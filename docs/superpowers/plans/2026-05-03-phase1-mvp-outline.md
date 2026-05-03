@@ -50,9 +50,17 @@ worldbuilding-agent/
 │       ├── electron/
 │       │   └── main.ts             # Electron main process
 │       └── src/                    # React 前端
-│           ├── App.tsx
+│           ├── App.tsx             # 路由根组件
 │           ├── main.tsx
-│           └── index.html
+│           ├── pages/
+│           │   ├── HomePage.tsx    # 项目列表/创建
+│           │   ├── ProjectPage.tsx # 项目主界面（侧边栏+主区域）
+│           │   ├── ChatPage.tsx    # 对话界面
+│           │   └── ContentBrowser.tsx # 内容浏览器
+│           └── components/
+│               ├── ChatMessage.tsx # 消息气泡（用户/assistant/tool call）
+│               ├── AgentList.tsx   # Agent 列表组件
+│               └── FileTree.tsx    # 文件树组件
 ```
 
 ## 实现步骤（按依赖顺序）
@@ -144,18 +152,45 @@ Tool registry：`createToolsForProject(projectRoot)` 返回 `Record<string, Agen
 ### Step 7：Electron Shell
 **目标**：桌面应用壳
 
-- Main process：启动 Fastify 服务器 → 创建 BrowserWindow
-- IPC：select-directory、start-server
-- Preload：暴露 electronAPI
-- electron-vite 配置
+1. **Main process** (`electron/main.ts`)：
+   - 启动时创建 Fastify 服务器，监听 localhost 随机端口
+   - 创建 BrowserWindow，加载前端页面
+   - IPC：处理项目选择对话框（`dialog.showOpenDialog`）
+   - IPC：`start-server` 将端口返回给 renderer
+   - 关闭时优雅停止服务器
+
+2. **Preload script**：
+   - 暴露 `electronAPI`（项目选择、窗口控制）到 renderer
+
+3. **electron-vite 配置**：
+   - Main：TypeScript 编译
+   - Renderer：Vite + React
 
 ### Step 8：React Frontend
 **目标**：基本可用的 UI
 
-- 首页：项目选择（打开文件夹按钮）
-- 项目页：Agent 列表 → 选择 → 开始对话
-- 对话页：消息列表 + 流式渲染 + 输入框
-- WebSocket 连接管理
+1. **HomePage**：
+   - 项目列表（最近打开）
+   - "新建项目" / "打开项目" 按钮
+
+2. **ProjectPage**（项目主界面，左侧边栏 + 右主区域）：
+   - 侧边栏：Agent 列表 + 文件树
+   - 主区域：根据选中内容切换 Chat 或 ContentBrowser
+
+3. **ChatPage**：
+   - 消息列表（用户消息 + assistant 消息 + tool call 展示）
+   - 输入框 + 发送按钮
+   - 流式渲染 assistant 回复（打字机效果）
+   - 中断按钮
+
+4. **ContentBrowser**：
+   - 文件树导航
+   - Markdown 渲染（使用 `react-markdown` 或类似库）
+   - YAML 文件格式化展示
+
+5. **状态管理**：
+   - 使用 React Context + useReducer
+   - WebSocket 连接管理
 
 ## 依赖关系图
 
