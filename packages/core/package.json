@@ -1,0 +1,23 @@
+{
+  "name": "@worldbuilding-agent/core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@mariozechner/pi-agent-core": "file:../../../pi-mono/packages/agent",
+    "@mariozechner/pi-ai": "file:../../../pi-mono/packages/ai",
+    "@sinclair/typebox": "^0.34.0",
+    "better-sqlite3": "^11.0.0",
+    "gray-matter": "^4.0.3",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "typescript": "^5.7.0"
+  }
+}
