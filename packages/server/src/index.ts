@@ -1,3 +1,4 @@
+import path from "node:path";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
@@ -11,14 +12,25 @@ export interface AppContext {
   agentEngine: AgentEngine;
 }
 
-export async function createServer(projectRoot: string) {
-  const fastify = Fastify({ logger: true });
+export async function createServer(
+  projectRoot: string,
+  options?: { projectName?: string; defaultModel?: string },
+) {
+  const fastify = Fastify({ logger: false });
 
   await fastify.register(cors, { origin: true });
   await fastify.register(websocket);
 
   const projectStore = new ProjectStore(projectRoot);
-  await projectStore.open();
+  try {
+    await projectStore.open();
+  } catch {
+    const dirName = path.basename(path.resolve(projectRoot));
+    await projectStore.create(
+      options?.projectName ?? dirName,
+      options?.defaultModel ?? "gemini-2.5-pro",
+    );
+  }
 
   const sessionStore = new SessionStore();
   await sessionStore.init(`${projectRoot}/.pi/sessions.db`);
@@ -29,6 +41,8 @@ export async function createServer(projectRoot: string) {
 
   registerRoutes(fastify, ctx);
   handleChatWebSocket(fastify, ctx);
+
+  await fastify.listen({ port: 0, host: "127.0.0.1" });
 
   return fastify;
 }

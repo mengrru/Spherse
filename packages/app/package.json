@@ -2,20 +2,25 @@
   "name": "@worldbuilding-agent/app",
   "version": "0.1.0",
   "type": "module",
+  "main": "dist/main/index.js",
   "scripts": {
-    "build": "echo TODO",
-    "dev": "echo TODO"
+    "build": "electron-vite build",
+    "dev": "electron-vite dev",
+    "preview": "electron-vite preview"
   },
   "dependencies": {
     "@worldbuilding-agent/server": "*",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
-    "electron": "^35.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "electron-vite": "^3.0.0"
+    "@vitejs/plugin-react": "^4.7.0",
+    "electron": "^35.0.0",
+    "electron-vite": "^3.0.0",
+    "typescript": "^5.7.0"
   }
 }
