@@ -71,6 +71,15 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async getSupportedProviders(): Promise<Record<string, {
+      name: string;
+      envKey: string;
+      models: readonly string[];
+    }>> {
+      const res = await fetch(`${baseUrl}/api/settings/providers`);
+      return res.json();
+    },
+
     createChatWebSocket(
       sessionId: string,
       onEvent: (event: AgentEvent) => void,
