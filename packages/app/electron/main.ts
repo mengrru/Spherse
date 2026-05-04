@@ -1,9 +1,13 @@
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createServer } from "@worldbuilding-agent/server";
 import Store from "electron-store";
 import type { AppSettings } from "@worldbuilding-agent/core";
 import { SUPPORTED_PROVIDERS, type SupportedProviderId } from "@worldbuilding-agent/core";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
 let server: Awaited<ReturnType<typeof createServer>> | null = null;
