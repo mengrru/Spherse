@@ -3,6 +3,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import { streamSimple, getModel } from "@mariozechner/pi-ai";
 import type { AgentEvent, AgentTool } from "@mariozechner/pi-agent-core";
 import type { AgentDefinition } from "./types.js";
+import { SUPPORTED_PROVIDERS } from "./types.js";
 import { ProjectStore } from "./project-store.js";
 import { SessionStore } from "./session-store.js";
 import { listAgents } from "./agent-parser.js";
@@ -144,7 +145,12 @@ export class AgentEngine {
   }
 
   private resolveModel(modelId: string): any {
-    const providers: string[] = ["google", "anthropic", "openai"];
+    const providers: string[] = [
+      ...Object.keys(SUPPORTED_PROVIDERS),
+      "google",
+      "anthropic",
+      "openai",
+    ];
     for (const provider of providers) {
       try {
         return (getModel as any)(provider, modelId);
