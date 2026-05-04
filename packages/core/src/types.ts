@@ -35,3 +35,26 @@ export interface SessionInfo {
   updatedAt: number;
   status: "active" | "archived";
 }
+
+export interface AppSettings {
+  providers: {
+    deepseek?: { apiKey: string };
+    zai?: { apiKey: string };
+  };
+  defaultModel: string;
+}
+
+export const SUPPORTED_PROVIDERS = {
+  deepseek: {
+    name: "DeepSeek",
+    envKey: "DEEPSEEK_API_KEY",
+    models: ["deepseek-v4-flash", "deepseek-v4-pro"],
+  },
+  zai: {
+    name: "z.ai",
+    envKey: "ZAI_API_KEY",
+    models: ["glm-4.5-air", "glm-4.7", "glm-5-turbo", "glm-5.1", "glm-5v-turbo"],
+  },
+} as const;
+
+export type SupportedProviderId = keyof typeof SUPPORTED_PROVIDERS;
