@@ -1,3 +1,68 @@
+:root {
+  --bg-base: #f5f5f5;
+  --bg-surface: #fff;
+  --bg-hover: #f5f5f5;
+  --bg-hover-strong: #e8e8e8;
+  --bg-input: #fff;
+  --bg-muted: #f0f0f0;
+  --bg-code: #f5f5f5;
+  --bg-active: #e8f0fe;
+  --bg-overlay: rgba(0, 0, 0, 0.4);
+  --border: #e0e0e0;
+  --border-light: #f0f0f0;
+  --border-input: #ddd;
+  --text-primary: #1a1a1a;
+  --text-secondary: #666;
+  --text-muted: #999;
+  --text-faint: #bbb;
+  --text-on-muted: #555;
+  --accent: #4a90d9;
+  --accent-hover: #3a7bc8;
+  --danger: #e74c3c;
+  --danger-hover: #c0392b;
+  --success: #4caf50;
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.15);
+  --type-creator-bg: #e8f5e9;
+  --type-creator-text: #2e7d32;
+  --type-roleplay-bg: #e3f2fd;
+  --type-roleplay-text: #1565c0;
+  --type-scheduler-bg: #fff3e0;
+  --type-scheduler-text: #e65100;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-base: #1a1a1a;
+    --bg-surface: #2a2a2a;
+    --bg-hover: #333;
+    --bg-hover-strong: #3a3a3a;
+    --bg-input: #2a2a2a;
+    --bg-muted: #333;
+    --bg-code: #333;
+    --bg-active: #1a3a5c;
+    --bg-overlay: rgba(0, 0, 0, 0.6);
+    --border: #3a3a3a;
+    --border-light: #333;
+    --border-input: #444;
+    --text-primary: #e0e0e0;
+    --text-secondary: #aaa;
+    --text-muted: #777;
+    --text-faint: #555;
+    --text-on-muted: #bbb;
+    --accent: #5a9fe8;
+    --accent-hover: #4a8fd8;
+    --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
+    --shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.5);
+    --type-creator-bg: #1a3a1a;
+    --type-creator-text: #66bb6a;
+    --type-roleplay-bg: #1a2a3a;
+    --type-roleplay-text: #64b5f6;
+    --type-scheduler-bg: #3a2a1a;
+    --type-scheduler-text: #ffb74d;
+  }
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -11,8 +76,8 @@ body,
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
   font-size: 14px;
-  color: #1a1a1a;
-  background: #f5f5f5;
+  color: var(--text-primary);
+  background: var(--bg-base);
 }
 
 button {
@@ -37,33 +102,33 @@ input {
 .home-card {
   text-align: center;
   padding: 48px;
-  background: white;
+  background: var(--bg-surface);
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-card);
 }
 
 .home-title {
   font-size: 32px;
   font-weight: 700;
   margin-bottom: 8px;
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 
 .home-subtitle {
   font-size: 16px;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 24px;
 }
 
 .home-status {
   font-size: 14px;
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 16px;
 }
 
 .home-btn {
   padding: 10px 32px;
-  background: #4a90d9;
+  background: var(--accent);
   color: white;
   border-radius: 6px;
   font-size: 16px;
@@ -71,7 +136,7 @@ input {
 }
 
 .home-btn:hover:not(:disabled) {
-  background: #3a7bc8;
+  background: var(--accent-hover);
 }
 
 .home-btn:disabled {
@@ -86,8 +151,8 @@ input {
 
 .sidebar {
   width: 240px;
-  background: #fff;
-  border-right: 1px solid #e0e0e0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -96,7 +161,7 @@ input {
 
 .sidebar-section {
   padding: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .sidebar-heading {
@@ -104,7 +169,7 @@ input {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #999;
+  color: var(--text-muted);
   margin-bottom: 8px;
 }
 
@@ -125,22 +190,22 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f0f0;
+  background: var(--bg-muted);
   border-radius: 4px;
   font-size: 16px;
-  color: #666;
+  color: var(--text-secondary);
   line-height: 1;
 }
 
 .sidebar-add-btn:hover {
-  background: #e0e0e0;
-  color: #333;
+  background: var(--border);
+  color: var(--text-primary);
 }
 
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--bg-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,13 +213,13 @@ input {
 }
 
 .dialog {
-  background: white;
+  background: var(--bg-surface);
   border-radius: 10px;
   width: 600px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-dialog);
 }
 
 .dialog-header {
@@ -162,7 +227,7 @@ input {
   align-items: center;
   justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .dialog-header h2 {
@@ -173,12 +238,12 @@ input {
 .dialog-close {
   background: none;
   font-size: 18px;
-  color: #999;
+  color: var(--text-muted);
   padding: 4px;
 }
 
 .dialog-close:hover {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .dialog-body {
@@ -189,12 +254,12 @@ input {
 
 .dialog-hint {
   font-size: 12px;
-  color: #888;
+  color: var(--text-muted);
   margin-bottom: 12px;
 }
 
 .dialog-hint code {
-  background: #f5f5f5;
+  background: var(--bg-code);
   padding: 1px 4px;
   border-radius: 3px;
   font-size: 11px;
@@ -204,7 +269,7 @@ input {
   width: 100%;
   min-height: 320px;
   padding: 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font-family: "SF Mono", "Menlo", "Monaco", monospace;
   font-size: 13px;
@@ -212,14 +277,16 @@ input {
   resize: vertical;
   outline: none;
   tab-size: 2;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .dialog-editor:focus {
-  border-color: #4a90d9;
+  border-color: var(--accent);
 }
 
 .dialog-error {
-  color: #e74c3c;
+  color: var(--danger);
   font-size: 12px;
   margin-top: 8px;
 }
@@ -229,31 +296,31 @@ input {
   justify-content: flex-end;
   gap: 8px;
   padding: 12px 20px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-light);
 }
 
 .dialog-btn-cancel {
   padding: 6px 16px;
-  background: #f0f0f0;
+  background: var(--bg-muted);
   border-radius: 5px;
-  color: #555;
+  color: var(--text-on-muted);
   font-size: 13px;
 }
 
 .dialog-btn-cancel:hover {
-  background: #e0e0e0;
+  background: var(--border);
 }
 
 .dialog-btn-submit {
   padding: 6px 16px;
-  background: #4a90d9;
+  background: var(--accent);
   color: white;
   border-radius: 5px;
   font-size: 13px;
 }
 
 .dialog-btn-submit:hover:not(:disabled) {
-  background: #3a7bc8;
+  background: var(--accent-hover);
 }
 
 .dialog-btn-submit:disabled {
@@ -273,7 +340,7 @@ input {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #999;
+  color: var(--text-muted);
 }
 
 .agent-list {
@@ -282,7 +349,7 @@ input {
 
 .agent-list-empty {
   font-size: 12px;
-  color: #bbb;
+  color: var(--text-faint);
 }
 
 .agent-item {
@@ -296,11 +363,11 @@ input {
 }
 
 .agent-item:hover {
-  background: #f5f5f5;
+  background: var(--bg-hover);
 }
 
 .agent-item-active {
-  background: #e8f0fe;
+  background: var(--bg-active);
 }
 
 .agent-item-name {
@@ -320,18 +387,18 @@ input {
 }
 
 .agent-type-creator {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--type-creator-bg);
+  color: var(--type-creator-text);
 }
 
 .agent-type-roleplay {
-  background: #e3f2fd;
-  color: #1565c0;
+  background: var(--type-roleplay-bg);
+  color: var(--type-roleplay-text);
 }
 
 .agent-type-scheduler {
-  background: #fff3e0;
-  color: #e65100;
+  background: var(--type-scheduler-bg);
+  color: var(--type-scheduler-text);
 }
 
 .file-tree {
@@ -340,7 +407,7 @@ input {
 
 .file-tree-empty {
   font-size: 12px;
-  color: #bbb;
+  color: var(--text-faint);
 }
 
 .file-tree-node {
@@ -354,7 +421,7 @@ input {
 }
 
 .file-tree-node:hover {
-  background: #f0f0f0;
+  background: var(--bg-muted);
 }
 
 .file-tree-icon {
@@ -379,8 +446,8 @@ input {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
-  background: white;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
 }
 
 .chat-agent-name {
@@ -392,8 +459,8 @@ input {
   font-size: 11px;
   padding: 1px 6px;
   border-radius: 3px;
-  background: #f0f0f0;
-  color: #666;
+  background: var(--bg-muted);
+  color: var(--text-secondary);
 }
 
 .chat-messages {
@@ -416,14 +483,14 @@ input {
 
 .chat-message-user {
   align-self: flex-end;
-  background: #4a90d9;
+  background: var(--accent);
   color: white;
 }
 
 .chat-message-assistant {
   align-self: flex-start;
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
 }
 
 .chat-message-role {
@@ -450,7 +517,7 @@ input {
 .chat-tool-calls {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px dashed #e0e0e0;
+  border-top: 1px dashed var(--border);
 }
 
 .tool-call-item {
@@ -463,42 +530,44 @@ input {
 
 .tool-call-name {
   font-family: monospace;
-  background: #f5f5f5;
+  background: var(--bg-code);
   padding: 1px 4px;
   border-radius: 2px;
 }
 
 .tool-call-status {
-  color: #999;
+  color: var(--text-muted);
 }
 
 .tool-call-running {
-  color: #4a90d9;
+  color: var(--accent);
 }
 
 .tool-call-completed {
-  color: #2e7d32;
+  color: var(--success);
 }
 
 .chat-input-area {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  border-top: 1px solid #e0e0e0;
-  background: white;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
 }
 
 .chat-input {
   flex: 1;
   padding: 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   outline: none;
   transition: border-color 0.2s;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .chat-input:focus {
-  border-color: #4a90d9;
+  border-color: var(--accent);
 }
 
 .chat-btn {
@@ -509,12 +578,12 @@ input {
 }
 
 .chat-btn-send {
-  background: #4a90d9;
+  background: var(--accent);
   color: white;
 }
 
 .chat-btn-send:hover:not(:disabled) {
-  background: #3a7bc8;
+  background: var(--accent-hover);
 }
 
 .chat-btn-send:disabled {
@@ -523,12 +592,12 @@ input {
 }
 
 .chat-btn-abort {
-  background: #e74c3c;
+  background: var(--danger);
   color: white;
 }
 
 .chat-btn-abort:hover {
-  background: #c0392b;
+  background: var(--danger-hover);
 }
 
 .content-browser {
@@ -542,25 +611,25 @@ input {
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
-  border-bottom: 1px solid #e0e0e0;
-  background: white;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
 }
 
 .content-back-btn {
   padding: 4px 12px;
-  background: #f0f0f0;
+  background: var(--bg-muted);
   border-radius: 4px;
   font-size: 13px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .content-back-btn:hover {
-  background: #e0e0e0;
+  background: var(--bg-hover-strong);
 }
 
 .content-file-path {
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   font-family: monospace;
 }
 
@@ -572,20 +641,20 @@ input {
 
 .content-loading,
 .content-error {
-  color: #999;
+  color: var(--text-muted);
   text-align: center;
   padding: 32px;
 }
 
 .content-error {
-  color: #e74c3c;
+  color: var(--danger);
 }
 
 .content-markdown {
-  background: white;
+  background: var(--bg-surface);
   padding: 24px;
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border);
   line-height: 1.7;
 }
 
@@ -601,14 +670,14 @@ input {
 }
 
 .content-markdown code {
-  background: #f5f5f5;
+  background: var(--bg-code);
   padding: 2px 4px;
   border-radius: 3px;
   font-size: 13px;
 }
 
 .content-markdown pre {
-  background: #f5f5f5;
+  background: var(--bg-code);
   padding: 12px;
   border-radius: 6px;
   overflow-x: auto;
@@ -634,20 +703,20 @@ input {
 
 .content-markdown th,
 .content-markdown td {
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   padding: 8px 12px;
   text-align: left;
 }
 
 .content-markdown th {
-  background: #f5f5f5;
+  background: var(--bg-code);
 }
 
 .content-code {
-  background: white;
+  background: var(--bg-surface);
   padding: 16px;
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--border);
   font-family: monospace;
   font-size: 13px;
   white-space: pre-wrap;
@@ -657,23 +726,23 @@ input {
 .sidebar-footer {
   margin-top: auto;
   padding: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-light);
 }
 
 .settings-btn {
   width: 100%;
   padding: 8px;
-  background: #f5f5f5;
+  background: var(--bg-muted);
   border-radius: 6px;
   font-size: 13px;
-  color: #666;
+  color: var(--text-secondary);
   text-align: center;
   transition: background 0.15s;
 }
 
 .settings-btn:hover {
-  background: #e8e8e8;
-  color: #333;
+  background: var(--bg-hover-strong);
+  color: var(--text-primary);
 }
 
 .settings-dialog {
@@ -691,7 +760,7 @@ input {
 .settings-section-title {
   font-size: 13px;
   font-weight: 600;
-  color: #555;
+  color: var(--text-on-muted);
   margin-bottom: 10px;
 }
 
@@ -719,11 +788,11 @@ input {
 }
 
 .settings-status-ok {
-  background: #4caf50;
+  background: var(--success);
 }
 
 .settings-status-none {
-  background: #e0e0e0;
+  background: var(--border);
 }
 
 .settings-key-input-wrap {
@@ -734,57 +803,60 @@ input {
 .settings-key-input {
   flex: 1;
   padding: 6px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 5px;
   outline: none;
   font-size: 13px;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .settings-key-input:focus {
-  border-color: #4a90d9;
+  border-color: var(--accent);
 }
 
 .settings-toggle-key {
   padding: 6px 10px;
-  background: #f0f0f0;
+  background: var(--bg-muted);
   border-radius: 5px;
   font-size: 12px;
-  color: #666;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
 .settings-toggle-key:hover {
-  background: #e0e0e0;
+  background: var(--bg-hover-strong);
 }
 
 .settings-model-select {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-input);
   border-radius: 5px;
   font-size: 13px;
   outline: none;
-  background: white;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .settings-model-select:focus {
-  border-color: #4a90d9;
+  border-color: var(--accent);
 }
 
 .settings-hint {
   font-size: 12px;
-  color: #999;
+  color: var(--text-muted);
   margin-top: 6px;
 }
 
 .settings-save-ok {
-  color: #4caf50;
+  color: var(--success);
   font-size: 13px;
   margin-right: auto;
 }
 
 .settings-save-error {
-  color: #e74c3c;
+  color: var(--danger);
   font-size: 13px;
   margin-right: auto;
 }
