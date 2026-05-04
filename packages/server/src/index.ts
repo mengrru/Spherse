@@ -35,7 +35,9 @@ export async function createServer(
   const sessionStore = new SessionStore();
   await sessionStore.init(`${projectRoot}/.pi/sessions.db`);
 
-  const agentEngine = new AgentEngine(projectStore, sessionStore);
+  const agentEngine = new AgentEngine(projectStore, sessionStore, {
+    defaultModel: options?.defaultModel,
+  });
 
   const ctx: AppContext = { projectStore, sessionStore, agentEngine };
 

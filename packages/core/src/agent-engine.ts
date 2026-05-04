@@ -18,10 +18,16 @@ export class AgentEngine {
   private projectStore: ProjectStore;
   private sessionStore: SessionStore;
   private activeSessions: Map<string, Agent> = new Map();
+  private globalDefaultModel?: string;
 
-  constructor(projectStore: ProjectStore, sessionStore: SessionStore) {
+  constructor(
+    projectStore: ProjectStore,
+    sessionStore: SessionStore,
+    options?: { defaultModel?: string },
+  ) {
     this.projectStore = projectStore;
     this.sessionStore = sessionStore;
+    this.globalDefaultModel = options?.defaultModel;
   }
 
   async listAgents(): Promise<AgentDefinition[]> {
@@ -127,7 +133,8 @@ export class AgentEngine {
     const agentsMd = await this.projectStore.readIndex();
     const systemPrompt = `${agentsMd}\n\n---\n\n${definition.systemPrompt}`;
 
-    const modelId = definition.model ?? config.defaultModel;
+    const modelId =
+      definition.model ?? this.globalDefaultModel ?? config.defaultModel;
     const model = this.resolveModel(modelId);
 
     return new Agent({
@@ -152,11 +159,8 @@ export class AgentEngine {
       "openai",
     ];
     for (const provider of providers) {
-      try {
-        return (getModel as any)(provider, modelId);
-      } catch {
-        continue;
-      }
+      const model = (getModel as any)(provider, modelId);
+      if (model) return model;
     }
     throw new Error(`Could not resolve model: ${modelId}`);
   }

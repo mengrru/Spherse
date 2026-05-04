@@ -46,7 +46,10 @@ function restoreEnvFromSettings(): void {
 }
 
 async function startServer(projectRoot: string): Promise<number> {
-  server = await createServer(projectRoot);
+  const settings = settingsStore.get("settings");
+  server = await createServer(projectRoot, {
+    defaultModel: settings?.defaultModel,
+  });
   const address = server.server.address();
   const port = typeof address === "object" && address ? address.port : 0;
   return port;
