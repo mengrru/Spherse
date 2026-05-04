@@ -87,11 +87,7 @@ npm run dev
 
 **核心层调试**：`packages/core` 和 `packages/server` 不依赖 Electron，可以直接用 Node.js 测试。
 
-**环境变量**：LLM API Key 通过环境变量配置（`GEMINI_API_KEY`、`ANTHROPIC_API_KEY`、`OPENAI_API_KEY`），取决于 agent 定义中指定的模型。
-
 ## 其它注意事项
-
-- **当前进度**：Task 1-8 已完成（core + server），Task 9（Electron + React）待实现
 - **世界观项目结构**：用户的世界观项目是独立文件夹，结构为 `.pi/`（系统文件）+ 用户自定义目录。详见设计文档第 3 节
 - **Agent 定义格式**：Markdown 文件 + YAML frontmatter，详见设计文档第 4 节
 - **数据存储**：创作内容为纯文件（Markdown/YAML），session 数据为 SQLite（`.pi/sessions.db`）
