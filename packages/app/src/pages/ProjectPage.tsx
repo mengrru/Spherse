@@ -4,6 +4,7 @@ import { AgentList } from "../components/AgentList";
 import { FileTree } from "../components/FileTree";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
 import { ChatPage } from "./ChatPage";
+import { SettingsModal } from "../components/SettingsModal";
 import { ContentBrowser } from "./ContentBrowser";
 import type { AgentDefinition } from "../lib/types";
 
@@ -20,6 +21,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const refreshAgents = () => {
     ctx.client.listAgents().then(setAgents).catch(console.error);
@@ -75,6 +77,11 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
           <h3 className="sidebar-heading">文件</h3>
           <FileTree client={ctx.client} onSelectFile={handleSelectFile} />
         </div>
+        <div className="sidebar-footer">
+          <button className="settings-btn" onClick={() => setShowSettings(true)}>
+            ⚙ 设置
+          </button>
+        </div>
       </aside>
       <main className="main-area">
         {viewMode === "chat" && sessionId ? (
@@ -97,6 +104,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
           onCancel={() => setShowCreateAgent(false)}
         />
       )}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
