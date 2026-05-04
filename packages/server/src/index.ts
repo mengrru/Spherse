@@ -1,15 +1,15 @@
-import path from "node:path";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
-import { ProjectStore, SessionStore, AgentEngine } from "@worldbuilding-agent/core";
+import { createEngine } from "@worldbuilding-agent/core";
+import type { ProjectStore } from "@worldbuilding-agent/core";
+import type { Engine } from "@worldbuilding-agent/core";
 import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 
 export interface AppContext {
+  engine: Engine;
   projectStore: ProjectStore;
-  sessionStore: SessionStore;
-  agentEngine: AgentEngine;
 }
 
 export async function createServer(
@@ -21,25 +21,9 @@ export async function createServer(
   await fastify.register(cors, { origin: true });
   await fastify.register(websocket);
 
-  const projectStore = new ProjectStore(projectRoot);
-  try {
-    await projectStore.open();
-  } catch {
-    const dirName = path.basename(path.resolve(projectRoot));
-    await projectStore.create(
-      options?.projectName ?? dirName,
-      options?.defaultModel ?? "gemini-2.5-pro",
-    );
-  }
+  const { engine, projectStore } = await createEngine(projectRoot, options);
 
-  const sessionStore = new SessionStore();
-  await sessionStore.init(`${projectRoot}/.pi/sessions.db`);
-
-  const agentEngine = new AgentEngine(projectStore, sessionStore, {
-    defaultModel: options?.defaultModel,
-  });
-
-  const ctx: AppContext = { projectStore, sessionStore, agentEngine };
+  const ctx: AppContext = { engine, projectStore };
 
   registerAllRoutes(fastify, ctx);
   handleChatWebSocket(fastify, ctx);

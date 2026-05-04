@@ -9,12 +9,11 @@ export interface ProjectConfig {
   };
 }
 
-export type AgentType = "creator" | "roleplay" | "scheduler" | string;
-
-export interface AgentDefinition {
+export interface AgentProfile {
+  id: string;
   name: string;
   model?: string;
-  type: AgentType;
+  type: string;
   schedule?: string;
   tools?: string[];
   context?: string[];
@@ -29,7 +28,7 @@ export interface AgentDefinition {
 
 export interface SessionInfo {
   id: string;
-  agentName: string;
+  agentId: string;
   title?: string;
   createdAt: number;
   updatedAt: number;

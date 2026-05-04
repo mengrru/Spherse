@@ -2,51 +2,56 @@ import path from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { streamSimple, getModel } from "@mariozechner/pi-ai";
 import type { AgentEvent, AgentTool } from "@mariozechner/pi-agent-core";
-import type { AgentDefinition } from "./types.js";
+import type { AgentProfile, SessionInfo } from "./types.js";
 import { SUPPORTED_PROVIDERS } from "./types.js";
-import { ProjectStore } from "./project-store.js";
-import { SessionStore } from "./session-store.js";
-import { listAgents } from "./agent-parser.js";
-import {
-  createToolsForProject,
-  getDefaultToolsForAgentType,
-} from "./tools/index.js";
+import { ProjectStore } from "./store/project.js";
+import { SessionStore } from "./store/session.js";
+import { AgentProfileStore } from "./store/agent-profile.js";
+import { createToolsForProject } from "./tools/index.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
 
-export class AgentEngine {
-  private projectStore: ProjectStore;
+export class Engine {
+  private profileStore: AgentProfileStore;
   private sessionStore: SessionStore;
+  private projectStore: ProjectStore;
   private activeSessions: Map<string, Agent> = new Map();
   private globalDefaultModel?: string;
 
   constructor(
-    projectStore: ProjectStore,
+    profileStore: AgentProfileStore,
     sessionStore: SessionStore,
+    projectStore: ProjectStore,
     options?: { defaultModel?: string },
   ) {
-    this.projectStore = projectStore;
+    this.profileStore = profileStore;
     this.sessionStore = sessionStore;
+    this.projectStore = projectStore;
     this.globalDefaultModel = options?.defaultModel;
   }
 
-  async listAgents(): Promise<AgentDefinition[]> {
-    const config = this.projectStore.getConfig();
-    if (!config) throw new Error("Project not opened");
-    const agentDir = path.join(
-      this.projectStore.getRootPath(),
-      ".pi",
-      config.paths.agents,
-    );
-    return listAgents(agentDir);
+  async listProfiles(): Promise<AgentProfile[]> {
+    return this.profileStore.list();
   }
 
-  async createSession(agentName: string): Promise<string> {
-    const definition = await this.findAgentDefinition(agentName);
-    if (!definition) throw new Error(`Agent "${agentName}" not found`);
+  async getProfile(id: string): Promise<AgentProfile | null> {
+    return this.profileStore.getById(id);
+  }
 
-    const sessionId = this.sessionStore.createSession(agentName);
-    const agent = await this.buildAgent(definition, sessionId);
+  async saveProfile(filename: string, content: string): Promise<AgentProfile> {
+    return this.profileStore.save(filename, content);
+  }
+
+  getSession(id: string): SessionInfo | null {
+    return this.sessionStore.getSession(id);
+  }
+
+  async createSession(agentId: string): Promise<string> {
+    const profile = await this.profileStore.getById(agentId);
+    if (!profile) throw new Error(`Agent profile "${agentId}" not found`);
+
+    const sessionId = this.sessionStore.createSession(agentId);
+    const agent = await this.buildAgent(profile, sessionId);
     this.activeSessions.set(sessionId, agent);
     return sessionId;
   }
@@ -57,11 +62,11 @@ export class AgentEngine {
     const session = this.sessionStore.getSession(sessionId);
     if (!session) throw new Error(`Session "${sessionId}" not found`);
 
-    const definition = await this.findAgentDefinition(session.agentName);
-    if (!definition)
-      throw new Error(`Agent "${session.agentName}" not found`);
+    const profile = await this.profileStore.getById(session.agentId);
+    if (!profile)
+      throw new Error(`Agent profile for session "${sessionId}" not found`);
 
-    const agent = await this.buildAgent(definition, sessionId);
+    const agent = await this.buildAgent(profile, sessionId);
     agent.state.messages = this.sessionStore.getSessionMessages(sessionId);
     this.activeSessions.set(sessionId, agent);
     return sessionId;
@@ -106,15 +111,17 @@ export class AgentEngine {
     if (agent) agent.abort();
   }
 
-  private async findAgentDefinition(
-    agentName: string,
-  ): Promise<AgentDefinition | undefined> {
-    const agents = await this.listAgents();
-    return agents.find((a) => a.name === agentName);
+  async deleteProfile(agentId: string): Promise<void> {
+    const sessions = this.sessionStore.listSessions(agentId);
+    for (const session of sessions) {
+      this.activeSessions.delete(session.id);
+    }
+    this.sessionStore.archiveByAgentId(agentId);
+    await this.profileStore.delete(agentId);
   }
 
   private async buildAgent(
-    definition: AgentDefinition,
+    profile: AgentProfile,
     sessionId: string,
   ): Promise<Agent> {
     const config = this.projectStore.getConfig()!;
@@ -124,17 +131,16 @@ export class AgentEngine {
       config.paths.changelog,
     );
 
-    const toolNames =
-      definition.tools ?? getDefaultToolsForAgentType(definition.type);
+    const toolNames = profile.tools ?? Object.keys(allTools);
     const tools: AgentTool[] = toolNames
       .map((name) => allTools[name])
       .filter(Boolean);
 
     const agentsMd = await this.projectStore.readIndex();
-    const systemPrompt = `${agentsMd}\n\n---\n\n${definition.systemPrompt}`;
+    const systemPrompt = `${agentsMd}\n\n---\n\n${profile.systemPrompt}`;
 
     const modelId =
-      definition.model ?? this.globalDefaultModel ?? config.defaultModel;
+      profile.model ?? this.globalDefaultModel ?? config.defaultModel;
     const model = this.resolveModel(modelId);
 
     return new Agent({

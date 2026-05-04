@@ -11,12 +11,6 @@ export { createListFilesTool } from "./list-files.js";
 export { createSearchContentTool } from "./search-content.js";
 export { createAppendChangelogTool } from "./append-changelog.js";
 
-const TOOL_DEFAULTS: Record<string, string[]> = {
-  creator: ["read_file", "write_file", "list_files", "search_content", "append_changelog"],
-  roleplay: ["read_file", "list_files", "search_content"],
-  scheduler: ["read_file", "write_file", "list_files", "search_content", "append_changelog"],
-};
-
 export function createToolsForProject(projectRoot: string, changelogPath?: string): Record<string, AgentTool<any>> {
   return {
     read_file: createReadFileTool(projectRoot),
@@ -25,8 +19,4 @@ export function createToolsForProject(projectRoot: string, changelogPath?: strin
     search_content: createSearchContentTool(projectRoot),
     append_changelog: createAppendChangelogTool(projectRoot, changelogPath),
   };
-}
-
-export function getDefaultToolsForAgentType(agentType: string): string[] {
-  return TOOL_DEFAULTS[agentType] ?? TOOL_DEFAULTS["creator"];
 }

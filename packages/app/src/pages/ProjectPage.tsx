@@ -6,7 +6,7 @@ import { CreateAgentDialog } from "../components/CreateAgentDialog";
 import { ChatPage } from "./ChatPage";
 import { SettingsModal } from "../components/SettingsModal";
 import { ContentBrowser } from "./ContentBrowser";
-import type { AgentDefinition } from "../lib/types";
+import type { AgentProfile } from "../lib/types";
 
 type ViewMode = "chat" | "content";
 
@@ -15,8 +15,8 @@ interface ProjectPageProps {
 }
 
 export function ProjectPage({ ctx }: ProjectPageProps) {
-  const [agents, setAgents] = useState<AgentDefinition[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState<AgentDefinition | null>(null);
+  const [agents, setAgents] = useState<AgentProfile[]>([]);
+  const [selectedAgent, setSelectedAgent] = useState<AgentProfile | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("chat");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -31,10 +31,10 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
     refreshAgents();
   }, [ctx]);
 
-  const handleSelectAgent = async (agent: AgentDefinition) => {
+  const handleSelectAgent = async (agent: AgentProfile) => {
     setSelectedAgent(agent);
     setViewMode("chat");
-    const { sessionId: sid } = await ctx.client.createSession(agent.name);
+    const { sessionId: sid } = await ctx.client.createSession(agent.id);
     setSessionId(sid);
   };
 

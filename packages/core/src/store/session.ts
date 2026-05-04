@@ -1,10 +1,10 @@
 import Database from "better-sqlite3";
-import type { SessionInfo } from "./types.js";
+import type { SessionInfo } from "../types.js";
 
 const MIGRATION = `
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
-  agent_name TEXT NOT NULL,
+  agent_id TEXT NOT NULL,
   title TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
@@ -34,14 +34,14 @@ export class SessionStore {
     this.db = null;
   }
 
-  createSession(agentName: string, title?: string): string {
+  createSession(agentId: string, title?: string): string {
     const id = crypto.randomUUID();
     const now = Date.now();
     this.db!
       .prepare(
-        "INSERT INTO sessions (id, agent_name, title, created_at, updated_at, status) VALUES (?, ?, ?, ?, ?, 'active')",
+        "INSERT INTO sessions (id, agent_id, title, created_at, updated_at, status) VALUES (?, ?, ?, ?, ?, 'active')",
       )
-      .run(id, agentName, title ?? null, now, now);
+      .run(id, agentId, title ?? null, now, now);
     return id;
   }
 
@@ -52,7 +52,7 @@ export class SessionStore {
     if (!row) return null;
     return {
       id: row.id,
-      agentName: row.agent_name,
+      agentId: row.agent_id,
       title: row.title ?? undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -60,21 +60,27 @@ export class SessionStore {
     };
   }
 
-  listSessions(agentName?: string): SessionInfo[] {
-    const query = agentName
-      ? "SELECT * FROM sessions WHERE agent_name = ? ORDER BY updated_at DESC"
-      : "SELECT * FROM sessions ORDER BY updated_at DESC";
-    const rows = agentName
-      ? (this.db!.prepare(query).all(agentName) as any[])
+  listSessions(agentId?: string): SessionInfo[] {
+    const query = agentId
+      ? "SELECT * FROM sessions WHERE agent_id = ? AND status = 'active' ORDER BY updated_at DESC"
+      : "SELECT * FROM sessions WHERE status = 'active' ORDER BY updated_at DESC";
+    const rows = agentId
+      ? (this.db!.prepare(query).all(agentId) as any[])
       : (this.db!.prepare(query).all() as any[]);
     return rows.map((row) => ({
       id: row.id,
-      agentName: row.agent_name,
+      agentId: row.agent_id,
       title: row.title ?? undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       status: row.status,
     }));
+  }
+
+  archiveByAgentId(agentId: string): void {
+    this.db!
+      .prepare("UPDATE sessions SET status = 'archived' WHERE agent_id = ?")
+      .run(agentId);
   }
 
   appendMessage(sessionId: string, message: any): void {

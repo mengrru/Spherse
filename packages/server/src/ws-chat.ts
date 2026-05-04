@@ -11,7 +11,7 @@ export function handleChatWebSocket(
     (socket, req) => {
       const { sessionId } = req.params;
 
-      ctx.agentEngine.restoreSession(sessionId).catch((err) => {
+      ctx.engine.restoreSession(sessionId).catch((err) => {
         socket.send(JSON.stringify({ type: "error", message: err.message }));
         socket.close();
       });
@@ -21,7 +21,7 @@ export function handleChatWebSocket(
 
         if (msg.type === "message") {
           try {
-            await ctx.agentEngine.sendMessage(sessionId, msg.content, (event) => {
+            await ctx.engine.sendMessage(sessionId, msg.content, (event) => {
               socket.send(JSON.stringify(event));
             });
             socket.send(JSON.stringify({ type: "agent_end_done" }));
@@ -31,7 +31,7 @@ export function handleChatWebSocket(
             );
           }
         } else if (msg.type === "abort") {
-          ctx.agentEngine.abortSession(sessionId);
+          ctx.engine.abortSession(sessionId);
         }
       });
     },

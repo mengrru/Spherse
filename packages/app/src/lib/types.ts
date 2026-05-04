@@ -1,4 +1,5 @@
-export interface AgentDefinition {
+export interface AgentProfile {
+  id: string;
   name: string;
   model?: string;
   type: string;
@@ -11,7 +12,7 @@ export interface AgentDefinition {
 
 export interface SessionInfo {
   id: string;
-  agentName: string;
+  agentId: string;
   title?: string;
   createdAt: number;
   updatedAt: number;

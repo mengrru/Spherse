@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ApiClient } from "../lib/api";
-import type { AgentDefinition, ChatMessage, AgentEvent, ToolCallInfo } from "../lib/types";
+import type { AgentProfile, ChatMessage, AgentEvent, ToolCallInfo } from "../lib/types";
 
 interface ChatPageProps {
   client: ApiClient;
   sessionId: string;
-  agent: AgentDefinition;
+  agent: AgentProfile;
 }
 
 export function ChatPage({ client, sessionId, agent }: ChatPageProps) {

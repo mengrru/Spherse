@@ -3,16 +3,15 @@ import type { AppContext } from "../index.js";
 
 export function registerAgentRoutes(fastify: FastifyInstance, ctx: AppContext): void {
   fastify.get("/api/agents", async () => {
-    return ctx.agentEngine.listAgents();
+    return ctx.engine.listProfiles();
   });
 
-  fastify.get<{ Params: { name: string } }>(
-    "/api/agents/:name",
+  fastify.get<{ Params: { id: string } }>(
+    "/api/agents/:id",
     async (req, reply) => {
-      const agents = await ctx.agentEngine.listAgents();
-      const agent = agents.find((a) => a.name === req.params.name);
-      if (!agent) return reply.code(404).send({ error: "Agent not found" });
-      return agent;
+      const profile = await ctx.engine.getProfile(req.params.id);
+      if (!profile) return reply.code(404).send({ error: "Agent not found" });
+      return profile;
     },
   );
 }

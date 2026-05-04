@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
-import type { ProjectConfig } from "./types.js";
+import type { ProjectConfig } from "../types.js";
 
 export interface ChangelogEntry {
   agent: string;

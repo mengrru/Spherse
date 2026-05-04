@@ -1,9 +1,9 @@
-import type { AgentDefinition } from "../lib/types";
+import type { AgentProfile } from "../lib/types";
 
 interface AgentListProps {
-  agents: AgentDefinition[];
-  selectedAgent: AgentDefinition | null;
-  onSelect: (agent: AgentDefinition) => void;
+  agents: AgentProfile[];
+  selectedAgent: AgentProfile | null;
+  onSelect: (agent: AgentProfile) => void;
 }
 
 export function AgentList({ agents, selectedAgent, onSelect }: AgentListProps) {
@@ -15,8 +15,8 @@ export function AgentList({ agents, selectedAgent, onSelect }: AgentListProps) {
     <ul className="agent-list">
       {agents.map((agent) => (
         <li
-          key={agent.name}
-          className={`agent-item ${selectedAgent?.name === agent.name ? "agent-item-active" : ""}`}
+          key={agent.id}
+          className={`agent-item ${selectedAgent?.id === agent.id ? "agent-item-active" : ""}`}
           onClick={() => onSelect(agent)}
         >
           <span className="agent-item-name">{agent.name}</span>

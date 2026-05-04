@@ -1,5 +1,5 @@
 import type {
-  AgentDefinition,
+  AgentProfile,
   SessionInfo,
   ContentResponse,
   FileEntry,
@@ -12,21 +12,21 @@ export function createApiClient(port: number) {
   const wsUrl = `ws://localhost:${port}`;
 
   return {
-    async listAgents(): Promise<AgentDefinition[]> {
+    async listAgents(): Promise<AgentProfile[]> {
       const res = await fetch(`${baseUrl}/api/agents`);
       return res.json();
     },
 
-    async getAgent(name: string): Promise<AgentDefinition> {
-      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(name)}`);
+    async getAgent(id: string): Promise<AgentProfile> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(id)}`);
       return res.json();
     },
 
-    async createSession(agentName: string): Promise<{ sessionId: string }> {
+    async createSession(agentId: string): Promise<{ sessionId: string }> {
       const res = await fetch(`${baseUrl}/api/sessions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentName }),
+        body: JSON.stringify({ agentId }),
       });
       return res.json();
     },
@@ -58,11 +58,22 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
-    async createAgent(filename: string, content: string): Promise<{ ok: boolean }> {
+    async createAgent(filename: string, content: string): Promise<{ ok: boolean; id: string }> {
       const res = await fetch(`${baseUrl}/api/agents/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename, content }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
+    async deleteAgent(id: string): Promise<{ ok: boolean }> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(id)}`, {
+        method: "DELETE",
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
