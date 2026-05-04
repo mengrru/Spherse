@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { AppContext } from "./index.js";
+import { SUPPORTED_PROVIDERS } from "@worldbuilding-agent/core";
 
 export function registerRoutes(fastify: FastifyInstance, ctx: AppContext) {
   fastify.get("/api/agents", async () => {
@@ -111,4 +112,8 @@ export function registerRoutes(fastify: FastifyInstance, ctx: AppContext) {
       }
     },
   );
+
+  fastify.get("/api/settings/providers", async () => {
+    return SUPPORTED_PROVIDERS;
+  });
 }
