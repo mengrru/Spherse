@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@worldbuilding-agent/server": "*",
+    "electron-store": "^11.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
