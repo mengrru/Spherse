@@ -3,7 +3,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import { ProjectStore, SessionStore, AgentEngine } from "@worldbuilding-agent/core";
-import { registerRoutes } from "./routes.js";
+import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 
 export interface AppContext {
@@ -41,7 +41,7 @@ export async function createServer(
 
   const ctx: AppContext = { projectStore, sessionStore, agentEngine };
 
-  registerRoutes(fastify, ctx);
+  registerAllRoutes(fastify, ctx);
   handleChatWebSocket(fastify, ctx);
 
   await fastify.listen({ port: 0, host: "127.0.0.1" });
