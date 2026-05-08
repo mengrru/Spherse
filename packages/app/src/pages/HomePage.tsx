@@ -26,13 +26,13 @@ export function HomePage({ onProjectReady }: HomePageProps) {
   };
 
   return (
-    <div className="home-page">
-      <div className="home-card">
-        <h1 className="home-title">Worldbuilding Agent</h1>
-        <p className="home-subtitle">AI 辅助世界观创作工具</p>
-        <p className="home-status">{status}</p>
+    <div className="flex items-center justify-center h-screen bg-base">
+      <div className="text-center p-12 bg-surface rounded-xl shadow-[var(--shadow-card)]">
+        <h1 className="text-[32px] font-bold mb-2 text-[var(--primary)]">Worldbuilding Agent</h1>
+        <p className="text-base text-[var(--secondary)] mb-6">AI 辅助世界观创作工具</p>
+        <p className="text-sm text-[var(--muted)] mb-4">{status}</p>
         <button
-          className="home-btn"
+          className="px-8 py-2.5 bg-accent text-white rounded-md text-base transition-colors hover:bg-accent-hover disabled:opacity-60 disabled:cursor-not-allowed"
           onClick={handleOpenProject}
           disabled={loading}
         >

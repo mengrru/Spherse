@@ -54,13 +54,13 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   };
 
   return (
-    <div className="project-page">
-      <aside className="sidebar">
-        <div className="sidebar-section">
-          <div className="sidebar-heading-row">
-            <h3 className="sidebar-heading">Agents</h3>
+    <div className="flex h-screen">
+      <aside className="w-60 bg-surface border-r border-[var(--border)] flex flex-col overflow-y-auto shrink-0">
+        <div className="p-3 border-b border-[var(--border-light)]">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)] mb-0">Agents</h3>
             <button
-              className="sidebar-add-btn"
+              className="w-[22px] h-[22px] flex items-center justify-center bg-[var(--muted-bg)] rounded text-[16px] text-[var(--secondary)] leading-none hover:bg-[var(--border)] hover:text-[var(--primary)]"
               onClick={() => setShowCreateAgent(true)}
               title="创建 Agent"
             >
@@ -73,17 +73,17 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
             onSelect={handleSelectAgent}
           />
         </div>
-        <div className="sidebar-section">
-          <h3 className="sidebar-heading">文件</h3>
+        <div className="p-3 border-b border-[var(--border-light)]">
+          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)] mb-2">文件</h3>
           <FileTree client={ctx.client} onSelectFile={handleSelectFile} />
         </div>
-        <div className="sidebar-footer">
-          <button className="settings-btn" onClick={() => setShowSettings(true)}>
+        <div className="mt-auto p-3 border-t border-[var(--border-light)]">
+          <button className="w-full py-2 bg-[var(--muted-bg)] rounded-md text-sm text-[var(--secondary)] text-center transition-colors hover:bg-[var(--hover-strong)] hover:text-[var(--primary)]" onClick={() => setShowSettings(true)}>
             ⚙ 设置
           </button>
         </div>
       </aside>
-      <main className="main-area">
+      <main className="flex-1 overflow-hidden flex flex-col">
         {viewMode === "chat" && sessionId ? (
           <ChatPage client={ctx.client} sessionId={sessionId} agent={selectedAgent!} />
         ) : viewMode === "content" && selectedFile ? (
@@ -93,7 +93,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
             onBack={handleBackToChat}
           />
         ) : (
-          <div className="empty-state">
+          <div className="flex items-center justify-center h-full text-[var(--muted)]">
             <p>选择一个 Agent 开始对话，或浏览文件</p>
           </div>
         )}

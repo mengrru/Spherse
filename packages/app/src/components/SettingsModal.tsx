@@ -65,27 +65,27 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   };
 
   return (
-    <div className="dialog-overlay" onClick={onClose}>
-      <div className="dialog settings-dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="dialog-header">
-          <h2>设置</h2>
-          <button className="dialog-close" onClick={onClose}>✕</button>
+    <div className="fixed inset-0 bg-[var(--overlay)] flex items-center justify-center z-[100]" onClick={onClose}>
+      <div className="bg-surface rounded-[10px] w-[480px] max-h-[80vh] flex flex-col shadow-[var(--shadow-dialog)]" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-light)]">
+          <h2 className="text-base font-semibold text-[var(--primary)]">设置</h2>
+          <button className="bg-none text-lg text-[var(--muted)] p-1 hover:text-[var(--primary)]" onClick={onClose}>✕</button>
         </div>
-        <div className="dialog-body">
-          <div className="settings-section">
-            <h3 className="settings-section-title">API 配置</h3>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="mb-5 last:mb-0">
+            <h3 className="text-[13px] font-semibold text-[var(--on-muted)] mb-2.5">API 配置</h3>
             {Object.entries(providers).map(([id, config]) => (
-              <div key={id} className="settings-provider-row">
-                <div className="settings-provider-info">
-                  <span className="settings-provider-name">{config.name}</span>
+              <div key={id} className="mb-3">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <span className="text-[13px] font-medium">{config.name}</span>
                   <span
-                    className={`settings-status-dot ${apiKeys[id]?.trim() ? "settings-status-ok" : "settings-status-none"}`}
+                    className={`w-2 h-2 rounded-full inline-block ${apiKeys[id]?.trim() ? "bg-success" : "bg-[var(--border)]"}`}
                   />
                 </div>
-                <div className="settings-key-input-wrap">
+                <div className="flex gap-1.5">
                   <input
                     type={showKeys[id] ? "text" : "password"}
-                    className="settings-key-input"
+                    className="flex-1 px-2.5 py-1.5 border border-[var(--border-input)] rounded-[5px] outline-none text-[13px] bg-[var(--input-bg)] text-[var(--primary)] focus:border-accent"
                     placeholder={config.envKey}
                     value={apiKeys[id] ?? ""}
                     onChange={(e) =>
@@ -93,7 +93,7 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                     }
                   />
                   <button
-                    className="settings-toggle-key"
+                    className="px-2.5 py-1.5 bg-[var(--muted-bg)] rounded-[5px] text-xs text-[var(--secondary)] whitespace-nowrap hover:bg-[var(--hover-strong)]"
                     onClick={() =>
                       setShowKeys({ ...showKeys, [id]: !showKeys[id] })
                     }
@@ -104,10 +104,10 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
               </div>
             ))}
           </div>
-          <div className="settings-section">
-            <h3 className="settings-section-title">默认模型</h3>
+          <div className="mb-5 last:mb-0">
+            <h3 className="text-[13px] font-semibold text-[var(--on-muted)] mb-2.5">默认模型</h3>
             <select
-              className="settings-model-select"
+              className="w-full px-2.5 py-2 border border-[var(--border-input)] rounded-[5px] text-[13px] outline-none bg-[var(--input-bg)] text-[var(--primary)] focus:border-accent"
               value={defaultModel}
               onChange={(e) => setDefaultModel(e.target.value)}
             >
@@ -125,22 +125,22 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
                 ))}
             </select>
             {Object.entries(providers).filter(([id]) => apiKeys[id]?.trim()).length === 0 && (
-              <p className="settings-hint">请先配置 API Key</p>
+              <p className="text-xs text-[var(--muted)] mt-1.5">请先配置 API Key</p>
             )}
           </div>
         </div>
-        <div className="dialog-footer">
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-[var(--border-light)]">
           {message === "saved" && (
-            <span className="settings-save-ok">已保存</span>
+            <span className="text-success text-[13px] mr-auto">已保存</span>
           )}
           {message === "error" && (
-            <span className="settings-save-error">保存失败</span>
+            <span className="text-danger text-[13px] mr-auto">保存失败</span>
           )}
-          <button className="dialog-btn-cancel" onClick={onClose}>
+          <button className="px-4 py-1.5 bg-[var(--muted-bg)] rounded-[5px] text-[13px] text-[var(--on-muted)] hover:bg-[var(--border)]" onClick={onClose}>
             关闭
           </button>
           <button
-            className="dialog-btn-submit"
+            className="px-4 py-1.5 bg-accent text-white rounded-[5px] text-[13px] hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleSave}
             disabled={saving}
           >

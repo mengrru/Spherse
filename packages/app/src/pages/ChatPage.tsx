@@ -138,27 +138,34 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
   };
 
   return (
-    <div className="chat-page">
-      <div className="chat-header">
-        <span className="chat-agent-name">{agent.name}</span>
-        <span className="chat-agent-type">{agent.type}</span>
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)] bg-surface">
+        <span className="font-semibold text-[15px]">{agent.name}</span>
+        <span className="text-[11px] px-1.5 py-[1px] rounded bg-[var(--muted-bg)] text-[var(--secondary)]">{agent.type}</span>
       </div>
-      <div className="chat-messages">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
         {messages.map((msg, i) => (
-          <div key={i} className={`chat-message chat-message-${msg.role}`}>
-            <div className="chat-message-role">
+          <div
+            key={i}
+            className={`max-w-[80%] py-2.5 px-3.5 rounded-lg leading-relaxed break-words whitespace-pre-wrap ${
+              msg.role === "user"
+                ? "self-end bg-accent text-white"
+                : "self-start bg-surface border border-[var(--border)]"
+            }`}
+          >
+            <div className="text-[11px] font-semibold mb-1 opacity-70">
               {msg.role === "user" ? "你" : agent.name}
             </div>
-            <div className="chat-message-content">
+            <div className="text-sm">
               {msg.content}
-              {msg._streaming && <span className="cursor-blink">|</span>}
+              {msg._streaming && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
             </div>
             {msg._toolCalls && msg._toolCalls.length > 0 && (
-              <div className="chat-tool-calls">
+              <div className="mt-2 pt-2 border-t border-dashed border-[var(--border)]">
                 {msg._toolCalls.map((tc, j) => (
-                  <div key={j} className={`tool-call-item tool-call-${tc.status}`}>
-                    <span className="tool-call-name">{tc.toolName}</span>
-                    <span className="tool-call-status">
+                  <div key={j} className={`flex items-center gap-1.5 text-xs py-0.5`}>
+                    <span className="font-mono bg-[var(--code-bg)] px-1 py-[1px] rounded-[2px]">{tc.toolName}</span>
+                    <span className={tc.status === "running" ? "text-accent" : "text-success"}>
                       {tc.status === "running" ? "..." : "done"}
                     </span>
                   </div>
@@ -169,9 +176,9 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div className="chat-input-area">
+      <div className="flex gap-2 px-4 py-3 border-t border-[var(--border)] bg-surface">
         <input
-          className="chat-input"
+          className="flex-1 px-3 py-2 border border-[var(--border-input)] rounded-md outline-none transition-colors bg-[var(--input-bg)] text-[var(--primary)] focus:border-accent"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="输入消息..."
@@ -184,12 +191,12 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
           disabled={streaming}
         />
         {streaming ? (
-          <button className="chat-btn chat-btn-abort" onClick={handleAbort}>
+          <button className="px-4 py-2 rounded-md font-medium transition-colors bg-danger text-white hover:bg-danger-hover" onClick={handleAbort}>
             中断
           </button>
         ) : (
           <button
-            className="chat-btn chat-btn-send"
+            className="px-4 py-2 rounded-md font-medium transition-colors bg-accent text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleSend}
             disabled={!input.trim()}
           >

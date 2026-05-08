@@ -71,18 +71,18 @@ export function FileTree({ client, onSelectFile }: FileTreeProps) {
   const renderNode = (node: TreeNode, depth: number = 0) => (
     <div key={node.path}>
       <div
-        className="file-tree-node"
+        className="flex items-center py-[3px] px-1 rounded cursor-pointer transition-colors hover:bg-[var(--muted-bg)] select-none"
         style={{ paddingLeft: depth * 16 + 8 }}
         onClick={() => toggleNode(node)}
       >
-        <span className="file-tree-icon">
+        <span className="mr-1 text-xs">
           {node.type === "directory"
             ? node.expanded
               ? "📂"
               : "📁"
             : "📄"}
         </span>
-        <span className="file-tree-name">{node.name}</span>
+        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{node.name}</span>
       </div>
       {node.expanded &&
         node.children.map((child) => renderNode(child, depth + 1))}
@@ -90,9 +90,9 @@ export function FileTree({ client, onSelectFile }: FileTreeProps) {
   );
 
   return (
-    <div className="file-tree">
+    <div className="text-[13px]">
       {rootNodes.length === 0 ? (
-        <p className="file-tree-empty">加载中...</p>
+        <p className="text-xs text-[var(--faint)]">加载中...</p>
       ) : (
         rootNodes.map((node) => renderNode(node))
       )}
