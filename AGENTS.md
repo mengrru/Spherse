@@ -2,8 +2,8 @@
 
 一个全平台、本地运行、开箱即用的 AI 辅助世界观创作桌面工具。基于 Electron + React + Fastify，使用 pi-agent-core 作为 agent 运行时，pi-ai 作为 LLM provider。
 
-设计文档：`docs/superpowers/specs/2026-05-03-worldbuilding-agent-design.md`
-实现计划：`docs/superpowers/plans/2026-05-03-phase1-mvp-outline.md`
+设计文档：`docs/official/`
+待办事项：`docs/dev/backlog.md`
 
 ## 项目目录索引
 
@@ -71,9 +71,11 @@ worldbuilding-agent/
 ├── scripts/
 │   └── verify.mjs                  # 核心模块验证脚本
 ├── docs/
-│   └── superpowers/
-│       ├── specs/                  # 设计文档
-│       └── plans/                  # 实现计划
+│   ├── official/                   # 正式项目文档（始终与代码同步）
+│   └── dev/                        # 开发过程文档（容易过时）
+│       ├── features/               # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
+│       ├── bugfix/                 # bugfix 分析与修复思路
+│       └── backlog.md              # 待办事项
 ├── package.json                    # npm workspace root
 └── tsconfig.base.json              # 共享 TypeScript 配置
 ```
@@ -133,7 +135,12 @@ npm run dev
 **核心层调试**：`packages/core` 和 `packages/server` 不依赖 Electron，可以直接用 Node.js 测试。
 
 ## 其它注意事项
-- **世界观项目结构**：用户的世界观项目是独立文件夹，结构为 `.pi/`（系统文件）+ 用户自定义目录。详见设计文档第 3 节
-- **Agent 定义格式**：Markdown 文件 + YAML frontmatter（必须包含 `id`、`name`、`type` 字段），详见设计文档第 4 节
+- **世界观项目结构**：用户的世界观项目是独立文件夹，结构为 `.pi/`（系统文件）+ 用户自定义目录。详见 `docs/official/`
+- **Agent 定义格式**：Markdown 文件 + YAML frontmatter（必须包含 `id`、`name`、`type` 字段），详见 `docs/official/`
 - **数据存储**：创作内容为纯文件（Markdown/YAML），session 数据为 SQLite（`.pi/sessions.db`）
 - **Agent 唯一标识**：每个 AgentProfile 有不可变 UUID（`id` 字段），sessions 通过 `agent_id` 关联，删除 agent 后 sessions 进入归档状态
+- **文档规范**：
+  - `docs/official/` — 正式项目文档，始终与代码保持同步
+  - `docs/dev/features/{yyyy-MM-dd-feature-name}/` — 开发中的 feature spec 和 implementation plan
+  - `docs/dev/bugfix/` — bugfix 分析与修复思路
+  - `docs/dev/` 下的文档容易过时，开发新 feature 时应优先参考 `docs/official/`，开发完成后根据情况更新 `docs/official/`
