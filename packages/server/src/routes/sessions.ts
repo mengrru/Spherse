@@ -2,6 +2,13 @@ import type { FastifyInstance } from "fastify";
 import type { AppContext } from "../index.js";
 
 export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext): void {
+  fastify.get<{ Querystring: { agentId?: string } }>(
+    "/api/sessions",
+    async (req) => {
+      return ctx.engine.listSessions(req.query.agentId);
+    },
+  );
+
   fastify.post<{ Body: { agentId?: string } }>(
     "/api/sessions",
     async (req, reply) => {
@@ -31,6 +38,14 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
     "/api/sessions/:id/messages",
     async (req) => {
       return ctx.engine.getSessionHistory(req.params.id);
+    },
+  );
+
+  fastify.delete<{ Params: { id: string } }>(
+    "/api/sessions/:id",
+    async (req, reply) => {
+      ctx.engine.deleteSession(req.params.id);
+      return { ok: true };
     },
   );
 }

@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { ApiClient } from "../lib/api";
 import type { FileEntry } from "../lib/types";
 
 interface FileTreeProps {
   client: ApiClient;
   onSelectFile: (filePath: string) => void;
+  refreshKey?: number;
 }
 
 interface TreeNode {
@@ -16,8 +17,13 @@ interface TreeNode {
   loaded: boolean;
 }
 
-export function FileTree({ client, onSelectFile }: FileTreeProps) {
+export function FileTree({ client, onSelectFile, refreshKey }: FileTreeProps) {
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
+  const nodesRef = useRef<TreeNode[]>([]);
+
+  useEffect(() => {
+    nodesRef.current = rootNodes;
+  }, [rootNodes]);
 
   const loadChildren = useCallback(
     async (parentPath: string): Promise<FileEntry[]> => {
@@ -47,11 +53,29 @@ export function FileTree({ client, onSelectFile }: FileTreeProps) {
       }));
   };
 
+  const refreshExpanded = useCallback(async (nodes: TreeNode[]): Promise<TreeNode[]> => {
+    const result: TreeNode[] = [];
+    for (const node of nodes) {
+      if (node.type === "directory" && node.expanded && node.loaded) {
+        const entries = await loadChildren(node.path);
+        const refreshed = buildNodes(entries, node.path);
+        const children = await refreshExpanded(refreshed.map((c) => {
+          const old = node.children.find((o) => o.path === c.path);
+          return old ? { ...c, expanded: old.expanded, loaded: old.loaded, children: old.children } : c;
+        }));
+        result.push({ ...node, children });
+      } else {
+        result.push(node);
+      }
+    }
+    return result;
+  }, [loadChildren]);
+
   useEffect(() => {
     loadChildren("").then((entries) => {
       setRootNodes(buildNodes(entries, ""));
     });
-  }, [loadChildren]);
+  }, [loadChildren, refreshKey]);
 
   const toggleNode = async (node: TreeNode) => {
     if (node.type === "file") {
@@ -65,8 +89,10 @@ export function FileTree({ client, onSelectFile }: FileTreeProps) {
       node.loaded = true;
     }
     node.expanded = !node.expanded;
-    setRootNodes([...rootNodes]);
+    setRootNodes([...nodesRef.current]);
   };
+
+  useFsWatchRefresh(client, refreshExpanded, setRootNodes, nodesRef);
 
   const renderNode = (node: TreeNode, depth: number = 0) => (
     <div key={node.path}>
@@ -98,4 +124,26 @@ export function FileTree({ client, onSelectFile }: FileTreeProps) {
       )}
     </div>
   );
+}
+
+function useFsWatchRefresh(
+  client: ApiClient,
+  refreshExpanded: (nodes: TreeNode[]) => Promise<TreeNode[]>,
+  setRootNodes: React.Dispatch<React.SetStateAction<TreeNode[]>>,
+  nodesRef: React.MutableRefObject<TreeNode[]>,
+) {
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => {
+    const ws = client.createFsWatchWebSocket(() => {
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        refreshExpanded(nodesRef.current).then(setRootNodes);
+      }, 300);
+    });
+    return () => {
+      clearTimeout(timerRef.current);
+      ws.close();
+    };
+  }, [client, refreshExpanded, setRootNodes, nodesRef]);
 }

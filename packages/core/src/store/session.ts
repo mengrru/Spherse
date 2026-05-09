@@ -83,6 +83,12 @@ export class SessionStore {
       .run(agentId);
   }
 
+  archiveSession(sessionId: string): void {
+    this.db!
+      .prepare("UPDATE sessions SET status = 'archived' WHERE id = ?")
+      .run(sessionId);
+  }
+
   appendMessage(sessionId: string, message: any): void {
     const now = Date.now();
     this.db!

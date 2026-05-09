@@ -12,7 +12,9 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,6 +22,23 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
   }, [messages]);
 
   useEffect(() => {
+    setMessages([]);
+    client.getSessionMessages(sessionId).then((history) => {
+      const loaded: ChatMessage[] = history.map((m: any) => ({
+        role: m.role,
+        content:
+          typeof m.content === "string"
+            ? m.content
+            : Array.isArray(m.content)
+              ? m.content
+                  .filter((c: any) => c.type === "text")
+                  .map((c: any) => c.text)
+                  .join("")
+              : "",
+      }));
+      setMessages(loaded);
+    });
+
     const ws = client.createChatWebSocket(sessionId, (event: AgentEvent) => {
       handleWsEvent(event);
     });
@@ -176,33 +195,47 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div className="flex gap-2 px-4 py-3 border-t border-[var(--border)] bg-surface">
-        <input
-          className="flex-1 px-3 py-2 border border-[var(--border-input)] rounded-md outline-none transition-colors bg-[var(--input-bg)] text-[var(--primary)] focus:border-accent"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="输入消息..."
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          disabled={streaming}
-        />
-        {streaming ? (
-          <button className="px-4 py-2 rounded-md font-medium transition-colors bg-danger text-white hover:bg-danger-hover" onClick={handleAbort}>
-            中断
-          </button>
-        ) : (
+      <div className={`relative flex flex-col border-t border-[var(--border)] bg-surface transition-[max-height] duration-200 ${expanded ? "max-h-[33vh]" : "max-h-[160px]"}`}>
+        <div className="flex items-center justify-end px-3 pt-1.5">
           <button
-            className="px-4 py-2 rounded-md font-medium transition-colors bg-accent text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
-            onClick={handleSend}
-            disabled={!input.trim()}
+            className="w-5 h-5 flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] transition-colors"
+            onClick={() => setExpanded((v) => !v)}
+            title={expanded ? "收起" : "展开"}
           >
-            发送
+            {expanded ? "\u25BC" : "\u25B2"}
           </button>
-        )}
+        </div>
+        <div className="flex-1 flex gap-2 px-3 pb-3 min-h-0">
+          <textarea
+            ref={textareaRef}
+            className="flex-1 resize-none px-3 py-2 border border-[var(--border-input)] rounded-md outline-none transition-colors bg-[var(--input-bg)] text-[var(--primary)] focus:border-accent text-sm"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="输入消息... (Shift+Enter 换行)"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            disabled={streaming}
+          />
+          <div className="flex flex-col justify-end">
+            {streaming ? (
+              <button className="w-8 h-8 flex items-center justify-center rounded-md transition-colors bg-danger text-white hover:bg-danger-hover" onClick={handleAbort}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" fill="currentColor"/></svg>
+              </button>
+            ) : (
+              <button
+                className="w-8 h-8 flex items-center justify-center rounded-md transition-colors bg-accent text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleSend}
+                disabled={!input.trim()}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import type { ProjectStore } from "@worldbuilding-agent/core";
 import type { Engine } from "@worldbuilding-agent/core";
 import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
+import { handleFsWatchWebSocket } from "./ws-fs-watch.js";
 
 export interface AppContext {
   engine: Engine;
@@ -27,6 +28,7 @@ export async function createServer(
 
   registerAllRoutes(fastify, ctx);
   handleChatWebSocket(fastify, ctx);
+  handleFsWatchWebSocket(fastify, ctx);
 
   await fastify.listen({ port: 0, host: "127.0.0.1" });
 

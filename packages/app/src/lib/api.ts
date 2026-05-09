@@ -36,6 +36,12 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async listSessions(agentId?: string): Promise<SessionInfo[]> {
+      const query = agentId ? `?agentId=${encodeURIComponent(agentId)}` : "";
+      const res = await fetch(`${baseUrl}/api/sessions${query}`);
+      return res.json();
+    },
+
     async getSessionMessages(id: string): Promise<ChatMessage[]> {
       const res = await fetch(`${baseUrl}/api/sessions/${id}/messages`);
       return res.json();
@@ -82,6 +88,17 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async deleteSession(id: string): Promise<{ ok: boolean }> {
+      const res = await fetch(`${baseUrl}/api/sessions/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
     async getSupportedProviders(): Promise<Record<string, {
       name: string;
       envKey: string;
@@ -107,6 +124,14 @@ export function createApiClient(port: number) {
         console.error("[WS] error", e);
         onEvent({ type: "error", message: "WebSocket connection error" });
       };
+      return ws;
+    },
+
+    createFsWatchWebSocket(onChange: () => void): WebSocket {
+      const url = `${wsUrl}/ws/fs-watch`;
+      const ws = new WebSocket(url);
+      ws.onmessage = () => onChange();
+      ws.onerror = () => {};
       return ws;
     },
   };

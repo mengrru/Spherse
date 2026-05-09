@@ -46,6 +46,10 @@ export class Engine {
     return this.sessionStore.getSession(id);
   }
 
+  listSessions(agentId?: string): SessionInfo[] {
+    return this.sessionStore.listSessions(agentId);
+  }
+
   async createSession(agentId: string): Promise<string> {
     const profile = await this.profileStore.getById(agentId);
     if (!profile) throw new Error(`Agent profile "${agentId}" not found`);
@@ -96,6 +100,11 @@ export class Engine {
 
   destroySession(sessionId: string): void {
     this.activeSessions.delete(sessionId);
+  }
+
+  deleteSession(sessionId: string): void {
+    this.activeSessions.delete(sessionId);
+    this.sessionStore.archiveSession(sessionId);
   }
 
   hasActiveSession(sessionId: string): boolean {
