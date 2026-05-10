@@ -16,6 +16,7 @@ worldbuilding-agent/
 │   │       ├── tools/              # pi-agent-core AgentTool 实现（engine 内部使用，不对外导出）
 │   │       │   ├── read-file.ts
 │   │       │   ├── write-file.ts
+│   │       │   ├── edit-file.ts
 │   │       │   ├── list-files.ts
 │   │       │   ├── search-content.ts
 │   │       │   ├── append-changelog.ts

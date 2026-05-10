@@ -60,4 +60,5 @@ npm run dev
   - `docs/dev/features/{yyyy-MM-dd-feature-name}/` — 开发中的 feature spec 和 implementation plan
   - `docs/dev/bugfix/` — bugfix 分析与修复思路
   - `docs/dev/` 下的文档容易过时，开发新 feature 时应优先参考 `docs/official/`，开发完成后根据情况更新 `docs/official/`
+- **`docs/official/` 维护**：完成 feature 后，检查 `docs/official/` 下是否有需要同步更新的文档（如新增文件/目录、新增工具、架构变更等），保持文档与代码一致
 - **Backlog 维护**：每完成一个 feature 后，更新 `docs/dev/backlog.md` 中对应条目的状态（`[ ]` → `[x]`），并补充新增的 backlog 条目

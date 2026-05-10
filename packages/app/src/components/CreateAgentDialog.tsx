@@ -7,6 +7,7 @@ type: creator
 tools:
   - read_file
   - write_file
+  - edit_file
   - list_files
   - search_content
   - append_changelog
