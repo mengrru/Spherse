@@ -99,6 +99,10 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    getPreviewUrl(filePath: string): string {
+      return `${baseUrl}/api/preview/${filePath}`;
+    },
+
     async getSupportedProviders(): Promise<Record<string, {
       name: string;
       envKey: string;
