@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getSupportedProviders: () =>
     ipcRenderer.invoke("get-supported-providers"),
   restoreProjects: () => ipcRenderer.invoke("restore-projects"),
+  addOpenProject: (projectRoot: string) => ipcRenderer.invoke("add-open-project", projectRoot),
   closeProject: (projectRoot: string) =>
     ipcRenderer.invoke("close-project", projectRoot),
   revealInFinder: (projectRoot: string) =>

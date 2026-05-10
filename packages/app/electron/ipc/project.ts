@@ -1,7 +1,7 @@
 import { ipcMain, dialog, shell } from "electron";
 import type { BrowserWindow } from "electron";
 import { startServer, stopServer, getServerPort } from "../server.js";
-import { getOpenProjects, removeOpenProject, setLastActiveProject, getLastActiveProject } from "../settings.js";
+import { getOpenProjects, addOpenProject, removeOpenProject, setLastActiveProject, getLastActiveProject } from "../settings.js";
 
 export function registerProjectIpc(
   getWindow: () => BrowserWindow | null,
@@ -17,6 +17,10 @@ export function registerProjectIpc(
 
   ipcMain.handle("start-server", async (_event, projectRoot: string) => {
     return startServer(projectRoot);
+  });
+
+  ipcMain.handle("add-open-project", async (_event, projectPath: string) => {
+    addOpenProject(projectPath);
   });
 
   ipcMain.handle("restore-projects", async () => {

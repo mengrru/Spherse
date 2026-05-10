@@ -49,6 +49,7 @@ export function App() {
       (prev) => new Map(prev).set(dir, { name, port, ctx: initAppContext(port, dir) }),
     );
     setActivePath(dir);
+    await window.electronAPI.addOpenProject(dir);
   };
 
   const handleCloseProject = async (path: string) => {

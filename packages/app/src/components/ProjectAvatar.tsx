@@ -16,13 +16,14 @@ export function ProjectAvatar({ name, path, active, onClick, onContextMenu }: Pr
       title={name}
       onClick={onClick}
       onContextMenu={onContextMenu}
-      className="cursor-pointer transition-all duration-150 hover:brightness-110 flex items-center justify-center rounded-lg shrink-0 select-none"
+      className="cursor-pointer transition-all duration-150 hover:opacity-90 flex items-center justify-center rounded-lg shrink-0 select-none"
       style={{
         width: 36,
         height: 36,
         backgroundColor: getAvatarColor(path),
         borderLeft: active ? "3px solid var(--accent)" : "3px solid transparent",
-        filter: active ? "brightness(1.08)" : undefined,
+        opacity: active ? 1 : 0.55,
+        boxShadow: active ? "inset 0 0 0 2px var(--accent)" : undefined,
         color: "var(--primary)",
         fontWeight: 600,
         fontSize: 15,

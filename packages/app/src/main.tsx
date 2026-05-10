@@ -9,6 +9,7 @@ declare global {
       selectDirectory: () => Promise<string | null>;
       startServer: (projectRoot: string) => Promise<number>;
       restoreProjects: () => Promise<Array<{ path: string; name: string; port: number }>>;
+      addOpenProject: (projectRoot: string) => Promise<void>;
       closeProject: (projectRoot: string) => Promise<void>;
       revealInFinder: (projectRoot: string) => Promise<void>;
       setLastActiveProject: (path: string) => Promise<void>;
