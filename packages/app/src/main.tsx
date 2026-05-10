@@ -8,6 +8,11 @@ declare global {
     electronAPI: {
       selectDirectory: () => Promise<string | null>;
       startServer: (projectRoot: string) => Promise<number>;
+      restoreProjects: () => Promise<Array<{ path: string; name: string; port: number }>>;
+      closeProject: (projectRoot: string) => Promise<void>;
+      revealInFinder: (projectRoot: string) => Promise<void>;
+      setLastActiveProject: (path: string) => Promise<void>;
+      getLastActiveProject: () => Promise<string | null>;
     };
   }
 }

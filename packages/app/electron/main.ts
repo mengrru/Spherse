@@ -1,7 +1,7 @@
 import { app } from "electron";
 import { createWindow, getMainWindow } from "./window.js";
 import { restoreEnvFromSettings } from "./settings.js";
-import { closeServer } from "./server.js";
+import { stopAllServers } from "./server.js";
 import { registerAllIpc } from "./ipc/index.js";
 
 app.whenReady().then(() => {
@@ -11,6 +11,10 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
-  closeServer();
+  stopAllServers();
   app.quit();
+});
+
+app.on("before-quit", () => {
+  stopAllServers();
 });

@@ -2,25 +2,36 @@ import type { FastifyInstance } from "fastify";
 import { createServer } from "@worldbuilding-agent/server";
 import { getSettings } from "./settings.js";
 
-let server: FastifyInstance | null = null;
+const servers = new Map<string, { server: FastifyInstance; port: number }>();
 
 export async function startServer(projectRoot: string): Promise<number> {
+  const existing = servers.get(projectRoot);
+  if (existing) return existing.port;
+
   const settings = getSettings();
-  server = await createServer(projectRoot, {
+  const server = await createServer(projectRoot, {
     defaultModel: settings?.defaultModel,
   });
   const address = server.server.address();
   const port = typeof address === "object" && address ? address.port : 0;
+  servers.set(projectRoot, { server, port });
   return port;
 }
 
-export function getServer(): FastifyInstance | null {
-  return server;
+export function stopServer(projectRoot: string): void {
+  const entry = servers.get(projectRoot);
+  if (entry) {
+    entry.server.close();
+    servers.delete(projectRoot);
+  }
 }
 
-export function closeServer(): void {
-  if (server) {
-    server.close();
-    server = null;
-  }
+export function getServerPort(projectRoot: string): number | undefined {
+  return servers.get(projectRoot)?.port;
+}
+
+export async function stopAllServers(): Promise<void> {
+  const entries = [...servers.entries()];
+  servers.clear();
+  await Promise.all(entries.map(([, entry]) => entry.server.close()));
 }

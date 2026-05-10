@@ -1,8 +1,21 @@
+import path from "node:path";
 import Store from "electron-store";
 import type { AppSettings } from "@worldbuilding-agent/core";
 import { SUPPORTED_PROVIDERS, type SupportedProviderId } from "@worldbuilding-agent/core";
 
-export const settingsStore = new Store<{ settings?: AppSettings }>({
+export interface OpenProjectEntry {
+  path: string;
+  name: string;
+  lastOpened: string;
+}
+
+type SettingsSchema = {
+  settings?: AppSettings;
+  openProjects?: OpenProjectEntry[];
+  lastActiveProject?: string | null;
+};
+
+export const settingsStore = new Store<SettingsSchema>({
   name: "settings",
 });
 
@@ -58,4 +71,50 @@ function applySettingsToEnv(settings: AppSettings): void {
       }
     }
   }
+}
+
+export function getOpenProjects(): OpenProjectEntry[] {
+  return settingsStore.get("openProjects") ?? [];
+}
+
+export function addOpenProject(projectPath: string): void {
+  const projects = getOpenProjects();
+  const idx = projects.findIndex((p) => p.path === projectPath);
+  const entry: OpenProjectEntry = {
+    path: projectPath,
+    name: path.basename(projectPath),
+    lastOpened: new Date().toISOString(),
+  };
+  if (idx >= 0) {
+    projects[idx] = entry;
+  } else {
+    projects.push(entry);
+  }
+  settingsStore.set("openProjects", projects);
+}
+
+export function removeOpenProject(projectPath: string): void {
+  const projects = getOpenProjects().filter((p) => p.path !== projectPath);
+  settingsStore.set("openProjects", projects);
+  const lastActive = getLastActiveProject();
+  if (lastActive === projectPath) {
+    setLastActiveProject(null);
+  }
+}
+
+export function updateLastOpened(projectPath: string): void {
+  const projects = getOpenProjects();
+  const entry = projects.find((p) => p.path === projectPath);
+  if (entry) {
+    entry.lastOpened = new Date().toISOString();
+    settingsStore.set("openProjects", projects);
+  }
+}
+
+export function getLastActiveProject(): string | null {
+  return settingsStore.get("lastActiveProject") ?? null;
+}
+
+export function setLastActiveProject(projectPath: string | null): void {
+  settingsStore.set("lastActiveProject", projectPath);
 }
