@@ -1,6 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import type { ApiClient } from "../lib/api";
 import type { AgentProfile, ChatMessage, AgentEvent, ToolCallInfo } from "../lib/types";
+
+const LINE_HEIGHT = 20;
+const PADDING_Y = 16;
+const MIN_HEIGHT = 4 * LINE_HEIGHT + PADDING_Y;
+const MID_HEIGHT = 10 * LINE_HEIGHT + PADDING_Y;
+const MAX_HEIGHT = 20 * LINE_HEIGHT + PADDING_Y;
 
 interface ChatPageProps {
   client: ApiClient;
@@ -12,17 +18,49 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [manualExpanded, setManualExpanded] = useState(false);
+  const [contentExceeds3Lines, setContentExceeds3Lines] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // session 切换后首次加载历史消息时用 instant 跳到底部，避免从顶部平滑滚动；
+  // 后续新消息（用户发送 / assistant 回复）使用 smooth 滚动
+  const initialScrollDone = useRef(false);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!initialScrollDone.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "instant" });
+      if (messages.length > 0) initialScrollDone.current = true;
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
+
+  useLayoutEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    const natural = ta.scrollHeight;
+    const exceeds = natural > MIN_HEIGHT + 4;
+    setContentExceeds3Lines(exceeds);
+    if (!exceeds && manualExpanded) {
+      setManualExpanded(false);
+      return;
+    }
+    if (manualExpanded) {
+      ta.style.height = `${MAX_HEIGHT}px`;
+      ta.style.overflowY = natural > MAX_HEIGHT ? "auto" : "hidden";
+    } else {
+      const targetHeight = Math.max(MIN_HEIGHT, Math.min(natural, MID_HEIGHT));
+      ta.style.height = `${targetHeight}px`;
+      ta.style.overflowY = natural > MID_HEIGHT ? "auto" : "hidden";
+    }
+  }, [input, manualExpanded]);
 
   useEffect(() => {
     setMessages([]);
+    initialScrollDone.current = false;
     client.getSessionMessages(sessionId).then((history) => {
       const loaded: ChatMessage[] = history.map((m: any) => ({
         role: m.role,
@@ -148,6 +186,7 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
     setMessages((prev) => [...prev, { role: "user", content: text }]);
     setInput("");
     setStreaming(true);
+    setManualExpanded(false);
     wsRef.current?.send(JSON.stringify({ type: "message", content: text }));
   };
 
@@ -166,14 +205,14 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`max-w-[80%] py-2.5 px-3.5 rounded-lg leading-relaxed break-words whitespace-pre-wrap ${
+            className={`max-w-[80%] py-2.5 px-3.5 rounded-lg leading-9 break-words whitespace-pre-wrap ${
               msg.role === "user"
                 ? "self-end bg-accent text-white"
                 : "self-start bg-surface border border-[var(--border)]"
             }`}
           >
             <div className="text-[11px] font-semibold mb-1 opacity-70">
-              {msg.role === "user" ? "你" : agent.name}
+              {msg.role === "assistant" && agent.name}
             </div>
             <div className="text-sm">
               {msg.content}
@@ -195,20 +234,12 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div className={`relative flex flex-col border-t border-[var(--border)] bg-surface transition-[max-height] duration-200 ${expanded ? "max-h-[33vh]" : "max-h-[160px]"}`}>
-        <div className="flex items-center justify-end px-3 pt-1.5">
-          <button
-            className="w-5 h-5 flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] transition-colors"
-            onClick={() => setExpanded((v) => !v)}
-            title={expanded ? "收起" : "展开"}
-          >
-            {expanded ? "\u25BC" : "\u25B2"}
-          </button>
-        </div>
-        <div className="flex-1 flex gap-2 px-3 pb-3 min-h-0">
+      <div className="p-3 border-t border-[var(--border)] bg-surface">
+        <div className="relative rounded-lg border border-[var(--border-input)] bg-[var(--input-bg)] transition-colors focus-within:border-accent">
           <textarea
             ref={textareaRef}
-            className="flex-1 resize-none px-3 py-2 border border-[var(--border-input)] rounded-md outline-none transition-colors bg-[var(--input-bg)] text-[var(--primary)] focus:border-accent text-sm"
+            className="w-full resize-none pl-3 pr-12 py-2 bg-transparent outline-none text-[var(--primary)] text-sm leading-5"
+            style={{ height: `${MIN_HEIGHT}px`, overflowY: "hidden" }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="输入消息... (Shift+Enter 换行)"
@@ -220,7 +251,20 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
             }}
             disabled={streaming}
           />
-          <div className="flex flex-col justify-end">
+          {contentExceeds3Lines && (
+            <button
+              className="absolute top-1.5 right-2.5 w-5 h-5 flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] transition-colors"
+              onClick={() => setManualExpanded((v) => !v)}
+              title={manualExpanded ? "收起" : "展开"}
+            >
+              {manualExpanded ? (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 6l4 4 4-4M3 3l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 8l4-4 4 4M3 11l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              )}
+            </button>
+          )}
+          <div className="absolute bottom-2 right-2">
             {streaming ? (
               <button className="w-8 h-8 flex items-center justify-center rounded-md transition-colors bg-danger text-white hover:bg-danger-hover" onClick={handleAbort}>
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" fill="currentColor"/></svg>
