@@ -21,7 +21,7 @@ export function ProjectAvatar({ name, path, active, onClick, onContextMenu }: Pr
         width: 36,
         height: 36,
         backgroundColor: getAvatarColor(path),
-        border: active ? "2px solid var(--hover-strong)" : "2px solid transparent",
+        border: "2px solid transparent",
         opacity: active ? 1 : 0.5,
         color: "var(--primary)",
         fontWeight: 600,
