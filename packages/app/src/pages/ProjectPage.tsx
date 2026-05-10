@@ -130,7 +130,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   };
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full flex-1 overflow-hidden">
       <aside className="w-60 bg-surface border-r border-[var(--border)] flex flex-col overflow-y-auto shrink-0">
         <div className="p-3 border-b border-[var(--border-light)]">
           <div className="flex items-center justify-between mb-2">
