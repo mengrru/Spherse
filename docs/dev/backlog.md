@@ -1,5 +1,7 @@
 # Backlog
 
+- [ ] **单服务器多引擎重构**：将多 Fastify 实例合并为单实例多 engine，通过 URL 前缀区分项目，减少资源占用。参见 `docs/dev/features/2026-05-10-multi-project/design.md`
+
 ## 代码质量
 
 - [ ] **恢复 React StrictMode 并修复 WebSocket effect cleanup**：`src/main.tsx` 当前移除了 StrictMode 以避免开发模式下双重 mount 导致 WebSocket 错误事件。正确做法是保留 StrictMode，在 `ChatPage` 的 `useEffect` 中用 ref 追踪活跃的 WebSocket 实例，忽略已关闭 socket 的事件。涉及文件：`packages/app/src/pages/ChatPage.tsx`、`packages/app/src/main.tsx`。
@@ -12,7 +14,7 @@
 - [x] **多 Session**：同一 agent 开启多个对话，侧边栏按 agent 分组展示 session 列表
 - [ ] **项目创建向导**：HomePage 区分"新建项目"和"打开项目"，支持设置项目名和默认模型
 - [ ] **用户自定义主题**：支持从 `.pi/theme.css` 加载用户自定义 CSS 覆盖默认主题
-- [ ] **多 Project 支持**：支持已导入项目的持久化，无需每次打开 app 重新手动导入
+- [x] **多 Project 支持**：支持已导入项目的持久化，无需每次打开 app 重新手动导入
 - [ ] **Skill 支持**：允许 agent 定义可复用的 skill（预设 prompt + tool 组合）
 - [ ] **HTML Viewer Card**：在对话流中支持渲染 HTML 内容卡片
 - [ ] **文件删除**：从文件浏览器删除文件/目录

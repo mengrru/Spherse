@@ -45,25 +45,28 @@ worldbuilding-agent/
 │       │   ├── preload.ts          # contextBridge，IPC 白名单
 │       │   ├── ipc/                # IPC handler 注册，按业务域拆分
 │       │   │   ├── index.ts        # registerAllIpc 聚合
-│       │   │   ├── project.ts      # select-directory, start-server
+│       │   │   ├── project.ts      # select-directory, start-server, restore-projects, close-project
 │       │   │   └── settings.ts     # get-settings, save-settings, get-supported-providers
 │       │   ├── window.ts           # BrowserWindow 创建与管理
-│       │   ├── server.ts           # Fastify 实例生命周期
-│       │   └── settings.ts         # electron-store 封装 + env 管理
+│       │   ├── server.ts           # 多 Fastify 实例管理（Map<projectPath, server>）
+│       │   └── settings.ts         # electron-store 封装 + env 管理 + openProjects 持久化
 │       └── src/
-│           ├── App.tsx
+│           ├── App.tsx             # 多项目状态管理 + Activity Bar + 工作区
 │           ├── main.tsx
 │           ├── styles.css          # Tailwind CSS v4 + CSS 变量色彩体系 + 暗色模式
 │           ├── lib/
 │           │   ├── api.ts          # HTTP/WS 客户端封装
+│           │   ├── avatar-color.ts # 项目头像颜色生成（路径 hash → HSL）
 │           │   ├── context.ts      # AppContext 定义
 │           │   └── types.ts        # 前端类型（AgentProfile, SessionInfo 等）
 │           ├── pages/
-│           │   ├── HomePage.tsx
 │           │   ├── ProjectPage.tsx
 │           │   ├── ChatPage.tsx
 │           │   └── ContentBrowser.tsx
 │           └── components/
+│               ├── ProjectBar.tsx      # 左侧 Activity Bar（项目头像列表 + 添加按钮）
+│               ├── ProjectAvatar.tsx   # 项目头像（颜色生成、右键菜单）
+│               ├── EmptyState.tsx      # 无项目时的空状态
 │               ├── AgentList.tsx
 │               ├── CreateAgentDialog.tsx
 │               ├── FileTree.tsx
@@ -144,3 +147,4 @@ npm run dev
   - `docs/dev/features/{yyyy-MM-dd-feature-name}/` — 开发中的 feature spec 和 implementation plan
   - `docs/dev/bugfix/` — bugfix 分析与修复思路
   - `docs/dev/` 下的文档容易过时，开发新 feature 时应优先参考 `docs/official/`，开发完成后根据情况更新 `docs/official/`
+- **Backlog 维护**：每完成一个 feature 后，更新 `docs/dev/backlog.md` 中对应条目的状态（`[ ]` → `[x]`），并补充新增的 backlog 条目
