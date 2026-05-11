@@ -1,4 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { ApiClient } from "../lib/api";
 import type { AgentProfile, ChatMessage, AgentEvent, ToolCallInfo } from "../lib/types";
 
@@ -215,7 +217,13 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
               {msg.role === "assistant" && agent.name}
             </div>
             <div className="text-sm">
-              {msg.content}
+              {msg.role === "assistant" ? (
+                <div className="chat-markdown">
+                  <Markdown remarkPlugins={[remarkGfm]}>{msg.content}</Markdown>
+                </div>
+              ) : (
+                msg.content
+              )}
               {msg._streaming && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
             </div>
             {msg._toolCalls && msg._toolCalls.length > 0 && (
