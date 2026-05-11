@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import type { AppContext } from "../lib/context";
+import { useCustomTheme } from "../hooks/useCustomTheme";
 import { FileTree } from "../components/FileTree";
 import { CreateAgentDialog } from "../components/CreateAgentDialog";
 import { ChatPage } from "./ChatPage";
@@ -60,6 +61,8 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [menuAgentId, menuSessionId]);
+
+  useCustomTheme(ctx.projectRoot, ctx.port);
 
   const grouped = useMemo(() => {
     const map = new Map<string, SessionInfo[]>();
