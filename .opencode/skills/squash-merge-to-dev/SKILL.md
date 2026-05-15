@@ -71,9 +71,12 @@ description: Use when the user says "squash merge to dev", "squash to dev", or w
    git push
    ```
 
-8. **展示结果**
+8. **展示结果并切回 feature 分支**
 
    显示新 commit 的 hash 和 message。
+   ```bash
+   git checkout <branch>
+   ```
 
 ## Edge Cases
 
