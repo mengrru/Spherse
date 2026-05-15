@@ -26,6 +26,13 @@ export interface AgentProfile {
   filePath: string;
 }
 
+export interface SkillDefinition {
+  name: string;
+  description: string;
+  instructions: string;
+  filePath: string;
+}
+
 export interface SessionInfo {
   id: string;
   agentId: string;

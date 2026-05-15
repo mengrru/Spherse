@@ -2,6 +2,7 @@ import path from "node:path";
 import { ProjectStore } from "./store/project.js";
 import { SessionStore } from "./store/session.js";
 import { AgentProfileStore } from "./store/agent-profile.js";
+import { SkillStore } from "./store/skill.js";
 import { Engine } from "./engine.js";
 
 export async function createEngine(
@@ -24,10 +25,12 @@ export async function createEngine(
     path.join(projectRoot, ".pi", config.paths.agents),
   );
 
+  const skillStore = new SkillStore(path.join(projectRoot, ".pi", "skills"));
+
   const sessionStore = new SessionStore();
   await sessionStore.init(path.join(projectRoot, ".pi", "sessions.db"));
 
-  const engine = new Engine(profileStore, sessionStore, projectStore, {
+  const engine = new Engine(profileStore, sessionStore, projectStore, skillStore, {
     defaultModel: options?.defaultModel,
   });
 

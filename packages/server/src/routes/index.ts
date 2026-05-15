@@ -6,6 +6,7 @@ import { registerSessionRoutes } from "./sessions.js";
 import { registerContentRoutes } from "./content.js";
 import { registerSettingsRoutes } from "./settings.js";
 import { registerPreviewRoutes } from "./preview.js";
+import { registerSkillRoutes } from "./skills.js";
 
 export function registerAllRoutes(fastify: FastifyInstance, ctx: AppContext): void {
   registerAgentRoutes(fastify, ctx);
@@ -14,4 +15,5 @@ export function registerAllRoutes(fastify: FastifyInstance, ctx: AppContext): vo
   registerContentRoutes(fastify, ctx);
   registerSettingsRoutes(fastify, ctx);
   registerPreviewRoutes(fastify, ctx);
+  registerSkillRoutes(fastify, ctx);
 }

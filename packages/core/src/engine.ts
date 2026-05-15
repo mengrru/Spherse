@@ -2,11 +2,12 @@ import path from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { streamSimple, getModel } from "@mariozechner/pi-ai";
 import type { AgentEvent, AgentTool } from "@mariozechner/pi-agent-core";
-import type { AgentProfile, SessionInfo } from "./types.js";
+import type { AgentProfile, SessionInfo, SkillDefinition } from "./types.js";
 import { SUPPORTED_PROVIDERS } from "./types.js";
 import { ProjectStore } from "./store/project.js";
 import { SessionStore } from "./store/session.js";
 import { AgentProfileStore } from "./store/agent-profile.js";
+import { SkillStore } from "./store/skill.js";
 import { createToolsForProject } from "./tools/index.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
@@ -15,6 +16,7 @@ export class Engine {
   private profileStore: AgentProfileStore;
   private sessionStore: SessionStore;
   private projectStore: ProjectStore;
+  private skillStore: SkillStore;
   private activeSessions: Map<string, Agent> = new Map();
   private globalDefaultModel?: string;
 
@@ -22,11 +24,13 @@ export class Engine {
     profileStore: AgentProfileStore,
     sessionStore: SessionStore,
     projectStore: ProjectStore,
+    skillStore: SkillStore,
     options?: { defaultModel?: string },
   ) {
     this.profileStore = profileStore;
     this.sessionStore = sessionStore;
     this.projectStore = projectStore;
+    this.skillStore = skillStore;
     this.globalDefaultModel = options?.defaultModel;
   }
 
@@ -129,15 +133,25 @@ export class Engine {
     await this.profileStore.delete(agentId);
   }
 
+  async listSkills(): Promise<SkillDefinition[]> {
+    return this.skillStore.list();
+  }
+
+  async getSkill(name: string): Promise<SkillDefinition | null> {
+    return this.skillStore.get(name);
+  }
+
   private async buildAgent(
     profile: AgentProfile,
     sessionId: string,
   ): Promise<Agent> {
     const config = this.projectStore.getConfig()!;
     const projectRoot = this.projectStore.getRootPath();
+    const skillDir = path.join(projectRoot, ".pi", "skills");
     const allTools = createToolsForProject(
       projectRoot,
       config.paths.changelog,
+      skillDir,
     );
 
     const toolNames = profile.tools ?? Object.keys(allTools);
@@ -146,7 +160,15 @@ export class Engine {
       .filter(Boolean);
 
     const agentsMd = await this.projectStore.readIndex();
-    const systemPrompt = `${agentsMd}\n\n---\n\n${profile.systemPrompt}`;
+    let systemPrompt = `${agentsMd}\n\n---\n\n${profile.systemPrompt}`;
+
+    const skills = await this.skillStore.list();
+    if (skills.length > 0) {
+      const skillCatalog = skills
+        .map((s) => `- **${s.name}**: ${s.description}`)
+        .join("\n");
+      systemPrompt += `\n\n## Available Skills\n\n${skillCatalog}\n\nUse the load_skill tool to load a skill's full instructions when needed.`;
+    }
 
     const modelId =
       profile.model ?? this.globalDefaultModel ?? config.defaultModel;
