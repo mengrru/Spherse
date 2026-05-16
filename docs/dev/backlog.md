@@ -5,6 +5,7 @@
 ## 代码质量
 
 - [ ] **恢复 React StrictMode 并修复 WebSocket effect cleanup**：`src/main.tsx` 当前移除了 StrictMode 以避免开发模式下双重 mount 导致 WebSocket 错误事件。正确做法是保留 StrictMode，在 `ChatPage` 的 `useEffect` 中用 ref 追踪活跃的 WebSocket 实例，忽略已关闭 socket 的事件。涉及文件：`packages/app/src/pages/ChatPage.tsx`、`packages/app/src/main.tsx`。
+- [ ] **统一 UI 基础组件**：引入成熟组件库（如 shadcn/ui、Radix UI 等），统一 Button、Dialog、Toast、Dropdown 等基础组件，替代当前散落的内联样式实现
 
 ## 功能增强
 
