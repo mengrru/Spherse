@@ -33,6 +33,7 @@ spherse/
 - **不添加注释**：除非用户明确要求
 - **Git 规范**：commit message 使用 `feat:` / `fix:` / `chore:` 前缀
 - **前端样式**：使用 Tailwind CSS v4 工具类 + CSS 变量色彩体系，不写原生 CSS class
+- **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试
 
 ## 启动和联调方式
 
@@ -49,6 +50,14 @@ npm run dev --workspace=packages/server  # server 监听
 
 # 启动桌面应用
 npm run dev
+```
+
+**测试命令（packages/core）**：
+
+```bash
+npm test --workspace=packages/core          # 运行测试
+npm run test:watch --workspace=packages/core # 监听模式
+npm run test:cov --workspace=packages/core   # 运行测试并生成覆盖率报告
 ```
 
 **核心层调试**：`packages/core` 和 `packages/server` 不依赖 Electron，可以直接用 Node.js 测试。
