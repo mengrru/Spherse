@@ -1,5 +1,5 @@
 {
-  "name": "@worldbuilding-agent/app",
+  "name": "@spherse/app",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/main/index.js",
@@ -9,7 +9,7 @@
     "preview": "electron-vite preview"
   },
   "dependencies": {
-    "@worldbuilding-agent/server": "*",
+    "@spherse/server": "*",
     "electron-store": "^11.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

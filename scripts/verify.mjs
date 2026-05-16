@@ -245,7 +245,7 @@ async function testTools() {
 // ── Run ────────────────────────────────────────────────────
 
 async function main() {
-  console.log("🧪 Worldbuilding Agent — Verification Script\n");
+  console.log("🧪 Spherse — Verification Script\n");
 
   await setup();
 

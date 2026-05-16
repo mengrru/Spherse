@@ -1,5 +1,5 @@
 {
-  "name": "@worldbuilding-agent/server",
+  "name": "@spherse/server",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -8,7 +8,7 @@
     "dev": "tsc --watch"
   },
   "dependencies": {
-    "@worldbuilding-agent/core": "*",
+    "@spherse/core": "*",
     "fastify": "^5.3.0",
     "@fastify/websocket": "^11.0.0",
     "@fastify/cors": "^10.0.0"

@@ -1,9 +1,9 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
-import { createEngine } from "@worldbuilding-agent/core";
-import type { ProjectStore } from "@worldbuilding-agent/core";
-import type { Engine } from "@worldbuilding-agent/core";
+import { createEngine } from "@spherse/core";
+import type { ProjectStore } from "@spherse/core";
+import type { Engine } from "@spherse/core";
 import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleFsWatchWebSocket } from "./ws-fs-watch.js";

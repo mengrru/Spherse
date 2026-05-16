@@ -1,4 +1,4 @@
-# Worldbuilding Agent
+# Spherse
 
 一个全平台、本地运行、开箱即用的 AI 辅助世界观创作桌面工具。基于 Electron + React + Fastify，使用 pi-agent-core 作为 agent 运行时，pi-ai 作为 LLM provider。
 
@@ -8,11 +8,11 @@
 ## 项目目录索引
 
 ```
-worldbuilding-agent/
+spherse/
 ├── packages/
-│   ├── core/        # @worldbuilding-agent/core — 纯 Node.js 核心逻辑
-│   ├── server/      # @worldbuilding-agent/server — Fastify API 层
-│   └── app/         # @worldbuilding-agent/app — Electron + React
+│   ├── core/        # @spherse/core — 纯 Node.js 核心逻辑
+│   ├── server/      # @spherse/server — Fastify API 层
+│   └── app/         # @spherse/app — Electron + React
 ├── docs/
 │   ├── official/    # 正式项目文档（始终与代码同步）
 │   └── dev/         # 开发过程文档（容易过时）

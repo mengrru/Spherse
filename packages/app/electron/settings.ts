@@ -1,7 +1,7 @@
 import path from "node:path";
 import Store from "electron-store";
-import type { AppSettings } from "@worldbuilding-agent/core";
-import { SUPPORTED_PROVIDERS, type SupportedProviderId } from "@worldbuilding-agent/core";
+import type { AppSettings } from "@spherse/core";
+import { SUPPORTED_PROVIDERS, type SupportedProviderId } from "@spherse/core";
 
 export interface OpenProjectEntry {
   path: string;

@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import { getMaskedSettings, saveSettings } from "../settings.js";
-import { SUPPORTED_PROVIDERS } from "@worldbuilding-agent/core";
-import type { AppSettings } from "@worldbuilding-agent/core";
+import { SUPPORTED_PROVIDERS } from "@spherse/core";
+import type { AppSettings } from "@spherse/core";
 
 export function registerSettingsIpc(): void {
   ipcMain.handle("get-settings", () => {

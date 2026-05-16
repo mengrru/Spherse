@@ -1,9 +1,9 @@
 # 项目目录索引
 
 ```
-worldbuilding-agent/
+spherse/
 ├── packages/
-│   ├── core/                       # @worldbuilding-agent/core — 纯 Node.js 核心逻辑
+│   ├── core/                       # @spherse/core — 纯 Node.js 核心逻辑
 │   │   └── src/
 │   │       ├── types.ts            # 共享类型（ProjectConfig, AgentProfile, SessionInfo）
 │   │       ├── factory.ts          # createEngine() 工厂函数，封装所有 store 创建
@@ -22,7 +22,7 @@ worldbuilding-agent/
 │   │       │   ├── append-changelog.ts
 │   │       │   └── index.ts        # createToolsForProject 工厂
 │   │       └── index.ts            # 公开导出：Engine, createEngine, types
-│   ├── server/                     # @worldbuilding-agent/server — Fastify API 层
+│   ├── server/                     # @spherse/server — Fastify API 层
 │   │   └── src/
 │   │       ├── index.ts            # createServer()，调用 createEngine 组装 AppContext
 │   │       ├── routes/             # REST 路由，按业务域拆分
@@ -34,7 +34,7 @@ worldbuilding-agent/
 │   │       │   └── settings.ts     # GET /api/settings/providers
 │   │       ├── ws-chat.ts          # WebSocket 对话流
 │   │       └── ws-fs-watch.ts      # WebSocket 文件变更推送
-│   └── app/                        # @worldbuilding-agent/app — Electron + React
+│   └── app/                        # @spherse/app — Electron + React
 │       ├── electron/
 │       │   ├── main.ts             # Electron 入口：组装各模块
 │       │   ├── preload.ts          # contextBridge，IPC 白名单

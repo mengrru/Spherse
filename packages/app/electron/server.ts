@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { createServer } from "@worldbuilding-agent/server";
+import { createServer } from "@spherse/server";
 import { getSettings } from "./settings.js";
 
 const servers = new Map<string, { server: FastifyInstance; port: number }>();
