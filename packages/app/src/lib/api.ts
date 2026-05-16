@@ -77,6 +77,29 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async getAgentRaw(id: string): Promise<string> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(id)}/raw`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      const data = await res.json();
+      return data.content;
+    },
+
+    async updateAgent(id: string, content: string): Promise<{ ok: boolean; id: string }> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
     async deleteAgent(id: string): Promise<{ ok: boolean }> {
       const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(id)}`, {
         method: "DELETE",

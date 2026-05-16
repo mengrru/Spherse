@@ -125,6 +125,10 @@ export class Engine {
     if (agent) agent.abort();
   }
 
+  async getRawContent(id: string): Promise<string | null> {
+    return this.profileStore.getRawContent(id);
+  }
+
   async deleteProfile(agentId: string): Promise<void> {
     const sessions = this.sessionStore.listSessions(agentId);
     for (const session of sessions) {

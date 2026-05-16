@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import type { AppContext } from "../lib/context";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import { FileTree } from "../components/FileTree";
-import { CreateAgentDialog } from "../components/CreateAgentDialog";
+import { AgentDialog } from "../components/AgentDialog";
 import { ChatPage } from "./ChatPage";
 import { SettingsModal } from "../components/SettingsModal";
 import { ContentBrowser } from "./ContentBrowser";
@@ -22,6 +22,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("chat");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
+  const [editAgent, setEditAgent] = useState<{ id: string; content: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [menuAgentId, setMenuAgentId] = useState<string | null>(null);
@@ -132,6 +133,19 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
     refreshAgents();
   };
 
+  const handleEditAgent = async (agent: AgentProfile) => {
+    setMenuAgentId(null);
+    const raw = await ctx.client.getAgentRaw(agent.id);
+    setEditAgent({ id: agent.id, content: raw });
+  };
+
+  const handleEditSubmit = async (_filename: string, content: string) => {
+    if (!editAgent) return;
+    await ctx.client.updateAgent(editAgent.id, content);
+    setEditAgent(null);
+    refreshAgents();
+  };
+
   return (
     <div className="flex h-full flex-1 overflow-hidden">
       <aside className="w-60 bg-surface border-r border-[var(--border)] flex flex-col overflow-y-auto shrink-0">
@@ -184,6 +198,12 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
                           onClick={() => handleNewSession(agent)}
                         >
                           新建对话
+                        </button>
+                        <button
+                          className="w-full px-3 py-1.5 text-left text-[12px] hover:bg-[var(--hover)] transition-colors"
+                          onClick={() => handleEditAgent(agent)}
+                        >
+                          编辑
                         </button>
                       </div>
                     )}
@@ -259,9 +279,18 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
         )}
       </main>
       {showCreateAgent && (
-        <CreateAgentDialog
+        <AgentDialog
+          mode="create"
           onSubmit={handleCreateAgent}
           onCancel={() => setShowCreateAgent(false)}
+        />
+      )}
+      {editAgent && (
+        <AgentDialog
+          mode="edit"
+          initialContent={editAgent.content}
+          onSubmit={handleEditSubmit}
+          onCancel={() => setEditAgent(null)}
         />
       )}
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}

@@ -14,4 +14,13 @@ export function registerAgentRoutes(fastify: FastifyInstance, ctx: AppContext): 
       return profile;
     },
   );
+
+  fastify.get<{ Params: { id: string } }>(
+    "/api/agents/:id/raw",
+    async (req, reply) => {
+      const raw = await ctx.engine.getRawContent(req.params.id);
+      if (raw === null) return reply.code(404).send({ error: "Agent not found" });
+      return { content: raw };
+    },
+  );
 }

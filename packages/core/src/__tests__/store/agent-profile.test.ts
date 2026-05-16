@@ -84,4 +84,16 @@ You are a world building assistant.`;
     const profiles = await store.list();
     expect(profiles).toHaveLength(0);
   });
+
+  it("getRawContent returns raw markdown for existing profile", async () => {
+    const profile = await store.save("raw-test.md", VALID_PROFILE);
+    const raw = await store.getRawContent(profile.id);
+    expect(raw).toContain("name: World Builder");
+    expect(raw).toContain("world building assistant");
+  });
+
+  it("getRawContent returns null for non-existent id", async () => {
+    const raw = await store.getRawContent("nope");
+    expect(raw).toBeNull();
+  });
 });

@@ -50,6 +50,13 @@ export class AgentProfileStore {
     return this.parseFile(filePath).then((p) => p!);
   }
 
+  async getRawContent(id: string): Promise<string | null> {
+    const profiles = await this.list();
+    const profile = profiles.find((p) => p.id === id);
+    if (!profile) return null;
+    return fs.readFile(profile.filePath, "utf-8");
+  }
+
   async delete(id: string): Promise<void> {
     const profiles = await this.list();
     const profile = profiles.find((p) => p.id === id);

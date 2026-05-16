@@ -23,13 +23,15 @@ context: []
 - 保持与已有设定的一致性
 `;
 
-interface CreateAgentDialogProps {
+interface AgentDialogProps {
+  mode: "create" | "edit";
+  initialContent?: string;
   onSubmit: (filename: string, content: string) => Promise<void>;
   onCancel: () => void;
 }
 
-export function CreateAgentDialog({ onSubmit, onCancel }: CreateAgentDialogProps) {
-  const [content, setContent] = useState(AGENT_TEMPLATE);
+export function AgentDialog({ mode, initialContent, onSubmit, onCancel }: AgentDialogProps) {
+  const [content, setContent] = useState(initialContent ?? AGENT_TEMPLATE);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +62,9 @@ export function CreateAgentDialog({ onSubmit, onCancel }: CreateAgentDialogProps
     <div className="fixed inset-0 bg-[var(--overlay)] flex items-center justify-center z-[100]" onClick={onCancel}>
       <div className="bg-surface rounded-[10px] w-[600px] max-h-[80vh] flex flex-col shadow-[var(--shadow-dialog)]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-light)]">
-          <h2 className="text-base font-semibold text-[var(--primary)]">创建 Agent</h2>
+          <h2 className="text-base font-semibold text-[var(--primary)]">
+            {mode === "create" ? "创建 Agent" : "编辑 Agent"}
+          </h2>
           <button className="bg-none text-lg text-[var(--muted)] p-1 hover:text-[var(--primary)]" onClick={onCancel}>✕</button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -85,7 +89,7 @@ export function CreateAgentDialog({ onSubmit, onCancel }: CreateAgentDialogProps
             onClick={handleSubmit}
             disabled={saving}
           >
-            {saving ? "保存中..." : "创建"}
+            {saving ? "保存中..." : mode === "create" ? "创建" : "保存"}
           </button>
         </div>
       </div>
