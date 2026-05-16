@@ -9,7 +9,7 @@
 ## 功能增强
 
 - [x] **Agent 编辑**：支持编辑已有 agent 定义文件（当前只能创建）
-- [ ] **Agent 删除**：从 UI 删除 agent 定义文件
+- [x] **Agent 删除**：从 UI 删除 agent 定义文件
 - [ ] **Session 删除**：从 UI 删除 session
 - [x] **多 Session**：同一 agent 开启多个对话，侧边栏按 agent 分组展示 session 列表
 - [ ] **项目创建向导**：HomePage 区分"新建项目"和"打开项目"，支持设置项目名和默认模型

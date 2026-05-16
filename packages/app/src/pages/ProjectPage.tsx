@@ -146,6 +146,19 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
     refreshAgents();
   };
 
+  const handleDeleteAgent = async (agent: AgentProfile) => {
+    setMenuAgentId(null);
+    const ok = window.confirm(`确定要删除 Agent「${agent.name}」吗？该 Agent 下的所有会话也将被移除。`);
+    if (!ok) return;
+    await ctx.client.deleteAgent(agent.id);
+    if (selectedAgent?.id === agent.id) {
+      setSelectedAgent(null);
+      setSelectedSession(null);
+    }
+    refreshAgents();
+    refreshSessions();
+  };
+
   return (
     <div className="flex h-full flex-1 overflow-hidden">
       <aside className="w-60 bg-surface border-r border-[var(--border)] flex flex-col overflow-y-auto shrink-0">
@@ -204,6 +217,12 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
                           onClick={() => handleEditAgent(agent)}
                         >
                           编辑
+                        </button>
+                        <button
+                          className="w-full px-3 py-1.5 text-left text-[12px] text-danger hover:bg-[var(--hover)] transition-colors"
+                          onClick={() => handleDeleteAgent(agent)}
+                        >
+                          删除
                         </button>
                       </div>
                     )}
