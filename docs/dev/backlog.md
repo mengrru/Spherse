@@ -32,7 +32,7 @@
 ## 基础设施
 
 - [ ] **electron-builder 打包**：配置生产构建和跨平台打包
-- [ ] **better-sqlite3 rebuild 自动化**：在 postinstall 中自动为 Electron 重新编译 native 模块
+- [x] **better-sqlite3 rebuild 自动化**：在 postinstall 中自动为 Electron 重新编译 native 模块
 - [ ] **E2E 测试**：Playwright 或 Spectron 端到端测试
 - [ ] **重新考虑 dot 文件夹名字和内部组织结构**：当前使用 `.pi/`，需评估命名是否直观、内部文件组织是否合理
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试
