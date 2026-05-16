@@ -2,7 +2,7 @@
 
 ## 世界观项目结构
 
-用户的世界观项目是独立文件夹，结构为 `.pi/`（系统文件）+ 用户自定义目录。
+用户的世界观项目是独立文件夹，结构为 `.spherse/`（系统文件）+ 用户自定义目录。
 
 ## Agent 定义格式
 
@@ -11,7 +11,7 @@ Markdown 文件 + YAML frontmatter（必须包含 `name`、`type` 字段，`id` 
 ## 数据存储
 
 - 创作内容为纯文件（Markdown/YAML）
-- Session 数据为 SQLite（`.pi/sessions.db`）
+- Session 数据为 SQLite（`.spherse/sessions.db`）
 
 ## Agent 唯一标识
 

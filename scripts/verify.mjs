@@ -43,12 +43,12 @@ async function testProjectStore() {
   assert(config.defaultModel === "gemini-2.5-pro", "create: model is correct");
   assert(config.paths.agents === "agents", "create: default paths set");
 
-  const piDir = path.join(tmpDir, ".pi");
-  const piStat = await fs.stat(piDir);
-  assert(piStat.isDirectory(), "create: .pi/ directory exists");
+  const spherseDir = path.join(tmpDir, ".spherse");
+  const spherseStat = await fs.stat(spherseDir);
+  assert(spherseStat.isDirectory(), "create: .spherse/ directory exists");
 
-  const agentsStat = await fs.stat(path.join(piDir, "agents"));
-  assert(agentsStat.isDirectory(), "create: .pi/agents/ directory exists");
+  const agentsStat = await fs.stat(path.join(spherseDir, "agents"));
+  assert(agentsStat.isDirectory(), "create: .spherse/agents/ directory exists");
 
   const agentsMd = await fs.readFile(path.join(tmpDir, "AGENTS.md"), "utf-8");
   assert(agentsMd.length > 0, "create: AGENTS.md created");
@@ -81,7 +81,7 @@ async function testProjectStore() {
 async function testAgentParser() {
   console.log("== Agent Parser ==");
 
-  const agentsDir = path.join(tmpDir, ".pi", "agents");
+  const agentsDir = path.join(tmpDir, ".spherse", "agents");
 
   // Create test agent files
   await fs.writeFile(path.join(agentsDir, "creator.md"), `---

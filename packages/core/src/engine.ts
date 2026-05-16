@@ -3,6 +3,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import { streamSimple, getModel } from "@mariozechner/pi-ai";
 import type { AgentEvent, AgentTool } from "@mariozechner/pi-agent-core";
 import type { AgentProfile, SessionInfo, SkillDefinition } from "./types.js";
+import { PROJECT_META_DIR } from "./types.js";
 import { SUPPORTED_PROVIDERS } from "./types.js";
 import { ProjectStore } from "./store/project.js";
 import { SessionStore } from "./store/session.js";
@@ -147,7 +148,7 @@ export class Engine {
   ): Promise<Agent> {
     const config = this.projectStore.getConfig()!;
     const projectRoot = this.projectStore.getRootPath();
-    const skillDir = path.join(projectRoot, ".pi", "skills");
+    const skillDir = path.join(projectRoot, PROJECT_META_DIR, "skills");
     const allTools = createToolsForProject(
       projectRoot,
       config.paths.changelog,

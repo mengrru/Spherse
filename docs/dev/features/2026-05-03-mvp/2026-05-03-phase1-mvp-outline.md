@@ -112,7 +112,7 @@ Tool registry：`createToolsForProject(projectRoot)` 返回 `Record<string, Agen
 - 重启恢复：用户打开 session 时从 SQLite 加载消息，重建 Agent（`agent.state.messages = restoredMessages`）
 
 **核心方法：**
-- `listAgents()` → 从 .pi/agents/ 解析所有 agent 定义
+- `listAgents()` → 从 .spherse/agents/ 解析所有 agent 定义
 - `createSession(agentName)` → 解析定义 → 创建 Agent 实例 + SQLite 记录
 - `restoreSession(sessionId)` → 从 SQLite 恢复消息到新 Agent 实例
 - `sendMessage(sessionId, message, onEvent)` → agent.prompt + subscribe 事件转发 + 持久化

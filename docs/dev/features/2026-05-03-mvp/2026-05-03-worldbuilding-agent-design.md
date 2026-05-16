@@ -40,7 +40,7 @@
 my-world/
 ├── AGENTS.md              # 目录索引 + 项目级指令（通用规范）
 ├── CHANGELOG.md           # 更新日志
-├── .pi/
+├── .spherse/
 │   ├── project.yaml       # 项目元信息
 │   ├── agents/            # Agent 定义（Markdown + YAML frontmatter）
 │   │   ├── creator.md
@@ -58,11 +58,11 @@ my-world/
 |------|------|------|
 | `AGENTS.md` | 是 | 项目目录索引和导航。人可读，agent 启动时优先加载此文件建立项目全貌认知 |
 | `CHANGELOG.md` | 是 | 更新日志。每次 agent 操作自动追加记录（时间、agent、操作类型、影响范围） |
-| `.pi/project.yaml` | 是 | 项目元信息（名称、创建时间、默认模型、路径配置等） |
-| `.pi/agents/` | 是 | Agent 定义文件目录 |
-| `.pi/sessions.db` | 自动生成 | SQLite 数据库，存储 session 数据 |
+| `.spherse/project.yaml` | 是 | 项目元信息（名称、创建时间、默认模型、路径配置等） |
+| `.spherse/agents/` | 是 | Agent 定义文件目录 |
+| `.spherse/sessions.db` | 自动生成 | SQLite 数据库，存储 session 数据 |
 
-除系统文件外，用户完全自定义目录结构。`.pi/` 下的路径可在 `project.yaml` 中配置。
+除系统文件外，用户完全自定义目录结构。`.spherse/` 下的路径可在 `project.yaml` 中配置。
 
 ### project.yaml 格式
 
@@ -78,7 +78,7 @@ paths:
 
 ## 4. Agent 定义
 
-Agent 以 Markdown 文件定义，位于 `.pi/agents/` 目录下。
+Agent 以 Markdown 文件定义，位于 `.spherse/agents/` 目录下。
 
 ### 文件格式
 
@@ -142,7 +142,7 @@ output:
 ### Agent 实例化与 Session
 
 - 一个 agent 定义可以实例化多个 `Agent` 对象（来自 pi-agent-core），每个对象代表一个 session
-- Session 数据（对话历史、元数据）存储在 `.pi/sessions.db`
+- Session 数据（对话历史、元数据）存储在 `.spherse/sessions.db`
 - MVP 阶段不支持跨 session 共享 memory，但架构上通过 `transformContext()` hook 预留接口
 - Session 与 agent 定义是多对一关系
 
@@ -240,7 +240,7 @@ output:
 
 ## 8. Session 数据设计
 
-### SQLite 表结构（`.pi/sessions.db`）
+### SQLite 表结构（`.spherse/sessions.db`）
 
 ```sql
 CREATE TABLE sessions (
@@ -274,7 +274,7 @@ CREATE TABLE file_locks (
 - 自动 commit：每次 agent 通过 `write_file` 写入后自动 commit
 - commit message 由 agent 生成或使用默认模板
 - 支持查看 diff、历史 log、回滚、分支
-- `.gitignore` 默认忽略 `.pi/sessions.db`
+- `.gitignore` 默认忽略 `.spherse/sessions.db`
 
 ## 10. 网站生成（独立子项目）
 
@@ -296,7 +296,7 @@ CREATE TABLE file_locks (
 ### Phase 1 — MVP
 
 - 项目创建/打开/管理
-- Agent 定义解析（读取 .pi/agents/*.md）
+- Agent 定义解析（读取 .spherse/agents/*.md）
 - 单 session 对话（基于 pi-agent-core Agent）
 - 基本工具：read_file、write_file、list_files、search_content、append_changelog
 - 内容浏览器（查看世界观文件）

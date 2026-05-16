@@ -10,10 +10,10 @@ Skill 是一种**运行时动态加载**的能力模块，不改变 agent 的 to
 
 ### 文件结构
 
-Skill 存储在项目目录的 `.pi/skills/{skill-name}/SKILL.md` 中：
+Skill 存储在项目目录的 `.spherse/skills/{skill-name}/SKILL.md` 中：
 
 ```
-.pi/skills/
+.spherse/skills/
 ├── brainstorming/
 │   └── SKILL.md
 ├── world-map-design/
@@ -54,7 +54,7 @@ interface SkillDefinition {
 }
 ```
 
-- `SkillStore.list()` → `SkillDefinition[]`：扫描 `.pi/skills/*/SKILL.md`
+- `SkillStore.list()` → `SkillDefinition[]`：扫描 `.spherse/skills/*/SKILL.md`
 - `SkillStore.get(name: string)` → `SkillDefinition | null`：读取指定 skill
 - 使用 `gray-matter` 解析 frontmatter（与 AgentProfileStore 一致）
 - 以目录名为 skill 唯一标识，`get(name)` 按目录名查找。frontmatter 中的 `name` 仅作为元数据读取，不强求一致

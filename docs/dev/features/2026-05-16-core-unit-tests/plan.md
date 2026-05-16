@@ -940,8 +940,8 @@ describe("ProjectStore", () => {
     expect(config.name).toBe("TestProject");
     expect(config.defaultModel).toBe("gemini-2.5-pro");
     expect(config.paths.agents).toBe("agents");
-    expect(pathExists(projectRoot, ".pi/project.yaml")).toBe(true);
-    expect(pathExists(projectRoot, ".pi/agents")).toBe(true);
+    expect(pathExists(projectRoot, ".spherse/project.yaml")).toBe(true);
+    expect(pathExists(projectRoot, ".spherse/agents")).toBe(true);
     expect(pathExists(projectRoot, "AGENTS.md")).toBe(true);
     expect(pathExists(projectRoot, "CHANGELOG.md")).toBe(true);
   });

@@ -10,7 +10,7 @@ export function useCustomTheme(projectRoot: string | undefined, port: number | u
     const link = document.createElement("link");
     link.id = "custom-theme-link";
     link.rel = "stylesheet";
-    link.href = `http://localhost:${port}/api/preview/.pi/theme.css?t=${Date.now()}`;
+    link.href = `http://localhost:${port}/api/preview/.spherse/theme.css?t=${Date.now()}`;
     link.onerror = () => {
       console.warn("[CustomTheme] Failed to load theme");
       link.remove();

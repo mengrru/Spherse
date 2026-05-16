@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add runtime skill discovery and loading, allowing agents to autonomously load reusable prompt instructions from `.pi/skills/*/SKILL.md`.
+**Goal:** Add runtime skill discovery and loading, allowing agents to autonomously load reusable prompt instructions from `.spherse/skills/*/SKILL.md`.
 
 **Architecture:** A new `SkillStore` reads skill definitions from the filesystem. During agent construction, all skill names and descriptions are injected into the system prompt as a catalog. A `load_skill` tool lets the LLM load a skill's full instructions on demand. Server routes expose skill metadata to the frontend.
 
@@ -307,7 +307,7 @@ if (skills.length > 0) {
 In `buildAgent()`, update the `createToolsForProject` call:
 
 ```typescript
-const skillDir = path.join(projectRoot, ".pi", "skills");
+const skillDir = path.join(projectRoot, ".spherse", "skills");
 const allTools = createToolsForProject(
   projectRoot,
   config.paths.changelog,
@@ -340,7 +340,7 @@ import { SkillStore } from "./store/skill.js";
 Create SkillStore and pass to Engine constructor. After the `AgentProfileStore` creation, add:
 
 ```typescript
-const skillStore = new SkillStore(path.join(projectRoot, ".pi", "skills"));
+const skillStore = new SkillStore(path.join(projectRoot, ".spherse", "skills"));
 ```
 
 Update Engine construction:
@@ -439,7 +439,7 @@ Expected: all packages compile without error
 
 - [ ] **Step 1: Create a test skill definition**
 
-Create `.pi/skills/test-skill/SKILL.md` in a test project directory:
+Create `.spherse/skills/test-skill/SKILL.md` in a test project directory:
 
 ```markdown
 ---

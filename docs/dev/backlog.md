@@ -13,7 +13,7 @@
 - [ ] **Session 删除**：从 UI 删除 session
 - [x] **多 Session**：同一 agent 开启多个对话，侧边栏按 agent 分组展示 session 列表
 - [ ] **项目创建向导**：HomePage 区分"新建项目"和"打开项目"，支持设置项目名和默认模型
-- [x] **用户自定义主题**：支持从 `.pi/theme.css` 加载用户自定义 CSS 覆盖默认主题
+- [x] **用户自定义主题**：支持从 `.spherse/theme.css` 加载用户自定义 CSS 覆盖默认主题
 - [x] **多 Project 支持**：支持已导入项目的持久化，无需每次打开 app 重新手动导入
 - [ ] **Skill 支持**：允许 agent 定义可复用的 skill（预设 prompt + tool 组合）
 - [ ] **HTML Viewer Card**：在对话流中支持渲染 HTML 内容卡片
@@ -34,5 +34,5 @@
 - [ ] **electron-builder 打包**：配置生产构建和跨平台打包
 - [x] **better-sqlite3 rebuild 自动化**：在 postinstall 中自动为 Electron 重新编译 native 模块
 - [ ] **E2E 测试**：Playwright 或 Spectron 端到端测试
-- [ ] **重新考虑 dot 文件夹名字和内部组织结构**：当前使用 `.pi/`，需评估命名是否直观、内部文件组织是否合理
+- [x] **重新考虑 dot 文件夹名字和内部组织结构**：`.pi/` → `.spherse/`
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试

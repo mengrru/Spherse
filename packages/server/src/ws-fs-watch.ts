@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { AppContext } from "./index.js";
+import { PROJECT_META_DIR } from "@spherse/core";
 
 export function handleFsWatchWebSocket(
   fastify: FastifyInstance,
@@ -21,7 +22,7 @@ export function handleFsWatchWebSocket(
           if (!alive) return;
           if (!filename) return;
           const segs = filename.split(/[/\\]/);
-          if (segs[0] === ".pi") return;
+          if (segs[0] === PROJECT_META_DIR) return;
           socket.send(JSON.stringify({ type: "change", eventType, path: filename }));
         },
       );

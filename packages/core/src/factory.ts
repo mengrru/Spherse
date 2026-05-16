@@ -1,4 +1,5 @@
 import path from "node:path";
+import { PROJECT_META_DIR } from "./types.js";
 import { ProjectStore } from "./store/project.js";
 import { SessionStore } from "./store/session.js";
 import { AgentProfileStore } from "./store/agent-profile.js";
@@ -22,13 +23,13 @@ export async function createEngine(
 
   const config = projectStore.getConfig()!;
   const profileStore = new AgentProfileStore(
-    path.join(projectRoot, ".pi", config.paths.agents),
+    path.join(projectRoot, PROJECT_META_DIR, config.paths.agents),
   );
 
-  const skillStore = new SkillStore(path.join(projectRoot, ".pi", "skills"));
+  const skillStore = new SkillStore(path.join(projectRoot, PROJECT_META_DIR, "skills"));
 
   const sessionStore = new SessionStore();
-  await sessionStore.init(path.join(projectRoot, ".pi", "sessions.db"));
+  await sessionStore.init(path.join(projectRoot, PROJECT_META_DIR, "sessions.db"));
 
   const engine = new Engine(profileStore, sessionStore, projectStore, skillStore, {
     defaultModel: options?.defaultModel,

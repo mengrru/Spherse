@@ -3,6 +3,7 @@ import fsSync from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 import type { ProjectConfig } from "../types.js";
+import { PROJECT_META_DIR } from "../types.js";
 
 export interface ChangelogEntry {
   agent: string;
@@ -29,16 +30,16 @@ const DEFAULT_AGENTS_MD = `# 世界观项目
 export class ProjectStore {
   private rootPath: string;
   private config: ProjectConfig | null = null;
-  private piDir: string;
+  private spherseDir: string;
 
   constructor(rootPath: string) {
     this.rootPath = path.resolve(rootPath);
-    this.piDir = path.join(this.rootPath, ".pi");
+    this.spherseDir = path.join(this.rootPath, PROJECT_META_DIR);
   }
 
   async create(name: string, defaultModel: string): Promise<ProjectConfig> {
-    await fs.mkdir(this.piDir, { recursive: true });
-    await fs.mkdir(path.join(this.piDir, DEFAULT_PATHS.agents), {
+    await fs.mkdir(this.spherseDir, { recursive: true });
+    await fs.mkdir(path.join(this.spherseDir, DEFAULT_PATHS.agents), {
       recursive: true,
     });
 
@@ -49,7 +50,7 @@ export class ProjectStore {
       paths: { ...DEFAULT_PATHS },
     };
 
-    const configPath = path.join(this.piDir, "project.yaml");
+    const configPath = path.join(this.spherseDir, "project.yaml");
     await fs.writeFile(configPath, YAML.stringify(this.config), "utf-8");
 
     const indexPath = path.join(this.rootPath, DEFAULT_PATHS.index);
@@ -62,7 +63,7 @@ export class ProjectStore {
   }
 
   async open(): Promise<ProjectConfig> {
-    const configPath = path.join(this.piDir, "project.yaml");
+    const configPath = path.join(this.spherseDir, "project.yaml");
     if (!fsSync.existsSync(configPath)) {
       throw new Error(`project.yaml not found at ${configPath}`);
     }

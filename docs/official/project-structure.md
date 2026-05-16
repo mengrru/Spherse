@@ -9,9 +9,9 @@ spherse/
 │   │       ├── factory.ts          # createEngine() 工厂函数，封装所有 store 创建
 │   │       ├── engine.ts           # Engine：运行时 session 管理 + profile 操作的门面
 │   │       ├── store/              # 存储层抽象（不涉及运行时状态）
-│   │       │   ├── project.ts      # 项目元数据读写（.pi/project.yaml, AGENTS.md, CHANGELOG.md）
+│   │       │   ├── project.ts      # 项目元数据读写（.spherse/project.yaml, AGENTS.md, CHANGELOG.md）
 │   │       │   ├── session.ts      # SQLite session 持久化（agent_id 关联, schema version 管理）
-│   │       │   ├── agent-profile.ts # .pi/agents/*.md CRUD（自动生成/补全 id）
+│       │   │   ├── agent-profile.ts # .spherse/agents/*.md CRUD（自动生成/补全 id）
 │   │       │   └── index.ts
 │   │       ├── tools/              # pi-agent-core AgentTool 实现（engine 内部使用，不对外导出）
 │   │       │   ├── read-file.ts

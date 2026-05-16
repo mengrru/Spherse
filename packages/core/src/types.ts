@@ -1,3 +1,5 @@
+export const PROJECT_META_DIR = ".spherse";
+
 export interface ProjectConfig {
   name: string;
   created: number;

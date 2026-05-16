@@ -341,16 +341,16 @@ const DEFAULT_AGENTS_MD = `# 世界观项目
 export class ProjectStore {
   private rootPath: string;
   private config: ProjectConfig | null = null;
-  private piDir: string;
+  private spherseDir: string;
 
   constructor(rootPath: string) {
     this.rootPath = path.resolve(rootPath);
-    this.piDir = path.join(this.rootPath, ".pi");
+    this.spherseDir = path.join(this.rootPath, ".spherse");
   }
 
   async create(name: string, defaultModel: string): Promise<ProjectConfig> {
-    await fs.mkdir(this.piDir, { recursive: true });
-    await fs.mkdir(path.join(this.piDir, DEFAULT_PATHS.agents), {
+    await fs.mkdir(this.spherseDir, { recursive: true });
+    await fs.mkdir(path.join(this.spherseDir, DEFAULT_PATHS.agents), {
       recursive: true,
     });
 
@@ -361,7 +361,7 @@ export class ProjectStore {
       paths: { ...DEFAULT_PATHS },
     };
 
-    const configPath = path.join(this.piDir, "project.yaml");
+    const configPath = path.join(this.spherseDir, "project.yaml");
     await fs.writeFile(configPath, YAML.stringify(this.config), "utf-8");
 
     const indexPath = path.join(this.rootPath, DEFAULT_PATHS.index);
@@ -374,7 +374,7 @@ export class ProjectStore {
   }
 
   async open(): Promise<ProjectConfig> {
-    const configPath = path.join(this.piDir, "project.yaml");
+    const configPath = path.join(this.spherseDir, "project.yaml");
     if (!fsSync.existsSync(configPath)) {
       throw new Error(`project.yaml not found at ${configPath}`);
     }
@@ -1044,7 +1044,7 @@ export class AgentEngine {
     if (!config) throw new Error("Project not opened");
     const agentDir = path.join(
       this.projectStore.getRootPath(),
-      ".pi",
+      ".spherse",
       config.paths.agents,
     );
     return listAgents(agentDir);
@@ -1205,7 +1205,7 @@ export async function createServer(projectRoot: string) {
   await projectStore.open();
 
   const sessionStore = new SessionStore();
-  await sessionStore.init(`${projectRoot}/.pi/sessions.db`);
+  await sessionStore.init(`${projectRoot}/.spherse/sessions.db`);
 
   const agentEngine = new AgentEngine(projectStore, sessionStore);
 
