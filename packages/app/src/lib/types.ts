@@ -37,16 +37,19 @@ export interface ChatMessage {
 }
 
 export interface ToolCallInfo {
+  toolCallId: string;
   toolName: string;
   args: Record<string, unknown>;
   result?: string;
+  partialResult?: string;
   status: "running" | "completed" | "error";
 }
 
 export type AgentEvent =
   | { type: "message_update"; message: any }
   | { type: "message_end"; message: any }
-  | { type: "tool_call"; toolCall: any }
-  | { type: "tool_result"; toolCall: any; result: any }
+  | { type: "tool_execution_start"; toolCallId: string; toolName: string; args: any }
+  | { type: "tool_execution_update"; toolCallId: string; toolName: string; args: any; partialResult: any }
+  | { type: "tool_execution_end"; toolCallId: string; toolName: string; result: any; isError: boolean }
   | { type: "agent_end_done" }
   | { type: "error"; message: string };

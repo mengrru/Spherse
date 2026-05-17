@@ -3,6 +3,7 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ApiClient } from "../lib/api";
 import type { AgentProfile, ChatMessage, AgentEvent, ToolCallInfo } from "../lib/types";
+import { ToolCallSection } from "../components/ToolCallSection";
 
 const LINE_HEIGHT = 20;
 const PADDING_Y = 16;
@@ -63,10 +64,26 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
   useEffect(() => {
     setMessages([]);
     initialScrollDone.current = false;
-    client.getSessionMessages(sessionId).then((history) => {
-      const loaded: ChatMessage[] = history.map((m: any) => ({
-        role: m.role,
-        content:
+    client.getSessionMessages(sessionId).then((history: any[]) => {
+      const toolResultMap = new Map<string, { result: string; isError: boolean }>();
+      for (const m of history) {
+        if (m.role === "toolResult" && m.toolCallId) {
+          const text = (m.content ?? [])
+            .filter((c: any) => c.type === "text")
+            .map((c: any) => c.text)
+            .join("");
+          toolResultMap.set(m.toolCallId, {
+            result: text,
+            isError: m.isError ?? false,
+          });
+        }
+      }
+
+      const loaded: ChatMessage[] = [];
+      for (const m of history) {
+        if (m.role === "toolResult") continue;
+
+        const text =
           typeof m.content === "string"
             ? m.content
             : Array.isArray(m.content)
@@ -74,8 +91,30 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
                   .filter((c: any) => c.type === "text")
                   .map((c: any) => c.text)
                   .join("")
-              : "",
-      }));
+              : "";
+
+        const toolCalls: ToolCallInfo[] | undefined =
+          Array.isArray(m.content)
+            ? m.content
+                .filter((c: any) => c.type === "toolCall")
+                .map((c: any) => {
+                  const tr = toolResultMap.get(c.id);
+                  return {
+                    toolCallId: c.id,
+                    toolName: c.name,
+                    args: c.arguments ?? {},
+                    result: tr?.result,
+                    status: tr ? (tr.isError ? "error" as const : "completed" as const) : "completed" as const,
+                  };
+                })
+            : undefined;
+
+        loaded.push({
+          role: m.role,
+          content: text,
+          ...(toolCalls && toolCalls.length > 0 ? { _toolCalls: toolCalls } : {}),
+        });
+      }
       setMessages(loaded);
     });
 
@@ -134,15 +173,15 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
         });
       }
       setStreaming(false);
-    } else if (event.type === "tool_call") {
-      const tc = event.toolCall;
+    } else if (event.type === "tool_execution_start") {
+      const toolCall: ToolCallInfo = {
+        toolCallId: event.toolCallId,
+        toolName: event.toolName,
+        args: event.args ?? {},
+        status: "running",
+      };
       setMessages((prev) => {
         const last = prev[prev.length - 1];
-        const toolCall: ToolCallInfo = {
-          toolName: tc?.function?.name ?? "unknown",
-          args: tc?.function?.args ?? {},
-          status: "running",
-        };
         if (last?.role === "assistant") {
           return [
             ...prev.slice(0, -1),
@@ -151,13 +190,30 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
         }
         return prev;
       });
-    } else if (event.type === "tool_result") {
+    } else if (event.type === "tool_execution_end") {
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last?.role === "assistant" && last._toolCalls) {
-          const calls = last._toolCalls.map((tc, i) =>
-            i === last._toolCalls!.length - 1
-              ? { ...tc, status: "completed" as const, result: event.result }
+          const calls = last._toolCalls.map((tc) =>
+            tc.toolCallId === event.toolCallId
+              ? {
+                  ...tc,
+                  status: (event.isError ? "error" : "completed") as ToolCallInfo["status"],
+                  result: typeof event.result === "string" ? event.result : JSON.stringify(event.result),
+                }
+              : tc,
+          );
+          return [...prev.slice(0, -1), { ...last, _toolCalls: calls }];
+        }
+        return prev;
+      });
+    } else if (event.type === "tool_execution_update") {
+      setMessages((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && last._toolCalls) {
+          const calls = last._toolCalls.map((tc) =>
+            tc.toolCallId === event.toolCallId
+              ? { ...tc, partialResult: typeof event.partialResult === "string" ? event.partialResult : JSON.stringify(event.partialResult) }
               : tc,
           );
           return [...prev.slice(0, -1), { ...last, _toolCalls: calls }];
@@ -227,16 +283,7 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
               {msg._streaming && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
             </div>
             {msg._toolCalls && msg._toolCalls.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-dashed border-[var(--border)]">
-                {msg._toolCalls.map((tc, j) => (
-                  <div key={j} className={`flex items-center gap-1.5 text-xs py-0.5`}>
-                    <span className="font-mono bg-[var(--code-bg)] px-1 py-[1px] rounded-[2px]">{tc.toolName}</span>
-                    <span className={tc.status === "running" ? "text-accent" : "text-success"}>
-                      {tc.status === "running" ? "..." : "done"}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <ToolCallSection toolCalls={msg._toolCalls} />
             )}
           </div>
         ))}
