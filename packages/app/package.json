@@ -9,9 +9,10 @@
     "preview": "electron-vite preview"
   },
   "dependencies": {
-    "@spherse/server": "*",
     "@spherse/presets": "*",
+    "@spherse/server": "*",
     "electron-store": "^11.0.2",
+    "js-yaml": "^3.14.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",
+    "@types/js-yaml": "^4.0.9",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.7.0",

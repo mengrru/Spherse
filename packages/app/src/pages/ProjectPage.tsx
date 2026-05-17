@@ -305,6 +305,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
       {showCreateAgent && (
         <AgentDialog
           mode="create"
+          client={ctx.client}
           onSubmit={handleCreateAgent}
           onCancel={() => setShowCreateAgent(false)}
         />
@@ -313,6 +314,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
         <AgentDialog
           mode="edit"
           initialContent={editAgent.content}
+          client={ctx.client}
           onSubmit={handleEditSubmit}
           onCancel={() => setEditAgent(null)}
         />

@@ -138,6 +138,12 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async getFileTree(): Promise<string[]> {
+      const res = await fetch(`${baseUrl}/api/file-tree`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+
     getPreviewUrl(filePath: string): string {
       return `${baseUrl}/api/preview/${filePath}`;
     },
