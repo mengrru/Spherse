@@ -28,6 +28,14 @@ spherse/
 │   │       │   ├── tools/           # tool 测试
 │   │       │   └── store/           # store 测试
 │   │       └── index.ts            # 公开导出：Engine, createEngine, types
+│   ├── presets/                    # @spherse/presets — 预置静态内容（模板、预置 skill）
+│   │   ├── templates/              # 模板源文件（.md 格式）
+│   │   │   └── agent-template.md   # 新 Agent 创建模板
+│   │   ├── scripts/
+│   │   │   └── sync-templates.mjs  # 模板同步脚本（.md → .ts 常量）
+│   │   └── src/
+│   │       ├── index.ts            # 公开导出
+│   │       └── generated/          # 自动生成的 .ts 常量（git 忽略）
 │   ├── server/                     # @spherse/server — Fastify API 层
 │   │   └── src/
 │   │       ├── index.ts            # createServer()，调用 createEngine 组装 AppContext
