@@ -3,6 +3,7 @@ import type { ToolCallInfo } from "../lib/types";
 
 interface ToolCallSectionProps {
   toolCalls: ToolCallInfo[];
+  onNavigateToPath?: (path: string) => void;
 }
 
 function getArgsSummary(args: Record<string, unknown>): string {
@@ -24,7 +25,7 @@ function formatArgValue(value: unknown): string {
   return JSON.stringify(value, null, 2);
 }
 
-export function ToolCallSection({ toolCalls }: ToolCallSectionProps) {
+export function ToolCallSection({ toolCalls, onNavigateToPath }: ToolCallSectionProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) => {
@@ -74,9 +75,18 @@ export function ToolCallSection({ toolCalls }: ToolCallSectionProps) {
                           {key}
                         </td>
                         <td className="py-0.5">
-                          <code className="bg-[var(--code-bg)] px-1 py-[1px] rounded-[2px] break-all whitespace-pre-wrap">
-                            {formatArgValue(value)}
-                          </code>
+                          {(key === "path" || key === "file_path") && typeof value === "string" && onNavigateToPath ? (
+                            <button
+                              className="text-[var(--accent)] underline decoration-[var(--accent)] hover:opacity-80 text-left break-all whitespace-pre-wrap font-mono text-xs bg-transparent border-none p-0 cursor-pointer"
+                              onClick={() => onNavigateToPath(value)}
+                            >
+                              {value}
+                            </button>
+                          ) : (
+                            <code className="bg-[var(--code-bg)] px-1 py-[1px] rounded-[2px] break-all whitespace-pre-wrap">
+                              {formatArgValue(value)}
+                            </code>
+                          )}
                         </td>
                       </tr>
                     ))}

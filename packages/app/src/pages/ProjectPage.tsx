@@ -283,14 +283,19 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
         </div>
       </aside>
       <main className="flex-1 overflow-hidden flex flex-col">
-        {viewMode === "chat" && selectedSession && selectedAgent ? (
-          <ChatPage client={ctx.client} sessionId={selectedSession.id} agent={selectedAgent} />
-        ) : viewMode === "content" && selectedFile ? (
-          <ContentBrowser
-            client={ctx.client}
-            filePath={selectedFile}
-            onBack={handleBackToChat}
-          />
+        {selectedSession && selectedAgent ? (
+          <>
+            <div className={viewMode === "chat" ? "contents" : "hidden"}>
+              <ChatPage client={ctx.client} sessionId={selectedSession.id} agent={selectedAgent} onNavigateToPath={handleSelectFile} />
+            </div>
+            {viewMode === "content" && selectedFile && (
+              <ContentBrowser
+                client={ctx.client}
+                filePath={selectedFile}
+                onBack={handleBackToChat}
+              />
+            )}
+          </>
         ) : (
           <div className="flex items-center justify-center h-full text-[var(--muted)]">
             <p>点击 Agent 开始新对话，或选择已有会话</p>

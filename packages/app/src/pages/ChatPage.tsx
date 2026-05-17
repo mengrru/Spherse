@@ -16,9 +16,10 @@ interface ChatPageProps {
   client: ApiClient;
   sessionId: string;
   agent: AgentProfile;
+  onNavigateToPath?: (path: string) => void;
 }
 
-export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
+export function ChatPage({ client, sessionId, agent, onNavigateToPath }: ChatPageProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -311,7 +312,7 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
               {msg._streaming && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
             </div>
             {msg._toolCalls && msg._toolCalls.length > 0 && (
-              <ToolCallSection toolCalls={msg._toolCalls} />
+              <ToolCallSection toolCalls={msg._toolCalls} onNavigateToPath={onNavigateToPath} />
             )}
             {msg._toolCalls
               ?.filter((tc) => tc._card)
