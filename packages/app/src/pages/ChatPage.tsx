@@ -2,8 +2,9 @@ import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ApiClient } from "../lib/api";
-import type { AgentProfile, ChatMessage, AgentEvent, ToolCallInfo } from "../lib/types";
+import type { AgentProfile, ChatMessage, AgentEvent, ToolCallInfo, HtmlCard } from "../lib/types";
 import { ToolCallSection } from "../components/ToolCallSection";
+import { HtmlCardRenderer } from "../components/HtmlCard";
 
 const LINE_HEIGHT = 20;
 const PADDING_Y = 16;
@@ -65,7 +66,7 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
     setMessages([]);
     initialScrollDone.current = false;
     client.getSessionMessages(sessionId).then((history: any[]) => {
-      const toolResultMap = new Map<string, { result: string; isError: boolean }>();
+      const toolResultMap = new Map<string, { result: string; isError: boolean; details?: any }>();
       for (const m of history) {
         if (m.role === "toolResult" && m.toolCallId) {
           const text = (m.content ?? [])
@@ -75,6 +76,7 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
           toolResultMap.set(m.toolCallId, {
             result: text,
             isError: m.isError ?? false,
+            details: m.details,
           });
         }
       }
@@ -99,13 +101,28 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
                 .filter((c: any) => c.type === "toolCall")
                 .map((c: any) => {
                   const tr = toolResultMap.get(c.id);
-                  return {
+                  const base: ToolCallInfo = {
                     toolCallId: c.id,
                     toolName: c.name,
                     args: c.arguments ?? {},
                     result: tr?.result,
                     status: tr ? (tr.isError ? "error" as const : "completed" as const) : "completed" as const,
                   };
+                  if (
+                    c.name === "render_card" &&
+                    tr?.details?.cardType === "html"
+                  ) {
+                    base._card = {
+                      type: "html",
+                      html: tr.details.html,
+                      title: tr.details.title,
+                      width: tr.details.width,
+                      height: tr.details.height ?? 400,
+                      max_width: tr.details.max_width ?? 800,
+                      max_height: tr.details.max_height ?? 600,
+                    };
+                  }
+                  return base;
                 })
             : undefined;
 
@@ -211,11 +228,22 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
       setMessages((prev) => {
         const last = prev[prev.length - 1];
         if (last?.role === "assistant" && last._toolCalls) {
-          const calls = last._toolCalls.map((tc) =>
-            tc.toolCallId === event.toolCallId
-              ? { ...tc, partialResult: typeof event.partialResult === "string" ? event.partialResult : JSON.stringify(event.partialResult) }
-              : tc,
-          );
+          const calls = last._toolCalls.map((tc) => {
+            if (tc.toolCallId !== event.toolCallId) return tc;
+            const updated: ToolCallInfo = {
+              ...tc,
+              partialResult: typeof event.partialResult === "string" ? event.partialResult : JSON.stringify(event.partialResult),
+            };
+            if (
+              tc.toolName === "render_card" &&
+              event.partialResult &&
+              typeof event.partialResult === "object" &&
+              event.partialResult.details?.type === "html"
+            ) {
+              updated._card = event.partialResult.details;
+            }
+            return updated;
+          });
           return [...prev.slice(0, -1), { ...last, _toolCalls: calls }];
         }
         return prev;
@@ -285,6 +313,11 @@ export function ChatPage({ client, sessionId, agent }: ChatPageProps) {
             {msg._toolCalls && msg._toolCalls.length > 0 && (
               <ToolCallSection toolCalls={msg._toolCalls} />
             )}
+            {msg._toolCalls
+              ?.filter((tc) => tc._card)
+              .map((tc) => (
+                <HtmlCardRenderer key={tc.toolCallId} card={tc._card!} />
+              ))}
           </div>
         ))}
         <div ref={messagesEndRef} />

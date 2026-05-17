@@ -17,7 +17,7 @@
 - [x] **用户自定义主题**：支持从 `.spherse/theme.css` 加载用户自定义 CSS 覆盖默认主题
 - [x] **多 Project 支持**：支持已导入项目的持久化，无需每次打开 app 重新手动导入
 - [x] **Skill 支持**：允许 agent 定义可复用的 skill（预设 prompt + tool 组合）
-- [ ] **HTML Viewer Card**：在对话流中支持渲染 HTML 内容卡片
+- [x] **HTML Viewer Card**：在对话流中支持渲染 HTML 内容卡片
 - [ ] **文件删除**：从文件浏览器删除文件/目录
 - [x] **文件编辑**：在应用内编辑文件内容
 - [x] **折叠工具调用过程**：将 agent 的 tool call 过程默认折叠，点击展开查看详情

@@ -36,6 +36,16 @@ export interface ChatMessage {
   _toolCalls?: ToolCallInfo[];
 }
 
+export interface HtmlCard {
+  type: "html";
+  html: string;
+  title?: string;
+  width?: number;
+  height?: number;
+  max_width?: number;
+  max_height?: number;
+}
+
 export interface ToolCallInfo {
   toolCallId: string;
   toolName: string;
@@ -43,6 +53,7 @@ export interface ToolCallInfo {
   result?: string;
   partialResult?: string;
   status: "running" | "completed" | "error";
+  _card?: HtmlCard;
 }
 
 export type AgentEvent =

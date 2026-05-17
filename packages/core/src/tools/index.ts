@@ -6,6 +6,7 @@ import { createSearchContentTool } from "./search-content.js";
 import { createAppendChangelogTool } from "./append-changelog.js";
 import { createEditFileTool } from "./edit-file.js";
 import { createLoadSkillTool } from "./load-skill.js";
+import { createRenderCardTool } from "./render-card.js";
 
 export { createReadFileTool } from "./read-file.js";
 export { createWriteFileTool } from "./write-file.js";
@@ -14,6 +15,7 @@ export { createListFilesTool } from "./list-files.js";
 export { createSearchContentTool } from "./search-content.js";
 export { createAppendChangelogTool } from "./append-changelog.js";
 export { createLoadSkillTool } from "./load-skill.js";
+export { createRenderCardTool } from "./render-card.js";
 
 export function createToolsForProject(
   projectRoot: string,
@@ -27,6 +29,7 @@ export function createToolsForProject(
     list_files: createListFilesTool(projectRoot),
     search_content: createSearchContentTool(projectRoot),
     append_changelog: createAppendChangelogTool(projectRoot, changelogPath),
+    render_card: createRenderCardTool(projectRoot),
   };
 
   if (skillDir) {
