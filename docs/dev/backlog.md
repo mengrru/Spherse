@@ -6,6 +6,7 @@
 
 - [ ] **恢复 React StrictMode 并修复 WebSocket effect cleanup**：`src/main.tsx` 当前移除了 StrictMode 以避免开发模式下双重 mount 导致 WebSocket 错误事件。正确做法是保留 StrictMode，在 `ChatPage` 的 `useEffect` 中用 ref 追踪活跃的 WebSocket 实例，忽略已关闭 socket 的事件。涉及文件：`packages/app/src/pages/ChatPage.tsx`、`packages/app/src/main.tsx`。
 - [ ] **统一 UI 基础组件**：引入成熟组件库（如 shadcn/ui、Radix UI 等），统一 Button、Dialog、Toast、Dropdown 等基础组件，替代当前散落的内联样式实现
+- [ ] **前端重构**：对现有前端代码进行重构，改善代码组织和可维护性
 
 ## 功能增强
 
@@ -29,6 +30,9 @@
 - [ ] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话
 - [x] **增加 edit file tool**：为 agent 提供编辑文件的工具（字符串替换模式：old_string + new_string）
 - [x] **Agent context 预注入**：agent profile 的 `context` 字段指定文件列表，buildAgent 时读取这些文件内容注入 systemPrompt，使 agent 从第一轮对话起就了解相关上下文
+- [ ] **Agent 编辑 UI 增强**：改善 agent 编辑界面的用户体验和功能
+- [ ] **内置 Skill：Card 生成 Skill 的 Skill**：提供内置 skill，用于制作 card 生成类 skill
+- [ ] **内置 Skill：主题制作 Skill**：提供内置 skill，用于制作自定义主题
 
 ## 基础设施
 
@@ -38,3 +42,4 @@
 - [x] **重新考虑 dot 文件夹名字和内部组织结构**：`.pi/` → `.spherse/`
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试
 - [ ] **i18n**：应用界面多语言支持
+- [ ] **Core & Server 日志**：为 core 和 server 层添加结构化日志系统，便于调试和问题排查
