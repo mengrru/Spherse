@@ -11,18 +11,18 @@
 
 - [x] **Agent 编辑**：支持编辑已有 agent 定义文件（当前只能创建）
 - [x] **Agent 删除**：从 UI 删除 agent 定义文件
-- [ ] **Session 删除**：从 UI 删除 session
+- [x] **Session 删除**：从 UI 删除 session
 - [x] **多 Session**：同一 agent 开启多个对话，侧边栏按 agent 分组展示 session 列表
 - [ ] **项目创建向导**：HomePage 区分"新建项目"和"打开项目"，支持设置项目名和默认模型
 - [x] **用户自定义主题**：支持从 `.spherse/theme.css` 加载用户自定义 CSS 覆盖默认主题
 - [x] **多 Project 支持**：支持已导入项目的持久化，无需每次打开 app 重新手动导入
-- [ ] **Skill 支持**：允许 agent 定义可复用的 skill（预设 prompt + tool 组合）
+- [x] **Skill 支持**：允许 agent 定义可复用的 skill（预设 prompt + tool 组合）
 - [ ] **HTML Viewer Card**：在对话流中支持渲染 HTML 内容卡片
 - [ ] **文件删除**：从文件浏览器删除文件/目录
-- [ ] **文件编辑**：在应用内编辑文件内容
-- [ ] **折叠工具调用过程**：将 agent 的 tool call 过程默认折叠，点击展开查看详情
-- [ ] **流式输出响应**：agent 回复逐字流式显示
-- [ ] **渲染响应 Markdown**：将 agent 回复渲染为格式化的 Markdown
+- [x] **文件编辑**：在应用内编辑文件内容
+- [x] **折叠工具调用过程**：将 agent 的 tool call 过程默认折叠，点击展开查看详情
+- [x] **流式输出响应**：agent 回复逐字流式显示
+- [x] **渲染响应 Markdown**：将 agent 回复渲染为格式化的 Markdown
 - [x] **支持本地 HTML 文件页面渲染**：在应用内直接渲染本地 HTML 文件
 - [ ] **支持 Agent 定时执行**：按 cron 表达式定时触发 agent 运行
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
@@ -37,3 +37,4 @@
 - [ ] **E2E 测试**：Playwright 或 Spectron 端到端测试
 - [x] **重新考虑 dot 文件夹名字和内部组织结构**：`.pi/` → `.spherse/`
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试
+- [ ] **i18n**：应用界面多语言支持

@@ -22,19 +22,6 @@ spherse/
 
 完整目录索引见 [`docs/official/project-structure.md`](docs/official/project-structure.md)。
 
-## 编码规范
-
-- **语言**：TypeScript（ESM），strict mode
-- **TypeScript 配置**：target ES2022, module Node16, moduleResolution Node16
-- **依赖规范**：
-  - pi-agent-core 的 `AgentTool` 接口使用 `@sinclair/typebox` 定义参数 schema
-- **工具模式**：所有 AgentTool 使用工厂函数模式 `createXxxTool(projectRoot: string): AgentTool`
-- **路径安全**：所有文件操作工具必须做 `path.resolve + startsWith` 校验，防止路径穿越
-- **不添加注释**：除非用户明确要求
-- **Git 规范**：commit message 使用 `feat:` / `fix:` / `chore:` 前缀
-- **前端样式**：使用 Tailwind CSS v4 工具类 + CSS 变量色彩体系，不写原生 CSS class
-- **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试
-
 ## 启动和联调方式
 
 ```bash
@@ -72,3 +59,17 @@ npm run test:cov --workspace=packages/core   # 运行测试并生成覆盖率报
 - **`docs/official/` 维护**：完成 feature 后，检查 `docs/official/` 下是否有需要同步更新的文档（如新增文件/目录、新增工具、架构变更等），保持文档与代码一致
 - **Backlog 维护**：每完成一个 feature 后，更新 `docs/dev/backlog.md` 中对应条目的状态（`[ ]` → `[x]`），并补充新增的 backlog 条目
 - **手动 commit**：完成代码后不要自动 commit，等待用户明确要求时再提交
+- **commit 前检查**：用户提示 commit 后，先确认 `docs/dev/backlog.md` 和 `docs/official/` 已根据本次变更得到应有的更新，再执行 commit
+
+## 编码规范
+
+- **语言**：TypeScript（ESM），strict mode
+- **TypeScript 配置**：target ES2022, module Node16, moduleResolution Node16
+- **依赖规范**：
+  - pi-agent-core 的 `AgentTool` 接口使用 `@sinclair/typebox` 定义参数 schema
+- **工具模式**：所有 AgentTool 使用工厂函数模式 `createXxxTool(projectRoot: string): AgentTool`
+- **路径安全**：所有文件操作工具必须做 `path.resolve + startsWith` 校验，防止路径穿越
+- **不添加注释**：除非用户明确要求
+- **Git 规范**：commit message 使用 `feat:` / `fix:` / `chore:` 前缀
+- **前端样式**：使用 Tailwind CSS v4 工具类 + CSS 变量色彩体系，不写原生 CSS class
+- **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试

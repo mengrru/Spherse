@@ -5,9 +5,10 @@
 - **Engine 是唯一门面**：外部（server）只通过 `Engine` 或 `createEngine` 访问 core 功能，不直接操作 store
 - **Store 只管存储**：store 是对存储层读写的抽象，不持有运行时状态（如活跃的 pi-agent-core Agent 实例）
 - **AgentProfile**：业务层 agent 概念，从 `.spherse/agents/*.md` 解析而来，包含不可变 `id`（UUID）
-- **AgentProfileStore**：首次读取无 `id` 的 .md 文件时自动生成并回写 `id`
+- **AgentProfileStore**：首次读取无 `id` 的 .md 文件时自动生成并回写 `id`；支持 `getRawContent(id)` 获取原始 Markdown 内容用于编辑
 - **工具分配**：agent profile 未声明 `tools` 时默认获得全部工具
 - **删除 agent**：由 Engine 协调 — 归档关联 sessions + 删除 profile 文件
+- **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），Engine 在构建 systemPrompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
 
 ## Server 层
 
@@ -23,4 +24,4 @@
 
 - **色彩体系**：CSS 变量定义在 `styles.css` 的 `:root`，暗色模式通过 `@media (prefers-color-scheme: dark)` 覆盖
 - **Tailwind @theme**：将常用颜色注册为 Tailwind 颜色（`bg-surface`, `bg-accent` 等），运行时通过 CSS 变量解析
-- **自定义主题**（计划中）：用户可通过 `.spherse/theme.css` 覆盖 CSS 变量实现主题定制
+- **自定义主题**：用户可通过 `.spherse/theme.css` 覆盖 CSS 变量实现主题定制

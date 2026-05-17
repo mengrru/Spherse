@@ -16,3 +16,16 @@ Markdown 文件 + YAML frontmatter（必须包含 `name`、`type` 字段，`id` 
 ## Agent 唯一标识
 
 每个 AgentProfile 有 UUID（`id` 字段），首次创建时自动生成，设计意图为不可变。Sessions 通过 `agent_id` 关联，删除 agent 后 sessions 进入归档状态。
+
+## Skill 定义格式
+
+存放于 `.spherse/skills/<skill-name>/SKILL.md`，YAML frontmatter（必须包含 `name`、`description` 字段）+ Markdown body（`instructions`）。
+
+```markdown
+---
+name: my-skill
+description: A brief description of the skill
+---
+
+Full skill instructions in Markdown...
+```
