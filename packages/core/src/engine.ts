@@ -10,6 +10,7 @@ import { SessionStore } from "./store/session.js";
 import { AgentProfileStore } from "./store/agent-profile.js";
 import { SkillStore } from "./store/skill.js";
 import { createToolsForProject } from "./tools/index.js";
+import { readContextFiles } from "./engine/read-context-files.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
 
@@ -173,6 +174,14 @@ export class Engine {
         .map((s) => `- **${s.name}**: ${s.description}`)
         .join("\n");
       systemPrompt += `\n\n## Available Skills\n\n${skillCatalog}\n\nUse the load_skill tool to load a skill's full instructions when needed.`;
+    }
+
+    const contextSection = await readContextFiles(
+      projectRoot,
+      profile.context,
+    );
+    if (contextSection) {
+      systemPrompt += contextSection;
     }
 
     const modelId =

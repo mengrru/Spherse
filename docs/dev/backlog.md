@@ -28,7 +28,7 @@
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
 - [ ] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话
 - [x] **增加 edit file tool**：为 agent 提供编辑文件的工具（字符串替换模式：old_string + new_string）
-- [ ] **Agent context 预注入**：agent profile 的 `context` 字段指定文件列表，buildAgent 时读取这些文件内容注入 systemPrompt，使 agent 从第一轮对话起就了解相关上下文
+- [x] **Agent context 预注入**：agent profile 的 `context` 字段指定文件列表，buildAgent 时读取这些文件内容注入 systemPrompt，使 agent 从第一轮对话起就了解相关上下文
 
 ## 基础设施
 
