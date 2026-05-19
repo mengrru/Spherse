@@ -5,6 +5,7 @@ import type { FileEntry } from "../lib/types";
 interface FileTreeProps {
   client: ApiClient;
   onSelectFile: (filePath: string) => void;
+  onDeleted?: (path: string) => void;
   refreshKey?: number;
 }
 
@@ -17,9 +18,11 @@ interface TreeNode {
   loaded: boolean;
 }
 
-export function FileTree({ client, onSelectFile, refreshKey }: FileTreeProps) {
+export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
   const nodesRef = useRef<TreeNode[]>([]);
+  const [contextMenu, setContextMenu] = useState<{ node: TreeNode; x: number; y: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     nodesRef.current = rootNodes;
@@ -92,6 +95,41 @@ export function FileTree({ client, onSelectFile, refreshKey }: FileTreeProps) {
     setRootNodes([...nodesRef.current]);
   };
 
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = () => setContextMenu(null);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setContextMenu(null);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [contextMenu]);
+
+  const handleContextMenu = (e: React.MouseEvent, node: TreeNode) => {
+    e.preventDefault();
+    setContextMenu({ node, x: e.clientX, y: e.clientY });
+  };
+
+  const handleDelete = async () => {
+    if (!contextMenu) return;
+    const { node } = contextMenu;
+    const label = node.type === "directory" ? `目录「${node.name}」` : `文件「${node.name}」`;
+    const ok = window.confirm(`确定要删除${label}吗？此操作不可撤销。`);
+    if (!ok) return;
+    setContextMenu(null);
+    try {
+      await client.deleteContent(node.path);
+      onDeleted?.(node.path);
+      refreshExpanded(nodesRef.current).then(setRootNodes);
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  };
+
   useFsWatchRefresh(client, refreshExpanded, setRootNodes, nodesRef);
 
   const renderNode = (node: TreeNode, depth: number = 0) => (
@@ -100,6 +138,7 @@ export function FileTree({ client, onSelectFile, refreshKey }: FileTreeProps) {
         className="flex items-center py-[3px] px-1 rounded cursor-pointer transition-colors hover:bg-[var(--muted-bg)] select-none"
         style={{ paddingLeft: depth * 16 + 8 }}
         onClick={() => toggleNode(node)}
+        onContextMenu={(e) => handleContextMenu(e, node)}
       >
         <span className="mr-1 text-xs">
           {node.type === "directory"
@@ -121,6 +160,21 @@ export function FileTree({ client, onSelectFile, refreshKey }: FileTreeProps) {
         <p className="text-xs text-[var(--faint)]">加载中...</p>
       ) : (
         rootNodes.map((node) => renderNode(node))
+      )}
+      {contextMenu && (
+        <div
+          ref={menuRef}
+          className="fixed z-50 bg-surface border border-[var(--border)] rounded-md shadow-lg py-1 min-w-[120px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            className="w-full px-3 py-1.5 text-left text-[12px] text-danger hover:bg-[var(--hover)] transition-colors"
+            onClick={handleDelete}
+          >
+            删除
+          </button>
+        </div>
       )}
     </div>
   );

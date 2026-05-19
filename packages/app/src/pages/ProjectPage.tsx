@@ -127,6 +127,13 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
     setViewMode("chat");
   };
 
+  const handleFileDeleted = (deletedPath: string) => {
+    if (selectedFile && (selectedFile === deletedPath || selectedFile.startsWith(deletedPath + "/"))) {
+      setSelectedFile(null);
+      setViewMode("chat");
+    }
+  };
+
   const handleCreateAgent = async (filename: string, content: string) => {
     await ctx.client.createAgent(filename, content);
     setShowCreateAgent(false);
@@ -274,7 +281,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
         </div>
         <div className="p-3 border-b border-[var(--border-light)]">
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)] mb-2">文件</h3>
-          <FileTree client={ctx.client} onSelectFile={handleSelectFile} />
+          <FileTree client={ctx.client} onSelectFile={handleSelectFile} onDeleted={handleFileDeleted} />
         </div>
         <div className="mt-auto p-3 border-t border-[var(--border-light)]">
           <button className="w-full py-2 bg-[var(--muted-bg)] rounded-md text-sm text-[var(--secondary)] text-center transition-colors hover:bg-[var(--hover-strong)] hover:text-[var(--primary)]" onClick={() => setShowSettings(true)}>
@@ -282,21 +289,22 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
           </button>
         </div>
       </aside>
+      {/* ChatPage 用 hidden 隐藏而非卸载，保持对话滚动位置和组件状态 */}
       <main className="flex-1 overflow-hidden flex flex-col">
-        {selectedSession && selectedAgent ? (
-          <>
-            <div className={viewMode === "chat" ? "contents" : "hidden"}>
-              <ChatPage client={ctx.client} sessionId={selectedSession.id} agent={selectedAgent} onNavigateToPath={handleSelectFile} />
-            </div>
-            {viewMode === "content" && selectedFile && (
-              <ContentBrowser
-                client={ctx.client}
-                filePath={selectedFile}
-                onBack={handleBackToChat}
-              />
-            )}
-          </>
-        ) : (
+        {selectedSession && selectedAgent && (
+          <div className={viewMode === "chat" ? "contents" : "hidden"}>
+            <ChatPage client={ctx.client} sessionId={selectedSession.id} agent={selectedAgent} onNavigateToPath={handleSelectFile} />
+          </div>
+        )}
+        {/* ContentBrowser 不依赖 session，从文件树或 chat 内链接均可直接打开 */}
+        {viewMode === "content" && selectedFile && (
+          <ContentBrowser
+            client={ctx.client}
+            filePath={selectedFile}
+            onBack={handleBackToChat}
+          />
+        )}
+        {viewMode !== "content" && !(selectedSession && selectedAgent) && (
           <div className="flex items-center justify-center h-full text-[var(--muted)]">
             <p>点击 Agent 开始新对话，或选择已有会话</p>
           </div>

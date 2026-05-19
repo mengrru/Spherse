@@ -62,4 +62,35 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
       }
     },
   );
+
+  fastify.delete<{ Params: { "*": string } }>(
+    "/api/content/*",
+    async (req, reply) => {
+      const relativePath = req.params["*"];
+      const absolutePath = path.resolve(
+        ctx.projectStore.getRootPath(),
+        relativePath,
+      );
+
+      if (!absolutePath.startsWith(ctx.projectStore.getRootPath())) {
+        return reply.code(403).send({ error: "Access denied" });
+      }
+
+      if (relativePath === ".spherse" || relativePath.startsWith(".spherse/") || relativePath.startsWith(".spherse\\")) {
+        return reply.code(403).send({ error: "Cannot delete .spherse directory" });
+      }
+
+      try {
+        const stat = await fs.stat(absolutePath);
+        if (stat.isDirectory()) {
+          await fs.rm(absolutePath, { recursive: true });
+        } else {
+          await fs.unlink(absolutePath);
+        }
+        return { ok: true };
+      } catch {
+        return reply.code(404).send({ error: "Not found" });
+      }
+    },
+  );
 }
