@@ -152,44 +152,44 @@ export function ChatPage({ client, sessionId, agent, onNavigateToPath }: ChatPag
       const textContent = event.message.content?.find(
         (c: any) => c.type === "text",
       );
-      if (textContent) {
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === "assistant" && last._streaming) {
-            return [
-              ...prev.slice(0, -1),
-              { role: "assistant", content: textContent.text, _streaming: true },
-            ];
-          }
+      setMessages((prev) => {
+        const text = textContent?.text ?? "";
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && last._streaming) {
+          return [
+            ...prev.slice(0, -1),
+            { ...last, content: text, _streaming: true },
+          ];
+        }
+        if (text || last?.role !== "assistant") {
           return [
             ...prev,
-            { role: "assistant", content: textContent.text, _streaming: true },
+            { role: "assistant", content: text, _streaming: true },
           ];
-        });
-      }
+        }
+        return prev;
+      });
     } else if (event.type === "message_end" && event.message?.role === "assistant") {
       const textContent = event.message.content?.find(
         (c: any) => c.type === "text",
       );
-      if (textContent) {
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last?.role === "assistant" && last._streaming) {
-            return [
-              ...prev.slice(0, -1),
-              {
-                role: "assistant",
-                content: textContent.text,
-                _streaming: false,
-              },
-            ];
-          }
+      setMessages((prev) => {
+        const text = textContent?.text ?? "";
+        const last = prev[prev.length - 1];
+        if (last?.role === "assistant" && last._streaming) {
+          return [
+            ...prev.slice(0, -1),
+            { ...last, content: text, _streaming: false },
+          ];
+        }
+        if (text || last?.role !== "assistant") {
           return [
             ...prev,
-            { role: "assistant", content: textContent.text, _streaming: false },
+            { role: "assistant", content: text, _streaming: false },
           ];
-        });
-      }
+        }
+        return prev;
+      });
       setStreaming(false);
     } else if (event.type === "tool_execution_start") {
       const toolCall: ToolCallInfo = {
@@ -206,7 +206,15 @@ export function ChatPage({ client, sessionId, agent, onNavigateToPath }: ChatPag
             { ...last, _toolCalls: [...(last._toolCalls ?? []), toolCall] },
           ];
         }
-        return prev;
+        return [
+          ...prev,
+          {
+            role: "assistant",
+            content: "",
+            _streaming: true,
+            _toolCalls: [toolCall],
+          },
+        ];
       });
     } else if (event.type === "tool_execution_end") {
       setMessages((prev) => {

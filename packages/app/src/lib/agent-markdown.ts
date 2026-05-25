@@ -57,15 +57,20 @@ export function buildAgentMarkdown(
     ...extraFrontmatter,
     name: formData.name,
     tools: formData.tools,
-    context: formData.context.length > 0 ? formData.context : undefined,
   };
+  if (formData.context.length > 0) {
+    frontmatter.context = formData.context;
+  }
 
   if (isCreate && !frontmatter.type) {
     frontmatter.type = "creator";
   }
 
+  const cleaned = Object.fromEntries(
+    Object.entries(frontmatter).filter(([, v]) => v !== undefined),
+  );
   const yamlStr = yaml
-    .dump(frontmatter, { lineWidth: -1, quotingType: '"' })
+    .dump(cleaned, { lineWidth: -1, quotingType: '"' })
     .trim();
   return `---\n${yamlStr}\n---\n\n${formData.systemPrompt}\n`;
 }
