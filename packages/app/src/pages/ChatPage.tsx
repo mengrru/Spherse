@@ -17,9 +17,10 @@ interface ChatPageProps {
   sessionId: string;
   agent: AgentProfile;
   onNavigateToPath?: (path: string) => void;
+  initialMessage?: string;
 }
 
-export function ChatPage({ client, sessionId, agent, onNavigateToPath }: ChatPageProps) {
+export function ChatPage({ client, sessionId, agent, onNavigateToPath, initialMessage }: ChatPageProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -28,6 +29,7 @@ export function ChatPage({ client, sessionId, agent, onNavigateToPath }: ChatPag
   const wsRef = useRef<WebSocket | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialMessageRef = useRef(initialMessage);
 
   // session 切换后首次加载历史消息时用 instant 跳到底部，避免从顶部平滑滚动；
   // 后续新消息（用户发送 / assistant 回复）使用 smooth 滚动
@@ -140,6 +142,18 @@ export function ChatPage({ client, sessionId, agent, onNavigateToPath }: ChatPag
       handleWsEvent(event);
     });
     wsRef.current = ws;
+
+    if (initialMessageRef.current) {
+      const msg = initialMessageRef.current;
+      const origOnOpen = ws.onopen;
+      ws.onopen = () => {
+        origOnOpen?.call(ws, new Event("open") as any);
+        setMessages((prev) => [...prev, { role: "user", content: msg }]);
+        ws.send(JSON.stringify({ type: "message", content: msg }));
+        setStreaming(true);
+        initialMessageRef.current = undefined;
+      };
+    }
 
     return () => {
       ws.close();

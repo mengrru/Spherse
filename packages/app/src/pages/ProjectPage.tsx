@@ -24,6 +24,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   const [showCreateAgent, setShowCreateAgent] = useState(false);
   const [editAgent, setEditAgent] = useState<{ id: string; content: string } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [initialMessage, setInitialMessage] = useState<string | undefined>(undefined);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [menuAgentId, setMenuAgentId] = useState<string | null>(null);
   const [menuSessionId, setMenuSessionId] = useState<string | null>(null);
@@ -85,6 +86,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   };
 
   const handleSelectSession = (session: SessionInfo) => {
+    setInitialMessage(undefined);
     const agent = agents.find((a) => a.id === session.agentId);
     if (!agent) return;
     setSelectedSession(session);
@@ -94,6 +96,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
 
   const handleNewSession = async (agent: AgentProfile) => {
     setMenuAgentId(null);
+    setInitialMessage(undefined);
     const { sessionId: sid } = await ctx.client.createSession(agent.id);
     refreshSessions();
     const newSession: SessionInfo = {
@@ -124,6 +127,36 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   };
 
   const handleBackToChat = () => {
+    setViewMode("chat");
+  };
+
+  const handleStartSession = async (
+    agentId: string,
+    selectedText: string,
+    sourcePath: string,
+    comment?: string,
+  ) => {
+    const agent = agents.find((a) => a.id === agentId);
+    if (!agent) return;
+
+    const parts = [`请处理以下来自「${sourcePath}」的内容：\n\n> ${selectedText}`];
+    if (comment) parts.push(`\n\n${comment}`);
+    const message = parts.join("");
+
+    const { sessionId: sid } = await ctx.client.createSession(agentId);
+    refreshSessions();
+
+    const newSession: SessionInfo = {
+      id: sid,
+      agentId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      status: "active",
+    };
+
+    setInitialMessage(message);
+    setSelectedSession(newSession);
+    setSelectedAgent(agent);
     setViewMode("chat");
   };
 
@@ -293,7 +326,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
       <main className="flex-1 overflow-hidden flex flex-col">
         {selectedSession && selectedAgent && (
           <div className={viewMode === "chat" ? "contents" : "hidden"}>
-            <ChatPage client={ctx.client} sessionId={selectedSession.id} agent={selectedAgent} onNavigateToPath={handleSelectFile} />
+            <ChatPage client={ctx.client} sessionId={selectedSession.id} agent={selectedAgent} onNavigateToPath={handleSelectFile} initialMessage={initialMessage} />
           </div>
         )}
         {/* ContentBrowser 不依赖 session，从文件树或 chat 内链接均可直接打开 */}
@@ -302,6 +335,8 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
             client={ctx.client}
             filePath={selectedFile}
             onBack={handleBackToChat}
+            agents={agents}
+            onStartSession={handleStartSession}
           />
         )}
         {viewMode !== "content" && !(selectedSession && selectedAgent) && (

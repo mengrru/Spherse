@@ -1,15 +1,20 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { ApiClient } from "../lib/api";
+import type { AgentProfile } from "../lib/types";
+import { TextSelectionToolbar } from "../components/TextSelectionToolbar";
+import { SelectionSessionDialog } from "../components/SelectionSessionDialog";
 
 interface ContentBrowserProps {
   client: ApiClient;
   filePath: string;
   onBack: () => void;
+  agents: AgentProfile[];
+  onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;
 }
 
-export function ContentBrowser({ client, filePath, onBack }: ContentBrowserProps) {
+export function ContentBrowser({ client, filePath, onBack, agents, onStartSession }: ContentBrowserProps) {
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +27,13 @@ export function ContentBrowser({ client, filePath, onBack }: ContentBrowserProps
   const [conflict, setConflict] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [selectionState, setSelectionState] = useState<{
+    text: string;
+    position: { x: number; y: number };
+  } | null>(null);
+  const [showSessionDialog, setShowSessionDialog] = useState(false);
 
   const isMarkdown =
     filePath.endsWith(".md") ||
@@ -116,6 +128,38 @@ export function ContentBrowser({ client, filePath, onBack }: ContentBrowserProps
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [isEditing, handleSave]);
+
+  useEffect(() => {
+    if (isEditing || showSessionDialog) return;
+
+    const handleMouseUp = () => {
+      const selection = window.getSelection();
+      if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+        setSelectionState(null);
+        return;
+      }
+
+      const contentEl = contentRef.current;
+      if (!contentEl) return;
+
+      const range = selection.getRangeAt(0);
+      if (!contentEl.contains(range.commonAncestorContainer)) return;
+
+      const text = selection.toString().trim();
+      const endRange = range.cloneRange();
+      endRange.collapse(false);
+      const endRect = endRange.getBoundingClientRect();
+      const y = endRect.top > 50 ? endRect.top - 36 : endRect.bottom + 4;
+
+      setSelectionState({
+        text,
+        position: { x: endRect.left, y },
+      });
+    };
+
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => document.removeEventListener("mouseup", handleMouseUp);
+  }, [isEditing, showSessionDialog]);
 
   useEffect(() => {
     if (!isEditing) return;
@@ -226,7 +270,7 @@ export function ContentBrowser({ client, filePath, onBack }: ContentBrowserProps
           spellCheck={false}
         />
       ) : (
-        <div className="flex-1 overflow-y-auto p-4">
+        <div ref={contentRef} className="flex-1 overflow-y-auto p-4">
           {loading && <p className="text-[var(--muted)] text-center p-8">加载中...</p>}
           {error && <p className="text-[var(--danger)] text-center p-8">{error}</p>}
           {content && !loading && (
@@ -281,6 +325,30 @@ export function ContentBrowser({ client, filePath, onBack }: ContentBrowserProps
             </div>
           </div>
         </div>
+      )}
+      {selectionState && !showSessionDialog && (
+        <TextSelectionToolbar
+          position={selectionState.position}
+          onAction={() => setShowSessionDialog(true)}
+          onClose={() => setSelectionState(null)}
+        />
+      )}
+      {showSessionDialog && selectionState && (
+        <SelectionSessionDialog
+          selectedText={selectionState.text}
+          sourcePath={filePath}
+          agents={agents}
+          position={selectionState.position}
+          onSubmit={(agentId, comment) => {
+            onStartSession?.(agentId, selectionState.text, filePath, comment);
+            setShowSessionDialog(false);
+            setSelectionState(null);
+          }}
+          onClose={() => {
+            setShowSessionDialog(false);
+            setSelectionState(null);
+          }}
+        />
       )}
     </div>
   );
