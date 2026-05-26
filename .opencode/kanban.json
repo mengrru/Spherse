@@ -1,0 +1,47 @@
+{
+  "stages": [
+    {
+      "name": "backlog",
+      "type": "entry",
+      "next": "brainstorming"
+    },
+    {
+      "name": "brainstorming",
+      "prompt": "使用 superpowers-brainstorming 对齐需求并编写 design doc。需求：{{task.content}}",
+      "completion": "design doc 已生成",
+      "next": "design-review"
+    },
+    {
+      "name": "design-review",
+      "type": "human-gate",
+      "next": "planning"
+    },
+    {
+      "name": "planning",
+      "prompt": "使用 superpowers writing-plans 编写实施计划",
+      "completion": "实施计划已编写完成并自我review完毕",
+      "next": "implementing"
+    },
+    {
+      "name": "implementing",
+      "prompt": "以 subagent-driven 模式按计划实现",
+      "completion": "所有计划中的步骤已实现完毕",
+      "next": "code-review"
+    },
+    {
+      "name": "code-review",
+      "type": "human-gate",
+      "next": "post-review"
+    },
+    {
+      "name": "post-review",
+      "prompt": "生成commit并squash merge to dev",
+      "completion": "命令执行完毕",
+      "next": "done"
+    },
+    {
+      "name": "done",
+      "type": "terminal"
+    }
+  ]
+}
