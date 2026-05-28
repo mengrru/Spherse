@@ -7,7 +7,7 @@
     },
     {
       "name": "brainstorming",
-      "prompt": "使用 superpowers-brainstorming 对齐需求并编写 design doc。需求：{{task.content}}",
+      "prompt": "使用 brainstorming skill 对齐需求并编写 design doc。需求：{{task.content}}",
       "completion": "design doc 已生成",
       "next": "design-review"
     },
@@ -18,13 +18,13 @@
     },
     {
       "name": "planning",
-      "prompt": "使用 superpowers writing-plans 编写实施计划",
-      "completion": "实施计划已编写完成并自我review完毕",
+      "prompt": "使用 writing-plans skill 编写实施计划",
+      "completion": "实施计划已编写完成并自查完毕",
       "next": "implementing"
     },
     {
       "name": "implementing",
-      "prompt": "以 subagent-driven 模式按计划实现",
+      "prompt": "以subagent-driven模式按计划实现",
       "completion": "所有计划中的步骤已实现完毕",
       "next": "code-review"
     },
@@ -34,7 +34,7 @@
       "next": "post-review"
     },
     {
-      "name": "post-review",
+      "name": "merge",
       "prompt": "生成commit并squash merge to dev",
       "completion": "命令执行完毕",
       "next": "done"
