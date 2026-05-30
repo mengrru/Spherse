@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "postinstall": "node scripts/rebuild-native.mjs",
+    "predev": "node scripts/rebuild-native.mjs",
     "build": "npm run build --workspaces",
     "dev": "npm run dev --workspace=packages/app"
   }
