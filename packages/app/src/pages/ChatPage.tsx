@@ -1,10 +1,13 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import type { ApiClient } from "../lib/api";
 import type { AgentProfile, ChatMessage, AgentEvent, ToolCallInfo, HtmlCard } from "../lib/types";
 import { ToolCallSection } from "../components/ToolCallSection";
 import { HtmlCardRenderer } from "../components/HtmlCard";
+import { MarkdownContent } from "../components/MarkdownContent";
+import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
+import { Textarea } from "../components/ui/textarea";
+import { ChevronsDownIcon, ChevronsUpIcon, SendIcon, SquareIcon } from "lucide-react";
 
 const LINE_HEIGHT = 20;
 const PADDING_Y = 16;
@@ -306,18 +309,18 @@ export function ChatPage({ client, sessionId, agent, onNavigateToPath, initialMe
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)] bg-surface">
+      <div className="flex items-center gap-2 border-b border-border bg-background px-4 py-3">
         <span className="font-semibold text-[15px]">{agent.name}</span>
-        <span className="text-[11px] px-1.5 py-[1px] rounded bg-[var(--muted-bg)] text-[var(--secondary)]">{agent.type}</span>
+        <Badge variant="secondary">{agent.type}</Badge>
       </div>
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`max-w-[80%] py-2.5 px-3.5 rounded-lg leading-9 break-words whitespace-pre-wrap ${
+            className={`max-w-[80%] rounded-lg px-3.5 py-2.5 leading-7 break-words ${
               msg.role === "user"
-                ? "self-end bg-accent text-white"
-                : "self-start bg-surface border border-[var(--border)]"
+                ? "self-end bg-primary text-primary-foreground"
+                : "self-start border border-border bg-card text-card-foreground"
             }`}
           >
             <div className="text-[11px] font-semibold mb-1 opacity-70">
@@ -325,9 +328,7 @@ export function ChatPage({ client, sessionId, agent, onNavigateToPath, initialMe
             </div>
             <div className="text-sm">
               {msg.role === "assistant" ? (
-                <div className="chat-markdown">
-                  <Markdown remarkPlugins={[remarkGfm]}>{msg.content}</Markdown>
-                </div>
+                <MarkdownContent variant="chat">{msg.content}</MarkdownContent>
               ) : (
                 msg.content
               )}
@@ -345,11 +346,11 @@ export function ChatPage({ client, sessionId, agent, onNavigateToPath, initialMe
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div className="p-3 border-t border-[var(--border)] bg-surface">
-        <div className="relative rounded-lg border border-[var(--border-input)] bg-[var(--input-bg)] transition-colors focus-within:border-accent">
-          <textarea
+      <div className="border-t border-border bg-background p-3">
+        <div className="relative rounded-lg border border-input bg-background transition-colors focus-within:border-ring">
+          <Textarea
             ref={textareaRef}
-            className="w-full resize-none pl-3 pr-12 py-2 bg-transparent outline-none text-[var(--primary)] text-sm leading-5"
+            className="min-h-0 w-full resize-none border-none bg-transparent py-2 pr-12 pl-3 text-sm leading-5 shadow-none focus-visible:ring-0"
             style={{ height: `${MIN_HEIGHT}px`, overflowY: "hidden" }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -363,31 +364,29 @@ export function ChatPage({ client, sessionId, agent, onNavigateToPath, initialMe
             disabled={streaming}
           />
           {contentExceeds3Lines && (
-            <button
-              className="absolute top-1.5 right-2.5 w-5 h-5 flex items-center justify-center text-[var(--secondary)] hover:text-[var(--primary)] transition-colors"
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="absolute top-1.5 right-2.5"
               onClick={() => setManualExpanded((v) => !v)}
               title={manualExpanded ? "收起" : "展开"}
             >
-              {manualExpanded ? (
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 6l4 4 4-4M3 3l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 8l4-4 4 4M3 11l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              )}
-            </button>
+              {manualExpanded ? <ChevronsDownIcon /> : <ChevronsUpIcon />}
+            </Button>
           )}
           <div className="absolute bottom-2 right-2">
             {streaming ? (
-              <button className="w-8 h-8 flex items-center justify-center rounded-md transition-colors bg-danger text-white hover:bg-danger-hover" onClick={handleAbort}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" fill="currentColor"/></svg>
-              </button>
+              <Button variant="destructive" size="icon-lg" onClick={handleAbort}>
+                <SquareIcon />
+              </Button>
             ) : (
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-md transition-colors bg-accent text-white hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+              <Button
+                size="icon-lg"
                 onClick={handleSend}
                 disabled={!input.trim()}
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
+                <SendIcon />
+              </Button>
             )}
           </div>
         </div>

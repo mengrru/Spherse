@@ -4,6 +4,7 @@ import { EmptyState } from "./components/EmptyState";
 import { ProjectPage } from "./pages/ProjectPage";
 import { initAppContext } from "./lib/context";
 import type { AppContext } from "./lib/context";
+import { TooltipProvider } from "./components/ui/tooltip";
 
 interface ProjectState {
   name: string;
@@ -73,27 +74,29 @@ export function App() {
 
   if (initializing) {
     return (
-      <div className="flex items-center justify-center h-screen bg-base text-[var(--muted)]">
+      <div className="flex h-screen items-center justify-center bg-background text-muted-foreground">
         加载中...
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen">
-      <ProjectBar
-        projects={projects}
-        activePath={activePath}
-        onSelect={setActivePath}
-        onAdd={handleAddProject}
-        onClose={handleCloseProject}
-        onReveal={handleReveal}
-      />
-      {activePath && projects.has(activePath) ? (
-        <ProjectPage key={activePath} ctx={projects.get(activePath)!.ctx} />
-      ) : (
-        <EmptyState />
-      )}
-    </div>
+    <TooltipProvider>
+      <div className="flex h-screen bg-background text-foreground">
+        <ProjectBar
+          projects={projects}
+          activePath={activePath}
+          onSelect={setActivePath}
+          onAdd={handleAddProject}
+          onClose={handleCloseProject}
+          onReveal={handleReveal}
+        />
+        {activePath && projects.has(activePath) ? (
+          <ProjectPage key={activePath} ctx={projects.get(activePath)!.ctx} />
+        ) : (
+          <EmptyState />
+        )}
+      </div>
+    </TooltipProvider>
   );
 }

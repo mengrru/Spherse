@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { Button } from "./ui/button";
+import { MessageCircleIcon } from "lucide-react";
 
 interface TextSelectionToolbarProps {
   position: { x: number; y: number }
@@ -7,7 +9,7 @@ interface TextSelectionToolbarProps {
 }
 
 export function TextSelectionToolbar({ position, onAction, onClose }: TextSelectionToolbarProps) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -28,9 +30,11 @@ export function TextSelectionToolbar({ position, onAction, onClose }: TextSelect
   }, [onClose]);
 
   return (
-    <div
+    <Button
       ref={ref}
-      className="fixed z-50 bg-surface border border-[var(--border)] rounded-md shadow-lg py-1 px-2 cursor-pointer text-[12px] hover:bg-[var(--hover)] transition-colors"
+      variant="secondary"
+      size="sm"
+      className="fixed z-50 shadow-lg"
       style={{
         left: position.x,
         top: position.y,
@@ -41,7 +45,8 @@ export function TextSelectionToolbar({ position, onAction, onClose }: TextSelect
         onAction();
       }}
     >
-      💬 发起会话
-    </div>
+      <MessageCircleIcon />
+      发起会话
+    </Button>
   );
 }

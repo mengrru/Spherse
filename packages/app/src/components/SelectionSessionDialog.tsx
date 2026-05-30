@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import type { AgentProfile } from "../lib/types";
+import { Button } from "./ui/button";
+import { Textarea } from "./ui/textarea";
+import { SendIcon } from "lucide-react";
 
 interface SelectionSessionDialogProps {
   selectedText: string
@@ -50,7 +53,7 @@ export function SelectionSessionDialog({
   return (
     <div
       ref={ref}
-      className="fixed z-50 bg-surface border border-[var(--border)] rounded-lg shadow-xl"
+      className="fixed z-50 rounded-lg border border-border bg-popover text-popover-foreground shadow-xl"
       style={{
         left: Math.max(8, Math.min(position.x - 100, window.innerWidth - 420)),
         top: Math.max(8, Math.min(position.y, window.innerHeight - 296)),
@@ -61,43 +64,42 @@ export function SelectionSessionDialog({
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="p-3 overflow-y-auto">
-        <div className="text-[11px] text-[var(--secondary)] mb-2">
+        <div className="mb-2 text-[11px] text-muted-foreground">
           引用自 <span className="font-mono">{sourcePath}</span>
         </div>
-        <div className="border-l-3 border-[var(--accent)] bg-[var(--muted-bg)] rounded-r p-2 text-[12px] font-mono max-h-[80px] overflow-y-auto mb-2 leading-relaxed">
+        <div className="mb-2 max-h-20 overflow-y-auto rounded-r border-l-2 border-primary bg-muted p-2 font-mono text-xs leading-relaxed">
           {previewText}
         </div>
 
         {phase === "compose" ? (
           <>
-            <textarea
-              className="w-full h-[48px] p-2 text-[13px] bg-[var(--input-bg)] border border-[var(--border-input)] rounded resize-y box-border outline-none focus:border-accent"
+            <Textarea
+              className="h-12 resize-y"
               placeholder="添加补充说明（可选）..."
               value={comment}
               onChange={(e) => setComment(e.target.value)}
             />
             <div className="flex justify-end mt-2">
-              <button
-                className="px-3 py-1.5 text-[12px] bg-accent text-white rounded hover:bg-accent-hover transition-colors"
-                onClick={() => setPhase("select-agent")}
-              >
-                发送 ➤
-              </button>
+              <Button size="sm" onClick={() => setPhase("select-agent")}>
+                <SendIcon />
+                发送
+              </Button>
             </div>
           </>
         ) : (
-          <div className="mt-1 border-t border-[var(--border)] pt-2">
-            <div className="text-[11px] text-[var(--secondary)] mb-1">选择 Agent</div>
+          <div className="mt-1 border-t border-border pt-2">
+            <div className="mb-1 text-[11px] text-muted-foreground">选择 Agent</div>
             <div className="flex flex-col gap-0.5">
               {agents.map((agent) => (
-                <button
+                <Button
                   key={agent.id}
-                  className="w-full px-2 py-1.5 text-left text-[13px] rounded hover:bg-[var(--hover)] transition-colors flex justify-between items-center"
+                  variant="ghost"
+                  className="w-full justify-between"
                   onClick={() => onSubmit(agent.id, comment || undefined)}
                 >
                   <span>{agent.name}</span>
-                  <span className="text-[11px] text-[var(--secondary)]">发送</span>
-                </button>
+                  <span className="text-[11px] text-muted-foreground">发送</span>
+                </Button>
               ))}
             </div>
           </div>

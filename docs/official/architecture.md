@@ -22,6 +22,9 @@
 
 ## 前端样式
 
-- **色彩体系**：CSS 变量定义在 `styles.css` 的 `:root`，暗色模式通过 `@media (prefers-color-scheme: dark)` 覆盖
-- **Tailwind @theme**：将常用颜色注册为 Tailwind 颜色（`bg-surface`, `bg-accent` 等），运行时通过 CSS 变量解析
+- **基础组件层**：前端基础 UI 统一使用 shadcn/ui 本地源码组件，组件位于 `packages/app/src/components/ui/`，当前底层 base 为 Base UI
+- **组件生成配置**：`packages/app/components.json` 记录 shadcn 样式 preset、Tailwind v4 CSS 入口和 `@/*` alias
+- **色彩体系**：CSS 变量定义在 `styles.css` 的 `:root`，暗色模式通过 `@media (prefers-color-scheme: dark)` 覆盖；shadcn 语义 token 使用 `--shadcn-*` 变量并通过 Tailwind `@theme inline` 暴露
+- **Tailwind @theme**：将常用颜色注册为 Tailwind 颜色（如 `bg-background`, `bg-card`, `bg-muted` 以及过渡期保留的 `bg-surface` 等），运行时通过 CSS 变量解析
+- **Markdown 渲染**：动态 Markdown 统一通过 `MarkdownContent` 组件映射 `react-markdown` 节点样式，不在 `styles.css` 里维护 `.chat-markdown` 或 `.prose-content` 选择器
 - **自定义主题**：用户可通过 `.spherse/theme.css` 覆盖 CSS 变量实现主题定制

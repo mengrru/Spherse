@@ -35,6 +35,11 @@ export default defineConfig({
   renderer: {
     plugins: [react(), tailwindcss()],
     root: ".",
+    resolve: {
+      alias: {
+        "@": resolve(__dirname, "src"),
+      },
+    },
     build: {
       outDir: "dist/renderer",
       rollupOptions: {

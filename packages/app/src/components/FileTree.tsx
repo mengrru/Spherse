@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ApiClient } from "../lib/api";
 import type { FileEntry } from "../lib/types";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "./ui/context-menu";
 
 interface FileTreeProps {
   client: ApiClient;
@@ -21,8 +27,6 @@ interface TreeNode {
 export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
   const nodesRef = useRef<TreeNode[]>([]);
-  const [contextMenu, setContextMenu] = useState<{ node: TreeNode; x: number; y: number } | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     nodesRef.current = rootNodes;
@@ -95,32 +99,10 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
     setRootNodes([...nodesRef.current]);
   };
 
-  useEffect(() => {
-    if (!contextMenu) return;
-    const handleClick = () => setContextMenu(null);
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setContextMenu(null);
-    };
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [contextMenu]);
-
-  const handleContextMenu = (e: React.MouseEvent, node: TreeNode) => {
-    e.preventDefault();
-    setContextMenu({ node, x: e.clientX, y: e.clientY });
-  };
-
-  const handleDelete = async () => {
-    if (!contextMenu) return;
-    const { node } = contextMenu;
+  const handleDelete = async (node: TreeNode) => {
     const label = node.type === "directory" ? `目录「${node.name}」` : `文件「${node.name}」`;
     const ok = window.confirm(`确定要删除${label}吗？此操作不可撤销。`);
     if (!ok) return;
-    setContextMenu(null);
     try {
       await client.deleteContent(node.path);
       onDeleted?.(node.path);
@@ -134,21 +116,29 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
 
   const renderNode = (node: TreeNode, depth: number = 0) => (
     <div key={node.path}>
-      <div
-        className="flex items-center py-[3px] px-1 rounded cursor-pointer transition-colors hover:bg-[var(--muted-bg)] select-none"
-        style={{ paddingLeft: depth * 16 + 8 }}
-        onClick={() => toggleNode(node)}
-        onContextMenu={(e) => handleContextMenu(e, node)}
-      >
-        <span className="mr-1 text-xs">
-          {node.type === "directory"
-            ? node.expanded
-              ? "📂"
-              : "📁"
-            : "📄"}
-        </span>
-        <span className="overflow-hidden text-ellipsis whitespace-nowrap">{node.name}</span>
-      </div>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div
+            className="flex cursor-pointer items-center rounded px-1 py-[3px] transition-colors select-none hover:bg-muted"
+            style={{ paddingLeft: depth * 16 + 8 }}
+            onClick={() => toggleNode(node)}
+          >
+            <span className="mr-1 text-xs">
+              {node.type === "directory"
+                ? node.expanded
+                  ? "📂"
+                  : "📁"
+                : "📄"}
+            </span>
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">{node.name}</span>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem variant="destructive" onClick={() => handleDelete(node)}>
+            删除
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
       {node.expanded &&
         node.children.map((child) => renderNode(child, depth + 1))}
     </div>
@@ -157,24 +147,9 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
   return (
     <div className="text-[13px]">
       {rootNodes.length === 0 ? (
-        <p className="text-xs text-[var(--faint)]">加载中...</p>
+        <p className="text-xs text-muted-foreground">加载中...</p>
       ) : (
         rootNodes.map((node) => renderNode(node))
-      )}
-      {contextMenu && (
-        <div
-          ref={menuRef}
-          className="fixed z-50 bg-surface border border-[var(--border)] rounded-md shadow-lg py-1 min-w-[120px]"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <button
-            className="w-full px-3 py-1.5 text-left text-[12px] text-danger hover:bg-[var(--hover)] transition-colors"
-            onClick={handleDelete}
-          >
-            删除
-          </button>
-        </div>
       )}
     </div>
   );
@@ -186,17 +161,17 @@ function useFsWatchRefresh(
   setRootNodes: React.Dispatch<React.SetStateAction<TreeNode[]>>,
   nodesRef: React.MutableRefObject<TreeNode[]>,
 ) {
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const ws = client.createFsWatchWebSocket(() => {
-      clearTimeout(timerRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         refreshExpanded(nodesRef.current).then(setRootNodes);
       }, 300);
     });
     return () => {
-      clearTimeout(timerRef.current);
+      if (timerRef.current) clearTimeout(timerRef.current);
       ws.close();
     };
   }, [client, refreshExpanded, setRootNodes, nodesRef]);

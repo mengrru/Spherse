@@ -1,34 +1,33 @@
 import { getAvatarColor } from "../lib/avatar-color";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 
 interface ProjectAvatarProps {
   name: string;
   path: string;
   active: boolean;
   onClick: () => void;
-  onContextMenu: (e: React.MouseEvent) => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 export function ProjectAvatar({ name, path, active, onClick, onContextMenu }: ProjectAvatarProps) {
   const letter = name.charAt(0).toUpperCase();
 
   return (
-    <div
+    <Avatar
       title={name}
       onClick={onClick}
       onContextMenu={onContextMenu}
-      className="cursor-pointer transition-all duration-150 hover:opacity-90 flex items-center justify-center rounded-lg shrink-0 select-none"
+      className="size-9 cursor-pointer shrink-0 select-none rounded-lg transition-all duration-150 hover:opacity-90"
       style={{
-        width: 36,
-        height: 36,
-        backgroundColor: getAvatarColor(path),
-        border: "2px solid transparent",
         opacity: active ? 1 : 0.5,
-        color: "var(--primary)",
-        fontWeight: 600,
-        fontSize: 15,
       }}
     >
-      {letter}
-    </div>
+      <AvatarFallback
+        className="rounded-lg font-semibold text-foreground"
+        style={{ backgroundColor: getAvatarColor(path) }}
+      >
+        {letter}
+      </AvatarFallback>
+    </Avatar>
   );
 }

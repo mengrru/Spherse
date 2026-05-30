@@ -61,20 +61,24 @@ spherse/
 │       │   ├── window.ts           # BrowserWindow 创建与管理
 │       │   ├── server.ts           # 多 Fastify 实例管理（Map<projectPath, server>）
 │       │   └── settings.ts         # electron-store 封装 + env 管理 + openProjects 持久化
+│       ├── components.json         # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
 │       └── src/
 │           ├── App.tsx             # 多项目状态管理 + Activity Bar + 工作区
 │           ├── main.tsx
-│           ├── styles.css          # Tailwind CSS v4 + CSS 变量色彩体系 + 暗色模式
+│           ├── styles.css          # Tailwind CSS v4 + shadcn 语义 token + 暗色模式
 │           ├── lib/
 │           │   ├── api.ts          # HTTP/WS 客户端封装
 │           │   ├── avatar-color.ts # 项目头像颜色生成（路径 hash → HSL）
 │           │   ├── context.ts      # AppContext 定义
+│           │   ├── utils.ts        # shadcn/ui cn() 工具
 │           │   └── types.ts        # 前端类型（AgentProfile, SessionInfo 等）
 │           ├── pages/
 │           │   ├── ProjectPage.tsx
 │           │   ├── ChatPage.tsx
 │           │   └── ContentBrowser.tsx
 │           └── components/
+│               ├── ui/                 # shadcn/ui 本地基础组件（Base UI 底层原语）
+│               ├── MarkdownContent.tsx # 统一 Markdown 渲染组件
 │               ├── ProjectBar.tsx      # 左侧 Activity Bar（项目头像列表 + 添加按钮）
 │               ├── ProjectAvatar.tsx   # 项目头像（颜色生成、右键菜单）
 │               ├── EmptyState.tsx      # 无项目时的空状态

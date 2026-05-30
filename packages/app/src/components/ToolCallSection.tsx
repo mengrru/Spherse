@@ -1,5 +1,9 @@
 import { useState } from "react";
 import type { ToolCallInfo } from "../lib/types";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import { ChevronRightIcon, CheckIcon, XIcon } from "lucide-react";
 
 interface ToolCallSectionProps {
   toolCalls: ToolCallInfo[];
@@ -38,52 +42,55 @@ export function ToolCallSection({ toolCalls, onNavigateToPath }: ToolCallSection
   };
 
   return (
-    <div className="mt-2 pt-2 border-t border-dashed border-[var(--border)]">
+    <div className="mt-2 border-t border-dashed border-border pt-2">
       {toolCalls.map((tc) => {
         const expanded = expandedIds.has(tc.toolCallId);
         const summary = getArgsSummary(tc.args);
         return (
-          <div key={tc.toolCallId}>
-            <button
-              className="flex items-center gap-1.5 text-xs py-0.5 w-full text-left hover:bg-[var(--hover)] rounded px-1 -mx-1 transition-colors"
+          <Collapsible key={tc.toolCallId} open={expanded}>
+            <CollapsibleTrigger
+              render={<Button variant="ghost" className="-mx-1 h-auto w-full justify-start px-1 py-0.5" />}
               onClick={() => toggle(tc.toolCallId)}
             >
-              <span className="text-[10px] text-[var(--secondary)] select-none w-3 inline-block text-center">
-                {expanded ? "▾" : "▸"}
+              <span
+                className="inline-flex size-3 items-center justify-center text-muted-foreground transition-transform"
+                style={{ transform: expanded ? "rotate(90deg)" : "rotate(0deg)" }}
+              >
+                <ChevronRightIcon className="size-3" />
               </span>
-              <span className="font-mono bg-[var(--code-bg)] px-1 py-[1px] rounded-[2px]">
+              <Badge variant="outline" className="font-mono">
                 {tc.toolName}
-              </span>
+              </Badge>
               {summary && (
-                <span className="text-[var(--secondary)] truncate max-w-[200px]">
+                <span className="max-w-[200px] truncate text-xs text-muted-foreground">
                   → {summary}
                 </span>
               )}
-              <span className="ml-auto shrink-0">
+              <span className="ml-auto shrink-0 text-xs">
                 {tc.status === "running" && <span className="text-accent">...</span>}
-                {tc.status === "completed" && <span className="text-success">✓</span>}
-                {tc.status === "error" && <span className="text-danger">✗</span>}
+                {tc.status === "completed" && <CheckIcon className="size-3" />}
+                {tc.status === "error" && <XIcon className="size-3 text-destructive" />}
               </span>
-            </button>
-            {expanded && (
-              <div className="ml-4 mb-1.5 mt-0.5 text-xs">
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="ml-4 mt-0.5 mb-1.5 text-xs">
                 <table className="border-collapse">
                   <tbody>
                     {Object.entries(tc.args).map(([key, value]) => (
                       <tr key={key}>
-                        <td className="py-0.5 pr-3 font-mono text-[var(--secondary)] align-top whitespace-nowrap">
+                        <td className="py-0.5 pr-3 align-top font-mono whitespace-nowrap text-muted-foreground">
                           {key}
                         </td>
                         <td className="py-0.5">
                           {(key === "path" || key === "file_path") && typeof value === "string" && onNavigateToPath ? (
                             <button
-                              className="text-[var(--accent)] underline decoration-[var(--accent)] hover:opacity-80 text-left break-all whitespace-pre-wrap font-mono text-xs bg-transparent border-none p-0 cursor-pointer"
+                              className="cursor-pointer border-none bg-transparent p-0 text-left font-mono text-xs whitespace-pre-wrap text-primary underline hover:opacity-80"
                               onClick={() => onNavigateToPath(value)}
                             >
                               {value}
                             </button>
                           ) : (
-                            <code className="bg-[var(--code-bg)] px-1 py-[1px] rounded-[2px] break-all whitespace-pre-wrap">
+                            <code className="rounded bg-muted px-1 py-[1px] break-all whitespace-pre-wrap">
                               {formatArgValue(value)}
                             </code>
                           )}
@@ -93,8 +100,8 @@ export function ToolCallSection({ toolCalls, onNavigateToPath }: ToolCallSection
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
         );
       })}
     </div>

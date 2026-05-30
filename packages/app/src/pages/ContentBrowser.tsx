@@ -1,10 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import type { ApiClient } from "../lib/api";
 import type { AgentProfile } from "../lib/types";
 import { TextSelectionToolbar } from "../components/TextSelectionToolbar";
 import { SelectionSessionDialog } from "../components/SelectionSessionDialog";
+import { MarkdownContent } from "../components/MarkdownContent";
+import { Button } from "../components/ui/button";
+import { Textarea } from "../components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
+import { ArrowLeftIcon } from "lucide-react";
 
 interface ContentBrowserProps {
   client: ApiClient;
@@ -171,73 +183,67 @@ export function ContentBrowser({ client, filePath, onBack, agents, onStartSessio
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--border)] bg-surface">
-        <button
-          className="px-3 py-1 bg-[var(--muted-bg)] rounded text-sm text-[var(--primary)] hover:bg-[var(--hover-strong)]"
-          onClick={handleBackClick}
-        >
-          ← 返回
-        </button>
-        <span className="text-sm text-[var(--secondary)] font-mono flex-1">
-          {isDirty && <span className="text-[var(--accent)] mr-1">●</span>}
+      <div className="flex items-center gap-3 border-b border-border bg-background px-4 py-3">
+        <Button variant="outline" onClick={handleBackClick}>
+          <ArrowLeftIcon />
+          返回
+        </Button>
+        <span className="flex-1 font-mono text-sm text-muted-foreground">
+          {isDirty && <span className="mr-1 text-primary">●</span>}
           {filePath}
         </span>
         {isEditing ? (
           <div className="flex items-center gap-2">
-            <button
-              className="px-3 py-1 text-xs bg-[var(--muted-bg)] text-[var(--secondary)] rounded hover:bg-[var(--hover-strong)]"
-              onClick={handleCancelEdit}
-            >
+            <Button variant="outline" size="sm" onClick={handleCancelEdit}>
               取消
-            </button>
-            <button
-              className={`px-3 py-1 text-xs rounded ${
-                isDirty && !saving
-                  ? "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]"
-                  : "bg-[var(--muted-bg)] text-[var(--muted)] cursor-not-allowed"
-              }`}
+            </Button>
+            <Button
+              size="sm"
               onClick={handleSave}
               disabled={!isDirty || saving}
             >
               {saving ? "保存中..." : "保存"}
-            </button>
+            </Button>
           </div>
         ) : isEditable && !isHtml ? (
-          <button
-            className="px-3 py-1 text-xs bg-[var(--muted-bg)] text-[var(--secondary)] rounded hover:bg-[var(--hover-strong)]"
-            onClick={handleEnterEdit}
-          >
+          <Button variant="outline" size="sm" onClick={handleEnterEdit}>
             编辑
-          </button>
+          </Button>
         ) : null}
         {isHtml && !isEditing && (
-          <div className="flex rounded overflow-hidden border border-[var(--border)]">
-            <button
-              className={`px-3 py-1 text-xs ${htmlView === "preview" ? "bg-[var(--active-bg)] text-[var(--primary)]" : "bg-[var(--muted-bg)] text-[var(--secondary)] hover:bg-[var(--hover-strong)]"}`}
+          <div className="flex overflow-hidden rounded-md border border-border">
+            <Button
+              variant={htmlView === "preview" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none"
               onClick={() => setHtmlView("preview")}
             >
               预览
-            </button>
-            <button
-              className={`px-3 py-1 text-xs border-l border-[var(--border)] ${htmlView === "source" ? "bg-[var(--active-bg)] text-[var(--primary)]" : "bg-[var(--muted-bg)] text-[var(--secondary)] hover:bg-[var(--hover-strong)]"}`}
+            </Button>
+            <Button
+              variant={htmlView === "source" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-none border-l border-border"
               onClick={() => setHtmlView("source")}
             >
               源码
-            </button>
+            </Button>
           </div>
         )}
       </div>
       {conflict && isEditing && (
         <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm">
           <span className="flex-1">文件已被外部修改</span>
-          <button
-            className="px-2 py-0.5 text-xs rounded border border-amber-300 hover:bg-amber-100"
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setConflict(false)}
           >
             保留我的修改
-          </button>
-          <button
-            className="px-2 py-0.5 text-xs rounded border border-amber-300 hover:bg-amber-100"
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={async () => {
               const data = await client.getContent(filePath);
               if (data) {
@@ -248,11 +254,11 @@ export function ContentBrowser({ client, filePath, onBack, agents, onStartSessio
             }}
           >
             重新加载文件
-          </button>
+          </Button>
         </div>
       )}
       {saveError && (
-        <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-[var(--danger)] text-sm">
+        <div className="border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
           保存失败: {saveError}
         </div>
       )}
@@ -263,69 +269,55 @@ export function ContentBrowser({ client, filePath, onBack, agents, onStartSessio
           title="HTML Preview"
         />
       ) : isEditing ? (
-        <textarea
-          className="flex-1 p-4 font-mono text-sm leading-relaxed resize-none bg-surface border-none outline-none"
+        <Textarea
+          className="min-h-0 flex-1 resize-none rounded-none border-none bg-background p-4 font-mono text-sm leading-relaxed shadow-none focus-visible:ring-0"
           value={editedContent}
           onChange={(e) => setEditedContent(e.target.value)}
           spellCheck={false}
         />
       ) : (
         <div ref={contentRef} className="flex-1 overflow-y-auto p-4">
-          {loading && <p className="text-[var(--muted)] text-center p-8">加载中...</p>}
-          {error && <p className="text-[var(--danger)] text-center p-8">{error}</p>}
+          {loading && <p className="p-8 text-center text-muted-foreground">加载中...</p>}
+          {error && <p className="p-8 text-center text-destructive">{error}</p>}
           {content && !loading && (
             isMarkdown ? (
-              <div className="bg-surface p-6 rounded-lg border border-[var(--border)] leading-relaxed prose-content">
-                <Markdown remarkPlugins={[remarkGfm]}>{content}</Markdown>
+              <div className="rounded-lg border border-border bg-card p-6 text-card-foreground">
+                <MarkdownContent variant="document">{content}</MarkdownContent>
               </div>
             ) : (
-              <pre className="bg-surface p-4 rounded-lg border border-[var(--border)] font-mono text-sm whitespace-pre-wrap leading-relaxed">{content}</pre>
+              <pre className="rounded-lg border border-border bg-card p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">{content}</pre>
             )
           )}
         </div>
       )}
-      {showLeaveConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "var(--overlay)" }}>
-          <div className="bg-surface rounded-lg shadow-lg p-6 max-w-sm w-full border border-[var(--border)]">
-            <p className="text-[var(--primary)] mb-4">有未保存的修改，确定离开？</p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 text-sm bg-[var(--muted-bg)] rounded hover:bg-[var(--hover-strong)] text-[var(--secondary)]"
-                onClick={() => setShowLeaveConfirm(false)}
-              >
-                继续编辑
-              </button>
-              <button
-                className="px-4 py-2 text-sm bg-[var(--danger)] text-white rounded hover:bg-[var(--danger-hover)]"
-                onClick={handleConfirmLeave}
-              >
-                放弃修改
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showCancelConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "var(--overlay)" }}>
-          <div className="bg-surface rounded-lg shadow-lg p-6 max-w-sm w-full border border-[var(--border)]">
-            <p className="text-[var(--primary)] mb-4">有未保存的修改，确定取消编辑？</p>
-            <div className="flex justify-end gap-2">
-              <button
-                className="px-4 py-2 text-sm bg-[var(--muted-bg)] rounded hover:bg-[var(--hover-strong)] text-[var(--secondary)]"
-                onClick={() => setShowCancelConfirm(false)}
-              >
-                继续编辑
-              </button>
-              <button
-                className="px-4 py-2 text-sm bg-[var(--danger)] text-white rounded hover:bg-[var(--danger-hover)]"
-                onClick={handleConfirmCancel}
-              >
-                放弃修改
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertDialog open={showLeaveConfirm} onOpenChange={setShowLeaveConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>有未保存的修改</AlertDialogTitle>
+            <AlertDialogDescription>确定离开当前文件并放弃这些修改吗？</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>继续编辑</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleConfirmLeave}>
+              放弃修改
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={showCancelConfirm} onOpenChange={setShowCancelConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>有未保存的修改</AlertDialogTitle>
+            <AlertDialogDescription>确定取消编辑并放弃这些修改吗？</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>继续编辑</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleConfirmCancel}>
+              放弃修改
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {selectionState && !showSessionDialog && (
         <TextSelectionToolbar
           position={selectionState.position}

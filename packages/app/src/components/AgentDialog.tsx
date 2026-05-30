@@ -4,6 +4,19 @@ import type { ApiClient } from "../lib/api";
 import { parseAgentMarkdown, buildAgentMarkdown } from "../lib/agent-markdown";
 import type { AgentFormData } from "../lib/agent-markdown";
 import { ALL_TOOLS } from "../lib/tool-registry";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "./ui/field";
+import { Input } from "./ui/input";
+import { Textarea } from "./ui/textarea";
+import { XIcon } from "lucide-react";
 
 const FILE_TREE_EXCLUDE = new Set(["AGENTS.md", "CHANGELOG.md", "changelog.md"]);
 
@@ -31,7 +44,7 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
   const [suggestions, setSuggestions] = useState<{ name: string; fullPath: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fileTree, setFileTree] = useState<string[]>([]);
 
   useEffect(() => {
@@ -52,7 +65,7 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
 
   const handleContextInputChange = (value: string) => {
     setContextInput(value);
-    clearTimeout(debounceRef.current);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => matchFiles(value), 200);
   };
 
@@ -97,119 +110,116 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
   };
 
   return (
-    <div className="fixed inset-0 bg-[var(--overlay)] flex items-center justify-center z-[100]" onClick={onCancel}>
-      <div className="bg-surface rounded-[10px] w-[600px] max-h-[80vh] flex flex-col shadow-[var(--shadow-dialog)]" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-light)]">
-          <h2 className="font-bold text-accent">
+    <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <DialogContent className="max-h-[80vh] sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle>
             {mode === "create" ? "创建 Agent" : "编辑 Agent"}
-          </h2>
-          <button className="bg-none text-lg text-[var(--muted)] p-1 hover:text-[var(--primary)]" onClick={onCancel}>✕</button>
-        </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wide text-[var(--on-muted)] mb-1.5">名称</label>
-            <input
-              type="text"
-              className="w-full px-3 py-2 border border-[var(--border-input)] rounded-md text-[13px] outline-none bg-[var(--input-bg)] text-[var(--primary)] focus:border-accent"
-              value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Agent 名称"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wide text-[var(--on-muted)] mb-1.5">工具权限</label>
-            <div className="flex flex-wrap gap-1.5">
-              {ALL_TOOLS.map((tool) => {
-                const selected = formData.tools.includes(tool.id);
-                return (
-                  <button
-                    key={tool.id}
-                    type="button"
-                    onClick={() => toggleTool(tool.id)}
-                    className={`px-2.5 py-1 rounded text-[12px] transition-colors border ${
-                      selected
-                        ? "bg-accent text-white border-accent"
-                        : "bg-[var(--muted-bg)] text-[var(--secondary)] border-dashed border-[var(--border)]"
-                    }`}
-                  >
-                    {tool.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wide text-[var(--on-muted)] mb-1.5">参考资料</label>
-            {formData.context.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {formData.context.map((path) => (
-                  <span key={path} className="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--muted-bg)] rounded text-[11px] text-[var(--primary)]">
-                    {path}
-                    <button
-                      type="button"
-                      className="text-[var(--danger)] hover:text-[var(--primary)]"
-                      onClick={() => removeContext(path)}
-                    >
-                      ✕
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-            <div className="relative">
-              <input
+          </DialogTitle>
+        </DialogHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <FieldGroup>
+            <Field>
+              <FieldLabel>名称</FieldLabel>
+              <Input
                 type="text"
-                className="w-full px-3 py-2 border border-[var(--border-input)] rounded-md text-[13px] outline-none bg-[var(--input-bg)] text-[var(--primary)] focus:border-accent"
-                value={contextInput}
-                onChange={(e) => handleContextInputChange(e.target.value)}
-                onKeyDown={handleContextKeyDown}
-                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                placeholder="输入路径搜索文件，回车添加"
+                value={formData.name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                placeholder="Agent 名称"
               />
-              {showSuggestions && suggestions.length > 0 && (
-                <div ref={suggestionsRef} className="absolute left-0 right-0 top-full mt-1 bg-surface border border-[var(--border)] rounded-md shadow-lg z-10 overflow-hidden">
-                  {suggestions.map((s) => (
-                    <button
-                      key={s.fullPath}
+            </Field>
+
+            <Field>
+              <FieldLabel>工具权限</FieldLabel>
+              <div className="flex flex-wrap gap-1.5">
+                {ALL_TOOLS.map((tool) => {
+                  const selected = formData.tools.includes(tool.id);
+                  return (
+                    <Button
+                      key={tool.id}
                       type="button"
-                      className="w-full px-3 py-1.5 text-left text-[12px] hover:bg-[var(--hover)] transition-colors"
-                      onMouseDown={(e) => { e.preventDefault(); addContext(s.fullPath); }}
+                      variant={selected ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleTool(tool.id)}
                     >
-                      {s.fullPath}
-                    </button>
+                      {tool.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </Field>
+
+            <Field>
+              <FieldLabel>参考资料</FieldLabel>
+              {formData.context.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {formData.context.map((path) => (
+                    <Badge key={path} variant="secondary" className="gap-1">
+                      {path}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-xs"
+                        className="-mr-1 size-4"
+                        onClick={() => removeContext(path)}
+                      >
+                        <XIcon />
+                      </Button>
+                    </Badge>
                   ))}
                 </div>
               )}
-            </div>
-          </div>
+              <div className="relative">
+                <Input
+                  type="text"
+                  value={contextInput}
+                  onChange={(e) => handleContextInputChange(e.target.value)}
+                  onKeyDown={handleContextKeyDown}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  placeholder="输入路径搜索文件，回车添加"
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div ref={suggestionsRef} className="absolute top-full right-0 left-0 z-10 mt-1 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s.fullPath}
+                        type="button"
+                        className="w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                        onMouseDown={(e) => { e.preventDefault(); addContext(s.fullPath); }}
+                      >
+                        {s.fullPath}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Field>
 
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-wide text-[var(--on-muted)] mb-1.5">提示词</label>
-            <textarea
-              className="w-full min-h-[160px] p-3 border border-[var(--border-input)] rounded-md font-mono text-[13px] leading-relaxed resize-y outline-none bg-[var(--input-bg)] text-[var(--primary)] focus:border-accent"
-              value={formData.systemPrompt}
-              onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}
-              spellCheck={false}
-            />
-          </div>
+            <Field>
+              <FieldLabel>提示词</FieldLabel>
+              <Textarea
+                className="min-h-40 resize-y font-mono"
+                value={formData.systemPrompt}
+                onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}
+                spellCheck={false}
+              />
+            </Field>
 
-          {error && <p className="text-danger text-xs">{error}</p>}
+            {error && <p className="text-xs text-destructive">{error}</p>}
+          </FieldGroup>
         </div>
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-[var(--border-light)]">
-          <button className="px-4 py-1.5 bg-[var(--muted-bg)] rounded-[5px] text-[13px] text-[var(--on-muted)] hover:bg-[var(--border)]" onClick={onCancel}>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
             取消
-          </button>
-          <button
-            className="px-4 py-1.5 bg-accent text-white rounded-[5px] text-[13px] hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={saving}
           >
             {saving ? "保存中..." : mode === "create" ? "创建" : "保存"}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

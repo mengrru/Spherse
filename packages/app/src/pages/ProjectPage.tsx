@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { AppContext } from "../lib/context";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import { FileTree } from "../components/FileTree";
@@ -7,6 +7,14 @@ import { ChatPage } from "./ChatPage";
 import { SettingsModal } from "../components/SettingsModal";
 import { ContentBrowser } from "./ContentBrowser";
 import type { AgentProfile, SessionInfo } from "../lib/types";
+import { Button } from "../components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
+import { ChevronDownIcon, MoreHorizontalIcon, PlusIcon, SettingsIcon } from "lucide-react";
 
 type ViewMode = "chat" | "content";
 
@@ -26,10 +34,6 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [initialMessage, setInitialMessage] = useState<string | undefined>(undefined);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  const [menuAgentId, setMenuAgentId] = useState<string | null>(null);
-  const [menuSessionId, setMenuSessionId] = useState<string | null>(null);
-  const agentMenuRef = useRef<HTMLDivElement>(null);
-  const sessionMenuRef = useRef<HTMLDivElement>(null);
 
   const refreshAgents = () => {
     ctx.client.listAgents().then(setAgents).catch(console.error);
@@ -49,20 +53,6 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
       setCollapsed(new Set(agents.slice(1).map((a) => a.id)));
     }
   }, [agents]);
-
-  useEffect(() => {
-    if (!menuAgentId && !menuSessionId) return;
-    const handler = (e: MouseEvent) => {
-      const inAgentMenu = agentMenuRef.current?.contains(e.target as Node);
-      const inSessionMenu = sessionMenuRef.current?.contains(e.target as Node);
-      if (!inAgentMenu && !inSessionMenu) {
-        setMenuAgentId(null);
-        setMenuSessionId(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [menuAgentId, menuSessionId]);
 
   useCustomTheme(ctx.projectRoot, ctx.port);
 
@@ -95,7 +85,6 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   };
 
   const handleNewSession = async (agent: AgentProfile) => {
-    setMenuAgentId(null);
     setInitialMessage(undefined);
     const { sessionId: sid } = await ctx.client.createSession(agent.id);
     refreshSessions();
@@ -112,7 +101,6 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   };
 
   const handleDeleteSession = async (sessionId: string) => {
-    setMenuSessionId(null);
     await ctx.client.deleteSession(sessionId);
     if (selectedSession?.id === sessionId) {
       setSelectedSession(null);
@@ -174,7 +162,6 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   };
 
   const handleEditAgent = async (agent: AgentProfile) => {
-    setMenuAgentId(null);
     const raw = await ctx.client.getAgentRaw(agent.id);
     setEditAgent({ id: agent.id, content: raw });
   };
@@ -187,7 +174,6 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
   };
 
   const handleDeleteAgent = async (agent: AgentProfile) => {
-    setMenuAgentId(null);
     const ok = window.confirm(`确定要删除 Agent「${agent.name}」吗？该 Agent 下的所有会话也将被移除。`);
     if (!ok) return;
     await ctx.client.deleteAgent(agent.id);
@@ -201,20 +187,21 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
 
   return (
     <div className="flex h-full flex-1 overflow-hidden">
-      <aside className="w-60 bg-surface border-r border-[var(--border)] flex flex-col overflow-y-auto shrink-0">
-        <div className="p-3 border-b border-[var(--border-light)]">
+      <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-background">
+        <div className="border-b border-border p-3">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)] mb-0">Agents</h3>
-            <button
-              className="w-[22px] h-[22px] flex items-center justify-center bg-[var(--muted-bg)] rounded text-[16px] text-[var(--secondary)] leading-none hover:bg-[var(--border)] hover:text-[var(--primary)]"
+            <h3 className="mb-0 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Agents</h3>
+            <Button
+              variant="ghost"
+              size="icon-xs"
               onClick={() => setShowCreateAgent(true)}
               title="创建 Agent"
             >
-              +
-            </button>
+              <PlusIcon />
+            </Button>
           </div>
           {agents.length === 0 ? (
-            <p className="text-xs text-[var(--faint)]">暂无 Agent 定义</p>
+            <p className="text-xs text-muted-foreground">暂无 Agent 定义</p>
           ) : (
             <div className="flex flex-col gap-0.5">
               {agents.map((agent) => {
@@ -222,85 +209,55 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
                 const isCollapsed = collapsed.has(agent.id);
                 return (
                   <div key={agent.id} className="relative">
-                    <div className="flex items-center gap-1 px-2 py-1.5 rounded hover:bg-[var(--hover)] group">
-                      <button
-                        className="w-5 h-5 flex items-center justify-center text-[var(--secondary)] shrink-0 text-[13px] transition-transform hover:bg-[var(--muted-bg)] rounded"
+                    <div className="group flex items-center gap-1 rounded px-2 py-1.5 hover:bg-muted">
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        className="shrink-0 transition-transform"
                         style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0)" }}
                         onClick={() => toggleCollapse(agent.id)}
                       >
-                        ▾
-                      </button>
+                        <ChevronDownIcon />
+                      </Button>
                       <span className="text-[13px] font-medium overflow-hidden text-ellipsis whitespace-nowrap flex-1">{agent.name}</span>
-                      <button
-                        className="w-4 h-4 flex items-center justify-center text-[var(--secondary)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMenuAgentId(menuAgentId === agent.id ? null : agent.id);
-                        }}
-                      >
-                        ···
-                      </button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />}>
+                          <MoreHorizontalIcon />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleNewSession(agent)}>
+                            新建对话
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditAgent(agent)}>
+                            编辑
+                          </DropdownMenuItem>
+                          <DropdownMenuItem variant="destructive" onClick={() => handleDeleteAgent(agent)}>
+                            删除
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    {menuAgentId === agent.id && (
-                      <div
-                        ref={agentMenuRef}
-                        className="absolute right-0 top-8 z-10 bg-surface border border-[var(--border)] rounded-md shadow-lg py-1 min-w-[120px]"
-                      >
-                        <button
-                          className="w-full px-3 py-1.5 text-left text-[12px] hover:bg-[var(--hover)] transition-colors"
-                          onClick={() => handleNewSession(agent)}
-                        >
-                          新建对话
-                        </button>
-                        <button
-                          className="w-full px-3 py-1.5 text-left text-[12px] hover:bg-[var(--hover)] transition-colors"
-                          onClick={() => handleEditAgent(agent)}
-                        >
-                          编辑
-                        </button>
-                        <button
-                          className="w-full px-3 py-1.5 text-left text-[12px] text-danger hover:bg-[var(--hover)] transition-colors"
-                          onClick={() => handleDeleteAgent(agent)}
-                        >
-                          删除
-                        </button>
-                      </div>
-                    )}
                     {!isCollapsed && agentSessions.length > 0 && (
-                      <ul className="list-none ml-3 border-l border-[var(--border-light)]">
+                      <ul className="ml-3 list-none border-l border-border">
                         {agentSessions.map((session) => (
                           <li key={session.id}>
                             <div
-                              className={`group flex items-center gap-1 pl-2 py-1 text-[12px] cursor-pointer transition-colors hover:bg-[var(--hover)] rounded-r ${selectedSession?.id === session.id ? "bg-[var(--active-bg)] text-[var(--primary)] font-medium" : "text-[var(--secondary)]"}`}
+                              className={`group flex cursor-pointer items-center gap-1 rounded-r py-1 pl-2 text-[12px] transition-colors hover:bg-muted ${selectedSession?.id === session.id ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground"}`}
                               onClick={() => handleSelectSession(session)}
                             >
                               <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
                                 {session.title ?? new Date(session.updatedAt).toLocaleString()}
                               </span>
-                              <span className="relative">
-                                <button
-                                  className="w-4 h-4 flex items-center justify-center text-[var(--secondary)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setMenuSessionId(menuSessionId === session.id ? null : session.id);
-                                  }}
-                                >
-                                  ···
-                                </button>
-                                {menuSessionId === session.id && (
-                                  <div
-                                    ref={sessionMenuRef}
-                                    className="absolute right-0 top-5 z-10 bg-surface border border-[var(--border)] rounded-md shadow-lg py-1 min-w-[80px]"
-                                  >
-                                    <button
-                                      className="w-full px-3 py-1.5 text-left text-[12px] text-danger hover:bg-[var(--hover)] transition-colors"
-                                      onClick={() => handleDeleteSession(session.id)}
-                                    >
-                                      删除
-                                    </button>
-                                  </div>
-                                )}
-                              </span>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />}>
+                                  <MoreHorizontalIcon />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem variant="destructive" onClick={() => handleDeleteSession(session.id)}>
+                                    删除
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </li>
                         ))}
@@ -312,14 +269,15 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
             </div>
           )}
         </div>
-        <div className="p-3 border-b border-[var(--border-light)]">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted)] mb-2">文件</h3>
+        <div className="border-b border-border p-3">
+          <h3 className="mb-2 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">文件</h3>
           <FileTree client={ctx.client} onSelectFile={handleSelectFile} onDeleted={handleFileDeleted} />
         </div>
-        <div className="mt-auto p-3 border-t border-[var(--border-light)]">
-          <button className="w-full py-2 bg-[var(--muted-bg)] rounded-md text-sm text-[var(--secondary)] text-center transition-colors hover:bg-[var(--hover-strong)] hover:text-[var(--primary)]" onClick={() => setShowSettings(true)}>
-            ⚙ 设置
-          </button>
+        <div className="mt-auto border-t border-border p-3">
+          <Button variant="outline" className="w-full" onClick={() => setShowSettings(true)}>
+            <SettingsIcon />
+            设置
+          </Button>
         </div>
       </aside>
       {/* ChatPage 用 hidden 隐藏而非卸载，保持对话滚动位置和组件状态 */}
@@ -340,7 +298,7 @@ export function ProjectPage({ ctx }: ProjectPageProps) {
           />
         )}
         {viewMode !== "content" && !(selectedSession && selectedAgent) && (
-          <div className="flex items-center justify-center h-full text-[var(--muted)]">
+          <div className="flex h-full items-center justify-center text-muted-foreground">
             <p>点击 Agent 开始新对话，或选择已有会话</p>
           </div>
         )}

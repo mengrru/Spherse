@@ -1,5 +1,12 @@
-import { useState, useEffect, useRef } from "react";
 import { ProjectAvatar } from "./ProjectAvatar";
+import { Button } from "./ui/button";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "./ui/context-menu";
+import { PlusIcon } from "lucide-react";
 
 interface ProjectBarProps {
   projects: Map<string, { name: string }>;
@@ -11,74 +18,41 @@ interface ProjectBarProps {
 }
 
 export function ProjectBar({ projects, activePath, onSelect, onAdd, onClose, onReveal }: ProjectBarProps) {
-  const [contextMenuPath, setContextMenuPath] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!contextMenuPath) return;
-    const handler = (e: MouseEvent) => {
-      if (!menuRef.current?.contains(e.target as Node)) {
-        setContextMenuPath(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [contextMenuPath]);
-
   return (
-    <div className="w-[56px] bg-base border-r border-[var(--border)] flex flex-col shrink-0">
+    <div className="flex w-14 shrink-0 flex-col border-r border-border bg-muted/30">
       <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">
         {Array.from(projects.entries()).map(([path, info]) => (
-          <ProjectAvatar
-            key={path}
-            name={info.name}
-            path={path}
-            active={path === activePath}
-            onClick={() => onSelect(path)}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              setContextMenuPath(path);
-              setMenuPos({ x: e.clientX, y: e.clientY });
-            }}
-          />
+          <ContextMenu key={path}>
+            <ContextMenuTrigger>
+              <ProjectAvatar
+                name={info.name}
+                path={path}
+                active={path === activePath}
+                onClick={() => onSelect(path)}
+              />
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+              <ContextMenuItem onClick={() => onClose(path)}>
+                关闭项目
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => onReveal(path)}>
+                在 Finder 中显示
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenu>
         ))}
       </div>
       <div className="mt-auto flex justify-center pb-3">
-        <button
-          className="w-[36px] h-[36px] flex items-center justify-center rounded-lg border border-dashed border-[var(--border)] text-[var(--muted)] text-lg hover:bg-[var(--hover)] transition-colors"
+        <Button
+          variant="outline"
+          size="icon-lg"
+          className="border-dashed"
           onClick={onAdd}
           title="添加项目"
         >
-          +
-        </button>
+          <PlusIcon />
+        </Button>
       </div>
-      {contextMenuPath && (
-        <div
-          ref={menuRef}
-          className="fixed z-50 bg-surface border border-[var(--border)] rounded-md shadow-lg py-1 min-w-[160px]"
-          style={{ left: menuPos.x, top: menuPos.y }}
-        >
-          <button
-            className="w-full px-3 py-1.5 text-left text-[12px] hover:bg-[var(--hover)] transition-colors"
-            onClick={() => {
-              onClose(contextMenuPath);
-              setContextMenuPath(null);
-            }}
-          >
-            关闭项目
-          </button>
-          <button
-            className="w-full px-3 py-1.5 text-left text-[12px] hover:bg-[var(--hover)] transition-colors"
-            onClick={() => {
-              onReveal(contextMenuPath);
-              setContextMenuPath(null);
-            }}
-          >
-            在 Finder 中显示
-          </button>
-        </div>
-      )}
     </div>
   );
 }

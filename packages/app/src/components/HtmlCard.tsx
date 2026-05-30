@@ -10,11 +10,11 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
 
   return (
     <div
-      className="my-2 rounded-lg border border-[var(--border)] overflow-hidden"
+      className="my-2 overflow-hidden rounded-lg border border-border"
       style={{ maxWidth: `${card.max_width ?? 800}px`, width }}
     >
       {card.title && (
-        <div className="px-3 py-1.5 text-xs font-semibold bg-[var(--muted-bg)] text-[var(--secondary)] border-b border-[var(--border)]">
+        <div className="border-b border-border bg-muted px-3 py-1.5 text-xs font-semibold text-muted-foreground">
           {card.title}
         </div>
       )}
