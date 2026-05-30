@@ -31,7 +31,7 @@
     {
       "name": "code-review",
       "type": "human-gate",
-      "next": "post-review"
+      "next": "merge"
     },
     {
       "name": "merge",
