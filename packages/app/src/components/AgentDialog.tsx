@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, type KeyboardEvent } from "react";
 import { AGENT_TEMPLATE } from "@spherse/presets";
 import type { ApiClient } from "../lib/api";
 import { parseAgentMarkdown, buildAgentMarkdown } from "../lib/agent-markdown";
@@ -20,10 +20,16 @@ import { XIcon } from "lucide-react";
 
 const FILE_TREE_EXCLUDE = new Set(["AGENTS.md", "CHANGELOG.md", "changelog.md"]);
 
+type FileSuggestion = { name: string; fullPath: string };
+
 function fuzzyMatch(filePath: string, query: string): boolean {
   const lower = filePath.toLowerCase();
   const parts = query.toLowerCase().split(/\s+/).filter(Boolean);
   return parts.length === 0 || parts.every((seg) => lower.includes(seg));
+}
+
+function getErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : "保存失败";
 }
 
 interface AgentDialogProps {
@@ -40,55 +46,15 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
   const [formData, setFormData] = useState<AgentFormData>(parsed.formData);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [contextInput, setContextInput] = useState("");
-  const [suggestions, setSuggestions] = useState<{ name: string; fullPath: string }[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [fileTree, setFileTree] = useState<string[]>([]);
-
-  useEffect(() => {
-    client.getFileTree().then((tree) => {
-      setFileTree(tree.filter((f) => !FILE_TREE_EXCLUDE.has(f.split("/").pop() ?? "")));
-    }).catch(() => {});
-  }, [client]);
-
-  function matchFiles(input: string) {
-    if (!input.trim()) { setSuggestions([]); setShowSuggestions(false); return; }
-    const matched = fileTree
-      .filter((f) => fuzzyMatch(f, input))
-      .filter((f) => !formData.context.includes(f))
-      .map((f) => ({ name: f.split("/").pop() ?? f, fullPath: f }));
-    setSuggestions(matched.slice(0, 8));
-    setShowSuggestions(matched.length > 0);
-  }
-
-  const handleContextInputChange = (value: string) => {
-    setContextInput(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => matchFiles(value), 200);
-  };
 
   const addContext = (path: string) => {
     if (!formData.context.includes(path)) {
       setFormData((prev) => ({ ...prev, context: [...prev.context, path] }));
     }
-    setContextInput("");
-    setSuggestions([]);
-    setShowSuggestions(false);
   };
 
   const removeContext = (path: string) => {
     setFormData((prev) => ({ ...prev, context: prev.context.filter((c) => c !== path) }));
-  };
-
-  const handleContextKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      if (contextInput.trim() && !formData.context.includes(contextInput.trim())) {
-        addContext(contextInput.trim());
-      }
-    }
   };
 
   const toggleTool = (toolId: string) => {
@@ -106,7 +72,7 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
     const content = buildAgentMarkdown(formData, parsed.extraFrontmatter, mode === "create");
     const filename = `${formData.name.trim()}.md`;
     try { await onSubmit(filename, content); }
-    catch (err: any) { setError(err.message); setSaving(false); }
+    catch (err: unknown) { setError(getErrorMessage(err)); setSaving(false); }
   };
 
   return (
@@ -129,71 +95,14 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
               />
             </Field>
 
-            <Field>
-              <FieldLabel>工具权限</FieldLabel>
-              <div className="flex flex-wrap gap-1.5">
-                {ALL_TOOLS.map((tool) => {
-                  const selected = formData.tools.includes(tool.id);
-                  return (
-                    <Button
-                      key={tool.id}
-                      type="button"
-                      variant={selected ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => toggleTool(tool.id)}
-                    >
-                      {tool.label}
-                    </Button>
-                  );
-                })}
-              </div>
-            </Field>
+            <ToolPicker selectedTools={formData.tools} onToggle={toggleTool} />
 
-            <Field>
-              <FieldLabel>参考资料</FieldLabel>
-              {formData.context.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {formData.context.map((path) => (
-                    <Badge key={path} variant="secondary" className="gap-1">
-                      {path}
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="-mr-1 size-4"
-                        onClick={() => removeContext(path)}
-                      >
-                        <XIcon />
-                      </Button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-              <div className="relative">
-                <Input
-                  type="text"
-                  value={contextInput}
-                  onChange={(e) => handleContextInputChange(e.target.value)}
-                  onKeyDown={handleContextKeyDown}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                  placeholder="输入路径搜索文件，回车添加"
-                />
-                {showSuggestions && suggestions.length > 0 && (
-                  <div ref={suggestionsRef} className="absolute top-full right-0 left-0 z-10 mt-1 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">
-                    {suggestions.map((s) => (
-                      <button
-                        key={s.fullPath}
-                        type="button"
-                        className="w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
-                        onMouseDown={(e) => { e.preventDefault(); addContext(s.fullPath); }}
-                      >
-                        {s.fullPath}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </Field>
+            <ContextPathField
+              client={client}
+              contextPaths={formData.context}
+              onAdd={addContext}
+              onRemove={removeContext}
+            />
 
             <Field>
               <FieldLabel>提示词</FieldLabel>
@@ -221,5 +130,158 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ToolPicker({
+  selectedTools,
+  onToggle,
+}: {
+  selectedTools: string[];
+  onToggle: (toolId: string) => void;
+}) {
+  return (
+    <Field>
+      <FieldLabel>工具权限</FieldLabel>
+      <div className="flex flex-wrap gap-1.5">
+        {ALL_TOOLS.map((tool) => {
+          const selected = selectedTools.includes(tool.id);
+          return (
+            <Button
+              key={tool.id}
+              type="button"
+              variant={selected ? "default" : "outline"}
+              size="sm"
+              onClick={() => onToggle(tool.id)}
+            >
+              {tool.label}
+            </Button>
+          );
+        })}
+      </div>
+    </Field>
+  );
+}
+
+function ContextPathField({
+  client,
+  contextPaths,
+  onAdd,
+  onRemove,
+}: {
+  client: ApiClient;
+  contextPaths: string[];
+  onAdd: (path: string) => void;
+  onRemove: (path: string) => void;
+}) {
+  const [input, setInput] = useState("");
+  const [fileTree, setFileTree] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<FileSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    client.getFileTree().then((tree) => {
+      setFileTree(tree.filter((f) => !FILE_TREE_EXCLUDE.has(f.split("/").pop() ?? "")));
+    }).catch(() => {});
+  }, [client]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  function hideSuggestions() {
+    setShowSuggestions(false);
+  }
+
+  function addPath(path: string) {
+    onAdd(path);
+    setInput("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+  }
+
+  function matchFiles(query: string) {
+    if (!query.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    const matched = fileTree
+      .filter((f) => fuzzyMatch(f, query))
+      .filter((f) => !contextPaths.includes(f))
+      .map((f) => ({ name: f.split("/").pop() ?? f, fullPath: f }));
+    setSuggestions(matched.slice(0, 8));
+    setShowSuggestions(matched.length > 0);
+  }
+
+  function handleInputChange(value: string) {
+    setInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => matchFiles(value), 200);
+  }
+
+  function handleInputKeyDown(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const path = input.trim();
+      if (path && !contextPaths.includes(path)) {
+        addPath(path);
+      }
+    }
+  }
+
+  return (
+    <Field>
+      <FieldLabel>参考资料</FieldLabel>
+      {contextPaths.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {contextPaths.map((path) => (
+            <Badge key={path} variant="secondary" className="gap-1">
+              {path}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                className="-mr-1 size-4"
+                onClick={() => onRemove(path)}
+              >
+                <XIcon />
+              </Button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <Input
+          type="text"
+          value={input}
+          onChange={(e) => handleInputChange(e.target.value)}
+          onKeyDown={handleInputKeyDown}
+          onBlur={() => setTimeout(hideSuggestions, 150)}
+          placeholder="输入路径搜索文件，回车添加"
+        />
+        {showSuggestions && suggestions.length > 0 && (
+          <div ref={suggestionsRef} className="absolute top-full right-0 left-0 z-10 mt-1 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion.fullPath}
+                type="button"
+                className="w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  addPath(suggestion.fullPath);
+                }}
+              >
+                {suggestion.fullPath}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </Field>
   );
 }

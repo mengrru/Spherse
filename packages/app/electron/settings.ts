@@ -46,7 +46,9 @@ export function saveSettings(incoming: AppSettings): void {
   for (const id of Object.keys(SUPPORTED_PROVIDERS) as SupportedProviderId[]) {
     const newConfig = incoming.providers[id];
     const prevConfig = prev?.providers?.[id as keyof typeof prev.providers];
-    if (newConfig?.apiKey && !newConfig.apiKey.includes("****")) {
+    if (newConfig && newConfig.apiKey.trim() === "") {
+      continue;
+    } else if (newConfig?.apiKey && !newConfig.apiKey.includes("****")) {
       (merged.providers as any)[id] = { apiKey: newConfig.apiKey };
     } else if (prevConfig?.apiKey) {
       (merged.providers as any)[id] = { apiKey: prevConfig.apiKey };

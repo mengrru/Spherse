@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import type { AgentProfile } from "../lib/types";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { SendIcon } from "lucide-react";
+import { useDismissable } from "../hooks/useDismissable";
 
 interface SelectionSessionDialogProps {
   selectedText: string
@@ -15,6 +15,16 @@ interface SelectionSessionDialogProps {
 
 const MAX_PREVIEW_LENGTH = 200;
 
+function getDialogPosition(position: { x: number; y: number }) {
+  return {
+    left: Math.max(8, Math.min(position.x - 100, window.innerWidth - 420)),
+    top: Math.max(8, Math.min(position.y, window.innerHeight - 296)),
+    maxWidth: 400,
+    maxHeight: window.innerHeight - 16,
+    width: "max-content",
+  };
+}
+
 export function SelectionSessionDialog({
   selectedText,
   sourcePath,
@@ -23,44 +33,21 @@ export function SelectionSessionDialog({
   onSubmit,
   onClose,
 }: SelectionSessionDialogProps) {
-  const [phase, setPhase] = useState<"compose" | "select-agent">("compose");
   const [comment, setComment] = useState("");
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  useDismissable({ ref, onDismiss: onClose });
 
   const previewText =
     selectedText.length > MAX_PREVIEW_LENGTH
       ? selectedText.slice(0, MAX_PREVIEW_LENGTH) + "..."
       : selectedText;
+  const trimmedComment = comment.trim();
 
   return (
     <div
       ref={ref}
       className="fixed z-50 rounded-lg border border-border bg-popover text-popover-foreground shadow-xl"
-      style={{
-        left: Math.max(8, Math.min(position.x - 100, window.innerWidth - 420)),
-        top: Math.max(8, Math.min(position.y, window.innerHeight - 296)),
-        maxWidth: 400,
-        maxHeight: window.innerHeight - 16,
-        width: "max-content",
-      }}
+      style={getDialogPosition(position)}
       onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="p-3 overflow-y-auto">
@@ -70,40 +57,34 @@ export function SelectionSessionDialog({
         <div className="mb-2 max-h-20 overflow-y-auto rounded-r border-l-2 border-primary bg-muted p-2 font-mono text-xs leading-relaxed">
           {previewText}
         </div>
-
-        {phase === "compose" ? (
-          <>
-            <Textarea
-              className="h-12 resize-y"
-              placeholder="添加补充说明（可选）..."
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-            />
-            <div className="flex justify-end mt-2">
-              <Button size="sm" onClick={() => setPhase("select-agent")}>
-                <SendIcon />
-                发送
-              </Button>
-            </div>
-          </>
-        ) : (
-          <div className="mt-1 border-t border-border pt-2">
-            <div className="mb-1 text-[11px] text-muted-foreground">选择 Agent</div>
-            <div className="flex flex-col gap-0.5">
-              {agents.map((agent) => (
-                <Button
-                  key={agent.id}
-                  variant="ghost"
-                  className="w-full justify-between"
-                  onClick={() => onSubmit(agent.id, comment || undefined)}
-                >
-                  <span>{agent.name}</span>
-                  <span className="text-[11px] text-muted-foreground">发送</span>
-                </Button>
-              ))}
-            </div>
+        {trimmedComment && (
+          <div className="mb-2 max-h-16 overflow-y-auto text-xs leading-relaxed text-muted-foreground">
+            {trimmedComment}
           </div>
         )}
+
+        <Textarea
+          className="h-12 resize-y"
+          placeholder="添加补充说明（可选）..."
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+        />
+        <div className="mt-2 border-t border-border pt-2">
+          <div className="mb-1 text-[11px] text-muted-foreground">选择 Agent</div>
+          <div className="flex flex-col gap-0.5">
+            {agents.map((agent) => (
+              <Button
+                key={agent.id}
+                variant="ghost"
+                className="w-full justify-between"
+                onClick={() => onSubmit(agent.id, trimmedComment || undefined)}
+              >
+                <span>{agent.name}</span>
+                <span className="text-[11px] text-muted-foreground">发送</span>
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

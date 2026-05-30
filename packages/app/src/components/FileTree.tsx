@@ -24,6 +24,31 @@ interface TreeNode {
   loaded: boolean;
 }
 
+function buildNodes(entries: FileEntry[], parentPath: string): TreeNode[] {
+  return entries
+    .filter((e) => !e.name.startsWith("."))
+    .sort((a, b) => {
+      if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    })
+    .map((entry) => ({
+      name: entry.name,
+      path: parentPath ? `${parentPath}/${entry.name}` : entry.name,
+      type: entry.type,
+      expanded: false,
+      children: [],
+      loaded: false,
+    }));
+}
+
+function updateNode(nodes: TreeNode[], path: string, update: (node: TreeNode) => TreeNode): TreeNode[] {
+  return nodes.map((node) => {
+    if (node.path === path) return update(node);
+    if (node.children.length === 0) return node;
+    return { ...node, children: updateNode(node.children, path, update) };
+  });
+}
+
 export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
   const nodesRef = useRef<TreeNode[]>([]);
@@ -42,23 +67,6 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
     },
     [client],
   );
-
-  const buildNodes = (entries: FileEntry[], parentPath: string): TreeNode[] => {
-    return entries
-      .filter((e) => !e.name.startsWith("."))
-      .sort((a, b) => {
-        if (a.type !== b.type) return a.type === "directory" ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      })
-      .map((entry) => ({
-        name: entry.name,
-        path: parentPath ? `${parentPath}/${entry.name}` : entry.name,
-        type: entry.type,
-        expanded: false,
-        children: [],
-        loaded: false,
-      }));
-  };
 
   const refreshExpanded = useCallback(async (nodes: TreeNode[]): Promise<TreeNode[]> => {
     const result: TreeNode[] = [];
@@ -90,13 +98,17 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
       return;
     }
 
-    if (!node.loaded) {
-      const entries = await loadChildren(node.path);
-      node.children = buildNodes(entries, node.path);
-      node.loaded = true;
-    }
-    node.expanded = !node.expanded;
-    setRootNodes([...nodesRef.current]);
+    const children = node.loaded
+      ? node.children
+      : buildNodes(await loadChildren(node.path), node.path);
+    setRootNodes((prev) =>
+      updateNode(prev, node.path, (current) => ({
+        ...current,
+        children,
+        loaded: true,
+        expanded: !current.expanded,
+      })),
+    );
   };
 
   const handleDelete = async (node: TreeNode) => {
@@ -114,43 +126,66 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
 
   useFsWatchRefresh(client, refreshExpanded, setRootNodes, nodesRef);
 
-  const renderNode = (node: TreeNode, depth: number = 0) => (
-    <div key={node.path}>
-      <ContextMenu>
-        <ContextMenuTrigger>
-          <div
-            className="flex cursor-pointer items-center rounded px-1 py-[3px] transition-colors select-none hover:bg-muted"
-            style={{ paddingLeft: depth * 16 + 8 }}
-            onClick={() => toggleNode(node)}
-          >
-            <span className="mr-1 text-xs">
-              {node.type === "directory"
-                ? node.expanded
-                  ? "📂"
-                  : "📁"
-                : "📄"}
-            </span>
-            <span className="overflow-hidden text-ellipsis whitespace-nowrap">{node.name}</span>
-          </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem variant="destructive" onClick={() => handleDelete(node)}>
-            删除
-          </ContextMenuItem>
-        </ContextMenuContent>
-      </ContextMenu>
-      {node.expanded &&
-        node.children.map((child) => renderNode(child, depth + 1))}
-    </div>
-  );
-
   return (
     <div className="text-[13px]">
       {rootNodes.length === 0 ? (
         <p className="text-xs text-muted-foreground">加载中...</p>
       ) : (
-        rootNodes.map((node) => renderNode(node))
+        rootNodes.map((node) => (
+          <TreeNodeView
+            key={node.path}
+            node={node}
+            depth={0}
+            onToggle={toggleNode}
+            onDelete={handleDelete}
+          />
+        ))
       )}
+    </div>
+  );
+}
+
+function TreeNodeView({
+  node,
+  depth,
+  onToggle,
+  onDelete,
+}: {
+  node: TreeNode;
+  depth: number;
+  onToggle: (node: TreeNode) => void;
+  onDelete: (node: TreeNode) => void;
+}) {
+  return (
+    <div>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div
+            className="flex cursor-pointer items-center rounded px-1 py-[3px] transition-colors select-none hover:bg-muted"
+            style={{ paddingLeft: depth * 16 + 8 }}
+            onClick={() => onToggle(node)}
+          >
+            <span className="mr-1 text-xs">
+              {node.type === "directory" ? (node.expanded ? "📂" : "📁") : "📄"}
+            </span>
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">{node.name}</span>
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem variant="destructive" onClick={() => onDelete(node)}>
+            删除
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+      {node.expanded && node.children.map((child) => (
+        <TreeNodeView
+          key={child.path}
+          node={child}
+          depth={depth + 1}
+          onToggle={onToggle}
+          onDelete={onDelete}
+        />
+      ))}
     </div>
   );
 }
