@@ -20,6 +20,18 @@
 - **IPC handler** 集中在 `electron/ipc/` 目录，按业务域拆分
 - **preload** 是安全桥梁，声明 Renderer 可用的 IPC 方法白名单
 
+## 前端路由与状态
+
+- **Hash Router**：renderer 使用 React Router Hash Router，路由表达应用内导航状态，避免 Electron 本地页面刷新时依赖服务端 history fallback
+- **项目路由**：项目、会话和内容页通过 URL 表达，当前路径形态为 `/project/:projectKey`、`/project/:projectKey/chat/:sessionId`、`/project/:projectKey/content?path=...`
+- **projectKey**：URL 中不暴露完整文件系统路径；`project-key.ts` 根据项目目录名生成当前打开项目集合内稳定的 URL key，真实身份仍以 project path 为准
+- **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作
+- **项目工作区 store**：`project-workspace-store.ts` 按 projectKey 管理 agents、sessions、折叠状态、当前会话和 content 路径等跨页面状态
+- **局部状态边界**：Chat 消息流、输入框、WebSocket ref、文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件内
+- **页面 / layout / feature 边界**：`pages/` 只做路由适配和参数校验；跨 feature 的页面编排放在 `layouts/`；业务域专属 UI、hooks 和局部动作放在 `features/{domain}/`
+- **feature-based 组织**：业务域专属 UI 和 hooks 放在 `features/{domain}/`；`features/chat` 暴露完整 Chat 入口，`pages/ChatPage.tsx` 只作为 route adapter
+- **共享组件边界**：`components/` 保留 shadcn/ui、跨 feature 复用组件和 app shell 组件；只被某个 feature 使用的组件不放在全局 components 根目录
+
 ## 前端样式
 
 - **基础组件层**：前端基础 UI 统一使用 shadcn/ui 本地源码组件，组件位于 `packages/app/src/components/ui/`，当前底层 base 为 Base UI

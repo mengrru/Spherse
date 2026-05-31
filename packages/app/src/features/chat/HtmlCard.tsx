@@ -1,4 +1,4 @@
-import type { HtmlCard } from "../lib/types";
+import type { HtmlCard } from "../../lib/types";
 
 interface HtmlCardRendererProps {
   card: HtmlCard;

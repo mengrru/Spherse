@@ -63,28 +63,72 @@ spherse/
 │       │   └── settings.ts         # electron-store 封装 + env 管理 + openProjects 持久化
 │       ├── components.json         # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
 │       └── src/
-│           ├── App.tsx             # 多项目状态管理 + Activity Bar + 工作区
-│           ├── main.tsx
+│           ├── App.tsx             # Hash Router 外壳 + Activity Bar + 全局初始化
+│           ├── main.tsx            # renderer 入口，挂载 RouterProvider
+│           ├── router.tsx          # React Router Hash Router 路由表
 │           ├── styles.css          # Tailwind CSS v4 + shadcn 语义 token + 暗色模式
 │           ├── lib/
 │           │   ├── api.ts          # HTTP/WS 客户端封装
 │           │   ├── avatar-color.ts # 项目头像颜色生成（路径 hash → HSL）
 │           │   ├── context.ts      # AppContext 定义
+│           │   ├── project-key.ts  # project path → URL projectKey 生成
 │           │   ├── utils.ts        # shadcn/ui cn() 工具
 │           │   └── types.ts        # 前端类型（AgentProfile, SessionInfo 等）
+│           ├── stores/
+│           │   ├── app-store.ts               # 打开项目、当前项目、Electron IPC 动作
+│           │   └── project-workspace-store.ts # 项目内 agents/sessions/当前会话等工作区状态
+│           ├── layouts/
+│           │   └── ProjectLayout.tsx          # Project layout，编排项目工作区侧栏与主内容区
+│           ├── features/
+│           │   ├── chat/
+│           │   │   ├── index.tsx          # Chat feature 入口组件
+│           │   │   ├── Header.tsx
+│           │   │   ├── MessageList.tsx
+│           │   │   ├── MessageItem.tsx
+│           │   │   ├── Composer.tsx
+│           │   │   ├── ToolCallSection.tsx
+│           │   │   ├── HtmlCard.tsx
+│           │   │   └── hooks/
+│           │   │       ├── useChatSession.ts # 历史消息、WebSocket、send/abort 状态机
+│           │   │       └── useChatScroll.ts  # 对话滚动行为
+│           │   ├── content-browser/
+│           │   │   ├── index.tsx             # 内容浏览 feature 入口组件
+│           │   │   ├── Header.tsx
+│           │   │   ├── ContentView.tsx       # markdown/plain/html/editor 内容区域
+│           │   │   ├── ConflictBanner.tsx
+│           │   │   ├── ConfirmDialogs.tsx
+│           │   │   └── hooks/
+│           │   │       ├── useContentFile.ts   # 文件内容加载状态
+│           │   │       └── useContentEditor.ts # 编辑、保存、dirty、冲突状态
+│           │   ├── text-selection-session/
+│           │   │   ├── index.tsx             # 文本划选后发起会话 feature 入口
+│           │   │   ├── StartSessionButton.tsx
+│           │   │   ├── StartSessionPopover.tsx
+│           │   │   └── hooks/
+│           │   │       └── useTextSelection.ts # 文本划选定位
+│           │   ├── agent-session-list/
+│           │   │   ├── index.tsx             # Agent/session 列表 container，连接 workspace store
+│           │   │   ├── AgentSessionListView.tsx # Agent/session 纯展示列表
+│           │   │   ├── AgentGroup.tsx
+│           │   │   ├── AgentRow.tsx
+│           │   │   ├── SessionRow.tsx
+│           │   │   ├── EmptyAgents.tsx
+│           │   │   └── hooks/
+│           │   │       └── useGroupedSessions.ts
+│           │   └── project-sidebar/
+│           │       └── index.tsx             # 项目侧栏 feature，组合 Agent/session 列表与文件树
 │           ├── pages/
-│           │   ├── ProjectPage.tsx
-│           │   ├── ChatPage.tsx
-│           │   └── ContentBrowser.tsx
+│           │   ├── ProjectPage.tsx       # Project route adapter，校验 projectKey 后渲染 ProjectLayout
+│           │   ├── ChatPage.tsx          # Chat route adapter，渲染 features/chat
+│           │   └── ContentBrowser.tsx    # ContentBrowser route adapter，渲染 features/content-browser
 │           └── components/
 │               ├── ui/                 # shadcn/ui 本地基础组件（Base UI 底层原语）
 │               ├── MarkdownContent.tsx # 统一 Markdown 渲染组件
-│               ├── ProjectBar.tsx      # 左侧 Activity Bar（项目头像列表 + 添加按钮）
+│               ├── ProjectBar.tsx      # 左侧 Activity Bar（项目头像列表、全局设置、添加项目）
 │               ├── ProjectAvatar.tsx   # 项目头像（颜色生成、右键菜单）
 │               ├── EmptyState.tsx      # 无项目时的空状态
 │               ├── AgentList.tsx
 │               ├── AgentDialog.tsx       # 创建/编辑 Agent 对话框
-│               ├── ToolCallSection.tsx   # 可折叠 tool call 列表组件
 │               ├── FileTree.tsx
 │               └── SettingsModal.tsx
 ├── scripts/

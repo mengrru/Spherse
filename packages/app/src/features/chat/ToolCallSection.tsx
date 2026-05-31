@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { ToolCallInfo } from "../lib/types";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import type { ToolCallInfo } from "../../lib/types";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";
 import { ChevronRightIcon, CheckIcon, XIcon } from "lucide-react";
 
 interface ToolCallSectionProps {
@@ -43,14 +43,14 @@ export function ToolCallSection({ toolCalls, onNavigateToPath }: ToolCallSection
 
   return (
     <div className="mt-2 border-t border-dashed border-border pt-2">
-      {toolCalls.map((tc) => {
-        const expanded = expandedIds.has(tc.toolCallId);
-        const summary = getArgsSummary(tc.args);
+      {toolCalls.map((toolCall) => {
+        const expanded = expandedIds.has(toolCall.toolCallId);
+        const summary = getArgsSummary(toolCall.args);
         return (
-          <Collapsible key={tc.toolCallId} open={expanded}>
+          <Collapsible key={toolCall.toolCallId} open={expanded}>
             <CollapsibleTrigger
               render={<Button variant="ghost" className="-mx-1 h-auto w-full justify-start px-1 py-0.5" />}
-              onClick={() => toggle(tc.toolCallId)}
+              onClick={() => toggle(toolCall.toolCallId)}
             >
               <span
                 className="inline-flex size-3 items-center justify-center text-muted-foreground transition-transform"
@@ -59,7 +59,7 @@ export function ToolCallSection({ toolCalls, onNavigateToPath }: ToolCallSection
                 <ChevronRightIcon className="size-3" />
               </span>
               <Badge variant="outline" className="font-mono">
-                {tc.toolName}
+                {toolCall.toolName}
               </Badge>
               {summary && (
                 <span className="max-w-[200px] truncate text-xs text-muted-foreground">
@@ -67,16 +67,16 @@ export function ToolCallSection({ toolCalls, onNavigateToPath }: ToolCallSection
                 </span>
               )}
               <span className="ml-auto shrink-0 text-xs">
-                {tc.status === "running" && <span className="text-accent">...</span>}
-                {tc.status === "completed" && <CheckIcon className="size-3" />}
-                {tc.status === "error" && <XIcon className="size-3 text-destructive" />}
+                {toolCall.status === "running" && <span className="text-accent">...</span>}
+                {toolCall.status === "completed" && <CheckIcon className="size-3" />}
+                {toolCall.status === "error" && <XIcon className="size-3 text-destructive" />}
               </span>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="ml-4 mt-0.5 mb-1.5 text-xs">
                 <table className="border-collapse">
                   <tbody>
-                    {Object.entries(tc.args).map(([key, value]) => (
+                    {Object.entries(toolCall.args).map(([key, value]) => (
                       <tr key={key}>
                         <td className="py-0.5 pr-3 align-top font-mono whitespace-nowrap text-muted-foreground">
                           {key}

@@ -1,15 +1,15 @@
 import { useRef } from "react";
-import { Button } from "./ui/button";
+import { Button } from "../../components/ui/button";
+import { useDismissable } from "../../hooks/useDismissable";
 import { MessageCircleIcon } from "lucide-react";
-import { useDismissable } from "../hooks/useDismissable";
 
-interface TextSelectionToolbarProps {
-  position: { x: number; y: number }
-  onAction: () => void
-  onClose: () => void
+interface StartSessionButtonProps {
+  position: { x: number; y: number };
+  onStart: () => void;
+  onClose: () => void;
 }
 
-export function TextSelectionToolbar({ position, onAction, onClose }: TextSelectionToolbarProps) {
+export function StartSessionButton({ position, onStart, onClose }: StartSessionButtonProps) {
   const ref = useRef<HTMLButtonElement>(null);
   useDismissable({ ref, onDismiss: onClose });
 
@@ -23,10 +23,10 @@ export function TextSelectionToolbar({ position, onAction, onClose }: TextSelect
         left: position.x,
         top: position.y,
       }}
-      onMouseDown={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        onAction();
+      onMouseDown={(event) => {
+        event.stopPropagation();
+        event.preventDefault();
+        onStart();
       }}
     >
       <MessageCircleIcon />

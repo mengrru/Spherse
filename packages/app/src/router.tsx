@@ -1,0 +1,29 @@
+import { createHashRouter } from "react-router";
+import { App } from "./App";
+import { EmptyState } from "./components/EmptyState";
+import { ProjectPage } from "./pages/ProjectPage";
+
+export const router = createHashRouter([
+  {
+    path: "/",
+    element: <App />,
+    children: [
+      {
+        index: true,
+        element: <EmptyState />,
+      },
+      {
+        path: "project/:projectKey",
+        element: <ProjectPage />,
+      },
+      {
+        path: "project/:projectKey/chat/:sessionId",
+        element: <ProjectPage />,
+      },
+      {
+        path: "project/:projectKey/content",
+        element: <ProjectPage />,
+      },
+    ],
+  },
+]);

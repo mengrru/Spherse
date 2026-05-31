@@ -6,7 +6,11 @@
 
 - [ ] **恢复 React StrictMode 并修复 WebSocket effect cleanup**：`src/main.tsx` 当前移除了 StrictMode 以避免开发模式下双重 mount 导致 WebSocket 错误事件。正确做法是保留 StrictMode，在 `ChatPage` 的 `useEffect` 中用 ref 追踪活跃的 WebSocket 实例，忽略已关闭 socket 的事件。涉及文件：`packages/app/src/pages/ChatPage.tsx`、`packages/app/src/main.tsx`。
 - [x] **统一 UI 基础组件**：引入 shadcn/ui（Base UI base），统一 Button、Dialog、Dropdown、Context Menu、Field、Badge 等基础组件，替代当前散落的内联样式实现。参见 `docs/dev/features/2026-05-30-frontend-refactor-shadcn/design.md`
-- [ ] **前端重构**：对现有前端代码进行重构，改善代码组织和可维护性
+- [x] **前端路由与全局状态管理**：引入 React Router Hash Router 和 Zustand，支持项目、会话、内容页 URL，并收拢多项目与项目工作区状态。参见 `docs/dev/features/2026-05-31-frontend-routing-state/design.md`
+- [x] **Chat feature 组织重构**：将 Chat 页面专属组件和 hooks 收敛到 `features/chat/`，`pages/ChatPage.tsx` 仅保留 route adapter。
+- [x] **ContentBrowser feature 组织重构**：将内容浏览与编辑相关组件和 hooks 收敛到 `features/content-browser/`，将可复用的文本划选发起会话能力收敛到 `features/text-selection-session/`，`pages/ContentBrowser.tsx` 仅保留 route adapter。
+- [x] **Agent/session list feature 组织重构**：将项目侧边栏中的 Agent/session 列表展示组件收敛到 `features/agent-session-list/`。
+- [x] **Project layout/sidebar 组织重构**：将 `ProjectPage` 收敛为 route adapter，新增 `layouts/ProjectLayout.tsx` 与 `features/project-sidebar`，并将设置入口提升到 app level。
 
 ## 功能增强
 

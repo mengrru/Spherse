@@ -1,6 +1,6 @@
-import React from "react";
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
+import { RouterProvider } from "react-router";
+import { router } from "./router";
 import "./styles.css";
 
 declare global {
@@ -18,4 +18,4 @@ declare global {
   }
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />);

@@ -1,21 +1,21 @@
-import { useState, useRef } from "react";
-import type { AgentProfile } from "../lib/types";
-import { Button } from "./ui/button";
-import { Textarea } from "./ui/textarea";
-import { useDismissable } from "../hooks/useDismissable";
+import { useRef, useState } from "react";
+import type { AgentProfile } from "../../lib/types";
+import { Button } from "../../components/ui/button";
+import { Textarea } from "../../components/ui/textarea";
+import { useDismissable } from "../../hooks/useDismissable";
 
-interface SelectionSessionDialogProps {
-  selectedText: string
-  sourcePath: string
-  agents: AgentProfile[]
-  position: { x: number; y: number }
-  onSubmit: (agentId: string, comment?: string) => void
-  onClose: () => void
+interface StartSessionPopoverProps {
+  selectedText: string;
+  sourcePath: string;
+  agents: AgentProfile[];
+  position: { x: number; y: number };
+  onSubmit: (agentId: string, comment?: string) => void;
+  onClose: () => void;
 }
 
 const MAX_PREVIEW_LENGTH = 200;
 
-function getDialogPosition(position: { x: number; y: number }) {
+function getPopoverPosition(position: { x: number; y: number }) {
   return {
     left: Math.max(8, Math.min(position.x - 100, window.innerWidth - 420)),
     top: Math.max(8, Math.min(position.y, window.innerHeight - 296)),
@@ -25,14 +25,14 @@ function getDialogPosition(position: { x: number; y: number }) {
   };
 }
 
-export function SelectionSessionDialog({
+export function StartSessionPopover({
   selectedText,
   sourcePath,
   agents,
   position,
   onSubmit,
   onClose,
-}: SelectionSessionDialogProps) {
+}: StartSessionPopoverProps) {
   const [comment, setComment] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   useDismissable({ ref, onDismiss: onClose });
@@ -47,8 +47,8 @@ export function SelectionSessionDialog({
     <div
       ref={ref}
       className="fixed z-50 rounded-lg border border-border bg-popover text-popover-foreground shadow-xl"
-      style={getDialogPosition(position)}
-      onMouseDown={(e) => e.stopPropagation()}
+      style={getPopoverPosition(position)}
+      onMouseDown={(event) => event.stopPropagation()}
     >
       <div className="p-3 overflow-y-auto">
         <div className="mb-2 text-[11px] text-muted-foreground">
@@ -67,7 +67,7 @@ export function SelectionSessionDialog({
           className="h-12 resize-y"
           placeholder="添加补充说明（可选）..."
           value={comment}
-          onChange={(e) => setComment(e.target.value)}
+          onChange={(event) => setComment(event.target.value)}
         />
         <div className="mt-2 border-t border-border pt-2">
           <div className="mb-1 text-[11px] text-muted-foreground">选择 Agent</div>
