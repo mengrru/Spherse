@@ -8,6 +8,7 @@ import {
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
 import { PlusIcon, SettingsIcon } from "lucide-react";
+import { DebugTools } from "../debug-tools";
 
 interface ActivityBarProps {
   projects: Map<string, ProjectState>;
@@ -53,6 +54,7 @@ export function ActivityBar({
         ))}
       </div>
       <div className="mt-auto flex flex-col items-center gap-2 pb-3">
+        <DebugTools />
         <Button
           variant="ghost"
           size="icon-lg"

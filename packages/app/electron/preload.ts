@@ -19,4 +19,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("set-last-active-project", path),
   getLastActiveProject: () =>
     ipcRenderer.invoke("get-last-active-project"),
+  isDev: () => ipcRenderer.invoke("is-dev"),
+  toggleDevTools: () => ipcRenderer.invoke("toggle-dev-tools"),
+  isDevToolsOpen: () => ipcRenderer.invoke("is-dev-tools-open"),
+  getElectronStoreData: () => ipcRenderer.invoke("get-electron-store-data"),
+  reloadRenderer: () => ipcRenderer.invoke("reload-renderer"),
+  resetAppData: () => ipcRenderer.invoke("reset-app-data"),
 });

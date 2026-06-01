@@ -24,7 +24,6 @@ export function createWindow(): BrowserWindow {
     mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
   }
 
-  mainWindow.webContents.openDevTools();
   return mainWindow;
 }
 

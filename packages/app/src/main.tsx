@@ -14,6 +14,12 @@ declare global {
       revealInFinder: (projectRoot: string) => Promise<void>;
       setLastActiveProject: (path: string) => Promise<void>;
       getLastActiveProject: () => Promise<string | null>;
+      isDev: () => Promise<boolean>;
+      toggleDevTools: () => Promise<void>;
+      isDevToolsOpen: () => Promise<boolean>;
+      getElectronStoreData: () => Promise<Record<string, unknown>>;
+      reloadRenderer: () => Promise<void>;
+      resetAppData: () => Promise<void>;
     };
   }
 }
