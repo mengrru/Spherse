@@ -94,6 +94,38 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async mkdir(dirPath: string): Promise<{ ok: boolean }> {
+      const res = await fetch(
+        `${baseUrl}/api/content/${encodeURIComponent(dirPath)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "mkdir" }),
+        },
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
+    async touchFile(filePath: string): Promise<{ ok: boolean }> {
+      const res = await fetch(
+        `${baseUrl}/api/content/${encodeURIComponent(filePath)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "touch" }),
+        },
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
     async createAgent(filename: string, content: string): Promise<{ ok: boolean; id: string }> {
       const res = await fetch(`${baseUrl}/api/agents/create`, {
         method: "POST",

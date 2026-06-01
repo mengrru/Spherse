@@ -1,8 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ChevronRightIcon, FileIcon, FolderIcon } from "lucide-react";
+import { ChevronRightIcon, FileIcon, FolderIcon, FolderPlusIcon, FilePlusIcon } from "lucide-react";
+import { toast } from "sonner";
 import type { ApiClient } from "../lib/api";
 import type { FileEntry } from "../lib/types";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 import {
   Collapsible,
   CollapsibleContent,
@@ -12,6 +23,7 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSeparator,
   ContextMenuTrigger,
 } from "./ui/context-menu";
 
@@ -30,6 +42,13 @@ interface TreeNode {
   children: TreeNode[];
   loaded: boolean;
 }
+
+type CreatingState = {
+  parentPath: string;
+  action: "new-file" | "new-folder";
+};
+
+const INVALID_NAME_RE = /[/\\:]/;
 
 function buildNodes(entries: FileEntry[], parentPath: string): TreeNode[] {
   return entries
@@ -58,6 +77,7 @@ function updateNode(nodes: TreeNode[], path: string, update: (node: TreeNode) =>
 
 export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
+  const [creating, setCreating] = useState<CreatingState | null>(null);
   const nodesRef = useRef<TreeNode[]>([]);
 
   useEffect(() => {
@@ -118,20 +138,49 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
     );
   };
 
-  const handleDelete = async (node: TreeNode) => {
-    const label = node.type === "directory" ? `目录「${node.name}」` : `文件「${node.name}」`;
-    const ok = window.confirm(`确定要删除${label}吗？此操作不可撤销。`);
-    if (!ok) return;
+  const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    const node = deleteTarget;
+    setDeleteTarget(null);
+    client.deleteContent(node.path)
+      .then(() => {
+        onDeleted?.(node.path);
+        refreshRoot();
+      })
+      .catch((err) => {
+        toast.error(`删除失败：${(err as Error).message}`);
+      });
+  };
+
+  const handleCreate = async (parentPath: string, action: "new-file" | "new-folder", name: string) => {
+    if (!name || INVALID_NAME_RE.test(name)) return;
+    const targetPath = parentPath ? `${parentPath}/${name}` : name;
     try {
-      await client.deleteContent(node.path);
-      onDeleted?.(node.path);
-      refreshExpanded(nodesRef.current).then(setRootNodes);
+      if (action === "new-folder") {
+        await client.mkdir(targetPath);
+      } else {
+        await client.touchFile(targetPath);
+      }
+      setCreating(null);
+      refreshRoot();
     } catch (err) {
-      console.error("Delete failed:", err);
+      toast.error(`创建失败：${(err as Error).message}`);
     }
   };
 
-  useFsWatchRefresh(client, refreshExpanded, setRootNodes, nodesRef);
+  const refreshRoot = useCallback(async () => {
+    const entries = await loadChildren("");
+    const root = buildNodes(entries, "");
+    const refreshed = await refreshExpanded(root.map((n) => {
+      const old = nodesRef.current.find((o) => o.path === n.path);
+      return old ? { ...n, expanded: old.expanded, loaded: old.loaded, children: old.children } : n;
+    }));
+    setRootNodes(refreshed);
+  }, [loadChildren, refreshExpanded]);
+
+  useFsWatchRefresh(client, refreshRoot);
 
   return (
     <div className="flex flex-col gap-px text-xs">
@@ -144,10 +193,80 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
             node={node}
             depth={0}
             onToggle={toggleNode}
-            onDelete={handleDelete}
+            onDelete={(n) => setDeleteTarget(n)}
+            onCreate={(n, action) => {
+              const dirPath = n.type === "directory" ? n.path : n.path.split("/").slice(0, -1).join("/");
+              if (n.type === "directory" && !n.expanded) {
+                toggleNode(n);
+              }
+              setCreating({ parentPath: dirPath, action });
+            }}
+            creating={creating}
+            onSubmitCreate={handleCreate}
+            onCancelCreate={() => setCreating(null)}
           />
         ))
       )}
+      {creating && creating.parentPath === "" && (
+        <InlineNameInput
+          depth={0}
+          onSubmit={(name) => handleCreate(creating.parentPath, creating.action, name)}
+          onCancel={() => setCreating(null)}
+        />
+      )}
+      <AlertDialog open={deleteTarget !== null} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogTitle>确认删除</AlertDialogTitle>
+          <AlertDialogDescription>
+            {deleteTarget && (
+              deleteTarget.type === "directory"
+                ? `确定要删除目录「${deleteTarget.name}」吗？此操作不可撤销。`
+                : `确定要删除文件「${deleteTarget.name}」吗？此操作不可撤销。`
+            )}
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete}>删除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function InlineNameInput({
+  depth,
+  onSubmit,
+  onCancel,
+}: {
+  depth: number;
+  onSubmit: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  return (
+    <div style={{ paddingLeft: (depth + 1) * 16 + 8 }}>
+      <Input
+        ref={inputRef}
+        className="h-6 text-xs"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            const value = e.currentTarget.value.trim();
+            if (value && !INVALID_NAME_RE.test(value)) {
+              onSubmit(value);
+            }
+          }
+          if (e.key === "Escape") {
+            onCancel();
+          }
+        }}
+        onBlur={() => onCancel()}
+      />
     </div>
   );
 }
@@ -157,12 +276,23 @@ function TreeNodeView({
   depth,
   onToggle,
   onDelete,
+  onCreate,
+  creating,
+  onSubmitCreate,
+  onCancelCreate,
 }: {
   node: TreeNode;
   depth: number;
   onToggle: (node: TreeNode) => void;
   onDelete: (node: TreeNode) => void;
+  onCreate: (node: TreeNode, action: "new-file" | "new-folder") => void;
+  creating: CreatingState | null;
+  onSubmitCreate: (parentPath: string, action: "new-file" | "new-folder", name: string) => void;
+  onCancelCreate: () => void;
 }) {
+  const isCreatingInThisDir =
+    creating && node.type === "directory" && creating.parentPath === node.path;
+
   if (node.type === "file") {
     return (
       <ContextMenu>
@@ -179,6 +309,15 @@ function TreeNodeView({
           </Button>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem onClick={() => onCreate(node, "new-file")}>
+            <FilePlusIcon className="size-4" />
+            新建文件
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => onCreate(node, "new-folder")}>
+            <FolderPlusIcon className="size-4" />
+            新建文件夹
+          </ContextMenuItem>
+          <ContextMenuSeparator />
           <ContextMenuItem variant="destructive" onClick={() => onDelete(node)}>
             删除
           </ContextMenuItem>
@@ -207,6 +346,15 @@ function TreeNodeView({
           </CollapsibleTrigger>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem onClick={() => onCreate(node, "new-file")}>
+            <FilePlusIcon className="size-4" />
+            新建文件
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => onCreate(node, "new-folder")}>
+            <FolderPlusIcon className="size-4" />
+            新建文件夹
+          </ContextMenuItem>
+          <ContextMenuSeparator />
           <ContextMenuItem variant="destructive" onClick={() => onDelete(node)}>
             删除
           </ContextMenuItem>
@@ -214,6 +362,13 @@ function TreeNodeView({
       </ContextMenu>
       <CollapsibleContent className="ml-2">
         <div className="flex flex-col gap-px">
+          {isCreatingInThisDir && (
+            <InlineNameInput
+              depth={depth + 1}
+              onSubmit={(name) => onSubmitCreate(creating.parentPath, creating.action, name)}
+              onCancel={onCancelCreate}
+            />
+          )}
           {node.children.map((child) => (
             <TreeNodeView
               key={child.path}
@@ -221,6 +376,10 @@ function TreeNodeView({
               depth={depth + 1}
               onToggle={onToggle}
               onDelete={onDelete}
+              onCreate={onCreate}
+              creating={creating}
+              onSubmitCreate={onSubmitCreate}
+              onCancelCreate={onCancelCreate}
             />
           ))}
         </div>
@@ -231,9 +390,7 @@ function TreeNodeView({
 
 function useFsWatchRefresh(
   client: ApiClient,
-  refreshExpanded: (nodes: TreeNode[]) => Promise<TreeNode[]>,
-  setRootNodes: React.Dispatch<React.SetStateAction<TreeNode[]>>,
-  nodesRef: React.MutableRefObject<TreeNode[]>,
+  refreshRoot: () => Promise<void>,
 ) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -241,12 +398,12 @@ function useFsWatchRefresh(
     const ws = client.createFsWatchWebSocket(() => {
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        refreshExpanded(nodesRef.current).then(setRootNodes);
+        refreshRoot();
       }, 300);
     });
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
       ws.close();
     };
-  }, [client, refreshExpanded, setRootNodes, nodesRef]);
+  }, [client, refreshRoot]);
 }

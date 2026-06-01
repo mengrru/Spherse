@@ -36,6 +36,47 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
   );
 
+  fastify.post<{ Params: { "*": string }; Body: { action: "mkdir" | "touch" } }>(
+    "/api/content/*",
+    async (req, reply) => {
+      const relativePath = req.params["*"];
+      const absolutePath = path.resolve(
+        ctx.projectStore.getRootPath(),
+        relativePath,
+      );
+
+      if (!absolutePath.startsWith(ctx.projectStore.getRootPath())) {
+        return reply.code(403).send({ error: "Access denied" });
+      }
+
+      if (relativePath === ".spherse" || relativePath.startsWith(".spherse/") || relativePath.startsWith(".spherse\\")) {
+        return reply.code(403).send({ error: "Cannot create inside .spherse directory" });
+      }
+
+      const action = req.body?.action;
+      if (action !== "mkdir" && action !== "touch") {
+        return reply.code(400).send({ error: "Invalid or missing 'action' (expected 'mkdir' or 'touch')" });
+      }
+
+      try {
+        const stat = await fs.stat(absolutePath).catch(() => null);
+        if (stat) {
+          return reply.code(409).send({ error: "Already exists" });
+        }
+
+        if (action === "mkdir") {
+          await fs.mkdir(absolutePath, { recursive: true });
+        } else {
+          await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+          await fs.writeFile(absolutePath, "", "utf-8");
+        }
+        return { ok: true };
+      } catch (err) {
+        return reply.code(500).send({ error: `Create failed: ${(err as Error).message}` });
+      }
+    },
+  );
+
   fastify.put<{ Params: { "*": string }; Body: { content: string } }>(
     "/api/content/*",
     async (req, reply) => {

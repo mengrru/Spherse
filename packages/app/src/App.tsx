@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from "react-router";
 import { ActivityBar } from "./features/activity-bar";
 import { SettingsModal } from "./features/settings";
 import { TooltipProvider } from "./components/ui/tooltip";
+import { Toaster } from "./components/ui/sonner";
 import { useAppStore } from "./stores/app-store";
 import { useProjectDataStore } from "./stores/project-data-store";
 import { useProjectUiStore } from "./stores/project-ui-store";
@@ -79,6 +80,7 @@ export function App() {
         />
         <Outlet />
         {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+        <Toaster />
       </div>
     </TooltipProvider>
   );
