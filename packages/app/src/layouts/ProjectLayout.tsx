@@ -2,19 +2,21 @@ import { useEffect } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import { ContentBrowser } from "../features/content-browser";
 import { Chat } from "../features/chat";
-import { ProjectSidebar } from "../features/project-sidebar";
+import { ProjectPanel } from "../features/project-panel";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import type { ProjectState } from "../stores/app-store";
 import { useAppStore } from "../stores/app-store";
-import { useProjectWorkspaceStore } from "../stores/project-workspace-store";
+import { useProjectDataStore } from "../stores/project-data-store";
 
 export interface ProjectLayoutProps {
   projectKey: string;
   project: ProjectState;
 }
 
-function buildContentUrl(projectKey: string, filePath: string): string {
-  return `/project/${projectKey}/content?path=${encodeURIComponent(filePath)}`;
+function buildContentUrl(projectKey: string, filePath: string, sessionId?: string | null): string {
+  const params = new URLSearchParams({ path: filePath });
+  if (sessionId) params.set("sessionId", sessionId);
+  return `/project/${projectKey}/content?${params.toString()}`;
 }
 
 export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
@@ -23,20 +25,19 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   const { sessionId } = useParams();
   const [searchParams] = useSearchParams();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
-  const workspace = useProjectWorkspaceStore((state) => state.workspaces[projectKey]);
-  const refreshAgents = useProjectWorkspaceStore((state) => state.refreshAgents);
-  const refreshSessions = useProjectWorkspaceStore((state) => state.refreshSessions);
-  const createSession = useProjectWorkspaceStore((state) => state.createSession);
-  const setActiveSession = useProjectWorkspaceStore((state) => state.setActiveSession);
-  const rememberContentPath = useProjectWorkspaceStore((state) => state.rememberContentPath);
-  const consumeInitialMessage = useProjectWorkspaceStore((state) => state.consumeInitialMessage);
+  const projectData = useProjectDataStore((state) => state.projects[projectKey]);
+  const refreshAgents = useProjectDataStore((state) => state.refreshAgents);
+  const refreshSessions = useProjectDataStore((state) => state.refreshSessions);
+  const createSession = useProjectDataStore((state) => state.createSession);
+  const consumeInitialMessage = useProjectDataStore((state) => state.consumeInitialMessage);
 
-  const agents = workspace?.agents ?? [];
-  const sessions = workspace?.sessions ?? [];
+  const agents = projectData?.agents ?? [];
+  const sessions = projectData?.sessions ?? [];
   const contentPath = searchParams.get("path");
+  const contentSessionId = searchParams.get("sessionId");
   const isContentRoute = location.pathname.endsWith("/content");
   const showingContent = isContentRoute && Boolean(contentPath);
-  const activeSessionId = sessionId ?? workspace?.activeSessionId ?? null;
+  const activeSessionId = sessionId ?? contentSessionId ?? null;
   const selectedSession = activeSessionId
     ? sessions.find((session) => session.id === activeSessionId) ?? null
     : null;
@@ -44,7 +45,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
     ? agents.find((agent) => agent.id === selectedSession.agentId) ?? null
     : null;
   const initialMessage = selectedSession
-    ? workspace?.initialMessageBySessionId[selectedSession.id]
+    ? projectData?.initialMessageBySessionId[selectedSession.id]
     : undefined;
 
   useCustomTheme(project.ctx.projectRoot, project.ctx.port);
@@ -54,21 +55,9 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   }, [projectKey, setActiveProject]);
 
   useEffect(() => {
-    void refreshAgents(projectKey);
-    void refreshSessions(projectKey);
-  }, [projectKey, refreshAgents, refreshSessions]);
-
-  useEffect(() => {
-    if (sessionId) {
-      setActiveSession(projectKey, sessionId);
-    }
-  }, [projectKey, sessionId, setActiveSession]);
-
-  useEffect(() => {
-    if (contentPath) {
-      rememberContentPath(projectKey, contentPath);
-    }
-  }, [contentPath, projectKey, rememberContentPath]);
+    void refreshAgents(projectKey, project.ctx.client);
+    void refreshSessions(projectKey, project.ctx.client);
+  }, [project.ctx.client, projectKey, refreshAgents, refreshSessions]);
 
   useEffect(() => {
     if (initialMessage && selectedSession) {
@@ -77,8 +66,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   }, [consumeInitialMessage, initialMessage, projectKey, selectedSession]);
 
   const handleSelectFile = (filePath: string) => {
-    rememberContentPath(projectKey, filePath);
-    navigate(buildContentUrl(projectKey, filePath));
+    navigate(buildContentUrl(projectKey, filePath, activeSessionId));
   };
 
   const handleBackToChat = () => {
@@ -98,7 +86,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
     const parts = [`请处理以下来自「${sourcePath}」的内容：\n\n> ${selectedText}`];
     if (comment) parts.push(`\n\n${comment}`);
     const message = parts.join("");
-    const session = await createSession(projectKey, agentId, message);
+    const session = await createSession(projectKey, project.ctx.client, agentId, message);
     if (session) {
       navigate(`/project/${projectKey}/chat/${session.id}`);
     }
@@ -106,14 +94,13 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
 
   const handleFileDeleted = (deletedPath: string) => {
     if (contentPath && (contentPath === deletedPath || contentPath.startsWith(`${deletedPath}/`))) {
-      rememberContentPath(projectKey, null);
       handleBackToChat();
     }
   };
 
   return (
     <div className="flex h-full flex-1 overflow-hidden">
-      <ProjectSidebar
+      <ProjectPanel
         projectKey={projectKey}
         project={project}
         activeSessionId={activeSessionId}

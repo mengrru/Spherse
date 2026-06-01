@@ -1,15 +1,15 @@
-import type { ProjectState } from "../stores/app-store";
+import type { ProjectState } from "../../stores/app-store";
 import { ProjectAvatar } from "./ProjectAvatar";
-import { Button } from "./ui/button";
+import { Button } from "../../components/ui/button";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
-} from "./ui/context-menu";
+} from "../../components/ui/context-menu";
 import { PlusIcon, SettingsIcon } from "lucide-react";
 
-interface ProjectBarProps {
+interface ActivityBarProps {
   projects: Map<string, ProjectState>;
   activeProjectKey: string | null;
   onSelect: (projectKey: string) => void;
@@ -19,7 +19,7 @@ interface ProjectBarProps {
   onSettings: () => void;
 }
 
-export function ProjectBar({
+export function ActivityBar({
   projects,
   activeProjectKey,
   onSelect,
@@ -27,7 +27,7 @@ export function ProjectBar({
   onClose,
   onReveal,
   onSettings,
-}: ProjectBarProps) {
+}: ActivityBarProps) {
   return (
     <div className="flex w-14 shrink-0 flex-col border-r border-border bg-muted/30">
       <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">

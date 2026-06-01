@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { ChevronRightIcon, FileIcon, FolderIcon } from "lucide-react";
 import type { ApiClient } from "../lib/api";
 import type { FileEntry } from "../lib/types";
+import { Button } from "./ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "./ui/collapsible";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -127,9 +134,9 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
   useFsWatchRefresh(client, refreshExpanded, setRootNodes, nodesRef);
 
   return (
-    <div className="text-[13px]">
+    <div className="flex flex-col gap-px text-xs">
       {rootNodes.length === 0 ? (
-        <p className="text-xs text-muted-foreground">加载中...</p>
+        <p className="px-2 text-xs text-sidebar-foreground/70">加载中...</p>
       ) : (
         rootNodes.map((node) => (
           <TreeNodeView
@@ -156,20 +163,20 @@ function TreeNodeView({
   onToggle: (node: TreeNode) => void;
   onDelete: (node: TreeNode) => void;
 }) {
-  return (
-    <div>
+  if (node.type === "file") {
+    return (
       <ContextMenu>
         <ContextMenuTrigger>
-          <div
-            className="flex cursor-pointer items-center rounded px-1 py-[3px] transition-colors select-none hover:bg-muted"
+          <Button
+            variant="ghost"
+            size="default"
+            className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             style={{ paddingLeft: depth * 16 + 8 }}
             onClick={() => onToggle(node)}
           >
-            <span className="mr-1 text-xs">
-              {node.type === "directory" ? (node.expanded ? "📂" : "📁") : "📄"}
-            </span>
+            <FileIcon className="size-4 shrink-0 text-sidebar-foreground/70" />
             <span className="overflow-hidden text-ellipsis whitespace-nowrap">{node.name}</span>
-          </div>
+          </Button>
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem variant="destructive" onClick={() => onDelete(node)}>
@@ -177,16 +184,48 @@ function TreeNodeView({
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-      {node.expanded && node.children.map((child) => (
-        <TreeNodeView
-          key={child.path}
-          node={child}
-          depth={depth + 1}
-          onToggle={onToggle}
-          onDelete={onDelete}
-        />
-      ))}
-    </div>
+    );
+  }
+
+  return (
+    <Collapsible open={node.expanded} onOpenChange={() => onToggle(node)}>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <CollapsibleTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="default"
+                className="group w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                style={{ paddingLeft: depth * 16 + 8 }}
+              />
+            }
+          >
+            <ChevronRightIcon className="size-4 shrink-0 text-sidebar-foreground/70 transition-transform group-data-[panel-open]:rotate-90" />
+            <FolderIcon className="size-4 shrink-0 text-sidebar-foreground/70" />
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">{node.name}</span>
+          </CollapsibleTrigger>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem variant="destructive" onClick={() => onDelete(node)}>
+            删除
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+      <CollapsibleContent className="ml-2">
+        <div className="flex flex-col gap-px">
+          {node.children.map((child) => (
+            <TreeNodeView
+              key={child.path}
+              node={child}
+              depth={depth + 1}
+              onToggle={onToggle}
+              onDelete={onDelete}
+            />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

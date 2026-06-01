@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { AgentDialog } from "../../components/AgentDialog";
-import { Button } from "../../components/ui/button";
+import {
+  SidebarGroup,
+  SidebarGroupAction,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+} from "../../components/ui/sidebar";
 import type { AgentProfile, SessionInfo } from "../../lib/types";
 import { useAppStore } from "../../stores/app-store";
-import { useProjectWorkspaceStore } from "../../stores/project-workspace-store";
+import { useProjectDataStore } from "../../stores/project-data-store";
+import { useProjectUiStore } from "../../stores/project-ui-store";
 import { AgentSessionListView } from "./AgentSessionListView";
 import { PlusIcon } from "lucide-react";
 
@@ -21,34 +27,50 @@ export function AgentSessionList({
 }: AgentSessionListProps) {
   const navigate = useNavigate();
   const project = useAppStore((state) => state.projects.get(projectKey));
-  const workspace = useProjectWorkspaceStore((state) => state.workspaces[projectKey]);
-  const refreshAgents = useProjectWorkspaceStore((state) => state.refreshAgents);
-  const createSession = useProjectWorkspaceStore((state) => state.createSession);
-  const deleteSession = useProjectWorkspaceStore((state) => state.deleteSession);
-  const deleteAgent = useProjectWorkspaceStore((state) => state.deleteAgent);
-  const setActiveSession = useProjectWorkspaceStore((state) => state.setActiveSession);
-  const toggleAgentCollapsed = useProjectWorkspaceStore((state) => state.toggleAgentCollapsed);
+  const projectData = useProjectDataStore((state) => state.projects[projectKey]);
+  const projectUi = useProjectUiStore((state) => state.projects[projectKey]);
+  const createSession = useProjectDataStore((state) => state.createSession);
+  const deleteSession = useProjectDataStore((state) => state.deleteSession);
+  const createAgent = useProjectDataStore((state) => state.createAgent);
+  const updateAgent = useProjectDataStore((state) => state.updateAgent);
+  const deleteAgent = useProjectDataStore((state) => state.deleteAgent);
+  const toggleAgentCollapsed = useProjectUiStore((state) => state.toggleAgentCollapsed);
+  const setCollapsedAgentIds = useProjectUiStore((state) => state.setCollapsedAgentIds);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
   const [editAgent, setEditAgent] = useState<{ id: string; content: string } | null>(null);
 
-  const agents = workspace?.agents ?? [];
-  const sessions = workspace?.sessions ?? [];
-  const collapsedAgentIds = workspace?.collapsedAgentIds ?? new Set<string>();
+  const agents = projectData?.agents ?? [];
+  const sessions = projectData?.sessions ?? [];
+  const collapsedAgentIds = projectUi?.collapsedAgentIds ?? new Set<string>();
+
+  useEffect(() => {
+    const validAgentIds = new Set(agents.map((agent) => agent.id));
+    const nextCollapsedAgentIds = collapsedAgentIds.size === 0
+      ? agents.slice(1).map((agent) => agent.id)
+      : [...collapsedAgentIds].filter((id) => validAgentIds.has(id));
+    const changed =
+      nextCollapsedAgentIds.length !== collapsedAgentIds.size ||
+      nextCollapsedAgentIds.some((id) => !collapsedAgentIds.has(id));
+    if (changed) {
+      setCollapsedAgentIds(projectKey, nextCollapsedAgentIds);
+    }
+  }, [agents, collapsedAgentIds, projectKey, setCollapsedAgentIds]);
 
   const handleSelectSession = (session: SessionInfo) => {
-    setActiveSession(projectKey, session.id);
     navigate(`/project/${projectKey}/chat/${session.id}`);
   };
 
   const handleNewSession = async (agent: AgentProfile) => {
-    const session = await createSession(projectKey, agent.id);
+    if (!project) return;
+    const session = await createSession(projectKey, project.ctx.client, agent.id);
     if (session) {
       navigate(`/project/${projectKey}/chat/${session.id}`);
     }
   };
 
   const handleDeleteSession = async (deletedSessionId: string) => {
-    await deleteSession(projectKey, deletedSessionId);
+    if (!project) return;
+    await deleteSession(projectKey, project.ctx.client, deletedSessionId);
     if (activeSessionId === deletedSessionId) {
       navigate(`/project/${projectKey}`);
     }
@@ -57,18 +79,17 @@ export function AgentSessionList({
   const handleDeleteAgent = async (agent: AgentProfile) => {
     const ok = window.confirm(`确定要删除 Agent「${agent.name}」吗？该 Agent 下的所有会话也将被移除。`);
     if (!ok) return;
-    await deleteAgent(projectKey, agent.id);
+    if (!project) return;
+    await deleteAgent(projectKey, project.ctx.client, agent.id);
     if (selectedAgentId === agent.id) {
-      setActiveSession(projectKey, null);
       navigate(`/project/${projectKey}`);
     }
   };
 
   const handleCreateAgent = async (filename: string, content: string) => {
     if (!project) return;
-    await project.ctx.client.createAgent(filename, content);
-    setShowCreateAgent(false);
-    await refreshAgents(projectKey);
+    const ok = await createAgent(projectKey, project.ctx.client, filename, content);
+    if (ok) setShowCreateAgent(false);
   };
 
   const handleEditAgent = async (agent: AgentProfile) => {
@@ -79,36 +100,38 @@ export function AgentSessionList({
 
   const handleEditSubmit = async (_filename: string, content: string) => {
     if (!project || !editAgent) return;
-    await project.ctx.client.updateAgent(editAgent.id, content);
-    setEditAgent(null);
-    await refreshAgents(projectKey);
+    const ok = await updateAgent(projectKey, project.ctx.client, editAgent.id, content);
+    if (ok) setEditAgent(null);
   };
 
   return (
     <>
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="mb-0 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">Agents</h3>
-        <Button
-          variant="ghost"
-          size="icon-xs"
+      <SidebarGroup className="px-0 py-0">
+        <SidebarGroupLabel className="h-7 px-0 text-[11px] font-semibold tracking-wide uppercase">
+          Agents
+        </SidebarGroupLabel>
+        <SidebarGroupAction
+          className="top-1 right-0"
           onClick={() => setShowCreateAgent(true)}
           title="创建 Agent"
         >
           <PlusIcon />
-        </Button>
-      </div>
-      <AgentSessionListView
-        agents={agents}
-        sessions={sessions}
-        collapsedAgentIds={collapsedAgentIds}
-        activeSessionId={activeSessionId}
-        onToggleAgentCollapsed={(agentId) => toggleAgentCollapsed(projectKey, agentId)}
-        onNewSession={handleNewSession}
-        onEditAgent={handleEditAgent}
-        onDeleteAgent={handleDeleteAgent}
-        onSelectSession={handleSelectSession}
-        onDeleteSession={handleDeleteSession}
-      />
+        </SidebarGroupAction>
+        <SidebarGroupContent>
+          <AgentSessionListView
+            agents={agents}
+            sessions={sessions}
+            collapsedAgentIds={collapsedAgentIds}
+            activeSessionId={activeSessionId}
+            onToggleAgentCollapsed={(agentId) => toggleAgentCollapsed(projectKey, agentId)}
+            onNewSession={handleNewSession}
+            onEditAgent={handleEditAgent}
+            onDeleteAgent={handleDeleteAgent}
+            onSelectSession={handleSelectSession}
+            onDeleteSession={handleDeleteSession}
+          />
+        </SidebarGroupContent>
+      </SidebarGroup>
       {showCreateAgent && project && (
         <AgentDialog
           mode="create"

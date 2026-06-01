@@ -1,56 +1,27 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import type { ComponentProps, ElementType } from "react";
-import { Button } from "./ui/button";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "./ui/field";
-import { Input } from "./ui/input";
-import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "./ui/native-select";
-import { Badge } from "./ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { cn } from "../lib/utils";
-
-interface ProviderConfig {
-  name: string;
-  envKey: string;
-  models: readonly string[];
-}
+} from "../../components/ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "../../components/ui/field";
+import { Input } from "../../components/ui/input";
+import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "../../components/ui/native-select";
+import { Badge } from "../../components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { cn } from "../../lib/utils";
+import { useSettingsStore } from "./store";
+import { MODEL_PROVIDER_IDS, type ProviderConfig, type SettingsApi } from "./types";
 
 interface SettingsModalProps {
   onClose: () => void;
 }
 
-const MODEL_PROVIDER_IDS = ["deepseek", "zai"] as const;
-const FALLBACK_MODEL_PROVIDERS: Record<(typeof MODEL_PROVIDER_IDS)[number], ProviderConfig> = {
-  deepseek: {
-    name: "DeepSeek",
-    envKey: "DEEPSEEK_API_KEY",
-    models: ["deepseek-v4-flash", "deepseek-v4-pro"],
-  },
-  zai: {
-    name: "z.ai",
-    envKey: "ZAI_API_KEY",
-    models: ["glm-4.5-air", "glm-4.7", "glm-5-turbo", "glm-5.1", "glm-5v-turbo"],
-  },
-};
-
-interface AppSettings {
-  providers?: Record<string, { apiKey?: string } | undefined>;
-  defaultModel?: string;
-}
-
-interface SettingsElectronAPI {
-  getSettings: () => Promise<AppSettings | null>;
-  saveSettings: (settings: AppSettings) => Promise<{ success: boolean }>;
-  getSupportedProviders: () => Promise<Record<string, ProviderConfig>>;
-}
-
-const electronAPI = (window as unknown as { electronAPI: SettingsElectronAPI }).electronAPI;
+const electronAPI = (window as unknown as { electronAPI: SettingsApi }).electronAPI;
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
   return (
@@ -66,78 +37,28 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 }
 
 function ModelSettingsTab({ onClose }: { onClose: () => void }) {
-  const [providers, setProviders] = useState<Record<string, ProviderConfig>>({});
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
-  const [defaultModel, setDefaultModel] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const apiKeys = useSettingsStore((state) => state.apiKeys);
+  const defaultModel = useSettingsStore((state) => state.defaultModel);
+  const saving = useSettingsStore((state) => state.saving);
+  const message = useSettingsStore((state) => state.message);
+  const load = useSettingsStore((state) => state.load);
+  const setApiKey = useSettingsStore((state) => state.setApiKey);
+  const setDefaultModel = useSettingsStore((state) => state.setDefaultModel);
+  const save = useSettingsStore((state) => state.save);
+  const connect = useSettingsStore((state) => state.connect);
+  const disconnect = useSettingsStore((state) => state.disconnect);
+  const modelProviders = useSettingsStore((state) => state.getModelProviders());
 
   useEffect(() => {
-    Promise.all([
-      electronAPI.getSupportedProviders(),
-      electronAPI.getSettings(),
-    ]).then(([prov, settings]) => {
-      setProviders(prov ?? {});
-      if (settings) {
-        const keys: Record<string, string> = {};
-        for (const [id, config] of Object.entries(settings.providers ?? {})) {
-          if (config?.apiKey) {
-            keys[id] = config.apiKey;
-          }
-        }
-        setApiKeys(keys);
-        setDefaultModel(settings.defaultModel ?? "");
-      }
-    });
-  }, []);
-
-  const modelProviders = Object.fromEntries(
-    MODEL_PROVIDER_IDS.map((id) => [id, providers[id] ?? FALLBACK_MODEL_PROVIDERS[id]]),
-  ) as Record<(typeof MODEL_PROVIDER_IDS)[number], ProviderConfig>;
-
-  const buildSettings = (
-    keys: Record<string, string> = apiKeys,
-    model: string = defaultModel,
-  ): AppSettings => {
-    const providersSettings: Record<string, { apiKey: string } | undefined> = {};
-    for (const id of MODEL_PROVIDER_IDS) {
-      providersSettings[id] = { apiKey: (keys[id] ?? "").trim() };
-    }
-    return {
-      providers: providersSettings,
-      defaultModel: model,
-    };
-  };
-
-  const saveSettings = async (
-    keys: Record<string, string> = apiKeys,
-    model: string = defaultModel,
-  ) => {
-    setSaving(true);
-    setMessage(null);
-    try {
-      await electronAPI.saveSettings(buildSettings(keys, model));
-      setMessage("saved");
-    } catch {
-      setMessage("error");
-    }
-    setSaving(false);
-  };
+    void load(electronAPI);
+  }, [load]);
 
   const handleConnect = async (id: string) => {
-    if (!apiKeys[id]?.trim()) return;
-    await saveSettings(apiKeys);
+    await connect(electronAPI, id);
   };
 
   const handleDisconnect = async (id: string) => {
-    const nextApiKeys = { ...apiKeys, [id]: "" };
-    const nextDefaultModel =
-      defaultModel && modelProviders[id as keyof typeof modelProviders]?.models.includes(defaultModel)
-        ? ""
-        : defaultModel;
-    setApiKeys(nextApiKeys);
-    setDefaultModel(nextDefaultModel);
-    await saveSettings(nextApiKeys, nextDefaultModel);
+    await disconnect(electronAPI, id);
   };
 
   return (
@@ -165,7 +86,7 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
                     id={id}
                     config={modelProviders[id]}
                     apiKey={apiKeys[id] ?? ""}
-                    onApiKeyChange={(value) => setApiKeys({ ...apiKeys, [id]: value })}
+                    onApiKeyChange={(value) => setApiKey(id, value)}
                     onConnect={() => handleConnect(id)}
                     onDisconnect={() => handleDisconnect(id)}
                   />
@@ -185,7 +106,7 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
         <Button variant="outline" onClick={onClose}>
           关闭
         </Button>
-        <Button onClick={() => saveSettings()} disabled={saving}>
+        <Button onClick={() => save(electronAPI)} disabled={saving}>
           {saving ? "保存中..." : "保存"}
         </Button>
       </DialogFooter>

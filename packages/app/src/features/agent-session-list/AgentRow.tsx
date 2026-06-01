@@ -1,12 +1,12 @@
 import type { AgentProfile } from "../../lib/types";
-import { Button } from "../../components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
-import { ChevronDownIcon, MoreHorizontalIcon } from "lucide-react";
+import { SidebarMenuAction, SidebarMenuButton } from "../../components/ui/sidebar";
+import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
 
 interface AgentRowProps {
   agent: AgentProfile;
@@ -26,19 +26,17 @@ export function AgentRow({
   onDeleteAgent,
 }: AgentRowProps) {
   return (
-    <div className="group flex items-center gap-1 rounded px-2 py-1.5 hover:bg-muted">
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        className="shrink-0 transition-transform"
-        style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0)" }}
-        onClick={() => onToggleCollapsed(agent.id)}
-      >
-        <ChevronDownIcon />
-      </Button>
-      <span className="text-[13px] font-medium overflow-hidden text-ellipsis whitespace-nowrap flex-1">{agent.name}</span>
+    <div className="group/agent-row relative">
+      <SidebarMenuButton size="sm" onClick={() => onToggleCollapsed(agent.id)}>
+        <ChevronRightIcon className={`transition-transform ${collapsed ? "" : "rotate-90"}`} />
+        <span>{agent.name}</span>
+      </SidebarMenuButton>
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />}>
+        <DropdownMenuTrigger
+          render={
+            <SidebarMenuAction className="md:opacity-0 group-hover/agent-row:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 data-popup-open:opacity-100 data-open:opacity-100" />
+          }
+        >
           <MoreHorizontalIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

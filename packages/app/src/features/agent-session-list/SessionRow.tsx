@@ -1,11 +1,15 @@
 import type { SessionInfo } from "../../lib/types";
-import { Button } from "../../components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
+import {
+  SidebarMenuAction,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from "../../components/ui/sidebar";
 import { MoreHorizontalIcon } from "lucide-react";
 
 interface SessionRowProps {
@@ -17,25 +21,30 @@ interface SessionRowProps {
 
 export function SessionRow({ session, active, onSelect, onDelete }: SessionRowProps) {
   return (
-    <li>
-      <div
-        className={`group flex cursor-pointer items-center gap-1 rounded-r py-1 pl-2 text-[12px] transition-colors hover:bg-muted ${active ? "bg-accent text-accent-foreground font-medium" : "text-muted-foreground"}`}
+    <SidebarMenuSubItem className="group/session-row">
+      <SidebarMenuSubButton
+        isActive={active}
+        className="cursor-pointer pr-6"
         onClick={() => onSelect(session)}
       >
-        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+        <span>
           {session.title ?? new Date(session.updatedAt).toLocaleString()}
         </span>
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="ghost" size="icon-xs" className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />}>
-            <MoreHorizontalIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem variant="destructive" onClick={() => onDelete(session.id)}>
-              删除
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </li>
+      </SidebarMenuSubButton>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <SidebarMenuAction className="top-1 right-0 md:opacity-0 group-hover/session-row:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100 data-popup-open:opacity-100 data-open:opacity-100" />
+          }
+        >
+          <MoreHorizontalIcon />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem variant="destructive" onClick={() => onDelete(session.id)}>
+            删除
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </SidebarMenuSubItem>
   );
 }

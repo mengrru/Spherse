@@ -1,4 +1,5 @@
 import type { AgentProfile, SessionInfo } from "../../lib/types";
+import { SidebarMenu } from "../../components/ui/sidebar";
 import { AgentGroup } from "./AgentGroup";
 import { EmptyAgents } from "./EmptyAgents";
 import { useGroupedSessions } from "./hooks/useGroupedSessions";
@@ -35,7 +36,7 @@ export function AgentSessionListView({
   }
 
   return (
-    <div className="flex flex-col gap-0.5">
+    <SidebarMenu>
       {agents.map((agent) => (
         <AgentGroup
           key={agent.id}
@@ -51,6 +52,6 @@ export function AgentSessionListView({
           onDeleteSession={onDeleteSession}
         />
       ))}
-    </div>
+    </SidebarMenu>
   );
 }

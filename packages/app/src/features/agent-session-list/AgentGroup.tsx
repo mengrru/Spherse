@@ -1,4 +1,5 @@
 import type { AgentProfile, SessionInfo } from "../../lib/types";
+import { SidebarMenuItem, SidebarMenuSub } from "../../components/ui/sidebar";
 import { AgentRow } from "./AgentRow";
 import { SessionRow } from "./SessionRow";
 
@@ -28,7 +29,7 @@ export function AgentGroup({
   onDeleteSession,
 }: AgentGroupProps) {
   return (
-    <div className="relative">
+    <SidebarMenuItem>
       <AgentRow
         agent={agent}
         collapsed={collapsed}
@@ -38,7 +39,7 @@ export function AgentGroup({
         onDeleteAgent={onDeleteAgent}
       />
       {!collapsed && sessions.length > 0 && (
-        <ul className="ml-3 list-none border-l border-border">
+        <SidebarMenuSub>
           {sessions.map((session) => (
             <SessionRow
               key={session.id}
@@ -48,8 +49,8 @@ export function AgentGroup({
               onDelete={onDeleteSession}
             />
           ))}
-        </ul>
+        </SidebarMenuSub>
       )}
-    </div>
+    </SidebarMenuItem>
   );
 }

@@ -1,3 +1,3 @@
 export function EmptyAgents() {
-  return <p className="text-xs text-muted-foreground">暂无 Agent 定义</p>;
+  return <p className="px-2 text-xs text-sidebar-foreground/70">暂无 Agent 定义</p>;
 }

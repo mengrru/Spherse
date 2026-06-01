@@ -1,25 +1,25 @@
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router";
-import { ProjectBar } from "./components/ProjectBar";
-import { SettingsModal } from "./components/SettingsModal";
+import { ActivityBar } from "./features/activity-bar";
+import { SettingsModal } from "./features/settings";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { useAppStore } from "./stores/app-store";
-import { useProjectWorkspaceStore } from "./stores/project-workspace-store";
+import { useProjectDataStore } from "./stores/project-data-store";
+import { useProjectUiStore } from "./stores/project-ui-store";
 
 export function App() {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
-  const {
-    projects,
-    activeProjectKey,
-    initializing,
-    restoreProjects,
-    openProject,
-    closeProject,
-    revealProject,
-    setActiveProject,
-  } = useAppStore();
-  const clearProject = useProjectWorkspaceStore((state) => state.clearProject);
+  const projects = useAppStore((state) => state.projects);
+  const activeProjectKey = useAppStore((state) => state.activeProjectKey);
+  const initializing = useAppStore((state) => state.initializing);
+  const restoreProjects = useAppStore((state) => state.restoreProjects);
+  const openProject = useAppStore((state) => state.openProject);
+  const closeProject = useAppStore((state) => state.closeProject);
+  const revealProject = useAppStore((state) => state.revealProject);
+  const setActiveProject = useAppStore((state) => state.setActiveProject);
+  const clearProjectData = useProjectDataStore((state) => state.clearProjectData);
+  const clearProjectUi = useProjectUiStore((state) => state.clearProjectUi);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,7 +48,8 @@ export function App() {
 
   const handleCloseProject = async (projectKey: string) => {
     const nextProjectKey = await closeProject(projectKey);
-    clearProject(projectKey);
+    clearProjectData(projectKey);
+    clearProjectUi(projectKey);
     if (nextProjectKey) {
       navigate(`/project/${nextProjectKey}`);
     } else {
@@ -67,7 +68,7 @@ export function App() {
   return (
     <TooltipProvider>
       <div className="flex h-screen bg-background text-foreground">
-        <ProjectBar
+        <ActivityBar
           projects={projects}
           activeProjectKey={activeProjectKey}
           onSelect={handleSelectProject}
