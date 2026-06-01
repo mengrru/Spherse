@@ -4,6 +4,7 @@ import websocket from "@fastify/websocket";
 import { createEngine } from "@spherse/core";
 import type { ProjectStore } from "@spherse/core";
 import type { Engine } from "@spherse/core";
+import type { FileWriteMutex } from "@spherse/core";
 import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleFsWatchWebSocket } from "./ws-fs-watch.js";
@@ -11,6 +12,7 @@ import { handleFsWatchWebSocket } from "./ws-fs-watch.js";
 export interface AppContext {
   engine: Engine;
   projectStore: ProjectStore;
+  fileWriteMutex: FileWriteMutex;
 }
 
 export async function createServer(
@@ -24,7 +26,7 @@ export async function createServer(
 
   const { engine, projectStore } = await createEngine(projectRoot, options);
 
-  const ctx: AppContext = { engine, projectStore };
+  const ctx: AppContext = { engine, projectStore, fileWriteMutex: engine.getFileWriteMutex() };
 
   registerAllRoutes(fastify, ctx);
   handleChatWebSocket(fastify, ctx);

@@ -3,6 +3,7 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { Type, type Static } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 
 const AppendChangelogParams = Type.Object({
   agent: Type.String({ description: "Name of the agent performing the action" }),
@@ -19,7 +20,7 @@ function validatePath(projectRoot: string, relativePath: string): string {
   return resolved;
 }
 
-export function createAppendChangelogTool(projectRoot: string, changelogPath?: string): AgentTool<typeof AppendChangelogParams> {
+export function createAppendChangelogTool(projectRoot: string, changelogPath: string | undefined, mutex: FileWriteMutex): AgentTool<typeof AppendChangelogParams> {
   const root = path.resolve(projectRoot);
   const defaultChangelog = path.join(root, "CHANGELOG.md");
 
@@ -31,20 +32,22 @@ export function createAppendChangelogTool(projectRoot: string, changelogPath?: s
     async execute(_toolCallId, params, _signal) {
       const resolved = changelogPath ? validatePath(root, changelogPath) : defaultChangelog;
 
-      const timestamp = new Date().toISOString();
-      const entry = `- **[${timestamp}]** ${params.agent} / ${params.action} / \`${params.target}\` — ${params.description}\n`;
+      return mutex.run(resolved, async () => {
+        const timestamp = new Date().toISOString();
+        const entry = `- **[${timestamp}]** ${params.agent} / ${params.action} / \`${params.target}\` — ${params.description}\n`;
 
-      const dir = path.dirname(resolved);
-      if (!fsSync.existsSync(dir)) {
-        await fs.mkdir(dir, { recursive: true });
-      }
+        const dir = path.dirname(resolved);
+        if (!fsSync.existsSync(dir)) {
+          await fs.mkdir(dir, { recursive: true });
+        }
 
-      await fs.appendFile(resolved, entry, "utf-8");
+        await fs.appendFile(resolved, entry, "utf-8");
 
-      return {
-        content: [{ type: "text" as const, text: `Changelog entry appended` }],
-        details: { timestamp, agent: params.agent, action: params.action, target: params.target },
-      };
+        return {
+          content: [{ type: "text" as const, text: `Changelog entry appended` }],
+          details: { timestamp, agent: params.agent, action: params.action, target: params.target },
+        };
+      });
     },
   };
 }

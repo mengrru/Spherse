@@ -95,8 +95,10 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
       }
 
       try {
-        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-        await fs.writeFile(absolutePath, req.body.content, "utf-8");
+        await ctx.fileWriteMutex.run(absolutePath, async () => {
+          await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+          await fs.writeFile(absolutePath, req.body.content, "utf-8");
+        });
         return { ok: true };
       } catch (err) {
         return reply.code(500).send({ error: `Write failed: ${(err as Error).message}` });

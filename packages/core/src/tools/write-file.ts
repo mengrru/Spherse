@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Type, type Static } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 
 const WriteFileParams = Type.Object({
   path: Type.String({ description: "Path relative to project root" }),
@@ -17,7 +18,7 @@ function validatePath(projectRoot: string, relativePath: string): string {
   return resolved;
 }
 
-export function createWriteFileTool(projectRoot: string): AgentTool<typeof WriteFileParams> {
+export function createWriteFileTool(projectRoot: string, mutex: FileWriteMutex): AgentTool<typeof WriteFileParams> {
   const root = path.resolve(projectRoot);
 
   return {
@@ -29,16 +30,18 @@ export function createWriteFileTool(projectRoot: string): AgentTool<typeof Write
       const resolved = validatePath(root, params.path);
       const createDirs = params.createDirs ?? true;
 
-      if (createDirs) {
-        await fs.mkdir(path.dirname(resolved), { recursive: true });
-      }
+      return mutex.run(resolved, async () => {
+        if (createDirs) {
+          await fs.mkdir(path.dirname(resolved), { recursive: true });
+        }
 
-      await fs.writeFile(resolved, params.content, "utf-8");
+        await fs.writeFile(resolved, params.content, "utf-8");
 
-      return {
-        content: [{ type: "text" as const, text: `Successfully wrote ${params.content.length} bytes to ${params.path}` }],
-        details: { path: params.path, size: params.content.length },
-      };
+        return {
+          content: [{ type: "text" as const, text: `Successfully wrote ${params.content.length} bytes to ${params.path}` }],
+          details: { path: params.path, size: params.content.length },
+        };
+      });
     },
   };
 }

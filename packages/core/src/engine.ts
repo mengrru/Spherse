@@ -10,6 +10,7 @@ import { SessionStore } from "./store/session.js";
 import { AgentProfileStore } from "./store/agent-profile.js";
 import { SkillStore } from "./store/skill.js";
 import { createToolsForProject } from "./tools/index.js";
+import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { readContextFiles } from "./engine/read-context-files.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
@@ -21,6 +22,7 @@ export class Engine {
   private skillStore: SkillStore;
   private activeSessions: Map<string, Agent> = new Map();
   private globalDefaultModel?: string;
+  private fileWriteMutex: FileWriteMutex;
 
   constructor(
     profileStore: AgentProfileStore,
@@ -34,6 +36,7 @@ export class Engine {
     this.projectStore = projectStore;
     this.skillStore = skillStore;
     this.globalDefaultModel = options?.defaultModel;
+    this.fileWriteMutex = new FileWriteMutex();
   }
 
   async listProfiles(): Promise<AgentProfile[]> {
@@ -147,6 +150,10 @@ export class Engine {
     return this.skillStore.get(name);
   }
 
+  getFileWriteMutex(): FileWriteMutex {
+    return this.fileWriteMutex;
+  }
+
   private async buildAgent(
     profile: AgentProfile,
     sessionId: string,
@@ -156,6 +163,7 @@ export class Engine {
     const skillDir = path.join(projectRoot, PROJECT_META_DIR, "skills");
     const allTools = createToolsForProject(
       projectRoot,
+      this.fileWriteMutex,
       config.paths.changelog,
       skillDir,
     );

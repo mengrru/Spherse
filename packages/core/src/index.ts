@@ -4,3 +4,4 @@ export type { AgentEventHandler } from "./engine.js";
 export { createEngine } from "./factory.js";
 export type { ProjectStore } from "./store/project.js";
 export { SkillStore } from "./store/skill.js";
+export { FileWriteMutex } from "./utils/file-write-mutex.js";
