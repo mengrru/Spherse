@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "predev": "node scripts/rebuild-native.mjs",
-    "build": "npm run build --workspaces",
+    "build": "npm run build -w @spherse/core && npm run build -w @spherse/presets && npm run build -w @spherse/server && npm run build -w @spherse/app",
     "dev": "npm run dev --workspace=packages/app"
   }
 }
