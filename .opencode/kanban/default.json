@@ -8,7 +8,7 @@
     {
       "name": "brainstorming",
       "prompt": "使用 brainstorming skill 对齐需求并编写 design doc。需求：{{task.content}}",
-      "completion": "design doc 已生成",
+      "completion": "design doc 已生成（完成后直接转移至 design-review 阶段不需要询问）",
       "next": "design-review"
     },
     {
@@ -18,13 +18,13 @@
     },
     {
       "name": "planning",
-      "prompt": "使用 writing-plans skill 编写实施计划",
-      "completion": "实施计划已编写完成并自查完毕",
+      "prompt": "（如果任务复杂度较低则无需编写实施计划直接跳至implementing阶段）使用 writing-plans skill 编写实施计划",
+      "completion": "实施计划已编写完成并自查完毕或任务复杂度较低",
       "next": "implementing"
     },
     {
       "name": "implementing",
-      "prompt": "以subagent-driven模式按计划实现",
+      "prompt": "以 subagent-driven 模式按计划实现 / 按照 design doc 进行实现",
       "completion": "所有计划中的步骤已实现完毕",
       "next": "code-review"
     },
@@ -35,7 +35,7 @@
     },
     {
       "name": "merge",
-      "prompt": "生成commit并squash merge to dev",
+      "prompt": "生成 commit 并squash merge to dev",
       "completion": "命令执行完毕",
       "next": "done"
     },
