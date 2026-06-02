@@ -57,7 +57,10 @@
 
 - **基础组件层**：前端基础 UI 统一使用 shadcn/ui 本地源码组件，组件位于 `packages/app/src/components/ui/`，当前底层 base 为 Base UI
 - **组件生成配置**：`packages/app/components.json` 记录 shadcn 样式 preset、Tailwind v4 CSS 入口和 `@/*` alias
-- **色彩体系**：CSS 变量定义在 `styles.css` 的 `:root`，暗色模式通过 `@media (prefers-color-scheme: dark)` 覆盖；shadcn 语义 token 使用 `--shadcn-*` 变量并通过 Tailwind `@theme inline` 暴露
-- **Tailwind @theme**：将常用颜色注册为 Tailwind 颜色（如 `bg-background`, `bg-card`, `bg-muted` 以及过渡期保留的 `bg-surface` 等），运行时通过 CSS 变量解析
+- **单一 Token 体系**：CSS 变量定义在 `styles.css` 的 `:root`，暗色模式通过 `@media (prefers-color-scheme: dark)` 覆盖。当前使用 shadcn 语义 token（`--shadcn-*`），通过 Tailwind `@theme inline` 映射为 `bg-background`、`text-foreground` 等 Tailwind 颜色。不维护旧的自定义变量（`--surface`、`--base` 等已移除）。后续如需 Spherse 自有扩展 token，使用 `--agent-{name}` 前缀 + `--color-agent-{name}` Tailwind 映射
+- **样式写法**：所有样式通过 Tailwind 工具类写在组件 className 中，不在 `styles.css` 中新增手写 CSS class。禁止硬编码颜色值（如 `text-[#333]`），需要新颜色时在 `styles.css` 中注册 CSS 变量 + Tailwind 颜色
+- **语义 Token 使用**：使用 shadcn 语义 token（`bg-background`、`bg-card`、`bg-muted`、`bg-primary`、`bg-accent`、`text-foreground`、`text-muted-foreground`、`border-border`、`text-destructive` 等）。shadcn 未覆盖的业务语义按需新增 `--agent-*` token
+- **间距与阴影**：使用 Tailwind 标准 scale（`p-2`、`rounded-md`、`shadow-sm` 等），不硬编码 magic number
+- **暗色适配**：业务组件不写 `dark:` 修饰符，由 CSS 变量值切换自动适配。仅 shadcn/ui 组件源码中已有的 `dark:` 保留
 - **Markdown 渲染**：动态 Markdown 统一通过 `MarkdownContent` 组件映射 `react-markdown` 节点样式，不在 `styles.css` 里维护 `.chat-markdown` 或 `.prose-content` 选择器
-- **自定义主题**：用户可通过项目根目录 `.spherse/theme.css` 覆盖 CSS 变量实现主题定制
+- **自定义主题**：用户可通过项目根目录 `.spherse/theme.css` 覆盖 CSS 变量实现主题定制，只允许覆盖 `:root` 中已有的变量名

@@ -34,6 +34,9 @@ spherse/
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
 │   │   ├── templates/
 │   │   │   └── agent-template.md     # 新 Agent 创建模板源文件
+│   │   ├── skills/                   # 内置 skill 模板（用户参考文档）
+│   │   │   └── create-ui-theme/      # 自定义 UI 主题创建指南
+│   │   │       └── SKILL.md
 │   │   ├── scripts/
 │   │   │   └── sync-templates.mjs    # 模板同步脚本（.md → .ts 常量）
 │   │   └── src/
@@ -70,7 +73,7 @@ spherse/
 │           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化
 │           ├── main.tsx              # renderer 入口，挂载 RouterProvider
 │           ├── router.tsx            # React Router Hash Router 路由表
-│           ├── styles.css            # Tailwind CSS v4 + shadcn 语义 token + 暗色模式
+│           ├── styles.css            # Tailwind CSS v4 + shadcn 语义 token（单一 token 体系）
 │           ├── lib/
 │           │   ├── api.ts            # HTTP/WS 客户端封装
 │           │   ├── agent-markdown.ts # Agent 定义 Markdown 生成/解析辅助

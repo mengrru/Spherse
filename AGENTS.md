@@ -82,5 +82,10 @@ npm test --workspace=packages/app           # 运行前端 store/组件相关测
   - `project-ui-store` 按 projectKey 管理纯 UI 状态（如折叠），不涉及 API 调用
   - 跨页面、跨 feature 持久的状态放 store；组件内短生命周期状态（表单、弹窗、输入框、WebSocket ref、编辑 dirty/conflict）用 `useState`/`useRef` 保留在组件内
   - 只被单个 feature 使用的状态不提升到全局 store，可在 feature 目录下建立自己的 store（如 `features/settings/store.ts`）
-- **前端样式**：使用 Tailwind CSS v4 工具类 + CSS 变量色彩体系，不写原生 CSS class
+- **前端样式**：
+  - 使用 Tailwind CSS v4 工具类 + CSS 变量色彩体系，不写原生 CSS class
+  - 只使用 shadcn 语义 token（`bg-background`、`bg-card`、`bg-muted`、`bg-primary`、`bg-accent`、`text-foreground`、`text-muted-foreground`、`border-border`、`text-destructive`）和 Spherse 自有 token（`bg-agent-creator`、`text-agent-success` 等），不硬编码颜色值（如 `text-[#333]`）
+  - 间距、圆角、阴影使用 Tailwind 标准 scale（`p-2`、`rounded-md`、`shadow-sm`），不使用 magic number
+  - 业务组件不写 `dark:` 修饰符，暗色适配通过 CSS 变量自动切换
+  - 需要新颜色时在 `styles.css` 中注册 CSS 变量（`--agent-{name}`）+ Tailwind 颜色（`--color-agent-{name}`），不在组件中硬编码
 - **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试

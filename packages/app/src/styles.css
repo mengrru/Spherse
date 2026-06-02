@@ -31,36 +31,6 @@
   --shadcn-sidebar-accent-foreground: #171717;
   --shadcn-sidebar-border: #e5e5e5;
   --shadcn-sidebar-ring: #a3a3a3;
-  --surface: #fff;
-  --base: #f5f5f5;
-  --hover: #f5f5f5;
-  --hover-strong: #e8e8e8;
-  --input-bg: #fff;
-  --muted-bg: #f0f0f0;
-  --code-bg: #f5f5f5;
-  --active-bg: #e8f0fe;
-  --overlay: rgba(0, 0, 0, 0.4);
-  --border: #e0e0e0;
-  --border-light: #f0f0f0;
-  --border-input: #ddd;
-  --primary: #1a1a1a;
-  --secondary: #666;
-  --muted: #999;
-  --faint: #bbb;
-  --on-muted: #555;
-  --accent: #4a90d9;
-  --accent-hover: #3a7bc8;
-  --danger: #e74c3c;
-  --danger-hover: #c0392b;
-  --success: #4caf50;
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.08);
-  --shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.15);
-  --type-creator-bg: #e8f5e9;
-  --type-creator-text: #2e7d32;
-  --type-roleplay-bg: #e3f2fd;
-  --type-roleplay-text: #1565c0;
-  --type-scheduler-bg: #fff3e0;
-  --type-scheduler-text: #e65100;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -91,33 +61,6 @@
     --shadcn-sidebar-accent-foreground: #fafafa;
     --shadcn-sidebar-border: #404040;
     --shadcn-sidebar-ring: #737373;
-    --surface: #2a2a2a;
-    --base: #1a1a1a;
-    --hover: #333;
-    --hover-strong: #3a3a3a;
-    --input-bg: #2a2a2a;
-    --muted-bg: #333;
-    --code-bg: #333;
-    --active-bg: #1a3a5c;
-    --overlay: rgba(0, 0, 0, 0.6);
-    --border: #3a3a3a;
-    --border-light: #333;
-    --border-input: #444;
-    --primary: #e0e0e0;
-    --secondary: #aaa;
-    --muted: #777;
-    --faint: #555;
-    --on-muted: #bbb;
-    --accent: #5a9fe8;
-    --accent-hover: #4a8fd8;
-    --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
-    --shadow-dialog: 0 8px 32px rgba(0, 0, 0, 0.5);
-    --type-creator-bg: #1a3a1a;
-    --type-creator-text: #66bb6a;
-    --type-roleplay-bg: #1a2a3a;
-    --type-roleplay-text: #64b5f6;
-    --type-scheduler-bg: #3a2a1a;
-    --type-scheduler-text: #ffb74d;
   }
 }
 
@@ -152,19 +95,6 @@
   --color-sidebar-accent-foreground: var(--shadcn-sidebar-accent-foreground);
   --color-sidebar-border: var(--shadcn-sidebar-border);
   --color-sidebar-ring: var(--shadcn-sidebar-ring);
-  --color-surface: var(--surface);
-  --color-base: var(--base);
-  --color-hover: var(--hover);
-  --color-hover-strong: var(--hover-strong);
-  --color-muted-bg: var(--muted-bg);
-  --color-code-bg: var(--code-bg);
-  --color-active-bg: var(--active-bg);
-  --color-overlay: var(--overlay);
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-danger: var(--danger);
-  --color-danger-hover: var(--danger-hover);
-  --color-success: var(--success);
 }
 
 @layer base {
@@ -172,9 +102,9 @@
   body,
   #root {
     height: 100%;
-    font-size: 15px;
-    color: var(--primary);
-    background: var(--base);
+    font-size: 100%;
+    color: var(--shadcn-foreground);
+    background: var(--shadcn-background);
   }
 
   button {
