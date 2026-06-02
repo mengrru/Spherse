@@ -1,10 +1,10 @@
 import path from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
-import { streamSimple, getModel } from "@mariozechner/pi-ai";
+import { streamSimple } from "@earendil-works/pi-ai";
 import type { AgentEvent, AgentTool } from "@mariozechner/pi-agent-core";
 import type { AgentProfile, SessionInfo, SkillDefinition } from "./types.js";
 import { PROJECT_META_DIR } from "./types.js";
-import { SUPPORTED_PROVIDERS } from "./types.js";
+import { resolveModelById } from "./model-providers.js";
 import { ProjectStore } from "./store/project.js";
 import { SessionStore } from "./store/session.js";
 import { AgentProfileStore } from "./store/agent-profile.js";
@@ -23,6 +23,10 @@ export class Engine {
   private activeSessions: Map<string, Agent> = new Map();
   private globalDefaultModel?: string;
   private fileWriteMutex: FileWriteMutex;
+
+  setDefaultModel(model: string | undefined): void {
+    this.globalDefaultModel = model;
+  }
 
   constructor(
     profileStore: AgentProfileStore,
@@ -204,23 +208,11 @@ export class Engine {
         tools,
       },
       sessionId,
-      streamFn: async (model, context, options) => {
-        return streamSimple(model, context, options);
-      },
+      streamFn: streamSimple as any,
     });
   }
 
   private resolveModel(modelId: string): any {
-    const providers: string[] = [
-      ...Object.keys(SUPPORTED_PROVIDERS),
-      "google",
-      "anthropic",
-      "openai",
-    ];
-    for (const provider of providers) {
-      const model = (getModel as any)(provider, modelId);
-      if (model) return model;
-    }
-    throw new Error(`Could not resolve model: ${modelId}`);
+    return resolveModelById(modelId);
   }
 }

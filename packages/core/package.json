@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@mariozechner/pi-agent-core": "^0.72.1",
-    "@mariozechner/pi-ai": "^0.72.1",
+    "@earendil-works/pi-ai": "^0.78.0",
     "@sinclair/typebox": "^0.34.0",
     "better-sqlite3": "^12.10.0",
     "gray-matter": "^4.0.3",

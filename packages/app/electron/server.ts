@@ -1,21 +1,29 @@
 import type { FastifyInstance } from "fastify";
 import { createServer } from "@spherse/server";
+import type { Engine } from "@spherse/core";
 import { getSettings } from "./settings.js";
 
-const servers = new Map<string, { server: FastifyInstance; port: number }>();
+const servers = new Map<string, { server: FastifyInstance; port: number; engine: Engine }>();
 
 export async function startServer(projectRoot: string): Promise<number> {
   const existing = servers.get(projectRoot);
   if (existing) return existing.port;
 
   const settings = getSettings();
-  const server = await createServer(projectRoot, {
+  const { engine, fastify } = await createServer(projectRoot, {
     defaultModel: settings?.defaultModel,
   });
-  const address = server.server.address();
+
+  const address = fastify.server.address();
   const port = typeof address === "object" && address ? address.port : 0;
-  servers.set(projectRoot, { server, port });
+  servers.set(projectRoot, { server: fastify, port, engine });
   return port;
+}
+
+export function updateDefaultModel(defaultModel: string | undefined): void {
+  for (const [, entry] of servers) {
+    entry.engine.setDefaultModel(defaultModel || undefined);
+  }
 }
 
 export function stopServer(projectRoot: string): void {

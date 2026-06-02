@@ -45,24 +45,29 @@ export interface SessionInfo {
 }
 
 export interface AppSettings {
-  providers: {
-    deepseek?: { apiKey: string };
-    zai?: { apiKey: string };
-  };
+  providers: Record<string, { apiKey: string } | undefined>;
   defaultModel: string;
 }
 
-export const SUPPORTED_PROVIDERS = {
-  deepseek: {
-    name: "DeepSeek",
-    envKey: "DEEPSEEK_API_KEY",
-    models: ["deepseek-v4-flash", "deepseek-v4-pro"],
-  },
-  zai: {
-    name: "z.ai",
-    envKey: "ZAI_API_KEY",
-    models: ["glm-4.5-air", "glm-4.7", "glm-5-turbo", "glm-5.1", "glm-5v-turbo"],
-  },
-} as const;
+export interface ProviderCatalogItem {
+  id: string;
+  name: string;
+  auth: {
+    type: "apiKey" | "external" | "unknown";
+    envKeys: string[];
+  };
+  models: ProviderModelItem[];
+}
 
-export type SupportedProviderId = keyof typeof SUPPORTED_PROVIDERS;
+export interface ProviderModelItem {
+  id: string;
+  name: string;
+  provider: string;
+  api: string;
+  reasoning: boolean;
+  input: readonly string[];
+  contextWindow?: number;
+  maxTokens?: number;
+}
+
+export type ProviderCatalog = Record<string, ProviderCatalogItem>;

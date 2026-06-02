@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 import { getMaskedSettings, saveSettings } from "../settings.js";
-import { SUPPORTED_PROVIDERS } from "@spherse/core";
+import { getSupportedProviders } from "@spherse/core";
+import { updateDefaultModel } from "../server.js";
 import type { AppSettings } from "@spherse/core";
 
 export function registerSettingsIpc(): void {
@@ -10,10 +11,11 @@ export function registerSettingsIpc(): void {
 
   ipcMain.handle("save-settings", (_event, settings: AppSettings) => {
     saveSettings(settings);
+    updateDefaultModel(settings.defaultModel || undefined);
     return { success: true };
   });
 
   ipcMain.handle("get-supported-providers", () => {
-    return SUPPORTED_PROVIDERS;
+    return getSupportedProviders();
   });
 }

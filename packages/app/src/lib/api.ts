@@ -194,11 +194,7 @@ export function createApiClient(port: number) {
       return `${baseUrl}/api/preview/${filePath}`;
     },
 
-    async getSupportedProviders(): Promise<Record<string, {
-      name: string;
-      envKey: string;
-      models: readonly string[];
-    }>> {
+    async getSupportedProviders(): Promise<Record<string, import("@spherse/core").ProviderCatalogItem>> {
       const res = await fetch(`${baseUrl}/api/settings/providers`);
       return res.json();
     },

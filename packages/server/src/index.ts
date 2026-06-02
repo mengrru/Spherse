@@ -34,5 +34,5 @@ export async function createServer(
 
   await fastify.listen({ port: 0, host: "127.0.0.1" });
 
-  return fastify;
+  return { fastify, engine };
 }

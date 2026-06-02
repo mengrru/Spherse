@@ -1,16 +1,11 @@
 import { create } from "zustand";
 import {
-  FALLBACK_MODEL_PROVIDERS,
-  MODEL_PROVIDER_IDS,
   type AppSettings,
   type ProviderConfig,
   type SettingsApi,
 } from "./types";
 
 type SaveMessage = "saved" | "error" | null;
-
-let cachedProviders: Record<string, ProviderConfig> | null = null;
-let cachedModelProviders: Record<(typeof MODEL_PROVIDER_IDS)[number], ProviderConfig> | null = null;
 
 interface SettingsStore {
   providers: Record<string, ProviderConfig>;
@@ -21,7 +16,6 @@ interface SettingsStore {
   load: (api: SettingsApi) => Promise<void>;
   setApiKey: (id: string, value: string) => void;
   setDefaultModel: (model: string) => void;
-  getModelProviders: () => Record<(typeof MODEL_PROVIDER_IDS)[number], ProviderConfig>;
   buildSettings: (keys?: Record<string, string>, model?: string) => AppSettings;
   save: (api: SettingsApi, keys?: Record<string, string>, model?: string) => Promise<boolean>;
   connect: (api: SettingsApi, id: string) => Promise<boolean>;
@@ -63,21 +57,9 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     set({ defaultModel: model });
   },
 
-  getModelProviders() {
-    const providers = get().providers;
-    if (providers === cachedProviders && cachedModelProviders) {
-      return cachedModelProviders;
-    }
-    cachedProviders = providers;
-    cachedModelProviders = Object.fromEntries(
-      MODEL_PROVIDER_IDS.map((id) => [id, providers[id] ?? FALLBACK_MODEL_PROVIDERS[id]]),
-    ) as Record<(typeof MODEL_PROVIDER_IDS)[number], ProviderConfig>;
-    return cachedModelProviders;
-  },
-
   buildSettings(keys = get().apiKeys, model = get().defaultModel) {
     const providers: Record<string, { apiKey: string } | undefined> = {};
-    for (const id of MODEL_PROVIDER_IDS) {
+    for (const id of Object.keys(get().providers)) {
       providers[id] = { apiKey: (keys[id] ?? "").trim() };
     }
     return {
@@ -107,10 +89,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   async disconnect(api, id) {
     const apiKeys = { ...get().apiKeys, [id]: "" };
-    const modelProviders = get().getModelProviders();
+    const providers = get().providers;
     const defaultModel = get().defaultModel;
     const nextDefaultModel =
-      defaultModel && modelProviders[id as keyof typeof modelProviders]?.models.includes(defaultModel)
+      defaultModel && providers[id]?.models.some((m) => m.id === defaultModel)
         ? ""
         : defaultModel;
     set({ apiKeys, defaultModel: nextDefaultModel });

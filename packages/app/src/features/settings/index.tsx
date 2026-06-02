@@ -15,7 +15,7 @@ import { Badge } from "../../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { cn } from "../../lib/utils";
 import { useSettingsStore } from "./store";
-import { MODEL_PROVIDER_IDS, type ProviderConfig, type SettingsApi } from "./types";
+import { type ProviderConfig, type SettingsApi } from "./types";
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -47,7 +47,7 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
   const save = useSettingsStore((state) => state.save);
   const connect = useSettingsStore((state) => state.connect);
   const disconnect = useSettingsStore((state) => state.disconnect);
-  const modelProviders = useSettingsStore((state) => state.getModelProviders());
+  const providers = useSettingsStore((state) => state.providers);
 
   useEffect(() => {
     void load(electronAPI);
@@ -71,7 +71,7 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
           <TabsContent value="models" className="mt-3">
             <FieldGroup>
               <DefaultModelField
-                providers={modelProviders}
+                providers={providers}
                 apiKeys={apiKeys}
                 value={defaultModel}
                 onChange={setDefaultModel}
@@ -79,12 +79,12 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
             </FieldGroup>
             <div className="mt-5 border-t border-border pt-4">
               <div className="mb-2 text-sm font-medium">模型提供商</div>
-              <div className="flex flex-col gap-2">
-                {MODEL_PROVIDER_IDS.map((id) => (
+              <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
+                {Object.entries(providers).map(([id, config]) => (
                   <ModelProviderItem
                     key={id}
                     id={id}
-                    config={modelProviders[id]}
+                    config={config}
                     apiKey={apiKeys[id] ?? ""}
                     onApiKeyChange={(value) => setApiKey(id, value)}
                     onConnect={() => handleConnect(id)}
@@ -136,7 +136,7 @@ function ModelProviderItem({
       <div className="mb-2 flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-medium">{config.name}</div>
-          <div className="text-xs text-muted-foreground">{config.envKey}</div>
+          <div className="text-xs text-muted-foreground">{config.auth.envKeys[0] ?? ""}</div>
         </div>
         <Badge variant={configured ? "secondary" : "outline"}>
           {configured ? "已提供 API Key" : "未连接"}
@@ -146,7 +146,7 @@ function ModelProviderItem({
         <Input
           type="password"
           className="flex-1"
-          placeholder={config.envKey}
+          placeholder={config.auth.envKeys[0] ?? ""}
           value={apiKey}
           onChange={(e) => onApiKeyChange(e.target.value)}
           autoComplete={`off-${id}`}
@@ -186,9 +186,9 @@ function DefaultModelField({
         <NativeSelectOption value="">-- 请选择 --</NativeSelectOption>
         {configuredProviders.map(([id, config]) => (
           <NativeSelectOptGroup key={id} label={config.name}>
-            {config.models.map((model) => (
-              <NativeSelectOption key={model} value={model}>
-                {model}
+            {config.models.map((m) => (
+              <NativeSelectOption key={`${id}/${m.id}`} value={`${id}/${m.id}`}>
+                {m.name}
               </NativeSelectOption>
             ))}
           </NativeSelectOptGroup>

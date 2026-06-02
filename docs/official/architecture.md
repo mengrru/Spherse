@@ -35,6 +35,8 @@
 - **preload** 是安全桥梁，声明 Renderer 可用的 IPC 方法白名单
 - **项目 server 管理**：当前每个打开项目对应一个本地 Fastify 实例，由 `electron/server.ts` 用 `Map<projectPath, server>` 管理
 - **设置持久化**：`electron/settings.ts` 使用 electron-store 保存打开项目、最后活跃项目、provider API key 和默认模型；保存 provider key 后同步到进程环境变量
+- **Provider catalog**：`core/model-providers.ts` 从 `@earendil-works/pi-ai` 元数据动态生成 provider catalog，`ENABLED_PROVIDERS` 过滤 UI 可见 provider（11 个），`PROVIDER_ENV_KEYS` 映射 provider→env key；Engine model resolution 使用全部 pi-ai provider
+- **默认模型切换**：Engine 暴露 `setDefaultModel()` 方法，IPC save-settings 后通过 `electron/server.ts` 的 `updateDefaultModel()` 同步更新所有运行中 engine 的 globalDefaultModel
 - **开发调试**：debug IPC 仅暴露开发模式相关动作，如 DevTools、electron-store 查看、reload renderer、reset app data
 
 ## 前端路由与状态

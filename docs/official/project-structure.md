@@ -5,9 +5,10 @@ spherse/
 ├── packages/
 │   ├── core/                         # @spherse/core — 纯 Node.js 核心逻辑
 │   │   └── src/
-│   │       ├── types.ts              # 共享类型与 provider/model 常量
+│   │       ├── types.ts              # 共享类型与 provider catalog 类型定义
 │   │       ├── factory.ts            # createEngine() 工厂函数，封装 store 与 mutex 创建
 │   │       ├── engine.ts             # Engine：运行时 session 管理 + agent/profile 操作门面
+│   │       ├── model-providers.ts    # pi-ai provider catalog adapter，ENABLED_PROVIDERS 过滤与 model resolution
 │   │       ├── engine/
 │   │       │   └── read-context-files.ts # 读取 agent profile context 文件并注入 system prompt
 │   │       ├── store/                # 存储层抽象（不持有运行时状态）
@@ -49,7 +50,7 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表与详情
-│   │       │   └── settings.ts       # Provider/model 信息
+│   │       │   └── settings.ts       # Provider 列表（动态 catalog）
 │   │       ├── ws-chat.ts            # WebSocket 对话流
 │   │       └── ws-fs-watch.ts        # WebSocket 文件变更推送
 │   └── app/                          # @spherse/app — Electron + React
@@ -62,7 +63,7 @@ spherse/
 │       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
 │       │   │   └── debug.ts          # 开发模式 debug 动作
 │       │   ├── window.ts             # BrowserWindow 创建与管理
-│       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, server>）
+│       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新
 │       │   └── settings.ts           # electron-store 封装 + env 管理 + openProjects/lastRoute 持久化
 │       ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
 │       └── src/

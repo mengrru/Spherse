@@ -1,7 +1,7 @@
 import path from "node:path";
 import Store from "electron-store";
 import type { AppSettings } from "@spherse/core";
-import { SUPPORTED_PROVIDERS, type SupportedProviderId } from "@spherse/core";
+import { getSupportedProviders } from "@spherse/core";
 
 export interface OpenProjectEntry {
   path: string;
@@ -35,7 +35,7 @@ export function getMaskedSettings(): AppSettings | null {
   const masked: AppSettings = { providers: {}, defaultModel: settings.defaultModel };
   for (const [id, config] of Object.entries(settings.providers)) {
     if (config?.apiKey) {
-      (masked.providers as any)[id] = { apiKey: maskApiKey(config.apiKey) };
+      masked.providers[id] = { apiKey: maskApiKey(config.apiKey) };
     }
   }
   return masked;
@@ -44,15 +44,14 @@ export function getMaskedSettings(): AppSettings | null {
 export function saveSettings(incoming: AppSettings): void {
   const prev = settingsStore.get("settings");
   const merged: AppSettings = { providers: {}, defaultModel: incoming.defaultModel };
-  for (const id of Object.keys(SUPPORTED_PROVIDERS) as SupportedProviderId[]) {
-    const newConfig = incoming.providers[id];
-    const prevConfig = prev?.providers?.[id as keyof typeof prev.providers];
+  for (const [id, newConfig] of Object.entries(incoming.providers)) {
+    const prevConfig = prev?.providers?.[id];
     if (newConfig && newConfig.apiKey.trim() === "") {
       continue;
     } else if (newConfig?.apiKey && !newConfig.apiKey.includes("****")) {
-      (merged.providers as any)[id] = { apiKey: newConfig.apiKey };
+      merged.providers[id] = { apiKey: newConfig.apiKey };
     } else if (prevConfig?.apiKey) {
-      (merged.providers as any)[id] = { apiKey: prevConfig.apiKey };
+      merged.providers[id] = { apiKey: prevConfig.apiKey };
     }
   }
   settingsStore.set("settings", merged);
@@ -66,11 +65,12 @@ export function restoreEnvFromSettings(): void {
 }
 
 function applySettingsToEnv(settings: AppSettings): void {
+  const catalog = getSupportedProviders();
   for (const [id, config] of Object.entries(settings.providers)) {
     if (config?.apiKey) {
-      const provider = SUPPORTED_PROVIDERS[id as SupportedProviderId];
-      if (provider) {
-        process.env[provider.envKey] = config.apiKey;
+      const item = catalog[id];
+      if (item?.auth.envKeys[0]) {
+        process.env[item.auth.envKeys[0]] = config.apiKey;
       }
     }
   }
