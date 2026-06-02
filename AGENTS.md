@@ -11,6 +11,7 @@
 spherse/
 ├── packages/
 │   ├── core/        # @spherse/core — 纯 Node.js 核心逻辑
+│   ├── presets/     # @spherse/presets — 内置模板与预置静态内容
 │   ├── server/      # @spherse/server — Fastify API 层
 │   └── app/         # @spherse/app — Electron + React
 ├── docs/
@@ -33,21 +34,23 @@ npm run build
 
 # 监听编译（开发时使用）
 npm run dev --workspace=packages/core    # core 监听
+npm run dev --workspace=packages/presets # presets 监听
 npm run dev --workspace=packages/server  # server 监听
 
-# 启动桌面应用
+# 启动桌面应用（会先执行 native dependency rebuild）
 npm run dev
 ```
 
-**测试命令（packages/core）**：
+**测试命令**：
 
 ```bash
 npm test --workspace=packages/core          # 运行测试
 npm run test:watch --workspace=packages/core # 监听模式
 npm run test:cov --workspace=packages/core   # 运行测试并生成覆盖率报告
+npm test --workspace=packages/app           # 运行前端 store/组件相关测试
 ```
 
-**核心层调试**：`packages/core` 和 `packages/server` 不依赖 Electron，可以直接用 Node.js 测试。
+**核心层调试**：`packages/core`、`packages/presets` 和 `packages/server` 不依赖 Electron，可以直接用 Node.js 编译或测试。
 
 ## 开发规范
 
@@ -58,6 +61,7 @@ npm run test:cov --workspace=packages/core   # 运行测试并生成覆盖率报
   - `docs/dev/` 下的文档容易过时，开发新 feature 时应优先参考 `docs/official/`，开发完成后根据情况更新 `docs/official/`
 - **`docs/official/` 维护**：完成 feature 后，检查 `docs/official/` 下是否有需要同步更新的文档（如新增文件/目录、新增工具、架构变更等），保持文档与代码一致
 - **Backlog 维护**：每完成一个 feature 后，更新 `docs/dev/backlog.md` 中对应条目的状态（`[ ]` → `[x]`），并补充新增的 backlog 条目
+- **预置内容维护**：修改 `packages/presets/templates/` 下模板后，应通过 `npm run build --workspace=packages/presets` 或 root `npm run build` 触发同步脚本，确保生成内容可用
 - **手动 commit**：完成代码后不要自动 commit，等待用户明确要求时再提交
 - **commit 前检查**：用户提示 commit 后，先确认 `docs/dev/backlog.md` 和 `docs/official/` 已根据本次变更得到应有的更新，再执行 commit
 
@@ -69,7 +73,14 @@ npm run test:cov --workspace=packages/core   # 运行测试并生成覆盖率报
   - pi-agent-core 的 `AgentTool` 接口使用 `@sinclair/typebox` 定义参数 schema
 - **工具模式**：所有 AgentTool 使用工厂函数模式 `createXxxTool(projectRoot: string): AgentTool`
 - **路径安全**：所有文件操作工具必须做 `path.resolve + startsWith` 校验，防止路径穿越
+- **并发写入安全**：会写文件的工具应共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
 - **不添加注释**：除非用户明确要求
 - **Git 规范**：commit message 使用 `feat:` / `fix:` / `chore:` 前缀
+- **前端 store 使用原则**：
+  - `app-store` 管理应用级状态（打开项目集合、当前项目、Electron IPC 动作），不持有项目内业务数据
+  - `project-data-store` 按 projectKey 缓存项目内 agents、sessions 等业务数据，负责 API 调用与 loading/error 状态
+  - `project-ui-store` 按 projectKey 管理纯 UI 状态（如折叠），不涉及 API 调用
+  - 跨页面、跨 feature 持久的状态放 store；组件内短生命周期状态（表单、弹窗、输入框、WebSocket ref、编辑 dirty/conflict）用 `useState`/`useRef` 保留在组件内
+  - 只被单个 feature 使用的状态不提升到全局 store，可在 feature 目录下建立自己的 store（如 `features/settings/store.ts`）
 - **前端样式**：使用 Tailwind CSS v4 工具类 + CSS 变量色彩体系，不写原生 CSS class
 - **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试

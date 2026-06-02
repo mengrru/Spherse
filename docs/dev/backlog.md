@@ -10,7 +10,7 @@
 - [x] **Chat feature 组织重构**：将 Chat 页面专属组件和 hooks 收敛到 `features/chat/`，`pages/ChatPage.tsx` 仅保留 route adapter。
 - [x] **ContentBrowser feature 组织重构**：将内容浏览与编辑相关组件和 hooks 收敛到 `features/content-browser/`，将可复用的文本划选发起会话能力收敛到 `features/text-selection-session/`，`pages/ContentBrowser.tsx` 仅保留 route adapter。
 - [x] **Agent/session list feature 组织重构**：将项目侧边栏中的 Agent/session 列表展示组件收敛到 `features/agent-session-list/`。
-- [x] **Project layout/sidebar 组织重构**：将 `ProjectPage` 收敛为 route adapter，新增 `layouts/ProjectLayout.tsx` 与 `features/project-sidebar`，并将设置入口提升到 app level。
+- [x] **Project layout/sidebar 组织重构**：将 `ProjectPage` 收敛为 route adapter，新增 `layouts/ProjectLayout.tsx` 与 `features/project-panel`，并将设置入口提升到 app level。
 
 ## 功能增强
 
@@ -23,6 +23,7 @@
 - [x] **多 Project 支持**：支持已导入项目的持久化，无需每次打开 app 重新手动导入
 - [x] **Skill 支持**：允许 agent 定义可复用的 skill（预设 prompt + tool 组合）
 - [x] **HTML Viewer Card**：在对话流中支持渲染 HTML 内容卡片
+- [x] **文件/文件夹新建**：从文件浏览器新建文件或目录
 - [x] **文件删除**：从文件浏览器删除文件/目录
 - [x] **文件编辑**：在应用内编辑文件内容
 - [x] **折叠工具调用过程**：将 agent 的 tool call 过程默认折叠，点击展开查看详情
@@ -31,7 +32,7 @@
 - [x] **支持本地 HTML 文件页面渲染**：在应用内直接渲染本地 HTML 文件
 - [ ] **支持 Agent 定时执行**：按 cron 表达式定时触发 agent 运行
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
-- [ ] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话
+- [x] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话
 - [x] **增加 edit file tool**：为 agent 提供编辑文件的工具（字符串替换模式：old_string + new_string）
 - [x] **Agent context 预注入**：agent profile 的 `context` 字段指定文件列表，buildAgent 时读取这些文件内容注入 systemPrompt，使 agent 从第一轮对话起就了解相关上下文
 - [ ] **Agent 编辑 UI 增强**：改善 agent 编辑界面的用户体验和功能
@@ -42,7 +43,7 @@
 ## 基础设施
 
 - [ ] **electron-builder 打包**：配置生产构建和跨平台打包
-- [x] **better-sqlite3 rebuild 自动化**：在 postinstall 中自动为 Electron 重新编译 native 模块
+- [x] **better-sqlite3 rebuild 自动化**：在启动开发桌面应用前自动为 Electron 重新编译 native 模块
 - [ ] **E2E 测试**：Playwright 或 Spectron 端到端测试
 - [x] **重新考虑 dot 文件夹名字和内部组织结构**：`.pi/` → `.spherse/`
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试

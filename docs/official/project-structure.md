@@ -3,142 +3,116 @@
 ```
 spherse/
 ├── packages/
-│   ├── core/                       # @spherse/core — 纯 Node.js 核心逻辑
+│   ├── core/                         # @spherse/core — 纯 Node.js 核心逻辑
 │   │   └── src/
-│   │       ├── types.ts            # 共享类型（ProjectConfig, AgentProfile, SessionInfo, SkillDefinition）
-│   │       ├── factory.ts          # createEngine() 工厂函数，封装所有 store 创建
-│   │       ├── engine.ts           # Engine：运行时 session 管理 + profile 操作的门面
-│   │       ├── store/              # 存储层抽象（不涉及运行时状态）
-│   │       │   ├── project.ts      # 项目元数据读写（.spherse/project.yaml, AGENTS.md, CHANGELOG.md）
-│   │       │   ├── session.ts      # SQLite session 持久化（agent_id 关联, schema version 管理）
-│   │       │   ├── agent-profile.ts # .spherse/agents/*.md CRUD（自动生成/补全 id）
-│   │       │   ├── skill.ts         # Skill 定义读取（.spherse/skills/*/SKILL.md）
+│   │       ├── types.ts              # 共享类型与 provider/model 常量
+│   │       ├── factory.ts            # createEngine() 工厂函数，封装 store 与 mutex 创建
+│   │       ├── engine.ts             # Engine：运行时 session 管理 + agent/profile 操作门面
+│   │       ├── engine/
+│   │       │   └── read-context-files.ts # 读取 agent profile context 文件并注入 system prompt
+│   │       ├── store/                # 存储层抽象（不持有运行时状态）
+│   │       │   ├── project.ts        # 项目元数据读写（.spherse/project.yaml, AGENTS.md, CHANGELOG.md）
+│   │       │   ├── session.ts        # SQLite session 持久化（agent_id 关联, schema version 管理）
+│   │       │   ├── agent-profile.ts  # .spherse/agents/*.md CRUD（自动生成/补全 id）
+│   │       │   ├── skill.ts          # .spherse/skills/*/SKILL.md 读取
 │   │       │   └── index.ts
-│   │       ├── tools/              # pi-agent-core AgentTool 实现（engine 内部使用，不对外导出）
+│   │       ├── tools/                # pi-agent-core AgentTool 实现（engine 内部使用）
 │   │       │   ├── read-file.ts
 │   │       │   ├── write-file.ts
 │   │       │   ├── edit-file.ts
 │   │       │   ├── list-files.ts
 │   │       │   ├── search-content.ts
 │   │       │   ├── append-changelog.ts
-│   │       │   ├── load-skill.ts    # createLoadSkillTool（运行时加载 skill 指令）
-│   │       │   └── index.ts        # createToolsForProject 工厂
-│   │       ├── __tests__/           # Vitest 单元测试
-│   │       │   ├── helpers.ts       # 共享测试工具（临时目录、文件操作）
-│   │       │   ├── tools/           # tool 测试
-│   │       │   └── store/           # store 测试
-│   │       └── index.ts            # 公开导出：Engine, createEngine, types
-│   ├── presets/                    # @spherse/presets — 预置静态内容（模板、预置 skill）
-│   │   ├── templates/              # 模板源文件（.md 格式）
-│   │   │   └── agent-template.md   # 新 Agent 创建模板
+│   │       │   ├── load-skill.ts
+│   │       │   ├── render-card.ts    # HTML card 渲染工具
+│   │       │   └── index.ts          # createToolsForProject 工厂
+│   │       ├── utils/
+│   │       │   └── file-write-mutex.ts # 文件写入互斥，避免并发写覆盖
+│   │       ├── __tests__/            # Vitest 单元测试
+│   │       └── index.ts              # 公开导出：Engine, createEngine, types
+│   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
+│   │   ├── templates/
+│   │   │   └── agent-template.md     # 新 Agent 创建模板源文件
 │   │   ├── scripts/
-│   │   │   └── sync-templates.mjs  # 模板同步脚本（.md → .ts 常量）
+│   │   │   └── sync-templates.mjs    # 模板同步脚本（.md → .ts 常量）
 │   │   └── src/
-│   │       ├── index.ts            # 公开导出
-│   │       └── generated/          # 自动生成的 .ts 常量（git 忽略）
-│   ├── server/                     # @spherse/server — Fastify API 层
+│   │       └── index.ts              # 公开导出模板内容
+│   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
-│   │       ├── index.ts            # createServer()，调用 createEngine 组装 AppContext
-│   │       ├── routes/             # REST 路由，按业务域拆分
-│   │       │   ├── index.ts        # registerAllRoutes 聚合
-│   │       │   ├── agents.ts       # GET /api/agents, GET /api/agents/:id, GET /api/agents/:id/raw
-│   │       │   ├── agent-write.ts  # POST /api/agents/create, PUT /api/agents/:id, DELETE /api/agents/:id
-│   │       │   ├── sessions.ts     # POST /api/sessions, GET /api/sessions/:id, GET /api/sessions/:id/messages
-│   │       │   ├── content.ts      # GET /api/content/*, PUT /api/content/*
-│   │       │   ├── preview.ts      # HTML 文件预览服务
-│   │       │   ├── skills.ts       # GET /api/skills, GET /api/skills/:name
-│   │       │   └── settings.ts     # GET /api/settings/providers
-│   │       ├── ws-chat.ts          # WebSocket 对话流
-│   │       └── ws-fs-watch.ts      # WebSocket 文件变更推送
-│   └── app/                        # @spherse/app — Electron + React
+│   │       ├── index.ts              # createServer()，调用 createEngine 组装 AppContext
+│   │       ├── routes/               # REST 路由，按业务域拆分
+│   │       │   ├── index.ts          # registerAllRoutes 聚合
+│   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
+│   │       │   ├── agent-write.ts    # Agent 创建/更新/删除
+│   │       │   ├── sessions.ts       # Session 创建/查询/删除与消息读取
+│   │       │   ├── content.ts        # 内容浏览、读取、保存、删除、新建文件/目录
+│   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
+│   │       │   ├── preview.ts        # HTML 文件预览服务
+│   │       │   ├── skills.ts         # Skill 列表与详情
+│   │       │   └── settings.ts       # Provider/model 信息
+│   │       ├── ws-chat.ts            # WebSocket 对话流
+│   │       └── ws-fs-watch.ts        # WebSocket 文件变更推送
+│   └── app/                          # @spherse/app — Electron + React
 │       ├── electron/
-│       │   ├── main.ts             # Electron 入口：组装各模块
-│       │   ├── preload.ts          # contextBridge，IPC 白名单
-│       │   ├── ipc/                # IPC handler 注册，按业务域拆分
-│       │   │   ├── index.ts        # registerAllIpc 聚合
-│       │   │   ├── project.ts      # select-directory, start-server, restore-projects, close-project
-│       │   │   └── settings.ts     # get-settings, save-settings, get-supported-providers
-│       │   ├── window.ts           # BrowserWindow 创建与管理
-│       │   ├── server.ts           # 多 Fastify 实例管理（Map<projectPath, server>）
-│       │   └── settings.ts         # electron-store 封装 + env 管理 + openProjects 持久化
-│       ├── components.json         # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
+│       │   ├── main.ts               # Electron 入口：组装窗口、IPC、项目 server 管理
+│       │   ├── preload.ts            # contextBridge，IPC 白名单
+│       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
+│       │   │   ├── index.ts          # registerAllIpc 聚合
+│       │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化
+│       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
+│       │   │   └── debug.ts          # 开发模式 debug 动作
+│       │   ├── window.ts             # BrowserWindow 创建与管理
+│       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, server>）
+│       │   └── settings.ts           # electron-store 封装 + env 管理 + openProjects 持久化
+│       ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
 │       └── src/
-│           ├── App.tsx             # Hash Router 外壳 + Activity Bar + 全局初始化
-│           ├── main.tsx            # renderer 入口，挂载 RouterProvider
-│           ├── router.tsx          # React Router Hash Router 路由表
-│           ├── styles.css          # Tailwind CSS v4 + shadcn 语义 token + 暗色模式
+│           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化
+│           ├── main.tsx              # renderer 入口，挂载 RouterProvider
+│           ├── router.tsx            # React Router Hash Router 路由表
+│           ├── styles.css            # Tailwind CSS v4 + shadcn 语义 token + 暗色模式
 │           ├── lib/
-│           │   ├── api.ts          # HTTP/WS 客户端封装
-│           │   ├── avatar-color.ts # 项目头像颜色生成（路径 hash → HSL）
-│           │   ├── context.ts      # AppContext 定义
-│           │   ├── project-key.ts  # project path → URL projectKey 生成
-│           │   ├── utils.ts        # shadcn/ui cn() 工具
-│           │   └── types.ts        # 前端类型（AgentProfile, SessionInfo 等）
+│           │   ├── api.ts            # HTTP/WS 客户端封装
+│           │   ├── agent-markdown.ts # Agent 定义 Markdown 生成/解析辅助
+│           │   ├── avatar-color.ts   # 项目头像颜色生成（路径 hash → HSL）
+│           │   ├── context.ts        # AppContext 定义
+│           │   ├── project-key.ts    # project path → URL projectKey 生成
+│           │   ├── tool-registry.ts  # 前端 tool call 展示元数据
+│           │   ├── types.ts          # 前端类型
+│           │   └── utils.ts          # shadcn/ui cn() 工具
 │           ├── stores/
-│           │   ├── app-store.ts               # 打开项目、当前项目、Electron IPC 动作
-│           │   └── project-workspace-store.ts # 项目内 agents/sessions/当前会话等工作区状态
+│           │   ├── app-store.ts          # 打开项目集合、当前项目、Electron IPC 动作
+│           │   ├── project-data-store.ts # agents/sessions/初始消息等项目数据缓存
+│           │   └── project-ui-store.ts   # 折叠状态等项目 UI 状态
 │           ├── layouts/
-│           │   └── ProjectLayout.tsx          # Project layout，编排项目工作区侧栏与主内容区
+│           │   └── ProjectLayout.tsx     # 项目工作区布局
 │           ├── features/
-│           │   ├── chat/
-│           │   │   ├── index.tsx          # Chat feature 入口组件
-│           │   │   ├── Header.tsx
-│           │   │   ├── MessageList.tsx
-│           │   │   ├── MessageItem.tsx
-│           │   │   ├── Composer.tsx
-│           │   │   ├── ToolCallSection.tsx
-│           │   │   ├── HtmlCard.tsx
-│           │   │   └── hooks/
-│           │   │       ├── useChatSession.ts # 历史消息、WebSocket、send/abort 状态机
-│           │   │       └── useChatScroll.ts  # 对话滚动行为
-│           │   ├── content-browser/
-│           │   │   ├── index.tsx             # 内容浏览 feature 入口组件
-│           │   │   ├── Header.tsx
-│           │   │   ├── ContentView.tsx       # markdown/plain/html/editor 内容区域
-│           │   │   ├── ConflictBanner.tsx
-│           │   │   ├── ConfirmDialogs.tsx
-│           │   │   └── hooks/
-│           │   │       ├── useContentFile.ts   # 文件内容加载状态
-│           │   │       └── useContentEditor.ts # 编辑、保存、dirty、冲突状态
-│           │   ├── text-selection-session/
-│           │   │   ├── index.tsx             # 文本划选后发起会话 feature 入口
-│           │   │   ├── StartSessionButton.tsx
-│           │   │   ├── StartSessionPopover.tsx
-│           │   │   └── hooks/
-│           │   │       └── useTextSelection.ts # 文本划选定位
-│           │   ├── agent-session-list/
-│           │   │   ├── index.tsx             # Agent/session 列表 container，连接 workspace store
-│           │   │   ├── AgentSessionListView.tsx # Agent/session 纯展示列表
-│           │   │   ├── AgentGroup.tsx
-│           │   │   ├── AgentRow.tsx
-│           │   │   ├── SessionRow.tsx
-│           │   │   ├── EmptyAgents.tsx
-│           │   │   └── hooks/
-│           │   │       └── useGroupedSessions.ts
-│           │   └── project-sidebar/
-│           │       └── index.tsx             # 项目侧栏 feature，组合 Agent/session 列表与文件树
+│           │   ├── activity-bar/         # 左侧项目 Activity Bar 与 ProjectAvatar
+│           │   ├── agent-session-list/   # Agent/session 分组列表
+│           │   ├── chat/                 # 对话页面入口、消息流、输入框、工具调用展示
+│           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
+│           │   ├── debug-tools/          # 开发模式调试菜单
+│           │   ├── project-panel/        # 项目侧栏，组合 Agent/session 列表与文件树
+│           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
+│           │   └── text-selection-session/ # 划选文本后发起会话
 │           ├── pages/
 │           │   ├── ProjectPage.tsx       # Project route adapter，校验 projectKey 后渲染 ProjectLayout
-│           │   ├── ChatPage.tsx          # Chat route adapter，渲染 features/chat
-│           │   └── ContentBrowser.tsx    # ContentBrowser route adapter，渲染 features/content-browser
+│           │   ├── ChatPage.tsx          # Chat route adapter
+│           │   └── ContentBrowser.tsx    # ContentBrowser route adapter
 │           └── components/
-│               ├── ui/                 # shadcn/ui 本地基础组件（Base UI 底层原语）
-│               ├── MarkdownContent.tsx # 统一 Markdown 渲染组件
-│               ├── ProjectBar.tsx      # 左侧 Activity Bar（项目头像列表、全局设置、添加项目）
-│               ├── ProjectAvatar.tsx   # 项目头像（颜色生成、右键菜单）
-│               ├── EmptyState.tsx      # 无项目时的空状态
-│               ├── AgentList.tsx
+│               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）
 │               ├── AgentDialog.tsx       # 创建/编辑 Agent 对话框
-│               ├── FileTree.tsx
-│               └── SettingsModal.tsx
+│               ├── EmptyState.tsx        # 无项目时的空状态
+│               ├── FileTree.tsx          # 文件树展示组件
+│               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
 ├── scripts/
-│   └── verify.mjs                  # 核心模块验证脚本
+│   ├── rebuild-native.mjs            # Electron native dependency rebuild
+│   └── verify.mjs                    # 核心模块验证脚本
 ├── docs/
-│   ├── official/                   # 正式项目文档（始终与代码同步）
-│   └── dev/                        # 开发过程文档（容易过时）
-│       ├── features/               # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
-│       ├── bugfix/                 # bugfix 分析与修复思路
-│       └── backlog.md              # 待办事项
-├── package.json                    # npm workspace root
-└── tsconfig.base.json              # 共享 TypeScript 配置
+│   ├── official/                     # 正式项目文档（始终与代码同步）
+│   └── dev/                          # 开发过程文档（容易过时）
+│       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
+│       ├── bugfix/                   # bugfix 分析与修复思路
+│       └── backlog.md                # 待办事项
+├── package.json                      # npm workspace root
+└── tsconfig.base.json                # 共享 TypeScript 配置
 ```
