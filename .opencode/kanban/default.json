@@ -35,8 +35,8 @@
     },
     {
       "name": "merge",
-      "prompt": "生成 commit 并squash merge to dev",
-      "completion": "命令执行完毕",
+      "prompt": "检查 official doc 是否需要更新，更新后（如有）再 commit 并squash merge to dev",
+      "completion": "已 squash merge 到 dev",
       "next": "done"
     },
     {
