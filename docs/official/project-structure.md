@@ -91,6 +91,7 @@ spherse/
 │           │   ├── chat/                 # 对话页面入口、消息流、输入框、工具调用展示
 │           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
 │           │   ├── debug-tools/          # 开发模式调试菜单
+│           │   ├── file-tree/            # 文件树组件、树模型、controller hook
 │           │   ├── project-panel/        # 项目侧栏，组合 Agent/session 列表与文件树
 │           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
 │           │   └── text-selection-session/ # 划选文本后发起会话
@@ -102,7 +103,6 @@ spherse/
 │               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）
 │               ├── AgentDialog.tsx       # 创建/编辑 Agent 对话框
 │               ├── EmptyState.tsx        # 无项目时的空状态
-│               ├── FileTree.tsx          # 文件树展示组件
 │               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
 ├── scripts/
 │   ├── rebuild-native.mjs            # Electron native dependency rebuild

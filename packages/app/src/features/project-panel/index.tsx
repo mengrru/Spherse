@@ -1,4 +1,4 @@
-import { FileTree } from "../../components/FileTree";
+import { FileTree } from "../file-tree";
 import {
   SidebarGroup,
   SidebarGroupContent,
