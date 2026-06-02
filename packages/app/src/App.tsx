@@ -8,6 +8,11 @@ import { useAppStore } from "./stores/app-store";
 import { useProjectDataStore } from "./stores/project-data-store";
 import { useProjectUiStore } from "./stores/project-ui-store";
 
+function buildProjectRoute(projectKey: string, lastRoute?: string): string {
+  const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
+  return `/project/${projectKey}${suffix}`;
+}
+
 export function App() {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
@@ -27,7 +32,8 @@ export function App() {
     restoreProjects().then((projectKey) => {
       const hashPath = window.location.hash.replace(/^#/, "") || "/";
       if (!cancelled && hashPath === "/" && projectKey) {
-        navigate(`/project/${projectKey}`, { replace: true });
+        const project = useAppStore.getState().projects.get(projectKey);
+        navigate(buildProjectRoute(projectKey, project?.lastRoute), { replace: true });
       }
     });
     return () => {
@@ -38,13 +44,15 @@ export function App() {
   const handleAddProject = async () => {
     const projectKey = await openProject();
     if (projectKey) {
-      navigate(`/project/${projectKey}`);
+      const project = useAppStore.getState().projects.get(projectKey);
+      navigate(buildProjectRoute(projectKey, project?.lastRoute));
     }
   };
 
   const handleSelectProject = async (projectKey: string) => {
     await setActiveProject(projectKey);
-    navigate(`/project/${projectKey}`);
+    const project = useAppStore.getState().projects.get(projectKey);
+    navigate(buildProjectRoute(projectKey, project?.lastRoute));
   };
 
   const handleCloseProject = async (projectKey: string) => {
@@ -52,7 +60,8 @@ export function App() {
     clearProjectData(projectKey);
     clearProjectUi(projectKey);
     if (nextProjectKey) {
-      navigate(`/project/${nextProjectKey}`);
+      const project = useAppStore.getState().projects.get(nextProjectKey);
+      navigate(buildProjectRoute(nextProjectKey, project?.lastRoute));
     } else {
       navigate("/");
     }

@@ -7,6 +7,7 @@ export interface OpenProjectEntry {
   path: string;
   name: string;
   lastOpened: string;
+  lastRoute?: string;
 }
 
 type SettingsSchema = {
@@ -82,10 +83,12 @@ export function getOpenProjects(): OpenProjectEntry[] {
 export function addOpenProject(projectPath: string): void {
   const projects = getOpenProjects();
   const idx = projects.findIndex((p) => p.path === projectPath);
+  const existing = idx >= 0 ? projects[idx] : undefined;
   const entry: OpenProjectEntry = {
     path: projectPath,
     name: path.basename(projectPath),
     lastOpened: new Date().toISOString(),
+    lastRoute: existing?.lastRoute,
   };
   if (idx >= 0) {
     projects[idx] = entry;
@@ -109,6 +112,15 @@ export function updateLastOpened(projectPath: string): void {
   const entry = projects.find((p) => p.path === projectPath);
   if (entry) {
     entry.lastOpened = new Date().toISOString();
+    settingsStore.set("openProjects", projects);
+  }
+}
+
+export function updateProjectLastRoute(projectPath: string, route: string): void {
+  const projects = getOpenProjects();
+  const entry = projects.find((p) => p.path === projectPath);
+  if (entry) {
+    entry.lastRoute = route;
     settingsStore.set("openProjects", projects);
   }
 }

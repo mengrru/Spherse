@@ -21,6 +21,7 @@
 - [ ] **项目创建向导**：HomePage 区分"新建项目"和"打开项目"，支持设置项目名和默认模型
 - [x] **用户自定义主题**：支持从 `.spherse/theme.css` 加载用户自定义 CSS 覆盖默认主题
 - [x] **多 Project 支持**：支持已导入项目的持久化，无需每次打开 app 重新手动导入
+- [x] **持久化上次访问的 route**：每个打开项目记住最后访问的项目内 route，应用启动、项目切换和关闭当前项目后恢复目标项目的上次位置。参见 `docs/dev/features/2026-06-02-persist-last-route/design.md`
 - [x] **Skill 支持**：允许 agent 定义可复用的 skill（预设 prompt + tool 组合）
 - [x] **HTML Viewer Card**：在对话流中支持渲染 HTML 内容卡片
 - [x] **文件/文件夹新建**：从文件浏览器新建文件或目录

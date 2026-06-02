@@ -8,6 +8,7 @@ export interface ProjectState {
   name: string;
   port: number;
   ctx: AppContext;
+  lastRoute?: string;
 }
 
 interface AppStore {
@@ -19,6 +20,7 @@ interface AppStore {
   closeProject: (projectKey: string) => Promise<string | null>;
   revealProject: (projectKey: string) => Promise<void>;
   setActiveProject: (projectKey: string | null) => Promise<void>;
+  setProjectLastRoute: (projectKey: string, route: string) => Promise<void>;
 }
 
 function findProjectKeyByPath(projects: Map<string, ProjectState>, projectPath: string): string | null {
@@ -38,7 +40,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const restored = await window.electronAPI.restoreProjects();
     const projects = new Map<string, ProjectState>();
 
-    for (const { path, name, port } of restored) {
+    for (const { path, name, port, lastRoute } of restored) {
       const key = createProjectKey(path, projects.keys());
       projects.set(key, {
         key,
@@ -46,6 +48,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         name,
         port,
         ctx: initAppContext(port, path),
+        lastRoute,
       });
     }
 
@@ -136,5 +139,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     if (project) {
       await window.electronAPI.setLastActiveProject(project.path);
     }
+  },
+
+  async setProjectLastRoute(projectKey, route) {
+    const project = get().projects.get(projectKey);
+    if (!project || project.lastRoute === route) return;
+
+    set((state) => {
+      const current = state.projects.get(projectKey);
+      if (!current || current.lastRoute === route) return {};
+      const projects = new Map(state.projects);
+      projects.set(projectKey, { ...current, lastRoute: route });
+      return { projects };
+    });
+
+    await window.electronAPI.setProjectLastRoute(project.path, route);
   },
 }));

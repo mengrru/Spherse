@@ -42,6 +42,7 @@
 - **Hash Router**：renderer 使用 React Router Hash Router，路由表达应用内导航状态，避免 Electron 本地页面刷新时依赖服务端 history fallback
 - **项目路由**：项目、会话和内容页通过 URL 表达，当前路径形态为 `/project/:projectKey`、`/project/:projectKey/chat/:sessionId`、`/project/:projectKey/content?path=...`
 - **projectKey**：URL 中不暴露完整文件系统路径；`project-key.ts` 根据项目目录名生成当前打开项目集合内稳定的 URL key，真实身份仍以 project path 为准
+- **项目内 lastRoute**：每个打开项目在 `openProjects` 条目中持久化相对于 `/project/:projectKey` 的 `lastRoute`，如 `/chat/:sessionId` 或 `/content?path=...`；应用启动、项目切换和关闭当前项目后的下一个项目导航都会恢复该项目的 lastRoute
 - **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作
 - **项目数据 store**：`project-data-store.ts` 按 projectKey 缓存 agents、sessions、初始消息和 loading/error 状态
 - **项目 UI store**：`project-ui-store.ts` 按 projectKey 管理折叠状态等纯 UI 状态

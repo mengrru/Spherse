@@ -1,7 +1,14 @@
 import { ipcMain, dialog, shell } from "electron";
 import type { BrowserWindow } from "electron";
 import { startServer, stopServer, getServerPort } from "../server.js";
-import { getOpenProjects, addOpenProject, removeOpenProject, setLastActiveProject, getLastActiveProject } from "../settings.js";
+import {
+  getOpenProjects,
+  addOpenProject,
+  removeOpenProject,
+  setLastActiveProject,
+  getLastActiveProject,
+  updateProjectLastRoute,
+} from "../settings.js";
 
 export function registerProjectIpc(
   getWindow: () => BrowserWindow | null,
@@ -25,17 +32,22 @@ export function registerProjectIpc(
 
   ipcMain.handle("restore-projects", async () => {
     const entries = getOpenProjects();
-    const results: Array<{ path: string; name: string; port: number }> = [];
+    const results: Array<{ path: string; name: string; port: number; lastRoute?: string }> = [];
     for (const entry of entries) {
       if (!getServerPort(entry.path)) {
         try {
           const port = await startServer(entry.path);
-          results.push({ path: entry.path, name: entry.name, port });
+          results.push({ path: entry.path, name: entry.name, port, lastRoute: entry.lastRoute });
         } catch {
           // If server fails to start (e.g. directory deleted), skip silently
         }
       } else {
-        results.push({ path: entry.path, name: entry.name, port: getServerPort(entry.path)! });
+        results.push({
+          path: entry.path,
+          name: entry.name,
+          port: getServerPort(entry.path)!,
+          lastRoute: entry.lastRoute,
+        });
       }
     }
     return results;
@@ -56,5 +68,9 @@ export function registerProjectIpc(
 
   ipcMain.handle("get-last-active-project", () => {
     return getLastActiveProject();
+  });
+
+  ipcMain.handle("set-project-last-route", (_event, projectPath: string, route: string) => {
+    updateProjectLastRoute(projectPath, route);
   });
 }

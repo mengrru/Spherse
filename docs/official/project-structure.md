@@ -58,12 +58,12 @@ spherse/
 │       │   ├── preload.ts            # contextBridge，IPC 白名单
 │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │       │   │   ├── index.ts          # registerAllIpc 聚合
-│       │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化
+│       │   │   ├── project.ts        # 项目选择、server 启停、打开项目/lastRoute 持久化
 │       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
 │       │   │   └── debug.ts          # 开发模式 debug 动作
 │       │   ├── window.ts             # BrowserWindow 创建与管理
 │       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, server>）
-│       │   └── settings.ts           # electron-store 封装 + env 管理 + openProjects 持久化
+│       │   └── settings.ts           # electron-store 封装 + env 管理 + openProjects/lastRoute 持久化
 │       ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
 │       └── src/
 │           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化

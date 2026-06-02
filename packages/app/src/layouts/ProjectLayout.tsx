@@ -25,6 +25,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   const { sessionId } = useParams();
   const [searchParams] = useSearchParams();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
+  const setProjectLastRoute = useAppStore((state) => state.setProjectLastRoute);
   const projectData = useProjectDataStore((state) => state.projects[projectKey]);
   const refreshAgents = useProjectDataStore((state) => state.refreshAgents);
   const refreshSessions = useProjectDataStore((state) => state.refreshSessions);
@@ -53,6 +54,13 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   useEffect(() => {
     void setActiveProject(projectKey);
   }, [projectKey, setActiveProject]);
+
+  useEffect(() => {
+    const fullPath = location.pathname + location.search;
+    const prefix = `/project/${projectKey}`;
+    const subRoute = fullPath.startsWith(prefix) ? fullPath.slice(prefix.length) : "";
+    void setProjectLastRoute(projectKey, subRoute);
+  }, [location.pathname, location.search, projectKey, setProjectLastRoute]);
 
   useEffect(() => {
     void refreshAgents(projectKey, project.ctx.client);
