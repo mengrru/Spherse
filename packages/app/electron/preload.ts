@@ -27,4 +27,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getElectronStoreData: () => ipcRenderer.invoke("get-electron-store-data"),
   reloadRenderer: () => ipcRenderer.invoke("reload-renderer"),
   resetAppData: () => ipcRenderer.invoke("reset-app-data"),
+  showSaveDialog: (options: { defaultPath?: string }) =>
+    ipcRenderer.invoke("show-save-dialog", options),
 });
