@@ -147,7 +147,7 @@ export function useChatSession({
   useEffect(() => {
     setMessages([]);
     client.getSessionMessages(sessionId).then((history: any[]) => {
-      setMessages(parseHistoryMessages(history));
+      setMessages((prev) => prev.length > 0 ? prev : parseHistoryMessages(history));
     });
 
     const ws = client.createChatWebSocket(sessionId, handleWsEvent);

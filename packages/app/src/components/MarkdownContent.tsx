@@ -38,7 +38,7 @@ export function MarkdownContent({ children, variant = "document" }: MarkdownCont
       <pre className={cn(compact ? "mb-2 p-2" : "mb-3 p-3", "overflow-x-auto rounded-md bg-muted font-mono text-xs", className)} {...props} />
     ),
     blockquote: ({ className, ...props }) => (
-      <blockquote className={cn("mb-3 border-l-2 border-border pl-3 text-muted-foreground", className)} {...props} />
+      <blockquote className={cn("mb-3 rounded-r border-l-4 border-border bg-muted/50 pl-3 text-foreground/80 text-[13px] italic", className)} {...props} />
     ),
     table: ({ className, ...props }) => (
       <div className="mb-3 overflow-x-auto">

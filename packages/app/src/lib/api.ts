@@ -28,6 +28,10 @@ export function createApiClient(port: number) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ agentId }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
       return res.json();
     },
 

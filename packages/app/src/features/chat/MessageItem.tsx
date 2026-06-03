@@ -22,11 +22,7 @@ export function MessageItem({ message, agent, onNavigateToPath }: MessageItemPro
         {message.role === "assistant" && agent.name}
       </div>
       <div className="text-sm">
-        {message.role === "assistant" ? (
-          <MarkdownContent variant="chat">{message.content}</MarkdownContent>
-        ) : (
-          message.content
-        )}
+        <MarkdownContent variant="chat">{message.content}</MarkdownContent>
         {message._streaming && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
       </div>
       {message._toolCalls && message._toolCalls.length > 0 && (

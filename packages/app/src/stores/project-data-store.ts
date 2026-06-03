@@ -100,7 +100,13 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
       const sessions = await client.listSessions();
       set((state) => updateProjectData(state, projectKey, (project) => ({
         ...project,
-        sessions,
+        sessions: [
+          ...project.sessions.filter((session) =>
+            project.initialMessageBySessionId[session.id] &&
+            !sessions.some((item) => item.id === session.id),
+          ),
+          ...sessions,
+        ],
         error: null,
       }), { createIfMissing: false }));
     } catch (err) {
@@ -119,6 +125,9 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
 
     try {
       const { sessionId } = await client.createSession(agentId);
+      if (typeof sessionId !== "string" || !sessionId) {
+        throw new Error("sessionId is required");
+      }
       const session: SessionInfo = {
         id: sessionId,
         agentId,

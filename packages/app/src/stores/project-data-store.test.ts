@@ -118,4 +118,52 @@ describe("useProjectDataStore", () => {
     expect(client.listAgents).not.toHaveBeenCalled();
     expect(useProjectDataStore.getState().projects["project-1"]?.error).toBe("create failed");
   });
+
+  it("keeps a newly created session when the follow-up sessions refresh is stale", async () => {
+    let resolveSessions: (sessions: SessionInfo[]) => void = () => {};
+    const client = createClient({
+      createSession: vi.fn().mockResolvedValue({ sessionId: "session-1" }),
+      listSessions: vi.fn().mockReturnValue(new Promise<SessionInfo[]>((resolve) => {
+        resolveSessions = resolve;
+      })),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    const session = await useProjectDataStore.getState().createSession(
+      "project-1",
+      client,
+      "agent-1",
+      "initial message",
+    );
+    resolveSessions([]);
+
+    await vi.waitFor(() => {
+      expect(client.listSessions).toHaveBeenCalledTimes(1);
+    });
+
+    expect(session?.id).toBe("session-1");
+    expect(useProjectDataStore.getState().projects["project-1"]?.sessions).toMatchObject([
+      { id: "session-1", agentId: "agent-1", status: "active" },
+    ]);
+    expect(useProjectDataStore.getState().projects["project-1"]?.initialMessageBySessionId).toEqual({
+      "session-1": "initial message",
+    });
+  });
+
+  it("does not create an undefined session when session creation returns no id", async () => {
+    const client = createClient({
+      createSession: vi.fn().mockResolvedValue({ error: "create failed" }),
+    } as Partial<ApiClient>);
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    const session = await useProjectDataStore.getState().createSession(
+      "project-1",
+      client,
+      "agent-1",
+      "initial message",
+    );
+
+    expect(session).toBeNull();
+    expect(useProjectDataStore.getState().projects["project-1"]?.sessions).toEqual([]);
+  });
 });

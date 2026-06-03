@@ -18,18 +18,19 @@ export function StartSessionButton({ position, onStart, onClose }: StartSessionB
       ref={ref}
       variant="secondary"
       size="sm"
-      className="fixed z-50 shadow-lg"
+      className="fixed z-50 -translate-x-1/2 border-border bg-popover text-popover-foreground shadow-lg ring-1 ring-border/60 hover:bg-popover"
       style={{
         left: position.x,
         top: position.y,
       }}
+      data-testid="text-selection-start-button"
       onMouseDown={(event) => {
         event.stopPropagation();
         event.preventDefault();
         onStart();
       }}
     >
-      <MessageCircleIcon />
+      <MessageCircleIcon className="size-3.5" />
       发起会话
     </Button>
   );

@@ -91,7 +91,8 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
     sourcePath: string,
     comment?: string,
   ) => {
-    const parts = [`请处理以下来自「${sourcePath}」的内容：\n\n> ${selectedText}`];
+    const quotedText = selectedText.split("\n").map((line) => `> ${line}`).join("\n");
+    const parts = [`请处理以下来自「${sourcePath}」的内容：\n\n${quotedText}`];
     if (comment) parts.push(`\n\n${comment}`);
     const message = parts.join("");
     const session = await createSession(projectKey, project.ctx.client, agentId, message);

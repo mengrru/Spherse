@@ -15,13 +15,33 @@ interface StartSessionPopoverProps {
 
 const MAX_PREVIEW_LENGTH = 200;
 
+const POPOVER_WIDTH = 300;
+const VIEWPORT_PADDING = 8;
+const POPOVER_MAX_HEIGHT = 420;
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(value, max));
+}
+
 function getPopoverPosition(position: { x: number; y: number }) {
+  const width = Math.min(POPOVER_WIDTH, window.innerWidth - VIEWPORT_PADDING * 2);
+  const maxHeight = Math.min(POPOVER_MAX_HEIGHT, window.innerHeight - VIEWPORT_PADDING * 2);
+  const left = clamp(
+    position.x - width / 2,
+    VIEWPORT_PADDING,
+    window.innerWidth - width - VIEWPORT_PADDING,
+  );
+  const top = clamp(
+    position.y + 40,
+    VIEWPORT_PADDING,
+    window.innerHeight - maxHeight - VIEWPORT_PADDING,
+  );
   return {
-    left: Math.max(8, Math.min(position.x - 100, window.innerWidth - 420)),
-    top: Math.max(8, Math.min(position.y, window.innerHeight - 296)),
-    maxWidth: 400,
-    maxHeight: window.innerHeight - 16,
-    width: "max-content",
+    left,
+    top,
+    width,
+    height: maxHeight,
+    maxHeight,
   };
 }
 
@@ -46,32 +66,27 @@ export function StartSessionPopover({
   return (
     <div
       ref={ref}
-      className="fixed z-50 rounded-lg border border-border bg-popover text-popover-foreground shadow-xl"
+      className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-xl"
       style={getPopoverPosition(position)}
+      data-testid="text-selection-popover"
       onMouseDown={(event) => event.stopPropagation()}
     >
-      <div className="p-3 overflow-y-auto">
+      <div className="flex h-full flex-col p-3">
         <div className="mb-2 text-[11px] text-muted-foreground">
           引用自 <span className="font-mono">{sourcePath}</span>
         </div>
         <div className="mb-2 max-h-20 overflow-y-auto rounded-r border-l-2 border-primary bg-muted p-2 font-mono text-xs leading-relaxed">
           {previewText}
         </div>
-        {trimmedComment && (
-          <div className="mb-2 max-h-16 overflow-y-auto text-xs leading-relaxed text-muted-foreground">
-            {trimmedComment}
-          </div>
-        )}
-
         <Textarea
           className="h-12 resize-y"
           placeholder="添加补充说明（可选）..."
           value={comment}
           onChange={(event) => setComment(event.target.value)}
         />
-        <div className="mt-2 border-t border-border pt-2">
+        <div className="mt-2 flex min-h-0 flex-1 flex-col border-t border-border pt-2">
           <div className="mb-1 text-[11px] text-muted-foreground">选择 Agent</div>
-          <div className="flex flex-col gap-0.5">
+          <div className="flex min-h-0 flex-1 max-h-60 flex-col gap-0.5 overflow-y-auto" data-testid="text-selection-agent-list">
             {agents.map((agent) => (
               <Button
                 key={agent.id}

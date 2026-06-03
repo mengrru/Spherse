@@ -1,5 +1,6 @@
-import { useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import type { AgentProfile } from "../../lib/types";
+import { SelectionHighlightOverlay } from "./SelectionHighlightOverlay";
 import { StartSessionButton } from "./StartSessionButton";
 import { StartSessionPopover } from "./StartSessionPopover";
 import { useTextSelection } from "./hooks/useTextSelection";
@@ -28,6 +29,10 @@ export function TextSelectionSession({
     setSelectionState(null);
   };
 
+  useEffect(() => {
+    if (!selectionState) setShowStartPopover(false);
+  }, [selectionState]);
+
   return (
     <>
       {children(contentRef)}
@@ -37,6 +42,9 @@ export function TextSelectionSession({
           onStart={() => setShowStartPopover(true)}
           onClose={clearSelection}
         />
+      )}
+      {selectionState && (
+        <SelectionHighlightOverlay rects={selectionState.highlightRects} />
       )}
       {selectionState && showStartPopover && (
         <StartSessionPopover

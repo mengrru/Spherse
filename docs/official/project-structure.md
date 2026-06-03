@@ -68,7 +68,13 @@ spherse/
 │       │   ├── window.ts             # BrowserWindow 创建与管理
 │       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新
 │       │   └── settings.ts           # electron-store 封装 + env 管理 + openProjects/lastRoute 持久化
+│       ├── playwright.config.ts      # Playwright E2E 测试配置
+│       ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
 │       ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
+│       ├── e2e/                      # Playwright E2E 测试
+│       │   ├── helpers/
+│       │   │   └── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
+│       │   └── text-selection-session.spec.ts  # 划选会话 E2E 测试
 │       └── src/
 │           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化
 │           ├── main.tsx              # renderer 入口，挂载 RouterProvider
