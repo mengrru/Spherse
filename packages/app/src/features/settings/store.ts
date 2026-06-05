@@ -92,7 +92,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     const providers = get().providers;
     const defaultModel = get().defaultModel;
     const nextDefaultModel =
-      defaultModel && providers[id]?.models.some((m) => m.id === defaultModel)
+      defaultModel && providers[id]?.models.some((m) => defaultModel === `${id}/${m.id}`)
         ? ""
         : defaultModel;
     set({ apiKeys, defaultModel: nextDefaultModel });

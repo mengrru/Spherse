@@ -11,7 +11,9 @@ export function registerSettingsIpc(): void {
 
   ipcMain.handle("save-settings", (_event, settings: AppSettings) => {
     saveSettings(settings);
-    updateDefaultModel(settings.defaultModel || undefined);
+    if (settings.defaultModel) {
+      updateDefaultModel(settings.defaultModel);
+    }
     return { success: true };
   });
 

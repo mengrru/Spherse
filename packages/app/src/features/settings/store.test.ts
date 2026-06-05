@@ -74,7 +74,7 @@ describe("useSettingsStore", () => {
     useSettingsStore.setState({
       providers: MOCK_PROVIDERS,
       apiKeys: { deepseek: " key ", openai: "openai-key" },
-      defaultModel: "deepseek-v4-flash",
+      defaultModel: "deepseek/deepseek-v4-flash",
     });
 
     const ok = await useSettingsStore.getState().save(api);
@@ -84,7 +84,7 @@ describe("useSettingsStore", () => {
     expect(saved.providers.deepseek.apiKey).toBe("key");
     expect(saved.providers.openai.apiKey).toBe("openai-key");
     expect(saved.providers.zai.apiKey).toBe("");
-    expect(saved.defaultModel).toBe("deepseek-v4-flash");
+    expect(saved.defaultModel).toBe("deepseek/deepseek-v4-flash");
   });
 
   it("clears default model when disconnecting its provider", async () => {
@@ -92,7 +92,7 @@ describe("useSettingsStore", () => {
     useSettingsStore.setState({
       providers: MOCK_PROVIDERS,
       apiKeys: { deepseek: "key", zai: "zai-key" },
-      defaultModel: "deepseek-v4-flash",
+      defaultModel: "deepseek/deepseek-v4-flash",
     });
 
     await useSettingsStore.getState().disconnect(api, "deepseek");
@@ -107,11 +107,11 @@ describe("useSettingsStore", () => {
     useSettingsStore.setState({
       providers: MOCK_PROVIDERS,
       apiKeys: { deepseek: "key", zai: "zai-key" },
-      defaultModel: "deepseek-v4-flash",
+      defaultModel: "deepseek/deepseek-v4-flash",
     });
 
     await useSettingsStore.getState().disconnect(api, "zai");
 
-    expect(useSettingsStore.getState().defaultModel).toBe("deepseek-v4-flash");
+    expect(useSettingsStore.getState().defaultModel).toBe("deepseek/deepseek-v4-flash");
   });
 });

@@ -61,6 +61,11 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
     await disconnect(electronAPI, id);
   };
 
+  const handleModelChange = async (model: string) => {
+    setDefaultModel(model);
+    await save(electronAPI, undefined, model);
+  };
+
   return (
     <>
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -74,7 +79,7 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
                 providers={providers}
                 apiKeys={apiKeys}
                 value={defaultModel}
-                onChange={setDefaultModel}
+                onChange={handleModelChange}
               />
             </FieldGroup>
             <div className="mt-5 border-t border-border pt-4">

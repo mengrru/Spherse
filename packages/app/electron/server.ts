@@ -22,7 +22,7 @@ export async function startServer(projectRoot: string): Promise<number> {
 
 export function updateDefaultModel(defaultModel: string | undefined): void {
   for (const [, entry] of servers) {
-    entry.engine.setDefaultModel(defaultModel || undefined);
+    entry.engine.setDefaultModel(defaultModel);
   }
 }
 
