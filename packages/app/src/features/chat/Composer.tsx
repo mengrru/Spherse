@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { ChevronsDownIcon, ChevronsUpIcon, SendIcon, SquareIcon } from "lucide-react";
@@ -11,15 +11,19 @@ const MAX_HEIGHT = 20 * LINE_HEIGHT + PADDING_Y;
 
 interface ComposerProps {
   streaming: boolean;
+  sessionId: string;
   onSend: (message: string) => void;
   onAbort: () => void;
 }
 
-export function Composer({ streaming, onSend, onAbort }: ComposerProps) {
-  const [input, setInput] = useState("");
+export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProps) {
+  const draftKey = `spherse:draft:${sessionId}`;
+  const [input, setInput] = useState(() => localStorage.getItem(draftKey) ?? "");
   const [manualExpanded, setManualExpanded] = useState(false);
   const [contentExceeds3Lines, setContentExceeds3Lines] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef(input);
+  inputRef.current = input;
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
@@ -44,13 +48,34 @@ export function Composer({ streaming, onSend, onAbort }: ComposerProps) {
     textarea.scrollTop = prevScrollTop; // prevent scroll-to-top after height change
   }, [input, manualExpanded]);
 
+  useEffect(() => {
+    if (input) {
+      const timer = setTimeout(() => localStorage.setItem(draftKey, input), 300);
+      return () => clearTimeout(timer);
+    }
+    localStorage.removeItem(draftKey);
+  }, [input, draftKey]);
+
+  useEffect(() => {
+    return () => {
+      if (inputRef.current) {
+        localStorage.setItem(`spherse:draft:${sessionId}`, inputRef.current);
+      }
+    };
+  }, [sessionId]);
+
   const send = () => {
     const message = input.trim();
     if (!message || streaming) return;
     onSend(message);
     setInput("");
+    localStorage.removeItem(draftKey);
     setManualExpanded(false);
   };
+
+  useEffect(() => {
+    if (!streaming) textareaRef.current?.focus();
+  }, [streaming]);
 
   return (
     <div className="border-t border-border bg-background p-3">

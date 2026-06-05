@@ -20,7 +20,7 @@ export function Chat({ client, sessionId, agent, onNavigateToPath, initialMessag
     sessionId,
     initialMessage,
   });
-  const messagesEndRef = useChatScroll(messages);
+  const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages);
 
   return (
     <div className="flex flex-col h-full">
@@ -29,10 +29,14 @@ export function Chat({ client, sessionId, agent, onNavigateToPath, initialMessag
         messages={messages}
         agent={agent}
         messagesEndRef={messagesEndRef}
+        containerRef={containerRef}
+        isAtBottom={isAtBottom}
+        onScrollToBottom={scrollToBottom}
         onNavigateToPath={onNavigateToPath}
       />
       <Composer
         streaming={streaming}
+        sessionId={sessionId}
         onSend={sendMessage}
         onAbort={abort}
       />
