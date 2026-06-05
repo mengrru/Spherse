@@ -24,7 +24,8 @@ export function Composer({ streaming, onSend, onAbort }: ComposerProps) {
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-    textarea.style.height = "auto";
+    const prevScrollTop = textarea.scrollTop;
+    textarea.style.height = "auto"; // collapse to measure scrollHeight
     const natural = textarea.scrollHeight;
     const exceeds = natural > MIN_HEIGHT + 4;
     setContentExceeds3Lines(exceeds);
@@ -40,6 +41,7 @@ export function Composer({ streaming, onSend, onAbort }: ComposerProps) {
       textarea.style.height = `${targetHeight}px`;
       textarea.style.overflowY = natural > MID_HEIGHT ? "auto" : "hidden";
     }
+    textarea.scrollTop = prevScrollTop; // prevent scroll-to-top after height change
   }, [input, manualExpanded]);
 
   const send = () => {
