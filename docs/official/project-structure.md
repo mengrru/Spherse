@@ -73,7 +73,9 @@ spherse/
 │       ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
 │       ├── e2e/                      # Playwright E2E 测试
 │       │   ├── helpers/
-│       │   │   └── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
+│       │   │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
+│       │   │   └── file-tree.ts      # 文件树 E2E 测试辅助（项目创建、app launch）
+│       │   ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │       │   └── text-selection-session.spec.ts  # 划选会话 E2E 测试
 │       └── src/
 │           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化

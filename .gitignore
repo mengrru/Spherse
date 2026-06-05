@@ -3,4 +3,5 @@ node_modules/*
 *.*s.map
 */**/dist/*
 coverage/
+test-results/
 .superpowers/

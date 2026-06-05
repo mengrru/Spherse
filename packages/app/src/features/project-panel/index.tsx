@@ -26,9 +26,9 @@ export function ProjectPanel({
   onFileDeleted,
 }: ProjectPanelProps) {
   return (
-    <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-border bg-sidebar">
+    <aside className="flex w-65 shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r border-border bg-sidebar">
       <SidebarProvider className="min-h-0 w-full">
-        <div className="flex flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="border-b border-sidebar-border p-2">
             <AgentSessionList
               projectKey={projectKey}
