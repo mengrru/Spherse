@@ -1,0 +1,37 @@
+{
+  "stages": [
+    {
+      "name": "backlog",
+      "type": "entry",
+      "next": "information-gathering"
+    },
+    {
+      "name": "information-gathering",
+      "prompt": "收集相关信息、读取相关code（尤其是需求中提到的），了解现状。产出一个调研文档，放到docs/investigation的子目录下。需求：{{task.content}}",
+      "completion": "调研文档生成完毕（完成后直接转移至 brainstorming 阶段不需要询问）",
+      "next": "brainstorming"
+    },
+    {
+      "name": "brainstorming",
+      "prompt": "使用 brainstorming skill 对齐需求并编写 design doc。该design放到刚才调研文档的同一个目录下。",
+      "completion": "design doc 已生成（完成后直接转移至 design-review 阶段不需要询问）",
+      "next": "design-review"
+    },
+    {
+      "name": "design-review",
+      "type": "human-gate",
+      "next": "merge"
+    },
+    {
+      "name": "merge",
+      "prompt": "本次只做调研并完成design doc，不涉及实现，所以直接commit & squash merge to dev",
+      "completion": "已 squash merge 到 dev",
+      "next": "done"
+    },
+    {
+      "name": "done",
+      "type": "terminal"
+    }
+  ]
+}
+
