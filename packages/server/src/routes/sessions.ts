@@ -43,7 +43,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
 
   fastify.delete<{ Params: { id: string } }>(
     "/api/sessions/:id",
-    async (req, reply) => {
+    async (req) => {
       ctx.engine.deleteSession(req.params.id);
       return { ok: true };
     },

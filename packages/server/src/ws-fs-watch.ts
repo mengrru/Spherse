@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { AppContext } from "./index.js";
 import { PROJECT_META_DIR } from "@spherse/core";

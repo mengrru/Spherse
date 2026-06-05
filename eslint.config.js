@@ -1,0 +1,100 @@
+import js from "@eslint/js";
+import tsParser from "@typescript-eslint/parser";
+import tsPlugin from "@typescript-eslint/eslint-plugin";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
+import globals from "globals";
+
+const tsFiles = [
+  "packages/*/src/**/*.{ts,tsx}",
+  "packages/app/electron/**/*.ts",
+  "packages/*/*.{ts,tsx}",
+  "packages/*/scripts/**/*.mjs",
+  "scripts/**/*.mjs",
+  "*.config.{js,mjs,ts}",
+];
+
+export default [
+  {
+    ignores: [
+      "node_modules/**",
+      "dist/**",
+      "coverage/**",
+      "docs/**",
+      ".superpowers/**",
+      "packages/presets/templates/**",
+      "packages/*/dist/**",
+    ],
+  },
+  js.configs.recommended,
+  {
+    files: tsFiles,
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      parser: tsParser,
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+    },
+    plugins: {
+      "@typescript-eslint": tsPlugin,
+    },
+    rules: {
+      ...tsPlugin.configs.recommended.rules,
+      "no-undef": "off",
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+  {
+    files: ["packages/app/src/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: globals.browser,
+    },
+    plugins: {
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      "react-hooks/immutability": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true },
+      ],
+    },
+  },
+  {
+    files: [
+      "packages/core/src/**/*.ts",
+      "packages/server/src/**/*.ts",
+      "packages/presets/src/**/*.ts",
+      "packages/app/electron/**/*.ts",
+      "packages/*/*.{ts,tsx}",
+      "packages/*/scripts/**/*.mjs",
+      "scripts/**/*.mjs",
+      "*.config.{js,mjs,ts}",
+    ],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ["**/*.test.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+];

@@ -41,6 +41,16 @@ npm run dev --workspace=packages/server  # server 监听
 npm run dev
 ```
 
+**Lint 命令**：
+
+```bash
+npm run lint              # 全仓库 lint 检查
+npm run lint:fix          # 全仓库 lint 自动修复
+npm run lint --workspace=packages/app    # 单 workspace lint
+```
+
+提交前会通过 Husky pre-commit 钩子自动执行 `npm run lint`，lint 不通过则阻塞提交。钩子不会自动修改或暂存文件，需手动运行 `npm run lint:fix` 修复。
+
 **测试命令**：
 
 ```bash
@@ -75,6 +85,7 @@ npm test --workspace=packages/app           # 运行前端 store/组件相关测
 - **路径安全**：所有文件操作工具必须做 `path.resolve + startsWith` 校验，防止路径穿越
 - **并发写入安全**：会写文件的工具应共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
 - **不添加注释**：除非用户明确要求
+- **Lint 规范**：ESLint 9 flat config 位于 root `eslint.config.js`，覆盖所有 package；`packages/app` 启用 React Hooks / React Refresh 规则；commit 前由 Husky pre-commit 钩子自动检查
 - **Git 规范**：commit message 使用 `feat:` / `fix:` / `chore:` 前缀
 - **前端 store 使用原则**：
   - `app-store` 管理应用级状态（打开项目集合、当前项目、Electron IPC 动作），不持有项目内业务数据

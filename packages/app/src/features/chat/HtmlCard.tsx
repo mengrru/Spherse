@@ -8,7 +8,7 @@ interface HtmlCardRendererProps {
 }
 
 function sanitizeFileName(name: string): string {
-  return name.replace(/[\\/:\*\?"<>\|]/g, "_").trim() || "untitled";
+  return name.replace(/[\\/:*?"<>|]/g, "_").trim() || "untitled";
 }
 
 export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {

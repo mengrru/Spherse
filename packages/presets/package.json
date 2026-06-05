@@ -14,7 +14,9 @@
   "scripts": {
     "prebuild": "node scripts/sync-templates.mjs",
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

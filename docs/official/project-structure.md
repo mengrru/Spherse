@@ -123,6 +123,9 @@ spherse/
 │       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
 │       ├── bugfix/                   # bugfix 分析与修复思路
 │       └── backlog.md                # 待办事项
+├── .husky/
+│   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
+├── eslint.config.js                  # ESLint 9 flat config（全仓库 lint 规则）
 ├── package.json                      # npm workspace root
 └── tsconfig.base.json                # 共享 TypeScript 配置
 ```

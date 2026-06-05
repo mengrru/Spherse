@@ -9,7 +9,7 @@ import {
 import type { CreateAction, TreeNode } from "./tree-model";
 
 export function FileTreeContextMenu({
-  node,
+  node: _node,
   children,
   onCreate,
   onDelete,

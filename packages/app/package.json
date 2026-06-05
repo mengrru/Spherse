@@ -8,7 +8,9 @@
     "dev": "electron-vite dev",
     "preview": "electron-vite preview",
     "test": "vitest run",
-    "test:e2e": "playwright test -c playwright.config.ts"
+    "test:e2e": "playwright test -c playwright.config.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",

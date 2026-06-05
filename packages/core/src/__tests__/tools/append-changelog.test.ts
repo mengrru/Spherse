@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createAppendChangelogTool } from "../../tools/append-changelog.js";
 import { FileWriteMutex } from "../../utils/file-write-mutex.js";
-import { createTempProject, cleanupDir, writeFile, readFile, pathExists } from "../helpers.js";
+import { createTempProject, cleanupDir, readFile, pathExists } from "../helpers.js";
 
 describe("createAppendChangelogTool", () => {
   let projectRoot: string;

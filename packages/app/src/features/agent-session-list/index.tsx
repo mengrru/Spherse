@@ -14,6 +14,10 @@ import { useProjectUiStore } from "../../stores/project-ui-store";
 import { AgentSessionListView } from "./AgentSessionListView";
 import { PlusIcon } from "lucide-react";
 
+const EMPTY_AGENTS: AgentProfile[] = [];
+const EMPTY_SESSIONS: SessionInfo[] = [];
+const EMPTY_COLLAPSED_AGENT_IDS = new Set<string>();
+
 export interface AgentSessionListProps {
   projectKey: string;
   activeSessionId: string | null;
@@ -39,9 +43,9 @@ export function AgentSessionList({
   const [showCreateAgent, setShowCreateAgent] = useState(false);
   const [editAgent, setEditAgent] = useState<{ id: string; content: string } | null>(null);
 
-  const agents = projectData?.agents ?? [];
-  const sessions = projectData?.sessions ?? [];
-  const collapsedAgentIds = projectUi?.collapsedAgentIds ?? new Set<string>();
+  const agents = projectData?.agents ?? EMPTY_AGENTS;
+  const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
+  const collapsedAgentIds = projectUi?.collapsedAgentIds ?? EMPTY_COLLAPSED_AGENT_IDS;
 
   useEffect(() => {
     const validAgentIds = new Set(agents.map((agent) => agent.id));

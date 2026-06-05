@@ -4,6 +4,8 @@
 
 ## 代码质量
 
+- [ ] **逐步禁止 `any`**：梳理 agent/runtime payload、SQLite row casting、测试 tool context 等现有 `any` 来源，优先通过明确事件/消息/数据库 row 类型替换；完成后开启 `@typescript-eslint/no-explicit-any` 的 warning 或 error 模式。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
+- [ ] **日志系统完善后收紧 console lint**：引入结构化日志并替换临时 `console.log`/`console.warn`/`console.error` 诊断输出后，开启 `no-console` 或更细粒度 console lint。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
 - [ ] **恢复 React StrictMode 并修复 WebSocket effect cleanup**：`src/main.tsx` 当前移除了 StrictMode 以避免开发模式下双重 mount 导致 WebSocket 错误事件。正确做法是保留 StrictMode，在 `ChatPage` 的 `useEffect` 中用 ref 追踪活跃的 WebSocket 实例，忽略已关闭 socket 的事件。涉及文件：`packages/app/src/pages/ChatPage.tsx`、`packages/app/src/main.tsx`。
 - [x] **统一 UI 基础组件**：引入 shadcn/ui（Base UI base），统一 Button、Dialog、Dropdown、Context Menu、Field、Badge 等基础组件，替代当前散落的内联样式实现。参见 `docs/dev/features/2026-05-30-frontend-refactor-shadcn/design.md`
 - [x] **前端路由与全局状态管理**：引入 React Router Hash Router 和 Zustand，支持项目、会话、内容页 URL，并收拢多项目与项目工作区状态。参见 `docs/dev/features/2026-05-31-frontend-routing-state/design.md`
@@ -43,6 +45,7 @@
 
 ## 基础设施
 
+- [ ] **本地验证流水线**：为 `feature -> dev`、`dev -> main` 的本地 merge 流程设计可运行脚本，例如 `npm run verify:feature` 覆盖 lint/build/unit tests，`npm run verify:release` 增加整体测试或 E2E。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
 - [ ] **electron-builder 打包**：配置生产构建和跨平台打包
 - [x] **better-sqlite3 rebuild 自动化**：在启动开发桌面应用前自动为 Electron 重新编译 native 模块
 - [ ] **E2E 测试**：Playwright 或 Spectron 端到端测试
