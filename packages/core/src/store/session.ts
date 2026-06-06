@@ -1,5 +1,7 @@
 import Database from "better-sqlite3";
 import type { SessionInfo } from "../types.js";
+import type { Logger } from "../logger.js";
+import pino from "pino";
 
 const MIGRATION = `
 CREATE TABLE IF NOT EXISTS sessions (
@@ -22,11 +24,17 @@ CREATE TABLE IF NOT EXISTS messages (
 
 export class SessionStore {
   private db: Database.Database | null = null;
+  private logger: Logger;
+
+  constructor(logger?: Logger) {
+    this.logger = logger ?? pino({ level: "silent" });
+  }
 
   async init(dbPath: string): Promise<void> {
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
     this.db.exec(MIGRATION);
+    this.logger.info({ dbPath }, "session store initialized");
   }
 
   close(): void {
@@ -42,6 +50,7 @@ export class SessionStore {
         "INSERT INTO sessions (id, agent_id, title, created_at, updated_at, status) VALUES (?, ?, ?, ?, ?, 'active')",
       )
       .run(id, agentId, title ?? null, now, now);
+    this.logger.info({ sessionId: id, agentId }, "session created in store");
     return id;
   }
 
@@ -99,6 +108,7 @@ export class SessionStore {
     this.db!
       .prepare("UPDATE sessions SET updated_at = ? WHERE id = ?")
       .run(now, sessionId);
+    this.logger.debug({ sessionId }, "message persisted");
   }
 
   getSessionMessages(sessionId: string): any[] {

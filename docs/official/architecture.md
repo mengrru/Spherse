@@ -12,6 +12,7 @@
 
 - **Engine 是唯一门面**：外部（server）只通过 `Engine` 或 `createEngine` 访问 core 功能，不直接操作 store
 - **Store 只管存储**：store 是对存储层读写的抽象，不持有运行时状态（如活跃的 pi-agent-core Agent 实例）
+- **结构化日志**：core 使用 pino 记录结构化日志，通过 `createEngine` 工厂函数注入 logger 实例；Engine 在 `sendMessage` 中通过 `logAgentEvent` 记录 agent loop 全生命周期事件（agent_start/turn_start/tool_execution 等），stores 在关键操作（init/create/persist）中输出日志
 - **AgentProfile**：业务层 agent 概念，从 `.spherse/agents/*.md` 解析而来，包含不可变 `id`（UUID）
 - **Agent context**：agent profile 的 `context` 字段声明项目内相对路径，Engine 构建 system prompt 时读取这些文件并注入 `Pre-loaded Context`
 - **AgentProfileStore**：首次读取无 `id` 的 .md 文件时自动生成并回写 `id`；支持 `getRawContent(id)` 获取原始 Markdown 内容用于编辑
@@ -29,7 +30,7 @@
 - **内容 API**：`content.ts` 负责目录列表、文件读取、保存、删除、新建文件和新建目录；所有文件路径都必须限制在项目根目录内
 - **文件树 API**：`file-tree.ts` 返回面向 UI 选择的项目文件列表，过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir
 - **预览 API**：`preview.ts` 为本地 HTML 内容提供预览 URL，renderer 通过 iframe/card 使用
-- **WebSocket**：`ws-chat.ts` 推送 agent 对话事件；`ws-fs-watch.ts` 推送项目文件变更，用于前端刷新内容浏览状态
+- **WebSocket**：`ws-chat.ts` 推送 agent 对话事件；`ws-fs-watch.ts` 推送项目文件变更，用于前端刷新内容浏览状态；`ws-debug.ts` 推送 pino 结构化日志流，供前端 Debug Streaming Log 面板消费
 - **AI access settings API**：`settings.ts` 暴露 `/api/settings/ai-access`，读写项目级 AI 读取禁止列表；renderer 不直接通过 content API 编辑 `.spherse/project.yaml`
 
 ## Electron 层
@@ -41,7 +42,7 @@
 - **设置持久化**：`electron/settings.ts` 使用 electron-store 保存打开项目、最后活跃项目、provider API key 和默认模型；保存 provider key 后同步到进程环境变量
 - **Provider catalog**：`core/model-providers.ts` 从 `@earendil-works/pi-ai` 元数据动态生成 provider catalog，`ENABLED_PROVIDERS` 过滤 UI 可见 provider（11 个），`PROVIDER_ENV_KEYS` 映射 provider→env key；Engine model resolution 使用全部 pi-ai provider
 - **默认模型切换**：Engine 暴露 `setDefaultModel()` 方法，IPC save-settings 后通过 `electron/server.ts` 的 `updateDefaultModel()` 同步更新所有运行中 engine 的 globalDefaultModel
-- **开发调试**：debug IPC 仅暴露开发模式相关动作，如 DevTools、electron-store 查看、reload renderer、reset app data
+- **开发调试**：debug IPC 仅暴露开发模式相关动作，如 DevTools、electron-store 查看、reload renderer、reset app data；Debug Tools 包含 Streaming Log 面板（可拖动悬浮窗口，通过 `/ws/debug` WebSocket 实时显示 server 日志）
 
 ## 前端路由与状态
 

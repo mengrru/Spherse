@@ -25,14 +25,22 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { BugIcon, RefreshCwIcon, DatabaseIcon, TrashIcon, CodeIcon } from "lucide-react";
+import { BugIcon, RefreshCwIcon, DatabaseIcon, TrashIcon, CodeIcon, ScrollTextIcon } from "lucide-react";
+import { useAppStore } from "../../stores/app-store";
+import { LogPanel } from "./LogPanel";
 
 export function DebugMenu() {
   const [devToolsOpen, setDevToolsOpen] = useState(false);
   const [storeViewerOpen, setStoreViewerOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [logPanelOpen, setLogPanelOpen] = useState(false);
   const [storeData, setStoreData] = useState<string>("");
   const { t } = useI18n();
+
+  const activeProjectKey = useAppStore((s) => s.activeProjectKey);
+  const projects = useAppStore((s) => s.projects);
+  const activeProject = activeProjectKey ? projects.get(activeProjectKey) : null;
+  const port = activeProject?.port;
 
   const handleDevToolsToggle = async (checked: boolean) => {
     await window.electronAPI.toggleDevTools();
@@ -80,6 +88,13 @@ export function DebugMenu() {
             <DatabaseIcon />
             {t("debug.appData")}
           </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setLogPanelOpen(true)}
+            disabled={!port}
+          >
+            <ScrollTextIcon />
+            Streaming Log
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
@@ -118,6 +133,10 @@ export function DebugMenu() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {logPanelOpen && port && (
+        <LogPanel port={port} onClose={() => setLogPanelOpen(false)} />
+      )}
     </>
   );
 }

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs/promises";
+import pino from "pino";
 import { SessionStore } from "../../store/session.js";
 
 describe("SessionStore", () => {
@@ -10,7 +11,7 @@ describe("SessionStore", () => {
   let tmpDir: string;
 
   beforeEach(async () => {
-    store = new SessionStore();
+    store = new SessionStore(pino({ level: "silent" }));
     tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "wb-session-"));
     dbPath = path.join(tmpDir, "test.db");
     await store.init(dbPath);

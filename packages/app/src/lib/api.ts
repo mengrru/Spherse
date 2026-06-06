@@ -240,15 +240,12 @@ export function createApiClient(port: number) {
       onEvent: (event: AgentEvent) => void,
     ): WebSocket {
       const url = `${wsUrl}/ws/chat/${sessionId}`;
-      console.log("[WS] connecting to", url);
       const ws = new WebSocket(url);
-      ws.onopen = () => console.log("[WS] connected");
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         onEvent(data);
       };
-      ws.onerror = (e) => {
-        console.error("[WS] error", e);
+      ws.onerror = () => {
         onEvent({ type: "error", message: "WebSocket connection error" });
       };
       return ws;
@@ -258,6 +255,16 @@ export function createApiClient(port: number) {
       const url = `${wsUrl}/ws/fs-watch`;
       const ws = new WebSocket(url);
       ws.onmessage = () => onChange();
+      ws.onerror = () => {};
+      return ws;
+    },
+
+    createLogWebSocket(onLog: (line: string) => void): WebSocket {
+      const url = `${wsUrl}/ws/debug`;
+      const ws = new WebSocket(url);
+      ws.onmessage = (event) => {
+        onLog(event.data);
+      };
       ws.onerror = () => {};
       return ws;
     },

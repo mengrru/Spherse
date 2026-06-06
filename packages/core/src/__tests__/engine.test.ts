@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import pino from "pino";
 import { Engine } from "../engine.js";
 import type { SessionInfo } from "../types.js";
 
@@ -17,6 +18,7 @@ function createEngineWithSessions(initial: Record<string, SessionInfo>) {
     sessionStore as ConstructorParameters<typeof Engine>[1],
     {} as ConstructorParameters<typeof Engine>[2],
     {} as ConstructorParameters<typeof Engine>[3],
+    { logger: pino({ level: "silent" }) },
   );
 
   return { engine, sessionStore };

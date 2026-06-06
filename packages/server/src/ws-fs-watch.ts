@@ -12,6 +12,7 @@ export function handleFsWatchWebSocket(
     { websocket: true },
     (socket) => {
       const projectRoot = ctx.projectStore.getRootPath();
+      fastify.log.info("fs-watch ws connected");
       let alive = true;
 
       const watcher = fs.watch(
@@ -33,6 +34,7 @@ export function handleFsWatchWebSocket(
       socket.on("close", () => {
         alive = false;
         watcher.close();
+        fastify.log.debug("fs-watch ws disconnected");
       });
     },
   );

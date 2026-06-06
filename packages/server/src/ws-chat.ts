@@ -10,6 +10,7 @@ export function handleChatWebSocket(
     { websocket: true },
     (socket, req) => {
       const { sessionId } = req.params;
+      fastify.log.info({ sessionId }, "chat ws connected");
 
       ctx.engine.restoreSession(sessionId).catch((err) => {
         socket.send(JSON.stringify({ type: "error", message: err.message }));
@@ -26,6 +27,7 @@ export function handleChatWebSocket(
             });
             socket.send(JSON.stringify({ type: "agent_end_done" }));
           } catch (err: any) {
+            fastify.log.error({ err, sessionId }, "chat ws message error");
             socket.send(
               JSON.stringify({ type: "error", message: err.message }),
             );
@@ -33,6 +35,10 @@ export function handleChatWebSocket(
         } else if (msg.type === "abort") {
           ctx.engine.abortSession(sessionId);
         }
+      });
+
+      socket.on("close", () => {
+        fastify.log.info({ sessionId }, "chat ws disconnected");
       });
     },
   );

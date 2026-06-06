@@ -8,6 +8,8 @@ import {
 } from "../access/ai-file-access.js";
 import type { ProjectConfig } from "../types.js";
 import { PROJECT_META_DIR } from "../types.js";
+import type { Logger } from "../logger.js";
+import pino from "pino";
 
 export interface ChangelogEntry {
   agent: string;
@@ -35,10 +37,12 @@ export class ProjectStore {
   private rootPath: string;
   private config: ProjectConfig | null = null;
   private spherseDir: string;
+  private logger: Logger;
 
-  constructor(rootPath: string) {
+  constructor(rootPath: string, logger?: Logger) {
     this.rootPath = path.resolve(rootPath);
     this.spherseDir = path.join(this.rootPath, PROJECT_META_DIR);
+    this.logger = logger ?? pino({ level: "silent" });
   }
 
   async create(name: string, defaultModel: string): Promise<ProjectConfig> {
@@ -63,6 +67,7 @@ export class ProjectStore {
     const changelogPath = path.join(this.rootPath, DEFAULT_PATHS.changelog);
     await fs.writeFile(changelogPath, "", "utf-8");
 
+    this.logger.info({ rootPath: this.rootPath, name }, "project created");
     return this.config;
   }
 
@@ -74,6 +79,7 @@ export class ProjectStore {
 
     const raw = await fs.readFile(configPath, "utf-8");
     this.config = YAML.parse(raw) as ProjectConfig;
+    this.logger.info({ rootPath: this.rootPath }, "project opened");
     return this.config;
   }
 

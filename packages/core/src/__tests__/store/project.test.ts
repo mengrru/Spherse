@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import pino from "pino";
 import { ProjectStore } from "../../store/project.js";
 import { createTempProject, cleanupDir, readFile, pathExists } from "../helpers.js";
 
@@ -10,7 +11,7 @@ describe("ProjectStore", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    store = new ProjectStore(projectRoot);
+    store = new ProjectStore(projectRoot, pino({ level: "silent" }));
   });
 
   afterEach(async () => {
@@ -62,7 +63,7 @@ describe("ProjectStore", () => {
       "deniedPaths:",
     );
 
-    const store2 = new ProjectStore(projectRoot);
+    const store2 = new ProjectStore(projectRoot, pino({ level: "silent" }));
     await store2.open();
 
     expect(store2.getAiAccessSettings().deniedPaths).toEqual([
@@ -122,7 +123,7 @@ describe("ProjectStore", () => {
 
   it("opens an existing project", async () => {
     await store.create("MyProject", "deepseek-v4-pro");
-    const store2 = new ProjectStore(projectRoot);
+    const store2 = new ProjectStore(projectRoot, pino({ level: "silent" }));
     const config = await store2.open();
     expect(config.name).toBe("MyProject");
     expect(config.defaultModel).toBe("deepseek-v4-pro");

@@ -1,4 +1,5 @@
 import path from "node:path";
+import pino from "pino";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { streamSimple } from "@earendil-works/pi-ai";
 import type { AgentEvent, AgentTool } from "@mariozechner/pi-agent-core";
@@ -13,6 +14,8 @@ import { createAiFileAccessPolicy } from "./access/ai-file-access.js";
 import { createToolsForProject } from "./tools/index.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { readContextFiles } from "./engine/read-context-files.js";
+import type { Logger } from "./logger.js";
+import { logAgentEvent } from "./engine/log-agent-event.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
 
@@ -24,6 +27,7 @@ export class Engine {
   private activeSessions: Map<string, Agent> = new Map();
   private globalDefaultModel?: string;
   private fileWriteMutex: FileWriteMutex;
+  private logger: Logger;
 
   setDefaultModel(model: string | undefined): void {
     this.globalDefaultModel = model;
@@ -34,7 +38,7 @@ export class Engine {
     sessionStore: SessionStore,
     projectStore: ProjectStore,
     skillStore: SkillStore,
-    options?: { defaultModel?: string },
+    options?: { defaultModel?: string; logger?: Logger },
   ) {
     this.profileStore = profileStore;
     this.sessionStore = sessionStore;
@@ -42,6 +46,7 @@ export class Engine {
     this.skillStore = skillStore;
     this.globalDefaultModel = options?.defaultModel;
     this.fileWriteMutex = new FileWriteMutex();
+    this.logger = options?.logger ?? pino({ level: "silent" });
   }
 
   async listProfiles(): Promise<AgentProfile[]> {
@@ -85,6 +90,7 @@ export class Engine {
     const sessionId = this.sessionStore.createSession(agentId);
     const agent = await this.buildAgent(profile, sessionId);
     this.activeSessions.set(sessionId, agent);
+    this.logger.info({ sessionId, agentId }, "session created");
     return sessionId;
   }
 
@@ -101,6 +107,7 @@ export class Engine {
     const agent = await this.buildAgent(profile, sessionId);
     agent.state.messages = this.sessionStore.getSessionMessages(sessionId);
     this.activeSessions.set(sessionId, agent);
+    this.logger.info({ sessionId }, "session restored");
     return sessionId;
   }
 
@@ -112,7 +119,10 @@ export class Engine {
     const agent = this.activeSessions.get(sessionId);
     if (!agent) throw new Error(`No active session "${sessionId}"`);
 
+    const sessionLogger = this.logger.child({ sessionId });
+
     const unsubscribe = agent.subscribe((event) => {
+      logAgentEvent(sessionLogger, event);
       onEvent(event);
       if (event.type === "message_end") {
         this.sessionStore.appendMessage(sessionId, event.message);
