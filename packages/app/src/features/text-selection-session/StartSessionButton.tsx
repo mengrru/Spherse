@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
 import { useDismissable } from "../../hooks/useDismissable";
 import { MessageCircleIcon } from "lucide-react";
@@ -11,6 +12,7 @@ interface StartSessionButtonProps {
 
 export function StartSessionButton({ position, onStart, onClose }: StartSessionButtonProps) {
   const ref = useRef<HTMLButtonElement>(null);
+  const { t } = useI18n();
   useDismissable({ ref, onDismiss: onClose });
 
   return (
@@ -31,7 +33,7 @@ export function StartSessionButton({ position, onStart, onClose }: StartSessionB
       }}
     >
       <MessageCircleIcon className="size-3.5" />
-      发起会话
+      {t("text-selection.startSession")}
     </Button>
   );
 }

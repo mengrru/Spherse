@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
+import { translate } from "@spherse/i18n";
 import type { ApiClient } from "../../../lib/api";
+import { useSettingsStore } from "../../settings/store";
 import {
   type TreeNode,
   type CreatingState,
@@ -130,7 +132,8 @@ export function useFileTreeController(
       setCreating(null);
       refreshRoot();
     } catch (err) {
-      toast.error(`创建失败：${(err as Error).message}`);
+      const locale = useSettingsStore.getState().locale ?? "zh-CN";
+      toast.error(translate(locale, "file-tree.createFailed", { message: (err as Error).message }));
     }
   };
 
@@ -149,7 +152,8 @@ export function useFileTreeController(
         refreshRoot();
       })
       .catch((err: unknown) => {
-        toast.error(`删除失败：${(err as Error).message}`);
+        const locale = useSettingsStore.getState().locale ?? "zh-CN";
+        toast.error(translate(locale, "file-tree.deleteFailed", { message: (err as Error).message }));
       });
   };
 

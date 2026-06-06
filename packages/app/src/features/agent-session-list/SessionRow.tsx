@@ -13,6 +13,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "../../components/ui/sidebar";
+import { useI18n } from "@spherse/i18n/react";
 
 interface SessionRowProps {
   session: SessionInfo;
@@ -27,6 +28,7 @@ function getFallbackTitle(session: SessionInfo) {
 }
 
 export function SessionRow({ session, active, onSelect, onDelete, onRename }: SessionRowProps) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [saving, setSaving] = useState(false);
@@ -68,11 +70,11 @@ export function SessionRow({ session, active, onSelect, onDelete, onRename }: Se
   async function saveTitle() {
     const title = draftTitle.trim();
     if (!title) {
-      setError("请输入会话名称");
+      setError(t("agent-session-list.sessionNameRequired"));
       return;
     }
     if (title.length > 80) {
-      setError("会话名称不能超过 80 个字符");
+      setError(t("agent-session-list.sessionNameTooLong"));
       return;
     }
     if (title === session.title) {
@@ -147,11 +149,11 @@ export function SessionRow({ session, active, onSelect, onDelete, onRename }: Se
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onClick={startEditing}>
-            重命名
+            {t("common.rename")}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem variant="destructive" onClick={() => onDelete(session.id)}>
-            删除
+            {t("common.delete")}
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

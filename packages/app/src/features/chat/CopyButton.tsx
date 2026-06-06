@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
 import { CheckIcon, CopyIcon } from "lucide-react";
 
@@ -7,6 +8,7 @@ interface CopyButtonProps {
 }
 
 export function CopyButton({ text }: CopyButtonProps) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -22,7 +24,7 @@ export function CopyButton({ text }: CopyButtonProps) {
       size="icon-sm"
       className="text-muted-foreground"
       onClick={handleCopy}
-      title="复制"
+      title={t("chat.copyTooltip")}
     >
       {copied ? <CheckIcon /> : <CopyIcon />}
     </Button>

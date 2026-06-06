@@ -1,3 +1,4 @@
+import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
 import { ArrowLeftIcon } from "lucide-react";
 
@@ -30,11 +31,12 @@ export function Header({
   onSave,
   onHtmlViewChange,
 }: HeaderProps) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center gap-3 border-b border-border bg-background px-4 py-3">
       <Button variant="outline" onClick={onBack}>
         <ArrowLeftIcon />
-        返回
+        {t("common.back")}
       </Button>
       <span className="flex-1 font-mono text-sm text-muted-foreground">
         {isDirty && <span className="mr-1 text-primary">●</span>}
@@ -43,19 +45,19 @@ export function Header({
       {isEditing ? (
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onCancelEdit}>
-            取消
+            {t("common.cancel")}
           </Button>
           <Button
             size="sm"
             onClick={onSave}
             disabled={!isDirty || saving}
           >
-            {saving ? "保存中..." : "保存"}
+            {saving ? t("common.saving") : t("common.save")}
           </Button>
         </div>
       ) : isEditable && !isHtml ? (
         <Button variant="outline" size="sm" onClick={onEnterEdit}>
-          编辑
+          {t("common.edit")}
         </Button>
       ) : null}
       {isHtml && !isEditing && (
@@ -66,7 +68,7 @@ export function Header({
             className="rounded-none"
             onClick={() => onHtmlViewChange("preview")}
           >
-            预览
+            {t("content-browser.preview")}
           </Button>
           <Button
             variant={htmlView === "source" ? "secondary" : "ghost"}
@@ -74,7 +76,7 @@ export function Header({
             className="rounded-none border-l border-border"
             onClick={() => onHtmlViewChange("source")}
           >
-            源码
+            {t("content-browser.source")}
           </Button>
         </div>
       )}

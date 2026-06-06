@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FolderCogIcon } from "lucide-react";
+import { useI18n } from "@spherse/i18n/react";
 import { FileTree } from "../file-tree";
 import { AiReadDenylistDialog } from "../file-tree/AiReadDenylistDialog";
 import {
@@ -32,6 +33,7 @@ export function ProjectPanel({
   onFileDeleted,
 }: ProjectPanelProps) {
   const [aiDenylistOpen, setAiDenylistOpen] = useState(false);
+  const { t } = useI18n();
 
   return (
     <aside className="flex w-65 shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r border-border bg-sidebar">
@@ -47,12 +49,12 @@ export function ProjectPanel({
           <div className="border-b border-sidebar-border p-2">
             <SidebarGroup className="px-0 py-0">
               <SidebarGroupLabel className="h-7 px-0 text-[11px] font-semibold tracking-wide uppercase">
-                文件
+                {t("project-panel.files")}
               </SidebarGroupLabel>
               <SidebarGroupAction
                 className="top-1 right-0"
                 onClick={() => setAiDenylistOpen(true)}
-                title="设置 AI 文件读取限制"
+                title={t("project-panel.aiReadDenylistTooltip")}
               >
                 <FolderCogIcon />
               </SidebarGroupAction>

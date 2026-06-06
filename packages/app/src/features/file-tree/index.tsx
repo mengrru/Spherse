@@ -1,4 +1,5 @@
 import type { ApiClient } from "../../lib/api";
+import { useI18n } from "@spherse/i18n/react";
 import type { FileTreeController } from "./hooks/useFileTreeController";
 import { useFileTreeController } from "./hooks/useFileTreeController";
 import { FileTreeNode } from "./FileTreeNode";
@@ -14,6 +15,7 @@ export interface FileTreeProps {
 }
 
 export function FileTree({ client, selectedFilePath, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
+  const { t } = useI18n();
   const ctrl: FileTreeController = useFileTreeController(
     client,
     onSelectFile,
@@ -24,7 +26,7 @@ export function FileTree({ client, selectedFilePath, onSelectFile, onDeleted, re
   return (
     <div className="flex flex-col gap-px text-xs">
       {ctrl.rootNodes.length === 0 ? (
-        <p className="px-2 text-xs text-sidebar-foreground/70">加载中...</p>
+        <p className="px-2 text-xs text-sidebar-foreground/70">{t("common.loading")}</p>
       ) : (
         ctrl.rootNodes.map((node) => (
           <FileTreeNode

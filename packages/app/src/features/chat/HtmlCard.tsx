@@ -1,5 +1,6 @@
 import { DownloadIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useI18n } from "@spherse/i18n/react";
 import type { HtmlCard } from "../../lib/types";
 import { useAppStore } from "../../stores/app-store";
 
@@ -12,6 +13,7 @@ function sanitizeFileName(name: string): string {
 }
 
 export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
+  const { t } = useI18n();
   const activeProjectKey = useAppStore((s) => s.activeProjectKey);
   const ctx = useAppStore((s) => {
     const p = activeProjectKey ? s.projects.get(activeProjectKey) : undefined;
@@ -35,7 +37,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     if (!filePath) return;
 
     if (!filePath.startsWith(projectRoot + "/") && filePath !== projectRoot) {
-      toast.error("文件必须保存在项目目录内");
+      toast.error(t("chat.fileMustBeInProject"));
       return;
     }
 
@@ -46,9 +48,9 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     const relativePath = filePath.slice(projectRoot.length + 1);
     try {
       await client.saveContent(relativePath, html || card.html);
-      toast.success("保存成功");
+      toast.success(t("chat.saveSuccess"));
     } catch (err) {
-      toast.error(`保存失败：${(err as Error).message}`);
+      toast.error(t("chat.saveFailed", { message: (err as Error).message }));
     }
   }
 

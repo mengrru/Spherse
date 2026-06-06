@@ -8,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
+import { useI18n } from "@spherse/i18n/react";
 
 interface ConfirmDialogsProps {
   showLeaveConfirm: boolean;
@@ -26,18 +27,19 @@ export function ConfirmDialogs({
   onConfirmLeave,
   onConfirmCancel,
 }: ConfirmDialogsProps) {
+  const { t } = useI18n();
   return (
     <>
       <AlertDialog open={showLeaveConfirm} onOpenChange={onLeaveOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>有未保存的修改</AlertDialogTitle>
-            <AlertDialogDescription>确定离开当前文件并放弃这些修改吗？</AlertDialogDescription>
+            <AlertDialogTitle>{t("content-browser.confirmLeaveTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("content-browser.confirmLeaveMessage")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>继续编辑</AlertDialogCancel>
+            <AlertDialogCancel>{t("content-browser.continueEditing")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={onConfirmLeave}>
-              放弃修改
+              {t("content-browser.discardChanges")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -45,13 +47,13 @@ export function ConfirmDialogs({
       <AlertDialog open={showCancelConfirm} onOpenChange={onCancelOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>有未保存的修改</AlertDialogTitle>
-            <AlertDialogDescription>确定取消编辑并放弃这些修改吗？</AlertDialogDescription>
+            <AlertDialogTitle>{t("content-browser.confirmLeaveTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("content-browser.confirmCancelMessage")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>继续编辑</AlertDialogCancel>
+            <AlertDialogCancel>{t("content-browser.continueEditing")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={onConfirmCancel}>
-              放弃修改
+              {t("content-browser.discardChanges")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

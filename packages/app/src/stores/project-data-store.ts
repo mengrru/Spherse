@@ -1,6 +1,8 @@
 import { create } from "zustand";
+import { translate } from "@spherse/i18n";
 import type { ApiClient } from "../lib/api";
 import type { AgentProfile, SessionInfo } from "../lib/types";
+import { useSettingsStore } from "../features/settings/store";
 
 interface ProjectData {
   agents: AgentProfile[];
@@ -41,7 +43,8 @@ function createProjectData(): ProjectData {
 }
 
 function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "请求失败";
+  const locale = useSettingsStore.getState().locale ?? "zh-CN";
+  return err instanceof Error ? err.message : translate(locale, "error.requestFailed");
 }
 
 function updateProjectData(

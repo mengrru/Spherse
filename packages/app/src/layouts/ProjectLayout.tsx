@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
+import { useI18n } from "@spherse/i18n/react";
 import { ContentBrowser } from "../features/content-browser";
 import { Chat } from "../features/chat";
 import { ProjectPanel } from "../features/project-panel";
@@ -24,6 +25,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   const location = useLocation();
   const { sessionId } = useParams();
   const [searchParams] = useSearchParams();
+  const { t } = useI18n();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const setProjectLastRoute = useAppStore((state) => state.setProjectLastRoute);
   const projectData = useProjectDataStore((state) => state.projects[projectKey]);
@@ -92,7 +94,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
     comment?: string,
   ) => {
     const quotedText = selectedText.split("\n").map((line) => `> ${line}`).join("\n");
-    const parts = [`请处理以下来自「${sourcePath}」的内容：\n\n${quotedText}`];
+    const parts = [t("text-selection.promptPrefix", { path: sourcePath, text: quotedText })];
     if (comment) parts.push(`\n\n${comment}`);
     const message = parts.join("");
     const session = await createSession(projectKey, project.ctx.client, agentId, message);
@@ -142,7 +144,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
         )}
         {!showingContent && !(selectedSession && selectedAgent) && (
           <div className="flex h-full items-center justify-center text-muted-foreground">
-            <p>点击 Agent 开始新对话，或选择已有会话</p>
+            <p>{t("chat.startConversation")}</p>
           </div>
         )}
       </main>

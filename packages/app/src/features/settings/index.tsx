@@ -88,7 +88,7 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
           <TabsContent value="models" className="mt-3">
             <FieldGroup>
               <Field>
-                <SectionTitle as={FieldLabel}>语言 / Language</SectionTitle>
+                <SectionTitle as={FieldLabel}>{t("settings.language")}</SectionTitle>
                 <NativeSelect className="w-full" value={locale} onChange={(e) => setLocale(e.target.value)}>
                   {SUPPORTED_LOCALES.map((loc) => (
                     <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>

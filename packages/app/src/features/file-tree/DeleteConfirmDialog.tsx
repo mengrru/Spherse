@@ -1,3 +1,4 @@
+import { useI18n } from "@spherse/i18n/react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +19,7 @@ export function DeleteConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <AlertDialog
       open={target !== null}
@@ -26,17 +28,17 @@ export function DeleteConfirmDialog({
       }}
     >
       <AlertDialogContent>
-        <AlertDialogTitle>确认删除</AlertDialogTitle>
+        <AlertDialogTitle>{t("file-tree.confirmDeleteTitle")}</AlertDialogTitle>
         <AlertDialogDescription>
           {target &&
             (target.type === "directory"
-              ? `确定要删除目录「${target.name}」吗？此操作不可撤销。`
-              : `确定要删除文件「${target.name}」吗？此操作不可撤销。`)}
+              ? t("file-tree.confirmDeleteDir", { name: target.name })
+              : t("file-tree.confirmDeleteFile", { name: target.name }))}
         </AlertDialogDescription>
         <AlertDialogFooter>
-          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
           <AlertDialogAction variant="destructive" onClick={onConfirm}>
-            删除
+            {t("common.delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

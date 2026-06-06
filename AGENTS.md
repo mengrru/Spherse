@@ -12,6 +12,7 @@ spherse/
 ├── packages/
 │   ├── core/        # @spherse/core — 纯 Node.js 核心逻辑
 │   ├── presets/     # @spherse/presets — 内置模板与预置静态内容
+│   ├── i18n/        # @spherse/i18n — i18n 基础设施与翻译资源
 │   ├── server/      # @spherse/server — Fastify API 层
 │   └── app/         # @spherse/app — Electron + React
 ├── docs/
@@ -35,6 +36,7 @@ npm run build
 # 监听编译（开发时使用）
 npm run dev --workspace=packages/core    # core 监听
 npm run dev --workspace=packages/presets # presets 监听
+npm run dev --workspace=packages/i18n    # i18n 监听
 npm run dev --workspace=packages/server  # server 监听
 
 # 启动桌面应用（会先执行 native dependency rebuild）
@@ -57,6 +59,7 @@ npm run lint --workspace=packages/app    # 单 workspace lint
 npm test --workspace=packages/core          # 运行测试
 npm run test:watch --workspace=packages/core # 监听模式
 npm run test:cov --workspace=packages/core   # 运行测试并生成覆盖率报告
+npm test --workspace=packages/i18n           # 运行 i18n 测试
 npm test --workspace=packages/app           # 运行前端 store/组件相关测试
 ```
 

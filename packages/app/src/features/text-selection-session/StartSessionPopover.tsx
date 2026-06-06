@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile } from "../../lib/types";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
@@ -55,6 +56,7 @@ export function StartSessionPopover({
 }: StartSessionPopoverProps) {
   const [comment, setComment] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const { t } = useI18n();
   useDismissable({ ref, onDismiss: onClose });
 
   const previewText =
@@ -73,19 +75,19 @@ export function StartSessionPopover({
     >
       <div className="flex h-full flex-col p-3">
         <div className="mb-2 text-[11px] text-muted-foreground">
-          引用自 <span className="font-mono">{sourcePath}</span>
+          {t("text-selection.quoteFrom", { path: sourcePath })}
         </div>
         <div className="mb-2 max-h-20 overflow-y-auto rounded-r border-l-2 border-primary bg-muted p-2 font-mono text-xs leading-relaxed">
           {previewText}
         </div>
         <Textarea
           className="h-12 resize-y"
-          placeholder="添加补充说明（可选）..."
+          placeholder={t("text-selection.supplementPlaceholder")}
           value={comment}
           onChange={(event) => setComment(event.target.value)}
         />
         <div className="mt-2 flex min-h-0 flex-1 flex-col border-t border-border pt-2">
-          <div className="mb-1 text-[11px] text-muted-foreground">选择 Agent</div>
+          <div className="mb-1 text-[11px] text-muted-foreground">{t("text-selection.agentPlaceholder")}</div>
           <div className="flex min-h-0 flex-1 max-h-60 flex-col gap-0.5 overflow-y-auto" data-testid="text-selection-agent-list">
             {agents.map((agent) => (
               <Button
@@ -95,7 +97,7 @@ export function StartSessionPopover({
                 onClick={() => onSubmit(agent.id, trimmedComment || undefined)}
               >
                 <span>{agent.name}</span>
-                <span className="text-[11px] text-muted-foreground">发送</span>
+                <span className="text-[11px] text-muted-foreground">{t("common.send")}</span>
               </Button>
             ))}
           </div>

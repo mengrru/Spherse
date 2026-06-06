@@ -8,12 +8,23 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from "../../components/ui/sidebar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../components/ui/alert-dialog";
 import type { AgentProfile, SessionInfo } from "../../lib/types";
 import { useAppStore } from "../../stores/app-store";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useProjectUiStore } from "../../stores/project-ui-store";
 import { AgentSessionListView } from "./AgentSessionListView";
 import { PlusIcon } from "lucide-react";
+import { useI18n } from "@spherse/i18n/react";
 
 const EMPTY_AGENTS: AgentProfile[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
@@ -30,6 +41,7 @@ export function AgentSessionList({
   activeSessionId,
   selectedAgentId,
 }: AgentSessionListProps) {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const project = useAppStore((state) => state.projects.get(projectKey));
   const projectData = useProjectDataStore((state) => state.projects[projectKey]);
@@ -44,6 +56,7 @@ export function AgentSessionList({
   const setCollapsedAgentIds = useProjectUiStore((state) => state.setCollapsedAgentIds);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
   const [editAgent, setEditAgent] = useState<{ id: string; content: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AgentProfile | null>(null);
 
   const agents = projectData?.agents ?? EMPTY_AGENTS;
   const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
@@ -86,15 +99,17 @@ export function AgentSessionList({
     if (!project) return false;
     const ok = await renameSession(projectKey, project.ctx.client, session.id, title);
     if (!ok) {
-      const message = useProjectDataStore.getState().projects[projectKey]?.error ?? "重命名失败";
-      toast.error(`重命名失败：${message}`);
+      const message = useProjectDataStore.getState().projects[projectKey]?.error ?? t("agent-session-list.renameFailed");
+      toast.error(t("agent-session-list.renameFailed", { message }));
     }
     return ok;
   };
 
-  const handleDeleteAgent = async (agent: AgentProfile) => {
-    const ok = window.confirm(`确定要删除 Agent「${agent.name}」吗？该 Agent 下的所有会话也将被移除。`);
-    if (!ok) return;
+  const handleDeleteAgent = (agent: AgentProfile) => {
+    setDeleteTarget(agent);
+  };
+
+  const performDeleteAgent = async (agent: AgentProfile) => {
     if (!project) return;
     await deleteAgent(projectKey, project.ctx.client, agent.id);
     if (selectedAgentId === agent.id) {
@@ -124,12 +139,12 @@ export function AgentSessionList({
     <>
       <SidebarGroup className="px-0 py-0">
         <SidebarGroupLabel className="h-7 px-0 text-[11px] font-semibold tracking-wide uppercase">
-          Agents
+          {t("agent-session-list.groupLabel")}
         </SidebarGroupLabel>
         <SidebarGroupAction
           className="top-1 right-0"
           onClick={() => setShowCreateAgent(true)}
-          title="创建 Agent"
+          title={t("agent-session-list.createAgentTooltip")}
         >
           <PlusIcon />
         </SidebarGroupAction>
@@ -166,6 +181,27 @@ export function AgentSessionList({
           onCancel={() => setEditAgent(null)}
         />
       )}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("file-tree.confirmDeleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("agent-session-list.confirmDeleteAgent", { name: deleteTarget?.name ?? "" })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => {
+              if (deleteTarget) {
+                performDeleteAgent(deleteTarget);
+                setDeleteTarget(null);
+              }
+            }}>
+              {t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

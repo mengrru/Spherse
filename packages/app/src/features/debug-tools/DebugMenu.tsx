@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useI18n } from "@spherse/i18n/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +32,7 @@ export function DebugMenu() {
   const [storeViewerOpen, setStoreViewerOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [storeData, setStoreData] = useState<string>("");
+  const { t } = useI18n();
 
   const handleDevToolsToggle = async (checked: boolean) => {
     await window.electronAPI.toggleDevTools();
@@ -56,7 +58,7 @@ export function DebugMenu() {
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="icon-lg" title="Debug" />
+            <Button variant="ghost" size="icon-lg" title={t("debug.debug")} />
           }
         >
           <BugIcon />
@@ -67,16 +69,16 @@ export function DebugMenu() {
             onCheckedChange={handleDevToolsToggle}
           >
             <CodeIcon />
-            DevTools
+            {t("debug.devTools")}
           </DropdownMenuCheckboxItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleReload}>
             <RefreshCwIcon />
-            Reload
+            {t("debug.reload")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={handleOpenStoreViewer}>
             <DatabaseIcon />
-            App Data Viewer
+            {t("debug.appData")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -84,7 +86,7 @@ export function DebugMenu() {
             onClick={() => setResetDialogOpen(true)}
           >
             <TrashIcon />
-            Reset App Data
+            {t("debug.resetAppData")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -92,7 +94,7 @@ export function DebugMenu() {
       <Dialog open={storeViewerOpen} onOpenChange={setStoreViewerOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>App Data</DialogTitle>
+            <DialogTitle>{t("debug.appData")}</DialogTitle>
           </DialogHeader>
           <pre className="overflow-auto rounded-md bg-muted p-4 font-mono text-xs max-h-[60vh]">
             {storeData}
@@ -103,16 +105,15 @@ export function DebugMenu() {
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset App Data</AlertDialogTitle>
+            <AlertDialogTitle>{t("debug.confirmResetTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This will clear all app settings, project list, and restart the
-              application. This cannot be undone.
+              {t("debug.confirmResetMessage")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("debug.cancel")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={handleReset}>
-              Reset
+              {t("debug.reset")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

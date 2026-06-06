@@ -7,6 +7,7 @@ import {
 } from "../../components/ui/dropdown-menu";
 import { SidebarMenuAction, SidebarMenuButton } from "../../components/ui/sidebar";
 import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
+import { useI18n } from "@spherse/i18n/react";
 
 interface AgentRowProps {
   agent: AgentProfile;
@@ -25,6 +26,7 @@ export function AgentRow({
   onEditAgent,
   onDeleteAgent,
 }: AgentRowProps) {
+  const { t } = useI18n();
   return (
     <div className="group/agent-row relative">
       <SidebarMenuButton size="sm" onClick={() => onToggleCollapsed(agent.id)}>
@@ -41,13 +43,13 @@ export function AgentRow({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => onNewSession(agent)}>
-            新建对话
+            {t("agent-session-list.newSession")}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onEditAgent(agent)}>
-            编辑
+            {t("common.edit")}
           </DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onClick={() => onDeleteAgent(agent)}>
-            删除
+            {t("common.delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

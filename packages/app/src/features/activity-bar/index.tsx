@@ -9,6 +9,7 @@ import {
 } from "../../components/ui/context-menu";
 import { PlusIcon, SettingsIcon } from "lucide-react";
 import { DebugTools } from "../debug-tools";
+import { useI18n } from "@spherse/i18n/react";
 
 interface ActivityBarProps {
   projects: Map<string, ProjectState>;
@@ -29,6 +30,7 @@ export function ActivityBar({
   onReveal,
   onSettings,
 }: ActivityBarProps) {
+  const { t } = useI18n();
   return (
     <div className="flex w-14 shrink-0 flex-col border-r border-border bg-muted/30">
       <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">
@@ -44,10 +46,10 @@ export function ActivityBar({
             </ContextMenuTrigger>
             <ContextMenuContent>
               <ContextMenuItem onClick={() => onClose(projectKey)}>
-                关闭项目
+                {t("activity-bar.closeProject")}
               </ContextMenuItem>
               <ContextMenuItem onClick={() => onReveal(projectKey)}>
-                在 Finder 中显示
+                {t("activity-bar.revealInFinder")}
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -59,7 +61,7 @@ export function ActivityBar({
           variant="ghost"
           size="icon-lg"
           onClick={onSettings}
-          title="设置"
+          title={t("activity-bar.settingsTooltip")}
         >
           <SettingsIcon />
         </Button>
@@ -68,7 +70,7 @@ export function ActivityBar({
           size="icon-lg"
           className="border-dashed"
           onClick={onAdd}
-          title="添加项目"
+          title={t("activity-bar.addProjectTooltip")}
         >
           <PlusIcon />
         </Button>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, type KeyboardEvent } from "react";
 import { AGENT_TEMPLATE } from "@spherse/presets";
+import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../lib/api";
 import { parseAgentMarkdown, buildAgentMarkdown } from "../lib/agent-markdown";
 import type { AgentFormData } from "../lib/agent-markdown";
@@ -28,8 +29,8 @@ function fuzzyMatch(filePath: string, query: string): boolean {
   return parts.length === 0 || parts.every((seg) => lower.includes(seg));
 }
 
-function getErrorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : "保存失败";
+function getErrorMessage(err: unknown, t: (key: string) => string): string {
+  return err instanceof Error ? err.message : t("agent-dialog.saveFailed");
 }
 
 interface AgentDialogProps {
@@ -41,6 +42,7 @@ interface AgentDialogProps {
 }
 
 export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }: AgentDialogProps) {
+  const { t } = useI18n();
   const raw = initialContent ?? AGENT_TEMPLATE;
   const parsed = useMemo(() => parseAgentMarkdown(raw), [raw]);
   const [formData, setFormData] = useState<AgentFormData>(parsed.formData);
@@ -67,12 +69,12 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
   };
 
   const handleSubmit = async () => {
-    if (!formData.name.trim()) { setError("请输入 Agent 名称"); return; }
+    if (!formData.name.trim()) { setError(t("agent-dialog.nameRequired")); return; }
     setSaving(true); setError(null);
     const content = buildAgentMarkdown(formData, parsed.extraFrontmatter, mode === "create");
     const filename = `${formData.name.trim()}.md`;
     try { await onSubmit(filename, content); }
-    catch (err: unknown) { setError(getErrorMessage(err)); setSaving(false); }
+    catch (err: unknown) { setError(getErrorMessage(err, t)); setSaving(false); }
   };
 
   return (
@@ -80,18 +82,18 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
       <DialogContent className="max-h-[80vh] sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
-            {mode === "create" ? "创建 Agent" : "编辑 Agent"}
+            {mode === "create" ? t("agent-dialog.createTitle") : t("agent-dialog.editTitle")}
           </DialogTitle>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <FieldGroup>
             <Field>
-              <FieldLabel>名称</FieldLabel>
+              <FieldLabel>{t("agent-dialog.nameLabel")}</FieldLabel>
               <Input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder="Agent 名称"
+                placeholder={t("agent-dialog.namePlaceholder")}
               />
             </Field>
 
@@ -105,7 +107,7 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
             />
 
             <Field>
-              <FieldLabel>提示词</FieldLabel>
+              <FieldLabel>{t("agent-dialog.promptLabel")}</FieldLabel>
               <Textarea
                 className="min-h-40 resize-y font-mono"
                 value={formData.systemPrompt}
@@ -119,13 +121,13 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
-            取消
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={saving}
           >
-            {saving ? "保存中..." : mode === "create" ? "创建" : "保存"}
+            {saving ? t("common.saving") : mode === "create" ? t("common.create") : t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -140,9 +142,10 @@ function ToolPicker({
   selectedTools: string[];
   onToggle: (toolId: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <Field>
-      <FieldLabel>工具权限</FieldLabel>
+      <FieldLabel>{t("agent-dialog.toolsLabel")}</FieldLabel>
       <div className="flex flex-wrap gap-1.5">
         {ALL_TOOLS.map((tool) => {
           const selected = selectedTools.includes(tool.id);
@@ -154,7 +157,7 @@ function ToolPicker({
               size="sm"
               onClick={() => onToggle(tool.id)}
             >
-              {tool.label}
+              {t(tool.label)}
             </Button>
           );
         })}
@@ -174,6 +177,7 @@ function ContextPathField({
   onAdd: (path: string) => void;
   onRemove: (path: string) => void;
 }) {
+  const { t } = useI18n();
   const [input, setInput] = useState("");
   const [fileTree, setFileTree] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<FileSuggestion[]>([]);
@@ -236,7 +240,7 @@ function ContextPathField({
 
   return (
     <Field>
-      <FieldLabel>参考资料</FieldLabel>
+      <FieldLabel>{t("agent-dialog.refsLabel")}</FieldLabel>
       {contextPaths.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">
           {contextPaths.map((path) => (
@@ -262,7 +266,7 @@ function ContextPathField({
           onChange={(e) => handleInputChange(e.target.value)}
           onKeyDown={handleInputKeyDown}
           onBlur={() => setTimeout(hideSuggestions, 150)}
-          placeholder="输入路径搜索文件，回车添加"
+          placeholder={t("agent-dialog.refsPlaceholder")}
         />
         {showSuggestions && suggestions.length > 0 && (
           <div ref={suggestionsRef} className="absolute top-full right-0 left-0 z-10 mt-1 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">

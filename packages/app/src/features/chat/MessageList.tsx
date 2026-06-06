@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile, ChatMessage } from "../../lib/types";
 import { Button } from "../../components/ui/button";
 import { ChevronDownIcon } from "lucide-react";
@@ -15,11 +16,12 @@ interface MessageListProps {
 }
 
 export function MessageList({ messages, agent, messagesEndRef, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath }: MessageListProps) {
+  const { t } = useI18n();
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-2 p-4">
         <div className="text-muted-foreground text-sm font-medium">{agent.name}</div>
-        <div className="text-muted-foreground text-sm">发送一条消息开始对话</div>
+        <div className="text-muted-foreground text-sm">{t("chat.startConversation")}</div>
       </div>
     );
   }

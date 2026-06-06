@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../lib/api";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
@@ -32,6 +33,7 @@ export function ContentView({
   editedContent,
   onEditedContentChange,
 }: ContentViewProps) {
+  const { t } = useI18n();
   if (isHtml && htmlView === "preview" && !isEditing && !loading && !error) {
     return (
       <iframe
@@ -55,7 +57,7 @@ export function ContentView({
 
   return (
     <div ref={contentRef} className="flex-1 overflow-y-auto p-4">
-      {loading && <p className="p-8 text-center text-muted-foreground">加载中...</p>}
+      {loading && <p className="p-8 text-center text-muted-foreground">{t("common.loading")}</p>}
       {error && <p className="p-8 text-center text-destructive">{error}</p>}
       {content && !loading && (
         isMarkdown ? (

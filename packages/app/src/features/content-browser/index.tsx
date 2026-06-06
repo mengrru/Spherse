@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../lib/api";
 import type { AgentProfile } from "../../lib/types";
 import { ConflictBanner } from "./ConflictBanner";
@@ -24,6 +25,7 @@ export function ContentBrowser({
   agents,
   onStartSession,
 }: ContentBrowserProps) {
+  const { t } = useI18n();
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
   const { content, setContent, loading, error } = useContentFile(client, filePath);
   const editor = useContentEditor({
@@ -64,7 +66,7 @@ export function ContentBrowser({
       )}
       {editor.saveError && (
         <div className="border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
-          保存失败: {editor.saveError}
+          {t("content-browser.saveFailed", { error: editor.saveError })}
         </div>
       )}
       <TextSelectionSession

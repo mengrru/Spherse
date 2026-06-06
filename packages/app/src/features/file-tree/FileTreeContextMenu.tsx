@@ -1,4 +1,5 @@
 import { FilePlusIcon, FolderPlusIcon } from "lucide-react";
+import { useI18n } from "@spherse/i18n/react";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -19,21 +20,22 @@ export function FileTreeContextMenu({
   onCreate: (action: CreateAction) => void;
   onDelete: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <ContextMenu>
       <ContextMenuTrigger>{children}</ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onClick={() => onCreate("new-file")}>
           <FilePlusIcon className="size-4" />
-          新建文件
+          {t("file-tree.newFile")}
         </ContextMenuItem>
         <ContextMenuItem onClick={() => onCreate("new-folder")}>
           <FolderPlusIcon className="size-4" />
-          新建文件夹
+          {t("file-tree.newFolder")}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem variant="destructive" onClick={onDelete}>
-          删除
+          {t("common.delete")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

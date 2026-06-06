@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { ChevronsDownIcon, ChevronsUpIcon, SendIcon, SquareIcon } from "lucide-react";
@@ -17,6 +18,7 @@ interface ComposerProps {
 }
 
 export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProps) {
+  const { t } = useI18n();
   const draftKey = `spherse:draft:${sessionId}`;
   const [input, setInput] = useState(() => localStorage.getItem(draftKey) ?? "");
   const [manualExpanded, setManualExpanded] = useState(false);
@@ -88,7 +90,7 @@ export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProp
           style={{ height: `${MIN_HEIGHT}px`, overflowY: "hidden" }}
           value={input}
           onChange={(event) => setInput(event.target.value)}
-          placeholder="输入消息... (Shift+Enter 换行)"
+          placeholder={t("chat.composerPlaceholder")}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
@@ -103,7 +105,7 @@ export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProp
             size="icon-xs"
             className="absolute top-1.5 right-2.5"
             onClick={() => setManualExpanded((value) => !value)}
-            title={manualExpanded ? "收起" : "展开"}
+            title={manualExpanded ? t("chat.collapse") : t("chat.expand")}
           >
             {manualExpanded ? <ChevronsDownIcon /> : <ChevronsUpIcon />}
           </Button>

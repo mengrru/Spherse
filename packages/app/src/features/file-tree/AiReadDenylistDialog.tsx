@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from "react";
 import { Trash2Icon } from "lucide-react";
+import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../lib/api";
 import { Button } from "../../components/ui/button";
 import {
@@ -22,6 +23,7 @@ export function AiReadDenylistDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const denylist = useAiReadDenylist(client, open);
+  const { t } = useI18n();
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
@@ -39,28 +41,28 @@ export function AiReadDenylistDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>AI 读取限制</DialogTitle>
+          <DialogTitle>{t("ai-read-denylist.title")}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            列表中的文件或目录不会被 AI 工具读取；你仍可正常查看和编辑。
+            {t("ai-read-denylist.description")}
           </p>
           <div className="flex gap-2">
             <Input
               value={denylist.input}
               onChange={(event) => denylist.setInput(event.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="例如 secrets 或 notes/private.md"
+              placeholder={t("ai-read-denylist.placeholder")}
             />
             <Button type="button" onClick={denylist.addInput}>
-              添加
+              {t("common.add")}
             </Button>
           </div>
           <div className="max-h-64 overflow-y-auto rounded-md border border-border">
             {denylist.loading ? (
-              <p className="p-3 text-sm text-muted-foreground">加载中...</p>
+              <p className="p-3 text-sm text-muted-foreground">{t("common.loading")}</p>
             ) : denylist.paths.length === 0 ? (
-              <p className="p-3 text-sm text-muted-foreground">暂无限制路径</p>
+              <p className="p-3 text-sm text-muted-foreground">{t("ai-read-denylist.emptyState")}</p>
             ) : (
               <div className="flex flex-col divide-y divide-border">
                 {denylist.paths.map((path) => (
@@ -70,7 +72,7 @@ export function AiReadDenylistDialog({
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={`移除 ${path}`}
+                      aria-label={t("ai-read-denylist.removeLabel", { path })}
                       onClick={() => denylist.removePath(path)}
                     >
                       <Trash2Icon className="size-4" />
@@ -83,10 +85,10 @@ export function AiReadDenylistDialog({
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            取消
+            {t("common.cancel")}
           </Button>
           <Button type="button" onClick={handleSave} disabled={denylist.saving}>
-            {denylist.saving ? "保存中..." : "保存"}
+            {denylist.saving ? t("common.saving") : t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -74,7 +74,7 @@ export function App() {
   if (initializing) {
     return (
       <div className="flex h-screen items-center justify-center bg-background text-muted-foreground">
-        {translate("zh-CN", "app.loading")}
+        {translate(locale ?? DEFAULT_LOCALE, "app.loading")}
       </div>
     );
   }
