@@ -114,6 +114,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
         project={project}
         activeSessionId={activeSessionId}
         selectedAgentId={selectedAgent?.id ?? null}
+        selectedFilePath={showingContent ? contentPath ?? undefined : undefined}
         onSelectFile={handleSelectFile}
         onFileDeleted={handleFileDeleted}
       />

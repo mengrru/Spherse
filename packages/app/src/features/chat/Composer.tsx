@@ -23,7 +23,9 @@ export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProp
   const [contentExceeds3Lines, setContentExceeds3Lines] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputRef = useRef(input);
-  inputRef.current = input;
+  useEffect(() => {
+    inputRef.current = input;
+  });
 
   useLayoutEffect(() => {
     const textarea = textareaRef.current;

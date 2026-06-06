@@ -12,6 +12,7 @@ import { InlineNameInput } from "./InlineNameInput";
 export function FileTreeNode({
   node,
   depth,
+  selectedFilePath,
   onToggle,
   onCreate,
   onDelete,
@@ -21,6 +22,7 @@ export function FileTreeNode({
 }: {
   node: TreeNode;
   depth: number;
+  selectedFilePath?: string;
   onToggle: (node: TreeNode) => void;
   onCreate: (node: TreeNode, action: CreateAction) => void;
   onDelete: (node: TreeNode) => void;
@@ -31,14 +33,18 @@ export function FileTreeNode({
   const isCreatingInThisDir =
     creating && node.type === "directory" && creating.parentPath === node.path;
 
+  const isSelected = node.type === "file" && node.path === selectedFilePath;
+
   const row = (
     <Button
       variant="ghost"
       size="default"
       className={
-        node.type === "directory"
-          ? "group w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          : "w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        isSelected
+          ? "w-full justify-start gap-2 bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+          : node.type === "directory"
+            ? "group w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            : "w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       }
       style={{ paddingLeft: depth * 16 + 8 }}
       onClick={() => onToggle(node)}
@@ -116,6 +122,7 @@ export function FileTreeNode({
               key={child.path}
               node={child}
               depth={depth + 1}
+              selectedFilePath={selectedFilePath}
               onToggle={onToggle}
               onCreate={onCreate}
               onDelete={onDelete}

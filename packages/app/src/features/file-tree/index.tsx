@@ -7,12 +7,13 @@ import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 
 export interface FileTreeProps {
   client: ApiClient;
+  selectedFilePath?: string;
   onSelectFile: (filePath: string) => void;
   onDeleted?: (path: string) => void;
   refreshKey?: number;
 }
 
-export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
+export function FileTree({ client, selectedFilePath, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
   const ctrl: FileTreeController = useFileTreeController(
     client,
     onSelectFile,
@@ -30,6 +31,7 @@ export function FileTree({ client, onSelectFile, onDeleted, refreshKey }: FileTr
             key={node.path}
             node={node}
             depth={0}
+            selectedFilePath={selectedFilePath}
             onToggle={ctrl.toggleNode}
             onCreate={ctrl.requestCreate}
             onDelete={ctrl.requestDelete}

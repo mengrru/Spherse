@@ -17,6 +17,7 @@ export interface ProjectPanelProps {
   project: ProjectState;
   activeSessionId: string | null;
   selectedAgentId: string | null;
+  selectedFilePath?: string;
   onSelectFile: (filePath: string) => void;
   onFileDeleted: (filePath: string) => void;
 }
@@ -26,6 +27,7 @@ export function ProjectPanel({
   project,
   activeSessionId,
   selectedAgentId,
+  selectedFilePath,
   onSelectFile,
   onFileDeleted,
 }: ProjectPanelProps) {
@@ -57,6 +59,7 @@ export function ProjectPanel({
               <SidebarGroupContent>
                 <FileTree
                   client={project.ctx.client}
+                  selectedFilePath={selectedFilePath}
                   onSelectFile={onSelectFile}
                   onDeleted={onFileDeleted}
                 />
