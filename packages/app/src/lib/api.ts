@@ -203,6 +203,25 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async getAiAccessSettings(): Promise<{ deniedPaths: string[] }> {
+      const res = await fetch(`${baseUrl}/api/settings/ai-access`);
+      if (!res.ok) return { deniedPaths: [] };
+      return res.json();
+    },
+
+    async updateAiAccessSettings(deniedPaths: string[]): Promise<{ ok: boolean; deniedPaths: string[] }> {
+      const res = await fetch(`${baseUrl}/api/settings/ai-access`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deniedPaths }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
     createChatWebSocket(
       sessionId: string,
       onEvent: (event: AgentEvent) => void,

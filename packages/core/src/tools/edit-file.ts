@@ -2,7 +2,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+
+type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 
 const EditFileParams = Type.Object({
   path: Type.String({ description: "Path relative to project root" }),
@@ -19,7 +22,11 @@ function validatePath(projectRoot: string, relativePath: string): string {
   return resolved;
 }
 
-export function createEditFileTool(projectRoot: string, mutex: FileWriteMutex): AgentTool<typeof EditFileParams> {
+export function createEditFileTool(
+  projectRoot: string,
+  mutex: FileWriteMutex,
+  getAiFileAccessPolicy: AiFileAccessPolicyProvider = () => createAiFileAccessPolicy(projectRoot, []),
+): AgentTool<typeof EditFileParams> {
   const root = path.resolve(projectRoot);
 
   return {
@@ -31,6 +38,15 @@ export function createEditFileTool(projectRoot: string, mutex: FileWriteMutex): 
     parameters: EditFileParams,
     async execute(_toolCallId, params, _signal) {
       const resolved = validatePath(root, params.path);
+      try {
+        getAiFileAccessPolicy().assertReadableByAi(params.path);
+      } catch (err) {
+        return {
+          content: [{ type: "text" as const, text: (err as Error).message }],
+          details: { path: params.path, denied: true },
+        };
+      }
+
       const replaceAll = params.replace_all ?? false;
 
       return mutex.run(resolved, async () => {

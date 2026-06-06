@@ -38,6 +38,8 @@ paths:
 
 `paths.agents` 相对 `.spherse/`，当前默认 agent 定义目录为 `.spherse/agents/`。`paths.index` 和 `paths.changelog` 相对项目根目录。
 
+可选字段 `aiAccess.deniedPaths` 是项目相对路径数组，用于限制 AI 工具读取文件内容或暴露目录内容。路径使用 `/` 分隔，不允许路径穿越，不允许加入 `AGENTS.md`、`CHANGELOG.md`、`.spherse` 或 `.spherse/**`。
+
 ## Agent 定义格式
 
 Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/*.md`。

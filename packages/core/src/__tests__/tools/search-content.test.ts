@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { createAiFileAccessPolicy } from "../../access/ai-file-access.js";
 import { createSearchContentTool } from "../../tools/search-content.js";
 import { createTempProject, cleanupDir, writeFile } from "../helpers.js";
 
@@ -84,5 +85,20 @@ describe("createSearchContentTool", () => {
     const tool = createSearchContentTool(projectRoot);
     const result = await tool.execute("tc1", { query: "x", path: "nope" }, undefined as any);
     expect(result.content[0].text).toContain("Path not found");
+  });
+
+  it("skips blocked files and denies blocked search roots", async () => {
+    await writeFile(projectRoot, "secrets/key.md", "needle secret");
+    await writeFile(projectRoot, "public.md", "needle public");
+    const policy = () => createAiFileAccessPolicy(projectRoot, ["secrets"]);
+    const tool = createSearchContentTool(projectRoot, policy);
+
+    const result = await tool.execute("tc1", { query: "needle" }, undefined as any);
+    expect(result.content[0].text).toContain("public.md");
+    expect(result.content[0].text).not.toContain("secrets/key.md");
+    expect(result.content[0].text).not.toContain("needle secret");
+
+    const deniedResult = await tool.execute("tc1", { query: "needle", path: "secrets" }, undefined as any);
+    expect(deniedResult.content[0].text).toContain("Access denied by AI read settings: secrets");
   });
 });

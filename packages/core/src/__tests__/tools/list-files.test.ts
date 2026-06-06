@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { createAiFileAccessPolicy } from "../../access/ai-file-access.js";
 import { createListFilesTool } from "../../tools/list-files.js";
 import { createTempProject, cleanupDir, writeFile, ensureDir } from "../helpers.js";
 
@@ -57,6 +58,20 @@ describe("createListFilesTool", () => {
     const result = await tool.execute("tc1", { path: "file.txt" }, undefined as any);
     expect(result.content[0].text).toContain("Not a directory");
     expect(result.details?.isDirectory).toBe(false);
+  });
+
+  it("omits blocked entries and denies listing blocked paths", async () => {
+    await ensureDir(projectRoot, "secrets");
+    await writeFile(projectRoot, "public.md", "public");
+    const policy = () => createAiFileAccessPolicy(projectRoot, ["secrets"]);
+    const tool = createListFilesTool(projectRoot, policy);
+
+    const rootResult = await tool.execute("tc1", { path: ".", recursive: false }, undefined as any);
+    expect(rootResult.content[0].text).not.toContain("secrets");
+    expect(rootResult.content[0].text).toContain("public.md");
+
+    const deniedResult = await tool.execute("tc1", { path: "secrets", recursive: false }, undefined as any);
+    expect(deniedResult.content[0].text).toContain("Access denied by AI read settings: secrets");
   });
 
   it("rejects path traversal", async () => {

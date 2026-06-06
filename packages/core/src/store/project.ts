@@ -2,6 +2,10 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
+import {
+  normalizeDeniedPath,
+  normalizeDeniedPaths,
+} from "../access/ai-file-access.js";
 import type { ProjectConfig } from "../types.js";
 import { PROJECT_META_DIR } from "../types.js";
 
@@ -75,6 +79,34 @@ export class ProjectStore {
 
   getConfig(): ProjectConfig | null {
     return this.config;
+  }
+
+  getAiAccessSettings(): { deniedPaths: string[] } {
+    return { deniedPaths: [...(this.config?.aiAccess?.deniedPaths ?? [])] };
+  }
+
+  async updateAiAccessSettings(
+    deniedPaths: string[],
+  ): Promise<{ deniedPaths: string[] }> {
+    if (!this.config) {
+      throw new Error("Project is not open");
+    }
+
+    for (const deniedPath of deniedPaths) {
+      if (!normalizeDeniedPath(deniedPath)) {
+        throw new Error(`Invalid AI denied path: ${deniedPath}`);
+      }
+    }
+
+    const aiAccess = { deniedPaths: normalizeDeniedPaths(deniedPaths) };
+    const nextConfig = { ...this.config, aiAccess };
+
+    const configPath = path.join(this.spherseDir, "project.yaml");
+    await fs.writeFile(configPath, YAML.stringify(nextConfig), "utf-8");
+
+    this.config = nextConfig;
+
+    return { deniedPaths: [...aiAccess.deniedPaths] };
   }
 
   getRootPath(): string {

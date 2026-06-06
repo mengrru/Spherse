@@ -3,6 +3,9 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+
+type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 
 const ListFilesParams = Type.Object({
   path: Type.String({ description: "Directory path relative to project root" }),
@@ -17,27 +20,46 @@ function validatePath(projectRoot: string, relativePath: string): string {
   return resolved;
 }
 
-async function listRecursive(dirPath: string, prefix: string, lines: string[]): Promise<void> {
+async function listRecursive(
+  dirPath: string,
+  prefix: string,
+  lines: string[],
+  projectRoot: string,
+  policy: AiFileAccessPolicy,
+): Promise<void> {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   for (const entry of entries) {
     const icon = entry.isDirectory() ? "📁" : "📄";
     const entryPath = path.join(dirPath, entry.name);
+    const relativePath = path.relative(projectRoot, entryPath).split(path.sep).join("/");
+    if (policy.isDenied(relativePath)) continue;
     lines.push(`${prefix}${icon} ${entry.name}`);
     if (entry.isDirectory()) {
-      await listRecursive(entryPath, `${prefix}  `, lines);
+      await listRecursive(entryPath, `${prefix}  `, lines, projectRoot, policy);
     }
   }
 }
 
-async function listFlat(dirPath: string, lines: string[]): Promise<void> {
+async function listFlat(
+  dirPath: string,
+  lines: string[],
+  projectRoot: string,
+  policy: AiFileAccessPolicy,
+): Promise<void> {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   for (const entry of entries) {
     const icon = entry.isDirectory() ? "📁" : "📄";
+    const entryPath = path.join(dirPath, entry.name);
+    const relativePath = path.relative(projectRoot, entryPath).split(path.sep).join("/");
+    if (policy.isDenied(relativePath)) continue;
     lines.push(`${icon} ${entry.name}`);
   }
 }
 
-export function createListFilesTool(projectRoot: string): AgentTool<typeof ListFilesParams> {
+export function createListFilesTool(
+  projectRoot: string,
+  getAiFileAccessPolicy: AiFileAccessPolicyProvider = () => createAiFileAccessPolicy(projectRoot, []),
+): AgentTool<typeof ListFilesParams> {
   const root = path.resolve(projectRoot);
 
   return {
@@ -47,6 +69,18 @@ export function createListFilesTool(projectRoot: string): AgentTool<typeof ListF
     parameters: ListFilesParams,
     async execute(_toolCallId, params, _signal) {
       const resolved = validatePath(root, params.path);
+      const policy = getAiFileAccessPolicy();
+
+      if (params.path && params.path !== ".") {
+        try {
+          policy.assertReadableByAi(params.path);
+        } catch (err) {
+          return {
+            content: [{ type: "text" as const, text: (err as Error).message }],
+            details: { path: params.path, denied: true },
+          };
+        }
+      }
 
       if (!fsSync.existsSync(resolved)) {
         return {
@@ -67,9 +101,9 @@ export function createListFilesTool(projectRoot: string): AgentTool<typeof ListF
       const recursive = params.recursive ?? false;
 
       if (recursive) {
-        await listRecursive(resolved, "", lines);
+        await listRecursive(resolved, "", lines, root, policy);
       } else {
-        await listFlat(resolved, lines);
+        await listFlat(resolved, lines, root, policy);
       }
 
       return {

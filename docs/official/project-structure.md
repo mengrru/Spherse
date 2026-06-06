@@ -29,6 +29,8 @@ spherse/
 │   │       │   └── index.ts          # createToolsForProject 工厂
 │   │       ├── utils/
 │   │       │   └── file-write-mutex.ts # 文件写入互斥，避免并发写覆盖
+│   │       ├── access/
+│   │       │   └── ai-file-access.ts  # AI 读取禁止列表路径规范化与访问策略
 │   │       ├── __tests__/            # Vitest 单元测试
 │   │       └── index.ts              # 公开导出：Engine, createEngine, types
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
@@ -53,7 +55,7 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表与详情
-│   │       │   └── settings.ts       # Provider 列表（动态 catalog）
+│   │       │   └── settings.ts       # Provider 列表（动态 catalog）+ AI 读取禁止列表 API
 │   │       ├── ws-chat.ts            # WebSocket 对话流
 │   │       └── ws-fs-watch.ts        # WebSocket 文件变更推送
 │   └── app/                          # @spherse/app — Electron + React
@@ -103,7 +105,7 @@ spherse/
 │           │   ├── chat/                 # 对话页面入口、消息流、输入框、工具调用展示
 │           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
 │           │   ├── debug-tools/          # 开发模式调试菜单
-│           │   ├── file-tree/            # 文件树组件、树模型、controller hook
+│           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog
 │           │   ├── project-panel/        # 项目侧栏，组合 Agent/session 列表与文件树
 │           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
 │           │   └── text-selection-session/ # 划选文本后发起会话

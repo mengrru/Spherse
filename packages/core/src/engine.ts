@@ -9,6 +9,7 @@ import { ProjectStore } from "./store/project.js";
 import { SessionStore } from "./store/session.js";
 import { AgentProfileStore } from "./store/agent-profile.js";
 import { SkillStore } from "./store/skill.js";
+import { createAiFileAccessPolicy } from "./access/ai-file-access.js";
 import { createToolsForProject } from "./tools/index.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { readContextFiles } from "./engine/read-context-files.js";
@@ -165,11 +166,16 @@ export class Engine {
     const config = this.projectStore.getConfig()!;
     const projectRoot = this.projectStore.getRootPath();
     const skillDir = path.join(projectRoot, PROJECT_META_DIR, "skills");
+    const getAiFileAccessPolicy = () => createAiFileAccessPolicy(
+      projectRoot,
+      this.projectStore.getAiAccessSettings().deniedPaths,
+    );
     const allTools = createToolsForProject(
       projectRoot,
       this.fileWriteMutex,
       config.paths.changelog,
       skillDir,
+      getAiFileAccessPolicy,
     );
 
     const toolNames = profile.tools ?? Object.keys(allTools);
@@ -191,6 +197,7 @@ export class Engine {
     const contextSection = await readContextFiles(
       projectRoot,
       profile.context,
+      getAiFileAccessPolicy,
     );
     if (contextSection) {
       systemPrompt += contextSection;

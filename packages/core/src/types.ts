@@ -9,6 +9,7 @@ export interface ProjectConfig {
     index: string;
     changelog: string;
   };
+  aiAccess?: { deniedPaths: string[] };
 }
 
 export interface AgentProfile {

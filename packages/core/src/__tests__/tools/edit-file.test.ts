@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { createAiFileAccessPolicy } from "../../access/ai-file-access.js";
 import { createEditFileTool } from "../../tools/edit-file.js";
 import { FileWriteMutex } from "../../utils/file-write-mutex.js";
 import { createTempProject, cleanupDir, writeFile, readFile } from "../helpers.js";
@@ -87,6 +88,21 @@ describe("createEditFileTool", () => {
     );
     expect(result.content[0].text).toContain("file not found");
     expect(result.details).toBeUndefined();
+  });
+
+  it("denies blocked paths because it reads before writing", async () => {
+    await writeFile(projectRoot, "secrets/key.md", "old secret");
+    const policy = () => createAiFileAccessPolicy(projectRoot, ["secrets"]);
+    const tool = createEditFileTool(projectRoot, mutex, policy);
+
+    const result = await tool.execute(
+      "tc1",
+      { path: "secrets/key.md", old_string: "old", new_string: "new" },
+      undefined as any,
+    );
+
+    expect(result.content[0].text).toContain("Access denied by AI read settings: secrets/key.md");
+    expect(await readFile(projectRoot, "secrets/key.md")).toBe("old secret");
   });
 
   it("rejects path traversal", async () => {

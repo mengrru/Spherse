@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { createAiFileAccessPolicy } from "../../access/ai-file-access.js";
 import { createRenderCardTool } from "../../tools/render-card.js";
 import { createTempProject, cleanupDir, writeFile } from "../helpers.js";
 
@@ -118,6 +119,24 @@ describe("createRenderCardTool", () => {
 
     expect(result.content[0].text).toContain("Error");
     expect(result.details?.error).toBe(true);
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("denies blocked file_path without returning HTML", async () => {
+    await writeFile(projectRoot, "secrets/card.html", "<strong>secret</strong>");
+    const policy = () => createAiFileAccessPolicy(projectRoot, ["secrets"]);
+    const tool = createRenderCardTool(projectRoot, policy);
+    const onUpdate = vi.fn();
+
+    const result = await tool.execute(
+      "tc1",
+      { type: "html", file_path: "secrets/card.html" },
+      undefined as any,
+      onUpdate,
+    );
+
+    expect(result.content[0].text).toContain("Access denied by AI read settings: secrets/card.html");
+    expect(JSON.stringify(result.details)).not.toContain("<strong>secret</strong>");
     expect(onUpdate).not.toHaveBeenCalled();
   });
 

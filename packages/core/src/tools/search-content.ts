@@ -3,6 +3,9 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+
+type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 
 const SearchContentParams = Type.Object({
   query: Type.String({ description: "Search query (substring match)" }),
@@ -80,6 +83,7 @@ async function searchDir(
   results: SearchResult[],
   maxResults: number,
   projectRoot: string,
+  policy: AiFileAccessPolicy,
 ): Promise<void> {
   if (results.length >= maxResults) return;
 
@@ -88,24 +92,32 @@ async function searchDir(
   for (const entry of entries) {
     if (results.length >= maxResults) break;
 
+    const entryPath = path.join(dirPath, entry.name);
+    const relativePath = path.relative(projectRoot, entryPath).split(path.sep).join("/");
+    if (policy.isDenied(relativePath)) continue;
+
     if (entry.isDirectory()) {
       if (shouldSkipDir(entry.name)) continue;
       await searchDir(
-        path.join(dirPath, entry.name),
+        entryPath,
         query,
         includePatterns,
         results,
         maxResults,
         projectRoot,
+        policy,
       );
     } else if (entry.isFile()) {
       if (!matchesPattern(entry.name, includePatterns)) continue;
-      await searchInFile(path.join(dirPath, entry.name), query, results, maxResults);
+      await searchInFile(entryPath, query, results, maxResults);
     }
   }
 }
 
-export function createSearchContentTool(projectRoot: string): AgentTool<typeof SearchContentParams> {
+export function createSearchContentTool(
+  projectRoot: string,
+  getAiFileAccessPolicy: AiFileAccessPolicyProvider = () => createAiFileAccessPolicy(projectRoot, []),
+): AgentTool<typeof SearchContentParams> {
   const root = path.resolve(projectRoot);
   const MAX_RESULTS = 100;
 
@@ -116,6 +128,18 @@ export function createSearchContentTool(projectRoot: string): AgentTool<typeof S
     parameters: SearchContentParams,
     async execute(_toolCallId, params, _signal) {
       const searchPath = params.path ? validatePath(root, params.path) : root;
+      const policy = getAiFileAccessPolicy();
+
+      if (params.path) {
+        try {
+          policy.assertReadableByAi(params.path);
+        } catch (err) {
+          return {
+            content: [{ type: "text" as const, text: (err as Error).message }],
+            details: { query: params.query, path: params.path, matches: 0, denied: true },
+          };
+        }
+      }
 
       if (!fsSync.existsSync(searchPath)) {
         return {
@@ -125,7 +149,7 @@ export function createSearchContentTool(projectRoot: string): AgentTool<typeof S
       }
 
       const results: SearchResult[] = [];
-      await searchDir(searchPath, params.query, params.includePatterns, results, MAX_RESULTS, root);
+      await searchDir(searchPath, params.query, params.includePatterns, results, MAX_RESULTS, root, policy);
 
       const text = results.length > 0
         ? results.map((r) => `${r.file}:${r.line}: ${r.text}`).join("\n")

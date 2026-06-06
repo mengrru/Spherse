@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { createAiFileAccessPolicy } from "../../access/ai-file-access.js";
 import { createReadFileTool } from "../../tools/read-file.js";
 import { createTempProject, cleanupDir, writeFile } from "../helpers.js";
 
@@ -33,6 +34,17 @@ describe("createReadFileTool", () => {
     const result = await tool.execute("tc1", { path: "missing.txt" }, undefined as any);
     expect(result.content[0].text).toContain("Error");
     expect(result.details).toBeUndefined();
+  });
+
+  it("denies reading a blocked file and includes the path", async () => {
+    await writeFile(projectRoot, "secrets/key.md", "secret");
+    const policy = () => createAiFileAccessPolicy(projectRoot, ["secrets/key.md"]);
+    const tool = createReadFileTool(projectRoot, policy);
+
+    const result = await tool.execute("tc1", { path: "secrets/key.md" }, undefined as any);
+
+    expect(result.content[0].text).toContain("Access denied by AI read settings: secrets/key.md");
+    expect(result.content[0].text).not.toBe("secret");
   });
 
   it("rejects path traversal with ../", async () => {

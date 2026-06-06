@@ -2,6 +2,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+
+type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 
 const ReadFileParams = Type.Object({
   path: Type.String({ description: "Path relative to project root" }),
@@ -15,7 +18,10 @@ function validatePath(projectRoot: string, relativePath: string): string {
   return resolved;
 }
 
-export function createReadFileTool(projectRoot: string): AgentTool<typeof ReadFileParams> {
+export function createReadFileTool(
+  projectRoot: string,
+  getAiFileAccessPolicy: AiFileAccessPolicyProvider = () => createAiFileAccessPolicy(projectRoot, []),
+): AgentTool<typeof ReadFileParams> {
   const root = path.resolve(projectRoot);
 
   return {
@@ -25,6 +31,15 @@ export function createReadFileTool(projectRoot: string): AgentTool<typeof ReadFi
     parameters: ReadFileParams,
     async execute(_toolCallId, params, _signal) {
       const resolved = validatePath(root, params.path);
+      try {
+        getAiFileAccessPolicy().assertReadableByAi(params.path);
+      } catch (err) {
+        return {
+          content: [{ type: "text" as const, text: (err as Error).message }],
+          details: { path: params.path, denied: true },
+        };
+      }
+
       try {
         const content = await fs.readFile(resolved, "utf-8");
         return {
