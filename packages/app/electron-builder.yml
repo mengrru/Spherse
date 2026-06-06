@@ -1,0 +1,20 @@
+appId: com.spherse.app
+productName: Spherse
+directories:
+  buildResources: build
+  output: release
+files:
+  - dist/**/*
+  - package.json
+extraMetadata:
+  main: dist/main/index.js
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+win:
+  target:
+    - nsis
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

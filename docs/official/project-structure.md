@@ -72,6 +72,8 @@ spherse/
 │       │   └── settings.ts           # electron-store 封装 + env 管理 + openProjects/lastRoute 持久化
 │       ├── playwright.config.ts      # Playwright E2E 测试配置
 │       ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
+│       ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS 等）
+│       ├── build/                    # electron-builder buildResources（icon 等资源）
 │       ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
 │       ├── e2e/                      # Playwright E2E 测试
 │       │   ├── helpers/

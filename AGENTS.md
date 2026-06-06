@@ -60,6 +60,14 @@ npm run test:cov --workspace=packages/core   # 运行测试并生成覆盖率报
 npm test --workspace=packages/app           # 运行前端 store/组件相关测试
 ```
 
+**打包命令**：
+
+```bash
+npm run dist        # 构建安装包（当前平台）
+npm run dist:mac    # 构建 macOS DMG
+npm run dist:win    # 构建 Windows NSIS 安装包
+```
+
 **核心层调试**：`packages/core`、`packages/presets` 和 `packages/server` 不依赖 Electron，可以直接用 Node.js 编译或测试。
 
 ## 开发规范

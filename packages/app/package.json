@@ -1,5 +1,6 @@
 {
   "name": "@spherse/app",
+  "productName": "Spherse",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/main/index.js",
@@ -9,6 +10,10 @@
     "preview": "electron-vite preview",
     "test": "vitest run",
     "test:e2e": "playwright test -c playwright.config.ts",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
@@ -39,6 +44,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.7.0",
     "electron": "41.7.1",
+    "electron-builder": "^26.0.12",
     "electron-vite": "^3.0.0",
     "tailwindcss": "^4.2.4",
     "typescript": "^5.7.0",
