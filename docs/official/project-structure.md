@@ -75,7 +75,8 @@ spherse/
 │   │       └── ws-fs-watch.ts        # WebSocket 文件变更推送
 │   └── app/                          # @spherse/app — Electron + React
 │       ├── electron/
-│       │   ├── main.ts               # Electron 入口：组装窗口、IPC、项目 server 管理
+│       │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main
+│       │   ├── main.ts               # Electron 主进程：组装窗口、IPC、项目 server 管理
 │       │   ├── preload.ts            # contextBridge，IPC 白名单
 │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │       │   │   ├── index.ts          # registerAllIpc 聚合
