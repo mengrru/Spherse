@@ -75,6 +75,7 @@ npm run dist:win    # 构建 Windows NSIS 安装包
 - **文档规范**：
   - `docs/official/` — 正式项目文档，始终与代码保持同步
   - `docs/dev/features/{yyyy-MM-dd-feature-name}/` — **开发中的 feature spec 和 implementation plan，务必放此目录，不要放到其它位置**
+  - `docs/dev/infra/{yyyy-MM-dd-name}/` — 基础设施相关的 design 和 plan
   - `docs/dev/bugfix/{yyyy-MM-dd-bugfix-name}/` — bugfix 分析与修复思路，包含 `design.md`（问题分析与方案）和 `plan.md`（实施计划）
   - `docs/dev/` 下的文档容易过时，开发新 feature 时应优先参考 `docs/official/`，开发完成后根据情况更新 `docs/official/`
 - **`docs/official/` 维护**：完成 feature 后，检查 `docs/official/` 下是否有需要同步更新的文档（如新增文件/目录、新增工具、架构变更等），保持文档与代码一致
@@ -107,4 +108,5 @@ npm run dist:win    # 构建 Windows NSIS 安装包
   - 间距、圆角、阴影使用 Tailwind 标准 scale（`p-2`、`rounded-md`、`shadow-sm`），不使用 magic number
   - 业务组件不写 `dark:` 修饰符，暗色适配通过 CSS 变量自动切换
   - 需要新颜色时在 `styles.css` 中注册 CSS 变量（`--agent-{name}`）+ Tailwind 颜色（`--color-agent-{name}`），不在组件中硬编码
+- **i18n 文案规范**：`packages/i18n/src/locales/zh-CN.ts` 是翻译基准，每条文案必须结合实际 UI 场景写注释（说明出现位置、上下文、交互状态等），用于指导其它语言版本（`zh-TW`、`en`）的翻译
 - **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试

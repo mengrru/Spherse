@@ -16,6 +16,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/ta
 import { cn } from "../../lib/utils";
 import { useSettingsStore } from "./store";
 import { type ProviderConfig, type SettingsApi } from "./types";
+import { SUPPORTED_LOCALES } from "@spherse/i18n";
+import { useI18n } from "@spherse/i18n/react";
+
+const LOCALE_LABELS: Record<string, string> = {
+  "zh-CN": "简体中文",
+  "zh-TW": "繁體中文",
+  en: "English",
+};
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -24,11 +32,12 @@ interface SettingsModalProps {
 const electronAPI = (window as unknown as { electronAPI: SettingsApi }).electronAPI;
 
 export function SettingsModal({ onClose }: SettingsModalProps) {
+  const { t } = useI18n();
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="max-h-[80vh] sm:max-w-[480px]">
+      <DialogContent className="flex max-h-[80vh] flex-col sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>设置</DialogTitle>
+          <DialogTitle>{t("settings.title")}</DialogTitle>
         </DialogHeader>
         <ModelSettingsTab onClose={onClose} />
       </DialogContent>
@@ -39,15 +48,18 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 function ModelSettingsTab({ onClose }: { onClose: () => void }) {
   const apiKeys = useSettingsStore((state) => state.apiKeys);
   const defaultModel = useSettingsStore((state) => state.defaultModel);
+  const locale = useSettingsStore((state) => state.locale);
   const saving = useSettingsStore((state) => state.saving);
   const message = useSettingsStore((state) => state.message);
   const load = useSettingsStore((state) => state.load);
   const setApiKey = useSettingsStore((state) => state.setApiKey);
   const setDefaultModel = useSettingsStore((state) => state.setDefaultModel);
+  const setLocale = useSettingsStore((state) => state.setLocale);
   const save = useSettingsStore((state) => state.save);
   const connect = useSettingsStore((state) => state.connect);
   const disconnect = useSettingsStore((state) => state.disconnect);
   const providers = useSettingsStore((state) => state.providers);
+  const { t } = useI18n();
 
   useEffect(() => {
     void load(electronAPI);
@@ -71,10 +83,18 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
       <div className="min-h-0 flex-1 overflow-y-auto">
         <Tabs defaultValue="models">
           <TabsList>
-            <TabsTrigger value="models">模型</TabsTrigger>
+            <TabsTrigger value="models">{t("settings.tabs.models")}</TabsTrigger>
           </TabsList>
           <TabsContent value="models" className="mt-3">
             <FieldGroup>
+              <Field>
+                <SectionTitle as={FieldLabel}>语言 / Language</SectionTitle>
+                <NativeSelect className="w-full" value={locale} onChange={(e) => setLocale(e.target.value)}>
+                  {SUPPORTED_LOCALES.map((loc) => (
+                    <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>
+                  ))}
+                </NativeSelect>
+              </Field>
               <DefaultModelField
                 providers={providers}
                 apiKeys={apiKeys}
@@ -83,7 +103,7 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
               />
             </FieldGroup>
             <div className="mt-5 border-t border-border pt-4">
-              <div className="mb-2 text-sm font-medium">模型提供商</div>
+              <div className="mb-2 text-sm font-medium">{t("settings.models.providers")}</div>
               <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
                 {Object.entries(providers).map(([id, config]) => (
                   <ModelProviderItem
@@ -101,18 +121,18 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
           </TabsContent>
         </Tabs>
       </div>
-      <DialogFooter className="-mx-4 -mb-4 items-center border-t border-border bg-muted/30 px-4 py-3">
+      <DialogFooter className="shrink-0 -mx-4 -mb-4 items-center border-t border-border bg-muted/30 px-4 py-3">
         {message === "saved" && (
-          <span className="mr-auto text-xs text-muted-foreground">已保存</span>
+          <span className="mr-auto text-xs text-muted-foreground">{t("settings.models.saved")}</span>
         )}
         {message === "error" && (
-          <span className="mr-auto text-xs text-destructive">保存失败</span>
+          <span className="mr-auto text-xs text-destructive">{t("settings.models.saveFailed")}</span>
         )}
         <Button variant="outline" onClick={onClose}>
-          关闭
+          {t("settings.models.close")}
         </Button>
         <Button onClick={() => save(electronAPI)} disabled={saving}>
-          {saving ? "保存中..." : "保存"}
+          {saving ? t("settings.models.saving") : t("settings.models.save")}
         </Button>
       </DialogFooter>
     </>
@@ -134,6 +154,7 @@ function ModelProviderItem({
   onConnect: () => void;
   onDisconnect: () => void;
 }) {
+  const { t } = useI18n();
   const configured = apiKey.trim().length > 0;
 
   return (
@@ -144,7 +165,7 @@ function ModelProviderItem({
           <div className="text-xs text-muted-foreground">{config.auth.envKeys[0] ?? ""}</div>
         </div>
         <Badge variant={configured ? "secondary" : "outline"}>
-          {configured ? "已提供 API Key" : "未连接"}
+          {configured ? t("settings.provider.apiKeyProvided") : t("settings.provider.notConnected")}
         </Badge>
       </div>
       <div className="flex gap-2">
@@ -158,12 +179,12 @@ function ModelProviderItem({
         />
         {configured ? (
           <Button type="button" variant="outline" className="group min-w-20" onClick={onDisconnect}>
-            <span className="group-hover:hidden">已连接</span>
-            <span className="hidden group-hover:inline">断开连接</span>
+            <span className="group-hover:hidden">{t("settings.provider.connected")}</span>
+            <span className="hidden group-hover:inline">{t("settings.provider.disconnect")}</span>
           </Button>
         ) : (
           <Button type="button" className="min-w-20" onClick={onConnect} disabled={!apiKey.trim()}>
-            连接
+            {t("settings.provider.connect")}
           </Button>
         )}
       </div>
@@ -182,13 +203,14 @@ function DefaultModelField({
   value: string;
   onChange: (value: string) => void;
 }) {
+  const { t } = useI18n();
   const configuredProviders = Object.entries(providers).filter(([id]) => apiKeys[id]?.trim());
 
   return (
     <Field>
-      <SectionTitle as={FieldLabel}>默认模型</SectionTitle>
+      <SectionTitle as={FieldLabel}>{t("settings.models.defaultModel")}</SectionTitle>
       <NativeSelect className="w-full" value={value} onChange={(e) => onChange(e.target.value)}>
-        <NativeSelectOption value="">-- 请选择 --</NativeSelectOption>
+        <NativeSelectOption value="">{t("settings.models.selectPlaceholder")}</NativeSelectOption>
         {configuredProviders.map(([id, config]) => (
           <NativeSelectOptGroup key={id} label={config.name}>
             {config.models.map((m) => (
@@ -200,7 +222,7 @@ function DefaultModelField({
         ))}
       </NativeSelect>
       {configuredProviders.length === 0 && (
-        <p className="mt-1.5 text-xs text-muted-foreground">请先配置 API Key</p>
+        <p className="mt-1.5 text-xs text-muted-foreground">{t("settings.models.configureFirst")}</p>
       )}
     </Field>
   );

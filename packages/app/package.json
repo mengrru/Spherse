@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
+    "@spherse/i18n": "*",
     "@spherse/presets": "*",
     "@spherse/server": "*",
     "class-variance-authority": "^0.7.1",

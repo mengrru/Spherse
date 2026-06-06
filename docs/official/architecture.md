@@ -6,6 +6,7 @@
 - **@spherse/presets**：内置模板与预置静态内容，构建前通过 `scripts/sync-templates.mjs` 将 `templates/*.md` 同步为可导入常量
 - **@spherse/server**：Fastify API 层，只负责把 HTTP/WebSocket 请求转发到 core 的 Engine 和 ProjectStore
 - **@spherse/app**：Electron + React 桌面应用，负责多项目窗口状态、IPC、renderer UI、每个项目的本地 server 生命周期
+- **@spherse/i18n**：纯 TypeScript i18n 基础设施，维护 locale 类型、翻译资源、`t()` 函数、fallback 规则和校验脚本；React 使用 `@spherse/i18n/react` 子入口的 provider/hook，Electron/server/core 使用同一个纯函数 API
 
 ## Core 层
 
@@ -54,6 +55,15 @@
 - **页面 / layout / feature 边界**：`pages/` 只做路由适配和参数校验；跨 feature 的页面编排放在 `layouts/`；业务域专属 UI、hooks 和局部动作放在 `features/{domain}/`
 - **feature-based 组织**：`features/chat`、`features/content-browser`、`features/agent-session-list`、`features/project-panel`、`features/file-tree`、`features/text-selection-session`、`features/settings`、`features/debug-tools`、`features/activity-bar` 分别拥有自己的组件和 hooks
 - **共享组件边界**：`components/` 保留 shadcn/ui、跨 feature 复用组件和少量通用组件；只被某个 feature 使用的组件不放在全局 components 根目录
+
+## i18n
+
+- **locale 是应用级设置**：持久化在 electron-store 的 `settings.locale`，默认 `zh-CN`
+- **翻译资源**：集中管理在 `@spherse/i18n` package 的 `src/locales/{zh-CN,zh-TW,en}.ts`
+- **前端消费**：renderer 通过 `@spherse/i18n/react` 的 `I18nProvider` + `useI18n()` 获取翻译
+- **后端消费**：Electron/server/core 通过 `translate(locale, key, params)` 纯函数获取翻译
+- **校验**：`npm run check:i18n` 检查 locale key 一致性和插值变量一致性
+- **开发者 skill**：`.opencode/skills/i18n/SKILL.md` 指导 coding agent 迁移用户可见字符串
 
 ## 前端样式
 

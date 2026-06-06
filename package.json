@@ -7,7 +7,8 @@
   ],
   "scripts": {
     "predev": "node scripts/rebuild-native.mjs",
-    "build": "npm run build -w @spherse/core && npm run build -w @spherse/presets && npm run build -w @spherse/server && npm run build -w @spherse/app",
+    "build": "npm run build -w @spherse/i18n && npm run build -w @spherse/core && npm run build -w @spherse/presets && npm run build -w @spherse/server && npm run build -w @spherse/app",
+    "check:i18n": "npm run check -w @spherse/i18n",
     "dev": "npm run dev --workspace=packages/app",
     "dist": "npm run dist --workspace=packages/app",
     "dist:mac": "npm run dist:mac --workspace=packages/app",

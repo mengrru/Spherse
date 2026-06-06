@@ -7,6 +7,9 @@ import { Toaster } from "./components/ui/sonner";
 import { useAppStore } from "./stores/app-store";
 import { useProjectDataStore } from "./stores/project-data-store";
 import { useProjectUiStore } from "./stores/project-ui-store";
+import { I18nProvider } from "@spherse/i18n/react";
+import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
+import { useSettingsStore } from "./features/settings/store";
 
 function buildProjectRoute(projectKey: string, lastRoute?: string): string {
   const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
@@ -26,6 +29,7 @@ export function App() {
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const clearProjectData = useProjectDataStore((state) => state.clearProjectData);
   const clearProjectUi = useProjectUiStore((state) => state.clearProjectUi);
+  const locale = useSettingsStore((state) => state.locale);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,27 +74,29 @@ export function App() {
   if (initializing) {
     return (
       <div className="flex h-screen items-center justify-center bg-background text-muted-foreground">
-        加载中...
+        {translate("zh-CN", "app.loading")}
       </div>
     );
   }
 
   return (
-    <TooltipProvider>
-      <div className="flex h-screen bg-background text-foreground">
-        <ActivityBar
-          projects={projects}
-          activeProjectKey={activeProjectKey}
-          onSelect={handleSelectProject}
-          onAdd={handleAddProject}
-          onClose={handleCloseProject}
-          onReveal={revealProject}
-          onSettings={() => setShowSettings(true)}
-        />
-        <Outlet />
-        {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
-        <Toaster />
-      </div>
-    </TooltipProvider>
+    <I18nProvider locale={locale ?? DEFAULT_LOCALE}>
+      <TooltipProvider>
+        <div className="flex h-screen bg-background text-foreground">
+          <ActivityBar
+            projects={projects}
+            activeProjectKey={activeProjectKey}
+            onSelect={handleSelectProject}
+            onAdd={handleAddProject}
+            onClose={handleCloseProject}
+            onReveal={revealProject}
+            onSettings={() => setShowSettings(true)}
+          />
+          <Outlet />
+          {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+          <Toaster />
+        </div>
+      </TooltipProvider>
+    </I18nProvider>
   );
 }

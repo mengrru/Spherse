@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { createServer } from "@spherse/server";
 import type { Engine } from "@spherse/core";
-import { getSettings } from "./settings.js";
+import { getSettings, getLocale } from "./settings.js";
 
 const servers = new Map<string, { server: FastifyInstance; port: number; engine: Engine }>();
 
@@ -24,6 +24,10 @@ export function updateDefaultModel(defaultModel: string | undefined): void {
   for (const [, entry] of servers) {
     entry.engine.setDefaultModel(defaultModel);
   }
+}
+
+export function getServerLocale(): string {
+  return getLocale();
 }
 
 export function stopServer(projectRoot: string): void {

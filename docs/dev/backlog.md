@@ -54,4 +54,5 @@
 - [x] **重新考虑 dot 文件夹名字和内部组织结构**：`.pi/` → `.spherse/`
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试
 - [ ] **i18n**：应用界面多语言支持
+- [ ] **Presets i18n**：为 `@spherse/presets` 内置模板和预置内容增加多语言支持，作为 i18n 基础设施完成后的独立任务
 - [ ] **Core & Server 日志**：为 core 和 server 层添加结构化日志系统，便于调试和问题排查

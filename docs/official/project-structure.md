@@ -43,6 +43,21 @@ spherse/
 │   │   │   └── sync-templates.mjs    # 模板同步脚本（.md → .ts 常量）
 │   │   └── src/
 │   │       └── index.ts              # 公开导出模板内容
+│   ├── i18n/                         # @spherse/i18n — 纯 TS i18n 基础设施
+│   │   ├── scripts/
+│   │   │   └── check-i18n.mjs        # locale key 一致性校验脚本
+│   │   └── src/
+│   │       ├── types.ts              # Locale, SUPPORTED_LOCALES, DEFAULT_LOCALE
+│   │       ├── catalog.ts            # 聚合 locale 文件，导出 TranslationKey
+│   │       ├── translate.ts          # normalizeLocale, translate, createTranslator
+│   │       ├── format.ts             # {var} 插值
+│   │       ├── react.tsx             # I18nProvider, useI18n（React 子入口）
+│   │       ├── locales/
+│   │       │   ├── zh-CN.ts          # 简体中文（canonical catalog）
+│   │       │   ├── zh-TW.ts          # 繁體中文
+│   │       │   └── en.ts             # English
+│   │       ├── __tests__/            # Vitest 单元测试
+│   │       └── index.ts              # 主入口：纯函数 API
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
 │   │       ├── index.ts              # createServer()，调用 createEngine 组装 AppContext
@@ -69,7 +84,7 @@ spherse/
 │       │   │   └── debug.ts          # 开发模式 debug 动作
 │       │   ├── window.ts             # BrowserWindow 创建与管理
 │       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新
-│       │   └── settings.ts           # electron-store 封装 + env 管理 + openProjects/lastRoute 持久化
+│       │   └── settings.ts           # electron-store 封装 + env 管理 + openProjects/lastRoute/locale 持久化
 │       ├── playwright.config.ts      # Playwright E2E 测试配置
 │       ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
 │       ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS 等）
@@ -128,8 +143,13 @@ spherse/
 │   ├── official/                     # 正式项目文档（始终与代码同步）
 │   └── dev/                          # 开发过程文档（容易过时）
 │       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
+│       ├── infra/                    # {yyyy-MM-dd-name}/ 下放基础设施 design + plan
 │       ├── bugfix/                   # bugfix 分析与修复思路
 │       └── backlog.md                # 待办事项
+├── .opencode/
+│   └── skills/                      # opencode coding-agent skill 定义
+│       └── i18n/
+│           └── SKILL.md             # i18n 字符串迁移指导
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
 ├── eslint.config.js                  # ESLint 9 flat config（全仓库 lint 规则）

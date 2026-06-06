@@ -32,7 +32,7 @@ function maskApiKey(key: string): string {
 export function getMaskedSettings(): AppSettings | null {
   const settings = settingsStore.get("settings");
   if (!settings) return null;
-  const masked: AppSettings = { providers: {}, defaultModel: settings.defaultModel };
+  const masked: AppSettings = { providers: {}, defaultModel: settings.defaultModel, locale: settings.locale ?? "zh-CN" };
   for (const [id, config] of Object.entries(settings.providers)) {
     if (config?.apiKey) {
       masked.providers[id] = { apiKey: maskApiKey(config.apiKey) };
@@ -43,7 +43,7 @@ export function getMaskedSettings(): AppSettings | null {
 
 export function saveSettings(incoming: AppSettings): void {
   const prev = settingsStore.get("settings");
-  const merged: AppSettings = { providers: {}, defaultModel: incoming.defaultModel };
+  const merged: AppSettings = { providers: {}, defaultModel: incoming.defaultModel, locale: incoming.locale ?? prev?.locale ?? "zh-CN" };
   for (const [id, newConfig] of Object.entries(incoming.providers)) {
     const prevConfig = prev?.providers?.[id];
     if (newConfig && newConfig.apiKey.trim() === "") {
@@ -131,4 +131,16 @@ export function getLastActiveProject(): string | null {
 
 export function setLastActiveProject(projectPath: string | null): void {
   settingsStore.set("lastActiveProject", projectPath);
+}
+
+export function getLocale(): string {
+  return settingsStore.get("settings")?.locale ?? "zh-CN";
+}
+
+export function setLocale(locale: string): void {
+  const settings = settingsStore.get("settings");
+  if (settings) {
+    settings.locale = locale;
+    settingsStore.set("settings", settings);
+  }
 }

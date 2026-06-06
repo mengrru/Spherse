@@ -5,6 +5,7 @@ export type ProviderConfig = ProviderCatalogItem;
 export interface AppSettings {
   providers?: Record<string, { apiKey?: string } | undefined>;
   defaultModel?: string;
+  locale?: string;
 }
 
 export interface SettingsApi {

@@ -11,11 +11,13 @@ interface SettingsStore {
   providers: Record<string, ProviderConfig>;
   apiKeys: Record<string, string>;
   defaultModel: string;
+  locale: string;
   saving: boolean;
   message: SaveMessage;
   load: (api: SettingsApi) => Promise<void>;
   setApiKey: (id: string, value: string) => void;
   setDefaultModel: (model: string) => void;
+  setLocale: (locale: string) => void;
   buildSettings: (keys?: Record<string, string>, model?: string) => AppSettings;
   save: (api: SettingsApi, keys?: Record<string, string>, model?: string) => Promise<boolean>;
   connect: (api: SettingsApi, id: string) => Promise<boolean>;
@@ -26,6 +28,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   providers: {},
   apiKeys: {},
   defaultModel: "",
+  locale: "zh-CN",
   saving: false,
   message: null,
 
@@ -44,6 +47,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       providers: providers ?? {},
       apiKeys,
       defaultModel: settings?.defaultModel ?? "",
+      locale: settings?.locale ?? "zh-CN",
     });
   },
 
@@ -57,6 +61,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     set({ defaultModel: model });
   },
 
+  setLocale(locale) {
+    set({ locale });
+  },
+
   buildSettings(keys = get().apiKeys, model = get().defaultModel) {
     const providers: Record<string, { apiKey: string } | undefined> = {};
     for (const id of Object.keys(get().providers)) {
@@ -65,6 +73,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     return {
       providers,
       defaultModel: model,
+      locale: get().locale,
     };
   },
 

@@ -41,6 +41,7 @@ describe("useSettingsStore", () => {
       providers: {},
       apiKeys: {},
       defaultModel: "",
+      locale: "zh-CN",
       saving: false,
       message: null,
     });
