@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { AgentDialog } from "../../components/AgentDialog";
 import {
   SidebarGroup,
@@ -35,6 +36,7 @@ export function AgentSessionList({
   const projectUi = useProjectUiStore((state) => state.projects[projectKey]);
   const createSession = useProjectDataStore((state) => state.createSession);
   const deleteSession = useProjectDataStore((state) => state.deleteSession);
+  const renameSession = useProjectDataStore((state) => state.renameSession);
   const createAgent = useProjectDataStore((state) => state.createAgent);
   const updateAgent = useProjectDataStore((state) => state.updateAgent);
   const deleteAgent = useProjectDataStore((state) => state.deleteAgent);
@@ -78,6 +80,16 @@ export function AgentSessionList({
     if (activeSessionId === deletedSessionId) {
       navigate(`/project/${projectKey}`);
     }
+  };
+
+  const handleRenameSession = async (session: SessionInfo, title: string) => {
+    if (!project) return false;
+    const ok = await renameSession(projectKey, project.ctx.client, session.id, title);
+    if (!ok) {
+      const message = useProjectDataStore.getState().projects[projectKey]?.error ?? "重命名失败";
+      toast.error(`重命名失败：${message}`);
+    }
+    return ok;
   };
 
   const handleDeleteAgent = async (agent: AgentProfile) => {
@@ -133,6 +145,7 @@ export function AgentSessionList({
             onDeleteAgent={handleDeleteAgent}
             onSelectSession={handleSelectSession}
             onDeleteSession={handleDeleteSession}
+            onRenameSession={handleRenameSession}
           />
         </SidebarGroupContent>
       </SidebarGroup>

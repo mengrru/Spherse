@@ -22,6 +22,7 @@ interface ProjectDataStore {
     initialMessage?: string,
   ) => Promise<SessionInfo | null>;
   deleteSession: (projectKey: string, client: ApiClient, sessionId: string) => Promise<void>;
+  renameSession: (projectKey: string, client: ApiClient, sessionId: string, title: string) => Promise<boolean>;
   createAgent: (projectKey: string, client: ApiClient, filename: string, content: string) => Promise<boolean>;
   updateAgent: (projectKey: string, client: ApiClient, agentId: string, content: string) => Promise<boolean>;
   deleteAgent: (projectKey: string, client: ApiClient, agentId: string) => Promise<void>;
@@ -172,6 +173,26 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
         ...project,
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
+    }
+  },
+
+  async renameSession(projectKey, client, sessionId, title) {
+    try {
+      const updatedSession = await client.renameSession(sessionId, title);
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...project,
+        sessions: project.sessions.map((session) =>
+          session.id === sessionId ? updatedSession : session,
+        ),
+        error: null,
+      }), { createIfMissing: false }));
+      return true;
+    } catch (err) {
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...project,
+        error: getErrorMessage(err),
+      }), { createIfMissing: false }));
+      return false;
     }
   },
 

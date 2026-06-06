@@ -41,6 +41,26 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
   );
 
+  fastify.patch<{ Params: { id: string }; Body: { title?: unknown } }>(
+    "/api/sessions/:id",
+    async (req, reply) => {
+      const { title } = req.body ?? {};
+      if (typeof title !== "string") {
+        return reply.code(400).send({ error: "title is required" });
+      }
+
+      try {
+        return ctx.engine.renameSession(req.params.id, title);
+      } catch (err: any) {
+        const message = err instanceof Error ? err.message : "request failed";
+        if (message.includes("not found")) {
+          return reply.code(404).send({ error: message });
+        }
+        return reply.code(400).send({ error: message });
+      }
+    },
+  );
+
   fastify.delete<{ Params: { id: string } }>(
     "/api/sessions/:id",
     async (req) => {

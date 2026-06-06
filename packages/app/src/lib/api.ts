@@ -177,6 +177,19 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async renameSession(id: string, title: string): Promise<SessionInfo> {
+      const res = await fetch(`${baseUrl}/api/sessions/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
     async deleteSession(id: string): Promise<{ ok: boolean }> {
       const res = await fetch(`${baseUrl}/api/sessions/${encodeURIComponent(id)}`, {
         method: "DELETE",

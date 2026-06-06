@@ -19,6 +19,7 @@
 - [x] **Agent 编辑**：支持编辑已有 agent 定义文件（当前只能创建）
 - [x] **Agent 删除**：从 UI 删除 agent 定义文件
 - [x] **Session 删除**：从 UI 删除 session
+- [x] **Session 重命名**：支持从侧边栏原地编辑 session 标题，标题持久化到 `.spherse/sessions.db`。
 - [x] **多 Session**：同一 agent 开启多个对话，侧边栏按 agent 分组展示 session 列表
 - [ ] **项目创建向导**：HomePage 区分"新建项目"和"打开项目"，支持设置项目名和默认模型
 - [x] **用户自定义主题**：支持从 `.spherse/theme.css` 加载用户自定义 CSS 覆盖默认主题

@@ -14,6 +14,7 @@ interface AgentGroupProps {
   onDeleteAgent: (agent: AgentProfile) => void;
   onSelectSession: (session: SessionInfo) => void;
   onDeleteSession: (sessionId: string) => void;
+  onRenameSession: (session: SessionInfo, title: string) => Promise<boolean>;
 }
 
 export function AgentGroup({
@@ -27,6 +28,7 @@ export function AgentGroup({
   onDeleteAgent,
   onSelectSession,
   onDeleteSession,
+  onRenameSession,
 }: AgentGroupProps) {
   return (
     <SidebarMenuItem>
@@ -45,9 +47,10 @@ export function AgentGroup({
               key={session.id}
               session={session}
               active={activeSessionId === session.id}
-              onSelect={onSelectSession}
-              onDelete={onDeleteSession}
-            />
+               onSelect={onSelectSession}
+               onDelete={onDeleteSession}
+               onRename={onRenameSession}
+             />
           ))}
         </SidebarMenuSub>
       )}

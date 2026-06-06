@@ -64,6 +64,20 @@ export class Engine {
     return this.sessionStore.listSessions(agentId);
   }
 
+  renameSession(sessionId: string, title: string): SessionInfo {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) throw new Error("title is required");
+    if (trimmedTitle.length > 80) {
+      throw new Error("title must be 80 characters or less");
+    }
+
+    const session = this.sessionStore.getSession(sessionId);
+    if (!session) throw new Error(`Session "${sessionId}" not found`);
+
+    this.sessionStore.updateSessionTitle(sessionId, trimmedTitle);
+    return { ...session, title: trimmedTitle };
+  }
+
   async createSession(agentId: string): Promise<string> {
     const profile = await this.profileStore.getById(agentId);
     if (!profile) throw new Error(`Agent profile "${agentId}" not found`);

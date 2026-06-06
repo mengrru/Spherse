@@ -50,7 +50,7 @@ spherse/
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
 │   │       │   ├── agent-write.ts    # Agent 创建/更新/删除
-│   │       │   ├── sessions.ts       # Session 创建/查询/删除与消息读取
+│       │       │   ├── sessions.ts       # Session 创建/查询/重命名/删除与消息读取
 │   │       │   ├── content.ts        # 内容浏览、读取、保存、删除、新建文件/目录
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
@@ -81,6 +81,7 @@ spherse/
 │       │   │   └── file-tree.ts      # 文件树 E2E 测试辅助（项目创建、app launch）
 │       │   ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │       │   └── text-selection-session.spec.ts  # 划选会话 E2E 测试
+│       │   └── session-rename.spec.ts          # 会话重命名 E2E 测试
 │       └── src/
 │           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化
 │           ├── main.tsx              # renderer 入口，挂载 RouterProvider

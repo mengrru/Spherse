@@ -82,6 +82,8 @@ Agent system prompt content...
 
 Session 数据存储在 `.spherse/sessions.db`。每个 session 通过 `agent_id` 关联 AgentProfile，状态为 `active` 或 `archived`。
 
+`sessions.title` 是可选的用户可编辑展示标题。用户重命名 session 时只更新 `title`，不更新 `updated_at`，因此不会改变 session 列表按最近对话活动排序的行为。
+
 删除 agent 时，Engine 会归档关联 sessions，再删除 agent profile 文件，避免历史对话失去可追溯状态。
 
 ## Skill 定义格式

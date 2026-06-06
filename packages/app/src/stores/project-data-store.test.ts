@@ -40,6 +40,14 @@ function createClient(overrides: Partial<ApiClient>): ApiClient {
     updateAgent: vi.fn().mockResolvedValue({ ok: true, id: "agent-1" }),
     deleteAgent: vi.fn().mockResolvedValue({ ok: true }),
     deleteSession: vi.fn().mockResolvedValue({ ok: true }),
+    renameSession: vi.fn().mockResolvedValue({
+      id: "session-1",
+      agentId: "agent-1",
+      title: "Renamed Session",
+      createdAt: 1,
+      updatedAt: 1,
+      status: "active",
+    }),
     getFileTree: vi.fn().mockResolvedValue([]),
     getPreviewUrl: vi.fn().mockReturnValue(""),
     getSupportedProviders: vi.fn().mockResolvedValue({}),
@@ -148,6 +156,73 @@ describe("useProjectDataStore", () => {
     expect(useProjectDataStore.getState().projects["project-1"]?.initialMessageBySessionId).toEqual({
       "session-1": "initial message",
     });
+  });
+
+  it("renames a session in the project cache", async () => {
+    const client = createClient({
+      listSessions: vi.fn().mockResolvedValue([createSession("session-1")]),
+      renameSession: vi.fn().mockResolvedValue({
+        ...createSession("session-1"),
+        title: "Renamed Session",
+      }),
+    });
+
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+    const ok = await useProjectDataStore.getState().renameSession(
+      "project-1",
+      client,
+      "session-1",
+      "Renamed Session",
+    );
+
+    expect(ok).toBe(true);
+    expect(client.renameSession).toHaveBeenCalledWith("session-1", "Renamed Session");
+    expect(useProjectDataStore.getState().projects["project-1"]?.sessions).toEqual([
+      { ...createSession("session-1"), title: "Renamed Session" },
+    ]);
+  });
+
+  it("keeps the existing session title when rename fails", async () => {
+    const original = { ...createSession("session-1"), title: "Original" };
+    const client = createClient({
+      listSessions: vi.fn().mockResolvedValue([original]),
+      renameSession: vi.fn().mockRejectedValue(new Error("rename failed")),
+    });
+
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+    const ok = await useProjectDataStore.getState().renameSession(
+      "project-1",
+      client,
+      "session-1",
+      "New Title",
+    );
+
+    expect(ok).toBe(false);
+    expect(useProjectDataStore.getState().projects["project-1"]?.sessions).toEqual([original]);
+    expect(useProjectDataStore.getState().projects["project-1"]?.error).toBe("rename failed");
+  });
+
+  it("does not recreate a cleared project when a rename resolves late", async () => {
+    let resolveRename: (session: SessionInfo) => void = () => {};
+    const client = createClient({
+      listSessions: vi.fn().mockResolvedValue([createSession("session-1")]),
+      renameSession: vi.fn().mockReturnValue(new Promise<SessionInfo>((resolve) => {
+        resolveRename = resolve;
+      })),
+    });
+
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+    const rename = useProjectDataStore.getState().renameSession(
+      "project-1",
+      client,
+      "session-1",
+      "Renamed Session",
+    );
+    useProjectDataStore.getState().clearProjectData("project-1");
+    resolveRename({ ...createSession("session-1"), title: "Renamed Session" });
+    await rename;
+
+    expect(useProjectDataStore.getState().projects["project-1"]).toBeUndefined();
   });
 
   it("does not create an undefined session when session creation returns no id", async () => {

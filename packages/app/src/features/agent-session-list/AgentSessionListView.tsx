@@ -15,6 +15,7 @@ export interface AgentSessionListViewProps {
   onDeleteAgent: (agent: AgentProfile) => void;
   onSelectSession: (session: SessionInfo) => void;
   onDeleteSession: (sessionId: string) => void;
+  onRenameSession: (session: SessionInfo, title: string) => Promise<boolean>;
 }
 
 export function AgentSessionListView({
@@ -28,6 +29,7 @@ export function AgentSessionListView({
   onDeleteAgent,
   onSelectSession,
   onDeleteSession,
+  onRenameSession,
 }: AgentSessionListViewProps) {
   const grouped = useGroupedSessions(sessions);
 
@@ -49,8 +51,9 @@ export function AgentSessionListView({
           onEditAgent={onEditAgent}
           onDeleteAgent={onDeleteAgent}
           onSelectSession={onSelectSession}
-          onDeleteSession={onDeleteSession}
-        />
+           onDeleteSession={onDeleteSession}
+           onRenameSession={onRenameSession}
+         />
       ))}
     </SidebarMenu>
   );
