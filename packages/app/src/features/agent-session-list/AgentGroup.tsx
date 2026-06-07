@@ -1,5 +1,8 @@
 import type { AgentProfile, SessionInfo } from "../../lib/types";
-import { SidebarMenuItem, SidebarMenuSub } from "../../components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "../../components/ui/collapsible";
 import { AgentRow } from "./AgentRow";
 import { SessionRow } from "./SessionRow";
 
@@ -31,29 +34,27 @@ export function AgentGroup({
   onRenameSession,
 }: AgentGroupProps) {
   return (
-    <SidebarMenuItem>
+    <Collapsible open={!collapsed} onOpenChange={() => onToggleCollapsed(agent.id)}>
       <AgentRow
         agent={agent}
-        collapsed={collapsed}
-        onToggleCollapsed={onToggleCollapsed}
         onNewSession={onNewSession}
         onEditAgent={onEditAgent}
         onDeleteAgent={onDeleteAgent}
       />
-      {!collapsed && sessions.length > 0 && (
-        <SidebarMenuSub>
+      <CollapsibleContent className="ml-2">
+        <div className="flex flex-col gap-px">
           {sessions.map((session) => (
             <SessionRow
               key={session.id}
               session={session}
               active={activeSessionId === session.id}
-               onSelect={onSelectSession}
-               onDelete={onDeleteSession}
-               onRename={onRenameSession}
-             />
+              onSelect={onSelectSession}
+              onDelete={onDeleteSession}
+              onRename={onRenameSession}
+            />
           ))}
-        </SidebarMenuSub>
-      )}
-    </SidebarMenuItem>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

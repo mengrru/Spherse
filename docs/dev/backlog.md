@@ -48,6 +48,7 @@
 ## 基础设施
 
 - [ ] **本地验证流水线**：为 `feature -> dev`、`dev -> main` 的本地 merge 流程设计可运行脚本，例如 `npm run verify:feature` 覆盖 lint/build/unit tests，`npm run verify:release` 增加整体测试或 E2E。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
+- [ ] **React DOM 组件测试工具链**：为 `packages/app` 引入组件级测试基础设施（如 Testing Library + user-event + jsdom/happy-dom），用于测试 React 组件渲染、ARIA 状态、用户交互和菜单/折叠等局部 UI 行为，补足当前 Vitest 单测与 Playwright E2E 之间的测试层级。
 - [x] **electron-builder 打包**：配置生产构建和跨平台打包
 - [x] **dev/prod 环境隔离**：通过 bootstrap 入口引导文件将 dev 模式的 userData 重定向到独立目录，实现 dev 和 prod 数据完全隔离、可同时运行
 - [x] **better-sqlite3 rebuild 自动化**：在启动开发桌面应用前自动为 Electron 重新编译 native 模块

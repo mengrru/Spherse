@@ -1,10 +1,10 @@
 import { ChevronRightIcon, FileIcon, FolderIcon } from "lucide-react";
-import { Button } from "../../components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../../components/ui/collapsible";
+import { TreeRow } from "../../components/ui/tree-row";
 import type { TreeNode, CreatingState, CreateAction } from "./tree-model";
 import { FileTreeContextMenu } from "./FileTreeContextMenu";
 import { InlineNameInput } from "./InlineNameInput";
@@ -36,17 +36,10 @@ export function FileTreeNode({
   const isSelected = node.type === "file" && node.path === selectedFilePath;
 
   const row = (
-    <Button
-      variant="ghost"
-      size="default"
-      className={
-        isSelected
-          ? "w-full justify-start gap-2 bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-          : node.type === "directory"
-            ? "group w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            : "w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-      }
-      style={{ paddingLeft: depth * 16 + 8 }}
+    <TreeRow
+      depth={depth}
+      selected={isSelected}
+      className={node.type === "directory" ? "group" : undefined}
       onClick={() => onToggle(node)}
     >
       {node.type === "directory" && (
@@ -60,19 +53,14 @@ export function FileTreeNode({
       <span className="overflow-hidden text-ellipsis whitespace-nowrap">
         {node.name}
       </span>
-    </Button>
+    </TreeRow>
   );
 
   const menuTrigger =
     node.type === "directory" ? (
       <CollapsibleTrigger
         render={
-          <Button
-            variant="ghost"
-            size="default"
-            className="group w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            style={{ paddingLeft: depth * 16 + 8 }}
-          />
+          <TreeRow depth={depth} className="group" />
         }
       >
         <ChevronRightIcon className="size-4 shrink-0 text-sidebar-foreground/70 transition-transform group-data-[panel-open]:rotate-90" />

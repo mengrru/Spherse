@@ -137,7 +137,7 @@ spherse/
 │           │   ├── ChatPage.tsx          # Chat route adapter
 │           │   └── ContentBrowser.tsx    # ContentBrowser route adapter
 │           └── components/
-│               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）
+│               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
 │               ├── AgentDialog.tsx       # 创建/编辑 Agent 对话框
 │               ├── EmptyState.tsx        # 无项目时的空状态
 │               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件

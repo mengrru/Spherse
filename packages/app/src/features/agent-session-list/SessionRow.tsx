@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { SessionInfo } from "../../lib/types";
+import { TreeRow } from "../../components/ui/tree-row";
 import { Input } from "../../components/ui/input";
 import {
   ContextMenu,
@@ -9,10 +10,6 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
-import {
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-} from "../../components/ui/sidebar";
 import { useI18n } from "@spherse/i18n/react";
 
 interface SessionRowProps {
@@ -109,7 +106,7 @@ export function SessionRow({ session, active, onSelect, onDelete, onRename }: Se
 
   if (editing) {
     return (
-      <SidebarMenuSubItem className="group/session-row">
+      <div className="group/session-row">
         <div className="pr-6">
           <Input
             ref={inputRef}
@@ -131,21 +128,23 @@ export function SessionRow({ session, active, onSelect, onDelete, onRename }: Se
           />
           {error && <div className="mt-1 text-xs text-destructive">{error}</div>}
         </div>
-      </SidebarMenuSubItem>
+      </div>
     );
   }
 
   return (
-    <SidebarMenuSubItem className="group/session-row" data-session-id={session.id}>
+    <div className="group/session-row" data-session-id={session.id}>
       <ContextMenu>
         <ContextMenuTrigger>
-          <SidebarMenuSubButton
-            isActive={active}
-            className="cursor-pointer pr-6"
+          <TreeRow
+            depth={1}
+            selected={active}
             onClick={() => onSelect(session)}
           >
-            <span>{session.title ?? fallbackTitle}</span>
-          </SidebarMenuSubButton>
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+              {session.title ?? fallbackTitle}
+            </span>
+          </TreeRow>
         </ContextMenuTrigger>
         <ContextMenuContent>
           <ContextMenuItem onClick={startEditing}>
@@ -157,6 +156,6 @@ export function SessionRow({ session, active, onSelect, onDelete, onRename }: Se
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-    </SidebarMenuSubItem>
+    </div>
   );
 }
