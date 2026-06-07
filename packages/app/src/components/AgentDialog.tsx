@@ -37,7 +37,7 @@ interface AgentDialogProps {
   mode: "create" | "edit";
   initialContent?: string;
   client: ApiClient;
-  onSubmit: (filename: string, content: string) => Promise<void>;
+  onSubmit: (slug: string, content: string) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -72,8 +72,12 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
     if (!formData.name.trim()) { setError(t("agent-dialog.nameRequired")); return; }
     setSaving(true); setError(null);
     const content = buildAgentMarkdown(formData, parsed.extraFrontmatter, mode === "create");
-    const filename = `${formData.name.trim()}.md`;
-    try { await onSubmit(filename, content); }
+    const slug = formData.name
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9\u4e00-\u9fff-]/g, "");
+    try { await onSubmit(slug, content); }
     catch (err: unknown) { setError(getErrorMessage(err, t)); setSaving(false); }
   };
 

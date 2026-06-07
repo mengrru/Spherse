@@ -57,8 +57,8 @@ export class Engine {
     return this.profileStore.getById(id);
   }
 
-  async saveProfile(filename: string, content: string): Promise<AgentProfile> {
-    return this.profileStore.save(filename, content);
+  async saveProfile(slug: string, content: string): Promise<AgentProfile> {
+    return this.profileStore.save(slug, content);
   }
 
   getSession(id: string): SessionInfo | null {

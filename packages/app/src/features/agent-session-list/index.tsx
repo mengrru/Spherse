@@ -117,9 +117,9 @@ export function AgentSessionList({
     }
   };
 
-  const handleCreateAgent = async (filename: string, content: string) => {
+  const handleCreateAgent = async (slug: string, content: string) => {
     if (!project) return;
-    const ok = await createAgent(projectKey, project.ctx.client, filename, content);
+    const ok = await createAgent(projectKey, project.ctx.client, slug, content);
     if (ok) setShowCreateAgent(false);
   };
 
@@ -129,7 +129,7 @@ export function AgentSessionList({
     setEditAgent({ id: agent.id, content: raw });
   };
 
-  const handleEditSubmit = async (_filename: string, content: string) => {
+  const handleEditSubmit = async (_slug: string, content: string) => {
     if (!project || !editAgent) return;
     const ok = await updateAgent(projectKey, project.ctx.client, editAgent.id, content);
     if (ok) setEditAgent(null);

@@ -13,7 +13,8 @@ project-root/
 │   ├── sessions.db
 │   ├── theme.css
 │   ├── agents/
-│   │   └── *.md
+│   │   └── {slug}-{shortId}/
+│   │       └── profile.md
 │   └── skills/
 │       └── <skill-name>/SKILL.md
 ├── AGENTS.md
@@ -42,7 +43,7 @@ paths:
 
 ## Agent 定义格式
 
-Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/*.md`。
+Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/{slug}-{shortId}/profile.md`。其中 `slug` 由初始 agent name 派生（小写、空格替换为连字符），`shortId` 为 agent UUID 前 6 位。目录名在创建时生成，之后不再变。
 
 必需字段：
 
@@ -52,6 +53,7 @@ Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/
 常用可选字段：
 
 - `id`：UUID，首次读取缺失 id 的文件时自动生成并回写；设计意图为不可变
+- `createdAt`：创建时间，Unix epoch milliseconds；创建时自动生成，之后保持不变
 - `model`：覆盖项目默认模型
 - `tools`：允许使用的 tool 名称列表；缺省时获得全部默认工具
 - `context`：项目根目录内相对路径列表，Engine 构建 system prompt 时预读取并注入
@@ -63,6 +65,7 @@ Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/
 ```markdown
 ---
 id: 550e8400-e29b-41d4-a716-446655440000
+createdAt: 1760000000000
 name: Historian
 type: worldbuilding
 model: glm-4.5-air
@@ -84,7 +87,7 @@ Session 数据存储在 `.spherse/sessions.db`。每个 session 通过 `agent_id
 
 `sessions.title` 是可选的用户可编辑展示标题。用户重命名 session 时只更新 `title`，不更新 `updated_at`，因此不会改变 session 列表按最近对话活动排序的行为。
 
-删除 agent 时，Engine 会归档关联 sessions，再删除 agent profile 文件，避免历史对话失去可追溯状态。
+删除 agent 时，Engine 会归档关联 sessions，再删除 agent 目录（包含 profile.md），避免历史对话失去可追溯状态。
 
 ## Skill 定义格式
 

@@ -16,7 +16,7 @@ spherse/
 │   │       ├── store/                # 存储层抽象（不持有运行时状态）
 │   │       │   ├── project.ts        # 项目元数据读写（.spherse/project.yaml, AGENTS.md, CHANGELOG.md）
 │   │       │   ├── session.ts        # SQLite session 持久化（agent_id 关联, schema version 管理）
-│   │       │   ├── agent-profile.ts  # .spherse/agents/*.md CRUD（自动生成/补全 id）
+│   │       │   ├── agent-profile.ts  # .spherse/agents/{slug}-{shortId}/profile.md CRUD
 │   │       │   ├── skill.ts          # .spherse/skills/*/SKILL.md 读取
 │   │       │   └── index.ts
 │   │       ├── tools/                # pi-agent-core AgentTool 实现（engine 内部使用）

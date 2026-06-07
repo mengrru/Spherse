@@ -7,9 +7,11 @@ function createAgent(id: string): AgentProfile {
   return {
     id,
     name: id,
+    slug: id,
+    createdAt: 1,
     type: "test",
     systemPrompt: "test",
-    filePath: `${id}.agents.md`,
+    filePath: `${id}/profile.md`,
   };
 }
 
@@ -118,7 +120,7 @@ describe("useProjectDataStore", () => {
     const ok = await useProjectDataStore.getState().createAgent(
       "project-1",
       client,
-      "agent.agents.md",
+      "agent",
       "content",
     );
 

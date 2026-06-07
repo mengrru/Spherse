@@ -130,11 +130,11 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
-    async createAgent(filename: string, content: string): Promise<{ ok: boolean; id: string }> {
+    async createAgent(slug: string, content: string): Promise<{ ok: boolean; id: string }> {
       const res = await fetch(`${baseUrl}/api/agents/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename, content }),
+        body: JSON.stringify({ slug, content }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "request failed" }));

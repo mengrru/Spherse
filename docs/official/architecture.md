@@ -13,13 +13,13 @@
 - **Engine 是唯一门面**：外部（server）只通过 `Engine` 或 `createEngine` 访问 core 功能，不直接操作 store
 - **Store 只管存储**：store 是对存储层读写的抽象，不持有运行时状态（如活跃的 pi-agent-core Agent 实例）
 - **结构化日志**：core 使用 pino 记录结构化日志，通过 `createEngine` 工厂函数注入 logger 实例；Engine 在 `sendMessage` 中通过 `logAgentEvent` 记录 agent loop 全生命周期事件（agent_start/turn_start/tool_execution 等），stores 在关键操作（init/create/persist）中输出日志
-- **AgentProfile**：业务层 agent 概念，从 `.spherse/agents/*.md` 解析而来，包含不可变 `id`（UUID）
+- **AgentProfile**：业务层 agent 概念，从 `.spherse/agents/{slug}-{shortId}/profile.md` 解析而来，包含不可变 `id`（UUID）、`createdAt`（创建时间）和 `slug`（目录名）
 - **Agent context**：agent profile 的 `context` 字段声明项目内相对路径，Engine 构建 system prompt 时读取这些文件并注入 `Pre-loaded Context`
-- **AgentProfileStore**：首次读取无 `id` 的 .md 文件时自动生成并回写 `id`；支持 `getRawContent(id)` 获取原始 Markdown 内容用于编辑
+- **AgentProfileStore**：首次读取无 `id` 的 profile.md 时自动生成并回写 `id`，创建 agent 时自动写入 `createdAt` 且更新时保持不变；支持 `getRawContent(id)` 获取原始 Markdown 内容用于编辑
 - **工具分配**：agent profile 未声明 `tools` 时默认获得全部工具
 - **工具集合**：默认工具由 `createToolsForProject` 组装，包括文件读写、字符串替换编辑、文件列表、内容搜索、changelog 追加、skill 加载和 HTML card 渲染
 - **写入互斥**：`write_file`、`edit_file`、`append_changelog` 共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
-- **删除 agent**：由 Engine 协调，归档关联 sessions 后删除 profile 文件
+- **删除 agent**：由 Engine 协调，归档关联 sessions 后删除 agent 目录
 - **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），Engine 在构建 system prompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
 - **AI 文件读取限制**：项目配置可声明 `aiAccess.deniedPaths`；Engine 构建 agent 时通过动态 access policy 限制 `read_file`、`list_files`、`search_content`、`render_card file_path`、`edit_file` 的内部读取和 profile context 注入
 

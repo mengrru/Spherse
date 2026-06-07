@@ -1,21 +1,20 @@
-import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { AppContext } from "../index.js";
 
 export function registerAgentWriteRoutes(fastify: FastifyInstance, ctx: AppContext): void {
-  fastify.post<{ Body: { filename?: string; content?: string } }>(
+  fastify.post<{ Body: { slug?: string; content?: string } }>(
     "/api/agents/create",
     async (req, reply) => {
-      const { filename, content } = req.body ?? {};
-      if (!filename || !content)
+      const { slug, content } = req.body ?? {};
+      if (!slug || !content)
         return reply
           .code(400)
-          .send({ error: "filename and content are required" });
-      if (!filename.endsWith(".md") || filename.includes(".."))
-        return reply.code(400).send({ error: "invalid filename" });
+          .send({ error: "slug and content are required" });
+      if (slug.includes("..") || slug.includes("/") || slug.includes("\\"))
+        return reply.code(400).send({ error: "invalid slug" });
 
       try {
-        const profile = await ctx.engine.saveProfile(filename, content);
+        const profile = await ctx.engine.saveProfile(slug, content);
         return { ok: true, id: profile.id };
       } catch (err: any) {
         return reply.code(500).send({ error: err.message });
@@ -34,9 +33,8 @@ export function registerAgentWriteRoutes(fastify: FastifyInstance, ctx: AppConte
       if (!profile)
         return reply.code(404).send({ error: "Agent not found" });
 
-      const filename = path.basename(profile.filePath);
       try {
-        const updated = await ctx.engine.saveProfile(filename, content);
+        const updated = await ctx.engine.saveProfile(profile.slug, content);
         return { ok: true, id: updated.id };
       } catch (err: any) {
         return reply.code(500).send({ error: err.message });
