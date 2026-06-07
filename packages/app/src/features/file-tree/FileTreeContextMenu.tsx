@@ -1,5 +1,6 @@
-import { FilePlusIcon, FolderPlusIcon } from "lucide-react";
+import { CopyIcon, FilePlusIcon, FolderPlusIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
+import { toast } from "sonner";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -10,7 +11,7 @@ import {
 import type { CreateAction, TreeNode } from "./tree-model";
 
 export function FileTreeContextMenu({
-  node: _node,
+  node,
   children,
   onCreate,
   onDelete,
@@ -32,6 +33,16 @@ export function FileTreeContextMenu({
         <ContextMenuItem onClick={() => onCreate("new-folder")}>
           <FolderPlusIcon className="size-4" />
           {t("file-tree.newFolder")}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          onClick={() => {
+            navigator.clipboard.writeText(node.path).catch(() => {});
+            toast.success(t("file-tree.pathCopied"));
+          }}
+        >
+          <CopyIcon className="size-4" />
+          {t("file-tree.copyPath")}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem variant="destructive" onClick={onDelete}>

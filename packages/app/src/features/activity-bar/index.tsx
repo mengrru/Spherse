@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { ProjectState } from "../../stores/app-store";
 import { ProjectAvatar } from "./ProjectAvatar";
 import { Button } from "../../components/ui/button";
@@ -9,6 +10,7 @@ import {
 } from "../../components/ui/context-menu";
 import { PlusIcon, SettingsIcon } from "lucide-react";
 import { DebugTools } from "../debug-tools";
+import { WelcomePageSettingsDialog } from "../welcome-page-settings";
 import { useI18n } from "@spherse/i18n/react";
 
 interface ActivityBarProps {
@@ -31,6 +33,9 @@ export function ActivityBar({
   onSettings,
 }: ActivityBarProps) {
   const { t } = useI18n();
+  const [settingsProjectKey, setSettingsProjectKey] = useState<string | null>(null);
+  const settingsProject = settingsProjectKey ? projects.get(settingsProjectKey) : null;
+
   return (
     <div className="flex w-14 shrink-0 flex-col border-r border-border bg-muted/30">
       <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">
@@ -45,11 +50,14 @@ export function ActivityBar({
               />
             </ContextMenuTrigger>
             <ContextMenuContent>
-              <ContextMenuItem onClick={() => onClose(projectKey)}>
-                {t("activity-bar.closeProject")}
+              <ContextMenuItem onClick={() => setSettingsProjectKey(projectKey)}>
+                {t("activity-bar.setWelcomePage")}
               </ContextMenuItem>
               <ContextMenuItem onClick={() => onReveal(projectKey)}>
                 {t("activity-bar.revealInFinder")}
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => onClose(projectKey)}>
+                {t("activity-bar.closeProject")}
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -75,6 +83,14 @@ export function ActivityBar({
           <PlusIcon />
         </Button>
       </div>
+      {settingsProject && (
+        <WelcomePageSettingsDialog
+          key={settingsProjectKey}
+          client={settingsProject.ctx.client}
+          open={true}
+          onOpenChange={(open) => { if (!open) setSettingsProjectKey(null); }}
+        />
+      )}
     </div>
   );
 }

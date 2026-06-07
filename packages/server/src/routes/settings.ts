@@ -25,4 +25,27 @@ export function registerSettingsRoutes(fastify: FastifyInstance, ctx: AppContext
       }
     },
   );
+
+  fastify.get("/api/settings/welcome-page", async () => {
+    return ctx.projectStore.getWelcomePageSettings();
+  });
+
+  fastify.put<{ Body: { path: string | null } }>(
+    "/api/settings/welcome-page",
+    async (req, reply) => {
+      if (
+        !req.body ||
+        !("path" in req.body) ||
+        (typeof req.body.path !== "string" && req.body.path !== null)
+      ) {
+        return reply.code(400).send({ error: "Missing or invalid 'path'" });
+      }
+      try {
+        const settings = await ctx.projectStore.updateWelcomePageSettings(req.body.path);
+        return { ok: true, ...settings };
+      } catch (err) {
+        return reply.code(400).send({ error: (err as Error).message });
+      }
+    },
+  );
 }

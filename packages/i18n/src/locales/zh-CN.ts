@@ -71,6 +71,8 @@ export const zhCN = {
   "activity-bar.closeProject": "关闭项目",
   // 项目右键菜单：在 Finder 中显示
   "activity-bar.revealInFinder": "在 Finder 中显示",
+  // 项目右键菜单：设置欢迎页
+  "activity-bar.setWelcomePage": "设置欢迎页",
 
   // --- Agent Dialog ---
   // 搭档创建弹窗标题
@@ -131,6 +133,8 @@ export const zhCN = {
   "chat.fileMustBeInProject": "文件必须保存在项目目录内",
   // 复制按钮悬停提示
   "chat.copyTooltip": "复制",
+  // Chat 关闭按钮悬停提示
+  "chat.close": "关闭",
 
   // --- Content Browser ---
   // 文件被外部修改时的冲突提示横幅
@@ -171,6 +175,10 @@ export const zhCN = {
   "file-tree.createFailed": "创建失败：{message}",
   // 删除失败提示，{message} 为错误信息
   "file-tree.deleteFailed": "删除失败：{message}",
+  // 文件树右键菜单：复制路径
+  "file-tree.copyPath": "复制路径",
+  // 复制路径成功提示
+  "file-tree.pathCopied": "路径已复制",
 
   // --- AI Read Denylist ---
   // AI 读取限制面板标题
@@ -214,6 +222,26 @@ export const zhCN = {
   // --- Settings ---
   // 设置中语言选择器的标签
   "settings.language": "语言 / Language",
+
+  // --- Welcome Page Settings ---
+  // 欢迎页设置弹窗标题
+  "welcome-page-settings.title": "设置欢迎页",
+  // 欢迎页设置弹窗的说明文案
+  "welcome-page-settings.description": "选择项目内 HTML 文件或图片作为项目欢迎页。",
+  // 文件路径输入框标签
+  "welcome-page-settings.pathLabel": "文件路径",
+  // 文件路径输入框占位提示
+  "welcome-page-settings.pathPlaceholder": "例如 welcome.html 或 assets/banner.png",
+  // 清除欢迎页路径按钮
+  "welcome-page-settings.clear": "清除",
+  // 路径校验失败提示
+  "welcome-page-settings.invalidPath": "路径无效，请使用项目内相对路径并确保文件扩展名为 HTML 或图片格式",
+  // 欢迎页保存成功提示
+  "welcome-page-settings.saved": "欢迎页已保存",
+  // 欢迎页保存失败提示，{message} 为错误信息
+  "welcome-page-settings.saveFailed": "保存失败：{message}",
+  // 读取欢迎页设置失败提示，{message} 为错误信息
+  "welcome-page-settings.loadFailed": "读取欢迎页设置失败：{message}",
 
   // --- Pages ---
   // 项目不存在时的提示文案
@@ -266,6 +294,11 @@ export const zhCN = {
   "debug.downloadTurnContextNoSession": "No active session",
   // 调试菜单：下载 turn 上下文失败时的 toast 提示（服务端返回错误）
   "debug.downloadTurnContextFailed": "Failed to download turn context",
+
+  // 欢迎页文件缺失时的错误提示，{path} 为文件路径
+  "welcome-page.fileMissing": "欢迎页文件不存在：{path}",
+  // 欢迎页加载失败的错误提示
+  "welcome-page.loadFailed": "欢迎页加载失败",
 
   // --- Error ---
   // 通用请求失败提示

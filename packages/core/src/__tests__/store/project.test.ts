@@ -161,4 +161,72 @@ describe("ProjectStore", () => {
     expect(content).toContain("writer / create / `ch1.md`");
     expect(content).toContain("Created chapter 1");
   });
+
+  it("has null default welcome page settings after create", async () => {
+    await store.create("TestProject", "gemini-2.5-pro");
+    expect(store.getWelcomePageSettings()).toEqual({ path: null });
+  });
+
+  it("saves, persists, and reopens welcome page settings", async () => {
+    await store.create("TestProject", "gemini-2.5-pro");
+
+    const result = await store.updateWelcomePageSettings("welcome.html");
+
+    expect(result).toEqual({ path: "welcome.html" });
+    expect(store.getWelcomePageSettings()).toEqual({ path: "welcome.html" });
+    expect(await readFile(projectRoot, ".spherse/project.yaml")).toContain("welcomePage");
+
+    const store2 = new ProjectStore(projectRoot, pino({ level: "silent" }));
+    await store2.open();
+    expect(store2.getWelcomePageSettings()).toEqual({ path: "welcome.html" });
+  });
+
+  it("saves image path as welcome page", async () => {
+    await store.create("TestProject", "gemini-2.5-pro");
+
+    const result = await store.updateWelcomePageSettings("assets/banner.png");
+
+    expect(result).toEqual({ path: "assets/banner.png" });
+  });
+
+  it("clears welcome page settings with null", async () => {
+    await store.create("TestProject", "gemini-2.5-pro");
+    await store.updateWelcomePageSettings("welcome.html");
+
+    const result = await store.updateWelcomePageSettings(null);
+
+    expect(result).toEqual({ path: null });
+    expect(store.getWelcomePageSettings()).toEqual({ path: null });
+  });
+
+  it("rejects invalid welcome page paths", async () => {
+    await store.create("TestProject", "gemini-2.5-pro");
+
+    for (const invalidPath of ["", ".", "../evil.html", "/absolute.html", ".spherse/x.html"]) {
+      await expect(store.updateWelcomePageSettings(invalidPath)).rejects.toThrow(
+        `Invalid welcome page path: ${invalidPath}`,
+      );
+    }
+
+    expect(store.getWelcomePageSettings()).toEqual({ path: null });
+  });
+
+  it("rejects unsupported file extensions", async () => {
+    await store.create("TestProject", "gemini-2.5-pro");
+
+    await expect(store.updateWelcomePageSettings("readme.md")).rejects.toThrow(
+      "Invalid welcome page path: readme.md",
+    );
+    await expect(store.updateWelcomePageSettings("data.json")).rejects.toThrow(
+      "Invalid welcome page path: data.json",
+    );
+
+    expect(store.getWelcomePageSettings()).toEqual({ path: null });
+  });
+
+  it("throws when updating welcome page settings before create or open", async () => {
+    await expect(store.updateWelcomePageSettings("welcome.html")).rejects.toThrow(
+      "Project is not open",
+    );
+  });
 });

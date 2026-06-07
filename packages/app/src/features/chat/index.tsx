@@ -12,9 +12,10 @@ export interface ChatProps {
   agent: AgentProfile;
   onNavigateToPath?: (path: string) => void;
   initialMessage?: string;
+  onClose?: () => void;
 }
 
-export function Chat({ client, sessionId, agent, onNavigateToPath, initialMessage }: ChatProps) {
+export function Chat({ client, sessionId, agent, onNavigateToPath, initialMessage, onClose }: ChatProps) {
   const { messages, streaming, sendMessage, abort } = useChatSession({
     client,
     sessionId,
@@ -22,9 +23,14 @@ export function Chat({ client, sessionId, agent, onNavigateToPath, initialMessag
   });
   const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages);
 
+  const handleClose = () => {
+    if (streaming) abort();
+    onClose?.();
+  };
+
   return (
     <div className="flex flex-col h-full">
-      <Header agent={agent} />
+      <Header agent={agent} onClose={onClose ? handleClose : undefined} />
       <MessageList
         messages={messages}
         agent={agent}

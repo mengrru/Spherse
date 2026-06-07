@@ -5,6 +5,7 @@ import { ContentBrowser } from "../features/content-browser";
 import { Chat } from "../features/chat";
 import { ProjectPanel } from "../features/project-panel";
 import { useCustomTheme } from "../hooks/useCustomTheme";
+import { WelcomePage } from "../features/welcome-page";
 import type { ProjectState } from "../stores/app-store";
 import { useAppStore } from "../stores/app-store";
 import { useProjectDataStore } from "../stores/project-data-store";
@@ -130,6 +131,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
               agent={selectedAgent}
               onNavigateToPath={handleSelectFile}
               initialMessage={initialMessage}
+              onClose={() => navigate(`/project/${projectKey}`)}
             />
           </div>
         )}
@@ -143,9 +145,14 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
           />
         )}
         {!showingContent && !(selectedSession && selectedAgent) && (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            <p>{t("chat.startConversation")}</p>
-          </div>
+          <WelcomePage
+            client={project.ctx.client}
+            fallback={
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                <p>{t("chat.startConversation")}</p>
+              </div>
+            }
+          />
         )}
       </main>
     </div>

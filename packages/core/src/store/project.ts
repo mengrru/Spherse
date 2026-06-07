@@ -33,6 +33,19 @@ const DEFAULT_AGENTS_MD = `# 世界观项目
 请在此处描述你的世界观项目的目录结构。
 `;
 
+const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
+
+function normalizeWelcomePagePath(input: string): string | null {
+  const trimmed = input.trim().replace(/\\/g, "/");
+  if (!trimmed || trimmed === "." || trimmed.startsWith("/") || trimmed.includes("..")) return null;
+  const normalized = trimmed.replace(/^\.\//, "").replace(/\/+/g, "/");
+  if (!normalized) return null;
+  if (normalized === ".spherse" || normalized.startsWith(".spherse/")) return null;
+  const ext = normalized.split(".").pop()?.toLowerCase();
+  if (!ext || !WELCOME_PAGE_EXTENSIONS.has(ext)) return null;
+  return normalized;
+}
+
 export class ProjectStore {
   private rootPath: string;
   private config: ProjectConfig | null = null;
@@ -89,6 +102,37 @@ export class ProjectStore {
 
   getAiAccessSettings(): { deniedPaths: string[] } {
     return { deniedPaths: [...(this.config?.aiAccess?.deniedPaths ?? [])] };
+  }
+
+  getWelcomePageSettings(): { path: string | null } {
+    return { path: this.config?.welcomePage?.path ?? null };
+  }
+
+  async updateWelcomePageSettings(
+    welcomePath: string | null,
+  ): Promise<{ path: string | null }> {
+    if (!this.config) {
+      throw new Error("Project is not open");
+    }
+
+    if (welcomePath !== null) {
+      const normalized = normalizeWelcomePagePath(welcomePath);
+      if (!normalized) {
+        throw new Error(`Invalid welcome page path: ${welcomePath}`);
+      }
+      const nextConfig = { ...this.config, welcomePage: { path: normalized } };
+      const configPath = path.join(this.spherseDir, "project.yaml");
+      await fs.writeFile(configPath, YAML.stringify(nextConfig), "utf-8");
+      this.config = nextConfig;
+      return { path: normalized };
+    }
+
+    const { welcomePage: _, ...rest } = this.config;
+    const nextConfig = rest as ProjectConfig;
+    const configPath = path.join(this.spherseDir, "project.yaml");
+    await fs.writeFile(configPath, YAML.stringify(nextConfig), "utf-8");
+    this.config = nextConfig;
+    return { path: null };
   }
 
   async updateAiAccessSettings(

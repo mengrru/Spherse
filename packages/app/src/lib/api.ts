@@ -246,6 +246,25 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async getWelcomePageSettings(): Promise<{ path: string | null }> {
+      const res = await fetch(`${baseUrl}/api/settings/welcome-page`);
+      if (!res.ok) return { path: null };
+      return res.json();
+    },
+
+    async updateWelcomePageSettings(path: string | null): Promise<{ ok: boolean; path: string | null }> {
+      const res = await fetch(`${baseUrl}/api/settings/welcome-page`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
     createChatWebSocket(
       sessionId: string,
       onEvent: (event: AgentEvent) => void,

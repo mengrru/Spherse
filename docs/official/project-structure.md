@@ -72,7 +72,7 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表与详情
-    │   │       │   ├── settings.ts       # Provider 列表（动态 catalog）+ AI 读取禁止列表 API
+    │   │       │   ├── settings.ts       # Provider 列表（动态 catalog）+ 项目 settings API（AI 读取禁止列表、欢迎页）
     │   │       │   └── debug.ts         # Debug turn context 导出（dev only）
     │   │       ├── ws-chat.ts            # WebSocket 对话流
     │   │       ├── ws-fs-watch.ts        # WebSocket 文件变更推送
@@ -113,6 +113,7 @@ spherse/
 │           │   ├── agent-markdown.ts # Agent 定义 Markdown 生成/解析辅助
 │           │   ├── avatar-color.ts   # 项目头像颜色生成（路径 hash → HSL）
 │           │   ├── context.ts        # AppContext 定义
+│           │   ├── events.ts         # renderer 内部自定义事件名常量
 │           │   ├── project-key.ts    # project path → URL projectKey 生成
 │           │   ├── tool-registry.ts  # 前端 tool call 展示元数据
 │           │   ├── types.ts          # 前端类型
@@ -132,6 +133,8 @@ spherse/
 │           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog
 │           │   ├── project-panel/        # 项目侧栏，组合 Agent/session 列表与文件树
 │           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
+│           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
+│           │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
 │           │   └── text-selection-session/ # 划选文本后发起会话
 │           ├── pages/
 │           │   ├── ProjectPage.tsx       # Project route adapter，校验 projectKey 后渲染 ProjectLayout
