@@ -30,6 +30,7 @@ export function App() {
   const clearProjectData = useProjectDataStore((state) => state.clearProjectData);
   const clearProjectUi = useProjectUiStore((state) => state.clearProjectUi);
   const locale = useSettingsStore((state) => state.locale);
+  const loadSettings = useSettingsStore((state) => state.load);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +45,11 @@ export function App() {
       cancelled = true;
     };
   }, [navigate, restoreProjects]);
+
+  useEffect(() => {
+    const api = (window as unknown as { electronAPI: import("./features/settings/types").SettingsApi }).electronAPI;
+    if (api) void loadSettings(api);
+  }, [loadSettings]);
 
   const handleAddProject = async () => {
     const projectKey = await openProject();

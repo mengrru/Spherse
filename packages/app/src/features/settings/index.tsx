@@ -4,7 +4,6 @@ import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
@@ -39,22 +38,20 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         <DialogHeader>
           <DialogTitle>{t("settings.title")}</DialogTitle>
         </DialogHeader>
-        <ModelSettingsTab onClose={onClose} />
+        <ModelSettingsTab />
       </DialogContent>
     </Dialog>
   );
 }
 
-function ModelSettingsTab({ onClose }: { onClose: () => void }) {
+function ModelSettingsTab() {
   const apiKeys = useSettingsStore((state) => state.apiKeys);
   const defaultModel = useSettingsStore((state) => state.defaultModel);
   const locale = useSettingsStore((state) => state.locale);
-  const saving = useSettingsStore((state) => state.saving);
-  const message = useSettingsStore((state) => state.message);
   const load = useSettingsStore((state) => state.load);
   const setApiKey = useSettingsStore((state) => state.setApiKey);
   const setDefaultModel = useSettingsStore((state) => state.setDefaultModel);
-  const setLocale = useSettingsStore((state) => state.setLocale);
+  const changeLocale = useSettingsStore((state) => state.changeLocale);
   const save = useSettingsStore((state) => state.save);
   const connect = useSettingsStore((state) => state.connect);
   const disconnect = useSettingsStore((state) => state.disconnect);
@@ -89,7 +86,7 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
             <FieldGroup>
               <Field>
                 <SectionTitle as={FieldLabel}>{t("settings.language")}</SectionTitle>
-                <NativeSelect className="w-full" value={locale} onChange={(e) => setLocale(e.target.value)}>
+                <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(electronAPI, e.target.value)}>
                   {SUPPORTED_LOCALES.map((loc) => (
                     <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>
                   ))}
@@ -121,20 +118,6 @@ function ModelSettingsTab({ onClose }: { onClose: () => void }) {
           </TabsContent>
         </Tabs>
       </div>
-      <DialogFooter className="shrink-0 -mx-4 -mb-4 items-center border-t border-border bg-muted/30 px-4 py-3">
-        {message === "saved" && (
-          <span className="mr-auto text-xs text-muted-foreground">{t("settings.models.saved")}</span>
-        )}
-        {message === "error" && (
-          <span className="mr-auto text-xs text-destructive">{t("settings.models.saveFailed")}</span>
-        )}
-        <Button variant="outline" onClick={onClose}>
-          {t("settings.models.close")}
-        </Button>
-        <Button onClick={() => save(electronAPI)} disabled={saving}>
-          {saving ? t("settings.models.saving") : t("settings.models.save")}
-        </Button>
-      </DialogFooter>
     </>
   );
 }

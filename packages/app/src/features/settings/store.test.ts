@@ -115,4 +115,22 @@ describe("useSettingsStore", () => {
 
     expect(useSettingsStore.getState().defaultModel).toBe("deepseek/deepseek-v4-flash");
   });
+
+  it("changeLocale updates locale and saves", async () => {
+    const api = createApi();
+    useSettingsStore.setState({
+      providers: MOCK_PROVIDERS,
+      apiKeys: { deepseek: "key" },
+      defaultModel: "",
+      locale: "zh-CN",
+    });
+
+    const ok = await useSettingsStore.getState().changeLocale(api, "en");
+
+    expect(ok).toBe(true);
+    expect(useSettingsStore.getState().locale).toBe("en");
+    expect(api.saveSettings).toHaveBeenCalledTimes(1);
+    const saved = (api.saveSettings as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(saved.locale).toBe("en");
+  });
 });

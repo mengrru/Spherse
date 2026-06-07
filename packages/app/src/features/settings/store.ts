@@ -18,6 +18,7 @@ interface SettingsStore {
   setApiKey: (id: string, value: string) => void;
   setDefaultModel: (model: string) => void;
   setLocale: (locale: string) => void;
+  changeLocale: (api: SettingsApi, locale: string) => Promise<boolean>;
   buildSettings: (keys?: Record<string, string>, model?: string) => AppSettings;
   save: (api: SettingsApi, keys?: Record<string, string>, model?: string) => Promise<boolean>;
   connect: (api: SettingsApi, id: string) => Promise<boolean>;
@@ -63,6 +64,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setLocale(locale) {
     set({ locale });
+  },
+
+  async changeLocale(api, locale) {
+    set({ locale });
+    return get().save(api);
   },
 
   buildSettings(keys = get().apiKeys, model = get().defaultModel) {
