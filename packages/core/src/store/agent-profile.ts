@@ -56,8 +56,8 @@ export class AgentProfileStore {
     assertSafeSlug(slug);
 
     const { data, content: body } = matter(content);
-    if (typeof data.name !== "string" || typeof data.type !== "string") {
-      throw new Error("agent profile name and type are required");
+    if (typeof data.name !== "string") {
+      throw new Error("agent profile name is required");
     }
 
     const existingPath = path.join(this.agentDir, slug, PROFILE_FILENAME);
@@ -133,7 +133,7 @@ export class AgentProfileStore {
       const raw = await fs.readFile(filePath, "utf-8");
       const { data, content } = matter(raw);
 
-      if (!data.name || !data.type) return null;
+      if (!data.name) return null;
 
       if (!data.id) {
         data.id = crypto.randomUUID();
@@ -146,7 +146,6 @@ export class AgentProfileStore {
         slug,
         createdAt: data.createdAt,
         model: data.model,
-        type: data.type,
         schedule: data.schedule,
         tools: data.tools,
         context: data.context,

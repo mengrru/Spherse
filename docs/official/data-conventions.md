@@ -48,7 +48,6 @@ Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/
 必需字段：
 
 - `name`：展示名称
-- `type`：业务类型
 
 常用可选字段：
 
@@ -67,7 +66,6 @@ Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/
 id: 550e8400-e29b-41d4-a716-446655440000
 createdAt: 1760000000000
 name: Historian
-type: worldbuilding
 model: glm-4.5-air
 tools:
   - read_file

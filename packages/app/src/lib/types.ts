@@ -4,7 +4,6 @@ export interface AgentProfile {
   slug: string;
   createdAt: number;
   model?: string;
-  type: string;
   schedule?: string;
   tools?: string[];
   context?: string[];

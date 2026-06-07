@@ -87,7 +87,6 @@ async function testAgentParser() {
   await fs.writeFile(path.join(agentsDir, "creator.md"), `---
 name: 世界创作者
 model: gemini-2.5-pro
-type: creator
 tools:
   - read_file
   - write_file
@@ -100,7 +99,6 @@ context:
 
   await fs.writeFile(path.join(agentsDir, "alice.md"), `---
 name: 爱丽丝
-type: roleplay
 ---
 
 你是爱丽丝。
@@ -110,7 +108,6 @@ type: roleplay
   const parsed = await parseAgentFile(path.join(agentsDir, "creator.md"));
   assert(parsed.name === "世界创作者", "parseAgentFile: name parsed");
   assert(parsed.model === "gemini-2.5-pro", "parseAgentFile: model parsed");
-  assert(parsed.type === "creator", "parseAgentFile: type parsed");
   assert(parsed.tools?.length === 2, "parseAgentFile: tools parsed");
   assert(parsed.systemPrompt.includes("创作助手"), "parseAgentFile: systemPrompt extracted");
 
@@ -123,7 +120,6 @@ type: roleplay
 
   // Minimal agent
   const alice = agents.find(a => a.name === "爱丽丝");
-  assert(alice?.type === "roleplay", "minimal agent: type correct");
   assert(alice?.model === undefined, "minimal agent: no model (undefined)");
   assert(alice?.tools === undefined, "minimal agent: no tools (undefined)");
 

@@ -1,6 +1,5 @@
 ---
 name: 新 Agent
-type: creator
 tools:
   - read_file
   - write_file

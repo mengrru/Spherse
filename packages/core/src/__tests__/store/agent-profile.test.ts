@@ -46,7 +46,6 @@ You are a world building assistant.`;
     const profiles = await store.list();
     expect(profiles).toHaveLength(1);
     expect(profiles[0].name).toBe("World Builder");
-    expect(profiles[0].type).toBe("assistant");
     expect(profiles[0].systemPrompt).toContain("world building assistant");
     expect(profiles[0].slug).toBe("world-builder-a1b2c3");
   });
@@ -63,7 +62,7 @@ You are a world building assistant.`;
     await createAgentDir(agentDir, "world-builder-a1b2c3", VALID_PROFILE);
     const profile = await store.getByName("World Builder");
     expect(profile).not.toBeNull();
-    expect(profile!.type).toBe("assistant");
+    expect(profile!.name).toBe("World Builder");
   });
 
   it("returns null for non-existent id/name", async () => {
@@ -107,7 +106,7 @@ You are a world building assistant.`;
   });
 
   it("skips profile.md without required frontmatter fields", async () => {
-    await createAgentDir(agentDir, "bad-agent-123456", "---\nname: NoType\n---\ncontent");
+    await createAgentDir(agentDir, "bad-agent-123456", "---\ntools:\n  - read_file\n---\ncontent");
     const profiles = await store.list();
     expect(profiles).toHaveLength(0);
   });
@@ -202,8 +201,8 @@ You are a world building assistant.`;
 
   it("rejects saving profile without required frontmatter", async () => {
     await expect(
-      store.save("bad-agent", "---\nname: NoType\n---\ncontent"),
-    ).rejects.toThrow("agent profile name and type are required");
+      store.save("bad-agent", "---\ntools:\n  - read_file\n---\ncontent"),
+    ).rejects.toThrow("agent profile name is required");
 
     expect(pathExists(agentDir, "bad-agent")).toBe(false);
   });

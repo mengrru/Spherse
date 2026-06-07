@@ -51,7 +51,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
 export function buildAgentMarkdown(
   formData: AgentFormData,
   extraFrontmatter: Record<string, unknown>,
-  isCreate: boolean,
+  _isCreate: boolean,
 ): string {
   const frontmatter: Record<string, unknown> = {
     ...extraFrontmatter,
@@ -60,10 +60,6 @@ export function buildAgentMarkdown(
   };
   if (formData.context.length > 0) {
     frontmatter.context = formData.context;
-  }
-
-  if (isCreate && !frontmatter.type) {
-    frontmatter.type = "creator";
   }
 
   const cleaned = Object.fromEntries(
