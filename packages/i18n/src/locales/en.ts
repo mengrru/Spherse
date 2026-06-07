@@ -117,5 +117,8 @@ export const en: Record<TranslationKey, string> = {
   "debug.confirmResetTitle": "Reset App Data",
   "debug.confirmResetMessage": "This will clear all app settings and project connections. Are you sure?",
   "debug.debug": "Debug",
+  "debug.downloadTurnContext": "Download Turn Context",
+  "debug.downloadTurnContextNoSession": "No active session",
+  "debug.downloadTurnContextFailed": "Failed to download turn context",
   "error.requestFailed": "Request failed",
 };

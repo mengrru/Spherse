@@ -8,6 +8,7 @@ import { registerSettingsRoutes } from "./settings.js";
 import { registerPreviewRoutes } from "./preview.js";
 import { registerSkillRoutes } from "./skills.js";
 import { registerFileTreeRoutes } from "./file-tree.js";
+import { registerDebugRoutes } from "./debug.js";
 
 export function registerAllRoutes(fastify: FastifyInstance, ctx: AppContext): void {
   registerAgentRoutes(fastify, ctx);
@@ -18,4 +19,5 @@ export function registerAllRoutes(fastify: FastifyInstance, ctx: AppContext): vo
   registerPreviewRoutes(fastify, ctx);
   registerSkillRoutes(fastify, ctx);
   registerFileTreeRoutes(fastify, ctx);
+  registerDebugRoutes(fastify, ctx);
 }

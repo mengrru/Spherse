@@ -19,6 +19,18 @@ import { logAgentEvent } from "./engine/log-agent-event.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
 
+export interface TurnContextSnapshot {
+  sessionId: string;
+  capturedAt: string;
+  systemPrompt: string;
+  messages: any[];
+  tools: Array<{
+    name: string;
+    description: string;
+    parameters: unknown;
+  }>;
+}
+
 export class Engine {
   private profileStore: AgentProfileStore;
   private sessionStore: SessionStore;
@@ -181,6 +193,23 @@ export class Engine {
 
   getFileWriteMutex(): FileWriteMutex {
     return this.fileWriteMutex;
+  }
+
+  getTurnContext(sessionId: string): TurnContextSnapshot {
+    const agent = this.activeSessions.get(sessionId);
+    if (!agent) throw new Error(`No active session "${sessionId}"`);
+
+    return {
+      sessionId,
+      capturedAt: new Date().toISOString(),
+      systemPrompt: agent.state.systemPrompt,
+      messages: agent.state.messages,
+      tools: agent.state.tools.map((tool: any) => ({
+        name: tool.name,
+        description: tool.description ?? "",
+        parameters: tool.parameters,
+      })),
+    };
   }
 
   private async buildAgent(

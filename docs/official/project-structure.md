@@ -72,7 +72,8 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表与详情
-│   │       │   └── settings.ts       # Provider 列表（动态 catalog）+ AI 读取禁止列表 API
+    │   │       │   ├── settings.ts       # Provider 列表（动态 catalog）+ AI 读取禁止列表 API
+    │   │       │   └── debug.ts         # Debug turn context 导出（dev only）
     │   │       ├── ws-chat.ts            # WebSocket 对话流
     │   │       ├── ws-fs-watch.ts        # WebSocket 文件变更推送
     │   │       └── ws-debug.ts           # WebSocket 日志流推送（pino → /ws/debug）

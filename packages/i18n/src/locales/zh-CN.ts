@@ -260,6 +260,12 @@ export const zhCN = {
   "debug.confirmResetMessage": "This will clear all app settings and project connections. Are you sure?",
   // 调试菜单标题
   "debug.debug": "Debug",
+  // 调试菜单：下载当前 session 的完整 turn 上下文（system prompt + messages + tools）
+  "debug.downloadTurnContext": "Download Turn Context",
+  // 调试菜单：下载 turn 上下文失败时的 toast 提示（无活跃 session 或请求失败）
+  "debug.downloadTurnContextNoSession": "No active session",
+  // 调试菜单：下载 turn 上下文失败时的 toast 提示（服务端返回错误）
+  "debug.downloadTurnContextFailed": "Failed to download turn context",
 
   // --- Error ---
   // 通用请求失败提示

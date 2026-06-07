@@ -207,6 +207,17 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
+    async getTurnContext(sessionId: string): Promise<any> {
+      const res = await fetch(
+        `${baseUrl}/api/debug/sessions/${encodeURIComponent(sessionId)}/turn-context`,
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
     getPreviewUrl(filePath: string): string {
       return `${baseUrl}/api/preview/${filePath}`;
     },
