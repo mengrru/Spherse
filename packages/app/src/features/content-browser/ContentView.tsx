@@ -13,6 +13,7 @@ interface ContentViewProps {
   error: string | null;
   isMarkdown: boolean;
   isHtml: boolean;
+  isImage: boolean;
   htmlView: "preview" | "source";
   isEditing: boolean;
   editedContent: string;
@@ -28,6 +29,7 @@ export function ContentView({
   error,
   isMarkdown,
   isHtml,
+  isImage,
   htmlView,
   isEditing,
   editedContent,
@@ -41,6 +43,18 @@ export function ContentView({
         className="flex-1 w-full border-0"
         title="HTML Preview"
       />
+    );
+  }
+
+  if (isImage && !loading && !error) {
+    return (
+      <div className="flex flex-1 items-center justify-center overflow-auto bg-muted p-4">
+        <img
+          src={client.getPreviewUrl(filePath)}
+          alt={filePath}
+          className="max-h-full max-w-full rounded-lg object-contain"
+        />
+      </div>
     );
   }
 

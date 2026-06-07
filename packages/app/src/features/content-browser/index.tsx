@@ -35,12 +35,14 @@ export function ContentBrowser({
     setContent,
   });
 
+  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
   const isMarkdown =
-    filePath.endsWith(".md") ||
-    filePath.endsWith(".markdown") ||
+    ext === "md" ||
+    ext === "markdown" ||
     filePath.endsWith(".agents.md");
-  const isHtml = filePath.endsWith(".html") || filePath.endsWith(".htm");
-  const isEditable = !isHtml;
+  const isHtml = ext === "html" || ext === "htm";
+  const isImage = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp"]).has(ext);
+  const isEditable = !isHtml && !isImage;
 
   return (
     <div className="flex flex-col h-full">
@@ -85,6 +87,7 @@ export function ContentBrowser({
             error={error}
             isMarkdown={isMarkdown}
             isHtml={isHtml}
+            isImage={isImage}
             htmlView={htmlView}
             isEditing={editor.isEditing}
             editedContent={editor.editedContent}
