@@ -98,9 +98,10 @@ spherse/
 │       │   ├── helpers/
 │       │   │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
 │       │   │   └── file-tree.ts      # 文件树 E2E 测试辅助（项目创建、app launch）
+│       │   ├── app-launch.spec.ts    # App 启动验证 smoke test
 │       │   ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
+│       │   ├── session-rename.spec.ts           # 会话重命名 E2E 测试
 │       │   └── text-selection-session.spec.ts  # 划选会话 E2E 测试
-│       │   └── session-rename.spec.ts          # 会话重命名 E2E 测试
 │       └── src/
 │           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化
 │           ├── main.tsx              # renderer 入口，挂载 RouterProvider

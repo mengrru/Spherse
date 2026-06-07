@@ -25,18 +25,19 @@ export async function createServer(
     target: "pino-pretty",
     options: { colorize: true },
   });
+  pretty.on("error", () => {});
 
   const debugStream = createDebugStream();
   const logger = pino({ level: "debug" }, pino.multistream([pretty, debugStream]));
 
+  const fastifyTransport = pino.transport({
+    target: "pino-pretty",
+    options: { colorize: true },
+  });
+  fastifyTransport.on("error", () => {});
+
   const fastify = Fastify({
-    logger: {
-      level: "debug",
-      transport: {
-        target: "pino-pretty",
-        options: { colorize: true },
-      },
-    },
+    logger: { level: "debug", stream: fastifyTransport },
   });
 
   await fastify.register(cors, { origin: true });

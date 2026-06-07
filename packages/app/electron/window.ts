@@ -12,7 +12,7 @@ export function createWindow(): BrowserWindow {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, "../preload/index.js"),
+      preload: path.join(__dirname, "../../preload/index.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
@@ -21,7 +21,7 @@ export function createWindow(): BrowserWindow {
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+    mainWindow.loadFile(path.join(__dirname, "../../renderer/index.html"));
   }
 
   return mainWindow;
