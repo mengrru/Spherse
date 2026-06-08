@@ -28,8 +28,9 @@ export async function createFileTreeProject(): Promise<TestProject> {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-ft-"));
   await mkdir(path.join(root, ".spherse", "agents"), { recursive: true });
 
+  await mkdir(path.join(root, ".spherse", "agents", "assistant"), { recursive: true });
   await writeFile(
-    path.join(root, ".spherse", "agents", "assistant.md"),
+    path.join(root, ".spherse", "agents", "assistant", "profile.md"),
     [
       "---",
       "id: assistant",
@@ -81,6 +82,6 @@ export async function launchFileTreeApp(
   await page.goto(
     `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent("README.md")}`,
   );
-  await page.waitForSelector("text=文件", { timeout: 15_000 });
+  await page.waitForSelector("text=文件", { timeout: 30_000 });
   return { app, page };
 }

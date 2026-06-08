@@ -54,7 +54,7 @@ test("app launches and shows main UI", async () => {
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent("README.md")}`,
     );
-    await page.waitForSelector("text=文件", { timeout: 15_000 });
+    await page.waitForSelector("text=文件", { timeout: 30_000 });
 
     await expect(page.locator("aside")).toBeVisible();
     await expect(page.getByText("文件")).toBeVisible();

@@ -31,8 +31,9 @@ export async function createTextSelectionProject(): Promise<TestProject> {
   await mkdir(path.join(root, "world"), { recursive: true });
   for (let index = 1; index <= 24; index += 1) {
     const id = `writer-${index}`;
+    await mkdir(path.join(root, ".spherse", "agents", id), { recursive: true });
     await writeFile(
-      path.join(root, ".spherse", "agents", `${id}.md`),
+      path.join(root, ".spherse", "agents", id, "profile.md"),
       [
         "---",
         `id: ${id}`,

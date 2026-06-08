@@ -10,6 +10,7 @@
     "preview": "electron-vite preview",
     "pretest": "npm run build --workspace=@spherse/i18n",
     "test": "vitest run",
+    "pretest:e2e": "node ../../scripts/rebuild-native.mjs",
     "test:e2e": "npm run build --workspace=@spherse/i18n && npm run build && playwright test -c playwright.config.ts",
     "pack": "electron-builder --dir",
     "dist": "electron-builder",

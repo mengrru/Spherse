@@ -53,7 +53,7 @@
 - [x] **electron-builder 打包**：配置生产构建和跨平台打包
 - [x] **dev/prod 环境隔离**：通过 bootstrap 入口引导文件将 dev 模式的 userData 重定向到独立目录，实现 dev 和 prod 数据完全隔离、可同时运行
 - [x] **better-sqlite3 rebuild 自动化**：在启动开发桌面应用前自动为 Electron 重新编译 native 模块
-- [ ] **E2E 测试**：Playwright 或 Spectron 端到端测试
+- [x] **E2E 测试**：已建立 Playwright Electron E2E 测试，并纳入 root `npm run verify:e2e` 验证链路。
 - [x] **重新考虑 dot 文件夹名字和内部组织结构**：`.pi/` → `.spherse/`
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试
 - [x] **i18n**：应用界面多语言支持

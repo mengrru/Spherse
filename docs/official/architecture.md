@@ -36,7 +36,7 @@
 
 ## Electron 层
 
-- **环境隔离**：`electron/bootstrap.ts` 作为构建入口，dev 模式（`app.isPackaged === false`）下将 `userData` 重定向到 `Spherse-Dev/` 目录，使 dev 和 prod 的 electron-store、localStorage 等所有数据完全隔离，可同时运行
+- **环境隔离**：`electron/bootstrap.ts` 作为构建入口，dev 模式（`app.isPackaged === false`）下将 `userData` 重定向到 `Spherse-Dev/` 目录，使 dev 和 prod 的 electron-store、localStorage 等所有数据完全隔离，可同时运行；`NODE_ENV=test` 时保留测试启动参数指定的 `userData`，确保 E2E 用例隔离
 - **IPC handler** 集中在 `electron/ipc/` 目录，按业务域拆分为 project、settings、debug
 - **preload** 是安全桥梁，声明 Renderer 可用的 IPC 方法白名单
 - **项目 server 管理**：当前每个打开项目对应一个本地 Fastify 实例，由 `electron/server.ts` 用 `Map<projectPath, server>` 管理

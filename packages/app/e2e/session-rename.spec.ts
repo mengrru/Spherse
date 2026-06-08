@@ -19,8 +19,9 @@ function projectKeyBase(projectPath: string): string {
 async function createRenameProject() {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-rename-"));
   await mkdir(path.join(root, ".spherse", "agents"), { recursive: true });
+  await mkdir(path.join(root, ".spherse", "agents", "writer"), { recursive: true });
   await writeFile(
-    path.join(root, ".spherse", "agents", "writer.md"),
+    path.join(root, ".spherse", "agents", "writer", "profile.md"),
     [
       "---",
       "id: writer-1",
