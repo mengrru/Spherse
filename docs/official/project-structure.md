@@ -37,9 +37,12 @@ spherse/
 │   │       └── index.ts              # 公开导出：Engine, createEngine, types
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
 │   │   ├── templates/
-│   │   │   └── agent-template.md     # 新 Agent 创建模板源文件
+│   │   │   ├── agent-template.md     # 新 Agent 创建模板源文件
+│   │   │   └── agent-theme-template.css # Agent 聊天窗口主题模板源文件
 │   │   ├── skills/                   # 内置 skill 模板（用户参考文档）
-│   │   │   └── create-ui-theme/      # 自定义 UI 主题创建指南
+│   │   │   ├── create-ui-theme/      # 自定义 UI 主题创建指南
+│   │   │   │   └── SKILL.md
+│   │   │   └── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
 │   │   │       └── SKILL.md
 │   │   ├── scripts/
 │   │   │   └── sync-templates.mjs    # 模板同步脚本（.md → .ts 常量）

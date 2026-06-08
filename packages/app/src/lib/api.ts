@@ -130,11 +130,11 @@ export function createApiClient(port: number) {
       return res.json();
     },
 
-    async createAgent(slug: string, content: string): Promise<{ ok: boolean; id: string }> {
+    async createAgent(slug: string, content: string, themeContent?: string): Promise<{ ok: boolean; id: string }> {
       const res = await fetch(`${baseUrl}/api/agents/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, content }),
+        body: JSON.stringify({ slug, content, themeContent }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
@@ -153,11 +153,17 @@ export function createApiClient(port: number) {
       return data.content;
     },
 
-    async updateAgent(id: string, content: string): Promise<{ ok: boolean; id: string }> {
+    async getAgentTheme(id: string): Promise<string> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(id)}/theme`);
+      if (!res.ok) return "";
+      return res.text();
+    },
+
+    async updateAgent(id: string, content: string, themeContent?: string): Promise<{ ok: boolean; id: string }> {
       const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, themeContent }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "request failed" }));

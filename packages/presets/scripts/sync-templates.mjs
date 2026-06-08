@@ -10,6 +10,7 @@ mkdirSync(generatedDir, { recursive: true });
 
 const mapping = [
   ["agent-template.md", "AGENT_TEMPLATE", "agent-template.ts"],
+  ["agent-theme-template.css", "AGENT_THEME_TEMPLATE", "agent-theme-template.ts"],
 ];
 
 for (const [sourceFile, constName, outFile] of mapping) {

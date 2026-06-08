@@ -10,7 +10,7 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "templates"],
+  "files": ["dist", "templates", "skills"],
   "scripts": {
     "prebuild": "node scripts/sync-templates.mjs",
     "build": "tsc",

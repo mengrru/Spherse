@@ -46,6 +46,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "agent-dialog.refsLabel": "參考資料",
   "agent-dialog.refsPlaceholder": "輸入路徑搜尋檔案，按 Enter 新增",
   "agent-dialog.saveFailed": "儲存失敗",
+  "agent-dialog.tabBasic": "基本",
+  "agent-dialog.tabTheme": "主題",
   "agent-session-list.newSession": "新建對話",
   "agent-session-list.createAgentTooltip": "建立搭檔",
   "agent-session-list.emptyAgents": "暫無搭檔",

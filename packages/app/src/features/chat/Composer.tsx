@@ -82,7 +82,7 @@ export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProp
   }, [streaming]);
 
   return (
-    <div className="border-t border-border bg-background p-3">
+    <div className="border-t border-border bg-background p-3" data-chat-composer>
       <div className="relative rounded-lg border border-input bg-background transition-colors focus-within:border-ring">
         <Textarea
           ref={textareaRef}

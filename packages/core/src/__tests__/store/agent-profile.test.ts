@@ -207,6 +207,33 @@ You are a world building assistant.`;
     expect(pathExists(agentDir, "bad-agent")).toBe(false);
   });
 
+  it("getTheme returns empty string when theme.css does not exist", async () => {
+    const profile = await store.save("theme-test", VALID_PROFILE);
+    const theme = await store.getTheme(profile.id);
+    expect(theme).toBe("");
+  });
+
+  it("saveTheme writes theme.css to agent directory", async () => {
+    const profile = await store.save("theme-test", VALID_PROFILE);
+    await store.saveTheme(profile.id, ":root { --test: red; }");
+    const theme = await store.getTheme(profile.id);
+    expect(theme).toBe(":root { --test: red; }");
+    expect(pathExists(agentDir, `${profile.slug}/theme.css`)).toBe(true);
+  });
+
+  it("saveTheme overwrites existing theme.css", async () => {
+    const profile = await store.save("theme-test", VALID_PROFILE);
+    await store.saveTheme(profile.id, "first");
+    await store.saveTheme(profile.id, "second");
+    const theme = await store.getTheme(profile.id);
+    expect(theme).toBe("second");
+  });
+
+  it("getTheme returns empty string for non-existent agent", async () => {
+    const theme = await store.getTheme("nope");
+    expect(theme).toBe("");
+  });
+
   it("rejects unsafe slugs", async () => {
     await expect(store.save("../bad", VALID_PROFILE)).rejects.toThrow(
       "invalid agent slug",

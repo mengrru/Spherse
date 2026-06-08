@@ -2,10 +2,10 @@ import type { FastifyInstance } from "fastify";
 import type { AppContext } from "../index.js";
 
 export function registerAgentWriteRoutes(fastify: FastifyInstance, ctx: AppContext): void {
-  fastify.post<{ Body: { slug?: string; content?: string } }>(
+  fastify.post<{ Body: { slug?: string; content?: string; themeContent?: string } }>(
     "/api/agents/create",
     async (req, reply) => {
-      const { slug, content } = req.body ?? {};
+      const { slug, content, themeContent } = req.body ?? {};
       if (!slug || !content)
         return reply
           .code(400)
@@ -15,6 +15,9 @@ export function registerAgentWriteRoutes(fastify: FastifyInstance, ctx: AppConte
 
       try {
         const profile = await ctx.engine.saveProfile(slug, content);
+        if (themeContent !== undefined) {
+          await ctx.engine.saveAgentTheme(profile.id, themeContent);
+        }
         return { ok: true, id: profile.id };
       } catch (err: any) {
         return reply.code(500).send({ error: err.message });
@@ -22,10 +25,10 @@ export function registerAgentWriteRoutes(fastify: FastifyInstance, ctx: AppConte
     },
   );
 
-  fastify.put<{ Params: { id: string }; Body: { content?: string } }>(
+  fastify.put<{ Params: { id: string }; Body: { content?: string; themeContent?: string } }>(
     "/api/agents/:id",
     async (req, reply) => {
-      const { content } = req.body ?? {};
+      const { content, themeContent } = req.body ?? {};
       if (!content)
         return reply.code(400).send({ error: "content is required" });
 
@@ -35,6 +38,9 @@ export function registerAgentWriteRoutes(fastify: FastifyInstance, ctx: AppConte
 
       try {
         const updated = await ctx.engine.saveProfile(profile.slug, content);
+        if (themeContent !== undefined) {
+          await ctx.engine.saveAgentTheme(req.params.id, themeContent);
+        }
         return { ok: true, id: updated.id };
       } catch (err: any) {
         return reply.code(500).send({ error: err.message });

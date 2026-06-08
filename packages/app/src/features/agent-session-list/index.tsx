@@ -55,7 +55,7 @@ export function AgentSessionList({
   const toggleAgentCollapsed = useProjectUiStore((state) => state.toggleAgentCollapsed);
   const setCollapsedAgentIds = useProjectUiStore((state) => state.setCollapsedAgentIds);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
-  const [editAgent, setEditAgent] = useState<{ id: string; content: string } | null>(null);
+  const [editAgent, setEditAgent] = useState<{ id: string; content: string; themeContent: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AgentProfile | null>(null);
 
   const agents = projectData?.agents ?? EMPTY_AGENTS;
@@ -117,21 +117,24 @@ export function AgentSessionList({
     }
   };
 
-  const handleCreateAgent = async (slug: string, content: string) => {
+  const handleCreateAgent = async (slug: string, content: string, themeContent: string) => {
     if (!project) return;
-    const ok = await createAgent(projectKey, project.ctx.client, slug, content);
+    const ok = await createAgent(projectKey, project.ctx.client, slug, content, themeContent);
     if (ok) setShowCreateAgent(false);
   };
 
   const handleEditAgent = async (agent: AgentProfile) => {
     if (!project) return;
-    const raw = await project.ctx.client.getAgentRaw(agent.id);
-    setEditAgent({ id: agent.id, content: raw });
+    const [raw, theme] = await Promise.all([
+      project.ctx.client.getAgentRaw(agent.id),
+      project.ctx.client.getAgentTheme(agent.id),
+    ]);
+    setEditAgent({ id: agent.id, content: raw, themeContent: theme });
   };
 
-  const handleEditSubmit = async (_slug: string, content: string) => {
+  const handleEditSubmit = async (_slug: string, content: string, themeContent: string) => {
     if (!project || !editAgent) return;
-    const ok = await updateAgent(projectKey, project.ctx.client, editAgent.id, content);
+    const ok = await updateAgent(projectKey, project.ctx.client, editAgent.id, content, themeContent);
     if (ok) setEditAgent(null);
   };
 
@@ -176,6 +179,7 @@ export function AgentSessionList({
         <AgentDialog
           mode="edit"
           initialContent={editAgent.content}
+          initialThemeContent={editAgent.themeContent}
           client={project.ctx.client}
           onSubmit={handleEditSubmit}
           onCancel={() => setEditAgent(null)}

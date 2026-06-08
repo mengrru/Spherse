@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect, type KeyboardEvent } from "react";
-import { AGENT_TEMPLATE } from "@spherse/presets";
+import { AGENT_TEMPLATE, AGENT_THEME_TEMPLATE } from "@spherse/presets";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../lib/api";
 import { parseAgentMarkdown, buildAgentMarkdown } from "../lib/agent-markdown";
@@ -36,16 +37,18 @@ function getErrorMessage(err: unknown, t: (key: string) => string): string {
 interface AgentDialogProps {
   mode: "create" | "edit";
   initialContent?: string;
+  initialThemeContent?: string;
   client: ApiClient;
-  onSubmit: (slug: string, content: string) => Promise<void>;
+  onSubmit: (slug: string, content: string, themeContent: string) => Promise<void>;
   onCancel: () => void;
 }
 
-export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }: AgentDialogProps) {
+export function AgentDialog({ mode, initialContent, initialThemeContent, client, onSubmit, onCancel }: AgentDialogProps) {
   const { t } = useI18n();
   const raw = initialContent ?? AGENT_TEMPLATE;
   const parsed = useMemo(() => parseAgentMarkdown(raw), [raw]);
   const [formData, setFormData] = useState<AgentFormData>(parsed.formData);
+  const [themeContent, setThemeContent] = useState(initialThemeContent ?? AGENT_THEME_TEMPLATE);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,52 +80,62 @@ export function AgentDialog({ mode, initialContent, client, onSubmit, onCancel }
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9\u4e00-\u9fff-]/g, "");
-    try { await onSubmit(slug, content); }
+    try { await onSubmit(slug, content, themeContent); }
     catch (err: unknown) { setError(getErrorMessage(err, t)); setSaving(false); }
   };
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
-      <DialogContent className="max-h-[80vh] sm:max-w-[600px]">
+      <DialogContent className="h-[80vh] flex flex-col sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? t("agent-dialog.createTitle") : t("agent-dialog.editTitle")}
           </DialogTitle>
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <FieldGroup>
-            <Field>
-              <FieldLabel>{t("agent-dialog.nameLabel")}</FieldLabel>
-              <Input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder={t("agent-dialog.namePlaceholder")}
+        <Tabs defaultValue="basic" className="min-h-0 flex-1 flex flex-col">
+          <TabsList className="mx-4 mt-1">
+            <TabsTrigger value="basic">{t("agent-dialog.tabBasic")}</TabsTrigger>
+            <TabsTrigger value="theme">{t("agent-dialog.tabTheme")}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="basic" className="flex-1 min-h-0 overflow-y-auto px-4">
+            <FieldGroup>
+              <Field>
+                <FieldLabel>{t("agent-dialog.nameLabel")}</FieldLabel>
+                <Input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder={t("agent-dialog.namePlaceholder")}
+                />
+              </Field>
+              <ToolPicker selectedTools={formData.tools} onToggle={toggleTool} />
+              <ContextPathField
+                client={client}
+                contextPaths={formData.context}
+                onAdd={addContext}
+                onRemove={removeContext}
               />
-            </Field>
-
-            <ToolPicker selectedTools={formData.tools} onToggle={toggleTool} />
-
-            <ContextPathField
-              client={client}
-              contextPaths={formData.context}
-              onAdd={addContext}
-              onRemove={removeContext}
+              <Field>
+                <FieldLabel>{t("agent-dialog.promptLabel")}</FieldLabel>
+                <Textarea
+                  className="min-h-40 resize-y font-mono"
+                  value={formData.systemPrompt}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}
+                  spellCheck={false}
+                />
+              </Field>
+              {error && <p className="text-xs text-destructive">{error}</p>}
+            </FieldGroup>
+          </TabsContent>
+          <TabsContent value="theme" className="flex-1 min-h-0 px-4">
+            <Textarea
+              className="h-full resize-none font-mono text-xs"
+              value={themeContent}
+              onChange={(e) => setThemeContent(e.target.value)}
+              spellCheck={false}
             />
-
-            <Field>
-              <FieldLabel>{t("agent-dialog.promptLabel")}</FieldLabel>
-              <Textarea
-                className="min-h-40 resize-y font-mono"
-                value={formData.systemPrompt}
-                onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}
-                spellCheck={false}
-              />
-            </Field>
-
-            {error && <p className="text-xs text-destructive">{error}</p>}
-          </FieldGroup>
-        </div>
+          </TabsContent>
+        </Tabs>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
             {t("common.cancel")}

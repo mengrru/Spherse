@@ -14,7 +14,11 @@ export function MessageItem({ message, agent, onNavigateToPath }: MessageItemPro
   const isUser = message.role === "user";
 
   return (
-    <div className={`group max-w-[80%] flex items-end gap-1.5 ${isUser ? "self-end flex-row-reverse" : "self-start"}`}>
+    <div
+      className={`group max-w-[80%] flex items-end gap-1.5 ${isUser ? "self-end flex-row-reverse" : "self-start"}`}
+      data-chat-message
+      data-role={message.role}
+    >
       <div
         className={`rounded-lg px-3.5 py-2.5 leading-7 break-words ${
           isUser

@@ -78,4 +78,6 @@
 - **间距与阴影**：使用 Tailwind 标准 scale（`p-2`、`rounded-md`、`shadow-sm` 等），不硬编码 magic number
 - **暗色适配**：业务组件不写 `dark:` 修饰符，由 CSS 变量值切换自动适配。仅 shadcn/ui 组件源码中已有的 `dark:` 保留
 - **Markdown 渲染**：动态 Markdown 统一通过 `MarkdownContent` 组件映射 `react-markdown` 节点样式，不在 `styles.css` 里维护 `.chat-markdown` 或 `.prose-content` 选择器
-- **自定义主题**：用户可通过项目根目录 `.spherse/theme.css` 覆盖 CSS 变量实现主题定制，只允许覆盖 `:root` 中已有的变量名
+- **项目级自定义主题**：用户可通过项目根目录 `.spherse/theme.css` 覆盖 CSS 变量实现项目全局主题定制，只允许覆盖 `:root` 中已有的变量名
+- **Agent 聊天主题**：每个 agent 可在 `.spherse/agents/{slug}-{shortId}/theme.css` 定义聊天窗口主题。前端进入聊天页时读取该文件并注入到聊天窗口内，优先级高于项目级主题；该样式只作用于当前 agent 的聊天窗口，不影响侧边栏等外部 UI
+- **聊天主题选择器**：聊天窗口对用户主题暴露 `data-chat-root`、`data-chat-header`、`data-chat-messages`、`data-chat-message[data-role]`、`data-chat-composer` 等入口。变更这些 DOM 入口或聊天布局时，需要同步更新 `packages/presets/templates/agent-theme-template.css` 与 `packages/presets/skills/create-agent-chat-theme/SKILL.md`

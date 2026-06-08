@@ -183,6 +183,14 @@ export class Engine {
     await this.profileStore.delete(agentId);
   }
 
+  async getAgentTheme(agentId: string): Promise<string> {
+    return this.profileStore.getTheme(agentId);
+  }
+
+  async saveAgentTheme(agentId: string, content: string): Promise<void> {
+    await this.profileStore.saveTheme(agentId, content);
+  }
+
   async listSkills(): Promise<SkillDefinition[]> {
     return this.skillStore.list();
   }

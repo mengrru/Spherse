@@ -23,4 +23,12 @@ export function registerAgentRoutes(fastify: FastifyInstance, ctx: AppContext): 
       return { content: raw };
     },
   );
+
+  fastify.get<{ Params: { id: string } }>(
+    "/api/agents/:id/theme",
+    async (req, reply) => {
+      const theme = await ctx.engine.getAgentTheme(req.params.id);
+      reply.type("text/css").send(theme);
+    },
+  );
 }

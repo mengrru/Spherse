@@ -84,6 +84,7 @@ npm run dist:win    # 构建 Windows NSIS 安装包
 - **`docs/official/` 维护**：完成 feature 后，检查 `docs/official/` 下是否有需要同步更新的文档（如新增文件/目录、新增工具、架构变更等），保持文档与代码一致
 - **Backlog 维护**：每完成一个 feature 后，更新 `docs/dev/backlog.md` 中对应条目的状态（`[ ]` → `[x]`），并补充新增的 backlog 条目
 - **预置内容维护**：修改 `packages/presets/templates/` 下模板后，应通过 `npm run build --workspace=packages/presets` 或 root `npm run build` 触发同步脚本，确保生成内容可用
+- **用户主题 Skill 维护**：修改 design system、全局主题机制、聊天窗口 DOM 结构、聊天布局、CSS token 或可主题化选择器时，必须检查 `packages/presets/skills/create-ui-theme/` 和 `packages/presets/skills/create-agent-chat-theme/` 是否需要同步更新
 - **手动 commit**：完成代码后不要自动 commit，等待用户明确要求时再提交
 - **commit 前检查**：用户提示 commit 后，先确认 `docs/dev/backlog.md` 和 `docs/official/` 已根据本次变更得到应有的更新，再执行 commit
 
@@ -111,5 +112,6 @@ npm run dist:win    # 构建 Windows NSIS 安装包
   - 间距、圆角、阴影使用 Tailwind 标准 scale（`p-2`、`rounded-md`、`shadow-sm`），不使用 magic number
   - 业务组件不写 `dark:` 修饰符，暗色适配通过 CSS 变量自动切换
   - 需要新颜色时在 `styles.css` 中注册 CSS 变量（`--agent-{name}`）+ Tailwind 颜色（`--color-agent-{name}`），不在组件中硬编码
+  - 变更主题 token、聊天窗口 `data-chat-*` 属性或可自定义样式入口时，同步更新用户可见的主题模板和 skill 文档
 - **i18n 文案规范**：`packages/i18n/src/locales/zh-CN.ts` 是翻译基准，每条文案必须结合实际 UI 场景写注释（说明出现位置、上下文、交互状态等），用于指导其它语言版本（`zh-TW`、`en`）的翻译
 - **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试

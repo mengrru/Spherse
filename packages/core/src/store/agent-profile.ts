@@ -109,6 +109,26 @@ export class AgentProfileStore {
     }
   }
 
+  async getTheme(id: string): Promise<string> {
+    const profiles = await this.list();
+    const profile = profiles.find((p) => p.id === id);
+    if (!profile) return "";
+    const themePath = path.join(path.dirname(profile.filePath), "theme.css");
+    try {
+      return await fs.readFile(themePath, "utf-8");
+    } catch {
+      return "";
+    }
+  }
+
+  async saveTheme(id: string, content: string): Promise<void> {
+    const profiles = await this.list();
+    const profile = profiles.find((p) => p.id === id);
+    if (!profile) throw new Error("agent not found");
+    const themePath = path.join(path.dirname(profile.filePath), "theme.css");
+    await fs.writeFile(themePath, content, "utf-8");
+  }
+
   async getRawContent(id: string): Promise<string | null> {
     const profiles = await this.list();
     const profile = profiles.find((p) => p.id === id);

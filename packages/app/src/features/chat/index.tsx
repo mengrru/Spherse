@@ -3,6 +3,7 @@ import type { AgentProfile } from "../../lib/types";
 import { Composer } from "./Composer";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
+import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
 
@@ -22,6 +23,7 @@ export function Chat({ client, sessionId, agent, onNavigateToPath, initialMessag
     initialMessage,
   });
   const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages);
+  const scopedThemeCss = useAgentTheme(client, agent.id);
 
   const handleClose = () => {
     if (streaming) abort();
@@ -29,7 +31,8 @@ export function Chat({ client, sessionId, agent, onNavigateToPath, initialMessag
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" data-chat-root>
+      {scopedThemeCss && <style>{scopedThemeCss}</style>}
       <Header agent={agent} onClose={onClose ? handleClose : undefined} />
       <MessageList
         messages={messages}

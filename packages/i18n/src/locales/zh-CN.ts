@@ -95,6 +95,10 @@ export const zhCN = {
   "agent-dialog.refsPlaceholder": "输入路径搜索文件，回车添加",
   // Agent 保存失败提示
   "agent-dialog.saveFailed": "保存失败",
+  // Agent dialog "基本" 标签页标题
+  "agent-dialog.tabBasic": "基本",
+  // Agent dialog "主题" 标签页标题
+  "agent-dialog.tabTheme": "主题",
 
   // --- Agent Session List ---
   // 新建对话按钮文案

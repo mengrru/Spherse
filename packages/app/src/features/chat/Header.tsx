@@ -11,7 +11,7 @@ interface HeaderProps {
 export function Header({ agent, onClose }: HeaderProps) {
   const { t } = useI18n();
   return (
-    <div className="flex items-center gap-2 border-b border-border bg-background px-4 py-3">
+    <div className="flex items-center gap-2 border-b border-border bg-background px-4 py-3" data-chat-header>
       <span className="font-semibold text-[15px]">{agent.name}</span>
       {onClose && (
         <Button

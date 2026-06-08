@@ -25,8 +25,8 @@ interface ProjectDataStore {
   ) => Promise<SessionInfo | null>;
   deleteSession: (projectKey: string, client: ApiClient, sessionId: string) => Promise<void>;
   renameSession: (projectKey: string, client: ApiClient, sessionId: string, title: string) => Promise<boolean>;
-  createAgent: (projectKey: string, client: ApiClient, slug: string, content: string) => Promise<boolean>;
-  updateAgent: (projectKey: string, client: ApiClient, agentId: string, content: string) => Promise<boolean>;
+  createAgent: (projectKey: string, client: ApiClient, slug: string, content: string, themeContent?: string) => Promise<boolean>;
+  updateAgent: (projectKey: string, client: ApiClient, agentId: string, content: string, themeContent?: string) => Promise<boolean>;
   deleteAgent: (projectKey: string, client: ApiClient, agentId: string) => Promise<void>;
   consumeInitialMessage: (projectKey: string, sessionId: string) => string | undefined;
   clearProjectData: (projectKey: string) => void;
@@ -199,14 +199,14 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     }
   },
 
-  async createAgent(projectKey, client, slug, content) {
+  async createAgent(projectKey, client, slug, content, themeContent) {
     set((state) => updateProjectData(state, projectKey, (project) => ({
       ...project,
       error: null,
     })));
 
     try {
-      await client.createAgent(slug, content);
+      await client.createAgent(slug, content, themeContent);
       await get().refreshAgents(projectKey, client);
       return true;
     } catch (err) {
@@ -218,14 +218,14 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     }
   },
 
-  async updateAgent(projectKey, client, agentId, content) {
+  async updateAgent(projectKey, client, agentId, content, themeContent) {
     set((state) => updateProjectData(state, projectKey, (project) => ({
       ...project,
       error: null,
     })));
 
     try {
-      await client.updateAgent(agentId, content);
+      await client.updateAgent(agentId, content, themeContent);
       await get().refreshAgents(projectKey, client);
       return true;
     } catch (err) {

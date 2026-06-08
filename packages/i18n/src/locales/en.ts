@@ -46,6 +46,8 @@ export const en: Record<TranslationKey, string> = {
   "agent-dialog.refsLabel": "References",
   "agent-dialog.refsPlaceholder": "Type path to search files, press Enter to add",
   "agent-dialog.saveFailed": "Save failed",
+  "agent-dialog.tabBasic": "General",
+  "agent-dialog.tabTheme": "Theme",
   "agent-session-list.newSession": "New Session",
   "agent-session-list.createAgentTooltip": "Create Partner",
   "agent-session-list.emptyAgents": "No partners defined",

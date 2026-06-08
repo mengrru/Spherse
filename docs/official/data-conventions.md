@@ -14,7 +14,8 @@ project-root/
 │   ├── theme.css
 │   ├── agents/
 │   │   └── {slug}-{shortId}/
-│   │       └── profile.md
+│   │       ├── profile.md
+│   │       └── theme.css
 │   └── skills/
 │       └── <skill-name>/SKILL.md
 ├── AGENTS.md
@@ -48,6 +49,8 @@ welcomePage:
 ## Agent 定义格式
 
 Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/{slug}-{shortId}/profile.md`。其中 `slug` 由初始 agent name 派生（小写、空格替换为连字符），`shortId` 为 agent UUID 前 6 位。目录名在创建时生成，之后不再变。
+
+Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent Dialog 的“主题”标签页编辑，正常新建流程会从 `@spherse/presets` 的 `agent-theme-template.css` 初始化。文件不存在时读取结果为空字符串，聊天窗口使用全局默认样式。
 
 必需字段：
 
@@ -91,6 +94,8 @@ Session 数据存储在 `.spherse/sessions.db`。每个 session 通过 `agent_id
 
 删除 agent 时，Engine 会归档关联 sessions，再删除 agent 目录（包含 profile.md），避免历史对话失去可追溯状态。
 
+删除 agent 时会删除整个 agent 目录，因此 `theme.css` 也会随 `profile.md` 一起移除。
+
 ## Skill 定义格式
 
 Skill 定义存放于 `.spherse/skills/<skill-name>/SKILL.md`，格式为 YAML frontmatter + Markdown body。
@@ -129,4 +134,4 @@ tool update 的 `details.type === "html"` 时，前端 chat 会按 HTML card 渲
 
 ## 预置模板
 
-内置模板由 `packages/presets/templates/*.md` 维护。构建 `@spherse/presets` 前会执行 `scripts/sync-templates.mjs`，把模板源文件同步为 TypeScript 常量供 app 使用。
+内置模板由 `packages/presets/templates/` 维护。构建 `@spherse/presets` 前会执行 `scripts/sync-templates.mjs`，把模板源文件同步为 TypeScript 常量供 app 使用。目前包括 agent profile 模板和 agent 聊天窗口主题模板。
