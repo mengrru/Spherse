@@ -45,16 +45,16 @@ export function ProjectPanel({
       className={
         sidePanelPinned
           ? "relative z-30 h-full shrink-0 transition-[width] duration-200 ease-out w-65"
-          : "absolute top-0 left-14 z-30 h-full w-65 transition-transform duration-200 ease-out"
+          : `absolute top-0 left-14 z-30 h-full w-65 transition-transform duration-200 ease-out ${
+              sidePanelVisible ? "translate-x-0" : "-translate-x-[calc(100%+3.5rem)]"
+            }`
       }
+      {...(!sidePanelPinned && {
+        onMouseEnter: showSidePanel,
+        onMouseLeave: hideSidePanel,
+      })}
     >
-      <div
-        className={`h-full transition-transform duration-200 ease-out ${
-          sidePanelVisible ? "translate-x-0" : "-translate-x-[calc(100%+3.5rem)]"
-        }`}
-        onMouseEnter={showSidePanel}
-        onMouseLeave={hideSidePanel}
-      >
+      <div className="h-full">
         <aside className="flex h-full w-65 shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r border-border bg-sidebar">
           <SidebarProvider className="min-h-0 w-full">
             <div className="flex min-w-0 flex-1 flex-col">

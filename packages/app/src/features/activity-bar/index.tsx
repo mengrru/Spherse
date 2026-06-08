@@ -52,22 +52,24 @@ export function ActivityBar({
         />
       )}
       <div
-        className={`relative z-40 h-full shrink-0 transition-[width] duration-200 ease-out ${
-          sidePanelPinned ? "w-14" : "w-0"
-        }`}
+        className={
+          sidePanelPinned
+            ? "relative z-40 h-full shrink-0 w-14"
+            : `absolute top-0 left-0 z-40 h-full w-14 transition-transform duration-200 ease-out ${
+                sidePanelVisible ? "translate-x-0" : "-translate-x-full"
+              }`
+        }
+        {...(!sidePanelPinned && {
+          onMouseEnter: showSidePanel,
+          onMouseLeave: hideSidePanel,
+        })}
       >
-        <div
-          className={`absolute top-0 left-0 h-full transition-transform duration-200 ease-out ${
-            sidePanelVisible ? "translate-x-0" : "-translate-x-full"
-          }`}
-        >
+        <div className="h-full">
           <div
             className={cn(
               "flex h-full w-14 shrink-0 flex-col border-r border-border",
               sidePanelPinned ? "bg-muted/30" : "bg-muted",
             )}
-            onMouseEnter={showSidePanel}
-            onMouseLeave={hideSidePanel}
           >
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">
               {Array.from(projects.entries()).map(([projectKey, info]) => (
