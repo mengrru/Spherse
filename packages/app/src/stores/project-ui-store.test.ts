@@ -28,4 +28,5 @@ describe("useProjectUiStore", () => {
       new Set(["agent-3"]),
     );
   });
+
 });

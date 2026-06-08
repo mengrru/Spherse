@@ -29,8 +29,17 @@ function projectState(overrides: Partial<ProjectState> = {}): ProjectState {
 }
 
 describe("useAppStore lastRoute", () => {
+  const storage = new Map<string, string>();
+
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.stubGlobal("localStorage", {
+      clear: () => storage.clear(),
+      getItem: (key: string) => storage.get(key) ?? null,
+      removeItem: (key: string) => storage.delete(key),
+      setItem: (key: string, value: string) => storage.set(key, value),
+    });
+    localStorage.clear();
     Object.defineProperty(globalThis, "window", {
       value: { electronAPI },
       configurable: true,
@@ -39,6 +48,8 @@ describe("useAppStore lastRoute", () => {
       projects: new Map(),
       activeProjectKey: null,
       initializing: true,
+      sidePanelPinned: true,
+      sidePanelHovered: false,
     });
   });
 
@@ -108,5 +119,31 @@ describe("useAppStore lastRoute", () => {
 
     resolveSetProjectLastRoute();
     await Promise.all([first, second]);
+  });
+
+  it("persists the global side panel pinned preference in localStorage", () => {
+    expect(useAppStore.getState().sidePanelPinned).toBe(true);
+
+    useAppStore.getState().setSidePanelPinned(false);
+
+    expect(useAppStore.getState().sidePanelPinned).toBe(false);
+    expect(localStorage.getItem("spherse:side-panel:pinned")).toBe("false");
+  });
+
+  it("coordinates side panel hover visibility at app level", () => {
+    vi.useFakeTimers();
+    useAppStore.getState().setSidePanelPinned(false);
+
+    useAppStore.getState().showSidePanel();
+
+    expect(useAppStore.getState().sidePanelHovered).toBe(true);
+
+    useAppStore.getState().hideSidePanel();
+    vi.advanceTimersByTime(119);
+    expect(useAppStore.getState().sidePanelHovered).toBe(true);
+
+    vi.advanceTimersByTime(1);
+    expect(useAppStore.getState().sidePanelHovered).toBe(false);
+    vi.useRealTimers();
   });
 });

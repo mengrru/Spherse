@@ -88,7 +88,7 @@ export function App() {
   return (
     <I18nProvider locale={locale ?? DEFAULT_LOCALE}>
       <TooltipProvider>
-        <div className="flex h-screen bg-background text-foreground">
+        <div className="relative flex h-screen overflow-hidden bg-background text-foreground">
           <ActivityBar
             projects={projects}
             activeProjectKey={activeProjectKey}

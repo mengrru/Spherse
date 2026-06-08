@@ -51,7 +51,7 @@
 - **项目路由**：项目、会话和内容页通过 URL 表达，当前路径形态为 `/project/:projectKey`、`/project/:projectKey/chat/:sessionId`、`/project/:projectKey/content?path=...`
 - **projectKey**：URL 中不暴露完整文件系统路径；`project-key.ts` 根据项目目录名生成当前打开项目集合内稳定的 URL key，真实身份仍以 project path 为准
 - **项目内 lastRoute**：每个打开项目在 `openProjects` 条目中持久化相对于 `/project/:projectKey` 的 `lastRoute`，如 `/chat/:sessionId` 或 `/content?path=...`；应用启动、项目切换和关闭当前项目后的下一个项目导航都会恢复该项目的 lastRoute
-- **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作
+- **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作，并持久化左侧 side panel 固定/自动收起偏好
 - **项目数据 store**：`project-data-store.ts` 按 projectKey 缓存 agents、sessions、初始消息和 loading/error 状态
 - **项目 UI store**：`project-ui-store.ts` 按 projectKey 管理折叠状态等纯 UI 状态
 - **局部状态边界**：Chat 消息流、WebSocket ref、文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件或 feature hook 内；Chat 输入框草稿按 sessionId 缓存在 renderer `localStorage`，用于 session 切换和应用重启后的草稿恢复；欢迎页设置 dialog 的打开状态保留在 `ActivityBar` 内，欢迎页设置变更通过 `lib/events.ts` 中的 renderer 自定义事件通知当前欢迎页重新读取项目配置

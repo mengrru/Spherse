@@ -36,6 +36,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "activity-bar.closeProject": "關閉專案",
   "activity-bar.revealInFinder": "在 Finder 中顯示",
   "activity-bar.setWelcomePage": "設定歡迎頁",
+  "activity-bar.autoCollapseSidePanelTooltip": "自動收起專案面板",
+  "activity-bar.pinSidePanelTooltip": "固定專案面板",
   "agent-dialog.createTitle": "建立搭檔",
   "agent-dialog.editTitle": "編輯搭檔",
   "agent-dialog.nameLabel": "名稱",

@@ -73,6 +73,10 @@ export const zhCN = {
   "activity-bar.revealInFinder": "在 Finder 中显示",
   // 项目右键菜单：设置欢迎页
   "activity-bar.setWelcomePage": "设置欢迎页",
+  // 左侧活动栏固定图标悬停提示：点击后将项目面板切换为鼠标移出后自动收起
+  "activity-bar.autoCollapseSidePanelTooltip": "自动收起项目面板",
+  // 左侧活动栏收起图标悬停提示：点击后将项目面板固定显示
+  "activity-bar.pinSidePanelTooltip": "固定项目面板",
 
   // --- Agent Dialog ---
   // 搭档创建弹窗标题

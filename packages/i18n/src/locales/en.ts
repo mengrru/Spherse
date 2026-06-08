@@ -36,6 +36,8 @@ export const en: Record<TranslationKey, string> = {
   "activity-bar.closeProject": "Close Project",
   "activity-bar.revealInFinder": "Reveal in Finder",
   "activity-bar.setWelcomePage": "Set Welcome Page",
+  "activity-bar.autoCollapseSidePanelTooltip": "Auto-collapse Project Panel",
+  "activity-bar.pinSidePanelTooltip": "Pin Project Panel",
   "agent-dialog.createTitle": "Create Partner",
   "agent-dialog.editTitle": "Edit Partner",
   "agent-dialog.nameLabel": "Name",

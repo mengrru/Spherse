@@ -122,19 +122,19 @@ spherse/
 │           │   ├── types.ts          # 前端类型
 │           │   └── utils.ts          # shadcn/ui cn() 工具
 │           ├── stores/
-│           │   ├── app-store.ts          # 打开项目集合、当前项目、Electron IPC 动作
+│           │   ├── app-store.ts          # 打开项目集合、当前项目、Electron IPC 动作、side panel 偏好
 │           │   ├── project-data-store.ts # agents/sessions/初始消息等项目数据缓存
 │           │   └── project-ui-store.ts   # 折叠状态等项目 UI 状态
 │           ├── layouts/
 │           │   └── ProjectLayout.tsx     # 项目工作区布局
 │           ├── features/
-│           │   ├── activity-bar/         # 左侧项目 Activity Bar 与 ProjectAvatar
+│           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
 │           │   ├── agent-session-list/   # Agent/session 分组列表
 │           │   ├── chat/                 # 对话页面入口、消息流、输入框、工具调用展示
 │           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
     │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
 │           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog
-│           │   ├── project-panel/        # 项目侧栏，组合 Agent/session 列表与文件树
+│           │   ├── project-panel/        # 项目侧栏，组合 Agent/session 列表与文件树，可随 Activity Bar 自动收起
 │           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
 │           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
 │           │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗

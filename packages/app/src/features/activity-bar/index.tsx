@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ProjectState } from "../../stores/app-store";
+import { useAppStore, type ProjectState } from "../../stores/app-store";
 import { ProjectAvatar } from "./ProjectAvatar";
 import { Button } from "../../components/ui/button";
 import {
@@ -8,10 +8,11 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
-import { PlusIcon, SettingsIcon } from "lucide-react";
+import { PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { DebugTools } from "../debug-tools";
 import { WelcomePageSettingsDialog } from "../welcome-page-settings";
 import { useI18n } from "@spherse/i18n/react";
+import { cn } from "../../lib/utils";
 
 interface ActivityBarProps {
   projects: Map<string, ProjectState>;
@@ -35,62 +36,108 @@ export function ActivityBar({
   const { t } = useI18n();
   const [settingsProjectKey, setSettingsProjectKey] = useState<string | null>(null);
   const settingsProject = settingsProjectKey ? projects.get(settingsProjectKey) : null;
+  const sidePanelPinned = useAppStore((state) => state.sidePanelPinned);
+  const sidePanelHovered = useAppStore((state) => state.sidePanelHovered);
+  const toggleSidePanelPinned = useAppStore((state) => state.toggleSidePanelPinned);
+  const showSidePanel = useAppStore((state) => state.showSidePanel);
+  const hideSidePanel = useAppStore((state) => state.hideSidePanel);
+  const sidePanelVisible = sidePanelPinned || sidePanelHovered;
 
   return (
-    <div className="flex w-14 shrink-0 flex-col border-r border-border bg-muted/30">
-      <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">
-        {Array.from(projects.entries()).map(([projectKey, info]) => (
-          <ContextMenu key={projectKey}>
-            <ContextMenuTrigger>
-              <ProjectAvatar
-                name={info.name}
-                path={info.path}
-                active={projectKey === activeProjectKey}
-                onClick={() => onSelect(projectKey)}
-              />
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <ContextMenuItem onClick={() => setSettingsProjectKey(projectKey)}>
-                {t("activity-bar.setWelcomePage")}
-              </ContextMenuItem>
-              <ContextMenuItem onClick={() => onReveal(projectKey)}>
-                {t("activity-bar.revealInFinder")}
-              </ContextMenuItem>
-              <ContextMenuItem onClick={() => onClose(projectKey)}>
-                {t("activity-bar.closeProject")}
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-        ))}
-      </div>
-      <div className="mt-auto flex flex-col items-center gap-2 pb-3">
-        <DebugTools />
-        <Button
-          variant="ghost"
-          size="icon-lg"
-          onClick={onSettings}
-          title={t("activity-bar.settingsTooltip")}
-        >
-          <SettingsIcon />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon-lg"
-          className="border-dashed"
-          onClick={onAdd}
-          title={t("activity-bar.addProjectTooltip")}
-        >
-          <PlusIcon />
-        </Button>
-      </div>
-      {settingsProject && (
-        <WelcomePageSettingsDialog
-          key={settingsProjectKey}
-          client={settingsProject.ctx.client}
-          open={true}
-          onOpenChange={(open) => { if (!open) setSettingsProjectKey(null); }}
+    <>
+      {!sidePanelVisible && (
+        <div
+          className="absolute inset-y-0 left-0 z-40 w-2"
+          onMouseEnter={showSidePanel}
         />
       )}
-    </div>
+      <div
+        className={`relative z-40 h-full shrink-0 transition-[width] duration-200 ease-out ${
+          sidePanelPinned ? "w-14" : "w-0"
+        }`}
+      >
+        <div
+          className={`absolute top-0 left-0 h-full transition-transform duration-200 ease-out ${
+            sidePanelVisible ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div
+            className={cn(
+              "flex h-full w-14 shrink-0 flex-col border-r border-border",
+              sidePanelPinned ? "bg-muted/30" : "bg-muted",
+            )}
+            onMouseEnter={showSidePanel}
+            onMouseLeave={hideSidePanel}
+          >
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">
+              {Array.from(projects.entries()).map(([projectKey, info]) => (
+                <ContextMenu key={projectKey}>
+                  <ContextMenuTrigger>
+                    <ProjectAvatar
+                      name={info.name}
+                      path={info.path}
+                      active={projectKey === activeProjectKey}
+                      onClick={() => onSelect(projectKey)}
+                    />
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => setSettingsProjectKey(projectKey)}>
+                      {t("activity-bar.setWelcomePage")}
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => onReveal(projectKey)}>
+                      {t("activity-bar.revealInFinder")}
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => onClose(projectKey)}>
+                      {t("activity-bar.closeProject")}
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              ))}
+            </div>
+            <div className="mt-auto flex flex-col items-center gap-2 pb-3">
+              <DebugTools />
+              <Button
+                variant="ghost"
+                size="icon-lg"
+                onClick={toggleSidePanelPinned}
+                title={
+                  sidePanelPinned
+                    ? t("activity-bar.autoCollapseSidePanelTooltip")
+                    : t("activity-bar.pinSidePanelTooltip")
+                }
+                aria-pressed={sidePanelPinned}
+              >
+                {sidePanelPinned ? <PanelLeftCloseIcon /> : <PinIcon />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-lg"
+                onClick={onSettings}
+                title={t("activity-bar.settingsTooltip")}
+              >
+                <SettingsIcon />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon-lg"
+                className="border-dashed"
+                onClick={onAdd}
+                title={t("activity-bar.addProjectTooltip")}
+              >
+                <PlusIcon />
+              </Button>
+            </div>
+            {settingsProject && (
+              <WelcomePageSettingsDialog
+                key={settingsProjectKey}
+                client={settingsProject.ctx.client}
+                open={true}
+                onOpenChange={(open) => { if (!open) setSettingsProjectKey(null); }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

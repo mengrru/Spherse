@@ -111,7 +111,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   };
 
   return (
-    <div className="flex h-full flex-1 overflow-hidden">
+    <div className="relative flex h-full flex-1 overflow-hidden">
       <ProjectPanel
         projectKey={projectKey}
         project={project}
