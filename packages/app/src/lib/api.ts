@@ -6,6 +6,14 @@ import type {
   ChatMessage,
   AgentEvent,
 } from "./types";
+import { parseApiResponse, parseChatServerEvent, schemas } from "@spherse/server/contracts";
+
+async function parseJsonResponse<T>(
+  res: Response,
+  schema: Parameters<typeof parseApiResponse>[0],
+): Promise<T> {
+  return parseApiResponse(schema, await res.json()) as T;
+}
 
 export function createApiClient(port: number) {
   const baseUrl = `http://localhost:${port}`;
@@ -32,7 +40,7 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return res.json();
+      return parseJsonResponse(res, schemas.createSessionResponse);
     },
 
     async getSession(id: string): Promise<SessionInfo> {
@@ -57,7 +65,11 @@ export function createApiClient(port: number) {
       );
       if (!res.ok) return [];
       const data = await res.json();
-      return Array.isArray(data) ? data : [];
+      try {
+        return parseApiResponse(schemas.fileEntries, data) as FileEntry[];
+      } catch {
+        return [];
+      }
     },
 
     async getContent(filePath: string): Promise<ContentResponse | null> {
@@ -65,7 +77,7 @@ export function createApiClient(port: number) {
         `${baseUrl}/api/content/${encodeURIComponent(filePath)}`,
       );
       if (!res.ok) return null;
-      return res.json();
+      return parseJsonResponse(res, schemas.contentResponse);
     },
 
     async saveContent(filePath: string, content: string): Promise<{ ok: boolean }> {
@@ -81,7 +93,7 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return res.json();
+      return parseJsonResponse(res, schemas.okResponse);
     },
 
     async deleteContent(filePath: string): Promise<{ ok: boolean }> {
@@ -95,7 +107,7 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return res.json();
+      return parseJsonResponse(res, schemas.okResponse);
     },
 
     async mkdir(dirPath: string): Promise<{ ok: boolean }> {
@@ -111,7 +123,7 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return res.json();
+      return parseJsonResponse(res, schemas.okResponse);
     },
 
     async touchFile(filePath: string): Promise<{ ok: boolean }> {
@@ -127,7 +139,7 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return res.json();
+      return parseJsonResponse(res, schemas.okResponse);
     },
 
     async createAgent(slug: string, content: string, themeContent?: string): Promise<{ ok: boolean; id: string }> {
@@ -180,7 +192,7 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return res.json();
+      return parseJsonResponse(res, schemas.okResponse);
     },
 
     async renameSession(id: string, title: string): Promise<SessionInfo> {
@@ -193,7 +205,7 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return res.json();
+      return parseJsonResponse(res, schemas.sessionInfo);
     },
 
     async deleteSession(id: string): Promise<{ ok: boolean }> {
@@ -204,13 +216,13 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return res.json();
+      return parseJsonResponse(res, schemas.okResponse);
     },
 
     async getFileTree(): Promise<string[]> {
       const res = await fetch(`${baseUrl}/api/file-tree`);
       if (!res.ok) return [];
-      return res.json();
+      return parseJsonResponse(res, schemas.aiAccessSettingsResponse);
     },
 
     async getTurnContext(sessionId: string): Promise<any> {
@@ -221,7 +233,7 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return res.json();
+      return parseJsonResponse(res, schemas.welcomePageSettingsResponse);
     },
 
     getPreviewUrl(filePath: string): string {
@@ -278,8 +290,11 @@ export function createApiClient(port: number) {
       const url = `${wsUrl}/ws/chat/${sessionId}`;
       const ws = new WebSocket(url);
       ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        onEvent(data);
+        try {
+          onEvent(parseChatServerEvent(JSON.parse(event.data)) as AgentEvent);
+        } catch {
+          onEvent({ type: "error", message: "Invalid WebSocket event" });
+        }
       };
       ws.onerror = () => {
         onEvent({ type: "error", message: "WebSocket connection error" });

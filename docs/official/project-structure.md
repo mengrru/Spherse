@@ -67,6 +67,7 @@ spherse/
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
 │   │       ├── index.ts              # createServer()，调用 createEngine 组装 AppContext
+│   │       ├── contracts/            # HTTP/WebSocket runtime schema 与解析 helper（@spherse/server/contracts）
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取

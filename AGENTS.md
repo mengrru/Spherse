@@ -59,6 +59,7 @@ npm run lint --workspace=packages/app    # 单 workspace lint
 npm test --workspace=packages/core          # 运行测试
 npm run test:watch --workspace=packages/core # 监听模式
 npm run test:cov --workspace=packages/core   # 运行测试并生成覆盖率报告
+npm test --workspace=packages/server        # 运行 server/API contract 测试
 npm test --workspace=packages/i18n           # 运行 i18n 测试
 npm test --workspace=packages/app           # 运行前端 store/组件相关测试
 npm run verify                              # lint + build + unit tests + i18n check
@@ -99,6 +100,7 @@ npm run dist:win    # 构建 Windows NSIS 安装包
   - pi-agent-core 的 `AgentTool` 接口使用 `@sinclair/typebox` 定义参数 schema
 - **工具模式**：所有 AgentTool 使用工厂函数模式 `createXxxTool(projectRoot: string): AgentTool`
 - **路径安全**：所有项目内路径解析必须使用 `@spherse/core` 的 `resolveProjectPath` / `assertInsideProject` / `isPathInside`，通过 `path.relative` 判断边界，避免 `startsWith` 前缀误判导致路径穿越
+- **API contract**：HTTP request/response 与 WebSocket message/event 的运行时 schema 统一定义在 `@spherse/server/contracts`，server route、renderer API client 和 WebSocket 边界必须复用同一套 schema/parser，不新增裸 `JSON.parse` 或仅靠 TypeScript 泛型的边界校验
 - **并发写入安全**：会写文件的工具应共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
 - **不添加注释**：除非用户明确要求
 - **Lint 规范**：ESLint 9 flat config 位于 root `eslint.config.js`，覆盖所有 package；`packages/app` 启用 React Hooks / React Refresh 规则；commit 前由 Husky pre-commit 钩子自动检查

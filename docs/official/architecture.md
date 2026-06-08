@@ -29,6 +29,8 @@
 
 - **AppContext** = `{ engine, projectStore }`，路由只通过 engine 访问 agent/session/skill 操作，projectStore 用于项目根目录和内容浏览
 - **路由按业务域拆分**到 `routes/` 目录，由 `routes/index.ts` 聚合注册
+- **API contract**：HTTP request/response 与 WebSocket message/event 的运行时 schema 定义在 `contracts/`，通过 `@spherse/server/contracts` 子入口导出给 server routes、WebSocket handler 和 renderer API client 复用；边界 JSON 进入业务逻辑前必须先通过 contract helper 解析
+- **运行时 schema**：有 body 的 HTTP route 通过 server contract 中的 TypeBox schema 绑定 Fastify `schema.body` / `schema.response`；WebSocket 收到的 JSON 必须通过 contract parser 校验，非法消息返回统一 error event
 - **内容 API**：`content.ts` 负责目录列表、文件读取、保存、删除、新建文件和新建目录；所有文件路径都通过 core 共享路径安全工具限制在项目根目录内
 - **文件树 API**：`file-tree.ts` 返回面向 UI 选择的项目文件列表，过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir
 - **预览 API**：`preview.ts` 为本地 HTML 与图片内容提供预览 URL，renderer 通过 iframe、图片或 HTML card 使用

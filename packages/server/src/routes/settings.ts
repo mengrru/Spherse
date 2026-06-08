@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { AppContext } from "../index.js";
 import { getSupportedProviders } from "@spherse/core";
+import { schemas } from "@spherse/server/contracts";
 
 export function registerSettingsRoutes(fastify: FastifyInstance, ctx: AppContext): void {
   fastify.get("/api/settings/providers", async () => {
@@ -13,6 +14,15 @@ export function registerSettingsRoutes(fastify: FastifyInstance, ctx: AppContext
 
   fastify.put<{ Body: { deniedPaths: string[] } }>(
     "/api/settings/ai-access",
+    {
+      schema: {
+        body: schemas.aiAccessSettingsRequest,
+        response: {
+          200: schemas.aiAccessSettingsResponse,
+          400: schemas.errorResponse,
+        },
+      },
+    },
     async (req, reply) => {
       if (!Array.isArray(req.body?.deniedPaths)) {
         return reply.code(400).send({ error: "Missing or invalid 'deniedPaths'" });
@@ -32,6 +42,15 @@ export function registerSettingsRoutes(fastify: FastifyInstance, ctx: AppContext
 
   fastify.put<{ Body: { path: string | null } }>(
     "/api/settings/welcome-page",
+    {
+      schema: {
+        body: schemas.welcomePageSettingsRequest,
+        response: {
+          200: schemas.welcomePageSettingsResponse,
+          400: schemas.errorResponse,
+        },
+      },
+    },
     async (req, reply) => {
       if (
         !req.body ||

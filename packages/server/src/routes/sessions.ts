@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { schemas } from "@spherse/server/contracts";
 import type { AppContext } from "../index.js";
 
 export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext): void {
@@ -11,6 +12,16 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
 
   fastify.post<{ Body: { agentId?: string } }>(
     "/api/sessions",
+    {
+      schema: {
+        body: schemas.createSessionRequest,
+        response: {
+          200: schemas.createSessionResponse,
+          400: schemas.errorResponse,
+          404: schemas.errorResponse,
+        },
+      },
+    },
     async (req, reply) => {
       const { agentId } = req.body ?? {};
       if (!agentId)
@@ -43,6 +54,16 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
 
   fastify.patch<{ Params: { id: string }; Body: { title?: unknown } }>(
     "/api/sessions/:id",
+    {
+      schema: {
+        body: schemas.renameSessionRequest,
+        response: {
+          200: schemas.sessionInfo,
+          400: schemas.errorResponse,
+          404: schemas.errorResponse,
+        },
+      },
+    },
     async (req, reply) => {
       const { title } = req.body ?? {};
       if (typeof title !== "string") {

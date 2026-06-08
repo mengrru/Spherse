@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { resolveProjectPath } from "@spherse/core";
+import { schemas } from "@spherse/server/contracts";
 import type { AppContext } from "../index.js";
 
 export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext): void {
@@ -37,6 +38,18 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
 
   fastify.post<{ Params: { "*": string }; Body: { action: "mkdir" | "touch" } }>(
     "/api/content/*",
+    {
+      schema: {
+        body: schemas.createContentRequest,
+        response: {
+          200: schemas.okResponse,
+          400: schemas.errorResponse,
+          403: schemas.errorResponse,
+          409: schemas.errorResponse,
+          500: schemas.errorResponse,
+        },
+      },
+    },
     async (req, reply) => {
       const relativePath = req.params["*"];
       let absolutePath: string;
@@ -76,6 +89,17 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
 
   fastify.put<{ Params: { "*": string }; Body: { content: string } }>(
     "/api/content/*",
+    {
+      schema: {
+        body: schemas.saveContentRequest,
+        response: {
+          200: schemas.okResponse,
+          400: schemas.errorResponse,
+          403: schemas.errorResponse,
+          500: schemas.errorResponse,
+        },
+      },
+    },
     async (req, reply) => {
       const relativePath = req.params["*"];
       let absolutePath: string;
@@ -103,6 +127,15 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
 
   fastify.delete<{ Params: { "*": string } }>(
     "/api/content/*",
+    {
+      schema: {
+        response: {
+          200: schemas.okResponse,
+          403: schemas.errorResponse,
+          404: schemas.errorResponse,
+        },
+      },
+    },
     async (req, reply) => {
       const relativePath = req.params["*"];
       let absolutePath: string;
