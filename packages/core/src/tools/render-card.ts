@@ -3,6 +3,7 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+import { resolveProjectPath } from "../utils/path-safety.js";
 
 type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 
@@ -16,14 +17,6 @@ const RenderCardParams = Type.Object({
   max_width: Type.Optional(Type.Number({ description: "Maximum width in pixels (default 800)" })),
   max_height: Type.Optional(Type.Number({ description: "Maximum height in pixels (default 600)" })),
 });
-
-function validatePath(projectRoot: string, relativePath: string): string {
-  const resolved = path.resolve(projectRoot, relativePath);
-  if (!resolved.startsWith(projectRoot)) {
-    throw new Error(`Path traversal denied: ${relativePath}`);
-  }
-  return resolved;
-}
 
 export function createRenderCardTool(
   projectRoot: string,
@@ -41,7 +34,7 @@ export function createRenderCardTool(
       let html: string;
 
       if (params.file_path) {
-        const resolved = validatePath(root, params.file_path);
+        const resolved = resolveProjectPath(root, params.file_path);
         try {
           getAiFileAccessPolicy().assertReadableByAi(params.file_path);
         } catch (err) {

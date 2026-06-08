@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
+import { resolveProjectPath } from "@spherse/core";
 import type { AppContext } from "../index.js";
 
 const CONTENT_TYPES: Record<string, string> = {
@@ -29,9 +30,10 @@ export function registerPreviewRoutes(fastify: FastifyInstance, ctx: AppContext)
     "/api/preview/*",
     async (req, reply) => {
       const relativePath = req.params["*"];
-      const absolutePath = path.resolve(ctx.projectStore.getRootPath(), relativePath);
-
-      if (!absolutePath.startsWith(ctx.projectStore.getRootPath())) {
+      let absolutePath: string;
+      try {
+        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+      } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
 

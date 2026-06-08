@@ -18,6 +18,7 @@
 - **AgentProfileStore**：首次读取无 `id` 的 profile.md 时自动生成并回写 `id`，创建 agent 时自动写入 `createdAt` 且更新时保持不变；支持 `getRawContent(id)` 获取原始 Markdown 内容用于编辑
 - **工具分配**：agent profile 未声明 `tools` 时默认获得全部工具
 - **工具集合**：默认工具由 `createToolsForProject` 组装，包括文件读写、字符串替换编辑、文件列表、内容搜索、changelog 追加、skill 加载和 HTML card 渲染
+- **路径安全**：项目内路径统一通过 `utils/path-safety.ts` 的 `resolveProjectPath` / `isPathInside` / `assertInsideProject` 解析和校验，core tools、agent context 读取和 server 内容路由共享同一边界判断
 - **写入互斥**：`write_file`、`edit_file`、`append_changelog` 共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
 - **删除 agent**：由 Engine 协调，归档关联 sessions 后删除 agent 目录
 - **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），Engine 在构建 system prompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
@@ -28,7 +29,7 @@
 
 - **AppContext** = `{ engine, projectStore }`，路由只通过 engine 访问 agent/session/skill 操作，projectStore 用于项目根目录和内容浏览
 - **路由按业务域拆分**到 `routes/` 目录，由 `routes/index.ts` 聚合注册
-- **内容 API**：`content.ts` 负责目录列表、文件读取、保存、删除、新建文件和新建目录；所有文件路径都必须限制在项目根目录内
+- **内容 API**：`content.ts` 负责目录列表、文件读取、保存、删除、新建文件和新建目录；所有文件路径都通过 core 共享路径安全工具限制在项目根目录内
 - **文件树 API**：`file-tree.ts` 返回面向 UI 选择的项目文件列表，过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir
 - **预览 API**：`preview.ts` 为本地 HTML 与图片内容提供预览 URL，renderer 通过 iframe、图片或 HTML card 使用
 - **WebSocket**：`ws-chat.ts` 推送 agent 对话事件；`ws-fs-watch.ts` 推送项目文件变更，用于前端刷新内容浏览状态；`ws-debug.ts` 推送 pino 结构化日志流，供前端 Debug Streaming Log 面板消费

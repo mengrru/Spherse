@@ -4,6 +4,7 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+import { resolveProjectPath } from "../utils/path-safety.js";
 
 type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 
@@ -11,14 +12,6 @@ const ListFilesParams = Type.Object({
   path: Type.String({ description: "Directory path relative to project root" }),
   recursive: Type.Optional(Type.Boolean({ description: "List recursively", default: false })),
 });
-
-function validatePath(projectRoot: string, relativePath: string): string {
-  const resolved = path.resolve(projectRoot, relativePath);
-  if (!resolved.startsWith(projectRoot)) {
-    throw new Error(`Path traversal denied: ${relativePath}`);
-  }
-  return resolved;
-}
 
 async function listRecursive(
   dirPath: string,
@@ -68,7 +61,7 @@ export function createListFilesTool(
     description: "List files and directories in a project path. Returns tree with 📁/📄 prefix.",
     parameters: ListFilesParams,
     async execute(_toolCallId, params, _signal) {
-      const resolved = validatePath(root, params.path);
+      const resolved = resolveProjectPath(root, params.path);
       const policy = getAiFileAccessPolicy();
 
       if (params.path && params.path !== ".") {

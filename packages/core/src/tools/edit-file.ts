@@ -4,6 +4,7 @@ import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+import { resolveProjectPath } from "../utils/path-safety.js";
 
 type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 
@@ -13,14 +14,6 @@ const EditFileParams = Type.Object({
   new_string: Type.String({ description: "The text to replace old_string with. Use empty string to delete." }),
   replace_all: Type.Optional(Type.Boolean({ description: "Replace all occurrences of old_string. Default false.", default: false })),
 });
-
-function validatePath(projectRoot: string, relativePath: string): string {
-  const resolved = path.resolve(projectRoot, relativePath);
-  if (!resolved.startsWith(projectRoot)) {
-    throw new Error(`Path traversal denied: ${relativePath}`);
-  }
-  return resolved;
-}
 
 export function createEditFileTool(
   projectRoot: string,
@@ -37,7 +30,7 @@ export function createEditFileTool(
       "Fails if old_string is not found or matches multiple times unless replace_all is true.",
     parameters: EditFileParams,
     async execute(_toolCallId, params, _signal) {
-      const resolved = validatePath(root, params.path);
+      const resolved = resolveProjectPath(root, params.path);
       try {
         getAiFileAccessPolicy().assertReadableByAi(params.path);
       } catch (err) {

@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
-import path from "node:path";
 import type { AiFileAccessPolicy } from "../access/ai-file-access.js";
+import { resolveProjectPath } from "../utils/path-safety.js";
 
 export async function readContextFiles(
   projectRoot: string,
@@ -12,8 +12,10 @@ export async function readContextFiles(
   const sections: string[] = [];
 
   for (const relPath of contextPaths) {
-    const resolved = path.resolve(projectRoot, relPath);
-    if (!resolved.startsWith(projectRoot + path.sep) && resolved !== projectRoot) {
+    let resolved: string;
+    try {
+      resolved = resolveProjectPath(projectRoot, relPath);
+    } catch {
       continue;
     }
     if (getAiFileAccessPolicy?.().isDenied(relPath)) {

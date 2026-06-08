@@ -3,20 +3,13 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+import { resolveProjectPath } from "../utils/path-safety.js";
 
 type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 
 const ReadFileParams = Type.Object({
   path: Type.String({ description: "Path relative to project root" }),
 });
-
-function validatePath(projectRoot: string, relativePath: string): string {
-  const resolved = path.resolve(projectRoot, relativePath);
-  if (!resolved.startsWith(projectRoot)) {
-    throw new Error(`Path traversal denied: ${relativePath}`);
-  }
-  return resolved;
-}
 
 export function createReadFileTool(
   projectRoot: string,
@@ -30,7 +23,7 @@ export function createReadFileTool(
     description: "Read the content of a file in the project. Returns the file content as text.",
     parameters: ReadFileParams,
     async execute(_toolCallId, params, _signal) {
-      const resolved = validatePath(root, params.path);
+      const resolved = resolveProjectPath(root, params.path);
       try {
         getAiFileAccessPolicy().assertReadableByAi(params.path);
       } catch (err) {

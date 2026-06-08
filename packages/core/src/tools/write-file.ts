@@ -3,20 +3,13 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+import { resolveProjectPath } from "../utils/path-safety.js";
 
 const WriteFileParams = Type.Object({
   path: Type.String({ description: "Path relative to project root" }),
   content: Type.String({ description: "Content to write to the file" }),
   createDirs: Type.Optional(Type.Boolean({ description: "Create parent directories if they don't exist", default: true })),
 });
-
-function validatePath(projectRoot: string, relativePath: string): string {
-  const resolved = path.resolve(projectRoot, relativePath);
-  if (!resolved.startsWith(projectRoot)) {
-    throw new Error(`Path traversal denied: ${relativePath}`);
-  }
-  return resolved;
-}
 
 export function createWriteFileTool(projectRoot: string, mutex: FileWriteMutex): AgentTool<typeof WriteFileParams> {
   const root = path.resolve(projectRoot);
@@ -27,7 +20,7 @@ export function createWriteFileTool(projectRoot: string, mutex: FileWriteMutex):
     description: "Write content to a file in the project. Creates parent directories by default.",
     parameters: WriteFileParams,
     async execute(_toolCallId, params, _signal) {
-      const resolved = validatePath(root, params.path);
+      const resolved = resolveProjectPath(root, params.path);
       const createDirs = params.createDirs ?? true;
 
       return mutex.run(resolved, async () => {

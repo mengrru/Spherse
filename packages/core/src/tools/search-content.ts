@@ -4,6 +4,7 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
 import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+import { resolveProjectPath } from "../utils/path-safety.js";
 
 type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 
@@ -12,14 +13,6 @@ const SearchContentParams = Type.Object({
   path: Type.Optional(Type.String({ description: "Directory path relative to project root. Defaults to project root." })),
   includePatterns: Type.Optional(Type.Array(Type.String(), { description: "File patterns to include, e.g. ['*.md', '*.txt']" })),
 });
-
-function validatePath(projectRoot: string, relativePath: string): string {
-  const resolved = path.resolve(projectRoot, relativePath);
-  if (!resolved.startsWith(projectRoot)) {
-    throw new Error(`Path traversal denied: ${relativePath}`);
-  }
-  return resolved;
-}
 
 function matchesPattern(fileName: string, patterns: string[] | undefined): boolean {
   if (!patterns || patterns.length === 0) return true;
@@ -127,7 +120,7 @@ export function createSearchContentTool(
     description: "Search file contents in the project for a query string. Returns matching file:line:text. Skips dotfiles and node_modules.",
     parameters: SearchContentParams,
     async execute(_toolCallId, params, _signal) {
-      const searchPath = params.path ? validatePath(root, params.path) : root;
+      const searchPath = params.path ? resolveProjectPath(root, params.path) : root;
       const policy = getAiFileAccessPolicy();
 
       if (params.path) {

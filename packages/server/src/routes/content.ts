@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
+import { resolveProjectPath } from "@spherse/core";
 import type { AppContext } from "../index.js";
 
 export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext): void {
@@ -8,12 +9,10 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
     "/api/content/*",
     async (req, reply) => {
       const relativePath = req.params["*"];
-      const absolutePath = path.resolve(
-        ctx.projectStore.getRootPath(),
-        relativePath,
-      );
-
-      if (!absolutePath.startsWith(ctx.projectStore.getRootPath())) {
+      let absolutePath: string;
+      try {
+        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+      } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
 
@@ -40,12 +39,10 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
     "/api/content/*",
     async (req, reply) => {
       const relativePath = req.params["*"];
-      const absolutePath = path.resolve(
-        ctx.projectStore.getRootPath(),
-        relativePath,
-      );
-
-      if (!absolutePath.startsWith(ctx.projectStore.getRootPath())) {
+      let absolutePath: string;
+      try {
+        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+      } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
 
@@ -81,12 +78,10 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
     "/api/content/*",
     async (req, reply) => {
       const relativePath = req.params["*"];
-      const absolutePath = path.resolve(
-        ctx.projectStore.getRootPath(),
-        relativePath,
-      );
-
-      if (!absolutePath.startsWith(ctx.projectStore.getRootPath())) {
+      let absolutePath: string;
+      try {
+        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+      } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
 
@@ -110,12 +105,10 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
     "/api/content/*",
     async (req, reply) => {
       const relativePath = req.params["*"];
-      const absolutePath = path.resolve(
-        ctx.projectStore.getRootPath(),
-        relativePath,
-      );
-
-      if (!absolutePath.startsWith(ctx.projectStore.getRootPath())) {
+      let absolutePath: string;
+      try {
+        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+      } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
 

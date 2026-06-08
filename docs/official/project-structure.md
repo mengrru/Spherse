@@ -30,7 +30,8 @@ spherse/
 │   │       │   ├── render-card.ts    # HTML card 渲染工具
 │   │       │   └── index.ts          # createToolsForProject 工厂
 │   │       ├── utils/
-│   │       │   └── file-write-mutex.ts # 文件写入互斥，避免并发写覆盖
+│   │       │   ├── file-write-mutex.ts # 文件写入互斥，避免并发写覆盖
+│   │       │   └── path-safety.ts      # 项目内路径解析与边界校验
 │   │       ├── access/
 │   │       │   └── ai-file-access.ts  # AI 读取禁止列表路径规范化与访问策略
 │   │       ├── __tests__/            # Vitest 单元测试
@@ -149,8 +150,7 @@ spherse/
 │               ├── EmptyState.tsx        # 无项目时的空状态
 │               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
 ├── scripts/
-│   ├── rebuild-native.mjs            # Electron native dependency rebuild
-│   └── verify.mjs                    # 核心模块验证脚本
+│   └── rebuild-native.mjs            # Electron native dependency rebuild
 ├── docs/
 │   ├── official/                     # 正式项目文档（始终与代码同步）
 │   └── dev/                          # 开发过程文档（容易过时）

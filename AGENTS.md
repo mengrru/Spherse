@@ -98,7 +98,7 @@ npm run dist:win    # 构建 Windows NSIS 安装包
 - **依赖规范**：
   - pi-agent-core 的 `AgentTool` 接口使用 `@sinclair/typebox` 定义参数 schema
 - **工具模式**：所有 AgentTool 使用工厂函数模式 `createXxxTool(projectRoot: string): AgentTool`
-- **路径安全**：所有文件操作工具必须做 `path.resolve + startsWith` 校验，防止路径穿越
+- **路径安全**：所有项目内路径解析必须使用 `@spherse/core` 的 `resolveProjectPath` / `assertInsideProject` / `isPathInside`，通过 `path.relative` 判断边界，避免 `startsWith` 前缀误判导致路径穿越
 - **并发写入安全**：会写文件的工具应共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
 - **不添加注释**：除非用户明确要求
 - **Lint 规范**：ESLint 9 flat config 位于 root `eslint.config.js`，覆盖所有 package；`packages/app` 启用 React Hooks / React Refresh 规则；commit 前由 Husky pre-commit 钩子自动检查
