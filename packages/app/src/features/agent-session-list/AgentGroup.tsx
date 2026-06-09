@@ -16,7 +16,7 @@ interface AgentGroupProps {
   onEditAgent: (agent: AgentProfile) => void;
   onDeleteAgent: (agent: AgentProfile) => void;
   onSelectSession: (session: SessionInfo) => void;
-  onDeleteSession: (sessionId: string) => void;
+  onDeleteSession: (session: SessionInfo) => void;
   onRenameSession: (session: SessionInfo, title: string) => Promise<boolean>;
 }
 
@@ -33,10 +33,12 @@ export function AgentGroup({
   onDeleteSession,
   onRenameSession,
 }: AgentGroupProps) {
+  const isActive = activeSessionId !== null && sessions.some((s) => s.id === activeSessionId);
   return (
     <Collapsible open={!collapsed} onOpenChange={() => onToggleCollapsed(agent.id)}>
       <AgentRow
         agent={agent}
+        active={isActive}
         onNewSession={onNewSession}
         onEditAgent={onEditAgent}
         onDeleteAgent={onDeleteAgent}

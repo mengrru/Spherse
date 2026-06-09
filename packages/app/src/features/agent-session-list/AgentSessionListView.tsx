@@ -13,7 +13,7 @@ export interface AgentSessionListViewProps {
   onEditAgent: (agent: AgentProfile) => void;
   onDeleteAgent: (agent: AgentProfile) => void;
   onSelectSession: (session: SessionInfo) => void;
-  onDeleteSession: (sessionId: string) => void;
+  onDeleteSession: (session: SessionInfo) => void;
   onRenameSession: (session: SessionInfo, title: string) => Promise<boolean>;
 }
 

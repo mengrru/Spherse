@@ -224,8 +224,22 @@ export const zhCN = {
   // 引用来源提示，{path} 为文件路径
   "text-selection.quoteFrom": "引用自 {path}",
   "text-selection.startSession": "发起会话",
+  // 文本选择浮动菜单：复制按钮
+  "text-selection.copy": "复制",
+  // 文本选择浮动菜单：发送至当前会话
+  "text-selection.sendToCurrentSession": "发送至当前会话",
+  // 文本选择浮动菜单：无活动会话提示
+  "text-selection.noActiveSession": "无活动会话",
   // 发起会话时的 AI 提示前缀，{path} 为文件路径，{text} 为引用内容
   "text-selection.promptPrefix": "请处理以下来自「{path}」的内容：\n\n{text}",
+
+  // --- Session ---
+  // 删除会话确认弹窗标题
+  "session.confirmDeleteTitle": "删除会话？",
+  // 删除会话确认弹窗描述，{title} 为会话名称
+  "session.confirmDeleteDescription": "确定要删除会话「{title}」吗？此操作无法撤销。",
+  // 无标题会话的默认名称
+  "session.untitled": "无标题会话",
 
   // --- Settings ---
   // 设置中语言选择器的标签

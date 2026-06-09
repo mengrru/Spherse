@@ -28,6 +28,7 @@ interface ProjectDataStore {
   createAgent: (projectKey: string, client: ApiClient, slug: string, content: string, themeContent?: string) => Promise<boolean>;
   updateAgent: (projectKey: string, client: ApiClient, agentId: string, content: string, themeContent?: string) => Promise<boolean>;
   deleteAgent: (projectKey: string, client: ApiClient, agentId: string) => Promise<void>;
+  setInitialMessage: (projectKey: string, sessionId: string, message: string) => void;
   consumeInitialMessage: (projectKey: string, sessionId: string) => string | undefined;
   clearProjectData: (projectKey: string) => void;
 }
@@ -250,6 +251,16 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
     }
+  },
+
+  setInitialMessage(projectKey, sessionId, message) {
+    set((state) => updateProjectData(state, projectKey, (project) => ({
+      ...project,
+      initialMessageBySessionId: {
+        ...project.initialMessageBySessionId,
+        [sessionId]: message,
+      },
+    }), { createIfMissing: false }));
   },
 
   consumeInitialMessage(projectKey, sessionId) {

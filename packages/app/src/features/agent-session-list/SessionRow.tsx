@@ -18,7 +18,7 @@ interface SessionRowProps {
   session: SessionInfo;
   active: boolean;
   onSelect: (session: SessionInfo) => void;
-  onDelete: (sessionId: string) => void;
+  onDelete: (session: SessionInfo) => void;
   onRename: (session: SessionInfo, title: string) => Promise<boolean>;
 }
 
@@ -159,7 +159,7 @@ export function SessionRow({ session, active, onSelect, onDelete, onRename }: Se
             {t("common.rename")}
           </ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem variant="destructive" onClick={() => onDelete(session.id)}>
+          <ContextMenuItem variant="destructive" onClick={() => onDelete(session)}>
             {t("common.delete")}
           </ContextMenuItem>
         </ContextMenuContent>

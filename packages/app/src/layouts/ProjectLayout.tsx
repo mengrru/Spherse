@@ -50,6 +50,9 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   const selectedAgent = selectedSession
     ? agents.find((agent) => agent.id === selectedSession.agentId) ?? null
     : null;
+  const currentSessionInfo = selectedSession && selectedAgent
+    ? { sessionId: selectedSession.id, agentName: selectedAgent.name, sessionTitle: selectedSession.title }
+    : null;
   const initialMessage = selectedSession
     ? projectData?.initialMessageBySessionId[selectedSession.id]
     : undefined;
@@ -147,6 +150,8 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
             filePath={contentPath}
             onBack={handleBackToChat}
             agents={agents}
+            projectKey={projectKey}
+            currentSessionInfo={currentSessionInfo}
             onStartSession={handleStartSession}
           />
         )}

@@ -10,9 +10,11 @@ import {
 } from "../../components/ui/dropdown-menu";
 import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
+import { cn } from "@/lib/utils";
 
 interface AgentRowProps {
   agent: AgentProfile;
+  active?: boolean;
   onNewSession: (agent: AgentProfile) => void;
   onEditAgent: (agent: AgentProfile) => void;
   onDeleteAgent: (agent: AgentProfile) => void;
@@ -20,6 +22,7 @@ interface AgentRowProps {
 
 export function AgentRow({
   agent,
+  active,
   onNewSession,
   onEditAgent,
   onDeleteAgent,
@@ -27,7 +30,7 @@ export function AgentRow({
   const { t } = useI18n();
   return (
     <div className="group/agent-row relative">
-      <CollapsibleTrigger render={<TreeRow depth={0} className="group pr-8" />}>
+      <CollapsibleTrigger render={<TreeRow depth={0} className={cn("group pr-8", active && "bg-sidebar-accent")} />}>
         <ChevronRightIcon
           className="size-4 shrink-0 text-sidebar-foreground/70 transition-transform group-data-[panel-open]:rotate-90"
         />

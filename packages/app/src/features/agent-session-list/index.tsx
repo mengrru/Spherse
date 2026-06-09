@@ -57,6 +57,7 @@ export function AgentSessionList({
   const [showCreateAgent, setShowCreateAgent] = useState(false);
   const [editAgent, setEditAgent] = useState<{ id: string; content: string; themeContent: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AgentProfile | null>(null);
+  const [deleteSessionTarget, setDeleteSessionTarget] = useState<SessionInfo | null>(null);
 
   const agents = projectData?.agents ?? EMPTY_AGENTS;
   const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
@@ -65,7 +66,7 @@ export function AgentSessionList({
   useEffect(() => {
     const validAgentIds = new Set(agents.map((agent) => agent.id));
     const nextCollapsedAgentIds = collapsedAgentIds.size === 0
-      ? agents.slice(1).map((agent) => agent.id)
+      ? agents.map((agent) => agent.id)
       : [...collapsedAgentIds].filter((id) => validAgentIds.has(id));
     const changed =
       nextCollapsedAgentIds.length !== collapsedAgentIds.size ||
@@ -87,10 +88,16 @@ export function AgentSessionList({
     }
   };
 
-  const handleDeleteSession = async (deletedSessionId: string) => {
-    if (!project) return;
-    await deleteSession(projectKey, project.ctx.client, deletedSessionId);
-    if (activeSessionId === deletedSessionId) {
+  const handleDeleteSessionRequest = (session: SessionInfo) => {
+    setDeleteSessionTarget(session);
+  };
+
+  const performDeleteSession = async () => {
+    if (!project || !deleteSessionTarget) return;
+    const deletedId = deleteSessionTarget.id;
+    setDeleteSessionTarget(null);
+    await deleteSession(projectKey, project.ctx.client, deletedId);
+    if (activeSessionId === deletedId) {
       navigate(`/project/${projectKey}`);
     }
   };
@@ -162,7 +169,7 @@ export function AgentSessionList({
             onEditAgent={handleEditAgent}
             onDeleteAgent={handleDeleteAgent}
             onSelectSession={handleSelectSession}
-            onDeleteSession={handleDeleteSession}
+            onDeleteSession={handleDeleteSessionRequest}
             onRenameSession={handleRenameSession}
           />
         </SidebarGroupContent>
@@ -201,6 +208,24 @@ export function AgentSessionList({
                 setDeleteTarget(null);
               }
             }}>
+              {t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={!!deleteSessionTarget} onOpenChange={(open) => { if (!open) setDeleteSessionTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("session.confirmDeleteTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("session.confirmDeleteDescription", {
+                title: deleteSessionTarget?.title ?? t("session.untitled"),
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={performDeleteSession}>
               {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>

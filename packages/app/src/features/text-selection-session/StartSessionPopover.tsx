@@ -1,15 +1,20 @@
 import { useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile } from "../../lib/types";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { useDismissable } from "../../hooks/useDismissable";
+import { useStreamingStore } from "../chat/streaming-store";
+import { useProjectDataStore } from "../../stores/project-data-store";
 
 interface StartSessionPopoverProps {
   selectedText: string;
   sourcePath: string;
   agents: AgentProfile[];
   position: { x: number; y: number };
+  projectKey: string;
+  currentSessionInfo?: { sessionId: string; agentName: string; sessionTitle?: string } | null;
   onSubmit: (agentId: string, comment?: string) => void;
   onClose: () => void;
 }
@@ -41,7 +46,6 @@ function getPopoverPosition(position: { x: number; y: number }) {
     left,
     top,
     width,
-    height: maxHeight,
     maxHeight,
   };
 }
@@ -51,12 +55,15 @@ export function StartSessionPopover({
   sourcePath,
   agents,
   position,
+  projectKey,
+  currentSessionInfo,
   onSubmit,
   onClose,
 }: StartSessionPopoverProps) {
   const [comment, setComment] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
+  const navigate = useNavigate();
   useDismissable({ ref, onDismiss: onClose });
 
   const previewText =
@@ -64,6 +71,22 @@ export function StartSessionPopover({
       ? selectedText.slice(0, MAX_PREVIEW_LENGTH) + "..."
       : selectedText;
   const trimmedComment = comment.trim();
+
+  const handleSendToCurrentSession = () => {
+    if (!currentSessionInfo) return;
+    const quotedText = selectedText.split("\n").map((line) => `> ${line}`).join("\n");
+    const parts = [t("text-selection.promptPrefix", { path: sourcePath, text: quotedText })];
+    if (trimmedComment) parts.push(`\n\n${trimmedComment}`);
+    const message = parts.join("");
+    const { sendMessage, sessions } = useStreamingStore.getState();
+    const ws = sessions[currentSessionInfo.sessionId]?.ws;
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      sendMessage(currentSessionInfo.sessionId, message);
+    } else {
+      useProjectDataStore.getState().setInitialMessage(projectKey, currentSessionInfo.sessionId, message);
+    }
+    navigate(`/project/${projectKey}/chat/${currentSessionInfo.sessionId}`);
+  };
 
   return (
     <div
@@ -73,7 +96,7 @@ export function StartSessionPopover({
       data-testid="text-selection-popover"
       onMouseDown={(event) => event.stopPropagation()}
     >
-      <div className="flex h-full flex-col p-3">
+      <div className="flex flex-col p-3">
         <div className="mb-2 text-[11px] text-muted-foreground">
           {t("text-selection.quoteFrom", { path: sourcePath })}
         </div>
@@ -81,26 +104,42 @@ export function StartSessionPopover({
           {previewText}
         </div>
         <Textarea
-          className="h-12 resize-y"
+          className="mb-2 h-12 resize-y"
           placeholder={t("text-selection.supplementPlaceholder")}
           value={comment}
           onChange={(event) => setComment(event.target.value)}
         />
-        <div className="mt-2 flex min-h-0 flex-1 flex-col border-t border-border pt-2">
-          <div className="mb-1 text-[11px] text-muted-foreground">{t("text-selection.agentPlaceholder")}</div>
-          <div className="flex min-h-0 flex-1 max-h-60 flex-col gap-0.5 overflow-y-auto" data-testid="text-selection-agent-list">
-            {agents.map((agent) => (
-              <Button
-                key={agent.id}
-                variant="ghost"
-                className="w-full justify-between"
-                onClick={() => onSubmit(agent.id, trimmedComment || undefined)}
-              >
-                <span>{agent.name}</span>
-                <span className="text-[11px] text-muted-foreground">{t("common.send")}</span>
-              </Button>
-            ))}
-          </div>
+        <div className="flex flex-col gap-0.5 overflow-y-auto" style={{ maxHeight: 240 }}>
+          {currentSessionInfo && (
+            <Button
+              variant="ghost"
+              className="w-full justify-between"
+              onClick={handleSendToCurrentSession}
+            >
+              <span>
+                {currentSessionInfo.agentName}
+                {currentSessionInfo.sessionTitle && (
+                  <>
+                    <span className="text-border">|</span>
+                    {currentSessionInfo.sessionTitle}
+                  </>
+                )}
+              </span>
+              <span className="text-[11px] text-muted-foreground">{t("text-selection.sendToCurrentSession")}</span>
+            </Button>
+          )}
+          <div className="my-1 border-t border-border" />
+          {agents.map((agent) => (
+            <Button
+              key={agent.id}
+              variant="ghost"
+              className="w-full justify-between"
+              onClick={() => onSubmit(agent.id, trimmedComment || undefined)}
+            >
+              <span>{agent.name}</span>
+              <span className="text-[11px] text-muted-foreground">{t("common.send")}</span>
+            </Button>
+          ))}
         </div>
       </div>
     </div>
