@@ -22,7 +22,7 @@ project-root/
 └── CHANGELOG.md
 ```
 
-`.spherse/theme.css` 是可选文件，只在用户自定义主题时存在。
+`.spherse/theme.css` 是可选文件，只在用户自定义主题时存在。新项目创建时，系统会自动注入 `presets.json` 声明的预置 skill（复制到 `.spherse/skills/`）和预置 agent（创建到 `.spherse/agents/`）。
 
 ## Project 配置
 
@@ -134,4 +134,39 @@ tool update 的 `details.type === "html"` 时，前端 chat 会按 HTML card 渲
 
 ## 预置模板
 
-内置模板由 `packages/presets/templates/` 维护。构建 `@spherse/presets` 前会执行 `scripts/sync-templates.mjs`，把模板源文件同步为 TypeScript 常量供 app 使用。目前包括 agent profile 模板和 agent 聊天窗口主题模板。
+内置模板与预置内容由 `packages/presets/` 维护。构建前执行 `scripts/sync-templates.mjs` 完成以下同步：
+
+1. 将 `templates/*.md` 和 `templates/*.css` 同步为 TypeScript 常量（`AGENT_TEMPLATE`、`AGENT_THEME_TEMPLATE`）
+2. 读取 `presets.json` 生成 `PRESET_SKILLS` 和 `PRESET_AGENTS` 常量（声明预置 skill 列表和预置 agent 列表）
+3. 递归读取 `skills/` 下声明的预置 skill 目录，生成 `PRESET_SKILL_SOURCES` 常量（包含每个 skill 的完整文件内容）
+
+如果 `presets.json` 声明的 skill dir 在 `skills/` 下不存在，构建时报错退出。
+
+### presets.json 格式
+
+`packages/presets/presets.json` 声明新项目创建时注入的预置内容：
+
+```json
+{
+  "presetSkills": [
+    { "dir": "create-ui-theme" },
+    { "dir": "create-agent-chat-theme" }
+  ],
+  "presetAgents": [
+    { "name": "世界观创作", "slug": "world-building" }
+  ]
+}
+```
+
+- `presetSkills[].dir`：对应 `packages/presets/skills/` 下的目录名，该目录的完整内容（含子目录）会被复制到新项目的 `.spherse/skills/{dir}/`
+- `presetAgents[].name`：预置 agent 的展示名称，会通过 `AGENT_TEMPLATE` 模板生成 profile.md
+- `presetAgents[].slug`：预置 agent 的目录 slug 前缀
+
+### 预置内容注入
+
+新建项目时，`createEngine` 检测到项目首次创建，调用 `initPresets()` 执行以下注入：
+
+- 将声明的预置 skill 完整目录结构复制到 `.spherse/skills/`
+- 根据声明创建预置 agent profile（使用 `AGENT_TEMPLATE` 模板，替换默认名称）
+
+非新建项目（已存在的项目重新打开）不会触发注入。注入后的内容属于用户所有，用户可自由修改或删除。

@@ -15,10 +15,12 @@
     "prebuild": "node scripts/sync-templates.mjs",
     "build": "tsc",
     "dev": "tsc --watch",
+    "test": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.6"
   }
 }

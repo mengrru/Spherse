@@ -3,7 +3,7 @@
 ## Package 边界
 
 - **@spherse/core**：纯 Node.js 核心逻辑，负责项目数据、agent profile、session、skill、tool 和 engine 运行时，不依赖 Electron 或 Fastify
-- **@spherse/presets**：内置模板与预置静态内容，构建前通过 `scripts/sync-templates.mjs` 将 `templates/*.md` 同步为可导入常量
+- **@spherse/presets**：内置模板与预置静态内容，构建前通过 `scripts/sync-templates.mjs` 将 `templates/*.md` 同步为可导入常量，并从 `presets.json` 及 `skills/` 目录生成预置 skill 源码和 agent 配置（`PRESET_SKILLS`、`PRESET_AGENTS`、`PRESET_SKILL_SOURCES`），供 core 在新项目创建时注入
 - **@spherse/server**：Fastify API 层，只负责把 HTTP/WebSocket 请求转发到 core 的 Engine 和 ProjectStore
 - **@spherse/app**：Electron + React 桌面应用，负责多项目窗口状态、IPC、renderer UI、每个项目的本地 server 生命周期
 - **@spherse/i18n**：纯 TypeScript i18n 基础设施，维护 locale 类型、翻译资源、`t()` 函数、fallback 规则和校验脚本；React 使用 `@spherse/i18n/react` 子入口的 provider/hook，Electron/server/core 使用同一个纯函数 API
@@ -24,6 +24,7 @@
 - **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），Engine 在构建 system prompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
 - **AI 文件读取限制**：项目配置可声明 `aiAccess.deniedPaths`；Engine 构建 agent 时通过动态 access policy 限制 `read_file`、`list_files`、`search_content`、`render_card file_path`、`edit_file` 的内部读取和 profile context 注入
 - **项目欢迎页设置**：项目配置可声明 `welcomePage.path`，保存项目根目录内 HTML 或图片相对路径；该设置仅供 renderer 欢迎页展示使用，不注入 agent prompt，也不影响 AI 工具访问策略
+- **预置内容注入**：`createEngine` 检测到新项目时调用 `initPresets()`，将 `@spherse/presets` 声明的预置 skill 完整目录复制到 `.spherse/skills/`，并根据 `PRESET_AGENTS` 配置自动创建预置 agent（如「世界观创作」）。预置配置来源为 `packages/presets/presets.json`。仅在首次创建时注入，已有项目不受影响；注入后的内容属于用户所有，app 升级不会覆盖
 
 ## Server 层
 

@@ -5,6 +5,7 @@ import { SessionStore } from "./store/session.js";
 import { AgentProfileStore } from "./store/agent-profile.js";
 import { SkillStore } from "./store/skill.js";
 import { Engine } from "./engine.js";
+import { initPresets } from "./presets.js";
 import type { Logger } from "./logger.js";
 
 export async function createEngine(
@@ -12,9 +13,11 @@ export async function createEngine(
   options?: { projectName?: string; defaultModel?: string; logger?: Logger },
 ): Promise<{ engine: Engine; projectStore: ProjectStore }> {
   const projectStore = new ProjectStore(projectRoot, options?.logger);
+  let isNewProject = false;
   try {
     await projectStore.open();
   } catch {
+    isNewProject = true;
     const dirName = path.basename(path.resolve(projectRoot));
     await projectStore.create(
       options?.projectName ?? dirName,
@@ -23,14 +26,19 @@ export async function createEngine(
   }
 
   const config = projectStore.getConfig()!;
+  const spherseDir = path.join(projectRoot, PROJECT_META_DIR);
   const profileStore = new AgentProfileStore(
-    path.join(projectRoot, PROJECT_META_DIR, config.paths.agents),
+    path.join(spherseDir, config.paths.agents),
   );
 
-  const skillStore = new SkillStore(path.join(projectRoot, PROJECT_META_DIR, "skills"));
+  const skillStore = new SkillStore(path.join(spherseDir, "skills"));
+
+  if (isNewProject) {
+    await initPresets(projectRoot, spherseDir, profileStore, options?.logger);
+  }
 
   const sessionStore = new SessionStore(options?.logger);
-  await sessionStore.init(path.join(projectRoot, PROJECT_META_DIR, "sessions.db"));
+  await sessionStore.init(path.join(spherseDir, "sessions.db"));
 
   const engine = new Engine(profileStore, sessionStore, projectStore, skillStore, {
     defaultModel: options?.defaultModel,

@@ -7,7 +7,8 @@ spherse/
 │   │   └── src/
 │   │       ├── types.ts              # 共享类型与 provider catalog 类型定义
     │   │       ├── logger.ts            # pino Logger 类型与默认工厂
-    │   │       ├── factory.ts            # createEngine() 工厂函数，封装 store 与 mutex 创建
+    │   │       ├── factory.ts            # createEngine() 工厂函数，封装 store、mutex 创建与新项目预置内容注入
+│   │       ├── presets.ts            # initPresets()：新项目预置 skill 与 agent 注入
 │   │       ├── engine.ts             # Engine：运行时 session 管理 + agent/profile 操作门面
 │   │       ├── model-providers.ts    # pi-ai provider catalog adapter，ENABLED_PROVIDERS 过滤与 model resolution
     │   │       ├── engine/
@@ -37,18 +38,26 @@ spherse/
 │   │       ├── __tests__/            # Vitest 单元测试
 │   │       └── index.ts              # 公开导出：Engine, createEngine, types
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
+│   │   ├── presets.json              # 预置 skill 与 agent 声明配置
 │   │   ├── templates/
 │   │   │   ├── agent-template.md     # 新 Agent 创建模板源文件
 │   │   │   └── agent-theme-template.css # Agent 聊天窗口主题模板源文件
-│   │   ├── skills/                   # 内置 skill 模板（用户参考文档）
+│   │   ├── skills/                   # 内置 skill（新项目注入 + 用户参考文档）
 │   │   │   ├── create-ui-theme/      # 自定义 UI 主题创建指南
 │   │   │   │   └── SKILL.md
 │   │   │   └── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
 │   │   │       └── SKILL.md
 │   │   ├── scripts/
-│   │   │   └── sync-templates.mjs    # 模板同步脚本（.md → .ts 常量）
+│   │   │   └── sync-templates.mjs    # 模板与预置内容同步脚本（.md → .ts 常量 + presets.json → 预置常量 + skills/ → skill 源码常量）
+│   │   ├── __tests__/
+│   │   │   └── sync-templates.test.ts # sync-templates 输出验证测试
 │   │   └── src/
-│   │       └── index.ts              # 公开导出模板内容
+│   │       ├── generated/            # 构建时由 sync-templates.mjs 自动生成（不入版本库）
+│   │       │   ├── agent-template.ts
+│   │       │   ├── agent-theme-template.ts
+│   │       │   ├── presets.ts        # PRESET_SKILLS, PRESET_AGENTS 常量
+│   │       │   └── preset-skills.ts  # PRESET_SKILL_SOURCES 常量
+│   │       └── index.ts              # 公开导出：模板内容 + 预置 skill/agent 配置
 │   ├── i18n/                         # @spherse/i18n — 纯 TS i18n 基础设施
 │   │   ├── scripts/
 │   │   │   └── check-i18n.mjs        # locale key 一致性校验脚本
