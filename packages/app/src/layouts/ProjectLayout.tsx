@@ -5,6 +5,7 @@ import { ContentBrowser } from "../features/content-browser";
 import { Chat } from "../features/chat";
 import { ProjectPanel } from "../features/project-panel";
 import { useCustomTheme } from "../hooks/useCustomTheme";
+import { useSidePanelClickAway } from "../hooks/useSidePanelClickAway";
 import { WelcomePage } from "../features/welcome-page";
 import type { ProjectState } from "../stores/app-store";
 import { useAppStore } from "../stores/app-store";
@@ -29,6 +30,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   const { t } = useI18n();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const setProjectLastRoute = useAppStore((state) => state.setProjectLastRoute);
+  const sidePanelClickAway = useSidePanelClickAway();
   const projectData = useProjectDataStore((state) => state.projects[projectKey]);
   const refreshAgents = useProjectDataStore((state) => state.refreshAgents);
   const refreshSessions = useProjectDataStore((state) => state.refreshSessions);
@@ -121,7 +123,10 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
         onSelectFile={handleSelectFile}
         onFileDeleted={handleFileDeleted}
       />
-      <main className="flex-1 overflow-hidden flex flex-col">
+      <main
+        className="flex-1 overflow-hidden flex flex-col"
+        {...sidePanelClickAway}
+      >
         {selectedSession && selectedAgent && (
           <div className={!showingContent ? "contents" : "hidden"}>
             <Chat
