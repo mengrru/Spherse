@@ -222,7 +222,7 @@ export function createApiClient(port: number) {
     async getFileTree(): Promise<string[]> {
       const res = await fetch(`${baseUrl}/api/file-tree`);
       if (!res.ok) return [];
-      return parseJsonResponse(res, schemas.aiAccessSettingsResponse);
+      return parseJsonResponse(res, schemas.fileTreeResponse);
     },
 
     async getTurnContext(sessionId: string): Promise<any> {

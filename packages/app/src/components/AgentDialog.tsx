@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, type KeyboardEvent } from "react";
+import { useState, useMemo } from "react";
 import { AGENT_TEMPLATE, AGENT_THEME_TEMPLATE } from "@spherse/presets";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
 import { useI18n } from "@spherse/i18n/react";
@@ -18,17 +18,8 @@ import {
 import { Field, FieldGroup, FieldLabel } from "./ui/field";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
+import { SearchFileField } from "./SearchFileField";
 import { XIcon } from "lucide-react";
-
-const FILE_TREE_EXCLUDE = new Set(["AGENTS.md", "CHANGELOG.md", "changelog.md"]);
-
-type FileSuggestion = { name: string; fullPath: string };
-
-function fuzzyMatch(filePath: string, query: string): boolean {
-  const lower = filePath.toLowerCase();
-  const parts = query.toLowerCase().split(/\s+/).filter(Boolean);
-  return parts.length === 0 || parts.every((seg) => lower.includes(seg));
-}
 
 function getErrorMessage(err: unknown, t: (key: string) => string): string {
   return err instanceof Error ? err.message : t("agent-dialog.saveFailed");
@@ -195,66 +186,6 @@ function ContextPathField({
   onRemove: (path: string) => void;
 }) {
   const { t } = useI18n();
-  const [input, setInput] = useState("");
-  const [fileTree, setFileTree] = useState<string[]>([]);
-  const [suggestions, setSuggestions] = useState<FileSuggestion[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    client.getFileTree().then((tree) => {
-      setFileTree(tree.filter((f) => !FILE_TREE_EXCLUDE.has(f.split("/").pop() ?? "")));
-    }).catch(() => {});
-  }, [client]);
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
-  function hideSuggestions() {
-    setShowSuggestions(false);
-  }
-
-  function addPath(path: string) {
-    onAdd(path);
-    setInput("");
-    setSuggestions([]);
-    setShowSuggestions(false);
-  }
-
-  function matchFiles(query: string) {
-    if (!query.trim()) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    const matched = fileTree
-      .filter((f) => fuzzyMatch(f, query))
-      .filter((f) => !contextPaths.includes(f))
-      .map((f) => ({ name: f.split("/").pop() ?? f, fullPath: f }));
-    setSuggestions(matched.slice(0, 8));
-    setShowSuggestions(matched.length > 0);
-  }
-
-  function handleInputChange(value: string) {
-    setInput(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => matchFiles(value), 200);
-  }
-
-  function handleInputKeyDown(e: KeyboardEvent) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const path = input.trim();
-      if (path && !contextPaths.includes(path)) {
-        addPath(path);
-      }
-    }
-  }
-
   return (
     <Field>
       <FieldLabel>{t("agent-dialog.refsLabel")}</FieldLabel>
@@ -276,33 +207,12 @@ function ContextPathField({
           ))}
         </div>
       )}
-      <div className="relative">
-        <Input
-          type="text"
-          value={input}
-          onChange={(e) => handleInputChange(e.target.value)}
-          onKeyDown={handleInputKeyDown}
-          onBlur={() => setTimeout(hideSuggestions, 150)}
-          placeholder={t("agent-dialog.refsPlaceholder")}
-        />
-        {showSuggestions && suggestions.length > 0 && (
-          <div ref={suggestionsRef} className="absolute top-full right-0 left-0 z-10 mt-1 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md">
-            {suggestions.map((suggestion) => (
-              <button
-                key={suggestion.fullPath}
-                type="button"
-                className="w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-accent hover:text-accent-foreground"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  addPath(suggestion.fullPath);
-                }}
-              >
-                {suggestion.fullPath}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <SearchFileField
+        client={client}
+        exclude={contextPaths}
+        onSelect={onAdd}
+        placeholder={t("agent-dialog.refsPlaceholder")}
+      />
     </Field>
   );
 }

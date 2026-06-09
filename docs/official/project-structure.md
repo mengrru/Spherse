@@ -113,6 +113,7 @@ spherse/
 │       │   ├── helpers/
 │       │   │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
 │       │   │   └── file-tree.ts      # 文件树 E2E 测试辅助（项目创建、app launch）
+│       │   ├── agent-dialog.spec.ts  # Agent 对话框搜索文件 E2E 测试
 │       │   ├── app-launch.spec.ts    # App 启动验证 smoke test
 │       │   ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │       │   ├── session-rename.spec.ts           # 会话重命名 E2E 测试
@@ -158,7 +159,8 @@ spherse/
 │               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
 │               ├── AgentDialog.tsx       # 创建/编辑 Agent 对话框
 │               ├── EmptyState.tsx        # 无项目时的空状态
-│               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
+│               ├── MarkdownContent.tsx   # 统一 Markdown 渲染组件
+│               └── SearchFileField.tsx   # 文件搜索输入组件（模糊匹配 + Popover 建议列表）
 ├── scripts/
 │   └── rebuild-native.mjs            # Electron native dependency rebuild
 ├── docs/

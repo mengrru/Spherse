@@ -66,6 +66,7 @@ export const schemas = {
   }),
   fileEntry: FileEntrySchema,
   fileEntries: Type.Array(FileEntrySchema),
+  fileTreeResponse: Type.Array(Type.String()),
   contentResponse: Type.Object({
     content: Type.String(),
     path: Type.String(),
@@ -102,6 +103,7 @@ export type RenameSessionRequest = Static<typeof schemas.renameSessionRequest>;
 export type SaveContentRequest = Static<typeof schemas.saveContentRequest>;
 export type CreateContentRequest = Static<typeof schemas.createContentRequest>;
 export type FileEntryContract = Static<typeof schemas.fileEntry>;
+export type FileTreeResponse = Static<typeof schemas.fileTreeResponse>;
 export type ContentResponseContract = Static<typeof schemas.contentResponse>;
 export type AiAccessSettingsRequest = Static<typeof schemas.aiAccessSettingsRequest>;
 export type AiAccessSettingsResponse = Static<typeof schemas.aiAccessSettingsResponse>;
