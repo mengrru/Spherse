@@ -146,6 +146,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
         )}
         {showingContent && contentPath && (
           <ContentBrowser
+            key={contentPath}
             client={project.ctx.client}
             filePath={contentPath}
             onBack={handleBackToChat}
