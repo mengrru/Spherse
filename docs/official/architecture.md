@@ -30,7 +30,7 @@
 
 - **AppContext** = `{ engine, projectStore }`，路由只通过 engine 访问 agent/session/skill 操作，projectStore 用于项目根目录和内容浏览
 - **路由按业务域拆分**到 `routes/` 目录，由 `routes/index.ts` 聚合注册
-- **API contract**：HTTP request/response 与 WebSocket message/event 的运行时 schema 定义在 `contracts/`，通过 `@spherse/server/contracts` 子入口导出给 server routes、WebSocket handler 和 renderer API client 复用；边界 JSON 进入业务逻辑前必须先通过 contract helper 解析
+- **API contract**：HTTP request/response 与 WebSocket message/event 的运行时 schema 定义在 `contracts/`，通过 `@spherse/server/contracts` 子入口导出给 server routes、WebSocket handler 和 renderer API client 复用；边界 JSON 进入业务逻辑前必须先通过 contract helper 解析；chat WebSocket 的 `ChatServerEvent` 是严格的 pi-agent lifecycle 事件 union（agent_start/turn_start/message_start/message_update/message_end/turn_end/agent_end/tool_execution/error 等），renderer 的 chat event 类型直接复用该 contract
 - **运行时 schema**：有 body 的 HTTP route 通过 server contract 中的 TypeBox schema 绑定 Fastify `schema.body` / `schema.response`；WebSocket 收到的 JSON 必须通过 contract parser 校验，非法消息返回统一 error event
 - **内容 API**：`content.ts` 负责目录列表、文件读取、保存、删除、新建文件和新建目录；所有文件路径都通过 core 共享路径安全工具限制在项目根目录内
 - **文件树 API**：`file-tree.ts` 返回面向 UI 选择的项目文件列表，过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir
@@ -58,7 +58,8 @@
 - **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作，并持久化左侧 side panel 固定/自动收起偏好
 - **项目数据 store**：`project-data-store.ts` 按 projectKey 缓存 agents、sessions、初始消息和 loading/error 状态
 - **项目 UI store**：`project-ui-store.ts` 按 projectKey 管理折叠状态等纯 UI 状态
-- **局部状态边界**：Chat 消息流、WebSocket ref、文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件或 feature hook 内；Chat 输入框草稿按 sessionId 缓存在 renderer `localStorage`，用于 session 切换和应用重启后的草稿恢复；欢迎页设置 dialog 的打开状态保留在 `ActivityBar` 内，欢迎页设置变更通过 `lib/events.ts` 中的 renderer 自定义事件通知当前欢迎页重新读取项目配置
+- **局部状态边界**：文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件或 feature hook 内；Chat 输入框草稿按 sessionId 缓存在 renderer `localStorage`，用于 session 切换和应用重启后的草稿恢复；欢迎页设置 dialog 的打开状态保留在 `ActivityBar` 内，欢迎页设置变更通过 `lib/events.ts` 中的 renderer 自定义事件通知当前欢迎页重新读取项目配置
+- **Chat streaming store**：Chat 消息流和 WebSocket 连接由 `features/chat/streaming-store.ts` 统一管理，按 sessionId 缓存 messages、streaming、scrollPosition、WebSocket 和挂载计数；`useChatSession` 只负责 attach/detach 与选择状态，切换页面或关闭 chat 不会中断后台流式输出；WebSocket 事件按 animation frame 批量归约，避免高频 token update 触发过多 React render；`chat-session-reducer.ts` 负责纯数据归约，使用 `message_start` 创建 assistant 占位、`agent_end` 结束正常 streaming，并忽略 user lifecycle 事件以保留本地立即显示 user bubble 的体验
 - **页面 / layout / feature 边界**：`pages/` 只做路由适配和参数校验；跨 feature 的页面编排放在 `layouts/`；业务域专属 UI、hooks 和局部动作放在 `features/{domain}/`
 - **feature-based 组织**：`features/chat`、`features/content-browser`、`features/agent-session-list`、`features/project-panel`、`features/file-tree`、`features/text-selection-session`、`features/settings`、`features/debug-tools`、`features/activity-bar`、`features/welcome-page`、`features/welcome-page-settings` 分别拥有自己的组件和 hooks
 - **共享组件边界**：`components/` 保留 shadcn/ui、跨 feature 复用组件和少量通用组件；只被某个 feature 使用的组件不放在全局 components 根目录

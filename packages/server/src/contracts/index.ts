@@ -1,51 +1,44 @@
 import { Type, type Static, type TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
 
-const UnknownRecord = Type.Record(Type.String(), Type.Unknown());
 const FileEntrySchema = Type.Object({
   name: Type.String(),
   type: Type.Union([Type.Literal("file"), Type.Literal("directory")]),
 });
-const KnownChatServerEventSchema = Type.Union([
-  Type.Object({ type: Type.Literal("message_update"), message: Type.Unknown() }),
-  Type.Object({ type: Type.Literal("message_end"), message: Type.Unknown() }),
+const ChatServerEventSchema = Type.Union([
+  Type.Object({ type: Type.Literal("agent_start") }),
+  Type.Object({ type: Type.Literal("agent_end"), messages: Type.Array(Type.Any()) }),
+  Type.Object({ type: Type.Literal("turn_start") }),
+  Type.Object({
+    type: Type.Literal("turn_end"),
+    message: Type.Any(),
+    toolResults: Type.Array(Type.Any()),
+  }),
+  Type.Object({ type: Type.Literal("message_start"), message: Type.Any() }),
+  Type.Object({ type: Type.Literal("message_update"), message: Type.Any(), assistantMessageEvent: Type.Optional(Type.Any()) }),
+  Type.Object({ type: Type.Literal("message_end"), message: Type.Any() }),
   Type.Object({
     type: Type.Literal("tool_execution_start"),
     toolCallId: Type.String(),
     toolName: Type.String(),
-    args: Type.Unknown(),
+    args: Type.Any(),
   }),
   Type.Object({
     type: Type.Literal("tool_execution_update"),
     toolCallId: Type.String(),
     toolName: Type.String(),
-    args: Type.Unknown(),
-    partialResult: Type.Unknown(),
+    args: Type.Any(),
+    partialResult: Type.Any(),
   }),
   Type.Object({
     type: Type.Literal("tool_execution_end"),
     toolCallId: Type.String(),
     toolName: Type.String(),
-    result: Type.Unknown(),
+    result: Type.Any(),
     isError: Type.Boolean(),
   }),
-  Type.Object({ type: Type.Literal("agent_end_done") }),
   Type.Object({ type: Type.Literal("error"), message: Type.String() }),
 ]);
-const ExtendedChatServerEventSchema = Type.Intersect([
-  Type.Object({ type: Type.String() }),
-  UnknownRecord,
-]);
-const knownChatServerEventTypes = new Set([
-  "message_update",
-  "message_end",
-  "tool_execution_start",
-  "tool_execution_update",
-  "tool_execution_end",
-  "agent_end_done",
-  "error",
-]);
-
 export const schemas = {
   okResponse: Type.Object({ ok: Type.Boolean() }),
   errorResponse: Type.Object({ error: Type.String() }),
@@ -89,10 +82,7 @@ export const schemas = {
     Type.Object({ type: Type.Literal("message"), content: Type.String() }),
     Type.Object({ type: Type.Literal("abort") }),
   ]),
-  chatServerEvent: Type.Union([
-    KnownChatServerEventSchema,
-    ExtendedChatServerEventSchema,
-  ]),
+  chatServerEvent: ChatServerEventSchema,
 } as const;
 
 export type OkResponse = Static<typeof schemas.okResponse>;
@@ -110,7 +100,7 @@ export type AiAccessSettingsResponse = Static<typeof schemas.aiAccessSettingsRes
 export type WelcomePageSettingsRequest = Static<typeof schemas.welcomePageSettingsRequest>;
 export type WelcomePageSettingsResponse = Static<typeof schemas.welcomePageSettingsResponse>;
 export type ChatClientMessage = Static<typeof schemas.chatClientMessage>;
-export type ChatServerEvent = Static<typeof schemas.chatServerEvent>;
+export type ChatServerEvent = Static<typeof ChatServerEventSchema>;
 
 export function parseContract<T extends TSchema>(schema: T, payload: unknown): Static<T> {
   if (!Value.Check(schema, payload)) {
@@ -130,14 +120,5 @@ export function parseChatClientMessage(payload: unknown): ChatClientMessage {
 }
 
 export function parseChatServerEvent(payload: unknown): ChatServerEvent {
-  if (
-    payload &&
-    typeof payload === "object" &&
-    "type" in payload &&
-    typeof payload.type === "string" &&
-    knownChatServerEventTypes.has(payload.type)
-  ) {
-    return parseContract(KnownChatServerEventSchema, payload);
-  }
-  return parseContract(ExtendedChatServerEventSchema, payload);
+  return parseContract(ChatServerEventSchema, payload);
 }

@@ -21,8 +21,24 @@ describe("api contracts", () => {
   });
 
   it("accepts known chat server events", () => {
-    expect(parseChatServerEvent({ type: "agent_end_done" })).toEqual({
-      type: "agent_end_done",
+    expect(parseChatServerEvent({ type: "agent_start" })).toEqual({
+      type: "agent_start",
+    });
+    expect(parseChatServerEvent({ type: "turn_start" })).toEqual({
+      type: "turn_start",
+    });
+    expect(parseChatServerEvent({ type: "message_start", message: { role: "user" } })).toEqual({
+      type: "message_start",
+      message: { role: "user" },
+    });
+    expect(parseChatServerEvent({ type: "turn_end", message: {}, toolResults: [] })).toEqual({
+      type: "turn_end",
+      message: {},
+      toolResults: [],
+    });
+    expect(parseChatServerEvent({ type: "agent_end", messages: [] })).toEqual({
+      type: "agent_end",
+      messages: [],
     });
     expect(parseChatServerEvent({ type: "error", message: "boom" })).toEqual({
       type: "error",
@@ -32,6 +48,10 @@ describe("api contracts", () => {
 
   it("rejects malformed known chat server events", () => {
     expect(() => parseChatServerEvent({ type: "error" })).toThrow(/Invalid payload/);
+    expect(() => parseChatServerEvent({ type: "message_start" })).toThrow(/Invalid payload/);
+    expect(() => parseChatServerEvent({ type: "turn_end", message: {} })).toThrow(/Invalid payload/);
+    expect(() => parseChatServerEvent({ type: "agent_end" })).toThrow(/Invalid payload/);
+    expect(() => parseChatServerEvent({ type: "unknown_event" })).toThrow(/Invalid payload/);
   });
 
   it("validates named API responses", () => {

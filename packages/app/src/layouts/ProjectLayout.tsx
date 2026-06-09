@@ -73,10 +73,10 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   }, [project.ctx.client, projectKey, refreshAgents, refreshSessions]);
 
   useEffect(() => {
-    if (initialMessage && selectedSession) {
+    if (initialMessage && selectedSession && selectedAgent) {
       consumeInitialMessage(projectKey, selectedSession.id);
     }
-  }, [consumeInitialMessage, initialMessage, projectKey, selectedSession]);
+  }, [consumeInitialMessage, initialMessage, projectKey, selectedAgent, selectedSession]);
 
   const handleSelectFile = (filePath: string) => {
     navigate(buildContentUrl(projectKey, filePath, activeSessionId));
@@ -133,6 +133,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
               key={selectedSession.id}
               client={project.ctx.client}
               sessionId={selectedSession.id}
+              port={project.ctx.port}
               agent={selectedAgent}
               onNavigateToPath={handleSelectFile}
               initialMessage={initialMessage}

@@ -115,6 +115,7 @@ spherse/
 │       │   │   └── file-tree.ts      # 文件树 E2E 测试辅助（项目创建、app launch）
 │       │   ├── agent-dialog.spec.ts  # Agent 对话框搜索文件 E2E 测试
 │       │   ├── app-launch.spec.ts    # App 启动验证 smoke test
+│       │   ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
 │       │   ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │       │   ├── session-rename.spec.ts           # 会话重命名 E2E 测试
 │       │   └── text-selection-session.spec.ts  # 划选会话 E2E 测试
@@ -142,7 +143,7 @@ spherse/
 │           ├── features/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
 │           │   ├── agent-session-list/   # Agent/session 分组列表
-│           │   ├── chat/                 # 对话页面入口、消息流、输入框、工具调用展示
+│           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示
 │           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
     │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
 │           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog

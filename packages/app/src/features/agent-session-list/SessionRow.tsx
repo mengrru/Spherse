@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
+import { Loader2 } from "lucide-react";
 import type { SessionInfo } from "../../lib/types";
 import { TreeRow } from "../../components/ui/tree-row";
 import { Input } from "../../components/ui/input";
@@ -11,6 +12,7 @@ import {
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
 import { useI18n } from "@spherse/i18n/react";
+import { useStreamingStore } from "../chat/streaming-store";
 
 interface SessionRowProps {
   session: SessionInfo;
@@ -33,6 +35,9 @@ export function SessionRow({ session, active, onSelect, onDelete, onRename }: Se
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurRef = useRef(false);
   const fallbackTitle = getFallbackTitle(session);
+  const isStreaming = useStreamingStore(
+    (s) => !active && s.sessions[session.id]?.streaming === true,
+  );
 
   useEffect(() => {
     if (!editing) return;
@@ -144,6 +149,9 @@ export function SessionRow({ session, active, onSelect, onDelete, onRename }: Se
             <span className="overflow-hidden text-ellipsis whitespace-nowrap">
               {session.title ?? fallbackTitle}
             </span>
+            {isStreaming && (
+              <Loader2 className="ml-auto h-3 w-3 shrink-0 animate-spin text-muted-foreground" />
+            )}
           </TreeRow>
         </ContextMenuTrigger>
         <ContextMenuContent>

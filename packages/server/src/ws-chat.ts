@@ -39,7 +39,6 @@ export function handleChatWebSocket(
             await ctx.engine.sendMessage(sessionId, msg.content, (event) => {
               socket.send(JSON.stringify(parseChatServerEvent(event)));
             });
-            socket.send(JSON.stringify(parseChatServerEvent({ type: "agent_end_done" })));
           } catch (err: any) {
             fastify.log.error({ err, sessionId }, "chat ws message error");
             socket.send(

@@ -57,11 +57,4 @@ export interface ToolCallInfo {
   _card?: HtmlCard;
 }
 
-export type AgentEvent =
-  | { type: "message_update"; message: any }
-  | { type: "message_end"; message: any }
-  | { type: "tool_execution_start"; toolCallId: string; toolName: string; args: any }
-  | { type: "tool_execution_update"; toolCallId: string; toolName: string; args: any; partialResult: any }
-  | { type: "tool_execution_end"; toolCallId: string; toolName: string; result: any; isError: boolean }
-  | { type: "agent_end_done" }
-  | { type: "error"; message: string };
+export type { ChatServerEvent as AgentEvent } from "@spherse/server/contracts";

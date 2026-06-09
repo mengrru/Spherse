@@ -10,23 +10,24 @@ import { useChatSession } from "./hooks/useChatSession";
 export interface ChatProps {
   client: ApiClient;
   sessionId: string;
+  port: number;
   agent: AgentProfile;
   onNavigateToPath?: (path: string) => void;
   initialMessage?: string;
   onClose?: () => void;
 }
 
-export function Chat({ client, sessionId, agent, onNavigateToPath, initialMessage, onClose }: ChatProps) {
+export function Chat({ client, sessionId, port, agent, onNavigateToPath, initialMessage, onClose }: ChatProps) {
   const { messages, streaming, sendMessage, abort } = useChatSession({
     client,
     sessionId,
+    port,
     initialMessage,
   });
-  const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages);
+  const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId);
   const scopedThemeCss = useAgentTheme(client, agent.id);
 
   const handleClose = () => {
-    if (streaming) abort();
     onClose?.();
   };
 
