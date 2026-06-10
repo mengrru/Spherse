@@ -71,8 +71,9 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   }, [location.pathname, location.search, projectKey, setProjectLastRoute]);
 
   useEffect(() => {
-    void refreshAgents(projectKey, project.ctx.client);
-    void refreshSessions(projectKey, project.ctx.client);
+    void refreshAgents(projectKey, project.ctx.client).then(() => {
+      void refreshSessions(projectKey, project.ctx.client);
+    });
   }, [project.ctx.client, projectKey, refreshAgents, refreshSessions]);
 
   useEffect(() => {

@@ -97,17 +97,19 @@ describe("useProjectDataStore", () => {
   it("does not recreate a cleared project when a sessions refresh resolves late", async () => {
     let resolveSessions: (sessions: SessionInfo[]) => void = () => {};
     const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
       listSessions: vi.fn().mockReturnValue(new Promise<SessionInfo[]>((resolve) => {
         resolveSessions = resolve;
       })),
     });
 
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
     const refresh = useProjectDataStore.getState().refreshSessions("project-1", client);
     useProjectDataStore.getState().clearProjectData("project-1");
     resolveSessions([createSession("session-1")]);
     await refresh;
 
-    expect(client.listSessions).toHaveBeenCalledTimes(1);
+    expect(client.listSessions).toHaveBeenCalledWith("agent-1");
     expect(useProjectDataStore.getState().projects["project-1"]).toBeUndefined();
   });
 
@@ -132,6 +134,7 @@ describe("useProjectDataStore", () => {
   it("keeps a newly created session when the follow-up sessions refresh is stale", async () => {
     let resolveSessions: (sessions: SessionInfo[]) => void = () => {};
     const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
       createSession: vi.fn().mockResolvedValue({ sessionId: "session-1" }),
       listSessions: vi.fn().mockReturnValue(new Promise<SessionInfo[]>((resolve) => {
         resolveSessions = resolve;
@@ -148,7 +151,7 @@ describe("useProjectDataStore", () => {
     resolveSessions([]);
 
     await vi.waitFor(() => {
-      expect(client.listSessions).toHaveBeenCalledTimes(1);
+      expect(client.listSessions).toHaveBeenCalledWith("agent-1");
     });
 
     expect(session?.id).toBe("session-1");
@@ -162,6 +165,7 @@ describe("useProjectDataStore", () => {
 
   it("renames a session in the project cache", async () => {
     const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
       listSessions: vi.fn().mockResolvedValue([createSession("session-1")]),
       renameSession: vi.fn().mockResolvedValue({
         ...createSession("session-1"),
@@ -169,6 +173,7 @@ describe("useProjectDataStore", () => {
       }),
     });
 
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
     await useProjectDataStore.getState().refreshSessions("project-1", client);
     const ok = await useProjectDataStore.getState().renameSession(
       "project-1",
@@ -178,7 +183,7 @@ describe("useProjectDataStore", () => {
     );
 
     expect(ok).toBe(true);
-    expect(client.renameSession).toHaveBeenCalledWith("session-1", "Renamed Session");
+    expect(client.renameSession).toHaveBeenCalledWith("agent-1", "session-1", "Renamed Session");
     expect(useProjectDataStore.getState().projects["project-1"]?.sessions).toEqual([
       { ...createSession("session-1"), title: "Renamed Session" },
     ]);
@@ -187,10 +192,12 @@ describe("useProjectDataStore", () => {
   it("keeps the existing session title when rename fails", async () => {
     const original = { ...createSession("session-1"), title: "Original" };
     const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
       listSessions: vi.fn().mockResolvedValue([original]),
       renameSession: vi.fn().mockRejectedValue(new Error("rename failed")),
     });
 
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
     await useProjectDataStore.getState().refreshSessions("project-1", client);
     const ok = await useProjectDataStore.getState().renameSession(
       "project-1",
@@ -207,12 +214,14 @@ describe("useProjectDataStore", () => {
   it("does not recreate a cleared project when a rename resolves late", async () => {
     let resolveRename: (session: SessionInfo) => void = () => {};
     const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
       listSessions: vi.fn().mockResolvedValue([createSession("session-1")]),
       renameSession: vi.fn().mockReturnValue(new Promise<SessionInfo>((resolve) => {
         resolveRename = resolve;
       })),
     });
 
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
     await useProjectDataStore.getState().refreshSessions("project-1", client);
     const rename = useProjectDataStore.getState().renameSession(
       "project-1",

@@ -42,7 +42,7 @@ const ChatServerEventSchema = Type.Union([
 export const schemas = {
   okResponse: Type.Object({ ok: Type.Boolean() }),
   errorResponse: Type.Object({ error: Type.String() }),
-  createSessionRequest: Type.Object({ agentId: Type.String({ minLength: 1 }) }),
+  createSessionRequest: Type.Object({}),
   createSessionResponse: Type.Object({ sessionId: Type.String() }),
   sessionInfo: Type.Object({
     id: Type.String(),

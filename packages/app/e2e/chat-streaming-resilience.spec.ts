@@ -64,10 +64,8 @@ async function createSessionViaApi(page: Page, projectRoot: string, agentId: str
     (dir) => window.electronAPI.startServer(dir),
     projectRoot,
   );
-  const res = await fetch(`http://localhost:${port}/api/sessions`, {
+  const res = await fetch(`http://localhost:${port}/api/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ agentId }),
   });
   const { sessionId } = await res.json() as { sessionId: string };
   return sessionId;

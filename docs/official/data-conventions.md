@@ -10,12 +10,12 @@
 project-root/
 ├── .spherse/
 │   ├── project.yaml
-│   ├── sessions.db
 │   ├── theme.css
 │   ├── agents/
 │   │   └── {slug}-{shortId}/
 │   │       ├── profile.md
-│   │       └── theme.css
+│   │       ├── theme.css
+│   │       └── sessions.db
 │   └── skills/
 │       └── <skill-name>/SKILL.md
 ├── AGENTS.md
@@ -88,13 +88,11 @@ Agent system prompt content...
 
 ## Session 数据
 
-Session 数据存储在 `.spherse/sessions.db`。每个 session 通过 `agent_id` 关联 AgentProfile，状态为 `active` 或 `archived`。
+每个 agent 拥有独立的 SQLite 数据库文件，位于 `.spherse/agents/{slug}-{shortId}/sessions.db`。每个 session 的状态为 `active` 或 `archived`。
 
 `sessions.title` 是可选的用户可编辑展示标题。用户重命名 session 时只更新 `title`，不更新 `updated_at`，因此不会改变 session 列表按最近对话活动排序的行为。
 
-删除 agent 时，Engine 会归档关联 sessions，再删除 agent 目录（包含 profile.md），避免历史对话失去可追溯状态。
-
-删除 agent 时会删除整个 agent 目录，因此 `theme.css` 也会随 `profile.md` 一起移除。
+删除 agent 时，Engine 关闭该 agent 的 DB 连接并删除整个 agent 目录，`sessions.db` 随 `profile.md`、`theme.css` 一起移除。
 
 ## Skill 定义格式
 

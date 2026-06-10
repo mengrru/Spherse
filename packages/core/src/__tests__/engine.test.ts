@@ -6,8 +6,8 @@ import type { SessionInfo } from "../types.js";
 function createEngineWithSessions(initial: Record<string, SessionInfo>) {
   const sessions = new Map(Object.entries(initial));
   const sessionStore = {
-    getSession: vi.fn((id: string) => sessions.get(id) ?? null),
-    updateSessionTitle: vi.fn((id: string, title: string) => {
+    getSession: vi.fn((_agentId: string, id: string) => sessions.get(id) ?? null),
+    updateSessionTitle: vi.fn((_agentId: string, id: string, title: string) => {
       const session = sessions.get(id);
       if (session) sessions.set(id, { ...session, title });
     }),
@@ -35,9 +35,9 @@ describe("Engine.renameSession", () => {
     };
     const { engine, sessionStore } = createEngineWithSessions({ "session-1": session });
 
-    const updated = engine.renameSession("session-1", "  New Title  ");
+    const updated = engine.renameSession("agent-1", "session-1", "  New Title  ");
 
-    expect(sessionStore.updateSessionTitle).toHaveBeenCalledWith("session-1", "New Title");
+    expect(sessionStore.updateSessionTitle).toHaveBeenCalledWith("agent-1", "session-1", "New Title");
     expect(updated).toEqual({ ...session, title: "New Title" });
     expect(updated.updatedAt).toBe(2);
   });
@@ -53,7 +53,7 @@ describe("Engine.renameSession", () => {
       },
     });
 
-    expect(() => engine.renameSession("session-1", "   ")).toThrow("title is required");
+    expect(() => engine.renameSession("agent-1", "session-1", "   ")).toThrow("title is required");
   });
 
   it("rejects a title longer than 80 characters", () => {
@@ -67,7 +67,7 @@ describe("Engine.renameSession", () => {
       },
     });
 
-    expect(() => engine.renameSession("session-1", "a".repeat(81))).toThrow(
+    expect(() => engine.renameSession("agent-1", "session-1", "a".repeat(81))).toThrow(
       "title must be 80 characters or less",
     );
   });
@@ -75,7 +75,7 @@ describe("Engine.renameSession", () => {
   it("throws when the session does not exist", () => {
     const { engine } = createEngineWithSessions({});
 
-    expect(() => engine.renameSession("missing", "New Title")).toThrow(
+    expect(() => engine.renameSession("agent-1", "missing", "New Title")).toThrow(
       'Session "missing" not found',
     );
   });

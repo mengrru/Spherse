@@ -3,31 +3,26 @@ import { schemas } from "@spherse/server/contracts";
 import type { AppContext } from "../index.js";
 
 export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext): void {
-  fastify.get<{ Querystring: { agentId?: string } }>(
-    "/api/sessions",
+  fastify.get<{ Params: { agentId: string } }>(
+    "/api/agents/:agentId/sessions",
     async (req) => {
-      return ctx.engine.listSessions(req.query.agentId);
+      return ctx.engine.listSessions(req.params.agentId);
     },
   );
 
-  fastify.post<{ Body: { agentId?: string } }>(
-    "/api/sessions",
+  fastify.post<{ Params: { agentId: string } }>(
+    "/api/agents/:agentId/sessions",
     {
       schema: {
-        body: schemas.createSessionRequest,
         response: {
           200: schemas.createSessionResponse,
-          400: schemas.errorResponse,
           404: schemas.errorResponse,
         },
       },
     },
     async (req, reply) => {
-      const { agentId } = req.body ?? {};
-      if (!agentId)
-        return reply.code(400).send({ error: "agentId is required" });
       try {
-        const sessionId = await ctx.engine.createSession(agentId);
+        const sessionId = await ctx.engine.createSession(req.params.agentId);
         return { sessionId };
       } catch (err: any) {
         return reply.code(404).send({ error: err.message });
@@ -35,25 +30,25 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
   );
 
-  fastify.get<{ Params: { id: string } }>(
-    "/api/sessions/:id",
+  fastify.get<{ Params: { agentId: string; id: string } }>(
+    "/api/agents/:agentId/sessions/:id",
     async (req, reply) => {
-      const session = ctx.engine.getSession(req.params.id);
+      const session = ctx.engine.getSession(req.params.agentId, req.params.id);
       if (!session)
         return reply.code(404).send({ error: "Session not found" });
       return session;
     },
   );
 
-  fastify.get<{ Params: { id: string } }>(
-    "/api/sessions/:id/messages",
+  fastify.get<{ Params: { agentId: string; id: string } }>(
+    "/api/agents/:agentId/sessions/:id/messages",
     async (req) => {
-      return ctx.engine.getSessionHistory(req.params.id);
+      return ctx.engine.getSessionHistory(req.params.agentId, req.params.id);
     },
   );
 
-  fastify.patch<{ Params: { id: string }; Body: { title?: unknown } }>(
-    "/api/sessions/:id",
+  fastify.patch<{ Params: { agentId: string; id: string }; Body: { title?: unknown } }>(
+    "/api/agents/:agentId/sessions/:id",
     {
       schema: {
         body: schemas.renameSessionRequest,
@@ -71,7 +66,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
       }
 
       try {
-        return ctx.engine.renameSession(req.params.id, title);
+        return ctx.engine.renameSession(req.params.agentId, req.params.id, title);
       } catch (err: any) {
         const message = err instanceof Error ? err.message : "request failed";
         if (message.includes("not found")) {
@@ -82,10 +77,10 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
   );
 
-  fastify.delete<{ Params: { id: string } }>(
-    "/api/sessions/:id",
+  fastify.delete<{ Params: { agentId: string; id: string } }>(
+    "/api/agents/:agentId/sessions/:id",
     async (req) => {
-      ctx.engine.deleteSession(req.params.id);
+      ctx.engine.deleteSession(req.params.agentId, req.params.id);
       return { ok: true };
     },
   );

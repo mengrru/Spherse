@@ -22,6 +22,7 @@ export function Chat({ client, sessionId, port, agent, onNavigateToPath, initial
     client,
     sessionId,
     port,
+    agentId: agent.id,
     initialMessage,
   });
   const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId);

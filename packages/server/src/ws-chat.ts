@@ -6,14 +6,14 @@ export function handleChatWebSocket(
   fastify: FastifyInstance,
   ctx: AppContext,
 ) {
-  fastify.get<{ Params: { sessionId: string } }>(
-    "/ws/chat/:sessionId",
+  fastify.get<{ Params: { agentId: string; sessionId: string } }>(
+    "/ws/chat/:agentId/:sessionId",
     { websocket: true },
     (socket, req) => {
-      const { sessionId } = req.params;
-      fastify.log.info({ sessionId }, "chat ws connected");
+      const { agentId, sessionId } = req.params;
+      fastify.log.info({ sessionId, agentId }, "chat ws connected");
 
-      ctx.engine.restoreSession(sessionId).catch((err) => {
+      ctx.engine.restoreSession(agentId, sessionId).catch((err) => {
         const message = err instanceof Error ? err.message : "request failed";
         socket.send(JSON.stringify(parseChatServerEvent({ type: "error", message })));
         socket.close();

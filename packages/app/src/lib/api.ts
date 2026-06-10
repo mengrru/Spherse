@@ -31,10 +31,8 @@ export function createApiClient(port: number) {
     },
 
     async createSession(agentId: string): Promise<{ sessionId: string }> {
-      const res = await fetch(`${baseUrl}/api/sessions`, {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/sessions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ agentId }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
@@ -43,19 +41,18 @@ export function createApiClient(port: number) {
       return parseJsonResponse(res, schemas.createSessionResponse);
     },
 
-    async getSession(id: string): Promise<SessionInfo> {
-      const res = await fetch(`${baseUrl}/api/sessions/${id}`);
+    async getSession(agentId: string, id: string): Promise<SessionInfo> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`);
       return res.json();
     },
 
-    async listSessions(agentId?: string): Promise<SessionInfo[]> {
-      const query = agentId ? `?agentId=${encodeURIComponent(agentId)}` : "";
-      const res = await fetch(`${baseUrl}/api/sessions${query}`);
+    async listSessions(agentId: string): Promise<SessionInfo[]> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/sessions`);
       return res.json();
     },
 
-    async getSessionMessages(id: string): Promise<ChatMessage[]> {
-      const res = await fetch(`${baseUrl}/api/sessions/${id}/messages`);
+    async getSessionMessages(agentId: string, id: string): Promise<ChatMessage[]> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages`);
       return res.json();
     },
 
@@ -195,8 +192,8 @@ export function createApiClient(port: number) {
       return parseJsonResponse(res, schemas.okResponse);
     },
 
-    async renameSession(id: string, title: string): Promise<SessionInfo> {
-      const res = await fetch(`${baseUrl}/api/sessions/${encodeURIComponent(id)}`, {
+    async renameSession(agentId: string, id: string, title: string): Promise<SessionInfo> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
@@ -208,8 +205,8 @@ export function createApiClient(port: number) {
       return parseJsonResponse(res, schemas.sessionInfo);
     },
 
-    async deleteSession(id: string): Promise<{ ok: boolean }> {
-      const res = await fetch(`${baseUrl}/api/sessions/${encodeURIComponent(id)}`, {
+    async deleteSession(agentId: string, id: string): Promise<{ ok: boolean }> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
       if (!res.ok) {
@@ -233,7 +230,7 @@ export function createApiClient(port: number) {
         const err = await res.json().catch(() => ({ error: "request failed" }));
         throw new Error(err.error ?? "request failed");
       }
-      return parseJsonResponse(res, schemas.welcomePageSettingsResponse);
+      return res.json();
     },
 
     getPreviewUrl(filePath: string): string {

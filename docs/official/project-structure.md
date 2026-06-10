@@ -16,7 +16,7 @@ spherse/
     │   │       │   └── log-agent-event.ts    # agent event → pino 日志映射（级别、截断、生命周期事件）
 │   │       ├── store/                # 存储层抽象（不持有运行时状态）
 │   │       │   ├── project.ts        # 项目元数据读写（.spherse/project.yaml, AGENTS.md, CHANGELOG.md）
-│   │       │   ├── session.ts        # SQLite session 持久化（agent_id 关联, schema version 管理）
+│   │       │   ├── session.ts        # SQLite session 持久化（每 agent 独立 sessions.db, lazy open 连接池）
 │   │       │   ├── agent-profile.ts  # .spherse/agents/{slug}-{shortId}/profile.md CRUD
 │   │       │   ├── skill.ts          # .spherse/skills/*/SKILL.md 读取
 │   │       │   └── index.ts

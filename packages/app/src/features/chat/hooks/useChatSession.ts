@@ -9,17 +9,19 @@ export function useChatSession({
   client,
   sessionId,
   port,
+  agentId,
   initialMessage,
 }: {
   client: ApiClient;
   sessionId: string;
   port: number;
+  agentId: string;
   initialMessage?: string;
 }) {
   useEffect(() => {
-    useStreamingStore.getState().attach(client, sessionId, port, initialMessage);
+    useStreamingStore.getState().attach(client, sessionId, port, agentId, initialMessage);
     return () => useStreamingStore.getState().detach(sessionId);
-  }, [client, sessionId, port, initialMessage]);
+  }, [client, sessionId, port, agentId, initialMessage]);
 
   const messages = useStreamingStore(
     (s) => s.sessions[sessionId]?.messages ?? EMPTY_MESSAGES,

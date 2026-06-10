@@ -102,7 +102,11 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     })));
 
     try {
-      const sessions = await client.listSessions();
+      const agents = get().projects[projectKey]?.agents ?? [];
+      const allSessions = await Promise.all(
+        agents.map((agent) => client.listSessions(agent.id)),
+      );
+      const sessions = allSessions.flat();
       set((state) => updateProjectData(state, projectKey, (project) => ({
         ...project,
         sessions: [
@@ -161,7 +165,10 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
 
   async deleteSession(projectKey, client, sessionId) {
     try {
-      await client.deleteSession(sessionId);
+      const project = get().projects[projectKey];
+      const session = project?.sessions.find((s) => s.id === sessionId);
+      if (!session) return;
+      await client.deleteSession(session.agentId, sessionId);
       set((state) => updateProjectData(state, projectKey, (project) => {
         const { [sessionId]: _removed, ...initialMessageBySessionId } =
           project.initialMessageBySessionId;
@@ -182,7 +189,10 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
 
   async renameSession(projectKey, client, sessionId, title) {
     try {
-      const updatedSession = await client.renameSession(sessionId, title);
+      const project = get().projects[projectKey];
+      const session = project?.sessions.find((s) => s.id === sessionId);
+      if (!session) return false;
+      const updatedSession = await client.renameSession(session.agentId, sessionId, title);
       set((state) => updateProjectData(state, projectKey, (project) => ({
         ...project,
         sessions: project.sessions.map((session) =>
@@ -241,10 +251,8 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
   async deleteAgent(projectKey, client, agentId) {
     try {
       await client.deleteAgent(agentId);
-      await Promise.all([
-        get().refreshAgents(projectKey, client),
-        get().refreshSessions(projectKey, client),
-      ]);
+      await get().refreshAgents(projectKey, client);
+      await get().refreshSessions(projectKey, client);
     } catch (err) {
       set((state) => updateProjectData(state, projectKey, (project) => ({
         ...project,

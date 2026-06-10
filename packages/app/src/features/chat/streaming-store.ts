@@ -134,7 +134,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     });
   }
 
-  function connect(client: ApiClient, sessionId: string, port: number, initialMessage?: string) {
+  function connect(client: ApiClient, sessionId: string, port: number, agentId: string, initialMessage?: string) {
     if (pendingCreation.has(sessionId)) return;
     pendingCreation.add(sessionId);
 
@@ -145,7 +145,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         try { current.ws.close(); } catch { /* already closed */ }
       }
 
-      const ws = new WebSocket(`ws://localhost:${port}/ws/chat/${sessionId}`);
+      const ws = new WebSocket(`ws://localhost:${port}/ws/chat/${agentId}/${sessionId}`);
 
       ws.onmessage = (wsEvent) => {
         if (get().sessions[sessionId]?.ws !== ws) return;
@@ -193,7 +193,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
       updateSession(sessionId, (session) => ({ ...session, ws }));
 
-      client.getSessionMessages(sessionId).then((history: any[]) => {
+      client.getSessionMessages(agentId, sessionId).then((history: any[]) => {
         const historyMessages = parseHistoryMessages(history);
         updateSession(sessionId, (session) => {
           const messages = mergeHistoryMessages(session.messages, historyMessages);
@@ -211,9 +211,9 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
   return {
     sessions: {},
 
-    attach(client, sessionId, port, initialMessage) {
+    attach(client, sessionId, port, agentId, initialMessage) {
       ensureSession(sessionId, 1);
-      connect(client, sessionId, port, initialMessage);
+      connect(client, sessionId, port, agentId, initialMessage);
     },
 
     detach(sessionId) {

@@ -27,9 +27,8 @@ export async function createEngine(
 
   const config = projectStore.getConfig()!;
   const spherseDir = path.join(projectRoot, PROJECT_META_DIR);
-  const profileStore = new AgentProfileStore(
-    path.join(spherseDir, config.paths.agents),
-  );
+  const agentsPath = path.join(spherseDir, config.paths.agents);
+  const profileStore = new AgentProfileStore(agentsPath);
 
   const skillStore = new SkillStore(path.join(spherseDir, "skills"));
 
@@ -37,8 +36,7 @@ export async function createEngine(
     await initPresets(projectRoot, spherseDir, profileStore, options?.logger);
   }
 
-  const sessionStore = new SessionStore(options?.logger);
-  await sessionStore.init(path.join(spherseDir, "sessions.db"));
+  const sessionStore = new SessionStore(agentsPath, options?.logger);
 
   const engine = new Engine(profileStore, sessionStore, projectStore, skillStore, {
     defaultModel: options?.defaultModel,

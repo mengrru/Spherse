@@ -36,7 +36,7 @@ export class Engine {
   private sessionStore: SessionStore;
   private projectStore: ProjectStore;
   private skillStore: SkillStore;
-  private activeSessions: Map<string, Agent> = new Map();
+  private activeSessions: Map<string, { agent: Agent; agentId: string }> = new Map();
   private globalDefaultModel?: string;
   private fileWriteMutex: FileWriteMutex;
   private logger: Logger;
@@ -73,25 +73,25 @@ export class Engine {
     return this.profileStore.save(slug, content);
   }
 
-  getSession(id: string): SessionInfo | null {
-    return this.sessionStore.getSession(id);
+  getSession(agentId: string, id: string): SessionInfo | null {
+    return this.sessionStore.getSession(agentId, id);
   }
 
-  listSessions(agentId?: string): SessionInfo[] {
+  listSessions(agentId: string): SessionInfo[] {
     return this.sessionStore.listSessions(agentId);
   }
 
-  renameSession(sessionId: string, title: string): SessionInfo {
+  renameSession(agentId: string, sessionId: string, title: string): SessionInfo {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) throw new Error("title is required");
     if (trimmedTitle.length > 80) {
       throw new Error("title must be 80 characters or less");
     }
 
-    const session = this.sessionStore.getSession(sessionId);
+    const session = this.sessionStore.getSession(agentId, sessionId);
     if (!session) throw new Error(`Session "${sessionId}" not found`);
 
-    this.sessionStore.updateSessionTitle(sessionId, trimmedTitle);
+    this.sessionStore.updateSessionTitle(agentId, sessionId, trimmedTitle);
     return { ...session, title: trimmedTitle };
   }
 
@@ -101,15 +101,15 @@ export class Engine {
 
     const sessionId = this.sessionStore.createSession(agentId);
     const agent = await this.buildAgent(profile, sessionId);
-    this.activeSessions.set(sessionId, agent);
+    this.activeSessions.set(sessionId, { agent, agentId });
     this.logger.info({ sessionId, agentId }, "session created");
     return sessionId;
   }
 
-  async restoreSession(sessionId: string): Promise<string> {
+  async restoreSession(agentId: string, sessionId: string): Promise<string> {
     if (this.activeSessions.has(sessionId)) return sessionId;
 
-    const session = this.sessionStore.getSession(sessionId);
+    const session = this.sessionStore.getSession(agentId, sessionId);
     if (!session) throw new Error(`Session "${sessionId}" not found`);
 
     const profile = await this.profileStore.getById(session.agentId);
@@ -117,8 +117,8 @@ export class Engine {
       throw new Error(`Agent profile for session "${sessionId}" not found`);
 
     const agent = await this.buildAgent(profile, sessionId);
-    agent.state.messages = this.sessionStore.getSessionMessages(sessionId);
-    this.activeSessions.set(sessionId, agent);
+    agent.state.messages = this.sessionStore.getSessionMessages(agentId, sessionId);
+    this.activeSessions.set(sessionId, { agent, agentId });
     this.logger.info({ sessionId }, "session restored");
     return sessionId;
   }
@@ -128,16 +128,17 @@ export class Engine {
     message: string,
     onEvent: AgentEventHandler,
   ): Promise<void> {
-    const agent = this.activeSessions.get(sessionId);
-    if (!agent) throw new Error(`No active session "${sessionId}"`);
+    const entry = this.activeSessions.get(sessionId);
+    if (!entry) throw new Error(`No active session "${sessionId}"`);
 
+    const { agent, agentId } = entry;
     const sessionLogger = this.logger.child({ sessionId });
 
     const unsubscribe = agent.subscribe((event) => {
       logAgentEvent(sessionLogger, event);
       onEvent(event);
       if (event.type === "message_end") {
-        this.sessionStore.appendMessage(sessionId, event.message);
+        this.sessionStore.appendMessage(agentId, sessionId, event.message);
       }
     });
 
@@ -152,22 +153,22 @@ export class Engine {
     this.activeSessions.delete(sessionId);
   }
 
-  deleteSession(sessionId: string): void {
+  deleteSession(agentId: string, sessionId: string): void {
     this.activeSessions.delete(sessionId);
-    this.sessionStore.archiveSession(sessionId);
+    this.sessionStore.archiveSession(agentId, sessionId);
   }
 
   hasActiveSession(sessionId: string): boolean {
     return this.activeSessions.has(sessionId);
   }
 
-  getSessionHistory(sessionId: string): any[] {
-    return this.sessionStore.getSessionMessages(sessionId);
+  getSessionHistory(agentId: string, sessionId: string): any[] {
+    return this.sessionStore.getSessionMessages(agentId, sessionId);
   }
 
   abortSession(sessionId: string): void {
-    const agent = this.activeSessions.get(sessionId);
-    if (agent) agent.abort();
+    const entry = this.activeSessions.get(sessionId);
+    if (entry) entry.agent.abort();
   }
 
   async getRawContent(id: string): Promise<string | null> {
@@ -179,7 +180,7 @@ export class Engine {
     for (const session of sessions) {
       this.activeSessions.delete(session.id);
     }
-    this.sessionStore.archiveByAgentId(agentId);
+    this.sessionStore.closeAgent(agentId);
     await this.profileStore.delete(agentId);
   }
 
@@ -204,8 +205,9 @@ export class Engine {
   }
 
   getTurnContext(sessionId: string): TurnContextSnapshot {
-    const agent = this.activeSessions.get(sessionId);
-    if (!agent) throw new Error(`No active session "${sessionId}"`);
+    const entry = this.activeSessions.get(sessionId);
+    if (!entry) throw new Error(`No active session "${sessionId}"`);
+    const { agent } = entry;
 
     return {
       sessionId,
