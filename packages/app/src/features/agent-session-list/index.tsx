@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AgentDialog } from "../../components/AgentDialog";
@@ -63,11 +63,24 @@ export function AgentSessionList({
   const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
   const collapsedAgentIds = projectUi?.collapsedAgentIds ?? EMPTY_COLLAPSED_AGENT_IDS;
 
+  const initializedProjectKeys = useRef<Set<string>>(new Set());
+
+  const effectiveCollapsedAgentIds = useMemo(() => {
+    if (collapsedAgentIds.size > 0 || agents.length === 0) return collapsedAgentIds;
+    return new Set(agents.map((agent) => agent.id));
+  }, [collapsedAgentIds, agents]);
+
   useEffect(() => {
+    if (initializedProjectKeys.current.has(projectKey)) return;
+    if (agents.length === 0) return;
+    initializedProjectKeys.current.add(projectKey);
+    setCollapsedAgentIds(projectKey, agents.map((agent) => agent.id));
+  }, [agents, projectKey, setCollapsedAgentIds]);
+
+  useEffect(() => {
+    if (!initializedProjectKeys.current.has(projectKey)) return;
     const validAgentIds = new Set(agents.map((agent) => agent.id));
-    const nextCollapsedAgentIds = collapsedAgentIds.size === 0
-      ? agents.map((agent) => agent.id)
-      : [...collapsedAgentIds].filter((id) => validAgentIds.has(id));
+    const nextCollapsedAgentIds = [...collapsedAgentIds].filter((id) => validAgentIds.has(id));
     const changed =
       nextCollapsedAgentIds.length !== collapsedAgentIds.size ||
       nextCollapsedAgentIds.some((id) => !collapsedAgentIds.has(id));
@@ -162,7 +175,7 @@ export function AgentSessionList({
           <AgentSessionListView
             agents={agents}
             sessions={sessions}
-            collapsedAgentIds={collapsedAgentIds}
+            collapsedAgentIds={effectiveCollapsedAgentIds}
             activeSessionId={activeSessionId}
             onToggleAgentCollapsed={(agentId) => toggleAgentCollapsed(projectKey, agentId)}
             onNewSession={handleNewSession}

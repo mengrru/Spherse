@@ -117,7 +117,7 @@ spherse/
 │       │   ├── app-launch.spec.ts    # App 启动验证 smoke test
 │       │   ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
 │       │   ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
-│       │   ├── session-rename.spec.ts           # 会话重命名 E2E 测试
+│       │   ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
 │       │   └── text-selection-session.spec.ts  # 划选会话 E2E 测试
 │       └── src/
 │           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化

@@ -16,25 +16,41 @@ function projectKeyBase(projectPath: string): string {
   return name.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").replace(/-+/g, "-") || "project";
 }
 
-async function createRenameProject() {
-  const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-rename-"));
-  await mkdir(path.join(root, ".spherse", "agents"), { recursive: true });
-  await mkdir(path.join(root, ".spherse", "agents", "writer"), { recursive: true });
-  await writeFile(
-    path.join(root, ".spherse", "agents", "writer", "profile.md"),
-    [
-      "---",
-      "id: writer-1",
-      "name: Writer",
-      "type: assistant",
-      "model: deepseek-v4-flash",
-      "tools: []",
-      "---",
-      "You help with writing.",
-      "",
-    ].join("\n"),
-  );
+async function createProject(agents: Array<{ slug: string; id: string; name: string; description: string }>) {
+  const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-agent-list-"));
+  for (const agent of agents) {
+    const dir = path.join(root, ".spherse", "agents", agent.slug);
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "profile.md"),
+      [
+        "---",
+        `id: ${agent.id}`,
+        `name: ${agent.name}`,
+        "type: assistant",
+        "model: deepseek-v4-flash",
+        "tools: []",
+        "---",
+        agent.description,
+        "",
+      ].join("\n"),
+    );
+  }
   return root;
+}
+
+function createSingleAgentProject() {
+  return createProject([
+    { slug: "writer", id: "writer-1", name: "Writer", description: "You help with writing." },
+  ]);
+}
+
+function createMultiAgentProject() {
+  return createProject([
+    { slug: "writer", id: "writer-1", name: "Writer", description: "You are a Writer." },
+    { slug: "researcher", id: "researcher-1", name: "Researcher", description: "You are a Researcher." },
+    { slug: "reviewer", id: "reviewer-1", name: "Reviewer", description: "You are a Reviewer." },
+  ]);
 }
 
 async function launchApp(projectRoot: string): Promise<{ app: ElectronApplication; page: Page }> {
@@ -83,13 +99,27 @@ function getSessionRow(page: Page, sessionId: string) {
   return page.locator(`[data-session-id="${sessionId}"]`);
 }
 
+function agentTrigger(page: Page, agentName: string) {
+  return page.locator(`[data-slot="collapsible-trigger"]:has-text("${agentName}")`);
+}
+
+function agentPanel(page: Page, agentName: string) {
+  return page.locator(`[data-slot="collapsible-trigger"]:has-text("${agentName}") >> xpath=ancestor::*[@data-slot="collapsible"]//*[@data-slot="collapsible-content"]`);
+}
+
+async function expandAgent(page: Page, agentName: string) {
+  await agentTrigger(page, agentName).click();
+  await expect(agentPanel(page, agentName)).toHaveAttribute("data-open", "");
+}
+
 test("right-click session row opens context menu with rename, rename updates title", async () => {
-  const projectRoot = await createRenameProject();
+  const projectRoot = await createSingleAgentProject();
   const { app, page } = await launchApp(projectRoot);
 
   try {
     const sessionId = await createSessionViaApi(page, projectRoot, "writer-1");
     await navigateToProject(page, projectRoot);
+    await expandAgent(page, "Writer");
 
     const sessionRow = getSessionRow(page, sessionId);
     await sessionRow.waitFor({ state: "visible", timeout: 10000 });
@@ -116,12 +146,13 @@ test("right-click session row opens context menu with rename, rename updates tit
 });
 
 test("rename with empty input shows validation error and keeps editing", async () => {
-  const projectRoot = await createRenameProject();
+  const projectRoot = await createSingleAgentProject();
   const { app, page } = await launchApp(projectRoot);
 
   try {
     const sessionId = await createSessionViaApi(page, projectRoot, "writer-1");
     await navigateToProject(page, projectRoot);
+    await expandAgent(page, "Writer");
 
     const sessionRow = getSessionRow(page, sessionId);
     await sessionRow.waitFor({ state: "visible", timeout: 10000 });
@@ -147,12 +178,13 @@ test("rename with empty input shows validation error and keeps editing", async (
 });
 
 test("escape cancels rename without saving", async () => {
-  const projectRoot = await createRenameProject();
+  const projectRoot = await createSingleAgentProject();
   const { app, page } = await launchApp(projectRoot);
 
   try {
     const sessionId = await createSessionViaApi(page, projectRoot, "writer-1");
     await navigateToProject(page, projectRoot);
+    await expandAgent(page, "Writer");
 
     const sessionRow = getSessionRow(page, sessionId);
     await sessionRow.waitFor({ state: "visible", timeout: 10000 });
@@ -172,6 +204,50 @@ test("escape cancels rename without saving", async () => {
 
     const titleAfterCancel = await sessionRow.textContent();
     expect(titleAfterCancel).toBe(originalTitle);
+  } finally {
+    await app.close();
+  }
+});
+
+test("all agents are collapsed by default", async () => {
+  const projectRoot = await createMultiAgentProject();
+  const { app, page } = await launchApp(projectRoot);
+
+  try {
+    await navigateToProject(page, projectRoot);
+
+    await expect(agentTrigger(page, "Writer")).toBeVisible({ timeout: 10000 });
+    await expect(agentTrigger(page, "Researcher")).toBeVisible();
+    await expect(agentTrigger(page, "Reviewer")).toBeVisible();
+
+    await expect(agentTrigger(page, "Writer")).not.toHaveAttribute("data-panel-open", "");
+    await expect(agentTrigger(page, "Researcher")).not.toHaveAttribute("data-panel-open", "");
+    await expect(agentTrigger(page, "Reviewer")).not.toHaveAttribute("data-panel-open", "");
+  } finally {
+    await app.close();
+  }
+});
+
+test("expanding all agents keeps them all open — no auto-collapse", async () => {
+  const projectRoot = await createMultiAgentProject();
+  const { app, page } = await launchApp(projectRoot);
+
+  try {
+    await navigateToProject(page, projectRoot);
+
+    await expect(agentTrigger(page, "Writer")).toBeVisible({ timeout: 10000 });
+
+    await agentTrigger(page, "Writer").click();
+    await expect(agentPanel(page, "Writer")).toHaveAttribute("data-open", "");
+
+    await agentTrigger(page, "Researcher").click();
+    await expect(agentPanel(page, "Researcher")).toHaveAttribute("data-open", "");
+
+    await agentTrigger(page, "Reviewer").click();
+    await expect(agentPanel(page, "Reviewer")).toHaveAttribute("data-open", "");
+
+    await expect(agentPanel(page, "Writer")).toHaveAttribute("data-open", "");
+    await expect(agentPanel(page, "Researcher")).toHaveAttribute("data-open", "");
   } finally {
     await app.close();
   }
