@@ -35,6 +35,7 @@ export interface ChatMessage {
   content: string;
   _streaming?: boolean;
   _toolCalls?: ToolCallInfo[];
+  _error?: string;
 }
 
 export interface HtmlCard {

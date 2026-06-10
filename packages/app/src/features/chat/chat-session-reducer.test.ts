@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendErrorMessage,
   mergeHistoryMessages,
+  parseHistoryMessages,
   reduceSessionEvents,
   type StreamingSessionData,
 } from "./chat-session-reducer";
@@ -120,5 +121,89 @@ describe("chat session reducer", () => {
       { role: "user", content: "Hello" },
       { role: "assistant", content: "Hi there", _streaming: false },
     ]);
+  });
+
+  it("sets _error when message_end has stopReason error", () => {
+    const current = session({
+      messages: [{ role: "user", content: "Hello" }],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [
+      { type: "message_start", message: { role: "assistant", content: [] } },
+      { type: "message_end", message: { role: "assistant", content: [], stopReason: "error", errorMessage: "Rate limit exceeded" } },
+    ], 200);
+
+    expect(next.messages).toEqual([
+      { role: "user", content: "Hello" },
+      { role: "assistant", content: "", _streaming: false, _error: "Rate limit exceeded" },
+    ]);
+  });
+
+  it("sets _error with fallback when errorMessage is missing", () => {
+    const current = session({
+      messages: [{ role: "user", content: "Hello" }],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [
+      { type: "message_start", message: { role: "assistant", content: [] } },
+      { type: "message_end", message: { role: "assistant", content: [], stopReason: "error" } },
+    ], 200);
+
+    expect(next.messages[1]._error).toBe("Unknown error");
+  });
+
+  it("does not set _error for non-error stopReason", () => {
+    const current = session({
+      messages: [{ role: "user", content: "Hello" }],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [
+      { type: "message_start", message: { role: "assistant", content: [] } },
+      { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "Hi" }], stopReason: "stop" } },
+    ], 200);
+
+    expect(next.messages[1]._error).toBeUndefined();
+  });
+
+  it("does not set _error for aborted stopReason", () => {
+    const current = session({
+      messages: [{ role: "user", content: "Hello" }],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [
+      { type: "message_start", message: { role: "assistant", content: [] } },
+      { type: "message_end", message: { role: "assistant", content: [], stopReason: "aborted" } },
+    ], 200);
+
+    expect(next.messages[1]._error).toBeUndefined();
+  });
+
+  it("parseHistoryMessages preserves _error from history", () => {
+    const history = [
+      { role: "user", content: "Hello" },
+      { role: "assistant", content: [], stopReason: "error", errorMessage: "Rate limit exceeded" },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed).toEqual([
+      { role: "user", content: "Hello" },
+      { role: "assistant", content: "", _error: "Rate limit exceeded" },
+    ]);
+  });
+
+  it("parseHistoryMessages does not set _error for normal messages", () => {
+    const history = [
+      { role: "user", content: "Hello" },
+      { role: "assistant", content: [{ type: "text", text: "Hi" }], stopReason: "stop" },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed[1]._error).toBeUndefined();
   });
 });

@@ -68,6 +68,7 @@ export const en: Record<TranslationKey, string> = {
   "chat.fileMustBeInProject": "File must be saved within the project directory",
   "chat.copyTooltip": "Copy",
   "chat.close": "Close",
+  "chat.responseGenerationFailed": "Response generation failed",
   "content-browser.conflictBannerText": "File has been modified externally",
   "content-browser.conflictKeepMine": "Keep my changes",
   "content-browser.conflictReload": "Reload file",

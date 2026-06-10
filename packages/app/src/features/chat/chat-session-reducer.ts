@@ -86,12 +86,14 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent): ChatMessa
       (content: any) => content.type === "text",
     );
     const text = textContent?.text ?? "";
+    const isError = event.message.stopReason === "error";
+    const error = isError ? (event.message.errorMessage ?? "Unknown error") : undefined;
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._streaming) {
-      return [...prev.slice(0, -1), { ...last, content: text, _streaming: false }];
+      return [...prev.slice(0, -1), { ...last, content: text, _streaming: false, ...(error && { _error: error }) }];
     }
-    if (text || last?.role !== "assistant") {
-      return [...prev, { role: "assistant", content: text, _streaming: false }];
+    if (text || error || last?.role !== "assistant") {
+      return [...prev, { role: "assistant", content: text, _streaming: false, ...(error && { _error: error }) }];
     }
     return prev;
   }
@@ -231,6 +233,7 @@ export function parseHistoryMessages(history: any[]): ChatMessage[] {
       role: message.role,
       content: text,
       ...(toolCalls && toolCalls.length > 0 ? { _toolCalls: toolCalls } : {}),
+      ...(message.stopReason === "error" ? { _error: message.errorMessage ?? "Unknown error" } : {}),
     });
   }
 

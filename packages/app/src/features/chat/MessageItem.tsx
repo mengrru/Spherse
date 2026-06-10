@@ -3,6 +3,7 @@ import { MarkdownContent } from "../../components/MarkdownContent";
 import { HtmlCardRenderer } from "./HtmlCard";
 import { ToolCallSection } from "./ToolCallSection";
 import { CopyButton } from "./CopyButton";
+import { ErrorMessageSection } from "./ErrorMessageSection";
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -33,6 +34,7 @@ export function MessageItem({ message, agent, onNavigateToPath }: MessageItemPro
           <MarkdownContent variant="chat">{message.content}</MarkdownContent>
           {message._streaming && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
         </div>
+        {message._error && <ErrorMessageSection error={message._error} />}
         {message._toolCalls && message._toolCalls.length > 0 && (
           <ToolCallSection toolCalls={message._toolCalls} onNavigateToPath={onNavigateToPath} />
         )}

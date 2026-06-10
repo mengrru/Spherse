@@ -68,6 +68,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "chat.fileMustBeInProject": "檔案必須儲存在專案目錄內",
   "chat.copyTooltip": "複製",
   "chat.close": "關閉",
+  "chat.responseGenerationFailed": "回覆產生失敗",
   "content-browser.conflictBannerText": "檔案已被外部修改",
   "content-browser.conflictKeepMine": "保留我的修改",
   "content-browser.conflictReload": "重新載入檔案",
