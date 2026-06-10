@@ -62,6 +62,7 @@
 - **Chat streaming store**：Chat 消息流和 WebSocket 连接由 `features/chat/streaming-store.ts` 统一管理，按 sessionId 缓存 messages、streaming、scrollPosition、WebSocket 和挂载计数；`useChatSession` 只负责 attach/detach 与选择状态，切换页面或关闭 chat 不会中断后台流式输出；WebSocket 事件按 animation frame 批量归约，避免高频 token update 触发过多 React render；`chat-session-reducer.ts` 负责纯数据归约，使用 `message_start` 创建 assistant 占位、`agent_end` 结束正常 streaming，并忽略 user lifecycle 事件以保留本地立即显示 user bubble 的体验
 - **页面 / layout / feature 边界**：`pages/` 只做路由适配和参数校验；跨 feature 的页面编排放在 `layouts/`；业务域专属 UI、hooks 和局部动作放在 `features/{domain}/`
 - **feature-based 组织**：`features/chat`、`features/content-browser`、`features/agent-session-list`、`features/project-panel`、`features/file-tree`、`features/text-selection-session`、`features/settings`、`features/debug-tools`、`features/activity-bar`、`features/welcome-page`、`features/welcome-page-settings` 分别拥有自己的组件和 hooks
+- **UI SDK**：`src/ui-sdk/` 提供 iframe 与 App 内代码统一 action 通信框架。iframe 通过 `postMessage` 发送 `type: "spherse:action"` 消息，由 `useSpherseMessageListener` hook 接收并分发到注册的 handler；App 内代码直接调用 `dispatchAction`。外部调用经 rate limiter 限流（每分钟最多 10 次），内部调用无限制。新增 action 只需在 `handlers/` 下新建文件并 `registerAction`，无需改动 listener 或 registry
 - **共享组件边界**：`components/` 保留 shadcn/ui、跨 feature 复用组件和少量通用组件；只被某个 feature 使用的组件不放在全局 components 根目录
 
 ## i18n

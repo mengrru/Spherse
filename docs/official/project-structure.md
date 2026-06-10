@@ -47,7 +47,9 @@ spherse/
 │   │   ├── skills/                   # 内置 skill（新项目注入 + 用户参考文档）
 │   │   │   ├── create-ui-theme/      # 自定义 UI 主题创建指南
 │   │   │   │   └── SKILL.md
-│   │   │   └── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
+│   │   │   ├── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
+│   │   │   │   └── SKILL.md
+│   │   │   └── use-ui-sdk/             # iframe 与 App 交互 postMessage 协议指南
 │   │   │       └── SKILL.md
 │   │   ├── scripts/
 │   │   │   └── sync-templates.mjs    # 模板与预置内容同步脚本（.md → .ts 常量 + presets.json → 预置常量 + skills/ → skill 源码常量）
@@ -120,7 +122,8 @@ spherse/
 │       │   ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
 │       │   ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │       │   ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
-│       │   └── text-selection-session.spec.ts  # 划选会话 E2E 测试
+│       │   ├── text-selection-session.spec.ts  # 划选会话 E2E 测试
+│       │   └── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
 │       └── src/
 │           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化
 │           ├── main.tsx              # renderer 入口，挂载 RouterProvider
@@ -142,6 +145,16 @@ spherse/
 │           │   └── project-ui-store.ts   # 折叠状态等项目 UI 状态
 │           ├── layouts/
 │           │   └── ProjectLayout.tsx     # 项目工作区布局
+│           ├── ui-sdk/
+│           │   ├── types.ts              # ActionContext, ActionHandler 类型
+│           │   ├── registry.ts           # registerAction / dispatchAction
+│           │   ├── rate-limit.ts         # 外部调用频率限制
+│           │   ├── use-spherse-message-listener.ts # postMessage → dispatchAction 桥梁
+│           │   ├── index.ts              # barrel export + handler side-effect import
+│           │   └── handlers/
+│           │       ├── create-session.ts # 创建会话并导航
+│           │       ├── open-file.ts      # 在 Content Browser 打开文件
+│           │       └── send-message.ts   # 向已有会话发送消息并导航
 │           ├── features/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
 │           │   ├── agent-session-list/   # Agent/session 分组列表

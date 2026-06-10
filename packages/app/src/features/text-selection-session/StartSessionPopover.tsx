@@ -5,8 +5,7 @@ import type { AgentProfile } from "../../lib/types";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { useDismissable } from "../../hooks/useDismissable";
-import { useStreamingStore } from "../chat/streaming-store";
-import { useProjectDataStore } from "../../stores/project-data-store";
+import { dispatchAction } from "../../ui-sdk";
 
 interface StartSessionPopoverProps {
   selectedText: string;
@@ -78,14 +77,7 @@ export function StartSessionPopover({
     const parts = [t("text-selection.promptPrefix", { path: sourcePath, text: quotedText })];
     if (trimmedComment) parts.push(`\n\n${trimmedComment}`);
     const message = parts.join("");
-    const { sendMessage, sessions } = useStreamingStore.getState();
-    const ws = sessions[currentSessionInfo.sessionId]?.ws;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      sendMessage(currentSessionInfo.sessionId, message);
-    } else {
-      useProjectDataStore.getState().setInitialMessage(projectKey, currentSessionInfo.sessionId, message);
-    }
-    navigate(`/project/${projectKey}/chat/${currentSessionInfo.sessionId}`);
+    dispatchAction("sendMessage", { sessionId: currentSessionInfo.sessionId, message }, { navigate, projectKey });
   };
 
   return (

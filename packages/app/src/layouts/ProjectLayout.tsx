@@ -6,6 +6,7 @@ import { Chat } from "../features/chat";
 import { ProjectPanel } from "../features/project-panel";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useSidePanelClickAway } from "../hooks/useSidePanelClickAway";
+import { useSpherseMessageListener } from "../ui-sdk";
 import { WelcomePage } from "../features/welcome-page";
 import type { ProjectState } from "../stores/app-store";
 import { useAppStore } from "../stores/app-store";
@@ -58,6 +59,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
     : undefined;
 
   useCustomTheme(project.ctx.projectRoot, project.ctx.port);
+  useSpherseMessageListener(projectKey);
 
   useEffect(() => {
     void setActiveProject(projectKey);
