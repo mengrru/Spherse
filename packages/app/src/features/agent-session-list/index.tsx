@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AgentDialog } from "../../components/AgentDialog";
@@ -63,22 +63,18 @@ export function AgentSessionList({
   const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
   const collapsedAgentIds = projectUi?.collapsedAgentIds ?? EMPTY_COLLAPSED_AGENT_IDS;
 
-  const initializedProjectKeys = useRef<Set<string>>(new Set());
-
   const effectiveCollapsedAgentIds = useMemo(() => {
-    if (collapsedAgentIds.size > 0 || agents.length === 0) return collapsedAgentIds;
+    if (projectUi != null || agents.length === 0) return collapsedAgentIds;
     return new Set(agents.map((agent) => agent.id));
-  }, [collapsedAgentIds, agents]);
+  }, [projectUi, collapsedAgentIds, agents]);
 
   useEffect(() => {
-    if (initializedProjectKeys.current.has(projectKey)) return;
-    if (agents.length === 0) return;
-    initializedProjectKeys.current.add(projectKey);
+    if (projectUi != null || agents.length === 0) return;
     setCollapsedAgentIds(projectKey, agents.map((agent) => agent.id));
-  }, [agents, projectKey, setCollapsedAgentIds]);
+  }, [projectUi, agents, projectKey, setCollapsedAgentIds]);
 
   useEffect(() => {
-    if (!initializedProjectKeys.current.has(projectKey)) return;
+    if (projectUi == null) return;
     const validAgentIds = new Set(agents.map((agent) => agent.id));
     const nextCollapsedAgentIds = [...collapsedAgentIds].filter((id) => validAgentIds.has(id));
     const changed =
@@ -87,7 +83,7 @@ export function AgentSessionList({
     if (changed) {
       setCollapsedAgentIds(projectKey, nextCollapsedAgentIds);
     }
-  }, [agents, collapsedAgentIds, projectKey, setCollapsedAgentIds]);
+  }, [projectUi, agents, collapsedAgentIds, projectKey, setCollapsedAgentIds]);
 
   const handleSelectSession = (session: SessionInfo) => {
     navigate(`/project/${projectKey}/chat/${session.id}`);
