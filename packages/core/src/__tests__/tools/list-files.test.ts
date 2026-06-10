@@ -24,7 +24,7 @@ describe("createListFilesTool", () => {
     expect(text).toContain("📄 a.txt");
     expect(text).toContain("📄 b.md");
     expect(text).toContain("📁 subdir");
-    expect(result.details).toEqual({ path: ".", recursive: false, count: 3 });
+    expect(result.details).toMatchObject({ path: ".", recursive: false, count: 3 });
   });
 
   it("lists recursively", async () => {
@@ -36,6 +36,46 @@ describe("createListFilesTool", () => {
     expect(text).toContain("📄 top.txt");
     expect(text).toContain("📄 nested.txt");
     expect(result.details?.recursive).toBe(true);
+  });
+
+  it("limits recursion depth to 1", async () => {
+    await writeFile(projectRoot, "top.txt", "top");
+    await writeFile(projectRoot, "a/b/nested.txt", "deep");
+    await ensureDir(projectRoot, "a/b/c");
+    const tool = createListFilesTool(projectRoot);
+    const result = await tool.execute("tc1", { path: ".", recursive: true, depth: 1 }, undefined as any);
+    const text = result.content[0].text;
+    expect(text).toContain("📄 top.txt");
+    expect(text).toContain("📁 a");
+    expect(text).not.toContain("nested.txt");
+    expect(result.details?.depth).toBe(1);
+  });
+
+  it("limits recursion depth to 2", async () => {
+    await writeFile(projectRoot, "a/file.txt", "mid");
+    await writeFile(projectRoot, "a/b/c/deep.txt", "deep");
+    const tool = createListFilesTool(projectRoot);
+    const result = await tool.execute("tc1", { path: ".", recursive: true, depth: 2 }, undefined as any);
+    const text = result.content[0].text;
+    expect(text).toContain("📄 file.txt");
+    expect(text).toContain("📁 b");
+    expect(text).not.toContain("deep.txt");
+  });
+
+  it("ignores depth when recursive is false", async () => {
+    await writeFile(projectRoot, "sub/file.txt", "content");
+    const tool = createListFilesTool(projectRoot);
+    const result = await tool.execute("tc1", { path: ".", recursive: false, depth: 5 }, undefined as any);
+    const text = result.content[0].text;
+    expect(text).toContain("📁 sub");
+    expect(text).not.toContain("file.txt");
+  });
+
+  it("recursive true without depth lists all levels", async () => {
+    await writeFile(projectRoot, "a/b/c/deep.txt", "deep");
+    const tool = createListFilesTool(projectRoot);
+    const result = await tool.execute("tc1", { path: ".", recursive: true }, undefined as any);
+    expect(result.content[0].text).toContain("deep.txt");
   });
 
   it("shows (empty directory) for empty dir", async () => {

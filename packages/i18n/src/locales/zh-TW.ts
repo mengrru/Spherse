@@ -129,6 +129,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "tool.edit_file": "編輯檔案",
   "tool.list_files": "列出檔案",
   "tool.search_content": "搜尋內容",
+  "tool.move_file": "移動檔案",
+  "tool.copy_file": "複製檔案",
   "tool.append_log": "附加日誌",
   "tool.load_skill": "載入技能",
   "tool.render_card": "渲染卡片",

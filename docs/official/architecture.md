@@ -16,13 +16,13 @@
 - **AgentProfile**：业务层 agent 概念，从 `.spherse/agents/{slug}-{shortId}/profile.md` 解析而来，包含不可变 `id`（UUID）、`createdAt`（创建时间）和 `slug`（目录名）
 - **Agent context**：agent profile 的 `context` 字段声明项目内相对路径，Engine 构建 system prompt 时读取这些文件并注入 `Pre-loaded Context`
 - **AgentProfileStore**：首次读取无 `id` 的 profile.md 时自动生成并回写 `id`，创建 agent 时自动写入 `createdAt` 且更新时保持不变；支持 `getRawContent(id)` 获取原始 Markdown 内容用于编辑
-- **工具分配**：agent profile 未声明 `tools` 时默认获得全部工具
-- **工具集合**：默认工具由 `createToolsForProject` 组装，包括文件读写、字符串替换编辑、文件列表、内容搜索、changelog 追加、skill 加载和 HTML card 渲染
+- **工具分配**：agent profile 未声明 `tools` 时默认不分配任何工具（空列表）；前端新建 agent 时通过模板默认勾选全部工具
+- **工具集合**：默认工具由 `createToolsForProject` 组装，包括文件读写、字符串替换编辑、文件列表、内容搜索、文件移动与复制、changelog 追加、skill 加载和 HTML card 渲染
 - **路径安全**：项目内路径统一通过 `utils/path-safety.ts` 的 `resolveProjectPath` / `isPathInside` / `assertInsideProject` 解析和校验，core tools、agent context 读取和 server 内容路由共享同一边界判断
-- **写入互斥**：`write_file`、`edit_file`、`append_changelog` 共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
+- **写入互斥**：`write_file`、`edit_file`、`append_changelog`、`move_file`、`copy_file` 共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
 - **删除 agent**：由 Engine 协调，归档关联 sessions 后删除 agent 目录
 - **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），Engine 在构建 system prompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
-- **AI 文件读取限制**：项目配置可声明 `aiAccess.deniedPaths`；Engine 构建 agent 时通过动态 access policy 限制 `read_file`、`list_files`、`search_content`、`render_card file_path`、`edit_file` 的内部读取和 profile context 注入
+- **AI 文件读取限制**：项目配置可声明 `aiAccess.deniedPaths`；Engine 构建 agent 时通过动态 access policy 限制 `read_file`、`list_files`、`search_content`、`render_card file_path`、`edit_file`、`move_file`、`copy_file` 的内部读取和 profile context 注入
 - **项目欢迎页设置**：项目配置可声明 `welcomePage.path`，保存项目根目录内 HTML 或图片相对路径；该设置仅供 renderer 欢迎页展示使用，不注入 agent prompt，也不影响 AI 工具访问策略
 - **预置内容注入**：`createEngine` 检测到新项目时调用 `initPresets()`，将 `@spherse/presets` 声明的预置 skill 完整目录复制到 `.spherse/skills/`，并根据 `PRESET_AGENTS` 配置自动创建预置 agent（如「世界观创作」）。预置配置来源为 `packages/presets/presets.json`。仅在首次创建时注入，已有项目不受影响；注入后的内容属于用户所有，app 升级不会覆盖
 

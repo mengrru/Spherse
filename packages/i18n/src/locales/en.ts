@@ -129,6 +129,8 @@ export const en: Record<TranslationKey, string> = {
   "tool.edit_file": "Edit File",
   "tool.list_files": "List Files",
   "tool.search_content": "Search Content",
+  "tool.move_file": "Move File",
+  "tool.copy_file": "Copy File",
   "tool.append_log": "Append Log",
   "tool.load_skill": "Load Skill",
   "tool.render_card": "Render Card",

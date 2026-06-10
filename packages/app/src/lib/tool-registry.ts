@@ -11,6 +11,8 @@ export const ALL_TOOLS: ToolInfo[] = [
   { id: "edit_file", label: "tool.edit_file" },
   { id: "list_files", label: "tool.list_files" },
   { id: "search_content", label: "tool.search_content" },
+  { id: "move_file", label: "tool.move_file" },
+  { id: "copy_file", label: "tool.copy_file" },
   { id: "append_changelog", label: "tool.append_log" },
   { id: "load_skill", label: "tool.load_skill" },
   { id: "render_card", label: "tool.render_card" },

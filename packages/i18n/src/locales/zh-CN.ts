@@ -286,6 +286,10 @@ export const zhCN = {
   "tool.list_files": "列出文件",
   // 工具标签：搜索内容
   "tool.search_content": "搜索内容",
+  // 工具标签：移动文件
+  "tool.move_file": "移动文件",
+  // 工具标签：复制文件
+  "tool.copy_file": "复制文件",
   // 工具标签：追加日志
   "tool.append_log": "追加日志",
   // 工具标签：加载技能

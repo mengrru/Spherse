@@ -6,6 +6,8 @@ tools:
   - edit_file
   - list_files
   - search_content
+  - move_file
+  - copy_file
   - append_changelog
   - load_skill
   - render_card

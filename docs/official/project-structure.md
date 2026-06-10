@@ -26,6 +26,8 @@ spherse/
 │   │       │   ├── edit-file.ts
 │   │       │   ├── list-files.ts
 │   │       │   ├── search-content.ts
+│   │       │   ├── move-file.ts
+│   │       │   ├── copy-file.ts
 │   │       │   ├── append-changelog.ts
 │   │       │   ├── load-skill.ts
 │   │       │   ├── render-card.ts    # HTML card 渲染工具

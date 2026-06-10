@@ -7,6 +7,8 @@ import { createAppendChangelogTool } from "./append-changelog.js";
 import { createEditFileTool } from "./edit-file.js";
 import { createLoadSkillTool } from "./load-skill.js";
 import { createRenderCardTool } from "./render-card.js";
+import { createMoveFileTool } from "./move-file.js";
+import { createCopyFileTool } from "./copy-file.js";
 import type { AiFileAccessPolicy } from "../access/ai-file-access.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 
@@ -20,6 +22,8 @@ export { createSearchContentTool } from "./search-content.js";
 export { createAppendChangelogTool } from "./append-changelog.js";
 export { createLoadSkillTool } from "./load-skill.js";
 export { createRenderCardTool } from "./render-card.js";
+export { createMoveFileTool } from "./move-file.js";
+export { createCopyFileTool } from "./copy-file.js";
 export { FileWriteMutex } from "../utils/file-write-mutex.js";
 
 export function createToolsForProject(
@@ -37,6 +41,8 @@ export function createToolsForProject(
     search_content: createSearchContentTool(projectRoot, getAiFileAccessPolicy),
     append_changelog: createAppendChangelogTool(projectRoot, changelogPath, mutex),
     render_card: createRenderCardTool(projectRoot, getAiFileAccessPolicy),
+    move_file: createMoveFileTool(projectRoot, mutex, getAiFileAccessPolicy),
+    copy_file: createCopyFileTool(projectRoot, mutex, getAiFileAccessPolicy),
   };
 
   if (skillDir) {

@@ -61,7 +61,7 @@ Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent D
 - `id`：UUID，首次读取缺失 id 的文件时自动生成并回写；设计意图为不可变
 - `createdAt`：创建时间，Unix epoch milliseconds；创建时自动生成，之后保持不变
 - `model`：覆盖项目默认模型
-- `tools`：允许使用的 tool 名称列表；缺省时获得全部默认工具
+- `tools`：允许使用的 tool 名称列表；缺省时不分配任何工具（空列表）
 - `context`：项目根目录内相对路径列表，Engine 构建 system prompt 时预读取并注入
 - `schedule`：预留的定时执行表达式
 - `output`：预留的输出路径、命名和 frontmatter 配置

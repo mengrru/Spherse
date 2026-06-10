@@ -11,6 +11,7 @@ type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
 const ListFilesParams = Type.Object({
   path: Type.String({ description: "Directory path relative to project root" }),
   recursive: Type.Optional(Type.Boolean({ description: "List recursively", default: false })),
+  depth: Type.Optional(Type.Number({ description: "Max recursion depth (only effective when recursive=true). Default: unlimited", minimum: 1 })),
 });
 
 async function listRecursive(
@@ -19,6 +20,8 @@ async function listRecursive(
   lines: string[],
   projectRoot: string,
   policy: AiFileAccessPolicy,
+  currentDepth: number,
+  maxDepth: number,
 ): Promise<void> {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   for (const entry of entries) {
@@ -27,8 +30,8 @@ async function listRecursive(
     const relativePath = path.relative(projectRoot, entryPath).split(path.sep).join("/");
     if (policy.isDenied(relativePath)) continue;
     lines.push(`${prefix}${icon} ${entry.name}`);
-    if (entry.isDirectory()) {
-      await listRecursive(entryPath, `${prefix}  `, lines, projectRoot, policy);
+    if (entry.isDirectory() && currentDepth < maxDepth) {
+      await listRecursive(entryPath, `${prefix}  `, lines, projectRoot, policy, currentDepth + 1, maxDepth);
     }
   }
 }
@@ -94,14 +97,15 @@ export function createListFilesTool(
       const recursive = params.recursive ?? false;
 
       if (recursive) {
-        await listRecursive(resolved, "", lines, root, policy);
+        const maxDepth = params.depth ?? Infinity;
+        await listRecursive(resolved, "", lines, root, policy, 1, maxDepth);
       } else {
         await listFlat(resolved, lines, root, policy);
       }
 
       return {
         content: [{ type: "text" as const, text: lines.join("\n") || "(empty directory)" }],
-        details: { path: params.path, recursive, count: lines.length },
+        details: { path: params.path, recursive, depth: params.depth, count: lines.length },
       };
     },
   };

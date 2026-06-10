@@ -241,7 +241,7 @@ export class Engine {
       getAiFileAccessPolicy,
     );
 
-    const toolNames = profile.tools ?? Object.keys(allTools);
+    const toolNames = profile.tools ?? [];
     const tools: AgentTool[] = toolNames
       .map((name) => allTools[name])
       .filter(Boolean);
