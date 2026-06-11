@@ -12,16 +12,20 @@ export function useSpherseMessageListener(projectKey: string): void {
   useEffect(() => {
     if (!project) return;
 
-    const ctx: ActionContext = {
-      navigate,
-      projectKey,
-      client: project.ctx.client,
-    };
+    const serverOrigin = project.ctx.client?.baseUrl ?? null;
 
     const handler = (event: MessageEvent) => {
       if (event.data?.type !== "spherse:action") return;
       if (typeof event.data.action !== "string") return;
+      if (event.origin !== "null" && (!serverOrigin || event.origin !== serverOrigin)) return;
       if (!checkRateLimit()) return;
+      const ctx: ActionContext = {
+        navigate,
+        projectKey,
+        client: project.ctx.client,
+        source: event.source,
+        requestId: event.data.requestId,
+      };
       void dispatchAction(
         event.data.action,
         event.data.params ?? {},

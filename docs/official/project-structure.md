@@ -49,7 +49,7 @@ spherse/
 │   │   │   │   └── SKILL.md
 │   │   │   ├── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
 │   │   │   │   └── SKILL.md
-│   │   │   └── use-ui-sdk/             # iframe 与 App 交互 postMessage 协议指南
+│   │   │   └── use-ui-sdk/             # iframe 与 App 交互 postMessage 协议指南（含 data key-value 持久化）
 │   │   │       └── SKILL.md
 │   │   ├── scripts/
 │   │   │   └── sync-templates.mjs    # 模板与预置内容同步脚本（.md → .ts 常量 + presets.json → 预置常量 + skills/ → skill 源码常量）
@@ -124,7 +124,8 @@ spherse/
 │       │   ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
 │       │   ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）
 │       │   ├── text-selection-session.spec.ts  # 划选会话 E2E 测试
-│       │   └── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
+│       │   ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
+│       │   └── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
 │       └── src/
 │           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化
 │           ├── main.tsx              # renderer 入口，挂载 RouterProvider
@@ -163,7 +164,8 @@ spherse/
 │           │       ├── float-session.ts  # 将指定会话移入浮窗
 │           │       ├── open-file.ts      # 在 Content Browser 打开文件
 │           │       ├── send-message.ts   # 向已有会话发送消息并导航，支持 float 参数；已浮窗会话不导航
-│           │       └── unfloat-session.ts # 取消浮窗
+│           │       ├── unfloat-session.ts # 取消浮窗
+│           │       └── data.ts           # data.get/set/delete key-value 持久化
 │           ├── features/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
 │           │   ├── agent-session-list/   # Agent/session 分组列表

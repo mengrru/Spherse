@@ -1,4 +1,5 @@
 import "./handlers/create-session";
+import "./handlers/data";
 import "./handlers/float-session";
 import "./handlers/open-file";
 import "./handlers/send-message";

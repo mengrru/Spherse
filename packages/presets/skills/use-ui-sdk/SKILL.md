@@ -1,6 +1,6 @@
 ---
 name: use-ui-sdk
-description: 在 Spherse 的 HTML 内容中嵌入 postMessage 调用，实现 iframe 与 App 的交互（如创建会话、打开文件）
+description: 在 Spherse 的 HTML 内容中嵌入 postMessage 调用，实现 iframe 与 App 的交互（如创建会话、打开文件、key-value 数据读写）
 ---
 
 # UI SDK — iframe 与 App 交互
@@ -184,12 +184,143 @@ window.parent.postMessage({
 </html>
 ```
 
+## Data Action — key-value 数据持久化
+
+Data action 支持在 HTML 内读写持久化的 key-value 数据。数据存储在与 HTML 文件同级的 `.data.json` 文件中。
+
+Data action 使用 request-response 模式，通过 `requestId` 匹配响应。
+
+### Promise Wrapper（推荐）
+
+将以下代码嵌入 HTML `<script>` 中即可使用 `await` 方式调用：
+
+```javascript
+function spherseCall(action, params) {
+  return new Promise((resolve, reject) => {
+    const requestId = "r" + Date.now() + Math.random().toString(36).slice(2);
+    const timeout = setTimeout(() => { cleanup(); reject(new Error("spherse timeout")); }, 10000);
+    const handler = (e) => {
+      if (e.data?.type === "spherse:response" && e.data.requestId === requestId) {
+        cleanup();
+        e.data.ok ? resolve(e.data.data) : reject(new Error("spherse data error"));
+      }
+    };
+    function cleanup() { clearTimeout(timeout); window.removeEventListener("message", handler); }
+    window.addEventListener("message", handler);
+    window.parent.postMessage({ type: "spherse:action", action, params, requestId }, "*");
+  });
+}
+```
+
+### data.get
+
+读取指定 key 的值。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | string | 是 | 数据文件路径（项目内相对路径，如 `world/game.data.json`） |
+| key | string | 是 | 要读取的 key |
+
+返回值：对应的 value（任意 JSON 类型），key 不存在时返回 `null`。
+
+```javascript
+const score = await spherseCall("data.get", { file: "world/game.data.json", key: "score" });
+```
+
+### data.set
+
+写入 key-value，已存在的 key 覆盖。文件不存在时自动创建。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | string | 是 | 数据文件路径 |
+| key | string | 是 | key 名 |
+| value | any | 是 | 任意 JSON 可序列化值 |
+
+返回值：写入后的 value。
+
+```javascript
+await spherseCall("data.set", { file: "world/game.data.json", key: "score", value: 100 });
+await spherseCall("data.set", { file: "world/game.data.json", key: "player", value: { name: "Alice", hp: 80 } });
+```
+
+### data.delete
+
+删除指定 key。key 不存在时也返回成功。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | string | 是 | 数据文件路径 |
+| key | string | 是 | 要删除的 key |
+
+返回值：`true`。
+
+```javascript
+await spherseCall("data.delete", { file: "world/game.data.json", key: "score" });
+```
+
+### 数据文件命名规范
+
+- **文件名**：数据文件必须命名为 `{HTML文件名}.data.json`，放在 HTML 文件的同级目录
+  - `world/game.html` → `world/game.data.json`
+  - `welcome.html` → `welcome.data.json`
+- **文件格式**：顶层 JSON object：`{ "key1": value1, "key2": value2 }`
+- 仅支持顶层 key 操作，不支持嵌套路径（如 `a.b.c`）
+- 所有 value 支持任意 JSON 可序列化类型（number、string、boolean、null、object、array）
+
+### 完整示例
+
+假设 HTML 文件为 `world/game.html`，数据文件约定为 `world/game.data.json`。
+
+```html
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+  <h1>游戏存档</h1>
+  <p>当前分数：<span id="score">--</span></p>
+  <button onclick="loadScore()">读取存档</button>
+  <button onclick="saveScore()">保存分数</button>
+
+  <script>
+    const DATA_FILE = "world/game.data.json";
+
+    function spherseCall(action, params) {
+      return new Promise((resolve, reject) => {
+        const requestId = "r" + Date.now() + Math.random().toString(36).slice(2);
+        const timeout = setTimeout(() => { cleanup(); reject(new Error("spherse timeout")); }, 10000);
+        const handler = (e) => {
+          if (e.data?.type === "spherse:response" && e.data.requestId === requestId) {
+            cleanup();
+            e.data.ok ? resolve(e.data.data) : reject(new Error("spherse data error"));
+          }
+        };
+        function cleanup() { clearTimeout(timeout); window.removeEventListener("message", handler); }
+        window.addEventListener("message", handler);
+        window.parent.postMessage({ type: "spherse:action", action, params, requestId }, "*");
+      });
+    }
+
+    async function loadScore() {
+      const score = await spherseCall("data.get", { file: DATA_FILE, key: "score" });
+      document.getElementById("score").textContent = score ?? "无存档";
+    }
+
+    async function saveScore() {
+      await spherseCall("data.set", { file: DATA_FILE, key: "score", value: 42 });
+      document.getElementById("score").textContent = "42（已保存）";
+    }
+  </script>
+</body>
+</html>
+```
+
 ## 注意事项
 
 - **频率限制**：每分钟最多触发 10 次操作，超出会被静默丢弃
 - **无需引入脚本**：使用浏览器原生 `postMessage`，零依赖
 - **适用场景**：欢迎页（Welcome Page）、Content Browser 预览、聊天 HtmlCard 中均可用
-- **单向触发**：操作是单向的，iframe 无法获取执行结果（如创建的 sessionId）
-- **仅限 UI 操作**：只支持导航类操作，不支持文件读写、删除等
+- **单向触发**：导航类操作（createSession、openFile、sendMessage）是单向的，iframe 无法获取执行结果。Data action（data.get/set/delete）例外，支持通过 `requestId` 获取返回值
+- **仅限 UI 操作与数据存取**：导航类操作不支持文件读写、删除等。Data action 支持 key-value 数据存取，数据存储在 HTML 同级的 `.data.json` 文件中
 - **参数校验**：缺少必填参数或类型不匹配时操作会被静默忽略
 - **action 严格匹配**：action 名称区分大小写，未知 action 会被忽略

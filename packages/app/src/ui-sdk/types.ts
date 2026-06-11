@@ -5,6 +5,8 @@ export interface ActionContext {
   navigate: NavigateFunction;
   projectKey: string;
   client?: ApiClient;
+  source?: MessageEventSource | null;
+  requestId?: string;
 }
 
 export type ActionHandler<P = Record<string, unknown>> = (

@@ -20,6 +20,7 @@ export function createApiClient(port: number) {
   const wsUrl = `ws://localhost:${port}`;
 
   return {
+    baseUrl,
     async listAgents(): Promise<AgentProfile[]> {
       const res = await fetch(`${baseUrl}/api/agents`);
       return res.json();
