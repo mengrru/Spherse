@@ -19,5 +19,5 @@ export function ProjectPage() {
     );
   }
 
-  return <ProjectLayout projectKey={projectKey} project={project} />;
+  return <ProjectLayout key={projectKey} projectKey={projectKey} project={project} />;
 }

@@ -17,16 +17,19 @@ import { useStreamingStore } from "../chat/streaming-store";
 interface SessionRowProps {
   session: SessionInfo;
   active: boolean;
+  floating: boolean;
   onSelect: (session: SessionInfo) => void;
   onDelete: (session: SessionInfo) => void;
   onRename: (session: SessionInfo, title: string) => Promise<boolean>;
+  onFloat: (session: SessionInfo) => void;
+  onCancelFloat: () => void;
 }
 
 function getFallbackTitle(session: SessionInfo) {
   return new Date(session.updatedAt).toLocaleString();
 }
 
-export function SessionRow({ session, active, onSelect, onDelete, onRename }: SessionRowProps) {
+export function SessionRow({ session, active, floating, onSelect, onDelete, onRename, onFloat, onCancelFloat }: SessionRowProps) {
   const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
@@ -155,6 +158,15 @@ export function SessionRow({ session, active, onSelect, onDelete, onRename }: Se
           </TreeRow>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          {floating ? (
+            <ContextMenuItem onClick={onCancelFloat}>
+              {t("agent-session-list.cancelFloat")}
+            </ContextMenuItem>
+          ) : (
+            <ContextMenuItem onClick={() => onFloat(session)}>
+              {t("agent-session-list.floatSession")}
+            </ContextMenuItem>
+          )}
           <ContextMenuItem onClick={startEditing}>
             {t("common.rename")}
           </ContextMenuItem>

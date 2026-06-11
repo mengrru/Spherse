@@ -25,6 +25,7 @@ import { useProjectUiStore } from "../../stores/project-ui-store";
 import { AgentSessionListView } from "./AgentSessionListView";
 import { PlusIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
+import { dispatchAction } from "../../ui-sdk";
 
 const EMPTY_AGENTS: AgentProfile[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
@@ -54,6 +55,7 @@ export function AgentSessionList({
   const deleteAgent = useProjectDataStore((state) => state.deleteAgent);
   const toggleAgentCollapsed = useProjectUiStore((state) => state.toggleAgentCollapsed);
   const setCollapsedAgentIds = useProjectUiStore((state) => state.setCollapsedAgentIds);
+  const floatingSessionId = projectUi?.floatingChat?.sessionId ?? null;
   const [showCreateAgent, setShowCreateAgent] = useState(false);
   const [editAgent, setEditAgent] = useState<{ id: string; content: string; themeContent: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AgentProfile | null>(null);
@@ -86,6 +88,7 @@ export function AgentSessionList({
   }, [projectUi, agents, collapsedAgentIds, projectKey, setCollapsedAgentIds]);
 
   const handleSelectSession = (session: SessionInfo) => {
+    if (floatingSessionId === session.id) return;
     navigate(`/project/${projectKey}/chat/${session.id}`);
   };
 
@@ -173,6 +176,7 @@ export function AgentSessionList({
             sessions={sessions}
             collapsedAgentIds={effectiveCollapsedAgentIds}
             activeSessionId={activeSessionId}
+            floatingSessionId={floatingSessionId}
             onToggleAgentCollapsed={(agentId) => toggleAgentCollapsed(projectKey, agentId)}
             onNewSession={handleNewSession}
             onEditAgent={handleEditAgent}
@@ -180,6 +184,12 @@ export function AgentSessionList({
             onSelectSession={handleSelectSession}
             onDeleteSession={handleDeleteSessionRequest}
             onRenameSession={handleRenameSession}
+            onFloatSession={(s) => {
+              dispatchAction("floatSession", { sessionId: s.id }, { navigate, projectKey });
+            }}
+            onCancelFloat={() => {
+              dispatchAction("unfloatSession", {}, { navigate, projectKey });
+            }}
           />
         </SidebarGroupContent>
       </SidebarGroup>

@@ -8,6 +8,7 @@ export interface AgentSessionListViewProps {
   sessions: SessionInfo[];
   collapsedAgentIds: Set<string>;
   activeSessionId: string | null;
+  floatingSessionId: string | null;
   onToggleAgentCollapsed: (agentId: string) => void;
   onNewSession: (agent: AgentProfile) => void;
   onEditAgent: (agent: AgentProfile) => void;
@@ -15,6 +16,8 @@ export interface AgentSessionListViewProps {
   onSelectSession: (session: SessionInfo) => void;
   onDeleteSession: (session: SessionInfo) => void;
   onRenameSession: (session: SessionInfo, title: string) => Promise<boolean>;
+  onFloatSession: (session: SessionInfo) => void;
+  onCancelFloat: () => void;
 }
 
 export function AgentSessionListView({
@@ -22,6 +25,7 @@ export function AgentSessionListView({
   sessions,
   collapsedAgentIds,
   activeSessionId,
+  floatingSessionId,
   onToggleAgentCollapsed,
   onNewSession,
   onEditAgent,
@@ -29,6 +33,8 @@ export function AgentSessionListView({
   onSelectSession,
   onDeleteSession,
   onRenameSession,
+  onFloatSession,
+  onCancelFloat,
 }: AgentSessionListViewProps) {
   const grouped = useGroupedSessions(sessions);
 
@@ -45,14 +51,17 @@ export function AgentSessionListView({
           sessions={grouped.get(agent.id) ?? []}
           collapsed={collapsedAgentIds.has(agent.id)}
           activeSessionId={activeSessionId}
+          floatingSessionId={floatingSessionId}
           onToggleCollapsed={onToggleAgentCollapsed}
           onNewSession={onNewSession}
           onEditAgent={onEditAgent}
           onDeleteAgent={onDeleteAgent}
           onSelectSession={onSelectSession}
-           onDeleteSession={onDeleteSession}
-           onRenameSession={onRenameSession}
-         />
+          onDeleteSession={onDeleteSession}
+          onRenameSession={onRenameSession}
+          onFloatSession={onFloatSession}
+          onCancelFloat={onCancelFloat}
+        />
       ))}
     </div>
   );

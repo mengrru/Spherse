@@ -122,6 +122,7 @@ spherse/
 │       │   ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
 │       │   ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │       │   ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
+│       │   ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）
 │       │   ├── text-selection-session.spec.ts  # 划选会话 E2E 测试
 │       │   └── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
 │       └── src/
@@ -141,10 +142,16 @@ spherse/
 │           │   └── utils.ts          # shadcn/ui cn() 工具
 │           ├── stores/
 │           │   ├── app-store.ts          # 打开项目集合、当前项目、Electron IPC 动作、side panel 偏好
-│           │   ├── project-data-store.ts # agents/sessions/初始消息等项目数据缓存
-│           │   └── project-ui-store.ts   # 折叠状态等项目 UI 状态
+│           │   ├── project-data-store.ts # agents/sessions/初始消息等项目数据缓存，包含 resolveSessionViews 派生查询
+│           │   └── project-ui-store.ts   # 折叠状态、浮窗会话等项目 UI 状态，localStorage 持久化
 │           ├── layouts/
-│           │   └── ProjectLayout.tsx     # 项目工作区布局
+│           │   └── ProjectLayout.tsx     # 项目工作区布局，组合 ProjectPanel、Chat、ContentBrowser、WelcomePage、FloatingChatManager
+│           ├── hooks/
+│           │   ├── useFloatingChatRedirect.ts # 浮窗会话重定向：主窗口活动会话与浮窗冲突时导航回项目首页
+│           │   ├── useCustomTheme.ts
+│           │   ├── useSidePanelClickAway.ts
+│           │   ├── useDismissable.ts
+│           │   └── use-mobile.ts
 │           ├── ui-sdk/
 │           │   ├── types.ts              # ActionContext, ActionHandler 类型
 │           │   ├── registry.ts           # registerAction / dispatchAction
@@ -152,9 +159,11 @@ spherse/
 │           │   ├── use-spherse-message-listener.ts # postMessage → dispatchAction 桥梁
 │           │   ├── index.ts              # barrel export + handler side-effect import
 │           │   └── handlers/
-│           │       ├── create-session.ts # 创建会话并导航
+│           │       ├── create-session.ts # 创建会话并导航，支持 float 参数直达浮窗
+│           │       ├── float-session.ts  # 将指定会话移入浮窗
 │           │       ├── open-file.ts      # 在 Content Browser 打开文件
-│           │       └── send-message.ts   # 向已有会话发送消息并导航
+│           │       ├── send-message.ts   # 向已有会话发送消息并导航，支持 float 参数；已浮窗会话不导航
+│           │       └── unfloat-session.ts # 取消浮窗
 │           ├── features/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
 │           │   ├── agent-session-list/   # Agent/session 分组列表
@@ -162,7 +171,8 @@ spherse/
 │           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
     │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
 │           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog
-│           │   ├── project-panel/        # 项目侧栏，组合 Agent/session 列表与文件树，可随 Activity Bar 自动收起
+│           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离）
+│           │   ├── project-panel/         # 项目侧栏，组合 Agent/session 列表与文件树，可随 Activity Bar 自动收起
 │           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
 │           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
 │           │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗

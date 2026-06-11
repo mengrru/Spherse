@@ -57,11 +57,11 @@
 - **项目内 lastRoute**：每个打开项目在 `openProjects` 条目中持久化相对于 `/project/:projectKey` 的 `lastRoute`，如 `/chat/:sessionId` 或 `/content?path=...`；应用启动、项目切换和关闭当前项目后的下一个项目导航都会恢复该项目的 lastRoute
 - **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作，并持久化左侧 side panel 固定/自动收起偏好
 - **项目数据 store**：`project-data-store.ts` 按 projectKey 缓存 agents、sessions、初始消息和 loading/error 状态
-- **项目 UI store**：`project-ui-store.ts` 按 projectKey 管理折叠状态等纯 UI 状态
+- **项目 UI store**：`project-ui-store.ts` 按 projectKey 管理折叠状态、浮窗会话状态等纯 UI 状态，通过 renderer localStorage 持久化
 - **局部状态边界**：文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件或 feature hook 内；Chat 输入框草稿按 sessionId 缓存在 renderer `localStorage`，用于 session 切换和应用重启后的草稿恢复；欢迎页设置 dialog 的打开状态保留在 `ActivityBar` 内，欢迎页设置变更通过 `lib/events.ts` 中的 renderer 自定义事件通知当前欢迎页重新读取项目配置
 - **Chat streaming store**：Chat 消息流和 WebSocket 连接由 `features/chat/streaming-store.ts` 统一管理，按 sessionId 缓存 messages、streaming、scrollPosition、WebSocket 和挂载计数；`useChatSession` 只负责 attach/detach 与选择状态，切换页面或关闭 chat 不会中断后台流式输出；WebSocket 事件按 animation frame 批量归约，避免高频 token update 触发过多 React render；`chat-session-reducer.ts` 负责纯数据归约，使用 `message_start` 创建 assistant 占位、`agent_end` 结束正常 streaming，并忽略 user lifecycle 事件以保留本地立即显示 user bubble 的体验
 - **页面 / layout / feature 边界**：`pages/` 只做路由适配和参数校验；跨 feature 的页面编排放在 `layouts/`；业务域专属 UI、hooks 和局部动作放在 `features/{domain}/`
-- **feature-based 组织**：`features/chat`、`features/content-browser`、`features/agent-session-list`、`features/project-panel`、`features/file-tree`、`features/text-selection-session`、`features/settings`、`features/debug-tools`、`features/activity-bar`、`features/welcome-page`、`features/welcome-page-settings` 分别拥有自己的组件和 hooks
+- **feature-based 组织**：`features/chat`、`features/content-browser`、`features/agent-session-list`、`features/project-panel`、`features/file-tree`、`features/floating-chat`、`features/text-selection-session`、`features/settings`、`features/debug-tools`、`features/activity-bar`、`features/welcome-page`、`features/welcome-page-settings` 分别拥有自己的组件和 hooks
 - **UI SDK**：`src/ui-sdk/` 提供 iframe 与 App 内代码统一 action 通信框架。iframe 通过 `postMessage` 发送 `type: "spherse:action"` 消息，由 `useSpherseMessageListener` hook 接收并分发到注册的 handler；App 内代码直接调用 `dispatchAction`。外部调用经 rate limiter 限流（每分钟最多 10 次），内部调用无限制。新增 action 只需在 `handlers/` 下新建文件并 `registerAction`，无需改动 listener 或 registry
 - **共享组件边界**：`components/` 保留 shadcn/ui、跨 feature 复用组件和少量通用组件；只被某个 feature 使用的组件不放在全局 components 根目录
 
@@ -87,3 +87,5 @@
 - **项目级自定义主题**：用户可通过项目根目录 `.spherse/theme.css` 覆盖 CSS 变量实现项目全局主题定制，只允许覆盖 `:root` 中已有的变量名
 - **Agent 聊天主题**：每个 agent 可在 `.spherse/agents/{slug}-{shortId}/theme.css` 定义聊天窗口主题。前端进入聊天页时读取该文件并注入到聊天窗口内，优先级高于项目级主题；该样式只作用于当前 agent 的聊天窗口，不影响侧边栏等外部 UI
 - **聊天主题选择器**：聊天窗口对用户主题暴露 `data-chat-root`、`data-chat-header`、`data-chat-messages`、`data-chat-message[data-role]`、`data-chat-composer` 等入口。变更这些 DOM 入口或聊天布局时，需要同步更新 `packages/presets/templates/agent-theme-template.css` 与 `packages/presets/skills/create-agent-chat-theme/SKILL.md`
+
+- **浮窗聊天**：会话可脱离主窗口进入可拖拽/可调整大小的 CSS overlay（Portal 渲染到 `document.body`，`z-40`）。同一项目最多一个浮窗，新浮窗自动关闭已有浮窗。浮窗状态（sessionId、position、size）持久化在 `project-ui-store` 并写入 renderer localStorage。浮窗会话在侧边栏显示选中态，点击无响应；关闭浮窗后会话回到未选中状态。浮窗聊天主题复用 Agent 聊天主题，通过 `data-chat-float-root`、`data-chat-float-titlebar` 选择器限定作用域。`FloatingChatManager` 渲染在 `ProjectLayout` 内，项目切换时随 `key={projectKey}` 完整卸载重建。文本选中发起的发送至当前会话列表包含浮窗会话，浮窗会话的发送不触发导航。

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../lib/api";
-import type { AgentProfile } from "../../lib/types";
+import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
 import { ConflictBanner } from "./ConflictBanner";
 import { ConfirmDialogs } from "./ConfirmDialogs";
 import { ContentView } from "./ContentView";
@@ -16,7 +16,7 @@ export interface ContentBrowserProps {
   onBack: () => void;
   agents: AgentProfile[];
   projectKey: string;
-  currentSessionInfo?: { sessionId: string; agentName: string; sessionTitle?: string } | null;
+  activeSessions?: ActiveSessionInfo[];
   onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;
 }
 
@@ -26,7 +26,7 @@ export function ContentBrowser({
   onBack,
   agents,
   projectKey,
-  currentSessionInfo,
+  activeSessions,
   onStartSession,
 }: ContentBrowserProps) {
   const { t } = useI18n();
@@ -80,7 +80,7 @@ export function ContentBrowser({
         sourcePath={filePath}
         agents={agents}
         projectKey={projectKey}
-        currentSessionInfo={currentSessionInfo}
+        activeSessions={activeSessions}
         onStartSession={onStartSession}
       >
         {(contentRef) => (

@@ -8,9 +8,12 @@ import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useSidePanelClickAway } from "../hooks/useSidePanelClickAway";
 import { useSpherseMessageListener } from "../ui-sdk";
 import { WelcomePage } from "../features/welcome-page";
+import { FloatingChatManager } from "../features/floating-chat";
 import type { ProjectState } from "../stores/app-store";
 import { useAppStore } from "../stores/app-store";
 import { useProjectDataStore } from "../stores/project-data-store";
+import { useProjectUiStore } from "../stores/project-ui-store";
+import { useFloatingChatRedirect } from "../hooks/useFloatingChatRedirect";
 
 export interface ProjectLayoutProps {
   projectKey: string;
@@ -39,21 +42,18 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   const consumeInitialMessage = useProjectDataStore((state) => state.consumeInitialMessage);
 
   const agents = projectData?.agents ?? [];
-  const sessions = projectData?.sessions ?? [];
   const contentPath = searchParams.get("path");
   const contentSessionId = searchParams.get("sessionId");
   const isContentRoute = location.pathname.endsWith("/content");
   const showingContent = isContentRoute && Boolean(contentPath);
   const activeSessionId = sessionId ?? contentSessionId ?? null;
-  const selectedSession = activeSessionId
-    ? sessions.find((session) => session.id === activeSessionId) ?? null
-    : null;
-  const selectedAgent = selectedSession
-    ? agents.find((agent) => agent.id === selectedSession.agentId) ?? null
-    : null;
-  const currentSessionInfo = selectedSession && selectedAgent
-    ? { sessionId: selectedSession.id, agentName: selectedAgent.name, sessionTitle: selectedSession.title }
-    : null;
+  const floatingSessionId = useProjectUiStore((s) =>
+    projectKey ? s.projects[projectKey]?.floatingChat?.sessionId ?? null : null,
+  );
+  const resolveSessionViews = useProjectDataStore((s) => s.resolveSessionViews);
+  const { selectedSession, selectedAgent, activeSessions } = resolveSessionViews(
+    projectKey, activeSessionId, floatingSessionId,
+  );
   const initialMessage = selectedSession
     ? projectData?.initialMessageBySessionId[selectedSession.id]
     : undefined;
@@ -83,6 +83,8 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
       consumeInitialMessage(projectKey, selectedSession.id);
     }
   }, [consumeInitialMessage, initialMessage, projectKey, selectedAgent, selectedSession]);
+
+  useFloatingChatRedirect(projectKey, activeSessionId);
 
   const handleSelectFile = (filePath: string) => {
     navigate(buildContentUrl(projectKey, filePath, activeSessionId));
@@ -155,7 +157,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
             onBack={handleBackToChat}
             agents={agents}
             projectKey={projectKey}
-            currentSessionInfo={currentSessionInfo}
+            activeSessions={activeSessions}
             onStartSession={handleStartSession}
           />
         )}
@@ -170,6 +172,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
           />
         )}
       </main>
+      <FloatingChatManager />
     </div>
   );
 }

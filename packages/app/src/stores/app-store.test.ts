@@ -146,4 +146,5 @@ describe("useAppStore lastRoute", () => {
     expect(useAppStore.getState().sidePanelHovered).toBe(false);
     vi.useRealTimers();
   });
+
 });

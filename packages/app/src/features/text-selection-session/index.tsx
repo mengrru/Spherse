@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
-import type { AgentProfile } from "../../lib/types";
+import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
 import { SelectionHighlightOverlay } from "./SelectionHighlightOverlay";
 import { TextSelectionToolbar } from "./TextSelectionToolbar";
 import { StartSessionPopover } from "./StartSessionPopover";
@@ -11,7 +11,7 @@ export interface TextSelectionSessionProps {
   sourcePath: string;
   agents: AgentProfile[];
   projectKey: string;
-  currentSessionInfo?: { sessionId: string; agentName: string; sessionTitle?: string } | null;
+  activeSessions?: ActiveSessionInfo[];
   onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;
 }
 
@@ -21,7 +21,7 @@ export function TextSelectionSession({
   sourcePath,
   agents,
   projectKey,
-  currentSessionInfo,
+  activeSessions,
   onStartSession,
 }: TextSelectionSessionProps) {
   const [showStartPopover, setShowStartPopover] = useState(false);
@@ -59,7 +59,7 @@ export function TextSelectionSession({
           agents={agents}
           position={selectionState.position}
           projectKey={projectKey}
-          currentSessionInfo={currentSessionInfo}
+          activeSessions={activeSessions}
           onSubmit={(agentId, comment) => {
             onStartSession?.(agentId, selectionState.text, sourcePath, comment);
             setShowStartPopover(false);

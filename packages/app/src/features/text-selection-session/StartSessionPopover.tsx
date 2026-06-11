@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
-import type { AgentProfile } from "../../lib/types";
+import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { useDismissable } from "../../hooks/useDismissable";
@@ -13,7 +13,7 @@ interface StartSessionPopoverProps {
   agents: AgentProfile[];
   position: { x: number; y: number };
   projectKey: string;
-  currentSessionInfo?: { sessionId: string; agentName: string; sessionTitle?: string } | null;
+  activeSessions?: ActiveSessionInfo[];
   onSubmit: (agentId: string, comment?: string) => void;
   onClose: () => void;
 }
@@ -55,7 +55,7 @@ export function StartSessionPopover({
   agents,
   position,
   projectKey,
-  currentSessionInfo,
+  activeSessions,
   onSubmit,
   onClose,
 }: StartSessionPopoverProps) {
@@ -71,13 +71,13 @@ export function StartSessionPopover({
       : selectedText;
   const trimmedComment = comment.trim();
 
-  const handleSendToCurrentSession = () => {
-    if (!currentSessionInfo) return;
+  const handleSendToSession = (sessionId: string) => {
     const quotedText = selectedText.split("\n").map((line) => `> ${line}`).join("\n");
     const parts = [t("text-selection.promptPrefix", { path: sourcePath, text: quotedText })];
     if (trimmedComment) parts.push(`\n\n${trimmedComment}`);
     const message = parts.join("");
-    dispatchAction("sendMessage", { sessionId: currentSessionInfo.sessionId, message }, { navigate, projectKey });
+    dispatchAction("sendMessage", { sessionId, message }, { navigate, projectKey });
+    onClose();
   };
 
   return (
@@ -102,25 +102,34 @@ export function StartSessionPopover({
           onChange={(event) => setComment(event.target.value)}
         />
         <div className="flex flex-col gap-0.5 overflow-y-auto" style={{ maxHeight: 240 }}>
-          {currentSessionInfo && (
-            <Button
-              variant="ghost"
-              className="w-full justify-between"
-              onClick={handleSendToCurrentSession}
-            >
-              <span>
-                {currentSessionInfo.agentName}
-                {currentSessionInfo.sessionTitle && (
-                  <>
-                    <span className="text-border">|</span>
-                    {currentSessionInfo.sessionTitle}
-                  </>
-                )}
-              </span>
-              <span className="text-[11px] text-muted-foreground">{t("text-selection.sendToCurrentSession")}</span>
-            </Button>
+          {activeSessions && activeSessions.length > 0 && (
+            <>
+              {activeSessions.map((session) => (
+                <Button
+                  key={session.sessionId}
+                  variant="ghost"
+                  className="w-full justify-between"
+                  onClick={() => handleSendToSession(session.sessionId)}
+                >
+                  <span>
+                    {session.agentName}
+                    {session.sessionTitle && (
+                      <>
+                        <span className="text-border">|</span>
+                        {session.sessionTitle}
+                      </>
+                    )}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {session.floating
+                      ? t("text-selection.sendToFloatingSession")
+                      : t("text-selection.sendToCurrentSession")}
+                  </span>
+                </Button>
+              ))}
+              <div className="my-1 border-t border-border" />
+            </>
           )}
-          <div className="my-1 border-t border-border" />
           {agents.map((agent) => (
             <Button
               key={agent.id}

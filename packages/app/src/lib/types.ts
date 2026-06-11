@@ -20,6 +20,13 @@ export interface SessionInfo {
   status: "active" | "archived";
 }
 
+export interface ActiveSessionInfo {
+  sessionId: string;
+  agentName: string;
+  sessionTitle?: string;
+  floating?: boolean;
+}
+
 export interface FileEntry {
   name: string;
   type: "file" | "directory";

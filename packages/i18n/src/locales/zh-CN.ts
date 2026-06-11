@@ -123,6 +123,10 @@ export const zhCN = {
   "agent-session-list.sessionNameTooLong": "会话名称不能超过 80 个字符",
   // 侧边栏 Agent 分组标签
   "agent-session-list.groupLabel": "创作搭档",
+  // 右键菜单：将对话显示为浮窗
+  "agent-session-list.floatSession": "浮窗",
+  // 右键菜单：取消对话浮窗
+  "agent-session-list.cancelFloat": "取消浮窗",
 
   // --- Chat ---
   // 聊天输入框占位提示
@@ -230,6 +234,8 @@ export const zhCN = {
   "text-selection.copy": "复制",
   // 文本选择浮动菜单：发送至当前会话
   "text-selection.sendToCurrentSession": "发送至当前会话",
+  // 文本选择浮动菜单：发送至浮窗会话
+  "text-selection.sendToFloatingSession": "发送至浮窗会话",
   // 文本选择浮动菜单：无活动会话提示
   "text-selection.noActiveSession": "无活动会话",
   // 发起会话时的 AI 提示前缀，{path} 为文件路径，{text} 为引用内容

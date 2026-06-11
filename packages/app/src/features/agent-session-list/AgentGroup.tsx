@@ -11,6 +11,7 @@ interface AgentGroupProps {
   sessions: SessionInfo[];
   collapsed: boolean;
   activeSessionId: string | null;
+  floatingSessionId: string | null;
   onToggleCollapsed: (agentId: string) => void;
   onNewSession: (agent: AgentProfile) => void;
   onEditAgent: (agent: AgentProfile) => void;
@@ -18,6 +19,8 @@ interface AgentGroupProps {
   onSelectSession: (session: SessionInfo) => void;
   onDeleteSession: (session: SessionInfo) => void;
   onRenameSession: (session: SessionInfo, title: string) => Promise<boolean>;
+  onFloatSession: (session: SessionInfo) => void;
+  onCancelFloat: () => void;
 }
 
 export function AgentGroup({
@@ -25,6 +28,7 @@ export function AgentGroup({
   sessions,
   collapsed,
   activeSessionId,
+  floatingSessionId,
   onToggleCollapsed,
   onNewSession,
   onEditAgent,
@@ -32,6 +36,8 @@ export function AgentGroup({
   onSelectSession,
   onDeleteSession,
   onRenameSession,
+  onFloatSession,
+  onCancelFloat,
 }: AgentGroupProps) {
   const isActive = activeSessionId !== null && sessions.some((s) => s.id === activeSessionId);
   return (
@@ -49,10 +55,13 @@ export function AgentGroup({
             <SessionRow
               key={session.id}
               session={session}
-              active={activeSessionId === session.id}
+              active={activeSessionId === session.id || session.id === floatingSessionId}
+              floating={session.id === floatingSessionId}
               onSelect={onSelectSession}
               onDelete={onDeleteSession}
               onRename={onRenameSession}
+              onFloat={onFloatSession}
+              onCancelFloat={onCancelFloat}
             />
           ))}
         </div>

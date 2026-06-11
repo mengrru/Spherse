@@ -101,6 +101,39 @@ background: radial-gradient(ellipse at 20% 50%, rgba(201, 160, 74, 0.04) 0%, tra
 }
 ```
 
+## Floating Chat Selectors
+
+When a chat session is displayed in a floating overlay, these additional selectors are available:
+
+| Selector | Description |
+|----------|-------------|
+| `[data-chat-float-root]` | Floating window container. Customize border, border-radius, box-shadow, background, backdrop-filter. |
+| `[data-chat-float-titlebar]` | Title bar area. Customize background, text color, padding. |
+| `[data-chat-float-titlebar] button` | Close button. Customize icon color, hover state. |
+
+The same `theme.css` file covers both inline and floating chat. `[data-chat-root]` selectors apply to both contexts (since `data-chat-root` is a child of `data-chat-float-root` in floating mode). Use `[data-chat-float-root]` selectors only for floating window appearance.
+
+Example:
+
+```css
+[data-chat-float-root] {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  background: rgba(30, 30, 40, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-chat-float-titlebar] {
+  background: rgba(0, 0, 0, 0.3);
+  color: #e0e0e0;
+}
+
+[data-chat-float-titlebar] button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+```
+
 ## Common Mistakes
 
 - Styling `[data-chat-message]` when you meant the bubble. Use `> div:first-child` for bubble shape, background, and text color.

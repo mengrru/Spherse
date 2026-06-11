@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { translate } from "@spherse/i18n";
 import type { ApiClient } from "../lib/api";
-import type { AgentProfile, SessionInfo } from "../lib/types";
+import type { AgentProfile, ActiveSessionInfo, SessionInfo } from "../lib/types";
 import { useSettingsStore } from "../features/settings/store";
 
 interface ProjectData {
@@ -15,6 +15,15 @@ interface ProjectData {
 interface ProjectDataStore {
   projects: Record<string, ProjectData>;
   getProjectData: (projectKey: string) => ProjectData;
+  resolveSessionViews: (
+    projectKey: string,
+    activeSessionId: string | null,
+    floatingSessionId: string | null,
+  ) => {
+    selectedSession: SessionInfo | null;
+    selectedAgent: AgentProfile | null;
+    activeSessions: ActiveSessionInfo[];
+  };
   refreshAgents: (projectKey: string, client: ApiClient) => Promise<void>;
   refreshSessions: (projectKey: string, client: ApiClient) => Promise<void>;
   createSession: (
@@ -69,6 +78,45 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
 
   getProjectData(projectKey) {
     return get().projects[projectKey] ?? createProjectData();
+  },
+
+  resolveSessionViews(projectKey, activeSessionId, floatingSessionId) {
+    const data = get().projects[projectKey];
+    const agents = data?.agents ?? [];
+    const sessions = data?.sessions ?? [];
+
+    const selectedSession = activeSessionId
+      ? sessions.find((s) => s.id === activeSessionId) ?? null
+      : null;
+    const selectedAgent = selectedSession
+      ? agents.find((a) => a.id === selectedSession.agentId) ?? null
+      : null;
+
+    const floatingSession = floatingSessionId
+      ? sessions.find((s) => s.id === floatingSessionId) ?? null
+      : null;
+    const floatingAgent = floatingSession
+      ? agents.find((a) => a.id === floatingSession.agentId) ?? null
+      : null;
+
+    const activeSessions: ActiveSessionInfo[] = [];
+    if (selectedSession && selectedAgent) {
+      activeSessions.push({
+        sessionId: selectedSession.id,
+        agentName: selectedAgent.name,
+        sessionTitle: selectedSession.title,
+      });
+    }
+    if (floatingSession && floatingAgent) {
+      activeSessions.push({
+        sessionId: floatingSession.id,
+        agentName: floatingAgent.name,
+        sessionTitle: floatingSession.title,
+        floating: true,
+      });
+    }
+
+    return { selectedSession, selectedAgent, activeSessions };
   },
 
   async refreshAgents(projectKey, client) {

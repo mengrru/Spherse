@@ -1,9 +1,15 @@
 import { registerAction } from "../registry";
 import { useStreamingStore } from "../../features/chat/streaming-store";
 import { useProjectDataStore } from "../../stores/project-data-store";
+import { useProjectUiStore } from "../../stores/project-ui-store";
+import { getDefaultFloatingState } from "../../features/floating-chat";
 
 registerAction("sendMessage", (params, ctx) => {
-  const { sessionId, message } = params as { sessionId: string; message: string };
+  const { sessionId, message, float } = params as {
+    sessionId: string;
+    message: string;
+    float?: boolean;
+  };
   if (!sessionId || typeof sessionId !== "string") return;
   if (!message || typeof message !== "string") return;
 
@@ -14,5 +20,12 @@ registerAction("sendMessage", (params, ctx) => {
   } else {
     useProjectDataStore.getState().setInitialMessage(ctx.projectKey, sessionId, message);
   }
-  ctx.navigate(`/project/${ctx.projectKey}/chat/${sessionId}`);
+
+  const ui = useProjectUiStore.getState().projects[ctx.projectKey];
+  if (float && ui?.floatingChat?.sessionId !== sessionId) {
+    useProjectUiStore.getState().setFloatingChat(ctx.projectKey, getDefaultFloatingState(sessionId));
+  }
+  if (!float && ui?.floatingChat?.sessionId !== sessionId) {
+    ctx.navigate(`/project/${ctx.projectKey}/chat/${sessionId}`);
+  }
 });

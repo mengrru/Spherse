@@ -33,6 +33,7 @@ window.parent.postMessage({
 |------|------|------|------|
 | agentId | string | 是 | 目标 agent 的 ID |
 | message | string | 否 | 初始消息内容 |
+| float | boolean | 否 | 为 `true` 时在浮窗中打开新会话，而非导航到聊天页 |
 
 ```javascript
 window.parent.postMessage({
@@ -71,6 +72,7 @@ window.parent.postMessage({
 |------|------|------|------|
 | sessionId | string | 是 | 目标会话 ID |
 | message | string | 是 | 消息内容 |
+| float | boolean | 否 | 为 `true` 时确保该会话在浮窗中显示再发送消息 |
 
 ```javascript
 window.parent.postMessage({
@@ -80,6 +82,38 @@ window.parent.postMessage({
     sessionId: "session-abc123",
     message: "请继续分析这个角色的动机"
   }
+}, "*");
+```
+
+### floatSession
+
+将会话显示为浮窗。一次只能有一个浮窗，新的浮窗会自动替换旧的。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| sessionId | string | 是 | 要浮窗的会话 ID |
+
+```javascript
+window.parent.postMessage({
+  type: "spherse:action",
+  action: "floatSession",
+  params: {
+    sessionId: "session-abc123"
+  }
+}, "*");
+```
+
+### unfloatSession
+
+关闭当前浮窗。
+
+无需参数。
+
+```javascript
+window.parent.postMessage({
+  type: "spherse:action",
+  action: "unfloatSession",
+  params: {}
 }, "*");
 ```
 

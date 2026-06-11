@@ -15,9 +15,10 @@ export interface ChatProps {
   onNavigateToPath?: (path: string) => void;
   initialMessage?: string;
   onClose?: () => void;
+  hideHeader?: boolean;
 }
 
-export function Chat({ client, sessionId, port, agent, onNavigateToPath, initialMessage, onClose }: ChatProps) {
+export function Chat({ client, sessionId, port, agent, onNavigateToPath, initialMessage, onClose, hideHeader }: ChatProps) {
   const { messages, streaming, sendMessage, abort } = useChatSession({
     client,
     sessionId,
@@ -35,7 +36,7 @@ export function Chat({ client, sessionId, port, agent, onNavigateToPath, initial
   return (
     <div className="flex flex-col h-full" data-chat-root>
       {scopedThemeCss && <style>{scopedThemeCss}</style>}
-      <Header agent={agent} onClose={onClose ? handleClose : undefined} />
+      {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
       <MessageList
         messages={messages}
         agent={agent}
