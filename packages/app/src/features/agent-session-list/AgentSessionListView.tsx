@@ -11,6 +11,7 @@ export interface AgentSessionListViewProps {
   floatingSessionId: string | null;
   onToggleAgentCollapsed: (agentId: string) => void;
   onNewSession: (agent: AgentProfile) => void;
+  onScheduleAgent: (agent: AgentProfile) => void;
   onEditAgent: (agent: AgentProfile) => void;
   onDeleteAgent: (agent: AgentProfile) => void;
   onSelectSession: (session: SessionInfo) => void;
@@ -28,6 +29,7 @@ export function AgentSessionListView({
   floatingSessionId,
   onToggleAgentCollapsed,
   onNewSession,
+  onScheduleAgent,
   onEditAgent,
   onDeleteAgent,
   onSelectSession,
@@ -54,6 +56,7 @@ export function AgentSessionListView({
           floatingSessionId={floatingSessionId}
           onToggleCollapsed={onToggleAgentCollapsed}
           onNewSession={onNewSession}
+          onScheduleAgent={onScheduleAgent}
           onEditAgent={onEditAgent}
           onDeleteAgent={onDeleteAgent}
           onSelectSession={onSelectSession}

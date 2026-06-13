@@ -17,6 +17,7 @@ spherse/
 │   │       ├── store/                # 存储层抽象（不持有运行时状态）
 │   │       │   ├── project.ts        # 项目元数据读写（.spherse/project.yaml, AGENTS.md, CHANGELOG.md）
 │   │       │   ├── session.ts        # SQLite session 持久化（每 agent 独立 sessions.db, lazy open 连接池）
+│   │       │   ├── schedule.ts       # 定时任务配置读写（schedules.yml / schedule-logs.jsonl）
 │   │       │   ├── agent-profile.ts  # .spherse/agents/{slug}-{shortId}/profile.md CRUD
 │   │       │   ├── skill.ts          # .spherse/skills/*/SKILL.md 读取
 │   │       │   └── index.ts
@@ -32,6 +33,7 @@ spherse/
 │   │       │   ├── load-skill.ts
 │   │       │   ├── render-card.ts    # HTML card 渲染工具
 │   │       │   └── index.ts          # createToolsForProject 工厂
+│   │       ├── scheduler.ts
 │   │       ├── utils/
 │   │       │   ├── file-write-mutex.ts # 文件写入互斥，避免并发写覆盖
 │   │       │   └── path-safety.ts      # 项目内路径解析与边界校验
@@ -90,11 +92,13 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表与详情
-    │   │       │   ├── settings.ts       # Provider 列表（动态 catalog）+ 项目 settings API（AI 读取禁止列表、欢迎页）
-    │   │       │   └── debug.ts         # Debug turn context 导出（dev only）
-    │   │       ├── ws-chat.ts            # WebSocket 对话流
-    │   │       ├── ws-fs-watch.ts        # WebSocket 文件变更推送
-    │   │       └── ws-debug.ts           # WebSocket 日志流推送（pino → /ws/debug）
+│   │       │   ├── settings.ts       # Provider 列表（动态 catalog）+ 项目 settings API（AI 读取禁止列表、欢迎页）
+│   │       │   ├── schedules.ts      # 定时任务 CRUD 与手动触发
+│       │       │   └── debug.ts         # Debug turn context 导出（dev only）
+│       │       ├── ws-chat.ts            # WebSocket 对话流
+│       │       ├── ws-fs-watch.ts        # WebSocket 文件变更推送
+│       │       ├── ws-debug.ts           # WebSocket 日志流推送（pino → /ws/debug）
+│       │       └── ws-schedule.ts        # WebSocket 定时任务事件推送
 │   └── app/                          # @spherse/app — Electron + React
 │       ├── electron/
 │       │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main
@@ -168,6 +172,7 @@ spherse/
 │           │       └── data.ts           # data.get/set/delete key-value 持久化
 │           ├── features/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
+│           │   ├── agent-schedule/       # Agent 定时任务弹窗、表单、列表与运行日志
 │           │   ├── agent-session-list/   # Agent/session 分组列表
 │           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示
 │           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示

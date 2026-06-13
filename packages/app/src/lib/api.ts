@@ -5,6 +5,10 @@ import type {
   FileEntry,
   ChatMessage,
   AgentEvent,
+  ScheduleEntry,
+  ScheduleInfo,
+  ScheduleLogEntry,
+  ScheduleServerEvent,
 } from "./types";
 import { parseApiResponse, parseChatServerEvent, schemas } from "@spherse/server/contracts";
 
@@ -279,6 +283,94 @@ export function createApiClient(port: number) {
         throw new Error(err.error ?? "request failed");
       }
       return res.json();
+    },
+
+    async listSchedules(agentId: string): Promise<ScheduleInfo[]> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/schedules`);
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "request failed");
+      return res.json();
+    },
+
+    async createSchedule(agentId: string, data: {
+      name?: string;
+      cron: string;
+      mode: "new_session" | "existing_session";
+      targetSessionId?: string;
+      message: string;
+      notify: boolean;
+      notificationMessage?: string;
+    }): Promise<ScheduleEntry> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/schedules`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
+    async updateSchedule(agentId: string, scheduleId: string, data: {
+      name?: string;
+      enabled?: boolean;
+      cron?: string;
+      mode?: "new_session" | "existing_session";
+      targetSessionId?: string;
+      message?: string;
+      notify?: boolean;
+      notificationMessage?: string;
+    }): Promise<ScheduleEntry> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/schedules/${encodeURIComponent(scheduleId)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
+    async deleteSchedule(agentId: string, scheduleId: string): Promise<{ ok: boolean }> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/schedules/${encodeURIComponent(scheduleId)}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
+    async triggerSchedule(agentId: string, scheduleId: string): Promise<{ ok: boolean }> {
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/schedules/${encodeURIComponent(scheduleId)}/trigger`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: "request failed" }));
+        throw new Error(err.error ?? "request failed");
+      }
+      return res.json();
+    },
+
+    async getScheduleLogs(agentId: string, limit?: number): Promise<ScheduleLogEntry[]> {
+      const params = limit ? `?limit=${limit}` : "";
+      const res = await fetch(`${baseUrl}/api/agents/${encodeURIComponent(agentId)}/schedule-logs${params}`);
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "request failed");
+      return res.json();
+    },
+
+    createScheduleWebSocket(onEvent: (event: ScheduleServerEvent) => void): WebSocket {
+      const url = `${wsUrl}/ws/schedule`;
+      const ws = new WebSocket(url);
+      ws.onmessage = (event) => {
+        try { onEvent(JSON.parse(event.data)); } catch { /* ignore parse errors */ }
+      };
+      ws.onerror = () => {};
+      return ws;
     },
 
     createChatWebSocket(

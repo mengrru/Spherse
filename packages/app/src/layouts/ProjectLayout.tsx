@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import { ContentBrowser } from "../features/content-browser";
 import { Chat } from "../features/chat";
@@ -40,6 +41,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   const refreshSessions = useProjectDataStore((state) => state.refreshSessions);
   const createSession = useProjectDataStore((state) => state.createSession);
   const consumeInitialMessage = useProjectDataStore((state) => state.consumeInitialMessage);
+  const handleScheduleEvent = useProjectDataStore((state) => state.handleScheduleEvent);
 
   const agents = projectData?.agents ?? [];
   const contentPath = searchParams.get("path");
@@ -77,6 +79,27 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
       void refreshSessions(projectKey, project.ctx.client);
     });
   }, [project.ctx.client, projectKey, refreshAgents, refreshSessions]);
+
+  useEffect(() => {
+    async function showScheduleNotification(agentId: string, scheduleId: string) {
+      const cachedSchedules = useProjectDataStore.getState().projects[projectKey]?.schedulesByAgent?.[agentId] ?? [];
+      let schedule = cachedSchedules.find((item) => item.id === scheduleId);
+      if (!schedule) {
+        const schedules = await project.ctx.client.listSchedules(agentId).catch(() => []);
+        schedule = schedules.find((item) => item.id === scheduleId);
+      }
+      if (!schedule?.notify) return;
+      toast.success(schedule.notificationMessage?.trim() || t("agent-schedule.notificationDefault"));
+    }
+
+    const ws = project.ctx.client.createScheduleWebSocket((event) => {
+      handleScheduleEvent(projectKey, project.ctx.client, event);
+      if (event.type === "schedule_completed") {
+        void showScheduleNotification(event.agentId, event.scheduleId);
+      }
+    });
+    return () => ws.close();
+  }, [handleScheduleEvent, project.ctx.client, projectKey, t]);
 
   useEffect(() => {
     if (initialMessage && selectedSession && selectedAgent) {

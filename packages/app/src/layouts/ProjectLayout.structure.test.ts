@@ -10,6 +10,7 @@ describe("ProjectLayout structure", () => {
     const source = readFileSync(join(currentDir, "ProjectLayout.tsx"), "utf8");
 
     expect(source).not.toContain("useOutletContext");
-    expect(source).not.toContain("sidePanel");
+    expect(source).not.toContain("useState");
+    expect(source).toContain("useSidePanelClickAway");
   });
 });

@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
@@ -16,6 +17,7 @@ interface AgentRowProps {
   agent: AgentProfile;
   active?: boolean;
   onNewSession: (agent: AgentProfile) => void;
+  onScheduleAgent: (agent: AgentProfile) => void;
   onEditAgent: (agent: AgentProfile) => void;
   onDeleteAgent: (agent: AgentProfile) => void;
 }
@@ -24,6 +26,7 @@ export function AgentRow({
   agent,
   active,
   onNewSession,
+  onScheduleAgent,
   onEditAgent,
   onDeleteAgent,
 }: AgentRowProps) {
@@ -56,6 +59,10 @@ export function AgentRow({
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onEditAgent(agent)}>
             {t("common.edit")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onScheduleAgent(agent)}>
+            {t("agent-schedule.menuItem")}
+            <DropdownMenuShortcut>Beta</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem variant="destructive" onClick={() => onDeleteAgent(agent)}>
             {t("common.delete")}

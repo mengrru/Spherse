@@ -30,9 +30,10 @@ export function getServerLocale(): string {
   return getLocale();
 }
 
-export function stopServer(projectRoot: string): void {
+export async function stopServer(projectRoot: string): Promise<void> {
   const entry = servers.get(projectRoot);
   if (entry) {
+    await entry.engine.shutdown();
     entry.server.close();
     servers.delete(projectRoot);
   }
@@ -45,5 +46,8 @@ export function getServerPort(projectRoot: string): number | undefined {
 export async function stopAllServers(): Promise<void> {
   const entries = [...servers.entries()];
   servers.clear();
-  await Promise.all(entries.map(([, entry]) => entry.server.close()));
+  await Promise.all(entries.map(async ([, entry]) => {
+    await entry.engine.shutdown();
+    entry.server.close();
+  }));
 }

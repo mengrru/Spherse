@@ -128,6 +128,72 @@ export const zhCN = {
   // 右键菜单：取消对话浮窗
   "agent-session-list.cancelFloat": "取消浮窗",
 
+  // --- Agent Schedule ---
+  // 搭档右键菜单中的定时消息入口
+  "agent-schedule.menuItem": "定时消息",
+  // 定时消息弹窗标题
+  "agent-schedule.dialogTitle": "定时消息",
+  // 定时消息名称输入框标签
+  "agent-schedule.name": "名称",
+  // 定时消息名称输入框占位
+  "agent-schedule.namePlaceholder": "可选，如「每日早安」",
+  // 定时频率选择标签
+  "agent-schedule.frequency": "频率",
+  // 定时消息频率预设：每 30 分钟执行一次
+  "agent-schedule.presetEvery30Minutes": "每 30 分钟",
+  // 定时消息频率预设：每小时整点执行一次
+  "agent-schedule.presetHourly": "每小时",
+  // 定时消息频率预设：每天 09:00 执行一次
+  "agent-schedule.presetDaily0900": "每天 09:00",
+  // 定时消息频率预设：每周一 09:00 执行一次
+  "agent-schedule.presetWeeklyMonday0900": "每周一 09:00",
+  // 定时消息频率预设：用户手动输入 cron 表达式
+  "agent-schedule.presetCustom": "自定义",
+  // 定时消息表单频率区域提示：说明当前调度器按 10 分钟轮询执行，不保证分钟级精确触发
+  "agent-schedule.granularityHint": "定时任务每 10 分钟检查一次，实际执行时间可能有数分钟延迟。",
+  // 频率选择下拉框占位
+  "agent-schedule.selectPreset": "选择预设...",
+  // 定时消息发送模式标签
+  "agent-schedule.mode": "会话模式",
+  // 发送模式：每次新建对话
+  "agent-schedule.modeNewSession": "新建对话",
+  // 发送模式：在已有对话中追加
+  "agent-schedule.modeExistingSession": "已有对话",
+  // 消息内容输入框标签
+  "agent-schedule.message": "消息内容",
+  // 消息内容输入框占位
+  "agent-schedule.messagePlaceholder": "输入定时发送的消息内容...",
+  // 消息发送通知开关标签
+  "agent-schedule.notify": "发送后通知",
+  // 定时消息表单：开启通知后显示的通知内容输入框占位，最多 30 字
+  "agent-schedule.notificationMessagePlaceholder": "通知内容，最多 30 字",
+  // 定时消息完成后，用户开启通知但未填写自定义通知内容时显示的 toast 文案
+  "agent-schedule.notificationDefault": "定时消息已完成",
+  // 定时任务列表行上的手动执行按钮悬停提示
+  "agent-schedule.triggerNow": "立即触发",
+  // 定时任务列表行上的手动执行按钮运行中状态提示
+  "agent-schedule.runningNow": "运行中",
+  // 定时消息配置页右上角创建按钮
+  "agent-schedule.createSchedule": "创建定时任务",
+  // 配置 tab 标题
+  "agent-schedule.tabConfig": "配置",
+  // 运行日志 tab 标题
+  "agent-schedule.tabLogs": "运行日志",
+  // 日志列表为空时显示
+  "agent-schedule.noLogs": "暂无运行日志",
+  // 定时任务列表为空时显示
+  "agent-schedule.noSchedules": "暂无定时任务",
+  // 删除定时任务确认提示
+  "agent-schedule.confirmDelete": "确定删除此定时任务吗？",
+  // 日志状态：运行中
+  "agent-schedule.logStatusRunning": "运行中",
+  // 日志状态：成功
+  "agent-schedule.logStatusSuccess": "成功",
+  // 日志状态：失败
+  "agent-schedule.logStatusFailed": "失败",
+  // 日志条数限制提示
+  "agent-schedule.logLimitNotice": "最多显示 {count} 条，更多请查看 schedule-logs.jsonl",
+
   // --- Chat ---
   // 聊天输入框占位提示
   "chat.composerPlaceholder": "输入消息... (Shift+Enter 换行)",

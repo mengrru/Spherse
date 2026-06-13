@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   title TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL,
-  status TEXT DEFAULT 'active'
+  status TEXT DEFAULT 'active',
+  source TEXT DEFAULT 'manual'
 );
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -96,19 +97,27 @@ export class SessionStore {
     const dbPath = path.join(agentDir, "sessions.db");
     const db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
-    db.exec(MIGRATION);
+    this.applyMigrations(db);
     this.connections.set(agentId, db);
     this.logger.info({ agentId, dbPath }, "session db opened for agent");
     return db;
   }
 
-  createSession(agentId: string, title?: string): string {
+  private applyMigrations(db: Database.Database): void {
+    db.exec(MIGRATION);
+    const cols = db.prepare("PRAGMA table_info(sessions)").all() as any[];
+    if (!cols.some((c: any) => c.name === "source")) {
+      db.exec("ALTER TABLE sessions ADD COLUMN source TEXT DEFAULT 'manual'");
+    }
+  }
+
+  createSession(agentId: string, title?: string, source?: string): string {
     const db = this.getDb(agentId);
     const id = crypto.randomUUID();
     const now = Date.now();
     db.prepare(
-      "INSERT INTO sessions (id, agent_id, title, created_at, updated_at, status) VALUES (?, ?, ?, ?, ?, 'active')",
-    ).run(id, agentId, title ?? null, now, now);
+      "INSERT INTO sessions (id, agent_id, title, created_at, updated_at, status, source) VALUES (?, ?, ?, ?, ?, 'active', ?)",
+    ).run(id, agentId, title ?? null, now, now, source ?? "manual");
     this.logger.info({ sessionId: id, agentId }, "session created in store");
     return id;
   }
@@ -126,6 +135,7 @@ export class SessionStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       status: row.status,
+      source: row.source ?? "manual",
     };
   }
 
@@ -143,6 +153,7 @@ export class SessionStore {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       status: row.status,
+      source: row.source ?? "manual",
     }));
   }
 

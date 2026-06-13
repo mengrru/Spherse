@@ -19,7 +19,7 @@ export interface AgentProfile {
   slug: string;
   createdAt: number;
   model?: string;
-  schedule?: string;
+  schedule?: boolean;
   tools?: string[];
   context?: string[];
   output?: {
@@ -38,6 +38,31 @@ export interface SkillDefinition {
   filePath: string;
 }
 
+export interface ScheduleEntry {
+  id: string;
+  name?: string;
+  enabled: boolean;
+  cron: string;
+  mode: "new_session" | "existing_session";
+  targetSessionId?: string;
+  message: string;
+  notify: boolean;
+  notificationMessage?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ScheduleLogEntry {
+  scheduleId: string;
+  scheduleName?: string;
+  agentName?: string;
+  sessionId: string;
+  triggeredAt: number;
+  completedAt?: number;
+  status: "running" | "success" | "failed";
+  error?: string;
+}
+
 export interface SessionInfo {
   id: string;
   agentId: string;
@@ -45,6 +70,7 @@ export interface SessionInfo {
   createdAt: number;
   updatedAt: number;
   status: "active" | "archived";
+  source?: "manual" | "scheduled";
 }
 
 export interface AppSettings {

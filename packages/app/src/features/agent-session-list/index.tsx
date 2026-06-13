@@ -23,6 +23,7 @@ import { useAppStore } from "../../stores/app-store";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useProjectUiStore } from "../../stores/project-ui-store";
 import { AgentSessionListView } from "./AgentSessionListView";
+import { ScheduleDialog } from "../agent-schedule";
 import { PlusIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { dispatchAction } from "../../ui-sdk";
@@ -60,6 +61,7 @@ export function AgentSessionList({
   const [editAgent, setEditAgent] = useState<{ id: string; content: string; themeContent: string } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AgentProfile | null>(null);
   const [deleteSessionTarget, setDeleteSessionTarget] = useState<SessionInfo | null>(null);
+  const [scheduleAgent, setScheduleAgent] = useState<AgentProfile | null>(null);
 
   const agents = projectData?.agents ?? EMPTY_AGENTS;
   const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
@@ -179,6 +181,7 @@ export function AgentSessionList({
             floatingSessionId={floatingSessionId}
             onToggleAgentCollapsed={(agentId) => toggleAgentCollapsed(projectKey, agentId)}
             onNewSession={handleNewSession}
+            onScheduleAgent={setScheduleAgent}
             onEditAgent={handleEditAgent}
             onDeleteAgent={handleDeleteAgent}
             onSelectSession={handleSelectSession}
@@ -250,6 +253,15 @@ export function AgentSessionList({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {scheduleAgent && project && (
+        <ScheduleDialog
+          open={!!scheduleAgent}
+          onOpenChange={(open) => { if (!open) setScheduleAgent(null); }}
+          agentId={scheduleAgent.id}
+          projectKey={projectKey}
+          client={project.ctx.client}
+        />
+      )}
     </>
   );
 }

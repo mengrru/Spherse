@@ -5,6 +5,7 @@ import { SessionStore } from "./store/session.js";
 import { AgentProfileStore } from "./store/agent-profile.js";
 import { SkillStore } from "./store/skill.js";
 import { Engine } from "./engine.js";
+import { Scheduler } from "./scheduler.js";
 import { initPresets } from "./presets.js";
 import type { Logger } from "./logger.js";
 
@@ -42,6 +43,10 @@ export async function createEngine(
     defaultModel: options?.defaultModel,
     logger: options?.logger,
   });
+
+  const scheduler = new Scheduler(engine, agentsPath, options?.logger);
+  engine.setScheduler(scheduler);
+  await scheduler.loadFromProfiles();
 
   return { engine, projectStore };
 }

@@ -14,6 +14,7 @@ import { createAiFileAccessPolicy } from "./access/ai-file-access.js";
 import { createToolsForProject } from "./tools/index.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { readContextFiles } from "./engine/read-context-files.js";
+import { Scheduler } from "./scheduler.js";
 import type { Logger } from "./logger.js";
 import { logAgentEvent } from "./engine/log-agent-event.js";
 
@@ -40,9 +41,19 @@ export class Engine {
   private globalDefaultModel?: string;
   private fileWriteMutex: FileWriteMutex;
   private logger: Logger;
+  private scheduler?: Scheduler;
 
   setDefaultModel(model: string | undefined): void {
     this.globalDefaultModel = model;
+  }
+
+  setScheduler(scheduler: Scheduler): void {
+    this.scheduler = scheduler;
+  }
+
+  getScheduler(): Scheduler {
+    if (!this.scheduler) throw new Error("Scheduler not initialized");
+    return this.scheduler;
   }
 
   constructor(
@@ -95,11 +106,11 @@ export class Engine {
     return { ...session, title: trimmedTitle };
   }
 
-  async createSession(agentId: string): Promise<string> {
+  async createSession(agentId: string, source?: string): Promise<string> {
     const profile = await this.profileStore.getById(agentId);
     if (!profile) throw new Error(`Agent profile "${agentId}" not found`);
 
-    const sessionId = this.sessionStore.createSession(agentId);
+    const sessionId = this.sessionStore.createSession(agentId, undefined, source);
     const agent = await this.buildAgent(profile, sessionId);
     this.activeSessions.set(sessionId, { agent, agentId });
     this.logger.info({ sessionId, agentId }, "session created");
@@ -181,6 +192,7 @@ export class Engine {
       this.activeSessions.delete(session.id);
     }
     this.sessionStore.closeAgent(agentId);
+    this.scheduler?.unregisterAgent(agentId);
     await this.profileStore.delete(agentId);
   }
 
@@ -220,6 +232,11 @@ export class Engine {
         parameters: tool.parameters,
       })),
     };
+  }
+
+  async shutdown(): Promise<void> {
+    this.scheduler?.stopAll();
+    this.sessionStore.close();
   }
 
   private async buildAgent(

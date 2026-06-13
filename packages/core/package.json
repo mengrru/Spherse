@@ -27,6 +27,7 @@
     "@spherse/i18n": "^0.1.0",
     "@spherse/presets": "^0.1.0",
     "better-sqlite3": "^12.10.0",
+    "cron-parser": "^5.5.0",
     "gray-matter": "^4.0.3",
     "pino": "^10.3.1",
     "yaml": "^2.7.0"

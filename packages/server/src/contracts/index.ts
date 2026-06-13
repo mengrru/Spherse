@@ -39,6 +39,47 @@ const ChatServerEventSchema = Type.Union([
   }),
   Type.Object({ type: Type.Literal("error"), message: Type.String() }),
 ]);
+const ScheduleEntrySchema = Type.Object({
+  id: Type.String(),
+  name: Type.Optional(Type.String()),
+  enabled: Type.Boolean(),
+  cron: Type.String(),
+  mode: Type.Union([Type.Literal("new_session"), Type.Literal("existing_session")]),
+  targetSessionId: Type.Optional(Type.String()),
+  message: Type.String(),
+  notify: Type.Boolean(),
+  notificationMessage: Type.Optional(Type.String({ maxLength: 30 })),
+  createdAt: Type.Number(),
+  updatedAt: Type.Number(),
+});
+const ScheduleServerEventSchema = Type.Union([
+  Type.Object({
+    type: Type.Literal("schedule_triggered"),
+    agentId: Type.String(),
+    scheduleId: Type.String(),
+    sessionId: Type.Optional(Type.String()),
+    triggeredAt: Type.Number(),
+  }),
+  Type.Object({
+    type: Type.Literal("schedule_completed"),
+    agentId: Type.String(),
+    scheduleId: Type.String(),
+    sessionId: Type.String(),
+    status: Type.Literal("success"),
+  }),
+  Type.Object({
+    type: Type.Literal("schedule_failed"),
+    agentId: Type.String(),
+    scheduleId: Type.String(),
+    error: Type.String(),
+  }),
+  Type.Object({
+    type: Type.Literal("schedule_updated"),
+    agentId: Type.String(),
+    scheduleId: Type.String(),
+    schedule: Type.Optional(ScheduleEntrySchema),
+  }),
+]);
 export const schemas = {
   okResponse: Type.Object({ ok: Type.Boolean() }),
   errorResponse: Type.Object({ error: Type.String() }),
@@ -51,6 +92,7 @@ export const schemas = {
     createdAt: Type.Number(),
     updatedAt: Type.Number(),
     status: Type.Union([Type.Literal("active"), Type.Literal("archived")]),
+    source: Type.Optional(Type.Union([Type.Literal("manual"), Type.Literal("scheduled")])),
   }),
   renameSessionRequest: Type.Object({ title: Type.String() }),
   saveContentRequest: Type.Object({ content: Type.String() }),
@@ -78,11 +120,42 @@ export const schemas = {
     ok: Type.Boolean(),
     path: Type.Union([Type.String(), Type.Null()]),
   }),
+  scheduleEntry: ScheduleEntrySchema,
+  createScheduleRequest: Type.Object({
+    name: Type.Optional(Type.String()),
+    cron: Type.String(),
+    mode: Type.Union([Type.Literal("new_session"), Type.Literal("existing_session")]),
+    targetSessionId: Type.Optional(Type.String()),
+    message: Type.String(),
+    notify: Type.Boolean(),
+    notificationMessage: Type.Optional(Type.String({ maxLength: 30 })),
+  }),
+  updateScheduleRequest: Type.Object({
+    name: Type.Optional(Type.String()),
+    enabled: Type.Optional(Type.Boolean()),
+    cron: Type.Optional(Type.String()),
+    mode: Type.Optional(Type.Union([Type.Literal("new_session"), Type.Literal("existing_session")])),
+    targetSessionId: Type.Optional(Type.String()),
+    message: Type.Optional(Type.String()),
+    notify: Type.Optional(Type.Boolean()),
+    notificationMessage: Type.Optional(Type.String({ maxLength: 30 })),
+  }),
+  scheduleLogEntry: Type.Object({
+    scheduleId: Type.String(),
+    scheduleName: Type.Optional(Type.String()),
+    agentName: Type.Optional(Type.String()),
+    sessionId: Type.String(),
+    triggeredAt: Type.Number(),
+    completedAt: Type.Optional(Type.Number()),
+    status: Type.Union([Type.Literal("running"), Type.Literal("success"), Type.Literal("failed")]),
+    error: Type.Optional(Type.String()),
+  }),
   chatClientMessage: Type.Union([
     Type.Object({ type: Type.Literal("message"), content: Type.String() }),
     Type.Object({ type: Type.Literal("abort") }),
   ]),
   chatServerEvent: ChatServerEventSchema,
+  scheduleServerEvent: ScheduleServerEventSchema,
 } as const;
 
 export type OkResponse = Static<typeof schemas.okResponse>;
@@ -101,6 +174,10 @@ export type WelcomePageSettingsRequest = Static<typeof schemas.welcomePageSettin
 export type WelcomePageSettingsResponse = Static<typeof schemas.welcomePageSettingsResponse>;
 export type ChatClientMessage = Static<typeof schemas.chatClientMessage>;
 export type ChatServerEvent = Static<typeof ChatServerEventSchema>;
+export type CreateScheduleRequest = Static<typeof schemas.createScheduleRequest>;
+export type UpdateScheduleRequest = Static<typeof schemas.updateScheduleRequest>;
+export type ScheduleLogEntryContract = Static<typeof schemas.scheduleLogEntry>;
+export type ScheduleServerEvent = Static<typeof ScheduleServerEventSchema>;
 
 export function parseContract<T extends TSchema>(schema: T, payload: unknown): Static<T> {
   if (!Value.Check(schema, payload)) {
@@ -121,4 +198,8 @@ export function parseChatClientMessage(payload: unknown): ChatClientMessage {
 
 export function parseChatServerEvent(payload: unknown): ChatServerEvent {
   return parseContract(ChatServerEventSchema, payload);
+}
+
+export function parseScheduleServerEvent(payload: unknown): ScheduleServerEvent {
+  return parseContract(ScheduleServerEventSchema, payload);
 }

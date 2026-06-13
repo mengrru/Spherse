@@ -14,6 +14,7 @@ interface AgentGroupProps {
   floatingSessionId: string | null;
   onToggleCollapsed: (agentId: string) => void;
   onNewSession: (agent: AgentProfile) => void;
+  onScheduleAgent: (agent: AgentProfile) => void;
   onEditAgent: (agent: AgentProfile) => void;
   onDeleteAgent: (agent: AgentProfile) => void;
   onSelectSession: (session: SessionInfo) => void;
@@ -31,6 +32,7 @@ export function AgentGroup({
   floatingSessionId,
   onToggleCollapsed,
   onNewSession,
+  onScheduleAgent,
   onEditAgent,
   onDeleteAgent,
   onSelectSession,
@@ -46,6 +48,7 @@ export function AgentGroup({
         agent={agent}
         active={isActive}
         onNewSession={onNewSession}
+        onScheduleAgent={onScheduleAgent}
         onEditAgent={onEditAgent}
         onDeleteAgent={onDeleteAgent}
       />

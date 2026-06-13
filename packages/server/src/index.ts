@@ -10,6 +10,7 @@ import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleFsWatchWebSocket } from "./ws-fs-watch.js";
 import { handleDebugWebSocket, createDebugStream } from "./ws-debug.js";
+import { handleScheduleWebSocket } from "./ws-schedule.js";
 
 export interface AppContext {
   engine: Engine;
@@ -54,6 +55,7 @@ export async function createServer(
   handleChatWebSocket(fastify, ctx);
   handleFsWatchWebSocket(fastify, ctx);
   handleDebugWebSocket(fastify);
+  handleScheduleWebSocket(fastify, ctx);
 
   await fastify.listen({ port: 0, host: "127.0.0.1" });
 

@@ -54,7 +54,7 @@ export function registerProjectIpc(
   });
 
   ipcMain.handle("close-project", async (_event, projectPath: string) => {
-    stopServer(projectPath);
+    await stopServer(projectPath);
     removeOpenProject(projectPath);
   });
 

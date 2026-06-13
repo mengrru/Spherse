@@ -1,12 +1,15 @@
 import { create } from "zustand";
 import { translate } from "@spherse/i18n";
 import type { ApiClient } from "../lib/api";
-import type { AgentProfile, ActiveSessionInfo, SessionInfo } from "../lib/types";
+import type { AgentProfile, ActiveSessionInfo, SessionInfo, ScheduleInfo, ScheduleServerEvent } from "../lib/types";
 import { useSettingsStore } from "../features/settings/store";
 
 interface ProjectData {
   agents: AgentProfile[];
   sessions: SessionInfo[];
+  schedulesByAgent: Record<string, ScheduleInfo[]>;
+  runningScheduleIdsByAgent: Record<string, string[]>;
+  scheduleEventVersion: number;
   initialMessageBySessionId: Record<string, string>;
   loading: boolean;
   error: string | null;
@@ -39,6 +42,12 @@ interface ProjectDataStore {
   deleteAgent: (projectKey: string, client: ApiClient, agentId: string) => Promise<void>;
   setInitialMessage: (projectKey: string, sessionId: string, message: string) => void;
   consumeInitialMessage: (projectKey: string, sessionId: string) => string | undefined;
+  refreshSchedules: (projectKey: string, client: ApiClient, agentId: string) => Promise<void>;
+  createSchedule: (projectKey: string, client: ApiClient, agentId: string, data: Parameters<ApiClient["createSchedule"]>[1]) => Promise<void>;
+  updateSchedule: (projectKey: string, client: ApiClient, agentId: string, scheduleId: string, data: Parameters<ApiClient["updateSchedule"]>[2]) => Promise<void>;
+  deleteSchedule: (projectKey: string, client: ApiClient, agentId: string, scheduleId: string) => Promise<void>;
+  triggerSchedule: (projectKey: string, client: ApiClient, agentId: string, scheduleId: string) => Promise<void>;
+  handleScheduleEvent: (projectKey: string, client: ApiClient, event: ScheduleServerEvent) => void;
   clearProjectData: (projectKey: string) => void;
 }
 
@@ -46,9 +55,37 @@ function createProjectData(): ProjectData {
   return {
     agents: [],
     sessions: [],
+    schedulesByAgent: {},
+    runningScheduleIdsByAgent: {},
+    scheduleEventVersion: 0,
     initialMessageBySessionId: {},
     loading: false,
     error: null,
+  };
+}
+
+function addRunningSchedule(project: ProjectData, agentId: string, scheduleId: string): ProjectData {
+  const current = project.runningScheduleIdsByAgent[agentId] ?? [];
+  if (current.includes(scheduleId)) return project;
+  return {
+    ...project,
+    runningScheduleIdsByAgent: {
+      ...project.runningScheduleIdsByAgent,
+      [agentId]: [...current, scheduleId],
+    },
+  };
+}
+
+function removeRunningSchedule(project: ProjectData, agentId: string, scheduleId: string): ProjectData {
+  const current = project.runningScheduleIdsByAgent[agentId] ?? [];
+  const next = current.filter((id) => id !== scheduleId);
+  if (next.length === current.length) return project;
+  return {
+    ...project,
+    runningScheduleIdsByAgent: {
+      ...project.runningScheduleIdsByAgent,
+      [agentId]: next,
+    },
   };
 }
 
@@ -331,6 +368,94 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
       };
     }));
     return message;
+  },
+
+  async refreshSchedules(projectKey, client, agentId) {
+    try {
+      const schedules = await client.listSchedules(agentId);
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...project,
+        schedulesByAgent: { ...project.schedulesByAgent, [agentId]: schedules },
+      }), { createIfMissing: false }));
+    } catch (err) {
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...project, error: getErrorMessage(err),
+      }), { createIfMissing: false }));
+    }
+  },
+
+  async createSchedule(projectKey, client, agentId, data) {
+    try {
+      await client.createSchedule(agentId, data);
+      await get().refreshSchedules(projectKey, client, agentId);
+    } catch (err) {
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...project, error: getErrorMessage(err),
+      }), { createIfMissing: false }));
+    }
+  },
+
+  async updateSchedule(projectKey, client, agentId, scheduleId, data) {
+    try {
+      await client.updateSchedule(agentId, scheduleId, data);
+      await get().refreshSchedules(projectKey, client, agentId);
+    } catch (err) {
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...project, error: getErrorMessage(err),
+      }), { createIfMissing: false }));
+    }
+  },
+
+  async deleteSchedule(projectKey, client, agentId, scheduleId) {
+    try {
+      await client.deleteSchedule(agentId, scheduleId);
+      await get().refreshSchedules(projectKey, client, agentId);
+    } catch (err) {
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...project, error: getErrorMessage(err),
+      }), { createIfMissing: false }));
+    }
+  },
+
+  async triggerSchedule(projectKey, client, agentId, scheduleId) {
+    set((state) => updateProjectData(state, projectKey, (project) =>
+      addRunningSchedule(project, agentId, scheduleId), { createIfMissing: false }));
+    try {
+      await client.triggerSchedule(agentId, scheduleId);
+    } catch (err) {
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...removeRunningSchedule(project, agentId, scheduleId),
+        error: getErrorMessage(err),
+      }), { createIfMissing: false }));
+    }
+  },
+
+  handleScheduleEvent(projectKey, client, event) {
+    if (event.type === "schedule_triggered") {
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...addRunningSchedule(project, event.agentId, event.scheduleId),
+        scheduleEventVersion: project.scheduleEventVersion + 1,
+      }), { createIfMissing: false }));
+      return;
+    }
+
+    if (event.type === "schedule_completed" || event.type === "schedule_failed") {
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...removeRunningSchedule(project, event.agentId, event.scheduleId),
+        scheduleEventVersion: project.scheduleEventVersion + 1,
+      }), { createIfMissing: false }));
+      void get().refreshSchedules(projectKey, client, event.agentId);
+      if (event.type === "schedule_completed") void get().refreshSessions(projectKey, client);
+      return;
+    }
+
+    if (event.type === "schedule_updated") {
+      set((state) => updateProjectData(state, projectKey, (project) => ({
+        ...project,
+        scheduleEventVersion: project.scheduleEventVersion + 1,
+      }), { createIfMissing: false }));
+      void get().refreshSchedules(projectKey, client, event.agentId);
+    }
   },
 
   clearProjectData(projectKey) {

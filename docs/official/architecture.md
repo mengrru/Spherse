@@ -22,6 +22,7 @@
 - **写入互斥**：`write_file`、`edit_file`、`append_changelog`、`move_file`、`copy_file` 共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
 - **删除 agent**：由 Engine 协调，归档关联 sessions 后删除 agent 目录
 - **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），Engine 在构建 system prompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
+- **定时调度**：`Scheduler` 类使用 `cron-parser` 解析 cron 表达式，通过单个 `setTimeout` 链式轮询所有已启用任务。轮询间隔为 10 分钟，首次轮询对齐到最近的 10 分钟整数倍时间；Engine 通过 `setScheduler` 注入，`loadFromProfiles` 在 Engine 启动时读取所有 agent 的 `schedules.yml` 并注册运行时状态
 - **AI 文件读取限制**：项目配置可声明 `aiAccess.deniedPaths`；Engine 构建 agent 时通过动态 access policy 限制 `read_file`、`list_files`、`search_content`、`render_card file_path`、`edit_file`、`move_file`、`copy_file` 的内部读取和 profile context 注入
 - **项目欢迎页设置**：项目配置可声明 `welcomePage.path`，保存项目根目录内 HTML 或图片相对路径；该设置仅供 renderer 欢迎页展示使用，不注入 agent prompt，也不影响 AI 工具访问策略
 - **预置内容注入**：`createEngine` 检测到新项目时调用 `initPresets()`，将 `@spherse/presets` 声明的预置 skill 完整目录复制到 `.spherse/skills/`，并根据 `PRESET_AGENTS` 配置自动创建预置 agent（如「世界观创作」）。预置配置来源为 `packages/presets/presets.json`。仅在首次创建时注入，已有项目不受影响；注入后的内容属于用户所有，app 升级不会覆盖
@@ -36,6 +37,7 @@
 - **文件树 API**：`file-tree.ts` 返回面向 UI 选择的项目文件列表，过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir
 - **预览 API**：`preview.ts` 为本地 HTML 与图片内容提供预览 URL，renderer 通过 iframe、图片或 HTML card 使用
 - **WebSocket**：`ws-chat.ts` 推送 agent 对话事件；`ws-fs-watch.ts` 推送项目文件变更，用于前端刷新内容浏览状态；`ws-debug.ts` 推送 pino 结构化日志流，供前端 Debug Streaming Log 面板消费
+- **定时任务 API**：`schedules.ts` 提供定时任务 CRUD 和手动触发，`ws-schedule.ts` 推送 `schedule_triggered/completed/failed/updated` 事件
 - **项目 settings API**：`settings.ts` 暴露 `/api/settings/ai-access` 读写项目级 AI 读取禁止列表，暴露 `/api/settings/welcome-page` 读写项目级欢迎页路径；renderer 不直接通过 content API 编辑 `.spherse/project.yaml`
 
 ## Electron 层
@@ -56,13 +58,13 @@
 - **projectKey**：URL 中不暴露完整文件系统路径；`project-key.ts` 根据项目目录名生成当前打开项目集合内稳定的 URL key，真实身份仍以 project path 为准
 - **项目内 lastRoute**：每个打开项目在 `openProjects` 条目中持久化相对于 `/project/:projectKey` 的 `lastRoute`，如 `/chat/:sessionId` 或 `/content?path=...`；应用启动、项目切换和关闭当前项目后的下一个项目导航都会恢复该项目的 lastRoute
 - **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作，并持久化左侧 side panel 固定/自动收起偏好
-- **项目数据 store**：`project-data-store.ts` 按 projectKey 缓存 agents、sessions、初始消息和 loading/error 状态
+- **项目数据 store**：`project-data-store.ts` 按 projectKey 缓存 agents、sessions、初始消息、定时任务、运行中定时任务和 loading/error 状态
 - **项目 UI store**：`project-ui-store.ts` 按 projectKey 管理折叠状态、浮窗会话状态等纯 UI 状态，通过 renderer localStorage 持久化
 - **局部状态边界**：文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件或 feature hook 内；Chat 输入框草稿按 sessionId 缓存在 renderer `localStorage`，用于 session 切换和应用重启后的草稿恢复；欢迎页设置 dialog 的打开状态保留在 `ActivityBar` 内，欢迎页设置变更通过 `lib/events.ts` 中的 renderer 自定义事件通知当前欢迎页重新读取项目配置
 - **Chat streaming store**：Chat 消息流和 WebSocket 连接由 `features/chat/streaming-store.ts` 统一管理，按 sessionId 缓存 messages、streaming、scrollPosition、WebSocket 和挂载计数；`useChatSession` 只负责 attach/detach 与选择状态，切换页面或关闭 chat 不会中断后台流式输出；WebSocket 事件按 animation frame 批量归约，避免高频 token update 触发过多 React render；`chat-session-reducer.ts` 负责纯数据归约，使用 `message_start` 创建 assistant 占位、`agent_end` 结束正常 streaming，并忽略 user lifecycle 事件以保留本地立即显示 user bubble 的体验
 - **页面 / layout / feature 边界**：`pages/` 只做路由适配和参数校验；跨 feature 的页面编排放在 `layouts/`；业务域专属 UI、hooks 和局部动作放在 `features/{domain}/`
-- **feature-based 组织**：`features/chat`、`features/content-browser`、`features/agent-session-list`、`features/project-panel`、`features/file-tree`、`features/floating-chat`、`features/text-selection-session`、`features/settings`、`features/debug-tools`、`features/activity-bar`、`features/welcome-page`、`features/welcome-page-settings` 分别拥有自己的组件和 hooks
-- **UI SDK**：`src/ui-sdk/` 提供 iframe 与 App 内代码统一 action 通信框架。iframe 通过 `postMessage` 发送 `type: "spherse:action"` 消息，由 `useSpherseMessageListener` hook 接收并分发到注册的 handler；App 内代码直接调用 `dispatchAction`。外部调用经 rate limiter 限流（每分钟最多 10 次），内部调用无限制。新增 action 只需在 `handlers/` 下新建文件并 `registerAction`，无需改动 listener 或 registry。导航类 action（createSession/openFile/sendMessage）为单向触发；data CRUD action（data.get/set/delete）支持 requestId 请求-响应模式，ifrane 指定 `.data.json` 文件路径，handler 复用现有 Content API 进行 key-value 数据持久化
+- **feature-based 组织**：`features/chat`、`features/content-browser`、`features/agent-session-list`、`features/agent-schedule`、`features/project-panel`、`features/file-tree`、`features/floating-chat`、`features/text-selection-session`、`features/settings`、`features/debug-tools`、`features/activity-bar`、`features/welcome-page`、`features/welcome-page-settings` 分别拥有自己的组件和 hooks
+- **UI SDK**：`src/ui-sdk/` 提供 iframe 与 App 内代码统一 action 通信框架。iframe 通过 `postMessage` 发送 `type: "spherse:action"` 消息，由 `useSpherseMessageListener` hook 接收并分发到注册的 handler；App 内代码直接调用 `dispatchAction`。外部调用经 rate limiter 限流（每分钟最多 10 次），内部调用无限制。新增 action 只需在 `handlers/` 下新建文件并 `registerAction`，无需改动 listener 或 registry。导航类 action（createSession/openFile/sendMessage）为单向触发；data CRUD action（data.get/set/delete）支持 requestId 请求-响应模式，iframe 指定 `.data.json` 文件路径，handler 复用现有 Content API 进行 key-value 数据持久化
 - **共享组件边界**：`components/` 保留 shadcn/ui、跨 feature 复用组件和少量通用组件；只被某个 feature 使用的组件不放在全局 components 根目录
 
 ## i18n
