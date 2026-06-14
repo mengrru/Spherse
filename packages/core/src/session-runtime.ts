@@ -1,5 +1,4 @@
 import path from "node:path";
-import pino from "pino";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { streamSimple } from "@earendil-works/pi-ai";
 import type { AgentEvent, AgentTool } from "@mariozechner/pi-agent-core";
@@ -11,7 +10,7 @@ import { createAiFileAccessPolicy } from "./access/ai-file-access.js";
 import { createToolsForProject } from "./tools/index.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { readContextFiles } from "./engine/read-context-files.js";
-import type { Logger } from "./logger.js";
+import { type Logger, createSilentLogger } from "./logger.js";
 import { logAgentEvent } from "./engine/log-agent-event.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
@@ -42,7 +41,7 @@ export class SessionRuntime {
     this.projectStore = projectStore;
     this.globalDefaultModel = options?.defaultModel;
     this.fileWriteMutex = new FileWriteMutex();
-    this.logger = options?.logger ?? pino({ level: "silent" });
+    this.logger = options?.logger ?? createSilentLogger();
   }
 
   setDefaultModel(model: string | undefined): void {

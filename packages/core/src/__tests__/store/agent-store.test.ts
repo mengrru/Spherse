@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "node:path";
-import pino from "pino";
+import { createSilentLogger } from "../../logger.js";
 import { AgentStore } from "../../store/agent-store.js";
 import { createTempProject, cleanupDir, ensureDir, writeFile } from "../helpers.js";
 
@@ -24,7 +24,7 @@ describe("AgentStore", () => {
     agentDir = path.join(tmpRoot, "agents", "test-agent-a1b2c3");
     await ensureDir(tmpRoot, "agents/test-agent-a1b2c3");
     await writeFile(agentDir, "profile.md", VALID_PROFILE);
-    store = new AgentStore(agentDir, agentId, pino({ level: "silent" }));
+    store = new AgentStore(agentDir, agentId, createSilentLogger());
     await store.open();
   });
 

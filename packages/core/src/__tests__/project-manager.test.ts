@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import pino from "pino";
+import { createSilentLogger } from "../logger.js";
 import { ProjectManager } from "../project-manager.js";
 import type { SessionInfo } from "../types.js";
 import type { ProjectStore } from "../store/project.js";
@@ -24,7 +24,7 @@ function createProjectManagerWithSessions(initial: Record<string, SessionInfo>) 
     getAgent: vi.fn(() => agentStore),
   } as unknown as ProjectStore;
 
-  const manager = new ProjectManager(projectStore, pino({ level: "silent" }));
+  const manager = new ProjectManager(projectStore, createSilentLogger());
 
   return { manager, sessionStore };
 }

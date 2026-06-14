@@ -1,6 +1,6 @@
 import path from "node:path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import pino from "pino";
+import { createSilentLogger } from "../logger.js";
 import { ProjectStore } from "../store/project.js";
 import { PRESET_SKILL_SOURCES, PRESET_AGENTS } from "@spherse/presets";
 import { createTempProject, cleanupDir, pathExists, readFile } from "./helpers.js";
@@ -13,7 +13,7 @@ describe("initPresets", () => {
   beforeEach(async () => {
     projectRoot = await createTempProject();
     spherseDir = path.join(projectRoot, ".spherse");
-    projectStore = new ProjectStore(projectRoot, pino({ level: "silent" }));
+    projectStore = new ProjectStore(projectRoot, createSilentLogger());
     await projectStore.create("TestProject", "gemini-2.5-pro");
   });
 
@@ -24,7 +24,7 @@ describe("initPresets", () => {
 
   it("copies all preset skills to .spherse/skills/", async () => {
     const { initPresets } = await import("../presets.js");
-    await initPresets(projectStore, spherseDir, pino({ level: "silent" }));
+    await initPresets(projectStore, spherseDir, createSilentLogger());
 
     for (const skill of PRESET_SKILL_SOURCES) {
       for (const file of skill.files) {
@@ -37,7 +37,7 @@ describe("initPresets", () => {
 
   it("creates preset agents with correct names", async () => {
     const { initPresets } = await import("../presets.js");
-    await initPresets(projectStore, spherseDir, pino({ level: "silent" }));
+    await initPresets(projectStore, spherseDir, createSilentLogger());
 
     const profiles = projectStore.listAgents();
     expect(profiles.length).toBeGreaterThanOrEqual(PRESET_AGENTS.length);
@@ -51,6 +51,6 @@ describe("initPresets", () => {
 
   it("does not throw when called on empty project", async () => {
     const { initPresets } = await import("../presets.js");
-    await expect(initPresets(projectStore, spherseDir, pino({ level: "silent" }))).resolves.toBeUndefined();
+    await expect(initPresets(projectStore, spherseDir, createSilentLogger())).resolves.toBeUndefined();
   });
 });

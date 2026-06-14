@@ -9,4 +9,4 @@ export { createProject } from "./factory.js";
 export { FileWriteMutex } from "./utils/file-write-mutex.js";
 export { assertInsideProject, isPathInside, resolveProjectPath } from "./utils/path-safety.js";
 export { getSupportedProviders, resolveModelById, ENABLED_PROVIDERS } from "./model-providers.js";
-export type { Logger } from "./logger.js";
+export { type Logger, createSilentLogger } from "./logger.js";

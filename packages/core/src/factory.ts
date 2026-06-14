@@ -6,14 +6,13 @@ import { SessionRuntime } from "./session-runtime.js";
 import { Scheduler } from "./scheduler.js";
 import { ProjectRuntime } from "./project-runtime.js";
 import { initPresets } from "./presets.js";
-import type { Logger } from "./logger.js";
-import pino from "pino";
+import { type Logger, createSilentLogger } from "./logger.js";
 
 export async function createProject(
   projectRoot: string,
   options?: { projectName?: string; defaultModel?: string; logger?: Logger },
 ): Promise<ProjectRuntime> {
-  const logger = options?.logger ?? pino({ level: "silent" });
+  const logger = options?.logger ?? createSilentLogger();
 
   const projectStore = new ProjectStore(projectRoot, logger);
 

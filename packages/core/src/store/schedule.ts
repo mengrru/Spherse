@@ -2,8 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 import type { ScheduleEntry, ScheduleLogEntry } from "../types.js";
-import type { Logger } from "../logger.js";
-import pino from "pino";
+import { type Logger, createSilentLogger } from "../logger.js";
 
 export class ScheduleStore {
   private schedulesPath: string;
@@ -13,7 +12,7 @@ export class ScheduleStore {
   constructor(agentDir: string, logger?: Logger) {
     this.schedulesPath = path.join(agentDir, "schedules.yml");
     this.logsPath = path.join(agentDir, "schedule-logs.jsonl");
-    this.logger = logger ?? pino({ level: "silent" });
+    this.logger = logger ?? createSilentLogger();
   }
 
   list(): ScheduleEntry[] {

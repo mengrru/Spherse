@@ -4,8 +4,7 @@ import type { SessionRuntime } from "./session-runtime.js";
 import type { ProjectStore } from "./store/project.js";
 import type { ScheduleStore } from "./store/schedule.js";
 import type { ScheduleEntry, ScheduleLogEntry } from "./types.js";
-import type { Logger } from "./logger.js";
-import pino from "pino";
+import { type Logger, createSilentLogger } from "./logger.js";
 
 export interface ScheduleEventPayload {
   agentId: string;
@@ -51,7 +50,7 @@ export class Scheduler extends EventEmitter {
     super();
     this.sessionRuntime = sessionRuntime;
     this.projectStore = projectStore;
-    this.logger = logger ?? pino({ level: "silent" });
+    this.logger = logger ?? createSilentLogger();
     this.startPolling();
   }
 

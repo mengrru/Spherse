@@ -1,13 +1,13 @@
 import Fastify, { type FastifyInstance } from "fastify";
-import pino from "pino";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import type { Logger } from "@spherse/core";
 import { ProjectRegistry } from "./registry.js";
+import { createServerLogger, createFastifyLoggerStream } from "./logger.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleFsWatchWebSocket } from "./ws-fs-watch.js";
-import { handleDebugWebSocket, createDebugStream } from "./ws-debug.js";
+import { handleDebugWebSocket } from "./ws-debug.js";
 import { handleScheduleWebSocket } from "./ws-schedule.js";
 
 export { ProjectRegistry, type ProjectContext } from "./registry.js";
@@ -21,23 +21,10 @@ export interface MultiProjectServer {
 export async function createMultiProjectServer(
   options?: { defaultModel?: string },
 ): Promise<MultiProjectServer> {
-  const pretty = pino.transport({
-    target: "pino-pretty",
-    options: { colorize: true },
-  });
-  pretty.on("error", () => {});
-
-  const debugStream = createDebugStream();
-  const logger = pino({ level: "debug" }, pino.multistream([pretty, debugStream]));
-
-  const fastifyTransport = pino.transport({
-    target: "pino-pretty",
-    options: { colorize: true },
-  });
-  fastifyTransport.on("error", () => {});
+  const logger = createServerLogger();
 
   const fastify = Fastify({
-    logger: { level: "debug", stream: fastifyTransport },
+    logger: { level: "debug", stream: createFastifyLoggerStream() },
   });
 
   await fastify.register(cors, { origin: true });

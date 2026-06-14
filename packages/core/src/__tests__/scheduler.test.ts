@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
-import pino from "pino";
+import { createSilentLogger } from "../logger.js";
 import { Scheduler } from "../scheduler.js";
 import { createProject } from "../factory.js";
 import type { ScheduleEntry } from "../types.js";
@@ -29,7 +29,7 @@ describe("Scheduler", () => {
 
     const runtime = await createProject(tmpDir, {
       projectName: "Test",
-      logger: pino({ level: "silent" }),
+      logger: createSilentLogger(),
     });
 
     sessionRuntime = runtime.sessionRuntime;
@@ -42,7 +42,7 @@ describe("Scheduler", () => {
     otherAgentId = secondAgent.getProfile().id;
 
     runtime.scheduler.stopAll();
-    scheduler = new Scheduler(sessionRuntime, projectStore, pino({ level: "silent" }));
+    scheduler = new Scheduler(sessionRuntime, projectStore, createSilentLogger());
     await scheduler.loadFromAgents();
   });
 
@@ -112,7 +112,7 @@ describe("Scheduler", () => {
     const entry = makeEntry({ name: "Persisted" });
     scheduler.register(agentId, entry, true);
 
-    const scheduler2 = new Scheduler(sessionRuntime, projectStore, pino({ level: "silent" }));
+    const scheduler2 = new Scheduler(sessionRuntime, projectStore, createSilentLogger());
     const found = scheduler2.get(agentId, entry.id);
     expect(found).not.toBeNull();
     expect(found!.name).toBe("Persisted");

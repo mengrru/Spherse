@@ -1,8 +1,7 @@
 import Database from "better-sqlite3";
 import crypto from "node:crypto";
 import type { SessionInfo } from "../types.js";
-import type { Logger } from "../logger.js";
-import pino from "pino";
+import { type Logger, createSilentLogger } from "../logger.js";
 
 const MIGRATION = `
 CREATE TABLE IF NOT EXISTS sessions (
@@ -33,7 +32,7 @@ export class SessionStore {
   constructor(dbPath: string, agentId: string, logger?: Logger) {
     this.dbPath = dbPath;
     this.agentId = agentId;
-    this.logger = logger ?? pino({ level: "silent" });
+    this.logger = logger ?? createSilentLogger();
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
     this.applyMigrations();

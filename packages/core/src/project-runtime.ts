@@ -1,8 +1,7 @@
 import type { ProjectManager } from "./project-manager.js";
 import type { SessionRuntime } from "./session-runtime.js";
 import type { Scheduler } from "./scheduler.js";
-import type { Logger } from "./logger.js";
-import pino from "pino";
+import { type Logger, createSilentLogger } from "./logger.js";
 
 export class ProjectRuntime {
   readonly projectManager: ProjectManager;
@@ -23,7 +22,7 @@ export class ProjectRuntime {
     this.sessionRuntime = deps.sessionRuntime;
     this.scheduler = deps.scheduler;
     this.projectId = deps.projectId;
-    this.logger = deps.logger ?? pino({ level: "silent" });
+    this.logger = deps.logger ?? createSilentLogger();
   }
 
   deleteSession(agentId: string, sessionId: string): void {

@@ -7,8 +7,7 @@ import {
   normalizeDeniedPaths,
 } from "../access/ai-file-access.js";
 import type { ProjectConfig } from "../types.js";
-import type { Logger } from "../logger.js";
-import pino from "pino";
+import { type Logger, createSilentLogger } from "../logger.js";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
 
@@ -30,7 +29,7 @@ export class ProjectConfigStore {
 
   constructor(configPath: string, logger?: Logger) {
     this.configPath = configPath;
-    this.logger = logger ?? pino({ level: "silent" });
+    this.logger = logger ?? createSilentLogger();
   }
 
   async read(): Promise<ProjectConfig> {

@@ -2,8 +2,7 @@ import type { AgentProfile, SessionInfo, SkillDefinition } from "./types.js";
 import { ProjectStore } from "./store/project.js";
 import type { ChangelogEntry } from "./store/project.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
-import type { Logger } from "./logger.js";
-import pino from "pino";
+import { type Logger, createSilentLogger } from "./logger.js";
 
 export class ProjectManager {
   private projectStore: ProjectStore;
@@ -13,7 +12,7 @@ export class ProjectManager {
   constructor(projectStore: ProjectStore, logger?: Logger) {
     this.projectStore = projectStore;
     this.fileWriteMutex = new FileWriteMutex();
-    this.logger = logger ?? pino({ level: "silent" });
+    this.logger = logger ?? createSilentLogger();
   }
 
   close(): void {

@@ -10,8 +10,7 @@ import { ProjectConfigStore } from "./project-config.js";
 import { SkillStore } from "./skill.js";
 import { AgentStore } from "./agent-store.js";
 import { AgentProfileStore, assertSafeSlug } from "./agent-profile.js";
-import type { Logger } from "../logger.js";
-import pino from "pino";
+import { type Logger, createSilentLogger } from "../logger.js";
 
 export interface ChangelogEntry {
   agent: string;
@@ -47,7 +46,7 @@ export class ProjectStore {
   constructor(rootPath: string, logger?: Logger) {
     this.rootPath = path.resolve(rootPath);
     this.spherseDir = path.join(this.rootPath, PROJECT_META_DIR);
-    this.logger = logger ?? pino({ level: "silent" });
+    this.logger = logger ?? createSilentLogger();
   }
 
   async open(): Promise<void> {

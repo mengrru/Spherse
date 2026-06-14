@@ -3,8 +3,7 @@ import type { AgentProfile } from "../types.js";
 import { AgentProfileStore } from "./agent-profile.js";
 import { SessionStore } from "./session.js";
 import { ScheduleStore } from "./schedule.js";
-import type { Logger } from "../logger.js";
-import pino from "pino";
+import { type Logger, createSilentLogger } from "../logger.js";
 
 export class AgentStore {
   private agentDir: string;
@@ -18,7 +17,7 @@ export class AgentStore {
   constructor(agentDir: string, agentId: string, logger?: Logger) {
     this.agentDir = agentDir;
     this.agentId = agentId;
-    this.logger = logger ?? pino({ level: "silent" });
+    this.logger = logger ?? createSilentLogger();
     this._profileStore = new AgentProfileStore(
       path.join(agentDir, "profile.md"),
       path.basename(agentDir),
