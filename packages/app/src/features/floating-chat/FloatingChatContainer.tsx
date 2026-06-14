@@ -46,19 +46,19 @@ function scopeCssToFloat(css: string): string {
 }
 
 interface FloatingChatContainerProps {
-  projectKey: string;
+  projectId: string;
   floatingChat: FloatingChatState;
   agent: AgentProfile;
   client: ApiClient;
-  port: number;
+  baseUrl: string;
 }
 
 export function FloatingChatContainer({
-  projectKey,
+  projectId,
   floatingChat,
   agent,
   client,
-  port,
+  baseUrl,
 }: FloatingChatContainerProps) {
   const setFloatingChat = useProjectUiStore((s) => s.setFloatingChat);
   const [scopedThemeCss, setScopedThemeCss] = useState<string | null>(null);
@@ -77,15 +77,15 @@ export function FloatingChatContainer({
   }, [client, agent.id]);
 
   const handleClose = () => {
-    setFloatingChat(projectKey, null);
+    setFloatingChat(projectId, null);
   };
 
   const handlePositionCommit = (pos: { x: number; y: number }) => {
-    setFloatingChat(projectKey, { ...floatingChat, position: pos });
+    setFloatingChat(projectId, { ...floatingChat, position: pos });
   };
 
   const handleSizeCommit = (size: { width: number; height: number }, pos: { x: number; y: number }) => {
-    setFloatingChat(projectKey, { ...floatingChat, position: pos, size });
+    setFloatingChat(projectId, { ...floatingChat, position: pos, size });
   };
 
   return createPortal(
@@ -102,7 +102,8 @@ export function FloatingChatContainer({
         <Chat
           client={client}
           sessionId={floatingChat.sessionId}
-          port={port}
+          baseUrl={baseUrl}
+          projectId={projectId}
           agent={agent}
           hideHeader
         />

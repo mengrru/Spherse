@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 
-export function useCustomTheme(projectRoot: string | undefined, port: number | undefined) {
+export function useCustomTheme(projectRoot: string | undefined, baseUrl: string | undefined, projectId: string | undefined) {
   useEffect(() => {
-    if (!projectRoot || !port) return;
+    if (!projectRoot || !baseUrl || !projectId) return;
 
     const existingLink = document.getElementById("custom-theme-link");
     if (existingLink) existingLink.remove();
@@ -10,10 +10,10 @@ export function useCustomTheme(projectRoot: string | undefined, port: number | u
     const link = document.createElement("link");
     link.id = "custom-theme-link";
     link.rel = "stylesheet";
-    link.href = `http://localhost:${port}/api/preview/.spherse/theme.css?t=${Date.now()}`;
+    link.href = `${baseUrl}/api/projects/${projectId}/preview/.spherse/theme.css?t=${Date.now()}`;
     link.onerror = () => {
       link.remove();
     };
     document.head.appendChild(link);
-  }, [projectRoot, port]);
+  }, [projectRoot, baseUrl, projectId]);
 }

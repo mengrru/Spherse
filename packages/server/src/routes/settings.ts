@@ -1,19 +1,22 @@
 import type { FastifyInstance } from "fastify";
-import type { AppContext } from "../index.js";
+import type { ProjectRegistry } from "../registry.js";
 import { getSupportedProviders } from "@spherse/core";
 import { schemas } from "@spherse/server/contracts";
 
-export function registerSettingsRoutes(fastify: FastifyInstance, ctx: AppContext): void {
+export function registerSettingsRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get("/api/settings/providers", async () => {
     return getSupportedProviders();
   });
 
-  fastify.get("/api/settings/ai-access", async () => {
-    return ctx.projectStore.getAiAccessSettings();
-  });
+  fastify.get<{ Params: { projectId: string } }>(
+    "/api/projects/:projectId/settings/ai-access",
+    async (req) => {
+      return req.projectCtx!.projectStore.getAiAccessSettings();
+    },
+  );
 
-  fastify.put<{ Body: { deniedPaths: string[] } }>(
-    "/api/settings/ai-access",
+  fastify.put<{ Params: { projectId: string }; Body: { deniedPaths: string[] } }>(
+    "/api/projects/:projectId/settings/ai-access",
     {
       schema: {
         body: schemas.aiAccessSettingsRequest,
@@ -28,7 +31,7 @@ export function registerSettingsRoutes(fastify: FastifyInstance, ctx: AppContext
         return reply.code(400).send({ error: "Missing or invalid 'deniedPaths'" });
       }
       try {
-        const settings = await ctx.projectStore.updateAiAccessSettings(req.body.deniedPaths);
+        const settings = await req.projectCtx!.projectStore.updateAiAccessSettings(req.body.deniedPaths);
         return { ok: true, ...settings };
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
@@ -36,12 +39,15 @@ export function registerSettingsRoutes(fastify: FastifyInstance, ctx: AppContext
     },
   );
 
-  fastify.get("/api/settings/welcome-page", async () => {
-    return ctx.projectStore.getWelcomePageSettings();
-  });
+  fastify.get<{ Params: { projectId: string } }>(
+    "/api/projects/:projectId/settings/welcome-page",
+    async (req) => {
+      return req.projectCtx!.projectStore.getWelcomePageSettings();
+    },
+  );
 
-  fastify.put<{ Body: { path: string | null } }>(
-    "/api/settings/welcome-page",
+  fastify.put<{ Params: { projectId: string }; Body: { path: string | null } }>(
+    "/api/projects/:projectId/settings/welcome-page",
     {
       schema: {
         body: schemas.welcomePageSettingsRequest,
@@ -60,7 +66,7 @@ export function registerSettingsRoutes(fastify: FastifyInstance, ctx: AppContext
         return reply.code(400).send({ error: "Missing or invalid 'path'" });
       }
       try {
-        const settings = await ctx.projectStore.updateWelcomePageSettings(req.body.path);
+        const settings = await req.projectCtx!.projectStore.updateWelcomePageSettings(req.body.path);
         return { ok: true, ...settings };
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });

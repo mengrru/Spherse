@@ -1,6 +1,7 @@
 export const PROJECT_META_DIR = ".spherse";
 
 export interface ProjectConfig {
+  id: string;
   name: string;
   created: number;
   defaultModel: string;

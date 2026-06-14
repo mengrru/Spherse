@@ -3,7 +3,7 @@ import type { ApiClient } from "../lib/api";
 
 export interface ActionContext {
   navigate: NavigateFunction;
-  projectKey: string;
+  projectId: string;
   client?: ApiClient;
   source?: MessageEventSource | null;
   requestId?: string;

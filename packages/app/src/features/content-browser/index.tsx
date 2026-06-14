@@ -15,7 +15,7 @@ export interface ContentBrowserProps {
   filePath: string;
   onBack: () => void;
   agents: AgentProfile[];
-  projectKey: string;
+  projectId: string;
   activeSessions?: ActiveSessionInfo[];
   onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;
 }
@@ -25,7 +25,7 @@ export function ContentBrowser({
   filePath,
   onBack,
   agents,
-  projectKey,
+  projectId,
   activeSessions,
   onStartSession,
 }: ContentBrowserProps) {
@@ -79,7 +79,7 @@ export function ContentBrowser({
         disabled={editor.isEditing}
         sourcePath={filePath}
         agents={agents}
-        projectKey={projectKey}
+        projectId={projectId}
         activeSessions={activeSessions}
         onStartSession={onStartSession}
       >

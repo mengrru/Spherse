@@ -12,16 +12,6 @@ const appRoot = path.resolve(__dirname, "..");
 const mainEntry = path.join(appRoot, "dist", "main", "index.js");
 const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
 
-function projectKeyBase(projectPath: string): string {
-  const name = projectPath.split(/[\\/]/).filter(Boolean).pop() ?? "project";
-  const key = name
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-+/g, "-");
-  return key || "project";
-}
-
 const DATA_TEST_HTML = [
   "<!DOCTYPE html>",
   "<html><head><meta charset=\"utf-8\"></head><body>",
@@ -77,13 +67,18 @@ const DATA_TEST_HTML = [
 async function createDataProject() {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-data-"));
   await mkdir(path.join(root, ".spherse"), { recursive: true });
+  const projectId = Math.random().toString(36).slice(2, 10);
+  await writeFile(
+    path.join(root, ".spherse", "project.yaml"),
+    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+  );
 
   await writeFile(path.join(root, "sdk-data-test.html"), DATA_TEST_HTML);
 
-  return { root, testHtmlPath: "sdk-data-test.html" };
+  return { root, testHtmlPath: "sdk-data-test.html", projectId };
 }
 
-async function launchAppWithProject(project: { root: string }): Promise<{
+async function launchAppWithProject(project: { root: string; projectId: string }): Promise<{
   app: ElectronApplication;
   page: Page;
 }> {
@@ -103,10 +98,11 @@ async function launchAppWithProject(project: { root: string }): Promise<{
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
-  await page.evaluate(async (projectRoot) => {
-    await window.electronAPI.addOpenProject(projectRoot);
-    await window.electronAPI.setLastActiveProject(projectRoot);
-  }, project.root);
+  await page.evaluate(async ({ id, projectRoot }) => {
+    await window.electronAPI.openProject(projectRoot);
+    await window.electronAPI.addOpenProject(id, projectRoot);
+    await window.electronAPI.setLastActiveProject(id);
+  }, { id: project.projectId, projectRoot: project.root });
   return { app, page };
 }
 
@@ -115,7 +111,7 @@ test("data.set + data.get round trip", async () => {
   const { app, page } = await launchAppWithProject(project);
 
   try {
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.testHtmlPath)}`,
     );
@@ -138,7 +134,7 @@ test("data.get nonexistent key returns null", async () => {
   const { app, page } = await launchAppWithProject(project);
 
   try {
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.testHtmlPath)}`,
     );
@@ -158,7 +154,7 @@ test("data.delete removes key", async () => {
   const { app, page } = await launchAppWithProject(project);
 
   try {
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.testHtmlPath)}`,
     );
@@ -184,7 +180,7 @@ test("data persistence survives navigation", async () => {
   const { app, page } = await launchAppWithProject(project);
 
   try {
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
 
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.testHtmlPath)}`,
@@ -215,7 +211,7 @@ test("data.set with complex JSON value", async () => {
   const { app, page } = await launchAppWithProject(project);
 
   try {
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.testHtmlPath)}`,
     );

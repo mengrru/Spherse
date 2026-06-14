@@ -1,5 +1,5 @@
-import type { FastifyInstance } from "fastify";
-import type { AppContext } from "../index.js";
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { ProjectRegistry, ProjectContext } from "../registry.js";
 import { registerAgentRoutes } from "./agents.js";
 import { registerAgentWriteRoutes } from "./agent-write.js";
 import { registerSessionRoutes } from "./sessions.js";
@@ -11,15 +11,31 @@ import { registerFileTreeRoutes } from "./file-tree.js";
 import { registerDebugRoutes } from "./debug.js";
 import { registerScheduleRoutes } from "./schedules.js";
 
-export function registerAllRoutes(fastify: FastifyInstance, ctx: AppContext): void {
-  registerAgentRoutes(fastify, ctx);
-  registerAgentWriteRoutes(fastify, ctx);
-  registerSessionRoutes(fastify, ctx);
-  registerContentRoutes(fastify, ctx);
-  registerSettingsRoutes(fastify, ctx);
-  registerPreviewRoutes(fastify, ctx);
-  registerSkillRoutes(fastify, ctx);
-  registerFileTreeRoutes(fastify, ctx);
-  registerDebugRoutes(fastify, ctx);
-  registerScheduleRoutes(fastify, ctx);
+declare module "fastify" {
+  interface FastifyRequest {
+    projectCtx?: ProjectContext;
+  }
+}
+
+export function registerAllRoutes(fastify: FastifyInstance, registry: ProjectRegistry): void {
+  fastify.addHook("preHandler", async (req: FastifyRequest, reply) => {
+    const projectId = (req.params as Record<string, string> | undefined)?.projectId;
+    if (projectId === undefined) return;
+    const ctx = registry.get(projectId);
+    if (!ctx) {
+      return reply.code(404).send({ error: "Unknown project" });
+    }
+    req.projectCtx = ctx;
+  });
+
+  registerAgentRoutes(fastify, registry);
+  registerAgentWriteRoutes(fastify, registry);
+  registerSessionRoutes(fastify, registry);
+  registerContentRoutes(fastify, registry);
+  registerSettingsRoutes(fastify, registry);
+  registerPreviewRoutes(fastify, registry);
+  registerSkillRoutes(fastify, registry);
+  registerFileTreeRoutes(fastify, registry);
+  registerDebugRoutes(fastify, registry);
+  registerScheduleRoutes(fastify, registry);
 }

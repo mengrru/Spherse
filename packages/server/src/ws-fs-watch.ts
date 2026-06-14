@@ -1,16 +1,21 @@
 import fs from "node:fs";
 import type { FastifyInstance } from "fastify";
-import type { AppContext } from "./index.js";
+import type { ProjectRegistry } from "./registry.js";
 import { PROJECT_META_DIR } from "@spherse/core";
 
 export function handleFsWatchWebSocket(
   fastify: FastifyInstance,
-  ctx: AppContext,
+  registry: ProjectRegistry,
 ) {
-  fastify.get(
-    "/ws/fs-watch",
+  fastify.get<{ Params: { projectId: string } }>(
+    "/ws/projects/:projectId/fs-watch",
     { websocket: true },
-    (socket) => {
+    (socket, req) => {
+      const ctx = registry.get(req.params.projectId);
+      if (!ctx) {
+        socket.close();
+        return;
+      }
       const projectRoot = ctx.projectStore.getRootPath();
       fastify.log.info("fs-watch ws connected");
       let alive = true;

@@ -13,21 +13,21 @@ interface ProjectUiState {
 
 interface ProjectUiStore {
   projects: Record<string, ProjectUiState>;
-  getProjectUi: (projectKey: string) => ProjectUiState;
-  toggleAgentCollapsed: (projectKey: string, agentId: string) => void;
-  setCollapsedAgentIds: (projectKey: string, agentIds: Iterable<string>) => void;
-  setFloatingChat: (projectKey: string, state: FloatingChatState | null) => void;
-  clearProjectUi: (projectKey: string) => void;
+  getProjectUi: (projectId: string) => ProjectUiState;
+  toggleAgentCollapsed: (projectId: string, agentId: string) => void;
+  setCollapsedAgentIds: (projectId: string, agentIds: Iterable<string>) => void;
+  setFloatingChat: (projectId: string, state: FloatingChatState | null) => void;
+  clearProjectUi: (projectId: string) => void;
 }
 
 const FLOATING_CHAT_STORAGE_PREFIX = "spherse:floating-chat:";
 
-function writeFloatingChat(projectKey: string, state: FloatingChatState | null) {
+function writeFloatingChat(projectId: string, state: FloatingChatState | null) {
   if (typeof localStorage === "undefined") return;
   if (state) {
-    localStorage.setItem(FLOATING_CHAT_STORAGE_PREFIX + projectKey, JSON.stringify(state));
+    localStorage.setItem(FLOATING_CHAT_STORAGE_PREFIX + projectId, JSON.stringify(state));
   } else {
-    localStorage.removeItem(FLOATING_CHAT_STORAGE_PREFIX + projectKey);
+    localStorage.removeItem(FLOATING_CHAT_STORAGE_PREFIX + projectId);
   }
 }
 
@@ -39,14 +39,14 @@ function createProjectUi(): ProjectUiState {
 
 function updateProjectUi(
   state: ProjectUiStore,
-  projectKey: string,
+  projectId: string,
   update: (project: ProjectUiState) => ProjectUiState,
 ) {
-  const current = state.projects[projectKey] ?? createProjectUi();
+  const current = state.projects[projectId] ?? createProjectUi();
   return {
     projects: {
       ...state.projects,
-      [projectKey]: update(current),
+      [projectId]: update(current),
     },
   };
 }
@@ -54,12 +54,12 @@ function updateProjectUi(
 export const useProjectUiStore = create<ProjectUiStore>((set, get) => ({
   projects: {},
 
-  getProjectUi(projectKey) {
-    return get().projects[projectKey] ?? createProjectUi();
+  getProjectUi(projectId) {
+    return get().projects[projectId] ?? createProjectUi();
   },
 
-  toggleAgentCollapsed(projectKey, agentId) {
-    set((state) => updateProjectUi(state, projectKey, (project) => {
+  toggleAgentCollapsed(projectId, agentId) {
+    set((state) => updateProjectUi(state, projectId, (project) => {
       const collapsedAgentIds = new Set(project.collapsedAgentIds);
       if (collapsedAgentIds.has(agentId)) {
         collapsedAgentIds.delete(agentId);
@@ -70,33 +70,33 @@ export const useProjectUiStore = create<ProjectUiStore>((set, get) => ({
     }));
   },
 
-  setCollapsedAgentIds(projectKey, agentIds) {
-    set((state) => updateProjectUi(state, projectKey, (project) => ({
+  setCollapsedAgentIds(projectId, agentIds) {
+    set((state) => updateProjectUi(state, projectId, (project) => ({
       ...project,
       collapsedAgentIds: new Set(agentIds),
     })));
   },
 
-  setFloatingChat(projectKey, state) {
+  setFloatingChat(projectId, state) {
     if (state) {
-      writeFloatingChat(projectKey, state);
-      set((s) => updateProjectUi(s, projectKey, (project) => {
+      writeFloatingChat(projectId, state);
+      set((s) => updateProjectUi(s, projectId, (project) => {
         const { floatingChat: _, ...rest } = project;
         return { ...rest, floatingChat: state };
       }));
     } else {
-      writeFloatingChat(projectKey, null);
-      set((s) => updateProjectUi(s, projectKey, (project) => {
+      writeFloatingChat(projectId, null);
+      set((s) => updateProjectUi(s, projectId, (project) => {
         const { floatingChat: _, ...rest } = project;
         return rest;
       }));
     }
   },
 
-  clearProjectUi(projectKey) {
-    writeFloatingChat(projectKey, null);
+  clearProjectUi(projectId) {
+    writeFloatingChat(projectId, null);
     set((state) => {
-      const { [projectKey]: _removed, ...projects } = state.projects;
+      const { [projectId]: _removed, ...projects } = state.projects;
       return { projects };
     });
   },

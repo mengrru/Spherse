@@ -5,9 +5,9 @@ import { checkRateLimit } from "./rate-limit";
 import type { ActionContext } from "./types";
 import { useAppStore } from "../stores/app-store";
 
-export function useSpherseMessageListener(projectKey: string): void {
+export function useSpherseMessageListener(projectId: string): void {
   const navigate = useNavigate();
-  const project = useAppStore((s) => s.projects.get(projectKey));
+  const project = useAppStore((s) => s.projects.get(projectId));
 
   useEffect(() => {
     if (!project) return;
@@ -21,7 +21,7 @@ export function useSpherseMessageListener(projectKey: string): void {
       if (!checkRateLimit()) return;
       const ctx: ActionContext = {
         navigate,
-        projectKey,
+        projectId,
         client: project.ctx.client,
         source: event.source,
         requestId: event.data.requestId,
@@ -35,5 +35,5 @@ export function useSpherseMessageListener(projectKey: string): void {
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [navigate, projectKey, project]);
+  }, [navigate, projectId, project]);
 }

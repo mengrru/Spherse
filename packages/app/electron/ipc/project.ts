@@ -1,10 +1,10 @@
 import { ipcMain, dialog, shell } from "electron";
 import type { BrowserWindow } from "electron";
-import { startServer, stopServer, getServerPort } from "../server.js";
+import { registerProject, unregisterProject, getServerPort } from "../server.js";
 import {
   getOpenProjects,
   addOpenProject,
-  removeOpenProject,
+  removeOpenProjectById,
   setLastActiveProject,
   getLastActiveProject,
   updateProjectLastRoute,
@@ -22,56 +22,51 @@ export function registerProjectIpc(
     return result.canceled ? null : result.filePaths[0];
   });
 
-  ipcMain.handle("start-server", async (_event, projectRoot: string) => {
-    return startServer(projectRoot);
+  ipcMain.handle("open-project", async (_event, projectRoot: string) => {
+    return registerProject(projectRoot);
   });
 
-  ipcMain.handle("add-open-project", async (_event, projectPath: string) => {
-    addOpenProject(projectPath);
+  ipcMain.handle("get-server-port", () => {
+    return getServerPort();
+  });
+
+  ipcMain.handle("add-open-project", async (_event, projectId: string, projectPath: string) => {
+    addOpenProject(projectId, projectPath);
   });
 
   ipcMain.handle("restore-projects", async () => {
     const entries = getOpenProjects();
-    const results: Array<{ path: string; name: string; port: number; lastRoute?: string }> = [];
+    const results: Array<{ id: string; path: string; name: string; lastRoute?: string }> = [];
     for (const entry of entries) {
-      if (!getServerPort(entry.path)) {
-        try {
-          const port = await startServer(entry.path);
-          results.push({ path: entry.path, name: entry.name, port, lastRoute: entry.lastRoute });
-        } catch {
-          // If server fails to start (e.g. directory deleted), skip silently
-        }
-      } else {
-        results.push({
-          path: entry.path,
-          name: entry.name,
-          port: getServerPort(entry.path)!,
-          lastRoute: entry.lastRoute,
-        });
+      try {
+        const { projectId } = await registerProject(entry.path);
+        results.push({ id: projectId, path: entry.path, name: entry.name, lastRoute: entry.lastRoute });
+      } catch {
+        // directory deleted or corrupt, skip silently
       }
     }
     return results;
   });
 
-  ipcMain.handle("close-project", async (_event, projectPath: string) => {
-    await stopServer(projectPath);
-    removeOpenProject(projectPath);
+  ipcMain.handle("close-project", async (_event, projectId: string) => {
+    await unregisterProject(projectId);
+    removeOpenProjectById(projectId);
   });
 
   ipcMain.handle("reveal-in-finder", async (_event, projectPath: string) => {
     shell.showItemInFolder(projectPath);
   });
 
-  ipcMain.handle("set-last-active-project", (_event, path: string) => {
-    setLastActiveProject(path);
+  ipcMain.handle("set-last-active-project", (_event, projectId: string) => {
+    setLastActiveProject(projectId);
   });
 
   ipcMain.handle("get-last-active-project", () => {
     return getLastActiveProject();
   });
 
-  ipcMain.handle("set-project-last-route", (_event, projectPath: string, route: string) => {
-    updateProjectLastRoute(projectPath, route);
+  ipcMain.handle("set-project-last-route", (_event, projectId: string, route: string) => {
+    updateProjectLastRoute(projectId, route);
   });
 
   ipcMain.handle("show-save-dialog", async (_event, options: { defaultPath?: string }) => {

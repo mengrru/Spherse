@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
-import type { AppContext } from "../index.js";
+import type { ProjectRegistry } from "../registry.js";
 
-export function registerDebugRoutes(fastify: FastifyInstance, ctx: AppContext): void {
-  fastify.get<{ Params: { id: string } }>(
-    "/api/debug/sessions/:id/turn-context",
+export function registerDebugRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
+  fastify.get<{ Params: { projectId: string; id: string } }>(
+    "/api/projects/:projectId/debug/sessions/:id/turn-context",
     async (req, reply) => {
       try {
-        return ctx.engine.getTurnContext(req.params.id);
+        return req.projectCtx!.engine.getTurnContext(req.params.id);
       } catch (err: any) {
         return reply.code(404).send({ error: err.message });
       }

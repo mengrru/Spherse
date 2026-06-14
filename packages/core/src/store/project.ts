@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
+import { nanoid } from "nanoid";
 import {
   normalizeDeniedPath,
   normalizeDeniedPaths,
@@ -65,6 +66,7 @@ export class ProjectStore {
     });
 
     this.config = {
+      id: nanoid(8),
       name,
       created: Date.now(),
       defaultModel,
@@ -92,8 +94,28 @@ export class ProjectStore {
 
     const raw = await fs.readFile(configPath, "utf-8");
     this.config = YAML.parse(raw) as ProjectConfig;
+
+    if (!this.config.id) {
+      this.config.id = nanoid(8);
+      await fs.writeFile(configPath, YAML.stringify(this.config), "utf-8");
+      this.logger.info({ rootPath: this.rootPath, id: this.config.id }, "project id generated for legacy project");
+    }
+
     this.logger.info({ rootPath: this.rootPath }, "project opened");
     return this.config;
+  }
+
+  getProjectId(): string {
+    if (!this.config) throw new Error("Project is not open");
+    return this.config.id;
+  }
+
+  async regenerateProjectId(newId: string): Promise<void> {
+    if (!this.config) throw new Error("Project is not open");
+    this.config.id = newId;
+    const configPath = path.join(this.spherseDir, "project.yaml");
+    await fs.writeFile(configPath, YAML.stringify(this.config), "utf-8");
+    this.logger.info({ newId }, "project id regenerated");
   }
 
   getConfig(): ProjectConfig | null {
@@ -161,6 +183,13 @@ export class ProjectStore {
 
   getRootPath(): string {
     return this.rootPath;
+  }
+
+  async readProjectId(): Promise<string> {
+    const configPath = path.join(this.spherseDir, "project.yaml");
+    const raw = await fs.readFile(configPath, "utf-8");
+    const config = YAML.parse(raw) as ProjectConfig;
+    return config.id;
   }
 
   async readIndex(): Promise<string> {

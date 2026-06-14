@@ -13,16 +13,6 @@ const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
 
 test.setTimeout(60_000);
 
-function projectKeyBase(projectPath: string): string {
-  const name = projectPath.split(/[\\/]/).filter(Boolean).pop() ?? "project";
-  const key = name
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-+/g, "-");
-  return key || "project";
-}
-
 test("app launches and shows main UI", async () => {
   const project = await createFileTreeProject();
   const userDataDir = await mkdtemp(path.join(tmpdir(), "spherse-e2e-launch-user-"));
@@ -45,12 +35,13 @@ test("app launches and shows main UI", async () => {
     await page.setViewportSize({ width: 1200, height: 800 });
     await page.waitForLoadState("domcontentloaded");
 
-    await page.evaluate(async (projectRoot) => {
-      await window.electronAPI.addOpenProject(projectRoot);
-      await window.electronAPI.setLastActiveProject(projectRoot);
-    }, project.root);
+    await page.evaluate(async ({ id, projectRoot }) => {
+      await window.electronAPI.openProject(projectRoot);
+      await window.electronAPI.addOpenProject(id, projectRoot);
+      await window.electronAPI.setLastActiveProject(id);
+    }, { id: project.projectId, projectRoot: project.root });
 
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent("README.md")}`,
     );

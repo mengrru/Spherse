@@ -8,20 +8,22 @@ const EMPTY_MESSAGES: ChatMessage[] = [];
 export function useChatSession({
   client,
   sessionId,
-  port,
+  baseUrl,
+  projectId,
   agentId,
   initialMessage,
 }: {
   client: ApiClient;
   sessionId: string;
-  port: number;
+  baseUrl: string;
+  projectId: string;
   agentId: string;
   initialMessage?: string;
 }) {
   useEffect(() => {
-    useStreamingStore.getState().attach(client, sessionId, port, agentId, initialMessage);
+    useStreamingStore.getState().attach(client, sessionId, baseUrl, projectId, agentId, initialMessage);
     return () => useStreamingStore.getState().detach(sessionId);
-  }, [client, sessionId, port, agentId, initialMessage]);
+  }, [client, sessionId, baseUrl, projectId, agentId, initialMessage]);
 
   const messages = useStreamingStore(
     (s) => s.sessions[sessionId]?.messages ?? EMPTY_MESSAGES,

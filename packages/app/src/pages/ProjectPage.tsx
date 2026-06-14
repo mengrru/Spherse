@@ -4,14 +4,14 @@ import { ProjectLayout } from "../layouts/ProjectLayout";
 import { useAppStore } from "../stores/app-store";
 
 export function ProjectPage() {
-  const { projectKey } = useParams();
+  const { projectId } = useParams();
   const { t } = useI18n();
   const project = useAppStore((state) => (
-    projectKey ? state.projects.get(projectKey) : undefined
+    projectId ? state.projects.get(projectId) : undefined
   ));
   const initializing = useAppStore((state) => state.initializing);
 
-  if (!projectKey || !project) {
+  if (!projectId || !project) {
     return (
       <div className="flex h-full flex-1 items-center justify-center text-muted-foreground">
         {initializing ? t("common.loading") : t("pages.projectNotFound")}
@@ -19,5 +19,5 @@ export function ProjectPage() {
     );
   }
 
-  return <ProjectLayout key={projectKey} projectKey={projectKey} project={project} />;
+  return <ProjectLayout key={projectId} projectId={projectId} project={project} />;
 }

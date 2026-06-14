@@ -18,14 +18,14 @@ registerAction("sendMessage", (params, ctx) => {
   if (ws && ws.readyState === WebSocket.OPEN) {
     wsSend(sessionId, message);
   } else {
-    useProjectDataStore.getState().setInitialMessage(ctx.projectKey, sessionId, message);
+    useProjectDataStore.getState().setInitialMessage(ctx.projectId, sessionId, message);
   }
 
-  const ui = useProjectUiStore.getState().projects[ctx.projectKey];
+  const ui = useProjectUiStore.getState().projects[ctx.projectId];
   if (float && ui?.floatingChat?.sessionId !== sessionId) {
-    useProjectUiStore.getState().setFloatingChat(ctx.projectKey, getDefaultFloatingState(sessionId));
+    useProjectUiStore.getState().setFloatingChat(ctx.projectId, getDefaultFloatingState(sessionId));
   }
   if (!float && ui?.floatingChat?.sessionId !== sessionId) {
-    ctx.navigate(`/project/${ctx.projectKey}/chat/${sessionId}`);
+    ctx.navigate(`/project/${ctx.projectId}/chat/${sessionId}`);
   }
 });

@@ -10,7 +10,8 @@ import { useChatSession } from "./hooks/useChatSession";
 export interface ChatProps {
   client: ApiClient;
   sessionId: string;
-  port: number;
+  baseUrl: string;
+  projectId: string;
   agent: AgentProfile;
   onNavigateToPath?: (path: string) => void;
   initialMessage?: string;
@@ -18,11 +19,12 @@ export interface ChatProps {
   hideHeader?: boolean;
 }
 
-export function Chat({ client, sessionId, port, agent, onNavigateToPath, initialMessage, onClose, hideHeader }: ChatProps) {
+export function Chat({ client, sessionId, baseUrl, projectId, agent, onNavigateToPath, initialMessage, onClose, hideHeader }: ChatProps) {
   const { messages, streaming, sendMessage, abort } = useChatSession({
     client,
     sessionId,
-    port,
+    baseUrl,
+    projectId,
     agentId: agent.id,
     initialMessage,
   });

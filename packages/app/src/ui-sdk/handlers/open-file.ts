@@ -5,6 +5,6 @@ registerAction("openFile", (params, ctx) => {
   if (!path || typeof path !== "string") return;
 
   ctx.navigate(
-    `/project/${ctx.projectKey}/content?path=${encodeURIComponent(path)}`,
+    `/project/${ctx.projectId}/content?path=${encodeURIComponent(path)}`,
   );
 });

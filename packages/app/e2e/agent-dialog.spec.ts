@@ -11,14 +11,14 @@ const appRoot = path.resolve(__dirname, "..");
 const mainEntry = path.join(appRoot, "dist", "main", "index.js");
 const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
 
-function projectKeyBase(projectPath: string): string {
-  const name = projectPath.split(/[\\/]/).filter(Boolean).pop() ?? "project";
-  return name.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").replace(/-+/g, "-") || "project";
-}
-
 async function createAgentDialogProject() {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-agent-dialog-"));
   await mkdir(path.join(root, ".spherse", "agents"), { recursive: true });
+  const projectId = Math.random().toString(36).slice(2, 10);
+  await writeFile(
+    path.join(root, ".spherse", "project.yaml"),
+    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+  );
   await mkdir(path.join(root, ".spherse", "agents", "assistant"), { recursive: true });
   await writeFile(
     path.join(root, ".spherse", "agents", "assistant", "profile.md"),
@@ -40,10 +40,10 @@ async function createAgentDialogProject() {
   await mkdir(path.join(root, "world", "history"), { recursive: true });
   await writeFile(path.join(root, "world", "history", "timeline.md"), "# Timeline\n");
   await writeFile(path.join(root, "README.md"), "# Test\n");
-  return root;
+  return { root, projectId };
 }
 
-async function launchApp(projectRoot: string): Promise<{ app: ElectronApplication; page: Page }> {
+async function launchApp(project: { root: string; projectId: string }): Promise<{ app: ElectronApplication; page: Page }> {
   const userDataDir = await mkdtemp(path.join(tmpdir(), "spherse-e2e-agent-dialog-user-"));
   const app = await electron.launch({
     args: [mainEntry, `--user-data-dir=${userDataDir}`],
@@ -58,15 +58,16 @@ async function launchApp(projectRoot: string): Promise<{ app: ElectronApplicatio
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
-  await page.evaluate(async (root: string) => {
-    await window.electronAPI.addOpenProject(root);
-    await window.electronAPI.setLastActiveProject(root);
-  }, projectRoot);
+  await page.evaluate(async ({ id, projectRoot }) => {
+    await window.electronAPI.openProject(projectRoot);
+    await window.electronAPI.addOpenProject(id, projectRoot);
+    await window.electronAPI.setLastActiveProject(id);
+  }, { id: project.projectId, projectRoot: project.root });
   return { app, page };
 }
 
-async function navigateToProject(page: Page, projectRoot: string) {
-  const projectUrl = `/project/${projectKeyBase(projectRoot)}`;
+async function navigateToProject(page: Page, projectId: string) {
+  const projectUrl = `/project/${projectId}`;
   await page.goto(`file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}`);
   await page.getByText("Assistant").first().waitFor({ timeout: 10000 });
 }
@@ -77,11 +78,11 @@ async function openAgentDialog(page: Page) {
 }
 
 test("search file suggestions appear when typing in agent dialog", async () => {
-  const projectRoot = await createAgentDialogProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createAgentDialogProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    await navigateToProject(page, projectRoot);
+    await navigateToProject(page, project.projectId);
     await openAgentDialog(page);
 
     const refsInput = page.locator("[placeholder*='参考'], [placeholder*='reference'], [placeholder*='搜索']").first();
@@ -96,11 +97,11 @@ test("search file suggestions appear when typing in agent dialog", async () => {
 });
 
 test("clicking suggestion adds path as badge in agent dialog", async () => {
-  const projectRoot = await createAgentDialogProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createAgentDialogProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    await navigateToProject(page, projectRoot);
+    await navigateToProject(page, project.projectId);
     await openAgentDialog(page);
 
     const refsInput = page.locator("[placeholder*='参考'], [placeholder*='reference'], [placeholder*='搜索']").first();
@@ -119,11 +120,11 @@ test("clicking suggestion adds path as badge in agent dialog", async () => {
 });
 
 test("enter key manually adds typed path in agent dialog", async () => {
-  const projectRoot = await createAgentDialogProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createAgentDialogProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    await navigateToProject(page, projectRoot);
+    await navigateToProject(page, project.projectId);
     await openAgentDialog(page);
 
     const refsInput = page.locator("[placeholder*='参考'], [placeholder*='reference'], [placeholder*='搜索']").first();

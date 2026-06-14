@@ -11,14 +11,14 @@ const appRoot = path.resolve(__dirname, "..");
 const mainEntry = path.join(appRoot, "dist", "main", "index.js");
 const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
 
-function projectKeyBase(projectPath: string): string {
-  const name = projectPath.split(/[\\/]/).filter(Boolean).pop() ?? "project";
-  return name.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").replace(/-+/g, "-") || "project";
-}
-
 async function createFloatingChatProject() {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-float-"));
   await mkdir(path.join(root, ".spherse", "agents"), { recursive: true });
+  const projectId = Math.random().toString(36).slice(2, 10);
+  await writeFile(
+    path.join(root, ".spherse", "project.yaml"),
+    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+  );
   await mkdir(path.join(root, ".spherse", "agents", "assistant"), { recursive: true });
   await writeFile(
     path.join(root, ".spherse", "agents", "assistant", "profile.md"),
@@ -34,10 +34,10 @@ async function createFloatingChatProject() {
       "",
     ].join("\n"),
   );
-  return root;
+  return { root, projectId };
 }
 
-async function launchApp(projectRoot: string): Promise<{ app: ElectronApplication; page: Page }> {
+async function launchApp(project: { root: string; projectId: string }): Promise<{ app: ElectronApplication; page: Page }> {
   const userDataDir = await mkdtemp(path.join(tmpdir(), "spherse-e2e-float-user-"));
   const app = await electron.launch({
     args: [mainEntry, `--user-data-dir=${userDataDir}`],
@@ -52,27 +52,25 @@ async function launchApp(projectRoot: string): Promise<{ app: ElectronApplicatio
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
-  await page.evaluate(async (root: string) => {
-    await window.electronAPI.addOpenProject(root);
-    await window.electronAPI.setLastActiveProject(root);
-  }, projectRoot);
+  await page.evaluate(async ({ id, projectRoot }) => {
+    await window.electronAPI.openProject(projectRoot);
+    await window.electronAPI.addOpenProject(id, projectRoot);
+    await window.electronAPI.setLastActiveProject(id);
+  }, { id: project.projectId, projectRoot: project.root });
   return { app, page };
 }
 
-async function createSessionViaApi(page: Page, projectRoot: string, agentId: string): Promise<string> {
-  const port: number = await page.evaluate(
-    (dir) => window.electronAPI.startServer(dir),
-    projectRoot,
-  );
-  const res = await fetch(`http://localhost:${port}/api/agents/${encodeURIComponent(agentId)}/sessions`, {
+async function createSessionViaApi(page: Page, projectId: string, agentId: string): Promise<string> {
+  const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const res = await fetch(`http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
   });
   const { sessionId } = await res.json() as { sessionId: string };
   return sessionId;
 }
 
-async function navigateToProject(page: Page, projectRoot: string) {
-  const projectUrl = `/project/${projectKeyBase(projectRoot)}`;
+async function navigateToProject(page: Page, projectId: string) {
+  const projectUrl = `/project/${projectId}`;
   await page.goto(`file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}`);
   await page.getByText("Assistant").first().waitFor({ timeout: 10000 });
 }
@@ -95,12 +93,12 @@ function getSessionRow(page: Page, sessionId: string) {
 }
 
 test("right-click float shows floating chat overlay", async () => {
-  const projectRoot = await createFloatingChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "assistant-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page);
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -117,12 +115,12 @@ test("right-click float shows floating chat overlay", async () => {
 });
 
 test("close button removes floating chat", async () => {
-  const projectRoot = await createFloatingChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "assistant-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page);
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -140,13 +138,13 @@ test("close button removes floating chat", async () => {
 });
 
 test("floating a different session auto-closes current float", async () => {
-  const projectRoot = await createFloatingChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionA = await createSessionViaApi(page, projectRoot, "assistant-1");
-    const sessionB = await createSessionViaApi(page, projectRoot, "assistant-1");
-    await navigateToProject(page, projectRoot);
+    const sessionA = await createSessionViaApi(page, project.projectId, "assistant-1");
+    const sessionB = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page);
 
     const rowA = getSessionRow(page, sessionA);
@@ -167,12 +165,12 @@ test("floating a different session auto-closes current float", async () => {
 });
 
 test("floating chat is draggable", async () => {
-  const projectRoot = await createFloatingChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "assistant-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page);
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -201,13 +199,13 @@ test("floating chat is draggable", async () => {
 });
 
 test("main window session and floating session are independent", async () => {
-  const projectRoot = await createFloatingChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionA = await createSessionViaApi(page, projectRoot, "assistant-1");
-    const sessionB = await createSessionViaApi(page, projectRoot, "assistant-1");
-    await navigateToProject(page, projectRoot);
+    const sessionA = await createSessionViaApi(page, project.projectId, "assistant-1");
+    const sessionB = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page);
 
     const rowA = getSessionRow(page, sessionA);
@@ -220,7 +218,7 @@ test("main window session and floating session are independent", async () => {
     await rowB.click();
 
     await expect(page).toHaveURL(
-      new RegExp(`#/project/${projectKeyBase(projectRoot)}/chat/${sessionB}`),
+      new RegExp(`#/project/${project.projectId}/chat/${sessionB}`),
       { timeout: 5000 },
     );
 
@@ -232,12 +230,12 @@ test("main window session and floating session are independent", async () => {
 });
 
 test("cancel float from context menu closes floating chat", async () => {
-  const projectRoot = await createFloatingChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "assistant-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page);
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -256,12 +254,12 @@ test("cancel float from context menu closes floating chat", async () => {
 });
 
 test("floating chat is resizable", async () => {
-  const projectRoot = await createFloatingChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "assistant-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page);
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -293,12 +291,12 @@ test("floating chat is resizable", async () => {
 });
 
 test("floating session row shows as active in sidebar", async () => {
-  const projectRoot = await createFloatingChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "assistant-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page);
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -316,12 +314,12 @@ test("floating session row shows as active in sidebar", async () => {
 });
 
 test("clicking floating session in sidebar does not navigate", async () => {
-  const projectRoot = await createFloatingChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "assistant-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page);
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -342,11 +340,16 @@ test("clicking floating session in sidebar does not navigate", async () => {
 
 test("switching project clears floating chat", async () => {
   const projectA = await createFloatingChatProject();
-  const projectB = await mkdtemp(path.join(tmpdir(), "spherse-e2e-float-b-"));
-  await mkdir(path.join(projectB, ".spherse", "agents"), { recursive: true });
-  await mkdir(path.join(projectB, ".spherse", "agents", "assistant"), { recursive: true });
+  const projectBRoot = await mkdtemp(path.join(tmpdir(), "spherse-e2e-float-b-"));
+  await mkdir(path.join(projectBRoot, ".spherse", "agents"), { recursive: true });
+  const projectBId = Math.random().toString(36).slice(2, 10);
   await writeFile(
-    path.join(projectB, ".spherse", "agents", "assistant", "profile.md"),
+    path.join(projectBRoot, ".spherse", "project.yaml"),
+    `id: ${projectBId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+  );
+  await mkdir(path.join(projectBRoot, ".spherse", "agents", "assistant"), { recursive: true });
+  await writeFile(
+    path.join(projectBRoot, ".spherse", "agents", "assistant", "profile.md"),
     [
       "---",
       "id: assistant-1",
@@ -374,15 +377,17 @@ test("switching project clears floating chat", async () => {
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
-  await page.evaluate(({ a, b }: { a: string; b: string }) => {
-    void window.electronAPI.addOpenProject(a);
-    void window.electronAPI.addOpenProject(b);
-    void window.electronAPI.setLastActiveProject(a);
-  }, { a: projectA, b: projectB });
+  await page.evaluate(async ({ aId, aPath, bId, bPath }: { aId: string; aPath: string; bId: string; bPath: string }) => {
+    await window.electronAPI.openProject(aPath);
+    await window.electronAPI.openProject(bPath);
+    await window.electronAPI.addOpenProject(aId, aPath);
+    await window.electronAPI.addOpenProject(bId, bPath);
+    await window.electronAPI.setLastActiveProject(aId);
+  }, { aId: projectA.projectId, aPath: projectA.root, bId: projectBId, bPath: projectBRoot });
 
   try {
-    const sessionId = await createSessionViaApi(page, projectA, "assistant-1");
-    await navigateToProject(page, projectA);
+    const sessionId = await createSessionViaApi(page, projectA.projectId, "assistant-1");
+    await navigateToProject(page, projectA.projectId);
     await expandAgent(page);
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -391,12 +396,12 @@ test("switching project clears floating chat", async () => {
     await page.getByRole("menuitem", { name: "浮窗" }).click();
     await expect(page.locator("[data-chat-float-root]")).toBeVisible({ timeout: 5000 });
 
-    const projectBName = projectB.split("/").pop()!;
+    const projectBName = projectBRoot.split("/").pop()!;
     await page.getByTitle(projectBName).click();
     await page.waitForTimeout(1000);
     await expect(page.locator("[data-chat-float-root]")).toHaveCount(0, { timeout: 5000 });
 
-    const projectAName = projectA.split("/").pop()!;
+    const projectAName = projectA.root.split("/").pop()!;
     await page.getByTitle(projectAName).click();
     await page.waitForTimeout(1000);
     await expect(page.locator("[data-chat-float-root]")).toBeVisible({ timeout: 5000 });

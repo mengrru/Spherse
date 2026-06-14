@@ -5,5 +5,5 @@ import { getDefaultFloatingState } from "../../features/floating-chat";
 registerAction("floatSession", (params, _ctx) => {
   const { sessionId } = params as { sessionId: string };
   if (!sessionId || typeof sessionId !== "string") return;
-  useProjectUiStore.getState().setFloatingChat(_ctx.projectKey, getDefaultFloatingState(sessionId));
+  useProjectUiStore.getState().setFloatingChat(_ctx.projectId, getDefaultFloatingState(sessionId));
 });

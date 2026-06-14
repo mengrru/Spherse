@@ -17,7 +17,7 @@ describe("createApiClient", () => {
   it("keeps agent creation response shape separate from session schema", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ ok: true, id: "agent-1" })));
 
-    await expect(createApiClient(1234).createAgent("agent", "content")).resolves.toEqual({
+    await expect(createApiClient("http://localhost:1234", "project-1").createAgent("agent", "content")).resolves.toEqual({
       ok: true,
       id: "agent-1",
     });
@@ -26,7 +26,7 @@ describe("createApiClient", () => {
   it("validates renamed session responses", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ ok: true, id: "session-1" })));
 
-    await expect(createApiClient(1234).renameSession("session-1", "Title")).rejects.toThrow(
+    await expect(createApiClient("http://localhost:1234", "project-1").renameSession("session-1", "Title")).rejects.toThrow(
       /Invalid payload/,
     );
   });

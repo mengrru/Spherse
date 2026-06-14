@@ -11,14 +11,14 @@ const appRoot = path.resolve(__dirname, "..");
 const mainEntry = path.join(appRoot, "dist", "main", "index.js");
 const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
 
-function projectKeyBase(projectPath: string): string {
-  const name = projectPath.split(/[\\/]/).filter(Boolean).pop() ?? "project";
-  return name.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").replace(/-+/g, "-") || "project";
-}
-
 async function createChatProject() {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-chat-"));
   await mkdir(path.join(root, ".spherse", "agents"), { recursive: true });
+  const projectId = Math.random().toString(36).slice(2, 10);
+  await writeFile(
+    path.join(root, ".spherse", "project.yaml"),
+    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+  );
   await mkdir(path.join(root, ".spherse", "agents", "assistant"), { recursive: true });
   await writeFile(
     path.join(root, ".spherse", "agents", "assistant", "profile.md"),
@@ -34,10 +34,10 @@ async function createChatProject() {
       "",
     ].join("\n"),
   );
-  return root;
+  return { root, projectId };
 }
 
-async function launchApp(projectRoot: string): Promise<{ app: ElectronApplication; page: Page }> {
+async function launchApp(project: { root: string; projectId: string }): Promise<{ app: ElectronApplication; page: Page }> {
   const userDataDir = await mkdtemp(path.join(tmpdir(), "spherse-e2e-chat-user-"));
   const app = await electron.launch({
     args: [mainEntry, `--user-data-dir=${userDataDir}`],
@@ -52,27 +52,25 @@ async function launchApp(projectRoot: string): Promise<{ app: ElectronApplicatio
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
-  await page.evaluate(async (root: string) => {
-    await window.electronAPI.addOpenProject(root);
-    await window.electronAPI.setLastActiveProject(root);
-  }, projectRoot);
+  await page.evaluate(async ({ id, projectRoot }) => {
+    await window.electronAPI.openProject(projectRoot);
+    await window.electronAPI.addOpenProject(id, projectRoot);
+    await window.electronAPI.setLastActiveProject(id);
+  }, { id: project.projectId, projectRoot: project.root });
   return { app, page };
 }
 
-async function createSessionViaApi(page: Page, projectRoot: string, agentId: string): Promise<string> {
-  const port: number = await page.evaluate(
-    (dir) => window.electronAPI.startServer(dir),
-    projectRoot,
-  );
-  const res = await fetch(`http://localhost:${port}/api/agents/${encodeURIComponent(agentId)}/sessions`, {
+async function createSessionViaApi(page: Page, projectId: string, agentId: string): Promise<string> {
+  const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const res = await fetch(`http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
   });
   const { sessionId } = await res.json() as { sessionId: string };
   return sessionId;
 }
 
-function navigateToSession(page: Page, projectRoot: string, sessionId: string) {
-  const projectUrl = `/project/${projectKeyBase(projectRoot)}/chat/${sessionId}`;
+function navigateToSession(page: Page, projectId: string, sessionId: string) {
+  const projectUrl = `/project/${projectId}/chat/${sessionId}`;
   return page.goto(`file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}`);
 }
 
@@ -142,20 +140,17 @@ function createStreamingSequence(): MockEvent[] {
 }
 
 test("abort button visible throughout entire agent turn until agent_end", async () => {
-  const projectRoot = await createChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const port: number = await page.evaluate(
-      (dir) => window.electronAPI.startServer(dir),
-      projectRoot,
-    );
-    const sessionId = await createSessionViaApi(page, projectRoot, "assistant-1");
+    const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+    const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
 
     const eventsBeforeEnd = createStreamingSequence().filter((e) => e.type !== "agent_end");
     const { complete } = await mockStreamingWithoutEnd(page, port, eventsBeforeEnd);
 
-    await navigateToSession(page, projectRoot, sessionId);
+    await navigateToSession(page, project.projectId, sessionId);
     await page.waitForSelector("[data-chat-composer]");
 
     const textarea = page.locator("[data-chat-composer] textarea");
@@ -178,20 +173,17 @@ test("abort button visible throughout entire agent turn until agent_end", async 
 });
 
 test("streaming continues after switching away and back", async () => {
-  const projectRoot = await createChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const port: number = await page.evaluate(
-      (dir) => window.electronAPI.startServer(dir),
-      projectRoot,
-    );
-    const sessionA = await createSessionViaApi(page, projectRoot, "assistant-1");
-    const sessionB = await createSessionViaApi(page, projectRoot, "assistant-1");
+    const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+    const sessionA = await createSessionViaApi(page, project.projectId, "assistant-1");
+    const sessionB = await createSessionViaApi(page, project.projectId, "assistant-1");
 
     await mockChatWebSocket(page, port, createStreamingSequence());
 
-    await navigateToSession(page, projectRoot, sessionA);
+    await navigateToSession(page, project.projectId, sessionA);
     await page.waitForSelector("[data-chat-composer]");
 
     const textarea = page.locator("[data-chat-composer] textarea");
@@ -200,10 +192,10 @@ test("streaming continues after switching away and back", async () => {
 
     await page.waitForSelector("text=Hello", { timeout: 5000 });
 
-    await navigateToSession(page, projectRoot, sessionB);
+    await navigateToSession(page, project.projectId, sessionB);
     await page.waitForSelector("[data-chat-composer]", { timeout: 5000 });
 
-    await navigateToSession(page, projectRoot, sessionA);
+    await navigateToSession(page, project.projectId, sessionA);
 
     await page.waitForSelector("text=Based on the file content.", { timeout: 10000 });
     await expect(page.locator("[data-chat-composer] button svg.lucide-send")).toBeVisible({ timeout: 10000 });
@@ -213,21 +205,18 @@ test("streaming continues after switching away and back", async () => {
 });
 
 test("sidebar shows streaming indicator on background session", async () => {
-  const projectRoot = await createChatProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createChatProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const port: number = await page.evaluate(
-      (dir) => window.electronAPI.startServer(dir),
-      projectRoot,
-    );
-    const sessionA = await createSessionViaApi(page, projectRoot, "assistant-1");
-    const sessionB = await createSessionViaApi(page, projectRoot, "assistant-1");
+    const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+    const sessionA = await createSessionViaApi(page, project.projectId, "assistant-1");
+    const sessionB = await createSessionViaApi(page, project.projectId, "assistant-1");
 
     const eventsBeforeEnd = createStreamingSequence().filter((e) => e.type !== "agent_end");
     const { complete } = await mockStreamingWithoutEnd(page, port, eventsBeforeEnd);
 
-    await navigateToSession(page, projectRoot, sessionA);
+    await navigateToSession(page, project.projectId, sessionA);
     await page.waitForSelector("[data-chat-composer]");
 
     const textarea = page.locator("[data-chat-composer] textarea");
@@ -236,7 +225,7 @@ test("sidebar shows streaming indicator on background session", async () => {
 
     await page.waitForSelector("text=Hello", { timeout: 5000 });
 
-    await navigateToSession(page, projectRoot, sessionB);
+    await navigateToSession(page, project.projectId, sessionB);
     await page.waitForSelector("[data-chat-composer]", { timeout: 5000 });
 
     const sessionARow = page.locator(`[data-session-id="${sessionA}"]`);

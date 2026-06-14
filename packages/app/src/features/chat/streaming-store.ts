@@ -20,7 +20,7 @@ interface StreamingStoreState {
 }
 
 interface StreamingStoreActions {
-  attach: (client: ApiClient, sessionId: string, port: number, initialMessage?: string) => void;
+  attach: (client: ApiClient, sessionId: string, baseUrl: string, projectId: string, agentId: string, initialMessage?: string) => void;
   detach: (sessionId: string) => void;
   disconnect: (sessionId: string) => void;
   touch: (sessionId: string) => void;
@@ -134,7 +134,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     });
   }
 
-  function connect(client: ApiClient, sessionId: string, port: number, agentId: string, initialMessage?: string) {
+  function connect(client: ApiClient, sessionId: string, baseUrl: string, projectId: string, agentId: string, initialMessage?: string) {
     if (pendingCreation.has(sessionId)) return;
     pendingCreation.add(sessionId);
 
@@ -145,7 +145,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         try { current.ws.close(); } catch { /* already closed */ }
       }
 
-      const ws = new WebSocket(`ws://localhost:${port}/ws/chat/${agentId}/${sessionId}`);
+      const ws = new WebSocket(`${baseUrl.replace(/^http/, "ws")}/ws/projects/${projectId}/chat/${agentId}/${sessionId}`);
 
       ws.onmessage = (wsEvent) => {
         if (get().sessions[sessionId]?.ws !== ws) return;
@@ -211,9 +211,9 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
   return {
     sessions: {},
 
-    attach(client, sessionId, port, agentId, initialMessage) {
+    attach(client, sessionId, baseUrl, projectId, agentId, initialMessage) {
       ensureSession(sessionId, 1);
-      connect(client, sessionId, port, agentId, initialMessage);
+      connect(client, sessionId, baseUrl, projectId, agentId, initialMessage);
     },
 
     detach(sessionId) {

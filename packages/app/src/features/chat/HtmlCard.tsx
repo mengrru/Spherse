@@ -14,9 +14,9 @@ function sanitizeFileName(name: string): string {
 
 export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const { t } = useI18n();
-  const activeProjectKey = useAppStore((s) => s.activeProjectKey);
+  const activeProjectId = useAppStore((s) => s.activeProjectId);
   const ctx = useAppStore((s) => {
-    const p = activeProjectKey ? s.projects.get(activeProjectKey) : undefined;
+    const p = activeProjectId ? s.projects.get(activeProjectId) : undefined;
     return p?.ctx;
   });
 

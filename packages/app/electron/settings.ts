@@ -4,6 +4,7 @@ import type { AppSettings } from "@spherse/core";
 import { getSupportedProviders } from "@spherse/core";
 
 export interface OpenProjectEntry {
+  id: string;
   path: string;
   name: string;
   lastOpened: string;
@@ -80,11 +81,12 @@ export function getOpenProjects(): OpenProjectEntry[] {
   return settingsStore.get("openProjects") ?? [];
 }
 
-export function addOpenProject(projectPath: string): void {
+export function addOpenProject(projectId: string, projectPath: string): void {
   const projects = getOpenProjects();
   const idx = projects.findIndex((p) => p.path === projectPath);
   const existing = idx >= 0 ? projects[idx] : undefined;
   const entry: OpenProjectEntry = {
+    id: projectId,
     path: projectPath,
     name: path.basename(projectPath),
     lastOpened: new Date().toISOString(),
@@ -107,6 +109,15 @@ export function removeOpenProject(projectPath: string): void {
   }
 }
 
+export function removeOpenProjectById(projectId: string): void {
+  const projects = getOpenProjects().filter((p) => p.id !== projectId);
+  settingsStore.set("openProjects", projects);
+  const lastActive = getLastActiveProject();
+  if (lastActive === projectId) {
+    setLastActiveProject(null);
+  }
+}
+
 export function updateLastOpened(projectPath: string): void {
   const projects = getOpenProjects();
   const entry = projects.find((p) => p.path === projectPath);
@@ -116,9 +127,9 @@ export function updateLastOpened(projectPath: string): void {
   }
 }
 
-export function updateProjectLastRoute(projectPath: string, route: string): void {
+export function updateProjectLastRoute(projectId: string, route: string): void {
   const projects = getOpenProjects();
-  const entry = projects.find((p) => p.path === projectPath);
+  const entry = projects.find((p) => p.id === projectId);
   if (entry) {
     entry.lastRoute = route;
     settingsStore.set("openProjects", projects);

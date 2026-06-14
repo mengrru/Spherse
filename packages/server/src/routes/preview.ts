@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { resolveProjectPath } from "@spherse/core";
-import type { AppContext } from "../index.js";
+import type { ProjectRegistry } from "../registry.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   html: "text/html",
@@ -25,14 +25,14 @@ const CONTENT_TYPES: Record<string, string> = {
 
 const ALLOWED_EXTENSIONS = new Set(Object.keys(CONTENT_TYPES));
 
-export function registerPreviewRoutes(fastify: FastifyInstance, ctx: AppContext): void {
-  fastify.get<{ Params: { "*": string } }>(
-    "/api/preview/*",
+export function registerPreviewRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
+  fastify.get<{ Params: { projectId: string; "*": string } }>(
+    "/api/projects/:projectId/preview/*",
     async (req, reply) => {
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }

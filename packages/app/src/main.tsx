@@ -4,25 +4,27 @@ import { router } from "./router";
 import "./styles.css";
 
 declare global {
-  interface Window {
-    electronAPI: {
-      selectDirectory: () => Promise<string | null>;
-      startServer: (projectRoot: string) => Promise<number>;
-      restoreProjects: () => Promise<Array<{ path: string; name: string; port: number; lastRoute?: string }>>;
-      addOpenProject: (projectRoot: string) => Promise<void>;
-      closeProject: (projectRoot: string) => Promise<void>;
-      revealInFinder: (projectRoot: string) => Promise<void>;
-      setLastActiveProject: (path: string) => Promise<void>;
-      getLastActiveProject: () => Promise<string | null>;
-      setProjectLastRoute: (projectRoot: string, route: string) => Promise<void>;
-      isDev: () => Promise<boolean>;
-      toggleDevTools: () => Promise<void>;
-      isDevToolsOpen: () => Promise<boolean>;
-      getElectronStoreData: () => Promise<Record<string, unknown>>;
-      reloadRenderer: () => Promise<void>;
-      resetAppData: () => Promise<void>;
-    };
-  }
+    interface Window {
+      electronAPI: {
+        selectDirectory: () => Promise<string | null>;
+        getServerPort: () => Promise<number>;
+        showSaveDialog: (options: { defaultPath?: string }) => Promise<string | null>;
+        restoreProjects: () => Promise<Array<{ id: string; path: string; name: string; lastRoute?: string }>>;
+        openProject: (projectRoot: string) => Promise<{ projectId: string }>;
+        addOpenProject: (projectId: string, projectRoot: string) => Promise<void>;
+        closeProject: (projectId: string) => Promise<void>;
+        revealInFinder: (projectRoot: string) => Promise<void>;
+        setLastActiveProject: (projectId: string) => Promise<void>;
+        getLastActiveProject: () => Promise<string | null>;
+        setProjectLastRoute: (projectId: string, route: string) => Promise<void>;
+        isDev: () => Promise<boolean>;
+        toggleDevTools: () => Promise<void>;
+        isDevToolsOpen: () => Promise<boolean>;
+        getElectronStoreData: () => Promise<Record<string, unknown>>;
+        reloadRenderer: () => Promise<void>;
+        resetAppData: () => Promise<void>;
+      };
+    }
 }
 
 createRoot(document.getElementById("root")!).render(<RouterProvider router={router} />);

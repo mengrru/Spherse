@@ -30,7 +30,6 @@ import { BugIcon, RefreshCwIcon, DatabaseIcon, TrashIcon, CodeIcon, ScrollTextIc
 import { toast } from "sonner";
 import { useAppStore } from "../../stores/app-store";
 import { LogPanel } from "./LogPanel";
-import { createApiClient } from "../../lib/api";
 
 function extractSessionId(pathname: string): string | null {
   const match = pathname.match(/\/project\/[^/]+\/chat\/([a-f0-9-]+)/);
@@ -47,12 +46,11 @@ export function DebugMenu() {
   const { t } = useI18n();
   const location = useLocation();
 
-  const activeProjectKey = useAppStore((s) => s.activeProjectKey);
+  const activeProjectId = useAppStore((s) => s.activeProjectId);
   const projects = useAppStore((s) => s.projects);
-  const activeProject = activeProjectKey ? projects.get(activeProjectKey) : null;
-  const port = activeProject?.port;
+  const activeProject = activeProjectId ? projects.get(activeProjectId) : null;
 
-  const sessionId = port ? extractSessionId(location.pathname) : null;
+  const sessionId = activeProject ? extractSessionId(location.pathname) : null;
 
   const handleDevToolsToggle = async (checked: boolean) => {
     await window.electronAPI.toggleDevTools();
@@ -74,14 +72,13 @@ export function DebugMenu() {
   };
 
   const handleDownloadTurnContext = async () => {
-    if (!port || !sessionId) {
+    if (!activeProject || !sessionId) {
       toast.error(t("debug.downloadTurnContextNoSession"));
       return;
     }
     setDownloading(true);
     try {
-      const client = createApiClient(port);
-      const data = await client.getTurnContext(sessionId);
+      const data = await activeProject.ctx.client.getTurnContext(sessionId);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -127,7 +124,7 @@ export function DebugMenu() {
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={() => setLogPanelOpen(true)}
-            disabled={!port}
+            disabled={!activeProject}
           >
             <ScrollTextIcon />
             Streaming Log
@@ -178,8 +175,8 @@ export function DebugMenu() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {logPanelOpen && port && (
-        <LogPanel port={port} onClose={() => setLogPanelOpen(false)} />
+      {logPanelOpen && activeProject && (
+        <LogPanel baseUrl={activeProject.ctx.baseUrl} onClose={() => setLogPanelOpen(false)} />
       )}
     </>
   );

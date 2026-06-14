@@ -1,15 +1,20 @@
 import type { FastifyInstance } from "fastify";
 import { parseChatClientMessage, parseChatServerEvent } from "@spherse/server/contracts";
-import type { AppContext } from "./index.js";
+import type { ProjectRegistry } from "./registry.js";
 
 export function handleChatWebSocket(
   fastify: FastifyInstance,
-  ctx: AppContext,
+  registry: ProjectRegistry,
 ) {
-  fastify.get<{ Params: { agentId: string; sessionId: string } }>(
-    "/ws/chat/:agentId/:sessionId",
+  fastify.get<{ Params: { projectId: string; agentId: string; sessionId: string } }>(
+    "/ws/projects/:projectId/chat/:agentId/:sessionId",
     { websocket: true },
     (socket, req) => {
+      const ctx = registry.get(req.params.projectId);
+      if (!ctx) {
+        socket.close();
+        return;
+      }
       const { agentId, sessionId } = req.params;
       fastify.log.info({ sessionId, agentId }, "chat ws connected");
 

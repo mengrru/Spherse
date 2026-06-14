@@ -14,7 +14,7 @@ import { useAppStore, type ProjectState } from "../../stores/app-store";
 import { AgentSessionList } from "../agent-session-list";
 
 export interface ProjectPanelProps {
-  projectKey: string;
+  projectId: string;
   project: ProjectState;
   activeSessionId: string | null;
   selectedAgentId: string | null;
@@ -24,7 +24,7 @@ export interface ProjectPanelProps {
 }
 
 export function ProjectPanel({
-  projectKey,
+  projectId,
   project,
   activeSessionId,
   selectedAgentId,
@@ -60,7 +60,7 @@ export function ProjectPanel({
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="border-b border-sidebar-border p-2">
                 <AgentSessionList
-                  projectKey={projectKey}
+                  projectId={projectId}
                   activeSessionId={activeSessionId}
                   selectedAgentId={selectedAgentId}
                 />

@@ -11,13 +11,14 @@ const appRoot = path.resolve(__dirname, "..");
 const mainEntry = path.join(appRoot, "dist", "main", "index.js");
 const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
 
-function projectKeyBase(projectPath: string): string {
-  const name = projectPath.split(/[\\/]/).filter(Boolean).pop() ?? "project";
-  return name.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").replace(/-+/g, "-") || "project";
-}
-
 async function createProject(agents: Array<{ slug: string; id: string; name: string; description: string }>) {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-agent-list-"));
+  await mkdir(path.join(root, ".spherse", "agents"), { recursive: true });
+  const projectId = Math.random().toString(36).slice(2, 10);
+  await writeFile(
+    path.join(root, ".spherse", "project.yaml"),
+    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+  );
   for (const agent of agents) {
     const dir = path.join(root, ".spherse", "agents", agent.slug);
     await mkdir(dir, { recursive: true });
@@ -36,7 +37,7 @@ async function createProject(agents: Array<{ slug: string; id: string; name: str
       ].join("\n"),
     );
   }
-  return root;
+  return { root, projectId };
 }
 
 function createSingleAgentProject() {
@@ -53,7 +54,7 @@ function createMultiAgentProject() {
   ]);
 }
 
-async function launchApp(projectRoot: string): Promise<{ app: ElectronApplication; page: Page }> {
+async function launchApp(project: { root: string; projectId: string }): Promise<{ app: ElectronApplication; page: Page }> {
   const userDataDir = await mkdtemp(path.join(tmpdir(), "spherse-e2e-rename-user-"));
   const app = await electron.launch({
     args: [mainEntry, `--user-data-dir=${userDataDir}`],
@@ -68,27 +69,25 @@ async function launchApp(projectRoot: string): Promise<{ app: ElectronApplicatio
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
-  await page.evaluate(async (root: string) => {
-    await window.electronAPI.addOpenProject(root);
-    await window.electronAPI.setLastActiveProject(root);
-  }, projectRoot);
+  await page.evaluate(async ({ id, projectRoot }) => {
+    await window.electronAPI.openProject(projectRoot);
+    await window.electronAPI.addOpenProject(id, projectRoot);
+    await window.electronAPI.setLastActiveProject(id);
+  }, { id: project.projectId, projectRoot: project.root });
   return { app, page };
 }
 
-async function createSessionViaApi(page: Page, projectRoot: string, agentId: string): Promise<string> {
-  const port: number = await page.evaluate(
-    (dir) => window.electronAPI.startServer(dir),
-    projectRoot,
-  );
-  const res = await fetch(`http://localhost:${port}/api/agents/${encodeURIComponent(agentId)}/sessions`, {
+async function createSessionViaApi(page: Page, projectId: string, agentId: string): Promise<string> {
+  const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const res = await fetch(`http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
   });
   const { sessionId } = await res.json() as { sessionId: string };
   return sessionId;
 }
 
-async function navigateToProject(page: Page, projectRoot: string) {
-  const projectUrl = `/project/${projectKeyBase(projectRoot)}`;
+async function navigateToProject(page: Page, projectId: string) {
+  const projectUrl = `/project/${projectId}`;
   await page.goto(`file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}`);
   await page.getByText("Writer").first().waitFor({ timeout: 10000 });
 }
@@ -111,12 +110,12 @@ async function expandAgent(page: Page, agentName: string) {
 }
 
 test("right-click session row opens context menu with rename, rename updates title", async () => {
-  const projectRoot = await createSingleAgentProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createSingleAgentProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "writer-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "writer-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page, "Writer");
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -144,12 +143,12 @@ test("right-click session row opens context menu with rename, rename updates tit
 });
 
 test("rename with empty input shows validation error and keeps editing", async () => {
-  const projectRoot = await createSingleAgentProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createSingleAgentProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "writer-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "writer-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page, "Writer");
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -176,12 +175,12 @@ test("rename with empty input shows validation error and keeps editing", async (
 });
 
 test("escape cancels rename without saving", async () => {
-  const projectRoot = await createSingleAgentProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createSingleAgentProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    const sessionId = await createSessionViaApi(page, projectRoot, "writer-1");
-    await navigateToProject(page, projectRoot);
+    const sessionId = await createSessionViaApi(page, project.projectId, "writer-1");
+    await navigateToProject(page, project.projectId);
     await expandAgent(page, "Writer");
 
     const sessionRow = getSessionRow(page, sessionId);
@@ -208,11 +207,11 @@ test("escape cancels rename without saving", async () => {
 });
 
 test("all agents are collapsed by default", async () => {
-  const projectRoot = await createMultiAgentProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createMultiAgentProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    await navigateToProject(page, projectRoot);
+    await navigateToProject(page, project.projectId);
 
     await expect(agentTrigger(page, "Writer")).toBeVisible({ timeout: 10000 });
     await expect(agentTrigger(page, "Researcher")).toBeVisible();
@@ -227,11 +226,11 @@ test("all agents are collapsed by default", async () => {
 });
 
 test("expanding all agents keeps them all open — no auto-collapse", async () => {
-  const projectRoot = await createMultiAgentProject();
-  const { app, page } = await launchApp(projectRoot);
+  const project = await createMultiAgentProject();
+  const { app, page } = await launchApp(project);
 
   try {
-    await navigateToProject(page, projectRoot);
+    await navigateToProject(page, project.projectId);
 
     await expect(agentTrigger(page, "Writer")).toBeVisible({ timeout: 10000 });
 

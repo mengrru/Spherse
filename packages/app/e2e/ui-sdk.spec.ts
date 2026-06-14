@@ -12,21 +12,16 @@ const appRoot = path.resolve(__dirname, "..");
 const mainEntry = path.join(appRoot, "dist", "main", "index.js");
 const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
 
-function projectKeyBase(projectPath: string): string {
-  const name = projectPath.split(/[\\/]/).filter(Boolean).pop() ?? "project";
-  const key = name
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-+/g, "-");
-  return key || "project";
-}
-
 async function createUiSdkProject() {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-sdk-"));
   await mkdir(path.join(root, ".spherse", "agents", "test-agent"), {
     recursive: true,
   });
+  const projectId = Math.random().toString(36).slice(2, 10);
+  await writeFile(
+    path.join(root, ".spherse", "project.yaml"),
+    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+  );
   await mkdir(path.join(root, "world"), { recursive: true });
 
   await writeFile(
@@ -75,10 +70,10 @@ async function createUiSdkProject() {
     ].join("\n"),
   );
 
-  return { root, triggerHtmlPath: "sdk-test-trigger.html" };
+  return { root, triggerHtmlPath: "sdk-test-trigger.html", projectId };
 }
 
-async function launchAppWithSdkProject(project: { root: string }): Promise<{
+async function launchAppWithSdkProject(project: { root: string; projectId: string }): Promise<{
   app: ElectronApplication;
   page: Page;
 }> {
@@ -98,10 +93,11 @@ async function launchAppWithSdkProject(project: { root: string }): Promise<{
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
-  await page.evaluate(async (projectRoot) => {
-    await window.electronAPI.addOpenProject(projectRoot);
-    await window.electronAPI.setLastActiveProject(projectRoot);
-  }, project.root);
+  await page.evaluate(async ({ id, projectRoot }) => {
+    await window.electronAPI.openProject(projectRoot);
+    await window.electronAPI.addOpenProject(id, projectRoot);
+    await window.electronAPI.setLastActiveProject(id);
+  }, { id: project.projectId, projectRoot: project.root });
   return { app, page };
 }
 
@@ -110,7 +106,7 @@ test("openFile action navigates from iframe", async () => {
   const { app, page } = await launchAppWithSdkProject(project);
 
   try {
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.triggerHtmlPath)}`,
     );
@@ -122,7 +118,7 @@ test("openFile action navigates from iframe", async () => {
 
     await expect(page).toHaveURL(
       new RegExp(
-        `#/project/${projectKeyBase(project.root)}/content\\?path=world%2Ftarget-file\\.md`,
+        `#/project/${project.projectId}/content\\?path=world%2Ftarget-file\\.md`,
       ),
     );
   } finally {
@@ -135,7 +131,7 @@ test("createSession action navigates from iframe", async () => {
   const { app, page } = await launchAppWithSdkProject(project);
 
   try {
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.triggerHtmlPath)}`,
     );
@@ -147,7 +143,7 @@ test("createSession action navigates from iframe", async () => {
 
     await expect(page).toHaveURL(
       new RegExp(
-        `#/project/${projectKeyBase(project.root)}/chat/[^/?#]+$`,
+        `#/project/${project.projectId}/chat/[^/?#]+$`,
       ),
     );
     await expect(
@@ -163,7 +159,7 @@ test("unknown action is ignored", async () => {
   const { app, page } = await launchAppWithSdkProject(project);
 
   try {
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.triggerHtmlPath)}`,
     );
@@ -196,7 +192,7 @@ test("rate limit blocks excess calls", async () => {
   const { app, page } = await launchAppWithSdkProject(project);
 
   try {
-    const projectUrl = `/project/${projectKeyBase(project.root)}`;
+    const projectUrl = `/project/${project.projectId}`;
     await page.goto(
       `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.triggerHtmlPath)}`,
     );

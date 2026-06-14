@@ -1,27 +1,26 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyInstance } from "fastify";
 import pino from "pino";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
-import { createEngine } from "@spherse/core";
-import type { ProjectStore } from "@spherse/core";
-import type { Engine } from "@spherse/core";
-import type { FileWriteMutex } from "@spherse/core";
+import type { Logger } from "@spherse/core";
+import { ProjectRegistry } from "./registry.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleFsWatchWebSocket } from "./ws-fs-watch.js";
 import { handleDebugWebSocket, createDebugStream } from "./ws-debug.js";
 import { handleScheduleWebSocket } from "./ws-schedule.js";
 
-export interface AppContext {
-  engine: Engine;
-  projectStore: ProjectStore;
-  fileWriteMutex: FileWriteMutex;
+export { ProjectRegistry, type ProjectContext } from "./registry.js";
+
+export interface MultiProjectServer {
+  fastify: FastifyInstance;
+  registry: ProjectRegistry;
+  logger: Logger;
 }
 
-export async function createServer(
-  projectRoot: string,
-  options?: { projectName?: string; defaultModel?: string },
-) {
+export async function createMultiProjectServer(
+  options?: { defaultModel?: string },
+): Promise<MultiProjectServer> {
   const pretty = pino.transport({
     target: "pino-pretty",
     options: { colorize: true },
@@ -44,23 +43,18 @@ export async function createServer(
   await fastify.register(cors, { origin: true });
   await fastify.register(websocket);
 
-  const { engine, projectStore } = await createEngine(projectRoot, {
-    ...options,
-    logger,
-  });
+  const registry = new ProjectRegistry(logger, options?.defaultModel);
 
-  const ctx: AppContext = { engine, projectStore, fileWriteMutex: engine.getFileWriteMutex() };
-
-  registerAllRoutes(fastify, ctx);
-  handleChatWebSocket(fastify, ctx);
-  handleFsWatchWebSocket(fastify, ctx);
+  registerAllRoutes(fastify, registry);
+  handleChatWebSocket(fastify, registry);
+  handleFsWatchWebSocket(fastify, registry);
   handleDebugWebSocket(fastify);
-  handleScheduleWebSocket(fastify, ctx);
+  handleScheduleWebSocket(fastify, registry);
 
   await fastify.listen({ port: 0, host: "127.0.0.1" });
 
   const address = fastify.server.address();
   logger.info({ port: (address as any).port }, "server listening");
 
-  return { fastify, engine };
+  return { fastify, registry, logger };
 }

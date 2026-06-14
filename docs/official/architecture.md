@@ -29,23 +29,25 @@
 
 ## Server 层
 
-- **AppContext** = `{ engine, projectStore }`，路由只通过 engine 访问 agent/session/skill 操作，projectStore 用于项目根目录和内容浏览
-- **路由按业务域拆分**到 `routes/` 目录，由 `routes/index.ts` 聚合注册
+- **单 Fastify 实例**：整个应用只启动一个 Fastify 实例承载所有项目，由 `createMultiProjectServer()` 创建；不再为每个项目创建独立 server
+- **ProjectRegistry**：`registry.ts` 维护 `Map<projectId, ProjectContext>`，项目打开时 `register()`、关闭时 `remove()`；`ProjectContext` = `{ engine, projectStore, fileWriteMutex, projectId }`
+- **projectId**：由 core 的 `ProjectStore` 在 `.spherse/project.yaml` 中生成（8 位 nanoid），跨重启和路径变化稳定；复制目录导致 id 冲突时 registry 静默改写副本的 project.yaml
+- **路由按业务域拆分**到 `routes/` 目录，由 `routes/index.ts` 聚合注册；所有项目级路由统一使用 `/api/projects/:projectId/...` 前缀，`preHandler` 钩子从 registry 解析 projectId 并注入 `req.projectCtx`；全局端点（如 `/api/settings/providers`）不带 projectId
 - **API contract**：HTTP request/response 与 WebSocket message/event 的运行时 schema 定义在 `contracts/`，通过 `@spherse/server/contracts` 子入口导出给 server routes、WebSocket handler 和 renderer API client 复用；边界 JSON 进入业务逻辑前必须先通过 contract helper 解析；chat WebSocket 的 `ChatServerEvent` 是严格的 pi-agent lifecycle 事件 union（agent_start/turn_start/message_start/message_update/message_end/turn_end/agent_end/tool_execution/error 等），renderer 的 chat event 类型直接复用该 contract
 - **运行时 schema**：有 body 的 HTTP route 通过 server contract 中的 TypeBox schema 绑定 Fastify `schema.body` / `schema.response`；WebSocket 收到的 JSON 必须通过 contract parser 校验，非法消息返回统一 error event
 - **内容 API**：`content.ts` 负责目录列表、文件读取、保存、删除、新建文件和新建目录；所有文件路径都通过 core 共享路径安全工具限制在项目根目录内
 - **文件树 API**：`file-tree.ts` 返回面向 UI 选择的项目文件列表，过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir
 - **预览 API**：`preview.ts` 为本地 HTML 与图片内容提供预览 URL，renderer 通过 iframe、图片或 HTML card 使用
-- **WebSocket**：`ws-chat.ts` 推送 agent 对话事件；`ws-fs-watch.ts` 推送项目文件变更，用于前端刷新内容浏览状态；`ws-debug.ts` 推送 pino 结构化日志流，供前端 Debug Streaming Log 面板消费
-- **定时任务 API**：`schedules.ts` 提供定时任务 CRUD 和手动触发，`ws-schedule.ts` 推送 `schedule_triggered/completed/failed/updated` 事件
-- **项目 settings API**：`settings.ts` 暴露 `/api/settings/ai-access` 读写项目级 AI 读取禁止列表，暴露 `/api/settings/welcome-page` 读写项目级欢迎页路径；renderer 不直接通过 content API 编辑 `.spherse/project.yaml`
+- **WebSocket**：`ws-chat.ts` 推送 agent 对话事件；`ws-fs-watch.ts` 推送项目文件变更；`ws-schedule.ts` 推送定时任务事件——三者均使用 `/ws/projects/:projectId/...` 路径前缀按项目隔离；`ws-debug.ts` 推送全局 pino 结构化日志流（日志带 projectId 字段，可供前端过滤），供前端 Debug Streaming Log 面板消费
+- **定时任务 API**：`schedules.ts` 提供定时任务 CRUD 和手动触发
+- **项目 settings API**：`settings.ts` 暴露 `/api/projects/:projectId/settings/ai-access` 读写项目级 AI 读取禁止列表，暴露 `/api/projects/:projectId/settings/welcome-page` 读写项目级欢迎页路径；renderer 不直接通过 content API 编辑 `.spherse/project.yaml`
 
 ## Electron 层
 
 - **环境隔离**：`electron/bootstrap.ts` 作为构建入口，dev 模式（`app.isPackaged === false`）下将 `userData` 重定向到 `Spherse-Dev/` 目录，使 dev 和 prod 的 electron-store、localStorage 等所有数据完全隔离，可同时运行；`NODE_ENV=test` 时保留测试启动参数指定的 `userData`，确保 E2E 用例隔离
 - **IPC handler** 集中在 `electron/ipc/` 目录，按业务域拆分为 project、settings、debug
 - **preload** 是安全桥梁，声明 Renderer 可用的 IPC 方法白名单
-- **项目 server 管理**：当前每个打开项目对应一个本地 Fastify 实例，由 `electron/server.ts` 用 `Map<projectPath, server>` 管理
+- **项目 server 管理**：单一 Fastify 实例在 `app.whenReady()` 时通过 `ensureServer()` 启动一次，项目打开/关闭只操作 `ProjectRegistry`（register/remove），不再 create/close Fastify；`electron/server.ts` 暴露 `ensureServer`、`registerProject`、`unregisterProject`、`getServerPort`、`stopServer`
 - **设置持久化**：`electron/settings.ts` 使用 electron-store 保存打开项目、最后活跃项目、provider API key 和默认模型；保存 provider key 后同步到进程环境变量
 - **Provider catalog**：`core/model-providers.ts` 从 `@earendil-works/pi-ai` 元数据动态生成 provider catalog，`ENABLED_PROVIDERS` 过滤 UI 可见 provider（11 个），`PROVIDER_ENV_KEYS` 映射 provider→env key；Engine model resolution 使用全部 pi-ai provider
 - **默认模型切换**：Engine 暴露 `setDefaultModel()` 方法，IPC save-settings 后通过 `electron/server.ts` 的 `updateDefaultModel()` 同步更新所有运行中 engine 的 globalDefaultModel
@@ -54,12 +56,12 @@
 ## 前端路由与状态
 
 - **Hash Router**：renderer 使用 React Router Hash Router，路由表达应用内导航状态，避免 Electron 本地页面刷新时依赖服务端 history fallback
-- **项目路由**：项目、会话和内容页通过 URL 表达，当前路径形态为 `/project/:projectKey`、`/project/:projectKey/chat/:sessionId`、`/project/:projectKey/content?path=...`
-- **projectKey**：URL 中不暴露完整文件系统路径；`project-key.ts` 根据项目目录名生成当前打开项目集合内稳定的 URL key，真实身份仍以 project path 为准
-- **项目内 lastRoute**：每个打开项目在 `openProjects` 条目中持久化相对于 `/project/:projectKey` 的 `lastRoute`，如 `/chat/:sessionId` 或 `/content?path=...`；应用启动、项目切换和关闭当前项目后的下一个项目导航都会恢复该项目的 lastRoute
+- **项目路由**：项目、会话和内容页通过 URL 表达，当前路径形态为 `/project/:projectId`、`/project/:projectId/chat/:sessionId`、`/project/:projectId/content?path=...`
+- **projectId**：URL 中使用 `.spherse/project.yaml` 中的稳定 id（nanoid 8 位 token）作为路由参数，替代旧的基于目录名生成的 projectKey；全链路（core → server → IPC → renderer 路由 → localStorage key）统一使用 projectId 作为唯一身份标识
+- **项目内 lastRoute**：每个打开项目在 `openProjects` 条目中持久化相对于 `/project/:projectId` 的 `lastRoute`，如 `/chat/:sessionId` 或 `/content?path=...`；应用启动、项目切换和关闭当前项目后的下一个项目导航都会恢复该项目的 lastRoute
 - **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作，并持久化左侧 side panel 固定/自动收起偏好
-- **项目数据 store**：`project-data-store.ts` 按 projectKey 缓存 agents、sessions、初始消息、定时任务、运行中定时任务和 loading/error 状态
-- **项目 UI store**：`project-ui-store.ts` 按 projectKey 管理折叠状态、浮窗会话状态等纯 UI 状态，通过 renderer localStorage 持久化
+- **项目数据 store**：`project-data-store.ts` 按 projectId 缓存 agents、sessions、初始消息、定时任务、运行中定时任务和 loading/error 状态
+- **项目 UI store**：`project-ui-store.ts` 按 projectId 管理折叠状态、浮窗会话状态等纯 UI 状态，通过 renderer localStorage 持久化
 - **局部状态边界**：文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件或 feature hook 内；Chat 输入框草稿按 sessionId 缓存在 renderer `localStorage`，用于 session 切换和应用重启后的草稿恢复；欢迎页设置 dialog 的打开状态保留在 `ActivityBar` 内，欢迎页设置变更通过 `lib/events.ts` 中的 renderer 自定义事件通知当前欢迎页重新读取项目配置
 - **Chat streaming store**：Chat 消息流和 WebSocket 连接由 `features/chat/streaming-store.ts` 统一管理，按 sessionId 缓存 messages、streaming、scrollPosition、WebSocket 和挂载计数；`useChatSession` 只负责 attach/detach 与选择状态，切换页面或关闭 chat 不会中断后台流式输出；WebSocket 事件按 animation frame 批量归约，避免高频 token update 触发过多 React render；`chat-session-reducer.ts` 负责纯数据归约，使用 `message_start` 创建 assistant 占位、`agent_end` 结束正常 streaming，并忽略 user lifecycle 事件以保留本地立即显示 user bubble 的体验
 - **页面 / layout / feature 边界**：`pages/` 只做路由适配和参数校验；跨 feature 的页面编排放在 `layouts/`；业务域专属 UI、hooks 和局部动作放在 `features/{domain}/`

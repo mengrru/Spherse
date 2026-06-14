@@ -12,7 +12,7 @@ import type { Logger } from "./logger.js";
 export async function createEngine(
   projectRoot: string,
   options?: { projectName?: string; defaultModel?: string; logger?: Logger },
-): Promise<{ engine: Engine; projectStore: ProjectStore }> {
+): Promise<{ engine: Engine; projectStore: ProjectStore; projectId: string }> {
   const projectStore = new ProjectStore(projectRoot, options?.logger);
   let isNewProject = false;
   try {
@@ -48,5 +48,5 @@ export async function createEngine(
   engine.setScheduler(scheduler);
   await scheduler.loadFromProfiles();
 
-  return { engine, projectStore };
+  return { engine, projectStore, projectId: projectStore.getProjectId() };
 }

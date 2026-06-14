@@ -4,25 +4,25 @@ import { useProjectUiStore } from "../../stores/project-ui-store";
 import { FloatingChatContainer } from "./FloatingChatContainer";
 
 export function FloatingChatManager() {
-  const activeProjectKey = useAppStore((s) => s.activeProjectKey);
+  const activeProjectId = useAppStore((s) => s.activeProjectId);
   const project = useAppStore((s) =>
-    s.activeProjectKey ? s.projects.get(s.activeProjectKey) : undefined,
+    s.activeProjectId ? s.projects.get(s.activeProjectId) : undefined,
   );
   const projectUi = useProjectUiStore((s) =>
-    activeProjectKey ? s.projects[activeProjectKey] : undefined,
+    activeProjectId ? s.projects[activeProjectId] : undefined,
   );
   const projectData = useProjectDataStore((s) =>
-    activeProjectKey ? s.projects[activeProjectKey] : undefined,
+    activeProjectId ? s.projects[activeProjectId] : undefined,
   );
 
   const floatingChat = projectUi?.floatingChat;
-  if (!floatingChat || !activeProjectKey) return null;
+  if (!floatingChat || !activeProjectId || !project) return null;
 
   const sessions = projectData?.sessions ?? [];
   const agents = projectData?.agents ?? [];
   const session = sessions.find((s) => s.id === floatingChat.sessionId);
   if (!session) {
-    useProjectUiStore.getState().setFloatingChat(activeProjectKey, null);
+    useProjectUiStore.getState().setFloatingChat(activeProjectId, null);
     return null;
   }
 
@@ -31,11 +31,11 @@ export function FloatingChatManager() {
 
   return (
     <FloatingChatContainer
-      projectKey={activeProjectKey}
+      projectId={activeProjectId}
       floatingChat={floatingChat}
       agent={agent}
       client={project.ctx.client}
-      port={project.ctx.port}
+      baseUrl={project.ctx.baseUrl}
     />
   );
 }

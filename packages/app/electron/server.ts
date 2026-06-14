@@ -1,53 +1,44 @@
 import type { FastifyInstance } from "fastify";
-import { createServer } from "@spherse/server";
-import type { Engine } from "@spherse/core";
-import { getSettings, getLocale } from "./settings.js";
+import { createMultiProjectServer } from "@spherse/server";
+import type { ProjectRegistry } from "@spherse/server";
+import { getSettings } from "./settings.js";
 
-const servers = new Map<string, { server: FastifyInstance; port: number; engine: Engine }>();
+let serverHandle: { fastify: FastifyInstance; registry: ProjectRegistry } | null = null;
 
-export async function startServer(projectRoot: string): Promise<number> {
-  const existing = servers.get(projectRoot);
-  if (existing) return existing.port;
-
+export async function ensureServer(): Promise<void> {
+  if (serverHandle) return;
   const settings = getSettings();
-  const { engine, fastify } = await createServer(projectRoot, {
+  const result = await createMultiProjectServer({
     defaultModel: settings?.defaultModel,
   });
+  serverHandle = { fastify: result.fastify, registry: result.registry };
+}
 
-  const address = fastify.server.address();
-  const port = typeof address === "object" && address ? address.port : 0;
-  servers.set(projectRoot, { server: fastify, port, engine });
-  return port;
+export function getServerPort(): number {
+  if (!serverHandle) throw new Error("Server not started");
+  const address = serverHandle.fastify.server.address();
+  return typeof address === "object" && address ? address.port : 0;
+}
+
+export async function registerProject(projectRoot: string): Promise<{ projectId: string }> {
+  if (!serverHandle) throw new Error("Server not started");
+  const ctx = await serverHandle.registry.register(projectRoot);
+  return { projectId: ctx.projectId };
+}
+
+export async function unregisterProject(projectId: string): Promise<void> {
+  if (!serverHandle) return;
+  await serverHandle.registry.remove(projectId);
 }
 
 export function updateDefaultModel(defaultModel: string | undefined): void {
-  for (const [, entry] of servers) {
-    entry.engine.setDefaultModel(defaultModel);
-  }
+  if (!serverHandle) return;
+  serverHandle.registry.setDefaultModel(defaultModel);
 }
 
-export function getServerLocale(): string {
-  return getLocale();
-}
-
-export async function stopServer(projectRoot: string): Promise<void> {
-  const entry = servers.get(projectRoot);
-  if (entry) {
-    await entry.engine.shutdown();
-    entry.server.close();
-    servers.delete(projectRoot);
-  }
-}
-
-export function getServerPort(projectRoot: string): number | undefined {
-  return servers.get(projectRoot)?.port;
-}
-
-export async function stopAllServers(): Promise<void> {
-  const entries = [...servers.entries()];
-  servers.clear();
-  await Promise.all(entries.map(async ([, entry]) => {
-    await entry.engine.shutdown();
-    entry.server.close();
-  }));
+export async function stopServer(): Promise<void> {
+  if (!serverHandle) return;
+  await serverHandle.registry.removeAll();
+  await serverHandle.fastify.close();
+  serverHandle = null;
 }

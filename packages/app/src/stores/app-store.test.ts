@@ -3,8 +3,9 @@ import { useAppStore, type ProjectState } from "./app-store";
 
 const electronAPI = {
   selectDirectory: vi.fn(),
-  startServer: vi.fn(),
+  getServerPort: vi.fn().mockResolvedValue(5173),
   restoreProjects: vi.fn(),
+  openProject: vi.fn(),
   addOpenProject: vi.fn(),
   closeProject: vi.fn(),
   revealInFinder: vi.fn(),
@@ -15,13 +16,13 @@ const electronAPI = {
 
 function projectState(overrides: Partial<ProjectState> = {}): ProjectState {
   return {
-    key: "project-a",
+    id: "project-a",
     path: "/tmp/project-a",
     name: "project-a",
-    port: 5173,
     ctx: {
       client: {} as ProjectState["ctx"]["client"],
-      port: 5173,
+      baseUrl: "http://localhost:5173",
+      projectId: "project-a",
       projectRoot: "/tmp/project-a",
     },
     ...overrides,
@@ -46,7 +47,7 @@ describe("useAppStore lastRoute", () => {
     });
     useAppStore.setState({
       projects: new Map(),
-      activeProjectKey: null,
+      activeProjectId: null,
       initializing: true,
       sidePanelPinned: true,
       sidePanelHovered: false,
@@ -56,17 +57,17 @@ describe("useAppStore lastRoute", () => {
   it("caches each restored project's last route", async () => {
     electronAPI.restoreProjects.mockResolvedValue([
       {
+        id: "project-a",
         path: "/tmp/project-a",
         name: "project-a",
-        port: 5173,
         lastRoute: "/chat/session-1",
       },
     ]);
-    electronAPI.getLastActiveProject.mockResolvedValue("/tmp/project-a");
+    electronAPI.getLastActiveProject.mockResolvedValue("project-a");
 
-    const activeProjectKey = await useAppStore.getState().restoreProjects();
+    const activeProjectId = await useAppStore.getState().restoreProjects();
 
-    expect(activeProjectKey).toBe("project-a");
+    expect(activeProjectId).toBe("project-a");
     expect(useAppStore.getState().projects.get("project-a")?.lastRoute).toBe(
       "/chat/session-1",
     );
@@ -75,7 +76,7 @@ describe("useAppStore lastRoute", () => {
   it("persists and updates a project's last route", async () => {
     useAppStore.setState({
       projects: new Map([["project-a", projectState()]]),
-      activeProjectKey: "project-a",
+      activeProjectId: "project-a",
       initializing: false,
     });
 
@@ -84,7 +85,7 @@ describe("useAppStore lastRoute", () => {
       .setProjectLastRoute("project-a", "/content?path=foo.md");
 
     expect(electronAPI.setProjectLastRoute).toHaveBeenCalledWith(
-      "/tmp/project-a",
+      "project-a",
       "/content?path=foo.md",
     );
     expect(useAppStore.getState().projects.get("project-a")?.lastRoute).toBe(
@@ -101,7 +102,7 @@ describe("useAppStore lastRoute", () => {
     );
     useAppStore.setState({
       projects: new Map([["project-a", projectState()]]),
-      activeProjectKey: "project-a",
+      activeProjectId: "project-a",
       initializing: false,
     });
 

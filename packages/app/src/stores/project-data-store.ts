@@ -17,9 +17,9 @@ interface ProjectData {
 
 interface ProjectDataStore {
   projects: Record<string, ProjectData>;
-  getProjectData: (projectKey: string) => ProjectData;
+  getProjectData: (projectId: string) => ProjectData;
   resolveSessionViews: (
-    projectKey: string,
+    projectId: string,
     activeSessionId: string | null,
     floatingSessionId: string | null,
   ) => {
@@ -27,28 +27,28 @@ interface ProjectDataStore {
     selectedAgent: AgentProfile | null;
     activeSessions: ActiveSessionInfo[];
   };
-  refreshAgents: (projectKey: string, client: ApiClient) => Promise<void>;
-  refreshSessions: (projectKey: string, client: ApiClient) => Promise<void>;
+  refreshAgents: (projectId: string, client: ApiClient) => Promise<void>;
+  refreshSessions: (projectId: string, client: ApiClient) => Promise<void>;
   createSession: (
-    projectKey: string,
+    projectId: string,
     client: ApiClient,
     agentId: string,
     initialMessage?: string,
   ) => Promise<SessionInfo | null>;
-  deleteSession: (projectKey: string, client: ApiClient, sessionId: string) => Promise<void>;
-  renameSession: (projectKey: string, client: ApiClient, sessionId: string, title: string) => Promise<boolean>;
-  createAgent: (projectKey: string, client: ApiClient, slug: string, content: string, themeContent?: string) => Promise<boolean>;
-  updateAgent: (projectKey: string, client: ApiClient, agentId: string, content: string, themeContent?: string) => Promise<boolean>;
-  deleteAgent: (projectKey: string, client: ApiClient, agentId: string) => Promise<void>;
-  setInitialMessage: (projectKey: string, sessionId: string, message: string) => void;
-  consumeInitialMessage: (projectKey: string, sessionId: string) => string | undefined;
-  refreshSchedules: (projectKey: string, client: ApiClient, agentId: string) => Promise<void>;
-  createSchedule: (projectKey: string, client: ApiClient, agentId: string, data: Parameters<ApiClient["createSchedule"]>[1]) => Promise<void>;
-  updateSchedule: (projectKey: string, client: ApiClient, agentId: string, scheduleId: string, data: Parameters<ApiClient["updateSchedule"]>[2]) => Promise<void>;
-  deleteSchedule: (projectKey: string, client: ApiClient, agentId: string, scheduleId: string) => Promise<void>;
-  triggerSchedule: (projectKey: string, client: ApiClient, agentId: string, scheduleId: string) => Promise<void>;
-  handleScheduleEvent: (projectKey: string, client: ApiClient, event: ScheduleServerEvent) => void;
-  clearProjectData: (projectKey: string) => void;
+  deleteSession: (projectId: string, client: ApiClient, sessionId: string) => Promise<void>;
+  renameSession: (projectId: string, client: ApiClient, sessionId: string, title: string) => Promise<boolean>;
+  createAgent: (projectId: string, client: ApiClient, slug: string, content: string, themeContent?: string) => Promise<boolean>;
+  updateAgent: (projectId: string, client: ApiClient, agentId: string, content: string, themeContent?: string) => Promise<boolean>;
+  deleteAgent: (projectId: string, client: ApiClient, agentId: string) => Promise<void>;
+  setInitialMessage: (projectId: string, sessionId: string, message: string) => void;
+  consumeInitialMessage: (projectId: string, sessionId: string) => string | undefined;
+  refreshSchedules: (projectId: string, client: ApiClient, agentId: string) => Promise<void>;
+  createSchedule: (projectId: string, client: ApiClient, agentId: string, data: Parameters<ApiClient["createSchedule"]>[1]) => Promise<void>;
+  updateSchedule: (projectId: string, client: ApiClient, agentId: string, scheduleId: string, data: Parameters<ApiClient["updateSchedule"]>[2]) => Promise<void>;
+  deleteSchedule: (projectId: string, client: ApiClient, agentId: string, scheduleId: string) => Promise<void>;
+  triggerSchedule: (projectId: string, client: ApiClient, agentId: string, scheduleId: string) => Promise<void>;
+  handleScheduleEvent: (projectId: string, client: ApiClient, event: ScheduleServerEvent) => void;
+  clearProjectData: (projectId: string) => void;
 }
 
 function createProjectData(): ProjectData {
@@ -96,16 +96,16 @@ function getErrorMessage(err: unknown): string {
 
 function updateProjectData(
   state: ProjectDataStore,
-  projectKey: string,
+  projectId: string,
   update: (project: ProjectData) => ProjectData,
   options: { createIfMissing?: boolean } = {},
 ) {
-  const current = state.projects[projectKey];
+  const current = state.projects[projectId];
   if (!current && options.createIfMissing === false) return state;
   return {
     projects: {
       ...state.projects,
-      [projectKey]: update(current ?? createProjectData()),
+      [projectId]: update(current ?? createProjectData()),
     },
   };
 }
@@ -113,12 +113,12 @@ function updateProjectData(
 export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
   projects: {},
 
-  getProjectData(projectKey) {
-    return get().projects[projectKey] ?? createProjectData();
+  getProjectData(projectId) {
+    return get().projects[projectId] ?? createProjectData();
   },
 
-  resolveSessionViews(projectKey, activeSessionId, floatingSessionId) {
-    const data = get().projects[projectKey];
+  resolveSessionViews(projectId, activeSessionId, floatingSessionId) {
+    const data = get().projects[projectId];
     const agents = data?.agents ?? [];
     const sessions = data?.sessions ?? [];
 
@@ -156,8 +156,8 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     return { selectedSession, selectedAgent, activeSessions };
   },
 
-  async refreshAgents(projectKey, client) {
-    set((state) => updateProjectData(state, projectKey, (project) => ({
+  async refreshAgents(projectId, client) {
+    set((state) => updateProjectData(state, projectId, (project) => ({
       ...project,
       loading: true,
       error: null,
@@ -165,14 +165,14 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
 
     try {
       const agents = await client.listAgents();
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         agents,
         loading: false,
         error: null,
       }), { createIfMissing: false }));
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         loading: false,
         error: getErrorMessage(err),
@@ -180,19 +180,19 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     }
   },
 
-  async refreshSessions(projectKey, client) {
-    set((state) => updateProjectData(state, projectKey, (project) => ({
+  async refreshSessions(projectId, client) {
+    set((state) => updateProjectData(state, projectId, (project) => ({
       ...project,
       error: null,
     })));
 
     try {
-      const agents = get().projects[projectKey]?.agents ?? [];
+      const agents = get().projects[projectId]?.agents ?? [];
       const allSessions = await Promise.all(
         agents.map((agent) => client.listSessions(agent.id)),
       );
       const sessions = allSessions.flat();
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         sessions: [
           ...project.sessions.filter((session) =>
@@ -204,15 +204,15 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
         error: null,
       }), { createIfMissing: false }));
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
     }
   },
 
-  async createSession(projectKey, client, agentId, initialMessage) {
-    set((state) => updateProjectData(state, projectKey, (project) => ({
+  async createSession(projectId, client, agentId, initialMessage) {
+    set((state) => updateProjectData(state, projectId, (project) => ({
       ...project,
       error: null,
     })));
@@ -229,7 +229,7 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
         updatedAt: Date.now(),
         status: "active",
       };
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         sessions: [session, ...project.sessions.filter((item) => item.id !== sessionId)],
         initialMessageBySessionId: initialMessage
@@ -237,10 +237,10 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
           : project.initialMessageBySessionId,
         error: null,
       }), { createIfMissing: false }));
-      void get().refreshSessions(projectKey, client);
+      void get().refreshSessions(projectId, client);
       return session;
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
@@ -248,13 +248,13 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     }
   },
 
-  async deleteSession(projectKey, client, sessionId) {
+  async deleteSession(projectId, client, sessionId) {
     try {
-      const project = get().projects[projectKey];
+      const project = get().projects[projectId];
       const session = project?.sessions.find((s) => s.id === sessionId);
       if (!session) return;
       await client.deleteSession(session.agentId, sessionId);
-      set((state) => updateProjectData(state, projectKey, (project) => {
+      set((state) => updateProjectData(state, projectId, (project) => {
         const { [sessionId]: _removed, ...initialMessageBySessionId } =
           project.initialMessageBySessionId;
         return {
@@ -265,20 +265,20 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
         };
       }, { createIfMissing: false }));
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
     }
   },
 
-  async renameSession(projectKey, client, sessionId, title) {
+  async renameSession(projectId, client, sessionId, title) {
     try {
-      const project = get().projects[projectKey];
+      const project = get().projects[projectId];
       const session = project?.sessions.find((s) => s.id === sessionId);
       if (!session) return false;
       const updatedSession = await client.renameSession(session.agentId, sessionId, title);
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         sessions: project.sessions.map((session) =>
           session.id === sessionId ? updatedSession : session,
@@ -287,7 +287,7 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
       }), { createIfMissing: false }));
       return true;
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
@@ -295,18 +295,18 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     }
   },
 
-  async createAgent(projectKey, client, slug, content, themeContent) {
-    set((state) => updateProjectData(state, projectKey, (project) => ({
+  async createAgent(projectId, client, slug, content, themeContent) {
+    set((state) => updateProjectData(state, projectId, (project) => ({
       ...project,
       error: null,
     })));
 
     try {
       await client.createAgent(slug, content, themeContent);
-      await get().refreshAgents(projectKey, client);
+      await get().refreshAgents(projectId, client);
       return true;
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
@@ -314,18 +314,18 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     }
   },
 
-  async updateAgent(projectKey, client, agentId, content, themeContent) {
-    set((state) => updateProjectData(state, projectKey, (project) => ({
+  async updateAgent(projectId, client, agentId, content, themeContent) {
+    set((state) => updateProjectData(state, projectId, (project) => ({
       ...project,
       error: null,
     })));
 
     try {
       await client.updateAgent(agentId, content, themeContent);
-      await get().refreshAgents(projectKey, client);
+      await get().refreshAgents(projectId, client);
       return true;
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
@@ -333,21 +333,21 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     }
   },
 
-  async deleteAgent(projectKey, client, agentId) {
+  async deleteAgent(projectId, client, agentId) {
     try {
       await client.deleteAgent(agentId);
-      await get().refreshAgents(projectKey, client);
-      await get().refreshSessions(projectKey, client);
+      await get().refreshAgents(projectId, client);
+      await get().refreshSessions(projectId, client);
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
     }
   },
 
-  setInitialMessage(projectKey, sessionId, message) {
-    set((state) => updateProjectData(state, projectKey, (project) => ({
+  setInitialMessage(projectId, sessionId, message) {
+    set((state) => updateProjectData(state, projectId, (project) => ({
       ...project,
       initialMessageBySessionId: {
         ...project.initialMessageBySessionId,
@@ -356,10 +356,10 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     }), { createIfMissing: false }));
   },
 
-  consumeInitialMessage(projectKey, sessionId) {
-    const message = get().projects[projectKey]?.initialMessageBySessionId[sessionId];
+  consumeInitialMessage(projectId, sessionId) {
+    const message = get().projects[projectId]?.initialMessageBySessionId[sessionId];
     if (!message) return undefined;
-    set((state) => updateProjectData(state, projectKey, (project) => {
+    set((state) => updateProjectData(state, projectId, (project) => {
       const { [sessionId]: _removed, ...initialMessageBySessionId } =
         project.initialMessageBySessionId;
       return {
@@ -370,69 +370,69 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     return message;
   },
 
-  async refreshSchedules(projectKey, client, agentId) {
+  async refreshSchedules(projectId, client, agentId) {
     try {
       const schedules = await client.listSchedules(agentId);
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         schedulesByAgent: { ...project.schedulesByAgent, [agentId]: schedules },
       }), { createIfMissing: false }));
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project, error: getErrorMessage(err),
       }), { createIfMissing: false }));
     }
   },
 
-  async createSchedule(projectKey, client, agentId, data) {
+  async createSchedule(projectId, client, agentId, data) {
     try {
       await client.createSchedule(agentId, data);
-      await get().refreshSchedules(projectKey, client, agentId);
+      await get().refreshSchedules(projectId, client, agentId);
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project, error: getErrorMessage(err),
       }), { createIfMissing: false }));
     }
   },
 
-  async updateSchedule(projectKey, client, agentId, scheduleId, data) {
+  async updateSchedule(projectId, client, agentId, scheduleId, data) {
     try {
       await client.updateSchedule(agentId, scheduleId, data);
-      await get().refreshSchedules(projectKey, client, agentId);
+      await get().refreshSchedules(projectId, client, agentId);
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project, error: getErrorMessage(err),
       }), { createIfMissing: false }));
     }
   },
 
-  async deleteSchedule(projectKey, client, agentId, scheduleId) {
+  async deleteSchedule(projectId, client, agentId, scheduleId) {
     try {
       await client.deleteSchedule(agentId, scheduleId);
-      await get().refreshSchedules(projectKey, client, agentId);
+      await get().refreshSchedules(projectId, client, agentId);
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project, error: getErrorMessage(err),
       }), { createIfMissing: false }));
     }
   },
 
-  async triggerSchedule(projectKey, client, agentId, scheduleId) {
-    set((state) => updateProjectData(state, projectKey, (project) =>
+  async triggerSchedule(projectId, client, agentId, scheduleId) {
+    set((state) => updateProjectData(state, projectId, (project) =>
       addRunningSchedule(project, agentId, scheduleId), { createIfMissing: false }));
     try {
       await client.triggerSchedule(agentId, scheduleId);
     } catch (err) {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...removeRunningSchedule(project, agentId, scheduleId),
         error: getErrorMessage(err),
       }), { createIfMissing: false }));
     }
   },
 
-  handleScheduleEvent(projectKey, client, event) {
+  handleScheduleEvent(projectId, client, event) {
     if (event.type === "schedule_triggered") {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...addRunningSchedule(project, event.agentId, event.scheduleId),
         scheduleEventVersion: project.scheduleEventVersion + 1,
       }), { createIfMissing: false }));
@@ -440,27 +440,27 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     }
 
     if (event.type === "schedule_completed" || event.type === "schedule_failed") {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...removeRunningSchedule(project, event.agentId, event.scheduleId),
         scheduleEventVersion: project.scheduleEventVersion + 1,
       }), { createIfMissing: false }));
-      void get().refreshSchedules(projectKey, client, event.agentId);
-      if (event.type === "schedule_completed") void get().refreshSessions(projectKey, client);
+      void get().refreshSchedules(projectId, client, event.agentId);
+      if (event.type === "schedule_completed") void get().refreshSessions(projectId, client);
       return;
     }
 
     if (event.type === "schedule_updated") {
-      set((state) => updateProjectData(state, projectKey, (project) => ({
+      set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         scheduleEventVersion: project.scheduleEventVersion + 1,
       }), { createIfMissing: false }));
-      void get().refreshSchedules(projectKey, client, event.agentId);
+      void get().refreshSchedules(projectId, client, event.agentId);
     }
   },
 
-  clearProjectData(projectKey) {
+  clearProjectData(projectId) {
     set((state) => {
-      const { [projectKey]: _removed, ...projects } = state.projects;
+      const { [projectId]: _removed, ...projects } = state.projects;
       return { projects };
     });
   },

@@ -13,15 +13,15 @@ export const router = createHashRouter([
         element: <EmptyState />,
       },
       {
-        path: "project/:projectKey",
+        path: "project/:projectId",
         element: <ProjectPage />,
       },
       {
-        path: "project/:projectKey/chat/:sessionId",
+        path: "project/:projectId/chat/:sessionId",
         element: <ProjectPage />,
       },
       {
-        path: "project/:projectKey/content",
+        path: "project/:projectId/content",
         element: <ProjectPage />,
       },
     ],

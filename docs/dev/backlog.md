@@ -1,6 +1,6 @@
 # Backlog
 
-- [ ] **单服务器多引擎重构**：将多 Fastify 实例合并为单实例多 engine，通过 URL 前缀区分项目，减少资源占用。参见 `docs/dev/features/2026-05-10-multi-project/design.md`
+- [x] **单服务器多引擎重构**：将多 Fastify 实例合并为单实例多 engine，通过 URL 前缀 `/api/projects/:projectId/...` 区分项目，减少资源占用。参见 `docs/dev/infra/2026-06-13-single-server-refactor/design.md`
 
 ## 代码质量
 

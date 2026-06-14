@@ -3,16 +3,16 @@ import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { resolveProjectPath } from "@spherse/core";
 import { schemas } from "@spherse/server/contracts";
-import type { AppContext } from "../index.js";
+import type { ProjectRegistry } from "../registry.js";
 
-export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext): void {
-  fastify.get<{ Params: { "*": string } }>(
-    "/api/content/*",
+export function registerContentRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
+  fastify.get<{ Params: { projectId: string; "*": string } }>(
+    "/api/projects/:projectId/content/*",
     async (req, reply) => {
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
@@ -36,8 +36,8 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
   );
 
-  fastify.post<{ Params: { "*": string }; Body: { action: "mkdir" | "touch" } }>(
-    "/api/content/*",
+  fastify.post<{ Params: { projectId: string; "*": string }; Body: { action: "mkdir" | "touch" } }>(
+    "/api/projects/:projectId/content/*",
     {
       schema: {
         body: schemas.createContentRequest,
@@ -54,7 +54,7 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
@@ -87,8 +87,8 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
   );
 
-  fastify.put<{ Params: { "*": string }; Body: { content: string } }>(
-    "/api/content/*",
+  fastify.put<{ Params: { projectId: string; "*": string }; Body: { content: string } }>(
+    "/api/projects/:projectId/content/*",
     {
       schema: {
         body: schemas.saveContentRequest,
@@ -104,7 +104,7 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
@@ -114,7 +114,7 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
       }
 
       try {
-        await ctx.fileWriteMutex.run(absolutePath, async () => {
+        await req.projectCtx!.fileWriteMutex.run(absolutePath, async () => {
           await fs.mkdir(path.dirname(absolutePath), { recursive: true });
           await fs.writeFile(absolutePath, req.body.content, "utf-8");
         });
@@ -125,8 +125,8 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
   );
 
-  fastify.delete<{ Params: { "*": string } }>(
-    "/api/content/*",
+  fastify.delete<{ Params: { projectId: string; "*": string } }>(
+    "/api/projects/:projectId/content/*",
     {
       schema: {
         response: {
@@ -140,7 +140,7 @@ export function registerContentRoutes(fastify: FastifyInstance, ctx: AppContext)
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(ctx.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }

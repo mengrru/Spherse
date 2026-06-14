@@ -17,17 +17,17 @@ import { useProjectUiStore } from "../stores/project-ui-store";
 import { useFloatingChatRedirect } from "../hooks/useFloatingChatRedirect";
 
 export interface ProjectLayoutProps {
-  projectKey: string;
+  projectId: string;
   project: ProjectState;
 }
 
-function buildContentUrl(projectKey: string, filePath: string, sessionId?: string | null): string {
+function buildContentUrl(projectId: string, filePath: string, sessionId?: string | null): string {
   const params = new URLSearchParams({ path: filePath });
   if (sessionId) params.set("sessionId", sessionId);
-  return `/project/${projectKey}/content?${params.toString()}`;
+  return `/project/${projectId}/content?${params.toString()}`;
 }
 
-export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
+export function ProjectLayout({ projectId, project }: ProjectLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { sessionId } = useParams();
@@ -36,7 +36,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const setProjectLastRoute = useAppStore((state) => state.setProjectLastRoute);
   const sidePanelClickAway = useSidePanelClickAway();
-  const projectData = useProjectDataStore((state) => state.projects[projectKey]);
+  const projectData = useProjectDataStore((state) => state.projects[projectId]);
   const refreshAgents = useProjectDataStore((state) => state.refreshAgents);
   const refreshSessions = useProjectDataStore((state) => state.refreshSessions);
   const createSession = useProjectDataStore((state) => state.createSession);
@@ -50,39 +50,39 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   const showingContent = isContentRoute && Boolean(contentPath);
   const activeSessionId = sessionId ?? contentSessionId ?? null;
   const floatingSessionId = useProjectUiStore((s) =>
-    projectKey ? s.projects[projectKey]?.floatingChat?.sessionId ?? null : null,
+    projectId ? s.projects[projectId]?.floatingChat?.sessionId ?? null : null,
   );
   const resolveSessionViews = useProjectDataStore((s) => s.resolveSessionViews);
   const { selectedSession, selectedAgent, activeSessions } = resolveSessionViews(
-    projectKey, activeSessionId, floatingSessionId,
+    projectId, activeSessionId, floatingSessionId,
   );
   const initialMessage = selectedSession
     ? projectData?.initialMessageBySessionId[selectedSession.id]
     : undefined;
 
-  useCustomTheme(project.ctx.projectRoot, project.ctx.port);
-  useSpherseMessageListener(projectKey);
+  useCustomTheme(project.ctx.projectRoot, project.ctx.baseUrl, project.ctx.projectId);
+  useSpherseMessageListener(projectId);
 
   useEffect(() => {
-    void setActiveProject(projectKey);
-  }, [projectKey, setActiveProject]);
+    void setActiveProject(projectId);
+  }, [projectId, setActiveProject]);
 
   useEffect(() => {
     const fullPath = location.pathname + location.search;
-    const prefix = `/project/${projectKey}`;
+    const prefix = `/project/${projectId}`;
     const subRoute = fullPath.startsWith(prefix) ? fullPath.slice(prefix.length) : "";
-    void setProjectLastRoute(projectKey, subRoute);
-  }, [location.pathname, location.search, projectKey, setProjectLastRoute]);
+    void setProjectLastRoute(projectId, subRoute);
+  }, [location.pathname, location.search, projectId, setProjectLastRoute]);
 
   useEffect(() => {
-    void refreshAgents(projectKey, project.ctx.client).then(() => {
-      void refreshSessions(projectKey, project.ctx.client);
+    void refreshAgents(projectId, project.ctx.client).then(() => {
+      void refreshSessions(projectId, project.ctx.client);
     });
-  }, [project.ctx.client, projectKey, refreshAgents, refreshSessions]);
+  }, [project.ctx.client, projectId, refreshAgents, refreshSessions]);
 
   useEffect(() => {
     async function showScheduleNotification(agentId: string, scheduleId: string) {
-      const cachedSchedules = useProjectDataStore.getState().projects[projectKey]?.schedulesByAgent?.[agentId] ?? [];
+      const cachedSchedules = useProjectDataStore.getState().projects[projectId]?.schedulesByAgent?.[agentId] ?? [];
       let schedule = cachedSchedules.find((item) => item.id === scheduleId);
       if (!schedule) {
         const schedules = await project.ctx.client.listSchedules(agentId).catch(() => []);
@@ -93,31 +93,31 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
     }
 
     const ws = project.ctx.client.createScheduleWebSocket((event) => {
-      handleScheduleEvent(projectKey, project.ctx.client, event);
+      handleScheduleEvent(projectId, project.ctx.client, event);
       if (event.type === "schedule_completed") {
         void showScheduleNotification(event.agentId, event.scheduleId);
       }
     });
     return () => ws.close();
-  }, [handleScheduleEvent, project.ctx.client, projectKey, t]);
+  }, [handleScheduleEvent, project.ctx.client, projectId, t]);
 
   useEffect(() => {
     if (initialMessage && selectedSession && selectedAgent) {
-      consumeInitialMessage(projectKey, selectedSession.id);
+      consumeInitialMessage(projectId, selectedSession.id);
     }
-  }, [consumeInitialMessage, initialMessage, projectKey, selectedAgent, selectedSession]);
+  }, [consumeInitialMessage, initialMessage, projectId, selectedAgent, selectedSession]);
 
-  useFloatingChatRedirect(projectKey, activeSessionId);
+  useFloatingChatRedirect(projectId, activeSessionId);
 
   const handleSelectFile = (filePath: string) => {
-    navigate(buildContentUrl(projectKey, filePath, activeSessionId));
+    navigate(buildContentUrl(projectId, filePath, activeSessionId));
   };
 
   const handleBackToChat = () => {
     if (activeSessionId) {
-      navigate(`/project/${projectKey}/chat/${activeSessionId}`);
+      navigate(`/project/${projectId}/chat/${activeSessionId}`);
     } else {
-      navigate(`/project/${projectKey}`);
+      navigate(`/project/${projectId}`);
     }
   };
 
@@ -131,9 +131,9 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
     const parts = [t("text-selection.promptPrefix", { path: sourcePath, text: quotedText })];
     if (comment) parts.push(`\n\n${comment}`);
     const message = parts.join("");
-    const session = await createSession(projectKey, project.ctx.client, agentId, message);
+    const session = await createSession(projectId, project.ctx.client, agentId, message);
     if (session) {
-      navigate(`/project/${projectKey}/chat/${session.id}`);
+      navigate(`/project/${projectId}/chat/${session.id}`);
     }
   };
 
@@ -146,7 +146,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
   return (
     <div className="relative flex h-full flex-1 overflow-hidden">
       <ProjectPanel
-        projectKey={projectKey}
+        projectId={projectId}
         project={project}
         activeSessionId={activeSessionId}
         selectedAgentId={selectedAgent?.id ?? null}
@@ -164,11 +164,12 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
               key={selectedSession.id}
               client={project.ctx.client}
               sessionId={selectedSession.id}
-              port={project.ctx.port}
+              baseUrl={project.ctx.baseUrl}
+              projectId={project.ctx.projectId}
               agent={selectedAgent}
               onNavigateToPath={handleSelectFile}
               initialMessage={initialMessage}
-              onClose={() => navigate(`/project/${projectKey}`)}
+              onClose={() => navigate(`/project/${projectId}`)}
             />
           </div>
         )}
@@ -179,7 +180,7 @@ export function ProjectLayout({ projectKey, project }: ProjectLayoutProps) {
             filePath={contentPath}
             onBack={handleBackToChat}
             agents={agents}
-            projectKey={projectKey}
+            projectId={projectId}
             activeSessions={activeSessions}
             onStartSession={handleStartSession}
           />

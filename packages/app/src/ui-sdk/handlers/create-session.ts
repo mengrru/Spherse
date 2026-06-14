@@ -14,12 +14,12 @@ registerAction("createSession", async (params, ctx) => {
 
   const session = await useProjectDataStore
     .getState()
-    .createSession(ctx.projectKey, ctx.client, agentId, message);
+    .createSession(ctx.projectId, ctx.client, agentId, message);
   if (!session) return;
 
   if (float) {
-    useProjectUiStore.getState().setFloatingChat(ctx.projectKey, getDefaultFloatingState(session.id));
+    useProjectUiStore.getState().setFloatingChat(ctx.projectId, getDefaultFloatingState(session.id));
   } else {
-    ctx.navigate(`/project/${ctx.projectKey}/chat/${session.id}`);
+    ctx.navigate(`/project/${ctx.projectId}/chat/${session.id}`);
   }
 });

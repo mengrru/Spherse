@@ -12,7 +12,7 @@ interface StartSessionPopoverProps {
   sourcePath: string;
   agents: AgentProfile[];
   position: { x: number; y: number };
-  projectKey: string;
+  projectId: string;
   activeSessions?: ActiveSessionInfo[];
   onSubmit: (agentId: string, comment?: string) => void;
   onClose: () => void;
@@ -54,7 +54,7 @@ export function StartSessionPopover({
   sourcePath,
   agents,
   position,
-  projectKey,
+  projectId,
   activeSessions,
   onSubmit,
   onClose,
@@ -76,7 +76,7 @@ export function StartSessionPopover({
     const parts = [t("text-selection.promptPrefix", { path: sourcePath, text: quotedText })];
     if (trimmedComment) parts.push(`\n\n${trimmedComment}`);
     const message = parts.join("");
-    dispatchAction("sendMessage", { sessionId, message }, { navigate, projectKey });
+    dispatchAction("sendMessage", { sessionId, message }, { navigate, projectId });
     onClose();
   };
 

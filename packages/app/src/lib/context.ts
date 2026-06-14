@@ -3,14 +3,16 @@ import type { ApiClient } from "./api";
 
 export interface AppContext {
   client: ApiClient;
-  port: number;
+  baseUrl: string;
+  projectId: string;
   projectRoot: string;
 }
 
-export function initAppContext(port: number, projectRoot: string): AppContext {
+export function initAppContext(baseUrl: string, projectId: string, projectRoot: string): AppContext {
   return {
-    client: createApiClient(port),
-    port,
+    client: createApiClient(baseUrl, projectId),
+    baseUrl,
+    projectId,
     projectRoot,
   };
 }

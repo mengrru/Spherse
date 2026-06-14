@@ -30,11 +30,11 @@ interface LogEntry {
 }
 
 interface LogPanelProps {
-  port: number;
+  baseUrl: string;
   onClose: () => void;
 }
 
-export function LogPanel({ port, onClose }: LogPanelProps) {
+export function LogPanel({ baseUrl, onClose }: LogPanelProps) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [paused, setPaused] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -52,7 +52,7 @@ export function LogPanel({ port, onClose }: LogPanelProps) {
   }, [autoScroll]);
 
   useEffect(() => {
-    const wsUrl = `ws://localhost:${port}/ws/debug`;
+    const wsUrl = `${baseUrl.replace(/^http/, "ws")}/ws/debug`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -79,7 +79,7 @@ export function LogPanel({ port, onClose }: LogPanelProps) {
       ws.close();
       wsRef.current = null;
     };
-  }, [port]);
+  }, [baseUrl]);
 
   useEffect(() => {
     if (!autoScrollRef.current) return;

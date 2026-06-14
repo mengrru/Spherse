@@ -1,17 +1,17 @@
 import type { FastifyInstance } from "fastify";
 import { schemas } from "@spherse/server/contracts";
-import type { AppContext } from "../index.js";
+import type { ProjectRegistry } from "../registry.js";
 
-export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext): void {
-  fastify.get<{ Params: { agentId: string } }>(
-    "/api/agents/:agentId/sessions",
+export function registerSessionRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
+  fastify.get<{ Params: { projectId: string; agentId: string } }>(
+    "/api/projects/:projectId/agents/:agentId/sessions",
     async (req) => {
-      return ctx.engine.listSessions(req.params.agentId);
+      return req.projectCtx!.engine.listSessions(req.params.agentId);
     },
   );
 
-  fastify.post<{ Params: { agentId: string } }>(
-    "/api/agents/:agentId/sessions",
+  fastify.post<{ Params: { projectId: string; agentId: string } }>(
+    "/api/projects/:projectId/agents/:agentId/sessions",
     {
       schema: {
         response: {
@@ -22,7 +22,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
     async (req, reply) => {
       try {
-        const sessionId = await ctx.engine.createSession(req.params.agentId);
+        const sessionId = await req.projectCtx!.engine.createSession(req.params.agentId);
         return { sessionId };
       } catch (err: any) {
         return reply.code(404).send({ error: err.message });
@@ -30,25 +30,25 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
   );
 
-  fastify.get<{ Params: { agentId: string; id: string } }>(
-    "/api/agents/:agentId/sessions/:id",
+  fastify.get<{ Params: { projectId: string; agentId: string; id: string } }>(
+    "/api/projects/:projectId/agents/:agentId/sessions/:id",
     async (req, reply) => {
-      const session = ctx.engine.getSession(req.params.agentId, req.params.id);
+      const session = req.projectCtx!.engine.getSession(req.params.agentId, req.params.id);
       if (!session)
         return reply.code(404).send({ error: "Session not found" });
       return session;
     },
   );
 
-  fastify.get<{ Params: { agentId: string; id: string } }>(
-    "/api/agents/:agentId/sessions/:id/messages",
+  fastify.get<{ Params: { projectId: string; agentId: string; id: string } }>(
+    "/api/projects/:projectId/agents/:agentId/sessions/:id/messages",
     async (req) => {
-      return ctx.engine.getSessionHistory(req.params.agentId, req.params.id);
+      return req.projectCtx!.engine.getSessionHistory(req.params.agentId, req.params.id);
     },
   );
 
-  fastify.patch<{ Params: { agentId: string; id: string }; Body: { title?: unknown } }>(
-    "/api/agents/:agentId/sessions/:id",
+  fastify.patch<{ Params: { projectId: string; agentId: string; id: string }; Body: { title?: unknown } }>(
+    "/api/projects/:projectId/agents/:agentId/sessions/:id",
     {
       schema: {
         body: schemas.renameSessionRequest,
@@ -66,7 +66,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
       }
 
       try {
-        return ctx.engine.renameSession(req.params.agentId, req.params.id, title);
+        return req.projectCtx!.engine.renameSession(req.params.agentId, req.params.id, title);
       } catch (err: any) {
         const message = err instanceof Error ? err.message : "request failed";
         if (message.includes("not found")) {
@@ -77,10 +77,10 @@ export function registerSessionRoutes(fastify: FastifyInstance, ctx: AppContext)
     },
   );
 
-  fastify.delete<{ Params: { agentId: string; id: string } }>(
-    "/api/agents/:agentId/sessions/:id",
+  fastify.delete<{ Params: { projectId: string; agentId: string; id: string } }>(
+    "/api/projects/:projectId/agents/:agentId/sessions/:id",
     async (req) => {
-      ctx.engine.deleteSession(req.params.agentId, req.params.id);
+      req.projectCtx!.engine.deleteSession(req.params.agentId, req.params.id);
       return { ok: true };
     },
   );

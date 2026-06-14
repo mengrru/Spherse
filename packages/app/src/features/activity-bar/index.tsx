@@ -16,17 +16,17 @@ import { cn } from "../../lib/utils";
 
 interface ActivityBarProps {
   projects: Map<string, ProjectState>;
-  activeProjectKey: string | null;
-  onSelect: (projectKey: string) => void;
+  activeProjectId: string | null;
+  onSelect: (projectId: string) => void;
   onAdd: () => void;
-  onClose: (projectKey: string) => void;
-  onReveal: (projectKey: string) => void;
+  onClose: (projectId: string) => void;
+  onReveal: (projectId: string) => void;
   onSettings: () => void;
 }
 
 export function ActivityBar({
   projects,
-  activeProjectKey,
+  activeProjectId,
   onSelect,
   onAdd,
   onClose,
@@ -34,8 +34,8 @@ export function ActivityBar({
   onSettings,
 }: ActivityBarProps) {
   const { t } = useI18n();
-  const [settingsProjectKey, setSettingsProjectKey] = useState<string | null>(null);
-  const settingsProject = settingsProjectKey ? projects.get(settingsProjectKey) : null;
+  const [settingsProjectId, setSettingsProjectId] = useState<string | null>(null);
+  const settingsProject = settingsProjectId ? projects.get(settingsProjectId) : null;
   const sidePanelPinned = useAppStore((state) => state.sidePanelPinned);
   const sidePanelHovered = useAppStore((state) => state.sidePanelHovered);
   const toggleSidePanelPinned = useAppStore((state) => state.toggleSidePanelPinned);
@@ -72,24 +72,24 @@ export function ActivityBar({
             )}
           >
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">
-              {Array.from(projects.entries()).map(([projectKey, info]) => (
-                <ContextMenu key={projectKey}>
+              {Array.from(projects.entries()).map(([projectId, info]) => (
+                <ContextMenu key={projectId}>
                   <ContextMenuTrigger>
                     <ProjectAvatar
                       name={info.name}
                       path={info.path}
-                      active={projectKey === activeProjectKey}
-                      onClick={() => onSelect(projectKey)}
+                      active={projectId === activeProjectId}
+                      onClick={() => onSelect(projectId)}
                     />
                   </ContextMenuTrigger>
                   <ContextMenuContent>
-                    <ContextMenuItem onClick={() => setSettingsProjectKey(projectKey)}>
+                    <ContextMenuItem onClick={() => setSettingsProjectId(projectId)}>
                       {t("activity-bar.setWelcomePage")}
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={() => onReveal(projectKey)}>
+                    <ContextMenuItem onClick={() => onReveal(projectId)}>
                       {t("activity-bar.revealInFinder")}
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={() => onClose(projectKey)}>
+                    <ContextMenuItem onClick={() => onClose(projectId)}>
                       {t("activity-bar.closeProject")}
                     </ContextMenuItem>
                   </ContextMenuContent>
@@ -131,10 +131,10 @@ export function ActivityBar({
             </div>
             {settingsProject && (
               <WelcomePageSettingsDialog
-                key={settingsProjectKey}
+                key={settingsProjectId}
                 client={settingsProject.ctx.client}
                 open={true}
-                onOpenChange={(open) => { if (!open) setSettingsProjectKey(null); }}
+                onOpenChange={(open) => { if (!open) setSettingsProjectId(null); }}
               />
             )}
           </div>

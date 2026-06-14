@@ -11,16 +11,16 @@ import { I18nProvider } from "@spherse/i18n/react";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
 import { useSettingsStore } from "./features/settings/store";
 
-function buildProjectRoute(projectKey: string, lastRoute?: string): string {
+function buildProjectRoute(projectId: string, lastRoute?: string): string {
   const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
-  return `/project/${projectKey}${suffix}`;
+  return `/project/${projectId}${suffix}`;
 }
 
 export function App() {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
   const projects = useAppStore((state) => state.projects);
-  const activeProjectKey = useAppStore((state) => state.activeProjectKey);
+  const activeProjectId = useAppStore((state) => state.activeProjectId);
   const initializing = useAppStore((state) => state.initializing);
   const restoreProjects = useAppStore((state) => state.restoreProjects);
   const openProject = useAppStore((state) => state.openProject);
@@ -34,11 +34,11 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    restoreProjects().then((projectKey) => {
+    restoreProjects().then((projectId) => {
       const hashPath = window.location.hash.replace(/^#/, "") || "/";
-      if (!cancelled && hashPath === "/" && projectKey) {
-        const project = useAppStore.getState().projects.get(projectKey);
-        navigate(buildProjectRoute(projectKey, project?.lastRoute), { replace: true });
+      if (!cancelled && hashPath === "/" && projectId) {
+        const project = useAppStore.getState().projects.get(projectId);
+        navigate(buildProjectRoute(projectId, project?.lastRoute), { replace: true });
       }
     });
     return () => {
@@ -52,26 +52,26 @@ export function App() {
   }, [loadSettings]);
 
   const handleAddProject = async () => {
-    const projectKey = await openProject();
-    if (projectKey) {
-      const project = useAppStore.getState().projects.get(projectKey);
-      navigate(buildProjectRoute(projectKey, project?.lastRoute));
+    const projectId = await openProject();
+    if (projectId) {
+      const project = useAppStore.getState().projects.get(projectId);
+      navigate(buildProjectRoute(projectId, project?.lastRoute));
     }
   };
 
-  const handleSelectProject = async (projectKey: string) => {
-    await setActiveProject(projectKey);
-    const project = useAppStore.getState().projects.get(projectKey);
-    navigate(buildProjectRoute(projectKey, project?.lastRoute));
+  const handleSelectProject = async (projectId: string) => {
+    await setActiveProject(projectId);
+    const project = useAppStore.getState().projects.get(projectId);
+    navigate(buildProjectRoute(projectId, project?.lastRoute));
   };
 
-  const handleCloseProject = async (projectKey: string) => {
-    const nextProjectKey = await closeProject(projectKey);
-    clearProjectData(projectKey);
-    clearProjectUi(projectKey);
-    if (nextProjectKey) {
-      const project = useAppStore.getState().projects.get(nextProjectKey);
-      navigate(buildProjectRoute(nextProjectKey, project?.lastRoute));
+  const handleCloseProject = async (projectId: string) => {
+    const nextProjectId = await closeProject(projectId);
+    clearProjectData(projectId);
+    clearProjectUi(projectId);
+    if (nextProjectId) {
+      const project = useAppStore.getState().projects.get(nextProjectId);
+      navigate(buildProjectRoute(nextProjectId, project?.lastRoute));
     } else {
       navigate("/");
     }
@@ -91,7 +91,7 @@ export function App() {
         <div className="relative flex h-screen overflow-hidden bg-background text-foreground">
           <ActivityBar
             projects={projects}
-            activeProjectKey={activeProjectKey}
+            activeProjectId={activeProjectId}
             onSelect={handleSelectProject}
             onAdd={handleAddProject}
             onClose={handleCloseProject}

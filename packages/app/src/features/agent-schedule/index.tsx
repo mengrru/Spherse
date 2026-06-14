@@ -26,16 +26,16 @@ interface ScheduleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agentId: string;
-  projectKey: string;
+  projectId: string;
   client: ApiClient;
 }
 
-export function ScheduleDialog({ open, onOpenChange, agentId, projectKey, client }: ScheduleDialogProps) {
+export function ScheduleDialog({ open, onOpenChange, agentId, projectId, client }: ScheduleDialogProps) {
   const { t } = useI18n();
-  const schedules = useProjectDataStore((s) => s.projects[projectKey]?.schedulesByAgent?.[agentId] ?? EMPTY_SCHEDULES);
-  const runningScheduleIds = useProjectDataStore((s) => s.projects[projectKey]?.runningScheduleIdsByAgent?.[agentId] ?? EMPTY_RUNNING_SCHEDULE_IDS);
-  const scheduleEventVersion = useProjectDataStore((s) => s.projects[projectKey]?.scheduleEventVersion ?? 0);
-  const agentName = useProjectDataStore((s) => s.projects[projectKey]?.agents?.find((a) => a.id === agentId)?.name ?? "");
+  const schedules = useProjectDataStore((s) => s.projects[projectId]?.schedulesByAgent?.[agentId] ?? EMPTY_SCHEDULES);
+  const runningScheduleIds = useProjectDataStore((s) => s.projects[projectId]?.runningScheduleIdsByAgent?.[agentId] ?? EMPTY_RUNNING_SCHEDULE_IDS);
+  const scheduleEventVersion = useProjectDataStore((s) => s.projects[projectId]?.scheduleEventVersion ?? 0);
+  const agentName = useProjectDataStore((s) => s.projects[projectId]?.agents?.find((a) => a.id === agentId)?.name ?? "");
   const refreshSchedules = useProjectDataStore((s) => s.refreshSchedules);
   const createSchedule = useProjectDataStore((s) => s.createSchedule);
   const updateSchedule = useProjectDataStore((s) => s.updateSchedule);
@@ -60,8 +60,8 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectKey, client
   }
 
   useEffect(() => {
-    if (open) refreshSchedules(projectKey, client, agentId);
-  }, [open, projectKey, client, agentId, refreshSchedules]);
+    if (open) refreshSchedules(projectId, client, agentId);
+  }, [open, projectId, client, agentId, refreshSchedules]);
 
   useEffect(() => {
     if (open && activeTab === "logs") {
@@ -102,9 +102,9 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectKey, client
       notificationMessage: notify && notificationMessage.trim() ? notificationMessage.trim() : undefined,
     };
     if (editingId === "__new__") {
-      await createSchedule(projectKey, client, agentId, data);
+      await createSchedule(projectId, client, agentId, data);
     } else if (editingId) {
-      await updateSchedule(projectKey, client, agentId, editingId, data);
+      await updateSchedule(projectId, client, agentId, editingId, data);
     }
     resetForm();
   }
@@ -120,17 +120,17 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectKey, client
   }
 
   async function handleTrigger(entry: ScheduleEntry) {
-    await triggerSchedule(projectKey, client, agentId, entry.id);
+    await triggerSchedule(projectId, client, agentId, entry.id);
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deleteSchedule(projectKey, client, agentId, deleteTarget.id);
+    await deleteSchedule(projectId, client, agentId, deleteTarget.id);
     setDeleteTarget(null);
   }
 
   async function handleToggle(entry: ScheduleInfo) {
-    await updateSchedule(projectKey, client, agentId, entry.id, { enabled: !entry.enabled });
+    await updateSchedule(projectId, client, agentId, entry.id, { enabled: !entry.enabled });
   }
 
   return (

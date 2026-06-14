@@ -10,23 +10,19 @@ const appRoot = path.resolve(__dirname, "../..");
 const mainEntry = path.join(appRoot, "dist", "main", "index.js");
 const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
 
-function projectKeyBase(projectPath: string): string {
-  const name = projectPath.split(/[\\/]/).filter(Boolean).pop() ?? "project";
-  const key = name
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .replace(/-+/g, "-");
-  return key || "project";
-}
-
 export interface TestProject {
   root: string;
+  projectId: string;
 }
 
 export async function createFileTreeProject(): Promise<TestProject> {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-ft-"));
   await mkdir(path.join(root, ".spherse", "agents"), { recursive: true });
+  const projectId = Math.random().toString(36).slice(2, 10);
+  await writeFile(
+    path.join(root, ".spherse", "project.yaml"),
+    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+  );
 
   await mkdir(path.join(root, ".spherse", "agents", "assistant"), { recursive: true });
   await writeFile(
@@ -54,7 +50,7 @@ export async function createFileTreeProject(): Promise<TestProject> {
   await mkdir(path.join(root, "docs"), { recursive: true });
   await writeFile(path.join(root, "docs", "guide.md"), "# Guide\n");
 
-  return { root };
+  return { root, projectId };
 }
 
 export async function launchFileTreeApp(
@@ -74,11 +70,12 @@ export async function launchFileTreeApp(
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
-  await page.evaluate(async (projectRoot) => {
-    await window.electronAPI.addOpenProject(projectRoot);
-    await window.electronAPI.setLastActiveProject(projectRoot);
-  }, project.root);
-  const projectUrl = `/project/${projectKeyBase(project.root)}`;
+  await page.evaluate(async ({ id, projectRoot }) => {
+    await window.electronAPI.openProject(projectRoot);
+    await window.electronAPI.addOpenProject(id, projectRoot);
+    await window.electronAPI.setLastActiveProject(id);
+  }, { id: project.projectId, projectRoot: project.root });
+  const projectUrl = `/project/${project.projectId}`;
   await page.goto(
     `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent("README.md")}`,
   );

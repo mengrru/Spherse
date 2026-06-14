@@ -33,21 +33,21 @@ const EMPTY_SESSIONS: SessionInfo[] = [];
 const EMPTY_COLLAPSED_AGENT_IDS = new Set<string>();
 
 export interface AgentSessionListProps {
-  projectKey: string;
+  projectId: string;
   activeSessionId: string | null;
   selectedAgentId: string | null;
 }
 
 export function AgentSessionList({
-  projectKey,
+  projectId,
   activeSessionId,
   selectedAgentId,
 }: AgentSessionListProps) {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const project = useAppStore((state) => state.projects.get(projectKey));
-  const projectData = useProjectDataStore((state) => state.projects[projectKey]);
-  const projectUi = useProjectUiStore((state) => state.projects[projectKey]);
+  const project = useAppStore((state) => state.projects.get(projectId));
+  const projectData = useProjectDataStore((state) => state.projects[projectId]);
+  const projectUi = useProjectUiStore((state) => state.projects[projectId]);
   const createSession = useProjectDataStore((state) => state.createSession);
   const deleteSession = useProjectDataStore((state) => state.deleteSession);
   const renameSession = useProjectDataStore((state) => state.renameSession);
@@ -74,8 +74,8 @@ export function AgentSessionList({
 
   useEffect(() => {
     if (projectUi != null || agents.length === 0) return;
-    setCollapsedAgentIds(projectKey, agents.map((agent) => agent.id));
-  }, [projectUi, agents, projectKey, setCollapsedAgentIds]);
+    setCollapsedAgentIds(projectId, agents.map((agent) => agent.id));
+  }, [projectUi, agents, projectId, setCollapsedAgentIds]);
 
   useEffect(() => {
     if (projectUi == null) return;
@@ -85,20 +85,20 @@ export function AgentSessionList({
       nextCollapsedAgentIds.length !== collapsedAgentIds.size ||
       nextCollapsedAgentIds.some((id) => !collapsedAgentIds.has(id));
     if (changed) {
-      setCollapsedAgentIds(projectKey, nextCollapsedAgentIds);
+      setCollapsedAgentIds(projectId, nextCollapsedAgentIds);
     }
-  }, [projectUi, agents, collapsedAgentIds, projectKey, setCollapsedAgentIds]);
+  }, [projectUi, agents, collapsedAgentIds, projectId, setCollapsedAgentIds]);
 
   const handleSelectSession = (session: SessionInfo) => {
     if (floatingSessionId === session.id) return;
-    navigate(`/project/${projectKey}/chat/${session.id}`);
+    navigate(`/project/${projectId}/chat/${session.id}`);
   };
 
   const handleNewSession = async (agent: AgentProfile) => {
     if (!project) return;
-    const session = await createSession(projectKey, project.ctx.client, agent.id);
+    const session = await createSession(projectId, project.ctx.client, agent.id);
     if (session) {
-      navigate(`/project/${projectKey}/chat/${session.id}`);
+      navigate(`/project/${projectId}/chat/${session.id}`);
     }
   };
 
@@ -110,17 +110,17 @@ export function AgentSessionList({
     if (!project || !deleteSessionTarget) return;
     const deletedId = deleteSessionTarget.id;
     setDeleteSessionTarget(null);
-    await deleteSession(projectKey, project.ctx.client, deletedId);
+    await deleteSession(projectId, project.ctx.client, deletedId);
     if (activeSessionId === deletedId) {
-      navigate(`/project/${projectKey}`);
+      navigate(`/project/${projectId}`);
     }
   };
 
   const handleRenameSession = async (session: SessionInfo, title: string) => {
     if (!project) return false;
-    const ok = await renameSession(projectKey, project.ctx.client, session.id, title);
+    const ok = await renameSession(projectId, project.ctx.client, session.id, title);
     if (!ok) {
-      const message = useProjectDataStore.getState().projects[projectKey]?.error ?? t("agent-session-list.renameFailed");
+      const message = useProjectDataStore.getState().projects[projectId]?.error ?? t("agent-session-list.renameFailed");
       toast.error(t("agent-session-list.renameFailed", { message }));
     }
     return ok;
@@ -132,15 +132,15 @@ export function AgentSessionList({
 
   const performDeleteAgent = async (agent: AgentProfile) => {
     if (!project) return;
-    await deleteAgent(projectKey, project.ctx.client, agent.id);
+    await deleteAgent(projectId, project.ctx.client, agent.id);
     if (selectedAgentId === agent.id) {
-      navigate(`/project/${projectKey}`);
+      navigate(`/project/${projectId}`);
     }
   };
 
   const handleCreateAgent = async (slug: string, content: string, themeContent: string) => {
     if (!project) return;
-    const ok = await createAgent(projectKey, project.ctx.client, slug, content, themeContent);
+    const ok = await createAgent(projectId, project.ctx.client, slug, content, themeContent);
     if (ok) setShowCreateAgent(false);
   };
 
@@ -155,7 +155,7 @@ export function AgentSessionList({
 
   const handleEditSubmit = async (_slug: string, content: string, themeContent: string) => {
     if (!project || !editAgent) return;
-    const ok = await updateAgent(projectKey, project.ctx.client, editAgent.id, content, themeContent);
+    const ok = await updateAgent(projectId, project.ctx.client, editAgent.id, content, themeContent);
     if (ok) setEditAgent(null);
   };
 
@@ -179,7 +179,7 @@ export function AgentSessionList({
             collapsedAgentIds={effectiveCollapsedAgentIds}
             activeSessionId={activeSessionId}
             floatingSessionId={floatingSessionId}
-            onToggleAgentCollapsed={(agentId) => toggleAgentCollapsed(projectKey, agentId)}
+            onToggleAgentCollapsed={(agentId) => toggleAgentCollapsed(projectId, agentId)}
             onNewSession={handleNewSession}
             onScheduleAgent={setScheduleAgent}
             onEditAgent={handleEditAgent}
@@ -188,10 +188,10 @@ export function AgentSessionList({
             onDeleteSession={handleDeleteSessionRequest}
             onRenameSession={handleRenameSession}
             onFloatSession={(s) => {
-              dispatchAction("floatSession", { sessionId: s.id }, { navigate, projectKey });
+              dispatchAction("floatSession", { sessionId: s.id }, { navigate, projectId });
             }}
             onCancelFloat={() => {
-              dispatchAction("unfloatSession", {}, { navigate, projectKey });
+              dispatchAction("unfloatSession", {}, { navigate, projectId });
             }}
           />
         </SidebarGroupContent>
@@ -258,7 +258,7 @@ export function AgentSessionList({
           open={!!scheduleAgent}
           onOpenChange={(open) => { if (!open) setScheduleAgent(null); }}
           agentId={scheduleAgent.id}
-          projectKey={projectKey}
+          projectId={projectId}
           client={project.ctx.client}
         />
       )}

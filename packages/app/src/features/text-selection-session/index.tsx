@@ -10,7 +10,7 @@ export interface TextSelectionSessionProps {
   disabled: boolean;
   sourcePath: string;
   agents: AgentProfile[];
-  projectKey: string;
+  projectId: string;
   activeSessions?: ActiveSessionInfo[];
   onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;
 }
@@ -20,7 +20,7 @@ export function TextSelectionSession({
   disabled,
   sourcePath,
   agents,
-  projectKey,
+  projectId,
   activeSessions,
   onStartSession,
 }: TextSelectionSessionProps) {
@@ -58,7 +58,7 @@ export function TextSelectionSession({
           sourcePath={sourcePath}
           agents={agents}
           position={selectionState.position}
-          projectKey={projectKey}
+          projectId={projectId}
           activeSessions={activeSessions}
           onSubmit={(agentId, comment) => {
             onStartSession?.(agentId, selectionState.text, sourcePath, comment);
