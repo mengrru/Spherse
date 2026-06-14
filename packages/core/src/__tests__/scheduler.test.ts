@@ -2,35 +2,42 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
+import pino from "pino";
 import { Scheduler } from "../scheduler.js";
 import { createEngine } from "../factory.js";
 import type { ScheduleEntry } from "../types.js";
 
-function createAgentDir(agentsDir: string, agentId: string, name: string): void {
-  const dir = path.join(agentsDir, `${name}-${agentId.slice(0, 6)}`);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, "profile.md"),
-    `---\nid: ${agentId}\nname: ${name}\nschedule: true\ncreatedAt: ${Date.now()}\n---\nTest prompt`,
-  );
-}
+const SECOND_AGENT_PROFILE = `---
+name: Second Agent
+model: gemini-2.5-pro
+tools:
+  - read_file
+---
+
+Second agent for testing.`;
 
 describe("Scheduler", () => {
   let scheduler: Scheduler;
   let tmpDir: string;
-  let agentsDir: string;
-  const agentId = "test-agent-sched";
-  const otherAgentId = "other-agent-sched";
+  let agentId: string;
+  let otherAgentId: string;
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-scheduler-"));
-    agentsDir = path.join(tmpDir, "agents");
-    fs.mkdirSync(agentsDir, { recursive: true });
-    createAgentDir(agentsDir, agentId, "SchedAgent");
-    createAgentDir(agentsDir, otherAgentId, "OtherSchedAgent");
 
-    const { engine } = await createEngine(tmpDir, { projectName: "Test" });
-    scheduler = new Scheduler(engine, agentsDir);
+    const { engine, projectStore } = await createEngine(tmpDir, {
+      projectName: "Test",
+      logger: pino({ level: "silent" }),
+    });
+
+    const presetAgents = [...projectStore.agents.keys()];
+    agentId = presetAgents[0];
+
+    const secondAgent = await projectStore.createAgent("second-agent", SECOND_AGENT_PROFILE);
+    otherAgentId = secondAgent.getProfile().id;
+
+    scheduler = new Scheduler(engine, projectStore, pino({ level: "silent" }));
+    await scheduler.loadFromAgents();
   });
 
   afterEach(() => {
@@ -98,8 +105,10 @@ describe("Scheduler", () => {
   it("persists schedules between instances", () => {
     const entry = makeEntry({ name: "Persisted" });
     scheduler.register(agentId, entry, true);
+
     const engine = (scheduler as any).engine;
-    const scheduler2 = new Scheduler(engine, agentsDir);
+    const projectStore = (scheduler as any).projectStore;
+    const scheduler2 = new Scheduler(engine, projectStore, pino({ level: "silent" }));
     const found = scheduler2.get(agentId, entry.id);
     expect(found).not.toBeNull();
     expect(found!.name).toBe("Persisted");
@@ -119,7 +128,6 @@ describe("Scheduler", () => {
     expect(scheduler.update(agentId, otherEntry.id, { enabled: false })).toBeNull();
     expect(scheduler.triggerNow(agentId, otherEntry.id)).toBeNull();
 
-    scheduler.unregister(agentId, otherEntry.id);
     expect(scheduler.get(otherAgentId, otherEntry.id)).not.toBeNull();
     expect(scheduler.list(otherAgentId)).toHaveLength(1);
   });

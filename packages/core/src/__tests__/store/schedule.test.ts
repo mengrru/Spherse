@@ -5,28 +5,16 @@ import fs from "node:fs";
 import { ScheduleStore } from "../../store/schedule.js";
 import type { ScheduleEntry } from "../../types.js";
 
-function createAgentDir(agentsDir: string, agentId: string, name: string): string {
-  const dir = path.join(agentsDir, `${name}-${agentId.slice(0, 6)}`);
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, "profile.md"),
-    `---\nid: ${agentId}\nname: ${name}\ncreatedAt: ${Date.now()}\n---\nTest`,
-  );
-  return dir;
-}
-
 describe("ScheduleStore", () => {
   let store: ScheduleStore;
   let tmpDir: string;
-  let agentsDir: string;
-  const agentId = "test-agent-001";
+  let agentDir: string;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-schedule-"));
-    agentsDir = path.join(tmpDir, "agents");
-    fs.mkdirSync(agentsDir, { recursive: true });
-    createAgentDir(agentsDir, agentId, "TestAgent");
-    store = new ScheduleStore(agentsDir);
+    agentDir = path.join(tmpDir, "test-agent");
+    fs.mkdirSync(agentDir, { recursive: true });
+    store = new ScheduleStore(agentDir);
   });
 
   afterEach(() => {
@@ -48,58 +36,58 @@ describe("ScheduleStore", () => {
   }
 
   it("returns empty list when no schedules exist", () => {
-    expect(store.list(agentId)).toEqual([]);
+    expect(store.list()).toEqual([]);
   });
 
   it("creates and lists schedules", () => {
     const entry = makeEntry({ name: "Daily Review" });
-    store.create(agentId, entry);
-    const list = store.list(agentId);
+    store.create(entry);
+    const list = store.list();
     expect(list).toHaveLength(1);
     expect(list[0].name).toBe("Daily Review");
   });
 
   it("gets schedule by id", () => {
     const entry = makeEntry();
-    store.create(agentId, entry);
-    const found = store.get(agentId, entry.id);
+    store.create(entry);
+    const found = store.get(entry.id);
     expect(found).not.toBeNull();
     expect(found!.id).toBe(entry.id);
   });
 
   it("returns null for unknown schedule id", () => {
-    expect(store.get(agentId, "nonexistent")).toBeNull();
+    expect(store.get("nonexistent")).toBeNull();
   });
 
   it("updates a schedule", () => {
     const entry = makeEntry();
-    store.create(agentId, entry);
-    const updated = store.update(agentId, entry.id, { enabled: false, name: "Updated" });
+    store.create(entry);
+    const updated = store.update(entry.id, { enabled: false, name: "Updated" });
     expect(updated!.enabled).toBe(false);
     expect(updated!.name).toBe("Updated");
   });
 
   it("returns null when updating nonexistent schedule", () => {
-    expect(store.update(agentId, "nonexistent", { enabled: false })).toBeNull();
+    expect(store.update("nonexistent", { enabled: false })).toBeNull();
   });
 
   it("deletes a schedule", () => {
     const entry = makeEntry();
-    store.create(agentId, entry);
-    store.delete(agentId, entry.id);
-    expect(store.list(agentId)).toEqual([]);
+    store.create(entry);
+    store.delete(entry.id);
+    expect(store.list()).toEqual([]);
   });
 
-  it("supports multiple schedules per agent", () => {
-    store.create(agentId, makeEntry());
-    store.create(agentId, makeEntry());
-    expect(store.list(agentId)).toHaveLength(2);
+  it("supports multiple schedules", () => {
+    store.create(makeEntry());
+    store.create(makeEntry());
+    expect(store.list()).toHaveLength(2);
   });
 
   it("appends and retrieves logs", () => {
-    store.appendLog(agentId, { scheduleId: "sched-1", sessionId: "sess-1", triggeredAt: 1000, completedAt: 2000, status: "success" });
-    store.appendLog(agentId, { scheduleId: "sched-1", sessionId: "sess-2", triggeredAt: 3000, status: "failed", error: "timeout" });
-    const logs = store.getRecentLogs(agentId);
+    store.appendLog({ scheduleId: "sched-1", sessionId: "sess-1", triggeredAt: 1000, completedAt: 2000, status: "success" });
+    store.appendLog({ scheduleId: "sched-1", sessionId: "sess-2", triggeredAt: 3000, status: "failed", error: "timeout" });
+    const logs = store.getRecentLogs();
     expect(logs).toHaveLength(2);
     expect(logs[0].status).toBe("success");
     expect(logs[1].status).toBe("failed");
@@ -107,27 +95,20 @@ describe("ScheduleStore", () => {
 
   it("respects log limit", () => {
     for (let i = 0; i < 60; i++) {
-      store.appendLog(agentId, { scheduleId: "sched-1", sessionId: `sess-${i}`, triggeredAt: i, status: "success" });
+      store.appendLog({ scheduleId: "sched-1", sessionId: `sess-${i}`, triggeredAt: i, status: "success" });
     }
-    expect(store.getRecentLogs(agentId, 50)).toHaveLength(50);
+    expect(store.getRecentLogs(50)).toHaveLength(50);
   });
 
   it("returns empty logs when file does not exist", () => {
-    expect(store.getRecentLogs(agentId)).toEqual([]);
+    expect(store.getRecentLogs()).toEqual([]);
   });
 
-  it("does not resolve agent directories through symlinks", () => {
-    fs.rmSync(agentsDir, { recursive: true, force: true });
-    fs.mkdirSync(agentsDir, { recursive: true });
-    const externalDir = path.join(tmpDir, "external-agent");
-    fs.mkdirSync(externalDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(externalDir, "profile.md"),
-      `---\nid: ${agentId}\nname: Escaped\ncreatedAt: ${Date.now()}\n---\nTest`,
-    );
-    fs.symlinkSync(externalDir, path.join(agentsDir, "symlink-agent"), "dir");
-
-    expect(() => store.create(agentId, makeEntry())).toThrow(/agent directory not found/);
-    expect(fs.existsSync(path.join(externalDir, "schedules.yml"))).toBe(false);
+  it("deletes all schedules and logs", () => {
+    store.create(makeEntry());
+    store.appendLog({ scheduleId: "sched-1", sessionId: "sess-1", triggeredAt: 1000, status: "success" });
+    store.deleteAll();
+    expect(store.list()).toEqual([]);
+    expect(store.getRecentLogs()).toEqual([]);
   });
 });

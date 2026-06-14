@@ -11,7 +11,7 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
   fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/settings/ai-access",
     async (req) => {
-      return req.projectCtx!.projectStore.getAiAccessSettings();
+      return req.projectCtx!.projectStore.config.getAiAccessSettings();
     },
   );
 
@@ -31,7 +31,7 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
         return reply.code(400).send({ error: "Missing or invalid 'deniedPaths'" });
       }
       try {
-        const settings = await req.projectCtx!.projectStore.updateAiAccessSettings(req.body.deniedPaths);
+        const settings = await req.projectCtx!.projectStore.config.updateAiAccessSettings(req.body.deniedPaths);
         return { ok: true, ...settings };
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });
@@ -42,7 +42,7 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
   fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/settings/welcome-page",
     async (req) => {
-      return req.projectCtx!.projectStore.getWelcomePageSettings();
+      return req.projectCtx!.projectStore.config.getWelcomePageSettings();
     },
   );
 
@@ -66,7 +66,7 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
         return reply.code(400).send({ error: "Missing or invalid 'path'" });
       }
       try {
-        const settings = await req.projectCtx!.projectStore.updateWelcomePageSettings(req.body.path);
+        const settings = await req.projectCtx!.projectStore.config.updateWelcomePageSettings(req.body.path);
         return { ok: true, ...settings };
       } catch (err) {
         return reply.code(400).send({ error: (err as Error).message });

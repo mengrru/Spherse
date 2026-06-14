@@ -1,9 +1,6 @@
 import path from "node:path";
 import { PROJECT_META_DIR } from "./types.js";
 import { ProjectStore } from "./store/project.js";
-import { SessionStore } from "./store/session.js";
-import { AgentProfileStore } from "./store/agent-profile.js";
-import { SkillStore } from "./store/skill.js";
 import { Engine } from "./engine.js";
 import { Scheduler } from "./scheduler.js";
 import { initPresets } from "./presets.js";
@@ -14,6 +11,7 @@ export async function createEngine(
   options?: { projectName?: string; defaultModel?: string; logger?: Logger },
 ): Promise<{ engine: Engine; projectStore: ProjectStore; projectId: string }> {
   const projectStore = new ProjectStore(projectRoot, options?.logger);
+
   let isNewProject = false;
   try {
     await projectStore.open();
@@ -26,27 +24,19 @@ export async function createEngine(
     );
   }
 
-  const config = projectStore.getConfig()!;
-  const spherseDir = path.join(projectRoot, PROJECT_META_DIR);
-  const agentsPath = path.join(spherseDir, config.paths.agents);
-  const profileStore = new AgentProfileStore(agentsPath);
-
-  const skillStore = new SkillStore(path.join(spherseDir, "skills"));
-
   if (isNewProject) {
-    await initPresets(projectRoot, spherseDir, profileStore, options?.logger);
+    const spherseDir = path.join(projectRoot, PROJECT_META_DIR);
+    await initPresets(projectStore, spherseDir, options?.logger);
   }
 
-  const sessionStore = new SessionStore(agentsPath, options?.logger);
-
-  const engine = new Engine(profileStore, sessionStore, projectStore, skillStore, {
+  const engine = new Engine(projectStore, {
     defaultModel: options?.defaultModel,
     logger: options?.logger,
   });
 
-  const scheduler = new Scheduler(engine, agentsPath, options?.logger);
+  const scheduler = new Scheduler(engine, projectStore, options?.logger);
   engine.setScheduler(scheduler);
-  await scheduler.loadFromProfiles();
+  await scheduler.loadFromAgents();
 
-  return { engine, projectStore, projectId: projectStore.getProjectId() };
+  return { engine, projectStore, projectId: projectStore.config.getProjectId() };
 }

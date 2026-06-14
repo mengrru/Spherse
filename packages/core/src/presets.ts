@@ -1,13 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { PRESET_SKILL_SOURCES, PRESET_AGENTS, AGENT_TEMPLATE } from "@spherse/presets";
-import type { AgentProfileStore } from "./store/agent-profile.js";
+import type { ProjectStore } from "./store/project.js";
 import type { Logger } from "./logger.js";
 
 export async function initPresets(
-  projectRoot: string,
+  projectStore: ProjectStore,
   spherseDir: string,
-  profileStore: AgentProfileStore,
   logger?: Logger,
 ): Promise<void> {
   for (const skill of PRESET_SKILL_SOURCES) {
@@ -27,7 +26,7 @@ export async function initPresets(
   for (const agent of PRESET_AGENTS) {
     try {
       const content = AGENT_TEMPLATE.replace("name: 新 Agent", `name: ${agent.name}`);
-      await profileStore.save(agent.slug, content);
+      await projectStore.createAgent(agent.slug, content);
       logger?.info({ agent: agent.name }, "preset agent created");
     } catch (err) {
       logger?.warn({ agent: agent.name, err }, "failed to create preset agent");

@@ -11,18 +11,20 @@
 ## Core 层
 
 - **Engine 是唯一门面**：外部（server）只通过 `Engine` 或 `createEngine` 访问 core 功能，不直接操作 store
+- **Store 树状结构**：store 按「聚合根 → per-agent 子 store」的树状结构组织——`ProjectStore` 作为聚合根持有 `ProjectConfigStore`、`SkillStore` 和 `Map<agentId, AgentStore>`；每个 `AgentStore` 聚合 per-agent 的 `AgentProfileStore`、`SessionStore`、`ScheduleStore`。store 在构造时就确定自己的文件路径，运行时不做 agentId → 目录的查找
 - **Store 只管存储**：store 是对存储层读写的抽象，不持有运行时状态（如活跃的 pi-agent-core Agent 实例）
+- **thin aggregator**：聚合根（`ProjectStore`、`AgentStore`）只持有子 store 并暴露 getter（`projectStore.config`、`agentStore.sessions`），不逐个 wrap 子 store 的方法
 - **结构化日志**：core 使用 pino 记录结构化日志，通过 `createEngine` 工厂函数注入 logger 实例；Engine 在 `sendMessage` 中通过 `logAgentEvent` 记录 agent loop 全生命周期事件（agent_start/turn_start/tool_execution 等），stores 在关键操作（init/create/persist）中输出日志
 - **AgentProfile**：业务层 agent 概念，从 `.spherse/agents/{slug}-{shortId}/profile.md` 解析而来，包含不可变 `id`（UUID）、`createdAt`（创建时间）和 `slug`（目录名）
 - **Agent context**：agent profile 的 `context` 字段声明项目内相对路径，Engine 构建 system prompt 时读取这些文件并注入 `Pre-loaded Context`
-- **AgentProfileStore**：首次读取无 `id` 的 profile.md 时自动生成并回写 `id`，创建 agent 时自动写入 `createdAt` 且更新时保持不变；支持 `getRawContent(id)` 获取原始 Markdown 内容用于编辑
+- **AgentProfileStore**：per-agent，首次读取无 `id` 的 profile.md 时自动生成并回写 `id`，创建 agent 时自动写入 `createdAt` 且更新时保持不变；支持 `getRawContent()` 获取原始 Markdown 内容用于编辑
 - **工具分配**：agent profile 未声明 `tools` 时默认不分配任何工具（空列表）；前端新建 agent 时通过模板默认勾选全部工具
 - **工具集合**：默认工具由 `createToolsForProject` 组装，包括文件读写、字符串替换编辑、文件列表、内容搜索、文件移动与复制、changelog 追加、skill 加载和 HTML card 渲染
 - **路径安全**：项目内路径统一通过 `utils/path-safety.ts` 的 `resolveProjectPath` / `isPathInside` / `assertInsideProject` 解析和校验，core tools、agent context 读取和 server 内容路由共享同一边界判断
 - **写入互斥**：`write_file`、`edit_file`、`append_changelog`、`move_file`、`copy_file` 共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
 - **删除 agent**：由 Engine 协调，归档关联 sessions 后删除 agent 目录
 - **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），Engine 在构建 system prompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
-- **定时调度**：`Scheduler` 类使用 `cron-parser` 解析 cron 表达式，通过单个 `setTimeout` 链式轮询所有已启用任务。轮询间隔为 10 分钟，首次轮询对齐到最近的 10 分钟整数倍时间；Engine 通过 `setScheduler` 注入，`loadFromProfiles` 在 Engine 启动时读取所有 agent 的 `schedules.yml` 并注册运行时状态
+- **定时调度**：`Scheduler` 类使用 `cron-parser` 解析 cron 表达式，通过单个 `setTimeout` 链式轮询所有已启用任务。轮询间隔为 10 分钟，首次轮询对齐到最近的 10 分钟整数倍时间；Engine 通过 `setScheduler` 注入，`loadFromAgents` 在 Engine 启动时遍历 `ProjectStore.agents` 读取每个 agent 的 `schedules.yml` 并注册运行时状态
 - **AI 文件读取限制**：项目配置可声明 `aiAccess.deniedPaths`；Engine 构建 agent 时通过动态 access policy 限制 `read_file`、`list_files`、`search_content`、`render_card file_path`、`edit_file`、`move_file`、`copy_file` 的内部读取和 profile context 注入
 - **项目欢迎页设置**：项目配置可声明 `welcomePage.path`，保存项目根目录内 HTML 或图片相对路径；该设置仅供 renderer 欢迎页展示使用，不注入 agent prompt，也不影响 AI 工具访问策略
 - **预置内容注入**：`createEngine` 检测到新项目时调用 `initPresets()`，将 `@spherse/presets` 声明的预置 skill 完整目录复制到 `.spherse/skills/`，并根据 `PRESET_AGENTS` 配置自动创建预置 agent（如「世界观创作」）。预置配置来源为 `packages/presets/presets.json`。仅在首次创建时注入，已有项目不受影响；注入后的内容属于用户所有，app 升级不会覆盖
@@ -31,7 +33,7 @@
 
 - **单 Fastify 实例**：整个应用只启动一个 Fastify 实例承载所有项目，由 `createMultiProjectServer()` 创建；不再为每个项目创建独立 server
 - **ProjectRegistry**：`registry.ts` 维护 `Map<projectId, ProjectContext>`，项目打开时 `register()`、关闭时 `remove()`；`ProjectContext` = `{ engine, projectStore, fileWriteMutex, projectId }`
-- **projectId**：由 core 的 `ProjectStore` 在 `.spherse/project.yaml` 中生成（8 位 nanoid），跨重启和路径变化稳定；复制目录导致 id 冲突时 registry 静默改写副本的 project.yaml
+- **projectId**：由 core 的 `ProjectConfigStore` 在 `.spherse/project.yaml` 中生成（8 位 nanoid），跨重启和路径变化稳定；复制目录导致 id 冲突时 registry 静默改写副本的 project.yaml
 - **路由按业务域拆分**到 `routes/` 目录，由 `routes/index.ts` 聚合注册；所有项目级路由统一使用 `/api/projects/:projectId/...` 前缀，`preHandler` 钩子从 registry 解析 projectId 并注入 `req.projectCtx`；全局端点（如 `/api/settings/providers`）不带 projectId
 - **API contract**：HTTP request/response 与 WebSocket message/event 的运行时 schema 定义在 `contracts/`，通过 `@spherse/server/contracts` 子入口导出给 server routes、WebSocket handler 和 renderer API client 复用；边界 JSON 进入业务逻辑前必须先通过 contract helper 解析；chat WebSocket 的 `ChatServerEvent` 是严格的 pi-agent lifecycle 事件 union（agent_start/turn_start/message_start/message_update/message_end/turn_end/agent_end/tool_execution/error 等），renderer 的 chat event 类型直接复用该 contract
 - **运行时 schema**：有 body 的 HTTP route 通过 server contract 中的 TypeBox schema 绑定 Fastify `schema.body` / `schema.response`；WebSocket 收到的 JSON 必须通过 contract parser 校验，非法消息返回统一 error event

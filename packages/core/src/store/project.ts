@@ -1,14 +1,15 @@
 import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
-import YAML from "yaml";
+import crypto from "node:crypto";
+import matter from "gray-matter";
 import { nanoid } from "nanoid";
-import {
-  normalizeDeniedPath,
-  normalizeDeniedPaths,
-} from "../access/ai-file-access.js";
-import type { ProjectConfig } from "../types.js";
+import type { AgentProfile } from "../types.js";
 import { PROJECT_META_DIR } from "../types.js";
+import { ProjectConfigStore } from "./project-config.js";
+import { SkillStore } from "./skill.js";
+import { AgentStore } from "./agent-store.js";
+import { AgentProfileStore, assertSafeSlug } from "./agent-profile.js";
 import type { Logger } from "../logger.js";
 import pino from "pino";
 
@@ -34,24 +35,14 @@ const DEFAULT_AGENTS_MD = `# 世界观项目
 请在此处描述你的世界观项目的目录结构。
 `;
 
-const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
-
-function normalizeWelcomePagePath(input: string): string | null {
-  const trimmed = input.trim().replace(/\\/g, "/");
-  if (!trimmed || trimmed === "." || trimmed.startsWith("/") || trimmed.includes("..")) return null;
-  const normalized = trimmed.replace(/^\.\//, "").replace(/\/+/g, "/");
-  if (!normalized) return null;
-  if (normalized === ".spherse" || normalized.startsWith(".spherse/")) return null;
-  const ext = normalized.split(".").pop()?.toLowerCase();
-  if (!ext || !WELCOME_PAGE_EXTENSIONS.has(ext)) return null;
-  return normalized;
-}
-
 export class ProjectStore {
   private rootPath: string;
-  private config: ProjectConfig | null = null;
   private spherseDir: string;
   private logger: Logger;
+
+  private _configStore: ProjectConfigStore | null = null;
+  private _skillStore: SkillStore | null = null;
+  private _agents: Map<string, AgentStore> = new Map();
 
   constructor(rootPath: string, logger?: Logger) {
     this.rootPath = path.resolve(rootPath);
@@ -59,22 +50,31 @@ export class ProjectStore {
     this.logger = logger ?? pino({ level: "silent" });
   }
 
-  async create(name: string, defaultModel: string): Promise<ProjectConfig> {
-    await fs.mkdir(this.spherseDir, { recursive: true });
-    await fs.mkdir(path.join(this.spherseDir, DEFAULT_PATHS.agents), {
-      recursive: true,
-    });
+  async open(): Promise<void> {
+    const configPath = path.join(this.spherseDir, "project.yaml");
+    this._configStore = new ProjectConfigStore(configPath, this.logger);
+    await this._configStore.read();
 
-    this.config = {
+    this._skillStore = new SkillStore(path.join(this.spherseDir, "skills"));
+
+    await this.loadAgents();
+  }
+
+  async create(name: string, defaultModel: string): Promise<void> {
+    await fs.mkdir(this.spherseDir, { recursive: true });
+    await fs.mkdir(path.join(this.spherseDir, DEFAULT_PATHS.agents), { recursive: true });
+
+    const configPath = path.join(this.spherseDir, "project.yaml");
+    this._configStore = new ProjectConfigStore(configPath, this.logger);
+    await this._configStore.write({
       id: nanoid(8),
       name,
       created: Date.now(),
       defaultModel,
       paths: { ...DEFAULT_PATHS },
-    };
+    });
 
-    const configPath = path.join(this.spherseDir, "project.yaml");
-    await fs.writeFile(configPath, YAML.stringify(this.config), "utf-8");
+    this._skillStore = new SkillStore(path.join(this.spherseDir, "skills"));
 
     const indexPath = path.join(this.rootPath, DEFAULT_PATHS.index);
     await fs.writeFile(indexPath, DEFAULT_AGENTS_MD, "utf-8");
@@ -83,119 +83,106 @@ export class ProjectStore {
     await fs.writeFile(changelogPath, "", "utf-8");
 
     this.logger.info({ rootPath: this.rootPath, name }, "project created");
-    return this.config;
   }
 
-  async open(): Promise<ProjectConfig> {
-    const configPath = path.join(this.spherseDir, "project.yaml");
-    if (!fsSync.existsSync(configPath)) {
-      throw new Error(`project.yaml not found at ${configPath}`);
+  private async loadAgents(): Promise<void> {
+    const agentsDir = path.join(this.spherseDir, this.config.get().paths.agents);
+    let entries: fsSync.Dirent[];
+    try {
+      entries = await fs.readdir(agentsDir, { withFileTypes: true });
+    } catch {
+      return;
     }
 
-    const raw = await fs.readFile(configPath, "utf-8");
-    this.config = YAML.parse(raw) as ProjectConfig;
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const agentDir = path.join(agentsDir, entry.name);
+      const profilePath = path.join(agentDir, "profile.md");
+      const profileStore = new AgentProfileStore(profilePath, entry.name);
+      const profile = await profileStore.read();
+      if (!profile) continue;
 
-    if (!this.config.id) {
-      this.config.id = nanoid(8);
-      await fs.writeFile(configPath, YAML.stringify(this.config), "utf-8");
-      this.logger.info({ rootPath: this.rootPath, id: this.config.id }, "project id generated for legacy project");
+      const agentStore = new AgentStore(agentDir, profile.id, this.logger);
+      await agentStore.open();
+      this._agents.set(profile.id, agentStore);
     }
 
-    this.logger.info({ rootPath: this.rootPath }, "project opened");
-    return this.config;
+    this.logger.info({ count: this._agents.size }, "agents loaded");
   }
 
-  getProjectId(): string {
-    if (!this.config) throw new Error("Project is not open");
-    return this.config.id;
+  get config(): ProjectConfigStore {
+    if (!this._configStore) throw new Error("Project is not open");
+    return this._configStore;
   }
 
-  async regenerateProjectId(newId: string): Promise<void> {
-    if (!this.config) throw new Error("Project is not open");
-    this.config.id = newId;
-    const configPath = path.join(this.spherseDir, "project.yaml");
-    await fs.writeFile(configPath, YAML.stringify(this.config), "utf-8");
-    this.logger.info({ newId }, "project id regenerated");
+  get skill(): SkillStore {
+    if (!this._skillStore) throw new Error("Project is not open");
+    return this._skillStore;
   }
 
-  getConfig(): ProjectConfig | null {
-    return this.config;
-  }
-
-  getAiAccessSettings(): { deniedPaths: string[] } {
-    return { deniedPaths: [...(this.config?.aiAccess?.deniedPaths ?? [])] };
-  }
-
-  getWelcomePageSettings(): { path: string | null } {
-    return { path: this.config?.welcomePage?.path ?? null };
-  }
-
-  async updateWelcomePageSettings(
-    welcomePath: string | null,
-  ): Promise<{ path: string | null }> {
-    if (!this.config) {
-      throw new Error("Project is not open");
-    }
-
-    if (welcomePath !== null) {
-      const normalized = normalizeWelcomePagePath(welcomePath);
-      if (!normalized) {
-        throw new Error(`Invalid welcome page path: ${welcomePath}`);
-      }
-      const nextConfig = { ...this.config, welcomePage: { path: normalized } };
-      const configPath = path.join(this.spherseDir, "project.yaml");
-      await fs.writeFile(configPath, YAML.stringify(nextConfig), "utf-8");
-      this.config = nextConfig;
-      return { path: normalized };
-    }
-
-    const { welcomePage: _, ...rest } = this.config;
-    const nextConfig = rest as ProjectConfig;
-    const configPath = path.join(this.spherseDir, "project.yaml");
-    await fs.writeFile(configPath, YAML.stringify(nextConfig), "utf-8");
-    this.config = nextConfig;
-    return { path: null };
-  }
-
-  async updateAiAccessSettings(
-    deniedPaths: string[],
-  ): Promise<{ deniedPaths: string[] }> {
-    if (!this.config) {
-      throw new Error("Project is not open");
-    }
-
-    for (const deniedPath of deniedPaths) {
-      if (!normalizeDeniedPath(deniedPath)) {
-        throw new Error(`Invalid AI denied path: ${deniedPath}`);
-      }
-    }
-
-    const aiAccess = { deniedPaths: normalizeDeniedPaths(deniedPaths) };
-    const nextConfig = { ...this.config, aiAccess };
-
-    const configPath = path.join(this.spherseDir, "project.yaml");
-    await fs.writeFile(configPath, YAML.stringify(nextConfig), "utf-8");
-
-    this.config = nextConfig;
-
-    return { deniedPaths: [...aiAccess.deniedPaths] };
+  get agents(): ReadonlyMap<string, AgentStore> {
+    return this._agents;
   }
 
   getRootPath(): string {
     return this.rootPath;
   }
 
-  async readProjectId(): Promise<string> {
-    const configPath = path.join(this.spherseDir, "project.yaml");
-    const raw = await fs.readFile(configPath, "utf-8");
-    const config = YAML.parse(raw) as ProjectConfig;
-    return config.id;
+  listAgents(): AgentProfile[] {
+    return [...this._agents.values()].map((a) => a.getProfile());
+  }
+
+  getAgent(agentId: string): AgentStore | undefined {
+    return this._agents.get(agentId);
+  }
+
+  async createAgent(slug: string, content: string, themeContent?: string): Promise<AgentStore> {
+    assertSafeSlug(slug);
+
+    const { data, content: body } = matter(content);
+    if (typeof data.name !== "string") {
+      throw new Error("agent profile name is required");
+    }
+
+    const id = crypto.randomUUID();
+    const createdAt = typeof data.createdAt === "number" ? data.createdAt : Date.now();
+    const frontmatter = { ...data, id, createdAt };
+    const serialized = matter.stringify(body, frontmatter);
+
+    const shortId = id.slice(0, 6);
+    const dirName = `${slug}-${shortId}`;
+    // TODO: 该处可能需要 slug 碰撞检测（查 agents Map + 文件系统），
+    //       当前先假设 slug-shortid 不碰撞，后续按需补全
+    const agentDir = path.join(this.spherseDir, this.config.get().paths.agents, dirName);
+    await fs.mkdir(agentDir, { recursive: true });
+    await fs.writeFile(path.join(agentDir, "profile.md"), serialized, "utf-8");
+
+    if (themeContent !== undefined) {
+      await fs.writeFile(path.join(agentDir, "theme.css"), themeContent, "utf-8");
+    }
+
+    const agentStore = new AgentStore(agentDir, id, this.logger);
+    await agentStore.open();
+    this._agents.set(id, agentStore);
+    this.logger.info({ agentId: id, slug }, "agent created");
+    return agentStore;
+  }
+
+  async deleteAgent(agentId: string): Promise<void> {
+    const agentStore = this._agents.get(agentId);
+    if (!agentStore) return;
+
+    agentStore.close();
+    const agentDir = agentStore.getAgentDir();
+    await fs.rm(agentDir, { recursive: true, force: true });
+    this._agents.delete(agentId);
+    this.logger.info({ agentId }, "agent deleted");
   }
 
   async readIndex(): Promise<string> {
     const indexPath = path.join(
       this.rootPath,
-      this.config?.paths.index ?? DEFAULT_PATHS.index,
+      this.config.get().paths.index ?? DEFAULT_PATHS.index,
     );
     return fs.readFile(indexPath, "utf-8");
   }
@@ -203,7 +190,7 @@ export class ProjectStore {
   async updateIndex(content: string): Promise<void> {
     const indexPath = path.join(
       this.rootPath,
-      this.config?.paths.index ?? DEFAULT_PATHS.index,
+      this.config.get().paths.index ?? DEFAULT_PATHS.index,
     );
     await fs.writeFile(indexPath, content, "utf-8");
   }
@@ -211,10 +198,17 @@ export class ProjectStore {
   async appendChangelog(entry: ChangelogEntry): Promise<void> {
     const changelogPath = path.join(
       this.rootPath,
-      this.config?.paths.changelog ?? DEFAULT_PATHS.changelog,
+      this.config.get().paths.changelog ?? DEFAULT_PATHS.changelog,
     );
     const timestamp = new Date().toISOString();
     const line = `- **[${timestamp}]** ${entry.agent} / ${entry.action} / \`${entry.target}\` — ${entry.description}\n`;
     await fs.appendFile(changelogPath, line, "utf-8");
+  }
+
+  close(): void {
+    for (const agentStore of this._agents.values()) {
+      agentStore.close();
+    }
+    this._agents.clear();
   }
 }

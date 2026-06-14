@@ -1,8 +1,9 @@
 import { EventEmitter } from "node:events";
 import { CronExpressionParser } from "cron-parser";
 import type { Engine } from "./engine.js";
+import type { ProjectStore } from "./store/project.js";
+import type { ScheduleStore } from "./store/schedule.js";
 import type { ScheduleEntry, ScheduleLogEntry } from "./types.js";
-import { ScheduleStore } from "./store/schedule.js";
 import type { Logger } from "./logger.js";
 import pino from "pino";
 
@@ -35,7 +36,7 @@ const TEMPLATE_VARS: Record<string, () => string> = {
 
 export class Scheduler extends EventEmitter {
   private engine: Engine;
-  private scheduleStore: ScheduleStore;
+  private projectStore: ProjectStore;
   private entries: Map<string, ScheduleEntry> = new Map();
   private agentSchedules: Map<string, Set<string>> = new Map();
   private scheduleAgentMap: Map<string, string> = new Map();
@@ -46,12 +47,17 @@ export class Scheduler extends EventEmitter {
   private logger: Logger;
   private static POLL_INTERVAL = 10 * 60 * 1000;
 
-  constructor(engine: Engine, agentsDir: string, logger?: Logger) {
+  constructor(engine: Engine, projectStore: ProjectStore, logger?: Logger) {
     super();
     this.engine = engine;
-    this.scheduleStore = new ScheduleStore(agentsDir, logger);
+    this.projectStore = projectStore;
     this.logger = logger ?? pino({ level: "silent" });
     this.startPolling();
+  }
+
+  private getScheduleStore(agentId: string): ScheduleStore | null {
+    const agentStore = this.projectStore.getAgent(agentId);
+    return agentStore ? agentStore.schedules : null;
   }
 
   private startPolling(): void {
@@ -94,13 +100,13 @@ export class Scheduler extends EventEmitter {
     }
   }
 
-  async loadFromProfiles(): Promise<void> {
-    const profiles = await this.engine.listProfiles();
-    for (const profile of profiles) {
-      this.agentNames.set(profile.id, profile.name);
-      const entries = this.scheduleStore.list(profile.id);
+  async loadFromAgents(): Promise<void> {
+    for (const [agentId, agentStore] of this.projectStore.agents) {
+      const profile = agentStore.getProfile();
+      this.agentNames.set(agentId, profile.name);
+      const entries = agentStore.schedules.list();
       for (const entry of entries) {
-        this.register(profile.id, entry, false);
+        this.register(agentId, entry, false);
       }
     }
     this.logger.info({ count: this.entries.size }, "scheduler loaded");
@@ -118,7 +124,7 @@ export class Scheduler extends EventEmitter {
     scheduleSet.add(entry.id);
 
     if (persist) {
-      this.scheduleStore.create(agentId, entry);
+      this.getScheduleStore(agentId)?.create(entry);
     }
 
     this.recomputeNextTrigger(entry.id, entry.cron);
@@ -133,7 +139,7 @@ export class Scheduler extends EventEmitter {
     this.nextTriggerMap.delete(scheduleId);
     this.inProgress.delete(scheduleId);
     this.agentSchedules.get(agentId)?.delete(scheduleId);
-    this.scheduleStore.delete(agentId, scheduleId);
+    this.getScheduleStore(agentId)?.delete(scheduleId);
     this.logger.info({ agentId, scheduleId }, "schedule unregistered");
   }
 
@@ -148,7 +154,7 @@ export class Scheduler extends EventEmitter {
     }
     this.agentSchedules.delete(agentId);
     this.agentNames.delete(agentId);
-    this.scheduleStore.deleteAll(agentId);
+    this.getScheduleStore(agentId)?.deleteAll();
     this.logger.info({ agentId }, "agent schedules unregistered");
   }
 
@@ -159,7 +165,7 @@ export class Scheduler extends EventEmitter {
 
     const updated = { ...existing, ...partial, updatedAt: Date.now() };
     this.entries.set(scheduleId, updated);
-    this.scheduleStore.update(agentId, scheduleId, updated);
+    this.getScheduleStore(agentId)?.update(scheduleId, updated);
 
     const cronChanged = partial.cron !== undefined && partial.cron !== existing.cron;
     const becameEnabled = !existing.enabled && partial.enabled === true;
@@ -182,7 +188,7 @@ export class Scheduler extends EventEmitter {
   get(agentId: string, scheduleId: string): ScheduleEntry | null {
     const runtimeAgentId = this.scheduleAgentMap.get(scheduleId);
     if (runtimeAgentId !== undefined) return runtimeAgentId === agentId ? this.entries.get(scheduleId) ?? null : null;
-    return this.scheduleStore.get(agentId, scheduleId);
+    return this.getScheduleStore(agentId)?.get(scheduleId) ?? null;
   }
 
   getNextTrigger(agentId: string, scheduleId: string): Date | null {
@@ -194,7 +200,7 @@ export class Scheduler extends EventEmitter {
   }
 
   getRecentLogs(agentId: string, limit?: number): ScheduleLogEntry[] {
-    return this.scheduleStore.getRecentLogs(agentId, limit);
+    return this.getScheduleStore(agentId)?.getRecentLogs(limit) ?? [];
   }
 
   stopAll(): void {
@@ -256,13 +262,13 @@ export class Scheduler extends EventEmitter {
       }
 
       logEntry.sessionId = sessionId;
-      this.scheduleStore.appendLog(agentId, logEntry);
+      this.getScheduleStore(agentId)?.appendLog(logEntry);
 
       const resolvedMessage = this.resolveTemplate(entry);
 
       await this.engine.sendMessage(sessionId, resolvedMessage, (event) => {
         if (event.type === "agent_end") {
-          this.scheduleStore.appendLog(agentId, {
+          this.getScheduleStore(agentId)?.appendLog({
             ...logEntry,
             completedAt: Date.now(),
             status: "success",
@@ -276,7 +282,7 @@ export class Scheduler extends EventEmitter {
         }
       });
     } catch (err) {
-      this.scheduleStore.appendLog(agentId, {
+      this.getScheduleStore(agentId)?.appendLog({
         ...logEntry,
         completedAt: Date.now(),
         status: "failed",

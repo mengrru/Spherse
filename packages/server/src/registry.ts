@@ -43,38 +43,30 @@ export class ProjectRegistry {
   }
 
   private async doRegister(resolvedRoot: string): Promise<ProjectContext> {
-    const tempStore = new ProjectStore(resolvedRoot, this.logger);
-    let projectId: string;
-    try {
-      projectId = await tempStore.readProjectId();
-    } catch {
-      projectId = "(new-project)";
-    }
-
-    const projectLogger = this.logger.child({ projectId });
+    const projectLogger = this.logger.child({});
     const { engine, projectStore } = await createEngine(resolvedRoot, {
       defaultModel: this.defaultModel,
       logger: projectLogger,
     });
-    projectId = projectStore.getProjectId();
 
-    let resolvedId = projectId;
+    let projectId = projectStore.config.getProjectId();
     if (this.projects.has(projectId)) {
-      resolvedId = nanoid(8);
-      await projectStore.regenerateProjectId(resolvedId);
+      const newId = nanoid(8);
+      await projectStore.config.regenerateProjectId(newId);
       this.logger.warn(
-        { originalId: projectId, newId: resolvedId, projectRoot: resolvedRoot },
+        { originalId: projectId, newId, projectRoot: resolvedRoot },
         "project id conflict, regenerated for duplicate directory",
       );
+      projectId = newId;
     }
 
     const ctx: ProjectContext = {
       engine,
       projectStore,
       fileWriteMutex: engine.getFileWriteMutex(),
-      projectId: resolvedId,
+      projectId,
     };
-    this.projects.set(resolvedId, ctx);
+    this.projects.set(projectId, ctx);
     return ctx;
   }
 

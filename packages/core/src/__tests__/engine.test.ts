@@ -2,24 +2,29 @@ import { describe, expect, it, vi } from "vitest";
 import pino from "pino";
 import { Engine } from "../engine.js";
 import type { SessionInfo } from "../types.js";
+import type { ProjectStore } from "../store/project.js";
+import type { AgentStore } from "../store/agent-store.js";
 
 function createEngineWithSessions(initial: Record<string, SessionInfo>) {
   const sessions = new Map(Object.entries(initial));
   const sessionStore = {
-    getSession: vi.fn((_agentId: string, id: string) => sessions.get(id) ?? null),
-    updateSessionTitle: vi.fn((_agentId: string, id: string, title: string) => {
+    getSession: vi.fn((id: string) => sessions.get(id) ?? null),
+    updateSessionTitle: vi.fn((id: string, title: string) => {
       const session = sessions.get(id);
       if (session) sessions.set(id, { ...session, title });
     }),
   };
 
-  const engine = new Engine(
-    {} as ConstructorParameters<typeof Engine>[0],
-    sessionStore as ConstructorParameters<typeof Engine>[1],
-    {} as ConstructorParameters<typeof Engine>[2],
-    {} as ConstructorParameters<typeof Engine>[3],
-    { logger: pino({ level: "silent" }) },
-  );
+  const agentStore = {
+    getProfile: vi.fn(() => ({ id: "agent-1", name: "Test", slug: "test", systemPrompt: "", filePath: "" })),
+    sessions: sessionStore,
+  } as unknown as AgentStore;
+
+  const projectStore = {
+    getAgent: vi.fn(() => agentStore),
+  } as unknown as ProjectStore;
+
+  const engine = new Engine(projectStore, { logger: pino({ level: "silent" }) });
 
   return { engine, sessionStore };
 }
@@ -37,7 +42,7 @@ describe("Engine.renameSession", () => {
 
     const updated = engine.renameSession("agent-1", "session-1", "  New Title  ");
 
-    expect(sessionStore.updateSessionTitle).toHaveBeenCalledWith("agent-1", "session-1", "New Title");
+    expect(sessionStore.updateSessionTitle).toHaveBeenCalledWith("session-1", "New Title");
     expect(updated).toEqual({ ...session, title: "New Title" });
     expect(updated.updatedAt).toBe(2);
   });
