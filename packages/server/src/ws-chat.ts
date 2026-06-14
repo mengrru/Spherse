@@ -18,7 +18,7 @@ export function handleChatWebSocket(
       const { agentId, sessionId } = req.params;
       fastify.log.info({ sessionId, agentId }, "chat ws connected");
 
-      ctx.engine.restoreSession(agentId, sessionId).catch((err) => {
+      ctx.sessionRuntime.restoreSession(agentId, sessionId).catch((err) => {
         const message = err instanceof Error ? err.message : "request failed";
         socket.send(JSON.stringify(parseChatServerEvent({ type: "error", message })));
         socket.close();
@@ -41,7 +41,7 @@ export function handleChatWebSocket(
 
         if (msg.type === "message") {
           try {
-            await ctx.engine.sendMessage(sessionId, msg.content, (event) => {
+            await ctx.sessionRuntime.sendMessage(sessionId, msg.content, (event) => {
               socket.send(JSON.stringify(parseChatServerEvent(event)));
             });
           } catch (err: any) {
@@ -51,11 +51,12 @@ export function handleChatWebSocket(
             );
           }
         } else if (msg.type === "abort") {
-          ctx.engine.abortSession(sessionId);
+          ctx.sessionRuntime.abortSession(sessionId);
         }
       });
 
       socket.on("close", () => {
+        ctx.sessionRuntime.destroySession(sessionId);
         fastify.log.info({ sessionId }, "chat ws disconnected");
       });
     },

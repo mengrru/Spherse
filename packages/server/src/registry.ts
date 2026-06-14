@@ -1,12 +1,13 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
-import { createEngine, ProjectStore } from "@spherse/core";
-import type { Engine, FileWriteMutex, Logger } from "@spherse/core";
+import { createProject } from "@spherse/core";
+import type { ProjectRuntime, ProjectManager, SessionRuntime, Scheduler, Logger } from "@spherse/core";
 
 export interface ProjectContext {
-  engine: Engine;
-  projectStore: ProjectStore;
-  fileWriteMutex: FileWriteMutex;
+  runtime: ProjectRuntime;
+  projectManager: ProjectManager;
+  sessionRuntime: SessionRuntime;
+  scheduler: Scheduler;
   projectId: string;
 }
 
@@ -25,7 +26,7 @@ export class ProjectRegistry {
     const resolvedRoot = path.resolve(projectRoot);
 
     for (const ctx of this.projects.values()) {
-      if (ctx.projectStore.getRootPath() === resolvedRoot) {
+      if (ctx.projectManager.getRootPath() === resolvedRoot) {
         return ctx;
       }
     }
@@ -44,15 +45,15 @@ export class ProjectRegistry {
 
   private async doRegister(resolvedRoot: string): Promise<ProjectContext> {
     const projectLogger = this.logger.child({});
-    const { engine, projectStore } = await createEngine(resolvedRoot, {
+    const runtime = await createProject(resolvedRoot, {
       defaultModel: this.defaultModel,
       logger: projectLogger,
     });
 
-    let projectId = projectStore.config.getProjectId();
+    let projectId = runtime.projectId;
     if (this.projects.has(projectId)) {
       const newId = nanoid(8);
-      await projectStore.config.regenerateProjectId(newId);
+      await runtime.projectManager.regenerateProjectId(newId);
       this.logger.warn(
         { originalId: projectId, newId, projectRoot: resolvedRoot },
         "project id conflict, regenerated for duplicate directory",
@@ -61,9 +62,10 @@ export class ProjectRegistry {
     }
 
     const ctx: ProjectContext = {
-      engine,
-      projectStore,
-      fileWriteMutex: engine.getFileWriteMutex(),
+      runtime,
+      projectManager: runtime.projectManager,
+      sessionRuntime: runtime.sessionRuntime,
+      scheduler: runtime.scheduler,
       projectId,
     };
     this.projects.set(projectId, ctx);
@@ -85,7 +87,7 @@ export class ProjectRegistry {
   async remove(projectId: string): Promise<void> {
     const ctx = this.projects.get(projectId);
     if (!ctx) return;
-    await ctx.engine.shutdown();
+    await ctx.runtime.shutdown();
     this.projects.delete(projectId);
   }
 
@@ -97,7 +99,7 @@ export class ProjectRegistry {
   setDefaultModel(model: string | undefined): void {
     this.defaultModel = model;
     for (const ctx of this.projects.values()) {
-      ctx.engine.setDefaultModel(model);
+      ctx.sessionRuntime.setDefaultModel(model);
     }
   }
 }

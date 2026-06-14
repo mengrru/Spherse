@@ -16,7 +16,7 @@ export function handleScheduleWebSocket(
         socket.close();
         return;
       }
-      const scheduler = ctx.engine.getScheduler();
+      const scheduler = ctx.scheduler;
 
       const onScheduleTriggered = (payload: ScheduleEventPayload) => {
         const event: ScheduleServerEvent = {

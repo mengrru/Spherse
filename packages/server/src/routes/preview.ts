@@ -32,7 +32,7 @@ export function registerPreviewRoutes(fastify: FastifyInstance, _registry: Proje
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectManager.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }

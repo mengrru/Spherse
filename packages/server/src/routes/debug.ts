@@ -6,7 +6,7 @@ export function registerDebugRoutes(fastify: FastifyInstance, _registry: Project
     "/api/projects/:projectId/debug/sessions/:id/turn-context",
     async (req, reply) => {
       try {
-        return req.projectCtx!.engine.getTurnContext(req.params.id);
+        return req.projectCtx!.sessionRuntime.getTurnContext(req.params.id);
       } catch (err: any) {
         return reply.code(404).send({ error: err.message });
       }

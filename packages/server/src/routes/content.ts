@@ -12,7 +12,7 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectManager.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
@@ -54,7 +54,7 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectManager.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
@@ -104,7 +104,7 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectManager.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }
@@ -114,7 +114,7 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
       }
 
       try {
-        await req.projectCtx!.fileWriteMutex.run(absolutePath, async () => {
+        await req.projectCtx!.projectManager.getFileWriteMutex().run(absolutePath, async () => {
           await fs.mkdir(path.dirname(absolutePath), { recursive: true });
           await fs.writeFile(absolutePath, req.body.content, "utf-8");
         });
@@ -140,7 +140,7 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
       const relativePath = req.params["*"];
       let absolutePath: string;
       try {
-        absolutePath = resolveProjectPath(req.projectCtx!.projectStore.getRootPath(), relativePath);
+        absolutePath = resolveProjectPath(req.projectCtx!.projectManager.getRootPath(), relativePath);
       } catch {
         return reply.code(403).send({ error: "Access denied" });
       }

@@ -4,7 +4,7 @@ import os from "node:os";
 import fs from "node:fs";
 import pino from "pino";
 import { Scheduler } from "../scheduler.js";
-import { createEngine } from "../factory.js";
+import { createProject } from "../factory.js";
 import type { ScheduleEntry } from "../types.js";
 
 const SECOND_AGENT_PROFILE = `---
@@ -21,14 +21,19 @@ describe("Scheduler", () => {
   let tmpDir: string;
   let agentId: string;
   let otherAgentId: string;
+  let sessionRuntime: any;
+  let projectStore: any;
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-scheduler-"));
 
-    const { engine, projectStore } = await createEngine(tmpDir, {
+    const runtime = await createProject(tmpDir, {
       projectName: "Test",
       logger: pino({ level: "silent" }),
     });
+
+    sessionRuntime = runtime.sessionRuntime;
+    projectStore = (runtime.projectManager as any).projectStore;
 
     const presetAgents = [...projectStore.agents.keys()];
     agentId = presetAgents[0];
@@ -36,7 +41,8 @@ describe("Scheduler", () => {
     const secondAgent = await projectStore.createAgent("second-agent", SECOND_AGENT_PROFILE);
     otherAgentId = secondAgent.getProfile().id;
 
-    scheduler = new Scheduler(engine, projectStore, pino({ level: "silent" }));
+    runtime.scheduler.stopAll();
+    scheduler = new Scheduler(sessionRuntime, projectStore, pino({ level: "silent" }));
     await scheduler.loadFromAgents();
   });
 
@@ -106,9 +112,7 @@ describe("Scheduler", () => {
     const entry = makeEntry({ name: "Persisted" });
     scheduler.register(agentId, entry, true);
 
-    const engine = (scheduler as any).engine;
-    const projectStore = (scheduler as any).projectStore;
-    const scheduler2 = new Scheduler(engine, projectStore, pino({ level: "silent" }));
+    const scheduler2 = new Scheduler(sessionRuntime, projectStore, pino({ level: "silent" }));
     const found = scheduler2.get(agentId, entry.id);
     expect(found).not.toBeNull();
     expect(found!.name).toBe("Persisted");

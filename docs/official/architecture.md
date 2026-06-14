@@ -2,32 +2,31 @@
 
 ## Package 边界
 
-- **@spherse/core**：纯 Node.js 核心逻辑，负责项目数据、agent profile、session、skill、tool 和 engine 运行时，不依赖 Electron 或 Fastify
+- **@spherse/core**：纯 Node.js 核心逻辑，负责项目数据、agent profile、session、skill、tool 和运行时管理，不依赖 Electron 或 Fastify
 - **@spherse/presets**：内置模板与预置静态内容，构建前通过 `scripts/sync-templates.mjs` 将 `templates/*.md` 同步为可导入常量，并从 `presets.json` 及 `skills/` 目录生成预置 skill 源码和 agent 配置（`PRESET_SKILLS`、`PRESET_AGENTS`、`PRESET_SKILL_SOURCES`），供 core 在新项目创建时注入
-- **@spherse/server**：Fastify API 层，只负责把 HTTP/WebSocket 请求转发到 core 的 Engine 和 ProjectStore
-- **@spherse/app**：Electron + React 桌面应用，负责多项目窗口状态、IPC、renderer UI、每个项目的本地 server 生命周期
-- **@spherse/i18n**：纯 TypeScript i18n 基础设施，维护 locale 类型、翻译资源、`t()` 函数、fallback 规则和校验脚本；React 使用 `@spherse/i18n/react` 子入口的 provider/hook，Electron/server/core 使用同一个纯函数 API
+- **@spherse/server**：Fastify API 层，只负责把 HTTP/WebSocket 请求转发到 core 的三个运行时模块（ProjectManager、SessionRuntime、Scheduler）
 
 ## Core 层
 
-- **Engine 是唯一门面**：外部（server）只通过 `Engine` 或 `createEngine` 访问 core 功能，不直接操作 store
+- **三模块架构**：core 对外暴露三个职责清晰的模块，由 `createProject` factory 创建并组装为 `ProjectRuntime`——`ProjectManager`（项目数据操作门面，包装 ProjectStore）、`SessionRuntime`（活跃 Agent 实例管理）、`Scheduler`（cron 轮询）。`ProjectRuntime` 是轻量协调层，只在操作跨越模块边界时介入（deleteSession、deleteAgent、shutdown）
+- **导出收紧**：store 层只导出 `ProjectStore`（供 core 内部使用），其余 store 类不对外暴露；core 只导出 `ProjectRuntime`、`ProjectManager`、`SessionRuntime`、`Scheduler`、`createProject` 和必要的类型/工具函数。Server 无法直接访问 store 实例
 - **Store 树状结构**：store 按「聚合根 → per-agent 子 store」的树状结构组织——`ProjectStore` 作为聚合根持有 `ProjectConfigStore`、`SkillStore` 和 `Map<agentId, AgentStore>`；每个 `AgentStore` 聚合 per-agent 的 `AgentProfileStore`、`SessionStore`、`ScheduleStore`。store 在构造时就确定自己的文件路径，运行时不做 agentId → 目录的查找
 - **Store 只管存储**：store 是对存储层读写的抽象，不持有运行时状态（如活跃的 pi-agent-core Agent 实例）
 - **thin aggregator**：聚合根（`ProjectStore`、`AgentStore`）只持有子 store 并暴露 getter（`projectStore.config`、`agentStore.sessions`），不逐个 wrap 子 store 的方法
-- **结构化日志**：core 使用 pino 记录结构化日志，通过 `createEngine` 工厂函数注入 logger 实例；Engine 在 `sendMessage` 中通过 `logAgentEvent` 记录 agent loop 全生命周期事件（agent_start/turn_start/tool_execution 等），stores 在关键操作（init/create/persist）中输出日志
+- **结构化日志**：core 使用 pino 记录结构化日志，通过 `createProject` 工厂函数注入 logger 实例；SessionRuntime 在 `sendMessage` 中通过 `logAgentEvent` 记录 agent loop 全生命周期事件（agent_start/turn_start/tool_execution 等），stores 在关键操作（init/create/persist）中输出日志
 - **AgentProfile**：业务层 agent 概念，从 `.spherse/agents/{slug}-{shortId}/profile.md` 解析而来，包含不可变 `id`（UUID）、`createdAt`（创建时间）和 `slug`（目录名）
-- **Agent context**：agent profile 的 `context` 字段声明项目内相对路径，Engine 构建 system prompt 时读取这些文件并注入 `Pre-loaded Context`
+- **Agent context**：agent profile 的 `context` 字段声明项目内相对路径，SessionRuntime 构建 system prompt 时读取这些文件并注入 `Pre-loaded Context`
 - **AgentProfileStore**：per-agent，首次读取无 `id` 的 profile.md 时自动生成并回写 `id`，创建 agent 时自动写入 `createdAt` 且更新时保持不变；支持 `getRawContent()` 获取原始 Markdown 内容用于编辑
 - **工具分配**：agent profile 未声明 `tools` 时默认不分配任何工具（空列表）；前端新建 agent 时通过模板默认勾选全部工具
 - **工具集合**：默认工具由 `createToolsForProject` 组装，包括文件读写、字符串替换编辑、文件列表、内容搜索、文件移动与复制、changelog 追加、skill 加载和 HTML card 渲染
 - **路径安全**：项目内路径统一通过 `utils/path-safety.ts` 的 `resolveProjectPath` / `isPathInside` / `assertInsideProject` 解析和校验，core tools、agent context 读取和 server 内容路由共享同一边界判断
 - **写入互斥**：`write_file`、`edit_file`、`append_changelog`、`move_file`、`copy_file` 共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
-- **删除 agent**：由 Engine 协调，归档关联 sessions 后删除 agent 目录
-- **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），Engine 在构建 system prompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
-- **定时调度**：`Scheduler` 类使用 `cron-parser` 解析 cron 表达式，通过单个 `setTimeout` 链式轮询所有已启用任务。轮询间隔为 10 分钟，首次轮询对齐到最近的 10 分钟整数倍时间；Engine 通过 `setScheduler` 注入，`loadFromAgents` 在 Engine 启动时遍历 `ProjectStore.agents` 读取每个 agent 的 `schedules.yml` 并注册运行时状态
-- **AI 文件读取限制**：项目配置可声明 `aiAccess.deniedPaths`；Engine 构建 agent 时通过动态 access policy 限制 `read_file`、`list_files`、`search_content`、`render_card file_path`、`edit_file`、`move_file`、`copy_file` 的内部读取和 profile context 注入
+- **删除 agent**：compound operation，由 `ProjectRuntime.deleteAgent` 协调——SessionRuntime.evictAgent 清理活跃 session、Scheduler.unregisterAgent 清理定时任务、ProjectManager.deleteAgent 删除数据
+- **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），SessionRuntime 在构建 system prompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
+- **定时调度**：`Scheduler` 类使用 `cron-parser` 解析 cron 表达式，通过单个 `setTimeout` 链式轮询所有已启用任务。轮询间隔为 10 分钟，首次轮询对齐到最近的 10 分钟整数倍时间；`loadFromAgents` 在 `createProject` 时遍历 `ProjectStore.agents` 读取每个 agent 的 `schedules.yml` 并注册运行时状态
+- **AI 文件读取限制**：项目配置可声明 `aiAccess.deniedPaths`；SessionRuntime 构建 agent 时通过动态 access policy 限制 `read_file`、`list_files`、`search_content`、`render_card file_path`、`edit_file`、`move_file`、`copy_file` 的内部读取和 profile context 注入
 - **项目欢迎页设置**：项目配置可声明 `welcomePage.path`，保存项目根目录内 HTML 或图片相对路径；该设置仅供 renderer 欢迎页展示使用，不注入 agent prompt，也不影响 AI 工具访问策略
-- **预置内容注入**：`createEngine` 检测到新项目时调用 `initPresets()`，将 `@spherse/presets` 声明的预置 skill 完整目录复制到 `.spherse/skills/`，并根据 `PRESET_AGENTS` 配置自动创建预置 agent（如「世界观创作」）。预置配置来源为 `packages/presets/presets.json`。仅在首次创建时注入，已有项目不受影响；注入后的内容属于用户所有，app 升级不会覆盖
+- **预置内容注入**：`createProject` 检测到新项目时调用 `initPresets()`，将 `@spherse/presets` 声明的预置 skill 完整目录复制到 `.spherse/skills/`，并根据 `PRESET_AGENTS` 配置自动创建预置 agent（如「世界观创作」）。预置配置来源为 `packages/presets/presets.json`。仅在首次创建时注入，已有项目不受影响；注入后的内容属于用户所有，app 升级不会覆盖
 
 ## Server 层
 

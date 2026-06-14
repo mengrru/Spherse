@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import pino from "pino";
-import { Engine } from "../engine.js";
+import { ProjectManager } from "../project-manager.js";
 import type { SessionInfo } from "../types.js";
 import type { ProjectStore } from "../store/project.js";
 import type { AgentStore } from "../store/agent-store.js";
 
-function createEngineWithSessions(initial: Record<string, SessionInfo>) {
+function createProjectManagerWithSessions(initial: Record<string, SessionInfo>) {
   const sessions = new Map(Object.entries(initial));
   const sessionStore = {
     getSession: vi.fn((id: string) => sessions.get(id) ?? null),
@@ -24,12 +24,12 @@ function createEngineWithSessions(initial: Record<string, SessionInfo>) {
     getAgent: vi.fn(() => agentStore),
   } as unknown as ProjectStore;
 
-  const engine = new Engine(projectStore, { logger: pino({ level: "silent" }) });
+  const manager = new ProjectManager(projectStore, pino({ level: "silent" }));
 
-  return { engine, sessionStore };
+  return { manager, sessionStore };
 }
 
-describe("Engine.renameSession", () => {
+describe("ProjectManager.renameSession", () => {
   it("renames an existing session and returns the updated session", () => {
     const session: SessionInfo = {
       id: "session-1",
@@ -38,9 +38,9 @@ describe("Engine.renameSession", () => {
       updatedAt: 2,
       status: "active",
     };
-    const { engine, sessionStore } = createEngineWithSessions({ "session-1": session });
+    const { manager, sessionStore } = createProjectManagerWithSessions({ "session-1": session });
 
-    const updated = engine.renameSession("agent-1", "session-1", "  New Title  ");
+    const updated = manager.renameSession("agent-1", "session-1", "  New Title  ");
 
     expect(sessionStore.updateSessionTitle).toHaveBeenCalledWith("session-1", "New Title");
     expect(updated).toEqual({ ...session, title: "New Title" });
@@ -48,7 +48,7 @@ describe("Engine.renameSession", () => {
   });
 
   it("rejects an empty title", () => {
-    const { engine } = createEngineWithSessions({
+    const { manager } = createProjectManagerWithSessions({
       "session-1": {
         id: "session-1",
         agentId: "agent-1",
@@ -58,11 +58,11 @@ describe("Engine.renameSession", () => {
       },
     });
 
-    expect(() => engine.renameSession("agent-1", "session-1", "   ")).toThrow("title is required");
+    expect(() => manager.renameSession("agent-1", "session-1", "   ")).toThrow("title is required");
   });
 
   it("rejects a title longer than 80 characters", () => {
-    const { engine } = createEngineWithSessions({
+    const { manager } = createProjectManagerWithSessions({
       "session-1": {
         id: "session-1",
         agentId: "agent-1",
@@ -72,15 +72,15 @@ describe("Engine.renameSession", () => {
       },
     });
 
-    expect(() => engine.renameSession("agent-1", "session-1", "a".repeat(81))).toThrow(
+    expect(() => manager.renameSession("agent-1", "session-1", "a".repeat(81))).toThrow(
       "title must be 80 characters or less",
     );
   });
 
   it("throws when the session does not exist", () => {
-    const { engine } = createEngineWithSessions({});
+    const { manager } = createProjectManagerWithSessions({});
 
-    expect(() => engine.renameSession("agent-1", "missing", "New Title")).toThrow(
+    expect(() => manager.renameSession("agent-1", "missing", "New Title")).toThrow(
       'Session "missing" not found',
     );
   });

@@ -14,10 +14,7 @@ export function registerAgentWriteRoutes(fastify: FastifyInstance, _registry: Pr
         return reply.code(400).send({ error: "invalid slug" });
 
       try {
-        const profile = await req.projectCtx!.engine.saveProfile(slug, content);
-        if (themeContent !== undefined) {
-          await req.projectCtx!.engine.saveAgentTheme(profile.id, themeContent);
-        }
+        const profile = await req.projectCtx!.projectManager.createAgent(slug, content, themeContent);
         return { ok: true, id: profile.id };
       } catch (err: any) {
         return reply.code(500).send({ error: err.message });
@@ -32,15 +29,12 @@ export function registerAgentWriteRoutes(fastify: FastifyInstance, _registry: Pr
       if (!content)
         return reply.code(400).send({ error: "content is required" });
 
-      const profile = await req.projectCtx!.engine.getProfile(req.params.id);
-      if (!profile)
+      const existing = req.projectCtx!.projectManager.getAgentProfile(req.params.id);
+      if (!existing)
         return reply.code(404).send({ error: "Agent not found" });
 
       try {
-        const updated = await req.projectCtx!.engine.saveProfile(profile.slug, content);
-        if (themeContent !== undefined) {
-          await req.projectCtx!.engine.saveAgentTheme(req.params.id, themeContent);
-        }
+        const updated = await req.projectCtx!.projectManager.updateAgent(req.params.id, content, themeContent);
         return { ok: true, id: updated.id };
       } catch (err: any) {
         return reply.code(500).send({ error: err.message });
@@ -52,7 +46,7 @@ export function registerAgentWriteRoutes(fastify: FastifyInstance, _registry: Pr
     "/api/projects/:projectId/agents/:id",
     async (req, reply) => {
       try {
-        await req.projectCtx!.engine.deleteProfile(req.params.id);
+        await req.projectCtx!.runtime.deleteAgent(req.params.id);
         return { ok: true };
       } catch (err: any) {
         return reply.code(404).send({ error: err.message });

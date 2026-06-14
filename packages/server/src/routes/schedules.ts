@@ -16,7 +16,7 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
   fastify.get<{ Params: { projectId: string; agentId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules",
     async (req) => {
-      const scheduler = req.projectCtx!.engine.getScheduler();
+      const scheduler = req.projectCtx!.scheduler;
       const entries = scheduler.list(req.params.agentId);
       return entries.map((entry) => ({
         ...entry,
@@ -28,7 +28,7 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
   fastify.get<{ Params: { projectId: string; agentId: string; scheduleId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId",
     async (req, reply) => {
-      const entry = req.projectCtx!.engine.getScheduler().get(req.params.agentId, req.params.scheduleId);
+      const entry = req.projectCtx!.scheduler.get(req.params.agentId, req.params.scheduleId);
       if (!entry) return reply.code(404).send({ error: "Schedule not found" });
       return entry;
     },
@@ -45,7 +45,7 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
         if (data.mode === "existing_session" && !data.targetSessionId) {
           return reply.code(400).send({ error: "targetSessionId is required for existing_session mode" });
         }
-        const scheduler = req.projectCtx!.engine.getScheduler();
+        const scheduler = req.projectCtx!.scheduler;
         const now = Date.now();
         const entry = {
           id: crypto.randomUUID(),
@@ -78,14 +78,14 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
           const cronErr = validateCron(data.cron);
           if (cronErr !== true) return reply.code(400).send({ error: `invalid cron: ${cronErr}` });
         }
-        const existing = req.projectCtx!.engine.getScheduler().get(req.params.agentId, req.params.scheduleId);
+        const existing = req.projectCtx!.scheduler.get(req.params.agentId, req.params.scheduleId);
         if (!existing) return reply.code(404).send({ error: "Schedule not found" });
         const resolvedMode = data.mode ?? existing.mode;
         const resolvedTarget = data.targetSessionId !== undefined ? data.targetSessionId : existing.targetSessionId;
         if (resolvedMode === "existing_session" && !resolvedTarget) {
           return reply.code(400).send({ error: "targetSessionId is required for existing_session mode" });
         }
-        const updated = req.projectCtx!.engine.getScheduler().update(req.params.agentId, req.params.scheduleId, data);
+        const updated = req.projectCtx!.scheduler.update(req.params.agentId, req.params.scheduleId, data);
         return updated;
       } catch (err: any) {
         return reply.code(400).send({ error: err.message });
@@ -96,7 +96,7 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
   fastify.delete<{ Params: { projectId: string; agentId: string; scheduleId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId",
     async (req) => {
-      req.projectCtx!.engine.getScheduler().unregister(req.params.agentId, req.params.scheduleId);
+      req.projectCtx!.scheduler.unregister(req.params.agentId, req.params.scheduleId);
       return { ok: true };
     },
   );
@@ -105,7 +105,7 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId/trigger",
     async (req, reply) => {
       try {
-        const scheduler = req.projectCtx!.engine.getScheduler();
+        const scheduler = req.projectCtx!.scheduler;
         const entry = scheduler.get(req.params.agentId, req.params.scheduleId);
         if (!entry) return reply.code(404).send({ error: "Schedule not found" });
         scheduler.triggerNow(req.params.agentId, req.params.scheduleId);
@@ -120,7 +120,7 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
     "/api/projects/:projectId/agents/:agentId/schedule-logs",
     async (req) => {
       const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
-      return req.projectCtx!.engine.getScheduler().getRecentLogs(req.params.agentId, limit);
+      return req.projectCtx!.scheduler.getRecentLogs(req.params.agentId, limit);
     },
   );
 }

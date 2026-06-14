@@ -16,7 +16,7 @@ export function handleFsWatchWebSocket(
         socket.close();
         return;
       }
-      const projectRoot = ctx.projectStore.getRootPath();
+      const projectRoot = ctx.projectManager.getRootPath();
       fastify.log.info("fs-watch ws connected");
       let alive = true;
 

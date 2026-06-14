@@ -9,7 +9,7 @@ export function registerFileTreeRoutes(fastify: FastifyInstance, _registry: Proj
   fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/file-tree",
     async (req) => {
-      const root = req.projectCtx!.projectStore.getRootPath();
+      const root = req.projectCtx!.projectManager.getRootPath();
       const files: string[] = [];
       await walkDir(root, "", files);
       return files;

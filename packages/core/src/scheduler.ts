@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { CronExpressionParser } from "cron-parser";
-import type { Engine } from "./engine.js";
+import type { SessionRuntime } from "./session-runtime.js";
 import type { ProjectStore } from "./store/project.js";
 import type { ScheduleStore } from "./store/schedule.js";
 import type { ScheduleEntry, ScheduleLogEntry } from "./types.js";
@@ -35,7 +35,7 @@ const TEMPLATE_VARS: Record<string, () => string> = {
 };
 
 export class Scheduler extends EventEmitter {
-  private engine: Engine;
+  private sessionRuntime: SessionRuntime;
   private projectStore: ProjectStore;
   private entries: Map<string, ScheduleEntry> = new Map();
   private agentSchedules: Map<string, Set<string>> = new Map();
@@ -47,9 +47,9 @@ export class Scheduler extends EventEmitter {
   private logger: Logger;
   private static POLL_INTERVAL = 10 * 60 * 1000;
 
-  constructor(engine: Engine, projectStore: ProjectStore, logger?: Logger) {
+  constructor(sessionRuntime: SessionRuntime, projectStore: ProjectStore, logger?: Logger) {
     super();
-    this.engine = engine;
+    this.sessionRuntime = sessionRuntime;
     this.projectStore = projectStore;
     this.logger = logger ?? pino({ level: "silent" });
     this.startPolling();
@@ -252,10 +252,10 @@ export class Scheduler extends EventEmitter {
       let sessionId: string;
 
       if (entry.mode === "new_session") {
-        sessionId = await this.engine.createSession(agentId, "scheduled");
+        sessionId = await this.sessionRuntime.createSession(agentId, "scheduled");
       } else if (entry.targetSessionId) {
         sessionId = entry.targetSessionId;
-        await this.engine.restoreSession(agentId, sessionId);
+        await this.sessionRuntime.restoreSession(agentId, sessionId);
       } else {
         this.logger.error({ scheduleId: entry.id }, "existing_session mode but no targetSessionId");
         return;
@@ -266,7 +266,7 @@ export class Scheduler extends EventEmitter {
 
       const resolvedMessage = this.resolveTemplate(entry);
 
-      await this.engine.sendMessage(sessionId, resolvedMessage, (event) => {
+      await this.sessionRuntime.sendMessage(sessionId, resolvedMessage, (event) => {
         if (event.type === "agent_end") {
           this.getScheduleStore(agentId)?.appendLog({
             ...logEntry,

@@ -1,16 +1,21 @@
 import path from "node:path";
 import { PROJECT_META_DIR } from "./types.js";
 import { ProjectStore } from "./store/project.js";
-import { Engine } from "./engine.js";
+import { ProjectManager } from "./project-manager.js";
+import { SessionRuntime } from "./session-runtime.js";
 import { Scheduler } from "./scheduler.js";
+import { ProjectRuntime } from "./project-runtime.js";
 import { initPresets } from "./presets.js";
 import type { Logger } from "./logger.js";
+import pino from "pino";
 
-export async function createEngine(
+export async function createProject(
   projectRoot: string,
   options?: { projectName?: string; defaultModel?: string; logger?: Logger },
-): Promise<{ engine: Engine; projectStore: ProjectStore; projectId: string }> {
-  const projectStore = new ProjectStore(projectRoot, options?.logger);
+): Promise<ProjectRuntime> {
+  const logger = options?.logger ?? pino({ level: "silent" });
+
+  const projectStore = new ProjectStore(projectRoot, logger);
 
   let isNewProject = false;
   try {
@@ -26,17 +31,22 @@ export async function createEngine(
 
   if (isNewProject) {
     const spherseDir = path.join(projectRoot, PROJECT_META_DIR);
-    await initPresets(projectStore, spherseDir, options?.logger);
+    await initPresets(projectStore, spherseDir, logger);
   }
 
-  const engine = new Engine(projectStore, {
+  const projectManager = new ProjectManager(projectStore, logger);
+  const sessionRuntime = new SessionRuntime(projectStore, {
     defaultModel: options?.defaultModel,
-    logger: options?.logger,
+    logger,
   });
-
-  const scheduler = new Scheduler(engine, projectStore, options?.logger);
-  engine.setScheduler(scheduler);
+  const scheduler = new Scheduler(sessionRuntime, projectStore, logger);
   await scheduler.loadFromAgents();
 
-  return { engine, projectStore, projectId: projectStore.config.getProjectId() };
+  return new ProjectRuntime({
+    projectManager,
+    sessionRuntime,
+    scheduler,
+    projectId: projectStore.config.getProjectId(),
+    logger,
+  });
 }

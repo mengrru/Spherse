@@ -6,7 +6,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
   fastify.get<{ Params: { projectId: string; agentId: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions",
     async (req) => {
-      return req.projectCtx!.engine.listSessions(req.params.agentId);
+      return req.projectCtx!.projectManager.listSessions(req.params.agentId);
     },
   );
 
@@ -22,7 +22,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
     },
     async (req, reply) => {
       try {
-        const sessionId = await req.projectCtx!.engine.createSession(req.params.agentId);
+        const sessionId = await req.projectCtx!.sessionRuntime.createSession(req.params.agentId);
         return { sessionId };
       } catch (err: any) {
         return reply.code(404).send({ error: err.message });
@@ -33,7 +33,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
   fastify.get<{ Params: { projectId: string; agentId: string; id: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions/:id",
     async (req, reply) => {
-      const session = req.projectCtx!.engine.getSession(req.params.agentId, req.params.id);
+      const session = req.projectCtx!.projectManager.getSession(req.params.agentId, req.params.id);
       if (!session)
         return reply.code(404).send({ error: "Session not found" });
       return session;
@@ -43,7 +43,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
   fastify.get<{ Params: { projectId: string; agentId: string; id: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions/:id/messages",
     async (req) => {
-      return req.projectCtx!.engine.getSessionHistory(req.params.agentId, req.params.id);
+      return req.projectCtx!.projectManager.getSessionHistory(req.params.agentId, req.params.id);
     },
   );
 
@@ -66,7 +66,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
       }
 
       try {
-        return req.projectCtx!.engine.renameSession(req.params.agentId, req.params.id, title);
+        return req.projectCtx!.projectManager.renameSession(req.params.agentId, req.params.id, title);
       } catch (err: any) {
         const message = err instanceof Error ? err.message : "request failed";
         if (message.includes("not found")) {
@@ -80,7 +80,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
   fastify.delete<{ Params: { projectId: string; agentId: string; id: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions/:id",
     async (req) => {
-      req.projectCtx!.engine.deleteSession(req.params.agentId, req.params.id);
+      req.projectCtx!.runtime.deleteSession(req.params.agentId, req.params.id);
       return { ok: true };
     },
   );
