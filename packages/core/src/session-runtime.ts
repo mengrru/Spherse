@@ -1,13 +1,10 @@
-import path from "node:path";
 import { Agent } from "@mariozechner/pi-agent-core";
 import { streamSimple } from "@earendil-works/pi-ai";
 import type { AgentEvent, AgentTool } from "@mariozechner/pi-agent-core";
 import type { AgentProfile } from "./types.js";
-import { PROJECT_META_DIR } from "./types.js";
 import { resolveModelById } from "./model-providers.js";
 import { ProjectStore } from "./store/project.js";
-import { createAiFileAccessPolicy } from "./access/ai-file-access.js";
-import { createToolsForProject } from "./tools/index.js";
+import { createToolsForProject, ToolContext } from "./tools/index.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { readContextFiles } from "./engine/read-context-files.js";
 import { type Logger, createSilentLogger } from "./logger.js";
@@ -153,18 +150,8 @@ export class SessionRuntime {
   ): Promise<Agent> {
     const config = this.projectStore.config.get();
     const projectRoot = this.projectStore.getRootPath();
-    const skillDir = path.join(projectRoot, PROJECT_META_DIR, "skills");
-    const getAiFileAccessPolicy = () => createAiFileAccessPolicy(
-      projectRoot,
-      this.projectStore.config.getAiAccessSettings().deniedPaths,
-    );
-    const allTools = createToolsForProject(
-      projectRoot,
-      this.fileWriteMutex,
-      config.paths.changelog,
-      skillDir,
-      getAiFileAccessPolicy,
-    );
+    const toolContext = new ToolContext(this.projectStore, this.fileWriteMutex);
+    const allTools = createToolsForProject(toolContext);
 
     const toolNames = profile.tools ?? [];
     const tools: AgentTool[] = toolNames
@@ -185,7 +172,7 @@ export class SessionRuntime {
     const contextSection = await readContextFiles(
       projectRoot,
       profile.context,
-      getAiFileAccessPolicy,
+      () => toolContext.getAiFileAccessPolicy(),
     );
     if (contextSection) {
       systemPrompt += contextSection;

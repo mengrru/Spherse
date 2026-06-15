@@ -97,4 +97,17 @@ export default [
       "@typescript-eslint/no-explicit-any": "off",
     },
   },
+  {
+    files: ["packages/core/src/tools/index.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ExportNamedDeclaration[source]",
+          message:
+            "tools/index.ts must not re-export from individual tool files. Use createToolsForProject as the sole entry point.",
+        },
+      ],
+    },
+  },
 ];

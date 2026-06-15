@@ -9,45 +9,26 @@ import { createLoadSkillTool } from "./load-skill.js";
 import { createRenderCardTool } from "./render-card.js";
 import { createMoveFileTool } from "./move-file.js";
 import { createCopyFileTool } from "./copy-file.js";
-import type { AiFileAccessPolicy } from "../access/ai-file-access.js";
-import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+import { ToolContext } from "./tool-context.js";
 
-type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
-
-export { createReadFileTool } from "./read-file.js";
-export { createWriteFileTool } from "./write-file.js";
-export { createEditFileTool } from "./edit-file.js";
-export { createListFilesTool } from "./list-files.js";
-export { createSearchContentTool } from "./search-content.js";
-export { createAppendChangelogTool } from "./append-changelog.js";
-export { createLoadSkillTool } from "./load-skill.js";
-export { createRenderCardTool } from "./render-card.js";
-export { createMoveFileTool } from "./move-file.js";
-export { createCopyFileTool } from "./copy-file.js";
-export { FileWriteMutex } from "../utils/file-write-mutex.js";
+export { ToolContext };
 
 export function createToolsForProject(
-  projectRoot: string,
-  mutex: FileWriteMutex,
-  changelogPath?: string,
-  skillDir?: string,
-  getAiFileAccessPolicy?: AiFileAccessPolicyProvider,
+  ctx: ToolContext,
 ): Record<string, AgentTool<any>> {
+  const getPolicy = () => ctx.getAiFileAccessPolicy();
   const tools: Record<string, AgentTool<any>> = {
-    read_file: createReadFileTool(projectRoot, getAiFileAccessPolicy),
-    write_file: createWriteFileTool(projectRoot, mutex),
-    edit_file: createEditFileTool(projectRoot, mutex, getAiFileAccessPolicy),
-    list_files: createListFilesTool(projectRoot, getAiFileAccessPolicy),
-    search_content: createSearchContentTool(projectRoot, getAiFileAccessPolicy),
-    append_changelog: createAppendChangelogTool(projectRoot, changelogPath, mutex),
-    render_card: createRenderCardTool(projectRoot, getAiFileAccessPolicy),
-    move_file: createMoveFileTool(projectRoot, mutex, getAiFileAccessPolicy),
-    copy_file: createCopyFileTool(projectRoot, mutex, getAiFileAccessPolicy),
+    read_file: createReadFileTool(ctx.root, getPolicy),
+    write_file: createWriteFileTool(ctx.root, ctx.mutex),
+    edit_file: createEditFileTool(ctx.root, ctx.mutex, getPolicy),
+    list_files: createListFilesTool(ctx.root, getPolicy),
+    search_content: createSearchContentTool(ctx.root, getPolicy),
+    append_changelog: createAppendChangelogTool(ctx),
+    render_card: createRenderCardTool(ctx.root, getPolicy),
+    move_file: createMoveFileTool(ctx.root, ctx.mutex, getPolicy),
+    copy_file: createCopyFileTool(ctx.root, ctx.mutex, getPolicy),
+    load_skill: createLoadSkillTool(ctx.skill),
   };
-
-  if (skillDir) {
-    tools.load_skill = createLoadSkillTool(skillDir);
-  }
 
   return tools;
 }

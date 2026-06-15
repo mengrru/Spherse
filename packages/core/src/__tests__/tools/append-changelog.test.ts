@@ -1,23 +1,33 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createAppendChangelogTool } from "../../tools/append-changelog.js";
+import { ToolContext } from "../../tools/tool-context.js";
+import { ProjectStore } from "../../store/project.js";
 import { FileWriteMutex } from "../../utils/file-write-mutex.js";
-import { createTempProject, cleanupDir, readFile, pathExists } from "../helpers.js";
+import { createSilentLogger } from "../../logger.js";
+import { createTempProject, cleanupDir, readFile } from "../helpers.js";
 
 describe("createAppendChangelogTool", () => {
   let projectRoot: string;
-  let mutex: FileWriteMutex;
+  let projectStore: ProjectStore;
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    mutex = new FileWriteMutex();
+    projectStore = new ProjectStore(projectRoot, createSilentLogger());
+    await projectStore.create("TestProject", "gemini-2.5-pro");
   });
 
   afterEach(async () => {
+    projectStore.close();
     await cleanupDir(projectRoot);
   });
 
+  function makeTool(): ReturnType<typeof createAppendChangelogTool> {
+    const ctx = new ToolContext(projectStore, new FileWriteMutex());
+    return createAppendChangelogTool(ctx);
+  }
+
   it("appends an entry to CHANGELOG.md", async () => {
-    const tool = createAppendChangelogTool(projectRoot, undefined, mutex);
+    const tool = makeTool();
     const result = await tool.execute(
       "tc1",
       { agent: "writer", action: "create", target: "chapter1.md", description: "Created chapter 1" },
@@ -31,7 +41,7 @@ describe("createAppendChangelogTool", () => {
   });
 
   it("appends multiple entries in order", async () => {
-    const tool = createAppendChangelogTool(projectRoot, undefined, mutex);
+    const tool = makeTool();
     await tool.execute(
       "tc1",
       { agent: "a", action: "create", target: "x", description: "first" },
@@ -46,26 +56,5 @@ describe("createAppendChangelogTool", () => {
     const firstIdx = content.indexOf("first");
     const secondIdx = content.indexOf("second");
     expect(firstIdx).toBeLessThan(secondIdx);
-  });
-
-  it("creates parent directories if needed", async () => {
-    const tool = createAppendChangelogTool(projectRoot, "logs/CHANGELOG.md", mutex);
-    await tool.execute(
-      "tc1",
-      { agent: "a", action: "create", target: "x", description: "test" },
-      undefined as any,
-    );
-    expect(pathExists(projectRoot, "logs/CHANGELOG.md")).toBe(true);
-  });
-
-  it("rejects path traversal on custom changelog path", async () => {
-    const tool = createAppendChangelogTool(projectRoot, "../../etc/evil.md", mutex);
-    await expect(
-      tool.execute(
-        "tc1",
-        { agent: "a", action: "x", target: "x", description: "x" },
-        undefined as any,
-      ),
-    ).rejects.toThrow("Path traversal denied");
   });
 });

@@ -6,7 +6,7 @@ spherse/
 │   ├── core/                         # @spherse/core — 纯 Node.js 核心逻辑
 │   │   └── src/
 │   │       ├── types.ts              # 共享类型与 provider catalog 类型定义
-    │   │       ├── logger.ts            # pino Logger 类型与默认工厂
+    │   │       ├── logger.ts            # pino Logger 类型与 createSilentLogger 内部兜底工厂
     │   │       ├── factory.ts            # createEngine() 工厂函数，封装 store、mutex 创建与新项目预置内容注入
 │   │       ├── presets.ts            # initPresets()：新项目预置 skill 与 agent 注入
 │   │       ├── engine.ts             # Engine：运行时 session 管理 + agent/profile 操作门面
@@ -31,8 +31,9 @@ spherse/
 │   │       │   ├── copy-file.ts
 │   │       │   ├── append-changelog.ts
 │   │       │   ├── load-skill.ts
-│   │       │   ├── render-card.ts    # HTML card 渲染工具
-│   │       │   └── index.ts          # createToolsForProject 工厂
+    │   │       │   ├── render-card.ts    # HTML card 渲染工具
+    │   │       │   ├── tool-context.ts   # ToolContext：收窄 ProjectStore 接口，约束 tool 可用的读写方法
+    │   │       │   └── index.ts          # createToolsForProject(ctx: ToolContext) 工厂
 │   │       ├── scheduler.ts
 │   │       ├── utils/
 │   │       │   ├── file-write-mutex.ts # 文件写入互斥，避免并发写覆盖
@@ -81,8 +82,10 @@ spherse/
 │   │       └── index.ts              # 主入口：纯函数 API
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
-│   │       ├── index.ts              # createServer()，调用 createEngine 组装 AppContext
-│   │       ├── contracts/            # HTTP/WebSocket runtime schema 与解析 helper（@spherse/server/contracts）
+    │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry
+    │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
+    │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove
+    │   │       ├── contracts/            # HTTP/WebSocket runtime schema 与解析 helper（@spherse/server/contracts）
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取

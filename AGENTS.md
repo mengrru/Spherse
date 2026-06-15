@@ -98,6 +98,7 @@ npm run dist:win    # 构建 Windows NSIS 安装包
 - **TypeScript 配置**：target ES2022, module Node16, moduleResolution Node16
 - **依赖规范**：
   - pi-agent-core 的 `AgentTool` 接口使用 `@sinclair/typebox` 定义参数 schema
+- **导出规范**：package 的 `index.ts`（barrel 入口）只导出外部实际使用的符号；外部仅作为类型使用的符号用 `export type` 导出，不导出未在外部消费的内容。定期检查导出清单，移除多余的导出
 - **工具模式**：所有 AgentTool 使用工厂函数模式 `createXxxTool(projectRoot: string): AgentTool`
 - **路径安全**：所有项目内路径解析必须使用 `@spherse/core` 的 `resolveProjectPath` / `assertInsideProject` / `isPathInside`，通过 `path.relative` 判断边界，避免 `startsWith` 前缀误判导致路径穿越
 - **API contract**：HTTP request/response 与 WebSocket message/event 的运行时 schema 统一定义在 `@spherse/server/contracts`，server route、renderer API client 和 WebSocket 边界必须复用同一套 schema/parser，不新增裸 `JSON.parse` 或仅靠 TypeScript 泛型的边界校验

@@ -1,14 +1,12 @@
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { SkillStore } from "../store/skill.js";
+import type { SkillStore } from "../store/skill.js";
 
 const LoadSkillParams = Type.Object({
   skill_name: Type.String({ description: "Name of the skill to load" }),
 });
 
-export function createLoadSkillTool(skillDir: string): AgentTool<typeof LoadSkillParams> {
-  const store = new SkillStore(skillDir);
-
+export function createLoadSkillTool(skillStore: SkillStore): AgentTool<typeof LoadSkillParams> {
   return {
     name: "load_skill",
     label: "Load Skill",
@@ -16,7 +14,7 @@ export function createLoadSkillTool(skillDir: string): AgentTool<typeof LoadSkil
       "Load a skill's full instructions. Use this when you want to activate a skill from the available skills list.",
     parameters: LoadSkillParams,
     async execute(_toolCallId, params, _signal) {
-      const skill = await store.get(params.skill_name);
+      const skill = await skillStore.get(params.skill_name);
       if (!skill) {
         return {
           content: [
