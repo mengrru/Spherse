@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
+import { notFound } from "../errors.js";
 
 export function registerSkillRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get<{ Params: { projectId: string } }>(
@@ -11,9 +12,9 @@ export function registerSkillRoutes(fastify: FastifyInstance, _registry: Project
 
   fastify.get<{ Params: { projectId: string; name: string } }>(
     "/api/projects/:projectId/skills/:name",
-    async (req, reply) => {
+    async (req) => {
       const skill = await req.projectCtx!.projectManager.getSkill(req.params.name);
-      if (!skill) return reply.code(404).send({ error: "Skill not found" });
+      if (!skill) throw notFound("Skill not found");
       return skill;
     },
   );

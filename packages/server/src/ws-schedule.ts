@@ -1,7 +1,43 @@
 import type { FastifyInstance } from "fastify";
-import type { ProjectRegistry } from "./registry.js";
 import type { ScheduleEventPayload } from "@spherse/core";
 import type { ScheduleServerEvent } from "@spherse/server/contracts";
+import type { ProjectRegistry } from "./registry.js";
+
+const EVENT_TYPES = ["schedule_triggered", "schedule_completed", "schedule_failed", "schedule_updated"] as const;
+
+function toServerEvent(type: (typeof EVENT_TYPES)[number], payload: ScheduleEventPayload): ScheduleServerEvent {
+  switch (type) {
+    case "schedule_triggered":
+      return {
+        type: "schedule_triggered",
+        agentId: payload.agentId,
+        scheduleId: payload.scheduleId,
+        sessionId: payload.sessionId,
+        triggeredAt: payload.triggeredAt!,
+      };
+    case "schedule_completed":
+      return {
+        type: "schedule_completed",
+        agentId: payload.agentId,
+        scheduleId: payload.scheduleId,
+        sessionId: payload.sessionId!,
+        status: "success",
+      };
+    case "schedule_failed":
+      return {
+        type: "schedule_failed",
+        agentId: payload.agentId,
+        scheduleId: payload.scheduleId,
+        error: payload.error!,
+      };
+    case "schedule_updated":
+      return {
+        type: "schedule_updated",
+        agentId: payload.agentId,
+        scheduleId: payload.scheduleId,
+      };
+  }
+}
 
 export function handleScheduleWebSocket(
   fastify: FastifyInstance,
@@ -18,57 +54,25 @@ export function handleScheduleWebSocket(
       }
       const scheduler = ctx.scheduler;
 
-      const onScheduleTriggered = (payload: ScheduleEventPayload) => {
-        const event: ScheduleServerEvent = {
-          type: "schedule_triggered",
-          agentId: payload.agentId,
-          scheduleId: payload.scheduleId,
-          sessionId: payload.sessionId,
-          triggeredAt: payload.triggeredAt!,
-        };
-        socket.send(JSON.stringify(event));
+      const safeSend = (event: ScheduleServerEvent) => {
+        try {
+          socket.send(JSON.stringify(event));
+        } catch {
+          // socket already closed — ignore
+        }
       };
 
-      const onScheduleCompleted = (payload: ScheduleEventPayload) => {
-        const event: ScheduleServerEvent = {
-          type: "schedule_completed",
-          agentId: payload.agentId,
-          scheduleId: payload.scheduleId,
-          sessionId: payload.sessionId!,
-          status: "success",
-        };
-        socket.send(JSON.stringify(event));
-      };
-
-      const onScheduleFailed = (payload: ScheduleEventPayload) => {
-        const event: ScheduleServerEvent = {
-          type: "schedule_failed",
-          agentId: payload.agentId,
-          scheduleId: payload.scheduleId,
-          error: payload.error!,
-        };
-        socket.send(JSON.stringify(event));
-      };
-
-      const onScheduleUpdated = (payload: ScheduleEventPayload) => {
-        const event: ScheduleServerEvent = {
-          type: "schedule_updated",
-          agentId: payload.agentId,
-          scheduleId: payload.scheduleId,
-        };
-        socket.send(JSON.stringify(event));
-      };
-
-      scheduler.on("schedule_triggered", onScheduleTriggered);
-      scheduler.on("schedule_completed", onScheduleCompleted);
-      scheduler.on("schedule_failed", onScheduleFailed);
-      scheduler.on("schedule_updated", onScheduleUpdated);
+      const handlers = new Map<(typeof EVENT_TYPES)[number], (payload: ScheduleEventPayload) => void>();
+      for (const type of EVENT_TYPES) {
+        const handler = (payload: ScheduleEventPayload) => safeSend(toServerEvent(type, payload));
+        handlers.set(type, handler);
+        scheduler.on(type, handler);
+      }
 
       socket.on("close", () => {
-        scheduler.off("schedule_triggered", onScheduleTriggered);
-        scheduler.off("schedule_completed", onScheduleCompleted);
-        scheduler.off("schedule_failed", onScheduleFailed);
-        scheduler.off("schedule_updated", onScheduleUpdated);
+        for (const [type, handler] of handlers) {
+          scheduler.off(type, handler);
+        }
       });
     },
   );

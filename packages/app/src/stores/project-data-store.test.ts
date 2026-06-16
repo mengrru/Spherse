@@ -53,7 +53,6 @@ function createClient(overrides: Partial<ApiClient>): ApiClient {
     getFileTree: vi.fn().mockResolvedValue([]),
     getPreviewUrl: vi.fn().mockReturnValue(""),
     getSupportedProviders: vi.fn().mockResolvedValue({}),
-    createChatWebSocket: vi.fn(),
     createFsWatchWebSocket: vi.fn(),
     ...overrides,
   } as ApiClient;

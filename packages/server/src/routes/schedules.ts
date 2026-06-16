@@ -1,15 +1,21 @@
 import type { FastifyInstance } from "fastify";
+import { nanoid } from "nanoid";
 import { CronExpressionParser } from "cron-parser";
-import { schemas, parseContract } from "@spherse/server/contracts";
+import { schemas } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
+import { badRequest, notFound } from "../errors.js";
 
-function validateCron(cron: string): true | string {
+function isValidCron(cron: string): boolean {
   try {
     CronExpressionParser.parse(cron);
     return true;
-  } catch (err: any) {
-    return err.message ?? "invalid cron expression";
+  } catch {
+    return false;
   }
+}
+
+function isValidScheduleMode(mode: string, targetSessionId: string | undefined): boolean {
+  return mode !== "existing_session" || !!targetSessionId;
 }
 
 export function registerScheduleRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
@@ -27,9 +33,9 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
 
   fastify.get<{ Params: { projectId: string; agentId: string; scheduleId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId",
-    async (req, reply) => {
+    async (req) => {
       const entry = req.projectCtx!.scheduler.get(req.params.agentId, req.params.scheduleId);
-      if (!entry) return reply.code(404).send({ error: "Schedule not found" });
+      if (!entry) throw notFound("Schedule not found");
       return entry;
     },
   );
@@ -38,58 +44,66 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
     "/api/projects/:projectId/agents/:agentId/schedules",
     { schema: { body: schemas.createScheduleRequest } },
     async (req, reply) => {
-      try {
-        const data = parseContract(schemas.createScheduleRequest, req.body);
-        const cronErr = validateCron(data.cron);
-        if (cronErr !== true) return reply.code(400).send({ error: `invalid cron: ${cronErr}` });
-        if (data.mode === "existing_session" && !data.targetSessionId) {
-          return reply.code(400).send({ error: "targetSessionId is required for existing_session mode" });
-        }
-        const scheduler = req.projectCtx!.scheduler;
-        const now = Date.now();
-        const entry = {
-          id: crypto.randomUUID(),
-          name: data.name,
-          enabled: true,
-          cron: data.cron,
-          mode: data.mode,
-          targetSessionId: data.targetSessionId,
-          message: data.message,
-          notify: data.notify,
-          notificationMessage: data.notify ? data.notificationMessage : undefined,
-          createdAt: now,
-          updatedAt: now,
-        };
-        scheduler.register(req.params.agentId, entry);
-        return reply.code(201).send(entry);
-      } catch (err: any) {
-        return reply.code(400).send({ error: err.message });
+      const data = req.body as {
+        name?: string;
+        cron: string;
+        mode: "new_session" | "existing_session";
+        targetSessionId?: string;
+        message: string;
+        notify: boolean;
+        notificationMessage?: string;
+      };
+      if (!isValidCron(data.cron)) throw badRequest("invalid cron expression");
+      if (!isValidScheduleMode(data.mode, data.targetSessionId)) {
+        throw badRequest("targetSessionId is required for existing_session mode");
       }
+
+      const scheduler = req.projectCtx!.scheduler;
+      const now = Date.now();
+      const entry = {
+        id: nanoid(),
+        name: data.name,
+        enabled: true,
+        cron: data.cron,
+        mode: data.mode,
+        targetSessionId: data.targetSessionId,
+        message: data.message,
+        notify: data.notify,
+        notificationMessage: data.notify ? data.notificationMessage : undefined,
+        createdAt: now,
+        updatedAt: now,
+      };
+      scheduler.register(req.params.agentId, entry);
+      return reply.code(201).send(entry);
     },
   );
 
   fastify.put<{ Params: { projectId: string; agentId: string; scheduleId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId",
     { schema: { body: schemas.updateScheduleRequest } },
-    async (req, reply) => {
-      try {
-        const data = parseContract(schemas.updateScheduleRequest, req.body);
-        if (data.cron) {
-          const cronErr = validateCron(data.cron);
-          if (cronErr !== true) return reply.code(400).send({ error: `invalid cron: ${cronErr}` });
-        }
-        const existing = req.projectCtx!.scheduler.get(req.params.agentId, req.params.scheduleId);
-        if (!existing) return reply.code(404).send({ error: "Schedule not found" });
-        const resolvedMode = data.mode ?? existing.mode;
-        const resolvedTarget = data.targetSessionId !== undefined ? data.targetSessionId : existing.targetSessionId;
-        if (resolvedMode === "existing_session" && !resolvedTarget) {
-          return reply.code(400).send({ error: "targetSessionId is required for existing_session mode" });
-        }
-        const updated = req.projectCtx!.scheduler.update(req.params.agentId, req.params.scheduleId, data);
-        return updated;
-      } catch (err: any) {
-        return reply.code(400).send({ error: err.message });
+    async (req) => {
+      const data = req.body as {
+        name?: string;
+        enabled?: boolean;
+        cron?: string;
+        mode?: "new_session" | "existing_session";
+        targetSessionId?: string;
+        message?: string;
+        notify?: boolean;
+        notificationMessage?: string;
+      };
+      if (data.cron && !isValidCron(data.cron)) throw badRequest("invalid cron expression");
+
+      const existing = req.projectCtx!.scheduler.get(req.params.agentId, req.params.scheduleId);
+      if (!existing) throw notFound("Schedule not found");
+
+      const resolvedMode = data.mode ?? existing.mode;
+      const resolvedTarget = data.targetSessionId !== undefined ? data.targetSessionId : existing.targetSessionId;
+      if (!isValidScheduleMode(resolvedMode, resolvedTarget)) {
+        throw badRequest("targetSessionId is required for existing_session mode");
       }
+
+      return req.projectCtx!.scheduler.update(req.params.agentId, req.params.scheduleId, data);
     },
   );
 
@@ -103,16 +117,12 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
 
   fastify.post<{ Params: { projectId: string; agentId: string; scheduleId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId/trigger",
-    async (req, reply) => {
-      try {
-        const scheduler = req.projectCtx!.scheduler;
-        const entry = scheduler.get(req.params.agentId, req.params.scheduleId);
-        if (!entry) return reply.code(404).send({ error: "Schedule not found" });
-        scheduler.triggerNow(req.params.agentId, req.params.scheduleId);
-        return { ok: true };
-      } catch (err: any) {
-        return reply.code(400).send({ error: err.message });
-      }
+    async (req) => {
+      const scheduler = req.projectCtx!.scheduler;
+      const entry = scheduler.get(req.params.agentId, req.params.scheduleId);
+      if (!entry) throw notFound("Schedule not found");
+      scheduler.triggerNow(req.params.agentId, req.params.scheduleId);
+      return { ok: true };
     },
   );
 

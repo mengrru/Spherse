@@ -1,10 +1,11 @@
 export * from "./types.js";
+export { NotFoundError, ValidationError, AccessDeniedError } from "./errors.js";
 export type { ProjectRuntime } from "./project-runtime.js";
 export type { ProjectManager } from "./project-manager.js";
 export type { SessionRuntime } from "./session-runtime.js";
 export type { Scheduler } from "./scheduler.js";
 export type { ScheduleEventPayload } from "./scheduler.js";
 export { createProject } from "./factory.js";
-export { resolveProjectPath } from "./utils/path-safety.js";
+export { resolveProjectPath, isProjectMetaPath } from "./utils/path-safety.js";
 export { getSupportedProviders } from "./model-providers.js";
 export type { Logger } from "./logger.js";

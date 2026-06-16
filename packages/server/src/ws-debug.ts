@@ -1,7 +1,8 @@
 import { Writable } from "node:stream";
 import type { FastifyInstance } from "fastify";
+import type { WebSocket } from "@fastify/websocket";
 
-const clients = new Set<any>();
+const clients = new Set<WebSocket>();
 
 export function handleDebugWebSocket(
   fastify: FastifyInstance,

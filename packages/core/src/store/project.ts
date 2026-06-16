@@ -11,6 +11,7 @@ import { SkillStore } from "./skill.js";
 import { AgentStore } from "./agent-store.js";
 import { AgentProfileStore, assertSafeSlug } from "./agent-profile.js";
 import { type Logger, createSilentLogger } from "../logger.js";
+import { ValidationError } from "../errors.js";
 
 export interface ChangelogEntry {
   agent: string;
@@ -140,7 +141,7 @@ export class ProjectStore {
 
     const { data, content: body } = matter(content);
     if (typeof data.name !== "string") {
-      throw new Error("agent profile name is required");
+      throw new ValidationError("agent profile name is required");
     }
 
     const id = crypto.randomUUID();

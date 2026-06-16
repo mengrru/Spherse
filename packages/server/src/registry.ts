@@ -44,7 +44,7 @@ export class ProjectRegistry {
   }
 
   private async doRegister(resolvedRoot: string): Promise<ProjectContext> {
-    const projectLogger = this.logger.child({});
+    const projectLogger = this.logger.child({ projectRoot: resolvedRoot });
     const runtime = await createProject(resolvedRoot, {
       defaultModel: this.defaultModel,
       logger: projectLogger,
@@ -93,13 +93,22 @@ export class ProjectRegistry {
 
   async removeAll(): Promise<void> {
     const ids = this.list();
-    await Promise.all(ids.map((id) => this.remove(id)));
+    const results = await Promise.allSettled(ids.map((id) => this.remove(id)));
+    for (const [i, result] of results.entries()) {
+      if (result.status === "rejected") {
+        this.logger.error({ projectId: ids[i], err: result.reason }, "failed to remove project");
+      }
+    }
   }
 
   setDefaultModel(model: string | undefined): void {
     this.defaultModel = model;
     for (const ctx of this.projects.values()) {
-      ctx.sessionRuntime.setDefaultModel(model);
+      try {
+        ctx.sessionRuntime.setDefaultModel(model);
+      } catch (err) {
+        this.logger.error({ err }, "failed to update default model for project");
+      }
     }
   }
 }

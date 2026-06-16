@@ -9,6 +9,7 @@ import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { readContextFiles } from "./engine/read-context-files.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { logAgentEvent } from "./engine/log-agent-event.js";
+import { NotFoundError } from "./errors.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
 
@@ -47,7 +48,7 @@ export class SessionRuntime {
 
   async createSession(agentId: string, source?: string): Promise<string> {
     const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) throw new Error(`Agent profile "${agentId}" not found`);
+    if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
 
     const profile = agentStore.getProfile();
     const sessionId = agentStore.sessions.createSession(undefined, source);
@@ -61,10 +62,10 @@ export class SessionRuntime {
     if (this.activeSessions.has(sessionId)) return sessionId;
 
     const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) throw new Error(`Agent "${agentId}" not found`);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
 
     const session = agentStore.sessions.getSession(sessionId);
-    if (!session) throw new Error(`Session "${sessionId}" not found`);
+    if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
 
     const profile = agentStore.getProfile();
     const agent = await this.buildAgent(profile, sessionId);
@@ -80,7 +81,7 @@ export class SessionRuntime {
     onEvent: AgentEventHandler,
   ): Promise<void> {
     const entry = this.activeSessions.get(sessionId);
-    if (!entry) throw new Error(`No active session "${sessionId}"`);
+    if (!entry) throw new NotFoundError(`No active session "${sessionId}"`);
 
     const { agent, agentId } = entry;
     const sessionLogger = this.logger.child({ sessionId });
@@ -116,7 +117,7 @@ export class SessionRuntime {
 
   getTurnContext(sessionId: string): TurnContextSnapshot {
     const entry = this.activeSessions.get(sessionId);
-    if (!entry) throw new Error(`No active session "${sessionId}"`);
+    if (!entry) throw new NotFoundError(`No active session "${sessionId}"`);
     const { agent } = entry;
 
     return {

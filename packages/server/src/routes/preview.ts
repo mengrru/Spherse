@@ -3,6 +3,7 @@ import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { resolveProjectPath } from "@spherse/core";
 import type { ProjectRegistry } from "../registry.js";
+import { forbidden, notFound } from "../errors.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   html: "text/html",
@@ -30,23 +31,18 @@ export function registerPreviewRoutes(fastify: FastifyInstance, _registry: Proje
     "/api/projects/:projectId/preview/*",
     async (req, reply) => {
       const relativePath = req.params["*"];
-      let absolutePath: string;
-      try {
-        absolutePath = resolveProjectPath(req.projectCtx!.projectManager.getRootPath(), relativePath);
-      } catch {
-        return reply.code(403).send({ error: "Access denied" });
-      }
+      const absolutePath = resolveProjectPath(req.projectCtx!.projectManager.getRootPath(), relativePath);
 
       const ext = path.extname(absolutePath).slice(1).toLowerCase();
       if (!ALLOWED_EXTENSIONS.has(ext)) {
-        return reply.code(403).send({ error: "File type not allowed" });
+        throw forbidden("File type not allowed");
       }
 
       try {
         const buffer = await fs.readFile(absolutePath);
         return reply.type(CONTENT_TYPES[ext]).send(buffer);
       } catch {
-        return reply.code(404).send({ error: "Not found" });
+        throw notFound("Not found");
       }
     },
   );

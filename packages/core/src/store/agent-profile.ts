@@ -3,6 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
 import type { AgentProfile } from "../types.js";
+import { ValidationError } from "../errors.js";
 
 export class AgentProfileStore {
   private profilePath: string;
@@ -22,7 +23,7 @@ export class AgentProfileStore {
   async save(content: string): Promise<AgentProfile> {
     const { data, content: body } = matter(content);
     if (typeof data.name !== "string") {
-      throw new Error("agent profile name is required");
+      throw new ValidationError("agent profile name is required");
     }
 
     const existingData = await this.readFrontmatter();
@@ -109,6 +110,6 @@ export function assertSafeSlug(slug: string): void {
     slug.includes("/") ||
     slug.includes("\\")
   ) {
-    throw new Error("invalid agent slug");
+    throw new ValidationError("invalid agent slug");
   }
 }

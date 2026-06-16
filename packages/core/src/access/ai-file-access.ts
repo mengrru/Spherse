@@ -1,4 +1,5 @@
 import path from "node:path";
+import { AccessDeniedError } from "../errors.js";
 
 export interface AiFileAccessPolicy {
   deniedPaths: readonly string[];
@@ -61,7 +62,7 @@ export function createAiFileAccessPolicy(
     assertReadableByAi(relativePath: string): void {
       const normalized = normalizeProjectRelativePath(relativePath) ?? relativePath;
       if (this.isDenied(relativePath)) {
-        throw new Error(`Access denied by AI read settings: ${normalized}`);
+        throw new AccessDeniedError(`Access denied by AI read settings: ${normalized}`);
       }
     },
   };

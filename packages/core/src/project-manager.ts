@@ -3,6 +3,7 @@ import { ProjectStore } from "./store/project.js";
 import type { ChangelogEntry } from "./store/project.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { type Logger, createSilentLogger } from "./logger.js";
+import { NotFoundError, ValidationError } from "./errors.js";
 
 export class ProjectManager {
   private projectStore: ProjectStore;
@@ -47,7 +48,7 @@ export class ProjectManager {
 
   async updateAgent(agentId: string, content: string, themeContent?: string): Promise<AgentProfile> {
     const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) throw new Error(`Agent "${agentId}" not found`);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
     const updated = await agentStore.profile.save(content);
     if (themeContent !== undefined) {
       await agentStore.profile.saveTheme(themeContent);
@@ -73,7 +74,7 @@ export class ProjectManager {
 
   async saveAgentTheme(agentId: string, content: string): Promise<void> {
     const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) throw new Error(`Agent "${agentId}" not found`);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
     await agentStore.profile.saveTheme(content);
   }
 
@@ -91,16 +92,16 @@ export class ProjectManager {
 
   renameSession(agentId: string, sessionId: string, title: string): SessionInfo {
     const trimmedTitle = title.trim();
-    if (!trimmedTitle) throw new Error("title is required");
+    if (!trimmedTitle) throw new ValidationError("title is required");
     if (trimmedTitle.length > 80) {
-      throw new Error("title must be 80 characters or less");
+      throw new ValidationError("title must be 80 characters or less");
     }
 
     const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) throw new Error(`Agent "${agentId}" not found`);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
 
     const session = agentStore.sessions.getSession(sessionId);
-    if (!session) throw new Error(`Session "${sessionId}" not found`);
+    if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
 
     agentStore.sessions.updateSessionTitle(sessionId, trimmedTitle);
     return { ...session, title: trimmedTitle };

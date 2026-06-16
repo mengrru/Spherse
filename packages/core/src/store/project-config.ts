@@ -8,6 +8,7 @@ import {
 } from "../access/ai-file-access.js";
 import type { ProjectConfig } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
+import { ValidationError } from "../errors.js";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
 
@@ -78,7 +79,7 @@ export class ProjectConfigStore {
   ): Promise<{ deniedPaths: string[] }> {
     for (const deniedPath of deniedPaths) {
       if (!normalizeDeniedPath(deniedPath)) {
-        throw new Error(`Invalid AI denied path: ${deniedPath}`);
+        throw new ValidationError(`Invalid AI denied path: ${deniedPath}`);
       }
     }
 
@@ -97,7 +98,7 @@ export class ProjectConfigStore {
     if (welcomePath !== null) {
       const normalized = normalizeWelcomePagePath(welcomePath);
       if (!normalized) {
-        throw new Error(`Invalid welcome page path: ${welcomePath}`);
+        throw new ValidationError(`Invalid welcome page path: ${welcomePath}`);
       }
       await this.write({ ...this.get(), welcomePage: { path: normalized } });
       return { path: normalized };

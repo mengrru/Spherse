@@ -44,10 +44,11 @@ export function handleChatWebSocket(
             await ctx.sessionRuntime.sendMessage(sessionId, msg.content, (event) => {
               socket.send(JSON.stringify(parseChatServerEvent(event)));
             });
-          } catch (err: any) {
+          } catch (err) {
             fastify.log.error({ err, sessionId }, "chat ws message error");
+            const message = err instanceof Error ? err.message : "chat error";
             socket.send(
-              JSON.stringify(parseChatServerEvent({ type: "error", message: err.message })),
+              JSON.stringify(parseChatServerEvent({ type: "error", message })),
             );
           }
         } else if (msg.type === "abort") {

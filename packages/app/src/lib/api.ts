@@ -4,13 +4,12 @@ import type {
   ContentResponse,
   FileEntry,
   ChatMessage,
-  AgentEvent,
   ScheduleEntry,
   ScheduleInfo,
   ScheduleLogEntry,
   ScheduleServerEvent,
 } from "./types";
-import { parseApiResponse, parseChatServerEvent, schemas } from "@spherse/server/contracts";
+import { parseApiResponse, schemas } from "@spherse/server/contracts";
 
 async function parseJsonResponse<T>(
   res: Response,
@@ -371,25 +370,6 @@ export function createApiClient(baseUrl: string, projectId: string) {
         try { onEvent(JSON.parse(event.data)); } catch { /* ignore parse errors */ }
       };
       ws.onerror = () => {};
-      return ws;
-    },
-
-    createChatWebSocket(
-      sessionId: string,
-      onEvent: (event: AgentEvent) => void,
-    ): WebSocket {
-      const url = `${wsProjectBase}/chat/${sessionId}`;
-      const ws = new WebSocket(url);
-      ws.onmessage = (event) => {
-        try {
-          onEvent(parseChatServerEvent(JSON.parse(event.data)) as AgentEvent);
-        } catch {
-          onEvent({ type: "error", message: "Invalid WebSocket event" });
-        }
-      };
-      ws.onerror = () => {
-        onEvent({ type: "error", message: "WebSocket connection error" });
-      };
       return ws;
     },
 

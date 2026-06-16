@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ProjectRegistry, ProjectContext } from "../registry.js";
+import { notFound } from "../errors.js";
 import { registerAgentRoutes } from "./agents.js";
 import { registerAgentWriteRoutes } from "./agent-write.js";
 import { registerSessionRoutes } from "./sessions.js";
@@ -18,13 +19,11 @@ declare module "fastify" {
 }
 
 export function registerAllRoutes(fastify: FastifyInstance, registry: ProjectRegistry): void {
-  fastify.addHook("preHandler", async (req: FastifyRequest, reply) => {
+  fastify.addHook("preHandler", async (req: FastifyRequest) => {
     const projectId = (req.params as Record<string, string> | undefined)?.projectId;
     if (projectId === undefined) return;
     const ctx = registry.get(projectId);
-    if (!ctx) {
-      return reply.code(404).send({ error: "Unknown project" });
-    }
+    if (!ctx) throw notFound("Unknown project");
     req.projectCtx = ctx;
   });
 

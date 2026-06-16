@@ -22,20 +22,12 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
         body: schemas.aiAccessSettingsRequest,
         response: {
           200: schemas.aiAccessSettingsResponse,
-          400: schemas.errorResponse,
         },
       },
     },
-    async (req, reply) => {
-      if (!Array.isArray(req.body?.deniedPaths)) {
-        return reply.code(400).send({ error: "Missing or invalid 'deniedPaths'" });
-      }
-      try {
-        const settings = await req.projectCtx!.projectManager.updateAiAccessSettings(req.body.deniedPaths);
-        return { ok: true, ...settings };
-      } catch (err) {
-        return reply.code(400).send({ error: (err as Error).message });
-      }
+    async (req) => {
+      const settings = await req.projectCtx!.projectManager.updateAiAccessSettings(req.body.deniedPaths);
+      return { ok: true, ...settings };
     },
   );
 
@@ -53,24 +45,12 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
         body: schemas.welcomePageSettingsRequest,
         response: {
           200: schemas.welcomePageSettingsResponse,
-          400: schemas.errorResponse,
         },
       },
     },
-    async (req, reply) => {
-      if (
-        !req.body ||
-        !("path" in req.body) ||
-        (typeof req.body.path !== "string" && req.body.path !== null)
-      ) {
-        return reply.code(400).send({ error: "Missing or invalid 'path'" });
-      }
-      try {
-        const settings = await req.projectCtx!.projectManager.updateWelcomePageSettings(req.body.path);
-        return { ok: true, ...settings };
-      } catch (err) {
-        return reply.code(400).send({ error: (err as Error).message });
-      }
+    async (req) => {
+      const settings = await req.projectCtx!.projectManager.updateWelcomePageSettings(req.body.path);
+      return { ok: true, ...settings };
     },
   );
 }

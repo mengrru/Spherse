@@ -4,6 +4,7 @@ import {
   assertInsideProject,
   isPathInside,
   resolveProjectPath,
+  isProjectMetaPath,
 } from "../../utils/path-safety.js";
 
 describe("path-safety", () => {
@@ -33,5 +34,14 @@ describe("path-safety", () => {
     expect(() => resolveProjectPath(root, "../outside.md")).toThrow(
       "Path traversal denied: ../outside.md",
     );
+  });
+
+  it("detects project meta paths with forward and backward slashes", () => {
+    expect(isProjectMetaPath(".spherse")).toBe(true);
+    expect(isProjectMetaPath(".spherse/project.yaml")).toBe(true);
+    expect(isProjectMetaPath(".spherse\\project.yaml")).toBe(true);
+    expect(isProjectMetaPath(".spherse/agents/abc")).toBe(true);
+    expect(isProjectMetaPath("docs/notes.md")).toBe(false);
+    expect(isProjectMetaPath(".spherse-copy")).toBe(false);
   });
 });
