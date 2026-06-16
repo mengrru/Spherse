@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { nanoid } from "nanoid";
 import { CronExpressionParser } from "cron-parser";
 import { schemas } from "@spherse/server/contracts";
+import type { ScheduleCreateRequest, ScheduleUpdateRequest } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { badRequest, notFound } from "../errors.js";
 
@@ -21,38 +22,41 @@ function isValidScheduleMode(mode: string, targetSessionId: string | undefined):
 export function registerScheduleRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get<{ Params: { projectId: string; agentId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules",
-    async (req) => {
-      const scheduler = req.projectCtx!.scheduler;
-      const entries = scheduler.list(req.params.agentId);
-      return entries.map((entry) => ({
-        ...entry,
-        nextTriggerAt: scheduler.getNextTrigger(req.params.agentId, entry.id)?.getTime() ?? null,
-      }));
+    {
+      schema: { response: { 200: schemas.scheduleListResponse } },
+      async handler(req) {
+        const scheduler = req.projectCtx!.scheduler;
+        const entries = scheduler.list(req.params.agentId);
+        return entries.map((entry) => ({
+          ...entry,
+          nextTriggerAt: scheduler.getNextTrigger(req.params.agentId, entry.id)?.getTime() ?? null,
+        }));
+      },
     },
   );
 
   fastify.get<{ Params: { projectId: string; agentId: string; scheduleId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId",
-    async (req) => {
-      const entry = req.projectCtx!.scheduler.get(req.params.agentId, req.params.scheduleId);
-      if (!entry) throw notFound("Schedule not found");
-      return entry;
+    {
+      schema: { response: { 200: schemas.scheduleEntry } },
+      async handler(req) {
+        const entry = req.projectCtx!.scheduler.get(req.params.agentId, req.params.scheduleId);
+        if (!entry) throw notFound("Schedule not found");
+        return entry;
+      },
     },
   );
 
-  fastify.post<{ Params: { projectId: string; agentId: string } }>(
+  fastify.post<{ Params: { projectId: string; agentId: string }; Body: ScheduleCreateRequest }>(
     "/api/projects/:projectId/agents/:agentId/schedules",
-    { schema: { body: schemas.createScheduleRequest } },
+    {
+      schema: {
+        body: schemas.scheduleCreateRequest,
+        response: { 201: schemas.scheduleEntry },
+      },
+    },
     async (req, reply) => {
-      const data = req.body as {
-        name?: string;
-        cron: string;
-        mode: "new_session" | "existing_session";
-        targetSessionId?: string;
-        message: string;
-        notify: boolean;
-        notificationMessage?: string;
-      };
+      const data = req.body;
       if (!isValidCron(data.cron)) throw badRequest("invalid cron expression");
       if (!isValidScheduleMode(data.mode, data.targetSessionId)) {
         throw badRequest("targetSessionId is required for existing_session mode");
@@ -78,20 +82,16 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
     },
   );
 
-  fastify.put<{ Params: { projectId: string; agentId: string; scheduleId: string } }>(
+  fastify.put<{ Params: { projectId: string; agentId: string; scheduleId: string }; Body: ScheduleUpdateRequest }>(
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId",
-    { schema: { body: schemas.updateScheduleRequest } },
+    {
+      schema: {
+        body: schemas.scheduleUpdateRequest,
+        response: { 200: schemas.scheduleEntry },
+      },
+    },
     async (req) => {
-      const data = req.body as {
-        name?: string;
-        enabled?: boolean;
-        cron?: string;
-        mode?: "new_session" | "existing_session";
-        targetSessionId?: string;
-        message?: string;
-        notify?: boolean;
-        notificationMessage?: string;
-      };
+      const data = req.body;
       if (data.cron && !isValidCron(data.cron)) throw badRequest("invalid cron expression");
 
       const existing = req.projectCtx!.scheduler.get(req.params.agentId, req.params.scheduleId);
@@ -109,6 +109,7 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
 
   fastify.delete<{ Params: { projectId: string; agentId: string; scheduleId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId",
+    { schema: { response: { 200: schemas.okResponse } } },
     async (req) => {
       req.projectCtx!.scheduler.unregister(req.params.agentId, req.params.scheduleId);
       return { ok: true };
@@ -117,6 +118,7 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
 
   fastify.post<{ Params: { projectId: string; agentId: string; scheduleId: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedules/:scheduleId/trigger",
+    { schema: { response: { 200: schemas.okResponse } } },
     async (req) => {
       const scheduler = req.projectCtx!.scheduler;
       const entry = scheduler.get(req.params.agentId, req.params.scheduleId);
@@ -128,9 +130,12 @@ export function registerScheduleRoutes(fastify: FastifyInstance, _registry: Proj
 
   fastify.get<{ Params: { projectId: string; agentId: string }; Querystring: { limit?: string } }>(
     "/api/projects/:projectId/agents/:agentId/schedule-logs",
-    async (req) => {
-      const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
-      return req.projectCtx!.scheduler.getRecentLogs(req.params.agentId, limit);
+    {
+      schema: { response: { 200: schemas.scheduleLogListResponse } },
+      async handler(req) {
+        const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
+        return req.projectCtx!.scheduler.getRecentLogs(req.params.agentId, limit);
+      },
     },
   );
 }

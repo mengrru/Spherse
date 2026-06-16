@@ -1,205 +1,83 @@
-import { Type, type Static, type TSchema } from "@sinclair/typebox";
-import { Value } from "@sinclair/typebox/value";
+import * as common from "./common.js";
+import * as agents from "./agents.js";
+import * as sessions from "./sessions.js";
+import * as content from "./content.js";
+import * as fileTree from "./file-tree.js";
+import * as settings from "./settings.js";
+import * as schedules from "./schedules.js";
+import * as skills from "./skills.js";
+import * as debug from "./debug.js";
+import * as websocket from "./websocket.js";
 
-const FileEntrySchema = Type.Object({
-  name: Type.String(),
-  type: Type.Union([Type.Literal("file"), Type.Literal("directory")]),
-});
-const ChatServerEventSchema = Type.Union([
-  Type.Object({ type: Type.Literal("agent_start") }),
-  Type.Object({ type: Type.Literal("agent_end"), messages: Type.Array(Type.Any()) }),
-  Type.Object({ type: Type.Literal("turn_start") }),
-  Type.Object({
-    type: Type.Literal("turn_end"),
-    message: Type.Any(),
-    toolResults: Type.Array(Type.Any()),
-  }),
-  Type.Object({ type: Type.Literal("message_start"), message: Type.Any() }),
-  Type.Object({ type: Type.Literal("message_update"), message: Type.Any(), assistantMessageEvent: Type.Optional(Type.Any()) }),
-  Type.Object({ type: Type.Literal("message_end"), message: Type.Any() }),
-  Type.Object({
-    type: Type.Literal("tool_execution_start"),
-    toolCallId: Type.String(),
-    toolName: Type.String(),
-    args: Type.Any(),
-  }),
-  Type.Object({
-    type: Type.Literal("tool_execution_update"),
-    toolCallId: Type.String(),
-    toolName: Type.String(),
-    args: Type.Any(),
-    partialResult: Type.Any(),
-  }),
-  Type.Object({
-    type: Type.Literal("tool_execution_end"),
-    toolCallId: Type.String(),
-    toolName: Type.String(),
-    result: Type.Any(),
-    isError: Type.Boolean(),
-  }),
-  Type.Object({ type: Type.Literal("error"), message: Type.String() }),
-]);
-const ScheduleEntrySchema = Type.Object({
-  id: Type.String(),
-  name: Type.Optional(Type.String()),
-  enabled: Type.Boolean(),
-  cron: Type.String(),
-  mode: Type.Union([Type.Literal("new_session"), Type.Literal("existing_session")]),
-  targetSessionId: Type.Optional(Type.String()),
-  message: Type.String(),
-  notify: Type.Boolean(),
-  notificationMessage: Type.Optional(Type.String({ maxLength: 30 })),
-  createdAt: Type.Number(),
-  updatedAt: Type.Number(),
-});
-const ScheduleServerEventSchema = Type.Union([
-  Type.Object({
-    type: Type.Literal("schedule_triggered"),
-    agentId: Type.String(),
-    scheduleId: Type.String(),
-    sessionId: Type.Optional(Type.String()),
-    triggeredAt: Type.Number(),
-  }),
-  Type.Object({
-    type: Type.Literal("schedule_completed"),
-    agentId: Type.String(),
-    scheduleId: Type.String(),
-    sessionId: Type.String(),
-    status: Type.Literal("success"),
-  }),
-  Type.Object({
-    type: Type.Literal("schedule_failed"),
-    agentId: Type.String(),
-    scheduleId: Type.String(),
-    error: Type.String(),
-  }),
-  Type.Object({
-    type: Type.Literal("schedule_updated"),
-    agentId: Type.String(),
-    scheduleId: Type.String(),
-    schedule: Type.Optional(ScheduleEntrySchema),
-  }),
-]);
 export const schemas = {
-  okResponse: Type.Object({ ok: Type.Boolean() }),
-  errorResponse: Type.Object({ error: Type.String() }),
-  createSessionRequest: Type.Object({}),
-  createSessionResponse: Type.Object({ sessionId: Type.String() }),
-  sessionInfo: Type.Object({
-    id: Type.String(),
-    agentId: Type.String(),
-    title: Type.Optional(Type.String()),
-    createdAt: Type.Number(),
-    updatedAt: Type.Number(),
-    status: Type.Union([Type.Literal("active"), Type.Literal("archived")]),
-    source: Type.Optional(Type.Union([Type.Literal("manual"), Type.Literal("scheduled")])),
-  }),
-  renameSessionRequest: Type.Object({ title: Type.String() }),
-  saveContentRequest: Type.Object({ content: Type.String() }),
-  createContentRequest: Type.Object({
-    action: Type.Union([Type.Literal("mkdir"), Type.Literal("touch")]),
-  }),
-  fileEntry: FileEntrySchema,
-  fileEntries: Type.Array(FileEntrySchema),
-  fileTreeResponse: Type.Array(Type.String()),
-  contentResponse: Type.Object({
-    content: Type.String(),
-    path: Type.String(),
-  }),
-  aiAccessSettingsRequest: Type.Object({
-    deniedPaths: Type.Array(Type.String()),
-  }),
-  aiAccessSettingsResponse: Type.Object({
-    ok: Type.Boolean(),
-    deniedPaths: Type.Array(Type.String()),
-  }),
-  welcomePageSettingsRequest: Type.Object({
-    path: Type.Union([Type.String(), Type.Null()]),
-  }),
-  welcomePageSettingsResponse: Type.Object({
-    ok: Type.Boolean(),
-    path: Type.Union([Type.String(), Type.Null()]),
-  }),
-  scheduleEntry: ScheduleEntrySchema,
-  createScheduleRequest: Type.Object({
-    name: Type.Optional(Type.String()),
-    cron: Type.String(),
-    mode: Type.Union([Type.Literal("new_session"), Type.Literal("existing_session")]),
-    targetSessionId: Type.Optional(Type.String()),
-    message: Type.String(),
-    notify: Type.Boolean(),
-    notificationMessage: Type.Optional(Type.String({ maxLength: 30 })),
-  }),
-  updateScheduleRequest: Type.Object({
-    name: Type.Optional(Type.String()),
-    enabled: Type.Optional(Type.Boolean()),
-    cron: Type.Optional(Type.String()),
-    mode: Type.Optional(Type.Union([Type.Literal("new_session"), Type.Literal("existing_session")])),
-    targetSessionId: Type.Optional(Type.String()),
-    message: Type.Optional(Type.String()),
-    notify: Type.Optional(Type.Boolean()),
-    notificationMessage: Type.Optional(Type.String({ maxLength: 30 })),
-  }),
-  scheduleLogEntry: Type.Object({
-    scheduleId: Type.String(),
-    scheduleName: Type.Optional(Type.String()),
-    agentName: Type.Optional(Type.String()),
-    sessionId: Type.String(),
-    triggeredAt: Type.Number(),
-    completedAt: Type.Optional(Type.Number()),
-    status: Type.Union([Type.Literal("running"), Type.Literal("success"), Type.Literal("failed")]),
-    error: Type.Optional(Type.String()),
-  }),
-  chatClientMessage: Type.Union([
-    Type.Object({ type: Type.Literal("message"), content: Type.String() }),
-    Type.Object({ type: Type.Literal("abort") }),
-  ]),
-  chatServerEvent: ChatServerEventSchema,
-  scheduleServerEvent: ScheduleServerEventSchema,
+  ...common.schemas,
+  ...agents.schemas,
+  ...sessions.schemas,
+  ...content.schemas,
+  ...fileTree.schemas,
+  ...settings.schemas,
+  ...schedules.schemas,
+  ...skills.schemas,
+  ...debug.schemas,
+  ...websocket.schemas,
 } as const;
 
-export type OkResponse = Static<typeof schemas.okResponse>;
-export type CreateSessionRequest = Static<typeof schemas.createSessionRequest>;
-export type CreateSessionResponse = Static<typeof schemas.createSessionResponse>;
-export type SessionInfoContract = Static<typeof schemas.sessionInfo>;
-export type RenameSessionRequest = Static<typeof schemas.renameSessionRequest>;
-export type SaveContentRequest = Static<typeof schemas.saveContentRequest>;
-export type CreateContentRequest = Static<typeof schemas.createContentRequest>;
-export type FileEntryContract = Static<typeof schemas.fileEntry>;
-export type FileTreeResponse = Static<typeof schemas.fileTreeResponse>;
-export type ContentResponseContract = Static<typeof schemas.contentResponse>;
-export type AiAccessSettingsRequest = Static<typeof schemas.aiAccessSettingsRequest>;
-export type AiAccessSettingsResponse = Static<typeof schemas.aiAccessSettingsResponse>;
-export type WelcomePageSettingsRequest = Static<typeof schemas.welcomePageSettingsRequest>;
-export type WelcomePageSettingsResponse = Static<typeof schemas.welcomePageSettingsResponse>;
-export type ChatClientMessage = Static<typeof schemas.chatClientMessage>;
-export type ChatServerEvent = Static<typeof ChatServerEventSchema>;
-export type CreateScheduleRequest = Static<typeof schemas.createScheduleRequest>;
-export type UpdateScheduleRequest = Static<typeof schemas.updateScheduleRequest>;
-export type ScheduleLogEntryContract = Static<typeof schemas.scheduleLogEntry>;
-export type ScheduleServerEvent = Static<typeof ScheduleServerEventSchema>;
+export { parseContract, parseApiResponse } from "./common.js";
+export type { OkResponse, ErrorResponse } from "./common.js";
 
-export function parseContract<T extends TSchema>(schema: T, payload: unknown): Static<T> {
-  if (!Value.Check(schema, payload)) {
-    const firstError = [...Value.Errors(schema, payload)][0];
-    const message = firstError?.message ?? "unknown validation error";
-    throw new Error(`Invalid payload: ${message}`);
-  }
-  return Value.Parse(schema, payload);
-}
+export type {
+  AgentProfileContract,
+  AgentListResponse,
+  AgentRawResponse,
+  AgentCreateRequest,
+  AgentCreateResponse,
+  AgentUpdateRequest,
+  AgentUpdateResponse,
+} from "./agents.js";
 
-export function parseApiResponse<T extends TSchema>(schema: T, payload: unknown): Static<T> {
-  return parseContract(schema, payload);
-}
+export type {
+  SessionInfoContract,
+  SessionListResponse,
+  SessionCreateResponse,
+  SessionRenameRequest,
+  SessionMessagesResponse,
+} from "./sessions.js";
 
-export function parseChatClientMessage(payload: unknown): ChatClientMessage {
-  return parseContract(schemas.chatClientMessage, payload);
-}
+export type {
+  FileEntryContract,
+  FileEntriesResponse,
+  ContentResponseContract,
+  ContentCreateRequest,
+  ContentSaveRequest,
+} from "./content.js";
 
-export function parseChatServerEvent(payload: unknown): ChatServerEvent {
-  return parseContract(ChatServerEventSchema, payload);
-}
+export type { FileTreeResponse } from "./file-tree.js";
 
-export function parseScheduleServerEvent(payload: unknown): ScheduleServerEvent {
-  return parseContract(ScheduleServerEventSchema, payload);
-}
+export type {
+  ProviderCatalogItemContract,
+  ProviderCatalogContract,
+  AiAccessSettingsRequest,
+  AiAccessSettingsResponse,
+  WelcomePageSettingsRequest,
+  WelcomePageSettingsResponse,
+} from "./settings.js";
+
+export type {
+  ScheduleEntryContract,
+  ScheduleInfoEntryContract,
+  ScheduleListResponse,
+  ScheduleCreateRequest,
+  ScheduleUpdateRequest,
+  ScheduleLogEntryContract,
+  ScheduleLogListResponse,
+} from "./schedules.js";
+
+export type { SkillDefinitionContract, SkillListResponse } from "./skills.js";
+export type { TurnContextSnapshotContract } from "./debug.js";
+
+export {
+  parseChatClientMessage,
+  parseChatServerEvent,
+  parseScheduleServerEvent,
+} from "./websocket.js";
+export type { ChatClientMessage, ChatServerEvent, ScheduleServerEvent } from "./websocket.js";

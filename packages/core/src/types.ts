@@ -18,7 +18,7 @@ export interface AgentProfile {
   id: string;
   name: string;
   slug: string;
-  createdAt: number;
+  createdAt?: number;
   model?: string;
   schedule?: boolean;
   tools?: string[];

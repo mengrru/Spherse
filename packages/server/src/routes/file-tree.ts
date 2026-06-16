@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
+import { schemas } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
 
 const EXCLUDED_DIRS = new Set([".spherse", "node_modules", ".git"]);
@@ -8,11 +9,14 @@ const EXCLUDED_DIRS = new Set([".spherse", "node_modules", ".git"]);
 export function registerFileTreeRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/file-tree",
-    async (req) => {
-      const root = req.projectCtx!.projectManager.getRootPath();
-      const files: string[] = [];
-      await walkDir(root, "", files);
-      return files;
+    {
+      schema: { response: { 200: schemas.fileTreeResponse } },
+      async handler(req) {
+        const root = req.projectCtx!.projectManager.getRootPath();
+        const files: string[] = [];
+        await walkDir(root, "", files);
+        return files;
+      },
     },
   );
 

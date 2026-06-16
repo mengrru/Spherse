@@ -5,6 +5,7 @@
 ## 代码质量
 
 - [ ] **逐步禁止 `any`**：梳理 agent/runtime payload、SQLite row casting、测试 tool context 等现有 `any` 来源，优先通过明确事件/消息/数据库 row 类型替换；完成后开启 `@typescript-eslint/no-explicit-any` 的 warning 或 error 模式。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
+- [ ] **消除 server contract 中的 `Type.Unknown()`**：当前 `contracts/websocket.ts`（chat 事件的 `message`/`args`/`result`/`toolResults`/`assistantMessageEvent`、schedule 事件的 `schedule`）、`contracts/debug.ts`（`messages`、tool `parameters`）、`contracts/sessions.ts`（`sessionMessagesResponse`）用 `Type.Unknown()` 承接 pi-ai/pi-agent-core 的复杂嵌套对象，仅作结构校验。后续应引入 pi-ai `Message` 联合、tool call/result、`AgentMessage[]` 等精确 TypeBox schema 替换，消除所有 `unknown`。
 - [ ] **日志系统完善后收紧 console lint**：引入结构化日志并替换临时 `console.log`/`console.warn`/`console.error` 诊断输出后，开启 `no-console` 或更细粒度 console lint。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
 - [ ] **恢复 React StrictMode 并修复 WebSocket effect cleanup**：`src/main.tsx` 当前移除了 StrictMode 以避免开发模式下双重 mount 导致 WebSocket 错误事件。正确做法是保留 StrictMode，在 `ChatPage` 的 `useEffect` 中用 ref 追踪活跃的 WebSocket 实例，忽略已关闭 socket 的事件。涉及文件：`packages/app/src/pages/ChatPage.tsx`、`packages/app/src/main.tsx`。
 - [x] **统一 UI 基础组件**：引入 shadcn/ui（Base UI base），统一 Button、Dialog、Dropdown、Context Menu、Field、Badge 等基础组件，替代当前散落的内联样式实现。参见 `docs/dev/features/2026-05-30-frontend-refactor-shadcn/design.md`

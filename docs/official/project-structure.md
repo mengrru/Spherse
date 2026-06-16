@@ -86,6 +86,17 @@ spherse/
     │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove
     │   │       ├── contracts/            # HTTP/WebSocket runtime schema 与解析 helper（@spherse/server/contracts）
+    │   │       │   ├── index.ts          # 聚合 schemas 与类型 re-export，对外稳定入口
+    │   │       │   ├── common.ts         # okResponse/errorResponse、parseContract/parseApiResponse
+    │   │       │   ├── agents.ts         # AgentProfile、AgentCreate/Update Request/Response
+    │   │       │   ├── sessions.ts       # SessionInfo、SessionList/Messages Response、rename 请求
+    │   │       │   ├── content.ts        # FileEntry、ContentResponse、create/save 请求
+    │   │       │   ├── file-tree.ts      # FileTreeResponse
+    │   │       │   ├── settings.ts       # ProviderCatalog、AiAccess/WelcomePage Request/Response
+    │   │       │   ├── schedules.ts      # ScheduleEntry、ScheduleCreate/Update 请求、List/Log Response
+    │   │       │   ├── skills.ts         # SkillDefinition、SkillList Response
+    │   │       │   ├── debug.ts          # TurnContextSnapshot
+    │   │       │   └── websocket.ts      # ChatClientMessage/ChatServerEvent/ScheduleServerEvent + parser
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取

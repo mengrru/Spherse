@@ -3,13 +3,28 @@ import type {
   SessionInfo,
   ContentResponse,
   FileEntry,
-  ChatMessage,
   ScheduleEntry,
   ScheduleInfo,
   ScheduleLogEntry,
   ScheduleServerEvent,
+  AgentCreateResponse,
+  AgentUpdateResponse,
+  AiAccessSettingsResponse,
+  WelcomePageSettingsResponse,
 } from "./types";
+import type {
+  ProviderCatalogContract,
+  TurnContextSnapshotContract,
+  SessionMessagesResponse,
+} from "@spherse/server/contracts";
 import { parseApiResponse, schemas } from "@spherse/server/contracts";
+
+async function assertOk(res: Response): Promise<void> {
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "request failed" }));
+    throw new Error(err.error ?? "request failed");
+  }
+}
 
 async function parseJsonResponse<T>(
   res: Response,
@@ -27,38 +42,40 @@ export function createApiClient(baseUrl: string, projectId: string) {
     baseUrl,
     async listAgents(): Promise<AgentProfile[]> {
       const res = await fetch(`${apiBase}/agents`);
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<AgentProfile[]>(res, schemas.agentListResponse);
     },
 
     async getAgent(id: string): Promise<AgentProfile> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(id)}`);
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<AgentProfile>(res, schemas.agentProfile);
     },
 
     async createSession(agentId: string): Promise<{ sessionId: string }> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions`, {
         method: "POST",
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return parseJsonResponse(res, schemas.createSessionResponse);
+      await assertOk(res);
+      return parseJsonResponse<{ sessionId: string }>(res, schemas.sessionCreateResponse);
     },
 
     async getSession(agentId: string, id: string): Promise<SessionInfo> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`);
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<SessionInfo>(res, schemas.sessionInfo);
     },
 
     async listSessions(agentId: string): Promise<SessionInfo[]> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions`);
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<SessionInfo[]>(res, schemas.sessionListResponse);
     },
 
-    async getSessionMessages(agentId: string, id: string): Promise<ChatMessage[]> {
+    async getSessionMessages(agentId: string, id: string): Promise<SessionMessagesResponse> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages`);
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<SessionMessagesResponse>(res, schemas.sessionMessagesResponse);
     },
 
     async listContent(dirPath: string = ""): Promise<FileEntry[]> {
@@ -79,7 +96,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
         `${apiBase}/content/${encodeURIComponent(filePath)}`,
       );
       if (!res.ok) return null;
-      return parseJsonResponse(res, schemas.contentResponse);
+      return parseJsonResponse<ContentResponse>(res, schemas.contentResponse);
     },
 
     async saveContent(filePath: string, content: string): Promise<{ ok: boolean }> {
@@ -91,11 +108,8 @@ export function createApiClient(baseUrl: string, projectId: string) {
           body: JSON.stringify({ content }),
         },
       );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return parseJsonResponse(res, schemas.okResponse);
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async deleteContent(filePath: string): Promise<{ ok: boolean }> {
@@ -105,11 +119,8 @@ export function createApiClient(baseUrl: string, projectId: string) {
           method: "DELETE",
         },
       );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return parseJsonResponse(res, schemas.okResponse);
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async mkdir(dirPath: string): Promise<{ ok: boolean }> {
@@ -121,11 +132,8 @@ export function createApiClient(baseUrl: string, projectId: string) {
           body: JSON.stringify({ action: "mkdir" }),
         },
       );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return parseJsonResponse(res, schemas.okResponse);
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async touchFile(filePath: string): Promise<{ ok: boolean }> {
@@ -137,33 +145,24 @@ export function createApiClient(baseUrl: string, projectId: string) {
           body: JSON.stringify({ action: "touch" }),
         },
       );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return parseJsonResponse(res, schemas.okResponse);
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
-    async createAgent(slug: string, content: string, themeContent?: string): Promise<{ ok: boolean; id: string }> {
+    async createAgent(slug: string, content: string, themeContent?: string): Promise<AgentCreateResponse> {
       const res = await fetch(`${apiBase}/agents/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, content, themeContent }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<AgentCreateResponse>(res, schemas.agentCreateResponse);
     },
 
     async getAgentRaw(id: string): Promise<string> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(id)}/raw`);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      const data = await res.json();
+      await assertOk(res);
+      const data = await parseJsonResponse<{ content: string }>(res, schemas.agentRawResponse);
       return data.content;
     },
 
@@ -173,28 +172,22 @@ export function createApiClient(baseUrl: string, projectId: string) {
       return res.text();
     },
 
-    async updateAgent(id: string, content: string, themeContent?: string): Promise<{ ok: boolean; id: string }> {
+    async updateAgent(id: string, content: string, themeContent?: string): Promise<AgentUpdateResponse> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, themeContent }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<AgentUpdateResponse>(res, schemas.agentUpdateResponse);
     },
 
     async deleteAgent(id: string): Promise<{ ok: boolean }> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return parseJsonResponse(res, schemas.okResponse);
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async renameSession(agentId: string, id: string, title: string): Promise<SessionInfo> {
@@ -203,92 +196,78 @@ export function createApiClient(baseUrl: string, projectId: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return parseJsonResponse(res, schemas.sessionInfo);
+      await assertOk(res);
+      return parseJsonResponse<SessionInfo>(res, schemas.sessionInfo);
     },
 
     async deleteSession(agentId: string, id: string): Promise<{ ok: boolean }> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return parseJsonResponse(res, schemas.okResponse);
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async getFileTree(): Promise<string[]> {
       const res = await fetch(`${apiBase}/file-tree`);
       if (!res.ok) return [];
-      return parseJsonResponse(res, schemas.fileTreeResponse);
+      return parseJsonResponse<string[]>(res, schemas.fileTreeResponse);
     },
 
-    async getTurnContext(sessionId: string): Promise<any> {
+    async getTurnContext(sessionId: string): Promise<TurnContextSnapshotContract> {
       const res = await fetch(
         `${apiBase}/debug/sessions/${encodeURIComponent(sessionId)}/turn-context`,
       );
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<TurnContextSnapshotContract>(res, schemas.turnContextSnapshot);
     },
 
     getPreviewUrl(filePath: string): string {
       return `${apiBase}/preview/${filePath}`;
     },
 
-    async getSupportedProviders(): Promise<Record<string, import("@spherse/core").ProviderCatalogItem>> {
+    async getSupportedProviders(): Promise<ProviderCatalogContract> {
       const res = await fetch(`${baseUrl}/api/settings/providers`);
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<ProviderCatalogContract>(res, schemas.providerCatalog);
     },
 
-    async getAiAccessSettings(): Promise<{ deniedPaths: string[] }> {
+    async getAiAccessSettings(): Promise<AiAccessSettingsResponse> {
       const res = await fetch(`${apiBase}/settings/ai-access`);
-      if (!res.ok) return { deniedPaths: [] };
-      return res.json();
+      if (!res.ok) return { ok: false, deniedPaths: [] };
+      return parseJsonResponse<AiAccessSettingsResponse>(res, schemas.aiAccessSettingsResponse);
     },
 
-    async updateAiAccessSettings(deniedPaths: string[]): Promise<{ ok: boolean; deniedPaths: string[] }> {
+    async updateAiAccessSettings(deniedPaths: string[]): Promise<AiAccessSettingsResponse> {
       const res = await fetch(`${apiBase}/settings/ai-access`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deniedPaths }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<AiAccessSettingsResponse>(res, schemas.aiAccessSettingsResponse);
     },
 
-    async getWelcomePageSettings(): Promise<{ path: string | null }> {
+    async getWelcomePageSettings(): Promise<WelcomePageSettingsResponse> {
       const res = await fetch(`${apiBase}/settings/welcome-page`);
-      if (!res.ok) return { path: null };
-      return res.json();
+      if (!res.ok) return { ok: false, path: null };
+      return parseJsonResponse<WelcomePageSettingsResponse>(res, schemas.welcomePageSettingsResponse);
     },
 
-    async updateWelcomePageSettings(path: string | null): Promise<{ ok: boolean; path: string | null }> {
+    async updateWelcomePageSettings(path: string | null): Promise<WelcomePageSettingsResponse> {
       const res = await fetch(`${apiBase}/settings/welcome-page`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<WelcomePageSettingsResponse>(res, schemas.welcomePageSettingsResponse);
     },
 
     async listSchedules(agentId: string): Promise<ScheduleInfo[]> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedules`);
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "request failed");
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<ScheduleInfo[]>(res, schemas.scheduleListResponse);
     },
 
     async createSchedule(agentId: string, data: {
@@ -305,11 +284,8 @@ export function createApiClient(baseUrl: string, projectId: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<ScheduleEntry>(res, schemas.scheduleEntry);
     },
 
     async updateSchedule(agentId: string, scheduleId: string, data: {
@@ -327,40 +303,31 @@ export function createApiClient(baseUrl: string, projectId: string) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<ScheduleEntry>(res, schemas.scheduleEntry);
     },
 
     async deleteSchedule(agentId: string, scheduleId: string): Promise<{ ok: boolean }> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedules/${encodeURIComponent(scheduleId)}`, {
         method: "DELETE",
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async triggerSchedule(agentId: string, scheduleId: string): Promise<{ ok: boolean }> {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedules/${encodeURIComponent(scheduleId)}/trigger`, {
         method: "POST",
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "request failed" }));
-        throw new Error(err.error ?? "request failed");
-      }
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async getScheduleLogs(agentId: string, limit?: number): Promise<ScheduleLogEntry[]> {
       const params = limit ? `?limit=${limit}` : "";
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedule-logs${params}`);
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "request failed");
-      return res.json();
+      await assertOk(res);
+      return parseJsonResponse<ScheduleLogEntry[]>(res, schemas.scheduleLogListResponse);
     },
 
     createScheduleWebSocket(onEvent: (event: ScheduleServerEvent) => void): WebSocket {

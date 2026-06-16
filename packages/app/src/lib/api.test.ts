@@ -26,7 +26,7 @@ describe("createApiClient", () => {
   it("validates renamed session responses", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ ok: true, id: "session-1" })));
 
-    await expect(createApiClient("http://localhost:1234", "project-1").renameSession("session-1", "Title")).rejects.toThrow(
+    await expect(createApiClient("http://localhost:1234", "project-1").renameSession("agent-1", "session-1", "Title")).rejects.toThrow(
       /Invalid payload/,
     );
   });

@@ -36,7 +36,7 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
 
   fastify.post<{ Params: { projectId: string; "*": string }; Body: { action: "mkdir" | "touch" } }>(
     "/api/projects/:projectId/content/*",
-    { schema: { body: schemas.createContentRequest, response: { 200: schemas.okResponse } } },
+    { schema: { body: schemas.contentCreateRequest, response: { 200: schemas.okResponse } } },
     async (req) => {
       const relativePath = req.params["*"];
       const root = req.projectCtx!.projectManager.getRootPath();
@@ -63,7 +63,7 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
 
   fastify.put<{ Params: { projectId: string; "*": string }; Body: { content: string } }>(
     "/api/projects/:projectId/content/*",
-    { schema: { body: schemas.saveContentRequest, response: { 200: schemas.okResponse } } },
+    { schema: { body: schemas.contentSaveRequest, response: { 200: schemas.okResponse } } },
     async (req) => {
       const relativePath = req.params["*"];
       const root = req.projectCtx!.projectManager.getRootPath();

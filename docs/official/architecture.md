@@ -35,7 +35,7 @@
 - **projectId**：由 core 的 `ProjectConfigStore` 在 `.spherse/project.yaml` 中生成（8 位 nanoid），跨重启和路径变化稳定；复制目录导致 id 冲突时 registry 静默改写副本的 project.yaml
 - **路由按业务域拆分**到 `routes/` 目录，由 `routes/index.ts` 聚合注册；所有项目级路由统一使用 `/api/projects/:projectId/...` 前缀，`preHandler` 钩子从 registry 解析 projectId 并注入 `req.projectCtx`；全局端点（如 `/api/settings/providers`）不带 projectId
 - **API contract**：HTTP request/response 与 WebSocket message/event 的运行时 schema 定义在 `contracts/`，通过 `@spherse/server/contracts` 子入口导出给 server routes、WebSocket handler 和 renderer API client 复用；边界 JSON 进入业务逻辑前必须先通过 contract helper 解析；chat WebSocket 的 `ChatServerEvent` 是严格的 pi-agent lifecycle 事件 union（agent_start/turn_start/message_start/message_update/message_end/turn_end/agent_end/tool_execution/error 等），renderer 的 chat event 类型直接复用该 contract
-- **运行时 schema**：有 body 的 HTTP route 通过 server contract 中的 TypeBox schema 绑定 Fastify `schema.body` / `schema.response`；WebSocket 收到的 JSON 必须通过 contract parser 校验，非法消息返回统一 error event
+- **运行时 schema**：有 body 的 HTTP route 通过 server contract 中的 TypeBox schema 绑定 Fastify `schema.body` / `schema.response`；所有 JSON route（GET 含）均绑定 `schema.response`，含 pi-agent 复杂嵌套对象（session messages、turn context）的端点改用 handler 内 `parseContract` 校验以避免 fast-json-stringify 误丢字段；contract 按业务域拆文件（`agents.ts`/`sessions.ts`/...），命名用资源+操作风格（`AgentCreateRequest`/`SessionListResponse`）；renderer 的 `api.ts` 对每个响应统一走 `parseApiResponse` 校验；WebSocket 收到的 JSON 必须通过 contract parser 校验，非法消息返回统一 error event
 - **内容 API**：`content.ts` 负责目录列表、文件读取、保存、删除、新建文件和新建目录；所有文件路径都通过 core 共享路径安全工具限制在项目根目录内
 - **文件树 API**：`file-tree.ts` 返回面向 UI 选择的项目文件列表，过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir
 - **预览 API**：`preview.ts` 为本地 HTML 与图片内容提供预览 URL，renderer 通过 iframe、图片或 HTML card 使用

@@ -1,27 +1,37 @@
 import type { FastifyInstance } from "fastify";
+import { schemas } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
 
 export function registerAgentRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
-  fastify.get("/api/projects/:projectId/agents", async (req) => {
-    return req.projectCtx!.projectManager.listAgents();
+  fastify.get("/api/projects/:projectId/agents", {
+    schema: { response: { 200: schemas.agentListResponse } },
+    async handler(req) {
+      return req.projectCtx!.projectManager.listAgents();
+    },
   });
 
   fastify.get<{ Params: { projectId: string; id: string } }>(
     "/api/projects/:projectId/agents/:id",
-    async (req) => {
-      const profile = await req.projectCtx!.projectManager.getAgentProfile(req.params.id);
-      if (!profile) throw notFound("Agent not found");
-      return profile;
+    {
+      schema: { response: { 200: schemas.agentProfile } },
+      async handler(req) {
+        const profile = await req.projectCtx!.projectManager.getAgentProfile(req.params.id);
+        if (!profile) throw notFound("Agent not found");
+        return profile;
+      },
     },
   );
 
   fastify.get<{ Params: { projectId: string; id: string } }>(
     "/api/projects/:projectId/agents/:id/raw",
-    async (req) => {
-      const raw = await req.projectCtx!.projectManager.getRawContent(req.params.id);
-      if (raw === null) throw notFound("Agent not found");
-      return { content: raw };
+    {
+      schema: { response: { 200: schemas.agentRawResponse } },
+      async handler(req) {
+        const raw = await req.projectCtx!.projectManager.getRawContent(req.params.id);
+        if (raw === null) throw notFound("Agent not found");
+        return { content: raw };
+      },
     },
   );
 

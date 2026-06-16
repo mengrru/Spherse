@@ -9,7 +9,6 @@ function createAgent(id: string): AgentProfile {
     name: id,
     slug: id,
     createdAt: 1,
-    type: "test",
     systemPrompt: "test",
     filePath: `${id}/profile.md`,
   };

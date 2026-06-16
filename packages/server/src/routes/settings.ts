@@ -4,14 +4,20 @@ import { getSupportedProviders } from "@spherse/core";
 import { schemas } from "@spherse/server/contracts";
 
 export function registerSettingsRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
-  fastify.get("/api/settings/providers", async () => {
-    return getSupportedProviders();
+  fastify.get("/api/settings/providers", {
+    schema: { response: { 200: schemas.providerCatalog } },
+    async handler() {
+      return getSupportedProviders();
+    },
   });
 
   fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/settings/ai-access",
-    async (req) => {
-      return req.projectCtx!.projectManager.getAiAccessSettings();
+    {
+      schema: { response: { 200: schemas.aiAccessSettingsResponse } },
+      async handler(req) {
+        return { ok: true, ...req.projectCtx!.projectManager.getAiAccessSettings() };
+      },
     },
   );
 
@@ -33,8 +39,11 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
 
   fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/settings/welcome-page",
-    async (req) => {
-      return req.projectCtx!.projectManager.getWelcomePageSettings();
+    {
+      schema: { response: { 200: schemas.welcomePageSettingsResponse } },
+      async handler(req) {
+        return { ok: true, ...req.projectCtx!.projectManager.getWelcomePageSettings() };
+      },
     },
   );
 

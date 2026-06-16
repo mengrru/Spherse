@@ -1,13 +1,16 @@
 import type { FastifyInstance } from "fastify";
-import { schemas } from "@spherse/server/contracts";
+import { schemas, parseContract } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
 
 export function registerSessionRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get<{ Params: { projectId: string; agentId: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions",
-    async (req) => {
-      return req.projectCtx!.projectManager.listSessions(req.params.agentId);
+    {
+      schema: { response: { 200: schemas.sessionListResponse } },
+      async handler(req) {
+        return req.projectCtx!.projectManager.listSessions(req.params.agentId);
+      },
     },
   );
 
@@ -16,7 +19,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
     {
       schema: {
         response: {
-          200: schemas.createSessionResponse,
+          200: schemas.sessionCreateResponse,
         },
       },
     },
@@ -28,17 +31,21 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
 
   fastify.get<{ Params: { projectId: string; agentId: string; id: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions/:id",
-    async (req) => {
-      const session = req.projectCtx!.projectManager.getSession(req.params.agentId, req.params.id);
-      if (!session) throw notFound("Session not found");
-      return session;
+    {
+      schema: { response: { 200: schemas.sessionInfo } },
+      async handler(req) {
+        const session = req.projectCtx!.projectManager.getSession(req.params.agentId, req.params.id);
+        if (!session) throw notFound("Session not found");
+        return session;
+      },
     },
   );
 
   fastify.get<{ Params: { projectId: string; agentId: string; id: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions/:id/messages",
     async (req) => {
-      return req.projectCtx!.projectManager.getSessionHistory(req.params.agentId, req.params.id);
+      const messages = req.projectCtx!.projectManager.getSessionHistory(req.params.agentId, req.params.id);
+      return parseContract(schemas.sessionMessagesResponse, messages);
     },
   );
 
@@ -46,7 +53,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
     "/api/projects/:projectId/agents/:agentId/sessions/:id",
     {
       schema: {
-        body: schemas.renameSessionRequest,
+        body: schemas.sessionRenameRequest,
         response: {
           200: schemas.sessionInfo,
         },
@@ -63,6 +70,7 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
 
   fastify.delete<{ Params: { projectId: string; agentId: string; id: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions/:id",
+    { schema: { response: { 200: schemas.okResponse } } },
     async (req) => {
       req.projectCtx!.runtime.deleteSession(req.params.agentId, req.params.id);
       return { ok: true };

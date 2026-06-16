@@ -58,4 +58,86 @@ describe("api contracts", () => {
     expect(parseApiResponse(schemas.okResponse, { ok: true })).toEqual({ ok: true });
     expect(() => parseApiResponse(schemas.okResponse, { ok: "true" })).toThrow(/Invalid payload/);
   });
+
+  it("validates agent profile, create, and update payloads", () => {
+    const profile = {
+      id: "a1",
+      name: "Agent",
+      slug: "agent",
+      createdAt: 1,
+      systemPrompt: "p",
+      filePath: "agent.md",
+    };
+    expect(parseApiResponse(schemas.agentProfile, profile)).toEqual(profile);
+    expect(parseApiResponse(schemas.agentProfile, { ...profile, output: { path: "out", naming: "tpl" } })).toMatchObject({
+      output: { path: "out", naming: "tpl" },
+    });
+    expect(() => parseApiResponse(schemas.agentProfile, { id: "a1" })).toThrow(/Invalid payload/);
+
+    expect(parseApiResponse(schemas.agentCreateRequest, { slug: "s", content: "c" })).toEqual({ slug: "s", content: "c" });
+    expect(() => parseApiResponse(schemas.agentCreateRequest, { content: "c" })).toThrow(/Invalid payload/);
+    expect(parseApiResponse(schemas.agentCreateResponse, { ok: true, id: "a1" })).toEqual({ ok: true, id: "a1" });
+  });
+
+  it("validates session list and messages responses", () => {
+    expect(parseApiResponse(schemas.sessionListResponse, [])).toEqual([]);
+    expect(() => parseApiResponse(schemas.sessionListResponse, "nope")).toThrow(/Invalid payload/);
+    expect(parseApiResponse(schemas.sessionMessagesResponse, [{ role: "user" }])).toEqual([{ role: "user" }]);
+  });
+
+  it("validates schedule list response with nextTriggerAt", () => {
+    const entry = {
+      id: "s1",
+      enabled: true,
+      cron: "* * * * *",
+      mode: "new_session",
+      message: "hi",
+      notify: false,
+      createdAt: 1,
+      updatedAt: 1,
+      nextTriggerAt: null,
+    };
+    expect(parseApiResponse(schemas.scheduleListResponse, [entry])).toEqual([entry]);
+    expect(() =>
+      parseApiResponse(schemas.scheduleListResponse, [{ ...entry, nextTriggerAt: undefined }]),
+    ).toThrow(/Invalid payload/);
+  });
+
+  it("validates skill list response", () => {
+    const skill = { name: "n", description: "d", instructions: "i", filePath: "n.md" };
+    expect(parseApiResponse(schemas.skillListResponse, [skill])).toEqual([skill]);
+    expect(() => parseApiResponse(schemas.skillDefinition, { name: "n" })).toThrow(/Invalid payload/);
+  });
+
+  it("validates provider catalog and settings responses", () => {
+    const catalog = {
+      openai: {
+        id: "openai",
+        name: "OpenAI",
+        auth: { type: "apiKey", envKeys: ["OPENAI_API_KEY"] },
+        models: [{ id: "gpt-4", name: "GPT-4", provider: "openai", api: "openai", reasoning: false, input: ["text"] }],
+      },
+    };
+    expect(parseApiResponse(schemas.providerCatalog, catalog)).toEqual(catalog);
+    expect(parseApiResponse(schemas.aiAccessSettingsResponse, { ok: true, deniedPaths: [] })).toEqual({
+      ok: true,
+      deniedPaths: [],
+    });
+    expect(parseApiResponse(schemas.welcomePageSettingsResponse, { ok: true, path: null })).toEqual({
+      ok: true,
+      path: null,
+    });
+  });
+
+  it("validates turn context snapshot", () => {
+    const snapshot = {
+      sessionId: "s1",
+      capturedAt: "2024-01-01T00:00:00.000Z",
+      systemPrompt: "p",
+      messages: [],
+      tools: [{ name: "t", description: "d", parameters: {} }],
+    };
+    expect(parseApiResponse(schemas.turnContextSnapshot, snapshot)).toEqual(snapshot);
+    expect(() => parseApiResponse(schemas.turnContextSnapshot, { sessionId: "s1" })).toThrow(/Invalid payload/);
+  });
 });
