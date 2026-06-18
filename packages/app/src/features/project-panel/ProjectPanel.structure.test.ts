@@ -9,7 +9,7 @@ describe("ProjectPanel structure", () => {
   it("owns its side panel floating and hidden layout", () => {
     const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
 
-    expect(source).toContain("useAppStore");
+    expect(source).toContain("useSidePanel");
     expect(source).toContain("-translate-x-[calc(100%+3.5rem)]");
   });
 });

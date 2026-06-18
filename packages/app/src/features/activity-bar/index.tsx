@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useAppStore, type ProjectState } from "../../stores/app-store";
+import type { ProjectState } from "../../stores/app-store";
+import { useSidePanel } from "../../hooks/useSidePanel";
 import { ProjectAvatar } from "./ProjectAvatar";
 import { Button } from "../../components/ui/button";
 import {
@@ -36,39 +37,34 @@ export function ActivityBar({
   const { t } = useI18n();
   const [settingsProjectId, setSettingsProjectId] = useState<string | null>(null);
   const settingsProject = settingsProjectId ? projects.get(settingsProjectId) : null;
-  const sidePanelPinned = useAppStore((state) => state.sidePanelPinned);
-  const sidePanelHovered = useAppStore((state) => state.sidePanelHovered);
-  const toggleSidePanelPinned = useAppStore((state) => state.toggleSidePanelPinned);
-  const showSidePanel = useAppStore((state) => state.showSidePanel);
-  const hideSidePanel = useAppStore((state) => state.hideSidePanel);
-  const sidePanelVisible = sidePanelPinned || sidePanelHovered;
+  const { pinned, visible, togglePin, show, hide } = useSidePanel();
 
   return (
     <>
-      {!sidePanelVisible && (
+      {!visible && (
         <div
           className="absolute inset-y-0 left-0 z-40 w-2"
-          onMouseEnter={showSidePanel}
+          onMouseEnter={show}
         />
       )}
       <div
         className={
-          sidePanelPinned
+          pinned
             ? "relative z-40 h-full shrink-0 w-14"
             : `absolute top-0 left-0 z-40 h-full w-14 transition-transform duration-200 ease-out ${
-                sidePanelVisible ? "translate-x-0" : "-translate-x-full"
+                visible ? "translate-x-0" : "-translate-x-full"
               }`
         }
-        {...(!sidePanelPinned && {
-          onMouseEnter: showSidePanel,
-          onMouseLeave: hideSidePanel,
+        {...(!pinned && {
+          onMouseEnter: show,
+          onMouseLeave: hide,
         })}
       >
         <div className="h-full">
           <div
             className={cn(
               "flex h-full w-14 shrink-0 flex-col border-r border-border",
-              sidePanelPinned ? "bg-muted/30" : "bg-muted",
+              pinned ? "bg-muted/30" : "bg-muted",
             )}
           >
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">
@@ -101,15 +97,15 @@ export function ActivityBar({
               <Button
                 variant="ghost"
                 size="icon-lg"
-                onClick={toggleSidePanelPinned}
+                onClick={togglePin}
                 title={
-                  sidePanelPinned
+                  pinned
                     ? t("activity-bar.autoCollapseSidePanelTooltip")
                     : t("activity-bar.pinSidePanelTooltip")
                 }
-                aria-pressed={sidePanelPinned}
+                aria-pressed={pinned}
               >
-                {sidePanelPinned ? <PanelLeftCloseIcon /> : <PinIcon />}
+                {pinned ? <PanelLeftCloseIcon /> : <PinIcon />}
               </Button>
               <Button
                 variant="ghost"

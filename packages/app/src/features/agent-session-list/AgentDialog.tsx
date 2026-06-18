@@ -1,23 +1,23 @@
 import { useState, useMemo } from "react";
 import { AGENT_TEMPLATE, AGENT_THEME_TEMPLATE } from "@spherse/presets";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "./ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import { useI18n } from "@spherse/i18n/react";
-import type { ApiClient } from "../lib/api";
-import { parseAgentMarkdown, buildAgentMarkdown } from "../lib/agent-markdown";
-import type { AgentFormData } from "../lib/agent-markdown";
-import { ALL_TOOLS } from "../lib/tool-registry";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
+import type { ApiClient } from "../../lib/api";
+import { parseAgentMarkdown, buildAgentMarkdown } from "../../lib/agent-markdown";
+import type { AgentFormData } from "../../lib/agent-markdown";
+import { ALL_TOOLS } from "../../lib/tool-registry";
+import { Badge } from "../../components/ui/badge";
+import { Button } from "../../components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { Field, FieldGroup, FieldLabel } from "./ui/field";
-import { Input } from "./ui/input";
-import { Textarea } from "./ui/textarea";
+} from "../../components/ui/dialog";
+import { Field, FieldGroup, FieldLabel } from "../../components/ui/field";
+import { Input } from "../../components/ui/input";
+import { Textarea } from "../../components/ui/textarea";
 import { SearchFileField } from "./SearchFileField";
 import { XIcon } from "lucide-react";
 

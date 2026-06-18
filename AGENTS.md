@@ -109,9 +109,16 @@ npm run dist:win    # 构建 Windows NSIS 安装包
 - **前端 store 使用原则**：
   - `app-store` 管理应用级状态（打开项目集合、当前项目、Electron IPC 动作），不持有项目内业务数据
   - `project-data-store` 按 projectKey 缓存项目内 agents、sessions 等业务数据，负责 API 调用与 loading/error 状态
-  - `project-ui-store` 按 projectKey 管理纯 UI 状态（如折叠），不涉及 API 调用
+  - `project-ui-store` 按 projectKey 管理纯 UI 状态（如 floating chat 位置），不涉及 API 调用
   - 跨页面、跨 feature 持久的状态放 store；组件内短生命周期状态（表单、弹窗、输入框、WebSocket ref、编辑 dirty/conflict）用 `useState`/`useRef` 保留在组件内
-  - 只被单个 feature 使用的状态不提升到全局 store，可在 feature 目录下建立自己的 store（如 `features/settings/store.ts`）
+  - 只被单个 feature 使用的状态不提升到全局 store，可在 feature 目录下建立自己的 store（如 `features/settings/store.ts`、`features/chat/streaming-store.ts`、`features/agent-session-list/store.ts`）。feature-local store 不应被其它 feature 或全局 store import
+  - 全局 store 不应依赖 feature-local store（如需要 locale 等跨层信息，应由调用方传入或由展示层翻译）
+  - store 命名统一 `use{语义名}Store` 格式（PascalCase 语义名 + `Store` 后缀），如 `useAppStore`、`useProjectDataStore`、`useSettingsStore`、`useStreamingStore`。作用域（全局 vs feature-local）由文件位置表达（`stores/` vs `features/xxx/store.ts`），不在命名中编码
+- **前端组件原则**：
+  - feature root 组件自治：自己从 store/context 读取所需数据并构造行为，不通过 props 接收父组件直接转发的 store 数据或 action；纯展示型子组件仍通过 props 接收数据。App shell 只管「渲染哪些 feature + 应用级副作用」，不做 feature 的数据中转站
+  - 组件行数软阈值 ~150 行：超过通常意味着混了多件不相关的事（抽子组件）、逻辑该抽 hook，应考虑拆分；阈值非硬上限，需结合认知复杂度判断
+  - 关注 state 耦合度而非 state 个数：多个 `useState` 在同一 handler 被一起更新，或 state/effect 互相触发形成 effect 链，优先用 `useReducer` 或抽 hook 收敛，而不是拆组件；多个语义正交的 `open`/`setOpen` 可考虑合并为单个枚举 state（如 `useState<DialogKind | null>(null)`）
+  - 关注认知复杂度信号：handler 互相调用、effect 链、条件渲染嵌套 > 3 层，优先拆分
 - **前端样式**：
   - 使用 Tailwind CSS v4 工具类 + CSS 变量色彩体系，不写原生 CSS class
   - 只使用 shadcn 语义 token（`bg-background`、`bg-card`、`bg-muted`、`bg-primary`、`bg-accent`、`text-foreground`、`text-muted-foreground`、`border-border`、`text-destructive`）和 Spherse 自有 token（`bg-agent-creator`、`text-agent-success` 等），不硬编码颜色值（如 `text-[#333]`）

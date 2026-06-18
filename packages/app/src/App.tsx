@@ -7,6 +7,7 @@ import { Toaster } from "./components/ui/sonner";
 import { useAppStore } from "./stores/app-store";
 import { useProjectDataStore } from "./stores/project-data-store";
 import { useProjectUiStore } from "./stores/project-ui-store";
+import { useAgentSessionListUiStore } from "./features/agent-session-list/store";
 import { I18nProvider } from "@spherse/i18n/react";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
 import { useSettingsStore } from "./features/settings/store";
@@ -29,6 +30,7 @@ export function App() {
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const clearProjectData = useProjectDataStore((state) => state.clearProjectData);
   const clearProjectUi = useProjectUiStore((state) => state.clearProjectUi);
+  const clearAgentSessionListUi = useAgentSessionListUiStore((state) => state.clearProject);
   const locale = useSettingsStore((state) => state.locale);
   const loadSettings = useSettingsStore((state) => state.load);
 
@@ -69,6 +71,7 @@ export function App() {
     const nextProjectId = await closeProject(projectId);
     clearProjectData(projectId);
     clearProjectUi(projectId);
+    clearAgentSessionListUi(projectId);
     if (nextProjectId) {
       const project = useAppStore.getState().projects.get(nextProjectId);
       navigate(buildProjectRoute(nextProjectId, project?.lastRoute));

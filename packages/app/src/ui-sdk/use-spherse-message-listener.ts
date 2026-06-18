@@ -3,16 +3,16 @@ import { useNavigate } from "react-router";
 import { dispatchAction } from "./registry";
 import { checkRateLimit } from "./rate-limit";
 import type { ActionContext } from "./types";
-import { useAppStore } from "../stores/app-store";
+import type { ApiClient } from "../lib/api";
 
-export function useSpherseMessageListener(projectId: string): void {
+export function useSpherseMessageListener(
+  projectId: string,
+  client: ApiClient,
+): void {
   const navigate = useNavigate();
-  const project = useAppStore((s) => s.projects.get(projectId));
 
   useEffect(() => {
-    if (!project) return;
-
-    const serverOrigin = project.ctx.client?.baseUrl ?? null;
+    const serverOrigin = client?.baseUrl ?? null;
 
     const handler = (event: MessageEvent) => {
       if (event.data?.type !== "spherse:action") return;
@@ -22,7 +22,7 @@ export function useSpherseMessageListener(projectId: string): void {
       const ctx: ActionContext = {
         navigate,
         projectId,
-        client: project.ctx.client,
+        client,
         source: event.source,
         requestId: event.data.requestId,
       };
@@ -35,5 +35,5 @@ export function useSpherseMessageListener(projectId: string): void {
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [navigate, projectId, project]);
+  }, [navigate, projectId, client]);
 }

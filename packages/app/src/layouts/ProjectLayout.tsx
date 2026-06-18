@@ -6,15 +6,16 @@ import { ContentBrowser } from "../features/content-browser";
 import { Chat } from "../features/chat";
 import { ProjectPanel } from "../features/project-panel";
 import { useCustomTheme } from "../hooks/useCustomTheme";
-import { useSidePanelClickAway } from "../hooks/useSidePanelClickAway";
+import { useSidePanel } from "../hooks/useSidePanel";
 import { useSpherseMessageListener } from "../ui-sdk";
 import { WelcomePage } from "../features/welcome-page";
 import { FloatingChatManager } from "../features/floating-chat";
 import type { ProjectState } from "../stores/app-store";
 import { useAppStore } from "../stores/app-store";
 import { useProjectDataStore } from "../stores/project-data-store";
-import { useProjectUiStore } from "../stores/project-ui-store";
-import { useFloatingChatRedirect } from "../hooks/useFloatingChatRedirect";
+import { useFloatingChatRedirect } from "../features/floating-chat/use-floating-chat-redirect";
+import { useFloatingSessionId } from "../features/floating-chat/use-floating-session-id";
+import { ProjectProvider } from "../lib/project-context";
 
 export interface ProjectLayoutProps {
   projectId: string;
@@ -35,7 +36,7 @@ export function ProjectLayout({ projectId, project }: ProjectLayoutProps) {
   const { t } = useI18n();
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const setProjectLastRoute = useAppStore((state) => state.setProjectLastRoute);
-  const sidePanelClickAway = useSidePanelClickAway();
+  const { clickAwayProps } = useSidePanel();
   const projectData = useProjectDataStore((state) => state.projects[projectId]);
   const refreshAgents = useProjectDataStore((state) => state.refreshAgents);
   const refreshSessions = useProjectDataStore((state) => state.refreshSessions);
@@ -49,9 +50,7 @@ export function ProjectLayout({ projectId, project }: ProjectLayoutProps) {
   const isContentRoute = location.pathname.endsWith("/content");
   const showingContent = isContentRoute && Boolean(contentPath);
   const activeSessionId = sessionId ?? contentSessionId ?? null;
-  const floatingSessionId = useProjectUiStore((s) =>
-    projectId ? s.projects[projectId]?.floatingChat?.sessionId ?? null : null,
-  );
+  const floatingSessionId = useFloatingSessionId(projectId);
   const resolveSessionViews = useProjectDataStore((s) => s.resolveSessionViews);
   const { selectedSession, selectedAgent, activeSessions } = resolveSessionViews(
     projectId, activeSessionId, floatingSessionId,
@@ -61,7 +60,7 @@ export function ProjectLayout({ projectId, project }: ProjectLayoutProps) {
     : undefined;
 
   useCustomTheme(project.ctx.projectRoot, project.ctx.baseUrl, project.ctx.projectId);
-  useSpherseMessageListener(projectId);
+  useSpherseMessageListener(projectId, project.ctx.client);
 
   useEffect(() => {
     void setActiveProject(projectId);
@@ -144,59 +143,61 @@ export function ProjectLayout({ projectId, project }: ProjectLayoutProps) {
   };
 
   return (
-    <div className="relative flex h-full flex-1 overflow-hidden">
-      <ProjectPanel
-        projectId={projectId}
-        project={project}
-        activeSessionId={activeSessionId}
-        selectedAgentId={selectedAgent?.id ?? null}
-        selectedFilePath={showingContent ? contentPath ?? undefined : undefined}
-        onSelectFile={handleSelectFile}
-        onFileDeleted={handleFileDeleted}
-      />
-      <main
-        className="flex-1 overflow-hidden flex flex-col"
-        {...sidePanelClickAway}
-      >
-        {selectedSession && selectedAgent && (
-          <div className={!showingContent ? "contents" : "hidden"}>
-            <Chat
-              key={selectedSession.id}
+    <ProjectProvider projectId={projectId} ctx={project.ctx}>
+      <div className="relative flex h-full flex-1 overflow-hidden">
+        <ProjectPanel
+          projectId={projectId}
+          project={project}
+          activeSessionId={activeSessionId}
+          selectedAgentId={selectedAgent?.id ?? null}
+          selectedFilePath={showingContent ? contentPath ?? undefined : undefined}
+          onSelectFile={handleSelectFile}
+          onFileDeleted={handleFileDeleted}
+        />
+        <main
+          className="flex-1 overflow-hidden flex flex-col"
+          {...clickAwayProps}
+        >
+          {selectedSession && selectedAgent && (
+            <div className={!showingContent ? "contents" : "hidden"}>
+              <Chat
+                key={selectedSession.id}
+                client={project.ctx.client}
+                sessionId={selectedSession.id}
+                baseUrl={project.ctx.baseUrl}
+                projectId={project.ctx.projectId}
+                agent={selectedAgent}
+                onNavigateToPath={handleSelectFile}
+                initialMessage={initialMessage}
+                onClose={() => navigate(`/project/${projectId}`)}
+              />
+            </div>
+          )}
+          {showingContent && contentPath && (
+            <ContentBrowser
+              key={contentPath}
               client={project.ctx.client}
-              sessionId={selectedSession.id}
-              baseUrl={project.ctx.baseUrl}
-              projectId={project.ctx.projectId}
-              agent={selectedAgent}
-              onNavigateToPath={handleSelectFile}
-              initialMessage={initialMessage}
-              onClose={() => navigate(`/project/${projectId}`)}
+              filePath={contentPath}
+              onBack={handleBackToChat}
+              agents={agents}
+              projectId={projectId}
+              activeSessions={activeSessions}
+              onStartSession={handleStartSession}
             />
-          </div>
-        )}
-        {showingContent && contentPath && (
-          <ContentBrowser
-            key={contentPath}
-            client={project.ctx.client}
-            filePath={contentPath}
-            onBack={handleBackToChat}
-            agents={agents}
-            projectId={projectId}
-            activeSessions={activeSessions}
-            onStartSession={handleStartSession}
-          />
-        )}
-        {!showingContent && !(selectedSession && selectedAgent) && (
-          <WelcomePage
-            client={project.ctx.client}
-            fallback={
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                <p>{t("chat.startConversation")}</p>
-              </div>
-            }
-          />
-        )}
-      </main>
-      <FloatingChatManager />
-    </div>
+          )}
+          {!showingContent && !(selectedSession && selectedAgent) && (
+            <WelcomePage
+              client={project.ctx.client}
+              fallback={
+                <div className="flex h-full items-center justify-center text-muted-foreground">
+                  <p>{t("chat.startConversation")}</p>
+                </div>
+              }
+            />
+          )}
+        </main>
+        <FloatingChatManager />
+      </div>
+    </ProjectProvider>
   );
 }

@@ -1,8 +1,6 @@
 import { create } from "zustand";
-import { translate } from "@spherse/i18n";
 import type { ApiClient } from "../lib/api";
 import type { AgentProfile, ActiveSessionInfo, SessionInfo, ScheduleInfo, ScheduleServerEvent } from "../lib/types";
-import { useSettingsStore } from "../features/settings/store";
 
 interface ProjectData {
   agents: AgentProfile[];
@@ -90,8 +88,7 @@ function removeRunningSchedule(project: ProjectData, agentId: string, scheduleId
 }
 
 function getErrorMessage(err: unknown): string {
-  const locale = useSettingsStore.getState().locale ?? "zh-CN";
-  return err instanceof Error ? err.message : translate(locale, "error.requestFailed");
+  return err instanceof Error ? err.message : "";
 }
 
 function updateProjectData(

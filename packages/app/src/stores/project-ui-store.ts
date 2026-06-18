@@ -7,15 +7,12 @@ export interface FloatingChatState {
 }
 
 interface ProjectUiState {
-  collapsedAgentIds: Set<string>;
   floatingChat?: FloatingChatState;
 }
 
 interface ProjectUiStore {
   projects: Record<string, ProjectUiState>;
   getProjectUi: (projectId: string) => ProjectUiState;
-  toggleAgentCollapsed: (projectId: string, agentId: string) => void;
-  setCollapsedAgentIds: (projectId: string, agentIds: Iterable<string>) => void;
   setFloatingChat: (projectId: string, state: FloatingChatState | null) => void;
   clearProjectUi: (projectId: string) => void;
 }
@@ -32,9 +29,7 @@ function writeFloatingChat(projectId: string, state: FloatingChatState | null) {
 }
 
 function createProjectUi(): ProjectUiState {
-  return {
-    collapsedAgentIds: new Set(),
-  };
+  return {};
 }
 
 function updateProjectUi(
@@ -56,25 +51,6 @@ export const useProjectUiStore = create<ProjectUiStore>((set, get) => ({
 
   getProjectUi(projectId) {
     return get().projects[projectId] ?? createProjectUi();
-  },
-
-  toggleAgentCollapsed(projectId, agentId) {
-    set((state) => updateProjectUi(state, projectId, (project) => {
-      const collapsedAgentIds = new Set(project.collapsedAgentIds);
-      if (collapsedAgentIds.has(agentId)) {
-        collapsedAgentIds.delete(agentId);
-      } else {
-        collapsedAgentIds.add(agentId);
-      }
-      return { ...project, collapsedAgentIds };
-    }));
-  },
-
-  setCollapsedAgentIds(projectId, agentIds) {
-    set((state) => updateProjectUi(state, projectId, (project) => ({
-      ...project,
-      collapsedAgentIds: new Set(agentIds),
-    })));
   },
 
   setFloatingChat(projectId, state) {

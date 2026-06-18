@@ -155,20 +155,21 @@ spherse/
 │           │   ├── avatar-color.ts   # 项目头像颜色生成（路径 hash → HSL）
 │           │   ├── context.ts        # AppContext 定义
 │           │   ├── events.ts         # renderer 内部自定义事件名常量
+│           │   ├── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入
 │           │   ├── project-key.ts    # project path → URL projectKey 生成
+│           │   ├── scope-css.ts      # CSS 选择器作用域前缀工具（agent chat/floating theme）
 │           │   ├── tool-registry.ts  # 前端 tool call 展示元数据
 │           │   ├── types.ts          # 前端类型
 │           │   └── utils.ts          # shadcn/ui cn() 工具
 │           ├── stores/
 │           │   ├── app-store.ts          # 打开项目集合、当前项目、Electron IPC 动作、side panel 偏好
 │           │   ├── project-data-store.ts # agents/sessions/初始消息等项目数据缓存，包含 resolveSessionViews 派生查询
-│           │   └── project-ui-store.ts   # 折叠状态、浮窗会话等项目 UI 状态，localStorage 持久化
+│           │   └── project-ui-store.ts   # 浮窗会话位置/尺寸等项目 UI 状态，localStorage 持久化
 │           ├── layouts/
-│           │   └── ProjectLayout.tsx     # 项目工作区布局，组合 ProjectPanel、Chat、ContentBrowser、WelcomePage、FloatingChatManager
+│           │   └── ProjectLayout.tsx     # 项目工作区布局，组合 ProjectPanel、Chat、ContentBrowser、WelcomePage、FloatingChatManager，挂 ProjectProvider
 │           ├── hooks/
-│           │   ├── useFloatingChatRedirect.ts # 浮窗会话重定向：主窗口活动会话与浮窗冲突时导航回项目首页
+│           │   ├── useSidePanel.ts       # side panel pinned/hover 状态合并派生 + clickAway props
 │           │   ├── useCustomTheme.ts
-│           │   ├── useSidePanelClickAway.ts
 │           │   ├── useDismissable.ts
 │           │   └── use-mobile.ts
 │           ├── ui-sdk/
@@ -187,12 +188,12 @@ spherse/
 │           ├── features/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
 │           │   ├── agent-schedule/       # Agent 定时任务弹窗、表单、列表与运行日志
-│           │   ├── agent-session-list/   # Agent/session 分组列表
+│           │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
 │           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示
 │           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
-    │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
+│           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
 │           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog
-│           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离）
+│           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
 │           │   ├── project-panel/         # 项目侧栏，组合 Agent/session 列表与文件树，可随 Activity Bar 自动收起
 │           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
 │           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
@@ -204,10 +205,8 @@ spherse/
 │           │   └── ContentBrowser.tsx    # ContentBrowser route adapter
 │           └── components/
 │               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
-│               ├── AgentDialog.tsx       # 创建/编辑 Agent 对话框
 │               ├── EmptyState.tsx        # 无项目时的空状态
-│               ├── MarkdownContent.tsx   # 统一 Markdown 渲染组件
-│               └── SearchFileField.tsx   # 文件搜索输入组件（模糊匹配 + Popover 建议列表）
+│               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
 ├── scripts/
 │   └── rebuild-native.mjs            # Electron native dependency rebuild
 ├── docs/

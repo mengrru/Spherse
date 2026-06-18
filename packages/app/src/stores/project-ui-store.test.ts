@@ -6,27 +6,15 @@ describe("useProjectUiStore", () => {
     useProjectUiStore.setState({ projects: {} });
   });
 
-  it("tracks collapsed agents per project", () => {
-    useProjectUiStore.getState().toggleAgentCollapsed("project-1", "agent-1");
-    useProjectUiStore.getState().toggleAgentCollapsed("project-2", "agent-2");
-
-    expect(useProjectUiStore.getState().projects["project-1"]?.collapsedAgentIds).toEqual(
-      new Set(["agent-1"]),
-    );
-    expect(useProjectUiStore.getState().projects["project-2"]?.collapsedAgentIds).toEqual(
-      new Set(["agent-2"]),
-    );
-  });
-
-  it("can replace collapsed agents and clear one project", () => {
-    useProjectUiStore.getState().setCollapsedAgentIds("project-1", ["agent-1", "agent-2"]);
-    useProjectUiStore.getState().setCollapsedAgentIds("project-2", ["agent-3"]);
+  it("clears one project while keeping others", () => {
+    useProjectUiStore.getState().setFloatingChat("project-2", {
+      sessionId: "session-1",
+      position: { x: 0, y: 0 },
+      size: { width: 400, height: 300 },
+    });
     useProjectUiStore.getState().clearProjectUi("project-1");
 
     expect(useProjectUiStore.getState().projects["project-1"]).toBeUndefined();
-    expect(useProjectUiStore.getState().projects["project-2"]?.collapsedAgentIds).toEqual(
-      new Set(["agent-3"]),
-    );
+    expect(useProjectUiStore.getState().projects["project-2"]?.floatingChat).toBeDefined();
   });
-
 });

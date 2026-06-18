@@ -4,6 +4,8 @@
 
 ## 代码质量
 
+- [x] **前端 store 边界整理（P1a）**：解耦 `project-data-store` 对 `settings` feature store 的反向依赖；引入 `ProjectContext` 消除 4+ 组件重复的 `ctx.client` 推导链；`collapsedAgentIds` 下沉到 `agent-session-list` feature store；合并 `sidePanel`/`floatingSessionId` 重复派生；修复 `FloatingChatManager` render 体 setState；移走错放 hooks/components；统一 `scopeCss`。参见 `docs/dev/features/2026-06-19-frontend-store-p1a/design.md`
+- [ ] **前端路由 / Page / Layout 重构（P0 + P1b）**：拆 `ProjectLayout`（page-as-layout 反模式），消除 `key={projectId}` remount 导致的 WS/refetch 浪费；统一 URL 解析用 `useMatch`；`resolveSessionViews` 响应式化；schedule 状态下沉 + WS 安家到 project scope；`agent-session-list → chat/streaming-store` 解耦。参见 `docs/dev/features/2026-06-19-frontend-store-p1a/design.md`（P1b 部分）
 - [ ] **逐步禁止 `any`**：梳理 agent/runtime payload、SQLite row casting、测试 tool context 等现有 `any` 来源，优先通过明确事件/消息/数据库 row 类型替换；完成后开启 `@typescript-eslint/no-explicit-any` 的 warning 或 error 模式。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
 - [ ] **消除 server contract 中的 `Type.Unknown()`**：当前 `contracts/websocket.ts`（chat 事件的 `message`/`args`/`result`/`toolResults`/`assistantMessageEvent`、schedule 事件的 `schedule`）、`contracts/debug.ts`（`messages`、tool `parameters`）、`contracts/sessions.ts`（`sessionMessagesResponse`）用 `Type.Unknown()` 承接 pi-ai/pi-agent-core 的复杂嵌套对象，仅作结构校验。后续应引入 pi-ai `Message` 联合、tool call/result、`AgentMessage[]` 等精确 TypeBox schema 替换，消除所有 `unknown`。
 - [ ] **日志系统完善后收紧 console lint**：引入结构化日志并替换临时 `console.log`/`console.warn`/`console.error` 诊断输出后，开启 `no-console` 或更细粒度 console lint。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`

@@ -250,4 +250,24 @@ describe("useProjectDataStore", () => {
     expect(session).toBeNull();
     expect(useProjectDataStore.getState().projects["project-1"]?.sessions).toEqual([]);
   });
+
+  it("stores the raw error message for Error throws", async () => {
+    const client = createClient({
+      listAgents: vi.fn().mockRejectedValue(new Error("boom")),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+
+    expect(useProjectDataStore.getState().projects["project-1"]?.error).toBe("boom");
+  });
+
+  it("stores an empty string when a non-Error value is thrown", async () => {
+    const client = createClient({
+      listAgents: vi.fn().mockRejectedValue("string error"),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+
+    expect(useProjectDataStore.getState().projects["project-1"]?.error).toBe("");
+  });
 });

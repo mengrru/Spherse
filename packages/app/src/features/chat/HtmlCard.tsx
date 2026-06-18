@@ -2,7 +2,7 @@ import { DownloadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { HtmlCard } from "../../lib/types";
-import { useAppStore } from "../../stores/app-store";
+import { useProjectCtx } from "../../lib/project-context";
 
 interface HtmlCardRendererProps {
   card: HtmlCard;
@@ -14,18 +14,12 @@ function sanitizeFileName(name: string): string {
 
 export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const { t } = useI18n();
-  const activeProjectId = useAppStore((s) => s.activeProjectId);
-  const ctx = useAppStore((s) => {
-    const p = activeProjectId ? s.projects.get(activeProjectId) : undefined;
-    return p?.ctx;
-  });
+  const { client, projectRoot } = useProjectCtx();
 
   const width = card.width ? `${Math.min(card.width, card.max_width ?? 800)}px` : "100%";
   const height = Math.min(card.height ?? 400, card.max_height ?? 600);
 
   async function handleSave() {
-    const client = ctx?.client;
-    const projectRoot = ctx?.projectRoot;
     if (!client || !projectRoot) return;
 
     const suggestedName = card.title

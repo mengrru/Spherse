@@ -10,9 +10,9 @@ import {
   SidebarGroupLabel,
   SidebarProvider,
 } from "../../components/ui/sidebar";
-import { useAppStore, type ProjectState } from "../../stores/app-store";
+import { useSidePanel } from "../../hooks/useSidePanel";
+import type { ProjectState } from "../../stores/app-store";
 import { AgentSessionList } from "../agent-session-list";
-
 export interface ProjectPanelProps {
   projectId: string;
   project: ProjectState;
@@ -34,24 +34,20 @@ export function ProjectPanel({
 }: ProjectPanelProps) {
   const [aiDenylistOpen, setAiDenylistOpen] = useState(false);
   const { t } = useI18n();
-  const sidePanelPinned = useAppStore((state) => state.sidePanelPinned);
-  const sidePanelHovered = useAppStore((state) => state.sidePanelHovered);
-  const showSidePanel = useAppStore((state) => state.showSidePanel);
-  const hideSidePanel = useAppStore((state) => state.hideSidePanel);
-  const sidePanelVisible = sidePanelPinned || sidePanelHovered;
+  const { pinned, visible, show, hide } = useSidePanel();
 
   return (
     <div
       className={
-        sidePanelPinned
+        pinned
           ? "relative z-30 h-full shrink-0 transition-[width] duration-200 ease-out w-65"
           : `absolute top-0 left-14 z-50 h-full w-65 transition-transform duration-200 ease-out ${
-              sidePanelVisible ? "translate-x-0" : "-translate-x-[calc(100%+3.5rem)]"
+              visible ? "translate-x-0" : "-translate-x-[calc(100%+3.5rem)]"
             }`
       }
-      {...(!sidePanelPinned && {
-        onMouseEnter: showSidePanel,
-        onMouseLeave: hideSidePanel,
+      {...(!pinned && {
+        onMouseEnter: show,
+        onMouseLeave: hide,
       })}
     >
       <div className="h-full">

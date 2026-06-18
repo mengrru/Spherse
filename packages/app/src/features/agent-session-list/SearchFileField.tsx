@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from "react";
-import type { ApiClient } from "../lib/api";
-import { Input } from "./ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import type { ApiClient } from "../../lib/api";
+import { Input } from "../../components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
 
 const FILE_TREE_EXCLUDE = new Set(["AGENTS.md", "CHANGELOG.md", "changelog.md"]);
 

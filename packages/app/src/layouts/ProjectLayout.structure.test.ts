@@ -11,6 +11,6 @@ describe("ProjectLayout structure", () => {
 
     expect(source).not.toContain("useOutletContext");
     expect(source).not.toContain("useState");
-    expect(source).toContain("useSidePanelClickAway");
+    expect(source).toContain("useSidePanel");
   });
 });
