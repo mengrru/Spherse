@@ -1,8 +1,8 @@
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../lib/project-context";
-import type { FileTreeController } from "./hooks/useFileTreeController";
 import { useFileTreeController } from "./hooks/useFileTreeController";
 import { FileTreeNode } from "./FileTreeNode";
+import { FileTreeProvider } from "./file-tree-context";
 import { InlineNameInput } from "./InlineNameInput";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 
@@ -16,32 +16,28 @@ export interface FileTreeProps {
 export function FileTree({ selectedFilePath, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
   const { t } = useI18n();
   const { client } = useProjectCtx();
-  const ctrl: FileTreeController = useFileTreeController(
-    client,
-    onSelectFile,
-    onDeleted,
-    refreshKey,
-  );
+  const ctrl = useFileTreeController(client, onSelectFile, onDeleted, refreshKey);
+
+  const ctxValue = {
+    selectedFilePath,
+    creating: ctrl.creating,
+    toggleNode: ctrl.toggleNode,
+    requestCreate: ctrl.requestCreate,
+    submitCreate: ctrl.submitCreate,
+    cancelCreate: ctrl.cancelCreate,
+    requestDelete: ctrl.requestDelete,
+  };
 
   return (
     <div className="flex flex-col gap-px text-xs">
       {ctrl.rootNodes.length === 0 ? (
         <p className="px-2 text-xs text-sidebar-foreground/70">{t("common.loading")}</p>
       ) : (
-        ctrl.rootNodes.map((node) => (
-          <FileTreeNode
-            key={node.path}
-            node={node}
-            depth={0}
-            selectedFilePath={selectedFilePath}
-            onToggle={ctrl.toggleNode}
-            onCreate={ctrl.requestCreate}
-            onDelete={ctrl.requestDelete}
-            creating={ctrl.creating}
-            onSubmitCreate={ctrl.submitCreate}
-            onCancelCreate={ctrl.cancelCreate}
-          />
-        ))
+        <FileTreeProvider value={ctxValue}>
+          {ctrl.rootNodes.map((node) => (
+            <FileTreeNode key={node.path} node={node} depth={0} />
+          ))}
+        </FileTreeProvider>
       )}
       {ctrl.creating && ctrl.creating.parentPath === "" && (
         <InlineNameInput

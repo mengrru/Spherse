@@ -33,9 +33,7 @@ import { LogPanel } from "./LogPanel";
 
 export function DebugMenu() {
   const [devToolsOpen, setDevToolsOpen] = useState(false);
-  const [storeViewerOpen, setStoreViewerOpen] = useState(false);
-  const [resetDialogOpen, setResetDialogOpen] = useState(false);
-  const [logPanelOpen, setLogPanelOpen] = useState(false);
+  const [overlay, setOverlay] = useState<null | "store" | "reset" | "logs">(null);
   const [storeData, setStoreData] = useState<string>("");
   const [downloading, setDownloading] = useState(false);
   const { t } = useI18n();
@@ -55,7 +53,7 @@ export function DebugMenu() {
   const handleOpenStoreViewer = async () => {
     const data = await window.electronAPI.getElectronStoreData();
     setStoreData(JSON.stringify(data, null, 2));
-    setStoreViewerOpen(true);
+    setOverlay("store");
   };
 
   const handleReload = () => {
@@ -118,7 +116,7 @@ export function DebugMenu() {
             {t("debug.appData")}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => setLogPanelOpen(true)}
+            onClick={() => setOverlay("logs")}
             disabled={!activeProject}
           >
             <ScrollTextIcon />
@@ -134,7 +132,7 @@ export function DebugMenu() {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            onClick={() => setResetDialogOpen(true)}
+            onClick={() => setOverlay("reset")}
           >
             <TrashIcon />
             {t("debug.resetAppData")}
@@ -142,7 +140,7 @@ export function DebugMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={storeViewerOpen} onOpenChange={setStoreViewerOpen}>
+      <Dialog open={overlay === "store"} onOpenChange={(open) => { if (!open) setOverlay(null); }}>
         <DialogContent className="sm:max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>{t("debug.appData")}</DialogTitle>
@@ -153,7 +151,7 @@ export function DebugMenu() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+      <AlertDialog open={overlay === "reset"} onOpenChange={(open) => { if (!open) setOverlay(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("debug.confirmResetTitle")}</AlertDialogTitle>
@@ -170,8 +168,8 @@ export function DebugMenu() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {logPanelOpen && activeProject && (
-        <LogPanel baseUrl={activeProject.ctx.baseUrl} onClose={() => setLogPanelOpen(false)} />
+      {overlay === "logs" && activeProject && (
+        <LogPanel baseUrl={activeProject.ctx.baseUrl} onClose={() => setOverlay(null)} />
       )}
     </>
   );

@@ -9,16 +9,6 @@ export interface AgentSessionListViewProps {
   collapsedAgentIds: Set<string>;
   activeSessionId: string | null;
   floatingSessionId: string | null;
-  onToggleAgentCollapsed: (agentId: string) => void;
-  onNewSession: (agent: AgentProfile) => void;
-  onScheduleAgent: (agent: AgentProfile) => void;
-  onEditAgent: (agent: AgentProfile) => void;
-  onDeleteAgent: (agent: AgentProfile) => void;
-  onSelectSession: (session: SessionInfo) => void;
-  onDeleteSession: (session: SessionInfo) => void;
-  onRenameSession: (session: SessionInfo, title: string) => Promise<boolean>;
-  onFloatSession: (session: SessionInfo) => void;
-  onCancelFloat: () => void;
 }
 
 export function AgentSessionListView({
@@ -27,16 +17,6 @@ export function AgentSessionListView({
   collapsedAgentIds,
   activeSessionId,
   floatingSessionId,
-  onToggleAgentCollapsed,
-  onNewSession,
-  onScheduleAgent,
-  onEditAgent,
-  onDeleteAgent,
-  onSelectSession,
-  onDeleteSession,
-  onRenameSession,
-  onFloatSession,
-  onCancelFloat,
 }: AgentSessionListViewProps) {
   const grouped = useGroupedSessions(sessions);
 
@@ -54,16 +34,6 @@ export function AgentSessionListView({
           collapsed={collapsedAgentIds.has(agent.id)}
           activeSessionId={activeSessionId}
           floatingSessionId={floatingSessionId}
-          onToggleCollapsed={onToggleAgentCollapsed}
-          onNewSession={onNewSession}
-          onScheduleAgent={onScheduleAgent}
-          onEditAgent={onEditAgent}
-          onDeleteAgent={onDeleteAgent}
-          onSelectSession={onSelectSession}
-          onDeleteSession={onDeleteSession}
-          onRenameSession={onRenameSession}
-          onFloatSession={onFloatSession}
-          onCancelFloat={onCancelFloat}
         />
       ))}
     </div>

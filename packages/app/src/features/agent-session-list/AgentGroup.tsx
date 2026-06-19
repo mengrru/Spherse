@@ -5,6 +5,7 @@ import {
 } from "../../components/ui/collapsible";
 import { AgentRow } from "./AgentRow";
 import { SessionRow } from "./SessionRow";
+import { useAgentSessionActions } from "./actions-context";
 
 interface AgentGroupProps {
   agent: AgentProfile;
@@ -12,16 +13,6 @@ interface AgentGroupProps {
   collapsed: boolean;
   activeSessionId: string | null;
   floatingSessionId: string | null;
-  onToggleCollapsed: (agentId: string) => void;
-  onNewSession: (agent: AgentProfile) => void;
-  onScheduleAgent: (agent: AgentProfile) => void;
-  onEditAgent: (agent: AgentProfile) => void;
-  onDeleteAgent: (agent: AgentProfile) => void;
-  onSelectSession: (session: SessionInfo) => void;
-  onDeleteSession: (session: SessionInfo) => void;
-  onRenameSession: (session: SessionInfo, title: string) => Promise<boolean>;
-  onFloatSession: (session: SessionInfo) => void;
-  onCancelFloat: () => void;
 }
 
 export function AgentGroup({
@@ -30,28 +21,12 @@ export function AgentGroup({
   collapsed,
   activeSessionId,
   floatingSessionId,
-  onToggleCollapsed,
-  onNewSession,
-  onScheduleAgent,
-  onEditAgent,
-  onDeleteAgent,
-  onSelectSession,
-  onDeleteSession,
-  onRenameSession,
-  onFloatSession,
-  onCancelFloat,
 }: AgentGroupProps) {
+  const actions = useAgentSessionActions();
   const isActive = activeSessionId !== null && sessions.some((s) => s.id === activeSessionId);
   return (
-    <Collapsible open={!collapsed} onOpenChange={() => onToggleCollapsed(agent.id)}>
-      <AgentRow
-        agent={agent}
-        active={isActive}
-        onNewSession={onNewSession}
-        onScheduleAgent={onScheduleAgent}
-        onEditAgent={onEditAgent}
-        onDeleteAgent={onDeleteAgent}
-      />
+    <Collapsible open={!collapsed} onOpenChange={() => actions.toggleAgentCollapsed(agent.id)}>
+      <AgentRow agent={agent} active={isActive} />
       <CollapsibleContent className="ml-2">
         <div className="flex flex-col gap-px">
           {sessions.map((session) => (
@@ -60,11 +35,6 @@ export function AgentGroup({
               session={session}
               active={activeSessionId === session.id || session.id === floatingSessionId}
               floating={session.id === floatingSessionId}
-              onSelect={onSelectSession}
-              onDelete={onDeleteSession}
-              onRename={onRenameSession}
-              onFloat={onFloatSession}
-              onCancelFloat={onCancelFloat}
             />
           ))}
         </div>

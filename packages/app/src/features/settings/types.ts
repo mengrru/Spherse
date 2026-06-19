@@ -1,12 +1,8 @@
 import type { ProviderCatalogItem } from "@spherse/core";
+import type { IpcAppSettings } from "@shared/electron-api";
 
 export type ProviderConfig = ProviderCatalogItem;
-
-export interface AppSettings {
-  providers?: Record<string, { apiKey?: string } | undefined>;
-  defaultModel?: string;
-  locale?: string;
-}
+export type AppSettings = IpcAppSettings;
 
 export interface SettingsApi {
   getSettings: () => Promise<AppSettings | null>;

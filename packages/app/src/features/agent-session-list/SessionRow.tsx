@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import { Loader2 } from "lucide-react";
 import type { SessionInfo } from "../../lib/types";
@@ -14,28 +14,54 @@ import {
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useProjectCtx } from "../../lib/project-context";
+import { useAgentSessionActions } from "./actions-context";
 
 interface SessionRowProps {
   session: SessionInfo;
   active: boolean;
   floating: boolean;
-  onSelect: (session: SessionInfo) => void;
-  onDelete: (session: SessionInfo) => void;
-  onRename: (session: SessionInfo, title: string) => Promise<boolean>;
-  onFloat: (session: SessionInfo) => void;
-  onCancelFloat: () => void;
 }
 
 function getFallbackTitle(session: SessionInfo) {
   return new Date(session.updatedAt).toLocaleString();
 }
 
-export function SessionRow({ session, active, floating, onSelect, onDelete, onRename, onFloat, onCancelFloat }: SessionRowProps) {
+type RenameState =
+  | { mode: "idle" }
+  | { mode: "editing"; draft: string; error: string | null }
+  | { mode: "saving"; draft: string; error: string | null };
+
+type RenameAction =
+  | { type: "start"; draft: string }
+  | { type: "cancel" }
+  | { type: "setDraft"; value: string }
+  | { type: "setError"; error: string }
+  | { type: "beginSave" }
+  | { type: "reset" };
+
+function renameReducer(state: RenameState, action: RenameAction): RenameState {
+  switch (action.type) {
+    case "start":
+      return { mode: "editing", draft: action.draft, error: null };
+    case "cancel":
+      return { mode: "idle" };
+    case "setDraft":
+      return state.mode === "idle" ? state : { mode: state.mode, draft: action.value, error: null };
+    case "setError":
+      return state.mode === "idle" ? state : { mode: state.mode, draft: state.draft, error: action.error };
+    case "beginSave":
+      return state.mode === "editing"
+        ? { mode: "saving", draft: state.draft, error: state.error }
+        : state;
+    case "reset":
+      return { mode: "idle" };
+  }
+}
+
+export function SessionRow({ session, active, floating }: SessionRowProps) {
   const { t } = useI18n();
-  const [editing, setEditing] = useState(false);
-  const [draftTitle, setDraftTitle] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const actions = useAgentSessionActions();
+  const [state, dispatch] = useReducer(renameReducer, { mode: "idle" } satisfies RenameState);
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurRef = useRef(false);
   const fallbackTitle = getFallbackTitle(session);
@@ -45,7 +71,7 @@ export function SessionRow({ session, active, floating, onSelect, onDelete, onRe
   );
 
   useEffect(() => {
-    if (!editing) return;
+    if (state.mode === "idle") return;
     skipBlurRef.current = true;
     requestAnimationFrame(() => {
       const input = inputRef.current;
@@ -59,48 +85,36 @@ export function SessionRow({ session, active, floating, onSelect, onDelete, onRe
         skipBlurRef.current = false;
       });
     });
-  }, [editing]);
+  }, [state.mode]);
 
   function startEditing() {
-    setDraftTitle(session.title ?? "");
-    setError(null);
-    setEditing(true);
+    dispatch({ type: "start", draft: session.title ?? "" });
   }
 
   function cancelEditing() {
-    if (saving) return;
-    setEditing(false);
-    setDraftTitle("");
-    setError(null);
+    if (state.mode === "saving") return;
+    dispatch({ type: "cancel" });
   }
 
   async function saveTitle() {
-    const title = draftTitle.trim();
+    if (state.mode === "idle") return;
+    const title = state.draft.trim();
     if (!title) {
-      setError(t("agent-session-list.sessionNameRequired"));
+      dispatch({ type: "setError", error: t("agent-session-list.sessionNameRequired") });
       return;
     }
     if (title.length > 80) {
-      setError(t("agent-session-list.sessionNameTooLong"));
+      dispatch({ type: "setError", error: t("agent-session-list.sessionNameTooLong") });
       return;
     }
     if (title === session.title) {
-      cancelEditing();
+      dispatch({ type: "cancel" });
       return;
     }
 
-    setSaving(true);
-    const ok = await onRename(session, title);
-    setSaving(false);
-    if (ok) {
-      setEditing(false);
-      setDraftTitle("");
-      setError(null);
-    } else {
-      setEditing(false);
-      setDraftTitle("");
-      setError(null);
-    }
+    dispatch({ type: "beginSave" });
+    await actions.renameSession(session, title);
+    dispatch({ type: "reset" });
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -114,21 +128,20 @@ export function SessionRow({ session, active, floating, onSelect, onDelete, onRe
     }
   }
 
-  if (editing) {
+  if (state.mode !== "idle") {
     return (
       <div className="group/session-row">
         <div className="pr-6">
           <Input
             ref={inputRef}
-            value={draftTitle}
+            value={state.draft}
             placeholder={fallbackTitle}
-            disabled={saving}
-            aria-invalid={error ? true : undefined}
+            disabled={state.mode === "saving"}
+            aria-invalid={state.error ? true : undefined}
             className="h-6 text-xs"
             autoFocus
             onChange={(e) => {
-              setDraftTitle(e.target.value);
-              setError(null);
+              dispatch({ type: "setDraft", value: e.target.value });
             }}
             onKeyDown={handleKeyDown}
             onBlur={() => {
@@ -136,7 +149,7 @@ export function SessionRow({ session, active, floating, onSelect, onDelete, onRe
               cancelEditing();
             }}
           />
-          {error && <div className="mt-1 text-xs text-destructive">{error}</div>}
+          {state.error && <div className="mt-1 text-xs text-destructive">{state.error}</div>}
         </div>
       </div>
     );
@@ -149,7 +162,7 @@ export function SessionRow({ session, active, floating, onSelect, onDelete, onRe
           <TreeRow
             depth={1}
             selected={active}
-            onClick={() => onSelect(session)}
+            onClick={() => actions.selectSession(session)}
           >
             <span className="overflow-hidden text-ellipsis whitespace-nowrap">
               {session.title ?? fallbackTitle}
@@ -161,11 +174,11 @@ export function SessionRow({ session, active, floating, onSelect, onDelete, onRe
         </ContextMenuTrigger>
         <ContextMenuContent>
           {floating ? (
-            <ContextMenuItem onClick={onCancelFloat}>
+            <ContextMenuItem onClick={actions.cancelFloat}>
               {t("agent-session-list.cancelFloat")}
             </ContextMenuItem>
           ) : (
-            <ContextMenuItem onClick={() => onFloat(session)}>
+            <ContextMenuItem onClick={() => actions.floatSession(session)}>
               {t("agent-session-list.floatSession")}
             </ContextMenuItem>
           )}
@@ -173,7 +186,7 @@ export function SessionRow({ session, active, floating, onSelect, onDelete, onRe
             {t("common.rename")}
           </ContextMenuItem>
           <ContextMenuSeparator />
-          <ContextMenuItem variant="destructive" onClick={() => onDelete(session)}>
+          <ContextMenuItem variant="destructive" onClick={() => actions.deleteSession(session)}>
             {t("common.delete")}
           </ContextMenuItem>
         </ContextMenuContent>

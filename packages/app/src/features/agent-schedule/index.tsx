@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import {
@@ -11,14 +11,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
-import type { ScheduleEntry, ScheduleInfo, ScheduleLogEntry } from "../../lib/types";
-import type { ApiClient } from "../../lib/api";
+import type { ScheduleEntry, ScheduleInfo } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
+import { useProjectCtx } from "../../lib/project-context";
 import { useScheduleStore } from "./store";
 import { ScheduleForm } from "./ScheduleForm";
 import { ScheduleList } from "./ScheduleList";
 import { ScheduleLogs } from "./ScheduleLogs";
-import { EMPTY_RUNNING_SCHEDULE_IDS, EMPTY_SCHEDULES, LOG_LIMIT, PRESETS } from "./constants";
+import { useScheduleLogs } from "./hooks/use-schedule-logs";
+import {
+  scheduleFormReducer,
+  IDLE_FORM_STATE,
+  type ScheduleFormFields,
+} from "./schedule-form-reducer";
+import { EMPTY_RUNNING_SCHEDULE_IDS, EMPTY_SCHEDULES, PRESETS } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
 import { PlusIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -28,11 +34,11 @@ interface ScheduleDialogProps {
   onOpenChange: (open: boolean) => void;
   agentId: string;
   projectId: string;
-  client: ApiClient;
 }
 
-export function ScheduleDialog({ open, onOpenChange, agentId, projectId, client }: ScheduleDialogProps) {
+export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: ScheduleDialogProps) {
   const { t } = useI18n();
+  const { client } = useProjectCtx();
   const schedules = useScheduleStore((s) => s.byProject[projectId]?.schedulesByAgent?.[agentId] ?? EMPTY_SCHEDULES);
   const runningScheduleIds = useScheduleStore((s) => s.byProject[projectId]?.runningScheduleIdsByAgent?.[agentId] ?? EMPTY_RUNNING_SCHEDULE_IDS);
   const scheduleEventVersion = useScheduleStore((s) => s.byProject[projectId]?.scheduleEventVersion ?? 0);
@@ -44,16 +50,10 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId, client 
   const triggerSchedule = useScheduleStore((s) => s.triggerSchedule);
 
   const [activeTab, setActiveTab] = useState("config");
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, dispatch] = useReducer(scheduleFormReducer, IDLE_FORM_STATE);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ScheduleEntry | null>(null);
-  const [cron, setCron] = useState("");
-  const [preset, setPreset] = useState("");
-  const [message, setMessage] = useState("");
-  const [name, setName] = useState("");
-  const [notify, setNotify] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
-  const [logs, setLogs] = useState<ScheduleLogEntry[]>([]);
+  const logs = useScheduleLogs(client, agentId, open && activeTab === "logs", scheduleEventVersion);
 
   const scheduleNameMap: Record<string, string> = {};
   for (const schedule of schedules) {
@@ -64,60 +64,37 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId, client 
     if (open) refreshSchedules(projectId, client, agentId);
   }, [open, projectId, client, agentId, refreshSchedules]);
 
-  useEffect(() => {
-    if (open && activeTab === "logs") {
-      client.getScheduleLogs(agentId, LOG_LIMIT).then(setLogs).catch(() => {});
-    }
-  }, [open, activeTab, agentId, client, scheduleEventVersion]);
-
-  function resetForm() {
-    setEditingId(null);
-    setCron("");
-    setPreset("");
-    setMessage("");
-    setName("");
-    setNotify(false);
-    setNotificationMessage("");
-    setExpandedId(null);
-  }
-
-  function startCreate() {
-    resetForm();
-    setEditingId("__new__");
+  function patchField<Field extends keyof ScheduleFormFields>(field: Field, value: ScheduleFormFields[Field]) {
+    dispatch({ type: "patch", patch: { [field]: value } });
   }
 
   function handlePresetChange(value: string) {
-    setPreset(value);
     const entry = PRESETS.find((p) => p.id === value);
-    if (entry) setCron(entry.cron);
+    dispatch({ type: "patch", patch: entry ? { preset: value, cron: entry.cron } : { preset: value } });
   }
 
   async function handleSave() {
-    if (!cron.trim() || !message.trim()) return;
+    if (!form.cron.trim() || !form.message.trim()) return;
     const data = {
-      name: name || undefined,
-      cron,
-      message,
+      name: form.name || undefined,
+      cron: form.cron,
+      message: form.message,
       mode: "new_session" as const,
-      notify,
-      notificationMessage: notify && notificationMessage.trim() ? notificationMessage.trim() : undefined,
+      notify: form.notify,
+      notificationMessage: form.notify && form.notificationMessage.trim() ? form.notificationMessage.trim() : undefined,
     };
-    if (editingId === "__new__") {
+    if (form.mode === "create") {
       await createSchedule(projectId, client, agentId, data);
-    } else if (editingId) {
-      await updateSchedule(projectId, client, agentId, editingId, data);
+    } else if (form.mode === "edit" && form.editingId) {
+      await updateSchedule(projectId, client, agentId, form.editingId, data);
     }
-    resetForm();
+    dispatch({ type: "reset" });
+    setExpandedId(null);
   }
 
   function handleEdit(entry: ScheduleEntry) {
-    setEditingId(entry.id);
+    dispatch({ type: "edit", entry });
     setExpandedId(null);
-    setCron(entry.cron);
-    setMessage(entry.message);
-    setName(entry.name ?? "");
-    setNotify(entry.notify);
-    setNotificationMessage(entry.notificationMessage ?? "");
   }
 
   async function handleTrigger(entry: ScheduleEntry) {
@@ -147,8 +124,8 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId, client 
               <TabsTrigger value="config">{t("agent-schedule.tabConfig")}</TabsTrigger>
               <TabsTrigger value="logs">{t("agent-schedule.tabLogs")}</TabsTrigger>
             </TabsList>
-            {activeTab === "config" && !editingId && (
-              <Button size="default" onClick={startCreate}>
+            {activeTab === "config" && form.mode === "idle" && (
+              <Button size="default" onClick={() => dispatch({ type: "startCreate" })}>
                 <PlusIcon className="size-4" />
                 {t("agent-schedule.createSchedule")}
               </Button>
@@ -156,24 +133,24 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId, client 
           </div>
 
           <TabsContent value="config" className="min-h-0 flex-1 overflow-y-auto">
-            {editingId ? (
+            {form.mode !== "idle" ? (
               <ScheduleForm
-                editingId={editingId}
-                name={name}
-                cron={cron}
-                preset={preset}
-                message={message}
-                notify={notify}
-                notificationMessage={notificationMessage}
-                onNameChange={setName}
-                onCronChange={setCron}
+                editingId={form.editingId ?? ""}
+                name={form.name}
+                cron={form.cron}
+                preset={form.preset}
+                message={form.message}
+                notify={form.notify}
+                notificationMessage={form.notificationMessage}
+                onNameChange={(v) => patchField("name", v)}
+                onCronChange={(v) => patchField("cron", v)}
                 onPresetChange={handlePresetChange}
-                onMessageChange={setMessage}
-                onNotifyChange={setNotify}
-                onNotificationMessageChange={setNotificationMessage}
-                onInsertVariable={(variable) => setMessage((prev) => prev + `{{${variable}}}`)}
+                onMessageChange={(v) => patchField("message", v)}
+                onNotifyChange={(v) => patchField("notify", v)}
+                onNotificationMessageChange={(v) => patchField("notificationMessage", v)}
+                onInsertVariable={(variable) => dispatch({ type: "patch", patch: { message: form.message + `{{${variable}}}` } })}
                 onSave={handleSave}
-                onCancel={resetForm}
+                onCancel={() => dispatch({ type: "reset" })}
               />
             ) : (
               <ScheduleList

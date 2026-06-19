@@ -8,13 +8,14 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "outDir": "dist/renderer",
-    "rootDir": "src",
+    "rootDirs": ["src", "shared"],
     "declaration": false,
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@shared/*": ["./shared/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "shared"]
 }

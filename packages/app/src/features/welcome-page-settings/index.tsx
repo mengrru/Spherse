@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { translate } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../lib/api";
 import { Button } from "../../components/ui/button";
@@ -14,7 +13,6 @@ import {
 import { Input } from "../../components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "../../components/ui/field";
 import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../lib/events";
-import { useSettingsStore } from "../../stores/settings-store";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
 
@@ -46,7 +44,6 @@ export function WelcomePageSettingsDialog({
 
   useEffect(() => {
     if (!open) return;
-    const locale = useSettingsStore.getState().locale ?? "zh-CN";
     setLoading(true);
     client
       .getWelcomePageSettings()
@@ -55,20 +52,19 @@ export function WelcomePageSettingsDialog({
         setPath(settings.path ?? "");
       })
       .catch((err: unknown) =>
-        toast.error(translate(locale, "welcome-page-settings.loadFailed", { message: (err as Error).message })),
+        toast.error(t("welcome-page-settings.loadFailed", { message: (err as Error).message })),
       )
       .finally(() => setLoading(false));
-  }, [client, open]);
+  }, [client, open, t]);
 
   const handleSave = async () => {
-    const locale = useSettingsStore.getState().locale ?? "zh-CN";
     const trimmed = path.trim();
     const valueToSave = trimmed === "" ? null : trimmed;
 
     if (valueToSave !== null) {
       const normalized = normalizeWelcomePagePath(valueToSave);
       if (!normalized) {
-        toast.error(translate(locale, "welcome-page-settings.invalidPath"));
+        toast.error(t("welcome-page-settings.invalidPath"));
         return;
       }
     }
@@ -78,27 +74,26 @@ export function WelcomePageSettingsDialog({
       const result = await client.updateWelcomePageSettings(valueToSave);
       setSavedPath(result.path);
       window.dispatchEvent(new Event(WELCOME_PAGE_SETTINGS_CHANGED_EVENT));
-      toast.success(translate(locale, "welcome-page-settings.saved"));
+      toast.success(t("welcome-page-settings.saved"));
       onOpenChange(false);
     } catch (err) {
-      toast.error(translate(locale, "welcome-page-settings.saveFailed", { message: (err as Error).message }));
+      toast.error(t("welcome-page-settings.saveFailed", { message: (err as Error).message }));
     } finally {
       setSaving(false);
     }
   };
 
   const handleClear = async () => {
-    const locale = useSettingsStore.getState().locale ?? "zh-CN";
     setSaving(true);
     try {
       const result = await client.updateWelcomePageSettings(null);
       setSavedPath(result.path);
       setPath("");
       window.dispatchEvent(new Event(WELCOME_PAGE_SETTINGS_CHANGED_EVENT));
-      toast.success(translate(locale, "welcome-page-settings.saved"));
+      toast.success(t("welcome-page-settings.saved"));
       onOpenChange(false);
     } catch (err) {
-      toast.error(translate(locale, "welcome-page-settings.saveFailed", { message: (err as Error).message }));
+      toast.error(t("welcome-page-settings.saveFailed", { message: (err as Error).message }));
     } finally {
       setSaving(false);
     }

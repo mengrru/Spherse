@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import { createContext, useCallback, useContext } from "react";
 import type { Locale } from "./types.js";
 import type { TranslationKey } from "./catalog.js";
 import { translate } from "./translate.js";
@@ -17,8 +17,9 @@ export function useI18n(): {
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 } {
   const locale = useContext(I18nContext);
-  return {
-    locale,
-    t: (key, params) => translate(locale, key, params),
-  };
+  const t = useCallback(
+    (key: TranslationKey, params?: Record<string, string | number>) => translate(locale, key, params),
+    [locale],
+  );
+  return { locale, t };
 }

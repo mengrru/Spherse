@@ -12,25 +12,16 @@ import {
 import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
+import { useAgentSessionActions } from "./actions-context";
 
 interface AgentRowProps {
   agent: AgentProfile;
   active?: boolean;
-  onNewSession: (agent: AgentProfile) => void;
-  onScheduleAgent: (agent: AgentProfile) => void;
-  onEditAgent: (agent: AgentProfile) => void;
-  onDeleteAgent: (agent: AgentProfile) => void;
 }
 
-export function AgentRow({
-  agent,
-  active,
-  onNewSession,
-  onScheduleAgent,
-  onEditAgent,
-  onDeleteAgent,
-}: AgentRowProps) {
+export function AgentRow({ agent, active }: AgentRowProps) {
   const { t } = useI18n();
+  const actions = useAgentSessionActions();
   return (
     <div className="group/agent-row relative">
       <CollapsibleTrigger render={<TreeRow depth={0} className={cn("group pr-8", active && "bg-sidebar-accent")} />}>
@@ -54,17 +45,17 @@ export function AgentRow({
           <MoreHorizontalIcon className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => onNewSession(agent)}>
+          <DropdownMenuItem onClick={() => actions.newSession(agent)}>
             {t("agent-session-list.newSession")}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onEditAgent(agent)}>
+          <DropdownMenuItem onClick={() => actions.editAgent(agent)}>
             {t("common.edit")}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onScheduleAgent(agent)}>
+          <DropdownMenuItem onClick={() => actions.scheduleAgent(agent)}>
             {t("agent-schedule.menuItem")}
             <DropdownMenuShortcut>Beta</DropdownMenuShortcut>
           </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onClick={() => onDeleteAgent(agent)}>
+          <DropdownMenuItem variant="destructive" onClick={() => actions.deleteAgent(agent)}>
             {t("common.delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -53,8 +53,7 @@ export function App() {
   }, [navigate, restoreProjects]);
 
   useEffect(() => {
-    const api = (window as unknown as { electronAPI: import("./features/settings/types").SettingsApi }).electronAPI;
-    if (api) void loadSettings(api);
+    void loadSettings(window.electronAPI);
   }, [loadSettings]);
 
   const handleAddProject = async () => {

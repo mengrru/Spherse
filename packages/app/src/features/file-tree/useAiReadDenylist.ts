@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { translate } from "@spherse/i18n";
+import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../lib/api";
-import { useSettingsStore } from "../../stores/settings-store";
 
 export function normalizeAiDeniedPath(input: string): string | null {
   const trimmed = input.trim().replace(/\\/g, "/");
@@ -21,6 +20,7 @@ export function normalizeAiDeniedPath(input: string): string | null {
 }
 
 export function useAiReadDenylist(client: ApiClient, open: boolean) {
+  const { t } = useI18n();
   const [paths, setPaths] = useState<string[]>([]);
   const [input, setInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -28,26 +28,24 @@ export function useAiReadDenylist(client: ApiClient, open: boolean) {
 
   useEffect(() => {
     if (!open) return;
-    const locale = useSettingsStore.getState().locale ?? "zh-CN";
     setLoading(true);
     client
       .getAiAccessSettings()
       .then((settings) => setPaths(settings.deniedPaths))
       .catch((err: unknown) =>
-        toast.error(translate(locale, "ai-read-denylist.loadFailed", { message: (err as Error).message })),
+        toast.error(t("ai-read-denylist.loadFailed", { message: (err as Error).message })),
       )
       .finally(() => setLoading(false));
-  }, [client, open]);
+  }, [client, open, t]);
 
   const addInput = () => {
-    const locale = useSettingsStore.getState().locale ?? "zh-CN";
     const normalized = normalizeAiDeniedPath(input);
     if (!normalized) {
-      toast.error(translate(locale, "ai-read-denylist.invalidPath"));
+      toast.error(t("ai-read-denylist.invalidPath"));
       return;
     }
     if (paths.includes(normalized)) {
-      toast.error(translate(locale, "ai-read-denylist.pathExists"));
+      toast.error(t("ai-read-denylist.pathExists"));
       return;
     }
     setPaths((current) => [...current, normalized]);
@@ -59,15 +57,14 @@ export function useAiReadDenylist(client: ApiClient, open: boolean) {
   };
 
   const save = async () => {
-    const locale = useSettingsStore.getState().locale ?? "zh-CN";
     setSaving(true);
     try {
       const result = await client.updateAiAccessSettings(paths);
       setPaths(result.deniedPaths);
-      toast.success(translate(locale, "ai-read-denylist.saved"));
+      toast.success(t("ai-read-denylist.saved"));
       return true;
     } catch (err) {
-      toast.error(translate(locale, "ai-read-denylist.saveFailed", { message: (err as Error).message }));
+      toast.error(t("ai-read-denylist.saveFailed", { message: (err as Error).message }));
       return false;
     } finally {
       setSaving(false);

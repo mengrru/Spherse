@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { AGENT_TEMPLATE, AGENT_THEME_TEMPLATE } from "@spherse/presets";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import { useI18n } from "@spherse/i18n/react";
-import type { ApiClient } from "../../lib/api";
 import { parseAgentMarkdown, buildAgentMarkdown } from "../../lib/agent-markdown";
 import type { AgentFormData } from "../../lib/agent-markdown";
 import { ALL_TOOLS } from "../../lib/tool-registry";
@@ -29,12 +28,11 @@ interface AgentDialogProps {
   mode: "create" | "edit";
   initialContent?: string;
   initialThemeContent?: string;
-  client: ApiClient;
   onSubmit: (slug: string, content: string, themeContent: string) => Promise<void>;
   onCancel: () => void;
 }
 
-export function AgentDialog({ mode, initialContent, initialThemeContent, client, onSubmit, onCancel }: AgentDialogProps) {
+export function AgentDialog({ mode, initialContent, initialThemeContent, onSubmit, onCancel }: AgentDialogProps) {
   const { t } = useI18n();
   const raw = initialContent ?? AGENT_TEMPLATE;
   const parsed = useMemo(() => parseAgentMarkdown(raw), [raw]);
@@ -101,7 +99,6 @@ export function AgentDialog({ mode, initialContent, initialThemeContent, client,
               </Field>
               <ToolPicker selectedTools={formData.tools} onToggle={toggleTool} />
               <ContextPathField
-                client={client}
                 contextPaths={formData.context}
                 onAdd={addContext}
                 onRemove={removeContext}
@@ -175,12 +172,10 @@ function ToolPicker({
 }
 
 function ContextPathField({
-  client,
   contextPaths,
   onAdd,
   onRemove,
 }: {
-  client: ApiClient;
   contextPaths: string[];
   onAdd: (path: string) => void;
   onRemove: (path: string) => void;
@@ -208,7 +203,6 @@ function ContextPathField({
         </div>
       )}
       <SearchFileField
-        client={client}
         exclude={contextPaths}
         onSelect={onAdd}
         placeholder={t("agent-dialog.refsPlaceholder")}

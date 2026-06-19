@@ -22,7 +22,7 @@ const LOCALE_LABELS: Record<string, string> = {
   en: "English",
 };
 
-const electronAPI = (window as unknown as { electronAPI: SettingsApi }).electronAPI;
+const electronAPI: SettingsApi = window.electronAPI;
 
 interface SettingsModalProps {
   onClose: () => void;

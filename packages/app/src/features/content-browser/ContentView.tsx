@@ -1,11 +1,10 @@
 import type { RefObject } from "react";
 import { useI18n } from "@spherse/i18n/react";
-import type { ApiClient } from "../../lib/api";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
+import { useProjectCtx } from "../../lib/project-context";
 
 interface ContentViewProps {
-  client: ApiClient;
   filePath: string;
   content: string | null;
   contentRef: RefObject<HTMLDivElement | null>;
@@ -21,7 +20,6 @@ interface ContentViewProps {
 }
 
 export function ContentView({
-  client,
   filePath,
   content,
   contentRef,
@@ -36,6 +34,7 @@ export function ContentView({
   onEditedContentChange,
 }: ContentViewProps) {
   const { t } = useI18n();
+  const { client } = useProjectCtx();
   if (isHtml && htmlView === "preview" && !isEditing && !loading && !error) {
     return (
       <iframe

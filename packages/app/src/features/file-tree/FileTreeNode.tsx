@@ -5,31 +5,22 @@ import {
   CollapsibleTrigger,
 } from "../../components/ui/collapsible";
 import { TreeRow } from "../../components/ui/tree-row";
-import type { TreeNode, CreatingState, CreateAction } from "./tree-model";
+import type { TreeNode } from "./tree-model";
 import { FileTreeContextMenu } from "./FileTreeContextMenu";
 import { InlineNameInput } from "./InlineNameInput";
+import { useFileTreeCtx } from "./file-tree-context";
 
-export function FileTreeNode({
-  node,
-  depth,
-  selectedFilePath,
-  onToggle,
-  onCreate,
-  onDelete,
-  creating,
-  onSubmitCreate,
-  onCancelCreate,
-}: {
-  node: TreeNode;
-  depth: number;
-  selectedFilePath?: string;
-  onToggle: (node: TreeNode) => void;
-  onCreate: (node: TreeNode, action: CreateAction) => void;
-  onDelete: (node: TreeNode) => void;
-  creating: CreatingState | null;
-  onSubmitCreate: (parentPath: string, action: CreateAction, name: string) => void;
-  onCancelCreate: () => void;
-}) {
+export function FileTreeNode({ node, depth }: { node: TreeNode; depth: number }) {
+  const {
+    selectedFilePath,
+    creating,
+    toggleNode,
+    requestCreate,
+    submitCreate,
+    cancelCreate,
+    requestDelete,
+  } = useFileTreeCtx();
+
   const isCreatingInThisDir =
     creating && node.type === "directory" && creating.parentPath === node.path;
 
@@ -40,7 +31,7 @@ export function FileTreeNode({
       depth={depth}
       selected={isSelected}
       className={node.type === "directory" ? "group" : undefined}
-      onClick={() => onToggle(node)}
+      onClick={() => toggleNode(node)}
     >
       {node.type === "directory" && (
         <ChevronRightIcon className="size-4 shrink-0 text-sidebar-foreground/70 transition-transform group-data-[panel-open]:rotate-90" />
@@ -77,8 +68,8 @@ export function FileTreeNode({
     return (
       <FileTreeContextMenu
         node={node}
-        onCreate={(action) => onCreate(node, action)}
-        onDelete={() => onDelete(node)}
+        onCreate={(action) => requestCreate(node, action)}
+        onDelete={() => requestDelete(node)}
       >
         {menuTrigger}
       </FileTreeContextMenu>
@@ -86,11 +77,11 @@ export function FileTreeNode({
   }
 
   return (
-    <Collapsible open={node.expanded} onOpenChange={() => onToggle(node)}>
+    <Collapsible open={node.expanded} onOpenChange={() => toggleNode(node)}>
       <FileTreeContextMenu
         node={node}
-        onCreate={(action) => onCreate(node, action)}
-        onDelete={() => onDelete(node)}
+        onCreate={(action) => requestCreate(node, action)}
+        onDelete={() => requestDelete(node)}
       >
         {menuTrigger}
       </FileTreeContextMenu>
@@ -100,24 +91,13 @@ export function FileTreeNode({
             <InlineNameInput
               depth={depth + 1}
               onSubmit={(name) =>
-                onSubmitCreate(creating.parentPath, creating.action, name)
+                submitCreate(creating.parentPath, creating.action, name)
               }
-              onCancel={onCancelCreate}
+              onCancel={cancelCreate}
             />
           )}
           {node.children.map((child) => (
-            <FileTreeNode
-              key={child.path}
-              node={child}
-              depth={depth + 1}
-              selectedFilePath={selectedFilePath}
-              onToggle={onToggle}
-              onCreate={onCreate}
-              onDelete={onDelete}
-              creating={creating}
-              onSubmitCreate={onSubmitCreate}
-              onCancelCreate={onCancelCreate}
-            />
+            <FileTreeNode key={child.path} node={child} depth={depth + 1} />
           ))}
         </div>
       </CollapsibleContent>

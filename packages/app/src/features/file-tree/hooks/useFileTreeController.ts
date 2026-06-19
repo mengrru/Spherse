@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { translate } from "@spherse/i18n";
+import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../../lib/api";
-import { useSettingsStore } from "../../../stores/settings-store";
 import {
   type TreeNode,
   type CreatingState,
@@ -33,6 +32,7 @@ export function useFileTreeController(
   onDeleted: ((path: string) => void) | undefined,
   refreshKey: number | undefined,
 ): FileTreeController {
+  const { t } = useI18n();
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
   const [creating, setCreating] = useState<CreatingState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
@@ -86,62 +86,66 @@ export function useFileTreeController(
     });
   }, [loadChildren, refreshKey]);
 
-  const toggleNode = async (node: TreeNode) => {
-    if (node.type === "file") {
-      onSelectFile(node.path);
-      return;
-    }
-
-    const children = node.loaded
-      ? node.children
-      : buildNodes(await loadChildren(node.path), node.path);
-    setRootNodes((prev) =>
-      updateNode(prev, node.path, (current) => ({
-        ...current,
-        children,
-        loaded: true,
-        expanded: !current.expanded,
-      })),
-    );
-  };
-
-  const requestCreate = (node: TreeNode, action: CreateAction) => {
-    const dirPath =
-      node.type === "directory"
-        ? node.path
-        : node.path.split("/").slice(0, -1).join("/");
-    if (node.type === "directory" && !node.expanded) {
-      toggleNode(node);
-    }
-    setCreating({ parentPath: dirPath, action });
-  };
-
-  const submitCreate = async (
-    parentPath: string,
-    action: CreateAction,
-    name: string,
-  ) => {
-    if (!name || INVALID_NAME_RE.test(name)) return;
-    const targetPath = parentPath ? `${parentPath}/${name}` : name;
-    try {
-      if (action === "new-folder") {
-        await client.mkdir(targetPath);
-      } else {
-        await client.touchFile(targetPath);
+  const toggleNode = useCallback(
+    async (node: TreeNode) => {
+      if (node.type === "file") {
+        onSelectFile(node.path);
+        return;
       }
-      setCreating(null);
-      refreshRoot();
-    } catch (err) {
-      const locale = useSettingsStore.getState().locale ?? "zh-CN";
-      toast.error(translate(locale, "file-tree.createFailed", { message: (err as Error).message }));
-    }
-  };
 
-  const cancelCreate = () => setCreating(null);
+      const children = node.loaded
+        ? node.children
+        : buildNodes(await loadChildren(node.path), node.path);
+      setRootNodes((prev) =>
+        updateNode(prev, node.path, (current) => ({
+          ...current,
+          children,
+          loaded: true,
+          expanded: !current.expanded,
+        })),
+      );
+    },
+    [onSelectFile, loadChildren],
+  );
 
-  const requestDelete = (node: TreeNode) => setDeleteTarget(node);
+  const requestCreate = useCallback(
+    (node: TreeNode, action: CreateAction) => {
+      const dirPath =
+        node.type === "directory"
+          ? node.path
+          : node.path.split("/").slice(0, -1).join("/");
+      if (node.type === "directory" && !node.expanded) {
+        toggleNode(node);
+      }
+      setCreating({ parentPath: dirPath, action });
+    },
+    [toggleNode],
+  );
 
-  const confirmDelete = () => {
+  const submitCreate = useCallback(
+    async (parentPath: string, action: CreateAction, name: string) => {
+      if (!name || INVALID_NAME_RE.test(name)) return;
+      const targetPath = parentPath ? `${parentPath}/${name}` : name;
+      try {
+        if (action === "new-folder") {
+          await client.mkdir(targetPath);
+        } else {
+          await client.touchFile(targetPath);
+        }
+        setCreating(null);
+        refreshRoot();
+      } catch (err) {
+        toast.error(t("file-tree.createFailed", { message: (err as Error).message }));
+      }
+    },
+    [client, refreshRoot, t],
+  );
+
+  const cancelCreate = useCallback(() => setCreating(null), []);
+
+  const requestDelete = useCallback((node: TreeNode) => setDeleteTarget(node), []);
+
+  const confirmDelete = useCallback(() => {
     if (!deleteTarget) return;
     const node = deleteTarget;
     setDeleteTarget(null);
@@ -152,12 +156,11 @@ export function useFileTreeController(
         refreshRoot();
       })
       .catch((err: unknown) => {
-        const locale = useSettingsStore.getState().locale ?? "zh-CN";
-        toast.error(translate(locale, "file-tree.deleteFailed", { message: (err as Error).message }));
+        toast.error(t("file-tree.deleteFailed", { message: (err as Error).message }));
       });
-  };
+  }, [deleteTarget, client, onDeleted, refreshRoot, t]);
 
-  const cancelDelete = () => setDeleteTarget(null);
+  const cancelDelete = useCallback(() => setDeleteTarget(null), []);
 
   useFsWatchRefresh(client, refreshRoot);
 

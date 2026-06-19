@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from "react";
-import type { ApiClient } from "../../lib/api";
 import { Input } from "../../components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+import { useProjectCtx } from "../../lib/project-context";
 
 const FILE_TREE_EXCLUDE = new Set(["AGENTS.md", "CHANGELOG.md", "changelog.md"]);
 
@@ -14,13 +14,13 @@ function fuzzyMatch(filePath: string, query: string): boolean {
 }
 
 interface SearchFileFieldProps {
-  client: ApiClient;
   exclude?: string[];
   onSelect: (path: string) => void;
   placeholder?: string;
 }
 
-export function SearchFileField({ client, exclude = [], onSelect, placeholder }: SearchFileFieldProps) {
+export function SearchFileField({ exclude = [], onSelect, placeholder }: SearchFileFieldProps) {
+  const { client } = useProjectCtx();
   const [input, setInput] = useState("");
   const [fileTree, setFileTree] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<FileSuggestion[]>([]);

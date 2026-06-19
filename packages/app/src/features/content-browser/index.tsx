@@ -82,7 +82,6 @@ export function ContentBrowser({
       >
         {(contentRef) => (
           <ContentView
-            client={client}
             filePath={filePath}
             content={content}
             contentRef={contentRef}

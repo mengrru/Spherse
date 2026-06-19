@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import type { ElectronAPI } from "@shared/electron-api.js";
 
 contextBridge.exposeInMainWorld("electronAPI", {
   selectDirectory: () => ipcRenderer.invoke("select-directory"),
@@ -31,4 +32,4 @@ contextBridge.exposeInMainWorld("electronAPI", {
   resetAppData: () => ipcRenderer.invoke("reset-app-data"),
   showSaveDialog: (options: { defaultPath?: string }) =>
     ipcRenderer.invoke("show-save-dialog", options),
-});
+} satisfies ElectronAPI);

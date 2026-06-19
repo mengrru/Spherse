@@ -24,6 +24,7 @@ import { useAgentSessionListUiStore } from "./store";
 import { useProjectCtx } from "../../lib/project-context";
 import { useFloatingSessionId } from "../floating-chat/use-floating-session-id";
 import { AgentSessionListView } from "./AgentSessionListView";
+import { AgentSessionActionsProvider, type AgentSessionActions } from "./actions-context";
 import { ScheduleDialog } from "../agent-schedule";
 import { PlusIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
@@ -32,6 +33,14 @@ import { dispatchAction } from "../../ui-sdk";
 const EMPTY_AGENTS: AgentProfile[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
 const EMPTY_COLLAPSED_AGENT_IDS = new Set<string>();
+
+type DialogState =
+  | { kind: "none" }
+  | { kind: "create-agent" }
+  | { kind: "edit-agent"; id: string; content: string; themeContent: string }
+  | { kind: "delete-agent"; agent: AgentProfile }
+  | { kind: "delete-session"; session: SessionInfo }
+  | { kind: "schedule"; agent: AgentProfile };
 
 export function AgentSessionList() {
   const { t } = useI18n();
@@ -48,11 +57,7 @@ export function AgentSessionList() {
   const toggleAgentCollapsed = useAgentSessionListUiStore((state) => state.toggleAgentCollapsed);
   const setCollapsedAgentIds = useAgentSessionListUiStore((state) => state.setCollapsedAgentIds);
   const floatingSessionId = useFloatingSessionId(projectId);
-  const [showCreateAgent, setShowCreateAgent] = useState(false);
-  const [editAgent, setEditAgent] = useState<{ id: string; content: string; themeContent: string } | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<AgentProfile | null>(null);
-  const [deleteSessionTarget, setDeleteSessionTarget] = useState<SessionInfo | null>(null);
-  const [scheduleAgent, setScheduleAgent] = useState<AgentProfile | null>(null);
+  const [dialog, setDialog] = useState<DialogState>({ kind: "none" });
 
   const agents = projectData?.agents ?? EMPTY_AGENTS;
   const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
@@ -93,20 +98,6 @@ export function AgentSessionList() {
     }
   };
 
-  const handleDeleteSessionRequest = (session: SessionInfo) => {
-    setDeleteSessionTarget(session);
-  };
-
-  const performDeleteSession = async () => {
-    if (!deleteSessionTarget) return;
-    const deletedId = deleteSessionTarget.id;
-    setDeleteSessionTarget(null);
-    await deleteSession(projectId, client, deletedId);
-    if (activeSessionId === deletedId) {
-      navigate(`/project/${projectId}`);
-    }
-  };
-
   const handleRenameSession = async (session: SessionInfo, title: string) => {
     const ok = await renameSession(projectId, client, session.id, title);
     if (!ok) {
@@ -116,11 +107,24 @@ export function AgentSessionList() {
     return ok;
   };
 
-  const handleDeleteAgent = (agent: AgentProfile) => {
-    setDeleteTarget(agent);
+  const performDeleteSession = async (session: SessionInfo) => {
+    setDialog({ kind: "none" });
+    await deleteSession(projectId, client, session.id);
+    if (activeSessionId === session.id) {
+      navigate(`/project/${projectId}`);
+    }
+  };
+
+  const handleEditAgent = async (agent: AgentProfile) => {
+    const [raw, theme] = await Promise.all([
+      client.getAgentRaw(agent.id),
+      client.getAgentTheme(agent.id),
+    ]);
+    setDialog({ kind: "edit-agent", id: agent.id, content: raw, themeContent: theme });
   };
 
   const performDeleteAgent = async (agent: AgentProfile) => {
+    setDialog({ kind: "none" });
     await deleteAgent(projectId, client, agent.id);
     if (activeSessionId) {
       const deletedSessionBelongsToAgent = projectData?.sessions.some(
@@ -134,21 +138,30 @@ export function AgentSessionList() {
 
   const handleCreateAgent = async (slug: string, content: string, themeContent: string) => {
     const ok = await createAgent(projectId, client, slug, content, themeContent);
-    if (ok) setShowCreateAgent(false);
-  };
-
-  const handleEditAgent = async (agent: AgentProfile) => {
-    const [raw, theme] = await Promise.all([
-      client.getAgentRaw(agent.id),
-      client.getAgentTheme(agent.id),
-    ]);
-    setEditAgent({ id: agent.id, content: raw, themeContent: theme });
+    if (ok) setDialog({ kind: "none" });
   };
 
   const handleEditSubmit = async (_slug: string, content: string, themeContent: string) => {
-    if (!editAgent) return;
-    const ok = await updateAgent(projectId, client, editAgent.id, content, themeContent);
-    if (ok) setEditAgent(null);
+    if (dialog.kind !== "edit-agent") return;
+    const ok = await updateAgent(projectId, client, dialog.id, content, themeContent);
+    if (ok) setDialog({ kind: "none" });
+  };
+
+  const actions: AgentSessionActions = {
+    toggleAgentCollapsed: (agentId) => toggleAgentCollapsed(projectId, agentId),
+    newSession: handleNewSession,
+    scheduleAgent: (agent) => setDialog({ kind: "schedule", agent }),
+    editAgent: handleEditAgent,
+    deleteAgent: (agent) => setDialog({ kind: "delete-agent", agent }),
+    selectSession: handleSelectSession,
+    deleteSession: (session) => setDialog({ kind: "delete-session", session }),
+    renameSession: handleRenameSession,
+    floatSession: (s) => {
+      dispatchAction("floatSession", { sessionId: s.id }, { navigate, projectId });
+    },
+    cancelFloat: () => {
+      dispatchAction("unfloatSession", {}, { navigate, projectId });
+    },
   };
 
   return (
@@ -159,99 +172,91 @@ export function AgentSessionList() {
         </SidebarGroupLabel>
         <SidebarGroupAction
           className="top-1 right-0"
-          onClick={() => setShowCreateAgent(true)}
+          onClick={() => setDialog({ kind: "create-agent" })}
           title={t("agent-session-list.createAgentTooltip")}
         >
           <PlusIcon />
         </SidebarGroupAction>
         <SidebarGroupContent>
-          <AgentSessionListView
-            agents={agents}
-            sessions={sessions}
-            collapsedAgentIds={effectiveCollapsedAgentIds}
-            activeSessionId={activeSessionId}
-            floatingSessionId={floatingSessionId}
-            onToggleAgentCollapsed={(agentId) => toggleAgentCollapsed(projectId, agentId)}
-            onNewSession={handleNewSession}
-            onScheduleAgent={setScheduleAgent}
-            onEditAgent={handleEditAgent}
-            onDeleteAgent={handleDeleteAgent}
-            onSelectSession={handleSelectSession}
-            onDeleteSession={handleDeleteSessionRequest}
-            onRenameSession={handleRenameSession}
-            onFloatSession={(s) => {
-              dispatchAction("floatSession", { sessionId: s.id }, { navigate, projectId });
-            }}
-            onCancelFloat={() => {
-              dispatchAction("unfloatSession", {}, { navigate, projectId });
-            }}
-          />
+          <AgentSessionActionsProvider actions={actions}>
+            <AgentSessionListView
+              agents={agents}
+              sessions={sessions}
+              collapsedAgentIds={effectiveCollapsedAgentIds}
+              activeSessionId={activeSessionId}
+              floatingSessionId={floatingSessionId}
+            />
+          </AgentSessionActionsProvider>
         </SidebarGroupContent>
       </SidebarGroup>
-      {showCreateAgent && (
+      {dialog.kind === "create-agent" && (
         <AgentDialog
           mode="create"
-          client={client}
           onSubmit={handleCreateAgent}
-          onCancel={() => setShowCreateAgent(false)}
+          onCancel={() => setDialog({ kind: "none" })}
         />
       )}
-      {editAgent && (
+      {dialog.kind === "edit-agent" && (
         <AgentDialog
           mode="edit"
-          initialContent={editAgent.content}
-          initialThemeContent={editAgent.themeContent}
-          client={client}
+          initialContent={dialog.content}
+          initialThemeContent={dialog.themeContent}
           onSubmit={handleEditSubmit}
-          onCancel={() => setEditAgent(null)}
+          onCancel={() => setDialog({ kind: "none" })}
         />
       )}
-      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+      <AlertDialog
+        open={dialog.kind === "delete-agent"}
+        onOpenChange={(open) => { if (!open) setDialog({ kind: "none" }); }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("file-tree.confirmDeleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("agent-session-list.confirmDeleteAgent", { name: deleteTarget?.name ?? "" })}
+              {t("agent-session-list.confirmDeleteAgent", {
+                name: dialog.kind === "delete-agent" ? dialog.agent.name : "",
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction variant="destructive" onClick={() => {
-              if (deleteTarget) {
-                performDeleteAgent(deleteTarget);
-                setDeleteTarget(null);
-              }
+              if (dialog.kind === "delete-agent") performDeleteAgent(dialog.agent);
             }}>
               {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <AlertDialog open={!!deleteSessionTarget} onOpenChange={(open) => { if (!open) setDeleteSessionTarget(null); }}>
+      <AlertDialog
+        open={dialog.kind === "delete-session"}
+        onOpenChange={(open) => { if (!open) setDialog({ kind: "none" }); }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("session.confirmDeleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
               {t("session.confirmDeleteDescription", {
-                title: deleteSessionTarget?.title ?? t("session.untitled"),
+                title: dialog.kind === "delete-session" ? dialog.session.title ?? t("session.untitled") : "",
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={performDeleteSession}>
+            <AlertDialogAction variant="destructive" onClick={() => {
+              if (dialog.kind === "delete-session") performDeleteSession(dialog.session);
+            }}>
               {t("common.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {scheduleAgent && (
+      {dialog.kind === "schedule" && (
         <ScheduleDialog
-          open={!!scheduleAgent}
-          onOpenChange={(open) => { if (!open) setScheduleAgent(null); }}
-          agentId={scheduleAgent.id}
+          open={true}
+          onOpenChange={(open) => { if (!open) setDialog({ kind: "none" }); }}
+          agentId={dialog.agent.id}
           projectId={projectId}
-          client={client}
         />
       )}
     </>
