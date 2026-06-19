@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "sonner";
 import { translate } from "@spherse/i18n";
 import type { ApiClient } from "../../../lib/api";
-import { useSettingsStore } from "../../settings/store";
+import { useSettingsStore } from "../../../stores/settings-store";
 import {
   type TreeNode,
   type CreatingState,

@@ -14,7 +14,7 @@ import {
 import { Input } from "../../components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "../../components/ui/field";
 import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../lib/events";
-import { useSettingsStore } from "../settings/store";
+import { useSettingsStore } from "../../stores/settings-store";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
 

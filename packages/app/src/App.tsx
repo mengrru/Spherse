@@ -11,7 +11,7 @@ import { useScheduleStore } from "./features/agent-schedule/store";
 import { useFloatingChatStore } from "./features/floating-chat/store";
 import { I18nProvider } from "@spherse/i18n/react";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
-import { useSettingsStore } from "./features/settings/store";
+import { useSettingsStore } from "./stores/settings-store";
 
 function buildProjectRoute(projectId: string, lastRoute?: string): string {
   const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
@@ -34,7 +34,7 @@ export function App() {
   const clearScheduleData = useScheduleStore((state) => state.clearProject);
   const clearFloatingChat = useFloatingChatStore((state) => state.clearProject);
   const locale = useSettingsStore((state) => state.locale);
-  const loadSettings = useSettingsStore((state) => state.load);
+  const loadSettings = useSettingsStore((state) => state.loadLocale);
 
   useEffect(() => {
     let cancelled = false;

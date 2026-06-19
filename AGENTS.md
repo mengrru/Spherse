@@ -108,17 +108,32 @@ npm run dist:win    # 构建 Windows NSIS 安装包
 - **Git 规范**：commit message 使用 `feat:` / `fix:` / `chore:` 前缀
 - **前端 store 使用原则**：
   - `app-store` 管理应用级状态（打开项目集合、当前项目、Electron IPC 动作），不持有项目内业务数据
-  - `project-data-store` 按 projectKey 缓存项目内 agents、sessions 等业务数据，负责 API 调用与 loading/error 状态
-  - `project-ui-store` 按 projectKey 管理纯 UI 状态（如 floating chat 位置），不涉及 API 调用
+  - `project-data-store` 按 projectKey 缓存项目内 agents、sessions、streaming 等业务数据
+  - `settings-store` 管理 app 级 locale（跨 feature 消费）；dialog 专属的表单状态用 hook（`useSettingsForm`）保留在组件内，不进 store
+  - `side-panel-store` 管理侧栏 pinned/hover 折叠机制（全局 UI 状态，被 layout + activity-bar + project-panel 跨层消费）
   - 跨页面、跨 feature 持久的状态放 store；组件内短生命周期状态（表单、弹窗、输入框、WebSocket ref、编辑 dirty/conflict）用 `useState`/`useRef` 保留在组件内
-  - 只被单个 feature 使用的状态不提升到全局 store，可在 feature 目录下建立自己的 store（如 `features/settings/store.ts`、`features/chat/streaming-store.ts`、`features/agent-session-list/store.ts`）。feature-local store 不应被其它 feature 或全局 store import
+  - 只被单个 feature 使用的状态不提升到全局 store，可在 feature 目录下建立自己的 store（如 `features/chat/streaming-store.ts`、`features/agent-schedule/store.ts`、`features/agent-session-list/store.ts`、`features/floating-chat/store.ts`）。feature-local store 不应被其它 feature 或全局 store import
   - 全局 store 不应依赖 feature-local store（如需要 locale 等跨层信息，应由调用方传入或由展示层翻译）
   - store 命名统一 `use{语义名}Store` 格式（PascalCase 语义名 + `Store` 后缀），如 `useAppStore`、`useProjectDataStore`、`useSettingsStore`、`useStreamingStore`。作用域（全局 vs feature-local）由文件位置表达（`stores/` vs `features/xxx/store.ts`），不在命名中编码
+  - store 初始化用显式调用链（App.tsx 或编排组件里调 `load`/`restore` action），初始化的顺序和依赖应从代码顺序直接看出
+  - per-project 状态的清理：关闭项目时由编排层（App.tsx）显式调用各 feature store 的 `clearProject(projectId)`
 - **前端组件原则**：
   - feature root 组件自治：自己从 store/context 读取所需数据并构造行为，不通过 props 接收父组件直接转发的 store 数据或 action；纯展示型子组件仍通过 props 接收数据。App shell 只管「渲染哪些 feature + 应用级副作用」，不做 feature 的数据中转站
   - 组件行数软阈值 ~150 行：超过通常意味着混了多件不相关的事（抽子组件）、逻辑该抽 hook，应考虑拆分；阈值非硬上限，需结合认知复杂度判断
   - 关注 state 耦合度而非 state 个数：多个 `useState` 在同一 handler 被一起更新，或 state/effect 互相触发形成 effect 链，优先用 `useReducer` 或抽 hook 收敛，而不是拆组件；多个语义正交的 `open`/`setOpen` 可考虑合并为单个枚举 state（如 `useState<DialogKind | null>(null)`）
   - 关注认知复杂度信号：handler 互相调用、effect 链、条件渲染嵌套 > 3 层，优先拆分
+- **前端路由原则**：
+  - 真嵌套路由：`project/:projectId` 是 layout route（`<ProjectScope>` + `<Outlet />`），子路由 `index`/`chat/:sessionId`/`content` 各自渲染独立 page 组件。不通过 `endsWith`/正则等手写 URL 解析判断当前路由，用 `useParams`/`useMatch`/`useSearchParams`
+  - URL 是活跃 project 的唯一真相源：业务组件用 `useParams().projectId` 读取当前 project，不读 `app-store.activeProjectId`（后者仅用于启动恢复和 IPC 持久化）
+  - layout 组件（`layouts/`）通过 `<Outlet />` 渲染子路由，不在内部用条件渲染模拟路由切换；page 组件（`pages/`）是纯 route adapter，从 URL 参数解析后渲染对应 feature
+  - 路由参数统一编码：session id 用 path param（`:sessionId`），文件路径用 query param（`?path=`）。不在同一概念上混用两种编码
+- **前端依赖注入**：
+  - `ProjectProvider` / `useProjectCtx`：在 `<ProjectScope>` 挂载，为子树提供 `client`/`baseUrl`/`projectId`/`projectRoot`。深层组件（`Chat`、`ContentBrowser`、`FileTree` 等）直接 `useProjectCtx()` 取 ctx，不通过 props 透传 `client`
+  - Context 注入稳定的、只读的依赖（ctx 引用在 project 生命周期内不变）；可变的、需响应式订阅的状态走 store。不把业务状态放 Context
+  - feature 组件的 props 只保留真正的展示数据和行为回调（如 `onBack`、`onSelect`），不透传可从 Context/Store 获取的 `client`/`projectId` 等环境依赖
+- **前端 effect 规范**：
+  - effect 依赖数组只放引用稳定的值（`projectId`、稳定的 store action、`client`）；不放每次渲染都变的值（`t`/locale 用 `useRef` 持有最新值，effect 内读 ref）
+  - 不要依赖 store 对象引用作为 effect 依赖——`setProjectLastRoute` 等 action 会创建新的对象引用，导致 effect 意外重跑。改依赖对象的具体字段（如 `project.ctx.client`）
 - **前端样式**：
   - 使用 Tailwind CSS v4 工具类 + CSS 变量色彩体系，不写原生 CSS class
   - 只使用 shadcn 语义 token（`bg-background`、`bg-card`、`bg-muted`、`bg-primary`、`bg-accent`、`text-foreground`、`text-muted-foreground`、`border-border`、`text-destructive`）和 Spherse 自有 token（`bg-agent-creator`、`text-agent-success` 等），不硬编码颜色值（如 `text-[#333]`）

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { translate } from "@spherse/i18n";
 import type { ApiClient } from "../../lib/api";
-import { useSettingsStore } from "../settings/store";
+import { useSettingsStore } from "../../stores/settings-store";
 
 export function normalizeAiDeniedPath(input: string): string | null {
   const trimmed = input.trim().replace(/\\/g, "/");
