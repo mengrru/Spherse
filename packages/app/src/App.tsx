@@ -39,10 +39,13 @@ export function App() {
   useEffect(() => {
     let cancelled = false;
     restoreProjects().then((projectId) => {
-      if (!cancelled && projectId) {
-        const project = useAppStore.getState().projects.get(projectId);
-        navigate(buildProjectRoute(projectId, project?.lastRoute), { replace: true });
-      }
+      if (cancelled || !projectId) return;
+      // Only auto-navigate when starting from the root path; if the URL already
+      // points to a specific route (deep link, E2E direct entry), respect it.
+      const hash = window.location.hash.replace(/^#/, "") || "/";
+      if (hash !== "/") return;
+      const project = useAppStore.getState().projects.get(projectId);
+      navigate(buildProjectRoute(projectId, project?.lastRoute), { replace: true });
     });
     return () => {
       cancelled = true;
