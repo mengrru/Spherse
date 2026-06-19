@@ -28,7 +28,7 @@ test("text selection session shows stable button, fixed popover, and highlight o
       document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: x, clientY: y }));
     }, firstMouseUp);
 
-    const button = page.getByTestId("text-selection-start-button");
+    const button = page.getByTestId("text-selection-toolbar");
     await expect(button).toBeVisible();
     const buttonBox = await button.boundingBox();
     expect(buttonBox).not.toBeNull();
@@ -48,7 +48,7 @@ test("text selection session shows stable button, fixed popover, and highlight o
     await expect(highlight).toBeVisible();
     await expect.poll(() => page.evaluate(() => window.getSelection()?.isCollapsed ?? true)).toBe(true);
 
-    await button.click();
+    await button.getByRole("button", { name: "发起会话" }).click();
     const popover = page.getByTestId("text-selection-popover");
     await expect(popover).toBeVisible();
     const popoverBox = await popover.boundingBox();
@@ -152,7 +152,7 @@ test("text selection session keeps long agent list scrollable in a compact viewp
       document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: x, clientY: y }));
     }, mouseUp);
 
-    await page.getByTestId("text-selection-start-button").click();
+    await page.getByTestId("text-selection-toolbar").getByRole("button", { name: "发起会话" }).click();
 
     const popover = page.getByTestId("text-selection-popover");
     const agentList = page.getByTestId("text-selection-agent-list");

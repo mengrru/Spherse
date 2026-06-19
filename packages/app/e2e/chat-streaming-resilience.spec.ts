@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
 const mainEntry = path.join(appRoot, "dist", "main", "index.js");
 const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
+const navToken = Date.now();
 
 async function createChatProject() {
   const root = await mkdtemp(path.join(tmpdir(), "spherse-e2e-chat-"));
@@ -19,6 +20,7 @@ async function createChatProject() {
     path.join(root, ".spherse", "project.yaml"),
     `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
   );
+  await writeFile(path.join(root, "AGENTS.md"), "# Test\n");
   await mkdir(path.join(root, ".spherse", "agents", "assistant"), { recursive: true });
   await writeFile(
     path.join(root, ".spherse", "agents", "assistant", "profile.md"),
@@ -65,13 +67,15 @@ async function createSessionViaApi(page: Page, projectId: string, agentId: strin
   const res = await fetch(`http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
   });
-  const { sessionId } = await res.json() as { sessionId: string };
+  const body = await res.json() as Record<string, unknown>;
+  if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
+  const { sessionId } = body as { sessionId: string };
   return sessionId;
 }
 
 function navigateToSession(page: Page, projectId: string, sessionId: string) {
   const projectUrl = `/project/${projectId}/chat/${sessionId}`;
-  return page.goto(`file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}`);
+  return page.goto(`file://${rendererEntry}?e2e=${navToken}#${projectUrl}`);
 }
 
 interface MockEvent {
@@ -80,7 +84,7 @@ interface MockEvent {
 }
 
 async function mockChatWebSocket(page: Page, port: number, events: MockEvent[]) {
-  await page.routeWebSocket(`ws://localhost:${port}/ws/chat/**`, (ws) => {
+  await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
     ws.onMessage((message) => {
       const parsed = JSON.parse(message as string);
       if (parsed.type === "message") {
@@ -91,7 +95,6 @@ async function mockChatWebSocket(page: Page, port: number, events: MockEvent[]) 
         ws.send(JSON.stringify({ type: "agent_end", messages: [] }));
       }
     });
-    ws.connect();
   });
 }
 
@@ -99,7 +102,7 @@ async function mockStreamingWithoutEnd(page: Page, port: number, eventsBeforeEnd
   let resolveComplete: () => void;
   const completePromise = new Promise<void>((resolve) => { resolveComplete = resolve; });
 
-  await page.routeWebSocket(`ws://localhost:${port}/ws/chat/**`, (ws) => {
+  await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
     ws.onMessage((message) => {
       const parsed = JSON.parse(message as string);
       if (parsed.type === "message") {
@@ -113,7 +116,6 @@ async function mockStreamingWithoutEnd(page: Page, port: number, eventsBeforeEnd
         ws.send(JSON.stringify({ type: "agent_end", messages: [] }));
       }
     });
-    ws.connect();
   });
 
   return { complete: () => resolveComplete() };
@@ -228,12 +230,14 @@ test("sidebar shows streaming indicator on background session", async () => {
     await navigateToSession(page, project.projectId, sessionB);
     await page.waitForSelector("[data-chat-composer]", { timeout: 5000 });
 
+    await page.locator('[data-slot="collapsible-trigger"]:has-text("Assistant")').click();
     const sessionARow = page.locator(`[data-session-id="${sessionA}"]`);
-    await expect(sessionARow.locator("svg.lucide-loader-2")).toBeVisible({ timeout: 5000 });
+    await expect(sessionARow).toBeVisible({ timeout: 5000 });
+    await expect(sessionARow.locator("svg.lucide-loader-circle")).toBeVisible({ timeout: 5000 });
 
     complete();
 
-    await page.waitForSelector(`[data-session-id="${sessionA}"] svg.lucide-loader-2`, { state: "hidden", timeout: 10000 }).catch(() => {});
+    await page.waitForSelector(`[data-session-id="${sessionA}"] svg.lucide-loader-circle`, { state: "hidden", timeout: 10000 }).catch(() => {});
   } finally {
     await app.close();
   }

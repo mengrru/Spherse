@@ -19,6 +19,7 @@ async function createProject(agents: Array<{ slug: string; id: string; name: str
     path.join(root, ".spherse", "project.yaml"),
     `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
   );
+  await writeFile(path.join(root, "AGENTS.md"), "# Test\n");
   for (const agent of agents) {
     const dir = path.join(root, ".spherse", "agents", agent.slug);
     await mkdir(dir, { recursive: true });
@@ -82,7 +83,9 @@ async function createSessionViaApi(page: Page, projectId: string, agentId: strin
   const res = await fetch(`http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
   });
-  const { sessionId } = await res.json() as { sessionId: string };
+  const body = await res.json() as Record<string, unknown>;
+  if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
+  const { sessionId } = body as { sessionId: string };
   return sessionId;
 }
 

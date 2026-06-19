@@ -19,6 +19,7 @@ async function createFloatingChatProject() {
     path.join(root, ".spherse", "project.yaml"),
     `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
   );
+  await writeFile(path.join(root, "AGENTS.md"), "# Test\n");
   await mkdir(path.join(root, ".spherse", "agents", "assistant"), { recursive: true });
   await writeFile(
     path.join(root, ".spherse", "agents", "assistant", "profile.md"),
@@ -65,7 +66,9 @@ async function createSessionViaApi(page: Page, projectId: string, agentId: strin
   const res = await fetch(`http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
   });
-  const { sessionId } = await res.json() as { sessionId: string };
+  const body = await res.json() as Record<string, unknown>;
+  if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
+  const { sessionId } = body as { sessionId: string };
   return sessionId;
 }
 
@@ -347,6 +350,7 @@ test("switching project clears floating chat", async () => {
     path.join(projectBRoot, ".spherse", "project.yaml"),
     `id: ${projectBId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
   );
+  await writeFile(path.join(projectBRoot, "AGENTS.md"), "# Test\n");
   await mkdir(path.join(projectBRoot, ".spherse", "agents", "assistant"), { recursive: true });
   await writeFile(
     path.join(projectBRoot, ".spherse", "agents", "assistant", "profile.md"),

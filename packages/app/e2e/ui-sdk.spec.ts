@@ -22,6 +22,7 @@ async function createUiSdkProject() {
     path.join(root, ".spherse", "project.yaml"),
     `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
   );
+  await writeFile(path.join(root, "AGENTS.md"), "# Test\n");
   await mkdir(path.join(root, "world"), { recursive: true });
 
   await writeFile(

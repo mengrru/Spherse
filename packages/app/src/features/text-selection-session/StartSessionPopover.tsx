@@ -88,7 +88,7 @@ export function StartSessionPopover({
       data-testid="text-selection-popover"
       onMouseDown={(event) => event.stopPropagation()}
     >
-      <div className="flex flex-col p-3">
+      <div className="flex min-h-0 flex-1 flex-col p-3">
         <div className="mb-2 text-[11px] text-muted-foreground">
           {t("text-selection.quoteFrom", { path: sourcePath })}
         </div>
@@ -101,7 +101,7 @@ export function StartSessionPopover({
           value={comment}
           onChange={(event) => setComment(event.target.value)}
         />
-        <div className="flex flex-col gap-0.5 overflow-y-auto" style={{ maxHeight: 240 }}>
+        <div className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto" style={{ maxHeight: 240 }} data-testid="text-selection-agent-list">
           {activeSessions && activeSessions.length > 0 && (
             <>
               {activeSessions.map((session) => (
