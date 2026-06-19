@@ -1,8 +1,8 @@
 import { registerAction } from "../registry";
-import { useProjectUiStore } from "../../stores/project-ui-store";
+import { useFloatingChatStore } from "../../features/floating-chat/store";
 
 registerAction("unfloatSession", (_params, ctx) => {
-  const ui = useProjectUiStore.getState().projects[ctx.projectId];
-  if (!ui?.floatingChat) return;
-  useProjectUiStore.getState().setFloatingChat(ctx.projectId, null);
+  const floatingChat = useFloatingChatStore.getState().byProject[ctx.projectId];
+  if (!floatingChat) return;
+  useFloatingChatStore.getState().setFloatingChat(ctx.projectId, null);
 });

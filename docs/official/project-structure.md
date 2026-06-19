@@ -163,10 +163,10 @@ spherse/
 │           │   └── utils.ts          # shadcn/ui cn() 工具
 │           ├── stores/
 │           │   ├── app-store.ts          # 打开项目集合、当前项目、Electron IPC 动作、side panel 偏好
-│           │   ├── project-data-store.ts # agents/sessions/初始消息等项目数据缓存，包含 resolveSessionViews 派生查询
+│           │   ├── project-data-store.ts # agents/sessions/初始消息/streaming 状态等项目数据缓存
 │           │   └── project-ui-store.ts   # 浮窗会话位置/尺寸等项目 UI 状态，localStorage 持久化
 │           ├── layouts/
-│           │   └── ProjectLayout.tsx     # 项目工作区布局，组合 ProjectPanel、Chat、ContentBrowser、WelcomePage、FloatingChatManager，挂 ProjectProvider
+│           │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/schedule WS/数据刷新）
 │           ├── hooks/
 │           │   ├── useSidePanel.ts       # side panel pinned/hover 状态合并派生 + clickAway props
 │           │   ├── useCustomTheme.ts
@@ -187,22 +187,22 @@ spherse/
 │           │       └── data.ts           # data.get/set/delete key-value 持久化
 │           ├── features/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
-│           │   ├── agent-schedule/       # Agent 定时任务弹窗、表单、列表与运行日志
+│           │   ├── agent-schedule/       # Agent 定时任务弹窗、表单、列表与运行日志，含 schedule feature store
 │           │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
 │           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示
 │           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
 │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
 │           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog
 │           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
-│           │   ├── project-panel/         # 项目侧栏，组合 Agent/session 列表与文件树，可随 Activity Bar 自动收起
+│           │   ├── project-panel/         # 项目侧栏，自治读取 URL/projectCtx，组合 Agent/session 列表与文件树
 │           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
 │           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
 │           │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
 │           │   └── text-selection-session/ # 划选文本后发起会话
 │           ├── pages/
-│           │   ├── ProjectPage.tsx       # Project route adapter，校验 projectKey 后渲染 ProjectLayout
-│           │   ├── ChatPage.tsx          # Chat route adapter
-│           │   └── ContentBrowser.tsx    # ContentBrowser route adapter
+│           │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat
+│           │   ├── ContentBrowserPage.tsx # Content 路由 page，从 ?path= 查询参数渲染 ContentBrowser
+│           │   └── WelcomePagePage.tsx   # Project index 路由 page，渲染 WelcomePage 空状态
 │           └── components/
 │               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
 │               ├── EmptyState.tsx        # 无项目时的空状态

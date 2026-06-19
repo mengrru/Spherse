@@ -1,7 +1,7 @@
 import { registerAction } from "../registry";
 import { useStreamingStore } from "../../features/chat/streaming-store";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { useProjectUiStore } from "../../stores/project-ui-store";
+import { useFloatingChatStore } from "../../features/floating-chat/store";
 import { getDefaultFloatingState } from "../../features/floating-chat";
 
 registerAction("sendMessage", (params, ctx) => {
@@ -21,11 +21,11 @@ registerAction("sendMessage", (params, ctx) => {
     useProjectDataStore.getState().setInitialMessage(ctx.projectId, sessionId, message);
   }
 
-  const ui = useProjectUiStore.getState().projects[ctx.projectId];
-  if (float && ui?.floatingChat?.sessionId !== sessionId) {
-    useProjectUiStore.getState().setFloatingChat(ctx.projectId, getDefaultFloatingState(sessionId));
+  const floatingSessionId = useFloatingChatStore.getState().byProject[ctx.projectId]?.sessionId;
+  if (float && floatingSessionId !== sessionId) {
+    useFloatingChatStore.getState().setFloatingChat(ctx.projectId, getDefaultFloatingState(sessionId));
   }
-  if (!float && ui?.floatingChat?.sessionId !== sessionId) {
+  if (!float && floatingSessionId !== sessionId) {
     ctx.navigate(`/project/${ctx.projectId}/chat/${sessionId}`);
   }
 });

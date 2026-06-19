@@ -14,6 +14,7 @@ import {
 import type { ScheduleEntry, ScheduleInfo, ScheduleLogEntry } from "../../lib/types";
 import type { ApiClient } from "../../lib/api";
 import { useProjectDataStore } from "../../stores/project-data-store";
+import { useScheduleStore } from "./store";
 import { ScheduleForm } from "./ScheduleForm";
 import { ScheduleList } from "./ScheduleList";
 import { ScheduleLogs } from "./ScheduleLogs";
@@ -32,15 +33,15 @@ interface ScheduleDialogProps {
 
 export function ScheduleDialog({ open, onOpenChange, agentId, projectId, client }: ScheduleDialogProps) {
   const { t } = useI18n();
-  const schedules = useProjectDataStore((s) => s.projects[projectId]?.schedulesByAgent?.[agentId] ?? EMPTY_SCHEDULES);
-  const runningScheduleIds = useProjectDataStore((s) => s.projects[projectId]?.runningScheduleIdsByAgent?.[agentId] ?? EMPTY_RUNNING_SCHEDULE_IDS);
-  const scheduleEventVersion = useProjectDataStore((s) => s.projects[projectId]?.scheduleEventVersion ?? 0);
+  const schedules = useScheduleStore((s) => s.byProject[projectId]?.schedulesByAgent?.[agentId] ?? EMPTY_SCHEDULES);
+  const runningScheduleIds = useScheduleStore((s) => s.byProject[projectId]?.runningScheduleIdsByAgent?.[agentId] ?? EMPTY_RUNNING_SCHEDULE_IDS);
+  const scheduleEventVersion = useScheduleStore((s) => s.byProject[projectId]?.scheduleEventVersion ?? 0);
   const agentName = useProjectDataStore((s) => s.projects[projectId]?.agents?.find((a) => a.id === agentId)?.name ?? "");
-  const refreshSchedules = useProjectDataStore((s) => s.refreshSchedules);
-  const createSchedule = useProjectDataStore((s) => s.createSchedule);
-  const updateSchedule = useProjectDataStore((s) => s.updateSchedule);
-  const deleteSchedule = useProjectDataStore((s) => s.deleteSchedule);
-  const triggerSchedule = useProjectDataStore((s) => s.triggerSchedule);
+  const refreshSchedules = useScheduleStore((s) => s.refreshSchedules);
+  const createSchedule = useScheduleStore((s) => s.createSchedule);
+  const updateSchedule = useScheduleStore((s) => s.updateSchedule);
+  const deleteSchedule = useScheduleStore((s) => s.deleteSchedule);
+  const triggerSchedule = useScheduleStore((s) => s.triggerSchedule);
 
   const [activeTab, setActiveTab] = useState("config");
   const [editingId, setEditingId] = useState<string | null>(null);

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FolderCogIcon } from "lucide-react";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { FileTree } from "../file-tree";
 import { AiReadDenylistDialog } from "../file-tree/AiReadDenylistDialog";
@@ -10,31 +11,28 @@ import {
   SidebarGroupLabel,
   SidebarProvider,
 } from "../../components/ui/sidebar";
-import { useSidePanel } from "../../hooks/useSidePanel";
-import type { ProjectState } from "../../stores/app-store";
+import { useSidePanel } from "../../hooks/use-side-panel";
 import { AgentSessionList } from "../agent-session-list";
-export interface ProjectPanelProps {
-  projectId: string;
-  project: ProjectState;
-  activeSessionId: string | null;
-  selectedAgentId: string | null;
-  selectedFilePath?: string;
-  onSelectFile: (filePath: string) => void;
-  onFileDeleted: (filePath: string) => void;
-}
 
-export function ProjectPanel({
-  projectId,
-  project,
-  activeSessionId,
-  selectedAgentId,
-  selectedFilePath,
-  onSelectFile,
-  onFileDeleted,
-}: ProjectPanelProps) {
+export function ProjectPanel() {
+  const { projectId } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [aiDenylistOpen, setAiDenylistOpen] = useState(false);
   const { t } = useI18n();
   const { pinned, visible, show, hide } = useSidePanel();
+  const contentPath = searchParams.get("path") ?? undefined;
+
+  const handleSelectFile = (filePath: string) => {
+    if (!projectId) return;
+    navigate(`/project/${projectId}/content?path=${encodeURIComponent(filePath)}`);
+  };
+
+  const handleFileDeleted = (deletedPath: string) => {
+    if (contentPath && (contentPath === deletedPath || contentPath.startsWith(`${deletedPath}/`))) {
+      if (projectId) navigate(`/project/${projectId}`);
+    }
+  };
 
   return (
     <div
@@ -55,11 +53,7 @@ export function ProjectPanel({
           <SidebarProvider className="min-h-0 w-full">
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="border-b border-sidebar-border p-2">
-                <AgentSessionList
-                  projectId={projectId}
-                  activeSessionId={activeSessionId}
-                  selectedAgentId={selectedAgentId}
-                />
+                <AgentSessionList />
               </div>
               <div className="border-b border-sidebar-border p-2">
                 <SidebarGroup className="px-0 py-0">
@@ -75,16 +69,14 @@ export function ProjectPanel({
                   </SidebarGroupAction>
                   <SidebarGroupContent>
                     <FileTree
-                      client={project.ctx.client}
-                      selectedFilePath={selectedFilePath}
-                      onSelectFile={onSelectFile}
-                      onDeleted={onFileDeleted}
+                      selectedFilePath={contentPath}
+                      onSelectFile={handleSelectFile}
+                      onDeleted={handleFileDeleted}
                     />
                   </SidebarGroupContent>
                 </SidebarGroup>
               </div>
               <AiReadDenylistDialog
-                client={project.ctx.client}
                 open={aiDenylistOpen}
                 onOpenChange={setAiDenylistOpen}
               />

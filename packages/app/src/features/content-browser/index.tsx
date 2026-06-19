@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
-import type { ApiClient } from "../../lib/api";
 import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
+import { useProjectCtx } from "../../lib/project-context";
 import { ConflictBanner } from "./ConflictBanner";
 import { ConfirmDialogs } from "./ConfirmDialogs";
 import { ContentView } from "./ContentView";
@@ -11,25 +11,22 @@ import { useContentEditor } from "./hooks/useContentEditor";
 import { useContentFile } from "./hooks/useContentFile";
 
 export interface ContentBrowserProps {
-  client: ApiClient;
   filePath: string;
   onBack: () => void;
   agents: AgentProfile[];
-  projectId: string;
   activeSessions?: ActiveSessionInfo[];
   onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;
 }
 
 export function ContentBrowser({
-  client,
   filePath,
   onBack,
   agents,
-  projectId,
   activeSessions,
   onStartSession,
 }: ContentBrowserProps) {
   const { t } = useI18n();
+  const { client, projectId } = useProjectCtx();
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
   const { content, setContent, loading, error } = useContentFile(client, filePath);
   const editor = useContentEditor({

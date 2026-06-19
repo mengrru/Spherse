@@ -13,40 +13,12 @@ interface AppStore {
   projects: Map<string, ProjectState>;
   activeProjectId: string | null;
   initializing: boolean;
-  sidePanelPinned: boolean;
-  sidePanelHovered: boolean;
   restoreProjects: () => Promise<string | null>;
   openProject: () => Promise<string | null>;
   closeProject: (projectId: string) => Promise<string | null>;
   revealProject: (projectId: string) => Promise<void>;
   setActiveProject: (projectId: string | null) => Promise<void>;
   setProjectLastRoute: (projectId: string, route: string) => Promise<void>;
-  setSidePanelPinned: (pinned: boolean) => void;
-  toggleSidePanelPinned: () => void;
-  showSidePanel: () => void;
-  hideSidePanel: () => void;
-}
-
-const SIDE_PANEL_PINNED_STORAGE_KEY = "spherse:side-panel:pinned";
-const LEGACY_PROJECT_PANEL_PINNED_STORAGE_KEY = "spherse:project-panel:pinned";
-let sidePanelHideTimer: ReturnType<typeof setTimeout> | null = null;
-
-function readSidePanelPinned(): boolean {
-  if (typeof localStorage === "undefined") return true;
-  const stored = localStorage.getItem(SIDE_PANEL_PINNED_STORAGE_KEY);
-  if (stored !== null) return stored !== "false";
-  const legacyStored = localStorage.getItem(LEGACY_PROJECT_PANEL_PINNED_STORAGE_KEY);
-  if (legacyStored !== null) {
-    localStorage.setItem(SIDE_PANEL_PINNED_STORAGE_KEY, legacyStored);
-    localStorage.removeItem(LEGACY_PROJECT_PANEL_PINNED_STORAGE_KEY);
-    return legacyStored !== "false";
-  }
-  return true;
-}
-
-function writeSidePanelPinned(pinned: boolean) {
-  if (typeof localStorage === "undefined") return;
-  localStorage.setItem(SIDE_PANEL_PINNED_STORAGE_KEY, String(pinned));
 }
 
 function findProjectIdByPath(projects: Map<string, ProjectState>, projectPath: string): string | null {
@@ -60,8 +32,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
   projects: new Map(),
   activeProjectId: null,
   initializing: true,
-  sidePanelPinned: readSidePanelPinned(),
-  sidePanelHovered: false,
 
   async restoreProjects() {
     set({ initializing: true });
@@ -170,39 +140,5 @@ export const useAppStore = create<AppStore>((set, get) => ({
     });
 
     await window.electronAPI.setProjectLastRoute(projectId, route);
-  },
-
-  setSidePanelPinned(pinned) {
-    writeSidePanelPinned(pinned);
-    if (sidePanelHideTimer) {
-      clearTimeout(sidePanelHideTimer);
-      sidePanelHideTimer = null;
-    }
-    set({
-      sidePanelPinned: pinned,
-      sidePanelHovered: pinned ? false : get().sidePanelHovered,
-    });
-  },
-
-  toggleSidePanelPinned() {
-    if (get().sidePanelPinned) set({ sidePanelHovered: true });
-    get().setSidePanelPinned(!get().sidePanelPinned);
-  },
-
-  showSidePanel() {
-    if (sidePanelHideTimer) {
-      clearTimeout(sidePanelHideTimer);
-      sidePanelHideTimer = null;
-    }
-    set({ sidePanelHovered: true });
-  },
-
-  hideSidePanel() {
-    if (get().sidePanelPinned) return;
-    if (sidePanelHideTimer) clearTimeout(sidePanelHideTimer);
-    sidePanelHideTimer = setTimeout(() => {
-      set({ sidePanelHovered: false });
-      sidePanelHideTimer = null;
-    }, 120);
   },
 }));

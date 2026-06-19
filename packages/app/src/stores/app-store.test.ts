@@ -49,8 +49,6 @@ describe("useAppStore lastRoute", () => {
       projects: new Map(),
       activeProjectId: null,
       initializing: true,
-      sidePanelPinned: true,
-      sidePanelHovered: false,
     });
   });
 
@@ -120,32 +118,6 @@ describe("useAppStore lastRoute", () => {
 
     resolveSetProjectLastRoute();
     await Promise.all([first, second]);
-  });
-
-  it("persists the global side panel pinned preference in localStorage", () => {
-    expect(useAppStore.getState().sidePanelPinned).toBe(true);
-
-    useAppStore.getState().setSidePanelPinned(false);
-
-    expect(useAppStore.getState().sidePanelPinned).toBe(false);
-    expect(localStorage.getItem("spherse:side-panel:pinned")).toBe("false");
-  });
-
-  it("coordinates side panel hover visibility at app level", () => {
-    vi.useFakeTimers();
-    useAppStore.getState().setSidePanelPinned(false);
-
-    useAppStore.getState().showSidePanel();
-
-    expect(useAppStore.getState().sidePanelHovered).toBe(true);
-
-    useAppStore.getState().hideSidePanel();
-    vi.advanceTimersByTime(119);
-    expect(useAppStore.getState().sidePanelHovered).toBe(true);
-
-    vi.advanceTimersByTime(1);
-    expect(useAppStore.getState().sidePanelHovered).toBe(false);
-    vi.useRealTimers();
   });
 
 });

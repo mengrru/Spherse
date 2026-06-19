@@ -1,6 +1,6 @@
 import { registerAction } from "../registry";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { useProjectUiStore } from "../../stores/project-ui-store";
+import { useFloatingChatStore } from "../../features/floating-chat/store";
 import { getDefaultFloatingState } from "../../features/floating-chat";
 
 registerAction("createSession", async (params, ctx) => {
@@ -18,7 +18,7 @@ registerAction("createSession", async (params, ctx) => {
   if (!session) return;
 
   if (float) {
-    useProjectUiStore.getState().setFloatingChat(ctx.projectId, getDefaultFloatingState(session.id));
+    useFloatingChatStore.getState().setFloatingChat(ctx.projectId, getDefaultFloatingState(session.id));
   } else {
     ctx.navigate(`/project/${ctx.projectId}/chat/${session.id}`);
   }

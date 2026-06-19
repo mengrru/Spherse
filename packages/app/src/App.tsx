@@ -6,8 +6,9 @@ import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "./components/ui/sonner";
 import { useAppStore } from "./stores/app-store";
 import { useProjectDataStore } from "./stores/project-data-store";
-import { useProjectUiStore } from "./stores/project-ui-store";
 import { useAgentSessionListUiStore } from "./features/agent-session-list/store";
+import { useScheduleStore } from "./features/agent-schedule/store";
+import { useFloatingChatStore } from "./features/floating-chat/store";
 import { I18nProvider } from "@spherse/i18n/react";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
 import { useSettingsStore } from "./features/settings/store";
@@ -29,16 +30,16 @@ export function App() {
   const revealProject = useAppStore((state) => state.revealProject);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const clearProjectData = useProjectDataStore((state) => state.clearProjectData);
-  const clearProjectUi = useProjectUiStore((state) => state.clearProjectUi);
   const clearAgentSessionListUi = useAgentSessionListUiStore((state) => state.clearProject);
+  const clearScheduleData = useScheduleStore((state) => state.clearProject);
+  const clearFloatingChat = useFloatingChatStore((state) => state.clearProject);
   const locale = useSettingsStore((state) => state.locale);
   const loadSettings = useSettingsStore((state) => state.load);
 
   useEffect(() => {
     let cancelled = false;
     restoreProjects().then((projectId) => {
-      const hashPath = window.location.hash.replace(/^#/, "") || "/";
-      if (!cancelled && hashPath === "/" && projectId) {
+      if (!cancelled && projectId) {
         const project = useAppStore.getState().projects.get(projectId);
         navigate(buildProjectRoute(projectId, project?.lastRoute), { replace: true });
       }
@@ -70,8 +71,9 @@ export function App() {
   const handleCloseProject = async (projectId: string) => {
     const nextProjectId = await closeProject(projectId);
     clearProjectData(projectId);
-    clearProjectUi(projectId);
     clearAgentSessionListUi(projectId);
+    clearScheduleData(projectId);
+    clearFloatingChat(projectId);
     if (nextProjectId) {
       const project = useAppStore.getState().projects.get(nextProjectId);
       navigate(buildProjectRoute(nextProjectId, project?.lastRoute));

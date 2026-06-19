@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
-import type { ApiClient } from "../../lib/api";
+import { useProjectCtx } from "../../lib/project-context";
 import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../lib/events";
 
 const HTML_EXTENSIONS = new Set(["html", "htm"]);
@@ -11,13 +11,12 @@ function getFileExtension(filePath: string): string {
 }
 
 export function WelcomePage({
-  client,
   fallback,
 }: {
-  client: ApiClient;
   fallback: React.ReactNode;
 }) {
   const { t } = useI18n();
+  const { client } = useProjectCtx();
   const [path, setPath] = useState<string | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
 

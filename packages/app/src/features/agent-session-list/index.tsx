@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import { AgentDialog } from "./AgentDialog";
 import {
@@ -33,18 +33,9 @@ const EMPTY_AGENTS: AgentProfile[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
 const EMPTY_COLLAPSED_AGENT_IDS = new Set<string>();
 
-export interface AgentSessionListProps {
-  projectId: string;
-  activeSessionId: string | null;
-  selectedAgentId: string | null;
-}
-
-export function AgentSessionList({
-  projectId,
-  activeSessionId,
-  selectedAgentId,
-}: AgentSessionListProps) {
+export function AgentSessionList() {
   const { t } = useI18n();
+  const { projectId = "", sessionId: activeSessionId = null } = useParams();
   const navigate = useNavigate();
   const { client } = useProjectCtx();
   const projectData = useProjectDataStore((state) => state.projects[projectId]);
@@ -131,8 +122,13 @@ export function AgentSessionList({
 
   const performDeleteAgent = async (agent: AgentProfile) => {
     await deleteAgent(projectId, client, agent.id);
-    if (selectedAgentId === agent.id) {
-      navigate(`/project/${projectId}`);
+    if (activeSessionId) {
+      const deletedSessionBelongsToAgent = projectData?.sessions.some(
+        (s) => s.id === activeSessionId && s.agentId === agent.id,
+      );
+      if (deletedSessionBelongsToAgent) {
+        navigate(`/project/${projectId}`);
+      }
     }
   };
 

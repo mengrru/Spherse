@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ProjectState } from "../../stores/app-store";
-import { useSidePanel } from "../../hooks/useSidePanel";
+import { useSidePanel } from "../../hooks/use-side-panel";
 import { ProjectAvatar } from "./ProjectAvatar";
 import { Button } from "../../components/ui/button";
 import {

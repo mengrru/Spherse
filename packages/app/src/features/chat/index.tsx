@@ -1,5 +1,5 @@
-import type { ApiClient } from "../../lib/api";
 import type { AgentProfile } from "../../lib/types";
+import { useProjectCtx } from "../../lib/project-context";
 import { Composer } from "./Composer";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
@@ -8,10 +8,7 @@ import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
 
 export interface ChatProps {
-  client: ApiClient;
   sessionId: string;
-  baseUrl: string;
-  projectId: string;
   agent: AgentProfile;
   onNavigateToPath?: (path: string) => void;
   initialMessage?: string;
@@ -19,7 +16,8 @@ export interface ChatProps {
   hideHeader?: boolean;
 }
 
-export function Chat({ client, sessionId, baseUrl, projectId, agent, onNavigateToPath, initialMessage, onClose, hideHeader }: ChatProps) {
+export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClose, hideHeader }: ChatProps) {
+  const { client, baseUrl, projectId } = useProjectCtx();
   const { messages, streaming, sendMessage, abort } = useChatSession({
     client,
     sessionId,

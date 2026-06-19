@@ -1,44 +1,39 @@
 import { useEffect } from "react";
-import { useAppStore } from "../../stores/app-store";
+import { useParams } from "react-router";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { useProjectUiStore } from "../../stores/project-ui-store";
-import { useProjectCtx } from "../../lib/project-context";
+import { useFloatingChatStore } from "./store";
 import { FloatingChatContainer } from "./FloatingChatContainer";
 
 export function FloatingChatManager() {
-  const activeProjectId = useAppStore((s) => s.activeProjectId);
-  const { client, baseUrl } = useProjectCtx();
-  const projectUi = useProjectUiStore((s) =>
-    activeProjectId ? s.projects[activeProjectId] : undefined,
+  const { projectId } = useParams();
+  const floatingChat = useFloatingChatStore((s) =>
+    projectId ? s.byProject[projectId] : undefined,
   );
   const projectData = useProjectDataStore((s) =>
-    activeProjectId ? s.projects[activeProjectId] : undefined,
+    projectId ? s.projects[projectId] : undefined,
   );
-  const setFloatingChat = useProjectUiStore((s) => s.setFloatingChat);
+  const setFloatingChat = useFloatingChatStore((s) => s.setFloatingChat);
 
-  const floatingChat = projectUi?.floatingChat;
   const sessions = projectData?.sessions ?? [];
   const agents = projectData?.agents ?? [];
   const session = floatingChat ? sessions.find((s) => s.id === floatingChat.sessionId) : undefined;
 
   useEffect(() => {
-    if (floatingChat && activeProjectId && !session) {
-      setFloatingChat(activeProjectId, null);
+    if (floatingChat && projectId && !session) {
+      setFloatingChat(projectId, null);
     }
-  }, [floatingChat, activeProjectId, session, setFloatingChat]);
+  }, [floatingChat, projectId, session, setFloatingChat]);
 
-  if (!floatingChat || !activeProjectId || !session) return null;
+  if (!floatingChat || !projectId || !session) return null;
 
   const agent = agents.find((a) => a.id === session.agentId);
   if (!agent) return null;
 
   return (
     <FloatingChatContainer
-      projectId={activeProjectId}
+      projectId={projectId}
       floatingChat={floatingChat}
       agent={agent}
-      client={client}
-      baseUrl={baseUrl}
     />
   );
 }

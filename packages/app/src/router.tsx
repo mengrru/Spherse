@@ -1,7 +1,10 @@
 import { createHashRouter } from "react-router";
 import { App } from "./App";
 import { EmptyState } from "./components/EmptyState";
-import { ProjectPage } from "./pages/ProjectPage";
+import { ProjectScope } from "./layouts/ProjectScope";
+import { ChatPage } from "./pages/ChatPage";
+import { ContentBrowserPage } from "./pages/ContentBrowserPage";
+import { WelcomePagePage } from "./pages/WelcomePagePage";
 
 export const router = createHashRouter([
   {
@@ -14,15 +17,21 @@ export const router = createHashRouter([
       },
       {
         path: "project/:projectId",
-        element: <ProjectPage />,
-      },
-      {
-        path: "project/:projectId/chat/:sessionId",
-        element: <ProjectPage />,
-      },
-      {
-        path: "project/:projectId/content",
-        element: <ProjectPage />,
+        element: <ProjectScope />,
+        children: [
+          {
+            index: true,
+            element: <WelcomePagePage />,
+          },
+          {
+            path: "chat/:sessionId",
+            element: <ChatPage />,
+          },
+          {
+            path: "content",
+            element: <ContentBrowserPage />,
+          },
+        ],
       },
     ],
   },

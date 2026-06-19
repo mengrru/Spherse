@@ -1,30 +1,18 @@
 import { create } from "zustand";
 import type { ApiClient } from "../lib/api";
-import type { AgentProfile, ActiveSessionInfo, SessionInfo, ScheduleInfo, ScheduleServerEvent } from "../lib/types";
+import type { AgentProfile, SessionInfo } from "../lib/types";
 
 interface ProjectData {
   agents: AgentProfile[];
   sessions: SessionInfo[];
-  schedulesByAgent: Record<string, ScheduleInfo[]>;
-  runningScheduleIdsByAgent: Record<string, string[]>;
-  scheduleEventVersion: number;
   initialMessageBySessionId: Record<string, string>;
+  streamingSessionIds: Set<string>;
   loading: boolean;
   error: string | null;
 }
 
 interface ProjectDataStore {
   projects: Record<string, ProjectData>;
-  getProjectData: (projectId: string) => ProjectData;
-  resolveSessionViews: (
-    projectId: string,
-    activeSessionId: string | null,
-    floatingSessionId: string | null,
-  ) => {
-    selectedSession: SessionInfo | null;
-    selectedAgent: AgentProfile | null;
-    activeSessions: ActiveSessionInfo[];
-  };
   refreshAgents: (projectId: string, client: ApiClient) => Promise<void>;
   refreshSessions: (projectId: string, client: ApiClient) => Promise<void>;
   createSession: (
@@ -40,12 +28,7 @@ interface ProjectDataStore {
   deleteAgent: (projectId: string, client: ApiClient, agentId: string) => Promise<void>;
   setInitialMessage: (projectId: string, sessionId: string, message: string) => void;
   consumeInitialMessage: (projectId: string, sessionId: string) => string | undefined;
-  refreshSchedules: (projectId: string, client: ApiClient, agentId: string) => Promise<void>;
-  createSchedule: (projectId: string, client: ApiClient, agentId: string, data: Parameters<ApiClient["createSchedule"]>[1]) => Promise<void>;
-  updateSchedule: (projectId: string, client: ApiClient, agentId: string, scheduleId: string, data: Parameters<ApiClient["updateSchedule"]>[2]) => Promise<void>;
-  deleteSchedule: (projectId: string, client: ApiClient, agentId: string, scheduleId: string) => Promise<void>;
-  triggerSchedule: (projectId: string, client: ApiClient, agentId: string, scheduleId: string) => Promise<void>;
-  handleScheduleEvent: (projectId: string, client: ApiClient, event: ScheduleServerEvent) => void;
+  setStreaming: (projectId: string, sessionId: string, streaming: boolean) => void;
   clearProjectData: (projectId: string) => void;
 }
 
@@ -53,37 +36,10 @@ function createProjectData(): ProjectData {
   return {
     agents: [],
     sessions: [],
-    schedulesByAgent: {},
-    runningScheduleIdsByAgent: {},
-    scheduleEventVersion: 0,
     initialMessageBySessionId: {},
+    streamingSessionIds: new Set(),
     loading: false,
     error: null,
-  };
-}
-
-function addRunningSchedule(project: ProjectData, agentId: string, scheduleId: string): ProjectData {
-  const current = project.runningScheduleIdsByAgent[agentId] ?? [];
-  if (current.includes(scheduleId)) return project;
-  return {
-    ...project,
-    runningScheduleIdsByAgent: {
-      ...project.runningScheduleIdsByAgent,
-      [agentId]: [...current, scheduleId],
-    },
-  };
-}
-
-function removeRunningSchedule(project: ProjectData, agentId: string, scheduleId: string): ProjectData {
-  const current = project.runningScheduleIdsByAgent[agentId] ?? [];
-  const next = current.filter((id) => id !== scheduleId);
-  if (next.length === current.length) return project;
-  return {
-    ...project,
-    runningScheduleIdsByAgent: {
-      ...project.runningScheduleIdsByAgent,
-      [agentId]: next,
-    },
   };
 }
 
@@ -109,49 +65,6 @@ function updateProjectData(
 
 export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
   projects: {},
-
-  getProjectData(projectId) {
-    return get().projects[projectId] ?? createProjectData();
-  },
-
-  resolveSessionViews(projectId, activeSessionId, floatingSessionId) {
-    const data = get().projects[projectId];
-    const agents = data?.agents ?? [];
-    const sessions = data?.sessions ?? [];
-
-    const selectedSession = activeSessionId
-      ? sessions.find((s) => s.id === activeSessionId) ?? null
-      : null;
-    const selectedAgent = selectedSession
-      ? agents.find((a) => a.id === selectedSession.agentId) ?? null
-      : null;
-
-    const floatingSession = floatingSessionId
-      ? sessions.find((s) => s.id === floatingSessionId) ?? null
-      : null;
-    const floatingAgent = floatingSession
-      ? agents.find((a) => a.id === floatingSession.agentId) ?? null
-      : null;
-
-    const activeSessions: ActiveSessionInfo[] = [];
-    if (selectedSession && selectedAgent) {
-      activeSessions.push({
-        sessionId: selectedSession.id,
-        agentName: selectedAgent.name,
-        sessionTitle: selectedSession.title,
-      });
-    }
-    if (floatingSession && floatingAgent) {
-      activeSessions.push({
-        sessionId: floatingSession.id,
-        agentName: floatingAgent.name,
-        sessionTitle: floatingSession.title,
-        floating: true,
-      });
-    }
-
-    return { selectedSession, selectedAgent, activeSessions };
-  },
 
   async refreshAgents(projectId, client) {
     set((state) => updateProjectData(state, projectId, (project) => ({
@@ -367,92 +280,23 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
     return message;
   },
 
-  async refreshSchedules(projectId, client, agentId) {
-    try {
-      const schedules = await client.listSchedules(agentId);
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        schedulesByAgent: { ...project.schedulesByAgent, [agentId]: schedules },
-      }), { createIfMissing: false }));
-    } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project, error: getErrorMessage(err),
-      }), { createIfMissing: false }));
-    }
-  },
-
-  async createSchedule(projectId, client, agentId, data) {
-    try {
-      await client.createSchedule(agentId, data);
-      await get().refreshSchedules(projectId, client, agentId);
-    } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project, error: getErrorMessage(err),
-      }), { createIfMissing: false }));
-    }
-  },
-
-  async updateSchedule(projectId, client, agentId, scheduleId, data) {
-    try {
-      await client.updateSchedule(agentId, scheduleId, data);
-      await get().refreshSchedules(projectId, client, agentId);
-    } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project, error: getErrorMessage(err),
-      }), { createIfMissing: false }));
-    }
-  },
-
-  async deleteSchedule(projectId, client, agentId, scheduleId) {
-    try {
-      await client.deleteSchedule(agentId, scheduleId);
-      await get().refreshSchedules(projectId, client, agentId);
-    } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project, error: getErrorMessage(err),
-      }), { createIfMissing: false }));
-    }
-  },
-
-  async triggerSchedule(projectId, client, agentId, scheduleId) {
-    set((state) => updateProjectData(state, projectId, (project) =>
-      addRunningSchedule(project, agentId, scheduleId), { createIfMissing: false }));
-    try {
-      await client.triggerSchedule(agentId, scheduleId);
-    } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...removeRunningSchedule(project, agentId, scheduleId),
-        error: getErrorMessage(err),
-      }), { createIfMissing: false }));
-    }
-  },
-
-  handleScheduleEvent(projectId, client, event) {
-    if (event.type === "schedule_triggered") {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...addRunningSchedule(project, event.agentId, event.scheduleId),
-        scheduleEventVersion: project.scheduleEventVersion + 1,
-      }), { createIfMissing: false }));
-      return;
-    }
-
-    if (event.type === "schedule_completed" || event.type === "schedule_failed") {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...removeRunningSchedule(project, event.agentId, event.scheduleId),
-        scheduleEventVersion: project.scheduleEventVersion + 1,
-      }), { createIfMissing: false }));
-      void get().refreshSchedules(projectId, client, event.agentId);
-      if (event.type === "schedule_completed") void get().refreshSessions(projectId, client);
-      return;
-    }
-
-    if (event.type === "schedule_updated") {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        scheduleEventVersion: project.scheduleEventVersion + 1,
-      }), { createIfMissing: false }));
-      void get().refreshSchedules(projectId, client, event.agentId);
-    }
+  setStreaming(projectId, sessionId, streaming) {
+    set((state) => {
+      const project = state.projects[projectId];
+      if (!project) return state;
+      const current = project.streamingSessionIds;
+      const next = new Set(current);
+      if (streaming) {
+        next.add(sessionId);
+      } else {
+        next.delete(sessionId);
+      }
+      if (next.size === current.size && (streaming === current.has(sessionId))) return state;
+      return updateProjectData(state, projectId, (p) => ({
+        ...p,
+        streamingSessionIds: next,
+      }));
+    });
   },
 
   clearProjectData(projectId) {

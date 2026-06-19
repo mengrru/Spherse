@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { parseChatServerEvent } from "@spherse/server/contracts";
 import type { ApiClient } from "../../lib/api";
 import type { AgentEvent } from "../../lib/types";
+import { useProjectDataStore } from "../../stores/project-data-store";
 import {
   mergeHistoryMessages,
   parseHistoryMessages,
@@ -13,6 +14,7 @@ interface StreamingSession extends StreamingSessionData {
   ws: WebSocket | null;
   attachedCount: number;
   initialMessageSent: boolean;
+  projectId: string;
 }
 
 interface StreamingStoreState {
@@ -67,14 +69,24 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       const now = Date.now();
       const next = { ...state.sessions };
       let changed = false;
+      const streamingChanges: Array<{ projectId: string; sessionId: string; streaming: boolean }> = [];
 
       for (const [sessionId, events] of queued) {
         const session = next[sessionId];
         if (!session) continue;
         const reduced = reduceSessionEvents(session, events, now);
         if (reduced === session) continue;
+        if (reduced.streaming !== session.streaming) {
+          streamingChanges.push({ projectId: session.projectId, sessionId, streaming: reduced.streaming });
+        }
         next[sessionId] = { ...session, ...reduced };
         changed = true;
+      }
+
+      if (streamingChanges.length > 0) {
+        for (const { projectId, sessionId, streaming } of streamingChanges) {
+          useProjectDataStore.getState().setStreaming(projectId, sessionId, streaming);
+        }
       }
 
       return changed ? { sessions: next } : state;
@@ -100,7 +112,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     }, CLEANUP_INTERVAL_MS);
   }
 
-  function ensureSession(sessionId: string, attachedDelta: number) {
+  function ensureSession(sessionId: string, attachedDelta: number, projectId: string) {
     set((state) => {
       const existing = state.sessions[sessionId];
       if (existing) {
@@ -124,6 +136,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         scrollPosition: 0,
         attachedCount: Math.max(0, attachedDelta),
         initialMessageSent: false,
+        projectId,
       };
       return {
         sessions: {
@@ -166,10 +179,15 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       ws.onclose = () => {
         const currentSession = get().sessions[sessionId];
         if (currentSession?.ws !== ws) return;
+        let wasStreaming = false;
         updateSession(sessionId, (session) => {
           if (session.ws === null && !session.streaming) return session;
+          wasStreaming = session.streaming;
           return { ...session, ws: null, streaming: false };
         });
+        if (wasStreaming) {
+          useProjectDataStore.getState().setStreaming(projectId, sessionId, false);
+        }
       };
 
       ws.onopen = () => {
@@ -186,8 +204,11 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
             initialMessageSent: true,
           };
         });
-        if (shouldSend && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "message", content: initialMessage }));
+        if (shouldSend) {
+          useProjectDataStore.getState().setStreaming(projectId, sessionId, true);
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "message", content: initialMessage }));
+          }
         }
       };
 
@@ -212,7 +233,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     sessions: {},
 
     attach(client, sessionId, baseUrl, projectId, agentId, initialMessage) {
-      ensureSession(sessionId, 1);
+      ensureSession(sessionId, 1, projectId);
       connect(client, sessionId, baseUrl, projectId, agentId, initialMessage);
     },
 
@@ -256,17 +277,34 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         streaming: true,
         lastActivityAt: Date.now(),
       }));
+      useProjectDataStore.getState().setStreaming(session.projectId, sessionId, true);
       session.ws.send(JSON.stringify({ type: "message", content }));
     },
 
     abort(sessionId) {
       const session = get().sessions[sessionId];
       if (!session?.ws || session.ws.readyState !== WebSocket.OPEN) {
-        updateSession(sessionId, (current) => current.streaming ? { ...current, streaming: false } : current);
+        let wasStreaming = false;
+        updateSession(sessionId, (current) => {
+          if (!current.streaming) return current;
+          wasStreaming = true;
+          return { ...current, streaming: false };
+        });
+        if (wasStreaming) {
+          useProjectDataStore.getState().setStreaming(session.projectId, sessionId, false);
+        }
         return;
       }
       session.ws.send(JSON.stringify({ type: "abort" }));
-      updateSession(sessionId, (current) => current.streaming ? { ...current, streaming: false } : current);
+      let wasStreaming = false;
+      updateSession(sessionId, (current) => {
+        if (!current.streaming) return current;
+        wasStreaming = true;
+        return { ...current, streaming: false };
+      });
+      if (wasStreaming) {
+        useProjectDataStore.getState().setStreaming(session.projectId, sessionId, false);
+      }
     },
 
     setScrollPosition(sessionId, position) {

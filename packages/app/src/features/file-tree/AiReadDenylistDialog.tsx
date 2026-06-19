@@ -1,7 +1,6 @@
 import type { KeyboardEvent } from "react";
 import { Trash2Icon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
-import type { ApiClient } from "../../lib/api";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -11,17 +10,17 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
+import { useProjectCtx } from "../../lib/project-context";
 import { useAiReadDenylist } from "./useAiReadDenylist";
 
 export function AiReadDenylistDialog({
-  client,
   open,
   onOpenChange,
 }: {
-  client: ApiClient;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { client } = useProjectCtx();
   const denylist = useAiReadDenylist(client, open);
   const { t } = useI18n();
 

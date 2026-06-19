@@ -1,28 +1,25 @@
 import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
-import type { ApiClient } from "../../lib/api";
 import type { AgentProfile } from "../../lib/types";
 import { Chat } from "../chat";
 import { FloatingChatFrame } from "./FloatingChatFrame";
-import { useProjectUiStore, type FloatingChatState } from "../../stores/project-ui-store";
+import { useFloatingChatStore, type FloatingChatState } from "./store";
+import { useProjectCtx } from "../../lib/project-context";
 import { scopeCss } from "../../lib/scope-css";
 
 interface FloatingChatContainerProps {
   projectId: string;
   floatingChat: FloatingChatState;
   agent: AgentProfile;
-  client: ApiClient;
-  baseUrl: string;
 }
 
 export function FloatingChatContainer({
   projectId,
   floatingChat,
   agent,
-  client,
-  baseUrl,
 }: FloatingChatContainerProps) {
-  const setFloatingChat = useProjectUiStore((s) => s.setFloatingChat);
+  const { client } = useProjectCtx();
+  const setFloatingChat = useFloatingChatStore((s) => s.setFloatingChat);
   const [scopedThemeCss, setScopedThemeCss] = useState<string | null>(null);
 
   useEffect(() => {
@@ -62,10 +59,7 @@ export function FloatingChatContainer({
         onClose={handleClose}
       >
         <Chat
-          client={client}
           sessionId={floatingChat.sessionId}
-          baseUrl={baseUrl}
-          projectId={projectId}
           agent={agent}
           hideHeader
         />

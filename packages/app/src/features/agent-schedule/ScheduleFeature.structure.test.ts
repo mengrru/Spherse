@@ -8,14 +8,14 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 describe("agent schedule feature structure", () => {
   it("keeps the schedule websocket at project layout level instead of the dialog", () => {
     const dialogSource = readFileSync(join(currentDir, "index.tsx"), "utf8");
-    const layoutSource = readFileSync(join(currentDir, "../../layouts/ProjectLayout.tsx"), "utf8");
+    const layoutSource = readFileSync(join(currentDir, "../../layouts/ProjectScope.tsx"), "utf8");
 
     expect(dialogSource).not.toContain("createScheduleWebSocket");
     expect(layoutSource).toContain("createScheduleWebSocket");
   });
 
   it("shows schedule notification toast from the project-level websocket handler", () => {
-    const layoutSource = readFileSync(join(currentDir, "../../layouts/ProjectLayout.tsx"), "utf8");
+    const layoutSource = readFileSync(join(currentDir, "../../layouts/ProjectScope.tsx"), "utf8");
 
     expect(layoutSource).toContain('import { toast } from "sonner"');
     expect(layoutSource).toContain("showScheduleNotification");

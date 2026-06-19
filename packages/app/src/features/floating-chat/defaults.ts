@@ -1,4 +1,4 @@
-import type { FloatingChatState } from "../../stores/project-ui-store";
+import type { FloatingChatState } from "./store";
 
 export const FLOAT_DEFAULT_WIDTH = 420;
 export const FLOAT_DEFAULT_HEIGHT = 600;

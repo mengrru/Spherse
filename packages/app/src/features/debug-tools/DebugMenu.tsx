@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "react-router";
+import { useMatch } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import {
   DropdownMenu,
@@ -31,11 +31,6 @@ import { toast } from "sonner";
 import { useAppStore } from "../../stores/app-store";
 import { LogPanel } from "./LogPanel";
 
-function extractSessionId(pathname: string): string | null {
-  const match = pathname.match(/\/project\/[^/]+\/chat\/([a-f0-9-]+)/);
-  return match?.[1] ?? null;
-}
-
 export function DebugMenu() {
   const [devToolsOpen, setDevToolsOpen] = useState(false);
   const [storeViewerOpen, setStoreViewerOpen] = useState(false);
@@ -44,13 +39,13 @@ export function DebugMenu() {
   const [storeData, setStoreData] = useState<string>("");
   const [downloading, setDownloading] = useState(false);
   const { t } = useI18n();
-  const location = useLocation();
+  const chatMatch = useMatch("/project/:projectId/chat/:sessionId");
 
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const projects = useAppStore((s) => s.projects);
   const activeProject = activeProjectId ? projects.get(activeProjectId) : null;
 
-  const sessionId = activeProject ? extractSessionId(location.pathname) : null;
+  const sessionId = chatMatch?.params.sessionId ?? null;
 
   const handleDevToolsToggle = async (checked: boolean) => {
     await window.electronAPI.toggleDevTools();

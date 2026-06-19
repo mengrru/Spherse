@@ -1,3 +1,3 @@
 export { FloatingChatManager } from "./FloatingChatManager";
 export { getDefaultFloatingState } from "./defaults";
-export type { FloatingChatState } from "../../stores/project-ui-store";
+export type { FloatingChatState } from "./store";

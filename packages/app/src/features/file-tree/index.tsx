@@ -1,5 +1,5 @@
-import type { ApiClient } from "../../lib/api";
 import { useI18n } from "@spherse/i18n/react";
+import { useProjectCtx } from "../../lib/project-context";
 import type { FileTreeController } from "./hooks/useFileTreeController";
 import { useFileTreeController } from "./hooks/useFileTreeController";
 import { FileTreeNode } from "./FileTreeNode";
@@ -7,15 +7,15 @@ import { InlineNameInput } from "./InlineNameInput";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 
 export interface FileTreeProps {
-  client: ApiClient;
   selectedFilePath?: string;
   onSelectFile: (filePath: string) => void;
   onDeleted?: (path: string) => void;
   refreshKey?: number;
 }
 
-export function FileTree({ client, selectedFilePath, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
+export function FileTree({ selectedFilePath, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
   const { t } = useI18n();
+  const { client } = useProjectCtx();
   const ctrl: FileTreeController = useFileTreeController(
     client,
     onSelectFile,

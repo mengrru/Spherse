@@ -12,7 +12,8 @@ import {
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
 import { useI18n } from "@spherse/i18n/react";
-import { useStreamingStore } from "../chat/streaming-store";
+import { useProjectDataStore } from "../../stores/project-data-store";
+import { useProjectCtx } from "../../lib/project-context";
 
 interface SessionRowProps {
   session: SessionInfo;
@@ -38,8 +39,9 @@ export function SessionRow({ session, active, floating, onSelect, onDelete, onRe
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurRef = useRef(false);
   const fallbackTitle = getFallbackTitle(session);
-  const isStreaming = useStreamingStore(
-    (s) => !active && s.sessions[session.id]?.streaming === true,
+  const { projectId } = useProjectCtx();
+  const isStreaming = useProjectDataStore(
+    (s) => !active && (s.projects[projectId]?.streamingSessionIds.has(session.id) ?? false),
   );
 
   useEffect(() => {
