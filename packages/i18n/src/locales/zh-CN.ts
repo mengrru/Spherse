@@ -193,6 +193,8 @@ export const zhCN = {
   "agent-schedule.logStatusFailed": "失败",
   // 日志条数限制提示
   "agent-schedule.logLimitNotice": "最多显示 {count} 条，更多请查看 schedule-logs.jsonl",
+  // agent 列表项上的 Clock icon tooltip：该 agent 至少有一条 enabled schedule，hover icon 时显示
+  "agent-schedule.indicatorTooltip": "已开启定时消息",
 
   // --- Chat ---
   // 聊天输入框占位提示

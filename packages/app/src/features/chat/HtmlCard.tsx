@@ -2,7 +2,7 @@ import { DownloadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { HtmlCard } from "../../lib/types";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 
 interface HtmlCardRendererProps {
   card: HtmlCard;

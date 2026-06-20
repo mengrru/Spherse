@@ -93,6 +93,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "agent-schedule.logStatusSuccess": "成功",
   "agent-schedule.logStatusFailed": "失敗",
   "agent-schedule.logLimitNotice": "最多顯示 {count} 條，更多請查看 schedule-logs.jsonl",
+  "agent-schedule.indicatorTooltip": "已開啟定時訊息",
   "chat.composerPlaceholder": "輸入訊息... (Shift+Enter 換行)",
   "chat.collapse": "收起",
   "chat.expand": "展開",

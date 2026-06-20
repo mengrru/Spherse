@@ -1,5 +1,5 @@
 import { useI18n } from "@spherse/i18n/react";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 import { useFileTreeController } from "./hooks/useFileTreeController";
 import { FileTreeNode } from "./FileTreeNode";
 import { FileTreeProvider } from "./file-tree-context";

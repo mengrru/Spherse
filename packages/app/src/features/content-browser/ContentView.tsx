@@ -2,7 +2,7 @@ import type { RefObject } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 
 interface ContentViewProps {
   filePath: string;

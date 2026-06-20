@@ -1,17 +1,16 @@
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { ContentBrowser } from "../features/content-browser";
-import { useProjectCtx } from "../lib/project-context";
+import { useProjectCtx } from "../context/project-context";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useFloatingSessionId } from "../features/floating-chat/use-floating-session-id";
 import type { ActiveSessionInfo } from "../lib/types";
 
 export function ContentBrowserPage() {
-  const { projectId = "" } = useParams();
+  const { projectId, client } = useProjectCtx();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { t } = useI18n();
-  const { client } = useProjectCtx();
   const projectData = useProjectDataStore((s) => s.projects[projectId]);
   const createSession = useProjectDataStore((s) => s.createSession);
   const floatingSessionId = useFloatingSessionId(projectId);

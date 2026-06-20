@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 import { ConflictBanner } from "./ConflictBanner";
 import { ConfirmDialogs } from "./ConfirmDialogs";
 import { ContentView } from "./ContentView";

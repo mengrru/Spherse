@@ -9,6 +9,7 @@ interface ProjectData {
   streamingSessionIds: Set<string>;
   loading: boolean;
   error: string | null;
+  hasEnabledSchedulesByAgent: Record<string, boolean>;
 }
 
 interface ProjectDataStore {
@@ -29,6 +30,7 @@ interface ProjectDataStore {
   setInitialMessage: (projectId: string, sessionId: string, message: string) => void;
   consumeInitialMessage: (projectId: string, sessionId: string) => string | undefined;
   setStreaming: (projectId: string, sessionId: string, streaming: boolean) => void;
+  setHasEnabledSchedules: (projectId: string, agentId: string, has: boolean) => void;
   clearProjectData: (projectId: string) => void;
 }
 
@@ -40,6 +42,7 @@ function createProjectData(): ProjectData {
     streamingSessionIds: new Set(),
     loading: false,
     error: null,
+    hasEnabledSchedulesByAgent: {},
   };
 }
 
@@ -297,6 +300,16 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
         streamingSessionIds: next,
       }));
     });
+  },
+
+  setHasEnabledSchedules(projectId, agentId, has) {
+    set((state) => updateProjectData(state, projectId, (project) => ({
+      ...project,
+      hasEnabledSchedulesByAgent: {
+        ...project.hasEnabledSchedulesByAgent,
+        [agentId]: has,
+      },
+    })));
   },
 
   clearProjectData(projectId) {

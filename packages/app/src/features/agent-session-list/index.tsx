@@ -21,7 +21,7 @@ import {
 import type { AgentProfile, SessionInfo } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useAgentSessionListUiStore } from "./store";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 import { useFloatingSessionId } from "../floating-chat/use-floating-session-id";
 import { AgentSessionListView } from "./AgentSessionListView";
 import { AgentSessionActionsProvider, type AgentSessionActions } from "./actions-context";
@@ -44,9 +44,9 @@ type DialogState =
 
 export function AgentSessionList() {
   const { t } = useI18n();
-  const { projectId = "", sessionId: activeSessionId = null } = useParams();
+  const { sessionId: activeSessionId = null } = useParams();
   const navigate = useNavigate();
-  const { client } = useProjectCtx();
+  const { projectId, client } = useProjectCtx();
   const projectData = useProjectDataStore((state) => state.projects[projectId]);
   const createSession = useProjectDataStore((state) => state.createSession);
   const deleteSession = useProjectDataStore((state) => state.deleteSession);

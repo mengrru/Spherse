@@ -155,18 +155,19 @@ spherse/
 │           │   ├── avatar-color.ts   # 项目头像颜色生成（路径 hash → HSL）
 │           │   ├── context.ts        # AppContext 定义
 │           │   ├── events.ts         # renderer 内部自定义事件名常量
-│           │   ├── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入
 │           │   ├── project-key.ts    # project path → URL projectKey 生成
 │           │   ├── scope-css.ts      # CSS 选择器作用域前缀工具（agent chat/floating theme）
 │           │   ├── tool-registry.ts  # 前端 tool call 展示元数据
 │           │   ├── types.ts          # 前端类型
 │           │   └── utils.ts          # shadcn/ui cn() 工具
+│           ├── context/
+│           │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（client/projectId/projectRoot）
 │           ├── stores/
 │           │   ├── app-store.ts          # 打开项目集合、当前项目、Electron IPC 动作、side panel 偏好
-│           │   ├── project-data-store.ts # agents/sessions/初始消息/streaming 状态等项目数据缓存
+│           │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledSchedulesByAgent 等项目数据缓存
 │           │   └── project-ui-store.ts   # 浮窗会话位置/尺寸等项目 UI 状态，localStorage 持久化
 │           ├── layouts/
-│           │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/schedule WS/数据刷新）
+│           │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/schedule WS/数据刷新/各 agent schedule 启用态预加载）
 │           ├── hooks/
 │           │   ├── useSidePanel.ts       # side panel pinned/hover 状态合并派生 + clickAway props
 │           │   ├── useCustomTheme.ts

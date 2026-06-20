@@ -65,7 +65,7 @@ Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent D
 - `model`：覆盖项目默认模型
 - `tools`：允许使用的 tool 名称列表；缺省时不分配任何工具（空列表）
 - `context`：项目根目录内相对路径列表，Engine 构建 system prompt 时预读取并注入
-- `schedule`：布尔值，表示该 agent 是否配置了定时任务。具体配置在 `schedules.yml` 中
+- `schedule`：可选布尔值，静态 frontmatter 标记，仅从 `profile.md` 读取、应用不自动回写。UI（AgentRow 定时任务指示）不依赖此字段，而是由 `schedules.yml` 中是否存在 `enabled: true` 的条目实时派生（见下方「定时任务数据」）
 - `output`：预留的输出路径、命名和 frontmatter 配置
 
 示例：

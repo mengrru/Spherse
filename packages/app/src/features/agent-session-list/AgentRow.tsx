@@ -1,17 +1,19 @@
 import type { AgentProfile } from "../../lib/types";
-import { Button } from "../../components/ui/button";
 import { CollapsibleTrigger } from "../../components/ui/collapsible";
 import { TreeRow } from "../../components/ui/tree-row";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuShortcut,
-  DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
-import { ChevronRightIcon, MoreHorizontalIcon } from "lucide-react";
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "../../components/ui/context-menu";
+import { Badge } from "../../components/ui/badge";
+import { ChevronRightIcon, Clock } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
+import { useProjectCtx } from "../../context/project-context";
+import { useProjectDataStore } from "../../stores/project-data-store";
 import { useAgentSessionActions } from "./actions-context";
 
 interface AgentRowProps {
@@ -22,44 +24,49 @@ interface AgentRowProps {
 export function AgentRow({ agent, active }: AgentRowProps) {
   const { t } = useI18n();
   const actions = useAgentSessionActions();
+  const { projectId } = useProjectCtx();
+  const hasEnabled = useProjectDataStore(
+    (s) => s.projects[projectId]?.hasEnabledSchedulesByAgent?.[agent.id] ?? false,
+  );
   return (
-    <div className="group/agent-row relative">
-      <CollapsibleTrigger render={<TreeRow depth={0} className={cn("group pr-8", active && "bg-sidebar-accent")} />}>
-        <ChevronRightIcon
-          className="size-4 shrink-0 text-sidebar-foreground/70 transition-transform group-data-[panel-open]:rotate-90"
-        />
-        <span className="overflow-hidden text-ellipsis whitespace-nowrap">
-          {agent.name}
-        </span>
-      </CollapsibleTrigger>
-      <DropdownMenu>
-        <DropdownMenuTrigger
+    <div className="group/agent-row">
+      <ContextMenu>
+        <ContextMenuTrigger
           render={
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 size-6 opacity-0 group-hover/agent-row:opacity-100 focus-visible:opacity-100 aria-expanded:opacity-100"
-            />
+            <CollapsibleTrigger render={<TreeRow depth={0} className={cn("group", active && "bg-sidebar-accent")} />} />
           }
         >
-          <MoreHorizontalIcon className="size-4" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => actions.newSession(agent)}>
+          <ChevronRightIcon
+            className="size-4 shrink-0 text-sidebar-foreground/70 transition-transform group-data-[panel-open]:rotate-90"
+          />
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+            {agent.name}
+          </span>
+          {hasEnabled && (
+            <Clock
+              className="ml-auto h-3 w-3 shrink-0 text-muted-foreground"
+              title={t("agent-schedule.indicatorTooltip")}
+              aria-label={t("agent-schedule.indicatorTooltip")}
+            />
+          )}
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem onClick={() => actions.newSession(agent)}>
             {t("agent-session-list.newSession")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => actions.editAgent(agent)}>
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => actions.editAgent(agent)}>
             {t("common.edit")}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => actions.scheduleAgent(agent)}>
+          </ContextMenuItem>
+          <ContextMenuItem onClick={() => actions.scheduleAgent(agent)}>
             {t("agent-schedule.menuItem")}
-            <DropdownMenuShortcut>Beta</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onClick={() => actions.deleteAgent(agent)}>
+            <Badge variant="secondary" className="ml-auto">Beta</Badge>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem variant="destructive" onClick={() => actions.deleteAgent(agent)}>
             {t("common.delete")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </div>
   );
 }

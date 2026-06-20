@@ -77,6 +77,11 @@ export const useScheduleStore = create<ScheduleStore>((set, get) => ({
         ...data,
         schedulesByAgent: { ...data.schedulesByAgent, [agentId]: schedules },
       })));
+      useProjectDataStore.getState().setHasEnabledSchedules(
+        projectId,
+        agentId,
+        schedules.some((s) => s.enabled),
+      );
     } catch {
       // silent — schedule refresh failures are non-critical
     }

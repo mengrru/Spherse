@@ -93,6 +93,7 @@ export const en: Record<TranslationKey, string> = {
   "agent-schedule.logStatusSuccess": "Success",
   "agent-schedule.logStatusFailed": "Failed",
   "agent-schedule.logLimitNotice": "Showing last {count} entries. See schedule-logs.jsonl for more.",
+  "agent-schedule.indicatorTooltip": "Scheduled messages enabled",
   "chat.composerPlaceholder": "Type a message... (Shift+Enter for new line)",
   "chat.collapse": "Collapse",
   "chat.expand": "Expand",

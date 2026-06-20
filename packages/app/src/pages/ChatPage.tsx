@@ -3,10 +3,12 @@ import { useNavigate, useParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { Chat } from "../features/chat";
 import { useProjectDataStore } from "../stores/project-data-store";
+import { useProjectCtx } from "../context/project-context";
 import { useFloatingChatRedirect } from "../features/floating-chat/use-floating-chat-redirect";
 
 export function ChatPage() {
-  const { projectId = "", sessionId = "" } = useParams();
+  const { sessionId = "" } = useParams();
+  const { projectId } = useProjectCtx();
   const navigate = useNavigate();
   const { t } = useI18n();
   const projectData = useProjectDataStore((s) => s.projects[projectId]);

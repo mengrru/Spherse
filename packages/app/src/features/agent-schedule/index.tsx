@@ -13,7 +13,7 @@ import {
 } from "../../components/ui/alert-dialog";
 import type { ScheduleEntry, ScheduleInfo } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 import { useScheduleStore } from "./store";
 import { ScheduleForm } from "./ScheduleForm";
 import { ScheduleList } from "./ScheduleList";

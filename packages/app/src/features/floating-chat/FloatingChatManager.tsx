@@ -1,11 +1,11 @@
 import { useEffect } from "react";
-import { useParams } from "react-router";
 import { useProjectDataStore } from "../../stores/project-data-store";
+import { useProjectCtx } from "../../context/project-context";
 import { useFloatingChatStore } from "./store";
 import { FloatingChatContainer } from "./FloatingChatContainer";
 
 export function FloatingChatManager() {
-  const { projectId } = useParams();
+  const { projectId } = useProjectCtx();
   const floatingChat = useFloatingChatStore((s) =>
     projectId ? s.byProject[projectId] : undefined,
   );
@@ -24,7 +24,7 @@ export function FloatingChatManager() {
     }
   }, [floatingChat, projectId, session, setFloatingChat]);
 
-  if (!floatingChat || !projectId || !session) return null;
+  if (!floatingChat || !session) return null;
 
   const agent = agents.find((a) => a.id === session.agentId);
   if (!agent) return null;

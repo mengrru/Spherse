@@ -124,7 +124,6 @@ npm run dist:win    # 构建 Windows NSIS 安装包
   - 关注认知复杂度信号：handler 互相调用、effect 链、条件渲染嵌套 > 3 层，优先拆分
 - **前端路由原则**：
   - 真嵌套路由：`project/:projectId` 是 layout route（`<ProjectScope>` + `<Outlet />`），子路由 `index`/`chat/:sessionId`/`content` 各自渲染独立 page 组件。不通过 `endsWith`/正则等手写 URL 解析判断当前路由，用 `useParams`/`useMatch`/`useSearchParams`
-  - URL 是活跃 project 的唯一真相源：业务组件用 `useParams().projectId` 读取当前 project，不读 `app-store.activeProjectId`（后者仅用于启动恢复和 IPC 持久化）
   - layout 组件（`layouts/`）通过 `<Outlet />` 渲染子路由，不在内部用条件渲染模拟路由切换；page 组件（`pages/`）是纯 route adapter，从 URL 参数解析后渲染对应 feature
   - 路由参数统一编码：session id 用 path param（`:sessionId`），文件路径用 query param（`?path=`）。不在同一概念上混用两种编码
 - **前端依赖注入**：

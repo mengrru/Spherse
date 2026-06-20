@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../lib/events";
 
 const HTML_EXTENSIONS = new Set(["html", "htm"]);

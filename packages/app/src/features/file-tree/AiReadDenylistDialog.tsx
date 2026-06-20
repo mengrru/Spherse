@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 import { useAiReadDenylist } from "./useAiReadDenylist";
 
 export function AiReadDenylistDialog({

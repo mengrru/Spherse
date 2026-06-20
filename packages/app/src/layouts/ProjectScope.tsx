@@ -10,7 +10,26 @@ import { useSpherseMessageListener } from "../ui-sdk";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useAppStore } from "../stores/app-store";
 import { useScheduleStore } from "../features/agent-schedule/store";
-import { ProjectProvider } from "../lib/project-context";
+import { ProjectProvider } from "../context/project-context";
+import type { ApiClient } from "../lib/api";
+
+async function preloadHasEnabledSchedules(projectId: string, client: ApiClient) {
+  const agents = useProjectDataStore.getState().projects[projectId]?.agents ?? [];
+  const results = await Promise.allSettled(
+    agents.map((agent) => client.listSchedules(agent.id)),
+  );
+  for (let i = 0; i < agents.length; i++) {
+    const result = results[i];
+    const agentId = agents[i].id;
+    if (result.status === "fulfilled") {
+      useProjectDataStore
+        .getState()
+        .setHasEnabledSchedules(projectId, agentId, result.value.some((s) => s.enabled));
+    } else {
+      console.warn(`preload schedules failed for agent ${agentId}`, result.reason);
+    }
+  }
+}
 
 export function ProjectScope() {
   const { projectId } = useParams();
@@ -55,6 +74,7 @@ export function ProjectScope() {
     if (cached?.agents?.length) return;
     void refreshAgents(projectId, client).then(() => {
       void refreshSessions(projectId, client);
+      void preloadHasEnabledSchedules(projectId, client);
     });
   }, [client, projectId, refreshAgents, refreshSessions]);
 

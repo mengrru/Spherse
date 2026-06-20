@@ -61,7 +61,7 @@
 - **projectId**：URL 中使用 `.spherse/project.yaml` 中的稳定 id（nanoid 8 位 token）作为路由参数，替代旧的基于目录名生成的 projectKey；全链路（core → server → IPC → renderer 路由 → localStorage key）统一使用 projectId 作为唯一身份标识
 - **项目内 lastRoute**：每个打开项目在 `openProjects` 条目中持久化相对于 `/project/:projectId` 的 `lastRoute`，如 `/chat/:sessionId` 或 `/content?path=...`；应用启动、项目切换和关闭当前项目后的下一个项目导航都会恢复该项目的 lastRoute
 - **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作，并持久化左侧 side panel 固定/自动收起偏好
-- **项目数据 store**：`project-data-store.ts` 按 projectId 缓存 agents、sessions、初始消息、定时任务、运行中定时任务和 loading/error 状态
+- **项目数据 store**：`project-data-store.ts` 按 projectId 缓存 agents、sessions、初始消息、streaming 状态、各 agent 是否存在启用定时任务的派生标记（`hasEnabledSchedulesByAgent`，由 agent-schedule feature store 在 schedule CRUD chokepoint `refreshSchedules` 中同步派生，`ProjectScope` 在项目打开时为所有 agent 预加载）以及 loading/error 状态
 - **项目 UI store**：`project-ui-store.ts` 按 projectId 管理折叠状态、浮窗会话状态等纯 UI 状态，通过 renderer localStorage 持久化
 - **局部状态边界**：文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件或 feature hook 内；Chat 输入框草稿按 sessionId 缓存在 renderer `localStorage`，用于 session 切换和应用重启后的草稿恢复；欢迎页设置 dialog 的打开状态保留在 `ActivityBar` 内，欢迎页设置变更通过 `lib/events.ts` 中的 renderer 自定义事件通知当前欢迎页重新读取项目配置
 - **Chat streaming store**：Chat 消息流和 WebSocket 连接由 `features/chat/streaming-store.ts` 统一管理，按 sessionId 缓存 messages、streaming、scrollPosition、WebSocket 和挂载计数；`useChatSession` 只负责 attach/detach 与选择状态，切换页面或关闭 chat 不会中断后台流式输出；WebSocket 事件按 animation frame 批量归约，避免高频 token update 触发过多 React render；`chat-session-reducer.ts` 负责纯数据归约，使用 `message_start` 创建 assistant 占位、`agent_end` 结束正常 streaming，并忽略 user lifecycle 事件以保留本地立即显示 user bubble 的体验

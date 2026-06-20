@@ -13,7 +13,7 @@ import {
 } from "../../components/ui/context-menu";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 import { useAgentSessionActions } from "./actions-context";
 
 interface SessionRowProps {

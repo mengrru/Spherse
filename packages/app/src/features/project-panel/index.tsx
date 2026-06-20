@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FolderCogIcon } from "lucide-react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { FileTree } from "../file-tree";
 import { AiReadDenylistDialog } from "../file-tree/AiReadDenylistDialog";
@@ -13,9 +13,10 @@ import {
 } from "../../components/ui/sidebar";
 import { useSidePanel } from "../../hooks/use-side-panel";
 import { AgentSessionList } from "../agent-session-list";
+import { useProjectCtx } from "../../context/project-context";
 
 export function ProjectPanel() {
-  const { projectId } = useParams();
+  const { projectId } = useProjectCtx();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [aiDenylistOpen, setAiDenylistOpen] = useState(false);

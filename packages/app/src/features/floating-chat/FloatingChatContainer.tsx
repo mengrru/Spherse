@@ -4,7 +4,7 @@ import type { AgentProfile } from "../../lib/types";
 import { Chat } from "../chat";
 import { FloatingChatFrame } from "./FloatingChatFrame";
 import { useFloatingChatStore, type FloatingChatState } from "./store";
-import { useProjectCtx } from "../../lib/project-context";
+import { useProjectCtx } from "../../context/project-context";
 import { scopeCss } from "../../lib/scope-css";
 
 interface FloatingChatContainerProps {
