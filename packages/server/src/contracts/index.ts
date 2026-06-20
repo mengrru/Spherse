@@ -60,6 +60,8 @@ export type {
   AiAccessSettingsResponse,
   WelcomePageSettingsRequest,
   WelcomePageSettingsResponse,
+  ThemeSettingsRequest,
+  ThemeSettingsResponse,
 } from "./settings.js";
 
 export type {

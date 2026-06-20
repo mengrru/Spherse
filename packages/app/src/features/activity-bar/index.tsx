@@ -7,11 +7,15 @@ import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
 import { PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { DebugTools } from "../debug-tools";
-import { WelcomePageSettingsDialog } from "../welcome-page-settings";
+import { WelcomePageSettingsDialog } from "../project-settings/welcome-page-settings";
+import { ThemeSettingsDialog } from "../project-settings/theme-settings";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "../../lib/utils";
 
@@ -37,6 +41,8 @@ export function ActivityBar({
   const { t } = useI18n();
   const [settingsProjectId, setSettingsProjectId] = useState<string | null>(null);
   const settingsProject = settingsProjectId ? projects.get(settingsProjectId) : null;
+  const [themeSettingsProjectId, setThemeSettingsProjectId] = useState<string | null>(null);
+  const themeSettingsProject = themeSettingsProjectId ? projects.get(themeSettingsProjectId) : null;
   const { pinned, visible, togglePin, show, hide } = useSidePanel();
 
   return (
@@ -79,9 +85,21 @@ export function ActivityBar({
                     />
                   </ContextMenuTrigger>
                   <ContextMenuContent>
-                    <ContextMenuItem onClick={() => setSettingsProjectId(projectId)}>
-                      {t("activity-bar.setWelcomePage")}
-                    </ContextMenuItem>
+                    {projectId === activeProjectId && (
+                      <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                          {t("activity-bar.settings")}
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                          <ContextMenuItem onClick={() => setSettingsProjectId(projectId)}>
+                            {t("activity-bar.settings.welcomePage")}
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => setThemeSettingsProjectId(projectId)}>
+                            {t("activity-bar.settings.theme")}
+                          </ContextMenuItem>
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                    )}
                     <ContextMenuItem onClick={() => onReveal(projectId)}>
                       {t("activity-bar.revealInFinder")}
                     </ContextMenuItem>
@@ -131,6 +149,14 @@ export function ActivityBar({
                 client={settingsProject.ctx.client}
                 open={true}
                 onOpenChange={(open) => { if (!open) setSettingsProjectId(null); }}
+              />
+            )}
+            {themeSettingsProject && (
+              <ThemeSettingsDialog
+                key={themeSettingsProjectId}
+                client={themeSettingsProject.ctx.client}
+                open={true}
+                onOpenChange={(open) => { if (!open) setThemeSettingsProjectId(null); }}
               />
             )}
           </div>

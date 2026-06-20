@@ -11,6 +11,7 @@ import type {
   AgentUpdateResponse,
   AiAccessSettingsResponse,
   WelcomePageSettingsResponse,
+  ThemeSettingsResponse,
 } from "./types";
 import type {
   ProviderCatalogContract,
@@ -262,6 +263,22 @@ export function createApiClient(baseUrl: string, projectId: string) {
       });
       await assertOk(res);
       return parseJsonResponse<WelcomePageSettingsResponse>(res, schemas.welcomePageSettingsResponse);
+    },
+
+    async getThemeSettings(): Promise<ThemeSettingsResponse> {
+      const res = await fetch(`${apiBase}/settings/theme`);
+      if (!res.ok) return { ok: false, content: "" };
+      return parseJsonResponse<ThemeSettingsResponse>(res, schemas.themeSettingsResponse);
+    },
+
+    async updateThemeSettings(content: string): Promise<{ ok: boolean }> {
+      const res = await fetch(`${apiBase}/settings/theme`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async listSchedules(agentId: string): Promise<ScheduleInfo[]> {

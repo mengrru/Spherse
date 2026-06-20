@@ -38,6 +38,13 @@ export const schemas = {
     ok: Type.Boolean(),
     path: Type.Union([Type.String(), Type.Null()]),
   }),
+  themeSettingsRequest: Type.Object({
+    content: Type.String(),
+  }),
+  themeSettingsResponse: Type.Object({
+    ok: Type.Boolean(),
+    content: Type.String(),
+  }),
 } as const;
 
 export type ProviderCatalogItemContract = Static<typeof providerCatalogItem>;
@@ -46,3 +53,5 @@ export type AiAccessSettingsRequest = Static<typeof schemas.aiAccessSettingsRequ
 export type AiAccessSettingsResponse = Static<typeof schemas.aiAccessSettingsResponse>;
 export type WelcomePageSettingsRequest = Static<typeof schemas.welcomePageSettingsRequest>;
 export type WelcomePageSettingsResponse = Static<typeof schemas.welcomePageSettingsResponse>;
+export type ThemeSettingsRequest = Static<typeof schemas.themeSettingsRequest>;
+export type ThemeSettingsResponse = Static<typeof schemas.themeSettingsResponse>;

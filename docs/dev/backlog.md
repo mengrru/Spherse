@@ -41,6 +41,7 @@
 - [x] **Chat streaming 跨页面韧性**：Chat WebSocket 连接与 streaming 状态按 session 缓存在 Zustand store 中，支持切换 session/关闭 chat 后后台继续流式输出、侧边栏显示后台 streaming 指示、滚动位置恢复，并复用 server `ChatServerEvent` contract 处理完整 pi-agent lifecycle。
 - [x] **支持本地 HTML 文件页面渲染**：在应用内直接渲染本地 HTML 文件
 - [x] **用户自定义欢迎页**：项目头像右键菜单支持设置项目级 HTML/图片欢迎页，项目根路由展示欢迎页，Chat 页面提供显式关闭按钮返回欢迎页。参见 `docs/dev/features/2026-06-07-user-custom-welcome-page/design.md`
+- [x] **项目设置子菜单 + 主题编辑器**：项目头像右键菜单的「设置欢迎页」改为二级菜单「设置」（含「欢迎页」「主题」），新增主题 CSS 编辑器弹窗直接读写 `.spherse/theme.css`，保存后热更新。参见 `docs/dev/features/2026-06-19-project-settings-dialog/design.md`
 - [x] **支持 Agent 定时执行**：按 cron 表达式定时触发 agent 运行
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
 - [x] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话

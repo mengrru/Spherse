@@ -11,6 +11,7 @@ export type {
   AgentCreateResponse,
   AiAccessSettingsResponse,
   WelcomePageSettingsResponse,
+  ThemeSettingsResponse,
 } from "@spherse/server/contracts";
 
 export interface ActiveSessionInfo {

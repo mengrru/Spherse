@@ -127,6 +127,11 @@ describe("api contracts", () => {
       ok: true,
       path: null,
     });
+    expect(parseApiResponse(schemas.themeSettingsResponse, { ok: true, content: ":root { --test: #fff; }" })).toEqual({
+      ok: true,
+      content: ":root { --test: #fff; }",
+    });
+    expect(() => parseApiResponse(schemas.themeSettingsResponse, { ok: true })).toThrow(/Invalid payload/);
   });
 
   it("validates turn context snapshot", () => {

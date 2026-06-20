@@ -71,8 +71,12 @@ export const zhCN = {
   "activity-bar.closeProject": "关闭项目",
   // 项目右键菜单：在 Finder 中显示
   "activity-bar.revealInFinder": "在 Finder 中显示",
-  // 项目右键菜单：设置欢迎页
-  "activity-bar.setWelcomePage": "设置欢迎页",
+  // 项目右键菜单：设置（二级菜单容器，hover 展开子菜单）
+  "activity-bar.settings": "设置",
+  // 项目右键菜单 → 设置 → 欢迎页（二级菜单项，打开欢迎页设置弹窗）
+  "activity-bar.settings.welcomePage": "欢迎页",
+  // 项目右键菜单 → 设置 → 主题（二级菜单项，打开主题 CSS 编辑弹窗）
+  "activity-bar.settings.theme": "主题",
   // 左侧活动栏固定图标悬停提示：点击后将项目面板切换为鼠标移出后自动收起
   "activity-bar.autoCollapseSidePanelTooltip": "自动收起项目面板",
   // 左侧活动栏收起图标悬停提示：点击后将项目面板固定显示
@@ -405,4 +409,16 @@ export const zhCN = {
   // --- Error ---
   // 通用请求失败提示
   "error.requestFailed": "请求失败",
+
+  // --- Theme Settings Dialog ---
+  // 主题设置弹窗标题
+  "theme-settings.title": "设置主题",
+  // 主题设置弹窗顶部说明，引导用户通过覆盖 CSS 变量自定义界面外观
+  "theme-settings.description": "覆盖 .spherse/theme.css 中的 CSS 变量来自定义界面外观。完整变量清单请参考 create-ui-theme skill。",
+  // 读取主题设置失败提示，{message} 为错误信息
+  "theme-settings.loadFailed": "读取主题设置失败：{message}",
+  // 保存主题设置失败提示，{message} 为错误信息
+  "theme-settings.saveFailed": "保存失败：{message}",
+  // 主题设置保存成功提示
+  "theme-settings.saved": "主题已保存",
 } as const;

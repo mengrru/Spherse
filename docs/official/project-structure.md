@@ -92,7 +92,7 @@ spherse/
     │   │       │   ├── sessions.ts       # SessionInfo、SessionList/Messages Response、rename 请求
     │   │       │   ├── content.ts        # FileEntry、ContentResponse、create/save 请求
     │   │       │   ├── file-tree.ts      # FileTreeResponse
-    │   │       │   ├── settings.ts       # ProviderCatalog、AiAccess/WelcomePage Request/Response
+    │   │       │   ├── settings.ts       # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
     │   │       │   ├── schedules.ts      # ScheduleEntry、ScheduleCreate/Update 请求、List/Log Response
     │   │       │   ├── skills.ts         # SkillDefinition、SkillList Response
     │   │       │   ├── debug.ts          # TurnContextSnapshot
@@ -106,7 +106,7 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表与详情
-│   │       │   ├── settings.ts       # Provider 列表（动态 catalog）+ 项目 settings API（AI 读取禁止列表、欢迎页）
+│   │       │   ├── settings.ts       # Provider 列表（动态 catalog）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── schedules.ts      # 定时任务 CRUD 与手动触发
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
 │       │       ├── ws-chat.ts            # WebSocket 对话流
@@ -198,7 +198,9 @@ spherse/
 │           │   ├── project-panel/         # 项目侧栏，自治读取 URL/projectCtx，组合 Agent/session 列表与文件树
 │           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
 │           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
-│           │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
+│           │   ├── project-settings/     # 项目设置弹窗集合
+│           │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
+│           │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗
 │           │   └── text-selection-session/ # 划选文本后发起会话
 │           ├── pages/
 │           │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat

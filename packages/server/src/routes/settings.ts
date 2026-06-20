@@ -1,6 +1,8 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
-import { getSupportedProviders } from "@spherse/core";
+import { getSupportedProviders, resolveProjectPath } from "@spherse/core";
 import { schemas } from "@spherse/server/contracts";
 
 export function registerSettingsRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
@@ -60,6 +62,43 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
     async (req) => {
       const settings = await req.projectCtx!.projectManager.updateWelcomePageSettings(req.body.path);
       return { ok: true, ...settings };
+    },
+  );
+
+  fastify.get<{ Params: { projectId: string } }>(
+    "/api/projects/:projectId/settings/theme",
+    {
+      schema: { response: { 200: schemas.themeSettingsResponse } },
+      async handler(req) {
+        const root = req.projectCtx!.projectManager.getRootPath();
+        const absolutePath = resolveProjectPath(root, ".spherse/theme.css");
+        let content = "";
+        try {
+          content = await fs.readFile(absolutePath, "utf-8");
+        } catch {
+          content = "";
+        }
+        return { ok: true, content };
+      },
+    },
+  );
+
+  fastify.put<{ Params: { projectId: string }; Body: { content: string } }>(
+    "/api/projects/:projectId/settings/theme",
+    {
+      schema: {
+        body: schemas.themeSettingsRequest,
+        response: { 200: schemas.okResponse },
+      },
+    },
+    async (req) => {
+      const root = req.projectCtx!.projectManager.getRootPath();
+      const absolutePath = resolveProjectPath(root, ".spherse/theme.css");
+      await req.projectCtx!.projectManager.getFileWriteMutex().run(absolutePath, async () => {
+        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+        await fs.writeFile(absolutePath, req.body.content, "utf-8");
+      });
+      return { ok: true };
     },
   );
 }

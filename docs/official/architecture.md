@@ -41,7 +41,7 @@
 - **预览 API**：`preview.ts` 为本地 HTML 与图片内容提供预览 URL，renderer 通过 iframe、图片或 HTML card 使用
 - **WebSocket**：`ws-chat.ts` 推送 agent 对话事件；`ws-fs-watch.ts` 推送项目文件变更；`ws-schedule.ts` 推送定时任务事件——三者均使用 `/ws/projects/:projectId/...` 路径前缀按项目隔离；`ws-debug.ts` 推送全局 pino 结构化日志流（日志带 projectId 字段，可供前端过滤），供前端 Debug Streaming Log 面板消费
 - **定时任务 API**：`schedules.ts` 提供定时任务 CRUD 和手动触发
-- **项目 settings API**：`settings.ts` 暴露 `/api/projects/:projectId/settings/ai-access` 读写项目级 AI 读取禁止列表，暴露 `/api/projects/:projectId/settings/welcome-page` 读写项目级欢迎页路径；renderer 不直接通过 content API 编辑 `.spherse/project.yaml`
+- **项目 settings API**：`settings.ts` 暴露 `/api/projects/:projectId/settings/ai-access` 读写项目级 AI 读取禁止列表，暴露 `/api/projects/:projectId/settings/welcome-page` 读写项目级欢迎页路径；`settings.ts` 还暴露 `/api/projects/:projectId/settings/theme` 读写项目级主题 CSS（GET 返回 `{ ok, content }`，文件不存在时 content 为空串；PUT body `{ content }` 原样落盘，返回 `{ ok }`）；renderer 不直接通过 content API 编辑 `.spherse/project.yaml`
 
 ## Electron 层
 
@@ -63,10 +63,10 @@
 - **应用级 store**：`app-store.ts` 管理打开项目集合、当前项目、restore/open/close/reveal 等 Electron IPC 相关动作，并持久化左侧 side panel 固定/自动收起偏好
 - **项目数据 store**：`project-data-store.ts` 按 projectId 缓存 agents、sessions、初始消息、streaming 状态、各 agent 是否存在启用定时任务的派生标记（`hasEnabledSchedulesByAgent`，由 agent-schedule feature store 在 schedule CRUD chokepoint `refreshSchedules` 中同步派生，`ProjectScope` 在项目打开时为所有 agent 预加载）以及 loading/error 状态
 - **项目 UI store**：`project-ui-store.ts` 按 projectId 管理折叠状态、浮窗会话状态等纯 UI 状态，通过 renderer localStorage 持久化
-- **局部状态边界**：文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件或 feature hook 内；Chat 输入框草稿按 sessionId 缓存在 renderer `localStorage`，用于 session 切换和应用重启后的草稿恢复；欢迎页设置 dialog 的打开状态保留在 `ActivityBar` 内，欢迎页设置变更通过 `lib/events.ts` 中的 renderer 自定义事件通知当前欢迎页重新读取项目配置
+- **局部状态边界**：文件编辑 dirty/conflict、弹窗表单等短生命周期状态保留在对应组件或 feature hook 内；Chat 输入框草稿按 sessionId 缓存在 renderer `localStorage`，用于 session 切换和应用重启后的草稿恢复；欢迎页设置与主题设置 dialog 的打开状态保留在 `ActivityBar` 内（通过「设置」二级菜单触发，仅 active 项目可见），设置变更通过 `lib/events.ts` 中的 renderer 自定义事件通知：欢迎页重新读取项目配置、`useCustomTheme` 重新挂载主题 `<link>` 热更新
 - **Chat streaming store**：Chat 消息流和 WebSocket 连接由 `features/chat/streaming-store.ts` 统一管理，按 sessionId 缓存 messages、streaming、scrollPosition、WebSocket 和挂载计数；`useChatSession` 只负责 attach/detach 与选择状态，切换页面或关闭 chat 不会中断后台流式输出；WebSocket 事件按 animation frame 批量归约，避免高频 token update 触发过多 React render；`chat-session-reducer.ts` 负责纯数据归约，使用 `message_start` 创建 assistant 占位、`agent_end` 结束正常 streaming，并忽略 user lifecycle 事件以保留本地立即显示 user bubble 的体验
 - **页面 / layout / feature 边界**：`pages/` 只做路由适配和参数校验；跨 feature 的页面编排放在 `layouts/`；业务域专属 UI、hooks 和局部动作放在 `features/{domain}/`
-- **feature-based 组织**：`features/chat`、`features/content-browser`、`features/agent-session-list`、`features/agent-schedule`、`features/project-panel`、`features/file-tree`、`features/floating-chat`、`features/text-selection-session`、`features/settings`、`features/debug-tools`、`features/activity-bar`、`features/welcome-page`、`features/welcome-page-settings` 分别拥有自己的组件和 hooks
+- **feature-based 组织**：`features/chat`、`features/content-browser`、`features/agent-session-list`、`features/agent-schedule`、`features/project-panel`、`features/file-tree`、`features/floating-chat`、`features/text-selection-session`、`features/settings`、`features/debug-tools`、`features/activity-bar`、`features/welcome-page`、`features/project-settings`（含 `welcome-page-settings` / `theme-settings`）分别拥有自己的组件和 hooks
 - **UI SDK**：`src/ui-sdk/` 提供 iframe 与 App 内代码统一 action 通信框架。iframe 通过 `postMessage` 发送 `type: "spherse:action"` 消息，由 `useSpherseMessageListener` hook 接收并分发到注册的 handler；App 内代码直接调用 `dispatchAction`。外部调用经 rate limiter 限流（每分钟最多 10 次），内部调用无限制。新增 action 只需在 `handlers/` 下新建文件并 `registerAction`，无需改动 listener 或 registry。导航类 action（createSession/openFile/sendMessage）为单向触发；data CRUD action（data.get/set/delete）支持 requestId 请求-响应模式，iframe 指定 `.data.json` 文件路径，handler 复用现有 Content API 进行 key-value 数据持久化
 - **共享组件边界**：`components/` 保留 shadcn/ui、跨 feature 复用组件和少量通用组件；只被某个 feature 使用的组件不放在全局 components 根目录
 
@@ -89,7 +89,7 @@
 - **间距与阴影**：使用 Tailwind 标准 scale（`p-2`、`rounded-md`、`shadow-sm` 等），不硬编码 magic number
 - **暗色适配**：业务组件不写 `dark:` 修饰符，由 CSS 变量值切换自动适配。仅 shadcn/ui 组件源码中已有的 `dark:` 保留
 - **Markdown 渲染**：动态 Markdown 统一通过 `MarkdownContent` 组件映射 `react-markdown` 节点样式，不在 `styles.css` 里维护 `.chat-markdown` 或 `.prose-content` 选择器
-- **项目级自定义主题**：用户可通过项目根目录 `.spherse/theme.css` 覆盖 CSS 变量实现项目全局主题定制，只允许覆盖 `:root` 中已有的变量名
+- **项目级自定义主题**：用户可通过项目根目录 `.spherse/theme.css` 覆盖 CSS 变量实现项目全局主题定制，只允许覆盖 `:root` 中已有的变量名。应用内可通过项目头像右键菜单「设置 → 主题」打开 CSS 编辑器直接读写该文件，保存后经 `THEME_SETTINGS_CHANGED_EVENT` 触发 `useCustomTheme` 热更新
 - **Agent 聊天主题**：每个 agent 可在 `.spherse/agents/{slug}-{shortId}/theme.css` 定义聊天窗口主题。前端进入聊天页时读取该文件并注入到聊天窗口内，优先级高于项目级主题；该样式只作用于当前 agent 的聊天窗口，不影响侧边栏等外部 UI
 - **聊天主题选择器**：聊天窗口对用户主题暴露 `data-chat-root`、`data-chat-header`、`data-chat-messages`、`data-chat-message[data-role]`、`data-chat-composer` 等入口。变更这些 DOM 入口或聊天布局时，需要同步更新 `packages/presets/templates/agent-theme-template.css` 与 `packages/presets/skills/create-agent-chat-theme/SKILL.md`
 

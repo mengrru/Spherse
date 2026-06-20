@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
-import type { ApiClient } from "../../lib/api";
-import { Button } from "../../components/ui/button";
+import type { ApiClient } from "../../../lib/api";
+import { Button } from "../../../components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../../components/ui/dialog";
-import { Input } from "../../components/ui/input";
-import { Field, FieldGroup, FieldLabel } from "../../components/ui/field";
-import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../lib/events";
+} from "../../../components/ui/dialog";
+import { Input } from "../../../components/ui/input";
+import { Field, FieldGroup, FieldLabel } from "../../../components/ui/field";
+import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../../lib/events";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
 
