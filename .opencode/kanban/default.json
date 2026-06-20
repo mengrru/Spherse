@@ -18,7 +18,7 @@
     },
     {
       "name": "planning",
-      "prompt": "（如果任务复杂度较低则无需编写实施计划直接跳至implementing阶段）使用 writing-plans skill 编写实施计划",
+      "prompt": "（如果任务复杂度较低则无需编写实施计划直接跳至implementing阶段）不要使用 writing-plans skill，直接编写实施计划：简洁清晰、task 拆分合理，方便后续以 subagent-driven 模式实现",
       "completion": "实施计划已编写完成并自查完毕或任务复杂度较低",
       "next": "implementing"
     },
