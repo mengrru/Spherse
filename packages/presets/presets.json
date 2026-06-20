@@ -1,7 +1,8 @@
 {
   "presetSkills": [
     { "dir": "create-ui-theme" },
-    { "dir": "create-agent-chat-theme" }
+    { "dir": "create-agent-chat-theme" },
+    { "dir": "use-ui-sdk" }
   ],
   "presetAgents": [
     { "name": "世界观创作", "slug": "world-building" }

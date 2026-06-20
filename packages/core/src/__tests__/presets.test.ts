@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createSilentLogger } from "../logger.js";
 import { ProjectStore } from "../store/project.js";
 import { PRESET_SKILL_SOURCES, PRESET_AGENTS } from "@spherse/presets";
-import { createTempProject, cleanupDir, pathExists, readFile } from "./helpers.js";
+import { createTempProject, cleanupDir, pathExists } from "./helpers.js";
 
 describe("initPresets", () => {
   let projectRoot: string;
@@ -22,16 +22,13 @@ describe("initPresets", () => {
     await cleanupDir(projectRoot);
   });
 
-  it("copies all preset skills to .spherse/skills/", async () => {
+  it("creates .spherse/skills/ directory but does not copy preset skills", async () => {
     const { initPresets } = await import("../presets.js");
     await initPresets(projectStore, spherseDir, createSilentLogger());
 
+    expect(pathExists(projectRoot, ".spherse/skills")).toBe(true);
     for (const skill of PRESET_SKILL_SOURCES) {
-      for (const file of skill.files) {
-        expect(pathExists(projectRoot, `.spherse/skills/${skill.dir}/${file.relativePath}`)).toBe(true);
-        const content = await readFile(projectRoot, `.spherse/skills/${skill.dir}/${file.relativePath}`);
-        expect(content).toBe(file.content);
-      }
+      expect(pathExists(projectRoot, `.spherse/skills/${skill.dir}/SKILL.md`)).toBe(false);
     }
   });
 

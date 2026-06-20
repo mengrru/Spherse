@@ -104,9 +104,21 @@ describe("api contracts", () => {
   });
 
   it("validates skill list response", () => {
-    const skill = { name: "n", description: "d", instructions: "i", filePath: "n.md" };
+    const skill = { name: "n", description: "d", instructions: "i", filePath: "n.md", source: "builtin" };
     expect(parseApiResponse(schemas.skillListResponse, [skill])).toEqual([skill]);
     expect(() => parseApiResponse(schemas.skillDefinition, { name: "n" })).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.skillDefinition, { name: "n", description: "d", instructions: "i", filePath: "n.md" }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.skillDefinition, {
+        name: "n",
+        description: "d",
+        instructions: "i",
+        filePath: "n.md",
+        source: "unknown",
+      }),
+    ).toThrow(/Invalid payload/);
   });
 
   it("validates provider catalog and settings responses", () => {

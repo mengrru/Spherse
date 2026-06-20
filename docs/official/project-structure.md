@@ -7,9 +7,9 @@ spherse/
 │   │   └── src/
 │   │       ├── types.ts              # 共享类型与 provider catalog 类型定义
     │   │       ├── logger.ts            # pino Logger 类型与 createSilentLogger 内部兜底工厂
-    │   │       ├── factory.ts            # createEngine() 工厂函数，封装 store、mutex 创建与新项目预置内容注入
-│   │       ├── presets.ts            # initPresets()：新项目预置 skill 与 agent 注入
-│   │       ├── engine.ts             # Engine：运行时 session 管理 + agent/profile 操作门面
+    │   │       ├── factory.ts            # createProject() 工厂函数，封装 store、mutex 创建与新项目预置内容注入
+│   │       ├── presets.ts            # initPresets()：新项目预置 agent 注入 + 创建空 .spherse/skills/ 目录
+│   │       ├── project-runtime.ts    # ProjectRuntime：运行时 session 管理 + agent/profile 操作门面
 │   │       ├── model-providers.ts    # pi-ai provider catalog adapter，ENABLED_PROVIDERS 过滤与 model resolution
     │   │       ├── engine/
     │   │       │   ├── read-context-files.ts # 读取 agent profile context 文件并注入 system prompt
@@ -19,7 +19,7 @@ spherse/
 │   │       │   ├── session.ts        # SQLite session 持久化（每 agent 独立 sessions.db, lazy open 连接池）
 │   │       │   ├── schedule.ts       # 定时任务配置读写（schedules.yml / schedule-logs.jsonl）
 │   │       │   ├── agent-profile.ts  # .spherse/agents/{slug}-{shortId}/profile.md CRUD
-│   │       │   ├── skill.ts          # .spherse/skills/*/SKILL.md 读取
+    │   │       │   ├── skill.ts          # SkillStore：合并 builtin（PRESET_SKILL_SOURCES 内存）与 project（.spherse/skills/*/SKILL.md）skill
 │   │       │   └── index.ts
 │   │       ├── tools/                # pi-agent-core AgentTool 实现（engine 内部使用）
 │   │       │   ├── read-file.ts
@@ -41,13 +41,13 @@ spherse/
 │   │       ├── access/
 │   │       │   └── ai-file-access.ts  # AI 读取禁止列表路径规范化与访问策略
 │   │       ├── __tests__/            # Vitest 单元测试
-│   │       └── index.ts              # 公开导出：Engine, createEngine, types
+│   │       └── index.ts              # 公开导出：ProjectRuntime, createProject, types
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
 │   │   ├── presets.json              # 预置 skill 与 agent 声明配置
 │   │   ├── templates/
 │   │   │   ├── agent-template.md     # 新 Agent 创建模板源文件
 │   │   │   └── agent-theme-template.css # Agent 聊天窗口主题模板源文件
-│   │   ├── skills/                   # 内置 skill（新项目注入 + 用户参考文档）
+    │   │   ├── skills/                   # 内置 skill 源（app 内置只读，通过 SkillStore 内存合并；新项目不再注入到 .spherse/skills/）
 │   │   │   ├── create-ui-theme/      # 自定义 UI 主题创建指南
 │   │   │   │   └── SKILL.md
 │   │   │   ├── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南

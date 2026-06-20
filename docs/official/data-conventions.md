@@ -24,7 +24,7 @@ project-root/
 └── CHANGELOG.md
 ```
 
-`.spherse/theme.css` 是可选文件，只在用户自定义主题时存在。新项目创建时，系统会自动注入 `presets.json` 声明的预置 skill（复制到 `.spherse/skills/`）和预置 agent（创建到 `.spherse/agents/`）。
+`.spherse/theme.css` 是可选文件，只在用户自定义主题时存在。新项目创建时，系统会自动根据 `presets.json` 创建预置 agent（创建到 `.spherse/agents/`）并创建空的 `.spherse/skills/` 目录（供用户自建 skill）。builtin skill 随 app 内置，通过 `SkillStore` 内存合并，不写入磁盘。
 
 ## Project 配置
 
@@ -64,7 +64,7 @@ Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent D
 - `createdAt`：创建时间，Unix epoch milliseconds；创建时自动生成，之后保持不变
 - `model`：覆盖项目默认模型
 - `tools`：允许使用的 tool 名称列表；缺省时不分配任何工具（空列表）
-- `context`：项目根目录内相对路径列表，Engine 构建 system prompt 时预读取并注入
+- `context`：项目根目录内相对路径列表，SessionRuntime 构建 system prompt 时预读取并注入
 - `schedule`：可选布尔值，静态 frontmatter 标记，仅从 `profile.md` 读取、应用不自动回写。UI（AgentRow 定时任务指示）不依赖此字段，而是由 `schedules.yml` 中是否存在 `enabled: true` 的条目实时派生（见下方「定时任务数据」）
 - `output`：预留的输出路径、命名和 frontmatter 配置
 
@@ -117,11 +117,13 @@ Agent system prompt content...
 
 `sessions.title` 是可选的用户可编辑展示标题。用户重命名 session 时只更新 `title`，不更新 `updated_at`，因此不会改变 session 列表按最近对话活动排序的行为。
 
-删除 agent 时，Engine 关闭该 agent 的 DB 连接并删除整个 agent 目录，`sessions.db` 随 `profile.md`、`theme.css` 一起移除。
+删除 agent 时，ProjectRuntime 关闭该 agent 的 DB 连接并删除整个 agent 目录，`sessions.db` 随 `profile.md`、`theme.css` 一起移除。
 
 ## Skill 定义格式
 
-Skill 定义存放于 `.spherse/skills/<skill-name>/SKILL.md`，格式为 YAML frontmatter + Markdown body。
+Skill 有两个来源：builtin skill（app 内置只读，随 app 升级更新）和 project skill（`.spherse/skills/<skill-name>/SKILL.md`，用户自建可读写）。两者按 name 合并，project 同名覆盖 builtin。格式均为 YAML frontmatter + Markdown body。
+
+`SkillDefinition` 的 `source` 字段标识来源（`builtin` 或 `project`）；builtin skill 的 `filePath` 为合成路径 `builtin://<dir>/SKILL.md`。
 
 必需字段：
 
@@ -173,7 +175,8 @@ tool update 的 `details.type === "html"` 时，前端 chat 会按 HTML card 渲
 {
   "presetSkills": [
     { "dir": "create-ui-theme" },
-    { "dir": "create-agent-chat-theme" }
+    { "dir": "create-agent-chat-theme" },
+    { "dir": "use-ui-sdk" }
   ],
   "presetAgents": [
     { "name": "世界观创作", "slug": "world-building" }
@@ -181,15 +184,17 @@ tool update 的 `details.type === "html"` 时，前端 chat 会按 HTML card 渲
 }
 ```
 
-- `presetSkills[].dir`：对应 `packages/presets/skills/` 下的目录名，该目录的完整内容（含子目录）会被复制到新项目的 `.spherse/skills/{dir}/`
+- `presetSkills[].dir`：对应 `packages/presets/skills/` 下的目录名，该目录内容会被打包为 builtin skill 源码（`PRESET_SKILL_SOURCES`），由 `SkillStore` 在运行时内存合并（source 为 `builtin`），不复制到项目的 `.spherse/skills/`
 - `presetAgents[].name`：预置 agent 的展示名称，会通过 `AGENT_TEMPLATE` 模板生成 profile.md
 - `presetAgents[].slug`：预置 agent 的目录 slug 前缀
 
 ### 预置内容注入
 
-新建项目时，`createEngine` 检测到项目首次创建，调用 `initPresets()` 执行以下注入：
+新建项目时，`createProject` 检测到项目首次创建，调用 `initPresets()` 执行以下操作：
 
-- 将声明的预置 skill 完整目录结构复制到 `.spherse/skills/`
+- 创建空的 `.spherse/skills/` 目录（供用户自建 project-local skill）
 - 根据声明创建预置 agent profile（使用 `AGENT_TEMPLATE` 模板，替换默认名称）
 
-非新建项目（已存在的项目重新打开）不会触发注入。注入后的内容属于用户所有，用户可自由修改或删除。
+builtin skill 不再注入到磁盘，而是由 `SkillStore` 在运行时从 `PRESET_SKILL_SOURCES` 内存合并（source 为 `builtin`，随 app 升级更新）。用户在 `.spherse/skills/` 下自建的 project-local skill（source 为 `project`）按 name 覆盖同名 builtin。
+
+非新建项目（已存在的项目重新打开）不会触发 agent 注入。注入后的预置 agent 属于用户所有，用户可自由修改或删除。

@@ -3,7 +3,7 @@
 ## Package 边界
 
 - **@spherse/core**：纯 Node.js 核心逻辑，负责项目数据、agent profile、session、skill、tool 和运行时管理，不依赖 Electron 或 Fastify
-- **@spherse/presets**：内置模板与预置静态内容，构建前通过 `scripts/sync-templates.mjs` 将 `templates/*.md` 同步为可导入常量，并从 `presets.json` 及 `skills/` 目录生成预置 skill 源码和 agent 配置（`PRESET_SKILLS`、`PRESET_AGENTS`、`PRESET_SKILL_SOURCES`），供 core 在新项目创建时注入
+- **@spherse/presets**：内置模板与预置静态内容，构建前通过 `scripts/sync-templates.mjs` 将 `templates/*.md` 同步为可导入常量，并从 `presets.json` 及 `skills/` 目录生成预置 skill 源码和 agent 配置（`PRESET_SKILLS`、`PRESET_AGENTS`、`PRESET_SKILL_SOURCES`）；其中 `PRESET_SKILL_SOURCES` 由 core 的 `SkillStore` 在内存中合并为 builtin skill，`PRESET_AGENTS` 供 `initPresets()` 在新项目创建时注入
 - **@spherse/server**：Fastify API 层，只负责把 HTTP/WebSocket 请求转发到 core 的三个运行时模块（ProjectManager、SessionRuntime、Scheduler）
 
 ## Core 层
@@ -22,11 +22,11 @@
 - **路径安全**：项目内路径统一通过 `utils/path-safety.ts` 的 `resolveProjectPath` / `isPathInside` / `assertInsideProject` 解析和校验，core tools、agent context 读取和 server 内容路由共享同一边界判断
 - **写入互斥**：`write_file`、`edit_file`、`append_changelog`、`move_file`、`copy_file` 共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
 - **删除 agent**：compound operation，由 `ProjectRuntime.deleteAgent` 协调——SessionRuntime.evictAgent 清理活跃 session、Scheduler.unregisterAgent 清理定时任务、ProjectManager.deleteAgent 删除数据
-- **Skill 系统**：`SkillStore` 读取 `.spherse/skills/*/SKILL.md`（YAML frontmatter + Markdown body），SessionRuntime 在构建 system prompt 时自动注入 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
+- **Skill 系统**：`SkillStore` 合并两个来源的 skill——builtin skill（来自 `@spherse/presets` 的 `PRESET_SKILL_SOURCES`，内存只读，随 app 升级更新）和 project skill（`.spherse/skills/*/SKILL.md`，磁盘读写，用户自建），两者均为 YAML frontmatter + Markdown body，按 name 合并，project 同名时覆盖 builtin。`SkillDefinition` 的 `source` 字段（`builtin` 或 `project`）标识来源。SessionRuntime 在构建 system prompt 时自动注入合并后的 skill catalog 列表；`load_skill` 工具供 agent 按需加载完整 skill 指令
 - **定时调度**：`Scheduler` 类使用 `cron-parser` 解析 cron 表达式，通过单个 `setTimeout` 链式轮询所有已启用任务。轮询间隔为 10 分钟，首次轮询对齐到最近的 10 分钟整数倍时间；`loadFromAgents` 在 `createProject` 时遍历 `ProjectStore.agents` 读取每个 agent 的 `schedules.yml` 并注册运行时状态
 - **AI 文件读取限制**：项目配置可声明 `aiAccess.deniedPaths`；SessionRuntime 构建 agent 时通过动态 access policy 限制 `read_file`、`list_files`、`search_content`、`render_card file_path`、`edit_file`、`move_file`、`copy_file` 的内部读取和 profile context 注入
 - **项目欢迎页设置**：项目配置可声明 `welcomePage.path`，保存项目根目录内 HTML 或图片相对路径；该设置仅供 renderer 欢迎页展示使用，不注入 agent prompt，也不影响 AI 工具访问策略
-- **预置内容注入**：`createProject` 检测到新项目时调用 `initPresets()`，将 `@spherse/presets` 声明的预置 skill 完整目录复制到 `.spherse/skills/`，并根据 `PRESET_AGENTS` 配置自动创建预置 agent（如「世界观创作」）。预置配置来源为 `packages/presets/presets.json`。仅在首次创建时注入，已有项目不受影响；注入后的内容属于用户所有，app 升级不会覆盖
+- **预置内容注入**：`createProject` 检测到新项目时调用 `initPresets()`，根据 `PRESET_AGENTS` 配置自动创建预置 agent（如「世界观创作」）并创建空的 `.spherse/skills/` 目录（供用户自建 project-local skill）。builtin skill 不再注入到磁盘，而是由 `SkillStore` 在运行时从 `PRESET_SKILL_SOURCES` 内存合并（随 app 升级更新）。预置配置来源为 `packages/presets/presets.json`。预置 agent 仅在首次创建时注入，已有项目不受影响；注入后的 agent 属于用户所有，app 升级不会覆盖
 
 ## Server 层
 
@@ -50,8 +50,8 @@
 - **preload** 是安全桥梁，声明 Renderer 可用的 IPC 方法白名单
 - **项目 server 管理**：单一 Fastify 实例在 `app.whenReady()` 时通过 `ensureServer()` 启动一次，项目打开/关闭只操作 `ProjectRegistry`（register/remove），不再 create/close Fastify；`electron/server.ts` 暴露 `ensureServer`、`registerProject`、`unregisterProject`、`getServerPort`、`stopServer`
 - **设置持久化**：`electron/settings.ts` 使用 electron-store 保存打开项目、最后活跃项目、provider API key 和默认模型；保存 provider key 后同步到进程环境变量
-- **Provider catalog**：`core/model-providers.ts` 从 `@earendil-works/pi-ai` 元数据动态生成 provider catalog，`ENABLED_PROVIDERS` 过滤 UI 可见 provider（11 个），`PROVIDER_ENV_KEYS` 映射 provider→env key；Engine model resolution 使用全部 pi-ai provider
-- **默认模型切换**：Engine 暴露 `setDefaultModel()` 方法，IPC save-settings 后通过 `electron/server.ts` 的 `updateDefaultModel()` 同步更新所有运行中 engine 的 globalDefaultModel
+- **Provider catalog**：`core/model-providers.ts` 从 `@earendil-works/pi-ai` 元数据动态生成 provider catalog，`ENABLED_PROVIDERS` 过滤 UI 可见 provider（11 个），`PROVIDER_ENV_KEYS` 映射 provider→env key；SessionRuntime model resolution 使用全部 pi-ai provider
+- **默认模型切换**：SessionRuntime 暴露 `setDefaultModel()` 方法，IPC save-settings 后通过 `electron/server.ts` 的 `updateDefaultModel()` 同步更新所有运行中 SessionRuntime 的 globalDefaultModel
 - **开发调试**：debug IPC 仅暴露开发模式相关动作，如 DevTools、electron-store 查看、reload renderer、reset app data；Debug Tools 包含 Streaming Log 面板（可拖动悬浮窗口，通过 `/ws/debug` WebSocket 实时显示 server 日志）和 Turn Context 下载（通过 `GET /api/debug/sessions/:id/turn-context` 导出当前 session 的 system prompt + messages + tools 为 JSON 文件，便于排查 agent 行为）
 
 ## 前端路由与状态

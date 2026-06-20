@@ -4,6 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
 import { nanoid } from "nanoid";
+import { PRESET_SKILL_SOURCES } from "@spherse/presets";
 import type { AgentProfile } from "../types.js";
 import { PROJECT_META_DIR } from "../types.js";
 import { ProjectConfigStore } from "./project-config.js";
@@ -55,7 +56,10 @@ export class ProjectStore {
     this._configStore = new ProjectConfigStore(configPath, this.logger);
     await this._configStore.read();
 
-    this._skillStore = new SkillStore(path.join(this.spherseDir, "skills"));
+    this._skillStore = new SkillStore(
+      path.join(this.spherseDir, "skills"),
+      PRESET_SKILL_SOURCES,
+    );
 
     await this.loadAgents();
   }
@@ -74,7 +78,10 @@ export class ProjectStore {
       paths: { ...DEFAULT_PATHS },
     });
 
-    this._skillStore = new SkillStore(path.join(this.spherseDir, "skills"));
+    this._skillStore = new SkillStore(
+      path.join(this.spherseDir, "skills"),
+      PRESET_SKILL_SOURCES,
+    );
 
     const indexPath = path.join(this.rootPath, DEFAULT_PATHS.index);
     await fs.writeFile(indexPath, DEFAULT_AGENTS_MD, "utf-8");
