@@ -206,4 +206,266 @@ describe("chat session reducer", () => {
 
     expect(parsed[1]._error).toBeUndefined();
   });
+
+  it("agent_end aggregates write_file calls into _runChanges", () => {
+    const current = session({
+      messages: [
+        { role: "user", content: "write a file" },
+        {
+          role: "assistant",
+          content: "done",
+          _streaming: true,
+          _toolCalls: [
+            {
+              toolCallId: "tc1",
+              toolName: "write_file",
+              args: { path: "a.txt", content: "hello" },
+              status: "completed",
+            },
+          ],
+        },
+      ],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [{ type: "agent_end", messages: [] }], 200);
+
+    expect(next.messages[1]._runChanges).toEqual([
+      {
+        path: "a.txt",
+        ops: [
+          {
+            toolCallId: "tc1",
+            toolName: "write_file",
+            args: { path: "a.txt", content: "hello" },
+          },
+        ],
+      },
+    ]);
+    expect(next.messages[1]._streaming).toBe(false);
+  });
+
+  it("agent_end aggregates edit_file calls into _runChanges", () => {
+    const current = session({
+      messages: [
+        { role: "user", content: "edit a file" },
+        {
+          role: "assistant",
+          content: "done",
+          _streaming: true,
+          _toolCalls: [
+            {
+              toolCallId: "tc1",
+              toolName: "edit_file",
+              args: { path: "a.txt", oldText: "a", newText: "b" },
+              status: "completed",
+            },
+          ],
+        },
+      ],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [{ type: "agent_end", messages: [] }], 200);
+
+    expect(next.messages[1]._runChanges).toEqual([
+      {
+        path: "a.txt",
+        ops: [
+          {
+            toolCallId: "tc1",
+            toolName: "edit_file",
+            args: { path: "a.txt", oldText: "a", newText: "b" },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("agent_end with no write/edit calls does not set _runChanges", () => {
+    const current = session({
+      messages: [
+        { role: "user", content: "read a file" },
+        {
+          role: "assistant",
+          content: "done",
+          _streaming: true,
+          _toolCalls: [
+            {
+              toolCallId: "tc1",
+              toolName: "read_file",
+              args: { path: "a.txt" },
+              status: "completed",
+            },
+          ],
+        },
+      ],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [{ type: "agent_end", messages: [] }], 200);
+
+    expect(next.messages[1]._runChanges).toBeUndefined();
+  });
+
+  it("agent_end aggregates multiple files into multiple cards", () => {
+    const current = session({
+      messages: [
+        { role: "user", content: "write files" },
+        {
+          role: "assistant",
+          content: "done",
+          _streaming: true,
+          _toolCalls: [
+            {
+              toolCallId: "tc1",
+              toolName: "write_file",
+              args: { path: "a.txt", content: "a" },
+              status: "completed",
+            },
+            {
+              toolCallId: "tc2",
+              toolName: "write_file",
+              args: { path: "b.txt", content: "b" },
+              status: "completed",
+            },
+          ],
+        },
+      ],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [{ type: "agent_end", messages: [] }], 200);
+
+    expect(next.messages[1]._runChanges?.map((c) => c.path)).toEqual(["a.txt", "b.txt"]);
+  });
+
+  it("agent_end aggregates same file multiple ops into one card", () => {
+    const current = session({
+      messages: [
+        { role: "user", content: "write and edit" },
+        {
+          role: "assistant",
+          content: "done",
+          _streaming: true,
+          _toolCalls: [
+            {
+              toolCallId: "tc1",
+              toolName: "write_file",
+              args: { path: "a.txt", content: "a" },
+              status: "completed",
+            },
+            {
+              toolCallId: "tc2",
+              toolName: "edit_file",
+              args: { path: "a.txt", oldText: "a", newText: "b" },
+              status: "completed",
+            },
+          ],
+        },
+      ],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [{ type: "agent_end", messages: [] }], 200);
+
+    expect(next.messages[1]._runChanges).toHaveLength(1);
+    expect(next.messages[1]._runChanges?.[0].path).toBe("a.txt");
+    expect(next.messages[1]._runChanges?.[0].ops.map((o) => o.toolCallId)).toEqual(["tc1", "tc2"]);
+  });
+
+  it("parseHistoryMessages attaches _runChanges for runs with write/edit", () => {
+    const history = [
+      { role: "user", content: "write a file" },
+      {
+        role: "assistant",
+        content: [
+          { type: "text", text: "ok" },
+          { type: "toolCall", id: "tc1", name: "write_file", arguments: { path: "a.txt", content: "hello" } },
+        ],
+      },
+      {
+        role: "toolResult",
+        toolCallId: "tc1",
+        content: [{ type: "text", text: "done" }],
+        isError: false,
+      },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed[1]._runChanges).toEqual([
+      {
+        path: "a.txt",
+        ops: [
+          {
+            toolCallId: "tc1",
+            toolName: "write_file",
+            args: { path: "a.txt", content: "hello" },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("parseHistoryMessages handles multiple runs independently", () => {
+    const history = [
+      { role: "user", content: "first" },
+      {
+        role: "assistant",
+        content: [
+          { type: "text", text: "ok1" },
+          { type: "toolCall", id: "tc1", name: "write_file", arguments: { path: "a.txt", content: "a" } },
+        ],
+      },
+      {
+        role: "toolResult",
+        toolCallId: "tc1",
+        content: [{ type: "text", text: "done" }],
+        isError: false,
+      },
+      { role: "user", content: "second" },
+      {
+        role: "assistant",
+        content: [
+          { type: "text", text: "ok2" },
+          { type: "toolCall", id: "tc2", name: "write_file", arguments: { path: "b.txt", content: "b" } },
+        ],
+      },
+      {
+        role: "toolResult",
+        toolCallId: "tc2",
+        content: [{ type: "text", text: "done" }],
+        isError: false,
+      },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed[1]._runChanges?.map((c) => c.path)).toEqual(["a.txt"]);
+    expect(parsed[3]._runChanges?.map((c) => c.path)).toEqual(["b.txt"]);
+  });
+
+  it("parseHistoryMessages does not set _runChanges for runs without write/edit", () => {
+    const history = [
+      { role: "user", content: "hello" },
+      {
+        role: "assistant",
+        content: [
+          { type: "text", text: "hi" },
+          { type: "toolCall", id: "tc1", name: "read_file", arguments: { path: "a.txt" } },
+        ],
+      },
+      {
+        role: "toolResult",
+        toolCallId: "tc1",
+        content: [{ type: "text", text: "content" }],
+        isError: false,
+      },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed[1]._runChanges).toBeUndefined();
+  });
 });

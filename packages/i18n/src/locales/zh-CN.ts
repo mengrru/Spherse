@@ -375,6 +375,24 @@ export const zhCN = {
   // 工具标签：渲染卡片
   "tool.render_card": "渲染卡片",
 
+  // --- Viewer Card ---
+  // edit_file diff 左栏标题，显示原始内容
+  "viewer-card.old": "旧",
+  // edit_file diff 右栏标题，显示替换后内容
+  "viewer-card.new": "新",
+  // write_file 操作内容为空时 viewer card 中的占位文案
+  "viewer-card.emptyContent": "（空内容）",
+  // write_file 操作子区块头部显示的写入字节数，{n} 为数字
+  "viewer-card.bytes": "{n} 字节",
+  // edit_file 操作子区块头部显示的替换次数，{n} 为数字
+  "viewer-card.occurrence": "{n} 处替换",
+  // viewer card 头部当同一文件有多次操作时显示的操作数 badge，{n} 为数字（>1 时显示）
+  "viewer-card.changeCount": "{n} 次变更",
+  // viewer card 头部状态标记：文件仅含 write_file 操作（新文件）
+  "viewer-card.created": "新创建",
+  // viewer card 头部状态标记：文件含 edit_file 操作（已修改）
+  "viewer-card.modified": "有变更",
+
   // --- Debug ---
   // 调试菜单：打开 DevTools
   "debug.devTools": "DevTools",

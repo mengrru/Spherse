@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import { useI18n } from "@spherse/i18n/react";
-import type { AgentProfile, ChatMessage } from "../../lib/types";
+import type { AgentProfile } from "../../lib/types";
+import type { ChatMessage } from "./types";
 import { Button } from "../../components/ui/button";
 import { ChevronDownIcon } from "lucide-react";
 import { MessageItem } from "./MessageItem";

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ToolCallInfo } from "../../lib/types";
+import type { ToolCallInfo } from "./types";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";

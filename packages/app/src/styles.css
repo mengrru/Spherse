@@ -31,6 +31,7 @@
   --shadcn-sidebar-accent-foreground: #171717;
   --shadcn-sidebar-border: #e5e5e5;
   --shadcn-sidebar-ring: #a3a3a3;
+  --agent-diff-added: #16a34a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -61,6 +62,7 @@
     --shadcn-sidebar-accent-foreground: #fafafa;
     --shadcn-sidebar-border: #404040;
     --shadcn-sidebar-ring: #737373;
+    --agent-diff-added: #22c55e;
   }
 }
 
@@ -95,6 +97,7 @@
   --color-sidebar-accent-foreground: var(--shadcn-sidebar-accent-foreground);
   --color-sidebar-border: var(--shadcn-sidebar-border);
   --color-sidebar-ring: var(--shadcn-sidebar-ring);
+  --color-agent-diff-added: var(--agent-diff-added);
 }
 
 @layer base {

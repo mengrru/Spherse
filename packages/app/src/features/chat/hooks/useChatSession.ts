@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { ApiClient } from "../../../lib/api";
-import type { ChatMessage } from "../../../lib/types";
+import type { ChatMessage } from "../types";
 import { useStreamingStore } from "../streaming-store";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];

@@ -1,9 +1,11 @@
-import type { AgentProfile, ChatMessage } from "../../lib/types";
+import type { AgentProfile } from "../../lib/types";
+import type { ChatMessage } from "./types";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { HtmlCardRenderer } from "./HtmlCard";
 import { ToolCallSection } from "./ToolCallSection";
 import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
+import { FileViewerCard } from "./FileViewerCard";
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -43,6 +45,13 @@ export function MessageItem({ message, agent, onNavigateToPath }: MessageItemPro
           .map((toolCall) => (
             <HtmlCardRenderer key={toolCall.toolCallId} card={toolCall._card!} />
           ))}
+        {message._runChanges && message._runChanges.length > 0 && (
+          <div className="mt-5">
+            {message._runChanges.map((change) => (
+              <FileViewerCard key={change.path} change={change} onNavigateToPath={onNavigateToPath} />
+            ))}
+          </div>
+        )}
       </div>
       {!message._streaming && (
         <div className="opacity-0 group-hover:opacity-100 transition-opacity pb-1">

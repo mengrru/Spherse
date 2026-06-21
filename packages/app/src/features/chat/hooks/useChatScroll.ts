@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatMessage } from "../../../lib/types";
+import type { ChatMessage } from "../types";
 import { useStreamingStore } from "../streaming-store";
 
 const BOTTOM_THRESHOLD = 100;

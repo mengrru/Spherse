@@ -31,6 +31,7 @@
 - [x] **持久化上次访问的 route**：每个打开项目记住最后访问的项目内 route，应用启动、项目切换和关闭当前项目后恢复目标项目的上次位置。参见 `docs/dev/features/2026-06-02-persist-last-route/design.md`
 - [x] **Skill 支持**：允许 agent 定义可复用的 skill（预设 prompt + tool 组合）
 - [x] **HTML Viewer Card**：在对话流中支持渲染 HTML 内容卡片
+- [x] **Viewer Card（write_file / edit_file 预览）**：agent run 结束时按文件聚合展示 write_file（全量内容）与 edit_file（左右分栏行级 diff）的只读预览 card，card 头部路径可点击跳转 ContentBrowser。参见 `docs/dev/features/2026-06-20-viewer-card/design.md`
 - [x] **文件/文件夹新建**：从文件浏览器新建文件或目录
 - [x] **文件删除**：从文件浏览器删除文件/目录
 - [x] **文件编辑**：在应用内编辑文件内容

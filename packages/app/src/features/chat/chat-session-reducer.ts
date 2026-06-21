@@ -1,4 +1,6 @@
-import type { AgentEvent, ChatMessage, ToolCallInfo } from "../../lib/types";
+import type { AgentEvent } from "../../lib/types";
+import type { ChatMessage, ToolCallInfo } from "./types";
+import { aggregateFileChanges, attachRunChanges } from "./lib/aggregate-file-changes";
 
 export interface StreamingSessionData {
   messages: ChatMessage[];
@@ -154,11 +156,17 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent): ChatMessa
   }
 
   if (event.type === "agent_end") {
-    const last = prev[prev.length - 1];
-    if (last?._streaming) {
-      return [...prev.slice(0, -1), { ...last, _streaming: false }];
+    let updated = prev;
+    const runEndIndex = updated.length - 1;
+    const changes = aggregateFileChanges(updated, runEndIndex);
+    if (changes.length > 0) {
+      updated = attachRunChanges(updated, runEndIndex, changes);
     }
-    return prev;
+    const last = updated[updated.length - 1];
+    if (last?._streaming) {
+      return [...updated.slice(0, -1), { ...last, _streaming: false }];
+    }
+    return updated;
   }
 
   if (event.type === "error") {
@@ -237,5 +245,22 @@ export function parseHistoryMessages(history: any[]): ChatMessage[] {
     });
   }
 
-  return loaded;
+  const runEndIndices: number[] = [];
+  for (let i = 1; i < loaded.length; i++) {
+    if (loaded[i].role === "user") {
+      runEndIndices.push(i - 1);
+    }
+  }
+  if (loaded.length > 0) {
+    runEndIndices.push(loaded.length - 1);
+  }
+
+  let result = loaded;
+  for (const runEndIndex of runEndIndices) {
+    const changes = aggregateFileChanges(result, runEndIndex);
+    if (changes.length > 0) {
+      result = attachRunChanges(result, runEndIndex, changes);
+    }
+  }
+  return result;
 }

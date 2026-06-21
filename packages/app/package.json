@@ -27,6 +27,7 @@
     "@spherse/server": "*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "diff": "^9.0.0",
     "electron-store": "^11.0.2",
     "js-yaml": "^3.14.2",
     "lucide-react": "^1.17.0",
@@ -43,6 +44,7 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.2.4",
+    "@types/diff": "^7.0.2",
     "@types/js-yaml": "^4.0.9",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

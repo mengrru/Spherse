@@ -12,4 +12,11 @@ describe("MessageItem structure", () => {
     expect(source.indexOf("<ToolCallSection")).toBeGreaterThan(-1);
     expect(source.indexOf("<ErrorMessageSection")).toBeGreaterThan(source.indexOf("<ToolCallSection"));
   });
+
+  it("renders FileViewerCard after ToolCallSection for run changes", () => {
+    const source = readFileSync(join(currentDir, "MessageItem.tsx"), "utf8");
+
+    expect(source.indexOf("<FileViewerCard")).toBeGreaterThan(-1);
+    expect(source.indexOf("<FileViewerCard")).toBeGreaterThan(source.indexOf("<ToolCallSection"));
+  });
 });

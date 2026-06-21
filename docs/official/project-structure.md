@@ -190,7 +190,7 @@ spherse/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
 │           │   ├── agent-schedule/       # Agent 定时任务弹窗、表单、列表与运行日志，含 schedule feature store
 │           │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
-│           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示
+│           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、chat 专属类型（types.ts）、聚合/diff 纯函数（lib/）
 │           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
 │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
 │           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog
