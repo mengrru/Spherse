@@ -8,4 +8,5 @@ export interface SettingsApi {
   getSettings: () => Promise<AppSettings | null>;
   saveSettings: (settings: AppSettings) => Promise<{ success: boolean }>;
   getSupportedProviders: () => Promise<Record<string, ProviderConfig>>;
+  getImageProviders: () => Promise<Record<string, ProviderConfig>>;
 }

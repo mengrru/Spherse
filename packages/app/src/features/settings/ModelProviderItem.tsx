@@ -25,10 +25,7 @@ export function ModelProviderItem({
   return (
     <div className="rounded-lg border border-border p-3">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <div>
-          <div className="text-sm font-medium">{config.name}</div>
-          <div className="text-xs text-muted-foreground">{config.auth.envKeys[0] ?? ""}</div>
-        </div>
+        <div className="text-sm font-medium">{config.name}</div>
         <Badge variant={configured ? "secondary" : "outline"}>
           {configured ? t("settings.provider.apiKeyProvided") : t("settings.provider.notConnected")}
         </Badge>
@@ -37,7 +34,7 @@ export function ModelProviderItem({
         <Input
           type="password"
           className="flex-1"
-          placeholder={config.auth.envKeys[0] ?? ""}
+          placeholder={t("settings.provider.apiKeyPlaceholder")}
           value={apiKey}
           onChange={(e) => onApiKeyChange(e.target.value)}
           autoComplete={`off-${id}`}

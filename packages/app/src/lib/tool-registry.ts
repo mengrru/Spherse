@@ -16,6 +16,7 @@ export const ALL_TOOLS: ToolInfo[] = [
   { id: "append_changelog", label: "tool.append_log" },
   { id: "load_skill", label: "tool.load_skill" },
   { id: "render_card", label: "tool.render_card" },
+  { id: "generate_image", label: "tool.generate_image" },
 ];
 
 export const ALL_TOOL_IDS = ALL_TOOLS.map((t) => t.id);

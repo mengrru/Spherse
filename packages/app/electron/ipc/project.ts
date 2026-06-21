@@ -69,12 +69,12 @@ export function registerProjectIpc(
     updateProjectLastRoute(projectId, route);
   });
 
-  ipcMain.handle("show-save-dialog", async (_event, options: { defaultPath?: string }) => {
+  ipcMain.handle("show-save-dialog", async (_event, options: { defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => {
     const win = getWindow();
     if (!win) return null;
     const result = await dialog.showSaveDialog(win, {
       defaultPath: options.defaultPath,
-      filters: [{ name: "HTML", extensions: ["html", "htm"] }],
+      ...(options.filters ? { filters: options.filters } : {}),
     });
     return result.canceled ? null : result.filePath;
   });

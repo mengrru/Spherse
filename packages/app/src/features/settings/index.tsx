@@ -36,13 +36,43 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
         <DialogHeader>
           <DialogTitle>{t("settings.title")}</DialogTitle>
         </DialogHeader>
-        <ModelSettingsTab />
+        <SettingsTabs />
       </DialogContent>
     </Dialog>
   );
 }
 
-function ModelSettingsTab() {
+function ModelGroupTab({ group }: { group: ReturnType<typeof useSettingsForm>["text"] }) {
+  const { t } = useI18n();
+  return (
+    <>
+      <FieldGroup>
+        <DefaultModelField
+          providers={group.providers}
+          apiKeys={group.apiKeys}
+          value={group.defaultModel}
+          onChange={(model) => { void group.changeDefaultModel(model); }}
+        />
+      </FieldGroup>
+      <SectionTitle className="mt-5">{t("settings.models.providers")}</SectionTitle>
+      <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
+        {Object.entries(group.providers).map(([id, config]) => (
+          <ModelProviderItem
+            key={id}
+            id={id}
+            config={config}
+            apiKey={group.apiKeys[id] ?? ""}
+            onApiKeyChange={(value) => group.setApiKey(id, value)}
+            onConnect={() => void group.connect(id)}
+            onDisconnect={() => void group.disconnect(id)}
+          />
+        ))}
+      </div>
+    </>
+  );
+}
+
+function SettingsTabs() {
   const { t } = useI18n();
   const locale = useSettingsStore((s) => s.locale);
   const changeLocale = useSettingsStore((s) => s.changeLocale);
@@ -52,43 +82,28 @@ function ModelSettingsTab() {
     <div className="min-h-0 flex-1 overflow-y-auto">
       <Tabs defaultValue="models">
         <TabsList>
-          <TabsTrigger value="models">{t("settings.tabs.models")}</TabsTrigger>
+          <TabsTrigger value="models">{t("settings.tabs.text")}</TabsTrigger>
+          <TabsTrigger value="image">{t("settings.tabs.image")}</TabsTrigger>
+          <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
         </TabsList>
+
         <TabsContent value="models" className="mt-3">
+          <ModelGroupTab group={form.text} />
+        </TabsContent>
+
+        <TabsContent value="image" className="mt-3">
+          <ModelGroupTab group={form.image} />
+        </TabsContent>
+
+        <TabsContent value="general" className="mt-3">
           <FieldGroup>
-            <div>
-              <SectionTitle className="mb-2 text-sm font-medium leading-none">
-                {t("settings.language")}
-              </SectionTitle>
-              <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(electronAPI, e.target.value)}>
-                {SUPPORTED_LOCALES.map((loc) => (
-                  <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </div>
-            <DefaultModelField
-              providers={form.providers}
-              apiKeys={form.apiKeys}
-              value={form.defaultModel}
-              onChange={(model) => { form.setDefaultModel(model); void form.save(undefined, model); }}
-            />
-          </FieldGroup>
-          <div className="mt-5 border-t border-border pt-4">
-            <div className="mb-2 text-sm font-medium">{t("settings.models.providers")}</div>
-            <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
-              {Object.entries(form.providers).map(([id, config]) => (
-                <ModelProviderItem
-                  key={id}
-                  id={id}
-                  config={config}
-                  apiKey={form.apiKeys[id] ?? ""}
-                  onApiKeyChange={(value) => form.setApiKey(id, value)}
-                  onConnect={() => void form.connect(id)}
-                  onDisconnect={() => void form.disconnect(id)}
-                />
+            <SectionTitle>{t("settings.language")}</SectionTitle>
+            <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(electronAPI, e.target.value)}>
+              {SUPPORTED_LOCALES.map((loc) => (
+                <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>
               ))}
-            </div>
-          </div>
+            </NativeSelect>
+          </FieldGroup>
         </TabsContent>
       </Tabs>
     </div>

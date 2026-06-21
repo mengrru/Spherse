@@ -2,7 +2,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import { streamSimple } from "@earendil-works/pi-ai";
 import type { AgentEvent, AgentTool } from "@mariozechner/pi-agent-core";
 import type { AgentProfile } from "./types.js";
-import { resolveModelById } from "./model-providers.js";
+import { resolveModelById } from "./model-providers/index.js";
 import { ProjectStore } from "./store/project.js";
 import { createToolsForProject, ToolContext } from "./tools/index.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";

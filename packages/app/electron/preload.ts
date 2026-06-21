@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("save-settings", settings),
   getSupportedProviders: () =>
     ipcRenderer.invoke("get-supported-providers"),
+  getImageProviders: () =>
+    ipcRenderer.invoke("get-image-providers"),
   restoreProjects: () => ipcRenderer.invoke("restore-projects"),
   addOpenProject: (projectId: string, projectRoot: string) =>
     ipcRenderer.invoke("add-open-project", projectId, projectRoot),

@@ -10,7 +10,9 @@ spherse/
     │   │       ├── factory.ts            # createProject() 工厂函数，封装 store、mutex 创建与新项目预置内容注入
 │   │       ├── presets.ts            # initPresets()：新项目预置 agent 注入 + 创建空 .spherse/skills/ 目录
 │   │       ├── project-runtime.ts    # ProjectRuntime：运行时 session 管理 + agent/profile 操作门面
-│   │       ├── model-providers.ts    # pi-ai provider catalog adapter，ENABLED_PROVIDERS 过滤与 model resolution
+│   │       ├── model-providers/     # pi-ai provider catalog adapter（文本 + 图片 provider）
+│   │       │   ├── index.ts        # ENABLED_PROVIDERS 过滤、getSupportedProviders / getImageSupportedProviders、model resolution
+│   │       │   └── zhipu-images.ts # 智谱图片 provider 元数据（通过 pi-ai registerImagesApiProvider 注册，模块加载副作用）
     │   │       ├── engine/
     │   │       │   ├── read-context-files.ts # 读取 agent profile context 文件并注入 system prompt
     │   │       │   └── log-agent-event.ts    # agent event → pino 日志映射（级别、截断、生命周期事件）
@@ -32,6 +34,7 @@ spherse/
 │   │       │   ├── append-changelog.ts
 │   │       │   ├── load-skill.ts
     │   │       │   ├── render-card.ts    # HTML card 渲染工具
+    │   │       │   ├── generate-image.ts # 图片生成工具（调用 pi-ai imagesApiProvider，结果落盘 .spherse/generated-images/）
     │   │       │   ├── tool-context.ts   # ToolContext：收窄 ProjectStore 接口，约束 tool 可用的读写方法
     │   │       │   └── index.ts          # createToolsForProject(ctx: ToolContext) 工厂
 │   │       ├── scheduler.ts
@@ -106,7 +109,8 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表与详情
-│   │       │   ├── settings.ts       # Provider 列表（动态 catalog）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
+│   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
+│   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
 │   │       │   ├── schedules.ts      # 定时任务 CRUD 与手动触发
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
 │       │       ├── ws-chat.ts            # WebSocket 对话流

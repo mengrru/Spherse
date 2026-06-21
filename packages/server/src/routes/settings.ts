@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
-import { getSupportedProviders, resolveProjectPath } from "@spherse/core";
+import { getSupportedProviders, getImageSupportedProviders, resolveProjectPath } from "@spherse/core";
 import { schemas } from "@spherse/server/contracts";
 
 export function registerSettingsRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
@@ -10,6 +10,13 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
     schema: { response: { 200: schemas.providerCatalog } },
     async handler() {
       return getSupportedProviders();
+    },
+  });
+
+  fastify.get("/api/settings/image-providers", {
+    schema: { response: { 200: schemas.providerCatalog } },
+    async handler() {
+      return getImageSupportedProviders();
     },
   });
 

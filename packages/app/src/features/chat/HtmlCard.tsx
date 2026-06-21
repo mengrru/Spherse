@@ -27,7 +27,10 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
       : "untitled.html";
     const defaultPath = projectRoot + "/" + suggestedName;
 
-    const filePath = await window.electronAPI.showSaveDialog({ defaultPath });
+    const filePath = await window.electronAPI.showSaveDialog({
+      defaultPath,
+      filters: [{ name: "HTML", extensions: ["html", "htm"] }],
+    });
     if (!filePath) return;
 
     if (!filePath.startsWith(projectRoot + "/") && filePath !== projectRoot) {

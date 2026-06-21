@@ -49,7 +49,7 @@ export class ProjectManager {
   async updateAgent(agentId: string, content: string, themeContent?: string): Promise<AgentProfile> {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
-    const updated = await agentStore.profile.save(content);
+    const updated = await agentStore.saveProfile(content);
     if (themeContent !== undefined) {
       await agentStore.profile.saveTheme(themeContent);
     }

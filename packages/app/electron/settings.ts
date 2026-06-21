@@ -1,6 +1,6 @@
 import path from "node:path";
 import Store from "electron-store";
-import type { AppSettings } from "@spherse/core";
+import type { AppSettings, ModelGroupSettings, ProviderCredentials } from "@spherse/core";
 import { getSupportedProviders } from "@spherse/core";
 
 export interface OpenProjectEntry {
@@ -30,31 +30,60 @@ function maskApiKey(key: string): string {
   return key.slice(0, 4) + "****" + key.slice(-4);
 }
 
+function maskModelGroup(group: ModelGroupSettings | undefined): ModelGroupSettings {
+  const providers: Record<string, ProviderCredentials> = {};
+  for (const [id, creds] of Object.entries(group?.providers ?? {})) {
+    if (creds?.apiKey) {
+      providers[id] = { apiKey: maskApiKey(creds.apiKey) };
+    }
+  }
+  return { defaultModel: group?.defaultModel ?? "", providers };
+}
+
 export function getMaskedSettings(): AppSettings | null {
   const settings = settingsStore.get("settings");
   if (!settings) return null;
-  const masked: AppSettings = { providers: {}, defaultModel: settings.defaultModel, locale: settings.locale ?? "zh-CN" };
-  for (const [id, config] of Object.entries(settings.providers)) {
-    if (config?.apiKey) {
-      masked.providers[id] = { apiKey: maskApiKey(config.apiKey) };
+  return {
+    locale: settings.locale ?? "zh-CN",
+    models: {
+      text: maskModelGroup(settings.models?.text),
+      image: maskModelGroup(settings.models?.image),
+    },
+  };
+}
+
+function mergeModelGroup(
+  incoming: ModelGroupSettings | undefined,
+  prev: ModelGroupSettings | undefined,
+): ModelGroupSettings {
+  const defaultModel = incoming?.defaultModel ?? prev?.defaultModel ?? "";
+  const providers: Record<string, ProviderCredentials> = {};
+  const allIds = new Set([
+    ...Object.keys(incoming?.providers ?? {}),
+    ...Object.keys(prev?.providers ?? {}),
+  ]);
+  for (const id of allIds) {
+    const newKey = incoming?.providers?.[id]?.apiKey;
+    const prevKey = prev?.providers?.[id]?.apiKey;
+    if (!newKey || newKey.trim() === "") continue;
+    if (newKey.includes("****")) {
+      if (prevKey) providers[id] = { apiKey: prevKey };
+    } else {
+      providers[id] = { apiKey: newKey };
     }
   }
-  return masked;
+  return { defaultModel, providers };
 }
 
 export function saveSettings(incoming: AppSettings): void {
   const prev = settingsStore.get("settings");
-  const merged: AppSettings = { providers: {}, defaultModel: incoming.defaultModel, locale: incoming.locale ?? prev?.locale ?? "zh-CN" };
-  for (const [id, newConfig] of Object.entries(incoming.providers)) {
-    const prevConfig = prev?.providers?.[id];
-    if (newConfig && newConfig.apiKey.trim() === "") {
-      continue;
-    } else if (newConfig?.apiKey && !newConfig.apiKey.includes("****")) {
-      merged.providers[id] = { apiKey: newConfig.apiKey };
-    } else if (prevConfig?.apiKey) {
-      merged.providers[id] = { apiKey: prevConfig.apiKey };
-    }
-  }
+  const merged: AppSettings = {
+    locale: incoming.locale ?? prev?.locale ?? "zh-CN",
+    models: {
+      text: mergeModelGroup(incoming.models?.text, prev?.models?.text),
+      image: mergeModelGroup(incoming.models?.image, prev?.models?.image),
+    },
+  };
   settingsStore.set("settings", merged);
   applySettingsToEnv(merged);
 }
@@ -66,14 +95,25 @@ export function restoreEnvFromSettings(): void {
 }
 
 function applySettingsToEnv(settings: AppSettings): void {
-  const catalog = getSupportedProviders();
-  for (const [id, config] of Object.entries(settings.providers)) {
-    if (config?.apiKey) {
-      const item = catalog[id];
+  const textCatalog = getSupportedProviders();
+  for (const [id, creds] of Object.entries(settings.models?.text?.providers ?? {})) {
+    if (creds?.apiKey) {
+      const item = textCatalog[id];
       if (item?.auth.envKeys[0]) {
-        process.env[item.auth.envKeys[0]] = config.apiKey;
+        process.env[item.auth.envKeys[0]] = creds.apiKey;
       }
     }
+  }
+
+  const imageGroup = settings.models?.image;
+  if (imageGroup?.defaultModel) {
+    process.env.SPHERSE_IMAGE_MODEL = imageGroup.defaultModel;
+    const slashIdx = imageGroup.defaultModel.indexOf("/");
+    const provider = slashIdx > 0 ? imageGroup.defaultModel.slice(0, slashIdx) : "";
+    process.env.SPHERSE_IMAGE_API_KEY = imageGroup.providers[provider]?.apiKey ?? "";
+  } else {
+    delete process.env.SPHERSE_IMAGE_MODEL;
+    delete process.env.SPHERSE_IMAGE_API_KEY;
   }
 }
 

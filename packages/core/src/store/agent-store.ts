@@ -32,6 +32,18 @@ export class AgentStore {
     return profile;
   }
 
+  /**
+   * Save profile content to disk and refresh the in-memory cache (`_profile`).
+   * Must be used instead of `_profileStore.save()` directly: `getProfile()` returns the cached
+   * `_profile`, so without refreshing it here, subsequent reads (e.g. when creating a new session)
+   * would return the stale pre-edit profile.
+   */
+  async saveProfile(content: string): Promise<AgentProfile> {
+    const profile = await this._profileStore.save(content);
+    this._profile = profile;
+    return profile;
+  }
+
   getProfile(): AgentProfile {
     if (!this._profile) throw new Error("AgentStore not opened");
     return this._profile;

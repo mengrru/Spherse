@@ -19,9 +19,8 @@ export const useSettingsStore = create<SettingsStore>((set) => ({
     set({ locale });
     const settings = await api.getSettings();
     await api.saveSettings({
-      providers: settings?.providers,
-      defaultModel: settings?.defaultModel,
       locale,
+      models: settings?.models,
     });
     return true;
   },

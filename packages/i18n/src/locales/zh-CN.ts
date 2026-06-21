@@ -3,8 +3,12 @@ export const zhCN = {
   "app.loading": "加载中...",
   // 设置弹窗标题
   "settings.title": "设置",
-  // 设置弹窗中的模型 tab 标签
-  "settings.tabs.models": "模型",
+  // 设置弹窗中的文本模型 tab 标签
+  "settings.tabs.text": "文本模型",
+  // 设置弹窗中的图片生成 tab 标签
+  "settings.tabs.image": "生图模型",
+  // 设置弹窗中的通用 tab 标签
+  "settings.tabs.general": "通用",
   // 默认模型下拉框的标签
   "settings.models.defaultModel": "默认模型",
   // 默认模型下拉框的占位提示
@@ -25,7 +29,8 @@ export const zhCN = {
   "settings.models.close": "关闭",
   // provider 状态标签：已填写 API Key
   "settings.provider.apiKeyProvided": "已提供 API Key",
-  // provider 状态标签：尚未连接
+  // provider API Key 输入框占位提示
+  "settings.provider.apiKeyPlaceholder": "API密钥",  // provider 状态标签：尚未连接
   "settings.provider.notConnected": "未连接",
   // provider 连接按钮的已连接状态
   "settings.provider.connected": "已连接",
@@ -215,6 +220,16 @@ export const zhCN = {
   "chat.saveFailed": "保存失败：{message}",
   // 文件不在项目目录内时的错误提示
   "chat.fileMustBeInProject": "文件必须保存在项目目录内",
+  // 图片生成中占位提示（image card 骨架屏）
+  "chat.imageGenerating": "正在生成图片...",
+  // 图片生成失败的默认提示
+  "chat.imageGenerateFailed": "图片生成失败",
+  // 图片导出成功提示
+  "chat.imageExportSuccess": "图片已导出",
+  // 图片导出失败提示，{message} 为错误信息
+  "chat.imageExportFailed": "导出失败：{message}",
+  // image card 右上角导出按钮的悬停提示
+  "chat.exportImage": "导出图片",
   // 复制按钮悬停提示
   "chat.copyTooltip": "复制",
   // Chat 关闭按钮悬停提示
@@ -324,6 +339,8 @@ export const zhCN = {
   // --- Settings ---
   // 设置中语言选择器的标签
   "settings.language": "语言 / Language",
+  // 图片生成设置中默认模型下拉框的标签
+  "settings.image.defaultModel": "默认生图模型",
 
   // --- Welcome Page Settings ---
   // 欢迎页设置弹窗标题
@@ -374,6 +391,8 @@ export const zhCN = {
   "tool.load_skill": "加载技能",
   // 工具标签：渲染卡片
   "tool.render_card": "渲染卡片",
+  // 工具标签：生成图片
+  "tool.generate_image": "生成图片",
 
   // --- Viewer Card ---
   // edit_file diff 左栏标题，显示原始内容

@@ -71,4 +71,21 @@ describe("AgentStore", () => {
     store.sessions.createSession();
     expect(() => store.close()).not.toThrow();
   });
+
+  it("refreshes cached profile after saveProfile so getProfile returns updated tools", async () => {
+    expect(store.getProfile().tools).toEqual(["read_file"]);
+
+    const updatedProfile = `---
+name: World Builder
+model: gemini-2.5-pro
+tools:
+  - read_file
+  - generate_image
+---
+
+You are a world building assistant.`;
+
+    await store.saveProfile(updatedProfile);
+    expect(store.getProfile().tools).toEqual(["read_file", "generate_image"]);
+  });
 });

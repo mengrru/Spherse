@@ -233,6 +233,22 @@ export function createApiClient(baseUrl: string, projectId: string) {
       return parseJsonResponse<ProviderCatalogContract>(res, schemas.providerCatalog);
     },
 
+    async getImageProviders(): Promise<ProviderCatalogContract> {
+      const res = await fetch(`${baseUrl}/api/settings/image-providers`);
+      await assertOk(res);
+      return parseJsonResponse<ProviderCatalogContract>(res, schemas.providerCatalog);
+    },
+
+    async exportImage(srcRel: string, destAbs: string): Promise<{ ok: boolean }> {
+      const res = await fetch(`${apiBase}/images/export`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ src: srcRel, dest: destAbs }),
+      });
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
+    },
+
     async getAiAccessSettings(): Promise<AiAccessSettingsResponse> {
       const res = await fetch(`${apiBase}/settings/ai-access`);
       if (!res.ok) return { ok: false, deniedPaths: [] };

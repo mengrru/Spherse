@@ -6,6 +6,6 @@ export type { SessionRuntime } from "./session-runtime.js";
 export type { Scheduler } from "./scheduler.js";
 export type { ScheduleEventPayload } from "./scheduler.js";
 export { createProject } from "./factory.js";
-export { resolveProjectPath, isProjectMetaPath } from "./utils/path-safety.js";
-export { getSupportedProviders } from "./model-providers.js";
+export { resolveProjectPath, isProjectMetaPath, assertInsideProject } from "./utils/path-safety.js";
+export { getSupportedProviders, getImageSupportedProviders } from "./model-providers/index.js";
 export type { Logger } from "./logger.js";

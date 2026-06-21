@@ -2,6 +2,7 @@ import type { AgentProfile } from "../../lib/types";
 import type { ChatMessage } from "./types";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { HtmlCardRenderer } from "./HtmlCard";
+import { ImageCardRenderer } from "./ImageCard";
 import { ToolCallSection } from "./ToolCallSection";
 import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
@@ -42,9 +43,14 @@ export function MessageItem({ message, agent, onNavigateToPath }: MessageItemPro
         {message._error && <ErrorMessageSection error={message._error} />}
         {message._toolCalls
           ?.filter((toolCall) => toolCall._card)
-          .map((toolCall) => (
-            <HtmlCardRenderer key={toolCall.toolCallId} card={toolCall._card!} />
-          ))}
+          .map((toolCall) => {
+            const card = toolCall._card!;
+            return card.type === "html" ? (
+              <HtmlCardRenderer key={toolCall.toolCallId} card={card} />
+            ) : (
+              <ImageCardRenderer key={toolCall.toolCallId} card={card} />
+            );
+          })}
         {message._runChanges && message._runChanges.length > 0 && (
           <div className="mt-5">
             {message._runChanges.map((change) => (

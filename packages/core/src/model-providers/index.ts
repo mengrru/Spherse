@@ -1,5 +1,6 @@
-import { getProviders, getModels, getModel } from "@earendil-works/pi-ai";
-import type { ProviderCatalog, ProviderCatalogItem, ProviderModelItem } from "./types.js";
+import { getProviders, getModels, getModel, getImageProviders, getImageModels } from "@earendil-works/pi-ai";
+import type { ProviderCatalog, ProviderCatalogItem, ProviderModelItem } from "../types.js";
+import { ZHIPU_IMAGE_MODELS } from "./zhipu-images.js";
 
 export const ENABLED_PROVIDERS = [
   "openai",
@@ -110,4 +111,54 @@ export function resolveModelById(modelId: string) {
     if (model) return model;
   }
   throw new Error(`Could not resolve model: ${modelId}`);
+}
+
+const IMAGE_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  openrouter: "OpenRouter",
+  zhipu: "智谱",
+};
+
+const IMAGE_PROVIDER_ENV_KEYS: Record<string, string[]> = {
+  openrouter: ["SPHERSE_IMAGE_API_KEY"],
+  zhipu: ["SPHERSE_IMAGE_API_KEY"],
+};
+
+export function getImageSupportedProviders(): ProviderCatalog {
+  const catalog: ProviderCatalog = {};
+
+  for (const provider of getImageProviders()) {
+    const models = getImageModels(provider);
+    if (models.length === 0) continue;
+    const items: ProviderModelItem[] = models.map((m: any) => ({
+      id: m.id,
+      name: m.name,
+      provider: m.provider,
+      api: m.api,
+      reasoning: false,
+      input: m.input ?? ["text"],
+    }));
+    catalog[provider] = {
+      id: provider,
+      name: IMAGE_PROVIDER_DISPLAY_NAMES[provider] ?? provider,
+      auth: { type: "apiKey", envKeys: IMAGE_PROVIDER_ENV_KEYS[provider] ?? [] },
+      models: items,
+    };
+  }
+
+  const zhipuItems: ProviderModelItem[] = Object.values(ZHIPU_IMAGE_MODELS).map((m) => ({
+    id: m.id,
+    name: m.name,
+    provider: m.provider,
+    api: m.api,
+    reasoning: false,
+    input: [...m.input],
+  }));
+  catalog["zhipu"] = {
+    id: "zhipu",
+    name: IMAGE_PROVIDER_DISPLAY_NAMES["zhipu"],
+    auth: { type: "apiKey", envKeys: IMAGE_PROVIDER_ENV_KEYS["zhipu"] ?? [] },
+    models: zhipuItems,
+  };
+
+  return catalog;
 }

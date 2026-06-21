@@ -35,11 +35,12 @@ describe("useSettingsStore", () => {
   });
 
   it("changeLocale updates locale and persists", async () => {
+    const models = {
+      text: { defaultModel: "deepseek/v4", providers: { deepseek: { apiKey: "key" } } },
+      image: { defaultModel: "", providers: {} },
+    };
     const api = createApi({
-      getSettings: vi.fn().mockResolvedValue({
-        providers: { deepseek: { apiKey: "key" } },
-        defaultModel: "deepseek/v4",
-      }),
+      getSettings: vi.fn().mockResolvedValue({ models }),
     });
 
     const ok = await useSettingsStore.getState().changeLocale(api, "en");
@@ -47,9 +48,8 @@ describe("useSettingsStore", () => {
     expect(ok).toBe(true);
     expect(useSettingsStore.getState().locale).toBe("en");
     expect(api.saveSettings).toHaveBeenCalledWith({
-      providers: { deepseek: { apiKey: "key" } },
-      defaultModel: "deepseek/v4",
       locale: "en",
+      models,
     });
   });
 });

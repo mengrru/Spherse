@@ -148,6 +148,14 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent): ChatMessa
         ) {
           updated._card = (event.partialResult as any).details;
         }
+        if (
+          toolCall.toolName === "generate_image" &&
+          event.partialResult &&
+          typeof event.partialResult === "object" &&
+          (event.partialResult as any).details?.type === "image"
+        ) {
+          updated._card = (event.partialResult as any).details;
+        }
         return updated;
       });
       return [...prev.slice(0, -1), { ...last, _toolCalls: calls }];
@@ -231,6 +239,20 @@ export function parseHistoryMessages(history: any[]): ChatMessage[] {
                   height: toolResult.details.height ?? 400,
                   max_width: toolResult.details.max_width ?? 800,
                   max_height: toolResult.details.max_height ?? 600,
+                };
+              }
+              if (
+                content.name === "generate_image" &&
+                toolResult?.details?.cardType === "image"
+              ) {
+                base._card = {
+                  type: "image",
+                  status: toolResult.details.status ?? "done",
+                  path: toolResult.details.path,
+                  prompt: toolResult.details.prompt ?? "",
+                  model: toolResult.details.model,
+                  mimeType: toolResult.details.mimeType,
+                  errorMessage: toolResult.details.errorMessage,
                 };
               }
               return base;

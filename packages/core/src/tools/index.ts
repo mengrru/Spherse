@@ -7,6 +7,7 @@ import { createAppendChangelogTool } from "./append-changelog.js";
 import { createEditFileTool } from "./edit-file.js";
 import { createLoadSkillTool } from "./load-skill.js";
 import { createRenderCardTool } from "./render-card.js";
+import { createGenerateImageTool } from "./generate-image.js";
 import { createMoveFileTool } from "./move-file.js";
 import { createCopyFileTool } from "./copy-file.js";
 import { ToolContext } from "./tool-context.js";
@@ -25,6 +26,7 @@ export function createToolsForProject(
     search_content: createSearchContentTool(ctx.root, getPolicy),
     append_changelog: createAppendChangelogTool(ctx),
     render_card: createRenderCardTool(ctx.root, getPolicy),
+    generate_image: createGenerateImageTool(ctx.root),
     move_file: createMoveFileTool(ctx.root, ctx.mutex, getPolicy),
     copy_file: createCopyFileTool(ctx.root, ctx.mutex, getPolicy),
     load_skill: createLoadSkillTool(ctx.skill),

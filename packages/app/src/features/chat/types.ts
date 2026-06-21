@@ -8,6 +8,18 @@ export interface HtmlCard {
   max_height?: number;
 }
 
+export interface ImageCard {
+  type: "image";
+  status: "generating" | "done" | "error";
+  path?: string;
+  prompt: string;
+  model?: string;
+  mimeType?: string;
+  errorMessage?: string;
+}
+
+export type ChatCard = HtmlCard | ImageCard;
+
 export interface ToolCallInfo {
   toolCallId: string;
   toolName: string;
@@ -15,7 +27,7 @@ export interface ToolCallInfo {
   result?: string;
   partialResult?: string;
   status: "running" | "completed" | "error";
-  _card?: HtmlCard;
+  _card?: ChatCard;
 }
 
 export interface ChatMessage {

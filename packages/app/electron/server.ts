@@ -9,7 +9,7 @@ export async function ensureServer(): Promise<void> {
   if (serverHandle) return;
   const settings = getSettings();
   const result = await createMultiProjectServer({
-    defaultModel: settings?.defaultModel,
+    defaultModel: settings?.models?.text?.defaultModel,
   });
   serverHandle = { fastify: result.fastify, registry: result.registry };
 }

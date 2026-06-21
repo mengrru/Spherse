@@ -1,4 +1,4 @@
-import type { ProviderCatalogItem } from "@spherse/core";
+import type { ProviderCatalogItem, ModelGroupSettings } from "@spherse/core";
 
 export interface RestoredProject {
   id: string;
@@ -7,14 +7,22 @@ export interface RestoredProject {
   lastRoute?: string;
 }
 
+export interface SaveDialogFilter {
+  name: string;
+  extensions: string[];
+}
+
 export interface SaveDialogOptions {
   defaultPath?: string;
+  filters?: SaveDialogFilter[];
 }
 
 export interface IpcAppSettings {
-  providers?: Record<string, { apiKey?: string } | undefined>;
-  defaultModel?: string;
   locale?: string;
+  models?: {
+    text?: ModelGroupSettings;
+    image?: ModelGroupSettings;
+  };
 }
 
 export interface ElectronAPI {
@@ -31,6 +39,7 @@ export interface ElectronAPI {
   getSettings: () => Promise<IpcAppSettings | null>;
   saveSettings: (settings: IpcAppSettings) => Promise<{ success: boolean }>;
   getSupportedProviders: () => Promise<Record<string, ProviderCatalogItem>>;
+  getImageProviders: () => Promise<Record<string, ProviderCatalogItem>>;
   isDev: () => Promise<boolean>;
   toggleDevTools: () => Promise<void>;
   isDevToolsOpen: () => Promise<boolean>;

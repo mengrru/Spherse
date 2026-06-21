@@ -18,6 +18,7 @@ project-root/
 │   │       ├── sessions.db
 │   │       ├── schedules.yml
 │   │       └── schedule-logs.jsonl
+│   ├── generated-images/          # generate_image 工具自动保存的图片（按时间戳+hex 命名）
 │   └── skills/
 │       └── <skill-name>/SKILL.md
 ├── AGENTS.md
@@ -156,6 +157,12 @@ Full skill instructions in Markdown...
 - `file_path`：提供项目根目录内的 HTML 文件相对路径
 
 tool update 的 `details.type === "html"` 时，前端 chat 会按 HTML card 渲染。
+
+## Image Card
+
+`generate_image` tool 接收文本 prompt，调用 pi-ai 图片生成 provider（OpenRouter 或智谱）生成图片，自动保存到 `.spherse/generated-images/{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`。文件名基于 UTC 时间戳 + 4 位随机 hex，避免并发写冲突，不使用 `FileWriteMutex`。
+
+tool update 的 `details.type === "image"` 时，前端 chat 会按 image card 渲染（三态：generating / done / error）。`done` 态通过 `GET /api/projects/:projectId/preview/<relPath>` 加载图片，卡片右上角提供导出按钮（经 `POST /api/projects/:projectId/images/export` 复制到用户选择的项目内路径）。
 
 ## 预置模板
 

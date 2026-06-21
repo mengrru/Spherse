@@ -75,10 +75,21 @@ export interface SessionInfo {
   source?: "manual" | "scheduled";
 }
 
-export interface AppSettings {
-  providers: Record<string, { apiKey: string } | undefined>;
+export interface ProviderCredentials {
+  apiKey?: string;
+}
+
+export interface ModelGroupSettings {
   defaultModel: string;
+  providers: Record<string, ProviderCredentials>;
+}
+
+export interface AppSettings {
   locale: string;
+  models: {
+    text: ModelGroupSettings;
+    image: ModelGroupSettings;
+  };
 }
 
 export interface ProviderCatalogItem {
