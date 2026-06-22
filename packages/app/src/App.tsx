@@ -12,6 +12,7 @@ import { useFloatingChatStore } from "./features/floating-chat/store";
 import { I18nProvider } from "@spherse/i18n/react";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
 import { useSettingsStore } from "./stores/settings-store";
+import { useBusStore } from "./stores/bus-store";
 
 function buildProjectRoute(projectId: string, lastRoute?: string): string {
   const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
@@ -47,6 +48,7 @@ export function App() {
       const project = useAppStore.getState().projects.get(projectId);
       navigate(buildProjectRoute(projectId, project?.lastRoute), { replace: true });
     });
+    void useBusStore.getState().init();
     return () => {
       cancelled = true;
     };

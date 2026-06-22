@@ -31,6 +31,7 @@ export function ContentBrowser({
   const { content, setContent, loading, error } = useContentFile(client, filePath);
   const editor = useContentEditor({
     client,
+    projectId,
     filePath,
     content,
     setContent,

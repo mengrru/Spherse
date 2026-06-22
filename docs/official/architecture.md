@@ -39,7 +39,7 @@
 - **内容 API**：`content.ts` 负责目录列表、文件读取、保存、删除、新建文件和新建目录；所有文件路径都通过 core 共享路径安全工具限制在项目根目录内
 - **文件树 API**：`file-tree.ts` 返回面向 UI 选择的项目文件列表，过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir
 - **预览 API**：`preview.ts` 为本地 HTML 与图片内容提供预览 URL，renderer 通过 iframe、图片或 HTML card 使用
-- **WebSocket**：`ws-chat.ts` 推送 agent 对话事件；`ws-fs-watch.ts` 推送项目文件变更；`ws-schedule.ts` 推送定时任务事件——三者均使用 `/ws/projects/:projectId/...` 路径前缀按项目隔离；`ws-debug.ts` 推送全局 pino 结构化日志流（日志带 projectId 字段，可供前端过滤），供前端 Debug Streaming Log 面板消费
+- **WebSocket**：`ws-chat.ts` 推送 agent 对话事件（`/ws/projects/:projectId/chat/:agentId/:sessionId`，双向、session-scoped）；`ws-bus.ts` 是全局多路复用 bus（`/ws/bus`），将 schedule 事件、fs-watch 文件变更、debug 日志三条 server→client 推送通道合并到单一连接上，客户端通过 `subscribe`/`unsubscribe` 消息按 `(projectId, channel)` 动态订阅子通道；`fs-watcher.ts` 提供按项目引用计数的共享 `fs.watch`（多订阅者共享 1 个 OS watcher）；bus envelope 与各通道事件 type/payload 的运行时 schema 统一定义在 `contracts/bus.ts`
 - **定时任务 API**：`schedules.ts` 提供定时任务 CRUD 和手动触发
 - **图片导出 API**：`images.ts` 提供 `POST /api/projects/:projectId/images/export`，将 `.spherse/generated-images/` 下生成的图片复制到用户选择的项目内目标路径；src 和 dest 均通过 `resolveProjectPath` / `assertInsideProject` 校验边界
 - **项目 settings API**：`settings.ts` 暴露 `/api/projects/:projectId/settings/ai-access` 读写项目级 AI 读取禁止列表，暴露 `/api/projects/:projectId/settings/welcome-page` 读写项目级欢迎页路径；`settings.ts` 还暴露 `/api/projects/:projectId/settings/theme` 读写项目级主题 CSS（GET 返回 `{ ok, content }`，文件不存在时 content 为空串；PUT body `{ content }` 原样落盘，返回 `{ ok }`）；`settings.ts` 同时承载全局 provider 列表端点（文本 `GET /api/settings/providers`、图片 `GET /api/settings/image-providers`）；renderer 不直接通过 content API 编辑 `.spherse/project.yaml`
@@ -92,7 +92,7 @@
 - **间距与阴影**：使用 Tailwind 标准 scale（`p-2`、`rounded-md`、`shadow-sm` 等），不硬编码 magic number
 - **暗色适配**：业务组件不写 `dark:` 修饰符，由 CSS 变量值切换自动适配。仅 shadcn/ui 组件源码中已有的 `dark:` 保留
 - **Markdown 渲染**：动态 Markdown 统一通过 `MarkdownContent` 组件映射 `react-markdown` 节点样式，不在 `styles.css` 里维护 `.chat-markdown` 或 `.prose-content` 选择器
-- **项目级自定义主题**：用户可通过项目根目录 `.spherse/theme.css` 覆盖 CSS 变量实现项目全局主题定制，只允许覆盖 `:root` 中已有的变量名。应用内可通过项目头像右键菜单「设置 → 主题」打开 CSS 编辑器直接读写该文件，保存后经 `THEME_SETTINGS_CHANGED_EVENT` 触发 `useCustomTheme` 热更新
+- **项目级自定义主题**：用户可通过项目根目录 `.spherse/theme.css` 覆盖 CSS 变量实现项目全局主题定制，只允许覆盖 `:root` 中已有的变量名。应用内可通过项目头像右键菜单「设置 → 主题」打开 CSS 编辑器直接读写该文件。前端通过 bus 的 fs-watch 通道监听 `.spherse/theme.css` 变更（无论来源是 UI 保存、外部编辑器还是 LLM 工具修改），文件变更时 `useCustomTheme` 自动热重载 `<link>` 样式表
 - **Agent 聊天主题**：每个 agent 可在 `.spherse/agents/{slug}-{shortId}/theme.css` 定义聊天窗口主题。前端进入聊天页时读取该文件并注入到聊天窗口内，优先级高于项目级主题；该样式只作用于当前 agent 的聊天窗口，不影响侧边栏等外部 UI
 - **聊天主题选择器**：聊天窗口对用户主题暴露 `data-chat-root`、`data-chat-header`、`data-chat-messages`、`data-chat-message[data-role]`、`data-chat-composer` 等入口。变更这些 DOM 入口或聊天布局时，需要同步更新 `packages/presets/templates/agent-theme-template.css` 与 `packages/presets/skills/create-agent-chat-theme/SKILL.md`
 

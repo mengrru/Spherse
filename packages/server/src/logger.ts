@@ -1,6 +1,6 @@
 import pino from "pino";
 import type { Logger } from "@spherse/core";
-import { createDebugStream } from "./ws-debug.js";
+import { createDebugBusStream } from "./ws-bus.js";
 
 export type PrettyStream = ReturnType<typeof pino.transport>;
 
@@ -14,6 +14,6 @@ export function createPrettyStream(): PrettyStream {
 }
 
 export function createServerLogger(prettyStream: PrettyStream): Logger {
-  const debugStream = createDebugStream();
+  const debugStream = createDebugBusStream();
   return pino({ level: "debug" }, pino.multistream([prettyStream, debugStream]));
 }

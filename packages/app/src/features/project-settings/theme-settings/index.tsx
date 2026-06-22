@@ -11,7 +11,6 @@ import {
   DialogTitle,
 } from "../../../components/ui/dialog";
 import { Textarea } from "../../../components/ui/textarea";
-import { THEME_SETTINGS_CHANGED_EVENT } from "../../../lib/events";
 
 export function ThemeSettingsDialog({
   client,
@@ -48,7 +47,6 @@ export function ThemeSettingsDialog({
     try {
       await client.updateThemeSettings(content);
       setSavedContent(content);
-      window.dispatchEvent(new Event(THEME_SETTINGS_CHANGED_EVENT));
       toast.success(t("theme-settings.saved"));
     } catch (err) {
       toast.error(t("theme-settings.saveFailed", { message: (err as Error).message }));

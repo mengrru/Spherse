@@ -7,6 +7,7 @@ import * as settings from "./settings.js";
 import * as schedules from "./schedules.js";
 import * as skills from "./skills.js";
 import * as debug from "./debug.js";
+import * as bus from "./bus.js";
 import * as websocket from "./websocket.js";
 
 export const schemas = {
@@ -19,6 +20,7 @@ export const schemas = {
   ...schedules.schemas,
   ...skills.schemas,
   ...debug.schemas,
+  ...bus.schemas,
   ...websocket.schemas,
 } as const;
 
@@ -80,6 +82,16 @@ export type { TurnContextSnapshotContract } from "./debug.js";
 export {
   parseChatClientMessage,
   parseChatServerEvent,
-  parseScheduleServerEvent,
 } from "./websocket.js";
-export type { ChatClientMessage, ChatServerEvent, ScheduleServerEvent } from "./websocket.js";
+export type { ChatClientMessage, ChatServerEvent } from "./websocket.js";
+
+export {
+  parseBusServerMessage,
+  parseBusClientMessage,
+  parseScheduleServerEvent,
+} from "./bus.js";
+export type {
+  BusServerMessage,
+  BusClientMessage,
+  ScheduleServerEvent,
+} from "./bus.js";

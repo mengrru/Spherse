@@ -15,8 +15,8 @@ export interface FileTreeProps {
 
 export function FileTree({ selectedFilePath, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
   const { t } = useI18n();
-  const { client } = useProjectCtx();
-  const ctrl = useFileTreeController(client, onSelectFile, onDeleted, refreshKey);
+  const { client, projectId } = useProjectCtx();
+  const ctrl = useFileTreeController(client, onSelectFile, onDeleted, refreshKey, projectId);
 
   const ctxValue = {
     selectedFilePath,

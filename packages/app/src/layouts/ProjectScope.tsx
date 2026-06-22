@@ -12,6 +12,8 @@ import { useAppStore } from "../stores/app-store";
 import { useScheduleStore } from "../features/agent-schedule/store";
 import { ProjectProvider } from "../context/project-context";
 import type { ApiClient } from "../lib/api";
+import type { ScheduleServerEvent } from "../lib/types";
+import { useBusSubscription } from "../hooks/useBusSubscription";
 
 async function preloadHasEnabledSchedules(projectId: string, client: ApiClient) {
   const agents = useProjectDataStore.getState().projects[projectId]?.agents ?? [];
@@ -78,28 +80,27 @@ export function ProjectScope() {
     });
   }, [client, projectId, refreshAgents, refreshSessions]);
 
-  useEffect(() => {
+  const showScheduleNotification = async (agentId: string, scheduleId: string) => {
     if (!projectId || !client) return;
-
-    async function showScheduleNotification(agentId: string, scheduleId: string) {
-      const cachedSchedules = useScheduleStore.getState().byProject[projectId!]?.schedulesByAgent?.[agentId] ?? [];
-      let schedule = cachedSchedules.find((item) => item.id === scheduleId);
-      if (!schedule) {
-        const schedules = await client!.listSchedules(agentId).catch(() => []);
-        schedule = schedules.find((item) => item.id === scheduleId);
-      }
-      if (!schedule?.notify) return;
-      toast.success(schedule.notificationMessage?.trim() || tRef.current("agent-schedule.notificationDefault"));
+    const cachedSchedules =
+      useScheduleStore.getState().byProject[projectId]?.schedulesByAgent?.[agentId] ?? [];
+    let schedule = cachedSchedules.find((item) => item.id === scheduleId);
+    if (!schedule) {
+      const schedules = await client.listSchedules(agentId).catch(() => []);
+      schedule = schedules.find((item) => item.id === scheduleId);
     }
+    if (!schedule?.notify) return;
+    toast.success(schedule.notificationMessage?.trim() || tRef.current("agent-schedule.notificationDefault"));
+  };
 
-    const ws = client.createScheduleWebSocket((event) => {
-      handleScheduleEvent(projectId!, client!, event);
-      if (event.type === "schedule_completed") {
-        void showScheduleNotification(event.agentId, event.scheduleId);
-      }
-    });
-    return () => ws.close();
-  }, [handleScheduleEvent, client, projectId]);
+  useBusSubscription(projectId ?? "", "schedule", (type, payload) => {
+    if (!projectId || !client) return;
+    handleScheduleEvent(projectId, client, { type, ...(payload as object) } as ScheduleServerEvent);
+    if (type === "schedule_completed") {
+      const p = payload as { agentId: string; scheduleId: string };
+      void showScheduleNotification(p.agentId, p.scheduleId);
+    }
+  });
 
   if (!projectId || !project) {
     return (

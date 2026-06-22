@@ -26,7 +26,6 @@ function createClient(listSchedulesReturn: ScheduleInfo[]): ApiClient {
     updateSchedule: vi.fn().mockResolvedValue(undefined),
     deleteSchedule: vi.fn().mockResolvedValue(undefined),
     triggerSchedule: vi.fn().mockResolvedValue(undefined),
-    createScheduleWebSocket: vi.fn(),
   } as unknown as ApiClient;
 }
 

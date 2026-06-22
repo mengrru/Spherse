@@ -6,7 +6,6 @@ import type {
   ScheduleEntry,
   ScheduleInfo,
   ScheduleLogEntry,
-  ScheduleServerEvent,
   AgentCreateResponse,
   AgentUpdateResponse,
   AiAccessSettingsResponse,
@@ -36,8 +35,6 @@ async function parseJsonResponse<T>(
 
 export function createApiClient(baseUrl: string, projectId: string) {
   const apiBase = `${baseUrl}/api/projects/${projectId}`;
-  const wsUrl = baseUrl.replace(/^http/, "ws");
-  const wsProjectBase = `${wsUrl}/ws/projects/${projectId}`;
 
   return {
     baseUrl,
@@ -361,34 +358,6 @@ export function createApiClient(baseUrl: string, projectId: string) {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedule-logs${params}`);
       await assertOk(res);
       return parseJsonResponse<ScheduleLogEntry[]>(res, schemas.scheduleLogListResponse);
-    },
-
-    createScheduleWebSocket(onEvent: (event: ScheduleServerEvent) => void): WebSocket {
-      const url = `${wsProjectBase}/schedule`;
-      const ws = new WebSocket(url);
-      ws.onmessage = (event) => {
-        try { onEvent(JSON.parse(event.data)); } catch { /* ignore parse errors */ }
-      };
-      ws.onerror = () => {};
-      return ws;
-    },
-
-    createFsWatchWebSocket(onChange: () => void): WebSocket {
-      const url = `${wsProjectBase}/fs-watch`;
-      const ws = new WebSocket(url);
-      ws.onmessage = () => onChange();
-      ws.onerror = () => {};
-      return ws;
-    },
-
-    createLogWebSocket(onLog: (line: string) => void): WebSocket {
-      const url = `${wsUrl}/ws/debug`;
-      const ws = new WebSocket(url);
-      ws.onmessage = (event) => {
-        onLog(event.data);
-      };
-      ws.onerror = () => {};
-      return ws;
     },
   };
 }

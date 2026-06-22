@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ApiClient } from "../../../lib/api";
+import { useBusSubscription } from "../../../hooks/useBusSubscription";
 
 interface UseContentEditorOptions {
   client: ApiClient;
+  projectId: string;
   filePath: string;
   content: string | null;
   setContent: (content: string) => void;
@@ -10,6 +12,7 @@ interface UseContentEditorOptions {
 
 export function useContentEditor({
   client,
+  projectId,
   filePath,
   content,
   setContent,
@@ -106,13 +109,22 @@ export function useContentEditor({
     return () => window.removeEventListener("keydown", handler);
   }, [isEditing, save]);
 
+  const isEditingRef = useRef(isEditing);
   useEffect(() => {
-    if (!isEditing) return;
-    const ws = client.createFsWatchWebSocket(() => {
-      setConflict(true);
-    });
-    return () => ws.close();
-  }, [isEditing, client]);
+    isEditingRef.current = isEditing;
+  }, [isEditing]);
+
+  const filePathRef = useRef(filePath);
+  useEffect(() => {
+    filePathRef.current = filePath;
+  }, [filePath]);
+
+  useBusSubscription(projectId, "fs-watch", (_type, payload) => {
+    if (!isEditingRef.current) return;
+    const changedPath = (payload as { path?: string } | null)?.path?.replace(/\\/g, "/");
+    if (changedPath !== filePathRef.current.replace(/\\/g, "/")) return;
+    setConflict(true);
+  });
 
   return {
     isEditing,

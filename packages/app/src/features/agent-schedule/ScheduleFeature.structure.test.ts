@@ -10,8 +10,8 @@ describe("agent schedule feature structure", () => {
     const dialogSource = readFileSync(join(currentDir, "index.tsx"), "utf8");
     const layoutSource = readFileSync(join(currentDir, "../../layouts/ProjectScope.tsx"), "utf8");
 
-    expect(dialogSource).not.toContain("createScheduleWebSocket");
-    expect(layoutSource).toContain("createScheduleWebSocket");
+    expect(dialogSource).not.toContain("useBusSubscription");
+    expect(layoutSource).toContain('useBusSubscription(projectId ?? "", "schedule"');
   });
 
   it("shows schedule notification toast from the project-level websocket handler", () => {
@@ -19,7 +19,7 @@ describe("agent schedule feature structure", () => {
 
     expect(layoutSource).toContain('import { toast } from "sonner"');
     expect(layoutSource).toContain("showScheduleNotification");
-    expect(layoutSource).toContain('event.type === "schedule_completed"');
+    expect(layoutSource).toContain('type === "schedule_completed"');
     expect(layoutSource).toContain("toast.success");
     expect(layoutSource).toContain("notificationMessage");
   });

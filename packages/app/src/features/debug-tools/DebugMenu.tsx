@@ -169,7 +169,7 @@ export function DebugMenu() {
       </AlertDialog>
 
       {overlay === "logs" && activeProject && (
-        <LogPanel baseUrl={activeProject.ctx.baseUrl} onClose={() => setOverlay(null)} />
+        <LogPanel onClose={() => setOverlay(null)} />
       )}
     </>
   );

@@ -31,6 +31,7 @@ export function useFileTreeController(
   onSelectFile: (filePath: string) => void,
   onDeleted: ((path: string) => void) | undefined,
   refreshKey: number | undefined,
+  projectId: string,
 ): FileTreeController {
   const { t } = useI18n();
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
@@ -162,7 +163,7 @@ export function useFileTreeController(
 
   const cancelDelete = useCallback(() => setDeleteTarget(null), []);
 
-  useFsWatchRefresh(client, refreshRoot);
+  useFsWatchRefresh(projectId, refreshRoot);
 
   return {
     rootNodes,

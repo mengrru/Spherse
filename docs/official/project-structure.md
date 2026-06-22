@@ -113,10 +113,10 @@ spherse/
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
 │   │       │   ├── schedules.ts      # 定时任务 CRUD 与手动触发
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
-│       │       ├── ws-chat.ts            # WebSocket 对话流
-│       │       ├── ws-fs-watch.ts        # WebSocket 文件变更推送
-│       │       ├── ws-debug.ts           # WebSocket 日志流推送（pino → /ws/debug）
-│       │       └── ws-schedule.ts        # WebSocket 定时任务事件推送
+│       │       ├── ws-chat.ts            # WebSocket 对话流（/ws/projects/:projectId/chat/...，双向 session-scoped）
+│       │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，schedule/fs-watch/debug 按 projectId×channel 订阅）
+│       │       └── lib/
+│       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）
 │   └── app/                          # @spherse/app — Electron + React
 │       ├── electron/
 │       │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main

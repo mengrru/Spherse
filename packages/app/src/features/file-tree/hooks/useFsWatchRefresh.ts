@@ -1,22 +1,22 @@
 import { useEffect, useRef } from "react";
-import type { ApiClient } from "../../../lib/api";
+import { useBusSubscription } from "../../../hooks/useBusSubscription";
 
 export function useFsWatchRefresh(
-  client: ApiClient,
+  projectId: string,
   refreshRoot: () => Promise<void>,
 ) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useBusSubscription(projectId, "fs-watch", () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      void refreshRoot();
+    }, 300);
+  });
+
   useEffect(() => {
-    const ws = client.createFsWatchWebSocket(() => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        refreshRoot();
-      }, 300);
-    });
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      ws.close();
     };
-  }, [client, refreshRoot]);
+  }, []);
 }

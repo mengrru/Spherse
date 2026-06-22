@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "../../components/ui/button";
 import { XIcon, PauseIcon, PlayIcon, TrashIcon, ArrowDownIcon } from "lucide-react";
+import { useBusSubscription } from "../../hooks/useBusSubscription";
 
 const MAX_LOG_LINES = 1000;
 
@@ -30,16 +31,14 @@ interface LogEntry {
 }
 
 interface LogPanelProps {
-  baseUrl: string;
   onClose: () => void;
 }
 
-export function LogPanel({ baseUrl, onClose }: LogPanelProps) {
+export function LogPanel({ onClose }: LogPanelProps) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [paused, setPaused] = useState(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const wsRef = useRef<WebSocket | null>(null);
   const pausedRef = useRef(false);
   const autoScrollRef = useRef(true);
 
@@ -51,35 +50,23 @@ export function LogPanel({ baseUrl, onClose }: LogPanelProps) {
     autoScrollRef.current = autoScroll;
   }, [autoScroll]);
 
-  useEffect(() => {
-    const wsUrl = `${baseUrl.replace(/^http/, "ws")}/ws/debug`;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onmessage = (event) => {
-      if (pausedRef.current) return;
-      try {
-        const entry = JSON.parse(event.data) as LogEntry;
-        setLogs((prev) => {
-          const next = [...prev, entry];
-          return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next;
-        });
-      } catch {
-        setLogs((prev) => {
-          const entry: LogEntry = { time: Date.now(), level: 30, msg: event.data };
-          const next = [...prev, entry];
-          return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next;
-        });
-      }
-    };
-
-    ws.onerror = () => {};
-
-    return () => {
-      ws.close();
-      wsRef.current = null;
-    };
-  }, [baseUrl]);
+  useBusSubscription("__global__", "debug", (_type, payload) => {
+    if (pausedRef.current) return;
+    const line = (payload as { line: string }).line;
+    try {
+      const entry = JSON.parse(line) as LogEntry;
+      setLogs((prev) => {
+        const next = [...prev, entry];
+        return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next;
+      });
+    } catch {
+      setLogs((prev) => {
+        const entry: LogEntry = { time: Date.now(), level: 30, msg: line };
+        const next = [...prev, entry];
+        return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next;
+      });
+    }
+  });
 
   useEffect(() => {
     if (!autoScrollRef.current) return;

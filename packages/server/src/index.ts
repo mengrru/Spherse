@@ -9,9 +9,7 @@ import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
-import { handleFsWatchWebSocket } from "./ws-fs-watch.js";
-import { handleDebugWebSocket } from "./ws-debug.js";
-import { handleScheduleWebSocket } from "./ws-schedule.js";
+import { handleBusWebSocket } from "./ws-bus.js";
 
 export { ProjectRegistry, type ProjectContext } from "./registry.js";
 
@@ -60,9 +58,7 @@ export async function createMultiProjectServer(
 
   registerAllRoutes(fastify, registry);
   handleChatWebSocket(fastify, registry);
-  handleFsWatchWebSocket(fastify, registry);
-  handleDebugWebSocket(fastify);
-  handleScheduleWebSocket(fastify, registry);
+  handleBusWebSocket(fastify, registry);
 
   await fastify.listen({ port: 0, host: "127.0.0.1" });
 
