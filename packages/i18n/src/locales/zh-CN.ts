@@ -260,6 +260,12 @@ export const zhCN = {
   "content-browser.preview": "预览",
   // 源码 tab 标签
   "content-browser.source": "源码",
+  // 复制相对项目路径的按钮文案（content browser Header）
+  "content-browser.copyPath": "复制路径",
+  // 复制路径成功后的 toast 提示
+  "content-browser.pathCopied": "路径已复制",
+  // 刷新按钮（content browser Header，图标按钮 title/aria-label）
+  "content-browser.refresh": "刷新",
 
   // --- File Tree ---
   // 新建文件按钮

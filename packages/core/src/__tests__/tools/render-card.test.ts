@@ -37,6 +37,7 @@ describe("createRenderCardTool", () => {
       max_width: 800,
       max_height: 600,
     });
+    expect(partialResult.details.file_path).toBeUndefined();
     expect(result.content[0].text).toBe("HTML card rendered successfully");
   });
 
@@ -87,6 +88,7 @@ describe("createRenderCardTool", () => {
 
     const details = onUpdate.mock.calls[0][0].details;
     expect(details.html).toBe("<h2>Report</h2>");
+    expect(details.file_path).toBe("output/report.html");
     expect(result.content[0].text).toBe("HTML card rendered successfully");
   });
 
@@ -167,6 +169,7 @@ describe("createRenderCardTool", () => {
 
     const details = onUpdate.mock.calls[0][0].details;
     expect(details.html).toBe("<canvas></canvas>");
+    expect(details.file_path).toBe("chart.html");
   });
 
   it("includes full card data in return details for history recovery", async () => {
@@ -187,5 +190,6 @@ describe("createRenderCardTool", () => {
     expect(result.details.height).toBe(300);
     expect(result.details.max_width).toBe(800);
     expect(result.details.max_height).toBe(600);
+    expect(result.details.file_path).toBeUndefined();
   });
 });

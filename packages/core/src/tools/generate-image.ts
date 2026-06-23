@@ -52,7 +52,7 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
     name: "generate_image",
     label: "Generate Image",
     description:
-      "根据文本描述（prompt）生成一张图片，并在聊天中以 image card 展示。生成后图片自动保存到项目内，用户可通过卡片右上角按钮导出到项目文件。仅在需要配图（场景插画、角色立绘、地图、道具图标等）时调用。",
+      `这是一个**图片生成（AI 绘图）工具**，根据文本描述（prompt）调用 AI 模型从零生成一张全新图片，并在聊天中以 image card 展示。生成后图片自动保存到 ${GENERATED_DIR} 目录下，用户可通过卡片右上角按钮导出到项目文件。`,
     parameters: GenerateImageParams,
     async execute(_toolCallId, params, signal, onUpdate) {
       const prompt = params.prompt;

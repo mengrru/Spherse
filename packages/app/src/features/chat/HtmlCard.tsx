@@ -64,7 +64,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   return (
     <div
       className="group/card my-2 overflow-hidden rounded-lg border border-border"
-      style={{ maxWidth: `${card.max_width ?? 800}px`, width }}
+      style={{ maxWidth: `min(${card.max_width ?? 800}px, 100%)`, width }}
     >
       {card.title ? (
         <div className="group-title flex items-center justify-between border-b border-border bg-muted px-3 py-1.5">
@@ -80,16 +80,28 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
             {saveButton}
           </div>
         )}
-        <iframe
-          srcDoc={card.html}
-          sandbox="allow-scripts allow-same-origin"
-          style={{
-            width: "100%",
-            height: `${height}px`,
-            border: "none",
-            display: "block",
-          }}
-        />
+        {card.file_path && client ? (
+          <iframe
+            src={client.getPreviewUrl(card.file_path)}
+            style={{
+              width: "100%",
+              height: `${height}px`,
+              border: "none",
+              display: "block",
+            }}
+          />
+        ) : (
+          <iframe
+            srcDoc={card.html}
+            sandbox="allow-scripts allow-same-origin"
+            style={{
+              width: "100%",
+              height: `${height}px`,
+              border: "none",
+              display: "block",
+            }}
+          />
+        )}
       </div>
     </div>
   );

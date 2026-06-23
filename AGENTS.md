@@ -138,6 +138,7 @@ npm run dist:win    # 构建 Windows NSIS 安装包
   - 只使用 shadcn 语义 token（`bg-background`、`bg-card`、`bg-muted`、`bg-primary`、`bg-accent`、`text-foreground`、`text-muted-foreground`、`border-border`、`text-destructive`）和 Spherse 自有 token（`bg-agent-creator`、`text-agent-success` 等），不硬编码颜色值（如 `text-[#333]`）
   - 间距、圆角、阴影使用 Tailwind 标准 scale（`p-2`、`rounded-md`、`shadow-sm`），不使用 magic number
   - 业务组件不写 `dark:` 修饰符，暗色适配通过 CSS 变量自动切换
+  - 使用逻辑属性（logical properties）代替物理方向，确保自动适配 LTR/RTL：用 `ms-*`/`me-*`（margin-inline-start/end）代替 `ml-*`/`mr-*`，用 `ps-*`/`pe-*`（padding-inline-start/end）代替 `pl-*`/`pr-*`，用 `start-*`/`end-*`（inset-inline-start/end）代替 `left-*`/`right-*`，用 `text-start`/`text-end` 代替 `text-left`/`text-right`
   - 需要新颜色时在 `styles.css` 中注册 CSS 变量（`--agent-{name}`）+ Tailwind 颜色（`--color-agent-{name}`），不在组件中硬编码
   - 变更主题 token、聊天窗口 `data-chat-*` 属性或可自定义样式入口时，同步更新用户可见的主题模板和 skill 文档
 - **i18n 文案规范**：`packages/i18n/src/locales/zh-CN.ts` 是翻译基准，每条文案必须结合实际 UI 场景写注释（说明出现位置、上下文、交互状态等），用于指导其它语言版本（`zh-TW`、`en`）的翻译

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
@@ -7,6 +7,7 @@ import { ConfirmDialogs } from "./ConfirmDialogs";
 import { ContentView } from "./ContentView";
 import { Header } from "./Header";
 import { TextSelectionSession } from "../text-selection-session";
+import { useContentAutoRefresh } from "./hooks/useContentAutoRefresh";
 import { useContentEditor } from "./hooks/useContentEditor";
 import { useContentFile } from "./hooks/useContentFile";
 
@@ -28,7 +29,8 @@ export function ContentBrowser({
   const { t } = useI18n();
   const { client, projectId } = useProjectCtx();
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
-  const { content, setContent, loading, error } = useContentFile(client, filePath);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { content, setContent, loading, error, reload: reloadContent } = useContentFile(client, filePath);
   const editor = useContentEditor({
     client,
     projectId,
@@ -37,6 +39,13 @@ export function ContentBrowser({
     setContent,
   });
 
+  const handleRefresh = useCallback(() => {
+    reloadContent();
+    setRefreshKey((k) => k + 1);
+  }, [reloadContent]);
+
+  useContentAutoRefresh({ projectId, filePath, enabled: !editor.isEditing, onReload: handleRefresh });
+
   const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
   const isMarkdown =
     ext === "md" ||
@@ -44,7 +53,7 @@ export function ContentBrowser({
     filePath.endsWith(".agents.md");
   const isHtml = ext === "html" || ext === "htm";
   const isImage = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp"]).has(ext);
-  const isEditable = !isHtml && !isImage;
+  const isEditable = !isImage;
 
   return (
     <div className="flex flex-col h-full">
@@ -61,6 +70,7 @@ export function ContentBrowser({
         onCancelEdit={editor.cancelEdit}
         onSave={() => void editor.save()}
         onHtmlViewChange={setHtmlView}
+        onRefresh={handleRefresh}
       />
       {editor.conflict && editor.isEditing && (
         <ConflictBanner
@@ -95,6 +105,7 @@ export function ContentBrowser({
             isEditing={editor.isEditing}
             editedContent={editor.editedContent}
             onEditedContentChange={editor.setEditedContent}
+            refreshKey={refreshKey}
           />
         )}
       </TextSelectionSession>

@@ -19,12 +19,12 @@ export function MessageItem({ message, agent, onNavigateToPath }: MessageItemPro
 
   return (
     <div
-      className={`group max-w-[80%] flex items-end gap-1.5 ${isUser ? "self-end flex-row-reverse" : "self-start"}`}
+      className={`group max-w-[90%] min-w-0 flex items-end gap-1.5 ${isUser ? "self-end flex-row-reverse" : "self-start"}`}
       data-chat-message
       data-role={message.role}
     >
       <div
-        className={`rounded-lg px-3.5 py-2.5 leading-7 break-words ${
+        className={`min-w-0 overflow-hidden rounded-lg px-3.5 py-2.5 leading-7 break-words ${
           isUser
             ? "bg-primary text-primary-foreground"
             : "border border-border bg-card text-card-foreground"

@@ -1,5 +1,6 @@
 import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import type { AgentProfile } from "../../lib/types";
 import { Chat } from "../chat";
 import { FloatingChatFrame } from "./FloatingChatFrame";
@@ -19,6 +20,7 @@ export function FloatingChatContainer({
   agent,
 }: FloatingChatContainerProps) {
   const { client } = useProjectCtx();
+  const navigate = useNavigate();
   const setFloatingChat = useFloatingChatStore((s) => s.setFloatingChat);
   const [scopedThemeCss, setScopedThemeCss] = useState<string | null>(null);
 
@@ -62,6 +64,9 @@ export function FloatingChatContainer({
           sessionId={floatingChat.sessionId}
           agent={agent}
           hideHeader
+          onNavigateToPath={(path) => {
+            navigate(`/project/${projectId}/content?path=${encodeURIComponent(path)}`);
+          }}
         />
       </FloatingChatFrame>
     </div>,

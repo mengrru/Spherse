@@ -1,6 +1,7 @@
 export interface HtmlCard {
   type: "html";
   html: string;
+  file_path?: string;
   title?: string;
   width?: number;
   height?: number;

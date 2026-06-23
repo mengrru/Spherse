@@ -234,6 +234,7 @@ export function parseHistoryMessages(history: any[]): ChatMessage[] {
                 base._card = {
                   type: "html",
                   html: toolResult.details.html,
+                  file_path: toolResult.details.file_path,
                   title: toolResult.details.title,
                   width: toolResult.details.width,
                   height: toolResult.details.height ?? 400,

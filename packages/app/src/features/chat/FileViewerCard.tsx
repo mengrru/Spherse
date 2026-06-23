@@ -71,12 +71,12 @@ export function FileViewerCard({
     <button
       type="button"
       onClick={() => onNavigateToPath(change.path)}
-      className="font-mono text-xs text-primary underline hover:opacity-80"
+      className="min-w-0 flex-1 shrink truncate text-left font-mono text-xs text-primary underline hover:opacity-80"
     >
       {change.path}
     </button>
   ) : (
-    <span className="font-mono text-xs text-primary underline">
+    <span className="min-w-0 flex-1 shrink truncate font-mono text-xs text-primary underline">
       {change.path}
     </span>
   )
@@ -84,7 +84,7 @@ export function FileViewerCard({
   return (
     <Collapsible open={expanded} className="mb-2">
       <div
-        className={`flex items-center gap-1 bg-card px-2 py-1.5 ${
+        className={`flex min-w-0 items-center gap-1 bg-card px-2 py-1.5 ${
           expanded ? "rounded-t-lg border border-b-0 border-border" : "rounded-lg border border-border"
         }`}
       >

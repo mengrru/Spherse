@@ -2,6 +2,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { ContentBrowser } from "../features/content-browser";
 import { useProjectCtx } from "../context/project-context";
+import { useProjectNavigation } from "../lib/use-project-navigation";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useFloatingSessionId } from "../features/floating-chat/use-floating-session-id";
 import type { ActiveSessionInfo } from "../lib/types";
@@ -10,6 +11,7 @@ export function ContentBrowserPage() {
   const { projectId, client } = useProjectCtx();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { back } = useProjectNavigation();
   const { t } = useI18n();
   const projectData = useProjectDataStore((s) => s.projects[projectId]);
   const createSession = useProjectDataStore((s) => s.createSession);
@@ -58,7 +60,7 @@ export function ContentBrowserPage() {
     <ContentBrowser
       key={filePath}
       filePath={filePath}
-      onBack={() => navigate(-1)}
+      onBack={back}
       agents={agents}
       activeSessions={activeSessions}
       onStartSession={handleStartSession}

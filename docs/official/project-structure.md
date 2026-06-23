@@ -163,6 +163,7 @@ spherse/
 │           │   ├── scope-css.ts      # CSS 选择器作用域前缀工具（agent chat/floating theme）
 │           │   ├── tool-registry.ts  # 前端 tool call 展示元数据
 │           │   ├── types.ts          # 前端类型
+│           │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界）
 │           │   └── utils.ts          # shadcn/ui cn() 工具
 │           ├── context/
 │           │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（client/projectId/projectRoot）
@@ -195,7 +196,7 @@ spherse/
 │           │   ├── agent-schedule/       # Agent 定时任务弹窗、表单、列表与运行日志，含 schedule feature store
 │           │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
 │           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、chat 专属类型（types.ts）、聚合/diff 纯函数（lib/）
-│           │   ├── content-browser/      # 文件浏览、预览、编辑、冲突提示
+│           │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）
 │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
 │           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog
 │           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
