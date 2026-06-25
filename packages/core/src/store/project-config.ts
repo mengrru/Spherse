@@ -5,10 +5,11 @@ import { nanoid } from "nanoid";
 import {
   normalizeDeniedPath,
   normalizeDeniedPaths,
-} from "../access/ai-file-access.js";
+} from "../access/denied-paths.js";
 import type { ProjectConfig } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 import { ValidationError } from "../errors.js";
+import { categorizePath } from "../access/path-category.js";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
 
@@ -17,7 +18,7 @@ function normalizeWelcomePagePath(input: string): string | null {
   if (!trimmed || trimmed === "." || trimmed.startsWith("/") || trimmed.includes("..")) return null;
   const normalized = trimmed.replace(/^\.\//, "").replace(/\/+/g, "/");
   if (!normalized) return null;
-  if (normalized === ".spherse" || normalized.startsWith(".spherse/")) return null;
+  if (categorizePath(normalized) !== "userFiles") return null;
   const ext = normalized.split(".").pop()?.toLowerCase();
   if (!ext || !WELCOME_PAGE_EXTENSIONS.has(ext)) return null;
   return normalized;

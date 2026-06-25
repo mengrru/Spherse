@@ -3,10 +3,11 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+import type { AccessPolicy } from "../access/access-policy.js";
+import { shouldSkipDirEntry } from "../utils/fs-walk.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
-type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
+type AccessPolicyProvider = () => AccessPolicy;
 
 const SearchContentParams = Type.Object({
   query: Type.String({ description: "Search query (substring match)" }),
@@ -28,10 +29,6 @@ function globToRegex(glob: string): RegExp {
     .replace(/\*/g, ".*")
     .replace(/\?/g, ".");
   return new RegExp(`^${escaped}$`, "i");
-}
-
-function shouldSkipDir(dirName: string): boolean {
-  return dirName.startsWith(".") || dirName === "node_modules";
 }
 
 interface SearchResult {
@@ -76,7 +73,7 @@ async function searchDir(
   results: SearchResult[],
   maxResults: number,
   projectRoot: string,
-  policy: AiFileAccessPolicy,
+  policy: AccessPolicy,
 ): Promise<void> {
   if (results.length >= maxResults) return;
 
@@ -87,10 +84,10 @@ async function searchDir(
 
     const entryPath = path.join(dirPath, entry.name);
     const relativePath = path.relative(projectRoot, entryPath).split(path.sep).join("/");
-    if (policy.isDenied(relativePath)) continue;
+    if (!policy.canRead(relativePath)) continue;
 
     if (entry.isDirectory()) {
-      if (shouldSkipDir(entry.name)) continue;
+      if (shouldSkipDirEntry(entry.name)) continue;
       await searchDir(
         entryPath,
         query,
@@ -109,7 +106,7 @@ async function searchDir(
 
 export function createSearchContentTool(
   projectRoot: string,
-  getAiFileAccessPolicy: AiFileAccessPolicyProvider = () => createAiFileAccessPolicy(projectRoot, []),
+  getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof SearchContentParams> {
   const root = path.resolve(projectRoot);
   const MAX_RESULTS = 100;
@@ -121,11 +118,11 @@ export function createSearchContentTool(
     parameters: SearchContentParams,
     async execute(_toolCallId, params, _signal) {
       const searchPath = params.path ? resolveProjectPath(root, params.path) : root;
-      const policy = getAiFileAccessPolicy();
+      const policy = getPolicy();
 
       if (params.path) {
         try {
-          policy.assertReadableByAi(params.path);
+          policy.assertRead(params.path);
         } catch (err) {
           return {
             content: [{ type: "text" as const, text: (err as Error).message }],

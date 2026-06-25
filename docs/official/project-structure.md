@@ -40,9 +40,12 @@ spherse/
 │   │       ├── scheduler.ts
 │   │       ├── utils/
 │   │       │   ├── file-write-mutex.ts # 文件写入互斥，避免并发写覆盖
+│   │       │   ├── fs-walk.ts         # 目录遍历过滤（shouldSkipDirEntry）
 │   │       │   └── path-safety.ts      # 项目内路径解析与边界校验
 │   │       ├── access/
-│   │       │   └── ai-file-access.ts  # AI 读取禁止列表路径规范化与访问策略
+│   │       │   ├── path-category.ts   # PathCategory 分类真相（PATH_PATTERNS + categorizePath）
+│   │       │   ├── access-policy.ts   # AccessPolicy 接口 + llmAccessPolicy / serverAccessPolicy 工厂
+│   │       │   └── denied-paths.ts    # deniedPaths 路径规范化与保留路径校验
 │   │       ├── __tests__/            # Vitest 单元测试
 │   │       └── index.ts              # 公开导出：ProjectRuntime, createProject, types
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容

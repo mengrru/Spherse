@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { resolveProjectPath } from "@spherse/core";
+import { resolveProjectPath, serverAccessPolicy, AccessDeniedError } from "@spherse/core";
 import type { ProjectRegistry } from "../registry.js";
 import { forbidden, notFound } from "../errors.js";
 
@@ -31,7 +31,16 @@ export function registerPreviewRoutes(fastify: FastifyInstance, _registry: Proje
     "/api/projects/:projectId/preview/*",
     async (req, reply) => {
       const relativePath = req.params["*"];
-      const absolutePath = resolveProjectPath(req.projectCtx!.projectManager.getRootPath(), relativePath);
+      const pm = req.projectCtx!.projectManager;
+      const root = pm.getRootPath();
+      const policy = serverAccessPolicy(root);
+      try {
+        policy.assertRead(relativePath);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        throw err;
+      }
+      const absolutePath = resolveProjectPath(root, relativePath);
 
       const ext = path.extname(absolutePath).slice(1).toLowerCase();
       if (!ALLOWED_EXTENSIONS.has(ext)) {

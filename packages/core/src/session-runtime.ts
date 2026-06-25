@@ -173,7 +173,7 @@ export class SessionRuntime {
     const contextSection = await readContextFiles(
       projectRoot,
       profile.context,
-      () => toolContext.getAiFileAccessPolicy(),
+      () => toolContext.llmPolicy,
     );
     if (contextSection) {
       systemPrompt += contextSection;

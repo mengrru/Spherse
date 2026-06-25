@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import matter from "gray-matter";
 import type { SkillDefinition } from "../types.js";
+import { isPathInside } from "../utils/path-safety.js";
 
 type PresetSkillSource = {
   dir: string;
@@ -53,7 +54,7 @@ export class SkillStore {
 
   private async parseSkill(dirName: string): Promise<SkillDefinition | null> {
     const skillMdPath = path.resolve(this.skillDir, dirName, "SKILL.md");
-    if (!skillMdPath.startsWith(this.skillDir)) return null;
+    if (!isPathInside(this.skillDir, skillMdPath)) return null;
     try {
       const raw = await fs.readFile(skillMdPath, "utf-8");
       const { data, content } = matter(raw);

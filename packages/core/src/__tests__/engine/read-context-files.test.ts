@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createAiFileAccessPolicy } from "../../access/ai-file-access.js";
+import { llmAccessPolicy } from "../../access/access-policy.js";
 import { readContextFiles } from "../../engine/read-context-files.js";
 import { createTempProject, cleanupDir, writeFile } from "../helpers.js";
 
@@ -74,7 +74,7 @@ describe("readContextFiles", () => {
 
   it("skips blocked context files", async () => {
     await writeFile(projectRoot, "secrets/key.md", "secret context");
-    const policy = () => createAiFileAccessPolicy(projectRoot, ["secrets"]);
+    const policy = () => llmAccessPolicy(projectRoot, ["secrets"]);
 
     const result = await readContextFiles(projectRoot, ["secrets/key.md"], policy);
 

@@ -32,7 +32,7 @@ describe("createToolsForProject AI access policy forwarding", () => {
     const tools = makeTools();
 
     const result = await tools.read_file.execute("tc", { path: "secrets/key.md" }, undefined as any);
-    expect(result.content[0].text).toContain("Access denied by AI read settings: secrets/key.md");
+    expect(result.content[0].text).toContain("Access denied");
   });
 
   it("forwards policy to list_files and omits denied entries", async () => {
@@ -67,6 +67,6 @@ describe("createToolsForProject AI access policy forwarding", () => {
     await projectStore.config.updateAiAccessSettings(["secrets/key.md"]);
 
     const second = await tools.read_file.execute("tc", { path: "secrets/key.md" }, undefined as any);
-    expect(second.content[0].text).toContain("Access denied by AI read settings: secrets/key.md");
+    expect(second.content[0].text).toContain("Access denied");
   });
 });

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { resolveProjectPath, isProjectMetaPath } from "@spherse/core";
+import { resolveProjectPath, serverAccessPolicy, AccessDeniedError } from "@spherse/core";
 import { schemas, parseContract } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { forbidden, notFound, badRequest, conflict } from "../errors.js";
@@ -11,7 +11,15 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
     "/api/projects/:projectId/content/*",
     async (req) => {
       const relativePath = req.params["*"];
-      const root = req.projectCtx!.projectManager.getRootPath();
+      const pm = req.projectCtx!.projectManager;
+      const root = pm.getRootPath();
+      const policy = serverAccessPolicy(root);
+      try {
+        policy.assertRead(relativePath);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        throw err;
+      }
       const absolutePath = resolveProjectPath(root, relativePath);
 
       let stat;
@@ -39,9 +47,16 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
     { schema: { body: schemas.contentCreateRequest, response: { 200: schemas.okResponse } } },
     async (req) => {
       const relativePath = req.params["*"];
-      const root = req.projectCtx!.projectManager.getRootPath();
+      const pm = req.projectCtx!.projectManager;
+      const root = pm.getRootPath();
+      const policy = serverAccessPolicy(root);
+      try {
+        policy.assertWrite(relativePath);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        throw err;
+      }
       const absolutePath = resolveProjectPath(root, relativePath);
-      if (isProjectMetaPath(relativePath)) throw forbidden("Cannot modify .spherse directory");
 
       const action = req.body?.action;
       if (action !== "mkdir" && action !== "touch") {
@@ -66,7 +81,15 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
     { schema: { body: schemas.contentSaveRequest, response: { 200: schemas.okResponse } } },
     async (req) => {
       const relativePath = req.params["*"];
-      const root = req.projectCtx!.projectManager.getRootPath();
+      const pm = req.projectCtx!.projectManager;
+      const root = pm.getRootPath();
+      const policy = serverAccessPolicy(root);
+      try {
+        policy.assertWrite(relativePath);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        throw err;
+      }
       const absolutePath = resolveProjectPath(root, relativePath);
 
       if (typeof req.body?.content !== "string") {
@@ -86,9 +109,16 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
     { schema: { response: { 200: schemas.okResponse } } },
     async (req) => {
       const relativePath = req.params["*"];
-      const root = req.projectCtx!.projectManager.getRootPath();
+      const pm = req.projectCtx!.projectManager;
+      const root = pm.getRootPath();
+      const policy = serverAccessPolicy(root);
+      try {
+        policy.assertWrite(relativePath);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        throw err;
+      }
       const absolutePath = resolveProjectPath(root, relativePath);
-      if (isProjectMetaPath(relativePath)) throw forbidden("Cannot modify .spherse directory");
 
       try {
         const stat = await fs.stat(absolutePath);

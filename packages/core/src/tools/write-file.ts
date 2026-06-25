@@ -2,8 +2,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
+import type { AccessPolicy } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
+
+type AccessPolicyProvider = () => AccessPolicy;
 
 const WriteFileParams = Type.Object({
   path: Type.String({ description: "Path relative to project root" }),
@@ -11,7 +14,11 @@ const WriteFileParams = Type.Object({
   createDirs: Type.Optional(Type.Boolean({ description: "Create parent directories if they don't exist", default: true })),
 });
 
-export function createWriteFileTool(projectRoot: string, mutex: FileWriteMutex): AgentTool<typeof WriteFileParams> {
+export function createWriteFileTool(
+  projectRoot: string,
+  mutex: FileWriteMutex,
+  getPolicy: AccessPolicyProvider,
+): AgentTool<typeof WriteFileParams> {
   const root = path.resolve(projectRoot);
 
   return {
@@ -22,6 +29,15 @@ export function createWriteFileTool(projectRoot: string, mutex: FileWriteMutex):
     async execute(_toolCallId, params, _signal) {
       const resolved = resolveProjectPath(root, params.path);
       const createDirs = params.createDirs ?? true;
+
+      try {
+        getPolicy().assertWrite(params.path);
+      } catch (err) {
+        return {
+          content: [{ type: "text" as const, text: (err as Error).message }],
+          details: { path: params.path, denied: true },
+        };
+      }
 
       return mutex.run(resolved, async () => {
         if (createDirs) {

@@ -2,9 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { schemas } from "@spherse/server/contracts";
+import { shouldSkipDirEntry } from "@spherse/core";
 import type { ProjectRegistry } from "../registry.js";
-
-const EXCLUDED_DIRS = new Set([".spherse", "node_modules", ".git"]);
 
 export function registerFileTreeRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get<{ Params: { projectId: string } }>(
@@ -28,8 +27,7 @@ export function registerFileTreeRoutes(fastify: FastifyInstance, _registry: Proj
       return;
     }
     for (const entry of entries) {
-      if (entry.name.startsWith(".")) continue;
-      if (EXCLUDED_DIRS.has(entry.name)) continue;
+      if (shouldSkipDirEntry(entry.name)) continue;
       const relativePath = relativeDir ? `${relativeDir}/${entry.name}` : entry.name;
       if (entry.isDirectory()) {
         await walkDir(path.join(absoluteDir, entry.name), relativePath, files);

@@ -3,10 +3,11 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+import type { AccessPolicy } from "../access/access-policy.js";
+import { shouldSkipDirEntry } from "../utils/fs-walk.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
-type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
+type AccessPolicyProvider = () => AccessPolicy;
 
 const ListFilesParams = Type.Object({
   path: Type.String({ description: "Directory path relative to project root" }),
@@ -19,16 +20,17 @@ async function listRecursive(
   prefix: string,
   lines: string[],
   projectRoot: string,
-  policy: AiFileAccessPolicy,
+  policy: AccessPolicy,
   currentDepth: number,
   maxDepth: number,
 ): Promise<void> {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   for (const entry of entries) {
+    if (shouldSkipDirEntry(entry.name)) continue;
     const icon = entry.isDirectory() ? "📁" : "📄";
     const entryPath = path.join(dirPath, entry.name);
     const relativePath = path.relative(projectRoot, entryPath).split(path.sep).join("/");
-    if (policy.isDenied(relativePath)) continue;
+    if (!policy.canRead(relativePath)) continue;
     lines.push(`${prefix}${icon} ${entry.name}`);
     if (entry.isDirectory() && currentDepth < maxDepth) {
       await listRecursive(entryPath, `${prefix}  `, lines, projectRoot, policy, currentDepth + 1, maxDepth);
@@ -40,21 +42,22 @@ async function listFlat(
   dirPath: string,
   lines: string[],
   projectRoot: string,
-  policy: AiFileAccessPolicy,
+  policy: AccessPolicy,
 ): Promise<void> {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
   for (const entry of entries) {
+    if (shouldSkipDirEntry(entry.name)) continue;
     const icon = entry.isDirectory() ? "📁" : "📄";
     const entryPath = path.join(dirPath, entry.name);
     const relativePath = path.relative(projectRoot, entryPath).split(path.sep).join("/");
-    if (policy.isDenied(relativePath)) continue;
+    if (!policy.canRead(relativePath)) continue;
     lines.push(`${icon} ${entry.name}`);
   }
 }
 
 export function createListFilesTool(
   projectRoot: string,
-  getAiFileAccessPolicy: AiFileAccessPolicyProvider = () => createAiFileAccessPolicy(projectRoot, []),
+  getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof ListFilesParams> {
   const root = path.resolve(projectRoot);
 
@@ -65,11 +68,11 @@ export function createListFilesTool(
     parameters: ListFilesParams,
     async execute(_toolCallId, params, _signal) {
       const resolved = resolveProjectPath(root, params.path);
-      const policy = getAiFileAccessPolicy();
+      const policy = getPolicy();
 
       if (params.path && params.path !== ".") {
         try {
-          policy.assertReadableByAi(params.path);
+          policy.assertRead(params.path);
         } catch (err) {
           return {
             content: [{ type: "text" as const, text: (err as Error).message }],

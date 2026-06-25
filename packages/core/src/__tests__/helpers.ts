@@ -2,6 +2,11 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { llmAccessPolicy, type AccessPolicy } from "../access/access-policy.js";
+
+export function permissivePolicy(projectRoot: string): () => AccessPolicy {
+  return () => llmAccessPolicy(projectRoot, []);
+}
 
 export async function createTempProject(): Promise<string> {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "wb-test-"));

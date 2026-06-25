@@ -17,10 +17,10 @@ export { ToolContext };
 export function createToolsForProject(
   ctx: ToolContext,
 ): Record<string, AgentTool<any>> {
-  const getPolicy = () => ctx.getAiFileAccessPolicy();
+  const getPolicy = () => ctx.llmPolicy;
   const tools: Record<string, AgentTool<any>> = {
     read_file: createReadFileTool(ctx.root, getPolicy),
-    write_file: createWriteFileTool(ctx.root, ctx.mutex),
+    write_file: createWriteFileTool(ctx.root, ctx.mutex, getPolicy),
     edit_file: createEditFileTool(ctx.root, ctx.mutex, getPolicy),
     list_files: createListFilesTool(ctx.root, getPolicy),
     search_content: createSearchContentTool(ctx.root, getPolicy),

@@ -27,7 +27,6 @@ describe("ProjectConfigStore", () => {
     name: "TestProject",
     created: Date.now(),
     defaultModel: "gemini-2.5-pro",
-    paths: { agents: "agents", index: "AGENTS.md", changelog: "CHANGELOG.md" },
   };
 
   it("writes and reads config", async () => {
@@ -69,7 +68,7 @@ describe("ProjectConfigStore", () => {
     const legacyConfig = { ...VALID_CONFIG };
     delete (legacyConfig as any).id;
     await fs.writeFile(configPath, 
-      `name: LegacyProject\ncreated: 0\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+      `name: LegacyProject\ncreated: 0\ndefaultModel: gemini-2.5-pro\n`,
       "utf-8",
     );
 

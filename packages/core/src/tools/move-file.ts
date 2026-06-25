@@ -3,12 +3,11 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import type { AiFileAccessPolicy } from "../access/ai-file-access.js";
-import { createAiFileAccessPolicy } from "../access/ai-file-access.js";
+import type { AccessPolicy } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
-type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
+type AccessPolicyProvider = () => AccessPolicy;
 
 const MoveFileParams = Type.Object({
   source: Type.String({ description: "Source path relative to project root" }),
@@ -18,7 +17,7 @@ const MoveFileParams = Type.Object({
 export function createMoveFileTool(
   projectRoot: string,
   mutex: FileWriteMutex,
-  getAiFileAccessPolicy: AiFileAccessPolicyProvider = () => createAiFileAccessPolicy(projectRoot, []),
+  getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof MoveFileParams> {
   const root = path.resolve(projectRoot);
 
@@ -30,14 +29,23 @@ export function createMoveFileTool(
     async execute(_toolCallId, params, _signal) {
       const resolvedSource = resolveProjectPath(root, params.source);
       const resolvedDest = resolveProjectPath(root, params.destination);
-      const policy = getAiFileAccessPolicy();
+      const policy = getPolicy();
 
       try {
-        policy.assertReadableByAi(params.source);
+        policy.assertRead(params.source);
       } catch (err) {
         return {
           content: [{ type: "text" as const, text: (err as Error).message }],
           details: { source: params.source, denied: true },
+        };
+      }
+
+      try {
+        getPolicy().assertWrite(params.destination);
+      } catch (err) {
+        return {
+          content: [{ type: "text" as const, text: (err as Error).message }],
+          details: { source: params.source, destination: params.destination, denied: true },
         };
       }
 

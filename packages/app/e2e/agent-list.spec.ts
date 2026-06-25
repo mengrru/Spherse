@@ -17,7 +17,7 @@ async function createProject(agents: Array<{ slug: string; id: string; name: str
   const projectId = Math.random().toString(36).slice(2, 10);
   await writeFile(
     path.join(root, ".spherse", "project.yaml"),
-    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\n`,
   );
   await writeFile(path.join(root, "AGENTS.md"), "# Test\n");
   for (const agent of agents) {

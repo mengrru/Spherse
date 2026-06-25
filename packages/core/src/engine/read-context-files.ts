@@ -1,11 +1,11 @@
 import fs from "node:fs/promises";
-import type { AiFileAccessPolicy } from "../access/ai-file-access.js";
+import type { AccessPolicy } from "../access/access-policy.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
 export async function readContextFiles(
   projectRoot: string,
   contextPaths: string[] | undefined,
-  getAiFileAccessPolicy?: () => AiFileAccessPolicy,
+  getAccessPolicy?: () => AccessPolicy,
 ): Promise<string> {
   if (!contextPaths || contextPaths.length === 0) return "";
 
@@ -18,7 +18,7 @@ export async function readContextFiles(
     } catch {
       continue;
     }
-    if (getAiFileAccessPolicy?.().isDenied(relPath)) {
+    if (getAccessPolicy && !getAccessPolicy().canRead(relPath)) {
       continue;
     }
 

@@ -5,11 +5,6 @@ export interface ProjectConfig {
   name: string;
   created: number;
   defaultModel: string;
-  paths: {
-    agents: string;
-    index: string;
-    changelog: string;
-  };
   aiAccess?: { deniedPaths: string[] };
   welcomePage?: { path: string };
 }

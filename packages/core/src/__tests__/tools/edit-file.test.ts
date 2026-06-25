@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createAiFileAccessPolicy } from "../../access/ai-file-access.js";
+import { llmAccessPolicy } from "../../access/access-policy.js";
 import { createEditFileTool } from "../../tools/edit-file.js";
 import { FileWriteMutex } from "../../utils/file-write-mutex.js";
-import { createTempProject, cleanupDir, writeFile, readFile } from "../helpers.js";
+import { createTempProject, cleanupDir, writeFile, readFile, permissivePolicy } from "../helpers.js";
 
 describe("createEditFileTool", () => {
   let projectRoot: string;
@@ -19,7 +19,7 @@ describe("createEditFileTool", () => {
 
   it("replaces a single occurrence", async () => {
     await writeFile(projectRoot, "code.ts", "const x = 1;\nconst y = 2;");
-    const tool = createEditFileTool(projectRoot, mutex);
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "code.ts", old_string: "const x = 1;", new_string: "const x = 10;" },
@@ -33,7 +33,7 @@ describe("createEditFileTool", () => {
 
   it("deletes text by using empty new_string", async () => {
     await writeFile(projectRoot, "a.txt", "keep thisremove this");
-    const tool = createEditFileTool(projectRoot, mutex);
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
     await tool.execute(
       "tc1",
       { path: "a.txt", old_string: "remove this", new_string: "" },
@@ -44,7 +44,7 @@ describe("createEditFileTool", () => {
 
   it("returns error when old_string not found", async () => {
     await writeFile(projectRoot, "a.txt", "hello");
-    const tool = createEditFileTool(projectRoot, mutex);
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "a.txt", old_string: "not here", new_string: "x" },
@@ -56,7 +56,7 @@ describe("createEditFileTool", () => {
 
   it("returns error when multiple matches without replace_all", async () => {
     await writeFile(projectRoot, "a.txt", "abc abc abc");
-    const tool = createEditFileTool(projectRoot, mutex);
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "a.txt", old_string: "abc", new_string: "x" },
@@ -68,7 +68,7 @@ describe("createEditFileTool", () => {
 
   it("replaces all occurrences when replace_all is true", async () => {
     await writeFile(projectRoot, "a.txt", "abc abc abc");
-    const tool = createEditFileTool(projectRoot, mutex);
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "a.txt", old_string: "abc", new_string: "x", replace_all: true },
@@ -80,7 +80,7 @@ describe("createEditFileTool", () => {
   });
 
   it("returns error for non-existent file", async () => {
-    const tool = createEditFileTool(projectRoot, mutex);
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "nope.txt", old_string: "a", new_string: "b" },
@@ -92,7 +92,7 @@ describe("createEditFileTool", () => {
 
   it("denies blocked paths because it reads before writing", async () => {
     await writeFile(projectRoot, "secrets/key.md", "old secret");
-    const policy = () => createAiFileAccessPolicy(projectRoot, ["secrets"]);
+    const policy = () => llmAccessPolicy(projectRoot, ["secrets"]);
     const tool = createEditFileTool(projectRoot, mutex, policy);
 
     const result = await tool.execute(
@@ -101,12 +101,12 @@ describe("createEditFileTool", () => {
       undefined as any,
     );
 
-    expect(result.content[0].text).toContain("Access denied by AI read settings: secrets/key.md");
+    expect(result.content[0].text).toContain("Access denied");
     expect(await readFile(projectRoot, "secrets/key.md")).toBe("old secret");
   });
 
   it("rejects path traversal", async () => {
-    const tool = createEditFileTool(projectRoot, mutex);
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
     await expect(
       tool.execute("tc1", { path: "../etc/hosts", old_string: "a", new_string: "b" }, undefined as any),
     ).rejects.toThrow("Path traversal denied");

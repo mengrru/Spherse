@@ -17,7 +17,7 @@ async function createFloatingChatProject() {
   const projectId = Math.random().toString(36).slice(2, 10);
   await writeFile(
     path.join(root, ".spherse", "project.yaml"),
-    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+    `id: ${projectId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\n`,
   );
   await writeFile(path.join(root, "AGENTS.md"), "# Test\n");
   await mkdir(path.join(root, ".spherse", "agents", "assistant"), { recursive: true });
@@ -348,7 +348,7 @@ test("switching project clears floating chat", async () => {
   const projectBId = Math.random().toString(36).slice(2, 10);
   await writeFile(
     path.join(projectBRoot, ".spherse", "project.yaml"),
-    `id: ${projectBId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\npaths:\n  agents: agents\n  index: AGENTS.md\n  changelog: CHANGELOG.md\n`,
+    `id: ${projectBId}\nname: Test\ncreated: ${Date.now()}\ndefaultModel: gemini-2.5-pro\n`,
   );
   await writeFile(path.join(projectBRoot, "AGENTS.md"), "# Test\n");
   await mkdir(path.join(projectBRoot, ".spherse", "agents", "assistant"), { recursive: true });

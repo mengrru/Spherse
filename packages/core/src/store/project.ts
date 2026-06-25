@@ -21,12 +21,6 @@ export interface ChangelogEntry {
   description: string;
 }
 
-const DEFAULT_PATHS = {
-  agents: "agents",
-  index: "AGENTS.md",
-  changelog: "CHANGELOG.md",
-};
-
 const DEFAULT_AGENTS_MD = `# 世界观项目
 
 > 此文件是项目的目录索引，供人类和 AI agent 阅读。
@@ -66,7 +60,7 @@ export class ProjectStore {
 
   async create(name: string, defaultModel: string): Promise<void> {
     await fs.mkdir(this.spherseDir, { recursive: true });
-    await fs.mkdir(path.join(this.spherseDir, DEFAULT_PATHS.agents), { recursive: true });
+    await fs.mkdir(path.join(this.spherseDir, "agents"), { recursive: true });
 
     const configPath = path.join(this.spherseDir, "project.yaml");
     this._configStore = new ProjectConfigStore(configPath, this.logger);
@@ -75,7 +69,6 @@ export class ProjectStore {
       name,
       created: Date.now(),
       defaultModel,
-      paths: { ...DEFAULT_PATHS },
     });
 
     this._skillStore = new SkillStore(
@@ -83,17 +76,17 @@ export class ProjectStore {
       PRESET_SKILL_SOURCES,
     );
 
-    const indexPath = path.join(this.rootPath, DEFAULT_PATHS.index);
+    const indexPath = path.join(this.rootPath, "AGENTS.md");
     await fs.writeFile(indexPath, DEFAULT_AGENTS_MD, "utf-8");
 
-    const changelogPath = path.join(this.rootPath, DEFAULT_PATHS.changelog);
+    const changelogPath = path.join(this.rootPath, "CHANGELOG.md");
     await fs.writeFile(changelogPath, "", "utf-8");
 
     this.logger.info({ rootPath: this.rootPath, name }, "project created");
   }
 
   private async loadAgents(): Promise<void> {
-    const agentsDir = path.join(this.spherseDir, this.config.get().paths.agents);
+    const agentsDir = path.join(this.spherseDir, "agents");
     let entries: fsSync.Dirent[];
     try {
       entries = await fs.readdir(agentsDir, { withFileTypes: true });
@@ -160,7 +153,7 @@ export class ProjectStore {
     const dirName = `${slug}-${shortId}`;
     // TODO: 该处可能需要 slug 碰撞检测（查 agents Map + 文件系统），
     //       当前先假设 slug-shortid 不碰撞，后续按需补全
-    const agentDir = path.join(this.spherseDir, this.config.get().paths.agents, dirName);
+    const agentDir = path.join(this.spherseDir, "agents", dirName);
     await fs.mkdir(agentDir, { recursive: true });
     await fs.writeFile(path.join(agentDir, "profile.md"), serialized, "utf-8");
 
@@ -187,26 +180,17 @@ export class ProjectStore {
   }
 
   async readIndex(): Promise<string> {
-    const indexPath = path.join(
-      this.rootPath,
-      this.config.get().paths.index ?? DEFAULT_PATHS.index,
-    );
+    const indexPath = path.join(this.rootPath, "AGENTS.md");
     return fs.readFile(indexPath, "utf-8");
   }
 
   async updateIndex(content: string): Promise<void> {
-    const indexPath = path.join(
-      this.rootPath,
-      this.config.get().paths.index ?? DEFAULT_PATHS.index,
-    );
+    const indexPath = path.join(this.rootPath, "AGENTS.md");
     await fs.writeFile(indexPath, content, "utf-8");
   }
 
   async appendChangelog(entry: ChangelogEntry): Promise<void> {
-    const changelogPath = path.join(
-      this.rootPath,
-      this.config.get().paths.changelog ?? DEFAULT_PATHS.changelog,
-    );
+    const changelogPath = path.join(this.rootPath, "CHANGELOG.md");
     const timestamp = new Date().toISOString();
     const line = `- **[${timestamp}]** ${entry.agent} / ${entry.action} / \`${entry.target}\` — ${entry.description}\n`;
     await fs.appendFile(changelogPath, line, "utf-8");

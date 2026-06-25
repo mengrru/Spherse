@@ -2,11 +2,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+import type { AccessPolicy } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
-type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
+type AccessPolicyProvider = () => AccessPolicy;
 
 const EditFileParams = Type.Object({
   path: Type.String({ description: "Path relative to project root" }),
@@ -18,7 +18,7 @@ const EditFileParams = Type.Object({
 export function createEditFileTool(
   projectRoot: string,
   mutex: FileWriteMutex,
-  getAiFileAccessPolicy: AiFileAccessPolicyProvider = () => createAiFileAccessPolicy(projectRoot, []),
+  getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof EditFileParams> {
   const root = path.resolve(projectRoot);
 
@@ -32,7 +32,16 @@ export function createEditFileTool(
     async execute(_toolCallId, params, _signal) {
       const resolved = resolveProjectPath(root, params.path);
       try {
-        getAiFileAccessPolicy().assertReadableByAi(params.path);
+        getPolicy().assertRead(params.path);
+      } catch (err) {
+        return {
+          content: [{ type: "text" as const, text: (err as Error).message }],
+          details: { path: params.path, denied: true },
+        };
+      }
+
+      try {
+        getPolicy().assertWrite(params.path);
       } catch (err) {
         return {
           content: [{ type: "text" as const, text: (err as Error).message }],

@@ -35,17 +35,13 @@ project-root/
 name: My World
 created: 1760000000000
 defaultModel: glm-4.5-air
-paths:
-  agents: agents
-  index: AGENTS.md
-  changelog: CHANGELOG.md
 welcomePage:
   path: welcome.html
 ```
 
-`paths.agents` 相对 `.spherse/`，当前默认 agent 定义目录为 `.spherse/agents/`。`paths.index` 和 `paths.changelog` 相对项目根目录。
+特殊文件路径（`AGENTS.md`、`CHANGELOG.md`、`.spherse/agents/` 等）由 `@spherse/core` 的 `access/path-category.ts` 中 `PATH_PATTERNS` 常量固定，不可配置。
 
-可选字段 `aiAccess.deniedPaths` 是项目相对路径数组，用于限制 AI 工具读取文件内容或暴露目录内容。路径使用 `/` 分隔，不允许路径穿越，不允许加入 `AGENTS.md`、`CHANGELOG.md`、`.spherse` 或 `.spherse/**`。
+可选字段 `aiAccess.deniedPaths` 是项目相对路径数组，用于同时禁止 AI 工具读取和写入这些路径。路径使用 `/` 分隔，不允许路径穿越，不允许加入 `AGENTS.md`、`CHANGELOG.md` 或 `.spherse` 下任何路径（这些由 access policy 白名单控制）。
 
 可选字段 `welcomePage.path` 是项目相对路径字符串，用于在项目根路由展示用户自定义欢迎页。路径使用 `/` 分隔，不允许路径穿越，不允许 `.spherse` 或 `.spherse/**`，支持扩展名 `html`、`htm`、`png`、`jpg`、`jpeg`、`gif`、`webp`、`svg`。保存配置时不要求文件已经存在；渲染时如果预览接口返回 403/404 或请求失败，前端回退到默认空状态。
 
@@ -147,6 +143,7 @@ Full skill instructions in Markdown...
 - 创作内容使用项目根目录下的普通文件，优先使用 Markdown/YAML/HTML 等人类可读格式
 - 内容浏览 API 会过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir，避免系统文件进入常规创作视图
 - 文件读取、写入、删除、新建文件、新建目录都必须做 `path.resolve` 后的项目根目录边界校验
+- AI 工具（read_file/write_file/edit_file/list_files/search_content/move_file/copy_file/render_card）和 server 通用路由（content/preview/images）的读写权限由 `@spherse/core` 的 access policy 统一管理：`categorizePath` 将路径分类为语义 category，`llmAccessPolicy`/`serverAccessPolicy` 基于 category 白名单控制读写范围
 - 会写文件的 agent tools 共享 `FileWriteMutex`，避免同一文件并发写覆盖
 
 ## HTML Card

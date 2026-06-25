@@ -2,10 +2,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { createAiFileAccessPolicy, type AiFileAccessPolicy } from "../access/ai-file-access.js";
+import type { AccessPolicy } from "../access/access-policy.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
-type AiFileAccessPolicyProvider = () => AiFileAccessPolicy;
+type AccessPolicyProvider = () => AccessPolicy;
 
 const RenderCardParams = Type.Object({
   type: Type.Literal("html", { description: "Card type" }),
@@ -20,7 +20,7 @@ const RenderCardParams = Type.Object({
 
 export function createRenderCardTool(
   projectRoot: string,
-  getAiFileAccessPolicy: AiFileAccessPolicyProvider = () => createAiFileAccessPolicy(projectRoot, []),
+  getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof RenderCardParams> {
   const root = path.resolve(projectRoot);
 
@@ -36,7 +36,7 @@ export function createRenderCardTool(
       if (params.file_path) {
         const resolved = resolveProjectPath(root, params.file_path);
         try {
-          getAiFileAccessPolicy().assertReadableByAi(params.file_path);
+          getPolicy().assertRead(params.file_path);
         } catch (err) {
           return {
             content: [{ type: "text" as const, text: (err as Error).message }],
