@@ -119,7 +119,7 @@ spherse/
 │       │       ├── ws-chat.ts            # WebSocket 对话流（/ws/projects/:projectId/chat/...，双向 session-scoped）
 │       │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，schedule/fs-watch/debug 按 projectId×channel 订阅）
 │       │       └── lib/
-│       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）
+│       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
 │   └── app/                          # @spherse/app — Electron + React
 │       ├── electron/
 │       │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main

@@ -1,12 +1,19 @@
 import fs from "node:fs";
-import { PROJECT_META_DIR } from "@spherse/core";
+import { categorizePath } from "@spherse/core";
+import type { PathCategory } from "@spherse/core";
 
-const THEME_CSS = `${PROJECT_META_DIR}/theme.css`;
+const WATCHED_CATEGORIES: ReadonlySet<PathCategory> = new Set([
+  "userFiles",
+  "rootIndex",
+  "changelog",
+  "projectTheme",
+  "agentTheme",
+]);
 
 function shouldReport(filename: string): boolean {
-  if (!filename.startsWith(PROJECT_META_DIR)) return true;
-  const normalized = filename.replace(/\\/g, "/");
-  return normalized === THEME_CSS;
+  const segs = filename.replace(/\\/g, "/").split("/");
+  if (segs.includes("node_modules") || segs.includes(".git")) return false;
+  return WATCHED_CATEGORIES.has(categorizePath(filename));
 }
 
 export type FsWatchListener = (

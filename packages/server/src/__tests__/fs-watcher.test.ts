@@ -120,7 +120,7 @@ describe("ProjectFsWatcher", () => {
     expect(listenerB).toHaveBeenCalledTimes(1);
   });
 
-  it("invokes all listeners on change, filters .spherse/ except theme.css", () => {
+  it("invokes all listeners on change, reports userFiles and theme categories", () => {
     const listenerA = vi.fn();
     const listenerB = vi.fn();
 
@@ -142,6 +142,33 @@ describe("ProjectFsWatcher", () => {
       eventType: "rename",
       path: ".spherse/theme.css",
     });
+  });
+
+  it("applies watch policy per path category and denoises node_modules/.git", () => {
+    const listener = vi.fn();
+    acquireFsWatch("/proj", "p1", listener);
+
+    const cases: Array<{ filename: string; reported: boolean }> = [
+      { filename: "lore/timeline.md", reported: true }, // userFiles
+      { filename: "AGENTS.md", reported: true }, // rootIndex
+      { filename: "CHANGELOG.md", reported: true }, // changelog
+      { filename: ".spherse/theme.css", reported: true }, // projectTheme
+      { filename: ".spherse/agents/bot/theme.css", reported: true }, // agentTheme
+      { filename: ".spherse/project.yaml", reported: false }, // projectConfig
+      { filename: ".spherse/agents/bot/profile.md", reported: false }, // agentProfile
+      { filename: "node_modules/pkg/index.js", reported: false }, // denoise top-level
+      { filename: "packages/app/node_modules/x", reported: false }, // denoise nested
+      { filename: ".git/config", reported: false }, // denoise .git
+    ];
+
+    for (const { filename, reported } of cases) {
+      const before = listener.mock.calls.length;
+      mock.fake.trigger("change", filename);
+      const delta = listener.mock.calls.length - before;
+      expect(delta, `${filename} should be ${reported ? "reported" : "ignored"}`).toBe(
+        reported ? 1 : 0,
+      );
+    }
   });
 
   it("cleans up on async watcher error event", () => {
