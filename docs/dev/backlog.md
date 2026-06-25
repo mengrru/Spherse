@@ -51,7 +51,7 @@
 - [x] **增加 edit file tool**：为 agent 提供编辑文件的工具（字符串替换模式：old_string + new_string）
 - [x] **Agent context 预注入**：agent profile 的 `context` 字段指定文件列表，buildAgent 时读取这些文件内容注入 systemPrompt，使 agent 从第一轮对话起就了解相关上下文
 - [ ] **Agent 编辑 UI 增强**：改善 agent 编辑界面的用户体验和功能
-- [ ] **内置 Agent 模板**：提供多个内置 agent profile 模板（世界观构建者、角色设计、历史记录员等），创建 Agent 时可选择模板快速开始
+- [x] **内置 Agent 模板**：提供多个内置 agent profile 模板（世界观构建者、角色设计、历史记录员等），创建 Agent 时可选择模板快速开始（一期实现 prompt 模板徽章载入：世界观创作助手、角色扮演）
 - [ ] **内置 Skill：Card 生成 Skill 的 Skill**：提供内置 skill，用于制作 card 生成类 skill
 - [ ] **内置 Skill：主题制作 Skill**：提供内置 skill，用于制作自定义主题
 - [x] **内置 skill 真内置化**：将 preset skill 从 per-project 注入改为 app 内置只读（builtin skill 通过 SkillStore 内存合并；启用 use-ui-sdk）

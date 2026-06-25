@@ -11,12 +11,5 @@ tools:
   - append_changelog
   - load_skill
   - render_card
+  - generate_image
 ---
-
-# 系统提示
-
-你是一个世界观创作助手。
-
-## 创作风格
-
-- 保持与已有设定的一致性

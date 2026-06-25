@@ -112,6 +112,20 @@ export const zhCN = {
   "agent-dialog.tabBasic": "基本",
   // Agent dialog "主题" 标签页标题
   "agent-dialog.tabTheme": "主题",
+  // Agent dialog 提示词模板行标签（预留，当前 UI 未强制展示）
+  "agent-dialog.templateLabel": "模板",
+  // 预制提示词模板：世界观创作助手 badge 文案
+  "agent-dialog.template.worldview-assistant": "世界观创作助手",
+  // 预制提示词模板：角色扮演 badge 文案
+  "agent-dialog.template.roleplay": "角色扮演",
+  // 提示词非空时点击模板的确认弹窗标题
+  "agent-dialog.templateConfirmTitle": "应用模板",
+  // 确认弹窗正文：提示将覆盖当前提示词
+  "agent-dialog.templateConfirmDesc": "应用模板将覆盖当前提示词内容，是否继续？",
+  // 确认弹窗「应用」按钮
+  "agent-dialog.templateConfirmApply": "应用",
+  // 确认弹窗「取消」按钮
+  "agent-dialog.templateConfirmCancel": "取消",
 
   // --- Agent Session List ---
   // 新建对话按钮文案

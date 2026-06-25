@@ -166,14 +166,15 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
 内置模板与预置内容由 `packages/presets/` 维护。构建前执行 `scripts/sync-templates.mjs` 完成以下同步：
 
 1. 将 `templates/*.md` 和 `templates/*.css` 同步为 TypeScript 常量（`AGENT_TEMPLATE`、`AGENT_THEME_TEMPLATE`）
-2. 读取 `presets.json` 生成 `PRESET_SKILLS` 和 `PRESET_AGENTS` 常量（声明预置 skill 列表和预置 agent 列表）
+2. 读取 `presets.json` 生成 `PRESET_SKILLS`、`PRESET_AGENTS` 和 `PRESET_PROMPT_TEMPLATES` 常量（分别声明预置 skill 列表、预置 agent 列表和预置 prompt template 列表）
 3. 递归读取 `skills/` 下声明的预置 skill 目录，生成 `PRESET_SKILL_SOURCES` 常量（包含每个 skill 的完整文件内容）
+4. 读取 `templates/prompt-templates/<id>.md` 的正文，合并到 `PRESET_PROMPT_TEMPLATES` 每个条目的 `prompt` 字段
 
-如果 `presets.json` 声明的 skill dir 在 `skills/` 下不存在，构建时报错退出。
+如果 `presets.json` 声明的 skill dir 在 `skills/` 下不存在，或 `presetPromptTemplates` 声明的 `id` 在 `templates/prompt-templates/` 下没有对应 `.md`，构建时报错退出。
 
 ### presets.json 格式
 
-`packages/presets/presets.json` 声明新项目创建时注入的预置内容：
+`packages/presets/presets.json` 声明预置内容，包含两类：新项目创建时注入的内容（`presetSkills`、`presetAgents`）和供 UI 直接消费的内容（`presetPromptTemplates`，由 Agent 创建对话框作为可复用 prompt 模板徽章展示，不参与项目创建注入）：
 
 ```json
 {
@@ -184,6 +185,10 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
   ],
   "presetAgents": [
     { "name": "世界观创作", "slug": "world-building" }
+  ],
+  "presetPromptTemplates": [
+    { "id": "worldview-assistant", "name": "世界观创作助手" },
+    { "id": "roleplay", "name": "角色扮演" }
   ]
 }
 ```
@@ -191,6 +196,8 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
 - `presetSkills[].dir`：对应 `packages/presets/skills/` 下的目录名，该目录内容会被打包为 builtin skill 源码（`PRESET_SKILL_SOURCES`），由 `SkillStore` 在运行时内存合并（source 为 `builtin`），不复制到项目的 `.spherse/skills/`
 - `presetAgents[].name`：预置 agent 的展示名称，会通过 `AGENT_TEMPLATE` 模板生成 profile.md
 - `presetAgents[].slug`：预置 agent 的目录 slug 前缀
+- `presetPromptTemplates[].id`：对应 `packages/presets/templates/prompt-templates/<id>.md` 文件名（不含扩展名），该文件正文作为 prompt 内容合并到 `PRESET_PROMPT_TEMPLATES` 的 `prompt` 字段；构建时缺失对应文件会报错
+- `presetPromptTemplates[].name`：prompt template 在 Agent 创建对话框徽章上展示的名称
 
 ### 预置内容注入
 

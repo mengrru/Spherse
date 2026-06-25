@@ -49,10 +49,11 @@ spherse/
 │   │       ├── __tests__/            # Vitest 单元测试
 │   │       └── index.ts              # 公开导出：ProjectRuntime, createProject, types
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
-│   │   ├── presets.json              # 预置 skill 与 agent 声明配置
+│   │   ├── presets.json              # 预置 skill、agent 与 prompt template 声明配置
 │   │   ├── templates/
 │   │   │   ├── agent-template.md     # 新 Agent 创建模板源文件
-│   │   │   └── agent-theme-template.css # Agent 聊天窗口主题模板源文件
+│   │   │   ├── agent-theme-template.css # Agent 聊天窗口主题模板源文件
+│   │   │   └── prompt-templates/     # 预置 prompt template 源文件（<id>.md，由 presets.json 的 presetPromptTemplates 声明）
     │   │   ├── skills/                   # 内置 skill 源（app 内置只读，通过 SkillStore 内存合并；新项目不再注入到 .spherse/skills/）
 │   │   │   ├── create-ui-theme/      # 自定义 UI 主题创建指南
 │   │   │   │   └── SKILL.md
@@ -69,8 +70,9 @@ spherse/
 │   │       │   ├── agent-template.ts
 │   │       │   ├── agent-theme-template.ts
 │   │       │   ├── presets.ts        # PRESET_SKILLS, PRESET_AGENTS 常量
-│   │       │   └── preset-skills.ts  # PRESET_SKILL_SOURCES 常量
-│   │       └── index.ts              # 公开导出：模板内容 + 预置 skill/agent 配置
+│   │       │   ├── preset-skills.ts  # PRESET_SKILL_SOURCES 常量
+│   │       │   └── prompt-templates.ts # PRESET_PROMPT_TEMPLATES 常量（{ id, name, prompt }）
+│   │       └── index.ts              # 公开导出：模板内容 + 预置 skill/agent/prompt template 配置
 │   ├── i18n/                         # @spherse/i18n — 纯 TS i18n 基础设施
 │   │   ├── scripts/
 │   │   │   └── check-i18n.mjs        # locale key 一致性校验脚本

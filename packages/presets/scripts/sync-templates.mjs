@@ -38,6 +38,20 @@ export const PRESET_AGENTS = ${JSON.stringify(presetsConfig.presetAgents, null, 
 writeFileSync(join(generatedDir, "presets.ts"), presetsTsContent, "utf-8");
 console.log("synced: presets.json → src/generated/presets.ts (PRESET_SKILLS, PRESET_AGENTS)");
 
+const promptTemplatesDir = join(templatesDir, "prompt-templates");
+const presetPromptTemplates = presetsConfig.presetPromptTemplates.map((tpl) => {
+  const filePath = join(promptTemplatesDir, `${tpl.id}.md`);
+  if (!existsSync(filePath)) {
+    console.error(`preset prompt template not found: ${tpl.id}.md`);
+    process.exit(1);
+  }
+  return { id: tpl.id, name: tpl.name, prompt: readFileSync(filePath, "utf-8") };
+});
+
+const promptTemplatesTsContent = `export const PRESET_PROMPT_TEMPLATES = ${JSON.stringify(presetPromptTemplates, null, 2)} as const;\n`;
+writeFileSync(join(generatedDir, "prompt-templates.ts"), promptTemplatesTsContent, "utf-8");
+console.log("synced: prompt templates → src/generated/prompt-templates.ts (PRESET_PROMPT_TEMPLATES)");
+
 function readDirRecursive(dir, base) {
   const entries = readdirSync(dir, { withFileTypes: true });
   const files = [];

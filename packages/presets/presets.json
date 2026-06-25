@@ -6,5 +6,9 @@
   ],
   "presetAgents": [
     { "name": "世界观创作", "slug": "world-building" }
+  ],
+  "presetPromptTemplates": [
+    { "id": "worldview-assistant", "name": "世界观创作助手" },
+    { "id": "roleplay", "name": "角色扮演" }
   ]
 }

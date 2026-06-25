@@ -71,4 +71,32 @@ describe("sync-templates", () => {
     expect(content).toContain("export const AGENT_TEMPLATE");
     expect(content).toContain("name: ");
   });
+
+  it("generates prompt-templates.ts with PRESET_PROMPT_TEMPLATES matching presets.json", async () => {
+    const content = fs.readFileSync(
+      path.join(generatedDir, "prompt-templates.ts"),
+      "utf-8",
+    );
+    expect(content).toContain("export const PRESET_PROMPT_TEMPLATES");
+
+    const { PRESET_PROMPT_TEMPLATES } = await import(
+      "../src/generated/prompt-templates.js"
+    );
+
+    const declared = presetsConfig.presetPromptTemplates;
+    expect(PRESET_PROMPT_TEMPLATES.length).toBe(declared.length);
+
+    const ids = declared.map((t) => t.id);
+    expect(new Set(ids).size).toBe(ids.length);
+
+    for (const tpl of PRESET_PROMPT_TEMPLATES) {
+      const declaredTpl = declared.find((d) => d.id === tpl.id);
+      expect(declaredTpl).toBeDefined();
+      expect(tpl.name).toBe(declaredTpl.name);
+      const mdPath = path.join(rootDir, "templates", "prompt-templates", `${tpl.id}.md`);
+      expect(fs.existsSync(mdPath)).toBe(true);
+      const actual = fs.readFileSync(mdPath, "utf-8");
+      expect(tpl.prompt).toBe(actual);
+    }
+  });
 });

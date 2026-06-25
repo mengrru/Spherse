@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { AGENT_TEMPLATE, AGENT_THEME_TEMPLATE } from "@spherse/presets";
+import { AGENT_TEMPLATE, AGENT_THEME_TEMPLATE, PRESET_PROMPT_TEMPLATES } from "@spherse/presets";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import { useI18n } from "@spherse/i18n/react";
 import { parseAgentMarkdown, buildAgentMarkdown } from "../../lib/agent-markdown";
@@ -14,6 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../components/ui/alert-dialog";
 import { Field, FieldGroup, FieldLabel } from "../../components/ui/field";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
@@ -32,6 +42,8 @@ interface AgentDialogProps {
   onCancel: () => void;
 }
 
+type PromptTemplate = (typeof PRESET_PROMPT_TEMPLATES)[number];
+
 export function AgentDialog({ mode, initialContent, initialThemeContent, onSubmit, onCancel }: AgentDialogProps) {
   const { t } = useI18n();
   const raw = initialContent ?? AGENT_TEMPLATE;
@@ -40,6 +52,22 @@ export function AgentDialog({ mode, initialContent, initialThemeContent, onSubmi
   const [themeContent, setThemeContent] = useState(initialThemeContent ?? AGENT_THEME_TEMPLATE);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmTemplate, setConfirmTemplate] = useState<PromptTemplate | null>(null);
+
+  const handleSelectTemplate = (template: PromptTemplate) => {
+    if (formData.systemPrompt.trim() === "") {
+      setFormData((prev) => ({ ...prev, systemPrompt: template.prompt }));
+    } else {
+      setConfirmTemplate(template);
+    }
+  };
+
+  const applyTemplate = () => {
+    if (confirmTemplate) {
+      setFormData((prev) => ({ ...prev, systemPrompt: confirmTemplate.prompt }));
+      setConfirmTemplate(null);
+    }
+  };
 
   const addContext = (path: string) => {
     if (!formData.context.includes(path)) {
@@ -111,6 +139,7 @@ export function AgentDialog({ mode, initialContent, initialThemeContent, onSubmi
                   onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}
                   spellCheck={false}
                 />
+                <PromptTemplatePicker onSelect={handleSelectTemplate} />
               </Field>
               {error && <p className="text-xs text-destructive">{error}</p>}
             </FieldGroup>
@@ -135,6 +164,22 @@ export function AgentDialog({ mode, initialContent, initialThemeContent, onSubmi
             {saving ? t("common.saving") : mode === "create" ? t("common.create") : t("common.save")}
           </Button>
         </DialogFooter>
+        <AlertDialog open={confirmTemplate !== null} onOpenChange={(open) => { if (!open) setConfirmTemplate(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("agent-dialog.templateConfirmTitle")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("agent-dialog.templateConfirmDesc")}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                {t("agent-dialog.templateConfirmCancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={applyTemplate}>
+                {t("agent-dialog.templateConfirmApply")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );
@@ -208,5 +253,18 @@ function ContextPathField({
         placeholder={t("agent-dialog.refsPlaceholder")}
       />
     </Field>
+  );
+}
+
+function PromptTemplatePicker({ onSelect }: { onSelect: (template: PromptTemplate) => void }) {
+  const { t } = useI18n();
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {PRESET_PROMPT_TEMPLATES.map((tpl) => (
+        <Button key={tpl.id} type="button" variant="outline" size="sm" onClick={() => onSelect(tpl)}>
+          {t(`agent-dialog.template.${tpl.id}`)}
+        </Button>
+      ))}
+    </div>
   );
 }
