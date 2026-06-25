@@ -1,27 +1,46 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import type { ApiClient } from "../../../lib/api";
-import { scopeCss } from "../../../lib/scope-css";
+import { useBusSubscription } from "../../../hooks/useBusSubscription";
 
-export function useAgentTheme(client: ApiClient | undefined, agentId: string | undefined) {
-  const [scopedCss, setScopedCss] = useState<string | null>(null);
+export function useAgentTheme(
+  client: ApiClient | undefined,
+  agentId: string | undefined,
+  projectId: string | undefined,
+) {
+  const [themeCss, setThemeCss] = useState<string | null>(null);
+  const reqIdRef = useRef(0);
 
-  useEffect(() => {
+  const loadTheme = useCallback(() => {
     if (!client || !agentId) return;
-
-    let cancelled = false;
+    const reqId = ++reqIdRef.current;
     client.getAgentTheme(agentId).then((css) => {
-      if (cancelled) return;
-      if (css.trim()) {
-        setScopedCss(scopeCss(css, "[data-chat-root]"));
-      } else {
-        setScopedCss(null);
-      }
+      if (reqId !== reqIdRef.current) return;
+      setThemeCss(css.trim() ? css : null);
     });
-
-    return () => {
-      cancelled = true;
-    };
   }, [client, agentId]);
 
-  return scopedCss;
+  useEffect(() => {
+    loadTheme();
+  }, [loadTheme]);
+
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useBusSubscription(projectId ?? "", "fs-watch", (_type, payload) => {
+    if (!client || !agentId) return;
+    const changedPath = (payload as { path?: string } | null)?.path?.replace(/\\/g, "/");
+    if (!changedPath || !changedPath.includes("agents/") || !changedPath.endsWith("theme.css")) return;
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      loadTheme();
+    }, 250);
+  });
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return themeCss;
 }

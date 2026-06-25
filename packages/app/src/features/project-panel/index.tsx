@@ -50,7 +50,7 @@ export function ProjectPanel() {
       })}
     >
       <div className="h-full">
-        <aside className="flex h-full w-65 shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r border-border bg-sidebar">
+        <aside data-project-panel className="flex h-full w-65 shrink-0 flex-col overflow-y-auto overflow-x-hidden border-r border-border bg-sidebar">
           <SidebarProvider className="min-h-0 w-full">
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="border-b border-sidebar-border p-2">

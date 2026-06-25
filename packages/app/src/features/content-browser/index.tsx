@@ -56,7 +56,7 @@ export function ContentBrowser({
   const isEditable = !isImage;
 
   return (
-    <div className="flex flex-col h-full">
+    <div data-content-browser className="flex flex-col h-full">
       <Header
         filePath={filePath}
         isDirty={editor.isDirty}

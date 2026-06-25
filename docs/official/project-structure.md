@@ -164,9 +164,8 @@ spherse/
 │           │   ├── avatar-color.ts   # 项目头像颜色生成（路径 hash → HSL）
 │           │   ├── context.ts        # AppContext 定义
 │           │   ├── events.ts         # renderer 内部自定义事件名常量
-│           │   ├── project-key.ts    # project path → URL projectKey 生成
-│           │   ├── scope-css.ts      # CSS 选择器作用域前缀工具（agent chat/floating theme）
-│           │   ├── tool-registry.ts  # 前端 tool call 展示元数据
+    │           │   ├── project-key.ts    # project path → URL projectKey 生成
+    │           │   ├── tool-registry.ts  # 前端 tool call 展示元数据
 │           │   ├── types.ts          # 前端类型
 │           │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界）
 │           │   └── utils.ts          # shadcn/ui cn() 工具

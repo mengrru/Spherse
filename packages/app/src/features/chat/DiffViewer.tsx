@@ -50,7 +50,7 @@ export function DiffViewer({ oldString, newString }: DiffViewerProps) {
                 key={i}
                 className={
                   line.type === "added"
-                    ? `${lineBase} bg-agent-diff-added/10`
+                    ? `${lineBase} bg-diff-added/10`
                     : lineBase
                 }
               >

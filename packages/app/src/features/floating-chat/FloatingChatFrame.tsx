@@ -72,6 +72,7 @@ export function FloatingChatFrame({
         <span className="text-xs font-medium truncate">{title}</span>
         <div className="ml-auto">
           <button
+            data-chat-float-close
             onClick={onClose}
             className="inline-flex h-5 w-5 items-center justify-center rounded-sm hover:bg-muted-foreground/10"
             aria-label={t("common.close")}

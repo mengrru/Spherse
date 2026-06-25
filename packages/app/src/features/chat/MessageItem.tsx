@@ -24,6 +24,7 @@ export function MessageItem({ message, agent, onNavigateToPath }: MessageItemPro
       data-role={message.role}
     >
       <div
+        data-chat-bubble
         className={`min-w-0 overflow-hidden rounded-lg px-3.5 py-2.5 leading-7 break-words ${
           isUser
             ? "bg-primary text-primary-foreground"

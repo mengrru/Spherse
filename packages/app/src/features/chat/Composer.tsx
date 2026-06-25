@@ -83,7 +83,7 @@ export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProp
 
   return (
     <div className="border-t border-border bg-background p-3" data-chat-composer>
-      <div className="relative rounded-lg border border-input bg-background transition-colors focus-within:border-ring">
+      <div className="relative rounded-lg border border-input bg-background transition-colors focus-within:border-ring" data-chat-composer-input>
         <Textarea
           ref={textareaRef}
           className="min-h-0 w-full resize-none border-none bg-transparent py-2 pr-12 pl-3 text-sm leading-5 shadow-none focus-visible:ring-0"

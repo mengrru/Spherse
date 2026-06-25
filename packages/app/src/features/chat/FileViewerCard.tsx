@@ -64,7 +64,7 @@ export function FileViewerCard({
   const isCreated = change.ops.every((op) => op.toolName === "write_file")
   const statusKey = isCreated ? "viewer-card.created" : "viewer-card.modified"
   const statusClass = isCreated
-    ? "border-transparent bg-agent-diff-added/20 text-agent-diff-added"
+    ? "border-transparent bg-diff-added/20 text-diff-added"
     : "border-transparent bg-accent text-accent-foreground"
 
   const pathNode = onNavigateToPath ? (

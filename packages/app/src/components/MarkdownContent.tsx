@@ -30,13 +30,13 @@ const DOCUMENT_COMPONENTS: Components = {
     <li className={cn("mb-1", className)} {...props} />
   ),
   code: ({ className, ...props }) => (
-    <code className={cn("rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]", className)} {...props} />
+    <code data-md-code-inline className={cn("rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]", className)} {...props} />
   ),
   pre: ({ className, ...props }) => (
-    <pre className={cn("mb-3 p-3 overflow-x-auto rounded-md bg-muted font-mono text-xs", className)} {...props} />
+    <pre data-md-code className={cn("mb-3 p-3 overflow-x-auto rounded-md bg-muted font-mono text-xs", className)} {...props} />
   ),
   blockquote: ({ className, ...props }) => (
-    <blockquote className={cn("mb-3 rounded-r border-l-4 border-border bg-muted/50 pl-3 text-foreground/80 text-[13px] italic", className)} {...props} />
+    <blockquote data-md-quote className={cn("mb-3 rounded-r border-l-4 border-border bg-muted/50 pl-3 text-foreground/80 text-[13px] italic", className)} {...props} />
   ),
   table: ({ className, ...props }) => (
     <div className="mb-3 overflow-x-auto">
@@ -77,13 +77,13 @@ const CHAT_COMPONENTS: Components = {
     <li className={cn("mb-1", className)} {...props} />
   ),
   code: ({ className, ...props }) => (
-    <code className={cn("rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]", className)} {...props} />
+    <code data-md-code-inline className={cn("rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]", className)} {...props} />
   ),
   pre: ({ className, ...props }) => (
-    <pre className={cn("mb-2 p-2 overflow-x-auto rounded-md bg-muted font-mono text-xs", className)} {...props} />
+    <pre data-md-code className={cn("mb-2 p-2 overflow-x-auto rounded-md bg-muted font-mono text-xs", className)} {...props} />
   ),
   blockquote: ({ className, ...props }) => (
-    <blockquote className={cn("mb-3 rounded-r border-l-4 border-border bg-muted/50 pl-3 text-foreground/80 text-[13px] italic", className)} {...props} />
+    <blockquote data-md-quote className={cn("mb-3 rounded-r border-l-4 border-border bg-muted/50 pl-3 text-foreground/80 text-[13px] italic", className)} {...props} />
   ),
   table: ({ className, ...props }) => (
     <div className="mb-3 overflow-x-auto">

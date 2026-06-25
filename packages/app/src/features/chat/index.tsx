@@ -27,7 +27,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     initialMessage,
   });
   const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId);
-  const scopedThemeCss = useAgentTheme(client, agent.id);
+  const themeCss = useAgentTheme(client, agent.id, projectId);
 
   const handleClose = () => {
     onClose?.();
@@ -35,7 +35,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
 
   return (
     <div className="flex flex-col h-full" data-chat-root>
-      {scopedThemeCss && <style>{scopedThemeCss}</style>}
+      {themeCss && <style>{themeCss}</style>}
       {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
       <MessageList
         messages={messages}

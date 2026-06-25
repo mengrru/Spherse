@@ -59,7 +59,7 @@ export function Header({
             setTimeout(() => setCopied(false), 1500);
           }}
         >
-          {copied ? <CheckIcon className="text-agent-success" /> : <CopyIcon />}
+          {copied ? <CheckIcon className="text-success" /> : <CopyIcon />}
         </Button>
         {!isEditing && (
           <Button variant="ghost" size="icon-sm" className="shrink-0 opacity-0 transition-opacity group-hover/header:opacity-100" onClick={onRefresh} title={t("content-browser.refresh")}>

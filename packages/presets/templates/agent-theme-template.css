@@ -1,94 +1,125 @@
 /* Agent 聊天窗口主题模板 */
-/* 取消注释并修改下方规则来自定义外观，保存后在该 Agent 的聊天窗口生效 */
-/* 注意：主题会自动作用于当前聊天窗口，不要再手动包裹 [data-chat-root] */
+/* 取消注释并修改下方规则来自定义外观，保存后会自动重载（无需重开聊天窗口） */
+/* 写法：原生 CSS nesting。所有规则嵌套在最外层 [data-chat-root] { ... } 内，
+   作用域天然限定在当前聊天窗口（inline 与 floating 同时生效）。 */
+/* 暗色适配：在 [data-chat-root] 内嵌套 @media (prefers-color-scheme: dark) 即可，
+   自动跟随 OS 偏好，不会污染全局。 */
 
-/* === 聊天窗口基础颜色 === */
-/* --shadcn-background: #0c0b12; */
-/* --shadcn-foreground: #e2ddd4; */
-/* --shadcn-primary: #c9a04a; */
-/* --shadcn-primary-foreground: #0c0b12; */
-/* --shadcn-card: rgba(18, 17, 28, 0.88); */
-/* --shadcn-card-foreground: #e2ddd4; */
-/* --shadcn-border: rgba(201, 160, 74, 0.12); */
-/* --shadcn-muted: rgba(255, 255, 255, 0.04); */
-/* --shadcn-muted-foreground: #7a7a8a; */
-/* --shadcn-input: rgba(93, 169, 179, 0.2); */
-/* --shadcn-ring: rgba(201, 160, 74, 0.4); */
+/* [data-chat-root] { */
 
-/* === 聊天窗口背景 === */
-/* 背景渐变或图片请写成一行 background，避免被作用域处理拆分 */
-/* background: radial-gradient(ellipse at 20% 50%, rgba(201, 160, 74, 0.04) 0%, transparent 50%), linear-gradient(180deg, #0c0b12 0%, #11101a 50%, #0e0d16 100%); */
-/* background: url('https://example.com/bg.jpg') center / cover no-repeat; */
+  /* === 聊天窗口基础颜色 === */
+  /* --sp-background: #0c0b12; */
+  /* --sp-foreground: #e2ddd4; */
+  /* --sp-primary: #c9a04a; */
+  /* --sp-primary-foreground: #0c0b12; */
+  /* --sp-card: rgba(18, 17, 28, 0.88); */
+  /* --sp-card-foreground: #e2ddd4; */
+  /* --sp-border: rgba(201, 160, 74, 0.12); */
+  /* --sp-muted: rgba(255, 255, 255, 0.04); */
+  /* --sp-muted-foreground: #7a7a8a; */
+  /* --sp-input: rgba(93, 169, 179, 0.2); */
+  /* --sp-ring: rgba(201, 160, 74, 0.4); */
 
-/* === 聊天 Header === */
-/* [data-chat-header] { */
-/*   color: #e2ddd4; */
-/*   background: rgba(12, 11, 18, 0.92); */
-/*   border-color: rgba(201, 160, 74, 0.12); */
+  /* === 聊天窗口背景（渐变/图片写在根块内） === */
+  /* background: radial-gradient(ellipse at 20% 50%, rgba(201, 160, 74, 0.04) 0%, transparent 50%), linear-gradient(180deg, #0c0b12 0%, #11101a 50%, #0e0d16 100%); */
+  /* background: url('https://example.com/bg.jpg') center / cover no-repeat; */
+
+  /* === 聊天 Header === */
+  /* [data-chat-header] { */
+  /*   color: #e2ddd4; */
+  /*   background: rgba(12, 11, 18, 0.92); */
+  /*   border-color: rgba(201, 160, 74, 0.12); */
+  /* } */
+
+  /* === 助手头像（纯 CSS 伪元素） === */
+  /* [data-chat-message][data-role="assistant"] { */
+  /*   position: relative; */
+  /* } */
+  /* [data-chat-message][data-role="assistant"]::before { */
+  /*   content: ''; */
+  /*   display: block; */
+  /*   width: 36px; */
+  /*   height: 36px; */
+  /*   margin-right: 8px; */
+  /*   flex-shrink: 0; */
+  /*   border-radius: 50%; */
+  /*   background: radial-gradient(circle at 40% 35%, #e2c87a 0%, #c9a04a 40%, #8a6a2a 100%); */
+  /*   box-shadow: 0 0 12px rgba(201, 160, 74, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.3); */
+  /* } */
+
+  /* === 消息气泡（用 data-chat-bubble 选气泡，不要用 > div 位置选择器） === */
+  /* [data-chat-message][data-role="user"] [data-chat-bubble] { */
+  /*   color: #0c0b12; */
+  /*   background: linear-gradient(135deg, #c9a04a 0%, #b8893a 100%); */
+  /*   border-radius: 18px 18px 4px 18px; */
+  /*   box-shadow: 0 2px 12px rgba(201, 160, 74, 0.2); */
+  /* } */
+  /* [data-chat-message][data-role="assistant"] [data-chat-bubble] { */
+  /*   color: #e2ddd4; */
+  /*   background: rgba(24, 23, 36, 0.9); */
+  /*   border: 1px solid rgba(201, 160, 74, 0.08); */
+  /*   border-radius: 18px 18px 18px 4px; */
+  /*   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03); */
+  /* } */
+
+  /* === 输入框 === */
+  /* [data-chat-composer] { */
+  /*   background: rgba(12, 11, 18, 0.92); */
+  /*   border-top: 1px solid rgba(201, 160, 74, 0.08); */
+  /* } */
+  /* [data-chat-composer-input] { */
+  /*   background: rgba(255, 255, 255, 0.03); */
+  /*   border-color: rgba(201, 160, 74, 0.08); */
+  /*   border-radius: 12px; */
+  /* } */
+  /* [data-chat-composer-input]:focus-within { */
+  /*   border-color: rgba(201, 160, 74, 0.25); */
+  /*   box-shadow: 0 0 16px rgba(201, 160, 74, 0.06); */
+  /* } */
+  /* [data-chat-composer] textarea { */
+  /*   color: #e2ddd4; */
+  /* } */
+  /* [data-chat-composer] textarea::placeholder { */
+  /*   color: #7a7a8a; */
+  /* } */
+
+  /* === Markdown 内容 === */
+  /* [data-md-code] { */
+  /*   background: rgba(0, 0, 0, 0.3); */
+  /*   border: 1px solid rgba(93, 169, 179, 0.15); */
+  /*   border-radius: 8px; */
+  /* } */
+  /* [data-md-quote] { */
+  /*   border-left: 3px solid rgba(201, 160, 74, 0.4); */
+  /*   background: rgba(201, 160, 74, 0.04); */
+  /*   border-radius: 0 8px 8px 0; */
+  /*   padding: 8px 16px; */
+  /* } */
+
+  /* === 暗色适配（嵌套 @media，自动跟随 OS 偏好，仅作用于聊天窗口） === */
+  /* @media (prefers-color-scheme: dark) { */
+  /*   --sp-background: #000; */
+  /*   --sp-foreground: #e8e8e8; */
+  /*   [data-chat-bubble] { border-color: #333; } */
+  /*   [data-md-code] { background: #050505; } */
+  /* } */
+
 /* } */
 
-/* === 助手头像（纯 CSS 伪元素） === */
-/* [data-chat-message][data-role="assistant"] { */
-/*   position: relative; */
-/* } */
-/* [data-chat-message][data-role="assistant"]::before { */
-/*   content: ''; */
-/*   display: block; */
-/*   width: 36px; */
-/*   height: 36px; */
-/*   margin-right: 8px; */
-/*   flex-shrink: 0; */
-/*   border-radius: 50%; */
-/*   background: radial-gradient(circle at 40% 35%, #e2c87a 0%, #c9a04a 40%, #8a6a2a 100%); */
-/*   box-shadow: 0 0 12px rgba(201, 160, 74, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.3); */
-/* } */
-
-/* === 消息气泡样式 === */
-/* data-chat-message 是消息外层；真正气泡是第一个子 div */
-/* [data-chat-message][data-role="user"] > div:first-child { */
-/*   color: #0c0b12; */
-/*   background: linear-gradient(135deg, #c9a04a 0%, #b8893a 100%); */
-/*   border-radius: 18px 18px 4px 18px; */
-/*   box-shadow: 0 2px 12px rgba(201, 160, 74, 0.2); */
-/* } */
-/* [data-chat-message][data-role="assistant"] > div:first-child { */
-/*   color: #e2ddd4; */
-/*   background: rgba(24, 23, 36, 0.9); */
-/*   border: 1px solid rgba(201, 160, 74, 0.08); */
-/*   border-radius: 18px 18px 18px 4px; */
-/*   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03); */
-/* } */
-
-/* === 输入框样式 === */
-/* [data-chat-composer] { */
-/*   background: rgba(12, 11, 18, 0.92); */
-/*   border-top: 1px solid rgba(201, 160, 74, 0.08); */
-/* } */
-/* [data-chat-composer] > div { */
-/*   background: rgba(255, 255, 255, 0.03); */
-/*   border-color: rgba(201, 160, 74, 0.08); */
+/* === 浮动窗口外观（独立顶层块，定制 floating chat 的 chrome，不影响 inline chat） === */
+/* [data-chat-float-root] { */
 /*   border-radius: 12px; */
-/* } */
-/* [data-chat-composer] > div:focus-within { */
-/*   border-color: rgba(201, 160, 74, 0.25); */
-/*   box-shadow: 0 0 16px rgba(201, 160, 74, 0.06); */
-/* } */
-/* [data-chat-composer] textarea { */
-/*   color: #e2ddd4; */
-/* } */
-/* [data-chat-composer] textarea::placeholder { */
-/*   color: #7a7a8a; */
-/* } */
+/*   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); */
+/*   backdrop-filter: blur(12px); */
+/*   background: rgba(30, 30, 40, 0.95); */
+/*   border: 1px solid rgba(255, 255, 255, 0.1); */
 
-/* === Markdown 内容扩展 === */
-/* pre, code { */
-/*   background: rgba(0, 0, 0, 0.3) !important; */
-/*   border: 1px solid rgba(93, 169, 179, 0.15) !important; */
-/*   border-radius: 8px !important; */
-/* } */
-/* blockquote { */
-/*   border-left: 3px solid rgba(212, 134, 177, 0.4); */
-/*   background: rgba(212, 134, 177, 0.04); */
-/*   border-radius: 0 8px 8px 0; */
-/*   padding: 8px 16px; */
+/*   [data-chat-float-titlebar] { */
+/*     background: rgba(0, 0, 0, 0.3); */
+/*     color: #e0e0e0; */
+/*   } */
+
+/*   [data-chat-float-close]:hover { */
+/*     background: rgba(255, 255, 255, 0.15); */
+/*   } */
 /* } */

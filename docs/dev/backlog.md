@@ -44,6 +44,7 @@
 - [x] **支持本地 HTML 文件页面渲染**：在应用内直接渲染本地 HTML 文件
 - [x] **用户自定义欢迎页**：项目头像右键菜单支持设置项目级 HTML/图片欢迎页，项目根路由展示欢迎页，Chat 页面提供显式关闭按钮返回欢迎页。参见 `docs/dev/features/2026-06-07-user-custom-welcome-page/design.md`
 - [x] **项目设置子菜单 + 主题编辑器**：项目头像右键菜单的「设置欢迎页」改为二级菜单「设置」（含「欢迎页」「主题」），新增主题 CSS 编辑器弹窗直接读写 `.spherse/theme.css`，保存后热更新。参见 `docs/dev/features/2026-06-19-project-settings-dialog/design.md`
+- [x] **自定义主题体验优化**：token 重命名为 `--sp-*` 命名空间（废弃 `--shadcn-*`/`--agent-*`）、废弃 `scopeCss` 改用原生 CSS nesting、聊天主题 dark mode 支持、聊天主题自动重载、补齐 data-* 钩子（`data-chat-bubble`/`data-chat-composer-input`/`data-chat-float-close`/`data-md-code`/`data-md-code-inline`/`data-md-quote`/`data-content-doc`）与文档视图 markdown 自定义。参见 `docs/dev/features/2026-06-26-theme-customization-experience/design.md`
 - [x] **支持 Agent 定时执行**：按 cron 表达式定时触发 agent 运行
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
 - [x] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话
@@ -53,7 +54,7 @@
 - [ ] **Agent 编辑 UI 增强**：改善 agent 编辑界面的用户体验和功能
 - [x] **内置 Agent 模板**：提供多个内置 agent profile 模板（世界观构建者、角色设计、历史记录员等），创建 Agent 时可选择模板快速开始（一期实现 prompt 模板徽章载入：世界观创作助手、角色扮演）
 - [ ] **内置 Skill：Card 生成 Skill 的 Skill**：提供内置 skill，用于制作 card 生成类 skill
-- [ ] **内置 Skill：主题制作 Skill**：提供内置 skill，用于制作自定义主题
+- [x] **内置 Skill：主题制作 Skill**：提供内置 skill，用于制作自定义主题。`create-ui-theme` 与 `create-agent-chat-theme` 两个 builtin skill 已存在，并在 `docs/dev/features/2026-06-26-theme-customization-experience/design.md` 中进一步增强（token 重命名、原生 CSS nesting、dark mode、自动重载、data-* 钩子补齐）
 - [x] **内置 skill 真内置化**：将 preset skill 从 per-project 注入改为 app 内置只读（builtin skill 通过 SkillStore 内存合并；启用 use-ui-sdk）
 
 ## 基础设施

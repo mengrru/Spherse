@@ -78,7 +78,7 @@ export function ContentView({
       {error && <p className="p-8 text-center text-destructive">{error}</p>}
       {content && !loading && (
         isMarkdown ? (
-          <div className="rounded-lg border border-border bg-card p-6 text-card-foreground">
+          <div data-content-doc className="rounded-lg border border-border bg-card p-6 text-card-foreground">
             <MarkdownContent variant="document">{content}</MarkdownContent>
           </div>
         ) : (
