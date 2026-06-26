@@ -113,6 +113,17 @@ export class ProjectManager {
     return agentStore.sessions.getSessionMessages(sessionId);
   }
 
+  getRecentSessionHistory(
+    agentId: string,
+    sessionId: string,
+    turns: number,
+    beforeId?: number,
+  ): { messages: unknown[]; hasMore: boolean; oldestId: number | null } {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) return { messages: [], hasMore: false, oldestId: null };
+    return agentStore.sessions.getRecentTurns(sessionId, turns, beforeId);
+  }
+
   deleteSession(agentId: string, sessionId: string): void {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return;

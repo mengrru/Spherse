@@ -15,6 +15,9 @@ interface StreamingSession extends StreamingSessionData {
   attachedCount: number;
   initialMessageSent: boolean;
   projectId: string;
+  hasMore: boolean;
+  oldestLoadedId: number | null;
+  loadingMore: boolean;
 }
 
 interface StreamingStoreState {
@@ -30,6 +33,7 @@ interface StreamingStoreActions {
   abort: (sessionId: string) => void;
   setScrollPosition: (sessionId: string, position: number) => void;
   cleanupExpired: (ttlMs: number) => void;
+  loadMore: (client: ApiClient, sessionId: string, agentId: string) => void;
 }
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
@@ -137,6 +141,9 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         attachedCount: Math.max(0, attachedDelta),
         initialMessageSent: false,
         projectId,
+        hasMore: false,
+        oldestLoadedId: null,
+        loadingMore: false,
       };
       return {
         sessions: {
@@ -214,11 +221,16 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
       updateSession(sessionId, (session) => ({ ...session, ws }));
 
-      client.getSessionMessages(agentId, sessionId).then((history: any[]) => {
-        const historyMessages = parseHistoryMessages(history);
+      client.getSessionMessagesPage(agentId, sessionId, { turns: 10 }).then((result) => {
+        const historyMessages = parseHistoryMessages(result.messages);
         updateSession(sessionId, (session) => {
           const messages = mergeHistoryMessages(session.messages, historyMessages);
-          return messages === session.messages ? session : { ...session, messages };
+          return {
+            ...session,
+            messages: messages === session.messages ? session.messages : messages,
+            hasMore: result.hasMore,
+            oldestLoadedId: result.oldestId,
+          };
         });
       }).catch((err: unknown) => {
         console.warn("[streaming-store] failed to load session history:", err);
@@ -321,6 +333,30 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
           get().disconnect(sessionId);
         }
       }
+    },
+
+    loadMore(client, sessionId, agentId) {
+      const session = get().sessions[sessionId];
+      if (!session || session.loadingMore || !session.hasMore || session.oldestLoadedId === null) return;
+      updateSession(sessionId, (s) => ({ ...s, loadingMore: true }));
+      client.getSessionMessagesPage(agentId, sessionId, { turns: 10, before: session.oldestLoadedId })
+        .then((result) => {
+          const historyMessages = parseHistoryMessages(result.messages);
+          updateSession(sessionId, (s) => {
+            const messages = mergeHistoryMessages(s.messages, historyMessages);
+            return {
+              ...s,
+              messages,
+              hasMore: result.hasMore,
+              oldestLoadedId: result.oldestId,
+              loadingMore: false,
+            };
+          });
+        })
+        .catch((err: unknown) => {
+          console.warn("[streaming-store] failed to load more history:", err);
+          updateSession(sessionId, (s) => ({ ...s, loadingMore: false }));
+        });
     },
   };
 });

@@ -116,6 +116,51 @@ export class SessionStore {
     return rows.map((row) => JSON.parse(row.content));
   }
 
+  getRecentTurns(
+    sessionId: string,
+    turns: number,
+    beforeId?: number,
+  ): { messages: any[]; hasMore: boolean; oldestId: number | null } {
+    let cursor: number;
+    if (beforeId !== undefined) {
+      cursor = beforeId;
+    } else {
+      const maxRow = this.db
+        .prepare("SELECT MAX(id) AS maxId FROM messages WHERE session_id = ?")
+        .get(sessionId) as { maxId: number | null } | undefined;
+      if (!maxRow || maxRow.maxId === null) {
+        return { messages: [], hasMore: false, oldestId: null };
+      }
+      cursor = maxRow.maxId + 1;
+    }
+
+    const rows = this.db
+      .prepare("SELECT * FROM messages WHERE session_id = ? AND id < ? ORDER BY id DESC")
+      .all(sessionId, cursor) as any[];
+
+    if (rows.length === 0) {
+      return { messages: [], hasMore: false, oldestId: null };
+    }
+
+    const collected: { id: number; message: any }[] = [];
+    let turnCount = 0;
+    for (const row of rows) {
+      const msg = JSON.parse(row.content);
+      collected.push({ id: row.id, message: msg });
+      if (msg.role === "user") {
+        turnCount++;
+        if (turnCount >= turns) {
+          break;
+        }
+      }
+    }
+
+    const hasMore = collected.length < rows.length;
+    const oldestId = collected.length > 0 ? collected[collected.length - 1].id : null;
+    const messages = collected.map((c) => c.message).reverse();
+    return { messages, hasMore, oldestId };
+  }
+
   updateSessionTitle(sessionId: string, title: string): void {
     this.db.prepare("UPDATE sessions SET title = ? WHERE id = ?").run(title, sessionId);
   }

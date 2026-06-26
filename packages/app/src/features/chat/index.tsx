@@ -6,6 +6,7 @@ import { MessageList } from "./MessageList";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
+import { useStreamingStore } from "./streaming-store";
 
 export interface ChatProps {
   sessionId: string;
@@ -26,7 +27,9 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     agentId: agent.id,
     initialMessage,
   });
-  const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId);
+  const hasMore = useStreamingStore((s) => s.sessions[sessionId]?.hasMore ?? false);
+  const loadingMore = useStreamingStore((s) => s.sessions[sessionId]?.loadingMore ?? false);
+  const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId, loadingMore);
   const themeCss = useAgentTheme(client, agent.id, projectId);
 
   const handleClose = () => {
@@ -45,6 +48,9 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
         isAtBottom={isAtBottom}
         onScrollToBottom={scrollToBottom}
         onNavigateToPath={onNavigateToPath}
+        hasMore={hasMore}
+        loadingMore={loadingMore}
+        onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}
       />
       <Composer
         streaming={streaming}

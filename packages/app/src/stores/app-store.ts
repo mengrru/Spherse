@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { initAppContext, type AppContext } from "../lib/context";
+import { getLastRoute, setLastRoute } from "../lib/localstorage/last-route";
 
 export interface ProjectState {
   id: string;
@@ -7,6 +8,7 @@ export interface ProjectState {
   name: string;
   ctx: AppContext;
   lastRoute?: string;
+  lastOpened: string;
 }
 
 interface AppStore {
@@ -40,13 +42,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const restored = await window.electronAPI.restoreProjects();
     const projects = new Map<string, ProjectState>();
 
-    for (const { id, path, name, lastRoute } of restored) {
+    for (const { id, path, name, lastOpened } of restored) {
       projects.set(id, {
         id,
         path,
         name,
         ctx: initAppContext(baseUrl, id, path),
-        lastRoute,
+        lastRoute: getLastRoute(id) ?? undefined,
+        lastOpened,
       });
     }
 
@@ -77,6 +80,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       path: dir,
       name,
       ctx: initAppContext(baseUrl, projectId, dir),
+      lastOpened: new Date().toISOString(),
     });
     set({ projects, activeProjectId: projectId });
     await window.electronAPI.addOpenProject(projectId, dir);
@@ -139,6 +143,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       return { projects };
     });
 
-    await window.electronAPI.setProjectLastRoute(projectId, route);
+    setLastRoute(projectId, route);
   },
 }));

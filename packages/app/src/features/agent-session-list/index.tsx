@@ -9,6 +9,12 @@ import {
   SidebarGroupLabel,
 } from "../../components/ui/sidebar";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -170,13 +176,23 @@ export function AgentSessionList() {
         <SidebarGroupLabel className="h-7 px-0 text-[11px] font-semibold tracking-wide uppercase">
           {t("agent-session-list.groupLabel")}
         </SidebarGroupLabel>
-        <SidebarGroupAction
-          className="top-1 right-0"
-          onClick={() => setDialog({ kind: "create-agent" })}
-          title={t("agent-session-list.createAgentTooltip")}
-        >
-          <PlusIcon />
-        </SidebarGroupAction>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <SidebarGroupAction
+                className="top-1 right-0"
+                title={t("agent-session-list.createAgentTooltip")}
+              />
+            }
+          >
+            <PlusIcon />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="bottom">
+            <DropdownMenuItem onClick={() => setDialog({ kind: "create-agent" })}>
+              {t("agent-session-list.createAgentTooltip")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <SidebarGroupContent>
           <AgentSessionActionsProvider actions={actions}>
             <AgentSessionListView

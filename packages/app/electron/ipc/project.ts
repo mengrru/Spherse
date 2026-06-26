@@ -7,7 +7,6 @@ import {
   removeOpenProjectById,
   setLastActiveProject,
   getLastActiveProject,
-  updateProjectLastRoute,
 } from "../settings.js";
 
 export function registerProjectIpc(
@@ -36,11 +35,11 @@ export function registerProjectIpc(
 
   ipcMain.handle("restore-projects", async () => {
     const entries = getOpenProjects();
-    const results: Array<{ id: string; path: string; name: string; lastRoute?: string }> = [];
+    const results: Array<{ id: string; path: string; name: string; lastOpened: string }> = [];
     for (const entry of entries) {
       try {
         const { projectId } = await registerProject(entry.path);
-        results.push({ id: projectId, path: entry.path, name: entry.name, lastRoute: entry.lastRoute });
+        results.push({ id: projectId, path: entry.path, name: entry.name, lastOpened: entry.lastOpened });
       } catch {
         // directory deleted or corrupt, skip silently
       }
@@ -63,10 +62,6 @@ export function registerProjectIpc(
 
   ipcMain.handle("get-last-active-project", () => {
     return getLastActiveProject();
-  });
-
-  ipcMain.handle("set-project-last-route", (_event, projectId: string, route: string) => {
-    updateProjectLastRoute(projectId, route);
   });
 
   ipcMain.handle("show-save-dialog", async (_event, options: { defaultPath?: string; filters?: Array<{ name: string; extensions: string[] }> }) => {

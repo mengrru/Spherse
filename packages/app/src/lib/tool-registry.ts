@@ -1,26 +1,17 @@
 import type { TranslationKey } from "@spherse/i18n";
 
-export interface ToolInfo {
-  id: string;
+export interface ToolGroup {
   label: TranslationKey;
+  toolIds: string[];
 }
 
-export const ALL_TOOLS: ToolInfo[] = [
-  { id: "read_file", label: "tool.read_file" },
-  { id: "write_file", label: "tool.write_file" },
-  { id: "edit_file", label: "tool.edit_file" },
-  { id: "list_files", label: "tool.list_files" },
-  { id: "search_content", label: "tool.search_content" },
-  { id: "move_file", label: "tool.move_file" },
-  { id: "copy_file", label: "tool.copy_file" },
-  { id: "append_changelog", label: "tool.append_log" },
-  { id: "load_skill", label: "tool.load_skill" },
-  { id: "render_card", label: "tool.render_card" },
-  { id: "generate_image", label: "tool.generate_image" },
+export const TOOL_GROUPS: ToolGroup[] = [
+  { label: "agent-dialog.permRead", toolIds: ["read_file", "list_files", "search_content"] },
+  { label: "agent-dialog.permWrite", toolIds: ["write_file", "edit_file", "move_file", "copy_file"] },
+  { label: "tool.append_log", toolIds: ["append_changelog"] },
+  { label: "tool.load_skill", toolIds: ["load_skill"] },
+  { label: "tool.render_card", toolIds: ["render_card"] },
+  { label: "tool.generate_image", toolIds: ["generate_image"] },
 ];
 
-export const ALL_TOOL_IDS = ALL_TOOLS.map((t) => t.id);
-
-export function getToolLabel(id: string): TranslationKey {
-  return ALL_TOOLS.find((t) => t.id === id)?.label ?? (id as TranslationKey);
-}
+export const ALL_TOOL_IDS: string[] = TOOL_GROUPS.flatMap((g) => g.toolIds);

@@ -11,8 +11,9 @@ const electronAPI = {
   revealInFinder: vi.fn(),
   setLastActiveProject: vi.fn(),
   getLastActiveProject: vi.fn(),
-  setProjectLastRoute: vi.fn(),
 };
+
+const LAST_ROUTE_KEY = "spherse:last-route:project-a";
 
 function projectState(overrides: Partial<ProjectState> = {}): ProjectState {
   return {
@@ -25,6 +26,7 @@ function projectState(overrides: Partial<ProjectState> = {}): ProjectState {
       projectId: "project-a",
       projectRoot: "/tmp/project-a",
     },
+    lastOpened: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -53,12 +55,13 @@ describe("useAppStore lastRoute", () => {
   });
 
   it("caches each restored project's last route", async () => {
+    localStorage.setItem(LAST_ROUTE_KEY, "/chat/session-1");
     electronAPI.restoreProjects.mockResolvedValue([
       {
         id: "project-a",
         path: "/tmp/project-a",
         name: "project-a",
-        lastRoute: "/chat/session-1",
+        lastOpened: "2026-01-01T00:00:00.000Z",
       },
     ]);
     electronAPI.getLastActiveProject.mockResolvedValue("project-a");
@@ -82,42 +85,30 @@ describe("useAppStore lastRoute", () => {
       .getState()
       .setProjectLastRoute("project-a", "/content?path=foo.md");
 
-    expect(electronAPI.setProjectLastRoute).toHaveBeenCalledWith(
-      "project-a",
-      "/content?path=foo.md",
-    );
+    expect(localStorage.getItem(LAST_ROUTE_KEY)).toBe("/content?path=foo.md");
     expect(useAppStore.getState().projects.get("project-a")?.lastRoute).toBe(
       "/content?path=foo.md",
     );
   });
 
-  it("suppresses duplicate same-route updates while IPC is pending", async () => {
-    let resolveSetProjectLastRoute: () => void = () => {};
-    electronAPI.setProjectLastRoute.mockReturnValue(
-      new Promise<void>((resolve) => {
-        resolveSetProjectLastRoute = resolve;
-      }),
-    );
+  it("suppresses duplicate same-route updates", async () => {
     useAppStore.setState({
       projects: new Map([["project-a", projectState()]]),
       activeProjectId: "project-a",
       initializing: false,
     });
+    const setItemSpy = vi.spyOn(localStorage, "setItem");
 
-    const first = useAppStore
+    await useAppStore
       .getState()
       .setProjectLastRoute("project-a", "/content?path=foo.md");
-    const second = useAppStore
+    await useAppStore
       .getState()
       .setProjectLastRoute("project-a", "/content?path=foo.md");
 
-    expect(electronAPI.setProjectLastRoute).toHaveBeenCalledTimes(1);
+    expect(setItemSpy).toHaveBeenCalledTimes(1);
     expect(useAppStore.getState().projects.get("project-a")?.lastRoute).toBe(
       "/content?path=foo.md",
     );
-
-    resolveSetProjectLastRoute();
-    await Promise.all([first, second]);
   });
-
 });

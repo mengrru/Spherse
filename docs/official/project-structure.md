@@ -97,7 +97,7 @@ spherse/
     │   │       │   ├── index.ts          # 聚合 schemas 与类型 re-export，对外稳定入口
     │   │       │   ├── common.ts         # okResponse/errorResponse、parseContract/parseApiResponse
     │   │       │   ├── agents.ts         # AgentProfile、AgentCreate/Update Request/Response
-    │   │       │   ├── sessions.ts       # SessionInfo、SessionList/Messages Response、rename 请求
+    │   │       │   ├── sessions.ts       # SessionInfo、SessionList/Messages Response、SessionMessagesPage（分页信封）、rename 请求
     │   │       │   ├── content.ts        # FileEntry、ContentResponse、create/save 请求
     │   │       │   ├── file-tree.ts      # FileTreeResponse
     │   │       │   ├── settings.ts       # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
@@ -129,12 +129,12 @@ spherse/
 │       │   ├── preload.ts            # contextBridge，IPC 白名单
 │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │       │   │   ├── index.ts          # registerAllIpc 聚合
-│       │   │   ├── project.ts        # 项目选择、server 启停、打开项目/lastRoute 持久化
+    │   │       │   ├── project.ts        # 项目选择、server 启停、打开项目持久化
 │       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
 │       │   │   └── debug.ts          # 开发模式 debug 动作
 │       │   ├── window.ts             # BrowserWindow 创建与管理
 │       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新
-│       │   └── settings.ts           # electron-store 封装 + env 管理 + openProjects/lastRoute/locale 持久化
+    │   │       └── settings.ts           # electron-store 封装 + env 管理 + openProjects/locale 持久化
 │       ├── playwright.config.ts      # Playwright E2E 测试配置
 │       ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
 │       ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS 等）
@@ -165,16 +165,20 @@ spherse/
 │           │   ├── context.ts        # AppContext 定义
 │           │   ├── events.ts         # renderer 内部自定义事件名常量
     │           │   ├── project-key.ts    # project path → URL projectKey 生成
-    │           │   ├── tool-registry.ts  # 前端 tool call 展示元数据
+    │           │   ├── tool-registry.ts  # 前端权限分组元数据（TOOL_GROUPS：读取文件/写入文件/独立工具）
 │           │   ├── types.ts          # 前端类型
-│           │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界）
-│           │   └── utils.ts          # shadcn/ui cn() 工具
+    │           │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界）
+    │           │   ├── utils.ts          # shadcn/ui cn() 工具
+    │           │   └── localstorage/
+    │           │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
 │           ├── context/
 │           │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（client/projectId/projectRoot）
-│           ├── stores/
-│           │   ├── app-store.ts          # 打开项目集合、当前项目、Electron IPC 动作、side panel 偏好
-│           │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledSchedulesByAgent 等项目数据缓存
-│           │   └── project-ui-store.ts   # 浮窗会话位置/尺寸等项目 UI 状态，localStorage 持久化
+    │           ├── stores/
+    │           │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
+    │           │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledSchedulesByAgent 等项目数据缓存
+    │           │   ├── settings-store.ts     # 应用级 locale 设置
+    │           │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）
+    │           │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │           ├── layouts/
 │           │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/schedule WS/数据刷新/各 agent schedule 启用态预加载）
 │           ├── hooks/

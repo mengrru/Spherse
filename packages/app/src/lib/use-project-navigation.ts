@@ -12,17 +12,27 @@ export function useProjectNavigation(): { back: () => void } {
   const location = useLocation();
   const { projectId } = useProjectCtx();
 
-  const prevPathnameRef = useRef("");
-  const currPathnameRef = useRef(location.pathname);
+  const historyRef = useRef<string[]>([]);
+  const lastProjectIdRef = useRef(projectId);
 
   useEffect(() => {
-    prevPathnameRef.current = currPathnameRef.current;
-    currPathnameRef.current = location.pathname;
-  }, [location.pathname]);
+    if (lastProjectIdRef.current !== projectId) {
+      historyRef.current = [location.pathname];
+      lastProjectIdRef.current = projectId;
+      return;
+    }
+    const stack = historyRef.current;
+    if (stack[stack.length - 1] !== location.pathname) {
+      stack.push(location.pathname);
+    }
+  }, [location.pathname, projectId]);
 
   const back = useCallback(() => {
-    if (isPathInProject(prevPathnameRef.current, projectId)) {
-      navigate(-1);
+    const stack = historyRef.current;
+    stack.pop();
+    const prev = stack[stack.length - 1];
+    if (prev && isPathInProject(prev, projectId)) {
+      navigate(prev);
     } else {
       navigate(`/project/${projectId}`);
     }

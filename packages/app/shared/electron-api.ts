@@ -4,7 +4,7 @@ export interface RestoredProject {
   id: string;
   path: string;
   name: string;
-  lastRoute?: string;
+  lastOpened: string;
 }
 
 export interface SaveDialogFilter {
@@ -35,7 +35,6 @@ export interface ElectronAPI {
   revealInFinder: (projectRoot: string) => Promise<void>;
   setLastActiveProject: (projectId: string) => Promise<void>;
   getLastActiveProject: () => Promise<string | null>;
-  setProjectLastRoute: (projectId: string, route: string) => Promise<void>;
   getSettings: () => Promise<IpcAppSettings | null>;
   saveSettings: (settings: IpcAppSettings) => Promise<{ success: boolean }>;
   getSupportedProviders: () => Promise<Record<string, ProviderCatalogItem>>;

@@ -43,6 +43,7 @@ export type {
   SessionCreateResponse,
   SessionRenameRequest,
   SessionMessagesResponse,
+  SessionMessagesPageResponse,
 } from "./sessions.js";
 
 export type {

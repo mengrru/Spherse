@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/ta
 import { useI18n } from "@spherse/i18n/react";
 import { parseAgentMarkdown, buildAgentMarkdown } from "../../lib/agent-markdown";
 import type { AgentFormData } from "../../lib/agent-markdown";
-import { ALL_TOOLS } from "../../lib/tool-registry";
+import { TOOL_GROUPS } from "../../lib/tool-registry";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import {
@@ -79,13 +79,18 @@ export function AgentDialog({ mode, initialContent, initialThemeContent, onSubmi
     setFormData((prev) => ({ ...prev, context: prev.context.filter((c) => c !== path) }));
   };
 
-  const toggleTool = (toolId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tools: prev.tools.includes(toolId)
-        ? prev.tools.filter((t) => t !== toolId)
-        : [...prev.tools, toolId],
-    }));
+  const toggleGroup = (groupToolIds: string[]) => {
+    setFormData((prev) => {
+      const allSelected = groupToolIds.every((id) => prev.tools.includes(id));
+      if (allSelected) {
+        return { ...prev, tools: prev.tools.filter((t) => !groupToolIds.includes(t)) };
+      }
+      const newTools = [...prev.tools];
+      for (const id of groupToolIds) {
+        if (!newTools.includes(id)) newTools.push(id);
+      }
+      return { ...prev, tools: newTools };
+    });
   };
 
   const handleSubmit = async () => {
@@ -125,7 +130,7 @@ export function AgentDialog({ mode, initialContent, initialThemeContent, onSubmi
                   placeholder={t("agent-dialog.namePlaceholder")}
                 />
               </Field>
-              <ToolPicker selectedTools={formData.tools} onToggle={toggleTool} />
+              <ToolPicker selectedTools={formData.tools} onToggleGroup={toggleGroup} />
               <ContextPathField
                 contextPaths={formData.context}
                 onAdd={addContext}
@@ -187,27 +192,27 @@ export function AgentDialog({ mode, initialContent, initialThemeContent, onSubmi
 
 function ToolPicker({
   selectedTools,
-  onToggle,
+  onToggleGroup,
 }: {
   selectedTools: string[];
-  onToggle: (toolId: string) => void;
+  onToggleGroup: (groupToolIds: string[]) => void;
 }) {
   const { t } = useI18n();
   return (
     <Field>
       <FieldLabel>{t("agent-dialog.toolsLabel")}</FieldLabel>
       <div className="flex flex-wrap gap-1.5">
-        {ALL_TOOLS.map((tool) => {
-          const selected = selectedTools.includes(tool.id);
+        {TOOL_GROUPS.map((group) => {
+          const selected = group.toolIds.every((id) => selectedTools.includes(id));
           return (
             <Button
-              key={tool.id}
+              key={group.label}
               type="button"
               variant={selected ? "default" : "outline"}
               size="sm"
-              onClick={() => onToggle(tool.id)}
+              onClick={() => onToggleGroup(group.toolIds)}
             >
-              {t(tool.label)}
+              {t(group.label)}
             </Button>
           );
         })}

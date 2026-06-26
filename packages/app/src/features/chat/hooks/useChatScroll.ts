@@ -4,12 +4,14 @@ import { useStreamingStore } from "../streaming-store";
 
 const BOTTOM_THRESHOLD = 100;
 
-export function useChatScroll(messages: ChatMessage[], sessionId: string) {
+export function useChatScroll(messages: ChatMessage[], sessionId: string, loadingMore: boolean = false) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const initialScrollDone = useRef(false);
   const restoredScroll = useRef(false);
   const prevCountRef = useRef(0);
+  const prevScrollHeightRef = useRef(0);
+  const wasLoadingMoreRef = useRef(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   const checkBottom = useCallback(() => {
@@ -33,7 +35,28 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string) {
   }, [messages, checkBottom]);
 
   useEffect(() => {
+    if (loadingMore) {
+      const container = containerRef.current;
+      if (container) {
+        prevScrollHeightRef.current = container.scrollHeight;
+        wasLoadingMoreRef.current = true;
+      }
+    }
+  }, [loadingMore]);
+
+  useEffect(() => {
     if (messages.length === 0) return;
+
+    if (wasLoadingMoreRef.current) {
+      const container = containerRef.current;
+      if (container) {
+        const delta = container.scrollHeight - prevScrollHeightRef.current;
+        container.scrollTop += delta;
+      }
+      wasLoadingMoreRef.current = false;
+      prevCountRef.current = messages.length;
+      return;
+    }
 
     const prevCount = prevCountRef.current;
     prevCountRef.current = messages.length;

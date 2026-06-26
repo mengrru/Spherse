@@ -16,6 +16,7 @@ import type {
   ProviderCatalogContract,
   TurnContextSnapshotContract,
   SessionMessagesResponse,
+  SessionMessagesPageResponse,
 } from "@spherse/server/contracts";
 import { parseApiResponse, schemas } from "@spherse/server/contracts";
 
@@ -74,6 +75,17 @@ export function createApiClient(baseUrl: string, projectId: string) {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages`);
       await assertOk(res);
       return parseJsonResponse<SessionMessagesResponse>(res, schemas.sessionMessagesResponse);
+    },
+
+    async getSessionMessagesPage(agentId: string, id: string, opts?: { turns?: number; before?: number }): Promise<SessionMessagesPageResponse> {
+      const params = new URLSearchParams();
+      if (opts?.turns !== undefined) params.set("turns", String(opts.turns));
+      if (opts?.before !== undefined) params.set("before", String(opts.before));
+      const query = params.toString();
+      const url = `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages${query ? `?${query}` : ""}`;
+      const res = await fetch(url);
+      await assertOk(res);
+      return parseJsonResponse<SessionMessagesPageResponse>(res, schemas.sessionMessagesPageResponse);
     },
 
     async listContent(dirPath: string = ""): Promise<FileEntry[]> {

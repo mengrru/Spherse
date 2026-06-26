@@ -88,20 +88,24 @@ export const zhCN = {
   "activity-bar.pinSidePanelTooltip": "固定项目面板",
 
   // --- Agent Dialog ---
-  // 搭档创建弹窗标题
-  "agent-dialog.createTitle": "创建搭档",
-  // 搭档编辑弹窗标题
-  "agent-dialog.editTitle": "编辑搭档",
-  // Agent 名称字段标签
+  // 对话对象创建弹窗标题
+  "agent-dialog.createTitle": "创建对话对象",
+  // 对话对象编辑弹窗标题
+  "agent-dialog.editTitle": "编辑对话对象",
+  // 对话对象名称字段标签
   "agent-dialog.nameLabel": "名称",
-  // 搭档名称输入框占位提示
-  "agent-dialog.namePlaceholder": "搭档名称",
-  // 搭档名称必填校验提示
-  "agent-dialog.nameRequired": "请输入搭档名称",
+  // 对话对象名称输入框占位提示
+  "agent-dialog.namePlaceholder": "名称",
+  // 对话对象名称必填校验提示
+  "agent-dialog.nameRequired": "请输入对话对象的名称",
   // Agent 提示词字段标签
   "agent-dialog.promptLabel": "提示词",
-  // Agent 工具权限字段标签
-  "agent-dialog.toolsLabel": "工具权限",
+  // Agent 权限字段标签（读取/写入等权限分组的总标签）
+  "agent-dialog.toolsLabel": "权限",
+  // 权限分组：读取类（read_file/list_files/search_content）
+  "agent-dialog.permRead": "读取文件",
+  // 权限分组：写入类（write_file/edit_file/move_file/copy_file）
+  "agent-dialog.permWrite": "写入文件",
   // Agent 参考资料字段标签
   "agent-dialog.refsLabel": "参考资料",
   // Agent 参考资料路径输入框占位提示
@@ -130,12 +134,12 @@ export const zhCN = {
   // --- Agent Session List ---
   // 新建对话按钮文案
   "agent-session-list.newSession": "新建对话",
-  // 创建搭档按钮悬停提示
-  "agent-session-list.createAgentTooltip": "创建搭档",
-  // 无搭档时的空状态提示
-  "agent-session-list.emptyAgents": "暂无搭档",
-  // 删除搭档确认弹窗内容，{name} 为搭档名称
-  "agent-session-list.confirmDeleteAgent": "确定要删除搭档「{name}」吗？该搭档下的所有会话也将被移除。",
+  // 创建对话对象按钮悬停提示
+  "agent-session-list.createAgentTooltip": "创建对话对象",
+  // 无对话对象时的空状态提示
+  "agent-session-list.emptyAgents": "暂无对话",
+  // 删除对话对象确认弹窗内容，{name} 为对话对象名称
+  "agent-session-list.confirmDeleteAgent": "确定要删除「{name}」吗？「{name}」下的所有会话也将被移除。",
   // 删除 Agent 失败提示，{message} 为错误信息
   "agent-session-list.deleteFailed": "删除失败：{message}",
   // 重命名 Agent 失败提示，{message} 为错误信息
@@ -144,8 +148,8 @@ export const zhCN = {
   "agent-session-list.sessionNameRequired": "请输入会话名称",
   // 会话名称长度超限提示
   "agent-session-list.sessionNameTooLong": "会话名称不能超过 80 个字符",
-  // 侧边栏 Agent 分组标签
-  "agent-session-list.groupLabel": "创作搭档",
+  // 侧边栏对话对象分组标签
+  "agent-session-list.groupLabel": "对话",
   // 右键菜单：将对话显示为浮窗
   "agent-session-list.floatSession": "浮窗",
   // 右键菜单：取消对话浮窗
@@ -228,6 +232,8 @@ export const zhCN = {
   "chat.expand": "展开",
   // 空对话时的引导文案
   "chat.startConversation": "发送一条消息开始对话",
+  // 历史消息分页「加载更多」按钮文案
+  "chat.loadMore": "加载更多",
   // 聊天保存成功提示
   "chat.saveSuccess": "保存成功",
   // 聊天保存失败提示，{message} 为错误信息
@@ -330,8 +336,8 @@ export const zhCN = {
   "project-panel.files": "文件",
 
   // --- Text Selection Session ---
-  // 文本选择会话的搭档下拉框占位提示
-  "text-selection.agentPlaceholder": "选择搭档",
+  // 文本选择会话的角色下拉框占位提示
+  "text-selection.agentPlaceholder": "选择对话对象",
   // 文本选择会话的补充说明输入框占位提示
   "text-selection.supplementPlaceholder": "添加补充说明（可选）...",
   // 引用来源提示，{path} 为文件路径
@@ -391,27 +397,13 @@ export const zhCN = {
   "empty-state.openProject": "点击左侧 + 打开项目",
 
   // --- Tool Labels ---
-  // 工具标签：读取文件
-  "tool.read_file": "读取文件",
-  // 工具标签：写入文件
-  "tool.write_file": "写入文件",
-  // 工具标签：编辑文件
-  "tool.edit_file": "编辑文件",
-  // 工具标签：列出文件
-  "tool.list_files": "列出文件",
-  // 工具标签：搜索内容
-  "tool.search_content": "搜索内容",
-  // 工具标签：移动文件
-  "tool.move_file": "移动文件",
-  // 工具标签：复制文件
-  "tool.copy_file": "复制文件",
-  // 工具标签：追加日志
+  // 独立工具标签：追加日志
   "tool.append_log": "追加日志",
-  // 工具标签：加载技能
-  "tool.load_skill": "加载技能",
-  // 工具标签：渲染卡片
+  // 独立工具标签：使用技能
+  "tool.load_skill": "使用技能",
+  // 独立工具标签：渲染卡片
   "tool.render_card": "渲染卡片",
-  // 工具标签：生成图片
+  // 独立工具标签：生成图片
   "tool.generate_image": "生成图片",
 
   // --- Viewer Card ---

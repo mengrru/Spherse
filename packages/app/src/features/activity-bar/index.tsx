@@ -74,7 +74,11 @@ export function ActivityBar({
             )}
           >
             <div className="flex-1 overflow-y-auto flex flex-col gap-2 items-center py-3">
-              {Array.from(projects.entries()).map(([projectId, info]) => (
+              {Array.from(projects.values())
+                .sort((a, b) => b.lastOpened.localeCompare(a.lastOpened))
+                .map((info) => {
+                  const projectId = info.id;
+                  return (
                 <ContextMenu key={projectId}>
                   <ContextMenuTrigger>
                     <ProjectAvatar
@@ -108,7 +112,8 @@ export function ActivityBar({
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
-              ))}
+                  );
+                })}
             </div>
             <div className="mt-auto flex flex-col items-center gap-2 pb-3">
               <DebugTools />

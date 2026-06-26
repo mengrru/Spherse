@@ -6,6 +6,7 @@ import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "./components/ui/sonner";
 import { useAppStore } from "./stores/app-store";
 import { useProjectDataStore } from "./stores/project-data-store";
+import { clearLastRoute } from "./lib/localstorage/last-route";
 import { useAgentSessionListUiStore } from "./features/agent-session-list/store";
 import { useScheduleStore } from "./features/agent-schedule/store";
 import { useFloatingChatStore } from "./features/floating-chat/store";
@@ -78,6 +79,7 @@ export function App() {
     clearAgentSessionListUi(projectId);
     clearScheduleData(projectId);
     clearFloatingChat(projectId);
+    clearLastRoute(projectId);
     if (nextProjectId) {
       const project = useAppStore.getState().projects.get(nextProjectId);
       navigate(buildProjectRoute(nextProjectId, project?.lastRoute));

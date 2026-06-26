@@ -14,9 +14,12 @@ interface MessageListProps {
   isAtBottom: boolean;
   onScrollToBottom: () => void;
   onNavigateToPath?: (path: string) => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, messagesEndRef, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath }: MessageListProps) {
+export function MessageList({ messages, agent, messagesEndRef, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
   if (messages.length === 0) {
     return (
@@ -30,6 +33,18 @@ export function MessageList({ messages, agent, messagesEndRef, containerRef, isA
   return (
     <div className="relative flex-1 min-h-0">
       <div ref={containerRef} className="h-full overflow-y-auto p-4 flex flex-col gap-3" data-chat-messages>
+        {hasMore && (
+          <div className="flex justify-center py-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loadingMore}
+              onClick={onLoadMore}
+            >
+              {loadingMore ? t("common.loading") : t("chat.loadMore")}
+            </Button>
+          </div>
+        )}
         {messages.map((message, index) => (
           <MessageItem
             key={index}
