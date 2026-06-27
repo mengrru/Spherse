@@ -1,5 +1,5 @@
-import { createApiClient } from "./api";
-import type { ApiClient } from "./api";
+import { createApiClient } from "../lib/api";
+import type { ApiClient } from "../lib/api";
 
 export interface AppContext {
   client: ApiClient;

@@ -36,8 +36,7 @@ interface ScheduleDialogProps {
   projectId: string;
 }
 
-export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: ScheduleDialogProps) {
-  const { t } = useI18n();
+export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: ScheduleDialogProps) {  const { t } = useI18n();
   const { client } = useProjectCtx();
   const schedules = useScheduleStore((s) => s.byProject[projectId]?.schedulesByAgent?.[agentId] ?? EMPTY_SCHEDULES);
   const runningScheduleIds = useScheduleStore((s) => s.byProject[projectId]?.runningScheduleIdsByAgent?.[agentId] ?? EMPTY_RUNNING_SCHEDULE_IDS);
@@ -187,3 +186,5 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
     </Dialog>
   );
 }
+
+export { ScheduleEventBridge } from "./ScheduleEventBridge";

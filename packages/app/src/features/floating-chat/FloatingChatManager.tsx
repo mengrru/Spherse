@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useParams, useNavigate } from "react-router";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useProjectCtx } from "../../context/project-context";
 import { useFloatingChatStore } from "./store";
@@ -6,6 +7,8 @@ import { FloatingChatContainer } from "./FloatingChatContainer";
 
 export function FloatingChatManager() {
   const { projectId } = useProjectCtx();
+  const { sessionId: routeSessionId } = useParams();
+  const navigate = useNavigate();
   const floatingChat = useFloatingChatStore((s) =>
     projectId ? s.byProject[projectId] : undefined,
   );
@@ -23,6 +26,12 @@ export function FloatingChatManager() {
       setFloatingChat(projectId, null);
     }
   }, [floatingChat, projectId, session, setFloatingChat]);
+
+  useEffect(() => {
+    if (floatingChat && routeSessionId === floatingChat.sessionId) {
+      navigate(`/project/${projectId}`);
+    }
+  }, [floatingChat, routeSessionId, navigate, projectId]);
 
   if (!floatingChat || !session) return null;
 

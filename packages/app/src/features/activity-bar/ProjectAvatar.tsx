@@ -1,4 +1,4 @@
-import { getAvatarColor } from "../../lib/avatar-color";
+import { getAvatarColor } from "./avatar-color";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 
 interface ProjectAvatarProps {

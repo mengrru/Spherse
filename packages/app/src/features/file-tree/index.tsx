@@ -30,8 +30,10 @@ export function FileTree({ selectedFilePath, onSelectFile, onDeleted, refreshKey
 
   return (
     <div className="flex flex-col gap-px text-xs">
-      {ctrl.rootNodes.length === 0 ? (
+      {ctrl.loading ? (
         <p className="px-2 text-xs text-sidebar-foreground/70">{t("common.loading")}</p>
+      ) : ctrl.rootNodes.length === 0 ? (
+        <p className="px-2 text-xs text-sidebar-foreground/70">{t("file-tree.empty")}</p>
       ) : (
         <FileTreeProvider value={ctxValue}>
           {ctrl.rootNodes.map((node) => (

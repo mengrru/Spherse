@@ -4,7 +4,6 @@ import { useI18n } from "@spherse/i18n/react";
 import { Chat } from "../features/chat";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useProjectCtx } from "../context/project-context";
-import { useFloatingChatRedirect } from "../features/floating-chat/use-floating-chat-redirect";
 
 export function ChatPage() {
   const { sessionId = "" } = useParams();
@@ -13,8 +12,6 @@ export function ChatPage() {
   const { t } = useI18n();
   const projectData = useProjectDataStore((s) => s.projects[projectId]);
   const consumeInitialMessage = useProjectDataStore((s) => s.consumeInitialMessage);
-
-  useFloatingChatRedirect(projectId, sessionId);
 
   const agents = projectData?.agents ?? [];
   const sessions = projectData?.sessions ?? [];

@@ -8,20 +8,20 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 describe("agent schedule feature structure", () => {
   it("keeps the schedule websocket at project layout level instead of the dialog", () => {
     const dialogSource = readFileSync(join(currentDir, "index.tsx"), "utf8");
-    const layoutSource = readFileSync(join(currentDir, "../../layouts/ProjectScope.tsx"), "utf8");
+    const bridgeSource = readFileSync(join(currentDir, "ScheduleEventBridge.tsx"), "utf8");
 
     expect(dialogSource).not.toContain("useBusSubscription");
-    expect(layoutSource).toContain('useBusSubscription(projectId ?? "", "schedule"');
+    expect(bridgeSource).toContain('useBusSubscription(projectId ?? "", "schedule"');
   });
 
   it("shows schedule notification toast from the project-level websocket handler", () => {
-    const layoutSource = readFileSync(join(currentDir, "../../layouts/ProjectScope.tsx"), "utf8");
+    const bridgeSource = readFileSync(join(currentDir, "ScheduleEventBridge.tsx"), "utf8");
 
-    expect(layoutSource).toContain('import { toast } from "sonner"');
-    expect(layoutSource).toContain("showScheduleNotification");
-    expect(layoutSource).toContain('type === "schedule_completed"');
-    expect(layoutSource).toContain("toast.success");
-    expect(layoutSource).toContain("notificationMessage");
+    expect(bridgeSource).toContain('import { toast } from "sonner"');
+    expect(bridgeSource).toContain("showScheduleNotification");
+    expect(bridgeSource).toContain('type === "schedule_completed"');
+    expect(bridgeSource).toContain("toast.success");
+    expect(bridgeSource).toContain("notificationMessage");
   });
 
   it("uses stable empty array fallbacks for schedule store selectors", () => {

@@ -100,11 +100,11 @@ function getSessionRow(page: Page, sessionId: string) {
 }
 
 function agentTrigger(page: Page, agentName: string) {
-  return page.locator(`[data-slot="collapsible-trigger"]:has-text("${agentName}")`);
+  return page.locator(`[data-slot="context-menu-trigger"]:has-text("${agentName}")`);
 }
 
 function agentPanel(page: Page, agentName: string) {
-  return page.locator(`[data-slot="collapsible-trigger"]:has-text("${agentName}") >> xpath=ancestor::*[@data-slot="collapsible"]//*[@data-slot="collapsible-content"]`);
+  return page.locator(`[data-slot="context-menu-trigger"]:has-text("${agentName}") >> xpath=ancestor::*[@data-slot="collapsible"]//*[@data-slot="collapsible-content"]`);
 }
 
 async function expandAgent(page: Page, agentName: string) {

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { initAppContext, type AppContext } from "../lib/context";
+import { initAppContext, type AppContext } from "../context/app-context";
 import { getLastRoute, setLastRoute } from "../lib/localstorage/last-route";
 
 export interface ProjectState {

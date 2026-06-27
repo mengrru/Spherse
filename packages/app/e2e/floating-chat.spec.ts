@@ -79,11 +79,11 @@ async function navigateToProject(page: Page, projectId: string) {
 }
 
 function agentTrigger(page: Page) {
-  return page.locator(`[data-slot="collapsible-trigger"]:has-text("Assistant")`);
+  return page.locator(`[data-slot="context-menu-trigger"]:has-text("Assistant")`);
 }
 
 function agentPanel(page: Page) {
-  return page.locator(`[data-slot="collapsible-trigger"]:has-text("Assistant") >> xpath=ancestor::*[@data-slot="collapsible"]//*[@data-slot="collapsible-content"]`);
+  return page.locator(`[data-slot="context-menu-trigger"]:has-text("Assistant") >> xpath=ancestor::*[@data-slot="collapsible"]//*[@data-slot="collapsible-content"]`);
 }
 
 async function expandAgent(page: Page) {

@@ -112,6 +112,8 @@ export const zhCN = {
   "agent-dialog.refsPlaceholder": "输入路径搜索文件，回车添加",
   // Agent 保存失败提示
   "agent-dialog.saveFailed": "保存失败",
+  // 编辑 Agent 时读取原始内容/主题失败的提示（出现在弹窗主体）
+  "agent-dialog.loadFailed": "读取失败",
   // Agent dialog "基本" 标签页标题
   "agent-dialog.tabBasic": "基本",
   // Agent dialog "主题" 标签页标题
@@ -306,6 +308,8 @@ export const zhCN = {
   "file-tree.copyPath": "复制路径",
   // 复制路径成功提示
   "file-tree.pathCopied": "路径已复制",
+  // 文件树没有文件时的空状态提示
+  "file-tree.empty": "暂无文件",
 
   // --- AI Read Denylist ---
   // AI 读取限制面板标题

@@ -7,7 +7,7 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 
 describe("ScheduleDialog import structure", () => {
   it("imports ScheduleDialog from the standalone agent-schedule feature", () => {
-    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
+    const source = readFileSync(join(currentDir, "AgentSessionDialogs.tsx"), "utf8");
 
     expect(source).toContain("../agent-schedule");
   });

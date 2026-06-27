@@ -63,6 +63,18 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     });
   }
 
+  function setStreamingAndNotify(sessionId: string, projectId: string, next: boolean) {
+    let changed = false;
+    updateSession(sessionId, (session) => {
+      if (session.streaming === next) return session;
+      changed = true;
+      return { ...session, streaming: next };
+    });
+    if (changed) {
+      useProjectDataStore.getState().setStreaming(projectId, sessionId, next);
+    }
+  }
+
   function flushQueuedEvents() {
     flushRaf = undefined;
     if (eventQueue.size === 0) return;
@@ -186,15 +198,10 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       ws.onclose = () => {
         const currentSession = get().sessions[sessionId];
         if (currentSession?.ws !== ws) return;
-        let wasStreaming = false;
-        updateSession(sessionId, (session) => {
-          if (session.ws === null && !session.streaming) return session;
-          wasStreaming = session.streaming;
-          return { ...session, ws: null, streaming: false };
-        });
-        if (wasStreaming) {
-          useProjectDataStore.getState().setStreaming(projectId, sessionId, false);
-        }
+        updateSession(sessionId, (session) =>
+          session.ws === null && !session.streaming ? session : { ...session, ws: null }
+        );
+        setStreamingAndNotify(sessionId, projectId, false);
       };
 
       ws.onopen = () => {
@@ -296,27 +303,11 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     abort(sessionId) {
       const session = get().sessions[sessionId];
       if (!session?.ws || session.ws.readyState !== WebSocket.OPEN) {
-        let wasStreaming = false;
-        updateSession(sessionId, (current) => {
-          if (!current.streaming) return current;
-          wasStreaming = true;
-          return { ...current, streaming: false };
-        });
-        if (wasStreaming) {
-          useProjectDataStore.getState().setStreaming(session.projectId, sessionId, false);
-        }
+        setStreamingAndNotify(sessionId, session.projectId, false);
         return;
       }
       session.ws.send(JSON.stringify({ type: "abort" }));
-      let wasStreaming = false;
-      updateSession(sessionId, (current) => {
-        if (!current.streaming) return current;
-        wasStreaming = true;
-        return { ...current, streaming: false };
-      });
-      if (wasStreaming) {
-        useProjectDataStore.getState().setStreaming(session.projectId, sessionId, false);
-      }
+      setStreamingAndNotify(sessionId, session.projectId, false);
     },
 
     setScrollPosition(sessionId, position) {

@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import type { AppContext } from "./context";
+import type { AppContext } from "./app-context";
 
 const ProjectContext = createContext<AppContext | null>(null);
 

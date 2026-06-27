@@ -15,6 +15,7 @@ import { useFsWatchRefresh } from "./useFsWatchRefresh";
 
 export interface FileTreeController {
   rootNodes: TreeNode[];
+  loading: boolean;
   creating: CreatingState | null;
   deleteTarget: TreeNode | null;
   toggleNode: (node: TreeNode) => void;
@@ -35,6 +36,7 @@ export function useFileTreeController(
 ): FileTreeController {
   const { t } = useI18n();
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
+  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState<CreatingState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
   const nodesRef = useRef<TreeNode[]>([]);
@@ -84,6 +86,7 @@ export function useFileTreeController(
   useEffect(() => {
     loadChildren("").then((entries) => {
       setRootNodes(buildNodes(entries, ""));
+      setLoading(false);
     });
   }, [loadChildren, refreshKey]);
 
@@ -167,6 +170,7 @@ export function useFileTreeController(
 
   return {
     rootNodes,
+    loading,
     creating,
     deleteTarget,
     toggleNode,

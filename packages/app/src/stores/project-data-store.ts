@@ -66,7 +66,22 @@ function updateProjectData(
   };
 }
 
-export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
+export const useProjectDataStore = create<ProjectDataStore>((set, get) => {
+  function clearRequestError(projectId: string) {
+    set((state) => updateProjectData(state, projectId, (project) => ({
+      ...project,
+      error: null,
+    })));
+  }
+
+  function handleRequestError(projectId: string, err: unknown) {
+    set((state) => updateProjectData(state, projectId, (project) => ({
+      ...project,
+      error: getErrorMessage(err),
+    }), { createIfMissing: false }));
+  }
+
+  return {
   projects: {},
 
   async refreshAgents(projectId, client) {
@@ -94,10 +109,7 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
   },
 
   async refreshSessions(projectId, client) {
-    set((state) => updateProjectData(state, projectId, (project) => ({
-      ...project,
-      error: null,
-    })));
+    clearRequestError(projectId);
 
     try {
       const agents = get().projects[projectId]?.agents ?? [];
@@ -117,18 +129,12 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
         error: null,
       }), { createIfMissing: false }));
     } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        error: getErrorMessage(err),
-      }), { createIfMissing: false }));
+      handleRequestError(projectId, err);
     }
   },
 
   async createSession(projectId, client, agentId, initialMessage) {
-    set((state) => updateProjectData(state, projectId, (project) => ({
-      ...project,
-      error: null,
-    })));
+    clearRequestError(projectId);
 
     try {
       const { sessionId } = await client.createSession(agentId);
@@ -153,10 +159,7 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
       void get().refreshSessions(projectId, client);
       return session;
     } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        error: getErrorMessage(err),
-      }), { createIfMissing: false }));
+      handleRequestError(projectId, err);
       return null;
     }
   },
@@ -178,10 +181,7 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
         };
       }, { createIfMissing: false }));
     } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        error: getErrorMessage(err),
-      }), { createIfMissing: false }));
+      handleRequestError(projectId, err);
     }
   },
 
@@ -200,48 +200,33 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
       }), { createIfMissing: false }));
       return true;
     } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        error: getErrorMessage(err),
-      }), { createIfMissing: false }));
+      handleRequestError(projectId, err);
       return false;
     }
   },
 
   async createAgent(projectId, client, slug, content, themeContent) {
-    set((state) => updateProjectData(state, projectId, (project) => ({
-      ...project,
-      error: null,
-    })));
+    clearRequestError(projectId);
 
     try {
       await client.createAgent(slug, content, themeContent);
       await get().refreshAgents(projectId, client);
       return true;
     } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        error: getErrorMessage(err),
-      }), { createIfMissing: false }));
+      handleRequestError(projectId, err);
       return false;
     }
   },
 
   async updateAgent(projectId, client, agentId, content, themeContent) {
-    set((state) => updateProjectData(state, projectId, (project) => ({
-      ...project,
-      error: null,
-    })));
+    clearRequestError(projectId);
 
     try {
       await client.updateAgent(agentId, content, themeContent);
       await get().refreshAgents(projectId, client);
       return true;
     } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        error: getErrorMessage(err),
-      }), { createIfMissing: false }));
+      handleRequestError(projectId, err);
       return false;
     }
   },
@@ -252,10 +237,7 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
       await get().refreshAgents(projectId, client);
       await get().refreshSessions(projectId, client);
     } catch (err) {
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        error: getErrorMessage(err),
-      }), { createIfMissing: false }));
+      handleRequestError(projectId, err);
     }
   },
 
@@ -318,4 +300,5 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
       return { projects };
     });
   },
-}));
+  };
+});
