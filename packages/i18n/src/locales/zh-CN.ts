@@ -448,10 +448,6 @@ export const zhCN = {
   // 项目不存在时的提示文案
   "pages.projectNotFound": "项目不存在",
 
-  // --- Empty State ---
-  // 无打开项目时的引导文案
-  "empty-state.openProject": "点击左侧 + 打开项目",
-
   // --- Tool Labels ---
   // 独立工具标签：追加日志
   "tool.append_log": "追加日志",
@@ -510,6 +506,8 @@ export const zhCN = {
   "welcome-page.fileMissing": "欢迎页文件不存在：{path}",
   // 欢迎页加载失败的错误提示
   "welcome-page.loadFailed": "欢迎页加载失败",
+  // 项目欢迎页未配置自定义内容时的空状态提示文案
+  "welcome-page.emptyState": "Spherse",
 
   // --- Error ---
   // 通用请求失败提示
@@ -526,4 +524,35 @@ export const zhCN = {
   "theme-settings.saveFailed": "保存失败：{message}",
   // 主题设置保存成功提示
   "theme-settings.saved": "主题已保存",
+  // --- Onboarding ---
+  // 引导页（无项目打开时）主标题
+  "onboarding.title": "Spherse",
+  // 引导页副标题
+  "onboarding.subtitle": "你的文字创作与演绎空间",
+  // 引导卡片1按钮：从已有项目打开
+  "onboarding.action.openExisting": "从已有项目打开",
+  // 引导卡片2按钮：创建新项目
+  "onboarding.action.createNew": "创建新项目",
+  // 引导卡片3按钮：打开示例项目，{name} 为示例项目名称
+  "onboarding.action.openSample": "打开示例项目：{name}",
+  // 引导卡片1描述
+  "onboarding.desc.openExisting": "打开一个已有的文件夹",
+  // 引导卡片2描述
+  "onboarding.desc.createNew": "从一个空文件夹开始",
+  // 引导卡片3描述
+  "onboarding.desc.openSample": "将内置示例项目拷贝到选定位置并打开",
+  // 创建项目时目标目录已存在且非空的错误提示
+  "onboarding.error.dirExistsNotEmpty": "该目录已存在且非空，请选择其它位置",
+  // 创建项目失败时的通用错误提示
+  "onboarding.error.createFailed": "创建项目失败，请重试",
+  // 拷贝示例项目失败时的错误提示
+  "onboarding.error.copyFailed": "拷贝示例项目失败，请重试",
+  // 内置示例资源缺失时的错误提示
+  "onboarding.error.sampleNotFound": "找不到内置示例，请重新安装应用",
+  // 新建项目时，选择项目保存位置的保存对话框标题（Electron 原生对话框）
+  "onboarding.dialog.newProjectLocation": "选择新建项目的位置",
+  // 打开示例项目时，选择示例项目拷贝目标位置的对话框标题（Electron 原生对话框）
+  "onboarding.dialog.sampleLocation": "选择示例项目的保存位置",
+  // 新建项目保存对话框默认文件夹名建议
+  "onboarding.defaultProjectName": "新建项目",
 } as const;

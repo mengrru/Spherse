@@ -54,7 +54,10 @@ spherse/
 │   │   │   ├── agent-template.md     # 新 Agent 创建模板源文件
 │   │   │   ├── agent-theme-template.css # Agent 聊天窗口主题模板源文件
 │   │   │   └── prompt-templates/     # 预置 prompt template 源文件（<id>.md，由 presets.json 的 presetPromptTemplates 声明）
-    │   │   ├── skills/                   # 内置 skill 源（app 内置只读，通过 SkillStore 内存合并；新项目不再注入到 .spherse/skills/）
+│   │   ├── sample-projects/          # 内置示例项目源（新用户引导页「打开示例项目」拷贝到用户选定位置；manifest.json + 各示例完整项目树）
+│   │   │   ├── manifest.json         # 示例清单（[{ id, displayName, dirName }]）
+│   │   │   └── harry-potter/         # Harry Potter 示例项目（完整项目树，含 .spherse/project.yaml、agents、文档）
+│   │   ├── skills/                   # 内置 skill 源（app 内置只读，通过 SkillStore 内存合并；新项目不再注入到 .spherse/skills/）
 │   │   │   ├── create-ui-theme/      # 自定义 UI 主题创建指南
 │   │   │   │   └── SKILL.md
 │   │   │   ├── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
@@ -127,9 +130,10 @@ spherse/
 │       │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main
 │       │   ├── main.ts               # Electron 主进程：组装窗口、IPC、项目 server 管理
 │       │   ├── preload.ts            # contextBridge，IPC 白名单
+│       │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）
 │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │       │   │   ├── index.ts          # registerAllIpc 聚合
-    │   │       │   ├── project.ts        # 项目选择、server 启停、打开项目持久化
+│       │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化、新建项目、打开示例项目
 │       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
 │       │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
 │       │   │   └── debug.ts          # 开发模式 debug 动作
@@ -138,7 +142,7 @@ spherse/
     │   │       └── settings.ts           # electron-store 封装 + env 管理 + openProjects/locale 持久化
 │       ├── playwright.config.ts      # Playwright E2E 测试配置
 │       ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
-│       ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS 等）
+│       ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS、extraResources 拷贝内置示例项目等）
 │       ├── build/                    # electron-builder buildResources（icon 等资源）
 │       ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
 │       ├── e2e/                      # Playwright E2E 测试
@@ -208,6 +212,7 @@ spherse/
 │           │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）
 │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
 │           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
+│           │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：从已有项目打开 / 创建新项目 / 打开示例项目
 │           │   ├── project-panel/         # 项目侧栏薄组合层，按序渲染 AgentSessionList/UserFilePanel/SkillPanel，自治 side-panel 浮动/隐藏布局
 │           │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │           │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）
@@ -220,11 +225,11 @@ spherse/
 │           ├── pages/
 │           │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat
 │           │   ├── ContentBrowserPage.tsx # Content 路由 page，从 ?path= 查询参数渲染 ContentBrowser
+│           │   ├── OnboardingPage.tsx    # App index 路由 page，re-export onboarding 引导页（无项目时显示）
 │           │   └── WelcomePagePage.tsx   # Project index 路由 page，渲染 WelcomePage 空状态
 │           └── components/
 │               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
 │               ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel，被 user-file-panel 与 skill-panel 共用
-│               ├── EmptyState.tsx        # 无项目时的空状态
 │               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
 ├── scripts/
 │   └── rebuild-native.mjs            # Electron native dependency rebuild

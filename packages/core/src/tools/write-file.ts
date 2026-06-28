@@ -26,7 +26,7 @@ export function createWriteFileTool(
     label: "Write File",
     description: "Write content to a file in the project. Creates parent directories by default.",
     parameters: WriteFileParams,
-    async execute(_toolCallId, params, _signal) {
+    async execute(_toolCallId, params, _signal?: AbortSignal) {
       const resolved = resolveProjectPath(root, params.path);
       const createDirs = params.createDirs ?? true;
 

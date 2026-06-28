@@ -1,9 +1,9 @@
 import { createHashRouter } from "react-router";
 import { App } from "./App";
-import { EmptyState } from "./components/EmptyState";
 import { ProjectScope } from "./layouts/ProjectScope";
 import { ChatPage } from "./pages/ChatPage";
 import { ContentBrowserPage } from "./pages/ContentBrowserPage";
+import { OnboardingPage } from "./pages/OnboardingPage";
 import { WelcomePagePage } from "./pages/WelcomePagePage";
 
 export const router = createHashRouter([
@@ -13,7 +13,7 @@ export const router = createHashRouter([
     children: [
       {
         index: true,
-        element: <EmptyState />,
+        element: <OnboardingPage />,
       },
       {
         path: "project/:projectId",

@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create, type StoreApi } from "zustand";
 import { initAppContext, type AppContext } from "../context/app-context";
 import { getLastRoute, setLastRoute } from "../lib/localstorage/last-route";
 
@@ -17,6 +17,8 @@ interface AppStore {
   initializing: boolean;
   restoreProjects: () => Promise<string | null>;
   openProject: () => Promise<string | null>;
+  createNewProject: () => Promise<{ projectId: string | null; error?: string }>;
+  openSampleProject: (sampleId: string) => Promise<{ projectId: string | null; error?: string }>;
   closeProject: (projectId: string) => Promise<string | null>;
   revealProject: (projectId: string) => Promise<void>;
   setActiveProject: (projectId: string | null) => Promise<void>;
@@ -28,6 +30,31 @@ function findProjectIdByPath(projects: Map<string, ProjectState>, projectPath: s
     if (project.path === projectPath) return project.id;
   }
   return null;
+}
+
+type StoreSetter = StoreApi<AppStore>["setState"];
+type StoreGetter = StoreApi<AppStore>["getState"];
+
+async function registerProject(
+  set: StoreSetter,
+  get: StoreGetter,
+  projectId: string,
+  projectPath: string,
+): Promise<void> {
+  const port = await window.electronAPI.getServerPort();
+  const baseUrl = `http://localhost:${port}`;
+  const name = projectPath.split(/[\\/]/).filter(Boolean).pop() || projectPath;
+  const projects = new Map(get().projects);
+  projects.set(projectId, {
+    id: projectId,
+    path: projectPath,
+    name,
+    ctx: initAppContext(baseUrl, projectId, projectPath),
+    lastOpened: new Date().toISOString(),
+  });
+  set({ projects, activeProjectId: projectId });
+  await window.electronAPI.addOpenProject(projectId, projectPath);
+  await window.electronAPI.setLastActiveProject(projectId);
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -71,28 +98,31 @@ export const useAppStore = create<AppStore>((set, get) => ({
     }
 
     const { projectId } = await window.electronAPI.openProject(dir);
-    const port = await window.electronAPI.getServerPort();
-    const baseUrl = `http://localhost:${port}`;
-    const name = dir.split(/[\\/]/).filter(Boolean).pop() || dir;
-    const projects = new Map(get().projects);
-    projects.set(projectId, {
-      id: projectId,
-      path: dir,
-      name,
-      ctx: initAppContext(baseUrl, projectId, dir),
-      lastOpened: new Date().toISOString(),
-    });
-    set({ projects, activeProjectId: projectId });
-    await window.electronAPI.addOpenProject(projectId, dir);
-    await window.electronAPI.setLastActiveProject(projectId);
+    await registerProject(set, get, projectId, dir);
     return projectId;
+  },
+
+  async createNewProject() {
+    const result = await window.electronAPI.createNewProject();
+    if (!result) return { projectId: null };
+    if ("error" in result) return { projectId: null, error: result.error };
+    await registerProject(set, get, result.projectId, result.path);
+    return { projectId: result.projectId };
+  },
+
+  async openSampleProject(sampleId) {
+    const result = await window.electronAPI.openSampleProject({ sampleId });
+    if (!result) return { projectId: null };
+    if ("error" in result) return { projectId: null, error: result.error };
+    await registerProject(set, get, result.projectId, result.path);
+    return { projectId: result.projectId };
   },
 
   async closeProject(projectId) {
     const project = get().projects.get(projectId);
     if (!project) return get().activeProjectId;
 
-    await window.electronAPI.closeProject(projectId);
+    await window.electronAPI.closeProject(projectId, project.path);
 
     let nextActiveId: string | null = get().activeProjectId;
     set((state) => {

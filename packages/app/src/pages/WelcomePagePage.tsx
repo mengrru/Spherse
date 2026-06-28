@@ -12,7 +12,7 @@ export function WelcomePagePage() {
       key={projectId}
       fallback={
         <div className="flex h-full items-center justify-center text-muted-foreground">
-          <p>{t("chat.startConversation")}</p>
+          <p>{t("welcome-page.emptyState")}</p>
         </div>
       }
     />

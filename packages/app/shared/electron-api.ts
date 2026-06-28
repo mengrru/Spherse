@@ -17,6 +17,12 @@ export interface SaveDialogOptions {
   filters?: SaveDialogFilter[];
 }
 
+export interface SampleManifestEntry {
+  id: string;
+  displayName: string;
+  dirName: string;
+}
+
 export interface IpcAppSettings {
   locale?: string;
   models?: {
@@ -32,7 +38,7 @@ export interface ElectronAPI {
   getServerPort: () => Promise<number>;
   restoreProjects: () => Promise<RestoredProject[]>;
   addOpenProject: (projectId: string, projectRoot: string) => Promise<void>;
-  closeProject: (projectId: string) => Promise<void>;
+  closeProject: (projectId: string, projectPath: string) => Promise<void>;
   revealInFinder: (projectRoot: string) => Promise<void>;
   setLastActiveProject: (projectId: string) => Promise<void>;
   getLastActiveProject: () => Promise<string | null>;
@@ -47,4 +53,7 @@ export interface ElectronAPI {
   reloadRenderer: () => Promise<void>;
   resetAppData: () => Promise<void>;
   showSaveDialog: (options: SaveDialogOptions) => Promise<string | null>;
+  createNewProject: () => Promise<{ projectId: string; path: string } | { error: string } | null>;
+  openSampleProject: (opts: { sampleId: string }) => Promise<{ projectId: string; path: string } | { error: string } | null>;
+  getSampleManifest: () => Promise<SampleManifestEntry[]>;
 }

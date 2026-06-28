@@ -17,8 +17,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   restoreProjects: () => ipcRenderer.invoke("restore-projects"),
   addOpenProject: (projectId: string, projectRoot: string) =>
     ipcRenderer.invoke("add-open-project", projectId, projectRoot),
-  closeProject: (projectId: string) =>
-    ipcRenderer.invoke("close-project", projectId),
+  closeProject: (projectId: string, projectPath: string) =>
+    ipcRenderer.invoke("close-project", projectId, projectPath),
   revealInFinder: (projectRoot: string) =>
     ipcRenderer.invoke("reveal-in-finder", projectRoot),
   setLastActiveProject: (projectId: string) =>
@@ -33,4 +33,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   resetAppData: () => ipcRenderer.invoke("reset-app-data"),
   showSaveDialog: (options: { defaultPath?: string }) =>
     ipcRenderer.invoke("show-save-dialog", options),
+  createNewProject: () => ipcRenderer.invoke("create-new-project"),
+  openSampleProject: (opts: { sampleId: string }) =>
+    ipcRenderer.invoke("open-sample-project", opts),
+  getSampleManifest: () => ipcRenderer.invoke("get-sample-manifest"),
 } satisfies ElectronAPI);

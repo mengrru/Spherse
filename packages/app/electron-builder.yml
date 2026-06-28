@@ -6,6 +6,10 @@ directories:
 files:
   - dist/**/*
   - package.json
+extraResources:
+  - from: ../presets/sample-projects
+    to: sample-projects
+    filter: ["**/*"]
 extraMetadata:
   main: dist/main/index.js
 mac:
