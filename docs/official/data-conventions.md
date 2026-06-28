@@ -118,16 +118,16 @@ Agent system prompt content...
 
 ## Skill 定义格式
 
-Skill 有两个来源：builtin skill（app 内置只读，随 app 升级更新）和 project skill（`.spherse/skills/<skill-name>/SKILL.md`，用户自建可读写）。两者按 name 合并，project 同名覆盖 builtin。格式均为 YAML frontmatter + Markdown body。
+Skill 有两个来源：builtin skill（app 内置只读，随 app 升级更新）和 project skill（`.spherse/skills/<skill-name>/SKILL.md`，用户自建可读写）。两者按 name 合并，project 同名覆盖 builtin。格式均为 YAML frontmatter + Markdown body。project skill 目录除 `SKILL.md` 外，还可携带附加文件（如 `references/*.md`、`scripts/*.js`、`assets/*`），与 `SKILL.md` 同目录放置。
 
-`SkillDefinition` 的 `source` 字段标识来源（`builtin` 或 `project`）；builtin skill 的 `filePath` 为合成路径 `builtin://<dir>/SKILL.md`。
+`SkillDefinition` 的 `source` 字段标识来源（`builtin` 或 `project`）；builtin skill 的 `filePath` 为合成路径 `builtin://<dir>/SKILL.md`。`SkillDefinition` 的 `files` 字段为 `string[]`，列出 skill 目录下（不含 `SKILL.md`）附加文件的 posix 风格相对路径；无附加文件或 builtin skill 时为 `[]`。`SkillStore` 在解析 project skill 时递归枚举其目录（跳过 hidden/`node_modules`/`.git` 条目）填充该字段。
 
 必需字段：
 
 - `name`
 - `description`
 
-Markdown body 会作为完整 instructions 被 `load_skill` 工具按需加载。
+Markdown body 会作为完整 instructions 被 `load_skill` 工具按需加载。当 project skill 带有附加文件（`files` 非空）时，`load_skill` 输出会在指令末尾追加 `## Skill Files` 段，逐项列出附加文件在项目内的完整相对路径，并提示 agent 用 `read_file` 工具读取；builtin skill 因 `files` 恒为 `[]` 不输出该清单。
 
 项目 skill（`source: project`）可通过 UI 创建与安装：前端 SkillPanel 调用 `POST /api/projects/:projectId/skills`（body：name/description/instructions）创建，或经原生文件选择器选 zip 后调用 `POST /api/projects/:projectId/skills/install`（body：zipPath 绝对路径）安装。zip 约定：顶层有且仅有一个技能文件夹，内含合法 `SKILL.md`，frontmatter `name` 须与文件夹名一致；同名冲突时返回 409，不覆盖。写逻辑实现在 `SkillStore.createSkill/installSkill`，`ProjectManager` 为纯委托。
 

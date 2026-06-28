@@ -20,7 +20,7 @@ describe("createLoadSkillTool", () => {
   });
 
   it("loads an existing skill", async () => {
-    const tool = createLoadSkillTool(new SkillStore(skillDir));
+    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
     const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
     expect(result.content[0].text).toContain("Skill: brainstorming");
     expect(result.content[0].text).toContain("Do creative brainstorming here.");
@@ -28,7 +28,7 @@ describe("createLoadSkillTool", () => {
   });
 
   it("returns error for non-existent skill", async () => {
-    const tool = createLoadSkillTool(new SkillStore(skillDir));
+    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
     const result = await tool.execute("tc1", { skill_name: "missing" }, undefined as any);
     expect(result.content[0].text).toContain('skill "missing" not found');
     expect(result.details).toBeUndefined();
@@ -36,8 +36,27 @@ describe("createLoadSkillTool", () => {
 
   it("returns error for skill without SKILL.md", async () => {
     await writeFile(skillDir, "empty-dir/placeholder.txt", "");
-    const tool = createLoadSkillTool(new SkillStore(skillDir));
+    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
     const result = await tool.execute("tc1", { skill_name: "empty-dir" }, undefined as any);
     expect(result.content[0].text).toContain("not found");
+  });
+
+  it("appends manifest for project skill with companion files", async () => {
+    await writeFile(skillDir, "brainstorming/references/foo.md", "# Foo\n\nFoo content.");
+    await writeFile(skillDir, "brainstorming/scripts/helper.js", "console.log('hi');");
+
+    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
+    const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
+    const text = result.content[0].text;
+    expect(text).toContain("## Skill Files");
+    expect(text).toContain("- brainstorming/references/foo.md");
+    expect(text).toContain("- brainstorming/scripts/helper.js");
+    expect(text).toContain("read_file tool");
+  });
+
+  it("does not append manifest for project skill without companion files", async () => {
+    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
+    const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
+    expect(result.content[0].text).not.toContain("## Skill Files");
   });
 });

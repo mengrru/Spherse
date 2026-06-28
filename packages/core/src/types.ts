@@ -33,6 +33,7 @@ export interface SkillDefinition {
   instructions: string;
   filePath: string;
   source: "builtin" | "project";
+  files: string[];
 }
 
 export interface ScheduleEntry {

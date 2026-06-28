@@ -104,7 +104,7 @@ describe("api contracts", () => {
   });
 
   it("validates skill list response", () => {
-    const skill = { name: "n", description: "d", instructions: "i", filePath: "n.md", source: "builtin" };
+    const skill = { name: "n", description: "d", instructions: "i", filePath: "n.md", source: "builtin", files: [] };
     expect(parseApiResponse(schemas.skillListResponse, [skill])).toEqual([skill]);
     expect(() => parseApiResponse(schemas.skillDefinition, { name: "n" })).toThrow(/Invalid payload/);
     expect(() =>
@@ -116,7 +116,17 @@ describe("api contracts", () => {
         description: "d",
         instructions: "i",
         filePath: "n.md",
+        source: "builtin",
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.skillDefinition, {
+        name: "n",
+        description: "d",
+        instructions: "i",
+        filePath: "n.md",
         source: "unknown",
+        files: [],
       }),
     ).toThrow(/Invalid payload/);
   });

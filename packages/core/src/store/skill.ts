@@ -6,6 +6,7 @@ import AdmZip from "adm-zip";
 import { nanoid } from "nanoid";
 import type { SkillDefinition } from "../types.js";
 import { isPathInside } from "../utils/path-safety.js";
+import { shouldSkipDirEntry } from "../utils/fs-walk.js";
 import { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { ConflictError, ValidationError } from "../errors.js";
 
@@ -206,16 +207,37 @@ export class SkillStore {
 
       if (!data.name || !data.description) return null;
 
+      const files = await this.collectSkillFiles(path.dirname(skillMdPath));
       return {
         name: data.name,
         description: data.description,
         instructions: content.trim(),
         filePath: skillMdPath,
         source: "project",
+        files,
       };
     } catch {
       return null;
     }
+  }
+
+  private async collectSkillFiles(skillDirAbs: string): Promise<string[]> {
+    const result: string[] = [];
+    const walk = async (dir: string, prefix: string) => {
+      const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => null);
+      if (!entries) return;
+      for (const entry of entries) {
+        if (shouldSkipDirEntry(entry.name)) continue;
+        const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+          await walk(path.join(dir, entry.name), rel);
+        } else if (rel !== "SKILL.md") {
+          result.push(rel);
+        }
+      }
+    };
+    await walk(skillDirAbs, "");
+    return result.sort();
   }
 
   private parseBuiltin(
@@ -234,6 +256,7 @@ export class SkillStore {
         instructions: content.trim(),
         filePath: `builtin://${source.dir}/SKILL.md`,
         source: "builtin",
+        files: [],
       });
     }
     return skills;

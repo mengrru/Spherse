@@ -37,6 +37,7 @@ describe("SkillStore (project-only, backward compat)", () => {
     expect(names).toEqual(["brainstorming", "debugging"]);
     for (const s of skills) {
       expect(s.source).toBe("project");
+      expect(s.files).toEqual([]);
     }
   });
 
@@ -52,10 +53,32 @@ describe("SkillStore (project-only, backward compat)", () => {
     expect(skill!.description).toBe("My skill");
     expect(skill!.instructions).toContain("Instructions here.");
     expect(skill!.source).toBe("project");
+    expect(skill!.files).toEqual([]);
   });
 
   it("returns null for non-existent skill", async () => {
     expect(await store.get("missing")).toBeNull();
+  });
+
+  it("enumerates companion files in a skill directory", async () => {
+    await writeFile(
+      skillDir,
+      "companion/SKILL.md",
+      "---\nname: companion\ndescription: Has files\n---\n\nBody.",
+    );
+    await writeFile(skillDir, "companion/references/foo.md", "# foo");
+    await writeFile(skillDir, "companion/scripts/helper.js", "export {}");
+    await writeFile(skillDir, "companion/.hidden", "secret");
+    await writeFile(skillDir, "companion/assets/logo.txt", "logo");
+    const skill = await store.get("companion");
+    expect(skill).not.toBeNull();
+    expect([...skill!.files].sort()).toEqual([
+      "assets/logo.txt",
+      "references/foo.md",
+      "scripts/helper.js",
+    ]);
+    expect(skill!.files).not.toContain("SKILL.md");
+    expect(skill!.files).not.toContain(".hidden");
   });
 
   it("skips directories without SKILL.md", async () => {
@@ -104,6 +127,7 @@ describe("SkillStore with builtin sources", () => {
     expect(skills[0].name).toBe("x");
     expect(skills[0].source).toBe("builtin");
     expect(skills[0].filePath.startsWith("builtin://")).toBe(true);
+    expect(skills[0].files).toEqual([]);
   });
 
   it("returns empty list when both builtin and project sources are empty", async () => {
@@ -143,6 +167,7 @@ describe("SkillStore with builtin sources", () => {
     const skill = await store.get("x");
     expect(skill).not.toBeNull();
     expect(skill!.source).toBe("builtin");
+    expect(skill!.files).toEqual([]);
   });
 
   it("skips builtin sources missing required fields", async () => {
@@ -190,6 +215,7 @@ describe("SkillStore with builtin sources", () => {
     expect(skill).not.toBeNull();
     expect(skill!.source).toBe("builtin");
     expect(skill!.description).toBe("Builtin X");
+    expect(skill!.files).toEqual([]);
   });
 });
 
