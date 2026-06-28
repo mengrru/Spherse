@@ -21,8 +21,8 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "^0.78.0",
-    "@mariozechner/pi-agent-core": "^0.72.1",
+    "@earendil-works/pi-ai": "0.80.2",
+    "@earendil-works/pi-agent-core": "0.80.2",
     "@sinclair/typebox": "^0.34.0",
     "@spherse/i18n": "^0.1.0",
     "@spherse/presets": "^0.1.0",

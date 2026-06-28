@@ -1,12 +1,11 @@
 import type {
   AssistantImages,
-  ImagesApiProvider,
   ImagesContext,
   ImagesModel,
-  ImagesOptions,
+  ImagesProvider,
   ProviderImagesOptions,
 } from "@earendil-works/pi-ai";
-import { registerImagesApiProvider } from "@earendil-works/pi-ai";
+import { createImagesProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
 
 export type ZhipuImagesApi = "zhipu-images";
 
@@ -156,15 +155,21 @@ export async function generateImagesZhipu(
   }
 }
 
-let registered = false;
-function registerZhipuImages(): void {
-  if (registered) return;
-  const provider: ImagesApiProvider<ZhipuImagesApi, ImagesOptions> = {
-    api: "zhipu-images",
-    generateImages: generateImagesZhipu as any,
-  };
-  registerImagesApiProvider(provider, "spherse-zhipu");
-  registered = true;
+export function createZhipuImagesProvider(): ImagesProvider {
+  return createImagesProvider({
+    id: "zhipu",
+    name: "智谱",
+    auth: { apiKey: envApiKeyAuth("Zhipu image API key", ["SPHERSE_IMAGE_API_KEY"]) },
+    models: Object.values(ZHIPU_IMAGE_MODELS).map((m) => ({
+      id: m.id,
+      name: m.name,
+      provider: "zhipu",
+      api: m.api,
+      baseUrl: m.baseUrl,
+      input: m.input,
+      output: m.output,
+      cost: m.cost,
+    })),
+    api: { generateImages: generateImagesZhipu as any },
+  });
 }
-
-registerZhipuImages();

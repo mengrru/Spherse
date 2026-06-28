@@ -3,10 +3,9 @@ import fsSync from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { Type } from "@sinclair/typebox";
-import type { AgentTool } from "@mariozechner/pi-agent-core";
-import { generateImages, getImageModel } from "@earendil-works/pi-ai";
+import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { resolveProjectPath } from "../utils/path-safety.js";
-import { resolveZhipuImageModel } from "../model-providers/zhipu-images.js";
+import { getImagesModels } from "../model-providers/index.js";
 
 const GenerateImageParams = Type.Object({
   prompt: Type.String({ description: "图片描述（prompt），用于生成图片" }),
@@ -69,23 +68,19 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
         details: { type: "image", status: "generating", prompt },
       });
 
-      let model: object;
-      try {
-        model =
-          config.provider === "zhipu"
-            ? resolveZhipuImageModel(config.modelId)
-            : (getImageModel as any)("openrouter", config.modelId);
-      } catch (err) {
+      const imagesModels = getImagesModels();
+      const model = imagesModels.getModel(config.provider, config.modelId);
+      if (!model) {
         return {
-          content: [{ type: "text" as const, text: `图片生成失败：无法解析模型 ${(err as Error).message}` }],
-          details: { type: "image", status: "error", prompt, errorMessage: (err as Error).message },
+          content: [{ type: "text" as const, text: `图片生成失败：无法解析模型 ${config.provider}/${config.modelId}` }],
+          details: { type: "image", status: "error", prompt, errorMessage: "model-not-found" },
         };
       }
 
       let result;
       try {
-        result = await generateImages(
-          model as any,
+        result = await imagesModels.generateImages(
+          model,
           { input: [{ type: "text", text: prompt }] },
           { apiKey: config.apiKey, ...(signal ? { signal } : {}) },
         );

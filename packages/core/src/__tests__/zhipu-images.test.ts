@@ -3,6 +3,7 @@ import {
   resolveZhipuImageModel,
   generateImagesZhipu,
   ZHIPU_IMAGE_MODELS,
+  createZhipuImagesProvider,
 } from "../model-providers/zhipu-images.js";
 
 const SAMPLE_MODEL = {
@@ -175,11 +176,12 @@ describe("generateImagesZhipu", () => {
   });
 });
 
-describe("zhipu-images registration", () => {
-  it("registers zhipu-images provider in pi-ai runtime on module import", async () => {
-    const { getImagesApiProvider } = await import("@earendil-works/pi-ai");
-    const provider = getImagesApiProvider("zhipu-images");
-    expect(provider).toBeDefined();
-    expect(typeof provider?.generateImages).toBe("function");
+describe("createZhipuImagesProvider", () => {
+  it("returns provider with correct id and generateImages function", () => {
+    const provider = createZhipuImagesProvider();
+    expect(provider.id).toBe("zhipu");
+    expect(provider.name).toBe("智谱");
+    expect(typeof provider.generateImages).toBe("function");
+    expect(provider.getModels().length).toBeGreaterThan(0);
   });
 });

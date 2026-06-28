@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { logAgentEvent } from "../../engine/log-agent-event.js";
 import type { Logger } from "../../logger.js";
-import type { AgentEvent } from "@mariozechner/pi-agent-core";
+import type { AgentEvent } from "@earendil-works/pi-agent-core";
 
 function createMockLogger(): {
   logger: Logger;

@@ -1,6 +1,8 @@
-import { getProviders, getModels, getModel, getImageProviders, getImageModels } from "@earendil-works/pi-ai";
+import { type Models, type ImagesModels, type MutableImagesModels } from "@earendil-works/pi-ai";
+import { builtinModels, builtinImagesModels } from "@earendil-works/pi-ai/providers/all";
+import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type { ProviderCatalog, ProviderCatalogItem, ProviderModelItem } from "../types.js";
-import { ZHIPU_IMAGE_MODELS } from "./zhipu-images.js";
+import { createZhipuImagesProvider } from "./zhipu-images.js";
 
 export const ENABLED_PROVIDERS = [
   "openai",
@@ -44,6 +46,10 @@ const PROVIDER_ENV_KEYS: Record<string, string[]> = {
   xai: ["XAI_API_KEY"],
 };
 
+const models: Models = builtinModels();
+const imagesModels: MutableImagesModels = builtinImagesModels();
+imagesModels.setProvider(createZhipuImagesProvider());
+
 function toDisplayName(id: string): string {
   return (
     PROVIDER_DISPLAY_NAMES[id] ??
@@ -61,19 +67,19 @@ function resolveAuthType(provider: string): "apiKey" | "external" | "unknown" {
 }
 
 export function getSupportedProviders(): ProviderCatalog {
-  const allProviders = getProviders();
+  const allProviders = models.getProviders();
   const enabledSet = new Set<string>(ENABLED_PROVIDERS);
   const catalog: ProviderCatalog = {};
 
   for (const provider of allProviders) {
-    if (!enabledSet.has(provider)) continue;
-    const models = getModels(provider);
-    if (models.length === 0) continue;
+    if (!enabledSet.has(provider.id)) continue;
+    const providerModels = models.getModels(provider.id);
+    if (providerModels.length === 0) continue;
 
-    const envKeys = PROVIDER_ENV_KEYS[provider] ?? [];
-    const authType = resolveAuthType(provider);
+    const envKeys = PROVIDER_ENV_KEYS[provider.id] ?? [];
+    const authType = resolveAuthType(provider.id);
 
-    const items: ProviderModelItem[] = models.map((m) => ({
+    const items: ProviderModelItem[] = providerModels.map((m) => ({
       id: m.id,
       name: m.name,
       provider: m.provider,
@@ -85,12 +91,12 @@ export function getSupportedProviders(): ProviderCatalog {
     }));
 
     const item: ProviderCatalogItem = {
-      id: provider,
-      name: toDisplayName(provider),
+      id: provider.id,
+      name: toDisplayName(provider.id),
       auth: { type: authType, envKeys },
       models: items,
     };
-    catalog[provider] = item;
+    catalog[provider.id] = item;
   }
 
   return catalog;
@@ -101,13 +107,13 @@ export function resolveModelById(modelId: string) {
   if (slashIdx >= 0) {
     const provider = modelId.slice(0, slashIdx);
     const id = modelId.slice(slashIdx + 1);
-    const model = (getModel as any)(provider, id);
+    const model = models.getModel(provider, id);
     if (model) return model;
     throw new Error(`Could not resolve model: ${modelId}`);
   }
-  const providers = getProviders();
+  const providers = models.getProviders();
   for (const provider of providers) {
-    const model = (getModel as any)(provider, modelId);
+    const model = models.getModel(provider.id, modelId);
     if (model) return model;
   }
   throw new Error(`Could not resolve model: ${modelId}`);
@@ -126,10 +132,10 @@ const IMAGE_PROVIDER_ENV_KEYS: Record<string, string[]> = {
 export function getImageSupportedProviders(): ProviderCatalog {
   const catalog: ProviderCatalog = {};
 
-  for (const provider of getImageProviders()) {
-    const models = getImageModels(provider);
-    if (models.length === 0) continue;
-    const items: ProviderModelItem[] = models.map((m: any) => ({
+  for (const provider of imagesModels.getProviders()) {
+    const providerModels = imagesModels.getModels(provider.id);
+    if (providerModels.length === 0) continue;
+    const items: ProviderModelItem[] = providerModels.map((m) => ({
       id: m.id,
       name: m.name,
       provider: m.provider,
@@ -137,28 +143,21 @@ export function getImageSupportedProviders(): ProviderCatalog {
       reasoning: false,
       input: m.input ?? ["text"],
     }));
-    catalog[provider] = {
-      id: provider,
-      name: IMAGE_PROVIDER_DISPLAY_NAMES[provider] ?? provider,
-      auth: { type: "apiKey", envKeys: IMAGE_PROVIDER_ENV_KEYS[provider] ?? [] },
+    catalog[provider.id] = {
+      id: provider.id,
+      name: IMAGE_PROVIDER_DISPLAY_NAMES[provider.id] ?? provider.id,
+      auth: { type: "apiKey", envKeys: IMAGE_PROVIDER_ENV_KEYS[provider.id] ?? [] },
       models: items,
     };
   }
 
-  const zhipuItems: ProviderModelItem[] = Object.values(ZHIPU_IMAGE_MODELS).map((m) => ({
-    id: m.id,
-    name: m.name,
-    provider: m.provider,
-    api: m.api,
-    reasoning: false,
-    input: [...m.input],
-  }));
-  catalog["zhipu"] = {
-    id: "zhipu",
-    name: IMAGE_PROVIDER_DISPLAY_NAMES["zhipu"],
-    auth: { type: "apiKey", envKeys: IMAGE_PROVIDER_ENV_KEYS["zhipu"] ?? [] },
-    models: zhipuItems,
-  };
-
   return catalog;
+}
+
+export function getChatStreamFn(): StreamFn {
+  return (model, context, options) => models.streamSimple(model, context, options);
+}
+
+export function getImagesModels(): ImagesModels {
+  return imagesModels;
 }

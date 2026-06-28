@@ -12,7 +12,7 @@ spherse/
 │   │       ├── project-runtime.ts    # ProjectRuntime：运行时 session 管理 + agent/profile 操作门面
 │   │       ├── model-providers/     # pi-ai provider catalog adapter（文本 + 图片 provider）
 │   │       │   ├── index.ts        # ENABLED_PROVIDERS 过滤、getSupportedProviders / getImageSupportedProviders、model resolution
-│   │       │   └── zhipu-images.ts # 智谱图片 provider 元数据（通过 pi-ai registerImagesApiProvider 注册，模块加载副作用）
+│   │       │   └── zhipu-images.ts # 智谱图片 provider 元数据 + createZhipuImagesProvider()（createImagesProvider 工厂，模块加载时注入 imagesModels 单例）
     │   │       ├── engine/
     │   │       │   ├── read-context-files.ts # 读取 agent profile context 文件并注入 system prompt
     │   │       │   └── log-agent-event.ts    # agent event → pino 日志映射（级别、截断、生命周期事件）
@@ -34,7 +34,7 @@ spherse/
 │   │       │   ├── append-changelog.ts
 │   │       │   ├── load-skill.ts
     │   │       │   ├── render-card.ts    # HTML card 渲染工具
-    │   │       │   ├── generate-image.ts # 图片生成工具（调用 pi-ai imagesApiProvider，结果落盘 .spherse/generated-images/）
+    │   │       │   ├── generate-image.ts # 图片生成工具（经 getImagesModels() 解析模型并生成，结果落盘 .spherse/generated-images/）
     │   │       │   ├── tool-context.ts   # ToolContext：收窄 ProjectStore 接口，约束 tool 可用的读写方法
     │   │       │   └── index.ts          # createToolsForProject(ctx: ToolContext) 工厂
 │   │       ├── scheduler.ts
