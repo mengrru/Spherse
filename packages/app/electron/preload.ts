@@ -3,6 +3,7 @@ import type { ElectronAPI } from "@shared/electron-api.js";
 
 contextBridge.exposeInMainWorld("electronAPI", {
   selectDirectory: () => ipcRenderer.invoke("select-directory"),
+  selectSkillZip: () => ipcRenderer.invoke("select-skill-zip"),
   openProject: (projectRoot: string) =>
     ipcRenderer.invoke("open-project", projectRoot),
   getServerPort: () => ipcRenderer.invoke("get-server-port"),

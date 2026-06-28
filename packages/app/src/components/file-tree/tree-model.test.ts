@@ -40,6 +40,16 @@ describe("buildNodes", () => {
     expect(nodes[1].path).toBe("project/index.ts");
   });
 
+  it("builds full project-relative paths when rooted at a nested rootPath", () => {
+    const entries: FileEntry[] = [
+      { name: "foo", type: "directory" },
+      { name: "SKILL.md", type: "file" },
+    ];
+    const nodes = buildNodes(entries, ".spherse/skills");
+    expect(nodes[0].path).toBe(".spherse/skills/foo");
+    expect(nodes[1].path).toBe(".spherse/skills/SKILL.md");
+  });
+
   it("returns empty array for empty input", () => {
     expect(buildNodes([], "")).toEqual([]);
   });

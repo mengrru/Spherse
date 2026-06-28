@@ -21,7 +21,7 @@ spherse/
 │   │       │   ├── session.ts        # SQLite session 持久化（每 agent 独立 sessions.db, lazy open 连接池）
 │   │       │   ├── schedule.ts       # 定时任务配置读写（schedules.yml / schedule-logs.jsonl）
 │   │       │   ├── agent-profile.ts  # .spherse/agents/{slug}-{shortId}/profile.md CRUD
-    │   │       │   ├── skill.ts          # SkillStore：合并 builtin（PRESET_SKILL_SOURCES 内存）与 project（.spherse/skills/*/SKILL.md）skill
+    │   │       │   ├── skill.ts          # SkillStore：合并 builtin（PRESET_SKILL_SOURCES 内存）与 project（.spherse/skills/*/SKILL.md）skill；createSkill/installSkill 写逻辑（含 zip 校验、zip-slip 防护、原子安装）
 │   │       │   └── index.ts
 │   │       ├── tools/                # pi-agent-core AgentTool 实现（engine 内部使用）
 │   │       │   ├── read-file.ts
@@ -102,7 +102,7 @@ spherse/
     │   │       │   ├── file-tree.ts      # FileTreeResponse
     │   │       │   ├── settings.ts       # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
     │   │       │   ├── schedules.ts      # ScheduleEntry、ScheduleCreate/Update 请求、List/Log Response
-    │   │       │   ├── skills.ts         # SkillDefinition、SkillList Response
+    │   │       │   ├── skills.ts         # SkillDefinition、SkillList/Create/Install Request 响应与请求 schema
     │   │       │   ├── debug.ts          # TurnContextSnapshot
     │   │       │   └── websocket.ts      # ChatClientMessage/ChatServerEvent/ScheduleServerEvent + parser
 │   │       ├── routes/               # REST 路由，按业务域拆分
@@ -113,7 +113,7 @@ spherse/
 │   │       │   ├── content.ts        # 内容浏览、读取、保存、删除、新建文件/目录
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
-│   │       │   ├── skills.ts         # Skill 列表与详情
+│   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
 │   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
 │   │       │   ├── schedules.ts      # 定时任务 CRUD 与手动触发
@@ -131,6 +131,7 @@ spherse/
 │       │   │   ├── index.ts          # registerAllIpc 聚合
     │   │       │   ├── project.ts        # 项目选择、server 启停、打开项目持久化
 │       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
+│       │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
 │       │   │   └── debug.ts          # 开发模式 debug 动作
 │       │   ├── window.ts             # BrowserWindow 创建与管理
 │       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新
@@ -206,9 +207,10 @@ spherse/
 │           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、chat 专属类型（types.ts）、聚合/diff 纯函数（lib/）
 │           │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）
 │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
-│           │   ├── file-tree/            # 文件树组件、树模型、controller hook、AI 读取限制 dialog
 │           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
-│           │   ├── project-panel/         # 项目侧栏，自治读取 URL/projectCtx，组合 Agent/session 列表与文件树
+│           │   ├── project-panel/         # 项目侧栏薄组合层，按序渲染 AgentSessionList/UserFilePanel/SkillPanel，自治 side-panel 浮动/隐藏布局
+│           │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
+│           │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）
 │           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
 │           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
 │           │   ├── project-settings/     # 项目设置弹窗集合
@@ -221,6 +223,7 @@ spherse/
 │           │   └── WelcomePagePage.tsx   # Project index 路由 page，渲染 WelcomePage 空状态
 │           └── components/
 │               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
+│               ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel，被 user-file-panel 与 skill-panel 共用
 │               ├── EmptyState.tsx        # 无项目时的空状态
 │               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
 ├── scripts/

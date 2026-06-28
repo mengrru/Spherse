@@ -27,6 +27,7 @@ export interface IpcAppSettings {
 
 export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>;
+  selectSkillZip: () => Promise<string | null>;
   openProject: (projectRoot: string) => Promise<{ projectId: string }>;
   getServerPort: () => Promise<number>;
   restoreProjects: () => Promise<RestoredProject[]>;

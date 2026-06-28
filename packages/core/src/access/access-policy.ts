@@ -39,6 +39,7 @@ const SRV_READ: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "changelog",
   "projectTheme",
   "generatedImages",
+  "skills",
   "agentTheme",
 ]);
 
@@ -47,6 +48,7 @@ const SRV_WRITE: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "rootIndex",
   "changelog",
   "projectTheme",
+  "skills",
 ]);
 
 function assertAllowed(

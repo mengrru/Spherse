@@ -138,6 +138,14 @@ export class ProjectManager {
     return this.projectStore.skill.get(name);
   }
 
+  async createSkill(name: string, description: string, instructions: string): Promise<SkillDefinition> {
+    return this.projectStore.skill.createSkill(name, description, instructions);
+  }
+
+  async installSkill(zipPath: string): Promise<SkillDefinition> {
+    return this.projectStore.skill.installSkill(zipPath);
+  }
+
   getAiAccessSettings(): { deniedPaths: string[] } {
     return this.projectStore.config.getAiAccessSettings();
   }

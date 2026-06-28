@@ -1,5 +1,5 @@
 export * from "./types.js";
-export { NotFoundError, ValidationError, AccessDeniedError } from "./errors.js";
+export { NotFoundError, ValidationError, AccessDeniedError, ConflictError } from "./errors.js";
 export type { ProjectRuntime } from "./project-runtime.js";
 export type { ProjectManager } from "./project-manager.js";
 export type { SessionRuntime } from "./session-runtime.js";

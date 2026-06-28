@@ -10,13 +10,15 @@ export interface FileTreeProps {
   selectedFilePath?: string;
   onSelectFile: (filePath: string) => void;
   onDeleted?: (path: string) => void;
-  refreshKey?: number;
+  rootPath?: string;
+  emptyLabel?: string;
 }
 
-export function FileTree({ selectedFilePath, onSelectFile, onDeleted, refreshKey }: FileTreeProps) {
+export function FileTree({ selectedFilePath, onSelectFile, onDeleted, rootPath, emptyLabel }: FileTreeProps) {
   const { t } = useI18n();
   const { client, projectId } = useProjectCtx();
-  const ctrl = useFileTreeController(client, onSelectFile, onDeleted, refreshKey, projectId);
+  const basePath = rootPath ?? "";
+  const ctrl = useFileTreeController(client, onSelectFile, onDeleted, projectId, basePath);
 
   const ctxValue = {
     selectedFilePath,
@@ -33,7 +35,7 @@ export function FileTree({ selectedFilePath, onSelectFile, onDeleted, refreshKey
       {ctrl.loading ? (
         <p className="px-2 text-xs text-sidebar-foreground/70">{t("common.loading")}</p>
       ) : ctrl.rootNodes.length === 0 ? (
-        <p className="px-2 text-xs text-sidebar-foreground/70">{t("file-tree.empty")}</p>
+        <p className="px-2 text-xs text-sidebar-foreground/70">{emptyLabel ?? t("file-tree.empty")}</p>
       ) : (
         <FileTreeProvider value={ctxValue}>
           {ctrl.rootNodes.map((node) => (
@@ -41,7 +43,7 @@ export function FileTree({ selectedFilePath, onSelectFile, onDeleted, refreshKey
           ))}
         </FileTreeProvider>
       )}
-      {ctrl.creating && ctrl.creating.parentPath === "" && (
+      {ctrl.creating && ctrl.creating.parentPath === basePath && (
         <InlineNameInput
           depth={0}
           onSubmit={(name) =>

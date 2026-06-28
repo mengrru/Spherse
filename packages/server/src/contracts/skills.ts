@@ -11,7 +11,17 @@ const skillDefinition = Type.Object({
 export const schemas = {
   skillDefinition,
   skillListResponse: Type.Array(skillDefinition),
+  skillCreateRequest: Type.Object({
+    name: Type.String(),
+    description: Type.String(),
+    instructions: Type.String(),
+  }),
+  skillInstallRequest: Type.Object({
+    zipPath: Type.String(),
+  }),
 } as const;
 
 export type SkillDefinitionContract = Static<typeof skillDefinition>;
 export type SkillListResponse = Static<typeof schemas.skillListResponse>;
+export type SkillCreateRequest = Static<typeof schemas.skillCreateRequest>;
+export type SkillInstallRequest = Static<typeof schemas.skillInstallRequest>;

@@ -154,6 +154,7 @@ describe("ProjectFsWatcher", () => {
       { filename: "CHANGELOG.md", reported: true }, // changelog
       { filename: ".spherse/theme.css", reported: true }, // projectTheme
       { filename: ".spherse/agents/bot/theme.css", reported: true }, // agentTheme
+      { filename: ".spherse/skills/my-skill/SKILL.md", reported: true }, // skills
       { filename: ".spherse/project.yaml", reported: false }, // projectConfig
       { filename: ".spherse/agents/bot/profile.md", reported: false }, // agentProfile
       { filename: "node_modules/pkg/index.js", reported: false }, // denoise top-level

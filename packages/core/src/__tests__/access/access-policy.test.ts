@@ -25,7 +25,7 @@ const MATRIX: MatrixRow[] = [
   { category: "projectConfig", path: ".spherse/project.yaml", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "projectTheme", path: ".spherse/theme.css", llmRead: true, llmWrite: true, srvRead: true, srvWrite: true },
   { category: "generatedImages", path: ".spherse/generated-images/img.png", llmRead: true, llmWrite: false, srvRead: true, srvWrite: false },
-  { category: "skills", path: ".spherse/skills/my-skill/SKILL.md", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
+  { category: "skills", path: ".spherse/skills/my-skill/SKILL.md", llmRead: true, llmWrite: false, srvRead: true, srvWrite: true },
   { category: "agentProfile", path: ".spherse/agents/bot-abc123/profile.md", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "agentTheme", path: ".spherse/agents/bot-abc123/theme.css", llmRead: true, llmWrite: true, srvRead: true, srvWrite: false },
   { category: "agentSessions", path: ".spherse/agents/bot-abc123/sessions.db", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
@@ -48,6 +48,33 @@ describe("access policy matrix", () => {
       expect(srv.canWrite(row.path)).toBe(row.srvWrite);
     },
   );
+});
+
+describe("serverAccessPolicy skills category", () => {
+  const srv = serverAccessPolicy(PROJECT_ROOT);
+
+  it("allows read and write of a skill file under .spherse/skills", () => {
+    expect(srv.canRead(".spherse/skills/x/SKILL.md")).toBe(true);
+    expect(srv.canWrite(".spherse/skills/x/SKILL.md")).toBe(true);
+  });
+
+  it("allows read and write of the .spherse/skills directory itself", () => {
+    expect(srv.canRead(".spherse/skills")).toBe(true);
+    expect(srv.canWrite(".spherse/skills")).toBe(true);
+  });
+});
+
+describe("serverAccessPolicy rejects non-skills .spherse paths", () => {
+  const srv = serverAccessPolicy(PROJECT_ROOT);
+
+  it.each([
+    ".spherse/project.yaml",
+    ".spherse/agents/myagent/profile.md",
+    ".spherse/agents/myagent/sessions.db",
+  ])("rejects read and write of %s", (p) => {
+    expect(srv.canRead(p)).toBe(false);
+    expect(srv.canWrite(p)).toBe(false);
+  });
 });
 
 describe("llmAccessPolicy denied paths", () => {

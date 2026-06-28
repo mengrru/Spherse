@@ -129,6 +129,8 @@ Skill 有两个来源：builtin skill（app 内置只读，随 app 升级更新�
 
 Markdown body 会作为完整 instructions 被 `load_skill` 工具按需加载。
 
+项目 skill（`source: project`）可通过 UI 创建与安装：前端 SkillPanel 调用 `POST /api/projects/:projectId/skills`（body：name/description/instructions）创建，或经原生文件选择器选 zip 后调用 `POST /api/projects/:projectId/skills/install`（body：zipPath 绝对路径）安装。zip 约定：顶层有且仅有一个技能文件夹，内含合法 `SKILL.md`，frontmatter `name` 须与文件夹名一致；同名冲突时返回 409，不覆盖。写逻辑实现在 `SkillStore.createSkill/installSkill`，`ProjectManager` 为纯委托。
+
 ```markdown
 ---
 name: my-skill

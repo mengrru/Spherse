@@ -338,6 +338,46 @@ export const zhCN = {
   "project-panel.aiReadDenylistTooltip": "设置 AI 文件读取限制",
   // 文件面板的分组标签
   "project-panel.files": "文件",
+  // 技能面板的分组标签（project panel 中「文件」下方的「技能」section 标题）
+  "project-panel.skills": "技能",
+
+  // --- Skill Panel ---
+  // 技能面板右上角三点菜单的「创建技能」项
+  "skill-panel.create": "创建技能",
+  // 技能面板右上角三点菜单的「安装技能」项
+  "skill-panel.install": "安装技能",
+  // 技能面板没有技能时的空状态提示
+  "skill-panel.empty": "暂无技能",
+  // 技能名称非法（空、含 / \ : 或以 . 开头）时的提示
+  "skill-panel.nameInvalid": "名称只能包含字母、数字、连字符和下划线，且不能以点开头",
+  // 创建技能弹窗标题
+  "skill-panel.createDialog.title": "创建技能",
+  // 创建技能弹窗的「名称」字段标签（同时用作文件夹名与 SKILL.md frontmatter name）
+  "skill-panel.createDialog.nameLabel": "名称",
+  // 创建技能弹窗的「描述」字段标签（SKILL.md frontmatter description）
+  "skill-panel.createDialog.descriptionLabel": "描述",
+  // 创建技能弹窗「描述」字段的占位提示
+  "skill-panel.createDialog.descriptionPlaceholder": "简要描述该技能是什么以及应该什么情况下被 AI 调用",
+  // 创建技能弹窗的「内容」字段标签（SKILL.md 正文 instructions）
+  "skill-panel.createDialog.contentLabel": "内容",
+  // 创建技能弹窗「内容」字段的占位提示
+  "skill-panel.createDialog.contentPlaceholder": "详细描述该技能的指令内容，AI 将在调用此技能时遵循这些指引",
+  // 创建技能弹窗的提交按钮
+  "skill-panel.createDialog.submit": "创建",
+  // 创建技能弹窗的取消按钮
+  "skill-panel.createDialog.cancel": "取消",
+  // 创建技能成功提示，{name} 为技能名
+  "skill-panel.create.success": "技能「{name}」已创建",
+  // 创建技能失败提示，{message} 为错误信息
+  "skill-panel.create.failed": "创建技能失败：{message}",
+  // 创建技能时名称已存在的提示，{name} 为技能名
+  "skill-panel.create.exists": "技能「{name}」已存在",
+  // 安装技能成功提示，{name} 为技能名
+  "skill-panel.install.success": "技能「{name}」已安装",
+  // 安装技能失败提示，{message} 为错误信息
+  "skill-panel.install.failed": "安装技能失败：{message}",
+  // 安装技能时名称已存在的提示（安装时无法在客户端获知技能名，故不展示名称）
+  "skill-panel.install.exists": "该技能已存在",
 
   // --- Text Selection Session ---
   // 文本选择会话的角色下拉框占位提示

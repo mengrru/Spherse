@@ -121,6 +121,15 @@ describe("api contracts", () => {
     ).toThrow(/Invalid payload/);
   });
 
+  it("validates skill create and install requests", () => {
+    expect(
+      parseApiResponse(schemas.skillCreateRequest, { name: "x", description: "d", instructions: "i" }),
+    ).toEqual({ name: "x", description: "d", instructions: "i" });
+    expect(() => parseApiResponse(schemas.skillCreateRequest, { name: "x" })).toThrow(/Invalid payload/);
+    expect(parseApiResponse(schemas.skillInstallRequest, { zipPath: "/a/b.zip" })).toEqual({ zipPath: "/a/b.zip" });
+    expect(() => parseApiResponse(schemas.skillInstallRequest, {})).toThrow(/Invalid payload/);
+  });
+
   it("validates provider catalog and settings responses", () => {
     const catalog = {
       openai: {

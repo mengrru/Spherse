@@ -1,6 +1,11 @@
+import os from "node:os";
+import path from "node:path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import AdmZip from "adm-zip";
+import { nanoid } from "nanoid";
 import { SkillStore } from "../../store/skill.js";
-import { createTempProject, cleanupDir, writeFile } from "../helpers.js";
+import { ConflictError, ValidationError } from "../../errors.js";
+import { createTempProject, cleanupDir, writeFile, pathExists } from "../helpers.js";
 
 describe("SkillStore (project-only, backward compat)", () => {
   let skillDir: string;
@@ -186,4 +191,202 @@ describe("SkillStore with builtin sources", () => {
     expect(skill!.source).toBe("builtin");
     expect(skill!.description).toBe("Builtin X");
   });
+});
+
+interface ZipEntrySpec {
+  entryName: string;
+  content?: string;
+}
+
+function buildZip(specs: ZipEntrySpec[]): string {
+  const zip = new AdmZip();
+  for (const spec of specs) {
+    if (spec.entryName.endsWith("/")) {
+      zip.addFile(spec.entryName, Buffer.alloc(0));
+    } else {
+      zip.addFile(spec.entryName, Buffer.from(spec.content ?? "", "utf-8"));
+    }
+  }
+  const zipPath = path.join(os.tmpdir(), `skill-test-${nanoid()}.zip`);
+  zip.writeZip(zipPath);
+  return zipPath;
+}
+
+function skillMd(name: string, description = "A test skill", body = "Do the thing."): string {
+  return `---\nname: ${name}\ndescription: ${description}\n---\n\n${body}\n`;
+}
+
+describe("SkillStore createSkill", () => {
+  let skillDir: string;
+  let store: SkillStore;
+
+  beforeEach(async () => {
+    skillDir = await createTempProject();
+    store = new SkillStore(skillDir);
+  });
+
+  afterEach(async () => {
+    await cleanupDir(skillDir);
+  });
+
+  it("creates a skill directory with valid frontmatter and body", async () => {
+    const skill = await store.createSkill("world-builder", "Builds worlds", "You build worlds.");
+
+    expect(skill.name).toBe("world-builder");
+    expect(skill.description).toBe("Builds worlds");
+    expect(skill.instructions).toBe("You build worlds.");
+    expect(skill.source).toBe("project");
+    expect(skill.filePath).toBe(path.join(skillDir, "world-builder", "SKILL.md"));
+
+    expect(pathExists(skillDir, "world-builder/SKILL.md")).toBe(true);
+
+    const skills = await store.list();
+    expect(skills.some((s) => s.name === "world-builder")).toBe(true);
+  });
+
+  it("throws ConflictError when the skill already exists", async () => {
+    await store.createSkill("dup", "First", "body");
+    await expect(store.createSkill("dup", "Second", "body")).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it.each(["a/b", "a\\b", "a:b", ".hidden", "  ", ""])(
+    "rejects invalid name %j with ValidationError",
+    async (badName) => {
+      await expect(store.createSkill(badName, "desc", "body")).rejects.toBeInstanceOf(ValidationError);
+    },
+  );
+
+  it("rejects an empty description", async () => {
+    await expect(store.createSkill("ok", "   ", "body")).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
+describe("SkillStore installSkill", () => {
+  let skillDir: string;
+  let store: SkillStore;
+
+  beforeEach(async () => {
+    skillDir = await createTempProject();
+    store = new SkillStore(skillDir);
+  });
+
+  afterEach(async () => {
+    await cleanupDir(skillDir);
+  });
+
+  it("installs a valid skill zip and exposes it via list", async () => {
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: skillMd("myskill") },
+    ]);
+
+    const skill = await store.installSkill(zipPath);
+
+    expect(skill.name).toBe("myskill");
+    expect(skill.description).toBe("A test skill");
+    expect(skill.instructions).toBe("Do the thing.");
+    expect(skill.source).toBe("project");
+    expect(pathExists(skillDir, "myskill/SKILL.md")).toBe(true);
+
+    const skills = await store.list();
+    expect(skills.some((s) => s.name === "myskill")).toBe(true);
+  });
+
+  it("throws ConflictError when the skill folder already exists", async () => {
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: skillMd("myskill") },
+    ]);
+    await store.createSkill("myskill", "Existing", "body");
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it("rejects a zip missing SKILL.md without creating the skill dir", async () => {
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/other.md", content: "nope" },
+    ]);
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ValidationError);
+    expect(pathExists(skillDir, "myskill")).toBe(false);
+  });
+
+  it("rejects SKILL.md missing the name frontmatter", async () => {
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: "---\ndescription: d\n---\nbody" },
+    ]);
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("rejects SKILL.md missing the description frontmatter", async () => {
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: "---\nname: myskill\n---\nbody" },
+    ]);
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("rejects when frontmatter name does not match the folder name", async () => {
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: skillMd("other-name") },
+    ]);
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ValidationError);
+    expect(pathExists(skillDir, "myskill")).toBe(false);
+  });
+
+  it("rejects a zip with more than one top-level folder", async () => {
+    const zipPath = buildZip([
+      { entryName: "a/", content: undefined },
+      { entryName: "a/SKILL.md", content: skillMd("a") },
+      { entryName: "b/extra.txt", content: "x" },
+    ]);
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("rejects a zip with a loose top-level file", async () => {
+    const zipPath = buildZip([{ entryName: "SKILL.md", content: skillMd("x") }]);
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ValidationError);
+  });
+
+  it("rejects a zip-slip entry without extracting anything", async () => {
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: skillMd("myskill") },
+      { entryName: "myskill/../../../escape.txt", content: "evil" },
+    ]);
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ValidationError);
+    expect(pathExists(skillDir, "myskill")).toBe(false);
+  });
+
+  it("does not leave a half-installed skill on validation failure", async () => {
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: "---\ndescription: d\n---\nbody" },
+    ]);
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ValidationError);
+    expect(pathExists(skillDir, "myskill")).toBe(false);
+  });
+
+  it.each([".hidden", "foo:bar", "foo\\bar"])(
+    "rejects install zip with invalid folder name %j without creating the skill dir",
+    async (folder) => {
+      const zipPath = buildZip([
+        { entryName: `${folder}/` },
+        { entryName: `${folder}/SKILL.md`, content: skillMd(folder) },
+      ]);
+
+      await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ValidationError);
+      expect(pathExists(skillDir, folder)).toBe(false);
+    },
+  );
 });

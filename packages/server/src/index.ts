@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import type { Logger } from "@spherse/core";
-import { NotFoundError, ValidationError, AccessDeniedError } from "@spherse/core";
+import { NotFoundError, ValidationError, AccessDeniedError, ConflictError } from "@spherse/core";
 import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
@@ -42,6 +42,9 @@ export async function createMultiProjectServer(
     }
     if (err instanceof AccessDeniedError) {
       return reply.code(403).send({ error: err.message });
+    }
+    if (err instanceof ConflictError) {
+      return reply.code(409).send({ error: err.message });
     }
     if (err instanceof Error && "validation" in err && err.validation) {
       return reply.code(400).send({ error: err.message });

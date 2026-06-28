@@ -7,6 +7,7 @@ export type {
   ScheduleInfoEntryContract as ScheduleInfo,
   ScheduleLogEntryContract as ScheduleLogEntry,
   ScheduleServerEvent,
+  SkillDefinitionContract as SkillDefinition,
   AgentUpdateResponse,
   AgentCreateResponse,
   AiAccessSettingsResponse,

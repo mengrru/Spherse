@@ -8,6 +8,7 @@ const WATCHED_CATEGORIES: ReadonlySet<PathCategory> = new Set([
   "changelog",
   "projectTheme",
   "agentTheme",
+  "skills",
 ]);
 
 function shouldReport(filename: string): boolean {

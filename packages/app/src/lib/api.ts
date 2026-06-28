@@ -6,6 +6,7 @@ import type {
   ScheduleEntry,
   ScheduleInfo,
   ScheduleLogEntry,
+  SkillDefinition,
   AgentCreateResponse,
   AgentUpdateResponse,
   AiAccessSettingsResponse,
@@ -167,6 +168,26 @@ export function createApiClient(baseUrl: string, projectId: string) {
       });
       await assertOk(res);
       return parseJsonResponse<AgentCreateResponse>(res, schemas.agentCreateResponse);
+    },
+
+    async createSkill(name: string, description: string, instructions: string): Promise<SkillDefinition> {
+      const res = await fetch(`${apiBase}/skills`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description, instructions }),
+      });
+      await assertOk(res);
+      return parseJsonResponse<SkillDefinition>(res, schemas.skillDefinition);
+    },
+
+    async installSkill(zipPath: string): Promise<SkillDefinition> {
+      const res = await fetch(`${apiBase}/skills/install`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ zipPath }),
+      });
+      await assertOk(res);
+      return parseJsonResponse<SkillDefinition>(res, schemas.skillDefinition);
     },
 
     async getAgentRaw(id: string): Promise<string> {

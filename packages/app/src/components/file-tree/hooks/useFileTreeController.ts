@@ -31,8 +31,8 @@ export function useFileTreeController(
   client: ApiClient,
   onSelectFile: (filePath: string) => void,
   onDeleted: ((path: string) => void) | undefined,
-  refreshKey: number | undefined,
   projectId: string,
+  rootPath: string,
 ): FileTreeController {
   const { t } = useI18n();
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
@@ -76,19 +76,19 @@ export function useFileTreeController(
   );
 
   const refreshRoot = useCallback(async () => {
-    const entries = await loadChildren("");
-    const root = buildNodes(entries, "");
+    const entries = await loadChildren(rootPath);
+    const root = buildNodes(entries, rootPath);
     const merged = mergeExpandedState(root, nodesRef.current);
     const refreshed = await refreshExpanded(merged);
     setRootNodes(refreshed);
-  }, [loadChildren, refreshExpanded]);
+  }, [loadChildren, refreshExpanded, rootPath]);
 
   useEffect(() => {
-    loadChildren("").then((entries) => {
-      setRootNodes(buildNodes(entries, ""));
+    loadChildren(rootPath).then((entries) => {
+      setRootNodes(buildNodes(entries, rootPath));
       setLoading(false);
     });
-  }, [loadChildren, refreshKey]);
+  }, [loadChildren, rootPath]);
 
   const toggleNode = useCallback(
     async (node: TreeNode) => {

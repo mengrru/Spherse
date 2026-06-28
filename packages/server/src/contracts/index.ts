@@ -77,7 +77,7 @@ export type {
   ScheduleLogListResponse,
 } from "./schedules.js";
 
-export type { SkillDefinitionContract, SkillListResponse } from "./skills.js";
+export type { SkillDefinitionContract, SkillListResponse, SkillCreateRequest, SkillInstallRequest } from "./skills.js";
 export type { TurnContextSnapshotContract } from "./debug.js";
 
 export {
