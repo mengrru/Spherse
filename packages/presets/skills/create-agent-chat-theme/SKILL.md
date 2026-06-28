@@ -9,7 +9,7 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 
 ## 写法：原生 CSS Nesting
 
-用**原生 CSS nesting** 编写，最外层包裹 `[data-chat-root] { ... }`，所有规则嵌套其中。Electron 渲染进程跑在现代 Chromium 上（Chrome 112+ 起原生支持 CSS nesting），`<style>` 标签会直接注入原始 CSS 文本，**不做任何转换**。
+用**原生 CSS nesting** 编写，最外层包裹 `[data-chat-root] { ... }`，所有规则嵌套其中。Electron 渲染进程跑在现代 Chromium 上（Chrome 112+ 起原生支持 CSS nesting）。主题以 `<link rel="stylesheet">` 从项目 preview 路由载入（与项目级主题一致），**不做任何转换**。
 
 ```css
 [data-chat-root] {
@@ -30,9 +30,9 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 
 1. **App defaults**（`styles.css`）— 内置 `:root` / `--sp-*` 变量
 2. **Project theme**（`.spherse/theme.css`，通过 `document.head` 的 `<link>` 注入）— 可覆盖 UI 变量，也可写 `[data-chat-root] { ... }` 块，作为**所有** chat 窗口的全局默认样式
-3. **Agent theme**（本文件，后注入的 `<style>` in chat 容器）— 相同特异性下覆盖 project theme 的 chat 规则
+3. **Agent theme**（本文件，chat 容器内后载入的 `<link>`）— 相同特异性下覆盖 project theme 的 chat 规则
 
-优先级原理：agent theme 的 `<style>` 在 DOM 中比 project theme 的 `<link>` 更靠后加载。CSS 层叠规则下，相同特异性的规则后者胜出，因此 agent theme 自然覆盖 project theme 的 chat 规则。
+优先级原理：agent theme 的 `<link>` 渲染在 chat 容器内，DOM 顺序上比 project theme 的 `<link>`（位于 `document.head`）更靠后。CSS 层叠规则下，相同特异性的规则后者胜出，因此 agent theme 自然覆盖 project theme 的 chat 规则。
 
 > 想给所有 agent 设统一聊天默认样式，优先写进项目级 `.spherse/theme.css` 的 `[data-chat-root] { ... }` 块；单个 agent 覆盖默认值，写在本文件里。
 
@@ -77,6 +77,27 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 > 以上钩子均在聊天窗口 DOM 内，可嵌套在 `[data-chat-root] { ... }` 中定制。
 >
 > 其它可主题化区域（项目面板 `data-project-panel`、内容浏览器 `data-content-browser`、文档视图容器 `data-content-doc`）在聊天窗口 DOM 之外，**不受 agent theme 影响**，请在项目级 `.spherse/theme.css` 中定制，详见 `create-ui-theme` skill。
+
+## 引用图片与字体
+
+主题以 `<link>` 从项目 preview 路由载入，CSS 中相对 `url()` 的解析基址为 agent 目录 `.spherse/agents/{slug}-{shortId}/`。因此本地图片、字体等资源可以用相对路径正常引用。
+
+- **素材放在 agent 目录**：推荐把图片/字体放进 agent 目录，用相对路径引用：
+  ```css
+  [data-chat-root] {
+    background-image: url(./bg.png);
+  }
+  ```
+- **引用项目内其它位置的文件**：用 `../` 跳出 agent 目录（`../` 到 `.spherse/`，再 `../` 到项目根）：
+  ```css
+  [data-chat-root] {
+    background-image: url(../assets/welcome.png);   /* 项目根 assets/ 下 */
+  }
+  ```
+- **远程 URL**：`url(https://example.com/texture.png)` 照常工作，不受影响。
+- **字体**：`@font-face` 中的 `src: url(...)` 同样按上述规则解析。
+
+> 不要使用从项目根开始的绝对路径（如 `url(/assets/x.png)`）——它不会解析到项目文件。始终用相对路径（`./`、`../`）或完整远程 URL。
 
 ## 示例
 

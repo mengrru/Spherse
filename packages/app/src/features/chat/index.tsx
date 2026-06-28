@@ -30,7 +30,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
   const hasMore = useStreamingStore((s) => s.sessions[sessionId]?.hasMore ?? false);
   const loadingMore = useStreamingStore((s) => s.sessions[sessionId]?.loadingMore ?? false);
   const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId, loadingMore);
-  const themeCss = useAgentTheme(client, agent.id, projectId);
+  const themeHref = useAgentTheme(client, agent.id, agent.slug, projectId);
 
   const handleClose = () => {
     onClose?.();
@@ -38,7 +38,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
 
   return (
     <div className="flex flex-col h-full" data-chat-root>
-      {themeCss && <style>{themeCss}</style>}
+      {themeHref && <link rel="stylesheet" href={themeHref} />}
       {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
       <MessageList
         messages={messages}

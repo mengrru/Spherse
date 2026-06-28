@@ -90,7 +90,7 @@ export function App() {
 
   if (initializing) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-muted-foreground">
+      <div data-app-root className="flex h-screen items-center justify-center bg-background text-muted-foreground">
         {translate(locale ?? DEFAULT_LOCALE, "app.loading")}
       </div>
     );
@@ -99,7 +99,7 @@ export function App() {
   return (
     <I18nProvider locale={locale ?? DEFAULT_LOCALE}>
       <TooltipProvider>
-        <div className="relative flex h-screen overflow-hidden bg-background text-foreground">
+        <div data-app-root className="relative flex h-screen overflow-hidden bg-background text-foreground">
           <ActivityBar
             projects={projects}
             activeProjectId={activeProjectId}

@@ -131,6 +131,60 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 }
 ```
 
+## 应用根容器 / 全局装饰
+
+`data-app-root` 是整个应用窗口的最外层容器，铺满视口（`100vh`，已 `position: relative` 且 `overflow: hidden`）。它是 activity bar、项目面板、主内容区、聊天窗口、浮动窗、设置弹窗、toast 等**所有可见 UI 的共同祖先**，适合用 `::before` / `::after` 或 `position: fixed` 在窗口任意位置叠加装饰层（全局背景、噪点纹理、边角装饰、水印、角标等）。
+
+| 钩子 | 作用对象 |
+|------|---------|
+| `data-app-root` | 整个应用窗口的最外层容器（铺满视口，`position: relative`） |
+
+示例：
+
+```css
+/* .spherse/theme.css —— 整窗背景（渐变 / 本地图片，相对路径基于 .spherse/ 解析） */
+[data-app-root] {
+  background: radial-gradient(ellipse at 20% 50%, rgba(201, 160, 74, 0.06) 0%, transparent 50%),
+              linear-gradient(180deg, #0c0b12 0%, #11101a 100%);
+}
+
+/* 用 ::before 叠一层铺满窗口的装饰（纹理 / 噪点），默认位于内容之下 */
+[data-app-root]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('https://example.com/noise.png') repeat;
+  opacity: 0.04;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 角落装饰：左上角的角标 / 印章 */
+[data-app-root]::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  inset-inline-start: 12px;
+  width: 64px;
+  height: 64px;
+  background: url('./assets/corner-mark.png') no-repeat center / contain;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 覆盖在所有内容之上的固定层（如水印），需要显式抬高 z-index */
+[data-app-root] > .my-watermark {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+}
+```
+
+> - `[data-app-root]` 已是定位上下文，`::before` / `::after` 用 `position: absolute` 即可相对整窗定位；`overflow: hidden` 会自动裁剪超出窗口的部分。
+> - 装饰默认处于内容之下：内容区的背景多为半透明或 `--sp-background`，叠在最外层根容器上的装饰会从内容半透明处透出。若要让装饰**盖在内容之上**，给伪元素或固定层显式设较高的 `z-index` 并加 `pointer-events: none`，避免遮挡交互。
+> - 本地图片用相对路径（`url('./assets/x.png')` 基于项目 `.spherse/` 目录解析），或远程 URL（项目主题同样以 `<link>` 从 preview 路由载入，相对 `url()` 解析到项目文件）。
+
 ## 项目面板与内容浏览器
 
 除了聊天窗口，项目级 `.spherse/theme.css` 还可以定制项目面板和内容浏览器的背景与外观。
