@@ -154,8 +154,12 @@ export function getImageSupportedProviders(): ProviderCatalog {
   return catalog;
 }
 
-export function getChatStreamFn(): StreamFn {
-  return (model, context, options) => models.streamSimple(model, context, options);
+export function getChatStreamFn(temperature?: number): StreamFn {
+  return (model, context, options) =>
+    models.streamSimple(model, context, {
+      ...options,
+      ...(temperature != null ? { temperature } : {}),
+    });
 }
 
 export function getImagesModels(): ImagesModels {

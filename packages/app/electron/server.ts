@@ -10,6 +10,7 @@ export async function ensureServer(): Promise<void> {
   const settings = getSettings();
   const result = await createMultiProjectServer({
     defaultModel: settings?.models?.text?.defaultModel,
+    temperature: settings?.models?.text?.temperature,
   });
   serverHandle = { fastify: result.fastify, registry: result.registry };
 }
@@ -34,6 +35,11 @@ export async function unregisterProject(projectId: string): Promise<void> {
 export function updateDefaultModel(defaultModel: string | undefined): void {
   if (!serverHandle) return;
   serverHandle.registry.setDefaultModel(defaultModel);
+}
+
+export function updateTemperature(temperature: number | undefined): void {
+  if (!serverHandle) return;
+  serverHandle.registry.setTemperature(temperature);
 }
 
 export async function stopServer(): Promise<void> {

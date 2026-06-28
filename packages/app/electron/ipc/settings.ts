@@ -1,7 +1,7 @@
 import { ipcMain } from "electron";
 import { getMaskedSettings, saveSettings } from "../settings.js";
 import { getSupportedProviders, getImageSupportedProviders } from "@spherse/core";
-import { updateDefaultModel } from "../server.js";
+import { updateDefaultModel, updateTemperature } from "../server.js";
 import type { AppSettings } from "@spherse/core";
 
 export function registerSettingsIpc(): void {
@@ -15,6 +15,7 @@ export function registerSettingsIpc(): void {
     if (defaultModel) {
       updateDefaultModel(defaultModel);
     }
+    updateTemperature(settings.models?.text?.temperature);
     return { success: true };
   });
 

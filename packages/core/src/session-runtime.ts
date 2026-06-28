@@ -28,21 +28,54 @@ export class SessionRuntime {
   private projectStore: ProjectStore;
   private activeSessions: Map<string, { agent: Agent; agentId: string }> = new Map();
   private globalDefaultModel?: string;
+  private globalTemperature?: number;
   private fileWriteMutex: FileWriteMutex;
   private logger: Logger;
 
   constructor(
     projectStore: ProjectStore,
-    options?: { defaultModel?: string; logger?: Logger },
+    options?: { defaultModel?: string; temperature?: number; logger?: Logger },
   ) {
     this.projectStore = projectStore;
     this.globalDefaultModel = options?.defaultModel;
+    this.globalTemperature = options?.temperature;
     this.fileWriteMutex = new FileWriteMutex();
     this.logger = options?.logger ?? createSilentLogger();
   }
 
   setDefaultModel(model: string | undefined): void {
     this.globalDefaultModel = model;
+    this.syncActiveAgentsModel();
+  }
+
+  setTemperature(temperature: number | undefined): void {
+    this.globalTemperature = temperature;
+    this.syncActiveAgentsStreamFn();
+  }
+
+  private syncActiveAgentsModel(): void {
+    if (this.activeSessions.size === 0) return;
+    const config = this.projectStore.config.get();
+    for (const [, { agent, agentId }] of this.activeSessions) {
+      const profile = this.projectStore.getAgent(agentId)?.getProfile();
+      if (!profile) continue;
+      const modelId = profile.model ?? this.globalDefaultModel ?? config.defaultModel;
+      try {
+        const resolved = resolveModelById(modelId);
+        const current = agent.state.model;
+        if (current?.id !== resolved.id || current?.provider !== resolved.provider) {
+          agent.state.model = resolved;
+        }
+      } catch (err) {
+        this.logger.error({ err, agentId }, "failed to re-resolve model for active agent");
+      }
+    }
+  }
+
+  private syncActiveAgentsStreamFn(): void {
+    for (const [, { agent }] of this.activeSessions) {
+      agent.streamFn = getChatStreamFn(this.globalTemperature);
+    }
   }
 
   async createSession(agentId: string, source?: string): Promise<string> {
@@ -190,7 +223,7 @@ export class SessionRuntime {
         tools,
       },
       sessionId,
-      streamFn: getChatStreamFn(),
+      streamFn: getChatStreamFn(this.globalTemperature),
     });
   }
 }

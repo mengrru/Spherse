@@ -29,14 +29,14 @@ function maskApiKey(key: string): string {
   return key.slice(0, 4) + "****" + key.slice(-4);
 }
 
-function maskModelGroup(group: ModelGroupSettings | undefined): ModelGroupSettings {
+export function maskModelGroup(group: ModelGroupSettings | undefined): ModelGroupSettings {
   const providers: Record<string, ProviderCredentials> = {};
   for (const [id, creds] of Object.entries(group?.providers ?? {})) {
     if (creds?.apiKey) {
       providers[id] = { apiKey: maskApiKey(creds.apiKey) };
     }
   }
-  return { defaultModel: group?.defaultModel ?? "", providers };
+  return { defaultModel: group?.defaultModel ?? "", providers, temperature: group?.temperature };
 }
 
 export function getMaskedSettings(): AppSettings | null {
@@ -51,7 +51,7 @@ export function getMaskedSettings(): AppSettings | null {
   };
 }
 
-function mergeModelGroup(
+export function mergeModelGroup(
   incoming: ModelGroupSettings | undefined,
   prev: ModelGroupSettings | undefined,
 ): ModelGroupSettings {
@@ -71,7 +71,7 @@ function mergeModelGroup(
       providers[id] = { apiKey: newKey };
     }
   }
-  return { defaultModel, providers };
+  return { defaultModel, providers, temperature: incoming?.temperature };
 }
 
 export function saveSettings(incoming: AppSettings): void {

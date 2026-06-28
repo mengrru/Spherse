@@ -20,7 +20,7 @@ export interface MultiProjectServer {
 }
 
 export async function createMultiProjectServer(
-  options?: { defaultModel?: string },
+  options?: { defaultModel?: string; temperature?: number },
 ): Promise<MultiProjectServer> {
   const prettyStream = createPrettyStream();
   const logger = createServerLogger(prettyStream);
@@ -57,7 +57,10 @@ export async function createMultiProjectServer(
     reply.code(404).send({ error: "Route not found" });
   });
 
-  const registry = new ProjectRegistry(logger, options?.defaultModel);
+  const registry = new ProjectRegistry(logger, {
+    defaultModel: options?.defaultModel,
+    temperature: options?.temperature,
+  });
 
   registerAllRoutes(fastify, registry);
   handleChatWebSocket(fastify, registry);

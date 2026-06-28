@@ -13,6 +13,7 @@ import { type SettingsApi } from "./types";
 import { DefaultModelField } from "./DefaultModelField";
 import { ModelProviderItem } from "./ModelProviderItem";
 import { SectionTitle } from "./SectionTitle";
+import { AdvancedSettings } from "./AdvancedSettings";
 import { SUPPORTED_LOCALES } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
 
@@ -42,7 +43,13 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
   );
 }
 
-function ModelGroupTab({ group }: { group: ReturnType<typeof useSettingsForm>["text"] }) {
+function ModelGroupTab({
+  group,
+  kind,
+}: {
+  group: ReturnType<typeof useSettingsForm>["text"];
+  kind: "text" | "image";
+}) {
   const { t } = useI18n();
   return (
     <>
@@ -54,6 +61,14 @@ function ModelGroupTab({ group }: { group: ReturnType<typeof useSettingsForm>["t
           onChange={(model) => { void group.changeDefaultModel(model); }}
         />
       </FieldGroup>
+      {kind === "text" && (
+        <AdvancedSettings
+          className="mt-3"
+          temperature={group.temperature}
+          onSetTemperature={(value) => { void group.setTemperature(value); }}
+          onReset={() => { void group.resetTemperature(); }}
+        />
+      )}
       <SectionTitle className="mt-5">{t("settings.models.providers")}</SectionTitle>
       <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
         {Object.entries(group.providers).map(([id, config]) => (
@@ -88,11 +103,11 @@ function SettingsTabs() {
         </TabsList>
 
         <TabsContent value="models" className="mt-3">
-          <ModelGroupTab group={form.text} />
+          <ModelGroupTab group={form.text} kind="text" />
         </TabsContent>
 
         <TabsContent value="image" className="mt-3">
-          <ModelGroupTab group={form.image} />
+          <ModelGroupTab group={form.image} kind="image" />
         </TabsContent>
 
         <TabsContent value="general" className="mt-3">

@@ -10,7 +10,12 @@ import { type Logger, createSilentLogger } from "./logger.js";
 
 export async function createProject(
   projectRoot: string,
-  options?: { projectName?: string; defaultModel?: string; logger?: Logger },
+  options?: {
+    projectName?: string;
+    defaultModel?: string;
+    temperature?: number;
+    logger?: Logger;
+  },
 ): Promise<ProjectRuntime> {
   const logger = options?.logger ?? createSilentLogger();
 
@@ -36,6 +41,7 @@ export async function createProject(
   const projectManager = new ProjectManager(projectStore, logger);
   const sessionRuntime = new SessionRuntime(projectStore, {
     defaultModel: options?.defaultModel,
+    temperature: options?.temperature,
     logger,
   });
   const scheduler = new Scheduler(sessionRuntime, projectStore, logger);

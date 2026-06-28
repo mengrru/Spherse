@@ -77,6 +77,7 @@ export interface ProviderCredentials {
 export interface ModelGroupSettings {
   defaultModel: string;
   providers: Record<string, ProviderCredentials>;
+  temperature?: number;
 }
 
 export interface AppSettings {

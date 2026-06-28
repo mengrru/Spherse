@@ -16,10 +16,12 @@ export class ProjectRegistry {
   private pending = new Map<string, Promise<ProjectContext>>();
   private logger: Logger;
   private defaultModel?: string;
+  private temperature?: number;
 
-  constructor(logger: Logger, defaultModel?: string) {
+  constructor(logger: Logger, options?: { defaultModel?: string; temperature?: number }) {
     this.logger = logger;
-    this.defaultModel = defaultModel;
+    this.defaultModel = options?.defaultModel;
+    this.temperature = options?.temperature;
   }
 
   async register(projectRoot: string): Promise<ProjectContext> {
@@ -47,6 +49,7 @@ export class ProjectRegistry {
     const projectLogger = this.logger.child({ projectRoot: resolvedRoot });
     const runtime = await createProject(resolvedRoot, {
       defaultModel: this.defaultModel,
+      temperature: this.temperature,
       logger: projectLogger,
     });
 
@@ -108,6 +111,17 @@ export class ProjectRegistry {
         ctx.sessionRuntime.setDefaultModel(model);
       } catch (err) {
         this.logger.error({ err }, "failed to update default model for project");
+      }
+    }
+  }
+
+  setTemperature(temperature: number | undefined): void {
+    this.temperature = temperature;
+    for (const ctx of this.projects.values()) {
+      try {
+        ctx.sessionRuntime.setTemperature(temperature);
+      } catch (err) {
+        this.logger.error({ err }, "failed to update temperature for project");
       }
     }
   }

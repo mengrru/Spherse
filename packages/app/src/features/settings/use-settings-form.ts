@@ -5,8 +5,11 @@ interface GroupFormState {
   providers: Record<string, ProviderConfig>;
   apiKeys: Record<string, string>;
   defaultModel: string;
+  temperature?: number;
   setApiKey: (id: string, value: string) => void;
   changeDefaultModel: (model: string) => Promise<boolean>;
+  setTemperature: (value?: number) => Promise<boolean>;
+  resetTemperature: () => Promise<boolean>;
   connect: (id: string) => Promise<boolean>;
   disconnect: (id: string) => Promise<boolean>;
 }
@@ -14,6 +17,7 @@ interface GroupFormState {
 interface GroupData {
   apiKeys: Record<string, string>;
   defaultModel: string;
+  temperature?: number;
 }
 
 function extractKeys(providers: Record<string, { apiKey?: string }> | undefined): Record<string, string> {
@@ -51,6 +55,7 @@ export function useSettingsForm(api: SettingsApi) {
       setTextData({
         apiKeys: extractKeys(settings?.models?.text?.providers),
         defaultModel: settings?.models?.text?.defaultModel ?? "",
+        temperature: settings?.models?.text?.temperature,
       });
       setImageData({
         apiKeys: extractKeys(settings?.models?.image?.providers),
@@ -70,7 +75,7 @@ export function useSettingsForm(api: SettingsApi) {
       try {
         await api.saveSettings({
           models: {
-            text: { defaultModel: t.defaultModel, providers: keysToProviders(t.apiKeys) },
+            text: { defaultModel: t.defaultModel, providers: keysToProviders(t.apiKeys), temperature: t.temperature },
             image: { defaultModel: i.defaultModel, providers: keysToProviders(i.apiKeys) },
           },
         });
@@ -93,11 +98,22 @@ export function useSettingsForm(api: SettingsApi) {
     providers,
     apiKeys: data.apiKeys,
     defaultModel: data.defaultModel,
+    temperature: data.temperature,
     setApiKey: (id, value) => {
       setData({ ...data, apiKeys: { ...data.apiKeys, [id]: value } });
     },
     changeDefaultModel: async (model) => {
       const next = { ...data, defaultModel: model };
+      setData(next);
+      return kind === "text" ? save(next, undefined) : save(undefined, next);
+    },
+    setTemperature: async (value) => {
+      const next = { ...data, temperature: value };
+      setData(next);
+      return kind === "text" ? save(next, undefined) : save(undefined, next);
+    },
+    resetTemperature: async () => {
+      const next = { ...data, temperature: undefined };
       setData(next);
       return kind === "text" ? save(next, undefined) : save(undefined, next);
     },
@@ -109,7 +125,7 @@ export function useSettingsForm(api: SettingsApi) {
       const nextKeys = { ...data.apiKeys, [id]: "" };
       const providerModel = data.defaultModel.startsWith(`${id}/`);
       const nextModel = providerModel ? "" : data.defaultModel;
-      const next = { apiKeys: nextKeys, defaultModel: nextModel };
+      const next = { ...data, apiKeys: nextKeys, defaultModel: nextModel };
       setData(next);
       return kind === "text" ? save(next, undefined) : save(undefined, next);
     },
