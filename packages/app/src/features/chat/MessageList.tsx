@@ -5,10 +5,12 @@ import type { ChatMessage } from "./types";
 import { Button } from "../../components/ui/button";
 import { ChevronDownIcon } from "lucide-react";
 import { MessageItem } from "./MessageItem";
+import { ThinkingIndicator } from "./ThinkingIndicator";
 
 interface MessageListProps {
   messages: ChatMessage[];
   agent: AgentProfile;
+  streaming: boolean;
   messagesEndRef: RefObject<HTMLDivElement | null>;
   containerRef: RefObject<HTMLDivElement | null>;
   isAtBottom: boolean;
@@ -19,7 +21,7 @@ interface MessageListProps {
   onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, messagesEndRef, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, hasMore, loadingMore, onLoadMore }: MessageListProps) {
+export function MessageList({ messages, agent, streaming, messagesEndRef, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
   if (messages.length === 0) {
     return (
@@ -29,6 +31,8 @@ export function MessageList({ messages, agent, messagesEndRef, containerRef, isA
       </div>
     );
   }
+
+  const lastMessage = messages[messages.length - 1];
 
   return (
     <div className="relative flex-1 min-h-0">
@@ -45,14 +49,25 @@ export function MessageList({ messages, agent, messagesEndRef, containerRef, isA
             </Button>
           </div>
         )}
-        {messages.map((message, index) => (
-          <MessageItem
-            key={index}
-            message={message}
-            agent={agent}
-            onNavigateToPath={onNavigateToPath}
-          />
-        ))}
+        {messages.map((message, index) => {
+          const isLast = index === messages.length - 1;
+          const showTime =
+            message.role === "user" || isLast || messages[index + 1]?.role === "user";
+          return (
+            <MessageItem
+              key={index}
+              message={message}
+              agent={agent}
+              showTime={showTime}
+              onNavigateToPath={onNavigateToPath}
+            />
+          );
+        })}
+        {streaming && lastMessage?.role === "user" && (
+          <div className="self-start">
+            <ThinkingIndicator />
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
       {!isAtBottom && (

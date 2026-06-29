@@ -10,7 +10,7 @@ const electronAPI = {
   openSampleProject: vi.fn(),
   addOpenProject: vi.fn(),
   closeProject: vi.fn(),
-  revealInFinder: vi.fn(),
+  openProjectFolder: vi.fn(),
   setLastActiveProject: vi.fn(),
   getLastActiveProject: vi.fn(),
 };

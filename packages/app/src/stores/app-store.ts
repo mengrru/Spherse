@@ -20,7 +20,7 @@ interface AppStore {
   createNewProject: () => Promise<{ projectId: string | null; error?: string }>;
   openSampleProject: (sampleId: string) => Promise<{ projectId: string | null; error?: string }>;
   closeProject: (projectId: string) => Promise<string | null>;
-  revealProject: (projectId: string) => Promise<void>;
+  openProjectFolder: (projectId: string) => Promise<void>;
   setActiveProject: (projectId: string | null) => Promise<void>;
   setProjectLastRoute: (projectId: string, route: string) => Promise<void>;
 }
@@ -147,10 +147,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
     return nextActiveId;
   },
 
-  async revealProject(projectId) {
+  async openProjectFolder(projectId) {
     const project = get().projects.get(projectId);
     if (!project) return;
-    await window.electronAPI.revealInFinder(project.path);
+    await window.electronAPI.openProjectFolder(project.path);
   },
 
   async setActiveProject(projectId) {

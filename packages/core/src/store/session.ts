@@ -76,7 +76,7 @@ export class SessionStore {
   listSessions(): SessionInfo[] {
     const rows = this.db
       .prepare(
-        "SELECT * FROM sessions WHERE agent_id = ? AND status = 'active' ORDER BY updated_at DESC",
+        "SELECT * FROM sessions WHERE agent_id = ? AND status = 'active' ORDER BY updated_at DESC, id DESC",
       )
       .all(this.agentId) as any[];
     return rows.map((row) => ({
@@ -88,6 +88,26 @@ export class SessionStore {
       status: row.status,
       source: row.source ?? "manual",
     }));
+  }
+
+  listSessionsPage(limit: number, offset: number): { items: SessionInfo[]; hasMore: boolean } {
+    const rows = this.db
+      .prepare(
+        "SELECT * FROM sessions WHERE agent_id = ? AND status = 'active' ORDER BY updated_at DESC, id DESC LIMIT ? OFFSET ?",
+      )
+      .all(this.agentId, limit + 1, offset) as any[];
+    const hasMore = rows.length > limit;
+    const sliced = hasMore ? rows.slice(0, limit) : rows;
+    const items = sliced.map((row) => ({
+      id: row.id,
+      agentId: row.agent_id,
+      title: row.title ?? undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      status: row.status,
+      source: row.source ?? "manual",
+    }));
+    return { items, hasMore };
   }
 
   archiveSession(sessionId: string): void {

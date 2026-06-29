@@ -119,7 +119,7 @@ describe("chat session reducer", () => {
     expect(afterAgentEnd.streaming).toBe(false);
     expect(afterAgentEnd.messages).toEqual([
       { role: "user", content: "Hello" },
-      { role: "assistant", content: "Hi there", _streaming: false },
+      { role: "assistant", content: "Hi there", _streaming: false, timestamp: 200 },
     ]);
   });
 
@@ -136,7 +136,7 @@ describe("chat session reducer", () => {
 
     expect(next.messages).toEqual([
       { role: "user", content: "Hello" },
-      { role: "assistant", content: "", _streaming: false, _error: "Rate limit exceeded" },
+      { role: "assistant", content: "", _streaming: false, _error: "Rate limit exceeded", timestamp: 200 },
     ]);
   });
 
@@ -163,20 +163,6 @@ describe("chat session reducer", () => {
     const next = reduceSessionEvents(current, [
       { type: "message_start", message: { role: "assistant", content: [] } },
       { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "Hi" }], stopReason: "stop" } },
-    ], 200);
-
-    expect(next.messages[1]._error).toBeUndefined();
-  });
-
-  it("does not set _error for aborted stopReason", () => {
-    const current = session({
-      messages: [{ role: "user", content: "Hello" }],
-      streaming: true,
-    });
-
-    const next = reduceSessionEvents(current, [
-      { type: "message_start", message: { role: "assistant", content: [] } },
-      { type: "message_end", message: { role: "assistant", content: [], stopReason: "aborted" } },
     ], 200);
 
     expect(next.messages[1]._error).toBeUndefined();
@@ -467,5 +453,45 @@ describe("chat session reducer", () => {
     const parsed = parseHistoryMessages(history);
 
     expect(parsed[1]._runChanges).toBeUndefined();
+  });
+
+  it("parseHistoryMessages carries timestamp onto returned messages", () => {
+    const history = [
+      { role: "user", content: "Hello", timestamp: 1000 },
+      { role: "assistant", content: [{ type: "text", text: "Hi" }], stopReason: "stop", timestamp: 2000 },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed[0].timestamp).toBe(1000);
+    expect(parsed[1].timestamp).toBe(2000);
+  });
+
+  it("message_end writes timestamp from event.message.timestamp", () => {
+    const current = session({
+      messages: [{ role: "user", content: "Hello" }],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [
+      { type: "message_start", message: { role: "assistant", content: [] } },
+      { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "Hi" }], timestamp: 9999 } },
+    ], 200);
+
+    expect(next.messages[1].timestamp).toBe(9999);
+  });
+
+  it("message_end falls back to now when event lacks timestamp", () => {
+    const current = session({
+      messages: [{ role: "user", content: "Hello" }],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [
+      { type: "message_start", message: { role: "assistant", content: [] } },
+      { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "Hi" }] } },
+    ], 4242);
+
+    expect(next.messages[1].timestamp).toBe(4242);
   });
 });

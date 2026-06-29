@@ -90,6 +90,16 @@ export class ProjectManager {
     return agentStore.sessions.listSessions();
   }
 
+  listSessionsPage(
+    agentId: string,
+    limit: number,
+    offset: number,
+  ): { items: SessionInfo[]; hasMore: boolean } {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) return { items: [], hasMore: false };
+    return agentStore.sessions.listSessionsPage(limit, offset);
+  }
+
   renameSession(agentId: string, sessionId: string, title: string): SessionInfo {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) throw new ValidationError("title is required");

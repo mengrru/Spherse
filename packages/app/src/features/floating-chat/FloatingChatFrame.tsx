@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { XIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
+import { useSidePanelStore } from "../../stores/side-panel-store";
 import { useDrag } from "./use-drag";
 import { useResize, type ResizeEdge } from "./use-resize";
 import { FLOAT_MIN_WIDTH, FLOAT_MIN_HEIGHT } from "./defaults";
@@ -37,6 +38,7 @@ export function FloatingChatFrame({
   children,
 }: FloatingChatFrameProps) {
   const { t } = useI18n();
+  const pinned = useSidePanelStore((s) => s.pinned);
   const [position, setPosition] = useState(initialPosition);
   const [size, setSize] = useState(initialSize);
 
@@ -61,7 +63,7 @@ export function FloatingChatFrame({
   return (
     <div
       data-chat-float-root
-      className="fixed z-40 flex flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg"
+      className={`fixed ${pinned ? "z-50" : "z-30"} flex flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg`}
       style={{ left: position.x, top: position.y, width: size.width, height: size.height }}
     >
       <div

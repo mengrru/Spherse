@@ -25,7 +25,7 @@ interface ActivityBarProps {
   onSelect: (projectId: string) => void;
   onAdd: () => void;
   onClose: (projectId: string) => void;
-  onReveal: (projectId: string) => void;
+  onOpenProjectFolder: (projectId: string) => void;
   onSettings: () => void;
 }
 
@@ -35,7 +35,7 @@ export function ActivityBar({
   onSelect,
   onAdd,
   onClose,
-  onReveal,
+  onOpenProjectFolder,
   onSettings,
 }: ActivityBarProps) {
   const { t } = useI18n();
@@ -104,8 +104,8 @@ export function ActivityBar({
                         </ContextMenuSubContent>
                       </ContextMenuSub>
                     )}
-                    <ContextMenuItem onClick={() => onReveal(projectId)}>
-                      {t("activity-bar.revealInFinder")}
+                    <ContextMenuItem onClick={() => onOpenProjectFolder(projectId)}>
+                      {t("activity-bar.openProjectFolder")}
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => onClose(projectId)}>
                       {t("activity-bar.closeProject")}

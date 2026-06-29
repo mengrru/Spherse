@@ -9,6 +9,7 @@ import { useSidePanel } from "../hooks/use-side-panel";
 import { useSpherseMessageListener } from "../ui-sdk";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useAppStore } from "../stores/app-store";
+import { useProjectNavHistory } from "../lib/use-project-navigation";
 import { ProjectProvider } from "../context/project-context";
 
 export function ProjectScope() {
@@ -33,6 +34,7 @@ export function ProjectScope() {
     project?.ctx.baseUrl ?? "",
     project?.ctx.projectId ?? "",
   );
+  useProjectNavHistory(projectId ?? "");
   useSpherseMessageListener(projectId ?? "", client);
 
   useEffect(() => {

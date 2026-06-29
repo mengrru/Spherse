@@ -19,8 +19,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("add-open-project", projectId, projectRoot),
   closeProject: (projectId: string, projectPath: string) =>
     ipcRenderer.invoke("close-project", projectId, projectPath),
-  revealInFinder: (projectRoot: string) =>
-    ipcRenderer.invoke("reveal-in-finder", projectRoot),
+  openProjectFolder: (projectRoot: string) =>
+    ipcRenderer.invoke("open-project-folder", projectRoot),
   setLastActiveProject: (projectId: string) =>
     ipcRenderer.invoke("set-last-active-project", projectId),
   getLastActiveProject: () =>

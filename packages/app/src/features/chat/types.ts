@@ -38,6 +38,7 @@ export interface ChatMessage {
   _toolCalls?: ToolCallInfo[];
   _error?: string;
   _runChanges?: FileChangeCard[];
+  timestamp?: number;
 }
 
 export interface FileChangeOp {

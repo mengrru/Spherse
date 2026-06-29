@@ -4,15 +4,23 @@ import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
 
 export function registerSessionRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
-  fastify.get<{ Params: { projectId: string; agentId: string } }>(
-    "/api/projects/:projectId/agents/:agentId/sessions",
-    {
-      schema: { response: { 200: schemas.sessionListResponse } },
-      async handler(req) {
-        return req.projectCtx!.projectManager.listSessions(req.params.agentId);
-      },
-    },
-  );
+  fastify.get<{
+    Params: { projectId: string; agentId: string };
+    Querystring: { limit?: string; offset?: string };
+  }>("/api/projects/:projectId/agents/:agentId/sessions", async (req) => {
+    const { limit, offset } = req.query;
+    if (limit !== undefined) {
+      const limitNum = parseInt(limit, 10) || 10;
+      const offsetNum = offset !== undefined ? parseInt(offset, 10) || 0 : 0;
+      const result = req.projectCtx!.projectManager.listSessionsPage(
+        req.params.agentId,
+        limitNum,
+        offsetNum,
+      );
+      return parseContract(schemas.sessionListPageResponse, result);
+    }
+    return req.projectCtx!.projectManager.listSessions(req.params.agentId);
+  });
 
   fastify.post<{ Params: { projectId: string; agentId: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions",

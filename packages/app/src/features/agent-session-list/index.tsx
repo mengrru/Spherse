@@ -27,6 +27,7 @@ import { dispatchAction } from "../../ui-sdk";
 
 const EMPTY_AGENTS: AgentProfile[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
+const EMPTY_SESSION_PAGING: Record<string, { hasMore: boolean; offset: number }> = {};
 
 export function AgentSessionList() {
   const { t } = useI18n();
@@ -40,11 +41,13 @@ export function AgentSessionList() {
   const createAgent = useProjectDataStore((state) => state.createAgent);
   const updateAgent = useProjectDataStore((state) => state.updateAgent);
   const deleteAgent = useProjectDataStore((state) => state.deleteAgent);
+  const loadMoreSessions = useProjectDataStore((state) => state.loadMoreSessions);
   const floatingSessionId = useFloatingSessionId(projectId);
   const [dialog, setDialog] = useState<DialogState>({ kind: "none" });
 
   const agents = projectData?.agents ?? EMPTY_AGENTS;
   const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
+  const sessionPaging = projectData?.sessionPaging ?? EMPTY_SESSION_PAGING;
   const { effectiveCollapsedAgentIds, toggleAgentCollapsed } = useCollapsedAgents(projectId, agents);
 
   const handleSelectSession = (session: SessionInfo) => {
@@ -145,9 +148,11 @@ export function AgentSessionList() {
             <AgentSessionListView
               agents={agents}
               sessions={sessions}
+              sessionPaging={sessionPaging}
               collapsedAgentIds={effectiveCollapsedAgentIds}
               activeSessionId={activeSessionId}
               floatingSessionId={floatingSessionId}
+              onLoadMore={(agentId) => loadMoreSessions(projectId, client, agentId)}
             />
           </AgentSessionActionsProvider>
         </SidebarGroupContent>

@@ -42,6 +42,7 @@
 - [x] **Chat 体验优化**：输入框草稿按 session 缓存并跨应用重启恢复，消息支持一键复制，空对话展示引导，流式输出时支持用户上滚锁定并提供回到底部按钮
 - [x] **Chat 历史懒加载**：聊天历史按 turn 分页加载（最新 10 turn + 顶部「加载更多」），API 层 cursor 分页（`getRecentTurns` + `?turns=&before=`），agent 运行时上下文恢复保持全量不受影响。参见 `docs/dev/features/2026-06-25-experience-optimization-round2/design.md`
 - [x] **体验优化 Round 2**：创建 agent 按钮改为下拉菜单；全量改名「搭档」→「对话对象」；agent dialog 权限分组（读取文件/写入文件）+ 文案调整；lastRoute 迁移至 localStorage；content browser 返回键按项目隔离。参见 `docs/dev/features/2026-06-25-experience-optimization-round2/design.md`
+- [x] **体验优化 Round 3**：chat 消息时间显示（user 每条 + assistant 仅 turn 末条）+ 发送响应等待动画（thinking 指示器）+ 手动打断「已停止生成」提示（替代空气泡）+ 自动滚动重写（1s 节流 + 半窗阈值）；session list 分页加载（每 agent 10 条 + 加载更多）；右键项目 avatar 改为打开项目文件夹；floating chat 层级 z-50；关闭项目清除自定义主题；content browser 返回键回到上一页（记录完整 location）。参见 `docs/dev/features/2026-06-29-experience-optimization-round3/design.md`
 - [x] **Chat streaming 跨页面韧性**：Chat WebSocket 连接与 streaming 状态按 session 缓存在 Zustand store 中，支持切换 session/关闭 chat 后后台继续流式输出、侧边栏显示后台 streaming 指示、滚动位置恢复，并复用 server `ChatServerEvent` contract 处理完整 pi-agent lifecycle。
 - [x] **支持本地 HTML 文件页面渲染**：在应用内直接渲染本地 HTML 文件
 - [x] **用户自定义欢迎页**：项目头像右键菜单支持设置项目级 HTML/图片欢迎页，项目根路由展示欢迎页，Chat 页面提供显式关闭按钮返回欢迎页。参见 `docs/dev/features/2026-06-07-user-custom-welcome-page/design.md`

@@ -86,8 +86,8 @@ export const zhCN = {
   "activity-bar.addProjectTooltip": "添加项目",
   // 项目右键菜单：关闭项目
   "activity-bar.closeProject": "关闭项目",
-  // 项目右键菜单：在 Finder 中显示
-  "activity-bar.revealInFinder": "在 Finder 中显示",
+  // 项目右键菜单：在系统文件管理器中打开项目文件夹
+  "activity-bar.openProjectFolder": "打开项目文件夹",
   // 项目右键菜单：设置（二级菜单容器，hover 展开子菜单）
   "activity-bar.settings": "设置",
   // 项目右键菜单 → 设置 → 欢迎页（二级菜单项，打开欢迎页设置弹窗）
@@ -168,6 +168,8 @@ export const zhCN = {
   "agent-session-list.floatSession": "浮窗",
   // 右键菜单：取消对话浮窗
   "agent-session-list.cancelFloat": "取消浮窗",
+  // 对话对象会话列表分组底部的「加载更多」按钮，用于分页加载下一批会话
+  "agent-session-list.loadMore": "加载更多",
 
   // --- Agent Schedule ---
   // 搭档右键菜单中的定时消息入口

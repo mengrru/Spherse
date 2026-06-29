@@ -18,7 +18,7 @@ export function reduceSessionEvents(
   let streaming = session.streaming;
 
   for (const event of events) {
-    const nextMessages = applyEventToMessages(messages, event);
+    const nextMessages = applyEventToMessages(messages, event, now);
     if (nextMessages !== messages) messages = nextMessages;
 
     const nextStreaming = applyEventToStreaming(event);
@@ -61,7 +61,7 @@ function applyEventToStreaming(event: AgentEvent): boolean | null {
   return null;
 }
 
-function applyEventToMessages(prev: ChatMessage[], event: AgentEvent): ChatMessage[] {
+function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: number): ChatMessage[] {
   if (event.type === "message_start" && event.message?.role === "assistant") {
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._streaming) return prev;
@@ -90,12 +90,13 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent): ChatMessa
     const text = textContent?.text ?? "";
     const isError = event.message.stopReason === "error";
     const error = isError ? (event.message.errorMessage ?? "Unknown error") : undefined;
+    const timestamp = event.message.timestamp ?? now;
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._streaming) {
-      return [...prev.slice(0, -1), { ...last, content: text, _streaming: false, ...(error && { _error: error }) }];
+      return [...prev.slice(0, -1), { ...last, content: text, _streaming: false, timestamp, ...(error && { _error: error }) }];
     }
     if (text || error || last?.role !== "assistant") {
-      return [...prev, { role: "assistant", content: text, _streaming: false, ...(error && { _error: error }) }];
+      return [...prev, { role: "assistant", content: text, _streaming: false, timestamp, ...(error && { _error: error }) }];
     }
     return prev;
   }
@@ -265,6 +266,7 @@ export function parseHistoryMessages(history: any[]): ChatMessage[] {
       content: text,
       ...(toolCalls && toolCalls.length > 0 ? { _toolCalls: toolCalls } : {}),
       ...(message.stopReason === "error" ? { _error: message.errorMessage ?? "Unknown error" } : {}),
+      timestamp: message.timestamp,
     });
   }
 

@@ -2,9 +2,16 @@ import { create } from "zustand";
 import type { ApiClient } from "../lib/api";
 import type { AgentProfile, SessionInfo } from "../lib/types";
 
+interface SessionPaging {
+  hasMore: boolean;
+  offset: number;
+  loadingMore: boolean;
+}
+
 interface ProjectData {
   agents: AgentProfile[];
   sessions: SessionInfo[];
+  sessionPaging: Record<string, SessionPaging>;
   initialMessageBySessionId: Record<string, string>;
   streamingSessionIds: Set<string>;
   loading: boolean;
@@ -16,6 +23,7 @@ interface ProjectDataStore {
   projects: Record<string, ProjectData>;
   refreshAgents: (projectId: string, client: ApiClient) => Promise<void>;
   refreshSessions: (projectId: string, client: ApiClient) => Promise<void>;
+  loadMoreSessions: (projectId: string, client: ApiClient, agentId: string) => Promise<void>;
   createSession: (
     projectId: string,
     client: ApiClient,
@@ -38,6 +46,7 @@ function createProjectData(): ProjectData {
   return {
     agents: [],
     sessions: [],
+    sessionPaging: {},
     initialMessageBySessionId: {},
     streamingSessionIds: new Set(),
     loading: false,
@@ -113,10 +122,17 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => {
 
     try {
       const agents = get().projects[projectId]?.agents ?? [];
-      const allSessions = await Promise.all(
-        agents.map((agent) => client.listSessions(agent.id)),
+      const pages = await Promise.all(
+        agents.map(async (agent) => {
+          const page = await client.listSessionsPage(agent.id, { limit: 10, offset: 0 });
+          return { agent, page };
+        }),
       );
-      const sessions = allSessions.flat();
+      const sessions = pages.flatMap(({ page }) => page.items);
+      const sessionPaging: Record<string, SessionPaging> = {};
+      for (const { agent, page } of pages) {
+        sessionPaging[agent.id] = { hasMore: page.hasMore, offset: page.items.length, loadingMore: false };
+      }
       set((state) => updateProjectData(state, projectId, (project) => ({
         ...project,
         sessions: [
@@ -126,9 +142,49 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => {
           ),
           ...sessions,
         ],
+        sessionPaging,
         error: null,
       }), { createIfMissing: false }));
     } catch (err) {
+      handleRequestError(projectId, err);
+    }
+  },
+
+  async loadMoreSessions(projectId, client, agentId) {
+    const paging = get().projects[projectId]?.sessionPaging[agentId];
+    if (!paging || !paging.hasMore || paging.loadingMore) return;
+    clearRequestError(projectId);
+    set((state) => updateProjectData(state, projectId, (project) => ({
+      ...project,
+      sessionPaging: {
+        ...project.sessionPaging,
+        [agentId]: { ...project.sessionPaging[agentId], loadingMore: true },
+      },
+    }), { createIfMissing: false }));
+
+    try {
+      const result = await client.listSessionsPage(agentId, { limit: 10, offset: paging.offset });
+      set((state) => updateProjectData(state, projectId, (project) => {
+        const existingIds = new Set(project.sessions.map((s) => s.id));
+        const newItems = result.items.filter((item) => !existingIds.has(item.id));
+        return {
+          ...project,
+          sessions: [...project.sessions, ...newItems],
+          sessionPaging: {
+            ...project.sessionPaging,
+            [agentId]: { hasMore: result.hasMore, offset: paging.offset + result.items.length, loadingMore: false },
+          },
+          error: null,
+        };
+      }, { createIfMissing: false }));
+    } catch (err) {
+      set((state) => updateProjectData(state, projectId, (project) => ({
+        ...project,
+        sessionPaging: {
+          ...project.sessionPaging,
+          [agentId]: { ...project.sessionPaging[agentId], loadingMore: false },
+        },
+      }), { createIfMissing: false }));
       handleRequestError(projectId, err);
     }
   },

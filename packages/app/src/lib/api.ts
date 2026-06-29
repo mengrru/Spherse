@@ -18,6 +18,7 @@ import type {
   TurnContextSnapshotContract,
   SessionMessagesResponse,
   SessionMessagesPageResponse,
+  SessionListPageResponse,
 } from "@spherse/server/contracts";
 import { parseApiResponse, schemas } from "@spherse/server/contracts";
 
@@ -70,6 +71,17 @@ export function createApiClient(baseUrl: string, projectId: string) {
       const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions`);
       await assertOk(res);
       return parseJsonResponse<SessionInfo[]>(res, schemas.sessionListResponse);
+    },
+
+    async listSessionsPage(agentId: string, opts?: { limit?: number; offset?: number }): Promise<SessionListPageResponse> {
+      const params = new URLSearchParams();
+      if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+      if (opts?.offset !== undefined) params.set("offset", String(opts.offset));
+      const query = params.toString();
+      const url = `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions${query ? `?${query}` : ""}`;
+      const res = await fetch(url);
+      await assertOk(res);
+      return parseJsonResponse<SessionListPageResponse>(res, schemas.sessionListPageResponse);
     },
 
     async getSessionMessages(agentId: string, id: string): Promise<SessionMessagesResponse> {

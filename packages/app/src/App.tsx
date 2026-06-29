@@ -29,7 +29,7 @@ export function App() {
   const restoreProjects = useAppStore((state) => state.restoreProjects);
   const openProject = useAppStore((state) => state.openProject);
   const closeProject = useAppStore((state) => state.closeProject);
-  const revealProject = useAppStore((state) => state.revealProject);
+  const openProjectFolder = useAppStore((state) => state.openProjectFolder);
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const clearProjectData = useProjectDataStore((state) => state.clearProjectData);
   const clearAgentSessionListUi = useAgentSessionListUiStore((state) => state.clearProject);
@@ -106,7 +106,7 @@ export function App() {
             onSelect={handleSelectProject}
             onAdd={handleAddProject}
             onClose={handleCloseProject}
-            onReveal={revealProject}
+            onOpenProjectFolder={openProjectFolder}
             onSettings={() => setShowSettings(true)}
           />
           <Outlet />

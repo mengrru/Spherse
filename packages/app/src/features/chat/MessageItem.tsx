@@ -7,14 +7,17 @@ import { ToolCallSection } from "./ToolCallSection";
 import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
 import { FileViewerCard } from "./FileViewerCard";
+import { ThinkingIndicator } from "./ThinkingIndicator";
+import { formatMessageTime } from "./lib/format-time";
 
 interface MessageItemProps {
   message: ChatMessage;
   agent: AgentProfile;
+  showTime?: boolean;
   onNavigateToPath?: (path: string) => void;
 }
 
-export function MessageItem({ message, agent, onNavigateToPath }: MessageItemProps) {
+export function MessageItem({ message, agent, showTime, onNavigateToPath }: MessageItemProps) {
   const isUser = message.role === "user";
 
   return (
@@ -35,8 +38,14 @@ export function MessageItem({ message, agent, onNavigateToPath }: MessageItemPro
           {message.role === "assistant" && agent.name}
         </div>
         <div className="text-sm">
-          <MarkdownContent variant="chat">{message.content}</MarkdownContent>
-          {message._streaming && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
+          {message._streaming && message.content === "" ? (
+            <ThinkingIndicator />
+          ) : (
+            <>
+              <MarkdownContent variant="chat">{message.content}</MarkdownContent>
+              {message._streaming && message.content && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
+            </>
+          )}
         </div>
         {message._toolCalls && message._toolCalls.length > 0 && (
           <ToolCallSection toolCalls={message._toolCalls} onNavigateToPath={onNavigateToPath} />
@@ -60,11 +69,16 @@ export function MessageItem({ message, agent, onNavigateToPath }: MessageItemPro
           </div>
         )}
       </div>
-      {!message._streaming && (
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity pb-1">
-          <CopyButton text={message.content} />
-        </div>
-      )}
+        {!message._streaming && (
+          <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pb-1 ${isUser ? "flex-row-reverse" : ""}`}>
+            <CopyButton text={message.content} />
+            {showTime && message.timestamp && (
+              <time className="text-[11px] text-muted-foreground whitespace-nowrap">
+                {formatMessageTime(message.timestamp)}
+              </time>
+            )}
+          </div>
+        )}
     </div>
   );
 }

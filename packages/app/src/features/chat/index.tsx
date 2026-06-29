@@ -43,6 +43,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
       <MessageList
         messages={messages}
         agent={agent}
+        streaming={streaming}
         messagesEndRef={messagesEndRef}
         containerRef={containerRef}
         isAtBottom={isAtBottom}

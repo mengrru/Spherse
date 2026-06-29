@@ -212,7 +212,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
           shouldSend = true;
           return {
             ...session,
-            messages: [...session.messages, { role: "user", content: initialMessage }],
+            messages: [...session.messages, { role: "user", content: initialMessage, timestamp: Date.now() }],
             streaming: true,
             lastActivityAt: Date.now(),
             initialMessageSent: true,
@@ -292,7 +292,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       if (!content || session.streaming) return;
       updateSession(sessionId, (current) => ({
         ...current,
-        messages: [...current.messages, { role: "user", content }],
+        messages: [...current.messages, { role: "user", content, timestamp: Date.now() }],
         streaming: true,
         lastActivityAt: Date.now(),
       }));

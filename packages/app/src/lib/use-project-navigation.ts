@@ -1,41 +1,49 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useProjectCtx } from "../context/project-context";
 
-function isPathInProject(pathname: string, projectId: string): boolean {
+const projectNavStacks = new Map<string, string[]>();
+
+function isKeyInProject(key: string, projectId: string): boolean {
   const prefix = `/project/${projectId}`;
-  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+  return key === prefix || key.startsWith(`${prefix}/`) || key.startsWith(`${prefix}?`);
+}
+
+export function projectBackTarget(stack: string[], projectId: string): string {
+  if (stack.length <= 1) return `/project/${projectId}`;
+  const prev = stack[stack.length - 2];
+  if (isKeyInProject(prev, projectId)) return prev;
+  return `/project/${projectId}`;
+}
+
+export function useProjectNavHistory(projectId: string): void {
+  const location = useLocation();
+  useEffect(() => {
+    const key = location.pathname + location.search;
+    let stack = projectNavStacks.get(projectId);
+    if (!stack) {
+      stack = [];
+      projectNavStacks.set(projectId, stack);
+    }
+    if (stack[stack.length - 1] !== key) {
+      stack.push(key);
+    }
+  }, [location.pathname, location.search, projectId]);
 }
 
 export function useProjectNavigation(): { back: () => void } {
   const navigate = useNavigate();
-  const location = useLocation();
   const { projectId } = useProjectCtx();
 
-  const historyRef = useRef<string[]>([]);
-  const lastProjectIdRef = useRef(projectId);
-
-  useEffect(() => {
-    if (lastProjectIdRef.current !== projectId) {
-      historyRef.current = [location.pathname];
-      lastProjectIdRef.current = projectId;
+  const back = useCallback(() => {
+    const stack = projectNavStacks.get(projectId);
+    if (!stack || stack.length === 0) {
+      navigate(`/project/${projectId}`);
       return;
     }
-    const stack = historyRef.current;
-    if (stack[stack.length - 1] !== location.pathname) {
-      stack.push(location.pathname);
-    }
-  }, [location.pathname, projectId]);
-
-  const back = useCallback(() => {
-    const stack = historyRef.current;
+    const target = projectBackTarget(stack, projectId);
     stack.pop();
-    const prev = stack[stack.length - 1];
-    if (prev && isPathInProject(prev, projectId)) {
-      navigate(prev);
-    } else {
-      navigate(`/project/${projectId}`);
-    }
+    navigate(target);
   }, [navigate, projectId]);
 
   return { back };

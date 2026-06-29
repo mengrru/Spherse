@@ -40,6 +40,7 @@ export type {
 export type {
   SessionInfoContract,
   SessionListResponse,
+  SessionListPageResponse,
   SessionCreateResponse,
   SessionRenameRequest,
   SessionMessagesResponse,

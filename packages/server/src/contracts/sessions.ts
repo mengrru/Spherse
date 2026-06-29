@@ -13,6 +13,10 @@ const sessionInfo = Type.Object({
 export const schemas = {
   sessionInfo,
   sessionListResponse: Type.Array(sessionInfo),
+  sessionListPageResponse: Type.Object({
+    items: Type.Array(sessionInfo),
+    hasMore: Type.Boolean(),
+  }),
   sessionCreateResponse: Type.Object({ sessionId: Type.String() }),
   sessionRenameRequest: Type.Object({ title: Type.String() }),
   sessionMessagesResponse: Type.Array(Type.Unknown()),
@@ -25,6 +29,7 @@ export const schemas = {
 
 export type SessionInfoContract = Static<typeof sessionInfo>;
 export type SessionListResponse = Static<typeof schemas.sessionListResponse>;
+export type SessionListPageResponse = Static<typeof schemas.sessionListPageResponse>;
 export type SessionCreateResponse = Static<typeof schemas.sessionCreateResponse>;
 export type SessionRenameRequest = Static<typeof schemas.sessionRenameRequest>;
 export type SessionMessagesResponse = Static<typeof schemas.sessionMessagesResponse>;

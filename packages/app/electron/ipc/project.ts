@@ -60,8 +60,8 @@ export function registerProjectIpc(
     }
   });
 
-  ipcMain.handle("reveal-in-finder", async (_event, projectPath: string) => {
-    shell.showItemInFolder(projectPath);
+  ipcMain.handle("open-project-folder", async (_event, projectPath: string) => {
+    await shell.openPath(projectPath);
   });
 
   ipcMain.handle("set-last-active-project", (_event, projectId: string) => {

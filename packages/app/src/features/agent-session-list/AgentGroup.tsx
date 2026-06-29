@@ -3,6 +3,8 @@ import {
   Collapsible,
   CollapsibleContent,
 } from "../../components/ui/collapsible";
+import { Button } from "../../components/ui/button";
+import { useI18n } from "@spherse/i18n/react";
 import { AgentRow } from "./AgentRow";
 import { SessionRow } from "./SessionRow";
 import { useAgentSessionActions } from "./actions-context";
@@ -13,6 +15,9 @@ interface AgentGroupProps {
   collapsed: boolean;
   activeSessionId: string | null;
   floatingSessionId: string | null;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 export function AgentGroup({
@@ -21,7 +26,11 @@ export function AgentGroup({
   collapsed,
   activeSessionId,
   floatingSessionId,
+  hasMore,
+  loadingMore,
+  onLoadMore,
 }: AgentGroupProps) {
+  const { t } = useI18n();
   const actions = useAgentSessionActions();
   const isActive = activeSessionId !== null && sessions.some((s) => s.id === activeSessionId);
   return (
@@ -37,6 +46,11 @@ export function AgentGroup({
               floating={session.id === floatingSessionId}
             />
           ))}
+          {hasMore && (
+            <Button variant="ghost" size="sm" className="ps-6 justify-start" disabled={loadingMore} onClick={onLoadMore}>
+              {loadingMore ? t("common.loading") : t("agent-session-list.loadMore")}
+            </Button>
+          )}
         </div>
       </CollapsibleContent>
     </Collapsible>

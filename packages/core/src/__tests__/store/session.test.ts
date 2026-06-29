@@ -83,6 +83,99 @@ describe("SessionStore", () => {
     expect(session!.title).toBe("New Title");
   });
 
+  describe("listSessionsPage", () => {
+    const insertSession = (id: string, updatedAt: number): void => {
+      const db = new Database(dbPath);
+      db.prepare(
+        "INSERT INTO sessions (id, agent_id, title, created_at, updated_at, status, source) VALUES (?, ?, NULL, ?, ?, 'active', 'manual')",
+      ).run(id, agentId, updatedAt, updatedAt);
+      db.close();
+    };
+
+    it("returns the first page and reports hasMore when more exist", () => {
+      for (let i = 0; i < 12; i++) {
+        insertSession(`s-${i}`, 1000 + i);
+      }
+      const page = store.listSessionsPage(10, 0);
+      expect(page.items).toHaveLength(10);
+      expect(page.hasMore).toBe(true);
+      expect(page.items[0].id).toBe("s-11");
+    });
+
+    it("returns remaining items with hasMore false on the last page", () => {
+      for (let i = 0; i < 12; i++) {
+        insertSession(`s-${i}`, 1000 + i);
+      }
+      const page = store.listSessionsPage(10, 10);
+      expect(page.items).toHaveLength(2);
+      expect(page.hasMore).toBe(false);
+      expect(page.items[0].id).toBe("s-1");
+    });
+
+    it("returns empty page with hasMore false when offset exceeds total", () => {
+      insertSession("s-0", 1000);
+      const page = store.listSessionsPage(10, 10);
+      expect(page.items).toHaveLength(0);
+      expect(page.hasMore).toBe(false);
+    });
+
+    it("reports hasMore false when the page is exactly filled", () => {
+      for (let i = 0; i < 10; i++) {
+        insertSession(`s-${i}`, 1000 + i);
+      }
+      const page = store.listSessionsPage(10, 0);
+      expect(page.items).toHaveLength(10);
+      expect(page.hasMore).toBe(false);
+    });
+
+    it("uses id DESC tiebreaker so equal updated_at rows never skip or duplicate across pages", () => {
+      const sameTs = 5000;
+      const allIds: string[] = [];
+      for (let i = 0; i < 12; i++) {
+        insertSession(`s-${i}`, sameTs);
+        allIds.push(`s-${i}`);
+      }
+      // id is TEXT, so `id DESC` is lexicographic descending.
+      const expectedOrder = [...allIds].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+
+      const page1 = store.listSessionsPage(10, 0);
+      const page2 = store.listSessionsPage(10, 10);
+      const page1Ids = page1.items.map((s) => s.id);
+      const page2Ids = page2.items.map((s) => s.id);
+
+      expect(page1.items).toHaveLength(10);
+      expect(page1.hasMore).toBe(true);
+      expect(page2.items).toHaveLength(2);
+      expect(page2.hasMore).toBe(false);
+
+      expect(page1Ids).toEqual(expectedOrder.slice(0, 10));
+      expect(page2Ids).toEqual(expectedOrder.slice(10));
+
+      const combined = [...page1Ids, ...page2Ids];
+      expect(new Set(combined).size).toBe(12);
+    });
+
+    it("excludes archived sessions", () => {
+      insertSession("s-active", 1000);
+      insertSession("s-archived", 2000);
+      store.archiveSession("s-archived");
+      const page = store.listSessionsPage(10, 0);
+      expect(page.items.map((s) => s.id)).toEqual(["s-active"]);
+      expect(page.hasMore).toBe(false);
+    });
+
+    it("maps rows to SessionInfo like listSessions", () => {
+      insertSession("s-1", 1000);
+      const page = store.listSessionsPage(10, 0);
+      expect(page.items[0]).toMatchObject({
+        id: "s-1",
+        agentId,
+        status: "active",
+        source: "manual",
+      });
+    });
+  });
+
   describe("getRecentTurns", () => {
     const insertTurn = (sessionId: string, userContent: string, assistantCount = 1): void => {
       store.appendMessage(sessionId, { role: "user", content: userContent, timestamp: Date.now() });

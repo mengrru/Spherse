@@ -31,6 +31,7 @@ function createClient(overrides: Partial<ApiClient>): ApiClient {
     createSession: vi.fn().mockResolvedValue({ sessionId: "session-1" }),
     getSession: vi.fn(),
     listSessions: vi.fn().mockResolvedValue([]),
+    listSessionsPage: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
     getSessionMessages: vi.fn().mockResolvedValue([]),
     listContent: vi.fn().mockResolvedValue([]),
     getContent: vi.fn().mockResolvedValue(null),
@@ -92,10 +93,10 @@ describe("useProjectDataStore", () => {
   });
 
   it("does not recreate a cleared project when a sessions refresh resolves late", async () => {
-    let resolveSessions: (sessions: SessionInfo[]) => void = () => {};
+    let resolveSessions: (page: { items: SessionInfo[]; hasMore: boolean }) => void = () => {};
     const client = createClient({
       listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
-      listSessions: vi.fn().mockReturnValue(new Promise<SessionInfo[]>((resolve) => {
+      listSessionsPage: vi.fn().mockReturnValue(new Promise<{ items: SessionInfo[]; hasMore: boolean }>((resolve) => {
         resolveSessions = resolve;
       })),
     });
@@ -103,10 +104,10 @@ describe("useProjectDataStore", () => {
     await useProjectDataStore.getState().refreshAgents("project-1", client);
     const refresh = useProjectDataStore.getState().refreshSessions("project-1", client);
     useProjectDataStore.getState().clearProjectData("project-1");
-    resolveSessions([createSession("session-1")]);
+    resolveSessions({ items: [createSession("session-1")], hasMore: false });
     await refresh;
 
-    expect(client.listSessions).toHaveBeenCalledWith("agent-1");
+    expect(client.listSessionsPage).toHaveBeenCalledWith("agent-1", { limit: 10, offset: 0 });
     expect(useProjectDataStore.getState().projects["project-1"]).toBeUndefined();
   });
 
@@ -129,11 +130,11 @@ describe("useProjectDataStore", () => {
   });
 
   it("keeps a newly created session when the follow-up sessions refresh is stale", async () => {
-    let resolveSessions: (sessions: SessionInfo[]) => void = () => {};
+    let resolveSessions: (page: { items: SessionInfo[]; hasMore: boolean }) => void = () => {};
     const client = createClient({
       listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
       createSession: vi.fn().mockResolvedValue({ sessionId: "session-1" }),
-      listSessions: vi.fn().mockReturnValue(new Promise<SessionInfo[]>((resolve) => {
+      listSessionsPage: vi.fn().mockReturnValue(new Promise<{ items: SessionInfo[]; hasMore: boolean }>((resolve) => {
         resolveSessions = resolve;
       })),
     });
@@ -145,10 +146,10 @@ describe("useProjectDataStore", () => {
       "agent-1",
       "initial message",
     );
-    resolveSessions([]);
+    resolveSessions({ items: [], hasMore: false });
 
     await vi.waitFor(() => {
-      expect(client.listSessions).toHaveBeenCalledWith("agent-1");
+      expect(client.listSessionsPage).toHaveBeenCalledWith("agent-1", { limit: 10, offset: 0 });
     });
 
     expect(session?.id).toBe("session-1");
@@ -163,7 +164,7 @@ describe("useProjectDataStore", () => {
   it("renames a session in the project cache", async () => {
     const client = createClient({
       listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
-      listSessions: vi.fn().mockResolvedValue([createSession("session-1")]),
+      listSessionsPage: vi.fn().mockResolvedValue({ items: [createSession("session-1")], hasMore: false }),
       renameSession: vi.fn().mockResolvedValue({
         ...createSession("session-1"),
         title: "Renamed Session",
@@ -190,7 +191,7 @@ describe("useProjectDataStore", () => {
     const original = { ...createSession("session-1"), title: "Original" };
     const client = createClient({
       listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
-      listSessions: vi.fn().mockResolvedValue([original]),
+      listSessionsPage: vi.fn().mockResolvedValue({ items: [original], hasMore: false }),
       renameSession: vi.fn().mockRejectedValue(new Error("rename failed")),
     });
 
@@ -212,7 +213,7 @@ describe("useProjectDataStore", () => {
     let resolveRename: (session: SessionInfo) => void = () => {};
     const client = createClient({
       listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
-      listSessions: vi.fn().mockResolvedValue([createSession("session-1")]),
+      listSessionsPage: vi.fn().mockResolvedValue({ items: [createSession("session-1")], hasMore: false }),
       renameSession: vi.fn().mockReturnValue(new Promise<SessionInfo>((resolve) => {
         resolveRename = resolve;
       })),
@@ -300,5 +301,75 @@ describe("useProjectDataStore", () => {
     expect(useProjectDataStore.getState().projects["project-2"]?.hasEnabledSchedulesByAgent).toEqual({
       "agent-a": false,
     });
+  });
+
+  it("refreshSessions loads only the first page and tracks paging state", async () => {
+    const firstPage = Array.from({ length: 10 }, (_, i) => createSession(`s-${i}`));
+    const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
+      listSessionsPage: vi.fn().mockResolvedValue({ items: firstPage, hasMore: true }),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+
+    expect(client.listSessionsPage).toHaveBeenCalledWith("agent-1", { limit: 10, offset: 0 });
+    const project = useProjectDataStore.getState().projects["project-1"];
+    expect(project?.sessions).toHaveLength(10);
+    expect(project?.sessionPaging["agent-1"]).toEqual({ hasMore: true, offset: 10, loadingMore: false });
+  });
+
+  it("loadMoreSessions appends the next page and advances paging offset", async () => {
+    const firstPage = Array.from({ length: 10 }, (_, i) => createSession(`s-${i}`));
+    const secondPage = [createSession("s-10"), createSession("s-11")];
+    const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
+      listSessionsPage: vi.fn()
+        .mockResolvedValueOnce({ items: firstPage, hasMore: true })
+        .mockResolvedValueOnce({ items: secondPage, hasMore: false }),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+    await useProjectDataStore.getState().loadMoreSessions("project-1", client, "agent-1");
+
+    expect(client.listSessionsPage).toHaveBeenNthCalledWith(2, "agent-1", { limit: 10, offset: 10 });
+    const project = useProjectDataStore.getState().projects["project-1"];
+    expect(project?.sessions).toHaveLength(12);
+    expect(project?.sessionPaging["agent-1"]).toEqual({ hasMore: false, offset: 12, loadingMore: false });
+  });
+
+  it("loadMoreSessions is a no-op when there are no more sessions", async () => {
+    const firstPage = Array.from({ length: 3 }, (_, i) => createSession(`s-${i}`));
+    const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
+      listSessionsPage: vi.fn().mockResolvedValue({ items: firstPage, hasMore: false }),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+    await useProjectDataStore.getState().loadMoreSessions("project-1", client, "agent-1");
+
+    expect(client.listSessionsPage).toHaveBeenCalledTimes(1);
+    expect(useProjectDataStore.getState().projects["project-1"]?.sessions).toHaveLength(3);
+  });
+
+  it("loadMoreSessions dedupes sessions already present", async () => {
+    const firstPage = Array.from({ length: 10 }, (_, i) => createSession(`s-${i}`));
+    const secondPage = [createSession("s-0"), createSession("s-10")];
+    const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
+      listSessionsPage: vi.fn()
+        .mockResolvedValueOnce({ items: firstPage, hasMore: true })
+        .mockResolvedValueOnce({ items: secondPage, hasMore: false }),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+    await useProjectDataStore.getState().loadMoreSessions("project-1", client, "agent-1");
+
+    const sessions = useProjectDataStore.getState().projects["project-1"]?.sessions ?? [];
+    expect(sessions).toHaveLength(11);
+    expect(sessions.filter((s) => s.id === "s-0")).toHaveLength(1);
   });
 });

@@ -5,10 +5,10 @@ const THEME_CSS_PATH = ".spherse/theme.css";
 
 export function useCustomTheme(projectRoot: string | undefined, baseUrl: string | undefined, projectId: string | undefined) {
   useEffect(() => {
-    if (!projectRoot || !baseUrl || !projectId) return;
-
     const existingLink = document.getElementById("custom-theme-link");
     if (existingLink) existingLink.remove();
+
+    if (!projectRoot || !baseUrl || !projectId) return;
 
     const link = document.createElement("link");
     link.id = "custom-theme-link";
