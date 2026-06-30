@@ -1,8 +1,10 @@
-import type { RefObject } from "react";
+import { type RefObject, useMemo } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
 import { useProjectCtx } from "../../context/project-context";
+import { FrontMatterPanel } from "./FrontMatterPanel";
+import { parseFrontmatter } from "./frontmatter";
 
 interface ContentViewProps {
   filePath: string;
@@ -37,6 +39,10 @@ export function ContentView({
 }: ContentViewProps) {
   const { t } = useI18n();
   const { client } = useProjectCtx();
+  const { frontmatter, body } = useMemo(
+    () => (isMarkdown && content ? parseFrontmatter(content) : { frontmatter: null, body: content ?? "" }),
+    [isMarkdown, content],
+  );
   if (isHtml && htmlView === "preview" && !isEditing && !loading && !error) {
     return (
       <iframe
@@ -79,7 +85,8 @@ export function ContentView({
       {content && !loading && (
         isMarkdown ? (
           <div data-content-doc className="rounded-lg border border-border bg-card p-6 text-card-foreground">
-            <MarkdownContent variant="document">{content}</MarkdownContent>
+            {frontmatter && <FrontMatterPanel data={frontmatter} />}
+            <MarkdownContent variant="document">{body}</MarkdownContent>
           </div>
         ) : (
           <pre className="rounded-lg border border-border bg-card p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">{content}</pre>

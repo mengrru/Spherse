@@ -20,6 +20,7 @@
 
 ## 功能增强
 
+- [x] **Content Browser front matter 显示优化**：markdown 文件顶部的 YAML front matter 原本被 remark-gfm 当作 `<hr>` 渲染破损，现新增 `parseFrontmatter`（safeLoad + 容错）在读视图层预解析，单独渲染轻量元信息面板（`dl` 网格 + 语义 token），正文剥离后交给 `MarkdownContent`；编辑态保留原始 front matter
 - [x] **Agent 编辑**：支持编辑已有 agent 定义文件（当前只能创建）
 - [x] **Agent 删除**：从 UI 删除 agent 定义文件
 - [x] **Session 删除**：从 UI 删除 session
