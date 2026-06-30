@@ -27,6 +27,10 @@ export async function readFile(dir: string, relativePath: string): Promise<strin
   return fs.readFile(path.join(dir, relativePath), "utf-8");
 }
 
+export async function removeFile(dir: string, relativePath: string): Promise<void> {
+  await fs.rm(path.join(dir, relativePath), { force: true });
+}
+
 export async function ensureDir(dir: string, relativePath: string): Promise<void> {
   await fs.mkdir(path.join(dir, relativePath), { recursive: true });
 }

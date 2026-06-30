@@ -192,7 +192,9 @@ export class SessionRuntime {
       .filter(Boolean);
 
     const agentsMd = await this.projectStore.readIndex();
-    let systemPrompt = `${agentsMd}\n\n---\n\n${profile.systemPrompt}`;
+    let systemPrompt = agentsMd.trim()
+      ? `${agentsMd}\n\n---\n\n${profile.systemPrompt}`
+      : profile.systemPrompt;
 
     const skills = await this.projectStore.skill.list();
     if (skills.length > 0) {

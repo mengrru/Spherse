@@ -27,6 +27,8 @@ project-root/
 
 `.spherse/theme.css` 是可选文件，只在用户自定义主题时存在。新项目创建时，系统会自动根据 `presets.json` 创建预置 agent（创建到 `.spherse/agents/`）并创建空的 `.spherse/skills/` 目录（供用户自建 skill）。builtin skill 随 app 内置，通过 `SkillStore` 内存合并，不写入磁盘。
 
+`AGENTS.md` 是可选文件：新项目创建时会写入默认模板，但该文件缺失不影响任何功能（创建/恢复 session 等行为正常，`readIndex()` 返回空串，agent system prompt 仅由 profile 与 skill/context 组成）。
+
 ## Project 配置
 
 `.spherse/project.yaml` 对应 `ProjectConfig`：

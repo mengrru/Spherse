@@ -181,7 +181,12 @@ export class ProjectStore {
 
   async readIndex(): Promise<string> {
     const indexPath = path.join(this.rootPath, "AGENTS.md");
-    return fs.readFile(indexPath, "utf-8");
+    try {
+      return await fs.readFile(indexPath, "utf-8");
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return "";
+      throw err;
+    }
   }
 
   async updateIndex(content: string): Promise<void> {

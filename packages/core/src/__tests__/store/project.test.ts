@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createSilentLogger } from "../../logger.js";
 import { ProjectStore } from "../../store/project.js";
 import { ProjectConfigStore } from "../../store/project-config.js";
-import { createTempProject, cleanupDir, readFile, pathExists } from "../helpers.js";
+import { createTempProject, cleanupDir, readFile, removeFile, pathExists } from "../helpers.js";
 
 const VALID_PROFILE = `---
 name: World Builder
@@ -83,6 +83,12 @@ describe("ProjectStore — config delegation", () => {
     expect(index).toContain("世界观项目");
     await store.updateIndex("# Updated Index");
     expect(await store.readIndex()).toBe("# Updated Index");
+  });
+
+  it("returns empty string when AGENTS.md is missing", async () => {
+    await removeFile(projectRoot, "AGENTS.md");
+    expect(pathExists(projectRoot, "AGENTS.md")).toBe(false);
+    expect(await store.readIndex()).toBe("");
   });
 
   it("appends changelog entries", async () => {
