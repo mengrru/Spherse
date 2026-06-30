@@ -1,0 +1,42 @@
+{
+  "stages": [
+    {
+      "name": "backlog",
+      "type": "entry",
+      "next": "requirements analysis"
+    },
+    {
+      "name": "requirements analysis",
+      "prompt": "快速分析需求、了解现状（必要时读取相关 code），直接梳理出实现思路。不使用任何相关 skill（如 brainstorming、writing-plans 等）。需求：{{task.content}}",
+      "completion": "实现思路已明确（完成后直接转移至 implementation 阶段不需要询问）",
+      "next": "implementation"
+    },
+    {
+      "name": "implementation",
+      "prompt": "按照梳理出的思路直接实现代码。鼓励为本次新增/修改的逻辑补充单元测试（遵循仓库现有的测试约定与命令），但不强制走严格的 TDD 红绿循环。不使用任何相关 skill（如 test-driven-development、executing-plans、subagent-driven-development 等）。",
+      "completion": "代码已实现完毕并通过自测（完成后直接转移至 self review 阶段不需要询问）",
+      "next": "self review"
+    },
+    {
+      "name": "self review",
+      "prompt": "对本次改动进行自动自查：dispatch 一个 subagent（general 类型）来 review 本次改动（git diff against base branch），重点检查正确性、边界情况、回归风险、lint/typecheck 是否通过、official doc 是否需要同步。汇总 subagent 的反馈并修复其中明显的问题。不使用任何相关 skill（如 requesting-code-review、receiving-code-review 等）。",
+      "completion": "subagent review 已完成且反馈的问题已处理（完成后直接转移至 code review 阶段不需要询问）",
+      "next": "code review"
+    },
+    {
+      "name": "code review",
+      "type": "human-gate",
+      "next": "merge"
+    },
+    {
+      "name": "merge",
+      "prompt": "commit 并 squash merge to dev。不使用任何相关 skill（如 finishing-a-development-branch、squash-merge-to-dev 等）。",
+      "completion": "已 squash merge 到 dev",
+      "next": "done"
+    },
+    {
+      "name": "done",
+      "type": "terminal"
+    }
+  ]
+}
