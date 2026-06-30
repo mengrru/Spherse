@@ -194,7 +194,7 @@ spherse/
 │           ├── ui-sdk/
 │           │   ├── types.ts              # ActionContext, ActionHandler 类型
 │           │   ├── registry.ts           # registerAction / dispatchAction
-│           │   ├── rate-limit.ts         # 外部调用频率限制
+│           │   ├── rate-limit.ts         # 外部调用频率限制（含白名单豁免）
 │           │   ├── use-spherse-message-listener.ts # postMessage → dispatchAction 桥梁
 │           │   ├── index.ts              # barrel export + handler side-effect import
 │           │   └── handlers/

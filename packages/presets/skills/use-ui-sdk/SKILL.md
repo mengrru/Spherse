@@ -317,7 +317,7 @@ await spherseCall("data.delete", { file: "world/game.data.json", key: "score" })
 
 ## 注意事项
 
-- **频率限制**：每分钟最多触发 10 次操作，超出会被静默丢弃
+- **频率限制**：每分钟最多触发 10 次操作，超出会被静默丢弃。读取类 action（`data.get`）位于白名单内，不受频率限制，便于交互式页面频繁读取状态
 - **无需引入脚本**：使用浏览器原生 `postMessage`，零依赖
 - **适用场景**：欢迎页（Welcome Page）、Content Browser 预览、聊天 HtmlCard 中均可用
 - **单向触发**：导航类操作（createSession、openFile、sendMessage）是单向的，iframe 无法获取执行结果。Data action（data.get/set/delete）例外，支持通过 `requestId` 获取返回值

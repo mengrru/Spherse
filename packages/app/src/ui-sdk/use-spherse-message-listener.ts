@@ -18,7 +18,7 @@ export function useSpherseMessageListener(
       if (event.data?.type !== "spherse:action") return;
       if (typeof event.data.action !== "string") return;
       if (event.origin !== "null" && (!serverOrigin || event.origin !== serverOrigin)) return;
-      if (!checkRateLimit()) return;
+      if (!checkRateLimit(event.data.action)) return;
       const ctx: ActionContext = {
         navigate,
         projectId,
