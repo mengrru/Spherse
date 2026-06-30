@@ -170,6 +170,14 @@ export const zhCN = {
   "agent-session-list.cancelFloat": "取消浮窗",
   // 对话对象会话列表分组底部的「加载更多」按钮，用于分页加载下一批会话
   "agent-session-list.loadMore": "加载更多",
+  // 对话对象右键菜单：复制该对话对象的 slug 到剪贴板
+  "agent-session-list.copyAgentId": "复制 slug",
+  // 复制对话对象 slug 成功后的提示
+  "agent-session-list.agentIdCopied": "slug 已复制",
+  // 会话右键菜单：复制该会话 ID 到剪贴板
+  "agent-session-list.copySessionId": "复制会话 ID",
+  // 复制会话 ID 成功后的提示
+  "agent-session-list.sessionIdCopied": "会话 ID 已复制",
 
   // --- Agent Schedule ---
   // 搭档右键菜单中的定时消息入口

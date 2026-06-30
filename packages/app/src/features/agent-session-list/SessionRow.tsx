@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import type { SessionInfo } from "../../lib/types";
 import { TreeRow } from "../../components/ui/tree-row";
 import { Input } from "../../components/ui/input";
@@ -184,6 +185,15 @@ export function SessionRow({ session, active, floating }: SessionRowProps) {
           )}
           <ContextMenuItem onClick={startEditing}>
             {t("common.rename")}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onClick={() => {
+              navigator.clipboard.writeText(session.id).catch(() => {});
+              toast.success(t("agent-session-list.sessionIdCopied"));
+            }}
+          >
+            {t("agent-session-list.copySessionId")}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem variant="destructive" onClick={() => actions.deleteSession(session)}>

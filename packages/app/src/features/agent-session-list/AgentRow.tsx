@@ -10,6 +10,7 @@ import {
 } from "../../components/ui/context-menu";
 import { Badge } from "../../components/ui/badge";
 import { ChevronRightIcon, Clock } from "lucide-react";
+import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
 import { useProjectCtx } from "../../context/project-context";
@@ -60,6 +61,15 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           <ContextMenuItem onClick={() => actions.scheduleAgent(agent)}>
             {t("agent-schedule.menuItem")}
             <Badge variant="secondary" className="ml-auto">Beta</Badge>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onClick={() => {
+              navigator.clipboard.writeText(agent.slug).catch(() => {});
+              toast.success(t("agent-session-list.agentIdCopied"));
+            }}
+          >
+            {t("agent-session-list.copyAgentId")}
           </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem variant="destructive" onClick={() => actions.deleteAgent(agent)}>
