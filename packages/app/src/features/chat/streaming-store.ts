@@ -10,6 +10,61 @@ import {
   type StreamingSessionData,
 } from "./chat-session-reducer";
 
+const DEFAULT_TTL_MS = 5 * 60 * 1000;
+const CLEANUP_INTERVAL_MS = 30 * 1000;
+const RECONNECT_BACKOFFS = [1000, 2000, 5000, 10000, 30000];
+const HEARTBEAT_INTERVAL_MS = 30 * 1000;
+const HEARTBEAT_TIMEOUT_MS = 60 * 1000;
+
+interface ConnectParams {
+  client: ApiClient;
+  baseUrl: string;
+  projectId: string;
+  agentId: string;
+  initialMessage?: string;
+}
+
+const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const heartbeatTimers = new Map<string, ReturnType<typeof setInterval>>();
+const lastPongAt = new Map<string, number>();
+const reconnectAttempts = new Map<string, number>();
+const manuallyClosed = new Map<string, boolean>();
+const connectParams = new Map<string, ConnectParams>();
+
+function clearReconnectTimer(sessionId: string): void {
+  const timer = reconnectTimers.get(sessionId);
+  if (timer) {
+    clearTimeout(timer);
+    reconnectTimers.delete(sessionId);
+  }
+}
+
+function clearHeartbeatTimer(sessionId: string): void {
+  const timer = heartbeatTimers.get(sessionId);
+  if (timer) {
+    clearInterval(timer);
+    heartbeatTimers.delete(sessionId);
+  }
+}
+
+function startHeartbeat(sessionId: string, ws: WebSocket): void {
+  clearHeartbeatTimer(sessionId);
+  lastPongAt.set(sessionId, Date.now());
+  heartbeatTimers.set(
+    sessionId,
+    setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        try { ws.send(JSON.stringify({ type: "ping" })); } catch { /* ws closed concurrently */ }
+      }
+      const last = lastPongAt.get(sessionId) ?? 0;
+      if (Date.now() - last > HEARTBEAT_TIMEOUT_MS) {
+        try { ws.close(); } catch { /* already closed */ }
+      }
+    }, HEARTBEAT_INTERVAL_MS),
+  );
+}
+
+
 interface StreamingSession extends StreamingSessionData {
   ws: WebSocket | null;
   attachedCount: number;
@@ -35,9 +90,6 @@ interface StreamingStoreActions {
   cleanupExpired: (ttlMs: number) => void;
   loadMore: (client: ApiClient, sessionId: string, agentId: string) => void;
 }
-
-const DEFAULT_TTL_MS = 5 * 60 * 1000;
-const CLEANUP_INTERVAL_MS = 30 * 1000;
 
 export const useStreamingStore = create<StreamingStoreState & StreamingStoreActions>((set, get) => {
   let cleanupTimer: ReturnType<typeof setInterval> | undefined;
@@ -128,6 +180,24 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     }, CLEANUP_INTERVAL_MS);
   }
 
+  function scheduleReconnect(sessionId: string): void {
+    if (reconnectTimers.has(sessionId)) return;
+    if (manuallyClosed.get(sessionId)) return;
+    const params = connectParams.get(sessionId);
+    if (!params) return;
+    const attempt = reconnectAttempts.get(sessionId) ?? 0;
+    const delay = RECONNECT_BACKOFFS[Math.min(attempt, RECONNECT_BACKOFFS.length - 1)];
+    reconnectAttempts.set(sessionId, attempt + 1);
+    reconnectTimers.set(
+      sessionId,
+      setTimeout(() => {
+        reconnectTimers.delete(sessionId);
+        const { client, baseUrl, projectId, agentId, initialMessage } = params;
+        connect(client, sessionId, baseUrl, projectId, agentId, initialMessage);
+      }, delay),
+    );
+  }
+
   function ensureSession(sessionId: string, attachedDelta: number, projectId: string) {
     set((state) => {
       const existing = state.sessions[sessionId];
@@ -177,12 +247,20 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         try { current.ws.close(); } catch { /* already closed */ }
       }
 
+      connectParams.set(sessionId, { client, baseUrl, projectId, agentId, initialMessage });
+      manuallyClosed.set(sessionId, false);
+      clearReconnectTimer(sessionId);
+
       const ws = new WebSocket(`${baseUrl.replace(/^http/, "ws")}/ws/projects/${projectId}/chat/${agentId}/${sessionId}`);
 
       ws.onmessage = (wsEvent) => {
         if (get().sessions[sessionId]?.ws !== ws) return;
         try {
           const raw = JSON.parse(wsEvent.data);
+          if (raw?.type === "pong") {
+            lastPongAt.set(sessionId, Date.now());
+            return;
+          }
           const parsed = parseChatServerEvent(raw) as AgentEvent;
           enqueueEvent(sessionId, parsed);
         } catch (err) {
@@ -198,13 +276,29 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       ws.onclose = () => {
         const currentSession = get().sessions[sessionId];
         if (currentSession?.ws !== ws) return;
-        updateSession(sessionId, (session) =>
-          session.ws === null && !session.streaming ? session : { ...session, ws: null }
-        );
+        clearHeartbeatTimer(sessionId);
+        eventQueue.delete(sessionId);
+        updateSession(sessionId, (session) => {
+          let messages = session.messages;
+          if (session.streaming) {
+            const last = messages[messages.length - 1];
+            if (last?.role === "assistant" && last._streaming) {
+              messages = [...messages.slice(0, -1), { ...last, _streaming: false }];
+            }
+          }
+          return session.ws === null && messages === session.messages
+            ? session
+            : { ...session, ws: null, messages };
+        });
         setStreamingAndNotify(sessionId, projectId, false);
+        if (!manuallyClosed.get(sessionId) && (get().sessions[sessionId]?.attachedCount ?? 0) > 0) {
+          scheduleReconnect(sessionId);
+        }
       };
 
       ws.onopen = () => {
+        startHeartbeat(sessionId, ws);
+        reconnectAttempts.set(sessionId, 0);
         if (!initialMessage) return;
         let shouldSend = false;
         updateSession(sessionId, (session) => {
@@ -265,6 +359,9 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     },
 
     disconnect(sessionId) {
+      manuallyClosed.set(sessionId, true);
+      clearReconnectTimer(sessionId);
+      clearHeartbeatTimer(sessionId);
       eventQueue.delete(sessionId);
       const session = get().sessions[sessionId];
       if (session?.ws) {
@@ -275,6 +372,12 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         const { [sessionId]: _removed, ...rest } = state.sessions;
         return { sessions: rest };
       });
+      reconnectTimers.delete(sessionId);
+      heartbeatTimers.delete(sessionId);
+      lastPongAt.delete(sessionId);
+      reconnectAttempts.delete(sessionId);
+      manuallyClosed.delete(sessionId);
+      connectParams.delete(sessionId);
       if (Object.keys(get().sessions).length === 0 && cleanupTimer) {
         clearInterval(cleanupTimer);
         cleanupTimer = undefined;

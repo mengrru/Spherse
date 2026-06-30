@@ -53,6 +53,8 @@ export function handleChatWebSocket(
           }
         } else if (msg.type === "abort") {
           ctx.sessionRuntime.abortSession(sessionId);
+        } else if (msg.type === "ping") {
+          socket.send(JSON.stringify(parseChatServerEvent({ type: "pong" })));
         }
       });
 

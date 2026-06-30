@@ -13,6 +13,7 @@ describe("api contracts", () => {
       content: "hello",
     });
     expect(parseChatClientMessage({ type: "abort" })).toEqual({ type: "abort" });
+    expect(parseChatClientMessage({ type: "ping" })).toEqual({ type: "ping" });
   });
 
   it("rejects malformed chat websocket client messages", () => {
@@ -44,6 +45,7 @@ describe("api contracts", () => {
       type: "error",
       message: "boom",
     });
+    expect(parseChatServerEvent({ type: "pong" })).toEqual({ type: "pong" });
   });
 
   it("rejects malformed known chat server events", () => {

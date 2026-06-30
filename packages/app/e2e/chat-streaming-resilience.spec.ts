@@ -87,7 +87,9 @@ async function mockChatWebSocket(page: Page, port: number, events: MockEvent[]) 
   await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
     ws.onMessage((message) => {
       const parsed = JSON.parse(message as string);
-      if (parsed.type === "message") {
+      if (parsed.type === "ping") {
+        ws.send(JSON.stringify({ type: "pong" }));
+      } else if (parsed.type === "message") {
         for (const event of events) {
           ws.send(JSON.stringify(event));
         }
@@ -105,7 +107,9 @@ async function mockStreamingWithoutEnd(page: Page, port: number, eventsBeforeEnd
   await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
     ws.onMessage((message) => {
       const parsed = JSON.parse(message as string);
-      if (parsed.type === "message") {
+      if (parsed.type === "ping") {
+        ws.send(JSON.stringify({ type: "pong" }));
+      } else if (parsed.type === "message") {
         for (const event of eventsBeforeEnd) {
           ws.send(JSON.stringify(event));
         }

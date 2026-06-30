@@ -34,12 +34,14 @@ const chatServerEvent = Type.Union([
     isError: Type.Boolean(),
   }),
   Type.Object({ type: Type.Literal("error"), message: Type.String() }),
+  Type.Object({ type: Type.Literal("pong") }),
 ]);
 
 export const schemas = {
   chatClientMessage: Type.Union([
     Type.Object({ type: Type.Literal("message"), content: Type.String() }),
     Type.Object({ type: Type.Literal("abort") }),
+    Type.Object({ type: Type.Literal("ping") }),
   ]),
   chatServerEvent,
 } as const;
