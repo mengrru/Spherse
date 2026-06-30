@@ -29,7 +29,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
   });
   const hasMore = useStreamingStore((s) => s.sessions[sessionId]?.hasMore ?? false);
   const loadingMore = useStreamingStore((s) => s.sessions[sessionId]?.loadingMore ?? false);
-  const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId, loadingMore);
+  const { messagesEndRef, containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId, streaming, loadingMore);
   const themeHref = useAgentTheme(client, agent.id, agent.slug, projectId);
 
   const handleClose = () => {
@@ -47,7 +47,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
         messagesEndRef={messagesEndRef}
         containerRef={containerRef}
         isAtBottom={isAtBottom}
-        onScrollToBottom={scrollToBottom}
+        onScrollToBottom={() => scrollToBottom("smooth")}
         onNavigateToPath={onNavigateToPath}
         hasMore={hasMore}
         loadingMore={loadingMore}
