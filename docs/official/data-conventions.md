@@ -185,7 +185,8 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
   "presetSkills": [
     { "dir": "create-ui-theme" },
     { "dir": "create-agent-chat-theme" },
-    { "dir": "use-ui-sdk" }
+    { "dir": "use-ui-sdk" },
+    { "dir": "write-html" }
   ],
   "presetAgents": [
     { "name": "世界观创作", "slug": "world-building" }
