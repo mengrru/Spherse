@@ -112,14 +112,22 @@ export const zhCN = {
   "agent-dialog.nameRequired": "请输入对话对象的名称",
   // Agent 提示词字段标签
   "agent-dialog.promptLabel": "提示词",
+  // Agent 提示词字段 tooltip：说明提示词的作用（对话对象的设定，AI 始终记住）
+  "agent-dialog.promptHint": "你的对话对象的设定。AI 会一直记住这些内容。",
+  // Agent 提示词输入框占位提示，引导用户描述对话对象的设定
+  "agent-dialog.promptPlaceholder": "描述这个对话对象的性格、语气与专长，例如「你是一位经验丰富的奇幻世界观顾问」",
   // Agent 权限字段标签（读取/写入等权限分组的总标签）
   "agent-dialog.toolsLabel": "权限",
+  // Agent 权限字段 tooltip：说明权限表示 AI 可使用的工具
+  "agent-dialog.toolsHint": "允许 AI 在对话过程中使用的工具",
   // 权限分组：读取类（read_file/list_files/search_content）
   "agent-dialog.permRead": "读取文件",
   // 权限分组：写入类（write_file/edit_file/move_file/copy_file）
   "agent-dialog.permWrite": "写入文件",
   // Agent 参考资料字段标签
   "agent-dialog.refsLabel": "参考资料",
+  // Agent 参考资料字段 tooltip：说明参考资料是 AI 一开始就记住的内容
+  "agent-dialog.refsHint": "一开始就让 AI 记住的文件内容。AI 会一直记住这些内容。",
   // Agent 参考资料路径输入框占位提示
   "agent-dialog.refsPlaceholder": "输入路径搜索文件，回车添加",
   // Agent 保存失败提示
@@ -132,6 +140,8 @@ export const zhCN = {
   "agent-dialog.tabTheme": "主题",
   // Agent dialog 提示词模板行标签（预留，当前 UI 未强制展示）
   "agent-dialog.templateLabel": "模板",
+  // 提示词下方预设模板按钮组的前缀文案
+  "agent-dialog.templatePresetsLabel": "预设模板：",
   // 预制提示词模板：世界观创作助手 badge 文案
   "agent-dialog.template.worldview-assistant": "世界观创作助手",
   // 预制提示词模板：角色扮演 badge 文案
@@ -144,6 +154,10 @@ export const zhCN = {
   "agent-dialog.templateConfirmApply": "应用",
   // 确认弹窗「取消」按钮
   "agent-dialog.templateConfirmCancel": "取消",
+  // Agent dialog 主题 tab：textarea 上方说明，告知主题 CSS 的作用范围（仅当前对话对象的聊天窗口）
+  "agent-dialog.themeScopeHint": "仅作用于该对话对象的聊天窗口（气泡、输入框、Markdown 等）。",
+  // Agent dialog 主题 tab：textarea 占位提示，引导用户与 AI 对话来生成主题
+  "agent-dialog.themePlaceholder": "与 AI 对话来生成主题，或将主题 CSS 粘贴到这里",
 
   // --- Agent Session List ---
   // 新建对话按钮文案
@@ -536,8 +550,10 @@ export const zhCN = {
   // --- Theme Settings Dialog ---
   // 主题设置弹窗标题
   "theme-settings.title": "设置主题",
-  // 主题设置弹窗顶部说明，引导用户通过覆盖 CSS 变量自定义界面外观
-  "theme-settings.description": "覆盖 .spherse/theme.css 中的 CSS 变量来自定义界面外观。完整变量清单请参考 create-ui-theme skill。",
+  // 主题设置弹窗顶部说明，引导用户通过覆盖 CSS 变量自定义界面外观，并说明作用范围为整个应用
+  "theme-settings.description": "覆盖 .spherse/theme.css 中的 CSS 变量来自定义整个应用的界面外观。",
+  // 主题设置 textarea 占位提示，引导用户与 AI 对话来生成主题
+  "theme-settings.placeholder": "与 AI 对话来生成主题，或将主题 CSS 粘贴到这里",
   // 读取主题设置失败提示，{message} 为错误信息
   "theme-settings.loadFailed": "读取主题设置失败：{message}",
   // 保存主题设置失败提示，{message} 为错误信息

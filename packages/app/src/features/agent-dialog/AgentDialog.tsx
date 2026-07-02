@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { AGENT_TEMPLATE, AGENT_THEME_TEMPLATE } from "@spherse/presets";
+import { AGENT_TEMPLATE } from "@spherse/presets";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import {
@@ -28,7 +28,7 @@ export function AgentDialog({ mode, agentId, onSubmit, onCancel }: AgentDialogPr
   const { t } = useI18n();
   const { client } = useProjectCtx();
   const [data, setData] = useState<LoadedAgentData | null>(
-    mode === "create" ? { raw: AGENT_TEMPLATE, theme: AGENT_THEME_TEMPLATE } : null,
+    mode === "create" ? { raw: AGENT_TEMPLATE, theme: "" } : null,
   );
   const [loadErr, setLoadErr] = useState<unknown>(null);
 

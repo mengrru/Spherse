@@ -1,8 +1,9 @@
 import { useI18n } from "@spherse/i18n/react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { Field, FieldLabel } from "../../components/ui/field";
+import { Field } from "../../components/ui/field";
 import { SearchFileField } from "./SearchFileField";
+import { HintLabel } from "./HintLabel";
 import { XIcon } from "lucide-react";
 
 export function ContextPathField({
@@ -17,7 +18,7 @@ export function ContextPathField({
   const { t } = useI18n();
   return (
     <Field>
-      <FieldLabel>{t("agent-dialog.refsLabel")}</FieldLabel>
+      <HintLabel hint={t("agent-dialog.refsHint")}>{t("agent-dialog.refsLabel")}</HintLabel>
       {contextPaths.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">
           {contextPaths.map((path) => (

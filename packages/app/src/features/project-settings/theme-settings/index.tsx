@@ -68,7 +68,7 @@ export function ThemeSettingsDialog({
           <Textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder=":root { --shadcn-primary: #3b82f6; }"
+            placeholder={t("theme-settings.placeholder")}
             className="h-[55vh] font-mono text-xs"
           />
         </div>

@@ -74,7 +74,8 @@ async function navigateToProject(page: Page, projectId: string) {
 }
 
 async function openAgentDialog(page: Page) {
-  await page.locator("[title='创建搭档']").click();
+  await page.locator("[title='创建对话对象']").click();
+  await page.getByRole("menuitem", { name: "创建对话对象" }).click();
   await page.getByText("基本").waitFor({ timeout: 10000 });
 }
 

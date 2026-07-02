@@ -20,6 +20,7 @@ import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { ToolPicker } from "./ToolPicker";
 import { ContextPathField } from "./ContextPathField";
+import { HintLabel } from "./HintLabel";
 import { PromptTemplatePicker, type PromptTemplate } from "./PromptTemplatePicker";
 import type { LoadedAgentData } from "./AgentDialog";
 
@@ -98,7 +99,7 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
   return (
     <>
       <Tabs defaultValue="basic" className="min-h-0 flex-1 flex flex-col">
-        <TabsList className="mx-4 mt-1">
+        <TabsList className="mx-4 mt-1 mb-2">
           <TabsTrigger value="basic">{t("agent-dialog.tabBasic")}</TabsTrigger>
           <TabsTrigger value="theme">{t("agent-dialog.tabTheme")}</TabsTrigger>
         </TabsList>
@@ -120,11 +121,12 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
               onRemove={removeContext}
             />
             <Field>
-              <FieldLabel>{t("agent-dialog.promptLabel")}</FieldLabel>
+              <HintLabel hint={t("agent-dialog.promptHint")}>{t("agent-dialog.promptLabel")}</HintLabel>
               <Textarea
                 className="min-h-40 max-h-70 resize-y font-mono"
                 value={formData.systemPrompt}
                 onChange={(e) => setFormData((prev) => ({ ...prev, systemPrompt: e.target.value }))}
+                placeholder={t("agent-dialog.promptPlaceholder")}
                 spellCheck={false}
               />
               <PromptTemplatePicker onSelect={handleSelectTemplate} />
@@ -132,11 +134,15 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
             {error && <p className="text-xs text-destructive">{error}</p>}
           </FieldGroup>
         </TabsContent>
-        <TabsContent value="theme" className="flex-1 min-h-0 px-4">
+        <TabsContent value="theme" className="flex-1 min-h-0 flex flex-col px-4">
+          <p className="mb-4 text-sm text-muted-foreground">
+            {t("agent-dialog.themeScopeHint")}
+          </p>
           <Textarea
-            className="h-full resize-none font-mono text-xs"
+            className="flex-1 min-h-0 resize-none font-mono text-xs"
             value={themeContent}
             onChange={(e) => setThemeContent(e.target.value)}
+            placeholder={t("agent-dialog.themePlaceholder")}
             spellCheck={false}
           />
         </TabsContent>
