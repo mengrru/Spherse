@@ -577,6 +577,8 @@ export const zhCN = {
   "onboarding.desc.createNew": "从一个空文件夹开始",
   // 引导卡片3描述
   "onboarding.desc.openSample": "将内置示例项目拷贝到选定位置并打开",
+  // 引导卡片3（打开示例项目）的 tooltip：说明示例项目的搭建方式与用途，鼠标悬浮于卡片时展示
+  "onboarding.tooltip.openSample": "该示例项目使用 Spherse 从零开始搭建，模型为 DeepSeek V4 Flash。通过该项目学习 Spherse 的使用方式，从而搭建完全属于你自己的世界。",
   // 创建项目时目标目录已存在且非空的错误提示
   "onboarding.error.dirExistsNotEmpty": "该目录已存在且非空，请选择其它位置",
   // 创建项目失败时的通用错误提示

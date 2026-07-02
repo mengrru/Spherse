@@ -269,6 +269,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "onboarding.desc.openExisting": "開啟一個已有的資料夾",
   "onboarding.desc.createNew": "從一個空資料夾開始",
   "onboarding.desc.openSample": "將內建範例專案複製到選定位置並開啟",
+  "onboarding.tooltip.openSample": "該範例專案使用 Spherse 從零開始搭建，模型為 DeepSeek V4 Flash。透過該專案學習 Spherse 的使用方式，進而搭建完全屬於你自己的世界。",
   "onboarding.error.dirExistsNotEmpty": "該目錄已存在且非空，請選擇其它位置",
   "onboarding.error.createFailed": "建立專案失敗，請重試",
   "onboarding.error.copyFailed": "複製範例專案失敗，請重試",

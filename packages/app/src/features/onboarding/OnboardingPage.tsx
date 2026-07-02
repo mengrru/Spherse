@@ -5,6 +5,7 @@ import type { TranslationKey } from "@spherse/i18n";
 import { toast } from "sonner";
 import type { SampleManifestEntry } from "@shared/electron-api";
 import { useAppStore } from "../../stores/app-store";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 
 const ERROR_KEYS: Record<string, TranslationKey> = {
   dirExistsNotEmpty: "onboarding.error.dirExistsNotEmpty",
@@ -103,6 +104,7 @@ export function OnboardingPage() {
             key={sample.id}
             title={`🪄✨ ${t("onboarding.action.openSample", { name: sample.displayName })}`}
             desc={t("onboarding.desc.openSample")}
+            tooltip={t("onboarding.tooltip.openSample")}
             onClick={() => handleOpenSample(sample.id)}
           />
         ))}
@@ -114,20 +116,33 @@ export function OnboardingPage() {
 function ActionCard({
   title,
   desc,
+  tooltip,
   onClick,
 }: {
   title: string;
   desc: string;
+  tooltip?: string;
   onClick: () => void;
 }) {
-  return (
+  const card = (
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-start gap-2 rounded-md border border-border bg-card p-5 text-start transition-colors hover:bg-accent focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none"
+      className="flex w-full flex-col items-start gap-2 rounded-md border border-border bg-card p-5 text-start transition-colors hover:bg-accent focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:outline-none"
     >
       <span className="font-medium text-foreground">{title}</span>
       <span className="text-sm text-muted-foreground">{desc}</span>
     </button>
+  );
+
+  if (!tooltip) return card;
+
+  return (
+    <Tooltip>
+      <TooltipTrigger render={card} />
+      <TooltipContent side="bottom" className="max-w-sm">
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 }

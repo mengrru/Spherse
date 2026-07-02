@@ -56,6 +56,17 @@ describe("OnboardingPage structure", () => {
     expect(src).toContain("samples.map(");
   });
 
+  it("attaches a tooltip only to the sample card", () => {
+    const src = source();
+
+    expect(src).toContain(
+      'tooltip={t("onboarding.tooltip.openSample")}',
+    );
+    expect(src).toContain("tooltip?: string");
+    expect(src).toContain("import { Tooltip, TooltipTrigger, TooltipContent }");
+    expect(src).toContain("if (!tooltip) return card");
+  });
+
   it("navigates to the opened project on success", () => {
     const src = source();
 

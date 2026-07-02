@@ -269,6 +269,7 @@ export const en: Record<TranslationKey, string> = {
   "onboarding.desc.openExisting": "Open an existing folder",
   "onboarding.desc.createNew": "Start from an empty folder",
   "onboarding.desc.openSample": "Copy the built-in sample project to a chosen location and open it",
+  "onboarding.tooltip.openSample": "This sample project was built from scratch with Spherse, using the DeepSeek V4 Flash model. Learn how to use Spherse through it, then build a world that is entirely your own.",
   "onboarding.error.dirExistsNotEmpty": "This directory already exists and is not empty. Please choose another location.",
   "onboarding.error.createFailed": "Failed to create project. Please try again.",
   "onboarding.error.copyFailed": "Failed to copy sample project. Please try again.",
