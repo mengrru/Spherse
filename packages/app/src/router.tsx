@@ -1,5 +1,6 @@
 import { createHashRouter } from "react-router";
 import { App } from "./App";
+import { GlobalErrorBoundary } from "./components/GlobalErrorBoundary";
 import { ProjectScope } from "./layouts/ProjectScope";
 import { ChatPage } from "./pages/ChatPage";
 import { ContentBrowserPage } from "./pages/ContentBrowserPage";
@@ -10,6 +11,7 @@ export const router = createHashRouter([
   {
     path: "/",
     element: <App />,
+    errorElement: <GlobalErrorBoundary />,
     children: [
       {
         index: true,

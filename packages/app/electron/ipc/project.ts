@@ -64,6 +64,26 @@ export function registerProjectIpc(
     await shell.openPath(projectPath);
   });
 
+  ipcMain.handle("open-external", async (_event, url: string) => {
+    if (typeof url !== "string") return;
+    const parsed = (() => {
+      try {
+        return new URL(url);
+      } catch {
+        return null;
+      }
+    })();
+    if (
+      parsed &&
+      (parsed.protocol === "http:" ||
+        parsed.protocol === "https:" ||
+        parsed.protocol === "mailto:" ||
+        parsed.protocol === "tel:")
+    ) {
+      await shell.openExternal(url);
+    }
+  });
+
   ipcMain.handle("set-last-active-project", (_event, projectId: string) => {
     setLastActiveProject(projectId);
   });

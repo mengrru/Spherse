@@ -21,7 +21,7 @@
 ## 功能增强
 
 - [x] **Content Browser front matter 显示优化**：markdown 文件顶部的 YAML front matter 原本被 remark-gfm 当作 `<hr>` 渲染破损，现新增 `parseFrontmatter`（safeLoad + 容错）在读视图层预解析，单独渲染轻量元信息面板（`dl` 网格 + 语义 token），正文剥离后交给 `MarkdownContent`；编辑态保留原始 front matter
-- [ ] **Content Browser markdown 内部链接跳转**：支持 markdown 文件中的项目内链接（`[text](./other.md)` / `[text](/assets/x.png)`）点击后在应用内导航到对应 Content Browser 页面，而非浏览器原生打开/下载。路径解析复用 `image-path.ts`（抽公共函数），链接 `<a>` 自定义拦截 onClick：`http(s)`/`mailto` 走外部打开（`shell.openExternal`），`#anchor` 走原生锚点滚动，其余项目内路径 `preventDefault` + `navigate` 到 `/project/:id/content?path=`。需考虑 `.md#section` 跨文件锚点拆分、不存在文件兜底 UX、内部链接视觉区分。
+- [x] **Content Browser markdown 内部链接跳转**：支持 markdown 文件中的项目内链接（`[text](./other.md)` / `[text](/assets/x.png)`）点击后在应用内导航到对应 Content Browser 页面，而非浏览器原生打开/下载。路径解析复用 `image-path.ts`（抽公共函数 `markdown-link.ts`），链接 `<a>` 自定义拦截 onClick：`http(s)`/`mailto`/`tel` 走外部打开（`shell.openExternal`，含协议白名单），`#anchor` 走 `preventDefault` + `scrollIntoView`（配合 `rehype-slug` 给 heading 加 id，避免 hash router 冲突），其余项目内路径 `preventDefault` + `navigate` 到 `/project/:id/content?path=`。支持 `.md#section` 跨文件锚点拆分、不存在文件 toast 兜底、percent-编码中文路径解码。另新增全局 ErrorBoundary（router errorElement）防止全屏报错。
 - [x] **Agent 编辑**：支持编辑已有 agent 定义文件（当前只能创建）
 - [x] **Agent 删除**：从 UI 删除 agent 定义文件
 - [x] **Session 删除**：从 UI 删除 session

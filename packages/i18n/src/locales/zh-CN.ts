@@ -310,6 +310,8 @@ export const zhCN = {
   "content-browser.pathCopied": "路径已复制",
   // 刷新按钮（content browser Header，图标按钮 title/aria-label）
   "content-browser.refresh": "刷新",
+  // 点击 markdown 内部链接指向的文件不存在时的 toast 错误提示，{path} 为目标文件相对项目根的路径
+  "content-browser.linkNotFound": "找不到文件：{path}",
 
   // --- File Tree ---
   // 新建文件按钮
@@ -522,6 +524,14 @@ export const zhCN = {
   // --- Error ---
   // 通用请求失败提示
   "error.requestFailed": "请求失败",
+  // 全局错误边界（react-router errorElement）标题：应用发生未预期错误时的全屏兜底页
+  "error.unexpectedTitle": "应用出现了问题",
+  // 全局错误边界正文，提示用户可通过重试恢复
+  "error.unexpectedMessage": "发生了未预期的错误。请尝试重新加载。",
+  // 全局错误边界「重新加载应用」按钮文案
+  "error.reload": "重新加载",
+  // 全局错误边界「返回项目列表」按钮文案（回到欢迎页/项目入口）
+  "error.goHome": "返回项目",
 
   // --- Theme Settings Dialog ---
   // 主题设置弹窗标题

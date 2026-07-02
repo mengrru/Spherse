@@ -1,12 +1,14 @@
 import { useMemo } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeSlug from "rehype-slug";
 import { cn } from "@/lib/utils";
 
 interface MarkdownContentProps {
   children: string;
   variant?: "chat" | "document";
   resolveImageSrc?: (src: string) => string;
+  onLinkClick?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 function imgClassName(variant: "chat" | "document"): string {
@@ -115,13 +117,12 @@ const CHAT_COMPONENTS: Components = {
   ),
 };
 
-export function MarkdownContent({ children, variant = "document", resolveImageSrc }: MarkdownContentProps) {
+export function MarkdownContent({ children, variant = "document", resolveImageSrc, onLinkClick }: MarkdownContentProps) {
   const components = useMemo<Components>(() => {
     const base = variant === "chat" ? CHAT_COMPONENTS : DOCUMENT_COMPONENTS;
-    if (!resolveImageSrc) return base;
-    return {
-      ...base,
-      img: ({ src, alt, ...props }) => (
+    const overrides: Partial<Components> = {};
+    if (resolveImageSrc) {
+      overrides.img = ({ src, alt, ...props }) => (
         <img
           data-md-img
           src={resolveImageSrc(String(src ?? ""))}
@@ -129,13 +130,28 @@ export function MarkdownContent({ children, variant = "document", resolveImageSr
           className={imgClassName(variant)}
           {...props}
         />
-      ),
-    };
-  }, [variant, resolveImageSrc]);
+      );
+    }
+    if (onLinkClick) {
+      overrides.a = ({ className, href, ...props }) => (
+        <a
+          className={cn("text-primary underline underline-offset-4", className)}
+          href={href}
+          onClick={(event) => {
+            if (!href) return;
+            onLinkClick(href, event);
+          }}
+          {...props}
+        />
+      );
+    }
+    if (Object.keys(overrides).length === 0) return base;
+    return { ...base, ...overrides };
+  }, [variant, resolveImageSrc, onLinkClick]);
 
   return (
     <div className={variant === "chat" ? "text-sm leading-6" : "text-sm leading-7"}>
-      <Markdown remarkPlugins={[remarkGfm]} components={components}>
+      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} components={components}>
         {children}
       </Markdown>
     </div>

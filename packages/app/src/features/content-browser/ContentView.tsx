@@ -1,10 +1,13 @@
 import { type RefObject, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
+import { toast } from "sonner";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
 import { useProjectCtx } from "../../context/project-context";
 import { FrontMatterPanel } from "./FrontMatterPanel";
 import { resolveMarkdownImagePath } from "./image-path";
+import { resolveMarkdownLink } from "./markdown-link";
 import { parseFrontmatter } from "./frontmatter";
 
 interface ContentViewProps {
@@ -39,7 +42,8 @@ export function ContentView({
   refreshKey,
 }: ContentViewProps) {
   const { t } = useI18n();
-  const { client } = useProjectCtx();
+  const { client, projectId } = useProjectCtx();
+  const navigate = useNavigate();
   const { frontmatter, body } = useMemo(
     () => (isMarkdown && content ? parseFrontmatter(content) : { frontmatter: null, body: content ?? "" }),
     [isMarkdown, content],
@@ -50,6 +54,32 @@ export function ContentView({
       return client.getPreviewUrl(projectPath);
     },
     [filePath, client],
+  );
+  const handleLinkClick = useCallback(
+    async (href: string, event: React.MouseEvent<HTMLAnchorElement>) => {
+      const resolved = resolveMarkdownLink(href, filePath);
+      if (resolved.kind === "external") {
+        event.preventDefault();
+        await window.electronAPI.openExternal(href);
+        return;
+      }
+      if (resolved.kind === "anchor") {
+        event.preventDefault();
+        if (resolved.anchor) {
+          document.getElementById(resolved.anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        return;
+      }
+      event.preventDefault();
+      if (!resolved.path) return;
+      const existing = await client.getContent(resolved.path);
+      if (!existing) {
+        toast.error(t("content-browser.linkNotFound", { path: resolved.path }));
+        return;
+      }
+      navigate(`/project/${projectId}/content?path=${encodeURIComponent(resolved.path)}`);
+    },
+    [filePath, client, projectId, navigate, t],
   );
   if (isHtml && htmlView === "preview" && !isEditing && !loading && !error) {
     return (
@@ -94,7 +124,7 @@ export function ContentView({
         isMarkdown ? (
           <div data-content-doc className="rounded-lg border border-border bg-card p-6 text-card-foreground">
             {frontmatter && <FrontMatterPanel data={frontmatter} />}
-            <MarkdownContent variant="document" resolveImageSrc={resolveImageSrc}>{body}</MarkdownContent>
+            <MarkdownContent variant="document" resolveImageSrc={resolveImageSrc} onLinkClick={handleLinkClick}>{body}</MarkdownContent>
           </div>
         ) : (
           <pre className="rounded-lg border border-border bg-card p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">{content}</pre>
