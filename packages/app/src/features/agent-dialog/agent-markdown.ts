@@ -1,5 +1,4 @@
 import yaml from "js-yaml";
-import { ALL_TOOL_IDS } from "./tool-registry";
 
 export interface AgentFormData {
   name: string;
@@ -19,7 +18,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
     return {
       formData: {
         name: "",
-        tools: [...ALL_TOOL_IDS],
+        tools: [],
         context: [],
         systemPrompt: raw.trim(),
       },
@@ -38,7 +37,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
       name: typeof name === "string" ? name : "",
       tools: Array.isArray(tools)
         ? tools.filter((t): t is string => typeof t === "string")
-        : [...ALL_TOOL_IDS],
+        : [],
       context: Array.isArray(context)
         ? context.filter((c): c is string => typeof c === "string")
         : [],

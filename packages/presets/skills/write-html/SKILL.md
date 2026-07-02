@@ -1,6 +1,6 @@
 ---
 name: write-html
-description: 指导在 Spherse 中编写 HTML 页面时的数据读写与 App 能力调用方式（charset、数据外置、ui-sdk postMessage 交互），不约束页面风格或代码风格
+description: 在 Spherse 中产出任何 HTML 之前必须先阅读本 skill。当用户要求创建或修改 HTML 页面、生成网页、制作可视化展示（欢迎页、导览主页、内容卡片、预览页等任意 HTML 交付物）时，务必在写出 HTML 代码前先读本 skill，了解 charset、数据加载模式与 App 能力调用的约定；切勿未经阅读直接输出 HTML
 ---
 
 # 编写 HTML 页面 — 数据读写与 App 能力调用

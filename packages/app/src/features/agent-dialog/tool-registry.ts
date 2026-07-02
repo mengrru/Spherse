@@ -13,5 +13,3 @@ export const TOOL_GROUPS: ToolGroup[] = [
   { label: "tool.render_card", toolIds: ["render_card"] },
   { label: "tool.generate_image", toolIds: ["generate_image"] },
 ];
-
-export const ALL_TOOL_IDS: string[] = TOOL_GROUPS.flatMap((g) => g.toolIds);
