@@ -266,7 +266,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     getPreviewUrl(filePath: string): string {
-      return `${apiBase}/preview/${filePath}`;
+      return `${apiBase}/preview/${filePath.split("/").map(encodeURIComponent).join("/")}`;
     },
 
     async getSupportedProviders(): Promise<ProviderCatalogContract> {

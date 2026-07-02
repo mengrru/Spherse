@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
 import { ArrowLeftIcon, CheckIcon, CopyIcon, RefreshCwIcon } from "lucide-react";
 
 interface HeaderProps {
@@ -87,24 +88,25 @@ export function Header({
           </Button>
         ) : null}
         {isHtml && !isEditing && (
-          <div className="flex overflow-hidden rounded-md border border-border">
-            <Button
-              variant={htmlView === "preview" ? "secondary" : "ghost"}
-              size="sm"
-              className="rounded-none"
-              onClick={() => onHtmlViewChange("preview")}
-            >
+          <ToggleGroup
+            variant="outline"
+            size="sm"
+            spacing={0}
+            value={[htmlView]}
+            onValueChange={(values) => {
+              const next = values[0];
+              if (next === "preview" || next === "source") {
+                onHtmlViewChange(next);
+              }
+            }}
+          >
+            <ToggleGroupItem value="preview">
               {t("content-browser.preview")}
-            </Button>
-            <Button
-              variant={htmlView === "source" ? "secondary" : "ghost"}
-              size="sm"
-              className="rounded-none border-l border-border"
-              onClick={() => onHtmlViewChange("source")}
-            >
+            </ToggleGroupItem>
+            <ToggleGroupItem value="source">
               {t("content-browser.source")}
-            </Button>
-          </div>
+            </ToggleGroupItem>
+          </ToggleGroup>
         )}
       </div>
     </div>

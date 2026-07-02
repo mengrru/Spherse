@@ -1,9 +1,10 @@
-import { type RefObject, useMemo } from "react";
+import { type RefObject, useCallback, useMemo } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
 import { useProjectCtx } from "../../context/project-context";
 import { FrontMatterPanel } from "./FrontMatterPanel";
+import { resolveMarkdownImagePath } from "./image-path";
 import { parseFrontmatter } from "./frontmatter";
 
 interface ContentViewProps {
@@ -42,6 +43,13 @@ export function ContentView({
   const { frontmatter, body } = useMemo(
     () => (isMarkdown && content ? parseFrontmatter(content) : { frontmatter: null, body: content ?? "" }),
     [isMarkdown, content],
+  );
+  const resolveImageSrc = useCallback(
+    (src: string) => {
+      const projectPath = resolveMarkdownImagePath(src, filePath);
+      return client.getPreviewUrl(projectPath);
+    },
+    [filePath, client],
   );
   if (isHtml && htmlView === "preview" && !isEditing && !loading && !error) {
     return (
@@ -86,7 +94,7 @@ export function ContentView({
         isMarkdown ? (
           <div data-content-doc className="rounded-lg border border-border bg-card p-6 text-card-foreground">
             {frontmatter && <FrontMatterPanel data={frontmatter} />}
-            <MarkdownContent variant="document">{body}</MarkdownContent>
+            <MarkdownContent variant="document" resolveImageSrc={resolveImageSrc}>{body}</MarkdownContent>
           </div>
         ) : (
           <pre className="rounded-lg border border-border bg-card p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">{content}</pre>

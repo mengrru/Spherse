@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
@@ -5,6 +6,13 @@ import { cn } from "@/lib/utils";
 interface MarkdownContentProps {
   children: string;
   variant?: "chat" | "document";
+  resolveImageSrc?: (src: string) => string;
+}
+
+function imgClassName(variant: "chat" | "document"): string {
+  return variant === "chat"
+    ? "my-2 max-w-full rounded-md"
+    : "my-3 max-w-full rounded-lg border border-border";
 }
 
 const DOCUMENT_COMPONENTS: Components = {
@@ -51,6 +59,9 @@ const DOCUMENT_COMPONENTS: Components = {
   ),
   a: ({ className, ...props }) => (
     <a className={cn("text-primary underline underline-offset-4", className)} {...props} />
+  ),
+  img: ({ className, ...props }) => (
+    <img data-md-img className={cn(imgClassName("document"), className)} {...props} />
   ),
 };
 
@@ -99,10 +110,28 @@ const CHAT_COMPONENTS: Components = {
   a: ({ className, ...props }) => (
     <a className={cn("text-primary underline underline-offset-4", className)} {...props} />
   ),
+  img: ({ className, ...props }) => (
+    <img data-md-img className={cn(imgClassName("chat"), className)} {...props} />
+  ),
 };
 
-export function MarkdownContent({ children, variant = "document" }: MarkdownContentProps) {
-  const components = variant === "chat" ? CHAT_COMPONENTS : DOCUMENT_COMPONENTS;
+export function MarkdownContent({ children, variant = "document", resolveImageSrc }: MarkdownContentProps) {
+  const components = useMemo<Components>(() => {
+    const base = variant === "chat" ? CHAT_COMPONENTS : DOCUMENT_COMPONENTS;
+    if (!resolveImageSrc) return base;
+    return {
+      ...base,
+      img: ({ src, alt, ...props }) => (
+        <img
+          data-md-img
+          src={resolveImageSrc(String(src ?? ""))}
+          alt={alt ?? ""}
+          className={imgClassName(variant)}
+          {...props}
+        />
+      ),
+    };
+  }, [variant, resolveImageSrc]);
 
   return (
     <div className={variant === "chat" ? "text-sm leading-6" : "text-sm leading-7"}>
