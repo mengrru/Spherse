@@ -140,6 +140,6 @@ npm run dist:win    # 构建 Windows NSIS 安装包
   - 业务组件不写 `dark:` 修饰符，暗色适配通过 CSS 变量自动切换
   - 使用逻辑属性（logical properties）代替物理方向，确保自动适配 LTR/RTL：用 `ms-*`/`me-*`（margin-inline-start/end）代替 `ml-*`/`mr-*`，用 `ps-*`/`pe-*`（padding-inline-start/end）代替 `pl-*`/`pr-*`，用 `start-*`/`end-*`（inset-inline-start/end）代替 `left-*`/`right-*`，用 `text-start`/`text-end` 代替 `text-left`/`text-right`
   - 需要新颜色时在 `styles.css` 中注册 CSS 变量（`--sp-{name}`）+ Tailwind 颜色（`--color-{name}`，如 `--color-success`），不在组件中硬编码
-  - 变更主题 token、聊天窗口 `data-chat-*` 属性（如 `data-chat-root`/`data-chat-bubble`/`data-chat-composer-input`/`data-chat-float-close`）、Markdown 钩子（`data-md-code`/`data-md-code-inline`/`data-md-quote`）、文档视图容器钩子（`data-content-doc`）或项目面板/内容浏览器钩子（`data-project-panel`/`data-content-browser`）等可自定义样式入口时，同步更新用户可见的主题模板和 skill 文档
+  - 变更主题 token、聊天窗口 `data-chat-*` 属性（如 `data-chat-root`/`data-chat-bubble`/`data-chat-composer-input`/`data-chat-float-close`）、Markdown 钩子（`data-md-code`/`data-md-code-inline`/`data-md-quote`）、文档视图容器钩子（`data-content-doc`）、项目面板/内容浏览器钩子（`data-project-panel`/`data-content-browser`）或全局 toast 钩子（`data-toast-root`）等可自定义样式入口时，同步更新用户可见的主题模板和 skill 文档
 - **i18n 文案规范**：`packages/i18n/src/locales/zh-CN.ts` 是翻译基准，每条文案必须结合实际 UI 场景写注释（说明出现位置、上下文、交互状态等），用于指导其它语言版本（`zh-TW`、`en`）的翻译
 - **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试

@@ -50,6 +50,7 @@
 - [x] **用户自定义欢迎页**：项目头像右键菜单支持设置项目级 HTML/图片欢迎页，项目根路由展示欢迎页，Chat 页面提供显式关闭按钮返回欢迎页。参见 `docs/dev/features/2026-06-07-user-custom-welcome-page/design.md`
 - [x] **项目设置子菜单 + 主题编辑器**：项目头像右键菜单的「设置欢迎页」改为二级菜单「设置」（含「欢迎页」「主题」），新增主题 CSS 编辑器弹窗直接读写 `.spherse/theme.css`，保存后热更新。参见 `docs/dev/features/2026-06-19-project-settings-dialog/design.md`
 - [x] **自定义主题体验优化**：token 重命名为 `--sp-*` 命名空间（废弃 `--shadcn-*`/`--agent-*`）、废弃 `scopeCss` 改用原生 CSS nesting、聊天主题 dark mode 支持、聊天主题自动重载、补齐 data-* 钩子（`data-chat-bubble`/`data-chat-composer-input`/`data-chat-float-close`/`data-md-code`/`data-md-code-inline`/`data-md-quote`/`data-content-doc`）与文档视图 markdown 自定义。参见 `docs/dev/features/2026-06-26-theme-customization-experience/design.md`
+- [x] **全局 toast 样式钩子**：全局 toast（sonner）暴露 `data-toast-root` 语义锚点（`<div data-toast-root className="contents">` 包裹 `<Sonner>`，因 sonner `ToasterProps` 封闭不透传 `data-*`），供项目级主题用 `[data-toast-root]` 前缀 + sonner 原生 `[data-sonner-toast]`/`[data-type]`/`[data-title]`/`[data-description]` 等后代选择器定制 toast 外观；同步更新 `create-ui-theme` skill、`architecture.md` 与 `AGENTS.md` 维护契约，新增 `sonner.structure.test.ts` 守卫。
 - [x] **支持 Agent 定时执行**：按 cron 表达式定时触发 agent 运行
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
 - [x] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话

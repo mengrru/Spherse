@@ -247,6 +247,26 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 
 > `data-md-code` / `data-md-quote` 这组钩子同时存在于聊天窗口与文档视图，作用域由父选择器显式表达：用 `[data-content-doc]` 限定到文档视图；用 `[data-chat-root]` 限定到聊天（见上文「全局聊天窗口默认样式」）。
 
+## 全局 Toast
+
+全局 toast（`sonner` 渲染的右下角通知）在应用侧暴露了一个语义入口 `data-toast-root`，作为项目级主题定制 toast 外观的稳定锚点。该容器包裹 sonner 的 `position: fixed` 视口层（所有 toast 的定位层），用 `display: contents` 修饰，不参与应用布局。
+
+| 钩子 | 作用对象 |
+|------|---------|
+| `data-toast-root` | 全局 toast 视口容器（包裹 sonner 的 `<ol data-sonner-toaster>`，本身 `position: fixed`） |
+
+toast 内部各部分由 sonner 渲染，暴露的是库自有的稳定 `data-*` 属性，用 `[data-toast-root]` 作前缀做后代选择器即可精准定制：
+
+| 子目标选择器 | 作用对象 |
+|------|---------|
+| `[data-toast-root] [data-sonner-toast]` | 单条 toast（`<li>`） |
+| `[data-toast-root] [data-type="success"]` | success 类型变体（`error`/`warning`/`info`/`loading` 同理） |
+| `[data-toast-root] [data-title]` | toast 标题文本 |
+| `[data-toast-root] [data-description]` | toast 描述文本 |
+| `[data-toast-root] [data-close-button]` | 关闭按钮 |
+| `[data-toast-root] [data-content]` | 标题+描述的内容包裹 |
+| `[data-toast-root] [data-y-position]` / `[data-x-position]` | 按屏幕位置区分（如顶部/底部、左/右） |
+
 ## 注意事项
 
 - 只覆盖你想修改的变量，其余保持默认
