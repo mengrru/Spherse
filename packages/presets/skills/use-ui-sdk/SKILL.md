@@ -31,16 +31,32 @@ window.parent.postMessage({
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| agentId | string | 是 | 目标 agent 的 ID |
+| agentId | string | 否 | 目标 agent 的 ID（UUID，与 `agentSlug` 二选一，同时提供时以 `agentId` 为准） |
+| agentSlug | string | 否 | 目标 agent 的 slug（即 agent 目录名，形如 `writer-a1b2c3`，可在 agent 右键菜单「复制 ID」获取），作为 `agentId` 的替代 |
 | message | string | 否 | 初始消息内容 |
 | float | boolean | 否 | 为 `true` 时在浮窗中打开新会话，而非导航到聊天页 |
 
 ```javascript
+// 通过 agent ID 创建会话
 window.parent.postMessage({
   type: "spherse:action",
   action: "createSession",
   params: {
     agentId: "my-writer",
+    message: "请帮我扩展这段世界观设定"
+  }
+}, "*");
+```
+
+也可以用人类可读的 agent slug（即 agent 目录名，形如 `writer-a1b2c3`，可在 agent 右键菜单「复制 ID」获取）替代 ID（二者二选一）：
+
+```javascript
+// 通过 agent slug 创建会话
+window.parent.postMessage({
+  type: "spherse:action",
+  action: "createSession",
+  params: {
+    agentSlug: "writer-a1b2c3",
     message: "请帮我扩展这段世界观设定"
   }
 }, "*");
