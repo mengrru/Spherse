@@ -14,6 +14,7 @@ import { DefaultModelField } from "./DefaultModelField";
 import { ModelProviderItem } from "./ModelProviderItem";
 import { SectionTitle } from "./SectionTitle";
 import { AdvancedSettings } from "./AdvancedSettings";
+import { UpdateChecker } from "./UpdateChecker";
 import { SUPPORTED_LOCALES } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
 
@@ -100,6 +101,7 @@ function SettingsTabs() {
           <TabsTrigger value="models">{t("settings.tabs.text")}</TabsTrigger>
           <TabsTrigger value="image">{t("settings.tabs.image")}</TabsTrigger>
           <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
+          <TabsTrigger value="about">{t("settings.tabs.about")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="models" className="mt-3">
@@ -119,6 +121,10 @@ function SettingsTabs() {
               ))}
             </NativeSelect>
           </FieldGroup>
+        </TabsContent>
+
+        <TabsContent value="about" className="mt-3">
+          <UpdateChecker />
         </TabsContent>
       </Tabs>
     </div>

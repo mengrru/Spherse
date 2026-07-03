@@ -31,6 +31,27 @@ export interface IpcAppSettings {
   };
 }
 
+export type UpdateStatus =
+  | "idle" | "checking" | "upToDate"
+  | "available" | "downloading" | "downloaded" | "error";
+
+export interface UpdateState {
+  status: UpdateStatus;
+  version?: string;
+  releaseNotes?: string;
+  downloadUrl?: string;
+  percent?: number;
+  errorMessage?: string;
+  errorPhase?: "check" | "download";
+}
+
+export type UpdateEvent =
+  | { type: "update-available"; version: string; releaseNotes: string; downloadUrl?: string }
+  | { type: "update-not-available" }
+  | { type: "download-progress"; percent: number }
+  | { type: "update-downloaded" }
+  | { type: "update-error"; message: string };
+
 export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>;
   selectSkillZip: () => Promise<string | null>;
@@ -57,4 +78,12 @@ export interface ElectronAPI {
   createNewProject: () => Promise<{ projectId: string; path: string } | { error: string } | null>;
   openSampleProject: (opts: { sampleId: string }) => Promise<{ projectId: string; path: string } | { error: string } | null>;
   getSampleManifest: () => Promise<SampleManifestEntry[]>;
+  checkForUpdates: (opts: { silent: boolean }) => Promise<void>;
+  downloadUpdate: () => Promise<void>;
+  installUpdate: () => Promise<void>;
+  cancelUpdate: () => Promise<void>;
+  getUpdateState: () => Promise<UpdateState>;
+  getAppVersion: () => Promise<string>;
+  openExternal: (url: string) => Promise<void>;
+  onUpdateEvent: (callback: (event: UpdateEvent) => void) => () => void;
 }

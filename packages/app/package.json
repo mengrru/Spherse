@@ -29,6 +29,7 @@
     "clsx": "^2.1.1",
     "diff": "^9.0.0",
     "electron-store": "^11.0.2",
+    "electron-updater": "^6.3.9",
     "js-yaml": "^3.14.2",
     "lucide-react": "^1.17.0",
     "react": "^19.0.0",

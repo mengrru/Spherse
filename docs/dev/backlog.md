@@ -82,3 +82,4 @@
 - [ ] **Presets i18n**：为 `@spherse/presets` 内置模板和预置内容增加多语言支持，作为 i18n 基础设施完成后的独立任务
 - [x] **Core & Server 日志**：为 core 和 server 层添加结构化日志系统，便于调试和问题排查。参见 `docs/dev/infra/2026-06-06-server-core-logging/design.md`
 - [x] **Debug Turn Context 下载**：在 debug menu 增加下载当前 session 完整 turn 上下文（system prompt + messages + tools）的功能，便于排查 agent 行为。参见 `docs/dev/infra/2026-06-07-debug-download-turn-context/design.md`
+- [x] **app 更新机制**：通过 electron-updater + GitHub Releases 实现「检查更新 → 用户确认下载 → 下载完成确认重启」全流程；启动静默检查 + 设置界面手动按钮；Windows 完整自动更新，macOS 未签名阶段通知模式（GitHub Releases API 检查 + 跳转下载）；Git tag + semver 发版，CI 自动构建发布。参见 `docs/dev/infra/2026-07-03-app-update-mechanism/design.md`

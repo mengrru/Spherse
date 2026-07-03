@@ -51,6 +51,45 @@ export const zhCN = {
   // provider 连接按钮
   "settings.provider.connect": "连接",
 
+  // 设置弹窗「关于」tab 标签
+  "settings.tabs.about": "关于",
+  // 关于 tab → 当前版本号前的标签
+  "settings.about.version": "当前版本",
+  // 关于 tab → 检查更新按钮（idle 态）
+  "settings.about.checkUpdate": "检查更新",
+  // 检查更新按钮 loading 态（checking）
+  "settings.about.checking": "检查中...",
+  // 检查更新按钮（upToDate 态，灰色禁用，原地显示不弹 toast）
+  "settings.about.upToDate": "已是最新版本",
+  // 检查更新失败时的错误文案（error 态，原地显示）
+  "settings.about.checkFailed": "检查更新失败，请稍后重试",
+  // error 态的重试按钮
+  "settings.about.retry": "重试",
+  // 更新确认弹窗标题，{version} 为新版本号
+  "settings.update.newVersion": "发现新版本 v{version}",
+  // 更新确认弹窗中 release notes 区域标题
+  "settings.update.releaseNotes": "更新内容",
+  // 更新确认弹窗 → 同意下载按钮
+  "settings.update.download": "立即更新",
+  // 更新确认弹窗 → 稍后按钮（关闭弹窗）
+  "settings.update.later": "稍后",
+  // 下载进度文案，{percent} 为百分比数字
+  "settings.update.downloading": "下载中 {percent}%",
+  // 下载中取消按钮
+  "settings.update.cancel": "取消",
+  // 下载失败错误文案
+  "settings.update.downloadError": "下载失败",
+  // 下载完成弹窗标题
+  "settings.update.downloaded": "更新已下载完成",
+  // 下载完成弹窗描述（提示需要重启才能完成安装）
+  "settings.update.downloadedDesc": "重启应用以完成安装",
+  // 下载完成弹窗 → 立即重启按钮
+  "settings.update.restartNow": "立即重启",
+  // 下载完成弹窗 → 稍后重启按钮
+  "settings.update.restartLater": "稍后重启",
+  // macOS 通知模式 → 打开 GitHub Releases 下载页的按钮
+  "settings.update.gotoDownload": "前往下载",
+
   // --- Common ---
   // 通用取消按钮
   "common.cancel": "取消",

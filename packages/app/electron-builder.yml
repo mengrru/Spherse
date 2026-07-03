@@ -3,6 +3,10 @@ productName: Spherse
 directories:
   buildResources: build
   output: release
+publish:
+  provider: github
+  owner: mengrru
+  repo: Spherse
 files:
   - dist/**/*
   - package.json

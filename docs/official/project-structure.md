@@ -130,13 +130,15 @@ spherse/
 │   └── app/                          # @spherse/app — Electron + React
 │       ├── electron/
 │       │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main
-│       │   ├── main.ts               # Electron 主进程：组装窗口、IPC、项目 server 管理
-│       │   ├── preload.ts            # contextBridge，IPC 白名单
+│       │   ├── main.ts               # Electron 主进程：组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
+│       │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
+│       │   ├── updater.ts            # electron-updater 封装：autoDownload/autoInstall 关闭、Windows 完整流程、macOS 通知模式（GitHub Releases API）、CancellationToken 取消、compareVersions、silent 抑制
 │       │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）
 │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │       │   │   ├── index.ts          # registerAllIpc 聚合
-│           │           │   ├── project.ts        # 项目选择、server 启停、打开项目持久化、新建项目、打开示例项目、打开项目文件夹（shell.openPath）
+│       │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化、新建项目、打开示例项目、打开项目文件夹（shell.openPath）
 │       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
+│       │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）
 │       │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
 │       │   │   └── debug.ts          # 开发模式 debug 动作
 │       │   ├── window.ts             # BrowserWindow 创建与管理
@@ -144,7 +146,7 @@ spherse/
     │   │       └── settings.ts           # electron-store 封装 + env 管理 + openProjects/locale 持久化
 │       ├── playwright.config.ts      # Playwright E2E 测试配置
 │       ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
-│       ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS、extraResources 拷贝内置示例项目等）
+│       ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS、extraResources、publish GitHub Releases）
 │       ├── build/                    # electron-builder buildResources（icon 等资源）
 │       ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
 │       ├── e2e/                      # Playwright E2E 测试
@@ -218,7 +220,7 @@ spherse/
 │           │   ├── project-panel/         # 项目侧栏薄组合层，按序渲染 AgentSessionList/UserFilePanel/SkillPanel，自治 side-panel 浮动/隐藏布局
 │           │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │           │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）
-│           │   ├── settings/             # 设置弹窗、设置 store、类型与测试
+│           │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab）、更新检查 hook（useUpdateChecker reducer）与 UpdateChecker 组件、设置 store、类型与测试
 │           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
 │           │   ├── project-settings/     # 项目设置弹窗集合
 │           │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
@@ -246,6 +248,9 @@ spherse/
 │   └── skills/                      # opencode coding-agent skill 定义
 │       └── i18n/
 │           └── SKILL.md             # i18n 字符串迁移指导
+├── .github/
+│   └── workflows/
+│       └── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布（win --publish always，mac --publish never + gh upload dmg）
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
 ├── eslint.config.js                  # ESLint 9 flat config（全仓库 lint 规则）
