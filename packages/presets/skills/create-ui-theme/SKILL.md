@@ -181,7 +181,7 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 }
 ```
 
-> - `[data-app-root]` 已是定位上下文，`::before` / `::after` 用 `position: absolute` 即可相对整窗定位；`overflow: hidden` 会自动裁剪超出窗口的部分。
+> - `[data-app-root]` 已是定位上下文，`::before` / `::after` 默认已被应用设为 `position: absolute; pointer-events: none`（相对整窗定位、不挡交互），因此**只需写装饰属性即可**，漏写也不会进入 flex 流导致整窗偏移；如需固定层（`position: fixed`）或可交互叠层（`pointer-events: auto`），显式覆盖即可。`overflow: hidden` 会自动裁剪超出窗口的部分。
 > - 装饰默认处于内容之下：内容区的背景多为半透明或 `--sp-background`，叠在最外层根容器上的装饰会从内容半透明处透出。若要让装饰**盖在内容之上**，给伪元素或固定层显式设较高的 `z-index` 并加 `pointer-events: none`，避免遮挡交互。
 > - 本地图片用相对路径（`url('./assets/x.png')` 基于项目 `.spherse/` 目录解析），或远程 URL（项目主题同样以 `<link>` 从 preview 路由载入，相对 `url()` 解析到项目文件）。
 

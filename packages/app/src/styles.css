@@ -133,6 +133,12 @@
     font-family: inherit;
     font-size: inherit;
   }
+
+  [data-app-root]::before,
+  [data-app-root]::after {
+    position: absolute;
+    pointer-events: none;
+  }
 }
 
 @keyframes blink {
