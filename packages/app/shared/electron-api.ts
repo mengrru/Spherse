@@ -75,7 +75,6 @@ export interface ElectronAPI {
   reloadRenderer: () => Promise<void>;
   resetAppData: () => Promise<void>;
   showSaveDialog: (options: SaveDialogOptions) => Promise<string | null>;
-  createNewProject: () => Promise<{ projectId: string; path: string } | { error: string } | null>;
   openSampleProject: (opts: { sampleId: string }) => Promise<{ projectId: string; path: string } | { error: string } | null>;
   getSampleManifest: () => Promise<SampleManifestEntry[]>;
   checkForUpdates: (opts: { silent: boolean }) => Promise<void>;

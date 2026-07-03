@@ -6,7 +6,6 @@ const electronAPI = {
   getServerPort: vi.fn().mockResolvedValue(5173),
   restoreProjects: vi.fn(),
   openProject: vi.fn(),
-  createNewProject: vi.fn(),
   openSampleProject: vi.fn(),
   addOpenProject: vi.fn(),
   closeProject: vi.fn(),
@@ -117,65 +116,6 @@ describe("useAppStore lastRoute", () => {
     expect(useAppStore.getState().projects.get("project-a")?.lastRoute).toBe(
       "/content?path=foo.md",
     );
-  });
-});
-
-describe("useAppStore createNewProject", () => {
-  beforeEach(() => {
-    setupStoreTest(false);
-  });
-
-  it("registers the project on success and returns its id", async () => {
-    electronAPI.createNewProject.mockResolvedValue({
-      projectId: "new-1",
-      path: "/tmp/new-project",
-    });
-
-    const result = await useAppStore.getState().createNewProject();
-
-    expect(result).toEqual({ projectId: "new-1" });
-    const project = useAppStore.getState().projects.get("new-1");
-    expect(project).toMatchObject({
-      id: "new-1",
-      path: "/tmp/new-project",
-      name: "new-project",
-    });
-    expect(project?.ctx).toEqual({
-      client: expect.anything(),
-      baseUrl: "http://localhost:5173",
-      projectId: "new-1",
-      projectRoot: "/tmp/new-project",
-    });
-    expect(useAppStore.getState().activeProjectId).toBe("new-1");
-    expect(electronAPI.addOpenProject).toHaveBeenCalledWith(
-      "new-1",
-      "/tmp/new-project",
-    );
-    expect(electronAPI.setLastActiveProject).toHaveBeenCalledWith("new-1");
-  });
-
-  it("returns the error and writes nothing when main reports an error", async () => {
-    electronAPI.createNewProject.mockResolvedValue({ error: "create.failed" });
-
-    const result = await useAppStore.getState().createNewProject();
-
-    expect(result).toEqual({ projectId: null, error: "create.failed" });
-    expect(useAppStore.getState().projects.size).toBe(0);
-    expect(useAppStore.getState().activeProjectId).toBeNull();
-    expect(electronAPI.getServerPort).not.toHaveBeenCalled();
-    expect(electronAPI.addOpenProject).not.toHaveBeenCalled();
-    expect(electronAPI.setLastActiveProject).not.toHaveBeenCalled();
-  });
-
-  it("returns a null id and writes nothing when the user cancels", async () => {
-    electronAPI.createNewProject.mockResolvedValue(null);
-
-    const result = await useAppStore.getState().createNewProject();
-
-    expect(result).toEqual({ projectId: null });
-    expect(useAppStore.getState().projects.size).toBe(0);
-    expect(electronAPI.getServerPort).not.toHaveBeenCalled();
-    expect(electronAPI.addOpenProject).not.toHaveBeenCalled();
   });
 });
 

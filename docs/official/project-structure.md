@@ -136,7 +136,7 @@ spherse/
 │       │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）
 │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │       │   │   ├── index.ts          # registerAllIpc 聚合
-│       │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化、新建项目、打开示例项目、打开项目文件夹（shell.openPath）
+│       │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化、打开示例项目、打开项目文件夹（shell.openPath）
 │       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
 │       │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）
 │       │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
@@ -216,7 +216,7 @@ spherse/
 │           │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）
 │           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
 │           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
-│           │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：从已有项目打开 / 创建新项目 / 打开示例项目
+│           │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
 │           │   ├── project-panel/         # 项目侧栏薄组合层，按序渲染 AgentSessionList/UserFilePanel/SkillPanel，自治 side-panel 浮动/隐藏布局
 │           │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │           │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）

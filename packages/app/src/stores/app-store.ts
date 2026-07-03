@@ -17,7 +17,6 @@ interface AppStore {
   initializing: boolean;
   restoreProjects: () => Promise<string | null>;
   openProject: () => Promise<string | null>;
-  createNewProject: () => Promise<{ projectId: string | null; error?: string }>;
   openSampleProject: (sampleId: string) => Promise<{ projectId: string | null; error?: string }>;
   closeProject: (projectId: string) => Promise<string | null>;
   openProjectFolder: (projectId: string) => Promise<void>;
@@ -100,14 +99,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const { projectId } = await window.electronAPI.openProject(dir);
     await registerProject(set, get, projectId, dir);
     return projectId;
-  },
-
-  async createNewProject() {
-    const result = await window.electronAPI.createNewProject();
-    if (!result) return { projectId: null };
-    if ("error" in result) return { projectId: null, error: result.error };
-    await registerProject(set, get, result.projectId, result.path);
-    return { projectId: result.projectId };
   },
 
   async openSampleProject(sampleId) {

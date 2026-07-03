@@ -42,7 +42,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   resetAppData: () => ipcRenderer.invoke("reset-app-data"),
   showSaveDialog: (options: { defaultPath?: string }) =>
     ipcRenderer.invoke("show-save-dialog", options),
-  createNewProject: () => ipcRenderer.invoke("create-new-project"),
   openSampleProject: (opts: { sampleId: string }) =>
     ipcRenderer.invoke("open-sample-project", opts),
   getSampleManifest: () => ipcRenderer.invoke("get-sample-manifest"),

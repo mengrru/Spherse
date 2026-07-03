@@ -604,32 +604,24 @@ export const zhCN = {
   "onboarding.title": "Spherse",
   // 引导页副标题
   "onboarding.subtitle": "你的文字创作与演绎空间",
-  // 引导卡片1按钮：从已有项目打开
-  "onboarding.action.openExisting": "从已有项目打开",
-  // 引导卡片2按钮：创建新项目
-  "onboarding.action.createNew": "创建新项目",
-  // 引导卡片3按钮：打开示例项目，{name} 为示例项目名称
+  // 引导卡片1按钮：打开已有项目或新建项目（合并入口，点击后弹出目录选择器，可选择已有文件夹，也可在其中新建文件夹）
+  "onboarding.action.openOrCreate": "打开或创建项目",
+  // 引导卡片2按钮：打开示例项目，{name} 为示例项目名称
   "onboarding.action.openSample": "打开示例项目：{name}",
-  // 引导卡片1描述
-  "onboarding.desc.openExisting": "打开一个已有的文件夹",
+  // 引导卡片1描述：说明该入口同时支持打开已有项目文件夹与新建空项目文件夹
+  "onboarding.desc.openOrCreate": "选择已有项目文件夹，或新建一个文件夹开始",
   // 引导卡片2描述
-  "onboarding.desc.createNew": "从一个空文件夹开始",
-  // 引导卡片3描述
   "onboarding.desc.openSample": "将内置示例项目拷贝到选定位置并打开",
-  // 引导卡片3（打开示例项目）的 tooltip：说明示例项目的搭建方式与用途，鼠标悬浮于卡片时展示
+  // 引导卡片2（打开示例项目）的 tooltip：说明示例项目的搭建方式与用途，鼠标悬浮于卡片时展示
   "onboarding.tooltip.openSample": "该示例项目使用 Spherse 从零开始搭建，模型为 DeepSeek V4 Flash。通过该项目学习 Spherse 的使用方式，从而搭建完全属于你自己的世界。",
-  // 创建项目时目标目录已存在且非空的错误提示
-  "onboarding.error.dirExistsNotEmpty": "该目录已存在且非空，请选择其它位置",
-  // 创建项目失败时的通用错误提示
-  "onboarding.error.createFailed": "创建项目失败，请重试",
   // 拷贝示例项目失败时的错误提示
   "onboarding.error.copyFailed": "拷贝示例项目失败，请重试",
+  // 示例项目拷贝成功但注册/打开失败时的错误提示（区分于拷贝失败）
+  "onboarding.error.openFailed": "打开示例项目失败，请重试",
+  // 引导页操作（打开/创建/示例）发生未预期异常时的通用错误提示
+  "onboarding.error.unexpected": "操作失败，请重试",
   // 内置示例资源缺失时的错误提示
   "onboarding.error.sampleNotFound": "找不到内置示例，请重新安装应用",
-  // 新建项目时，选择项目保存位置的保存对话框标题（Electron 原生对话框）
-  "onboarding.dialog.newProjectLocation": "选择新建项目的位置",
   // 打开示例项目时，选择示例项目拷贝目标位置的对话框标题（Electron 原生对话框）
   "onboarding.dialog.sampleLocation": "选择示例项目的保存位置",
-  // 新建项目保存对话框默认文件夹名建议
-  "onboarding.defaultProjectName": "新建项目",
 } as const;

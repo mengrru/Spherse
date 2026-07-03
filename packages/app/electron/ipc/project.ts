@@ -1,7 +1,7 @@
 import { ipcMain, dialog, shell } from "electron";
 import type { BrowserWindow } from "electron";
 import path from "node:path";
-import { existsSync, readdirSync, mkdirSync, cpSync } from "node:fs";
+import { existsSync, mkdirSync, cpSync } from "node:fs";
 import { translate, normalizeLocale } from "@spherse/i18n";
 import { registerProject, unregisterProject, getServerPort } from "../server.js";
 import {
@@ -21,7 +21,7 @@ export function registerProjectIpc(
     const win = getWindow();
     if (!win) return null;
     const result = await dialog.showOpenDialog(win, {
-      properties: ["openDirectory"],
+      properties: ["openDirectory", "createDirectory"],
     });
     return result.canceled ? null : result.filePaths[0];
   });
@@ -102,30 +102,8 @@ export function registerProjectIpc(
     return result.canceled ? null : result.filePath;
   });
 
-  ipcMain.handle("create-new-project", async () => {
-    try {
-      const win = getWindow();
-      if (!win) return null;
-      const title = translate(normalizeLocale(getLocale()), "onboarding.dialog.newProjectLocation");
-      const defaultPath = translate(normalizeLocale(getLocale()), "onboarding.defaultProjectName");
-      const result = await dialog.showSaveDialog(win, { title, defaultPath });
-      if (result.canceled || !result.filePath) return null;
-      const targetPath = result.filePath;
-      if (existsSync(targetPath) && readdirSync(targetPath).length > 0) {
-        return { error: "dirExistsNotEmpty" };
-      }
-      mkdirSync(targetPath, { recursive: true });
-      const { projectId } = await registerProject(targetPath);
-      addOpenProject(projectId, targetPath);
-      setLastActiveProject(projectId);
-      return { projectId, path: targetPath };
-    } catch (err) {
-      console.error("[create-new-project]", err);
-      return { error: "createFailed" };
-    }
-  });
-
   ipcMain.handle("open-sample-project", async (_event, opts: { sampleId: string }) => {
+    let targetDir: string;
     try {
       const manifest = await readSampleManifest();
       const entry = manifest.find((e) => e.id === opts.sampleId);
@@ -138,7 +116,7 @@ export function registerProjectIpc(
       const result = await dialog.showOpenDialog(win, { properties: ["openDirectory"], title });
       if (result.canceled || result.filePaths.length === 0) return null;
       const parentDir = result.filePaths[0];
-      let targetDir = path.join(parentDir, entry.displayName);
+      targetDir = path.join(parentDir, entry.displayName);
       let counter = 2;
       while (existsSync(targetDir)) {
         targetDir = path.join(parentDir, `${entry.displayName}-${counter}`);
@@ -146,13 +124,16 @@ export function registerProjectIpc(
       }
       mkdirSync(targetDir, { recursive: true });
       cpSync(srcDir, targetDir, { recursive: true });
+    } catch (err) {
+      console.error("[open-sample-project] copy failed:", err);
+      return { error: "copyFailed" };
+    }
+    try {
       const { projectId } = await registerProject(targetDir);
-      addOpenProject(projectId, targetDir);
-      setLastActiveProject(projectId);
       return { projectId, path: targetDir };
     } catch (err) {
-      console.error("[open-sample-project]", err);
-      return { error: "copyFailed" };
+      console.error("[open-sample-project] register failed:", err);
+      return { error: "openFailed" };
     }
   });
 

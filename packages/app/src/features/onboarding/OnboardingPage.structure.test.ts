@@ -18,9 +18,6 @@ describe("OnboardingPage structure", () => {
       "const openProject = useAppStore((state) => state.openProject)",
     );
     expect(src).toContain(
-      "const createNewProject = useAppStore((state) => state.createNewProject)",
-    );
-    expect(src).toContain(
       "const openSampleProject = useAppStore((state) => state.openSampleProject)",
     );
   });
@@ -37,7 +34,7 @@ describe("OnboardingPage structure", () => {
     expect(src).toContain(".catch(");
   });
 
-  it("guards create-new and open-sample actions against rapid re-entry", () => {
+  it("guards open-or-create and open-sample actions against rapid re-entry", () => {
     const src = source();
 
     expect(src).toContain("const busyRef = useRef(false)");
@@ -45,15 +42,19 @@ describe("OnboardingPage structure", () => {
     expect(src).toContain("busyRef.current = true");
   });
 
-  it("renders the three onboarding actions, mapping over samples for the sample card", () => {
+  it("renders two onboarding actions: the merged open-or-create card and the sample card", () => {
     const src = source();
 
-    expect(src).toContain('t("onboarding.action.openExisting")');
-    expect(src).toContain('t("onboarding.action.createNew")');
+    expect(src).toContain('t("onboarding.action.openOrCreate")');
+    expect(src).toContain('t("onboarding.desc.openOrCreate")');
     expect(src).toContain(
       't("onboarding.action.openSample", { name: sample.displayName })',
     );
     expect(src).toContain("samples.map(");
+    expect(src).toContain("grid-cols-2");
+    expect(src).not.toContain("createNewProject");
+    expect(src).not.toContain('onboarding.action.createNew');
+    expect(src).not.toContain('onboarding.action.openExisting');
   });
 
   it("attaches a tooltip only to the sample card", () => {
@@ -80,10 +81,16 @@ describe("OnboardingPage structure", () => {
 
     expect(src).toContain("import { toast } from \"sonner\"");
     expect(src).toContain("toast.error(t(key))");
-    expect(src).toContain("dirExistsNotEmpty: \"onboarding.error.dirExistsNotEmpty\"");
-    expect(src).toContain("createFailed: \"onboarding.error.createFailed\"");
     expect(src).toContain("copyFailed: \"onboarding.error.copyFailed\"");
+    expect(src).toContain("openFailed: \"onboarding.error.openFailed\"");
     expect(src).toContain("sampleNotFound: \"onboarding.error.sampleNotFound\"");
+  });
+
+  it("catches unexpected rejections in both actions so failures are visible (not silent)", () => {
+    const src = source();
+
+    expect(src).toContain('toast.error(t("onboarding.error.unexpected"))');
+    expect(src.match(/catch \{/g)?.length).toBeGreaterThanOrEqual(2);
   });
 
   it("uses only shadcn semantic tokens and logical properties (no hardcoded colors / dark: / physical dirs)", () => {

@@ -8,9 +8,8 @@ import { useAppStore } from "../../stores/app-store";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 
 const ERROR_KEYS: Record<string, TranslationKey> = {
-  dirExistsNotEmpty: "onboarding.error.dirExistsNotEmpty",
-  createFailed: "onboarding.error.createFailed",
   copyFailed: "onboarding.error.copyFailed",
+  openFailed: "onboarding.error.openFailed",
   sampleNotFound: "onboarding.error.sampleNotFound",
 };
 
@@ -28,7 +27,6 @@ export function OnboardingPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const openProject = useAppStore((state) => state.openProject);
-  const createNewProject = useAppStore((state) => state.createNewProject);
   const openSampleProject = useAppStore((state) => state.openSampleProject);
   const [samples, setSamples] = useState<SampleManifestEntry[]>([]);
   const busyRef = useRef(false);
@@ -47,21 +45,14 @@ export function OnboardingPage() {
     };
   }, []);
 
-  const handleOpenExisting = async () => {
-    const projectId = await openProject();
-    if (projectId) navigate(`/project/${projectId}`);
-  };
-
-  const handleCreateNew = async () => {
+  const handleOpenOrCreate = async () => {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
-      const { projectId, error } = await createNewProject();
-      if (projectId) {
-        navigate(`/project/${projectId}`);
-      } else {
-        reportError(t, error);
-      }
+      const projectId = await openProject();
+      if (projectId) navigate(`/project/${projectId}`);
+    } catch {
+      toast.error(t("onboarding.error.unexpected"));
     } finally {
       busyRef.current = false;
     }
@@ -77,6 +68,8 @@ export function OnboardingPage() {
       } else {
         reportError(t, error);
       }
+    } catch {
+      toast.error(t("onboarding.error.unexpected"));
     } finally {
       busyRef.current = false;
     }
@@ -88,16 +81,11 @@ export function OnboardingPage() {
         <h1 className="mb-2 text-3xl font-semibold">{t("onboarding.title")}</h1>
         <p className="text-sm text-muted-foreground">{t("onboarding.subtitle")}</p>
       </header>
-      <div className="grid w-full max-w-4xl grid-cols-3 gap-4">
+      <div className="grid w-full max-w-3xl grid-cols-2 gap-4">
         <ActionCard
-          title={t("onboarding.action.openExisting")}
-          desc={t("onboarding.desc.openExisting")}
-          onClick={handleOpenExisting}
-        />
-        <ActionCard
-          title={t("onboarding.action.createNew")}
-          desc={t("onboarding.desc.createNew")}
-          onClick={handleCreateNew}
+          title={t("onboarding.action.openOrCreate")}
+          desc={t("onboarding.desc.openOrCreate")}
+          onClick={handleOpenOrCreate}
         />
         {samples.map((sample) => (
           <ActionCard
