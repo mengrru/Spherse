@@ -29,6 +29,7 @@ export interface IpcAppSettings {
     text?: ModelGroupSettings;
     image?: ModelGroupSettings;
   };
+  debugToolsEnabled?: boolean;
 }
 
 export type UpdateStatus =

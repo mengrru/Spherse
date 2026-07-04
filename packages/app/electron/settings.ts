@@ -48,6 +48,7 @@ export function getMaskedSettings(): AppSettings | null {
       text: maskModelGroup(settings.models?.text),
       image: maskModelGroup(settings.models?.image),
     },
+    debugToolsEnabled: settings.debugToolsEnabled ?? false,
   };
 }
 
@@ -82,6 +83,7 @@ export function saveSettings(incoming: AppSettings): void {
       text: mergeModelGroup(incoming.models?.text, prev?.models?.text),
       image: mergeModelGroup(incoming.models?.image, prev?.models?.image),
     },
+    debugToolsEnabled: incoming.debugToolsEnabled ?? prev?.debugToolsEnabled ?? false,
   };
   settingsStore.set("settings", merged);
   applySettingsToEnv(merged);

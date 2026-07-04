@@ -87,6 +87,7 @@ export interface AppSettings {
     text: ModelGroupSettings;
     image: ModelGroupSettings;
   };
+  debugToolsEnabled?: boolean;
 }
 
 export interface ProviderCatalogItem {

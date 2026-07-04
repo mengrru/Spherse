@@ -231,6 +231,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "session.confirmDeleteDescription": "確定要刪除會話「{title}」嗎？此操作無法撤銷。",
   "session.untitled": "無標題會話",
   "settings.language": "語言 / Language",
+  "settings.debugTools": "除錯工具",
+  "settings.debugToolsDesc": "在側邊欄顯示除錯選單入口",
   "settings.image.defaultModel": "預設生圖模型",
   "welcome-page-settings.title": "設定歡迎頁",
   "welcome-page-settings.description": "選擇專案內 HTML 檔案或圖片作為專案歡迎頁。",

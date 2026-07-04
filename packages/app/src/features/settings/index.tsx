@@ -7,6 +7,7 @@ import {
 import { FieldGroup } from "../../components/ui/field";
 import { NativeSelect, NativeSelectOption } from "../../components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { Switch } from "../../components/ui/switch";
 import { useSettingsStore } from "../../stores/settings-store";
 import { useSettingsForm } from "./use-settings-form";
 import { type SettingsApi } from "./types";
@@ -92,6 +93,8 @@ function SettingsTabs() {
   const { t } = useI18n();
   const locale = useSettingsStore((s) => s.locale);
   const changeLocale = useSettingsStore((s) => s.changeLocale);
+  const debugToolsEnabled = useSettingsStore((s) => s.debugToolsEnabled);
+  const setDebugToolsEnabled = useSettingsStore((s) => s.setDebugToolsEnabled);
   const form = useSettingsForm(electronAPI);
 
   return (
@@ -120,6 +123,18 @@ function SettingsTabs() {
                 <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>
               ))}
             </NativeSelect>
+          </FieldGroup>
+          <FieldGroup className="mt-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium leading-none">{t("settings.debugTools")}</span>
+                <span className="text-xs text-muted-foreground">{t("settings.debugToolsDesc")}</span>
+              </div>
+              <Switch
+                checked={debugToolsEnabled}
+                onCheckedChange={(checked) => { void setDebugToolsEnabled(electronAPI, checked); }}
+              />
+            </div>
           </FieldGroup>
         </TabsContent>
 

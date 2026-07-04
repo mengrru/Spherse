@@ -231,6 +231,8 @@ export const en: Record<TranslationKey, string> = {
   "session.confirmDeleteDescription": "Are you sure you want to delete session {title}? This action cannot be undone.",
   "session.untitled": "Untitled session",
   "settings.language": "Language",
+  "settings.debugTools": "Debug Tools",
+  "settings.debugToolsDesc": "Show the debug menu entry in the side panel",
   "settings.image.defaultModel": "Default Image Model",
   "welcome-page-settings.title": "Set Welcome Page",
   "welcome-page-settings.description": "Select an HTML file or image in the project as the welcome page.",

@@ -486,6 +486,10 @@ export const zhCN = {
   // --- Settings ---
   // 设置中语言选择器的标签
   "settings.language": "语言 / Language",
+  // 设置 > 通用：调试工具开关的标题（开启后在侧边栏显示调试入口）
+  "settings.debugTools": "调试工具",
+  // 设置 > 通用：调试工具开关下方的说明文案
+  "settings.debugToolsDesc": "在侧边栏显示调试菜单入口",
   // 图片生成设置中默认模型下拉框的标签
   "settings.image.defaultModel": "默认生图模型",
 

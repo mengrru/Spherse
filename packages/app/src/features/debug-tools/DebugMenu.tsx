@@ -4,7 +4,6 @@ import { useI18n } from "@spherse/i18n/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuCheckboxItem,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -32,7 +31,6 @@ import { useAppStore } from "../../stores/app-store";
 import { LogPanel } from "./LogPanel";
 
 export function DebugMenu() {
-  const [devToolsOpen, setDevToolsOpen] = useState(false);
   const [overlay, setOverlay] = useState<null | "store" | "reset" | "logs">(null);
   const [storeData, setStoreData] = useState<string>("");
   const [downloading, setDownloading] = useState(false);
@@ -45,9 +43,8 @@ export function DebugMenu() {
 
   const sessionId = chatMatch?.params.sessionId ?? null;
 
-  const handleDevToolsToggle = async (checked: boolean) => {
-    await window.electronAPI.toggleDevTools();
-    setDevToolsOpen(checked);
+  const handleToggleDevTools = () => {
+    void window.electronAPI.toggleDevTools();
   };
 
   const handleOpenStoreViewer = async () => {
@@ -99,13 +96,10 @@ export function DebugMenu() {
           <BugIcon />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="right">
-          <DropdownMenuCheckboxItem
-            checked={devToolsOpen}
-            onCheckedChange={handleDevToolsToggle}
-          >
+          <DropdownMenuItem onClick={handleToggleDevTools}>
             <CodeIcon />
             {t("debug.devTools")}
-          </DropdownMenuCheckboxItem>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleReload}>
             <RefreshCwIcon />

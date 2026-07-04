@@ -13,7 +13,7 @@ function createApi(overrides: Partial<SettingsApi> = {}): SettingsApi {
 
 describe("useSettingsStore", () => {
   beforeEach(() => {
-    useSettingsStore.setState({ locale: "zh-CN" });
+    useSettingsStore.setState({ locale: "zh-CN", debugToolsEnabled: false });
   });
 
   it("loads locale from settings", async () => {
@@ -50,6 +50,41 @@ describe("useSettingsStore", () => {
     expect(api.saveSettings).toHaveBeenCalledWith({
       locale: "en",
       models,
+      debugToolsEnabled: false,
+    });
+  });
+
+  it("loads debugToolsEnabled from settings", async () => {
+    const api = createApi({
+      getSettings: vi.fn().mockResolvedValue({ debugToolsEnabled: true }),
+    });
+
+    await useSettingsStore.getState().loadLocale(api);
+
+    expect(useSettingsStore.getState().debugToolsEnabled).toBe(true);
+  });
+
+  it("defaults debugToolsEnabled to false when absent", async () => {
+    const api = createApi();
+
+    await useSettingsStore.getState().loadLocale(api);
+
+    expect(useSettingsStore.getState().debugToolsEnabled).toBe(false);
+  });
+
+  it("setDebugToolsEnabled updates state and persists", async () => {
+    const api = createApi({
+      getSettings: vi.fn().mockResolvedValue({ locale: "zh-CN", models: undefined }),
+    });
+
+    const ok = await useSettingsStore.getState().setDebugToolsEnabled(api, true);
+
+    expect(ok).toBe(true);
+    expect(useSettingsStore.getState().debugToolsEnabled).toBe(true);
+    expect(api.saveSettings).toHaveBeenCalledWith({
+      locale: "zh-CN",
+      models: undefined,
+      debugToolsEnabled: true,
     });
   });
 });

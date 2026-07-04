@@ -214,7 +214,7 @@ spherse/
 │           │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
     │           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、chat 专属类型（types.ts）、thinking 指示器（ThinkingIndicator）、聚合/diff 纯函数（lib/，含 format-time）
 │           │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）
-│           │   ├── debug-tools/          # 开发模式调试菜单 + Streaming Log 悬浮面板
+│           │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
 │           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
 │           │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
 │           │   ├── project-panel/         # 项目侧栏薄组合层，按序渲染 AgentSessionList/UserFilePanel/SkillPanel，自治 side-panel 浮动/隐藏布局
