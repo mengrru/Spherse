@@ -1,5 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { parseChatClientMessage, parseChatServerEvent } from "@spherse/server/contracts";
+import { NotFoundError, ModelNotConfiguredError } from "@spherse/core";
+import {
+  CHAT_CLOSE_CODES,
+  ErrorEventCode,
+  parseChatClientMessage,
+  parseChatServerEvent,
+} from "@spherse/server/contracts";
 import type { ProjectRegistry } from "./registry.js";
 
 export function handleChatWebSocket(
@@ -20,8 +26,11 @@ export function handleChatWebSocket(
 
       ctx.sessionRuntime.restoreSession(agentId, sessionId).catch((err) => {
         const message = err instanceof Error ? err.message : "request failed";
+        const code = err instanceof NotFoundError
+          ? CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE
+          : 1000;
         socket.send(JSON.stringify(parseChatServerEvent({ type: "error", message })));
-        socket.close();
+        socket.close(code, message);
       });
 
       socket.on("message", async (raw: Buffer) => {
@@ -47,9 +56,10 @@ export function handleChatWebSocket(
           } catch (err) {
             fastify.log.error({ err, sessionId }, "chat ws message error");
             const message = err instanceof Error ? err.message : "chat error";
-            socket.send(
-              JSON.stringify(parseChatServerEvent({ type: "error", message })),
-            );
+            const code = err instanceof ModelNotConfiguredError
+              ? ErrorEventCode.ModelNotConfigured
+              : ErrorEventCode.Unknown;
+            socket.send(JSON.stringify(parseChatServerEvent({ type: "error", message, code })));
           }
         } else if (msg.type === "abort") {
           ctx.sessionRuntime.abortSession(sessionId);

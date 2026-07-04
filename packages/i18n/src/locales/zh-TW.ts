@@ -165,6 +165,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "chat.copyTooltip": "複製",
   "chat.close": "關閉",
   "chat.responseGenerationFailed": "回覆產生失敗",
+  "chat.error.modelNotConfigured": "尚未設定模型，請在設定中選擇一個模型後再傳送訊息。",
   "content-browser.conflictBannerText": "檔案已被外部修改",
   "content-browser.conflictKeepMine": "保留我的修改",
   "content-browser.conflictReload": "重新載入檔案",

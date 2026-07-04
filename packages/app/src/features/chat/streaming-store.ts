@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { parseChatServerEvent } from "@spherse/server/contracts";
+import { CHAT_CLOSE_CODES, parseChatServerEvent } from "@spherse/server/contracts";
 import type { ApiClient } from "../../lib/api";
 import type { AgentEvent } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
@@ -15,6 +15,9 @@ const CLEANUP_INTERVAL_MS = 30 * 1000;
 const RECONNECT_BACKOFFS = [1000, 2000, 5000, 10000, 30000];
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
 const HEARTBEAT_TIMEOUT_MS = 60 * 1000;
+const FATAL_CLOSE_CODES = new Set<number>([
+  CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE,
+]);
 
 interface ConnectParams {
   client: ApiClient;
@@ -73,6 +76,7 @@ interface StreamingSession extends StreamingSessionData {
   hasMore: boolean;
   oldestLoadedId: number | null;
   loadingMore: boolean;
+  historyLoaded: boolean;
 }
 
 interface StreamingStoreState {
@@ -226,6 +230,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         hasMore: false,
         oldestLoadedId: null,
         loadingMore: false,
+        historyLoaded: false,
       };
       return {
         sessions: {
@@ -273,7 +278,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         enqueueEvent(sessionId, { type: "error", message: "WebSocket connection error" });
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event: CloseEvent) => {
         const currentSession = get().sessions[sessionId];
         if (currentSession?.ws !== ws) return;
         clearHeartbeatTimer(sessionId);
@@ -291,6 +296,10 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
             : { ...session, ws: null, messages };
         });
         setStreamingAndNotify(sessionId, projectId, false);
+        if (FATAL_CLOSE_CODES.has(event.code)) {
+          manuallyClosed.set(sessionId, true);
+          return;
+        }
         if (!manuallyClosed.get(sessionId) && (get().sessions[sessionId]?.attachedCount ?? 0) > 0) {
           scheduleReconnect(sessionId);
         }
@@ -322,20 +331,24 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
       updateSession(sessionId, (session) => ({ ...session, ws }));
 
-      client.getSessionMessagesPage(agentId, sessionId, { turns: 10 }).then((result) => {
-        const historyMessages = parseHistoryMessages(result.messages);
-        updateSession(sessionId, (session) => {
-          const messages = mergeHistoryMessages(session.messages, historyMessages);
-          return {
-            ...session,
-            messages: messages === session.messages ? session.messages : messages,
-            hasMore: result.hasMore,
-            oldestLoadedId: result.oldestId,
-          };
+      if (!get().sessions[sessionId]?.historyLoaded) {
+        client.getSessionMessagesPage(agentId, sessionId, { turns: 10 }).then((result) => {
+          const historyMessages = parseHistoryMessages(result.messages);
+          updateSession(sessionId, (session) => {
+            const messages = mergeHistoryMessages(session.messages, historyMessages);
+            return {
+              ...session,
+              messages: messages === session.messages ? session.messages : messages,
+              hasMore: result.hasMore,
+              oldestLoadedId: result.oldestId,
+              historyLoaded: true,
+            };
+          });
+        }).catch((err: unknown) => {
+          console.warn("[streaming-store] failed to load session history:", err);
+          updateSession(sessionId, (session) => ({ ...session, historyLoaded: true }));
         });
-      }).catch((err: unknown) => {
-        console.warn("[streaming-store] failed to load session history:", err);
-      });
+      }
     } finally {
       pendingCreation.delete(sessionId);
       startCleanupTimer();

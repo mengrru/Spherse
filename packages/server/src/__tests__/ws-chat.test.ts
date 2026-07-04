@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NotFoundError, ModelNotConfiguredError } from "@spherse/core";
 
 import { handleChatWebSocket } from "../ws-chat.js";
+import { CHAT_CLOSE_CODES } from "../contracts/index.js";
 
 interface MockSocket {
   on: ReturnType<typeof vi.fn>;
@@ -96,5 +98,54 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     const unknownSocket = createMockSocket();
     routeHandler!(unknownSocket, req({ projectId: "missing", agentId: "a1", sessionId: "s1" }));
     expect(unknownSocket.close).toHaveBeenCalled();
+  });
+
+  it("closes with SESSION_UNRECOVERABLE when restoreSession rejects NotFoundError", async () => {
+    routeHandler = null;
+    const mock = createMockRegistry();
+    mock.sessionRuntime.restoreSession = vi
+      .fn()
+      .mockRejectedValue(new NotFoundError("Session s1 not found"));
+    handleChatWebSocket(mockFastify as never, mock.registry as never);
+    const errSocket = createMockSocket();
+    routeHandler!(errSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(errSocket.send).toHaveBeenCalledTimes(1);
+    expect(sentObjects(errSocket)[0]).toMatchObject({ type: "error", message: "Session s1 not found" });
+    expect(errSocket.close).toHaveBeenCalledWith(
+      CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE,
+      "Session s1 not found",
+    );
+  });
+
+  it("closes with 1000 when restoreSession rejects a generic error", async () => {
+    routeHandler = null;
+    const mock = createMockRegistry();
+    mock.sessionRuntime.restoreSession = vi.fn().mockRejectedValue(new Error("boom"));
+    handleChatWebSocket(mockFastify as never, mock.registry as never);
+    const errSocket = createMockSocket();
+    routeHandler!(errSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(errSocket.close).toHaveBeenCalledWith(1000, "boom");
+  });
+
+  it("sends error with MODEL_NOT_CONFIGURED code and keeps connection open", async () => {
+    sessionRuntime.sendMessage.mockRejectedValue(new ModelNotConfiguredError());
+    socket.simulateMessage(Buffer.from(JSON.stringify({ type: "message", content: "hi" })));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sentObjects(socket)).toContainEqual({
+      type: "error",
+      message: "Model is not configured. Please select a model in Settings.",
+      code: "MODEL_NOT_CONFIGURED",
+    });
+    expect(socket.close).not.toHaveBeenCalled();
+  });
+
+  it("sends error with UNKNOWN code when sendMessage rejects a generic error", async () => {
+    sessionRuntime.sendMessage.mockRejectedValue(new Error("oops"));
+    socket.simulateMessage(Buffer.from(JSON.stringify({ type: "message", content: "hi" })));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sentObjects(socket)).toContainEqual({ type: "error", message: "oops", code: "UNKNOWN" });
+    expect(socket.close).not.toHaveBeenCalled();
   });
 });

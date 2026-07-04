@@ -50,7 +50,7 @@ export function MessageItem({ message, agent, showTime, onNavigateToPath }: Mess
         {message._toolCalls && message._toolCalls.length > 0 && (
           <ToolCallSection toolCalls={message._toolCalls} onNavigateToPath={onNavigateToPath} />
         )}
-        {message._error && <ErrorMessageSection error={message._error} />}
+        {message._error && <ErrorMessageSection error={message._error} errorCode={message._errorCode} />}
         {message._toolCalls
           ?.filter((toolCall) => toolCall._card)
           .map((toolCall) => {

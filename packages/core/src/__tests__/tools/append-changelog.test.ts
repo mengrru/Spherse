@@ -13,7 +13,7 @@ describe("createAppendChangelogTool", () => {
   beforeEach(async () => {
     projectRoot = await createTempProject();
     projectStore = new ProjectStore(projectRoot, createSilentLogger());
-    await projectStore.create("TestProject", "gemini-2.5-pro");
+    await projectStore.create("TestProject");
   });
 
   afterEach(async () => {

@@ -27,10 +27,9 @@ describe("ProjectStore — lifecycle", () => {
   });
 
   it("creates a project with all default files", async () => {
-    await store.create("TestProject", "gemini-2.5-pro");
+    await store.create("TestProject");
     const config = store.config.get();
     expect(config.name).toBe("TestProject");
-    expect(config.defaultModel).toBe("gemini-2.5-pro");
     expect(pathExists(projectRoot, ".spherse/project.yaml")).toBe(true);
     expect(pathExists(projectRoot, ".spherse/agents")).toBe(true);
     expect(pathExists(projectRoot, "AGENTS.md")).toBe(true);
@@ -38,12 +37,11 @@ describe("ProjectStore — lifecycle", () => {
   });
 
   it("opens an existing project", async () => {
-    await store.create("MyProject", "deepseek-v4-pro");
+    await store.create("MyProject");
     const store2 = new ProjectStore(projectRoot, createSilentLogger());
     await store2.open();
     const config = store2.config.get();
     expect(config.name).toBe("MyProject");
-    expect(config.defaultModel).toBe("deepseek-v4-pro");
   });
 
   it("throws when opening non-existent project", async () => {
@@ -66,7 +64,7 @@ describe("ProjectStore — config delegation", () => {
   beforeEach(async () => {
     projectRoot = await createTempProject();
     store = new ProjectStore(projectRoot, createSilentLogger());
-    await store.create("TestProject", "gemini-2.5-pro");
+    await store.create("TestProject");
   });
 
   afterEach(async () => {
@@ -111,7 +109,7 @@ describe("ProjectStore — agent management", () => {
   beforeEach(async () => {
     projectRoot = await createTempProject();
     store = new ProjectStore(projectRoot, createSilentLogger());
-    await store.create("TestProject", "gemini-2.5-pro");
+    await store.create("TestProject");
   });
 
   afterEach(async () => {
@@ -177,7 +175,7 @@ describe("ProjectStore — agent sessions and schedules access", () => {
   beforeEach(async () => {
     projectRoot = await createTempProject();
     store = new ProjectStore(projectRoot, createSilentLogger());
-    await store.create("TestProject", "gemini-2.5-pro");
+    await store.create("TestProject");
   });
 
   afterEach(async () => {

@@ -58,7 +58,7 @@ export class ProjectStore {
     await this.loadAgents();
   }
 
-  async create(name: string, defaultModel: string): Promise<void> {
+  async create(name: string): Promise<void> {
     await fs.mkdir(this.spherseDir, { recursive: true });
     await fs.mkdir(path.join(this.spherseDir, "agents"), { recursive: true });
 
@@ -68,7 +68,6 @@ export class ProjectStore {
       id: nanoid(8),
       name,
       created: Date.now(),
-      defaultModel,
     });
 
     this._skillStore = new SkillStore(

@@ -1,6 +1,15 @@
 import { Type, type Static } from "@sinclair/typebox";
 import { parseContract } from "./common.js";
 
+export enum ErrorEventCode {
+  ModelNotConfigured = "MODEL_NOT_CONFIGURED",
+  Unknown = "UNKNOWN",
+}
+
+export const CHAT_CLOSE_CODES = {
+  SESSION_UNRECOVERABLE: 4401,
+} as const;
+
 const chatServerEvent = Type.Union([
   Type.Object({ type: Type.Literal("agent_start") }),
   Type.Object({ type: Type.Literal("agent_end"), messages: Type.Array(Type.Unknown()) }),
@@ -33,7 +42,11 @@ const chatServerEvent = Type.Union([
     result: Type.Unknown(),
     isError: Type.Boolean(),
   }),
-  Type.Object({ type: Type.Literal("error"), message: Type.String() }),
+  Type.Object({
+    type: Type.Literal("error"),
+    message: Type.String(),
+    code: Type.Optional(Type.Enum(ErrorEventCode)),
+  }),
   Type.Object({ type: Type.Literal("pong") }),
 ]);
 

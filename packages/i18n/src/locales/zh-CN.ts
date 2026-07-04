@@ -339,6 +339,8 @@ export const zhCN = {
   "chat.close": "关闭",
   // 消息生成失败时的固定提示文案，点击可展开查看具体错误
   "chat.responseGenerationFailed": "回复生成失败",
+  // 用户尚未配置模型时尝试发消息，聊天区显示的错误提示（说明需先到设置中选择模型）
+  "chat.error.modelNotConfigured": "尚未配置模型，请在设置中选择一个模型后再发送消息。",
 
   // --- Content Browser ---
   // 文件被外部修改时的冲突提示横幅

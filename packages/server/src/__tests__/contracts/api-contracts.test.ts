@@ -45,11 +45,20 @@ describe("api contracts", () => {
       type: "error",
       message: "boom",
     });
+    expect(
+      parseChatServerEvent({ type: "error", message: "x", code: "MODEL_NOT_CONFIGURED" }),
+    ).toEqual({ type: "error", message: "x", code: "MODEL_NOT_CONFIGURED" });
+    expect(
+      parseChatServerEvent({ type: "error", message: "y", code: "UNKNOWN" }),
+    ).toEqual({ type: "error", message: "y", code: "UNKNOWN" });
     expect(parseChatServerEvent({ type: "pong" })).toEqual({ type: "pong" });
   });
 
   it("rejects malformed known chat server events", () => {
     expect(() => parseChatServerEvent({ type: "error" })).toThrow(/Invalid payload/);
+    expect(() =>
+      parseChatServerEvent({ type: "error", message: "x", code: "UNKNOWN_CODE" }),
+    ).toThrow(/Invalid payload/);
     expect(() => parseChatServerEvent({ type: "message_start" })).toThrow(/Invalid payload/);
     expect(() => parseChatServerEvent({ type: "turn_end", message: {} })).toThrow(/Invalid payload/);
     expect(() => parseChatServerEvent({ type: "agent_end" })).toThrow(/Invalid payload/);

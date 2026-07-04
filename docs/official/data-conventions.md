@@ -36,10 +36,11 @@ project-root/
 ```yaml
 name: My World
 created: 1760000000000
-defaultModel: glm-4.5-air
 welcomePage:
   path: welcome.html
 ```
+
+模型选择不由项目配置持有，而是由用户级全局设置（`AppSettings.models.text.defaultModel`）决定；项目级不再有 `defaultModel` 字段（老项目 `project.yaml` 中残留的该字段会被忽略，不报错）。
 
 特殊文件路径（`AGENTS.md`、`CHANGELOG.md`、`.spherse/agents/` 等）由 `@spherse/core` 的 `access/path-category.ts` 中 `PATH_PATTERNS` 常量固定，不可配置。
 

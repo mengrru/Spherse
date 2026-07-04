@@ -1,4 +1,5 @@
 import type { AgentEvent } from "../../lib/types";
+import type { ErrorEventCode } from "@spherse/server/contracts";
 import type { ChatMessage, ToolCallInfo } from "./types";
 import { aggregateFileChanges, attachRunChanges } from "./lib/aggregate-file-changes";
 
@@ -35,18 +36,20 @@ export function reduceSessionEvents(
   };
 }
 
-export function appendErrorMessage(prev: ChatMessage[], message: string): ChatMessage[] {
+export function appendErrorMessage(prev: ChatMessage[], message: string, code?: ErrorEventCode): ChatMessage[] {
   const last = prev[prev.length - 1];
   if (last?.role === "assistant" && last._streaming) {
     return [
       ...prev.slice(0, -1),
       {
         ...last,
-        content: last.content ? `${last.content}\n\n[Error] ${message}` : `[Error] ${message}`,
+        _streaming: false,
+        _error: message,
+        ...(code && { _errorCode: code }),
       },
     ];
   }
-  return [...prev, { role: "assistant", content: `[Error] ${message}` }];
+  return [...prev, { role: "assistant", content: "", _error: message, ...(code && { _errorCode: code }) }];
 }
 
 export function mergeHistoryMessages(current: ChatMessage[], history: ChatMessage[]): ChatMessage[] {
@@ -58,6 +61,7 @@ export function mergeHistoryMessages(current: ChatMessage[], history: ChatMessag
 function applyEventToStreaming(event: AgentEvent): boolean | null {
   if (event.type === "agent_start") return true;
   if (event.type === "agent_end") return false;
+  if (event.type === "error") return false;
   return null;
 }
 
@@ -179,7 +183,7 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
   }
 
   if (event.type === "error") {
-    return appendErrorMessage(prev, event.message);
+    return appendErrorMessage(prev, event.message, event.code);
   }
 
   return prev;

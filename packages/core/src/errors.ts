@@ -25,3 +25,10 @@ export class ConflictError extends Error {
     this.name = "ConflictError";
   }
 }
+
+export class ModelNotConfiguredError extends Error {
+  constructor() {
+    super("Model is not configured. Please select a model in Settings.");
+    this.name = "ModelNotConfiguredError";
+  }
+}

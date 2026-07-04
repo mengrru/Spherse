@@ -25,10 +25,13 @@ vi.mock("../model-providers/index.js", async (importOriginal) => {
 });
 
 import { createProject } from "../factory.js";
+import { ModelNotConfiguredError } from "../errors.js";
 
 interface FakeAgent {
-  state: { model: { id: string; provider: string } };
+  state: { model?: { id: string; provider: string } };
   streamFn: unknown;
+  prompt: (message: string) => Promise<void>;
+  subscribe: (listener: (event: unknown) => void) => () => void;
 }
 interface RuntimeInternals {
   sessionRuntime: {
@@ -155,13 +158,13 @@ describe("SessionRuntime default model hot-swap", () => {
   it("hot-swaps model on active agents using the global default", async () => {
     const sessionId = await runtime.sessionRuntime.createSession(agentId);
     const agent = activeAgent(runtime as RuntimeInternals, sessionId);
-    // preset agent has no profile.model → resolves to project default "gemini-2.5-pro"
-    expect(agent.state.model.id).toBe("gemini-2.5-pro");
+    // preset agent has no profile.model and no global default yet → no model resolved
+    expect(resolveModelByIdMock).not.toHaveBeenCalled();
 
     runtime.sessionRuntime.setDefaultModel("openai/gpt-4o");
 
-    expect(agent.state.model.id).toBe("gpt-4o");
-    expect(agent.state.model.provider).toBe("openai");
+    expect(agent.state.model?.id).toBe("gpt-4o");
+    expect(agent.state.model?.provider).toBe("openai");
   });
 
   it("does not override agents whose profile pins a specific model", async () => {
@@ -173,13 +176,13 @@ describe("SessionRuntime default model hot-swap", () => {
 
     const sessionId = await runtime.sessionRuntime.createSession(agentId);
     const agent = activeAgent(runtime as RuntimeInternals, sessionId);
-    expect(agent.state.model.id).toBe("pinned");
+    expect(agent.state.model?.id).toBe("pinned");
 
     runtime.sessionRuntime.setDefaultModel("openai/gpt-4o");
 
     // profile.model wins over global default → unchanged
-    expect(agent.state.model.id).toBe("pinned");
-    expect(agent.state.model.provider).toBe("custom");
+    expect(agent.state.model?.id).toBe("pinned");
+    expect(agent.state.model?.provider).toBe("custom");
   });
 
   it("hot-swaps model on ALL active agents (multiple sessions)", async () => {
@@ -191,8 +194,64 @@ describe("SessionRuntime default model hot-swap", () => {
 
     for (const sid of [sessionIdA, sessionIdB, sessionIdC]) {
       const agent = activeAgent(runtime as RuntimeInternals, sid);
-      expect(agent.state.model.id).toBe("gpt-4o");
-      expect(agent.state.model.provider).toBe("openai");
+      expect(agent.state.model?.id).toBe("gpt-4o");
+      expect(agent.state.model?.provider).toBe("openai");
     }
+  });
+});
+
+describe("SessionRuntime lazy model resolution", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-rt-lazy-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore;
+    agentId = [...projectStore.agents.keys()][0];
+    runtime.scheduler.stopAll();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("builds an agent without a model when none is configured", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    expect(sessionId).toBeDefined();
+    expect(resolveModelByIdMock).not.toHaveBeenCalled();
+  });
+
+  it("treats an empty-string globalDefaultModel as unconfigured", async () => {
+    runtime.sessionRuntime.setDefaultModel("");
+    await runtime.sessionRuntime.createSession(agentId);
+    expect(resolveModelByIdMock).not.toHaveBeenCalled();
+  });
+
+  it("throws ModelNotConfiguredError on sendMessage when no model is configured", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    await expect(
+      runtime.sessionRuntime.sendMessage(sessionId, "hi", () => {}),
+    ).rejects.toBeInstanceOf(ModelNotConfiguredError);
+  });
+
+  it("does not throw ModelNotConfiguredError on sendMessage after a model is configured", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    runtime.sessionRuntime.setDefaultModel("openai/gpt-4o");
+
+    const agent = activeAgent(runtime as RuntimeInternals, sessionId);
+    agent.subscribe = vi.fn(() => () => {}) as FakeAgent["subscribe"];
+    agent.prompt = vi.fn().mockResolvedValue(undefined) as FakeAgent["prompt"];
+
+    await expect(
+      runtime.sessionRuntime.sendMessage(sessionId, "hi", () => {}),
+    ).resolves.toBeUndefined();
+    expect(agent.prompt).toHaveBeenCalledWith("hi");
   });
 });

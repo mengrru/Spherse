@@ -1,5 +1,6 @@
 import { Agent } from "@earendil-works/pi-agent-core";
 import type { AgentEvent, AgentTool } from "@earendil-works/pi-agent-core";
+import type { Model, Api } from "@earendil-works/pi-ai";
 import type { AgentProfile } from "./types.js";
 import { resolveModelById, getChatStreamFn } from "./model-providers/index.js";
 import { ProjectStore } from "./store/project.js";
@@ -8,7 +9,7 @@ import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { readContextFiles } from "./engine/read-context-files.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { logAgentEvent } from "./engine/log-agent-event.js";
-import { NotFoundError } from "./errors.js";
+import { NotFoundError, ModelNotConfiguredError } from "./errors.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
 
@@ -22,6 +23,13 @@ export interface TurnContextSnapshot {
     description: string;
     parameters: unknown;
   }>;
+}
+
+function resolveEffectiveModelId(
+  profile: AgentProfile,
+  globalDefaultModel: string | undefined,
+): string | undefined {
+  return profile.model || globalDefaultModel || undefined;
 }
 
 export class SessionRuntime {
@@ -55,11 +63,11 @@ export class SessionRuntime {
 
   private syncActiveAgentsModel(): void {
     if (this.activeSessions.size === 0) return;
-    const config = this.projectStore.config.get();
     for (const [, { agent, agentId }] of this.activeSessions) {
       const profile = this.projectStore.getAgent(agentId)?.getProfile();
       if (!profile) continue;
-      const modelId = profile.model ?? this.globalDefaultModel ?? config.defaultModel;
+      const modelId = resolveEffectiveModelId(profile, this.globalDefaultModel);
+      if (!modelId) continue;
       try {
         const resolved = resolveModelById(modelId);
         const current = agent.state.model;
@@ -107,6 +115,18 @@ export class SessionRuntime {
     return sessionId;
   }
 
+  private ensureModelForAgent(agent: Agent, agentId: string): void {
+    const profile = this.projectStore.getAgent(agentId)?.getProfile();
+    if (!profile) throw new NotFoundError(`Agent "${agentId}" not found`);
+    const modelId = resolveEffectiveModelId(profile, this.globalDefaultModel);
+    if (!modelId) throw new ModelNotConfiguredError();
+    try {
+      agent.state.model = resolveModelById(modelId);
+    } catch {
+      throw new ModelNotConfiguredError();
+    }
+  }
+
   async sendMessage(
     sessionId: string,
     message: string,
@@ -116,6 +136,7 @@ export class SessionRuntime {
     if (!entry) throw new NotFoundError(`No active session "${sessionId}"`);
 
     const { agent, agentId } = entry;
+    this.ensureModelForAgent(agent, agentId);
     const sessionLogger = this.logger.child({ sessionId });
     const agentStore = this.projectStore.getAgent(agentId);
 
@@ -181,7 +202,6 @@ export class SessionRuntime {
     profile: AgentProfile,
     sessionId: string,
   ): Promise<Agent> {
-    const config = this.projectStore.config.get();
     const projectRoot = this.projectStore.getRootPath();
     const toolContext = new ToolContext(this.projectStore, this.fileWriteMutex);
     const allTools = createToolsForProject(toolContext);
@@ -213,9 +233,15 @@ export class SessionRuntime {
       systemPrompt += contextSection;
     }
 
-    const modelId =
-      profile.model ?? this.globalDefaultModel ?? config.defaultModel;
-    const model = resolveModelById(modelId);
+    const modelId = resolveEffectiveModelId(profile, this.globalDefaultModel);
+    let model: Model<Api> | undefined;
+    if (modelId) {
+      try {
+        model = resolveModelById(modelId);
+      } catch (err) {
+        this.logger.warn({ err, modelId, agentId: profile.id }, "model not resolvable, agent will wait for model config");
+      }
+    }
 
     return new Agent({
       initialState: {

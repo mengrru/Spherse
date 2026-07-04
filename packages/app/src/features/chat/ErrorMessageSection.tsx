@@ -3,14 +3,20 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../compo
 import { Button } from "../../components/ui/button";
 import { ChevronRightIcon, AlertTriangleIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
+import { ErrorEventCode } from "@spherse/server/contracts";
 
 interface ErrorMessageSectionProps {
   error: string;
+  errorCode?: ErrorEventCode;
 }
 
-export function ErrorMessageSection({ error }: ErrorMessageSectionProps) {
+export function ErrorMessageSection({ error, errorCode }: ErrorMessageSectionProps) {
   const [expanded, setExpanded] = useState(false);
   const { t } = useI18n();
+
+  const detail = errorCode === ErrorEventCode.ModelNotConfigured
+    ? t("chat.error.modelNotConfigured")
+    : error;
 
   return (
     <div className="mt-2 border-t border-dashed border-border pt-2">
@@ -30,7 +36,7 @@ export function ErrorMessageSection({ error }: ErrorMessageSectionProps) {
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="ml-4 mt-0.5 mb-1.5 text-xs text-destructive break-all">
-            {error}
+            {detail}
           </div>
         </CollapsibleContent>
       </Collapsible>

@@ -14,7 +14,7 @@ describe("initPresets", () => {
     projectRoot = await createTempProject();
     spherseDir = path.join(projectRoot, ".spherse");
     projectStore = new ProjectStore(projectRoot, createSilentLogger());
-    await projectStore.create("TestProject", "gemini-2.5-pro");
+    await projectStore.create("TestProject");
   });
 
   afterEach(async () => {

@@ -27,10 +27,7 @@ export async function createProject(
   } catch {
     isNewProject = true;
     const dirName = path.basename(path.resolve(projectRoot));
-    await projectStore.create(
-      options?.projectName ?? dirName,
-      options?.defaultModel ?? "gemini-2.5-pro",
-    );
+    await projectStore.create(options?.projectName ?? dirName);
   }
 
   if (isNewProject) {

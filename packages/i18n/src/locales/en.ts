@@ -165,6 +165,7 @@ export const en: Record<TranslationKey, string> = {
   "chat.copyTooltip": "Copy",
   "chat.close": "Close",
   "chat.responseGenerationFailed": "Response generation failed",
+  "chat.error.modelNotConfigured": "No model configured. Please select a model in Settings before sending messages.",
   "content-browser.conflictBannerText": "File has been modified externally",
   "content-browser.conflictKeepMine": "Keep my changes",
   "content-browser.conflictReload": "Reload file",

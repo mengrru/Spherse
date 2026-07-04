@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ErrorEventCode } from "@spherse/server/contracts";
 import {
   appendErrorMessage,
   mergeHistoryMessages,
@@ -29,7 +30,7 @@ describe("chat session reducer", () => {
     expect(next).toBe(current);
   });
 
-  it("appends stream errors to the current streaming assistant message", () => {
+  it("attaches stream errors to the current streaming assistant message via _error", () => {
     const messages = appendErrorMessage([
       { role: "user", content: "start" },
       { role: "assistant", content: "partial", _streaming: true },
@@ -38,21 +39,80 @@ describe("chat session reducer", () => {
     expect(messages).toHaveLength(2);
     expect(messages[1]).toEqual({
       role: "assistant",
-      content: "partial\n\n[Error] broken",
-      _streaming: true,
+      content: "partial",
+      _streaming: false,
+      _error: "broken",
     });
   });
 
-  it("only agent_end ends streaming state", () => {
+  it("attaches _errorCode when appendErrorMessage receives a code", () => {
+    const messages = appendErrorMessage(
+      [{ role: "user", content: "start" }],
+      "no model",
+      ErrorEventCode.ModelNotConfigured,
+    );
+
+    expect(messages[messages.length - 1]).toEqual({
+      role: "assistant",
+      content: "",
+      _error: "no model",
+      _errorCode: ErrorEventCode.ModelNotConfigured,
+    });
+  });
+
+  it("leaves _errorCode undefined when appendErrorMessage has no code", () => {
+    const messages = appendErrorMessage([{ role: "user", content: "start" }], "broken");
+
+    expect(messages[messages.length - 1]._errorCode).toBeUndefined();
+  });
+
+  it("threads _errorCode through reduceSessionEvents for error events", () => {
+    const current = session({
+      messages: [{ role: "user", content: "hi" }],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [
+      { type: "error", message: "no model", code: ErrorEventCode.ModelNotConfigured },
+    ], 200);
+
+    const last = next.messages[next.messages.length - 1];
+    expect(last._errorCode).toBe(ErrorEventCode.ModelNotConfigured);
+    expect(last._error).toBe("no model");
+  });
+
+  it("omits _errorCode when error event has no code", () => {
+    const current = session({
+      messages: [{ role: "user", content: "hi" }],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(current, [{ type: "error", message: "broken" }], 200);
+
+    const last = next.messages[next.messages.length - 1];
+    expect(last._errorCode).toBeUndefined();
+    expect(last._error).toBe("broken");
+  });
+
+  it("error events clear streaming state (no agent_end needed)", () => {
     const current = session({
       messages: [{ role: "assistant", content: "partial", _streaming: true }],
       streaming: true,
     });
 
     const afterError = reduceSessionEvents(current, [{ type: "error", message: "broken" }], 200);
-    expect(afterError.streaming).toBe(true);
+    expect(afterError.streaming).toBe(false);
+    expect(afterError.messages[0]._streaming).toBe(false);
+    expect(afterError.messages[0]._error).toBe("broken");
+  });
 
-    const afterDone = reduceSessionEvents(afterError, [{ type: "agent_end", messages: [] }], 300);
+  it("agent_end clears streaming state for normal runs", () => {
+    const current = session({
+      messages: [{ role: "assistant", content: "partial", _streaming: true }],
+      streaming: true,
+    });
+
+    const afterDone = reduceSessionEvents(current, [{ type: "agent_end", messages: [] }], 300);
     expect(afterDone.streaming).toBe(false);
     expect(afterDone.messages[0]._streaming).toBe(false);
   });

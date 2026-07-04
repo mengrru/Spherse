@@ -4,7 +4,6 @@ export interface ProjectConfig {
   id: string;
   name: string;
   created: number;
-  defaultModel: string;
   aiAccess?: { deniedPaths: string[] };
   welcomePage?: { path: string };
 }

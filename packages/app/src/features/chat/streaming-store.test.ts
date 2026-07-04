@@ -207,4 +207,60 @@ describe("streaming-store resilience", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(reopened.sent.map((s) => JSON.parse(s))).not.toContainEqual({ type: "message", content: "first message" });
   });
+
+  it("does not reconnect after a fatal close code (4401)", async () => {
+    const socket = await attachAndConnect("s5");
+    expect(mock.instances).toHaveLength(1);
+
+    socket.onclose?.({ code: 4401 } as CloseEvent);
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(mock.instances).toHaveLength(1);
+  });
+
+  it("preserves already-loaded messages after a fatal close", async () => {
+    const client: ApiClient = {
+      getSessionMessagesPage: vi.fn().mockResolvedValue({
+        messages: [{ role: "user", content: "old question" }, { role: "assistant", content: "old answer" }],
+        hasMore: false,
+        oldestId: null,
+      }),
+    } as unknown as ApiClient;
+    useStreamingStore.getState().attach(client, "s7", BASE_URL, "p1", "a1");
+    const socket = mock.instances[mock.instances.length - 1];
+    socket.readyState = OPEN;
+    socket.onopen?.({} as Event);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const messagesBefore = useStreamingStore.getState().sessions.s7.messages;
+    expect(messagesBefore.length).toBeGreaterThan(0);
+
+    socket.onclose?.({ code: 4401 } as CloseEvent);
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    const messagesAfter = useStreamingStore.getState().sessions.s7.messages;
+    expect(messagesAfter).toEqual(messagesBefore);
+    expect(messagesAfter.length).toBeGreaterThan(0);
+  });
+
+  it("does not re-fetch history on reconnect", async () => {
+    const client = createMockClient();
+    const historySpy = client.getSessionMessagesPage as ReturnType<typeof vi.fn>;
+    useStreamingStore.getState().attach(client, "s8", BASE_URL, "p1", "a1");
+    const socket = mock.instances[mock.instances.length - 1];
+    socket.readyState = OPEN;
+    socket.onopen?.({} as Event);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(historySpy).toHaveBeenCalledTimes(1);
+
+    socket.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    const reopened = mock.instances[mock.instances.length - 1];
+    reopened.readyState = OPEN;
+    reopened.onopen?.({} as Event);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(historySpy).toHaveBeenCalledTimes(1);
+  });
 });

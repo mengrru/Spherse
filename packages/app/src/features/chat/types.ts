@@ -1,3 +1,5 @@
+import type { ErrorEventCode } from "@spherse/server/contracts";
+
 export interface HtmlCard {
   type: "html";
   html: string;
@@ -37,6 +39,7 @@ export interface ChatMessage {
   _streaming?: boolean;
   _toolCalls?: ToolCallInfo[];
   _error?: string;
+  _errorCode?: ErrorEventCode;
   _runChanges?: FileChangeCard[];
   timestamp?: number;
 }

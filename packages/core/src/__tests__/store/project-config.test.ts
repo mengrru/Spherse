@@ -26,7 +26,6 @@ describe("ProjectConfigStore", () => {
     id: "test-id-01",
     name: "TestProject",
     created: Date.now(),
-    defaultModel: "gemini-2.5-pro",
   };
 
   it("writes and reads config", async () => {
@@ -67,7 +66,7 @@ describe("ProjectConfigStore", () => {
   it("generates id for legacy project without id", async () => {
     const legacyConfig = { ...VALID_CONFIG };
     delete (legacyConfig as any).id;
-    await fs.writeFile(configPath, 
+    await fs.writeFile(configPath,
       `name: LegacyProject\ncreated: 0\ndefaultModel: gemini-2.5-pro\n`,
       "utf-8",
     );
@@ -79,6 +78,19 @@ describe("ProjectConfigStore", () => {
 
     const raw = await readFile(tmpRoot, ".spherse/project.yaml");
     expect(raw).toContain(`id: ${config.id}`);
+  });
+
+  it("reads legacy project.yaml containing a defaultModel field without error", async () => {
+    await fs.writeFile(
+      configPath,
+      `id: legacy-id-02\nname: LegacyProject\ncreated: 0\ndefaultModel: gemini-2.5-pro\n`,
+      "utf-8",
+    );
+
+    const store2 = new ProjectConfigStore(configPath, createSilentLogger());
+    const config = await store2.read();
+    expect(config.name).toBe("LegacyProject");
+    expect(config.id).toBe("legacy-id-02");
   });
 
   it("throws when reading non-existent file", async () => {

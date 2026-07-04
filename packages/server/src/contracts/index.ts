@@ -84,6 +84,8 @@ export type { TurnContextSnapshotContract } from "./debug.js";
 export {
   parseChatClientMessage,
   parseChatServerEvent,
+  ErrorEventCode,
+  CHAT_CLOSE_CODES,
 } from "./websocket.js";
 export type { ChatClientMessage, ChatServerEvent } from "./websocket.js";
 
