@@ -231,6 +231,12 @@ export const zhCN = {
   "agent-session-list.copySessionId": "复制会话 ID",
   // 复制会话 ID 成功后的提示
   "agent-session-list.sessionIdCopied": "会话 ID 已复制",
+  // 会话右键菜单：导出该会话的纯文本聊天记录（仅 user/assistant 文本，不含工具调用与思考），下载为 .txt 文件
+  "agent-session-list.exportSession": "导出聊天记录",
+  // 导出聊天记录成功后的提示，{filename} 为下载文件名
+  "agent-session-list.exportSessionDone": "已导出：{filename}",
+  // 导出聊天记录失败后的提示
+  "agent-session-list.exportSessionFailed": "导出失败",
 
   // --- Agent Schedule ---
   // 搭档右键菜单中的定时消息入口

@@ -21,6 +21,11 @@ import { AgentSessionListView } from "./AgentSessionListView";
 import { AgentSessionActionsProvider, type AgentSessionActions } from "./actions-context";
 import { useCollapsedAgents } from "./hooks/use-collapsed-agents";
 import { AgentSessionDialogs, type DialogState } from "./AgentSessionDialogs";
+import {
+  buildExportFilename,
+  downloadTextFile,
+  formatSessionAsPlainText,
+} from "./lib/export-session";
 import { EllipsisIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { dispatchAction } from "../../ui-sdk";
@@ -103,6 +108,19 @@ export function AgentSessionList() {
     if (ok) setDialog({ kind: "none" });
   };
 
+  const handleExportSession = async (session: SessionInfo) => {
+    try {
+      const messages = await client.getSessionMessages(session.agentId, session.id);
+      const agent = agents.find((a) => a.id === session.agentId);
+      const content = formatSessionAsPlainText(messages, session.title ?? "", agent?.name);
+      const filename = buildExportFilename(agent?.slug ?? session.agentId, new Date());
+      downloadTextFile(filename, content);
+      toast.success(t("agent-session-list.exportSessionDone", { filename }));
+    } catch (_) {
+      toast.error(t("agent-session-list.exportSessionFailed"));
+    }
+  };
+
   const actions: AgentSessionActions = {
     toggleAgentCollapsed,
     newSession: handleNewSession,
@@ -118,6 +136,7 @@ export function AgentSessionList() {
     cancelFloat: () => {
       dispatchAction("unfloatSession", {}, { navigate, projectId });
     },
+    exportSession: handleExportSession,
   };
 
   return (

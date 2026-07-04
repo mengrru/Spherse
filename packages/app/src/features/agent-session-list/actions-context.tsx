@@ -13,6 +13,7 @@ export interface AgentSessionActions {
   renameSession: (session: SessionInfo, title: string) => Promise<boolean>;
   floatSession: (session: SessionInfo) => void;
   cancelFloat: () => void;
+  exportSession: (session: SessionInfo) => void;
 }
 
 const ActionsContext = createContext<AgentSessionActions | null>(null);
