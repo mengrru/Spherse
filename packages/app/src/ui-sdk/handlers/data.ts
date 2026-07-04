@@ -1,5 +1,6 @@
 import type { ApiClient } from "../../lib/api";
 import { registerAction } from "../registry";
+import { respond } from "../respond";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
@@ -30,53 +31,46 @@ async function writeDataJson(client: ApiClient, dataFilePath: string, data: Reco
   await client.saveContent(dataFilePath, content);
 }
 
-function respond(source: MessageEventSource, requestId: string, ok: boolean, data?: unknown) {
-  (source as WindowProxy).postMessage({ type: "spherse:response", requestId, ok, data }, "*");
-}
-
 registerAction("data.get", async (params, ctx) => {
   const { file, key } = params as { file: unknown; key: unknown };
-  const requestId = ctx.requestId;
   const validFile = validateFileParam(file);
-  if (!validFile || !key || typeof key !== "string" || !requestId || !ctx.source || !ctx.client) return;
+  if (!validFile || !key || typeof key !== "string" || !ctx.client) return;
 
   try {
     const json = await readDataJson(ctx.client, validFile);
     const value = key in json ? json[key] : null;
-    respond(ctx.source, requestId, true, value);
+    respond(ctx, true, value);
   } catch {
-    respond(ctx.source, requestId, false);
+    respond(ctx, false);
   }
 });
 
 registerAction("data.set", async (params, ctx) => {
   const { file, key, value } = params as { file: unknown; key: unknown; value: unknown };
-  const requestId = ctx.requestId;
   const validFile = validateFileParam(file);
-  if (!validFile || !key || typeof key !== "string" || value === undefined || !requestId || !ctx.source || !ctx.client) return;
+  if (!validFile || !key || typeof key !== "string" || value === undefined || !ctx.client) return;
 
   try {
     const json = await readDataJson(ctx.client, validFile);
     json[key] = value;
     await writeDataJson(ctx.client, validFile, json);
-    respond(ctx.source, requestId, true, value);
+    respond(ctx, true, value);
   } catch {
-    respond(ctx.source, requestId, false);
+    respond(ctx, false);
   }
 });
 
 registerAction("data.delete", async (params, ctx) => {
   const { file, key } = params as { file: unknown; key: unknown };
-  const requestId = ctx.requestId;
   const validFile = validateFileParam(file);
-  if (!validFile || !key || typeof key !== "string" || !requestId || !ctx.source || !ctx.client) return;
+  if (!validFile || !key || typeof key !== "string" || !ctx.client) return;
 
   try {
     const json = await readDataJson(ctx.client, validFile);
     delete json[key];
     await writeDataJson(ctx.client, validFile, json);
-    respond(ctx.source, requestId, true, true);
+    respond(ctx, true, true);
   } catch {
-    respond(ctx.source, requestId, false);
+    respond(ctx, false);
   }
 });

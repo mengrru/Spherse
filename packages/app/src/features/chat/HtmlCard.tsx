@@ -1,8 +1,10 @@
+import { useRef } from "react";
 import { DownloadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { HtmlCard } from "./types";
 import { useProjectCtx } from "../../context/project-context";
+import { useChatRuntime } from "./runtime-context";
 
 interface HtmlCardRendererProps {
   card: HtmlCard;
@@ -14,7 +16,30 @@ function sanitizeFileName(name: string): string {
 
 export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const { t } = useI18n();
-  const { client, projectRoot } = useProjectCtx();
+  const { client, projectRoot, projectId } = useProjectCtx();
+  const runtime = useChatRuntime();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  function injectRuntime(iframe: HTMLIFrameElement | null) {
+    if (!iframe || !runtime) return;
+    const win = iframe.contentWindow as (Window & { __SPHERSE__?: unknown }) | null;
+    if (!win) return;
+    const payload = {
+      sessionId: runtime.sessionId,
+      agentId: runtime.agentId,
+      projectId,
+    };
+    try {
+      win.__SPHERSE__ = payload;
+    } catch {
+      /* cross-origin: ignore */
+    }
+    try {
+      win.postMessage({ type: "spherse:runtime", ...payload }, "*");
+    } catch {
+      /* ignore */
+    }
+  }
 
   const width = card.width ? `${Math.min(card.width, card.max_width ?? 800)}px` : "100%";
   const height = Math.min(card.height ?? 400, card.max_height ?? 600);
@@ -82,7 +107,9 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
         )}
         {card.file_path && client ? (
           <iframe
+            ref={iframeRef}
             src={client.getPreviewUrl(card.file_path)}
+            onLoad={() => injectRuntime(iframeRef.current)}
             style={{
               width: "100%",
               height: `${height}px`,
@@ -92,8 +119,10 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
           />
         ) : (
           <iframe
+            ref={iframeRef}
             srcDoc={card.html}
             sandbox="allow-scripts allow-same-origin"
+            onLoad={() => injectRuntime(iframeRef.current)}
             style={{
               width: "100%",
               height: `${height}px`,

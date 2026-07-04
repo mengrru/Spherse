@@ -23,6 +23,48 @@ window.parent.postMessage({
 - `action` 为操作名称，见下方可用 action 列表
 - `params` 为操作参数对象
 
+## 运行时上下文（聊天 HtmlCard 专属）
+
+当 HTML 作为**聊天 HtmlCard** 渲染时，App 会向卡片所在的 iframe 注入当前会话的运行时信息，卡片无需硬编码任何 ID 即可向「当前会话」发消息或读取上下文。Welcome Page 与 Content Browser 预览**不注入**运行时上下文。
+
+注入方式有两种（同时提供，任选其一读取）：
+
+1. **全局变量**：`window.__SPHERSE__`，在 iframe 加载后由 App 写入。
+
+   ```javascript
+   const { sessionId, agentId, projectId } = window.__SPHERSE__;
+   ```
+
+2. **postMessage 通知**：App 在 iframe 加载时发送 `{ type: "spherse:runtime", sessionId, agentId, projectId }`。在卡片脚本最早期注册监听器即可竞态安全地拿到（推荐用于需要在脚本初始化阶段就使用的场景）：
+
+   ```javascript
+   window.addEventListener("message", (e) => {
+     if (e.data?.type === "spherse:runtime") {
+       window.__SPHERSE__ = e.data;
+       init();
+     }
+   });
+   ```
+
+> 对「用户点击按钮才触发」的交互式卡片，直接读 `window.__SPHERSE__` 即可（此时必然已注入）；对「加载时立即使用」的场景，使用 postMessage 监听更稳妥。
+
+### 完整运行时读取封装（推荐）
+
+```javascript
+function getSpherseRuntime() {
+  return new Promise((resolve) => {
+    if (window.__SPHERSE__) return resolve(window.__SPHERSE__);
+    const handler = (e) => {
+      if (e.data?.type === "spherse:runtime") {
+        window.removeEventListener("message", handler);
+        resolve(e.data);
+      }
+    };
+    window.addEventListener("message", handler);
+  });
+}
+```
+
 ## 可用 Action
 
 ### createSession
@@ -86,19 +128,37 @@ window.parent.postMessage({
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| sessionId | string | 是 | 目标会话 ID |
+| sessionId | string | 是 | 目标会话 ID（HtmlCard 中可用 `window.__SPHERSE__.sessionId` 获取当前会话） |
 | message | string | 是 | 消息内容 |
 | float | boolean | 否 | 为 `true` 时确保该会话在浮窗中显示再发送消息 |
 
+`sendMessage` 支持 request-response 模式：传入 `requestId`（配合下文 Promise wrapper）可获取发送结果。
+
+- 发送成功：`{ ok: true }`
+- 目标会话仍在生成中（未到达 `agent_end`）：`{ ok: false, data: { error: "session_busy" } }`。此时消息**不会被发送**，卡片应提示用户稍后重试，或在会话空闲后再发。
+
 ```javascript
+// 向当前会话发消息（HtmlCard 内）
+const rt = window.__SPHERSE__;
 window.parent.postMessage({
   type: "spherse:action",
   action: "sendMessage",
   params: {
-    sessionId: "session-abc123",
+    sessionId: rt.sessionId,
     message: "请继续分析这个角色的动机"
   }
 }, "*");
+```
+
+带结果反馈的写法（推荐，可感知 busy 状态）：
+
+```javascript
+try {
+  await spherseCall("sendMessage", { sessionId: rt.sessionId, message: "继续" });
+  // 发送成功
+} catch (e) {
+  // 会话忙碌或发送失败，提示用户稍后重试
+}
 ```
 
 ### floatSession
@@ -336,7 +396,7 @@ await spherseCall("data.delete", { file: "world/game.data.json", key: "score" })
 - **频率限制**：每分钟最多触发 10 次操作，超出会被静默丢弃。读取类 action（`data.get`）位于白名单内，不受频率限制，便于交互式页面频繁读取状态
 - **无需引入脚本**：使用浏览器原生 `postMessage`，零依赖
 - **适用场景**：欢迎页（Welcome Page）、Content Browser 预览、聊天 HtmlCard 中均可用
-- **单向触发**：导航类操作（createSession、openFile、sendMessage）是单向的，iframe 无法获取执行结果。Data action（data.get/set/delete）例外，支持通过 `requestId` 获取返回值
+- **单向触发**：导航类操作（createSession、openFile）是单向的，iframe 无法获取执行结果。`sendMessage` 与 Data action（data.get/set/delete）例外，支持通过 `requestId` 获取返回值（`sendMessage` 在目标会话忙碌时返回 `{ ok: false, data: { error: "session_busy" } }`）
 - **仅限 UI 操作与数据存取**：导航类操作不支持文件读写、删除等。Data action 支持 key-value 数据存取，数据存储在 HTML 同级的 `.data.json` 文件中
 - **参数校验**：缺少必填参数或类型不匹配时操作会被静默忽略
 - **action 严格匹配**：action 名称区分大小写，未知 action 会被忽略

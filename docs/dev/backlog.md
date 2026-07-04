@@ -57,6 +57,7 @@
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
 - [x] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话
 - [x] **UI SDK**：iframe 与 App 内统一 action 通信框架，支持 postMessage 触发和 App 内 dispatchAction 调用。参见 `docs/dev/features/2026-06-11-ui-sdk/design.md`
+- [x] **UI SDK 增强（HtmlCard 运行时上下文 + sendMessage 可观测）**：聊天 HtmlCard 渲染时向 iframe 注入运行时上下文（`window.__SPHERSE__` + `spherse:runtime` postMessage，含 sessionId/agentId/projectId），卡片无需硬编码 ID 即可向「当前会话」调用 action；sendMessage 改为 request-response，目标会话仍在生成时返回 `{ ok:false, error:"session_busy" }` 而非静默丢弃。新增 `ui-sdk/respond.ts` 共享回复工具与 `features/chat/runtime-context.tsx`
 - [x] **UI SDK createSession 支持 agent slug**：`createSession` action 新增可选 `agentSlug` 参数，作为 `agentId`（UUID）的人类可读替代（HTML 作者通常只知道 slug）。在 renderer handler 层解析 slug→id（优先读 project-data-store 缓存，未命中回退 `client.listAgents()`），不改 server/API contract；同时传 `agentId` 与 `agentSlug` 时以 `agentId` 为准
 - [x] **增加 edit file tool**：为 agent 提供编辑文件的工具（字符串替换模式：old_string + new_string）
 - [x] **Agent context 预注入**：agent profile 的 `context` 字段指定文件列表，buildAgent 时读取这些文件内容注入 systemPrompt，使 agent 从第一轮对话起就了解相关上下文

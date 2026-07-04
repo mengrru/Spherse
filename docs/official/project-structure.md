@@ -199,20 +199,21 @@ spherse/
 │           │   ├── types.ts              # ActionContext, ActionHandler 类型
 │           │   ├── registry.ts           # registerAction / dispatchAction
 │           │   ├── rate-limit.ts         # 外部调用频率限制（含白名单豁免）
+│           │   ├── respond.ts            # request-response 回复工具（requestId → spherse:response postMessage）
 │           │   ├── use-spherse-message-listener.ts # postMessage → dispatchAction 桥梁
 │           │   ├── index.ts              # barrel export + handler side-effect import
 │           │   └── handlers/
 │           │       ├── create-session.ts # 创建会话并导航，支持 float 参数直达浮窗
 │           │       ├── float-session.ts  # 将指定会话移入浮窗
 │           │       ├── open-file.ts      # 在 Content Browser 打开文件
-│           │       ├── send-message.ts   # 向已有会话发送消息并导航，支持 float 参数；已浮窗会话不导航
+│           │       ├── send-message.ts   # 向已有会话发送消息并导航，支持 float 参数与 request-response（session_busy 反馈）；已浮窗会话不导航
 │           │       ├── unfloat-session.ts # 取消浮窗
 │           │       └── data.ts           # data.get/set/delete key-value 持久化
 │           ├── features/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
 │           │   ├── agent-schedule/       # Agent 定时任务弹窗、表单、列表与运行日志，含 schedule feature store
 │           │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
-    │           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、chat 专属类型（types.ts）、thinking 指示器（ThinkingIndicator）、聚合/diff 纯函数（lib/，含 format-time）
+│           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、HtmlCard（含 UI SDK 运行时上下文注入）、chat 运行时 context（runtime-context.tsx）、chat 专属类型（types.ts）、thinking 指示器（ThinkingIndicator）、聚合/diff 纯函数（lib/，含 format-time）
 │           │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）
 │           │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
 │           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect

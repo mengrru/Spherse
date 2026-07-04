@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import type { AgentProfile } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
 import { Composer } from "./Composer";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
+import { ChatRuntimeProvider } from "./runtime-context";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
@@ -36,29 +38,33 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     onClose?.();
   };
 
+  const runtime = useMemo(() => ({ sessionId, agentId: agent.id }), [sessionId, agent.id]);
+
   return (
-    <div className="flex flex-col h-full" data-chat-root>
-      {themeHref && <link rel="stylesheet" href={themeHref} />}
-      {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
-      <MessageList
-        messages={messages}
-        agent={agent}
-        streaming={streaming}
-        messagesEndRef={messagesEndRef}
-        containerRef={containerRef}
-        isAtBottom={isAtBottom}
-        onScrollToBottom={() => scrollToBottom("smooth")}
-        onNavigateToPath={onNavigateToPath}
-        hasMore={hasMore}
-        loadingMore={loadingMore}
-        onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}
-      />
-      <Composer
-        streaming={streaming}
-        sessionId={sessionId}
-        onSend={sendMessage}
-        onAbort={abort}
-      />
-    </div>
+    <ChatRuntimeProvider runtime={runtime}>
+      <div className="flex flex-col h-full" data-chat-root>
+        {themeHref && <link rel="stylesheet" href={themeHref} />}
+        {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
+        <MessageList
+          messages={messages}
+          agent={agent}
+          streaming={streaming}
+          messagesEndRef={messagesEndRef}
+          containerRef={containerRef}
+          isAtBottom={isAtBottom}
+          onScrollToBottom={() => scrollToBottom("smooth")}
+          onNavigateToPath={onNavigateToPath}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}
+        />
+        <Composer
+          streaming={streaming}
+          sessionId={sessionId}
+          onSend={sendMessage}
+          onAbort={abort}
+        />
+      </div>
+    </ChatRuntimeProvider>
   );
 }

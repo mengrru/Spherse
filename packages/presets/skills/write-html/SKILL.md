@@ -108,12 +108,14 @@ window.parent.postMessage({
 需要触发 App 内其它能力（如创建/打开 chat session、向会话发消息、浮窗会话等）时，阅读 `use-ui-sdk` skill，按其中定义的 action 名称与参数调用。可用 action 包括：
 
 - `createSession` — 创建新会话并导航到聊天页
-- `sendMessage` — 向已有会话发送消息
+- `sendMessage` — 向已有会话发送消息（支持 request-response，会话忙碌时返回 `session_busy`）
 - `floatSession` / `unfloatSession` — 浮窗显示/关闭会话
 - `openFile` — 在 Content Browser 打开项目文件
 - `data.get` / `data.set` / `data.delete` — key-value 数据读写
 
 所有 action 均通过 `window.parent.postMessage({ type: "spherse:action", action, params }, "*")` 触发，无需引入任何外部脚本。
+
+> **向当前会话发消息**：当 HTML 作为聊天 HtmlCard 渲染时，App 会注入运行时上下文 `window.__SPHERSE__`（含 `sessionId`/`agentId`/`projectId`），卡片可直接用它向当前会话发消息。详见 `use-ui-sdk` skill 的「运行时上下文」一节。
 
 ## 速查：场景 → 方案
 
@@ -125,3 +127,4 @@ window.parent.postMessage({
 | 持久化读写数据 | ui-sdk `data.get` / `data.set` / `data.delete` |
 | 点击打开项目内文件 | ui-sdk `openFile` |
 | 打开/发送 chat 会话 | ui-sdk `createSession` / `sendMessage` / `floatSession` |
+| HtmlCard 内向当前会话发消息 | 读 `window.__SPHERSE__.sessionId`，调用 `sendMessage` |

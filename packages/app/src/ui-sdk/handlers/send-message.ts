@@ -1,4 +1,5 @@
 import { registerAction } from "../registry";
+import { respond } from "../respond";
 import { useStreamingStore } from "../../features/chat/streaming-store";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useFloatingChatStore } from "../../features/floating-chat/store";
@@ -14,11 +15,17 @@ registerAction("sendMessage", (params, ctx) => {
   if (!message || typeof message !== "string") return;
 
   const { sendMessage: wsSend, sessions } = useStreamingStore.getState();
-  const ws = sessions[sessionId]?.ws;
-  if (ws && ws.readyState === WebSocket.OPEN) {
+  const session = sessions[sessionId];
+  const ws = session?.ws;
+
+  if (session?.streaming) {
+    respond(ctx, false, { error: "session_busy" });
+  } else if (ws && ws.readyState === WebSocket.OPEN) {
     wsSend(sessionId, message);
+    respond(ctx, true);
   } else {
     useProjectDataStore.getState().setInitialMessage(ctx.projectId, sessionId, message);
+    respond(ctx, true);
   }
 
   const floatingSessionId = useFloatingChatStore.getState().byProject[ctx.projectId]?.sessionId;
