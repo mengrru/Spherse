@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 import {
@@ -53,7 +53,11 @@ export function AgentSessionList() {
   const agents = projectData?.agents ?? EMPTY_AGENTS;
   const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
   const sessionPaging = projectData?.sessionPaging ?? EMPTY_SESSION_PAGING;
-  const { effectiveCollapsedAgentIds, toggleAgentCollapsed } = useCollapsedAgents(projectId, agents);
+  const activeAgentId = useMemo(
+    () => (activeSessionId ? sessions.find((s) => s.id === activeSessionId)?.agentId ?? null : null),
+    [activeSessionId, sessions],
+  );
+  const { effectiveCollapsedAgentIds, toggleAgentCollapsed } = useCollapsedAgents(projectId, agents, activeAgentId);
 
   const handleSelectSession = (session: SessionInfo) => {
     if (floatingSessionId === session.id) return;
