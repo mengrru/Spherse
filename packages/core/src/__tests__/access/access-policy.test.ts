@@ -29,8 +29,10 @@ const MATRIX: MatrixRow[] = [
   { category: "agentProfile", path: ".spherse/agents/bot-abc123/profile.md", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "agentTheme", path: ".spherse/agents/bot-abc123/theme.css", llmRead: true, llmWrite: true, srvRead: true, srvWrite: false },
   { category: "agentSessions", path: ".spherse/agents/bot-abc123/sessions.db", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
+  { category: "spherseOther", path: ".spherse/agents/bot-abc123/sessions.db-wal", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
+  { category: "spherseOther", path: ".spherse/agents/bot-abc123/sessions.db-shm", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "agentSchedules", path: ".spherse/agents/bot-abc123/schedules.yml", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
-  { category: "spherseOther", path: ".spherse/unknown.txt", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
+  { category: "spherseOther", path: ".spherse/unknown.txt", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
 ];
 
 describe("access policy matrix", () => {

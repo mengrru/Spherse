@@ -101,4 +101,24 @@ describe("createSearchContentTool", () => {
     const deniedResult = await tool.execute("tc1", { query: "needle", path: "secrets" }, undefined as any);
     expect(deniedResult.content[0].text).toContain("Access denied");
   });
+
+  it("denies broad search of .spherse and never leaks sqlite sidecar data", async () => {
+    await writeFile(projectRoot, ".spherse/agents/bot-abc/sessions.db-wal", "needle in wal");
+    await writeFile(projectRoot, ".spherse/agents/bot-abc/sessions.db-shm", "needle in shm");
+    await writeFile(projectRoot, ".spherse/agents/bot-abc/sessions.db", "needle in db");
+    await writeFile(projectRoot, ".spherse/agents/bot-abc/profile.md", "needle in profile");
+    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute("tc1", { query: "needle", path: ".spherse" }, undefined as any);
+    const text = result.content[0].text as string;
+    expect(text).toContain("Access denied");
+    expect(result.details?.denied).toBe(true);
+    expect(text).not.toContain("sessions.db-wal");
+    expect(text).not.toContain("sessions.db-shm");
+    expect(text).not.toContain("sessions.db");
+    expect(text).not.toContain("in wal");
+    expect(text).not.toContain("in shm");
+    expect(text).not.toContain("in db");
+    expect(text).not.toContain("in profile");
+  });
 });

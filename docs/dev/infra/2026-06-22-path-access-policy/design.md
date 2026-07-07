@@ -84,11 +84,12 @@ serverAccessPolicy(projectRootPath).read(targetPath);
 | `agentTheme` | ✓ | ✓ | ✓ | ✗（专用 `/agents` 走 core） |
 | `agentSessions` | ✗ | ✗ | ✗（专用 `/sessions`） | ✗ |
 | `agentSchedules` | ✓ | ✗ | ✗（专用 `/schedules`） | ✗ |
-| `spherseOther` | ✓ | ✗ | ✗ | ✗ |
+| `spherseOther` | ✗ | ✗ | ✗ | ✗ |
 
 **要点：**
 - LLM write 白名单 = `userFiles` + `projectTheme` + `agentTheme`（AI 可写用户文件与主题文件；不可经通用工具改写 mechanism 文件）。
-- `agentSessions`（二进制 SQLite）对所有策略拒绝，只通过专用 `/sessions` API 操作。
+- `agentSessions`（二进制 SQLite）对所有策略拒绝，只通过专用 `/sessions` API 操作。其边车文件（`sessions.db-wal` / `-shm` / `-journal` 等）落入 `spherseOther`。
+- `spherseOther`（`.spherse/**` catch-all）对 LLM 默认拒绝——`.spherse/` 下只有显式列出的分类可被 LLM 读，其余（含 SQLite 边车文件、未来内部文件）一律 default-deny，避免内部数据经 `search_content` / `read_file` 泄漏。
 - server write 白名单 = `userFiles` + `rootIndex` + `changelog` + `projectTheme`。**拒绝 `.spherse` 下的 engine 数据**（`projectConfig`/`agentProfile`/`agentTheme`/`agentSessions`/`agentSchedules`/`spherseOther`）——这些只由 core 写或专用路由经 core 写，通用 `PUT /content/*` 必须拒绝。`projectTheme`（`.spherse/theme.css`）是用户可编辑 CSS、经 `/settings/theme` 直写，故允许。
 
 **目录遍历过滤：** `shouldSkipDirEntry(name)`（跳过 dotfile/dotdir、`node_modules`、`.git`）独立导出，由 `list_files` / `search_content` / file-tree 复用。preview 扩展名白名单保留为 route 级校验。
