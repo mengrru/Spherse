@@ -238,7 +238,7 @@ export function parseHistoryMessages(history: any[]): ChatMessage[] {
               ) {
                 base._card = {
                   type: "html",
-                  html: toolResult.details.html,
+                  html: toolResult.details.html ?? (toolResult.details.file_path ? undefined : (content.arguments as any)?.content),
                   file_path: toolResult.details.file_path,
                   title: toolResult.details.title,
                   width: toolResult.details.width,

@@ -45,7 +45,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const height = Math.min(card.height ?? 400, card.max_height ?? 600);
 
   async function handleSave() {
-    if (!client || !projectRoot) return;
+    if (!client || !projectRoot || !card.html) return;
 
     const suggestedName = card.title
       ? sanitizeFileName(card.title) + ".html"
@@ -76,7 +76,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     }
   }
 
-  const saveButton = (
+  const saveButton = card.html ? (
     <button
       type="button"
       onClick={handleSave}
@@ -84,7 +84,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     >
       <DownloadIcon className="size-3.5" />
     </button>
-  );
+  ) : null;
 
   return (
     <div

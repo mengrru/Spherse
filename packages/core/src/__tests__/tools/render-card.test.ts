@@ -172,7 +172,7 @@ describe("createRenderCardTool", () => {
     expect(details.file_path).toBe("chart.html");
   });
 
-  it("includes full card data in return details for history recovery", async () => {
+  it("excludes html from return details to avoid context window waste", async () => {
     const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
     const html = "<h1>Card</h1>";
 
@@ -184,12 +184,28 @@ describe("createRenderCardTool", () => {
     );
 
     expect(result.details.cardType).toBe("html");
-    expect(result.details.html).toBe(html);
+    expect(result.details).not.toHaveProperty("html");
     expect(result.details.title).toBe("Test");
     expect(result.details.width).toBe(500);
     expect(result.details.height).toBe(300);
     expect(result.details.max_width).toBe(800);
     expect(result.details.max_height).toBe(600);
     expect(result.details.file_path).toBeUndefined();
+  });
+
+  it("excludes html from return details for file_path rendering", async () => {
+    await writeFile(projectRoot, "output/report.html", "<h2>Report</h2>");
+    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute(
+      "tc1",
+      { type: "html", file_path: "output/report.html" },
+      undefined as any,
+      undefined as any,
+    );
+
+    expect(result.details.cardType).toBe("html");
+    expect(result.details).not.toHaveProperty("html");
+    expect(result.details.file_path).toBe("output/report.html");
   });
 });

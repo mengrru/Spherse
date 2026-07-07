@@ -2,7 +2,7 @@ import type { ErrorEventCode } from "@spherse/server/contracts";
 
 export interface HtmlCard {
   type: "html";
-  html: string;
+  html?: string;
   file_path?: string;
   title?: string;
   width?: number;

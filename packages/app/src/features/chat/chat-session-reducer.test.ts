@@ -527,6 +527,109 @@ describe("chat session reducer", () => {
     expect(parsed[1].timestamp).toBe(2000);
   });
 
+  it("parseHistoryMessages reconstructs render_card html from arguments for inline content", () => {
+    const history = [
+      { role: "user", content: "show card" },
+      {
+        role: "assistant",
+        content: [{ type: "toolCall", id: "tc1", name: "render_card", arguments: { type: "html", content: "<h1>Hi</h1>" } }],
+        stopReason: "stop",
+      },
+      {
+        role: "toolResult",
+        toolCallId: "tc1",
+        content: [{ type: "text", text: "HTML card rendered successfully" }],
+        details: { cardType: "html", title: "Test", width: 500, height: 400, max_width: 800, max_height: 600 },
+      },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed[1]._toolCalls?.[0]._card).toEqual({
+      type: "html",
+      html: "<h1>Hi</h1>",
+      file_path: undefined,
+      title: "Test",
+      width: 500,
+      height: 400,
+      max_width: 800,
+      max_height: 600,
+    });
+  });
+
+  it("parseHistoryMessages recovers render_card file_path card without html in details", () => {
+    const history = [
+      { role: "user", content: "show card" },
+      {
+        role: "assistant",
+        content: [{ type: "toolCall", id: "tc1", name: "render_card", arguments: { type: "html", file_path: "card.html" } }],
+        stopReason: "stop",
+      },
+      {
+        role: "toolResult",
+        toolCallId: "tc1",
+        content: [{ type: "text", text: "HTML card rendered successfully" }],
+        details: { cardType: "html", file_path: "card.html", height: 400, max_width: 800, max_height: 600 },
+      },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed[1]._toolCalls?.[0]._card).toEqual({
+      type: "html",
+      html: undefined,
+      file_path: "card.html",
+      title: undefined,
+      width: undefined,
+      height: 400,
+      max_width: 800,
+      max_height: 600,
+    });
+  });
+
+  it("parseHistoryMessages prefers legacy details.html when present (backward compat)", () => {
+    const history = [
+      { role: "user", content: "show card" },
+      {
+        role: "assistant",
+        content: [{ type: "toolCall", id: "tc1", name: "render_card", arguments: { type: "html", content: "<h1>New</h1>" } }],
+        stopReason: "stop",
+      },
+      {
+        role: "toolResult",
+        toolCallId: "tc1",
+        content: [{ type: "text", text: "HTML card rendered successfully" }],
+        details: { cardType: "html", html: "<h1>Legacy</h1>", height: 400, max_width: 800, max_height: 600 },
+      },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed[1]._toolCalls?.[0]._card?.html).toBe("<h1>Legacy</h1>");
+  });
+
+  it("parseHistoryMessages ignores arguments.content when file_path present (both-args edge case)", () => {
+    const history = [
+      { role: "user", content: "show card" },
+      {
+        role: "assistant",
+        content: [{ type: "toolCall", id: "tc1", name: "render_card", arguments: { type: "html", content: "<h1>Inline</h1>", file_path: "card.html" } }],
+        stopReason: "stop",
+      },
+      {
+        role: "toolResult",
+        toolCallId: "tc1",
+        content: [{ type: "text", text: "HTML card rendered successfully" }],
+        details: { cardType: "html", file_path: "card.html", height: 400, max_width: 800, max_height: 600 },
+      },
+    ];
+
+    const parsed = parseHistoryMessages(history);
+
+    expect(parsed[1]._toolCalls?.[0]._card?.html).toBeUndefined();
+    expect(parsed[1]._toolCalls?.[0]._card?.file_path).toBe("card.html");
+  });
+
   it("message_end writes timestamp from event.message.timestamp", () => {
     const current = session({
       messages: [{ role: "user", content: "Hello" }],

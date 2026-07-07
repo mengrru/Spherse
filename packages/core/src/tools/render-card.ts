@@ -80,7 +80,6 @@ export function createRenderCardTool(
         details: {
           cardType: "html",
           title: params.title,
-          html,
           file_path: params.file_path,
           width: params.width,
           height: params.height ?? 400,

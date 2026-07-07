@@ -160,6 +160,8 @@ Full skill instructions in Markdown...
 
 tool update 的 `details.type === "html"` 时，前端 chat 会按 HTML card 渲染。
 
+HTML 全文仅通过 `onUpdate`（`tool_execution_update`）传给前端，**不**包含在 tool 返回值的 `details` 中（避免持久化到 DB 和浪费 context window）。历史恢复时，前端从 tool call 的 `arguments.content`（inline）或 `details.file_path`（file 来源，通过 preview URL 加载）重建卡片。
+
 ## Image Card
 
 `generate_image` tool 接收文本 prompt，调用 pi-ai 图片生成 provider（OpenRouter 或智谱）生成图片，自动保存到 `.spherse/generated-images/{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`。文件名基于 UTC 时间戳 + 4 位随机 hex，避免并发写冲突，不使用 `FileWriteMutex`。
