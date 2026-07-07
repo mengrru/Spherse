@@ -73,6 +73,7 @@ export function SkillPanel() {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleInstallClick}>
                 {t("skill-panel.install")}
+                <span className="ms-auto text-[0.625rem] text-muted-foreground">{t("skill-panel.install.hint")}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

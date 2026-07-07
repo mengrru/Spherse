@@ -13,7 +13,7 @@ export async function initPresets(
 
   for (const agent of PRESET_AGENTS) {
     try {
-      const content = AGENT_TEMPLATE.replace("name: 新 Agent", `name: ${agent.name}`);
+      const content = AGENT_TEMPLATE.replace(/^---\n/, `---\nname: ${agent.name}\n`);
       await projectStore.createAgent(agent.slug, content);
       logger.info({ agent: agent.name }, "preset agent created");
     } catch (err) {

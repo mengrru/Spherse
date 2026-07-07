@@ -27,6 +27,14 @@ vi.mock("../../model-providers/index.js", async (importOriginal) => {
 
 import { createProject } from "../../factory.js";
 
+const TEST_AGENT_PROFILE = `---
+name: Test Agent
+tools:
+  - read_file
+---
+
+Test agent for sessions.`;
+
 interface FakeAgent {
   state: { model: { id: string; provider: string } };
   streamFn: unknown;
@@ -62,7 +70,8 @@ describe("SessionManager temperature propagation", () => {
       logger: createSilentLogger(),
     })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
     const projectStore = runtime.projectManager.projectStore;
-    agentId = [...projectStore.agents.keys()][0];
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
     runtime.scheduler.stopAll();
   });
 
@@ -141,7 +150,8 @@ describe("SessionManager default model hot-swap", () => {
       logger: createSilentLogger(),
     })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
     const projectStore = runtime.projectManager.projectStore;
-    agentId = [...projectStore.agents.keys()][0];
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
     runtime.scheduler.stopAll();
   });
 
@@ -206,7 +216,8 @@ describe("SessionManager lazy model resolution", () => {
       logger: createSilentLogger(),
     })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
     const projectStore = runtime.projectManager.projectStore;
-    agentId = [...projectStore.agents.keys()][0];
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
     runtime.scheduler.stopAll();
   });
 
@@ -262,7 +273,8 @@ describe("SessionManager lifecycle", () => {
       logger: createSilentLogger(),
     })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
     const projectStore = runtime.projectManager.projectStore;
-    agentId = [...projectStore.agents.keys()][0];
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
     runtime.scheduler.stopAll();
   });
 
@@ -322,7 +334,8 @@ describe("SessionManager getSessionStatus", () => {
       logger: createSilentLogger(),
     })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
     const projectStore = runtime.projectManager.projectStore;
-    agentId = [...projectStore.agents.keys()][0];
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
     runtime.scheduler.stopAll();
   });
 

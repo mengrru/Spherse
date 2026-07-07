@@ -32,12 +32,12 @@ describe("initPresets", () => {
     }
   });
 
-  it("creates preset agents with correct names", async () => {
+  it("creates preset agents declared in presets.json", async () => {
     const { initPresets } = await import("../presets.js");
     await initPresets(projectStore, spherseDir, createSilentLogger());
 
     const profiles = projectStore.listAgents();
-    expect(profiles.length).toBeGreaterThanOrEqual(PRESET_AGENTS.length);
+    expect(profiles.length).toBe(PRESET_AGENTS.length);
 
     for (const presetAgent of PRESET_AGENTS) {
       const profile = profiles.find((p) => p.name === presetAgent.name);

@@ -28,6 +28,14 @@ import { createProject } from "../../factory.js";
 import { LiveSession } from "../../session/live-session.js";
 import type { SessionContext } from "../../session/types.js";
 
+const TEST_AGENT_PROFILE = `---
+name: Test Agent
+tools:
+  - read_file
+---
+
+Test agent for sessions.`;
+
 interface RuntimeInternals {
   projectManager: { projectStore: { agents: Map<string, unknown> } };
   scheduler: { stopAll: () => void };
@@ -60,7 +68,8 @@ describe("LiveSession context engineering", () => {
       logger: createSilentLogger(),
     })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
     const projectStore = runtime.projectManager.projectStore as any;
-    agentId = [...projectStore.agents.keys()][0];
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
     runtime.scheduler.stopAll();
     ctx = {
       projectStore,

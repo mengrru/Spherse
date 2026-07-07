@@ -11,6 +11,7 @@ mkdirSync(generatedDir, { recursive: true });
 const mapping = [
   ["agent-template.md", "AGENT_TEMPLATE", "agent-template.ts"],
   ["agent-theme-template.css", "AGENT_THEME_TEMPLATE", "agent-theme-template.ts"],
+  ["agents-index-template.md", "AGENTS_INDEX_TEMPLATE", "agents-index-template.ts"],
 ];
 
 for (const [sourceFile, constName, outFile] of mapping) {
@@ -33,7 +34,7 @@ for (const skill of presetsConfig.presetSkills) {
 
 const presetsTsContent = `export const PRESET_SKILLS = ${JSON.stringify(presetsConfig.presetSkills, null, 2)} as const;
 
-export const PRESET_AGENTS = ${JSON.stringify(presetsConfig.presetAgents, null, 2)} as const;
+export const PRESET_AGENTS: readonly { name: string; slug: string }[] = ${JSON.stringify(presetsConfig.presetAgents, null, 2)};
 `;
 writeFileSync(join(generatedDir, "presets.ts"), presetsTsContent, "utf-8");
 console.log("synced: presets.json → src/generated/presets.ts (PRESET_SKILLS, PRESET_AGENTS)");

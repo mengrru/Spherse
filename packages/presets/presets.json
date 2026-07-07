@@ -5,9 +5,7 @@
     { "dir": "use-ui-sdk" },
     { "dir": "write-html" }
   ],
-  "presetAgents": [
-    { "name": "世界观创作", "slug": "world-building" }
-  ],
+  "presetAgents": [],
   "presetPromptTemplates": [
     { "id": "worldview-assistant", "name": "世界观创作助手" },
     { "id": "roleplay", "name": "角色扮演" }

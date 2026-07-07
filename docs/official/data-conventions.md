@@ -208,9 +208,7 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
     { "dir": "use-ui-sdk" },
     { "dir": "write-html" }
   ],
-  "presetAgents": [
-    { "name": "世界观创作", "slug": "world-building" }
-  ],
+  "presetAgents": [],
   "presetPromptTemplates": [
     { "id": "worldview-assistant", "name": "世界观创作助手" },
     { "id": "roleplay", "name": "角色扮演" }
@@ -229,7 +227,7 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
 新建项目时，`createProject` 检测到项目首次创建，调用 `initPresets()` 执行以下操作：
 
 - 创建空的 `.spherse/skills/` 目录（供用户自建 project-local skill）
-- 根据声明创建预置 agent profile（使用 `AGENT_TEMPLATE` 模板，替换默认名称）
+- 根据声明创建预置 agent profile（使用 `AGENT_TEMPLATE` 模板，替换默认名称）。当前 `presetAgents` 为空，不创建任何预置 agent；将来添加条目即可恢复注入
 
 builtin skill 不再注入到磁盘，而是由 `SkillStore` 在运行时从 `PRESET_SKILL_SOURCES` 内存合并（source 为 `builtin`，随 app 升级更新）。用户在 `.spherse/skills/` 下自建的 project-local skill（source 为 `project`）按 name 覆盖同名 builtin。
 

@@ -78,7 +78,7 @@ describe("ProjectStore — config delegation", () => {
 
   it("reads and updates index", async () => {
     const index = await store.readIndex();
-    expect(index).toContain("世界观项目");
+    expect(index).toContain("未命名项目");
     await store.updateIndex("# Updated Index");
     expect(await store.readIndex()).toBe("# Updated Index");
   });

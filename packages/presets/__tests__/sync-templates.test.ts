@@ -69,7 +69,25 @@ describe("sync-templates", () => {
       "utf-8",
     );
     expect(content).toContain("export const AGENT_TEMPLATE");
-    expect(content).toContain("name: ");
+    expect(content).toContain("tools:");
+  });
+
+  it("generates agents-index-template.ts with AGENTS_INDEX_TEMPLATE constant", async () => {
+    const content = fs.readFileSync(
+      path.join(generatedDir, "agents-index-template.ts"),
+      "utf-8",
+    );
+    expect(content).toContain("export const AGENTS_INDEX_TEMPLATE");
+    const { AGENTS_INDEX_TEMPLATE } = await import(
+      "../src/generated/agents-index-template.js"
+    );
+    expect(typeof AGENTS_INDEX_TEMPLATE).toBe("string");
+    expect(AGENTS_INDEX_TEMPLATE.length).toBeGreaterThan(0);
+    const sourceFile = fs.readFileSync(
+      path.join(rootDir, "templates", "agents-index-template.md"),
+      "utf-8",
+    );
+    expect(AGENTS_INDEX_TEMPLATE).toBe(sourceFile);
   });
 
   it("generates prompt-templates.ts with PRESET_PROMPT_TEMPLATES matching presets.json", async () => {

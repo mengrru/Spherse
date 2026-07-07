@@ -87,7 +87,7 @@ function ModelGroupTab({
               <span>
                 {t("settings.models.providersHintPre")}
                 <a
-                  className="text-primary underline underline-offset-2"
+                  className="text-background underline underline-offset-2"
                   href="https://platform.deepseek.com/api_keys"
                   onClick={(e) => {
                     e.preventDefault();

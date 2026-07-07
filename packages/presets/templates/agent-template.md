@@ -1,5 +1,4 @@
 ---
-name: 新 Agent
 tools:
   - read_file
   - write_file

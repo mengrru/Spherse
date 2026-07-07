@@ -4,7 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
 import { nanoid } from "nanoid";
-import { PRESET_SKILL_SOURCES } from "@spherse/presets";
+import { PRESET_SKILL_SOURCES, AGENTS_INDEX_TEMPLATE } from "@spherse/presets";
 import type { AgentProfile } from "../types.js";
 import { PROJECT_META_DIR } from "../types.js";
 import { ProjectConfigStore } from "./project-config.js";
@@ -20,15 +20,6 @@ export interface ChangelogEntry {
   target: string;
   description: string;
 }
-
-const DEFAULT_AGENTS_MD = `# 世界观项目
-
-> 此文件是项目的目录索引，供人类和 AI agent 阅读。
-
-## 目录结构
-
-请在此处描述你的世界观项目的目录结构。
-`;
 
 export class ProjectStore {
   private rootPath: string;
@@ -76,7 +67,7 @@ export class ProjectStore {
     );
 
     const indexPath = path.join(this.rootPath, "AGENTS.md");
-    await fs.writeFile(indexPath, DEFAULT_AGENTS_MD, "utf-8");
+    await fs.writeFile(indexPath, AGENTS_INDEX_TEMPLATE, "utf-8");
 
     const changelogPath = path.join(this.rootPath, "CHANGELOG.md");
     await fs.writeFile(changelogPath, "", "utf-8");

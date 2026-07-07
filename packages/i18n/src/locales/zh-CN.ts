@@ -441,6 +441,8 @@ export const zhCN = {
   "skill-panel.create": "创建技能",
   // 技能面板右上角三点菜单的「安装技能」项
   "skill-panel.install": "安装技能",
+  // 「安装技能」菜单项的后缀提示，提醒用户需选择 .zip 压缩包
+  "skill-panel.install.hint": "ZIP 包",
   // 技能面板没有技能时的空状态提示
   "skill-panel.empty": "暂无技能",
   // 技能名称非法（空、含 / \ : 或以 . 开头）时的提示
@@ -643,7 +645,7 @@ export const zhCN = {
   // 引导卡片2按钮：打开示例项目，{name} 为示例项目名称
   "onboarding.action.openSample": "打开示例项目：{name}",
   // 引导卡片1描述：说明该入口同时支持打开已有项目文件夹与新建空项目文件夹
-  "onboarding.desc.openOrCreate": "选择已有项目文件夹，或新建一个文件夹开始",
+  "onboarding.desc.openOrCreate": "选择已有项目文件夹，或新建一个文件夹从空项目开始",
   // 引导卡片2描述
   "onboarding.desc.openSample": "将内置示例项目拷贝到选定位置并打开",
   // 引导卡片2（打开示例项目）的 tooltip：说明示例项目的搭建方式与用途，鼠标悬浮于卡片时展示

@@ -16,6 +16,15 @@ tools:
 
 Second agent for testing.`;
 
+const FIRST_AGENT_PROFILE = `---
+name: First Agent
+model: gemini-2.5-pro
+tools:
+  - read_file
+---
+
+First agent for testing.`;
+
 describe("Scheduler", () => {
   let scheduler: Scheduler;
   let tmpDir: string;
@@ -35,8 +44,8 @@ describe("Scheduler", () => {
     sessionRuntime = runtime.sessionRuntime;
     projectStore = (runtime.projectManager as any).projectStore;
 
-    const presetAgents = [...projectStore.agents.keys()];
-    agentId = presetAgents[0];
+    const firstAgent = await projectStore.createAgent("first-agent", FIRST_AGENT_PROFILE);
+    agentId = firstAgent.getProfile().id;
 
     const secondAgent = await projectStore.createAgent("second-agent", SECOND_AGENT_PROFILE);
     otherAgentId = secondAgent.getProfile().id;
