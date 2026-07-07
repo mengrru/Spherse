@@ -73,6 +73,20 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
     },
   );
 
+  fastify.get<{ Params: { projectId: string; agentId: string; id: string } }>(
+    "/api/projects/:projectId/agents/:agentId/sessions/:id/status",
+    {
+      schema: { response: { 200: schemas.sessionStatus } },
+      async handler(req) {
+        const status = req.projectCtx!.sessionRuntime.getSessionStatus(
+          req.params.agentId,
+          req.params.id,
+        );
+        return parseContract(schemas.sessionStatus, status);
+      },
+    },
+  );
+
   fastify.patch<{ Params: { projectId: string; agentId: string; id: string }; Body: { title: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions/:id",
     {

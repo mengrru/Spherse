@@ -14,6 +14,7 @@ export interface AgentSessionActions {
   floatSession: (session: SessionInfo) => void;
   cancelFloat: () => void;
   exportSession: (session: SessionInfo) => void;
+  showSessionStatus: (session: SessionInfo) => void;
 }
 
 const ActionsContext = createContext<AgentSessionActions | null>(null);

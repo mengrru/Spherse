@@ -307,3 +307,66 @@ describe("SessionManager lifecycle", () => {
     expect(runtime.sessionRuntime.sessions.size).toBe(0);
   });
 });
+
+describe("SessionManager getSessionStatus", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-status-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore;
+    agentId = [...projectStore.agents.keys()][0];
+    runtime.scheduler.stopAll();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("returns in-memory status for a live session", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    const agent = activeAgent(runtime as RuntimeInternals, sessionId);
+    agent.state.model = { id: "m", provider: "p", contextWindow: 128000 };
+    agent.state.messages = [
+      { role: "user", content: "hi" },
+      { role: "assistant", usage: { totalTokens: 512 } },
+    ];
+
+    const status = runtime.sessionRuntime.getSessionStatus(agentId, sessionId);
+    expect(status).toEqual({ currentTokens: 512, contextWindowLimit: 128000 });
+  });
+
+  it("computes status from persisted history for a non-live session", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    const agentStore = runtime.projectManager.projectStore.agents.get(agentId) as any;
+    agentStore.sessions.appendMessage(sessionId, {
+      role: "assistant",
+      usage: { totalTokens: 999 },
+    });
+    runtime.sessionRuntime.destroySession(sessionId);
+    expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(false);
+
+    resolveModelByIdMock.mockReturnValueOnce({ id: "m", provider: "p", contextWindow: 64000 });
+    runtime.sessionRuntime.setDefaultModel("p/m");
+
+    const status = runtime.sessionRuntime.getSessionStatus(agentId, sessionId);
+    expect(status).toEqual({ currentTokens: 999, contextWindowLimit: 64000 });
+  });
+
+  it("throws NotFoundError for an unknown agent on the non-live path", async () => {
+    expect(() => runtime.sessionRuntime.getSessionStatus("nope", "sid")).toThrow(/Agent "nope" not found/);
+  });
+
+  it("throws NotFoundError for an unknown session on the non-live path", async () => {
+    expect(() => runtime.sessionRuntime.getSessionStatus(agentId, "missing-sid")).toThrow(
+      /Session "missing-sid" not found/,
+    );
+  });
+});

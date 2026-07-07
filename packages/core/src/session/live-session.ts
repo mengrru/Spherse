@@ -18,15 +18,13 @@ import { serializeSystemPrompt } from "../context/serialize.js";
 import { estimateTokens } from "../context/token-estimate.js";
 import { planCompaction, wrapDigestContent } from "../context/compaction.js";
 import type { SessionContext, TurnContextSnapshot } from "./types.js";
+import {
+  resolveEffectiveModelId,
+  extractLastUsageTotalTokens,
+  type SessionStatus,
+} from "./status.js";
 
 export type AgentEventHandler = (event: AgentEvent) => void;
-
-function resolveEffectiveModelId(
-  profile: AgentProfile,
-  globalDefaultModel: string | undefined,
-): string | undefined {
-  return profile.model || globalDefaultModel || undefined;
-}
 
 export class LiveSession {
   private readonly agent: Agent;
@@ -147,6 +145,13 @@ export class LiveSession {
     };
   }
 
+  getStatus(): SessionStatus {
+    return {
+      currentTokens: this.readCurrentTokens(),
+      contextWindowLimit: (this.agent.state.model as { contextWindow?: number } | undefined)?.contextWindow ?? null,
+    };
+  }
+
   applyDefaultModel(globalDefaultModel: string | undefined): void {
     const profile = this.ctx.projectStore.getAgent(this.agentId)?.getProfile();
     if (!profile) return;
@@ -222,10 +227,8 @@ export class LiveSession {
 
   private readCurrentTokens(): number {
     const messages = this.agent.state.messages;
-    const last = messages[messages.length - 1] as any;
-    if (last?.role === "assistant" && typeof last?.usage?.totalTokens === "number") {
-      return last.usage.totalTokens;
-    }
+    const lastUsage = extractLastUsageTotalTokens(messages);
+    if (lastUsage !== null) return lastUsage;
     const systemPromptTokens = estimateTokens(this.agent.state.systemPrompt);
     const messageTokens = estimateTokens(messages as Message[]);
     return systemPromptTokens + messageTokens;

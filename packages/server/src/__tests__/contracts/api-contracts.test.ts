@@ -114,6 +114,21 @@ describe("api contracts", () => {
     ).toThrow(/Invalid payload/);
   });
 
+  it("validates session status response", () => {
+    expect(parseApiResponse(schemas.sessionStatus, { currentTokens: 512, contextWindowLimit: 32768 })).toEqual({
+      currentTokens: 512,
+      contextWindowLimit: 32768,
+    });
+    expect(parseApiResponse(schemas.sessionStatus, { currentTokens: 0, contextWindowLimit: null })).toEqual({
+      currentTokens: 0,
+      contextWindowLimit: null,
+    });
+    expect(() => parseApiResponse(schemas.sessionStatus, { currentTokens: "x" })).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionStatus, { currentTokens: 1, contextWindowLimit: "no" }),
+    ).toThrow(/Invalid payload/);
+  });
+
   it("validates schedule list response with nextTriggerAt", () => {
     const entry = {
       id: "s1",

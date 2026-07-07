@@ -31,6 +31,7 @@
 - [x] **Session 重命名**：支持从侧边栏原地编辑 session 标题，标题持久化到 `.spherse/sessions.db`。
 - [x] **多 Session**：同一 agent 开启多个对话，侧边栏按 agent 分组展示 session 列表
 - [x] **Session 聊天记录导出**：会话右键菜单新增「导出聊天记录」，拉取完整消息后仅保留 user/assistant 文本（排除 tool call、tool result），格式化为纯文本并下载为 `.txt` 文件。
+- [x] **Session 状态信息 dialog**：会话右键菜单新增「会话状态」，弹窗展示当前 turn 的上下文 token 用量与上下文窗口上限（live session 取内存实时值，非 live 从持久化消息历史最近 assistant usage + 解析模型 contextWindow 计算）。
 - [ ] **项目创建向导**：HomePage 区分"新建项目"和"打开项目"，支持设置项目名和默认模型（引导页 + 打开或创建/示例入口已完成 @2026-06-28，名称/模型向导待续，参见 docs/dev/features/2026-06-28-new-user-onboarding/）
 - [x] **用户自定义主题**：支持从 `.spherse/theme.css` 加载用户自定义 CSS 覆盖默认主题
 - [x] **多 Project 支持**：支持已导入项目的持久化，无需每次打开 app 重新手动导入

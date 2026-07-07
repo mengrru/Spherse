@@ -199,6 +199,10 @@ export function SessionRow({ session, active, floating }: SessionRowProps) {
             {t("agent-session-list.exportSession")}
           </ContextMenuItem>
           <ContextMenuSeparator />
+          <ContextMenuItem onClick={() => actions.showSessionStatus(session)}>
+            {t("agent-session-list.sessionStatus")}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
           <ContextMenuItem variant="destructive" onClick={() => actions.deleteSession(session)}>
             {t("common.delete")}
           </ContextMenuItem>

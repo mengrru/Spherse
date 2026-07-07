@@ -25,6 +25,10 @@ export const schemas = {
     hasMore: Type.Boolean(),
     oldestId: Type.Union([Type.Number(), Type.Null()]),
   }),
+  sessionStatus: Type.Object({
+    currentTokens: Type.Number(),
+    contextWindowLimit: Type.Union([Type.Number(), Type.Null()]),
+  }),
 } as const;
 
 export type SessionInfoContract = Static<typeof sessionInfo>;
@@ -34,3 +38,4 @@ export type SessionCreateResponse = Static<typeof schemas.sessionCreateResponse>
 export type SessionRenameRequest = Static<typeof schemas.sessionRenameRequest>;
 export type SessionMessagesResponse = Static<typeof schemas.sessionMessagesResponse>;
 export type SessionMessagesPageResponse = Static<typeof schemas.sessionMessagesPageResponse>;
+export type SessionStatusResponse = Static<typeof schemas.sessionStatus>;

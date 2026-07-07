@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
+import { SessionStatusDialog } from "./SessionStatusDialog";
 import type { AgentProfile, SessionInfo } from "../../lib/types";
 
 export type DialogState =
@@ -19,7 +20,8 @@ export type DialogState =
   | { kind: "edit-agent"; id: string }
   | { kind: "delete-agent"; agent: AgentProfile }
   | { kind: "delete-session"; session: SessionInfo }
-  | { kind: "schedule"; agent: AgentProfile };
+  | { kind: "schedule"; agent: AgentProfile }
+  | { kind: "session-status"; session: SessionInfo };
 
 interface AgentSessionDialogsProps {
   dialog: DialogState;
@@ -102,6 +104,13 @@ export function AgentSessionDialogs({
           onOpenChange={(open) => { if (!open) onClose(); }}
           agentId={dialog.agent.id}
           projectId={projectId}
+        />
+      )}
+      {dialog.kind === "session-status" && (
+        <SessionStatusDialog
+          session={dialog.session}
+          open={true}
+          onOpenChange={(open) => { if (!open) onClose(); }}
         />
       )}
     </>

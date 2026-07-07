@@ -243,6 +243,8 @@ export const zhCN = {
   "agent-session-list.exportSessionDone": "已导出：{filename}",
   // 导出聊天记录失败后的提示
   "agent-session-list.exportSessionFailed": "导出失败",
+  // 会话右键菜单：打开「会话状态」弹窗，查看当前 turn 的上下文 token 用量等信息
+  "agent-session-list.sessionStatus": "会话状态",
 
   // --- Agent Schedule ---
   // 搭档右键菜单中的定时消息入口
@@ -496,6 +498,18 @@ export const zhCN = {
   "session.confirmDeleteDescription": "确定要删除会话「{title}」吗？此操作无法撤销。",
   // 无标题会话的默认名称
   "session.untitled": "无标题会话",
+  // 会话状态弹窗的标题，展示当前 turn 的上下文窗口 token 用量等信息
+  "session.statusTitle": "会话状态",
+  // 会话状态弹窗中「上下文 token 用量」字段的标签，即当前 turn 已占用上下文窗口的 token 数
+  "session.statusContextTokens": "上下文 Token 用量",
+  // 会话状态弹窗中「上下文窗口上限」字段的标签，即模型允许的最大上下文 token 数
+  "session.statusContextLimit": "上下文窗口上限",
+  // 会话状态弹窗加载状态数据时的提示文案
+  "session.statusLoading": "加载中…",
+  // 会话状态弹窗加载失败时的错误提示
+  "session.statusLoadFailed": "状态加载失败",
+  // 会话状态弹窗中上下文窗口上限无法解析（未配置模型等）时显示的占位符
+  "session.statusUnknown": "未知",
 
   // --- Settings ---
   // 设置中语言选择器的标签

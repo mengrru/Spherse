@@ -3,6 +3,7 @@ import { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 import { NotFoundError } from "../errors.js";
 import { LiveSession, type AgentEventHandler } from "./live-session.js";
+import { computeSessionStatus, type SessionStatus } from "./status.js";
 import type { SessionContext, TurnContextSnapshot } from "./types.js";
 
 export class SessionManager {
@@ -59,6 +60,18 @@ export class SessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) throw new NotFoundError(`No active session "${sessionId}"`);
     return session.getTurnContext();
+  }
+
+  getSessionStatus(agentId: string, sessionId: string): SessionStatus {
+    const live = this.sessions.get(sessionId);
+    if (live) return live.getStatus();
+    const agentStore = this.ctx.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    if (!agentStore.sessions.getSession(sessionId)) {
+      throw new NotFoundError(`Session "${sessionId}" not found`);
+    }
+    const messages = agentStore.sessions.getSessionMessages(sessionId);
+    return computeSessionStatus(messages, agentStore.getProfile(), this.ctx.defaultModel);
   }
 
   destroySession(sessionId: string): void {

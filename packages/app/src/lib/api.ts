@@ -19,6 +19,7 @@ import type {
   SessionMessagesResponse,
   SessionMessagesPageResponse,
   SessionListPageResponse,
+  SessionStatusResponse,
 } from "@spherse/server/contracts";
 import { parseApiResponse, schemas } from "@spherse/server/contracts";
 
@@ -249,6 +250,14 @@ export function createApiClient(baseUrl: string, projectId: string) {
       });
       await assertOk(res);
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
+    },
+
+    async getSessionStatus(agentId: string, id: string): Promise<SessionStatusResponse> {
+      const res = await fetch(
+        `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/status`,
+      );
+      await assertOk(res);
+      return parseJsonResponse<SessionStatusResponse>(res, schemas.sessionStatus);
     },
 
     async getFileTree(): Promise<string[]> {

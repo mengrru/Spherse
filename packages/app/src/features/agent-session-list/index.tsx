@@ -141,6 +141,7 @@ export function AgentSessionList() {
       dispatchAction("unfloatSession", {}, { navigate, projectId });
     },
     exportSession: handleExportSession,
+    showSessionStatus: (session) => setDialog({ kind: "session-status", session }),
   };
 
   return (
