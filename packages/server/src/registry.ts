@@ -1,12 +1,12 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { createProject } from "@spherse/core";
-import type { ProjectRuntime, ProjectManager, SessionRuntime, Scheduler, Logger } from "@spherse/core";
+import type { ProjectRuntime, ProjectManager, SessionManager, Scheduler, Logger } from "@spherse/core";
 
 export interface ProjectContext {
   runtime: ProjectRuntime;
   projectManager: ProjectManager;
-  sessionRuntime: SessionRuntime;
+  sessionRuntime: SessionManager;
   scheduler: Scheduler;
   projectId: string;
 }

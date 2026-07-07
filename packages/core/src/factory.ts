@@ -2,7 +2,7 @@ import path from "node:path";
 import { PROJECT_META_DIR } from "./types.js";
 import { ProjectStore } from "./store/project.js";
 import { ProjectManager } from "./project-manager.js";
-import { SessionRuntime } from "./session-runtime.js";
+import { SessionManager } from "./session/session-manager.js";
 import { Scheduler } from "./scheduler.js";
 import { ProjectRuntime } from "./project-runtime.js";
 import { initPresets } from "./presets.js";
@@ -36,7 +36,7 @@ export async function createProject(
   }
 
   const projectManager = new ProjectManager(projectStore, logger);
-  const sessionRuntime = new SessionRuntime(projectStore, {
+  const sessionRuntime = new SessionManager(projectStore, {
     defaultModel: options?.defaultModel,
     temperature: options?.temperature,
     logger,

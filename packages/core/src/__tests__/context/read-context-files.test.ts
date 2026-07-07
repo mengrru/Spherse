@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { llmAccessPolicy } from "../../access/access-policy.js";
-import { readContextFiles } from "../../engine/read-context-files.js";
+import { readContextFiles } from "../../context/read-context-files.js";
 import { createTempProject, cleanupDir, writeFile } from "../helpers.js";
 
 describe("readContextFiles", () => {
@@ -14,23 +14,22 @@ describe("readContextFiles", () => {
     await cleanupDir(projectRoot);
   });
 
-  it("returns empty string when context is empty", async () => {
+  it("returns empty array when context is empty", async () => {
     const result = await readContextFiles(projectRoot, []);
-    expect(result).toBe("");
+    expect(result).toEqual([]);
   });
 
-  it("returns empty string when context is undefined", async () => {
+  it("returns empty array when context is undefined", async () => {
     const result = await readContextFiles(projectRoot, undefined);
-    expect(result).toBe("");
+    expect(result).toEqual([]);
   });
 
   it("injects single context file", async () => {
     await writeFile(projectRoot, "world/magic.md", "Magic system content");
     const result = await readContextFiles(projectRoot, ["world/magic.md"]);
-    expect(result).toContain("## Pre-loaded Context");
-    expect(result).toContain('<context-file path="world/magic.md">');
-    expect(result).toContain("Magic system content");
-    expect(result).toContain("</context-file>");
+    expect(result).toHaveLength(1);
+    expect(result[0].path).toBe("world/magic.md");
+    expect(result[0].content).toBe("Magic system content");
   });
 
   it("injects multiple context files", async () => {
@@ -40,10 +39,11 @@ describe("readContextFiles", () => {
       "world/magic.md",
       "world/factions.md",
     ]);
-    expect(result).toContain('<context-file path="world/magic.md">');
-    expect(result).toContain("Magic content");
-    expect(result).toContain('<context-file path="world/factions.md">');
-    expect(result).toContain("Factions content");
+    expect(result).toHaveLength(2);
+    expect(result[0].path).toBe("world/magic.md");
+    expect(result[0].content).toBe("Magic content");
+    expect(result[1].path).toBe("world/factions.md");
+    expect(result[1].content).toBe("Factions content");
   });
 
   it("skips non-existent files", async () => {
@@ -52,24 +52,24 @@ describe("readContextFiles", () => {
       "world/exists.md",
       "world/missing.md",
     ]);
-    expect(result).toContain('<context-file path="world/exists.md">');
-    expect(result).toContain("Exists");
-    expect(result).not.toContain("world/missing.md");
+    expect(result).toHaveLength(1);
+    expect(result[0].path).toBe("world/exists.md");
+    expect(result[0].content).toBe("Exists");
   });
 
-  it("returns empty string when all files are missing", async () => {
+  it("returns empty array when all files are missing", async () => {
     const result = await readContextFiles(projectRoot, [
       "nope.md",
       "also-nope.md",
     ]);
-    expect(result).toBe("");
+    expect(result).toEqual([]);
   });
 
   it("skips path traversal attempts", async () => {
     const result = await readContextFiles(projectRoot, [
       "../../../etc/passwd",
     ]);
-    expect(result).toBe("");
+    expect(result).toEqual([]);
   });
 
   it("skips blocked context files", async () => {
@@ -78,6 +78,6 @@ describe("readContextFiles", () => {
 
     const result = await readContextFiles(projectRoot, ["secrets/key.md"], policy);
 
-    expect(result).toBe("");
+    expect(result).toEqual([]);
   });
 });

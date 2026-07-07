@@ -22,7 +22,7 @@ describe("createLoadSkillTool", () => {
   it("loads an existing skill", async () => {
     const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
     const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
-    expect(result.content[0].text).toContain("Skill: brainstorming");
+    expect(result.content[0].text).toContain('<skill-content name="brainstorming">');
     expect(result.content[0].text).toContain("Do creative brainstorming here.");
     expect(result.details).toEqual({ name: "brainstorming" });
   });

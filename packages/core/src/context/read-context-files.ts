@@ -1,15 +1,16 @@
 import fs from "node:fs/promises";
 import type { AccessPolicy } from "../access/access-policy.js";
+import type { ContextFile } from "./blocks.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
 export async function readContextFiles(
   projectRoot: string,
   contextPaths: string[] | undefined,
   getAccessPolicy?: () => AccessPolicy,
-): Promise<string> {
-  if (!contextPaths || contextPaths.length === 0) return "";
+): Promise<ContextFile[]> {
+  if (!contextPaths || contextPaths.length === 0) return [];
 
-  const sections: string[] = [];
+  const files: ContextFile[] = [];
 
   for (const relPath of contextPaths) {
     let resolved: string;
@@ -24,14 +25,11 @@ export async function readContextFiles(
 
     try {
       const content = await fs.readFile(resolved, "utf-8");
-      sections.push(
-        `<context-file path="${relPath}">\n${content}\n</context-file>`,
-      );
+      files.push({ path: relPath, content });
     } catch {
       continue;
     }
   }
 
-  if (sections.length === 0) return "";
-  return `\n\n## Pre-loaded Context\n\n${sections.join("\n\n")}`;
+  return files;
 }

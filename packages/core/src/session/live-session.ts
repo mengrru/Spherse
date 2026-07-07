@@ -1,0 +1,284 @@
+import { Agent } from "@earendil-works/pi-agent-core";
+import type { AgentEvent, AgentTool, AgentMessage } from "@earendil-works/pi-agent-core";
+import type { Message, Model, Api } from "@earendil-works/pi-ai";
+import type { AgentProfile } from "../types.js";
+import { resolveModelById, getChatStreamFn } from "../model-providers/index.js";
+import { createToolsForProject, ToolContext } from "../tools/index.js";
+import { readContextFiles } from "../context/read-context-files.js";
+import { logAgentEvent } from "../engine/log-agent-event.js";
+import { NotFoundError, ModelNotConfiguredError } from "../errors.js";
+import {
+  buildProjectInstructions,
+  buildAgentProfile,
+  buildSkillCatalog,
+  buildPreloadedContext,
+} from "../context/blocks.js";
+import type { ContextBlock } from "../context/blocks.js";
+import { serializeSystemPrompt } from "../context/serialize.js";
+import { estimateTokens } from "../context/token-estimate.js";
+import { planCompaction, wrapDigestContent } from "../context/compaction.js";
+import type { SessionContext, TurnContextSnapshot } from "./types.js";
+
+export type AgentEventHandler = (event: AgentEvent) => void;
+
+function resolveEffectiveModelId(
+  profile: AgentProfile,
+  globalDefaultModel: string | undefined,
+): string | undefined {
+  return profile.model || globalDefaultModel || undefined;
+}
+
+export class LiveSession {
+  private readonly agent: Agent;
+  private readonly agentId: string;
+  private readonly sessionId: string;
+  private readonly ctx: SessionContext;
+  private readonly liveMessageDbIds: number[] = [];
+
+  private constructor(
+    agent: Agent,
+    agentId: string,
+    sessionId: string,
+    ctx: SessionContext,
+  ) {
+    this.agent = agent;
+    this.agentId = agentId;
+    this.sessionId = sessionId;
+    this.ctx = ctx;
+  }
+
+  static async create(
+    ctx: SessionContext,
+    agentId: string,
+    sessionId: string,
+  ): Promise<LiveSession> {
+    const agentStore = ctx.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
+    const profile = agentStore.getProfile();
+    const agent = await this.buildAgent(ctx, profile, sessionId);
+    return new LiveSession(agent, agentId, sessionId, ctx);
+  }
+
+  static async restore(
+    ctx: SessionContext,
+    agentId: string,
+    sessionId: string,
+  ): Promise<LiveSession> {
+    const agentStore = ctx.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    const session = agentStore.sessions.getSession(sessionId);
+    if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
+
+    const profile = agentStore.getProfile();
+    const agent = await this.buildAgent(ctx, profile, sessionId);
+    const live = new LiveSession(agent, agentId, sessionId, ctx);
+
+    const latest = agentStore.sessions.getLatestCompaction(sessionId);
+    if (latest) {
+      const digestMessage: AgentMessage = {
+        role: "user",
+        content: wrapDigestContent(latest.digestContent),
+        timestamp: latest.createdAt,
+      } as any;
+      const tailRows = agentStore.sessions.getMessagesAfter(sessionId, latest.anchorMessageId);
+      agent.state.messages = [digestMessage, ...tailRows.map((r) => r.message)] as AgentMessage[];
+      live.liveMessageDbIds.push(latest.anchorMessageId, ...tailRows.map((r) => r.id));
+    } else {
+      const rows = agentStore.sessions.getSessionMessagesWithIds(sessionId);
+      agent.state.messages = rows.map((r) => r.message) as AgentMessage[];
+      live.liveMessageDbIds.push(...rows.map((r) => r.id));
+    }
+    return live;
+  }
+
+  getAgentId(): string {
+    return this.agentId;
+  }
+
+  async sendMessage(message: string, onEvent: AgentEventHandler): Promise<void> {
+    this.ensureModel();
+    const sessionLogger = this.ctx.logger.child({ sessionId: this.sessionId });
+    const agentStore = this.ctx.projectStore.getAgent(this.agentId);
+
+    const unsubscribe = this.agent.subscribe((event) => {
+      logAgentEvent(sessionLogger, event);
+      onEvent(event);
+      if (event.type === "message_end") {
+        const msgId = agentStore?.sessions.appendMessage(this.sessionId, event.message);
+        if (msgId !== undefined) this.liveMessageDbIds.push(msgId);
+      }
+    });
+
+    try {
+      await this.agent.prompt(message);
+      await this.maybeCompact();
+    } finally {
+      unsubscribe();
+    }
+  }
+
+  private ensureModel(): void {
+    const profile = this.ctx.projectStore.getAgent(this.agentId)?.getProfile();
+    if (!profile) throw new NotFoundError(`Agent "${this.agentId}" not found`);
+    const modelId = resolveEffectiveModelId(profile, this.ctx.defaultModel);
+    if (!modelId) throw new ModelNotConfiguredError();
+    try {
+      this.agent.state.model = resolveModelById(modelId);
+    } catch {
+      throw new ModelNotConfiguredError();
+    }
+  }
+
+  abort(): void {
+    this.agent.abort();
+  }
+
+  getTurnContext(): TurnContextSnapshot {
+    return {
+      sessionId: this.sessionId,
+      capturedAt: new Date().toISOString(),
+      systemPrompt: this.agent.state.systemPrompt,
+      messages: this.agent.state.messages,
+      tools: this.agent.state.tools.map((tool: any) => ({
+        name: tool.name,
+        description: tool.description ?? "",
+        parameters: tool.parameters,
+      })),
+    };
+  }
+
+  applyDefaultModel(globalDefaultModel: string | undefined): void {
+    const profile = this.ctx.projectStore.getAgent(this.agentId)?.getProfile();
+    if (!profile) return;
+    const modelId = resolveEffectiveModelId(profile, globalDefaultModel);
+    if (!modelId) return;
+    try {
+      const resolved = resolveModelById(modelId);
+      const current = this.agent.state.model;
+      if (current?.id !== resolved.id || current?.provider !== resolved.provider) {
+        this.agent.state.model = resolved;
+      }
+    } catch (err) {
+      this.ctx.logger.error({ err, agentId: this.agentId }, "failed to re-resolve model for active agent");
+    }
+  }
+
+  applyTemperature(temperature: number | undefined): void {
+    this.agent.streamFn = getChatStreamFn(temperature);
+  }
+
+  private async maybeCompact(): Promise<void> {
+    const currentTokens = this.readCurrentTokens();
+    const contextWindow = (this.agent.state.model as any)?.contextWindow ?? 32768;
+
+    const plan = planCompaction(this.agent.state.messages as Message[], {
+      currentTokens,
+      contextWindow,
+    });
+
+    if (!plan.shouldCompact || !plan.digest) return;
+
+    const agentStore = this.ctx.projectStore.getAgent(this.agentId);
+    if (!agentStore) return;
+
+    if (plan.anchorIndex < 0 || plan.anchorIndex >= this.liveMessageDbIds.length) return;
+
+    const anchorMessageId = this.liveMessageDbIds[plan.anchorIndex];
+
+    try {
+      const digestMessage: AgentMessage = {
+        role: "user",
+        content: wrapDigestContent(plan.digest),
+        timestamp: Date.now(),
+      } as any;
+      const postBuffer: AgentMessage[] = [digestMessage, ...plan.tail];
+      const postEstimate =
+        estimateTokens(this.agent.state.systemPrompt) + estimateTokens(postBuffer as Message[]);
+
+      agentStore.sessions.recordCompaction(this.sessionId, {
+        anchorMessageId,
+        digestContent: plan.digest,
+        tokenEstimate: postEstimate,
+      });
+
+      this.agent.state.messages = postBuffer;
+      const tail = this.liveMessageDbIds.slice(plan.anchorIndex + 1);
+      this.liveMessageDbIds.length = 0;
+      this.liveMessageDbIds.push(anchorMessageId, ...tail);
+      this.ctx.logger.info(
+        {
+          sessionId: this.sessionId,
+          anchorMessageId,
+          compactedMessages: plan.anchorIndex + 1,
+          tokensBefore: currentTokens,
+          tokensAfter: postEstimate,
+        },
+        "compaction applied",
+      );
+    } catch (err) {
+      this.ctx.logger.error({ err, sessionId: this.sessionId }, "compaction failed, keeping live buffer");
+    }
+  }
+
+  private readCurrentTokens(): number {
+    const messages = this.agent.state.messages;
+    const last = messages[messages.length - 1] as any;
+    if (last?.role === "assistant" && typeof last?.usage?.totalTokens === "number") {
+      return last.usage.totalTokens;
+    }
+    const systemPromptTokens = estimateTokens(this.agent.state.systemPrompt);
+    const messageTokens = estimateTokens(messages as Message[]);
+    return systemPromptTokens + messageTokens;
+  }
+
+  private static async buildAgent(
+    ctx: SessionContext,
+    profile: AgentProfile,
+    sessionId: string,
+  ): Promise<Agent> {
+    const projectRoot = ctx.projectRoot;
+    const toolContext = new ToolContext(ctx.projectStore, ctx.fileWriteMutex);
+    const allTools = createToolsForProject(toolContext);
+
+    const toolNames = profile.tools ?? [];
+    const tools: AgentTool[] = toolNames
+      .map((name) => allTools[name])
+      .filter(Boolean);
+
+    const agentsMd = await ctx.projectStore.readIndex();
+    const blocks: Array<ContextBlock | null> = [];
+    blocks.push(buildProjectInstructions(agentsMd));
+    blocks.push(buildAgentProfile(profile.systemPrompt));
+
+    const skills = await ctx.projectStore.skill.list();
+    blocks.push(
+      buildSkillCatalog(skills.map((s) => ({ name: s.name, description: s.description }))),
+    );
+
+    const files = await readContextFiles(projectRoot, profile.context, () => toolContext.llmPolicy);
+    blocks.push(buildPreloadedContext(files));
+
+    const systemPrompt = serializeSystemPrompt(blocks);
+
+    const modelId = resolveEffectiveModelId(profile, ctx.defaultModel);
+    let model: Model<Api> | undefined;
+    if (modelId) {
+      try {
+        model = resolveModelById(modelId);
+      } catch (err) {
+        ctx.logger.warn({ err, modelId, agentId: profile.id }, "model not resolvable, agent will wait for model config");
+      }
+    }
+
+    return new Agent({
+      initialState: {
+        systemPrompt,
+        model,
+        thinkingLevel: "medium",
+        tools,
+      },
+      sessionId,
+      streamFn: getChatStreamFn(ctx.temperature),
+    });
+  }
+}

@@ -2,7 +2,7 @@ export * from "./types.js";
 export { NotFoundError, ValidationError, AccessDeniedError, ConflictError, ModelNotConfiguredError } from "./errors.js";
 export type { ProjectRuntime } from "./project-runtime.js";
 export type { ProjectManager } from "./project-manager.js";
-export type { SessionRuntime } from "./session-runtime.js";
+export type { SessionManager } from "./session/session-manager.js";
 export type { Scheduler } from "./scheduler.js";
 export type { ScheduleEventPayload } from "./scheduler.js";
 export { createProject } from "./factory.js";

@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { CronExpressionParser } from "cron-parser";
-import type { SessionRuntime } from "./session-runtime.js";
+import type { SessionManager } from "./session/session-manager.js";
 import type { ProjectStore } from "./store/project.js";
 import type { ScheduleStore } from "./store/schedule.js";
 import type { ScheduleEntry, ScheduleLogEntry } from "./types.js";
@@ -34,7 +34,7 @@ const TEMPLATE_VARS: Record<string, () => string> = {
 };
 
 export class Scheduler extends EventEmitter {
-  private sessionRuntime: SessionRuntime;
+  private sessionRuntime: SessionManager;
   private projectStore: ProjectStore;
   private entries: Map<string, ScheduleEntry> = new Map();
   private agentSchedules: Map<string, Set<string>> = new Map();
@@ -46,7 +46,7 @@ export class Scheduler extends EventEmitter {
   private logger: Logger;
   private static POLL_INTERVAL = 10 * 60 * 1000;
 
-  constructor(sessionRuntime: SessionRuntime, projectStore: ProjectStore, logger?: Logger) {
+  constructor(sessionRuntime: SessionManager, projectStore: ProjectStore, logger?: Logger) {
     super();
     this.sessionRuntime = sessionRuntime;
     this.projectStore = projectStore;

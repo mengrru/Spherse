@@ -31,7 +31,7 @@ export function createLoadSkillTool(
         };
       }
 
-      let text = `# Skill: ${skill.name}\n\n${skill.instructions}`;
+      let text = `<skill-content name="${skill.name}">\n${skill.instructions}`;
       if (skill.source === "project" && skill.files.length > 0) {
         const skillDirRel = path
           .relative(projectRoot, path.dirname(skill.filePath))
@@ -40,6 +40,7 @@ export function createLoadSkillTool(
         const fileList = skill.files.map((f) => `- ${skillDirRel}/${f}`).join("\n");
         text += `\n\n## Skill Files\n\nThis skill has companion files you can read with the read_file tool:\n${fileList}`;
       }
+      text += `\n</skill-content>`;
 
       return {
         content: [

@@ -21,6 +21,15 @@ CREATE TABLE IF NOT EXISTS messages (
   content TEXT NOT NULL,
   timestamp INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS compactions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL REFERENCES sessions(id),
+  anchor_message_id INTEGER NOT NULL,
+  digest_content TEXT NOT NULL,
+  token_estimate INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
 `;
 
 export class SessionStore {
@@ -44,6 +53,10 @@ export class SessionStore {
     const cols = this.db.prepare("PRAGMA table_info(sessions)").all() as any[];
     if (!cols.some((c: any) => c.name === "source")) {
       this.db.exec("ALTER TABLE sessions ADD COLUMN source TEXT DEFAULT 'manual'");
+    }
+    const msgCols = this.db.prepare("PRAGMA table_info(messages)").all() as any[];
+    if (!msgCols.some((c: any) => c.name === "prev_message_id")) {
+      this.db.exec("ALTER TABLE messages ADD COLUMN prev_message_id INTEGER");
     }
   }
 
@@ -114,26 +127,85 @@ export class SessionStore {
     this.db.prepare("UPDATE sessions SET status = 'archived' WHERE id = ?").run(sessionId);
   }
 
-  appendMessage(sessionId: string, message: any): void {
+  appendMessage(sessionId: string, message: any, prevMessageId?: number | null): number {
     const now = Date.now();
     const insertMessage = this.db.prepare(
-      "INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)",
+      "INSERT INTO messages (session_id, role, content, timestamp, prev_message_id) VALUES (?, ?, ?, ?, ?)",
     );
     const updateSession = this.db.prepare(
       "UPDATE sessions SET updated_at = ? WHERE id = ?",
     );
-    this.db.transaction(() => {
-      insertMessage.run(sessionId, message.role, JSON.stringify(message), message.timestamp ?? now);
+    const selectLastId = this.db.prepare(
+      "SELECT MAX(id) AS lastId FROM messages WHERE session_id = ?",
+    );
+    const info = this.db.transaction(() => {
+      const resolvedPrev =
+        prevMessageId === undefined
+          ? ((selectLastId.get(sessionId) as { lastId: number | null } | undefined)?.lastId ?? null)
+          : prevMessageId;
+      const result = insertMessage.run(
+        sessionId,
+        message.role,
+        JSON.stringify(message),
+        message.timestamp ?? now,
+        resolvedPrev,
+      );
       updateSession.run(now, sessionId);
+      return result;
     })();
     this.logger.debug({ sessionId }, "message persisted");
+    return Number(info.lastInsertRowid);
   }
 
   getSessionMessages(sessionId: string): any[] {
+    return this.getSessionMessagesWithIds(sessionId).map((r) => r.message);
+  }
+
+  getSessionMessagesWithIds(sessionId: string): Array<{ id: number; message: any }> {
     const rows = this.db
-      .prepare("SELECT * FROM messages WHERE session_id = ? ORDER BY timestamp ASC")
+      .prepare("SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC")
       .all(sessionId) as any[];
-    return rows.map((row) => JSON.parse(row.content));
+    return rows.map((row) => ({ id: row.id, message: JSON.parse(row.content) }));
+  }
+
+  getMessagesAfter(sessionId: string, anchorId: number): Array<{ id: number; message: any }> {
+    const rows = this.db
+      .prepare("SELECT * FROM messages WHERE session_id = ? AND id > ? ORDER BY id ASC")
+      .all(sessionId, anchorId) as any[];
+    return rows.map((row) => ({ id: row.id, message: JSON.parse(row.content) }));
+  }
+
+  recordCompaction(
+    sessionId: string,
+    record: { anchorMessageId: number; digestContent: string; tokenEstimate: number },
+  ): void {
+    const now = Date.now();
+    this.db.prepare(
+      "INSERT INTO compactions (session_id, anchor_message_id, digest_content, token_estimate, created_at) VALUES (?, ?, ?, ?, ?)",
+    ).run(sessionId, record.anchorMessageId, record.digestContent, record.tokenEstimate, now);
+    this.logger.debug({ sessionId, anchorMessageId: record.anchorMessageId }, "compaction recorded");
+  }
+
+  getLatestCompaction(
+    sessionId: string,
+  ): {
+    id: number;
+    anchorMessageId: number;
+    digestContent: string;
+    tokenEstimate: number;
+    createdAt: number;
+  } | null {
+    const row = this.db
+      .prepare("SELECT * FROM compactions WHERE session_id = ? ORDER BY created_at DESC, id DESC LIMIT 1")
+      .get(sessionId) as any;
+    if (!row) return null;
+    return {
+      id: row.id,
+      anchorMessageId: row.anchor_message_id,
+      digestContent: row.digest_content,
+      tokenEstimate: row.token_estimate,
+      createdAt: row.created_at,
+    };
   }
 
   getRecentTurns(

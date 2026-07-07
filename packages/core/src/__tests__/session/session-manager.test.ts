@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
-import { createSilentLogger } from "../logger.js";
+import { createSilentLogger } from "../../logger.js";
+import { ModelNotConfiguredError } from "../../errors.js";
 
 const { getChatStreamFnMock, resolveModelByIdMock } = vi.hoisted(() => ({
   getChatStreamFnMock: vi.fn(() => vi.fn()),
@@ -14,9 +15,9 @@ const { getChatStreamFnMock, resolveModelByIdMock } = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../model-providers/index.js", async (importOriginal) => {
+vi.mock("../../model-providers/index.js", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../model-providers/index.js")>();
+    await importOriginal<typeof import("../../model-providers/index.js")>();
   return {
     ...actual,
     getChatStreamFn: getChatStreamFnMock,
@@ -24,40 +25,35 @@ vi.mock("../model-providers/index.js", async (importOriginal) => {
   };
 });
 
-import { createProject } from "../factory.js";
-import { ModelNotConfiguredError } from "../errors.js";
+import { createProject } from "../../factory.js";
 
 interface FakeAgent {
-  state: { model?: { id: string; provider: string } };
+  state: { model: { id: string; provider: string } };
   streamFn: unknown;
-  prompt: (message: string) => Promise<void>;
-  subscribe: (listener: (event: unknown) => void) => () => void;
+  subscribe: ReturnType<typeof vi.fn>;
+  prompt: ReturnType<typeof vi.fn>;
 }
 interface RuntimeInternals {
   sessionRuntime: {
-    activeSessions: Map<string, { agent: FakeAgent; agentId: string }>;
-    createSession: (agentId: string) => Promise<string>;
-    setTemperature: (t: number | undefined) => void;
-    setDefaultModel: (m: string | undefined) => void;
-    hasActiveSession: (id: string) => boolean;
+    sessions: Map<string, { getAgentId(): string }>;
   };
   projectManager: { projectStore: { agents: Map<string, unknown> } };
   scheduler: { stopAll: () => void };
 }
 
-function activeAgent(runtime: RuntimeInternals, sessionId: string): FakeAgent {
-  const entry = runtime.sessionRuntime.activeSessions.get(sessionId);
+function activeAgent(runtime: RuntimeInternals, sessionId: string): any {
+  const entry = (runtime.sessionRuntime as any).sessions.get(sessionId);
   if (!entry) throw new Error(`no active session ${sessionId}`);
-  return entry.agent;
+  return (entry as any).agent;
 }
 
-describe("SessionRuntime temperature propagation", () => {
+describe("SessionManager temperature propagation", () => {
   let tmpDir: string;
   let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
   let agentId: string;
 
   beforeEach(async () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-rt-temp-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-temp-"));
     getChatStreamFnMock.mockClear();
     resolveModelByIdMock.mockClear();
     runtime = (await createProject(tmpDir, {
@@ -102,7 +98,6 @@ describe("SessionRuntime temperature propagation", () => {
 
     runtime.sessionRuntime.setTemperature(0.5);
 
-    // one active agent → one additional getChatStreamFn call for the hot-swap
     expect(getChatStreamFnMock).toHaveBeenCalledTimes(2);
     expect(getChatStreamFnMock).toHaveBeenLastCalledWith(0.5);
 
@@ -123,7 +118,6 @@ describe("SessionRuntime temperature propagation", () => {
 
     runtime.sessionRuntime.setTemperature(0.9);
 
-    // 3 active agents → 3 additional getChatStreamFn calls, all with 0.9
     expect(getChatStreamFnMock.mock.calls.length).toBe(callsBefore + 3);
     expect(getChatStreamFnMock.mock.calls.slice(callsBefore)).toEqual([[0.9], [0.9], [0.9]]);
 
@@ -133,13 +127,13 @@ describe("SessionRuntime temperature propagation", () => {
   });
 });
 
-describe("SessionRuntime default model hot-swap", () => {
+describe("SessionManager default model hot-swap", () => {
   let tmpDir: string;
   let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
   let agentId: string;
 
   beforeEach(async () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-rt-model-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-model-"));
     getChatStreamFnMock.mockClear();
     resolveModelByIdMock.mockClear();
     runtime = (await createProject(tmpDir, {
@@ -158,7 +152,6 @@ describe("SessionRuntime default model hot-swap", () => {
   it("hot-swaps model on active agents using the global default", async () => {
     const sessionId = await runtime.sessionRuntime.createSession(agentId);
     const agent = activeAgent(runtime as RuntimeInternals, sessionId);
-    // preset agent has no profile.model and no global default yet → no model resolved
     expect(resolveModelByIdMock).not.toHaveBeenCalled();
 
     runtime.sessionRuntime.setDefaultModel("openai/gpt-4o");
@@ -180,7 +173,6 @@ describe("SessionRuntime default model hot-swap", () => {
 
     runtime.sessionRuntime.setDefaultModel("openai/gpt-4o");
 
-    // profile.model wins over global default → unchanged
     expect(agent.state.model?.id).toBe("pinned");
     expect(agent.state.model?.provider).toBe("custom");
   });
@@ -200,13 +192,13 @@ describe("SessionRuntime default model hot-swap", () => {
   });
 });
 
-describe("SessionRuntime lazy model resolution", () => {
+describe("SessionManager lazy model resolution", () => {
   let tmpDir: string;
   let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
   let agentId: string;
 
   beforeEach(async () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-rt-lazy-"));
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-lazy-"));
     getChatStreamFnMock.mockClear();
     resolveModelByIdMock.mockClear();
     runtime = (await createProject(tmpDir, {
@@ -253,5 +245,65 @@ describe("SessionRuntime lazy model resolution", () => {
       runtime.sessionRuntime.sendMessage(sessionId, "hi", () => {}),
     ).resolves.toBeUndefined();
     expect(agent.prompt).toHaveBeenCalledWith("hi");
+  });
+});
+
+describe("SessionManager lifecycle", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-life-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore;
+    agentId = [...projectStore.agents.keys()][0];
+    runtime.scheduler.stopAll();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("hasActiveSession reflects create/destroy", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(true);
+    runtime.sessionRuntime.destroySession(sessionId);
+    expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(false);
+  });
+
+  it("restoreSession is idempotent for an already-active session", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    const before = runtime.sessionRuntime.sessions.size;
+    await runtime.sessionRuntime.restoreSession(agentId, sessionId);
+    expect(runtime.sessionRuntime.sessions.size).toBe(before);
+  });
+
+  it("evictAgent removes all sessions for that agent", async () => {
+    const sidA = await runtime.sessionRuntime.createSession(agentId);
+    const sidB = await runtime.sessionRuntime.createSession(agentId);
+    expect(runtime.sessionRuntime.hasActiveSession(sidA)).toBe(true);
+    expect(runtime.sessionRuntime.hasActiveSession(sidB)).toBe(true);
+
+    runtime.sessionRuntime.evictAgent(agentId);
+
+    expect(runtime.sessionRuntime.hasActiveSession(sidA)).toBe(false);
+    expect(runtime.sessionRuntime.hasActiveSession(sidB)).toBe(false);
+  });
+
+  it("closeAll removes every session", async () => {
+    const sidA = await runtime.sessionRuntime.createSession(agentId);
+    const sidB = await runtime.sessionRuntime.createSession(agentId);
+
+    runtime.sessionRuntime.closeAll();
+
+    expect(runtime.sessionRuntime.hasActiveSession(sidA)).toBe(false);
+    expect(runtime.sessionRuntime.hasActiveSession(sidB)).toBe(false);
+    expect(runtime.sessionRuntime.sessions.size).toBe(0);
   });
 });

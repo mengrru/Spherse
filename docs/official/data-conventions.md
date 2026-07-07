@@ -119,6 +119,23 @@ Agent system prompt content...
 
 删除 agent 时，ProjectRuntime 关闭该 agent 的 DB 连接并删除整个 agent 目录，`sessions.db` 随 `profile.md`、`theme.css` 一起移除。
 
+## System Prompt XML 约定
+
+所有 system-prompt section 用语义化 XML 标签包裹，不用 markdown 边界（`---` / `## H2`）。保留 tag 注册表（避免后续命名冲突）：
+
+| XML tag | 用途 |
+|---|---|
+| `<project-instructions>` | AGENTS.md 内容 |
+| `<agent-profile>` | agent profile 主体 |
+| `<skill-catalog>` | 可用技能目录（仅 name+description） |
+| `<skill-item name="…" description="…"/>` | 单个技能条目（自闭合，嵌套在 skill-catalog 内） |
+| `<preloaded-context>` | 预载文件区 |
+| `<context-file path="…">` | 单个预载文件（嵌套在 preloaded-context 内） |
+| `<skill-content name="…">` | load_skill 工具返回的技能全文 |
+| `<compaction-digest covers="…">` | 压缩历史摘要（合成消息） |
+
+agent profile 的 `context` 字段指定的文件通过 `<preloaded-context>` / `<context-file>` 注入 system prompt；`<skill-catalog>` 仅列出技能的 name + description，agent 需要完整指令时调用 `load_skill` 工具获取被 `<skill-content>` 包裹的全文。会话历史超过上下文窗口阈值时触发 compaction，将早期消息压缩为 `<compaction-digest>` 包裹的扁平化文本摘要，作为合成 user 消息保留（详见 `docs/dev/features/2026-07-02-context-engineering/design.md`）。
+
 ## Skill 定义格式
 
 Skill 有两个来源：builtin skill（app 内置只读，随 app 升级更新）和 project skill（`.spherse/skills/<skill-name>/SKILL.md`，用户自建可读写）。两者按 name 合并，project 同名覆盖 builtin。格式均为 YAML frontmatter + Markdown body。project skill 目录除 `SKILL.md` 外，还可携带附加文件（如 `references/*.md`、`scripts/*.js`、`assets/*`），与 `SKILL.md` 同目录放置。

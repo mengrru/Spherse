@@ -296,4 +296,157 @@ describe("SessionStore", () => {
       expect(result.hasMore).toBe(true);
     });
   });
+
+  describe("prev_message_id support", () => {
+    const getPrevMessageId = (messageId: number): number | null => {
+      const db = new Database(dbPath, { readonly: true });
+      const row = db
+        .prepare("SELECT prev_message_id FROM messages WHERE id = ?")
+        .get(messageId) as { prev_message_id: number | null } | undefined;
+      db.close();
+      return row ? row.prev_message_id : null;
+    };
+
+    it("appendMessage returns a numeric row id", () => {
+      const id = store.createSession();
+      const rowId = store.appendMessage(id, { role: "user", content: "hello" });
+      expect(typeof rowId).toBe("number");
+      expect(rowId).toBeGreaterThan(0);
+    });
+
+    it("appendMessage with prevMessageId stores it correctly", () => {
+      const id = store.createSession();
+      const firstId = store.appendMessage(id, { role: "user", content: "first" });
+      const secondId = store.appendMessage(id, { role: "assistant", content: "second" }, firstId);
+      expect(getPrevMessageId(secondId)).toBe(firstId);
+    });
+
+    it("appendMessage without prevMessageId stores NULL for the first message", () => {
+      const id = store.createSession();
+      const rowId = store.appendMessage(id, { role: "user", content: "hello" });
+      expect(getPrevMessageId(rowId)).toBeNull();
+    });
+
+    it("appendMessage auto-chains prev_message_id to the last message when not provided", () => {
+      const id = store.createSession();
+      const firstId = store.appendMessage(id, { role: "user", content: "first" });
+      const secondId = store.appendMessage(id, { role: "assistant", content: "second" });
+      const thirdId = store.appendMessage(id, { role: "user", content: "third" });
+      expect(getPrevMessageId(secondId)).toBe(firstId);
+      expect(getPrevMessageId(thirdId)).toBe(secondId);
+    });
+
+    it("appendMessage auto-chain is scoped per session", () => {
+      const a = store.createSession();
+      const b = store.createSession();
+      const a1 = store.appendMessage(a, { role: "user", content: "a1" });
+      const b1 = store.appendMessage(b, { role: "user", content: "b1" });
+      const a2 = store.appendMessage(a, { role: "user", content: "a2" });
+      expect(getPrevMessageId(b1)).toBeNull();
+      expect(getPrevMessageId(a2)).toBe(a1);
+    });
+  });
+
+  describe("compactions", () => {
+    it("recordCompaction + getLatestCompaction returns the recorded record with correct fields", () => {
+      const id = store.createSession();
+      store.recordCompaction(id, {
+        anchorMessageId: 42,
+        digestContent: "digest-payload",
+        tokenEstimate: 1024,
+      });
+      const latest = store.getLatestCompaction(id);
+      expect(latest).not.toBeNull();
+      expect(latest!.anchorMessageId).toBe(42);
+      expect(latest!.digestContent).toBe("digest-payload");
+      expect(latest!.tokenEstimate).toBe(1024);
+      expect(typeof latest!.id).toBe("number");
+      expect(typeof latest!.createdAt).toBe("number");
+    });
+
+    it("getLatestCompaction returns null for session with no compactions", () => {
+      const id = store.createSession();
+      expect(store.getLatestCompaction(id)).toBeNull();
+    });
+
+    it("getLatestCompaction returns the most recent when multiple compactions exist", () => {
+      const id = store.createSession();
+      store.recordCompaction(id, {
+        anchorMessageId: 1,
+        digestContent: "first",
+        tokenEstimate: 10,
+      });
+      store.recordCompaction(id, {
+        anchorMessageId: 5,
+        digestContent: "second",
+        tokenEstimate: 20,
+      });
+      const latest = store.getLatestCompaction(id);
+      expect(latest).not.toBeNull();
+      expect(latest!.digestContent).toBe("second");
+      expect(latest!.anchorMessageId).toBe(5);
+      expect(latest!.tokenEstimate).toBe(20);
+    });
+  });
+
+  describe("getMessagesAfter", () => {
+    it("Returns messages with id > anchorId in ascending order", () => {
+      const id = store.createSession();
+      store.appendMessage(id, { role: "user", content: "one" });
+      const anchor = store.appendMessage(id, { role: "assistant", content: "two" });
+      const m3 = store.appendMessage(id, { role: "user", content: "three" });
+      const m4 = store.appendMessage(id, { role: "assistant", content: "four" });
+
+      const result = store.getMessagesAfter(id, anchor);
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe(m3);
+      expect(result[0].message.content).toBe("three");
+      expect(result[1].id).toBe(m4);
+      expect(result[1].message.content).toBe("four");
+    });
+
+    it("Returns empty array when no messages after anchorId", () => {
+      const id = store.createSession();
+      store.appendMessage(id, { role: "user", content: "one" });
+      const anchor = store.appendMessage(id, { role: "assistant", content: "two" });
+
+      const result = store.getMessagesAfter(id, anchor);
+      expect(result).toEqual([]);
+    });
+
+    it("Returns objects with both id and message fields", () => {
+      const id = store.createSession();
+      store.appendMessage(id, { role: "user", content: "one" });
+      const anchor = store.appendMessage(id, { role: "assistant", content: "two" });
+      store.appendMessage(id, { role: "user", content: "three" });
+
+      const result = store.getMessagesAfter(id, anchor);
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({ id: expect.any(Number), message: expect.objectContaining({ content: "three" }) });
+    });
+  });
+
+  describe("getSessionMessagesWithIds", () => {
+    it("Returns objects with both id and message fields", () => {
+      const id = store.createSession();
+      store.appendMessage(id, { role: "user", content: "one" });
+      store.appendMessage(id, { role: "assistant", content: "two" });
+
+      const result = store.getSessionMessagesWithIds(id);
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ id: expect.any(Number), message: expect.objectContaining({ role: "user", content: "one" }) });
+      expect(result[1]).toEqual({ id: expect.any(Number), message: expect.objectContaining({ role: "assistant", content: "two" }) });
+    });
+
+    it("Returns same messages as getSessionMessages", () => {
+      const id = store.createSession();
+      store.appendMessage(id, { role: "user", content: "one", timestamp: 1000 });
+      store.appendMessage(id, { role: "assistant", content: "two", timestamp: 2000 });
+      store.appendMessage(id, { role: "user", content: "three", timestamp: 3000 });
+
+      const plain = store.getSessionMessages(id);
+      const withIds = store.getSessionMessagesWithIds(id).map((r) => r.message);
+      expect(withIds).toEqual(plain);
+    });
+  });
 });

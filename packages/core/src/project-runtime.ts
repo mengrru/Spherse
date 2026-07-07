@@ -1,11 +1,11 @@
 import type { ProjectManager } from "./project-manager.js";
-import type { SessionRuntime } from "./session-runtime.js";
+import type { SessionManager } from "./session/session-manager.js";
 import type { Scheduler } from "./scheduler.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 
 export class ProjectRuntime {
   readonly projectManager: ProjectManager;
-  readonly sessionRuntime: SessionRuntime;
+  readonly sessionRuntime: SessionManager;
   readonly scheduler: Scheduler;
   readonly projectId: string;
   private logger: Logger;
@@ -13,7 +13,7 @@ export class ProjectRuntime {
 
   constructor(deps: {
     projectManager: ProjectManager;
-    sessionRuntime: SessionRuntime;
+    sessionRuntime: SessionManager;
     scheduler: Scheduler;
     projectId: string;
     logger?: Logger;
