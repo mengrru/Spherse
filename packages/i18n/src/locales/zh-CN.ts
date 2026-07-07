@@ -17,6 +17,12 @@ export const zhCN = {
   "settings.models.configureFirst": "请先配置 API Key",
   // 模型提供商区域标题
   "settings.models.providers": "模型提供商",
+  // 文本模型 tab「模型提供商」标题旁 info tooltip 的前半段文案（后接可点击的 DeepSeek 链接），提示只需填一个提供商的密钥、推荐 DeepSeek
+  "settings.models.providersHintPre": "只需填写任一提供商的 API Key 即可使用。还没有密钥？推荐使用 ",
+  // 文本模型 tab「模型提供商」标题旁 info tooltip 的后半段文案（紧跟 DeepSeek 链接之后）
+  "settings.models.providersHintPost": "。",
+  // 文本模型 tab「模型提供商」标题旁 info 图标的完整无障碍标签（aria-label，供屏幕阅读器朗读，无需断句）
+  "settings.models.providersHintAria": "只需填写任一提供商的 API Key 即可使用。还没有密钥？推荐使用 DeepSeek。",
   // 保存按钮文案
   "settings.models.save": "保存",
   // 保存按钮的加载中状态

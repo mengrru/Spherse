@@ -18,6 +18,8 @@ import { AdvancedSettings } from "./AdvancedSettings";
 import { UpdateChecker } from "./UpdateChecker";
 import { SUPPORTED_LOCALES } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
+import { InfoIcon } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 
 const LOCALE_LABELS: Record<string, string> = {
   "zh-CN": "简体中文",
@@ -71,7 +73,35 @@ function ModelGroupTab({
           onReset={() => { void group.resetTemperature(); }}
         />
       )}
-      <SectionTitle className="mt-5">{t("settings.models.providers")}</SectionTitle>
+      <SectionTitle className={kind === "text" ? "mt-5 flex items-center gap-1.5" : "mt-5"}>
+        {t("settings.models.providers")}
+        {kind === "text" && (
+          <Tooltip>
+            <TooltipTrigger
+              aria-label={t("settings.models.providersHintAria")}
+              className="inline-flex cursor-help text-muted-foreground"
+            >
+              <InfoIcon className="size-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>
+              <span>
+                {t("settings.models.providersHintPre")}
+                <a
+                  className="text-primary underline underline-offset-2"
+                  href="https://platform.deepseek.com/api_keys"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    void window.electronAPI.openExternal("https://platform.deepseek.com/api_keys");
+                  }}
+                >
+                  DeepSeek
+                </a>
+                {t("settings.models.providersHintPost")}
+              </span>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </SectionTitle>
       <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
         {Object.entries(group.providers).map(([id, config]) => (
           <ModelProviderItem
