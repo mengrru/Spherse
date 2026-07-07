@@ -278,7 +278,7 @@ function spherseCall(action, params) {
     const handler = (e) => {
       if (e.data?.type === "spherse:response" && e.data.requestId === requestId) {
         cleanup();
-        e.data.ok ? resolve(e.data.data) : reject(new Error("spherse data error"));
+        e.data.ok ? resolve(e.data.data) : reject(new Error(e.data.data?.error || "spherse data error"));
       }
     };
     function cleanup() { clearTimeout(timeout); window.removeEventListener("message", handler); }
@@ -368,7 +368,7 @@ await spherseCall("data.delete", { file: "world/game.data.json", key: "score" })
         const handler = (e) => {
           if (e.data?.type === "spherse:response" && e.data.requestId === requestId) {
             cleanup();
-            e.data.ok ? resolve(e.data.data) : reject(new Error("spherse data error"));
+            e.data.ok ? resolve(e.data.data) : reject(new Error(e.data.data?.error || "spherse data error"));
           }
         };
         function cleanup() { clearTimeout(timeout); window.removeEventListener("message", handler); }

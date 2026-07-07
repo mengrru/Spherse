@@ -1,6 +1,6 @@
 ---
 name: write-html
-description: 在 Spherse 中产出任何 HTML 之前必须先阅读本 skill。当用户要求创建或修改 HTML 页面、生成网页、制作可视化展示（欢迎页、导览主页、内容卡片、预览页等任意 HTML 交付物）时，务必在写出 HTML 代码前先读本 skill，了解 charset、数据加载模式与 App 能力调用的约定；切勿未经阅读直接输出 HTML
+description: 在 Spherse 中产出任何 HTML 之前必须先阅读本 skill。当用户要求创建或修改 HTML 页面、生成网页、制作可视化展示（欢迎页、导览主页、内容卡片、预览页等任意 HTML 交付物）时，务必在写出 HTML 代码前先读本 skill，了解 charset、数据与渲染分离的决策、数据加载模式与 App 能力调用（含交互式卡片回传会话）的约定；切勿未经阅读直接输出 HTML
 ---
 
 # 编写 HTML 页面 — 数据读写与 App 能力调用
@@ -34,6 +34,19 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 | **字符串模式** | 纯 HTML 字符串经 `srcDoc` 加载（无真实 origin） | ❌ 不可以 | Chat HtmlCard 无 `file_path` |
 
 判断方法：如果页面是作为**文件**写入用户项目目录（而非内联字符串），按「文件模式」处理。
+
+## 何时将数据与渲染分离
+
+实现一个 HTML 页面前，先判断它属于哪类，决定数据是「外置 JSON」还是「内联进 HTML」：
+
+| 倾向 | 适用场景 | 做法 |
+|------|----------|------|
+| **外置 JSON（推荐）** | 信息量较大（多条目列表/表格/清单）、预计需要长期维护与更新、数据可能被其它页面复用 | 数据存成独立的 `{页面名}.data.json` 文件，HTML 只负责渲染并用 `fetch` 加载数据 |
+| **内联进 HTML** | 少量一次性展示内容、纯结构展示、字符串模式且无需持久化 | 数据直接写进 `<script>` 中的 JS 对象或 DOM |
+
+外置的好处：数据与结构解耦，后续只改 JSON 即可更新内容，无需触碰 HTML；JSON 也可被其它页面 `fetch` 复用。
+
+> 实现时务必**用 write 工具分别落盘两个文件**：HTML 页面（如 `world/atlas.html`）和数据文件（如 `world/atlas.data.json`），不要只写 HTML。
 
 ## 只读展示数据：外置为同目录 JSON（文件模式推荐）
 
@@ -103,6 +116,86 @@ window.parent.postMessage({
 
 > `path` 为项目内相对路径。
 
+## 交互式 HtmlCard：将用户选择回传当前会话
+
+当 HTML 作为**聊天 HtmlCard** 渲染时，可以为用户制作带交互性的卡片——例如让用户在多个选项中勾选，点击「提交」后把选择结果直接作为一条消息发回**当前会话**，驱动后续对话或 agent 行为。
+
+实现要点：
+
+1. App 在卡片 iframe 加载时注入运行时上下文 `window.__SPHERSE__`（含 `sessionId`/`agentId`/`projectId`）。
+2. 用户点击提交时，读取 `window.__SPHERSE__.sessionId`，组装消息文本，通过 `sendMessage` action 发送。
+3. `sendMessage` 支持 request-response，会话忙碌时返回 `{ ok: false, data: { error: "session_busy" } }`，消息**不会发出**，应提示用户稍后重试。
+
+> 完整的 `spherseCall` Promise wrapper 与 `sendMessage` 签名见 `use-ui-sdk` skill。本示例内联了 wrapper 以便自包含。
+
+示例：选项卡片，用户勾选后提交，结果回传当前会话。
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>选择推进方向</title>
+  <style>
+    body { font-family: sans-serif; padding: 1rem; }
+    label { display: block; margin: 0.4rem 0; cursor: pointer; }
+    button { margin-top: 0.8rem; padding: 0.4rem 1rem; }
+    #tip { margin-top: 0.5rem; color: #888; min-height: 1.2em; }
+  </style>
+</head>
+<body>
+  <h3>请选择接下来要展开的方向</h3>
+  <label><input type="checkbox" value="角色背景"> 角色背景</label>
+  <label><input type="checkbox" value="势力关系"> 势力关系</label>
+  <label><input type="checkbox" value="历史时间线"> 历史时间线</label>
+  <button onclick="submit()">提交选择</button>
+  <div id="tip"></div>
+
+  <script>
+    function spherseCall(action, params) {
+      return new Promise((resolve, reject) => {
+        const requestId = "r" + Date.now() + Math.random().toString(36).slice(2);
+        const timeout = setTimeout(() => { cleanup(); reject(new Error("spherse timeout")); }, 10000);
+        const handler = (e) => {
+          if (e.data?.type === "spherse:response" && e.data.requestId === requestId) {
+            cleanup();
+            e.data.ok ? resolve(e.data.data) : reject(new Error(e.data.data?.error || "spherse data error"));
+          }
+        };
+        function cleanup() { clearTimeout(timeout); window.removeEventListener("message", handler); }
+        window.addEventListener("message", handler);
+        window.parent.postMessage({ type: "spherse:action", action, params, requestId }, "*");
+      });
+    }
+
+    async function submit() {
+      const picks = [...document.querySelectorAll("input:checked")].map((i) => i.value);
+      if (picks.length === 0) {
+        document.getElementById("tip").textContent = "请至少选择一项";
+        return;
+      }
+      const rt = window.__SPHERSE__;
+      if (!rt?.sessionId) {
+        document.getElementById("tip").textContent = "未找到当前会话，无法提交";
+        return;
+      }
+      const message = "我选择了展开以下方向：" + picks.join("、");
+      try {
+        await spherseCall("sendMessage", { sessionId: rt.sessionId, message });
+        document.getElementById("tip").textContent = "已发送";
+      } catch (e) {
+        document.getElementById("tip").textContent =
+          e.message === "session_busy" ? "会话正在生成，请稍后重试" : "发送失败，请重试";
+      }
+    }
+  </script>
+</body>
+</html>
+```
+
+> - 此模式仅适用于**聊天 HtmlCard**（Welcome Page / Content Browser 预览不注入 `window.__SPHERSE__`）。
+> - 提交内容应是有意义的、可被会话/agent 理解的自然语言，而非原始参数。
+
 ## 其它 App 能力调用
 
 需要触发 App 内其它能力（如创建/打开 chat session、向会话发消息、浮窗会话等）时，阅读 `use-ui-sdk` skill，按其中定义的 action 名称与参数调用。可用 action 包括：
@@ -122,9 +215,10 @@ window.parent.postMessage({
 | 需求 | 方案 |
 |------|------|
 | 声明字符编码 | `<head>` 内加 `<meta charset="UTF-8">` |
+| 信息量大 / 需长期维护的页面 | 数据与渲染分离：外置 `{页面名}.data.json`，HTML 用 `fetch()` 读取，分两个文件落盘 |
 | 文件模式下加载展示数据 | 外置同目录 `.json`，用 `fetch()` |
 | 字符串模式下加载展示数据 | 数据内联进 HTML，或用 ui-sdk `data.get` |
 | 持久化读写数据 | ui-sdk `data.get` / `data.set` / `data.delete` |
 | 点击打开项目内文件 | ui-sdk `openFile` |
 | 打开/发送 chat 会话 | ui-sdk `createSession` / `sendMessage` / `floatSession` |
-| HtmlCard 内向当前会话发消息 | 读 `window.__SPHERSE__.sessionId`，调用 `sendMessage` |
+| 交互式卡片 / 向当前会话发消息 | 读 `window.__SPHERSE__.sessionId`，调 `sendMessage`（如收集用户选择后提交回传，会话忙碌返回 `session_busy`） |
