@@ -93,6 +93,7 @@ interface StreamingStoreActions {
   setScrollPosition: (sessionId: string, position: number) => void;
   cleanupExpired: (ttlMs: number) => void;
   loadMore: (client: ApiClient, sessionId: string, agentId: string) => void;
+  refreshHistory: (client: ApiClient, agentId: string, sessionId: string) => void;
 }
 
 export const useStreamingStore = create<StreamingStoreState & StreamingStoreActions>((set, get) => {
@@ -463,6 +464,29 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         .catch((err: unknown) => {
           console.warn("[streaming-store] failed to load more history:", err);
           updateSession(sessionId, (s) => ({ ...s, loadingMore: false }));
+        });
+    },
+
+    refreshHistory(client, agentId, sessionId) {
+      const session = get().sessions[sessionId];
+      if (!session || session.streaming) return;
+      client.getSessionMessagesPage(agentId, sessionId, { turns: 10 })
+        .then((result) => {
+          const historyMessages = parseHistoryMessages(result.messages);
+          updateSession(sessionId, (s) => {
+            if (s.streaming) return s;
+            const messages = mergeHistoryMessages([], historyMessages);
+            return {
+              ...s,
+              messages,
+              hasMore: result.hasMore,
+              oldestLoadedId: result.oldestId,
+              historyLoaded: true,
+            };
+          });
+        })
+        .catch((err: unknown) => {
+          console.warn("[streaming-store] failed to refresh session history:", err);
         });
     },
   };

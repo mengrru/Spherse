@@ -247,51 +247,53 @@ export const zhCN = {
   "agent-session-list.sessionStatus": "会话状态",
 
   // --- Agent Schedule ---
-  // 搭档右键菜单中的定时消息入口
-  "agent-schedule.menuItem": "定时消息",
-  // 定时消息弹窗标题
-  "agent-schedule.dialogTitle": "定时消息",
-  // 定时消息名称输入框标签
+  // 搭档右键菜单中的定时任务入口
+  "agent-schedule.menuItem": "定时任务",
+  // 定时任务弹窗标题
+  "agent-schedule.dialogTitle": "定时任务",
+  // 定时任务名称输入框标签
   "agent-schedule.name": "名称",
-  // 定时消息名称输入框占位
+  // 定时任务名称输入框占位
   "agent-schedule.namePlaceholder": "可选，如「每日早安」",
-  // 定时频率选择标签
+  // 定时频率输入框标签
   "agent-schedule.frequency": "频率",
-  // 定时消息频率预设：每 30 分钟执行一次
+  // 定时任务频率模板：每 30 分钟执行一次
   "agent-schedule.presetEvery30Minutes": "每 30 分钟",
-  // 定时消息频率预设：每小时整点执行一次
+  // 定时任务频率模板：每小时整点执行一次
   "agent-schedule.presetHourly": "每小时",
-  // 定时消息频率预设：每天 09:00 执行一次
+  // 定时任务频率模板：每天 09:00 执行一次
   "agent-schedule.presetDaily0900": "每天 09:00",
-  // 定时消息频率预设：每周一 09:00 执行一次
+  // 定时任务频率模板：每周一 09:00 执行一次
   "agent-schedule.presetWeeklyMonday0900": "每周一 09:00",
-  // 定时消息频率预设：用户手动输入 cron 表达式
-  "agent-schedule.presetCustom": "自定义",
-  // 定时消息表单频率区域提示：说明当前调度器按 10 分钟轮询执行，不保证分钟级精确触发
+  // cron 表达式输入框占位
+  "agent-schedule.cronPlaceholder": "0 9 * * *",
+  // 定时任务表单频率区域提示：说明当前调度器按 10 分钟轮询执行，不保证分钟级精确触发
   "agent-schedule.granularityHint": "定时任务每 10 分钟检查一次，实际执行时间可能有数分钟延迟。",
-  // 频率选择下拉框占位
-  "agent-schedule.selectPreset": "选择预设...",
-  // 定时消息发送模式标签
+  // 定时任务执行模式标签
   "agent-schedule.mode": "会话模式",
-  // 发送模式：每次新建对话
+  // 执行模式：每次新建对话
   "agent-schedule.modeNewSession": "新建对话",
-  // 发送模式：在已有对话中追加
+  // 执行模式：在已有对话中追加
   "agent-schedule.modeExistingSession": "已有对话",
+  // 绑定已有会话模式下，会话 ID 输入框标签
+  "agent-schedule.targetSessionId": "会话 ID",
+  // 绑定已有会话模式下，会话 ID 输入框占位
+  "agent-schedule.targetSessionIdPlaceholder": "输入要绑定的会话 ID",
   // 消息内容输入框标签
   "agent-schedule.message": "消息内容",
   // 消息内容输入框占位
   "agent-schedule.messagePlaceholder": "输入定时发送的消息内容...",
-  // 消息发送通知开关标签
-  "agent-schedule.notify": "发送后通知",
-  // 定时消息表单：开启通知后显示的通知内容输入框占位，最多 30 字
+  // 定时任务完成后的通知开关标签（触发时机为执行完成，而非发送瞬间）
+  "agent-schedule.notify": "完成后通知",
+  // 定时任务表单：开启通知后显示的通知内容输入框占位，最多 30 字
   "agent-schedule.notificationMessagePlaceholder": "通知内容，最多 30 字",
-  // 定时消息完成后，用户开启通知但未填写自定义通知内容时显示的 toast 文案
-  "agent-schedule.notificationDefault": "定时消息已完成",
+  // 定时任务完成后，用户开启通知但未填写自定义通知内容时显示的 toast 文案
+  "agent-schedule.notificationDefault": "定时任务已完成",
   // 定时任务列表行上的手动执行按钮悬停提示
   "agent-schedule.triggerNow": "立即触发",
   // 定时任务列表行上的手动执行按钮运行中状态提示
   "agent-schedule.runningNow": "运行中",
-  // 定时消息配置页右上角创建按钮
+  // 定时任务配置页右上角创建按钮
   "agent-schedule.createSchedule": "创建定时任务",
   // 配置 tab 标题
   "agent-schedule.tabConfig": "配置",
@@ -312,7 +314,7 @@ export const zhCN = {
   // 日志条数限制提示
   "agent-schedule.logLimitNotice": "最多显示 {count} 条，更多请查看 schedule-logs.jsonl",
   // agent 列表项上的 Clock icon tooltip：该 agent 至少有一条 enabled schedule，hover icon 时显示
-  "agent-schedule.indicatorTooltip": "已开启定时消息",
+  "agent-schedule.indicatorTooltip": "已开启定时任务",
 
   // --- Chat ---
   // 聊天输入框占位提示

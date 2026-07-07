@@ -2,9 +2,10 @@ import type { ScheduleEntry } from "../../lib/types";
 
 export type ScheduleFormFields = {
   cron: string;
-  preset: string;
   message: string;
   name: string;
+  sessionMode: "new_session" | "existing_session";
+  targetSessionId: string;
   notify: boolean;
   notificationMessage: string;
 };
@@ -24,9 +25,10 @@ export const NEW_SCHEDULE_ID = "__new__";
 
 export const EMPTY_FORM_FIELDS: ScheduleFormFields = {
   cron: "",
-  preset: "",
   message: "",
   name: "",
+  sessionMode: "new_session",
+  targetSessionId: "",
   notify: false,
   notificationMessage: "",
 };
@@ -49,9 +51,10 @@ export function scheduleFormReducer(
         mode: "edit",
         editingId: action.entry.id,
         cron: action.entry.cron,
-        preset: "",
         message: action.entry.message,
         name: action.entry.name ?? "",
+        sessionMode: action.entry.mode,
+        targetSessionId: action.entry.targetSessionId ?? "",
         notify: action.entry.notify,
         notificationMessage: action.entry.notificationMessage ?? "",
       };

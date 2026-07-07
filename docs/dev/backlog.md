@@ -57,6 +57,8 @@
 - [x] **自定义主题体验优化**：token 重命名为 `--sp-*` 命名空间（废弃 `--shadcn-*`/`--agent-*`）、废弃 `scopeCss` 改用原生 CSS nesting、聊天主题 dark mode 支持、聊天主题自动重载、补齐 data-* 钩子（`data-chat-bubble`/`data-chat-composer-input`/`data-chat-float-close`/`data-md-code`/`data-md-code-inline`/`data-md-quote`/`data-content-doc`）与文档视图 markdown 自定义。参见 `docs/dev/features/2026-06-26-theme-customization-experience/design.md`
 - [x] **全局 toast 样式钩子**：全局 toast（sonner）暴露 `data-toast-root` 语义锚点（`<div data-toast-root className="contents">` 包裹 `<Sonner>`，因 sonner `ToasterProps` 封闭不透传 `data-*`），供项目级主题用 `[data-toast-root]` 前缀 + sonner 原生 `[data-sonner-toast]`/`[data-type]`/`[data-title]`/`[data-description]` 等后代选择器定制 toast 外观；同步更新 `create-ui-theme` skill、`architecture.md` 与 `AGENTS.md` 维护契约，新增 `sonner.structure.test.ts` 守卫。
 - [x] **支持 Agent 定时执行**：按 cron 表达式定时触发 agent 运行
+- [x] **定时任务（scheduler）体验优化**：cron 输入由 Select 下拉改为常驻 Input + 模板按钮；统一术语 定时消息→定时任务（三语）；发送后通知→完成后通知（文案，逻辑本就基于 agent_end 触发）；新增绑定已有会话模式（填写 session ID 在指定 session 内执行）
+- [x] **定时任务完成后刷新对应 session 的历史**：定时任务后台触发 session 时 chat 流事件仅走 scheduler 私有回调、不广播到前端，导致 streaming-store 缓存的 session 历史过期。修复：在 `schedule_completed` 事件中对受影响的 sessionId 调用 `streaming-store.refreshHistory` 重新拉取最新历史（守卫：session 未缓存或正在流式时跳过）
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
 - [x] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话
 - [x] **UI SDK**：iframe 与 App 内统一 action 通信框架，支持 postMessage 触发和 App 内 dispatchAction 调用。参见 `docs/dev/features/2026-06-11-ui-sdk/design.md`

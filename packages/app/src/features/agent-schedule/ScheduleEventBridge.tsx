@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useProjectDataStore } from "../../stores/project-data-store";
+import { useStreamingStore } from "../chat/streaming-store";
 import { useScheduleStore } from "./store";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import type { ScheduleServerEvent } from "../../lib/types";
@@ -57,8 +58,9 @@ export function ScheduleEventBridge() {
     if (!projectId || !client) return;
     handleScheduleEvent(projectId, client, { type, ...(payload as object) } as ScheduleServerEvent);
     if (type === "schedule_completed") {
-      const p = payload as { agentId: string; scheduleId: string };
+      const p = payload as { agentId: string; scheduleId: string; sessionId: string };
       void showScheduleNotification(p.agentId, p.scheduleId);
+      useStreamingStore.getState().refreshHistory(client, p.agentId, p.sessionId);
     }
   });
 

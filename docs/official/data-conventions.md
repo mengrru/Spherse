@@ -105,7 +105,7 @@ Agent system prompt content...
   updatedAt: 1749600000000
 ```
 
-`mode` 当前支持 `new_session` 与 `existing_session`；UI 目前只开放 `new_session`。`notify` 为 `true` 时，renderer 会在任务完成后显示通知；`notificationMessage` 为可选自定义通知内容。
+`mode` 当前支持 `new_session` 与 `existing_session`：`new_session` 每次触发时新建对话执行；`existing_session` 在用户指定的已有会话中执行，需配合 `targetSessionId` 字段填写目标会话 ID。`notify` 为 `true` 时，renderer 会在任务完成后显示通知；`notificationMessage` 为可选自定义通知内容。
 
 执行日志追加写入同目录下的 `schedule-logs.jsonl`，每行一个 JSON 对象。日志包含 `id`、`agentId`、`scheduleId`、`status`、`triggeredAt`、`completedAt`、`error`、`sessionId`、`agentName`、`scheduleName` 等字段，用于运行日志 UI 展示与问题排查。日志文件超过 2MB 时保留最近 5000 行。
 

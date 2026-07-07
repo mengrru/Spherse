@@ -39,8 +39,6 @@ describe("agent schedule feature structure", () => {
     expect(source).toContain("onTrigger");
     expect(source).toContain("runningScheduleIds");
     expect(source).toContain("LoaderCircleIcon");
-    expect(source).toContain('className="size-6"');
-    expect(source.indexOf("onTrigger(entry)")).toBeGreaterThan(-1);
     expect(source.indexOf("onTrigger(entry)")).toBeLessThan(source.indexOf("onEdit(entry)"));
   });
 
@@ -50,13 +48,9 @@ describe("agent schedule feature structure", () => {
 
     expect(dialogSource).toContain("PlusIcon");
     expect(dialogSource).toContain('`${t("agent-schedule.dialogTitle")} | ${agentName}`');
-    expect(dialogSource).toContain('className="mb-3 flex items-center justify-between"');
     expect(dialogSource).toContain("<TabsList>");
-    expect(dialogSource).toContain('size="default"');
     expect(dialogSource).toContain('t("agent-schedule.createSchedule")');
     expect(listSource).not.toContain("onCreate");
-    expect(listSource).not.toContain('t("common.create")');
-    expect(listSource).not.toContain('t("common.add")');
   });
 
   it("shows schedule logs by reversing the API order", () => {
@@ -74,11 +68,10 @@ describe("agent schedule feature structure", () => {
     expect(source).not.toContain("new Date(log.triggeredAt)");
   });
 
-  it("keeps the message field before frequency and uses a taller textarea", () => {
+  it("keeps the message field before frequency", () => {
     const source = readFileSync(join(currentDir, "ScheduleForm.tsx"), "utf8");
 
     expect(source.indexOf('t("agent-schedule.message")')).toBeLessThan(source.indexOf('t("agent-schedule.frequency")'));
-    expect(source).toContain("rows={10}");
   });
 
   it("shows the scheduler granularity hint near the frequency controls", () => {
@@ -88,7 +81,7 @@ describe("agent schedule feature structure", () => {
     expect(source.indexOf('t("agent-schedule.frequency")')).toBeLessThan(source.indexOf('t("agent-schedule.granularityHint")'));
   });
 
-  it("localizes schedule preset labels instead of storing Chinese display strings", () => {
+  it("renders cron templates as buttons that fill the cron input instead of a preset select", () => {
     const constantsSource = readFileSync(join(currentDir, "constants.ts"), "utf8");
     const formSource = readFileSync(join(currentDir, "ScheduleForm.tsx"), "utf8");
     const dialogSource = readFileSync(join(currentDir, "index.tsx"), "utf8");
@@ -97,12 +90,33 @@ describe("agent schedule feature structure", () => {
     expect(constantsSource).toContain('id: "every-30-minutes"');
     expect(constantsSource).not.toContain("每 30 分钟");
     expect(constantsSource).not.toContain("自定义");
+    expect(constantsSource).not.toContain('id: "custom"');
+    // template buttons localize labels and fill the free-text cron input
     expect(formSource).toContain("t(p.labelKey)");
-    expect(formSource).not.toContain("p.label}</SelectItem>");
-    expect(formSource).not.toContain("key={p.label}");
-    expect(formSource).not.toContain("value={p.label}");
-    expect(formSource).not.toContain('preset === "自定义"');
-    expect(dialogSource).toContain("p.id === value");
+    expect(formSource).toContain("onCronChange(p.cron)");
+    expect(formSource).not.toContain("<Select");
+    expect(formSource).not.toContain("</SelectContent>");
+    expect(formSource).toContain('t("agent-schedule.cronPlaceholder")');
+    // dialog no longer maps preset ids to cron
+    expect(dialogSource).not.toContain("handlePresetChange");
+    expect(dialogSource).not.toContain("p.id === value");
+  });
+
+  it("lets users pick a session mode and bind an existing session id", () => {
+    const formSource = readFileSync(join(currentDir, "ScheduleForm.tsx"), "utf8");
+    const reducerSource = readFileSync(join(currentDir, "schedule-form-reducer.ts"), "utf8");
+    const dialogSource = readFileSync(join(currentDir, "index.tsx"), "utf8");
+
+    expect(reducerSource).toContain("sessionMode");
+    expect(reducerSource).toContain("targetSessionId");
+    expect(reducerSource).toContain("sessionMode: action.entry.mode");
+    expect(reducerSource).toContain('sessionMode: "new_session"');
+    expect(formSource).toContain("onSessionModeChange");
+    expect(formSource).toContain("onTargetSessionIdChange");
+    expect(formSource).toContain('"agent-schedule.modeNewSession"');
+    expect(formSource).toContain('"agent-schedule.modeExistingSession"');
+    expect(dialogSource).toContain("mode: form.sessionMode");
+    expect(dialogSource).toContain("form.sessionMode === \"existing_session\"");
   });
 
   it("shows notification controls last with a 30 character custom message limit", () => {

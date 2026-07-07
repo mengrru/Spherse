@@ -263,4 +263,64 @@ describe("streaming-store resilience", () => {
 
     expect(historySpy).toHaveBeenCalledTimes(1);
   });
+
+  it("refreshHistory replaces cached messages with the latest DB page", async () => {
+    const client: ApiClient = {
+      getSessionMessagesPage: vi.fn().mockResolvedValue({
+        messages: [{ role: "user", content: "old" }, { role: "assistant", content: "old reply" }],
+        hasMore: false,
+        oldestId: 5,
+      }),
+    } as unknown as ApiClient;
+    useStreamingStore.getState().attach(client, "sr", BASE_URL, "p1", "a1");
+    const socket = mock.instances[mock.instances.length - 1];
+    socket.readyState = OPEN;
+    socket.onopen?.({} as Event);
+    await vi.advanceTimersByTimeAsync(0);
+
+    (client.getSessionMessagesPage as ReturnType<typeof vi.fn>).mockResolvedValue({
+      messages: [{ role: "user", content: "new" }, { role: "assistant", content: "fresh reply" }],
+      hasMore: true,
+      oldestId: 9,
+    });
+
+    useStreamingStore.getState().refreshHistory(client, "a1", "sr");
+    await vi.advanceTimersByTimeAsync(0);
+
+    const messages = useStreamingStore.getState().sessions.sr.messages;
+    expect(messages.map((m) => m.content)).toEqual(["new", "fresh reply"]);
+    expect(useStreamingStore.getState().sessions.sr.hasMore).toBe(true);
+  });
+
+  it("refreshHistory is a no-op when the session is not cached", async () => {
+    const client = createMockClient();
+    const spy = client.getSessionMessagesPage as ReturnType<typeof vi.fn>;
+    useStreamingStore.getState().refreshHistory(client, "a1", "unknown");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("refreshHistory does not clobber a session that is actively streaming", async () => {
+    const client: ApiClient = {
+      getSessionMessagesPage: vi.fn().mockResolvedValue({ messages: [], hasMore: false, oldestId: null }),
+    } as unknown as ApiClient;
+    useStreamingStore.getState().attach(client, "ss", BASE_URL, "p1", "a1");
+    const socket = mock.instances[mock.instances.length - 1];
+    socket.readyState = OPEN;
+    socket.onopen?.({} as Event);
+    useStreamingStore.getState().sendMessage("ss", "hi");
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "message_start", message: { role: "assistant" } }),
+    } as MessageEvent);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(useStreamingStore.getState().sessions.ss.streaming).toBe(true);
+    const spy = client.getSessionMessagesPage as ReturnType<typeof vi.fn>;
+    spy.mockClear();
+
+    useStreamingStore.getState().refreshHistory(client, "a1", "ss");
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(spy).not.toHaveBeenCalled();
+  });
 });

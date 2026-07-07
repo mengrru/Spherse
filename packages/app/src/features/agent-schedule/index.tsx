@@ -24,7 +24,7 @@ import {
   IDLE_FORM_STATE,
   type ScheduleFormFields,
 } from "./schedule-form-reducer";
-import { EMPTY_RUNNING_SCHEDULE_IDS, EMPTY_SCHEDULES, PRESETS } from "./constants";
+import { EMPTY_RUNNING_SCHEDULE_IDS, EMPTY_SCHEDULES } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
 import { PlusIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -67,18 +67,15 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
     dispatch({ type: "patch", patch: { [field]: value } });
   }
 
-  function handlePresetChange(value: string) {
-    const entry = PRESETS.find((p) => p.id === value);
-    dispatch({ type: "patch", patch: entry ? { preset: value, cron: entry.cron } : { preset: value } });
-  }
-
   async function handleSave() {
     if (!form.cron.trim() || !form.message.trim()) return;
+    if (form.sessionMode === "existing_session" && !form.targetSessionId.trim()) return;
     const data = {
       name: form.name || undefined,
       cron: form.cron,
       message: form.message,
-      mode: "new_session" as const,
+      mode: form.sessionMode,
+      targetSessionId: form.sessionMode === "existing_session" ? form.targetSessionId.trim() : "",
       notify: form.notify,
       notificationMessage: form.notify && form.notificationMessage.trim() ? form.notificationMessage.trim() : undefined,
     };
@@ -112,7 +109,7 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!flex h-[60vh] w-[50vw] !max-w-[50vw] flex-col sm:!max-w-[50vw]">
+      <DialogContent className="!flex h-[60vh] w-[38vw] !max-w-[38vw] flex-col sm:!max-w-[38vw]">
         <DialogHeader>
           <DialogTitle>{agentName ? `${t("agent-schedule.dialogTitle")} | ${agentName}` : t("agent-schedule.dialogTitle")}</DialogTitle>
         </DialogHeader>
@@ -137,14 +134,16 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
                 editingId={form.editingId ?? ""}
                 name={form.name}
                 cron={form.cron}
-                preset={form.preset}
                 message={form.message}
+                sessionMode={form.sessionMode}
+                targetSessionId={form.targetSessionId}
                 notify={form.notify}
                 notificationMessage={form.notificationMessage}
                 onNameChange={(v) => patchField("name", v)}
                 onCronChange={(v) => patchField("cron", v)}
-                onPresetChange={handlePresetChange}
                 onMessageChange={(v) => patchField("message", v)}
+                onSessionModeChange={(v) => patchField("sessionMode", v)}
+                onTargetSessionIdChange={(v) => patchField("targetSessionId", v)}
                 onNotifyChange={(v) => patchField("notify", v)}
                 onNotificationMessageChange={(v) => patchField("notificationMessage", v)}
                 onInsertVariable={(variable) => dispatch({ type: "patch", patch: { message: form.message + `{{${variable}}}` } })}

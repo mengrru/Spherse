@@ -25,13 +25,36 @@ function getNextCronDate(cron: string): Date | null {
   }
 }
 
+function localDate(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function localTime(): string {
+  const d = new Date();
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${min}`;
+}
+
 const TEMPLATE_VARS: Record<string, () => string> = {
-  date: () => new Date().toISOString().slice(0, 10),
-  time: () => new Date().toTimeString().slice(0, 5),
-  datetime: () => `${new Date().toISOString().slice(0, 10)} ${new Date().toTimeString().slice(0, 5)}`,
+  date: localDate,
+  time: localTime,
+  datetime: () => `${localDate()} ${localTime()}`,
   weekday: () => new Intl.DateTimeFormat("zh-CN", { weekday: "long" }).format(new Date()),
   agent_name: () => "",
 };
+
+export function resolveTemplateVars(message: string, agentName: string): string {
+  return message.replace(/{{(\w+)}}/g, (_match, key) => {
+    if (key === "agent_name") return agentName;
+    const fn = TEMPLATE_VARS[key];
+    return fn ? fn() : `{{${key}}}`;
+  });
+}
 
 export class Scheduler extends EventEmitter {
   private sessionRuntime: SessionManager;
@@ -223,11 +246,7 @@ export class Scheduler extends EventEmitter {
     const agentId = this.scheduleAgentMap.get(entry.id);
     const agentName = agentId ? this.agentNames.get(agentId) ?? "" : "";
 
-    return entry.message.replace(/{{(\w+)}}/g, (_match, key) => {
-      if (key === "agent_name") return agentName;
-      const fn = TEMPLATE_VARS[key];
-      return fn ? fn() : `{{${key}}}`;
-    });
+    return resolveTemplateVars(entry.message, agentName);
   }
 
   private async trigger(entry: ScheduleEntry): Promise<void> {

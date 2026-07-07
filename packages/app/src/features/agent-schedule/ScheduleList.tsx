@@ -71,6 +71,7 @@ export function ScheduleList({
               <div className="mt-1 mb-2 ml-8 space-y-1 text-xs text-muted-foreground">
                 <p>cron: {entry.cron}</p>
                 <p>{t("agent-schedule.message")}: {entry.message}</p>
+                <p>{t("agent-schedule.mode")}: {t(entry.mode === "new_session" ? "agent-schedule.modeNewSession" : "agent-schedule.modeExistingSession")}{entry.mode === "existing_session" && entry.targetSessionId ? ` (${entry.targetSessionId})` : ""}</p>
                 {entry.notify && entry.notificationMessage && <p>{t("agent-schedule.notify")}: {entry.notificationMessage}</p>}
               </div>
             )}
