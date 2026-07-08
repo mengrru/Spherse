@@ -5,6 +5,7 @@ import { useI18n } from "@spherse/i18n/react";
 import type { HtmlCard } from "./types";
 import { useProjectCtx } from "../../context/project-context";
 import { useChatRuntime } from "./runtime-context";
+import { isPathInsideProject, toProjectRelative, joinProjectPath } from "../../lib/project-path";
 
 interface HtmlCardRendererProps {
   card: HtmlCard;
@@ -50,7 +51,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     const suggestedName = card.title
       ? sanitizeFileName(card.title) + ".html"
       : "untitled.html";
-    const defaultPath = projectRoot + "/" + suggestedName;
+    const defaultPath = joinProjectPath(projectRoot, suggestedName);
 
     const filePath = await window.electronAPI.showSaveDialog({
       defaultPath,
@@ -58,7 +59,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     });
     if (!filePath) return;
 
-    if (!filePath.startsWith(projectRoot + "/") && filePath !== projectRoot) {
+    if (!isPathInsideProject(projectRoot, filePath)) {
       toast.error(t("chat.fileMustBeInProject"));
       return;
     }
@@ -67,7 +68,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
       ? card.html
       : card.html.replace(/<head([^>]*)>/i, `<head$1><meta charset="UTF-8">`);
 
-    const relativePath = filePath.slice(projectRoot.length + 1);
+    const relativePath = toProjectRelative(projectRoot, filePath);
     try {
       await client.saveContent(relativePath, html || card.html);
       toast.success(t("chat.saveSuccess"));

@@ -17,6 +17,7 @@
 - [x] **统一 UI 基础组件**：引入 shadcn/ui（Base UI base），统一 Button、Dialog、Dropdown、Context Menu、Field、Badge 等基础组件，替代当前散落的内联样式实现。参见 `docs/dev/features/2026-05-30-frontend-refactor-shadcn/design.md`
 - [x] **前端路由与全局状态管理**：引入 React Router Hash Router 和 Zustand，支持项目、会话、内容页 URL，并收拢多项目与项目工作区状态。参见 `docs/dev/features/2026-05-31-frontend-routing-state/design.md`
 - [x] **Chat feature 组织重构**：将 Chat 页面专属组件和 hooks 收敛到 `features/chat/`，`pages/ChatPage.tsx` 仅保留 route adapter。
+- [x] **Windows 路径保护修复**：HtmlCard 保存 / ImageCard 导出在 Windows 下因渲染进程硬编码 `/` 分隔符做 `startsWith(projectRoot + "/")` 判定，导致 Electron `showSaveDialog` 返回的反斜杠路径（`C:\…\card.html`）被全部误拒为「文件必须在项目目录内」。新增浏览器安全纯 JS 路径工具 `packages/app/src/lib/project-path.ts`（`isPathInsideProject`/`toProjectRelative`/`joinProjectPath`，统一 `\→/`、Windows 盘符大小写无关、解析 `..` 穿越段、UNC 支持），复刻 core `isPathInside` 语义（renderer 沙箱无法 import `node:path`）；HtmlCard/ImageCard 改用新工具替换手写校验与 `slice` 切片。参见 `docs/dev/bugfix/2026-07-08-windows-path-protection/design.md`
 - [x] **ContentBrowser feature 组织重构**：将内容浏览与编辑相关组件和 hooks 收敛到 `features/content-browser/`，将可复用的文本划选发起会话能力收敛到 `features/text-selection-session/`，`pages/ContentBrowser.tsx` 仅保留 route adapter。
 - [x] **Agent/session list feature 组织重构**：将项目侧边栏中的 Agent/session 列表展示组件收敛到 `features/agent-session-list/`。
 - [x] **Project layout/sidebar 组织重构**：将 `ProjectPage` 收敛为 route adapter，新增 `layouts/ProjectLayout.tsx` 与 `features/project-panel`，并将设置入口提升到 app level。

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { ImageCard } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
+import { isPathInsideProject, joinProjectPath } from "../../lib/project-path";
 
 interface ImageCardRendererProps {
   card: ImageCard;
@@ -16,7 +17,7 @@ export function ImageCardRenderer({ card }: ImageCardRendererProps) {
     if (!client || !projectRoot || !card.path) return;
 
     const ext = card.path.split(".").pop() ?? "png";
-    const defaultPath = `${projectRoot}/image-${Date.now()}.${ext}`;
+    const defaultPath = joinProjectPath(projectRoot, `image-${Date.now()}.${ext}`);
 
     const filePath = await window.electronAPI.showSaveDialog({
       defaultPath,
@@ -27,7 +28,7 @@ export function ImageCardRenderer({ card }: ImageCardRendererProps) {
     });
     if (!filePath) return;
 
-    if (!filePath.startsWith(projectRoot + "/") && filePath !== projectRoot) {
+    if (!isPathInsideProject(projectRoot, filePath)) {
       toast.error(t("chat.fileMustBeInProject"));
       return;
     }
