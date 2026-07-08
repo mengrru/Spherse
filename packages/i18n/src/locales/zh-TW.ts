@@ -311,4 +311,11 @@ export const zhTW: Record<TranslationKey, string> = {
   "onboarding.error.unexpected": "操作失敗，請重試",
   "onboarding.error.sampleNotFound": "找不到內建範例，請重新安裝應用程式",
   "onboarding.dialog.sampleLocation": "選擇範例專案的儲存位置",
+
+  "contextMenu.undo": "復原",
+  "contextMenu.redo": "重做",
+  "contextMenu.cut": "剪下",
+  "contextMenu.copy": "複製",
+  "contextMenu.paste": "貼上",
+  "contextMenu.selectAll": "全選",
 };

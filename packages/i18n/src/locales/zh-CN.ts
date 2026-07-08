@@ -662,4 +662,18 @@ export const zhCN = {
   "onboarding.error.sampleNotFound": "找不到内置示例，请重新安装应用",
   // 打开示例项目时，选择示例项目拷贝目标位置的对话框标题（Electron 原生对话框）
   "onboarding.dialog.sampleLocation": "选择示例项目的保存位置",
+
+  // --- 文本框右键菜单（input/textarea 的原生 context-menu）---
+  // 文本框右键菜单「撤销」
+  "contextMenu.undo": "撤销",
+  // 文本框右键菜单「重做」
+  "contextMenu.redo": "重做",
+  // 文本框右键菜单「剪切」
+  "contextMenu.cut": "剪切",
+  // 文本框右键菜单「复制」
+  "contextMenu.copy": "复制",
+  // 文本框右键菜单「粘贴」
+  "contextMenu.paste": "粘贴",
+  // 文本框右键菜单「全选」
+  "contextMenu.selectAll": "全选",
 } as const;

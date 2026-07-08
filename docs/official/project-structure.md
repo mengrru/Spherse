@@ -140,6 +140,7 @@ spherse/
 │       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
 │       │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）
 │       │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
+│       │   │   ├── context-menu.ts   # 文本框原生右键菜单：webContents 'context-menu' 事件（isEditable 门控，editFlags 控制 enable，i18n 本地化 undo/redo/cut/copy/paste/selectAll）
 │       │   │   └── debug.ts          # 开发模式 debug 动作
 │       │   ├── window.ts             # BrowserWindow 创建与管理
 │       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新

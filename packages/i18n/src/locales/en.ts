@@ -311,4 +311,11 @@ export const en: Record<TranslationKey, string> = {
   "onboarding.error.unexpected": "Operation failed. Please try again.",
   "onboarding.error.sampleNotFound": "Built-in sample not found. Please reinstall the app.",
   "onboarding.dialog.sampleLocation": "Choose a location for the sample project",
+
+  "contextMenu.undo": "Undo",
+  "contextMenu.redo": "Redo",
+  "contextMenu.cut": "Cut",
+  "contextMenu.copy": "Copy",
+  "contextMenu.paste": "Paste",
+  "contextMenu.selectAll": "Select All",
 };
