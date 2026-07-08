@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DownloadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
@@ -6,6 +6,7 @@ import type { HtmlCard } from "./types";
 import { useProjectCtx } from "../../context/project-context";
 import { useChatRuntime } from "./runtime-context";
 import { isPathInsideProject, toProjectRelative, joinProjectPath } from "../../lib/project-path";
+import { ensureCharset, buildFileSrcDoc } from "./html-card-src";
 
 interface HtmlCardRendererProps {
   card: HtmlCard;
@@ -20,6 +21,28 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const { client, projectRoot, projectId } = useProjectCtx();
   const runtime = useChatRuntime();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [fetchedHtml, setFetchedHtml] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState(false);
+
+  const previewUrl = card.file_path && client ? client.getPreviewUrl(card.file_path) : null;
+
+  useEffect(() => {
+    if (!previewUrl || card.html) return;
+    let cancelled = false;
+    setFetchedHtml(null);
+    setFetchError(false);
+    fetch(previewUrl)
+      .then((res) => (res.ok ? res.text() : Promise.reject(new Error(`status ${res.status}`))))
+      .then((html) => {
+        if (!cancelled) setFetchedHtml(html);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [previewUrl, card.html]);
 
   function injectRuntime(iframe: HTMLIFrameElement | null) {
     if (!iframe || !runtime) return;
@@ -64,13 +87,11 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
       return;
     }
 
-    const html = card.html.includes("charset")
-      ? card.html
-      : card.html.replace(/<head([^>]*)>/i, `<head$1><meta charset="UTF-8">`);
+    const html = ensureCharset(card.html);
 
     const relativePath = toProjectRelative(projectRoot, filePath);
     try {
-      await client.saveContent(relativePath, html || card.html);
+      await client.saveContent(relativePath, html);
       toast.success(t("chat.saveSuccess"));
     } catch (err) {
       toast.error(t("chat.saveFailed", { message: (err as Error).message }));
@@ -86,6 +107,71 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
       <DownloadIcon className="size-3.5" />
     </button>
   ) : null;
+
+  function renderIframe() {
+    const sandbox = "allow-scripts allow-same-origin";
+    const iframeStyle = {
+      width: "100%",
+      height: `${height}px`,
+      border: "none",
+      display: "block" as const,
+    };
+    const onLoad = () => injectRuntime(iframeRef.current);
+
+    // file_path 卡片统一经 srcDoc 同源渲染：preview 服务器（localhost）与父窗口不同源，
+    // 直接用 src 加载会让 injectRuntime 写入 window.__SPHERSE__ 触发 SecurityError 被吞掉，
+    // 运行时上下文无法注入。改用 srcDoc 后 iframe 继承父窗口 origin，注入路径与 content 模式一致。
+    // <base>（buildFileSrcDoc 注入）把 base URL 指向 preview 目录，保证相对资源（img/css/js）仍可解析。
+    // 流式期间 card.html 由 render_card 工具回传，直接复用；历史恢复时 html 缺失，由 useEffect fetch 拉取。
+    // fetch 失败时降级为 src（丢失运行时注入，但至少保证卡片可见）。
+    if (card.file_path && client && previewUrl) {
+      const effectiveHtml = card.html ?? fetchedHtml;
+      if (effectiveHtml !== null) {
+        return (
+          <iframe
+            ref={iframeRef}
+            srcDoc={buildFileSrcDoc(effectiveHtml, previewUrl)}
+            sandbox={sandbox}
+            onLoad={onLoad}
+            style={iframeStyle}
+          />
+        );
+      }
+      if (fetchError) {
+        return (
+          <iframe
+            ref={iframeRef}
+            src={previewUrl}
+            sandbox={sandbox}
+            onLoad={onLoad}
+            style={iframeStyle}
+          />
+        );
+      }
+      return (
+        <div
+          className="flex items-center justify-center text-xs text-muted-foreground"
+          style={{ height: iframeStyle.height }}
+        >
+          {t("chat.loading")}
+        </div>
+      );
+    }
+
+    if (card.html) {
+      return (
+        <iframe
+          ref={iframeRef}
+          srcDoc={card.html}
+          sandbox={sandbox}
+          onLoad={onLoad}
+          style={iframeStyle}
+        />
+      );
+    }
+
+    return null;
+  }
 
   return (
     <div
@@ -106,32 +192,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
             {saveButton}
           </div>
         )}
-        {card.file_path && client ? (
-          <iframe
-            ref={iframeRef}
-            src={client.getPreviewUrl(card.file_path)}
-            onLoad={() => injectRuntime(iframeRef.current)}
-            style={{
-              width: "100%",
-              height: `${height}px`,
-              border: "none",
-              display: "block",
-            }}
-          />
-        ) : (
-          <iframe
-            ref={iframeRef}
-            srcDoc={card.html}
-            sandbox="allow-scripts allow-same-origin"
-            onLoad={() => injectRuntime(iframeRef.current)}
-            style={{
-              width: "100%",
-              height: `${height}px`,
-              border: "none",
-              display: "block",
-            }}
-          />
-        )}
+        {renderIframe()}
       </div>
     </div>
   );

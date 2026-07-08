@@ -159,6 +159,7 @@ export const en: Record<TranslationKey, string> = {
   "chat.expand": "Expand",
   "chat.startConversation": "Send a message to start the conversation",
   "chat.loadMore": "Load More",
+  "chat.loading": "Loading...",
   "chat.saveSuccess": "Saved successfully",
   "chat.saveFailed": "Save failed: {message}",
   "chat.fileMustBeInProject": "File must be saved within the project directory",

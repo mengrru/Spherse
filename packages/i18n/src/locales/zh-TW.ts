@@ -159,6 +159,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "chat.expand": "展開",
   "chat.startConversation": "傳送一則訊息開始對話",
   "chat.loadMore": "載入更多",
+  "chat.loading": "載入中...",
   "chat.saveSuccess": "儲存成功",
   "chat.saveFailed": "儲存失敗：{message}",
   "chat.fileMustBeInProject": "檔案必須儲存在專案目錄內",

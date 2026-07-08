@@ -327,6 +327,8 @@ export const zhCN = {
   "chat.startConversation": "发送一条消息开始对话",
   // 历史消息分页「加载更多」按钮文案
   "chat.loadMore": "加载更多",
+  // HtmlCard 通过 file_path 渲染时，前端拉取文件内容期间的占位提示
+  "chat.loading": "加载中...",
   // 聊天保存成功提示
   "chat.saveSuccess": "保存成功",
   // 聊天保存失败提示，{message} 为错误信息

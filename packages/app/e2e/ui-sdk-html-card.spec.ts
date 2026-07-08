@@ -83,7 +83,13 @@ async function createSessionViaApi(page: Page, projectId: string, agentId: strin
   return (body as { sessionId: string }).sessionId;
 }
 
-function createCardSequence(): Record<string, unknown>[] {
+function createCardSequence(mode: "content" | "file" = "content"): Record<string, unknown>[] {
+  const args = mode === "file"
+    ? { type: "html", file_path: "card.html" }
+    : { type: "html", content: CARD_HTML };
+  const updateDetails = mode === "file"
+    ? { type: "html", html: CARD_HTML, file_path: "card.html" }
+    : { type: "html", html: CARD_HTML };
   return [
     { type: "agent_start" },
     { type: "turn_start" },
@@ -96,16 +102,16 @@ function createCardSequence(): Record<string, unknown>[] {
       type: "tool_execution_start",
       toolCallId: "card1",
       toolName: "render_card",
-      args: { type: "html", content: CARD_HTML },
+      args,
     },
     {
       type: "tool_execution_update",
       toolCallId: "card1",
       toolName: "render_card",
-      args: { type: "html", content: CARD_HTML },
+      args,
       partialResult: {
         content: [{ type: "text", text: "rendering..." }],
-        details: { type: "html", html: CARD_HTML },
+        details: updateDetails,
       },
     },
     {
@@ -123,10 +129,11 @@ function createCardSequence(): Record<string, unknown>[] {
   ];
 }
 
-test("HtmlCard iframe receives runtime context with current sessionId", async () => {
-  const project = await createCardProject();
+async function assertCardReceivesRuntime(
+  project: { root: string; projectId: string },
+  mode: "content" | "file",
+) {
   const { app, page } = await launchApp(project);
-
   try {
     const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
     const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
@@ -137,7 +144,7 @@ test("HtmlCard iframe receives runtime context with current sessionId", async ()
         if (parsed.type === "ping") {
           ws.send(JSON.stringify({ type: "pong" }));
         } else if (parsed.type === "message") {
-          for (const event of createCardSequence()) {
+          for (const event of createCardSequence(mode)) {
             ws.send(JSON.stringify(event));
           }
         }
@@ -156,4 +163,15 @@ test("HtmlCard iframe receives runtime context with current sessionId", async ()
   } finally {
     await app.close();
   }
+}
+
+test("HtmlCard iframe receives runtime context with current sessionId (inline content)", async () => {
+  const project = await createCardProject();
+  await assertCardReceivesRuntime(project, "content");
+});
+
+test("HtmlCard iframe receives runtime context with current sessionId (file_path)", async () => {
+  const project = await createCardProject();
+  await writeFile(path.join(project.root, "card.html"), CARD_HTML);
+  await assertCardReceivesRuntime(project, "file");
 });
