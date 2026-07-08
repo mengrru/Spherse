@@ -129,7 +129,8 @@
     font-size: inherit;
   }
 
-  input {
+  input,
+  textarea {
     font-family: inherit;
     font-size: inherit;
   }
