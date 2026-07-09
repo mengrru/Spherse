@@ -60,6 +60,7 @@ Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent D
 
 常用可选字段：
 
+- `alias`：别名，设定后显示在助手消息气泡上代替 `name`；未设置或留空时回退到 `name`
 - `id`：UUID，首次读取缺失 id 的文件时自动生成并回写；设计意图为不可变
 - `createdAt`：创建时间，Unix epoch milliseconds；创建时自动生成，之后保持不变
 - `model`：覆盖项目默认模型

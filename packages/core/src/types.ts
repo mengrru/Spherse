@@ -11,6 +11,7 @@ export interface ProjectConfig {
 export interface AgentProfile {
   id: string;
   name: string;
+  alias?: string;
   slug: string;
   createdAt?: number;
   model?: string;

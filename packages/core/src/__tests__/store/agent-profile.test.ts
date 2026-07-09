@@ -46,6 +46,21 @@ You are a world building assistant.`;
     expect(profile!.slug).toBe("test-agent-a1b2c3");
   });
 
+  it("parses alias from frontmatter when present", async () => {
+    const content = "---\nname: World Builder\nalias: 小明\n---\n\nprompt";
+    await writeProfile(content);
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.alias).toBe("小明");
+  });
+
+  it("returns undefined alias when frontmatter omits it", async () => {
+    await writeProfile(VALID_PROFILE);
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.alias).toBeUndefined();
+  });
+
   it("returns null when profile.md does not exist", async () => {
     const profile = await store.read();
     expect(profile).toBeNull();

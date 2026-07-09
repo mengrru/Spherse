@@ -3,6 +3,7 @@ import { Type, type Static } from "@sinclair/typebox";
 const agentProfile = Type.Object({
   id: Type.String(),
   name: Type.String(),
+  alias: Type.Optional(Type.String()),
   slug: Type.String(),
   createdAt: Type.Optional(Type.Number()),
   model: Type.Optional(Type.String()),

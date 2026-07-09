@@ -86,6 +86,10 @@ export class AgentProfileStore {
       return {
         id: data.id,
         name: data.name,
+        alias:
+          typeof data.alias === "string" && data.alias.trim()
+            ? data.alias
+            : undefined,
         slug: this.slug,
         createdAt: data.createdAt,
         model: data.model,

@@ -2,6 +2,7 @@ import yaml from "js-yaml";
 
 export interface AgentFormData {
   name: string;
+  alias?: string;
   tools: string[];
   context: string[];
   systemPrompt: string;
@@ -18,6 +19,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
     return {
       formData: {
         name: "",
+        alias: undefined,
         tools: [],
         context: [],
         systemPrompt: raw.trim(),
@@ -30,11 +32,12 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
   const body = raw.slice(match[0].length).trim();
   const frontmatter = yaml.load(frontmatterRaw) as Record<string, unknown>;
 
-  const { name, tools, context, ...extra } = frontmatter;
+  const { name, alias, tools, context, ...extra } = frontmatter;
 
   return {
     formData: {
       name: typeof name === "string" ? name : "",
+      alias: typeof alias === "string" && alias.trim() ? alias : undefined,
       tools: Array.isArray(tools)
         ? tools.filter((t): t is string => typeof t === "string")
         : [],
@@ -57,6 +60,9 @@ export function buildAgentMarkdown(
     name: formData.name,
     tools: formData.tools,
   };
+  if (formData.alias?.trim()) {
+    frontmatter.alias = formData.alias.trim();
+  }
   if (formData.context.length > 0) {
     frontmatter.context = formData.context;
   }

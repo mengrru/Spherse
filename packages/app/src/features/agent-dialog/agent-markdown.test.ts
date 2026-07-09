@@ -51,6 +51,36 @@ describe("parseAgentMarkdown", () => {
     expect(result.formData.context).toEqual([]);
   });
 
+  it("parses alias when present", () => {
+    const raw = "---\nname: Agent\nalias: 小明\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.alias).toBe("小明");
+  });
+
+  it("returns undefined alias when missing", () => {
+    const raw = "---\nname: Agent\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.alias).toBeUndefined();
+  });
+
+  it("does not leak alias into extra frontmatter", () => {
+    const raw = "---\nname: Agent\nalias: 小明\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.extraFrontmatter).not.toHaveProperty("alias");
+  });
+
+  it("returns undefined alias when value is not a string", () => {
+    const raw = "---\nname: Agent\nalias: 123\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.alias).toBeUndefined();
+  });
+
+  it("returns undefined alias when value is whitespace-only", () => {
+    const raw = "---\nname: Agent\nalias: '   '\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.alias).toBeUndefined();
+  });
+
   it("keeps extra frontmatter keys separate from form data", () => {
     const raw = "---\nname: Agent\nautoRun: true\nmodel: gpt-4\n---\n\nsystem prompt";
     const result = parseAgentMarkdown(raw);
@@ -94,5 +124,45 @@ describe("buildAgentMarkdown", () => {
     );
     const parsed = parseAgentMarkdown(md);
     expect(parsed.formData.tools).toEqual([]);
+  });
+
+  it("writes alias into frontmatter when set", () => {
+    const md = buildAgentMarkdown(
+      { name: "Agent", alias: "小明", tools: [], context: [], systemPrompt: "hello" },
+      {},
+      false,
+    );
+    const parsed = parseAgentMarkdown(md);
+    expect(parsed.formData.alias).toBe("小明");
+  });
+
+  it("omits alias from frontmatter when empty", () => {
+    const md = buildAgentMarkdown(
+      { name: "Agent", alias: "", tools: [], context: [], systemPrompt: "hello" },
+      {},
+      false,
+    );
+    expect(md).not.toContain("alias");
+  });
+
+  it("omits alias from frontmatter when whitespace-only", () => {
+    const md = buildAgentMarkdown(
+      { name: "Agent", alias: "   ", tools: [], context: [], systemPrompt: "hello" },
+      {},
+      false,
+    );
+    expect(md).not.toContain("alias");
+  });
+
+  it("preserves alias through a round-trip with extra frontmatter", () => {
+    const md = buildAgentMarkdown(
+      { name: "Agent", alias: "小明", tools: ["read_file"], context: [], systemPrompt: "hello" },
+      { model: "gpt-4" },
+      false,
+    );
+    const parsed = parseAgentMarkdown(md);
+    expect(parsed.formData.alias).toBe("小明");
+    expect(parsed.extraFrontmatter).toEqual({ model: "gpt-4" });
+    expect(parsed.extraFrontmatter).not.toHaveProperty("alias");
   });
 });

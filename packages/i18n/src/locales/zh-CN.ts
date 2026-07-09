@@ -155,6 +155,12 @@ export const zhCN = {
   "agent-dialog.namePlaceholder": "名称",
   // 对话对象名称必填校验提示
   "agent-dialog.nameRequired": "请输入对话对象的名称",
+  // 对话对象别名（alias）字段标签：别名是可选的，设定后会显示在聊天气泡上代替名称
+  "agent-dialog.aliasLabel": "别名",
+  // 对话对象别名输入框占位提示：留空时气泡上显示名称
+  "agent-dialog.aliasPlaceholder": "留空则显示名称",
+  // 对话对象别名 tooltip：说明别名会显示在助手消息气泡上，未设置时显示名称
+  "agent-dialog.aliasHint": "设置后在助手消息气泡上显示该别名，未设置时显示名称。",
   // Agent 提示词字段标签
   "agent-dialog.promptLabel": "提示词",
   // Agent 提示词字段 tooltip：说明提示词的作用（对话对象的设定，AI 始终记住）
