@@ -159,8 +159,8 @@ export const zhCN = {
   "agent-dialog.aliasLabel": "别名",
   // 对话对象别名输入框占位提示：留空时气泡上显示名称
   "agent-dialog.aliasPlaceholder": "留空则显示名称",
-  // 对话对象别名 tooltip：说明别名会显示在助手消息气泡上，未设置时显示名称
-  "agent-dialog.aliasHint": "设置后在助手消息气泡上显示该别名，未设置时显示名称。",
+  // 对话对象别名 tooltip：说明别名会显示在 AI 消息气泡上，未设置时显示名称
+  "agent-dialog.aliasHint": "设置后在 AI 的消息气泡上显示该别名，未设置时显示名称。",
   // Agent 提示词字段标签
   "agent-dialog.promptLabel": "提示词",
   // Agent 提示词字段 tooltip：说明提示词的作用（对话对象的设定，AI 始终记住）
@@ -317,8 +317,8 @@ export const zhCN = {
   "agent-schedule.logStatusSuccess": "成功",
   // 日志状态：失败
   "agent-schedule.logStatusFailed": "失败",
-  // 日志条数限制提示
-  "agent-schedule.logLimitNotice": "最多显示 {count} 条，更多请查看 schedule-logs.jsonl",
+  // 日志条数限制提示，{path} 为该 agent 的 logs.jsonl 完整项目相对路径（如 .spherse/agents/historian-abc123/schedules/logs.jsonl）
+  "agent-schedule.logLimitNotice": "最多显示 {count} 条，更多请查看 {path}",
   // agent 列表项上的 Clock icon tooltip：该 agent 至少有一条 enabled schedule，hover icon 时显示
   "agent-schedule.indicatorTooltip": "已开启定时任务",
 

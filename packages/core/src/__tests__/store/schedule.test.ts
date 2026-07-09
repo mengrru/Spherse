@@ -111,4 +111,22 @@ describe("ScheduleStore", () => {
     expect(store.list()).toEqual([]);
     expect(store.getRecentLogs()).toEqual([]);
   });
+
+  it("persists files under the schedules/ subdirectory", () => {
+    store.create(makeEntry());
+    store.appendLog({ scheduleId: "sched-1", sessionId: "sess-1", triggeredAt: 1000, status: "success" });
+    expect(fs.existsSync(path.join(agentDir, "schedules", "index.yml"))).toBe(true);
+    expect(fs.existsSync(path.join(agentDir, "schedules", "logs.jsonl"))).toBe(true);
+    expect(fs.existsSync(path.join(agentDir, "schedules.yml"))).toBe(false);
+    expect(fs.existsSync(path.join(agentDir, "schedule-logs.jsonl"))).toBe(false);
+  });
+
+  it("removes the schedules/ directory on deleteAll", () => {
+    store.create(makeEntry());
+    store.appendLog({ scheduleId: "sched-1", sessionId: "sess-1", triggeredAt: 1000, status: "success" });
+    const dir = path.join(agentDir, "schedules");
+    expect(fs.existsSync(dir)).toBe(true);
+    store.deleteAll();
+    expect(fs.existsSync(dir)).toBe(false);
+  });
 });

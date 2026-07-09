@@ -16,8 +16,9 @@ project-root/
 │   │       ├── profile.md
 │   │       ├── theme.css
 │   │       ├── sessions.db
-│   │       ├── schedules.yml
-│   │       └── schedule-logs.jsonl
+│   │       └── schedules/
+│   │           ├── index.yml
+│   │           └── logs.jsonl
 │   ├── generated-images/          # generate_image 工具自动保存的图片（按时间戳+hex 命名）
 │   └── skills/
 │       └── <skill-name>/SKILL.md
@@ -66,7 +67,7 @@ Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent D
 - `model`：覆盖项目默认模型
 - `tools`：允许使用的 tool 名称列表；缺省时不分配任何工具（空列表）
 - `context`：项目根目录内相对路径列表，SessionRuntime 构建 system prompt 时预读取并注入
-- `schedule`：可选布尔值，静态 frontmatter 标记，仅从 `profile.md` 读取、应用不自动回写。UI（AgentRow 定时任务指示）不依赖此字段，而是由 `schedules.yml` 中是否存在 `enabled: true` 的条目实时派生（见下方「定时任务数据」）
+- `schedule`：可选布尔值，静态 frontmatter 标记，仅从 `profile.md` 读取、应用不自动回写。UI（AgentRow 定时任务指示）不依赖此字段，而是由 `schedules/index.yml` 中是否存在 `enabled: true` 的条目实时派生（见下方「定时任务数据」）
 - `output`：预留的输出路径、命名和 frontmatter 配置
 
 示例：
@@ -91,7 +92,7 @@ Agent system prompt content...
 
 ## 定时任务数据
 
-定时任务配置存储在 `.spherse/agents/{slug}-{shortId}/schedules.yml`，YAML 数组格式，每个元素为 `ScheduleEntry`：
+定时任务配置存储在 `.spherse/agents/{slug}-{shortId}/schedules/index.yml`，YAML 数组格式，每个元素为 `ScheduleEntry`：
 
 ```yaml
 - id: uuid
@@ -108,7 +109,7 @@ Agent system prompt content...
 
 `mode` 当前支持 `new_session` 与 `existing_session`：`new_session` 每次触发时新建对话执行；`existing_session` 在用户指定的已有会话中执行，需配合 `targetSessionId` 字段填写目标会话 ID。`notify` 为 `true` 时，renderer 会在任务完成后显示通知；`notificationMessage` 为可选自定义通知内容。
 
-执行日志追加写入同目录下的 `schedule-logs.jsonl`，每行一个 JSON 对象。日志包含 `id`、`agentId`、`scheduleId`、`status`、`triggeredAt`、`completedAt`、`error`、`sessionId`、`agentName`、`scheduleName` 等字段，用于运行日志 UI 展示与问题排查。日志文件超过 2MB 时保留最近 5000 行。
+执行日志追加写入同目录下的 `logs.jsonl`，每行一个 JSON 对象。日志包含 `id`、`agentId`、`scheduleId`、`status`、`triggeredAt`、`completedAt`、`error`、`sessionId`、`agentName`、`scheduleName` 等字段，用于运行日志 UI 展示与问题排查。日志文件超过 2MB 时保留最近 5000 行。
 
 定时任务由运行时调度器按 10 分钟轮询检查 cron 命中情况，实际执行时间可能比 cron 表达式指定时间延迟数分钟。
 

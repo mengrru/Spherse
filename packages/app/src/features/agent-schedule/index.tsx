@@ -42,6 +42,10 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
   const runningScheduleIds = useScheduleStore((s) => s.byProject[projectId]?.runningScheduleIdsByAgent?.[agentId] ?? EMPTY_RUNNING_SCHEDULE_IDS);
   const scheduleEventVersion = useScheduleStore((s) => s.byProject[projectId]?.scheduleEventVersion ?? 0);
   const agentName = useProjectDataStore((s) => s.projects[projectId]?.agents?.find((a) => a.id === agentId)?.name ?? "");
+  const logFilePath = useProjectDataStore((s) => {
+    const agent = s.projects[projectId]?.agents?.find((a) => a.id === agentId);
+    return agent ? `.spherse/agents/${agent.slug}/schedules/logs.jsonl` : "";
+  });
   const refreshSchedules = useScheduleStore((s) => s.refreshSchedules);
   const createSchedule = useScheduleStore((s) => s.createSchedule);
   const updateSchedule = useScheduleStore((s) => s.updateSchedule);
@@ -164,8 +168,8 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
             )}
           </TabsContent>
 
-          <TabsContent value="logs" className="min-h-0 flex-1 overflow-y-auto">
-            <ScheduleLogs logs={logs} agentName={agentName} scheduleNameMap={scheduleNameMap} />
+          <TabsContent value="logs" className="min-h-0 flex-1">
+            <ScheduleLogs logs={logs} agentName={agentName} scheduleNameMap={scheduleNameMap} logFilePath={logFilePath} />
           </TabsContent>
         </Tabs>
 

@@ -19,7 +19,7 @@ spherse/
 │   │       ├── store/                # 存储层抽象（不持有运行时状态）
 │   │       │   ├── project.ts        # 项目元数据读写（.spherse/project.yaml, AGENTS.md, CHANGELOG.md）
 │   │       │   ├── session.ts        # SQLite session 持久化（每 agent 独立 sessions.db, lazy open 连接池）
-│   │       │   ├── schedule.ts       # 定时任务配置读写（schedules.yml / schedule-logs.jsonl）
+│   │       │   ├── schedule.ts       # 定时任务配置读写（schedules/index.yml / schedules/logs.jsonl）
 │   │       │   ├── agent-profile.ts  # .spherse/agents/{slug}-{shortId}/profile.md CRUD
     │   │       │   ├── skill.ts          # SkillStore：合并 builtin（PRESET_SKILL_SOURCES 内存）与 project（.spherse/skills/*/SKILL.md）skill；createSkill/installSkill 写逻辑（含 zip 校验、zip-slip 防护、原子安装）
 │   │       │   └── index.ts

@@ -38,11 +38,11 @@ describe("categorizePath", () => {
   });
 
   it("classifies both agent schedule filenames", () => {
-    expect(categorizePath(".spherse/agents/historian-abc123/schedules.yml")).toBe(
+    expect(categorizePath(".spherse/agents/historian-abc123/schedules/index.yml")).toBe(
       "agentSchedules",
     );
     expect(
-      categorizePath(".spherse/agents/historian-abc123/schedule-logs.jsonl"),
+      categorizePath(".spherse/agents/historian-abc123/schedules/logs.jsonl"),
     ).toBe("agentScheduleLogs");
   });
 

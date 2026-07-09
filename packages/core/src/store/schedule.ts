@@ -5,13 +5,15 @@ import type { ScheduleEntry, ScheduleLogEntry } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 
 export class ScheduleStore {
+  private schedulesDir: string;
   private schedulesPath: string;
   private logsPath: string;
   private logger: Logger;
 
   constructor(agentDir: string, logger?: Logger) {
-    this.schedulesPath = path.join(agentDir, "schedules.yml");
-    this.logsPath = path.join(agentDir, "schedule-logs.jsonl");
+    this.schedulesDir = path.join(agentDir, "schedules");
+    this.schedulesPath = path.join(this.schedulesDir, "index.yml");
+    this.logsPath = path.join(this.schedulesDir, "logs.jsonl");
     this.logger = logger ?? createSilentLogger();
   }
 
@@ -36,6 +38,7 @@ export class ScheduleStore {
       try { fs.unlinkSync(this.schedulesPath); } catch { /* file may not exist */ }
       return;
     }
+    fs.mkdirSync(this.schedulesDir, { recursive: true });
     const content = YAML.stringify(entries);
     fs.writeFileSync(this.schedulesPath, content, "utf-8");
     this.logger.info({ count: entries.length }, "schedules saved");
@@ -64,12 +67,14 @@ export class ScheduleStore {
   deleteAll(): void {
     try { fs.unlinkSync(this.schedulesPath); } catch { /* file may not exist */ }
     try { fs.unlinkSync(this.logsPath); } catch { /* file may not exist */ }
+    try { fs.rmdirSync(this.schedulesDir); } catch { /* dir may not exist or not empty */ }
     this.logger.info("schedule files deleted");
   }
 
   private static MAX_LOG_LINES = 5000;
 
   appendLog(entry: ScheduleLogEntry): void {
+    fs.mkdirSync(this.schedulesDir, { recursive: true });
     fs.appendFileSync(this.logsPath, JSON.stringify(entry) + "\n", "utf-8");
 
     try {

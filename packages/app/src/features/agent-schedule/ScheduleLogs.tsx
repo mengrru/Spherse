@@ -7,9 +7,10 @@ interface ScheduleLogsProps {
   logs: ScheduleLogEntry[];
   agentName: string;
   scheduleNameMap: Record<string, string>;
+  logFilePath: string;
 }
 
-export function ScheduleLogs({ logs, agentName, scheduleNameMap }: ScheduleLogsProps) {
+export function ScheduleLogs({ logs, agentName, scheduleNameMap, logFilePath }: ScheduleLogsProps) {
   const { t } = useI18n();
   const displayLogs = [...logs].reverse();
 
@@ -28,11 +29,11 @@ export function ScheduleLogs({ logs, agentName, scheduleNameMap }: ScheduleLogsP
   }
 
   return (
-    <>
-      <p className="text-xs text-muted-foreground mb-2">
-        {t("agent-schedule.logLimitNotice", { count: String(LOG_LIMIT) })}
+    <div className="flex flex-col h-full">
+      <p className="text-xs text-muted-foreground mb-2 shrink-0">
+        {t("agent-schedule.logLimitNotice", { count: String(LOG_LIMIT), path: logFilePath })}
       </p>
-      <div className="space-y-1">
+      <div className="space-y-1 overflow-y-auto flex-1 min-h-0">
         {displayLogs.map((log, i) => (
           <div key={i} className="flex items-center gap-2 p-2 rounded-md bg-muted text-xs">
             <span className="shrink-0 text-muted-foreground">
@@ -49,6 +50,6 @@ export function ScheduleLogs({ logs, agentName, scheduleNameMap }: ScheduleLogsP
           </div>
         ))}
       </div>
-    </>
+    </div>
   );
 }
