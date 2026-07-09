@@ -129,6 +129,21 @@ describe("ProjectStore — agent management", () => {
     expect(store.listAgents()).toHaveLength(1);
   });
 
+  it("lists agents sorted by createdAt descending (newest first)", async () => {
+    const profile = (createdAt: number): string =>
+      VALID_PROFILE.replace(
+        "model: gemini-2.5-pro",
+        `model: gemini-2.5-pro\ncreatedAt: ${createdAt}`,
+      );
+
+    await store.createAgent("old-agent", profile(1000));
+    await store.createAgent("new-agent", profile(3000));
+    await store.createAgent("mid-agent", profile(2000));
+
+    const list = store.listAgents();
+    expect(list.map((a) => a.createdAt)).toEqual([3000, 2000, 1000]);
+  });
+
   it("gets agent by id", async () => {
     const created = await store.createAgent("world-builder", VALID_PROFILE);
     const id = created.getProfile().id;

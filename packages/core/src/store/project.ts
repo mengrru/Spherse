@@ -119,7 +119,9 @@ export class ProjectStore {
   }
 
   listAgents(): AgentProfile[] {
-    return [...this._agents.values()].map((a) => a.getProfile());
+    return [...this._agents.values()]
+      .map((a) => a.getProfile())
+      .sort((a, b) => (typeof b.createdAt === "number" ? b.createdAt : 0) - (typeof a.createdAt === "number" ? a.createdAt : 0));
   }
 
   getAgent(agentId: string): AgentStore | undefined {
