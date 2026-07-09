@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import Fastify from "fastify";
 import {
   parseApiResponse,
   parseChatClientMessage,
@@ -207,6 +208,40 @@ describe("api contracts", () => {
       content: ":root { --test: #fff; }",
     });
     expect(() => parseApiResponse(schemas.themeSettingsResponse, { ok: true })).toThrow(/Invalid payload/);
+  });
+
+  it("preserves null welcome-page path through Fastify body coercion", async () => {
+    const app = Fastify();
+    app.put<{ Body: { path: string | null } }>(
+      "/welcome-page",
+      {
+        schema: {
+          body: schemas.welcomePageSettingsRequest,
+          response: { 200: schemas.welcomePageSettingsResponse },
+        },
+      },
+      async (req) => ({ ok: true, path: req.body.path }),
+    );
+
+    try {
+      const cleared = await app.inject({
+        method: "PUT",
+        url: "/welcome-page",
+        payload: { path: null },
+      });
+      expect(cleared.statusCode).toBe(200);
+      expect(cleared.json()).toEqual({ ok: true, path: null });
+
+      const set = await app.inject({
+        method: "PUT",
+        url: "/welcome-page",
+        payload: { path: "welcome.html" },
+      });
+      expect(set.statusCode).toBe(200);
+      expect(set.json()).toEqual({ ok: true, path: "welcome.html" });
+    } finally {
+      await app.close();
+    }
   });
 
   it("validates turn context snapshot", () => {

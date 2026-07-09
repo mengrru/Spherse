@@ -32,11 +32,11 @@ export const schemas = {
     deniedPaths: Type.Array(Type.String()),
   }),
   welcomePageSettingsRequest: Type.Object({
-    path: Type.Union([Type.String(), Type.Null()]),
+    path: Type.Union([Type.Null(), Type.String()]),
   }),
   welcomePageSettingsResponse: Type.Object({
     ok: Type.Boolean(),
-    path: Type.Union([Type.String(), Type.Null()]),
+    path: Type.Union([Type.Null(), Type.String()]),
   }),
   themeSettingsRequest: Type.Object({
     content: Type.String(),
