@@ -24,6 +24,20 @@ description: 在 Spherse 中产出任何 HTML 之前必须先阅读本 skill。�
 </html>
 ```
 
+## 强制：不要禁止页面滚动
+
+HtmlCard 在**固定高度**的 iframe 中渲染（默认 400px，上限 600px）。当页面内容超出卡片高度时，必须能滚动查看全部内容——**切勿设置 `body { overflow: hidden }` 或 `html { overflow: hidden }`**，否则超出部分被裁剪、无法滚动，用户看不到完整内容。
+
+```css
+/* ❌ 错误：卡片内内容会被裁剪，无滚动条 */
+body { overflow: hidden; }
+
+/* ✅ 正确：保持默认（visible）或显式允许滚动 */
+body { overflow-y: auto; }
+```
+
+> 即便不加 `overflow:hidden`，App 也会在渲染时强制注入 `html,body{overflow-y:auto!important}` 作为兜底；但请勿依赖兜底，页面自身就应保持可滚动。
+
 ## 区分两种渲染模式
 
 Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 访问同目录文件：
@@ -215,6 +229,7 @@ window.parent.postMessage({
 | 需求 | 方案 |
 |------|------|
 | 声明字符编码 | `<head>` 内加 `<meta charset="UTF-8">` |
+| 保持卡片内容可滚动 | 切勿设 `body{overflow:hidden}`；保持默认或 `overflow-y:auto`（超长内容需可滚动） |
 | 信息量大 / 需长期维护的页面 | 数据与渲染分离：外置 `{页面名}.data.json`，HTML 用 `fetch()` 读取，分两个文件落盘 |
 | 文件模式下加载展示数据 | 外置同目录 `.json`，用 `fetch()` |
 | 字符串模式下加载展示数据 | 数据内联进 HTML，或用 ui-sdk `data.get` |

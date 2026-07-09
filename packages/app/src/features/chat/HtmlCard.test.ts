@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFileSrcDoc, ensureCharset } from "./html-card-src";
+import { buildFileSrcDoc, ensureCharset, ensureScrollable } from "./html-card-src";
 
 describe("ensureCharset", () => {
   it("preserves html that already declares a charset", () => {
@@ -36,7 +36,7 @@ describe("buildFileSrcDoc", () => {
     const html = "<html><body>hi</body></html>";
     const result = buildFileSrcDoc(html, previewUrl);
     expect(result.startsWith(`<base href="${dirUrl}/">`)).toBe(true);
-    expect(result).toContain("<html><body>hi</body></html>");
+    expect(result).toContain("<html><body>hi");
   });
 
   it("handles previewUrl without directory (file at root level)", () => {
@@ -45,5 +45,59 @@ describe("buildFileSrcDoc", () => {
     const html = "<html><head></head><body>hi</body></html>";
     const result = buildFileSrcDoc(html, rootPreviewUrl);
     expect(result).toContain(`<base href="${rootDirUrl}/">`);
+  });
+
+  it("also injects the scrollable style override", () => {
+    const html = "<html><head></head><body>hi</body></html>";
+    const result = buildFileSrcDoc(html, previewUrl);
+    expect(result).toContain("data-spherse-card-scroll");
+  });
+});
+
+describe("ensureScrollable", () => {
+  it("injects scrollable style before </body>", () => {
+    const html = "<html><head></head><body>hi</body></html>";
+    const result = ensureScrollable(html);
+    expect(result).toContain("data-spherse-card-scroll");
+    expect(result).toContain("overflow-y:auto!important");
+    const markerIdx = result.indexOf("data-spherse-card-scroll");
+    expect(markerIdx).toBeGreaterThan(result.indexOf("<body"));
+    expect(markerIdx).toBeLessThan(result.indexOf("</body>"));
+  });
+
+  it("injects before </html> when document has no </body>", () => {
+    const html = "<html>hi</html>";
+    const result = ensureScrollable(html);
+    expect(result).toContain("data-spherse-card-scroll");
+    expect(result.indexOf("</style>")).toBeLessThan(result.indexOf("</html>"));
+  });
+
+  it("appends style when document has no closing tags", () => {
+    const html = "<div>hi</div>";
+    const result = ensureScrollable(html);
+    expect(result.endsWith("overflow-y:auto!important}</style>")).toBe(true);
+    expect(result).toContain("<div>hi</div>");
+  });
+
+  it("is idempotent — does not double-inject when marker already present", () => {
+    const html = "<html><head><style data-spherse-card-scroll>x</style></head></html>";
+    expect(ensureScrollable(html)).toBe(html);
+  });
+
+  it("overrides pages that set body overflow hidden via stylesheet", () => {
+    const html = '<html><head><style>body{overflow:hidden!important}</style></head><body>hi</body></html>';
+    const result = ensureScrollable(html);
+    expect(result).toContain("html,body{overflow-y:auto!important}");
+    // injected near end so it wins the source-order tie-break against page-level !important
+    expect(result.indexOf("overflow-y:auto!important")).toBeGreaterThan(
+      result.indexOf("overflow:hidden!important"),
+    );
+  });
+
+  it("overrides pages that set body overflow hidden inline", () => {
+    const html = '<html><head></head><body style="overflow:hidden">hi</body></html>';
+    const result = ensureScrollable(html);
+    expect(result).toContain("data-spherse-card-scroll");
+    expect(result).toContain("html,body{overflow-y:auto!important}");
   });
 });
