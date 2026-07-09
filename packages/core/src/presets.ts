@@ -14,7 +14,7 @@ export async function initPresets(
   for (const agent of PRESET_AGENTS) {
     try {
       const content = AGENT_TEMPLATE.replace(/^---\n/, `---\nname: ${agent.name}\n`);
-      await projectStore.createAgent(agent.slug, content);
+      await projectStore.createAgent(agent.slugBase, content);
       logger.info({ agent: agent.name }, "preset agent created");
     } catch (err) {
       logger.warn({ agent: agent.name, err }, "failed to create preset agent");

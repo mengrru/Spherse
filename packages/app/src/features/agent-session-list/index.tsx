@@ -101,8 +101,8 @@ export function AgentSessionList() {
     }
   };
 
-  const handleCreateAgent = async (slug: string, content: string, themeContent: string) => {
-    const ok = await createAgent(projectId, client, slug, content, themeContent);
+  const handleCreateAgent = async (slugBase: string, content: string, themeContent: string) => {
+    const ok = await createAgent(projectId, client, slugBase, content, themeContent);
     if (ok) setDialog({ kind: "none" });
   };
 

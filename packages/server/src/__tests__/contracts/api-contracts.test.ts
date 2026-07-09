@@ -86,7 +86,7 @@ describe("api contracts", () => {
     });
     expect(() => parseApiResponse(schemas.agentProfile, { id: "a1" })).toThrow(/Invalid payload/);
 
-    expect(parseApiResponse(schemas.agentCreateRequest, { slug: "s", content: "c" })).toEqual({ slug: "s", content: "c" });
+    expect(parseApiResponse(schemas.agentCreateRequest, { slugBase: "s", content: "c" })).toEqual({ slugBase: "s", content: "c" });
     expect(() => parseApiResponse(schemas.agentCreateRequest, { content: "c" })).toThrow(/Invalid payload/);
     expect(parseApiResponse(schemas.agentCreateResponse, { ok: true, id: "a1" })).toEqual({ ok: true, id: "a1" });
   });

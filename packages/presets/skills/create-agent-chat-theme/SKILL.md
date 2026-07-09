@@ -5,7 +5,7 @@ description: Use when creating or editing an agent-level Spherse chat window the
 
 # Agent Chat Theme
 
-Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{slug}-{shortId}/theme.css`).
+Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{agent-slug}/theme.css`).
 
 ## 写法：原生 CSS Nesting
 
@@ -80,7 +80,7 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 
 ## 引用图片与字体
 
-主题以 `<link>` 从项目 preview 路由载入，CSS 中相对 `url()` 的解析基址为 agent 目录 `.spherse/agents/{slug}-{shortId}/`。因此本地图片、字体等资源可以用相对路径正常引用。
+主题以 `<link>` 从项目 preview 路由载入，CSS 中相对 `url()` 的解析基址为 agent 目录 `.spherse/agents/{agent-slug}/`。因此本地图片、字体等资源可以用相对路径正常引用。
 
 - **素材放在 agent 目录**：推荐把图片/字体放进 agent 目录，用相对路径引用：
   ```css

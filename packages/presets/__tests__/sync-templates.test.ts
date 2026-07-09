@@ -25,7 +25,7 @@ describe("sync-templates", () => {
     }
     for (const agent of presetsConfig.presetAgents) {
       expect(content).toContain(`"name": "${agent.name}"`);
-      expect(content).toContain(`"slug": "${agent.slug}"`);
+      expect(content).toContain(`"slugBase": "${agent.slugBase}"`);
     }
   });
 

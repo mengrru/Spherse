@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildProjectInstructions,
   buildAgentProfile,
+  buildSessionContext,
   buildSkillCatalog,
   buildPreloadedContext,
   type ContextBlock,
@@ -44,6 +45,30 @@ describe("serializeSystemPrompt", () => {
       );
     });
 
+    it("serializes session-context without alias", () => {
+      const out = serializeSystemPrompt([
+        {
+          kind: "session-context",
+          meta: { name: "Test", slug: "test-abc", sessionId: "s1" },
+        },
+      ]);
+      expect(out).toBe(
+        `<session-context>\nagent-name: Test\nagent-slug: test-abc\nsession-id: s1\n</session-context>`,
+      );
+    });
+
+    it("serializes session-context with alias", () => {
+      const out = serializeSystemPrompt([
+        {
+          kind: "session-context",
+          meta: { name: "Test", alias: "小明", slug: "test-abc", sessionId: "s1" },
+        },
+      ]);
+      expect(out).toBe(
+        `<session-context>\nagent-name: Test\nagent-alias: 小明\nagent-slug: test-abc\nsession-id: s1\n</session-context>`,
+      );
+    });
+
     it("serializes preloaded-context", () => {
       const out = serializeSystemPrompt([
         {
@@ -59,10 +84,14 @@ describe("serializeSystemPrompt", () => {
     });
   });
 
-  it("combines all 4 blocks with blank lines between sections", () => {
+  it("combines all 5 blocks with blank lines between sections", () => {
     const blocks: Array<ContextBlock> = [
       { kind: "project-instructions", content: "AGENTS" },
       { kind: "agent-profile", content: "PROFILE" },
+      {
+        kind: "session-context",
+        meta: { name: "A", alias: "AA", slug: "a-x", sessionId: "s1" },
+      },
       {
         kind: "skill-catalog",
         skills: [{ name: "a", description: "A skill" }],
@@ -76,6 +105,7 @@ describe("serializeSystemPrompt", () => {
     expect(out).toBe(
       `<project-instructions>\nAGENTS\n</project-instructions>\n\n` +
         `<agent-profile>\nPROFILE\n</agent-profile>\n\n` +
+        `<session-context>\nagent-name: A\nagent-alias: AA\nagent-slug: a-x\nsession-id: s1\n</session-context>\n\n` +
         `<skill-catalog>\n<skill-item name="a" description="A skill"/>\n</skill-catalog>\n\n` +
         `<preloaded-context>\n<context-file path="f.md">\nFILE\n</context-file>\n</preloaded-context>`,
     );
@@ -158,6 +188,33 @@ describe("block builders", () => {
     it("returns a block for non-empty content", () => {
       const block = buildAgentProfile("profile text");
       expect(block).toEqual({ kind: "agent-profile", content: "profile text" });
+    });
+  });
+
+  describe("buildSessionContext", () => {
+    it("returns a block for valid meta", () => {
+      const block = buildSessionContext({
+        name: "A",
+        slug: "a-x",
+        sessionId: "s1",
+      });
+      expect(block).toEqual({
+        kind: "session-context",
+        meta: { name: "A", slug: "a-x", sessionId: "s1" },
+      });
+    });
+
+    it("includes alias when provided", () => {
+      const block = buildSessionContext({
+        name: "A",
+        alias: "别名",
+        slug: "a-x",
+        sessionId: "s1",
+      });
+      expect(block).toEqual({
+        kind: "session-context",
+        meta: { name: "A", alias: "别名", slug: "a-x", sessionId: "s1" },
+      });
     });
   });
 

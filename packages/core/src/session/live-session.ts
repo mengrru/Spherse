@@ -10,6 +10,7 @@ import { NotFoundError, ModelNotConfiguredError } from "../errors.js";
 import {
   buildProjectInstructions,
   buildAgentProfile,
+  buildSessionContext,
   buildSkillCatalog,
   buildPreloadedContext,
 } from "../context/blocks.js";
@@ -252,6 +253,14 @@ export class LiveSession {
     const blocks: Array<ContextBlock | null> = [];
     blocks.push(buildProjectInstructions(agentsMd));
     blocks.push(buildAgentProfile(profile.systemPrompt));
+    blocks.push(
+      buildSessionContext({
+        name: profile.name,
+        alias: profile.alias,
+        slug: profile.slug,
+        sessionId,
+      }),
+    );
 
     const skills = await ctx.projectStore.skill.list();
     blocks.push(

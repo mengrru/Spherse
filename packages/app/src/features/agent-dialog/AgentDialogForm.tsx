@@ -31,7 +31,7 @@ function getErrorMessage(err: unknown, t: (key: string) => string): string {
 interface AgentDialogFormProps {
   initial: LoadedAgentData;
   mode: "create" | "edit";
-  onSubmit: (slug: string, content: string, themeContent: string) => Promise<void>;
+  onSubmit: (slugBase: string, content: string, themeContent: string) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -87,12 +87,12 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
     if (!formData.name.trim()) { setError(t("agent-dialog.nameRequired")); return; }
     setSaving(true); setError(null);
     const content = buildAgentMarkdown(formData, parsed.extraFrontmatter, mode === "create");
-    const slug = formData.name
+    const slugBase = formData.name
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9\u4e00-\u9fff-]/g, "");
-    try { await onSubmit(slug, content, themeContent); }
+    try { await onSubmit(slugBase, content, themeContent); }
     catch (err: unknown) { setError(getErrorMessage(err, t)); setSaving(false); }
   };
 

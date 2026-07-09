@@ -26,7 +26,7 @@ export const schemas = {
   agentListResponse: Type.Array(agentProfile),
   agentRawResponse: Type.Object({ content: Type.String() }),
   agentCreateRequest: Type.Object({
-    slug: Type.String(),
+    slugBase: Type.String(),
     content: Type.String(),
     themeContent: Type.Optional(Type.String()),
   }),

@@ -14,10 +14,10 @@ export function registerAgentWriteRoutes(fastify: FastifyInstance, _registry: Pr
       },
     },
     async (req) => {
-      const { slug, content, themeContent } = req.body;
-      if (!slug || !content) throw badRequest("slug and content are required");
+      const { slugBase, content, themeContent } = req.body;
+      if (!slugBase || !content) throw badRequest("slugBase and content are required");
 
-      const profile = await req.projectCtx!.projectManager.createAgent(slug, content, themeContent);
+      const profile = await req.projectCtx!.projectManager.createAgent(slugBase, content, themeContent);
       return { ok: true, id: profile.id };
     },
   );

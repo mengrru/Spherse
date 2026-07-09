@@ -8,9 +8,17 @@ export interface SkillItem {
   description: string;
 }
 
+export interface SessionMeta {
+  name: string;
+  alias?: string;
+  slug: string;
+  sessionId: string;
+}
+
 export type ContextBlock =
   | { kind: "project-instructions"; content: string }
   | { kind: "agent-profile"; content: string }
+  | { kind: "session-context"; meta: SessionMeta }
   | { kind: "skill-catalog"; skills: SkillItem[] }
   | { kind: "preloaded-context"; files: ContextFile[] };
 
@@ -22,6 +30,10 @@ export function buildProjectInstructions(content: string): ContextBlock | null {
 export function buildAgentProfile(content: string): ContextBlock | null {
   if (content.trim() === "") return null;
   return { kind: "agent-profile", content };
+}
+
+export function buildSessionContext(meta: SessionMeta): ContextBlock {
+  return { kind: "session-context", meta };
 }
 
 export function buildSkillCatalog(skills: SkillItem[]): ContextBlock | null {

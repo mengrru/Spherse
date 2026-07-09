@@ -222,7 +222,7 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 }
 ```
 
-> 单个 agent 想覆盖这些默认样式时，在 `agents/{slug}-{shortId}/theme.css` 里写更高优先级或相同特异性的规则即可覆盖（agent theme 在 DOM 中更靠后注入，相同特异性下胜出）。详见 `create-agent-chat-theme` skill 的「层叠关系」章节。
+> 单个 agent 想覆盖这些默认样式时，在 `agents/{agent-slug}/theme.css` 里写更高优先级或相同特异性的规则即可覆盖（agent theme 在 DOM 中更靠后注入，相同特异性下胜出）。详见 `create-agent-chat-theme` skill 的「层叠关系」章节。
 
 ## 文档视图 Markdown 样式
 

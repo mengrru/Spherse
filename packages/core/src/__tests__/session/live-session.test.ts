@@ -112,6 +112,35 @@ describe("LiveSession context engineering", () => {
     expect(agent.state.systemPrompt).toContain("Custom Project");
   });
 
+  it("buildAgent includes session-context with name, slug and session id", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const profile = agentStore.getProfile();
+
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const agent = agentOf(live);
+
+    expect(agent.state.systemPrompt).toContain("<session-context>");
+    expect(agent.state.systemPrompt).toContain(`agent-name: ${profile.name}`);
+    expect(agent.state.systemPrompt).toContain(`agent-slug: ${profile.slug}`);
+    expect(agent.state.systemPrompt).toContain(`session-id: ${sessionId}`);
+    expect(agent.state.systemPrompt).not.toContain("agent-alias:");
+  });
+
+  it("buildAgent includes agent-alias in session-context when present", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    agentStore._profile = { ...agentStore._profile, alias: "小明" };
+    const profile = agentStore.getProfile();
+
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const agent = agentOf(live);
+
+    expect(agent.state.systemPrompt).toContain(`agent-name: ${profile.name}`);
+    expect(agent.state.systemPrompt).toContain("agent-alias: 小明");
+    expect(agent.state.systemPrompt).toContain(`session-id: ${sessionId}`);
+  });
+
   it("does not wire transformContext into the Agent", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();

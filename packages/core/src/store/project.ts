@@ -128,8 +128,8 @@ export class ProjectStore {
     return this._agents.get(agentId);
   }
 
-  async createAgent(slug: string, content: string, themeContent?: string): Promise<AgentStore> {
-    assertSafeSlug(slug);
+  async createAgent(slugBase: string, content: string, themeContent?: string): Promise<AgentStore> {
+    assertSafeSlug(slugBase);
 
     const { data, content: body } = matter(content);
     if (typeof data.name !== "string") {
@@ -142,7 +142,7 @@ export class ProjectStore {
     const serialized = matter.stringify(body, frontmatter);
 
     const shortId = id.slice(0, 6);
-    const dirName = `${slug}-${shortId}`;
+    const dirName = `${slugBase}-${shortId}`;
     // TODO: 该处可能需要 slug 碰撞检测（查 agents Map + 文件系统），
     //       当前先假设 slug-shortid 不碰撞，后续按需补全
     const agentDir = path.join(this.spherseDir, "agents", dirName);
@@ -156,7 +156,7 @@ export class ProjectStore {
     const agentStore = new AgentStore(agentDir, id, this.logger);
     await agentStore.open();
     this._agents.set(id, agentStore);
-    this.logger.info({ agentId: id, slug }, "agent created");
+    this.logger.info({ agentId: id, slug: dirName }, "agent created");
     return agentStore;
   }
 

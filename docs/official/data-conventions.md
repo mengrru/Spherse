@@ -12,7 +12,7 @@ project-root/
 │   ├── project.yaml
 │   ├── theme.css
 │   ├── agents/
-│   │   └── {slug}-{shortId}/
+│   │   └── {agent-slug}/
 │   │       ├── profile.md
 │   │       ├── theme.css
 │   │       ├── sessions.db
@@ -51,7 +51,7 @@ welcomePage:
 
 ## Agent 定义格式
 
-Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/{slug}-{shortId}/profile.md`。其中 `slug` 由初始 agent name 派生（小写、空格替换为连字符），`shortId` 为 agent UUID 前 6 位。目录名在创建时生成，之后不再变。
+Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/{agent-slug}/profile.md`。agent slug（目录名）由 `slugBase`（从初始 agent name 派生：小写、空格替换为连字符）与 `shortId`（agent UUID 前 6 位）拼接而成，形如 `world-builder-a1b2c3`。目录名在创建时生成，之后不再变。
 
 Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent Dialog 的“主题”标签页编辑，正常新建流程会从 `@spherse/presets` 的 `agent-theme-template.css` 初始化。文件不存在时读取结果为空字符串，聊天窗口使用全局默认样式。
 
@@ -92,7 +92,7 @@ Agent system prompt content...
 
 ## 定时任务数据
 
-定时任务配置存储在 `.spherse/agents/{slug}-{shortId}/schedules/index.yml`，YAML 数组格式，每个元素为 `ScheduleEntry`：
+定时任务配置存储在 `.spherse/agents/{agent-slug}/schedules/index.yml`，YAML 数组格式，每个元素为 `ScheduleEntry`：
 
 ```yaml
 - id: uuid
@@ -115,7 +115,7 @@ Agent system prompt content...
 
 ## Session 数据
 
-每个 agent 拥有独立的 SQLite 数据库文件，位于 `.spherse/agents/{slug}-{shortId}/sessions.db`。表结构为 `sessions(id TEXT PK, agent_id TEXT, title TEXT, created_at INT, updated_at INT, status TEXT DEFAULT 'active', source TEXT DEFAULT 'manual')`。每个 session 的状态为 `active` 或 `archived`。
+每个 agent 拥有独立的 SQLite 数据库文件，位于 `.spherse/agents/{agent-slug}/sessions.db`。表结构为 `sessions(id TEXT PK, agent_id TEXT, title TEXT, created_at INT, updated_at INT, status TEXT DEFAULT 'active', source TEXT DEFAULT 'manual')`。每个 session 的状态为 `active` 或 `archived`。
 
 `sessions.title` 是可选的用户可编辑展示标题。用户重命名 session 时只更新 `title`，不更新 `updated_at`，因此不会改变 session 列表按最近对话活动排序的行为。
 
@@ -129,6 +129,7 @@ Agent system prompt content...
 |---|---|
 | `<project-instructions>` | AGENTS.md 内容 |
 | `<agent-profile>` | agent profile 主体 |
+| `<session-context>` | 当前会话上下文（agent name/alias/slug, session id，key-value 格式） |
 | `<skill-catalog>` | 可用技能目录（仅 name+description） |
 | `<skill-item name="…" description="…"/>` | 单个技能条目（自闭合，嵌套在 skill-catalog 内） |
 | `<preloaded-context>` | 预载文件区 |
@@ -220,7 +221,7 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
 
 - `presetSkills[].dir`：对应 `packages/presets/skills/` 下的目录名，该目录内容会被打包为 builtin skill 源码（`PRESET_SKILL_SOURCES`），由 `SkillStore` 在运行时内存合并（source 为 `builtin`），不复制到项目的 `.spherse/skills/`
 - `presetAgents[].name`：预置 agent 的展示名称，会通过 `AGENT_TEMPLATE` 模板生成 profile.md
-- `presetAgents[].slug`：预置 agent 的目录 slug 前缀
+- `presetAgents[].slugBase`：预置 agent 的目录 slug 前缀（与 shortId 拼接后形成 agent slug）
 - `presetPromptTemplates[].id`：对应 `packages/presets/templates/prompt-templates/<id>.md` 文件名（不含扩展名），该文件正文作为 prompt 内容合并到 `PRESET_PROMPT_TEMPLATES` 的 `prompt` 字段；构建时缺失对应文件会报错
 - `presetPromptTemplates[].name`：prompt template 在 Agent 创建对话框徽章上展示的名称
 

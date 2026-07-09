@@ -41,8 +41,8 @@ export class ProjectManager {
     return agentStore ? agentStore.getProfile() : null;
   }
 
-  async createAgent(slug: string, content: string, themeContent?: string): Promise<AgentProfile> {
-    const agentStore = await this.projectStore.createAgent(slug, content, themeContent);
+  async createAgent(slugBase: string, content: string, themeContent?: string): Promise<AgentProfile> {
+    const agentStore = await this.projectStore.createAgent(slugBase, content, themeContent);
     return agentStore.getProfile();
   }
 

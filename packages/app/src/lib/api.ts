@@ -173,11 +173,11 @@ export function createApiClient(baseUrl: string, projectId: string) {
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
-    async createAgent(slug: string, content: string, themeContent?: string): Promise<AgentCreateResponse> {
+    async createAgent(slugBase: string, content: string, themeContent?: string): Promise<AgentCreateResponse> {
       const res = await fetch(`${apiBase}/agents/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, content, themeContent }),
+        body: JSON.stringify({ slugBase, content, themeContent }),
       });
       await assertOk(res);
       return parseJsonResponse<AgentCreateResponse>(res, schemas.agentCreateResponse);

@@ -20,7 +20,7 @@ export interface LoadedAgentData {
 interface AgentDialogProps {
   mode: "create" | "edit";
   agentId?: string;
-  onSubmit: (slug: string, content: string, themeContent: string) => Promise<void>;
+  onSubmit: (slugBase: string, content: string, themeContent: string) => Promise<void>;
   onCancel: () => void;
 }
 

@@ -261,11 +261,11 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => {
     }
   },
 
-  async createAgent(projectId, client, slug, content, themeContent) {
+  async createAgent(projectId, client, slugBase, content, themeContent) {
     clearRequestError(projectId);
 
     try {
-      await client.createAgent(slug, content, themeContent);
+      await client.createAgent(slugBase, content, themeContent);
       await get().refreshAgents(projectId, client);
       return true;
     } catch (err) {

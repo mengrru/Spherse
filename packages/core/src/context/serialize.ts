@@ -14,6 +14,15 @@ function renderBlock(block: ContextBlock): string {
       return `<project-instructions>\n${block.content}\n</project-instructions>`;
     case "agent-profile":
       return `<agent-profile>\n${block.content}\n</agent-profile>`;
+    case "session-context": {
+      const lines = [`agent-name: ${block.meta.name}`];
+      if (block.meta.alias) {
+        lines.push(`agent-alias: ${block.meta.alias}`);
+      }
+      lines.push(`agent-slug: ${block.meta.slug}`);
+      lines.push(`session-id: ${block.meta.sessionId}`);
+      return `<session-context>\n${lines.join("\n")}\n</session-context>`;
+    }
     case "skill-catalog": {
       const items = block.skills
         .map(
