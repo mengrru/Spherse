@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { parseBusServerMessage } from "@spherse/server/contracts";
 
-export type BusChannel = "schedule" | "fs-watch" | "debug";
+export type BusChannel = "trigger" | "fs-watch" | "debug";
 export type BusStatus = "idle" | "connecting" | "open" | "closed";
 export type BusHandler = (type: string, payload: unknown) => void;
 
@@ -10,6 +10,7 @@ interface BusStore {
   init: () => Promise<void>;
   addHandler: (projectId: string, channel: BusChannel, handler: BusHandler) => void;
   removeHandler: (projectId: string, channel: BusChannel, handler: BusHandler) => void;
+  emitAgentTriggerEvent: (projectId: string, eventName: string, payload?: string) => void;
   teardown: () => void;
 }
 
@@ -169,6 +170,10 @@ export const useBusStore = create<BusStore>((set, get) => {
         handlers.delete(key);
         sendUnsubscribe(projectId, channel);
       }
+    },
+
+    emitAgentTriggerEvent(projectId, eventName, payload) {
+      sendRaw({ kind: "emit-trigger-event", projectId, eventName, payload });
     },
 
     teardown() {

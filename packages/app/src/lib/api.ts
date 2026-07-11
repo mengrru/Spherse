@@ -3,9 +3,9 @@ import type {
   SessionInfo,
   ContentResponse,
   FileEntry,
-  ScheduleEntry,
-  ScheduleInfo,
-  ScheduleLogEntry,
+  TriggerEntry,
+  TriggerInfo,
+  TriggerLogEntry,
   SkillDefinition,
   AgentCreateResponse,
   AgentUpdateResponse,
@@ -348,70 +348,74 @@ export function createApiClient(baseUrl: string, projectId: string) {
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
-    async listSchedules(agentId: string): Promise<ScheduleInfo[]> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedules`);
+    async listTriggers(agentId: string): Promise<TriggerInfo[]> {
+      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers`);
       await assertOk(res);
-      return parseJsonResponse<ScheduleInfo[]>(res, schemas.scheduleListResponse);
+      return parseJsonResponse<TriggerInfo[]>(res, schemas.triggerListResponse);
     },
 
-    async createSchedule(agentId: string, data: {
+    async createTrigger(agentId: string, data: {
       name?: string;
-      cron: string;
+      type: "time" | "event";
+      cron?: string;
+      eventName?: string;
       mode: "new_session" | "existing_session";
       targetSessionId?: string;
       message: string;
       notify: boolean;
       notificationMessage?: string;
-    }): Promise<ScheduleEntry> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedules`, {
+    }): Promise<TriggerEntry> {
+      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       await assertOk(res);
-      return parseJsonResponse<ScheduleEntry>(res, schemas.scheduleEntry);
+      return parseJsonResponse<TriggerEntry>(res, schemas.triggerEntry);
     },
 
-    async updateSchedule(agentId: string, scheduleId: string, data: {
+    async updateTrigger(agentId: string, triggerId: string, data: {
       name?: string;
       enabled?: boolean;
+      type?: "time" | "event";
       cron?: string;
+      eventName?: string;
       mode?: "new_session" | "existing_session";
       targetSessionId?: string;
       message?: string;
       notify?: boolean;
       notificationMessage?: string;
-    }): Promise<ScheduleEntry> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedules/${encodeURIComponent(scheduleId)}`, {
+    }): Promise<TriggerEntry> {
+      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       await assertOk(res);
-      return parseJsonResponse<ScheduleEntry>(res, schemas.scheduleEntry);
+      return parseJsonResponse<TriggerEntry>(res, schemas.triggerEntry);
     },
 
-    async deleteSchedule(agentId: string, scheduleId: string): Promise<{ ok: boolean }> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedules/${encodeURIComponent(scheduleId)}`, {
+    async deleteTrigger(agentId: string, triggerId: string): Promise<{ ok: boolean }> {
+      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}`, {
         method: "DELETE",
       });
       await assertOk(res);
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
-    async triggerSchedule(agentId: string, scheduleId: string): Promise<{ ok: boolean }> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedules/${encodeURIComponent(scheduleId)}/trigger`, {
+    async runTrigger(agentId: string, triggerId: string): Promise<{ ok: boolean }> {
+      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}/run`, {
         method: "POST",
       });
       await assertOk(res);
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
-    async getScheduleLogs(agentId: string, limit?: number): Promise<ScheduleLogEntry[]> {
+    async getTriggerLogs(agentId: string, limit?: number): Promise<TriggerLogEntry[]> {
       const params = limit ? `?limit=${limit}` : "";
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/schedule-logs${params}`);
+      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/trigger-logs${params}`);
       await assertOk(res);
-      return parseJsonResponse<ScheduleLogEntry[]>(res, schemas.scheduleLogListResponse);
+      return parseJsonResponse<TriggerLogEntry[]>(res, schemas.triggerLogListResponse);
     },
   };
 }

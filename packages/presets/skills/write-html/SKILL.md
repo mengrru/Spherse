@@ -216,6 +216,7 @@ window.parent.postMessage({
 
 - `createSession` — 创建新会话并导航到聊天页
 - `sendMessage` — 向已有会话发送消息（支持 request-response，会话忙碌时返回 `session_busy`）
+- `emitAgentTriggerEvent` — 触发自定义事件，激活匹配的事件触发器
 - `floatSession` / `unfloatSession` — 浮窗显示/关闭会话
 - `openFile` — 在 Content Browser 打开项目文件
 - `data.get` / `data.set` / `data.delete` — key-value 数据读写
@@ -236,4 +237,5 @@ window.parent.postMessage({
 | 持久化读写数据 | ui-sdk `data.get` / `data.set` / `data.delete` |
 | 点击打开项目内文件 | ui-sdk `openFile` |
 | 打开/发送 chat 会话 | ui-sdk `createSession` / `sendMessage` / `floatSession` |
+| 触发事件驱动 agent 执行 | ui-sdk `emitAgentTriggerEvent`（配合 agent 触发器配置） |
 | 交互式卡片 / 向当前会话发消息 | 读 `window.__SPHERSE__.sessionId`，调 `sendMessage`（如收集用户选择后提交回传，会话忙碌返回 `session_busy`） |

@@ -3,8 +3,9 @@ export { NotFoundError, ValidationError, AccessDeniedError, ConflictError, Model
 export type { ProjectRuntime } from "./project-runtime.js";
 export type { ProjectManager } from "./project-manager.js";
 export type { SessionManager } from "./session/session-manager.js";
-export type { Scheduler } from "./scheduler.js";
-export type { ScheduleEventPayload } from "./scheduler.js";
+export type { TriggerManager } from "./trigger/trigger-manager.js";
+export type { TriggerEventPayload } from "./trigger/trigger-manager.js";
+export type { TimerService } from "./trigger/timer-service.js";
 export { createProject } from "./factory.js";
 export { resolveProjectPath, isProjectMetaPath, assertInsideProject, isPathInside } from "./utils/path-safety.js";
 export { categorizePath } from "./access/path-category.js";

@@ -1,6 +1,6 @@
 import { useI18n } from "@spherse/i18n/react";
 import { AgentDialog } from "../agent-dialog";
-import { ScheduleDialog } from "../agent-schedule";
+import { TriggerDialog } from "../agent-trigger";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +20,7 @@ export type DialogState =
   | { kind: "edit-agent"; id: string }
   | { kind: "delete-agent"; agent: AgentProfile }
   | { kind: "delete-session"; session: SessionInfo }
-  | { kind: "schedule"; agent: AgentProfile }
+  | { kind: "trigger"; agent: AgentProfile }
   | { kind: "session-status"; session: SessionInfo };
 
 interface AgentSessionDialogsProps {
@@ -98,8 +98,8 @@ export function AgentSessionDialogs({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      {dialog.kind === "schedule" && (
-        <ScheduleDialog
+      {dialog.kind === "trigger" && (
+        <TriggerDialog
           open={true}
           onOpenChange={(open) => { if (!open) onClose(); }}
           agentId={dialog.agent.id}

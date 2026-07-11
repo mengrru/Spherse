@@ -5,7 +5,7 @@ import type { AgentProfile, SessionInfo } from "../../lib/types";
 export interface AgentSessionActions {
   toggleAgentCollapsed: (agentId: string) => void;
   newSession: (agent: AgentProfile) => void;
-  scheduleAgent: (agent: AgentProfile) => void;
+  triggerAgent: (agent: AgentProfile) => void;
   editAgent: (agent: AgentProfile) => void;
   deleteAgent: (agent: AgentProfile) => void;
   selectSession: (session: SessionInfo) => void;

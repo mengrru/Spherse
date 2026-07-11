@@ -271,34 +271,34 @@ describe("useProjectDataStore", () => {
     expect(useProjectDataStore.getState().projects["project-1"]?.error).toBe("");
   });
 
-  it("writes and reads hasEnabledSchedulesByAgent via setHasEnabledSchedules", () => {
-    useProjectDataStore.getState().setHasEnabledSchedules("project-1", "agent-a", true);
+  it("writes and reads hasEnabledTriggersByAgent via setHasEnabledTriggers", () => {
+    useProjectDataStore.getState().setHasEnabledTriggers("project-1", "agent-a", true);
 
-    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledSchedulesByAgent).toEqual({
+    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledTriggersByAgent).toEqual({
       "agent-a": true,
     });
   });
 
-  it("clears hasEnabledSchedulesByAgent together with project data", async () => {
+  it("clears hasEnabledTriggersByAgent together with project data", async () => {
     const client = createClient({
       listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
     });
     await useProjectDataStore.getState().refreshAgents("project-1", client);
-    useProjectDataStore.getState().setHasEnabledSchedules("project-1", "agent-1", true);
+    useProjectDataStore.getState().setHasEnabledTriggers("project-1", "agent-1", true);
 
     useProjectDataStore.getState().clearProjectData("project-1");
 
     expect(useProjectDataStore.getState().projects["project-1"]).toBeUndefined();
   });
 
-  it("isolates hasEnabledSchedulesByAgent between projects", () => {
-    useProjectDataStore.getState().setHasEnabledSchedules("project-1", "agent-a", true);
-    useProjectDataStore.getState().setHasEnabledSchedules("project-2", "agent-a", false);
+  it("isolates hasEnabledTriggersByAgent between projects", () => {
+    useProjectDataStore.getState().setHasEnabledTriggers("project-1", "agent-a", true);
+    useProjectDataStore.getState().setHasEnabledTriggers("project-2", "agent-a", false);
 
-    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledSchedulesByAgent).toEqual({
+    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledTriggersByAgent).toEqual({
       "agent-a": true,
     });
-    expect(useProjectDataStore.getState().projects["project-2"]?.hasEnabledSchedulesByAgent).toEqual({
+    expect(useProjectDataStore.getState().projects["project-2"]?.hasEnabledTriggersByAgent).toEqual({
       "agent-a": false,
     });
   });

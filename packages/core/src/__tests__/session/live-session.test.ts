@@ -38,7 +38,8 @@ Test agent for sessions.`;
 
 interface RuntimeInternals {
   projectManager: { projectStore: { agents: Map<string, unknown> } };
-  scheduler: { stopAll: () => void };
+  triggerManager: { stopAll: () => void };
+  timerService: { stop: () => void };
 }
 
 function getAgentStore(runtime: RuntimeInternals, agentId: string): any {
@@ -70,7 +71,7 @@ describe("LiveSession context engineering", () => {
     const projectStore = runtime.projectManager.projectStore as any;
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
-    runtime.scheduler.stopAll();
+    runtime.timerService.stop();
     ctx = {
       projectStore,
       projectRoot: projectStore.getRootPath(),

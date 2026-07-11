@@ -15,7 +15,6 @@ export interface AgentProfile {
   slug: string;
   createdAt?: number;
   model?: string;
-  schedule?: boolean;
   tools?: string[];
   context?: string[];
   output?: {
@@ -36,11 +35,15 @@ export interface SkillDefinition {
   files: string[];
 }
 
-export interface ScheduleEntry {
+export type TriggerType = "time" | "event";
+
+export interface TriggerEntry {
   id: string;
   name?: string;
   enabled: boolean;
-  cron: string;
+  type: TriggerType;
+  cron?: string;
+  eventName?: string;
   mode: "new_session" | "existing_session";
   targetSessionId?: string;
   message: string;
@@ -50,10 +53,11 @@ export interface ScheduleEntry {
   updatedAt: number;
 }
 
-export interface ScheduleLogEntry {
-  scheduleId: string;
-  scheduleName?: string;
+export interface TriggerLogEntry {
+  triggerId: string;
+  triggerName?: string;
   agentName?: string;
+  eventName?: string;
   sessionId: string;
   triggeredAt: number;
   completedAt?: number;
@@ -68,7 +72,7 @@ export interface SessionInfo {
   createdAt: number;
   updatedAt: number;
   status: "active" | "archived";
-  source?: "manual" | "scheduled";
+  source?: "manual" | "triggered";
 }
 
 export interface ProviderCredentials {

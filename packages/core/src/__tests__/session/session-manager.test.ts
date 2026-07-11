@@ -46,7 +46,7 @@ interface RuntimeInternals {
     sessions: Map<string, { getAgentId(): string }>;
   };
   projectManager: { projectStore: { agents: Map<string, unknown> } };
-  scheduler: { stopAll: () => void };
+  timerService: { stop: () => void };
 }
 
 function activeAgent(runtime: RuntimeInternals, sessionId: string): any {
@@ -72,7 +72,7 @@ describe("SessionManager temperature propagation", () => {
     const projectStore = runtime.projectManager.projectStore;
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
-    runtime.scheduler.stopAll();
+    runtime.timerService.stop();
   });
 
   afterEach(() => {
@@ -152,7 +152,7 @@ describe("SessionManager default model hot-swap", () => {
     const projectStore = runtime.projectManager.projectStore;
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
-    runtime.scheduler.stopAll();
+    runtime.timerService.stop();
   });
 
   afterEach(() => {
@@ -218,7 +218,7 @@ describe("SessionManager lazy model resolution", () => {
     const projectStore = runtime.projectManager.projectStore;
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
-    runtime.scheduler.stopAll();
+    runtime.timerService.stop();
   });
 
   afterEach(() => {
@@ -275,7 +275,7 @@ describe("SessionManager lifecycle", () => {
     const projectStore = runtime.projectManager.projectStore;
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
-    runtime.scheduler.stopAll();
+    runtime.timerService.stop();
   });
 
   afterEach(() => {
@@ -336,7 +336,7 @@ describe("SessionManager getSessionStatus", () => {
     const projectStore = runtime.projectManager.projectStore;
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
-    runtime.scheduler.stopAll();
+    runtime.timerService.stop();
   });
 
   afterEach(() => {

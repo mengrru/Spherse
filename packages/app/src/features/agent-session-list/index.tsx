@@ -128,7 +128,7 @@ export function AgentSessionList() {
   const actions: AgentSessionActions = {
     toggleAgentCollapsed,
     newSession: handleNewSession,
-    scheduleAgent: (agent) => setDialog({ kind: "schedule", agent }),
+    triggerAgent: (agent) => setDialog({ kind: "trigger", agent }),
     editAgent: (agent) => setDialog({ kind: "edit-agent", id: agent.id }),
     deleteAgent: (agent) => setDialog({ kind: "delete-agent", agent }),
     selectSession: handleSelectSession,

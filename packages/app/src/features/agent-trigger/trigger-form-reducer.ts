@@ -1,7 +1,9 @@
-import type { ScheduleEntry } from "../../lib/types";
+import type { TriggerEntry } from "../../lib/types";
 
-export type ScheduleFormFields = {
+export type TriggerFormFields = {
+  type: "time" | "event";
   cron: string;
+  eventName: string;
   message: string;
   name: string;
   sessionMode: "new_session" | "existing_session";
@@ -10,21 +12,23 @@ export type ScheduleFormFields = {
   notificationMessage: string;
 };
 
-export type ScheduleFormState = {
+export type TriggerFormState = {
   mode: "idle" | "create" | "edit";
   editingId: string | null;
-} & ScheduleFormFields;
+} & TriggerFormFields;
 
-export type ScheduleFormAction =
+export type TriggerFormAction =
   | { type: "startCreate" }
-  | { type: "edit"; entry: ScheduleEntry }
-  | { type: "patch"; patch: Partial<ScheduleFormFields> }
+  | { type: "edit"; entry: TriggerEntry }
+  | { type: "patch"; patch: Partial<TriggerFormFields> }
   | { type: "reset" };
 
-export const NEW_SCHEDULE_ID = "__new__";
+export const NEW_TRIGGER_ID = "__new__";
 
-export const EMPTY_FORM_FIELDS: ScheduleFormFields = {
+export const EMPTY_FORM_FIELDS: TriggerFormFields = {
+  type: "time",
   cron: "",
+  eventName: "",
   message: "",
   name: "",
   sessionMode: "new_session",
@@ -33,24 +37,26 @@ export const EMPTY_FORM_FIELDS: ScheduleFormFields = {
   notificationMessage: "",
 };
 
-export const IDLE_FORM_STATE: ScheduleFormState = {
+export const IDLE_FORM_STATE: TriggerFormState = {
   mode: "idle",
   editingId: null,
   ...EMPTY_FORM_FIELDS,
 };
 
-export function scheduleFormReducer(
-  state: ScheduleFormState,
-  action: ScheduleFormAction,
-): ScheduleFormState {
+export function triggerFormReducer(
+  state: TriggerFormState,
+  action: TriggerFormAction,
+): TriggerFormState {
   switch (action.type) {
     case "startCreate":
-      return { mode: "create", editingId: NEW_SCHEDULE_ID, ...EMPTY_FORM_FIELDS };
+      return { mode: "create", editingId: NEW_TRIGGER_ID, ...EMPTY_FORM_FIELDS };
     case "edit":
       return {
         mode: "edit",
         editingId: action.entry.id,
-        cron: action.entry.cron,
+        type: action.entry.type,
+        cron: action.entry.cron ?? "",
+        eventName: action.entry.eventName ?? "",
         message: action.entry.message,
         name: action.entry.name ?? "",
         sessionMode: action.entry.mode,

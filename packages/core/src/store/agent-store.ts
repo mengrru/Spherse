@@ -2,7 +2,7 @@ import path from "node:path";
 import type { AgentProfile } from "../types.js";
 import { AgentProfileStore } from "./agent-profile.js";
 import { SessionStore } from "./session.js";
-import { ScheduleStore } from "./schedule.js";
+import { TriggerStore } from "./trigger.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 
 export class AgentStore {
@@ -11,7 +11,7 @@ export class AgentStore {
   private _profile: AgentProfile | null = null;
   private _profileStore: AgentProfileStore;
   private _sessionStore: SessionStore | null = null;
-  private _scheduleStore: ScheduleStore;
+  private _triggerStore: TriggerStore;
   private logger: Logger;
 
   constructor(agentDir: string, agentId: string, logger?: Logger) {
@@ -22,7 +22,7 @@ export class AgentStore {
       path.join(agentDir, "profile.md"),
       path.basename(agentDir),
     );
-    this._scheduleStore = new ScheduleStore(agentDir, logger);
+    this._triggerStore = new TriggerStore(agentDir, logger);
   }
 
   async open(): Promise<AgentProfile> {
@@ -68,8 +68,8 @@ export class AgentStore {
     return this._sessionStore;
   }
 
-  get schedules(): ScheduleStore {
-    return this._scheduleStore;
+  get triggers(): TriggerStore {
+    return this._triggerStore;
   }
 
   close(): void {

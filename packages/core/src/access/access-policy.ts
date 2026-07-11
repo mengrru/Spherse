@@ -22,8 +22,8 @@ const LLM_READ: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "skills",
   "agentProfile",
   "agentTheme",
-  "agentSchedules",
-  "agentScheduleLogs",
+  "agentTriggers",
+  "agentTriggerLogs",
 ]);
 
 const LLM_WRITE: ReadonlySet<PathCategory> = new Set<PathCategory>([

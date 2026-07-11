@@ -53,10 +53,11 @@ describe("AgentStore", () => {
     expect(store.sessions.getSession(id)).not.toBeNull();
   });
 
-  it("schedules getter provides ScheduleStore", () => {
-    store.schedules.create({
-      id: "sched-1",
+  it("triggers getter provides TriggerStore", () => {
+    store.triggers.create({
+      id: "trig-1",
       enabled: true,
+      type: "time",
       cron: "0 9 * * *",
       mode: "new_session",
       message: "hello",
@@ -64,7 +65,7 @@ describe("AgentStore", () => {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
-    expect(store.schedules.list()).toHaveLength(1);
+    expect(store.triggers.list()).toHaveLength(1);
   });
 
   it("close closes session db", () => {

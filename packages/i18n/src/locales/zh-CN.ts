@@ -252,75 +252,91 @@ export const zhCN = {
   // 会话右键菜单：打开「会话状态」弹窗，查看当前 turn 的上下文 token 用量等信息
   "agent-session-list.sessionStatus": "会话状态",
 
-  // --- Agent Schedule ---
-  // 搭档右键菜单中的定时任务入口
-  "agent-schedule.menuItem": "定时任务",
-  // 定时任务弹窗标题
-  "agent-schedule.dialogTitle": "定时任务",
-  // 定时任务名称输入框标签
-  "agent-schedule.name": "名称",
-  // 定时任务名称输入框占位
-  "agent-schedule.namePlaceholder": "可选，如「每日早安」",
-  // 定时频率输入框标签
-  "agent-schedule.frequency": "频率",
-  // 定时任务频率模板：每 30 分钟执行一次
-  "agent-schedule.presetEvery30Minutes": "每 30 分钟",
-  // 定时任务频率模板：每小时整点执行一次
-  "agent-schedule.presetHourly": "每小时",
-  // 定时任务频率模板：每天 09:00 执行一次
-  "agent-schedule.presetDaily0900": "每天 09:00",
-  // 定时任务频率模板：每周一 09:00 执行一次
-  "agent-schedule.presetWeeklyMonday0900": "每周一 09:00",
+  // --- Agent Trigger ---
+  // 触发类型选择器标签（时间触发 / 事件触发）
+  "agent-trigger.type": "触发类型",
+  // 触发类型：基于 cron 表达式的时间触发
+  "agent-trigger.typeTime": "时间触发",
+  // 触发类型：基于自定义事件名的事件触发
+  "agent-trigger.typeEvent": "事件触发",
+  // 搭档右键菜单中的触发器入口
+  "agent-trigger.menuItem": "触发器",
+  // 触发器弹窗标题
+  "agent-trigger.dialogTitle": "触发器",
+  // 触发器名称输入框标签
+  "agent-trigger.name": "名称",
+  // 触发器名称输入框占位
+  "agent-trigger.namePlaceholder": "可选，如「每日早安」",
+  // 事件名输入框标签（事件触发模式下显示）
+  "agent-trigger.eventName": "事件名",
+  // 事件名输入框占位
+  "agent-trigger.eventNamePlaceholder": "输入自定义事件名，如 daily-review",
+  // 事件触发模式提示：当此事件被触发时执行此任务
+  "agent-trigger.eventHint": "当此事件被触发时执行此任务",
+  // 事件名校验失败提示：不能使用 sp: 保留前缀
+  "agent-trigger.eventNameReserved": "事件名不能以 sp: 开头（保留前缀）",
+  // 事件触发模式下提示：使用 {{payload}} 引用事件发送方的消息内容
+  "agent-trigger.payloadVarHint": "使用 {{payload}} 引用事件发送方的消息内容",
+  // 定时频率输入框标签（时间触发模式下显示）
+  "agent-trigger.frequency": "频率",
+  // 时间触发频率模板：每 30 分钟执行一次
+  "agent-trigger.presetEvery30Minutes": "每 30 分钟",
+  // 时间触发频率模板：每小时整点执行一次
+  "agent-trigger.presetHourly": "每小时",
+  // 时间触发频率模板：每天 09:00 执行一次
+  "agent-trigger.presetDaily0900": "每天 09:00",
+  // 时间触发频率模板：每周一 09:00 执行一次
+  "agent-trigger.presetWeeklyMonday0900": "每周一 09:00",
   // cron 表达式输入框占位
-  "agent-schedule.cronPlaceholder": "0 9 * * *",
-  // 定时任务表单频率区域提示：说明当前调度器按 10 分钟轮询执行，不保证分钟级精确触发
-  "agent-schedule.granularityHint": "定时任务每 10 分钟检查一次，实际执行时间可能有数分钟延迟。",
-  // 定时任务执行模式标签
-  "agent-schedule.mode": "会话模式",
+  "agent-trigger.cronPlaceholder": "0 9 * * *",
+  // 时间触发表单频率区域提示：说明当前调度器按 10 分钟轮询执行，不保证分钟级精确触发
+  "agent-trigger.granularityHint": "时间触发每 10 分钟检查一次，实际执行时间可能有数分钟延迟。",
+  // 触发器执行模式标签
+  "agent-trigger.mode": "会话模式",
   // 执行模式：每次新建对话
-  "agent-schedule.modeNewSession": "新建对话",
+  "agent-trigger.modeNewSession": "新建对话",
   // 执行模式：在已有对话中追加
-  "agent-schedule.modeExistingSession": "已有对话",
+  "agent-trigger.modeExistingSession": "已有对话",
   // 绑定已有会话模式下，会话 ID 输入框标签
-  "agent-schedule.targetSessionId": "会话 ID",
+  "agent-trigger.targetSessionId": "会话 ID",
   // 绑定已有会话模式下，会话 ID 输入框占位
-  "agent-schedule.targetSessionIdPlaceholder": "输入要绑定的会话 ID",
+  "agent-trigger.targetSessionIdPlaceholder": "输入要绑定的会话 ID",
   // 消息内容输入框标签
-  "agent-schedule.message": "消息内容",
+  "agent-trigger.message": "消息内容",
   // 消息内容输入框占位
-  "agent-schedule.messagePlaceholder": "输入定时发送的消息内容...",
-  // 定时任务完成后的通知开关标签（触发时机为执行完成，而非发送瞬间）
-  "agent-schedule.notify": "完成后通知",
-  // 定时任务表单：开启通知后显示的通知内容输入框占位，最多 30 字
-  "agent-schedule.notificationMessagePlaceholder": "通知内容，最多 30 字",
-  // 定时任务完成后，用户开启通知但未填写自定义通知内容时显示的 toast 文案
-  "agent-schedule.notificationDefault": "定时任务已完成",
-  // 定时任务列表行上的手动执行按钮悬停提示
-  "agent-schedule.triggerNow": "立即触发",
-  // 定时任务列表行上的手动执行按钮运行中状态提示
-  "agent-schedule.runningNow": "运行中",
-  // 定时任务配置页右上角创建按钮
-  "agent-schedule.createSchedule": "创建定时任务",
+  "agent-trigger.messagePlaceholder": "输入触发时发送的消息内容...",
+  // 触发器完成后的通知开关标签（触发时机为执行完成，而非发送瞬间）
+  "agent-trigger.notify": "完成后通知",
+  // 触发器表单：开启通知后显示的通知内容输入框占位，最多 30 字
+  "agent-trigger.notificationMessagePlaceholder": "通知内容，最多 30 字",
+  // 触发器完成后，用户开启通知但未填写自定义通知内容时显示的 toast 文案
+  "agent-trigger.notificationDefault": "触发器已完成",
+  // 触发器列表行上的手动执行按钮悬停提示
+  "agent-trigger.triggerNow": "立即触发",
+  // 触发器列表行上的手动执行按钮运行中状态提示
+  "agent-trigger.runningNow": "运行中",
+  // 触发器配置页右上角创建按钮
+  "agent-trigger.createTrigger": "创建触发器",
   // 配置 tab 标题
-  "agent-schedule.tabConfig": "配置",
+  "agent-trigger.tabConfig": "配置",
   // 运行日志 tab 标题
-  "agent-schedule.tabLogs": "运行日志",
+  "agent-trigger.tabLogs": "运行日志",
   // 日志列表为空时显示
-  "agent-schedule.noLogs": "暂无运行日志",
-  // 定时任务列表为空时显示
-  "agent-schedule.noSchedules": "暂无定时任务",
-  // 删除定时任务确认提示
-  "agent-schedule.confirmDelete": "确定删除此定时任务吗？",
+  "agent-trigger.noLogs": "暂无运行日志",
+  // 触发器列表为空时显示
+  "agent-trigger.noTriggers": "暂无触发器",
+  // 删除触发器确认提示
+  "agent-trigger.confirmDelete": "确定删除此触发器吗？",
   // 日志状态：运行中
-  "agent-schedule.logStatusRunning": "运行中",
+  "agent-trigger.logStatusRunning": "运行中",
   // 日志状态：成功
-  "agent-schedule.logStatusSuccess": "成功",
+  "agent-trigger.logStatusSuccess": "成功",
   // 日志状态：失败
-  "agent-schedule.logStatusFailed": "失败",
-  // 日志条数限制提示，{path} 为该 agent 的 logs.jsonl 完整项目相对路径（如 .spherse/agents/historian-abc123/schedules/logs.jsonl）
-  "agent-schedule.logLimitNotice": "最多显示 {count} 条，更多请查看 {path}",
-  // agent 列表项上的 Clock icon tooltip：该 agent 至少有一条 enabled schedule，hover icon 时显示
-  "agent-schedule.indicatorTooltip": "已开启定时任务",
+  "agent-trigger.logStatusFailed": "失败",
+  // 日志条数限制提示，{path} 为该 agent 的 logs.jsonl 完整项目相对路径（如 .spherse/agents/historian-abc123/triggers/logs.jsonl）
+  "agent-trigger.logLimitNotice": "最多显示 {count} 条，更多请查看 {path}",
+  // agent 列表项上的 Clock icon tooltip：该 agent 至少有一条 enabled trigger，hover icon 时显示
+  "agent-trigger.indicatorTooltip": "已开启触发器",
 
   // --- Chat ---
   // 聊天输入框占位提示

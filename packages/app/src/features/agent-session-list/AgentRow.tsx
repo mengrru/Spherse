@@ -27,7 +27,7 @@ export function AgentRow({ agent, active }: AgentRowProps) {
   const actions = useAgentSessionActions();
   const { projectId } = useProjectCtx();
   const hasEnabled = useProjectDataStore(
-    (s) => s.projects[projectId]?.hasEnabledSchedulesByAgent?.[agent.id] ?? false,
+    (s) => s.projects[projectId]?.hasEnabledTriggersByAgent?.[agent.id] ?? false,
   );
   return (
     <div className="group/agent-row">
@@ -46,8 +46,8 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           {hasEnabled && (
             <Clock
               className="ml-auto h-3 w-3 shrink-0 text-muted-foreground"
-              title={t("agent-schedule.indicatorTooltip")}
-              aria-label={t("agent-schedule.indicatorTooltip")}
+              title={t("agent-trigger.indicatorTooltip")}
+              aria-label={t("agent-trigger.indicatorTooltip")}
             />
           )}
         </ContextMenuTrigger>
@@ -58,8 +58,8 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           <ContextMenuItem onClick={() => actions.editAgent(agent)}>
             {t("common.edit")}
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => actions.scheduleAgent(agent)}>
-            {t("agent-schedule.menuItem")}
+          <ContextMenuItem onClick={() => actions.triggerAgent(agent)}>
+            {t("agent-trigger.menuItem")}
             <Badge variant="secondary" className="ml-auto">Beta</Badge>
           </ContextMenuItem>
           <ContextMenuSeparator />

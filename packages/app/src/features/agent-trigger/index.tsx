@@ -11,72 +11,78 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
-import type { ScheduleEntry, ScheduleInfo } from "../../lib/types";
+import type { TriggerEntry, TriggerInfo } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useProjectCtx } from "../../context/project-context";
-import { useScheduleStore } from "./store";
-import { ScheduleForm } from "./ScheduleForm";
-import { ScheduleList } from "./ScheduleList";
-import { ScheduleLogs } from "./ScheduleLogs";
-import { useScheduleLogs } from "./hooks/use-schedule-logs";
+import { useTriggerStore } from "./store";
+import { TriggerForm } from "./TriggerForm";
+import { TriggerList } from "./TriggerList";
+import { TriggerLogs } from "./TriggerLogs";
+import { useTriggerLogs } from "./hooks/use-trigger-logs";
 import {
-  scheduleFormReducer,
+  triggerFormReducer,
   IDLE_FORM_STATE,
-  type ScheduleFormFields,
-} from "./schedule-form-reducer";
-import { EMPTY_RUNNING_SCHEDULE_IDS, EMPTY_SCHEDULES } from "./constants";
+  type TriggerFormFields,
+} from "./trigger-form-reducer";
+import { EMPTY_RUNNING_TRIGGER_IDS, EMPTY_TRIGGERS } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
 import { PlusIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 
-interface ScheduleDialogProps {
+interface TriggerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   agentId: string;
   projectId: string;
 }
 
-export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: ScheduleDialogProps) {  const { t } = useI18n();
+export function TriggerDialog({ open, onOpenChange, agentId, projectId }: TriggerDialogProps) {  const { t } = useI18n();
   const { client } = useProjectCtx();
-  const schedules = useScheduleStore((s) => s.byProject[projectId]?.schedulesByAgent?.[agentId] ?? EMPTY_SCHEDULES);
-  const runningScheduleIds = useScheduleStore((s) => s.byProject[projectId]?.runningScheduleIdsByAgent?.[agentId] ?? EMPTY_RUNNING_SCHEDULE_IDS);
-  const scheduleEventVersion = useScheduleStore((s) => s.byProject[projectId]?.scheduleEventVersion ?? 0);
+  const triggers = useTriggerStore((s) => s.byProject[projectId]?.triggersByAgent?.[agentId] ?? EMPTY_TRIGGERS);
+  const runningTriggerIds = useTriggerStore((s) => s.byProject[projectId]?.runningTriggerIdsByAgent?.[agentId] ?? EMPTY_RUNNING_TRIGGER_IDS);
+  const triggerEventVersion = useTriggerStore((s) => s.byProject[projectId]?.triggerEventVersion ?? 0);
   const agentName = useProjectDataStore((s) => s.projects[projectId]?.agents?.find((a) => a.id === agentId)?.name ?? "");
   const logFilePath = useProjectDataStore((s) => {
     const agent = s.projects[projectId]?.agents?.find((a) => a.id === agentId);
-    return agent ? `.spherse/agents/${agent.slug}/schedules/logs.jsonl` : "";
+    return agent ? `.spherse/agents/${agent.slug}/triggers/logs.jsonl` : "";
   });
-  const refreshSchedules = useScheduleStore((s) => s.refreshSchedules);
-  const createSchedule = useScheduleStore((s) => s.createSchedule);
-  const updateSchedule = useScheduleStore((s) => s.updateSchedule);
-  const deleteSchedule = useScheduleStore((s) => s.deleteSchedule);
-  const triggerSchedule = useScheduleStore((s) => s.triggerSchedule);
+  const refreshTriggers = useTriggerStore((s) => s.refreshTriggers);
+  const createTrigger = useTriggerStore((s) => s.createTrigger);
+  const updateTrigger = useTriggerStore((s) => s.updateTrigger);
+  const deleteTrigger = useTriggerStore((s) => s.deleteTrigger);
+  const runTrigger = useTriggerStore((s) => s.runTrigger);
 
   const [activeTab, setActiveTab] = useState("config");
-  const [form, dispatch] = useReducer(scheduleFormReducer, IDLE_FORM_STATE);
+  const [form, dispatch] = useReducer(triggerFormReducer, IDLE_FORM_STATE);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<ScheduleEntry | null>(null);
-  const logs = useScheduleLogs(client, agentId, open && activeTab === "logs", scheduleEventVersion);
+  const [deleteTarget, setDeleteTarget] = useState<TriggerEntry | null>(null);
+  const logs = useTriggerLogs(client, agentId, open && activeTab === "logs", triggerEventVersion);
 
-  const scheduleNameMap: Record<string, string> = {};
-  for (const schedule of schedules) {
-    scheduleNameMap[schedule.id] = schedule.name || schedule.cron;
+  const triggerNameMap: Record<string, string> = {};
+  for (const trigger of triggers) {
+    triggerNameMap[trigger.id] = trigger.name || (trigger.type === "time" ? trigger.cron! : trigger.eventName!);
   }
 
   useEffect(() => {
-    if (open) refreshSchedules(projectId, client, agentId);
-  }, [open, projectId, client, agentId, refreshSchedules]);
+    if (open) refreshTriggers(projectId, client, agentId);
+  }, [open, projectId, client, agentId, refreshTriggers]);
 
-  function patchField<Field extends keyof ScheduleFormFields>(field: Field, value: ScheduleFormFields[Field]) {
+  function patchField<Field extends keyof TriggerFormFields>(field: Field, value: TriggerFormFields[Field]) {
     dispatch({ type: "patch", patch: { [field]: value } });
   }
 
   async function handleSave() {
-    if (!form.cron.trim() || !form.message.trim()) return;
+    if (form.type === "time") {
+      if (!form.cron.trim() || !form.message.trim()) return;
+    } else {
+      if (!form.eventName.trim() || !form.message.trim()) return;
+    }
     if (form.sessionMode === "existing_session" && !form.targetSessionId.trim()) return;
     const data = {
       name: form.name || undefined,
-      cron: form.cron,
+      type: form.type,
+      cron: form.type === "time" ? form.cron : undefined,
+      eventName: form.type === "event" ? form.eventName : undefined,
       message: form.message,
       mode: form.sessionMode,
       targetSessionId: form.sessionMode === "existing_session" ? form.targetSessionId.trim() : "",
@@ -84,67 +90,71 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
       notificationMessage: form.notify && form.notificationMessage.trim() ? form.notificationMessage.trim() : undefined,
     };
     if (form.mode === "create") {
-      await createSchedule(projectId, client, agentId, data);
+      await createTrigger(projectId, client, agentId, data);
     } else if (form.mode === "edit" && form.editingId) {
-      await updateSchedule(projectId, client, agentId, form.editingId, data);
+      await updateTrigger(projectId, client, agentId, form.editingId, data);
     }
     dispatch({ type: "reset" });
     setExpandedId(null);
   }
 
-  function handleEdit(entry: ScheduleEntry) {
+  function handleEdit(entry: TriggerEntry) {
     dispatch({ type: "edit", entry });
     setExpandedId(null);
   }
 
-  async function handleTrigger(entry: ScheduleEntry) {
-    await triggerSchedule(projectId, client, agentId, entry.id);
+  async function handleTrigger(entry: TriggerEntry) {
+    await runTrigger(projectId, client, agentId, entry.id);
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deleteSchedule(projectId, client, agentId, deleteTarget.id);
+    await deleteTrigger(projectId, client, agentId, deleteTarget.id);
     setDeleteTarget(null);
   }
 
-  async function handleToggle(entry: ScheduleInfo) {
-    await updateSchedule(projectId, client, agentId, entry.id, { enabled: !entry.enabled });
+  async function handleToggle(entry: TriggerInfo) {
+    await updateTrigger(projectId, client, agentId, entry.id, { enabled: !entry.enabled });
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!flex h-[60vh] w-[38vw] !max-w-[38vw] flex-col sm:!max-w-[38vw]">
         <DialogHeader>
-          <DialogTitle>{agentName ? `${t("agent-schedule.dialogTitle")} | ${agentName}` : t("agent-schedule.dialogTitle")}</DialogTitle>
+          <DialogTitle>{agentName ? `${t("agent-trigger.dialogTitle")} | ${agentName}` : t("agent-trigger.dialogTitle")}</DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="min-h-0 flex-1">
           <div className="mb-3 flex items-center justify-between">
             <TabsList>
-              <TabsTrigger value="config">{t("agent-schedule.tabConfig")}</TabsTrigger>
-              <TabsTrigger value="logs">{t("agent-schedule.tabLogs")}</TabsTrigger>
+              <TabsTrigger value="config">{t("agent-trigger.tabConfig")}</TabsTrigger>
+              <TabsTrigger value="logs">{t("agent-trigger.tabLogs")}</TabsTrigger>
             </TabsList>
             {activeTab === "config" && form.mode === "idle" && (
               <Button size="default" onClick={() => dispatch({ type: "startCreate" })}>
                 <PlusIcon className="size-4" />
-                {t("agent-schedule.createSchedule")}
+                {t("agent-trigger.createTrigger")}
               </Button>
             )}
           </div>
 
           <TabsContent value="config" className="min-h-0 flex-1 overflow-y-auto">
             {form.mode !== "idle" ? (
-              <ScheduleForm
+              <TriggerForm
                 editingId={form.editingId ?? ""}
+                type={form.type}
                 name={form.name}
                 cron={form.cron}
+                eventName={form.eventName}
                 message={form.message}
                 sessionMode={form.sessionMode}
                 targetSessionId={form.targetSessionId}
                 notify={form.notify}
                 notificationMessage={form.notificationMessage}
+                onTypeChange={(v) => patchField("type", v)}
                 onNameChange={(v) => patchField("name", v)}
                 onCronChange={(v) => patchField("cron", v)}
+                onEventNameChange={(v) => patchField("eventName", v)}
                 onMessageChange={(v) => patchField("message", v)}
                 onSessionModeChange={(v) => patchField("sessionMode", v)}
                 onTargetSessionIdChange={(v) => patchField("targetSessionId", v)}
@@ -155,9 +165,9 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
                 onCancel={() => dispatch({ type: "reset" })}
               />
             ) : (
-              <ScheduleList
-                schedules={schedules}
-                runningScheduleIds={runningScheduleIds}
+              <TriggerList
+                triggers={triggers}
+                runningTriggerIds={runningTriggerIds}
                 expandedId={expandedId}
                 onToggle={handleToggle}
                 onExpand={setExpandedId}
@@ -169,7 +179,7 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
           </TabsContent>
 
           <TabsContent value="logs" className="min-h-0 flex-1">
-            <ScheduleLogs logs={logs} agentName={agentName} scheduleNameMap={scheduleNameMap} logFilePath={logFilePath} />
+            <TriggerLogs logs={logs} agentName={agentName} triggerNameMap={triggerNameMap} logFilePath={logFilePath} />
           </TabsContent>
         </Tabs>
 
@@ -177,7 +187,7 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>{t("common.delete")}</AlertDialogTitle>
-              <AlertDialogDescription>{t("agent-schedule.confirmDelete")}</AlertDialogDescription>
+              <AlertDialogDescription>{t("agent-trigger.confirmDelete")}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
@@ -190,4 +200,4 @@ export function ScheduleDialog({ open, onOpenChange, agentId, projectId }: Sched
   );
 }
 
-export { ScheduleEventBridge } from "./ScheduleEventBridge";
+export { TriggerEventBridge } from "./TriggerEventBridge";

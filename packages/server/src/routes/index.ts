@@ -10,7 +10,7 @@ import { registerPreviewRoutes } from "./preview.js";
 import { registerSkillRoutes } from "./skills.js";
 import { registerFileTreeRoutes } from "./file-tree.js";
 import { registerDebugRoutes } from "./debug.js";
-import { registerScheduleRoutes } from "./schedules.js";
+import { registerTriggerRoutes } from "./trigger.js";
 import { registerImagesRoutes } from "./images.js";
 
 declare module "fastify" {
@@ -37,6 +37,6 @@ export function registerAllRoutes(fastify: FastifyInstance, registry: ProjectReg
   registerSkillRoutes(fastify, registry);
   registerFileTreeRoutes(fastify, registry);
   registerDebugRoutes(fastify, registry);
-  registerScheduleRoutes(fastify, registry);
+  registerTriggerRoutes(fastify, registry);
   registerImagesRoutes(fastify, registry);
 }

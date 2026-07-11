@@ -130,10 +130,11 @@ describe("api contracts", () => {
     ).toThrow(/Invalid payload/);
   });
 
-  it("validates schedule list response with nextTriggerAt", () => {
+  it("validates trigger list response with nextTriggerAt", () => {
     const entry = {
-      id: "s1",
+      id: "t1",
       enabled: true,
+      type: "time",
       cron: "* * * * *",
       mode: "new_session",
       message: "hi",
@@ -142,9 +143,9 @@ describe("api contracts", () => {
       updatedAt: 1,
       nextTriggerAt: null,
     };
-    expect(parseApiResponse(schemas.scheduleListResponse, [entry])).toEqual([entry]);
+    expect(parseApiResponse(schemas.triggerListResponse, [entry])).toEqual([entry]);
     expect(() =>
-      parseApiResponse(schemas.scheduleListResponse, [{ ...entry, nextTriggerAt: undefined }]),
+      parseApiResponse(schemas.triggerListResponse, [{ ...entry, nextTriggerAt: undefined }]),
     ).toThrow(/Invalid payload/);
   });
 

@@ -3,7 +3,7 @@ import { Outlet, useLocation, useParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { ProjectPanel } from "../features/project-panel";
 import { FloatingChatManager } from "../features/floating-chat";
-import { ScheduleEventBridge } from "../features/agent-schedule";
+import { TriggerEventBridge } from "../features/agent-trigger";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useSidePanel } from "../hooks/use-side-panel";
 import { useSpherseMessageListener } from "../ui-sdk";
@@ -77,7 +77,7 @@ export function ProjectScope() {
           <Outlet />
         </main>
         <FloatingChatManager />
-        <ScheduleEventBridge />
+        <TriggerEventBridge />
       </div>
     </ProjectProvider>
   );

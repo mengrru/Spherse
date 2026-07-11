@@ -2,87 +2,87 @@ import { describe, expect, it } from "vitest";
 import {
   parseBusClientMessage,
   parseBusServerMessage,
-  parseScheduleServerEvent,
+  parseTriggerServerEvent,
 } from "../../contracts/index.js";
 
 describe("bus server message contract", () => {
-  it("accepts schedule_triggered envelope", () => {
+  it("accepts trigger_triggered envelope", () => {
     expect(
       parseBusServerMessage({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_triggered",
-        payload: { agentId: "a1", scheduleId: "s1", triggeredAt: 123 },
+        type: "trigger_triggered",
+        payload: { agentId: "a1", triggerId: "t1", triggeredAt: 123 },
       }),
     ).toEqual({
-      channel: "schedule",
+      channel: "trigger",
       projectId: "p1",
-      type: "schedule_triggered",
-      payload: { agentId: "a1", scheduleId: "s1", triggeredAt: 123 },
+      type: "trigger_triggered",
+      payload: { agentId: "a1", triggerId: "t1", triggeredAt: 123 },
     });
   });
 
-  it("accepts schedule_triggered envelope with optional sessionId", () => {
+  it("accepts trigger_triggered envelope with optional sessionId and eventName", () => {
     expect(
       parseBusServerMessage({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_triggered",
-        payload: { agentId: "a1", scheduleId: "s1", sessionId: "sess1", triggeredAt: 1 },
+        type: "trigger_triggered",
+        payload: { agentId: "a1", triggerId: "t1", sessionId: "sess1", eventName: "evt", triggeredAt: 1 },
       }),
     ).toEqual({
-      channel: "schedule",
+      channel: "trigger",
       projectId: "p1",
-      type: "schedule_triggered",
-      payload: { agentId: "a1", scheduleId: "s1", sessionId: "sess1", triggeredAt: 1 },
+      type: "trigger_triggered",
+      payload: { agentId: "a1", triggerId: "t1", sessionId: "sess1", eventName: "evt", triggeredAt: 1 },
     });
   });
 
-  it("accepts schedule_completed envelope", () => {
+  it("accepts trigger_completed envelope", () => {
     expect(
       parseBusServerMessage({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_completed",
-        payload: { agentId: "a1", scheduleId: "s1", sessionId: "sess1", status: "success" },
+        type: "trigger_completed",
+        payload: { agentId: "a1", triggerId: "t1", sessionId: "sess1", status: "success" },
       }),
     ).toEqual({
-      channel: "schedule",
+      channel: "trigger",
       projectId: "p1",
-      type: "schedule_completed",
-      payload: { agentId: "a1", scheduleId: "s1", sessionId: "sess1", status: "success" },
+      type: "trigger_completed",
+      payload: { agentId: "a1", triggerId: "t1", sessionId: "sess1", status: "success" },
     });
   });
 
-  it("accepts schedule_failed envelope", () => {
+  it("accepts trigger_failed envelope", () => {
     expect(
       parseBusServerMessage({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_failed",
-        payload: { agentId: "a1", scheduleId: "s1", error: "boom" },
+        type: "trigger_failed",
+        payload: { agentId: "a1", triggerId: "t1", error: "boom" },
       }),
     ).toEqual({
-      channel: "schedule",
+      channel: "trigger",
       projectId: "p1",
-      type: "schedule_failed",
-      payload: { agentId: "a1", scheduleId: "s1", error: "boom" },
+      type: "trigger_failed",
+      payload: { agentId: "a1", triggerId: "t1", error: "boom" },
     });
   });
 
-  it("accepts schedule_updated envelope with optional schedule", () => {
+  it("accepts trigger_updated envelope with optional trigger", () => {
     expect(
       parseBusServerMessage({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_updated",
-        payload: { agentId: "a1", scheduleId: "s1" },
+        type: "trigger_updated",
+        payload: { agentId: "a1", triggerId: "t1" },
       }),
     ).toEqual({
-      channel: "schedule",
+      channel: "trigger",
       projectId: "p1",
-      type: "schedule_updated",
-      payload: { agentId: "a1", scheduleId: "s1" },
+      type: "trigger_updated",
+      payload: { agentId: "a1", triggerId: "t1" },
     });
   });
 
@@ -99,19 +99,6 @@ describe("bus server message contract", () => {
       projectId: "p1",
       type: "change",
       payload: { eventType: "rename", path: "/a/b.md" },
-    });
-    expect(
-      parseBusServerMessage({
-        channel: "fs-watch",
-        projectId: "p1",
-        type: "change",
-        payload: { eventType: "change", path: "/c.md" },
-      }),
-    ).toEqual({
-      channel: "fs-watch",
-      projectId: "p1",
-      type: "change",
-      payload: { eventType: "change", path: "/c.md" },
     });
   });
 
@@ -159,55 +146,34 @@ describe("bus server message contract", () => {
     });
   });
 
-  it("rejects schedule envelope missing projectId", () => {
+  it("rejects trigger envelope missing projectId", () => {
     expect(() =>
       parseBusServerMessage({
-        channel: "schedule",
-        type: "schedule_triggered",
-        payload: { agentId: "a1", scheduleId: "s1", triggeredAt: 1 },
+        channel: "trigger",
+        type: "trigger_triggered",
+        payload: { agentId: "a1", triggerId: "t1", triggeredAt: 1 },
       }),
     ).toThrow(/Invalid payload/);
   });
 
-  it("rejects schedule envelope with malformed payload", () => {
+  it("rejects trigger envelope with malformed payload", () => {
     expect(() =>
       parseBusServerMessage({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_triggered",
-        payload: { scheduleId: "s1", triggeredAt: 1 },
+        type: "trigger_triggered",
+        payload: { triggerId: "t1", triggeredAt: 1 },
       }),
     ).toThrow(/Invalid payload/);
   });
 
-  it("rejects schedule_completed with wrong status", () => {
+  it("rejects trigger_completed with wrong status", () => {
     expect(() =>
       parseBusServerMessage({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_completed",
-        payload: { agentId: "a1", scheduleId: "s1", sessionId: "x", status: "failed" },
-      }),
-    ).toThrow(/Invalid payload/);
-  });
-
-  it("rejects fs-watch change with unknown eventType", () => {
-    expect(() =>
-      parseBusServerMessage({
-        channel: "fs-watch",
-        projectId: "p1",
-        type: "change",
-        payload: { eventType: "unlink", path: "/a" },
-      }),
-    ).toThrow(/Invalid payload/);
-  });
-
-  it("rejects debug envelope with missing payload line", () => {
-    expect(() =>
-      parseBusServerMessage({
-        channel: "debug",
-        type: "log",
-        payload: {},
+        type: "trigger_completed",
+        payload: { agentId: "a1", triggerId: "t1", sessionId: "x", status: "failed" },
       }),
     ).toThrow(/Invalid payload/);
   });
@@ -232,7 +198,7 @@ describe("bus server message contract", () => {
 
 describe("bus client message contract", () => {
   it("accepts subscribe messages across channels", () => {
-    for (const channel of ["schedule", "fs-watch", "debug"] as const) {
+    for (const channel of ["trigger", "fs-watch", "debug"] as const) {
       expect(parseBusClientMessage({ kind: "subscribe", projectId: "p1", channel })).toEqual({
         kind: "subscribe",
         projectId: "p1",
@@ -242,7 +208,7 @@ describe("bus client message contract", () => {
   });
 
   it("accepts unsubscribe messages across channels", () => {
-    for (const channel of ["schedule", "fs-watch", "debug"] as const) {
+    for (const channel of ["trigger", "fs-watch", "debug"] as const) {
       expect(parseBusClientMessage({ kind: "unsubscribe", projectId: "p1", channel })).toEqual({
         kind: "unsubscribe",
         projectId: "p1",
@@ -253,6 +219,46 @@ describe("bus client message contract", () => {
 
   it("accepts ping message", () => {
     expect(parseBusClientMessage({ kind: "ping" })).toEqual({ kind: "ping" });
+  });
+
+  it("accepts emit-trigger-event message", () => {
+    expect(
+      parseBusClientMessage({
+        kind: "emit-trigger-event",
+        projectId: "p1",
+        eventName: "user-login",
+        payload: "hello",
+      }),
+    ).toEqual({
+      kind: "emit-trigger-event",
+      projectId: "p1",
+      eventName: "user-login",
+      payload: "hello",
+    });
+  });
+
+  it("accepts emit-trigger-event without payload", () => {
+    expect(
+      parseBusClientMessage({
+        kind: "emit-trigger-event",
+        projectId: "p1",
+        eventName: "user-login",
+      }),
+    ).toEqual({
+      kind: "emit-trigger-event",
+      projectId: "p1",
+      eventName: "user-login",
+    });
+  });
+
+  it("rejects emit-trigger-event with sp: prefix", () => {
+    expect(() =>
+      parseBusClientMessage({
+        kind: "emit-trigger-event",
+        projectId: "p1",
+        eventName: "",
+      }),
+    ).toThrow(/Invalid payload/);
   });
 
   it("rejects subscribe with missing channel", () => {
@@ -267,53 +273,47 @@ describe("bus client message contract", () => {
     ).toThrow(/Invalid payload/);
   });
 
-  it("rejects subscribe missing projectId", () => {
-    expect(() =>
-      parseBusClientMessage({ kind: "subscribe", channel: "schedule" }),
-    ).toThrow(/Invalid payload/);
-  });
-
   it("rejects unknown kind", () => {
     expect(() => parseBusClientMessage({ kind: "bogus" })).toThrow(/Invalid payload/);
   });
 });
 
-describe("migrated schedule server event contract", () => {
-  it("accepts the legacy top-level schedule_triggered shape", () => {
+describe("trigger server event contract", () => {
+  it("accepts trigger_triggered shape", () => {
     expect(
-      parseScheduleServerEvent({
-        type: "schedule_triggered",
+      parseTriggerServerEvent({
+        type: "trigger_triggered",
         agentId: "a1",
-        scheduleId: "s1",
+        triggerId: "t1",
         triggeredAt: 5,
       }),
     ).toEqual({
-      type: "schedule_triggered",
+      type: "trigger_triggered",
       agentId: "a1",
-      scheduleId: "s1",
+      triggerId: "t1",
       triggeredAt: 5,
     });
   });
 
-  it("accepts the legacy top-level schedule_failed shape", () => {
+  it("accepts trigger_failed shape", () => {
     expect(
-      parseScheduleServerEvent({
-        type: "schedule_failed",
+      parseTriggerServerEvent({
+        type: "trigger_failed",
         agentId: "a1",
-        scheduleId: "s1",
+        triggerId: "t1",
         error: "boom",
       }),
     ).toEqual({
-      type: "schedule_failed",
+      type: "trigger_failed",
       agentId: "a1",
-      scheduleId: "s1",
+      triggerId: "t1",
       error: "boom",
     });
   });
 
-  it("rejects malformed legacy schedule event", () => {
+  it("rejects malformed trigger event", () => {
     expect(() =>
-      parseScheduleServerEvent({ type: "schedule_failed", agentId: "a1" }),
+      parseTriggerServerEvent({ type: "trigger_failed", agentId: "a1" }),
     ).toThrow(/Invalid payload/);
   });
 });

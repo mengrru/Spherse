@@ -46,16 +46,17 @@ function createMockSocket(): MockSocket {
   };
 }
 
-function createMockScheduler() {
-  const scheduler = new EventEmitter();
-  vi.spyOn(scheduler, "on");
-  vi.spyOn(scheduler, "off");
-  return scheduler;
+function createMockTriggerManager() {
+  const triggerManager = new EventEmitter();
+  triggerManager.onUserEvent = vi.fn();
+  vi.spyOn(triggerManager, "on");
+  vi.spyOn(triggerManager, "off");
+  return triggerManager;
 }
 
-function createMockRegistry(scheduler: EventEmitter, projectRoot = "/proj/p1", projectId = "p1") {
+function createMockRegistry(triggerManager: EventEmitter, projectRoot = "/proj/p1", projectId = "p1") {
   const ctx = {
-    scheduler,
+    triggerManager,
     projectManager: { getRootPath: () => projectRoot },
     projectId,
   };
@@ -99,12 +100,12 @@ const mockFastify = {
 
 describe("ws-bus /ws/bus handler", () => {
   let socket: MockSocket;
-  let scheduler: EventEmitter;
+  let triggerManager: EventEmitter & { onUserEvent: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     routeHandler = null;
-    scheduler = createMockScheduler();
-    const { registry } = createMockRegistry(scheduler);
+    triggerManager = createMockTriggerManager();
+    const { registry } = createMockRegistry(triggerManager);
     handleBusWebSocket(mockFastify as never, registry as never);
     socket = createMockSocket();
     routeHandler!(socket);
@@ -117,82 +118,111 @@ describe("ws-bus /ws/bus handler", () => {
     routeHandler = null;
   });
 
-  describe("schedule channel", () => {
-    it("attaches 4 schedule listeners and forwards events as bus envelopes", () => {
-      socket.simulateMessage(subMsg("p1", "schedule"));
+  describe("trigger channel", () => {
+    it("attaches 4 trigger listeners and forwards events as bus envelopes", () => {
+      socket.simulateMessage(subMsg("p1", "trigger"));
 
-      expect(scheduler.on).toHaveBeenCalledTimes(4);
-      expect(scheduler.on).toHaveBeenCalledWith("schedule_triggered", expect.any(Function));
-      expect(scheduler.on).toHaveBeenCalledWith("schedule_completed", expect.any(Function));
-      expect(scheduler.on).toHaveBeenCalledWith("schedule_failed", expect.any(Function));
-      expect(scheduler.on).toHaveBeenCalledWith("schedule_updated", expect.any(Function));
+      expect(triggerManager.on).toHaveBeenCalledTimes(4);
+      expect(triggerManager.on).toHaveBeenCalledWith("trigger_triggered", expect.any(Function));
+      expect(triggerManager.on).toHaveBeenCalledWith("trigger_completed", expect.any(Function));
+      expect(triggerManager.on).toHaveBeenCalledWith("trigger_failed", expect.any(Function));
+      expect(triggerManager.on).toHaveBeenCalledWith("trigger_updated", expect.any(Function));
 
-      scheduler.emit("schedule_triggered", {
+      triggerManager.emit("trigger_triggered", {
         agentId: "a1",
-        scheduleId: "s1",
+        triggerId: "t1",
         triggeredAt: 12345,
       });
 
       expect(sentObjects(socket)).toContainEqual({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_triggered",
-        payload: { agentId: "a1", scheduleId: "s1", triggeredAt: 12345 },
+        type: "trigger_triggered",
+        payload: { agentId: "a1", triggerId: "t1", triggeredAt: 12345 },
       });
     });
 
-    it("forwards schedule_completed with status success", () => {
-      socket.simulateMessage(subMsg("p1", "schedule"));
+    it("forwards trigger_completed with status success", () => {
+      socket.simulateMessage(subMsg("p1", "trigger"));
 
-      scheduler.emit("schedule_completed", {
+      triggerManager.emit("trigger_completed", {
         agentId: "a1",
-        scheduleId: "s1",
+        triggerId: "t1",
         sessionId: "sess1",
         status: "success",
       });
 
       expect(sentObjects(socket)).toContainEqual({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_completed",
-        payload: { agentId: "a1", scheduleId: "s1", sessionId: "sess1", status: "success" },
+        type: "trigger_completed",
+        payload: { agentId: "a1", triggerId: "t1", sessionId: "sess1", status: "success" },
       });
     });
 
-    it("forwards schedule_failed with error", () => {
-      socket.simulateMessage(subMsg("p1", "schedule"));
+    it("forwards trigger_failed with error", () => {
+      socket.simulateMessage(subMsg("p1", "trigger"));
 
-      scheduler.emit("schedule_failed", {
+      triggerManager.emit("trigger_failed", {
         agentId: "a1",
-        scheduleId: "s1",
+        triggerId: "t1",
         error: "boom",
       });
 
       expect(sentObjects(socket)).toContainEqual({
-        channel: "schedule",
+        channel: "trigger",
         projectId: "p1",
-        type: "schedule_failed",
-        payload: { agentId: "a1", scheduleId: "s1", error: "boom" },
+        type: "trigger_failed",
+        payload: { agentId: "a1", triggerId: "t1", error: "boom" },
       });
     });
 
     it("does not double-attach on duplicate subscribe", () => {
-      socket.simulateMessage(subMsg("p1", "schedule"));
-      expect(scheduler.on).toHaveBeenCalledTimes(4);
+      socket.simulateMessage(subMsg("p1", "trigger"));
+      expect(triggerManager.on).toHaveBeenCalledTimes(4);
 
-      socket.simulateMessage(subMsg("p1", "schedule"));
-      expect(scheduler.on).toHaveBeenCalledTimes(4);
+      socket.simulateMessage(subMsg("p1", "trigger"));
+      expect(triggerManager.on).toHaveBeenCalledTimes(4);
     });
 
     it("releases 4 listeners on unsubscribe", () => {
-      socket.simulateMessage(subMsg("p1", "schedule"));
-      expect(scheduler.off).not.toHaveBeenCalled();
+      socket.simulateMessage(subMsg("p1", "trigger"));
+      expect(triggerManager.off).not.toHaveBeenCalled();
 
-      socket.simulateMessage(unsubMsg("p1", "schedule"));
-      expect(scheduler.off).toHaveBeenCalledTimes(4);
+      socket.simulateMessage(unsubMsg("p1", "trigger"));
+      expect(triggerManager.off).toHaveBeenCalledTimes(4);
 
-      scheduler.emit("schedule_triggered", { agentId: "a1", scheduleId: "s1", triggeredAt: 1 });
+      triggerManager.emit("trigger_triggered", { agentId: "a1", triggerId: "t1", triggeredAt: 1 });
       expect(socket.send).not.toHaveBeenCalled();
+    });
+
+    it("forwards emit-trigger-event to triggerManager.onUserEvent", () => {
+      socket.simulateMessage(
+        Buffer.from(
+          JSON.stringify({
+            kind: "emit-trigger-event",
+            projectId: "p1",
+            eventName: "user-login",
+            payload: "hello",
+          }),
+        ),
+      );
+
+      expect(triggerManager.onUserEvent).toHaveBeenCalledWith("user-login", "hello");
+    });
+
+    it("forwards emit-trigger-event without payload as empty string", () => {
+      socket.simulateMessage(
+        Buffer.from(
+          JSON.stringify({
+            kind: "emit-trigger-event",
+            projectId: "p1",
+            eventName: "user-login",
+          }),
+        ),
+      );
+
+      expect(triggerManager.onUserEvent).toHaveBeenCalledWith("user-login", "");
     });
   });
 
@@ -296,9 +326,9 @@ describe("ws-bus /ws/bus handler", () => {
       expect(socket.send).not.toHaveBeenCalled();
     });
 
-    it("silently ignores subscribe with unknown projectId (schedule)", () => {
-      socket.simulateMessage(subMsg("unknown", "schedule"));
-      expect(scheduler.on).not.toHaveBeenCalled();
+    it("silently ignores subscribe with unknown projectId (trigger)", () => {
+      socket.simulateMessage(subMsg("unknown", "trigger"));
+      expect(triggerManager.on).not.toHaveBeenCalled();
       expect(socket.send).not.toHaveBeenCalled();
     });
 
@@ -311,13 +341,13 @@ describe("ws-bus /ws/bus handler", () => {
 
   describe("socket close", () => {
     it("releases all subscriptions on close", () => {
-      socket.simulateMessage(subMsg("p1", "schedule"));
+      socket.simulateMessage(subMsg("p1", "trigger"));
       socket.simulateMessage(subMsg("p1", "fs-watch"));
       socket.simulateMessage(subMsg("__global__", "debug"));
 
       socket.simulateClose();
 
-      expect(scheduler.off).toHaveBeenCalledTimes(4);
+      expect(triggerManager.off).toHaveBeenCalledTimes(4);
       expect(releaseFsWatch).toHaveBeenCalledWith("p1", expect.any(Function));
 
       const stream = createDebugBusStream();
@@ -327,12 +357,12 @@ describe("ws-bus /ws/bus handler", () => {
     });
 
     it("is idempotent on double close (error then close)", () => {
-      socket.simulateMessage(subMsg("p1", "schedule"));
+      socket.simulateMessage(subMsg("p1", "trigger"));
 
       socket.simulateError(new Error("boom"));
       socket.simulateClose();
 
-      expect(scheduler.off).toHaveBeenCalledTimes(4);
+      expect(triggerManager.off).toHaveBeenCalledTimes(4);
     });
   });
 

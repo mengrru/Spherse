@@ -7,7 +7,7 @@ const sessionInfo = Type.Object({
   createdAt: Type.Number(),
   updatedAt: Type.Number(),
   status: Type.Union([Type.Literal("active"), Type.Literal("archived")]),
-  source: Type.Optional(Type.Union([Type.Literal("manual"), Type.Literal("scheduled")])),
+  source: Type.Optional(Type.Union([Type.Literal("manual"), Type.Literal("triggered")])),
 });
 
 export const schemas = {

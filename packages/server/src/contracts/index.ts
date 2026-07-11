@@ -4,7 +4,7 @@ import * as sessions from "./sessions.js";
 import * as content from "./content.js";
 import * as fileTree from "./file-tree.js";
 import * as settings from "./settings.js";
-import * as schedules from "./schedules.js";
+import * as schedules from "./trigger.js";
 import * as skills from "./skills.js";
 import * as debug from "./debug.js";
 import * as bus from "./bus.js";
@@ -70,14 +70,14 @@ export type {
 } from "./settings.js";
 
 export type {
-  ScheduleEntryContract,
-  ScheduleInfoEntryContract,
-  ScheduleListResponse,
-  ScheduleCreateRequest,
-  ScheduleUpdateRequest,
-  ScheduleLogEntryContract,
-  ScheduleLogListResponse,
-} from "./schedules.js";
+  TriggerEntryContract,
+  TriggerInfoEntryContract,
+  TriggerListResponse,
+  TriggerCreateRequest,
+  TriggerUpdateRequest,
+  TriggerLogEntryContract,
+  TriggerLogListResponse,
+} from "./trigger.js";
 
 export type { SkillDefinitionContract, SkillListResponse, SkillCreateRequest, SkillInstallRequest } from "./skills.js";
 export type { TurnContextSnapshotContract } from "./debug.js";
@@ -93,10 +93,10 @@ export type { ChatClientMessage, ChatServerEvent } from "./websocket.js";
 export {
   parseBusServerMessage,
   parseBusClientMessage,
-  parseScheduleServerEvent,
+  parseTriggerServerEvent,
 } from "./bus.js";
 export type {
   BusServerMessage,
   BusClientMessage,
-  ScheduleServerEvent,
+  TriggerServerEvent,
 } from "./bus.js";

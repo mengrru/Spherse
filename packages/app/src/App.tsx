@@ -8,7 +8,7 @@ import { useAppStore } from "./stores/app-store";
 import { useProjectDataStore } from "./stores/project-data-store";
 import { clearLastRoute } from "./lib/localstorage/last-route";
 import { useAgentSessionListUiStore } from "./features/agent-session-list/store";
-import { useScheduleStore } from "./features/agent-schedule/store";
+import { useTriggerStore } from "./features/agent-trigger/store";
 import { useFloatingChatStore } from "./features/floating-chat/store";
 import { I18nProvider } from "@spherse/i18n/react";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
@@ -33,7 +33,7 @@ export function App() {
   const setActiveProject = useAppStore((state) => state.setActiveProject);
   const clearProjectData = useProjectDataStore((state) => state.clearProjectData);
   const clearAgentSessionListUi = useAgentSessionListUiStore((state) => state.clearProject);
-  const clearScheduleData = useScheduleStore((state) => state.clearProject);
+  const clearTriggerData = useTriggerStore((state) => state.clearProject);
   const clearFloatingChat = useFloatingChatStore((state) => state.clearProject);
   const locale = useSettingsStore((state) => state.locale);
   const loadSettings = useSettingsStore((state) => state.loadLocale);
@@ -77,7 +77,7 @@ export function App() {
     const nextProjectId = await closeProject(projectId);
     clearProjectData(projectId);
     clearAgentSessionListUi(projectId);
-    clearScheduleData(projectId);
+    clearTriggerData(projectId);
     clearFloatingChat(projectId);
     clearLastRoute(projectId);
     if (nextProjectId) {

@@ -198,15 +198,16 @@ describe("ProjectStore — agent sessions and schedules access", () => {
     await cleanupDir(projectRoot);
   });
 
-  it("agent store provides sessions and schedules getters", async () => {
+  it("agent store provides sessions and triggers getters", async () => {
     const agentStore = await store.createAgent("world-builder", VALID_PROFILE);
 
     const sessionId = agentStore.sessions.createSession("Test");
     expect(agentStore.sessions.getSession(sessionId)).not.toBeNull();
 
-    agentStore.schedules.create({
-      id: "sched-1",
+    agentStore.triggers.create({
+      id: "trig-1",
       enabled: true,
+      type: "time",
       cron: "0 9 * * *",
       mode: "new_session",
       message: "hello",
@@ -214,6 +215,6 @@ describe("ProjectStore — agent sessions and schedules access", () => {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
-    expect(agentStore.schedules.list()).toHaveLength(1);
+    expect(agentStore.triggers.list()).toHaveLength(1);
   });
 });

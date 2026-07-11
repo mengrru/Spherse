@@ -1,30 +1,32 @@
 import { Type, type Static } from "@sinclair/typebox";
 import { parseContract } from "./common.js";
+import { triggerEntry } from "./trigger.js";
 
-const scheduleTriggeredPayload = Type.Object({
+const triggerTriggeredPayload = Type.Object({
   agentId: Type.String(),
-  scheduleId: Type.String(),
+  triggerId: Type.String(),
+  eventName: Type.Optional(Type.String()),
   sessionId: Type.Optional(Type.String()),
   triggeredAt: Type.Number(),
 });
 
-const scheduleCompletedPayload = Type.Object({
+const triggerCompletedPayload = Type.Object({
   agentId: Type.String(),
-  scheduleId: Type.String(),
+  triggerId: Type.String(),
   sessionId: Type.String(),
   status: Type.Literal("success"),
 });
 
-const scheduleFailedPayload = Type.Object({
+const triggerFailedPayload = Type.Object({
   agentId: Type.String(),
-  scheduleId: Type.String(),
+  triggerId: Type.String(),
   error: Type.String(),
 });
 
-const scheduleUpdatedPayload = Type.Object({
+const triggerUpdatedPayload = Type.Object({
   agentId: Type.String(),
-  scheduleId: Type.String(),
-  schedule: Type.Optional(Type.Unknown()),
+  triggerId: Type.String(),
+  trigger: Type.Optional(triggerEntry),
 });
 
 export const fsWatchChangeEvent = Type.Object({
@@ -39,35 +41,35 @@ export const debugLogEvent = Type.Object({
 export type DebugLogEvent = Static<typeof debugLogEvent>;
 
 const busClientChannel = Type.Union([
-  Type.Literal("schedule"),
+  Type.Literal("trigger"),
   Type.Literal("fs-watch"),
   Type.Literal("debug"),
 ]);
 
 const busServerMessage = Type.Union([
   Type.Object({
-    channel: Type.Literal("schedule"),
+    channel: Type.Literal("trigger"),
     projectId: Type.String(),
-    type: Type.Literal("schedule_triggered"),
-    payload: scheduleTriggeredPayload,
+    type: Type.Literal("trigger_triggered"),
+    payload: triggerTriggeredPayload,
   }),
   Type.Object({
-    channel: Type.Literal("schedule"),
+    channel: Type.Literal("trigger"),
     projectId: Type.String(),
-    type: Type.Literal("schedule_completed"),
-    payload: scheduleCompletedPayload,
+    type: Type.Literal("trigger_completed"),
+    payload: triggerCompletedPayload,
   }),
   Type.Object({
-    channel: Type.Literal("schedule"),
+    channel: Type.Literal("trigger"),
     projectId: Type.String(),
-    type: Type.Literal("schedule_failed"),
-    payload: scheduleFailedPayload,
+    type: Type.Literal("trigger_failed"),
+    payload: triggerFailedPayload,
   }),
   Type.Object({
-    channel: Type.Literal("schedule"),
+    channel: Type.Literal("trigger"),
     projectId: Type.String(),
-    type: Type.Literal("schedule_updated"),
-    payload: scheduleUpdatedPayload,
+    type: Type.Literal("trigger_updated"),
+    payload: triggerUpdatedPayload,
   }),
   Type.Object({
     channel: Type.Literal("fs-watch"),
@@ -105,36 +107,42 @@ const busClientMessage = Type.Union([
     channel: busClientChannel,
   }),
   Type.Object({ kind: Type.Literal("ping") }),
+  Type.Object({
+    kind: Type.Literal("emit-trigger-event"),
+    projectId: Type.String(),
+    eventName: Type.String({ minLength: 1 }),
+    payload: Type.Optional(Type.String()),
+  }),
 ]);
 
-const scheduleServerEvent = Type.Union([
+const triggerServerEvent = Type.Union([
   Type.Object({
-    type: Type.Literal("schedule_triggered"),
-    ...scheduleTriggeredPayload.properties,
+    type: Type.Literal("trigger_triggered"),
+    ...triggerTriggeredPayload.properties,
   }),
   Type.Object({
-    type: Type.Literal("schedule_completed"),
-    ...scheduleCompletedPayload.properties,
+    type: Type.Literal("trigger_completed"),
+    ...triggerCompletedPayload.properties,
   }),
   Type.Object({
-    type: Type.Literal("schedule_failed"),
-    ...scheduleFailedPayload.properties,
+    type: Type.Literal("trigger_failed"),
+    ...triggerFailedPayload.properties,
   }),
   Type.Object({
-    type: Type.Literal("schedule_updated"),
-    ...scheduleUpdatedPayload.properties,
+    type: Type.Literal("trigger_updated"),
+    ...triggerUpdatedPayload.properties,
   }),
 ]);
 
 export const schemas = {
   busServerMessage,
   busClientMessage,
-  scheduleServerEvent,
+  triggerServerEvent,
 } as const;
 
 export type BusServerMessage = Static<typeof busServerMessage>;
 export type BusClientMessage = Static<typeof busClientMessage>;
-export type ScheduleServerEvent = Static<typeof scheduleServerEvent>;
+export type TriggerServerEvent = Static<typeof triggerServerEvent>;
 
 export function parseBusServerMessage(payload: unknown): BusServerMessage {
   return parseContract(busServerMessage, payload);
@@ -144,6 +152,6 @@ export function parseBusClientMessage(payload: unknown): BusClientMessage {
   return parseContract(busClientMessage, payload);
 }
 
-export function parseScheduleServerEvent(payload: unknown): ScheduleServerEvent {
-  return parseContract(scheduleServerEvent, payload);
+export function parseTriggerServerEvent(payload: unknown): TriggerServerEvent {
+  return parseContract(triggerServerEvent, payload);
 }

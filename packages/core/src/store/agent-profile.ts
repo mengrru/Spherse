@@ -93,7 +93,6 @@ export class AgentProfileStore {
         slug: this.slug,
         createdAt: data.createdAt,
         model: data.model,
-        schedule: data.schedule,
         tools: data.tools,
         context: data.context,
         output: data.output,

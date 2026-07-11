@@ -1,29 +1,29 @@
-import type { ScheduleLogEntry } from "../../lib/types";
+import type { TriggerLogEntry } from "../../lib/types";
 import { LOG_LIMIT } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
 
-interface ScheduleLogsProps {
-  logs: ScheduleLogEntry[];
+interface TriggerLogsProps {
+  logs: TriggerLogEntry[];
   agentName: string;
-  scheduleNameMap: Record<string, string>;
+  triggerNameMap: Record<string, string>;
   logFilePath: string;
 }
 
-export function ScheduleLogs({ logs, agentName, scheduleNameMap, logFilePath }: ScheduleLogsProps) {
+export function TriggerLogs({ logs, agentName, triggerNameMap, logFilePath }: TriggerLogsProps) {
   const { t } = useI18n();
   const displayLogs = [...logs].reverse();
 
   function renderLogStatus(status: string) {
     const key = status === "running" ? "logStatusRunning" : status === "success" ? "logStatusSuccess" : "logStatusFailed";
     const color = status === "success" ? "text-green-600" : status === "failed" ? "text-destructive" : "text-muted-foreground";
-    return <span className={cn("text-xs font-medium", color)}>{t(`agent-schedule.${key}`)}</span>;
+    return <span className={cn("text-xs font-medium", color)}>{t(`agent-trigger.${key}`)}</span>;
   }
 
   if (logs.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-xs text-muted-foreground text-center">{t("agent-schedule.noLogs")}</p>
+        <p className="text-xs text-muted-foreground text-center">{t("agent-trigger.noLogs")}</p>
       </div>
     );
   }
@@ -31,7 +31,7 @@ export function ScheduleLogs({ logs, agentName, scheduleNameMap, logFilePath }: 
   return (
     <div className="flex flex-col h-full">
       <p className="text-xs text-muted-foreground mb-2 shrink-0">
-        {t("agent-schedule.logLimitNotice", { count: String(LOG_LIMIT), path: logFilePath })}
+        {t("agent-trigger.logLimitNotice", { count: String(LOG_LIMIT), path: logFilePath })}
       </p>
       <div className="space-y-1 overflow-y-auto flex-1 min-h-0">
         {displayLogs.map((log, i) => (
@@ -42,7 +42,7 @@ export function ScheduleLogs({ logs, agentName, scheduleNameMap, logFilePath }: 
             {renderLogStatus(log.status)}
             <span className="font-medium truncate max-w-[120px]">{log.agentName || agentName}</span>
             <span className="truncate max-w-[100px] text-muted-foreground">
-              {log.scheduleName || scheduleNameMap[log.scheduleId] || log.scheduleId.slice(0, 8)}
+              {log.triggerName || triggerNameMap[log.triggerId] || log.triggerId.slice(0, 8)}
             </span>
             {log.error && (
               <span className="truncate text-destructive/80 max-w-[120px]">{log.error}</span>

@@ -108,34 +108,34 @@ describe("bus-store", () => {
     const socket = await connect();
     socket.sent.length = 0;
     const handler = vi.fn();
-    useBusStore.getState().addHandler("p1", "schedule", handler);
+    useBusStore.getState().addHandler("p1", "trigger", handler);
     expect(socket.sent).toHaveLength(1);
     expect(JSON.parse(socket.sent[0])).toEqual({
       kind: "subscribe",
       projectId: "p1",
-      channel: "schedule",
+      channel: "trigger",
     });
   });
 
   it("second subscriber on the same key does not send subscribe again", async () => {
     const socket = await connect();
-    useBusStore.getState().addHandler("p1", "schedule", vi.fn());
+    useBusStore.getState().addHandler("p1", "trigger", vi.fn());
     socket.sent.length = 0;
-    useBusStore.getState().addHandler("p1", "schedule", vi.fn());
+    useBusStore.getState().addHandler("p1", "trigger", vi.fn());
     expect(socket.sent).toHaveLength(0);
   });
 
   it("removeHandler last subscriber sends unsubscribe", async () => {
     const socket = await connect();
     const handler = vi.fn();
-    useBusStore.getState().addHandler("p1", "schedule", handler);
+    useBusStore.getState().addHandler("p1", "trigger", handler);
     socket.sent.length = 0;
-    useBusStore.getState().removeHandler("p1", "schedule", handler);
+    useBusStore.getState().removeHandler("p1", "trigger", handler);
     expect(socket.sent).toHaveLength(1);
     expect(JSON.parse(socket.sent[0])).toEqual({
       kind: "unsubscribe",
       projectId: "p1",
-      channel: "schedule",
+      channel: "trigger",
     });
   });
 
@@ -143,25 +143,25 @@ describe("bus-store", () => {
     const socket = await connect();
     const h1 = vi.fn();
     const h2 = vi.fn();
-    useBusStore.getState().addHandler("p1", "schedule", h1);
-    useBusStore.getState().addHandler("p1", "schedule", h2);
+    useBusStore.getState().addHandler("p1", "trigger", h1);
+    useBusStore.getState().addHandler("p1", "trigger", h2);
     socket.sent.length = 0;
-    useBusStore.getState().removeHandler("p1", "schedule", h1);
+    useBusStore.getState().removeHandler("p1", "trigger", h1);
     expect(socket.sent).toHaveLength(0);
   });
 
-  it("dispatches schedule events to matching handlers", async () => {
+  it("dispatches trigger events to matching handlers", async () => {
     const socket = await connect();
     const handler = vi.fn();
-    useBusStore.getState().addHandler("p1", "schedule", handler);
-    const payload = { agentId: "a1", scheduleId: "s1", triggeredAt: 123 };
+    useBusStore.getState().addHandler("p1", "trigger", handler);
+    const payload = { agentId: "a1", triggerId: "t1", triggeredAt: 123 };
     socket.onmessage?.({ data: JSON.stringify({
-      channel: "schedule",
+      channel: "trigger",
       projectId: "p1",
-      type: "schedule_triggered",
+      type: "trigger_triggered",
       payload,
     }) } as MessageEvent);
-    expect(handler).toHaveBeenCalledWith("schedule_triggered", payload);
+    expect(handler).toHaveBeenCalledWith("trigger_triggered", payload);
   });
 
   it("dispatches debug events via the __global__::debug key", async () => {
@@ -179,7 +179,7 @@ describe("bus-store", () => {
   it("swallows __system__ pong without calling handlers", async () => {
     const socket = await connect();
     const handler = vi.fn();
-    useBusStore.getState().addHandler("p1", "schedule", handler);
+    useBusStore.getState().addHandler("p1", "trigger", handler);
     socket.onmessage?.({ data: JSON.stringify({
       channel: "__system__",
       type: "pong",
@@ -201,7 +201,7 @@ describe("bus-store", () => {
 
   it("reconnects with backoff and replays subscriptions on reopen", async () => {
     const socket = await connect();
-    useBusStore.getState().addHandler("p1", "schedule", vi.fn());
+    useBusStore.getState().addHandler("p1", "trigger", vi.fn());
     expect(allSends(mock.instances, "subscribe")).toHaveLength(1);
 
     socket.close();
@@ -218,7 +218,7 @@ describe("bus-store", () => {
     expect(subscribeAfterReconnect).toEqual({
       kind: "subscribe",
       projectId: "p1",
-      channel: "schedule",
+      channel: "trigger",
     });
   });
 

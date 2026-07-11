@@ -19,7 +19,7 @@ spherse/
 │   │       ├── store/                # 存储层抽象（不持有运行时状态）
 │   │       │   ├── project.ts        # 项目元数据读写（.spherse/project.yaml, AGENTS.md, CHANGELOG.md）
 │   │       │   ├── session.ts        # SQLite session 持久化（每 agent 独立 sessions.db, lazy open 连接池）
-│   │       │   ├── schedule.ts       # 定时任务配置读写（schedules/index.yml / schedules/logs.jsonl）
+    │   │       │   ├── trigger.ts        # 触发器配置读写（triggers/index.yml / triggers/logs.jsonl）
 │   │       │   ├── agent-profile.ts  # .spherse/agents/{agent-slug}/profile.md CRUD
     │   │       │   ├── skill.ts          # SkillStore：合并 builtin（PRESET_SKILL_SOURCES 内存）与 project（.spherse/skills/*/SKILL.md）skill；createSkill/installSkill 写逻辑（含 zip 校验、zip-slip 防护、原子安装）
 │   │       │   └── index.ts
@@ -37,7 +37,10 @@ spherse/
     │   │       │   ├── generate-image.ts # 图片生成工具（经 getImagesModels() 解析模型并生成，结果落盘 .spherse/generated-images/）
     │   │       │   ├── tool-context.ts   # ToolContext：收窄 ProjectStore 接口，约束 tool 可用的读写方法
     │   │       │   └── index.ts          # createToolsForProject(ctx: ToolContext) 工厂
-│   │       ├── scheduler.ts
+│   │       ├── trigger/
+│   │       │   ├── trigger-manager.ts # TriggerManager：trigger 配置读取与触发执行（磁盘为唯一真相源）
+│   │       │   ├── timer-service.ts   # TimerService：10 分钟轮询，每次 tick 调用 triggerManager.onTimeTick()
+│   │       │   └── template.ts        # trigger 消息模板变量注入（{{payload}} 等）
 │   │       ├── utils/
 │   │       │   ├── file-write-mutex.ts # 文件写入互斥，避免并发写覆盖
 │   │       │   ├── fs-walk.ts         # 目录遍历过滤（shouldSkipDirEntry）
@@ -106,10 +109,10 @@ spherse/
     │   │       │   ├── content.ts        # FileEntry、ContentResponse、create/save 请求
     │   │       │   ├── file-tree.ts      # FileTreeResponse
     │   │       │   ├── settings.ts       # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
-    │   │       │   ├── schedules.ts      # ScheduleEntry、ScheduleCreate/Update 请求、List/Log Response
+    │   │       │   ├── trigger.ts        # TriggerEntry、TriggerCreate/Update 请求、List/Log Response
     │   │       │   ├── skills.ts         # SkillDefinition、SkillList/Create/Install Request 响应与请求 schema
     │   │       │   ├── debug.ts          # TurnContextSnapshot
-    │   │       │   └── websocket.ts      # ChatClientMessage/ChatServerEvent/ScheduleServerEvent + parser
+    │   │       │   └── websocket.ts      # ChatClientMessage/ChatServerEvent/TriggerServerEvent + parser
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
@@ -121,10 +124,10 @@ spherse/
 │   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
 │   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
-│   │       │   ├── schedules.ts      # 定时任务 CRUD 与手动触发
+│       │       │   ├── trigger.ts         # 触发器 CRUD 与手动触发（/triggers、/trigger-logs、/run）
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
 │       │       ├── ws-chat.ts            # WebSocket 对话流（/ws/projects/:projectId/chat/...，双向 session-scoped）
-│       │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，schedule/fs-watch/debug 按 projectId×channel 订阅）
+│       │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，trigger/fs-watch/debug 按 projectId×channel 订阅）
 │       │       └── lib/
 │       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
 │   └── app/                          # @spherse/app — Electron + React
@@ -185,12 +188,12 @@ spherse/
 │           │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（client/projectId/projectRoot）
     │           ├── stores/
     │           │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
-    │           │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledSchedulesByAgent 等项目数据缓存
+    │           │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledTriggersByAgent 等项目数据缓存
     │           │   ├── settings-store.ts     # 应用级 locale 设置
     │           │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）
     │           │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │           ├── layouts/
-│           │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/schedule WS/数据刷新/各 agent schedule 启用态预加载）
+│           │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/trigger WS/数据刷新/各 agent trigger 启用态预加载）
 │           ├── hooks/
 │           │   ├── useSidePanel.ts       # side panel pinned/hover 状态合并派生 + clickAway props
 │           │   ├── useCustomTheme.ts
@@ -212,7 +215,7 @@ spherse/
 │           │       └── data.ts           # data.get/set/delete key-value 持久化
 │           ├── features/
 │           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
-│           │   ├── agent-schedule/       # Agent 定时任务弹窗、表单、列表与运行日志，含 schedule feature store
+│   │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 trigger feature store
 │           │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
 │           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、HtmlCard（含 UI SDK 运行时上下文注入）、chat 运行时 context（runtime-context.tsx）、chat 专属类型（types.ts）、thinking 指示器（ThinkingIndicator）、聚合/diff 纯函数（lib/，含 format-time）
 │           │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）

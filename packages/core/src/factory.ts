@@ -3,7 +3,8 @@ import { PROJECT_META_DIR } from "./types.js";
 import { ProjectStore } from "./store/project.js";
 import { ProjectManager } from "./project-manager.js";
 import { SessionManager } from "./session/session-manager.js";
-import { Scheduler } from "./scheduler.js";
+import { TriggerManager } from "./trigger/trigger-manager.js";
+import { TimerService } from "./trigger/timer-service.js";
 import { ProjectRuntime } from "./project-runtime.js";
 import { initPresets } from "./presets.js";
 import { type Logger, createSilentLogger } from "./logger.js";
@@ -41,13 +42,15 @@ export async function createProject(
     temperature: options?.temperature,
     logger,
   });
-  const scheduler = new Scheduler(sessionRuntime, projectStore, logger);
-  await scheduler.loadFromAgents();
+  const triggerManager = new TriggerManager({ sessionRuntime, projectStore, logger });
+  const timerService = new TimerService(() => triggerManager.onTimeTick(), logger);
+  timerService.start();
 
   return new ProjectRuntime({
     projectManager,
     sessionRuntime,
-    scheduler,
+    triggerManager,
+    timerService,
     projectId: projectStore.config.getProjectId(),
     logger,
   });

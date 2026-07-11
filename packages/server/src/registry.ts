@@ -1,13 +1,13 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { createProject } from "@spherse/core";
-import type { ProjectRuntime, ProjectManager, SessionManager, Scheduler, Logger } from "@spherse/core";
+import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger } from "@spherse/core";
 
 export interface ProjectContext {
   runtime: ProjectRuntime;
   projectManager: ProjectManager;
   sessionRuntime: SessionManager;
-  scheduler: Scheduler;
+  triggerManager: TriggerManager;
   projectId: string;
 }
 
@@ -68,7 +68,7 @@ export class ProjectRegistry {
       runtime,
       projectManager: runtime.projectManager,
       sessionRuntime: runtime.sessionRuntime,
-      scheduler: runtime.scheduler,
+      triggerManager: runtime.triggerManager,
       projectId,
     };
     this.projects.set(projectId, ctx);

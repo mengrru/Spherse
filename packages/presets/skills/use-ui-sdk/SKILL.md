@@ -193,6 +193,30 @@ window.parent.postMessage({
 }, "*");
 ```
 
+### emitAgentTriggerEvent
+
+触发一个自定义事件，用于激活配置了「事件触发器」的 agent。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| eventName | string | 是 | 自定义事件名（不能以 `sp:` 开头，该前缀为系统保留） |
+| payload | string | 否 | 事件附带的数据，会通过 `{{payload}}` 注入触发器的消息模板（是否使用取决于 trigger 配置） |
+
+```javascript
+window.parent.postMessage({
+  type: "spherse:action",
+  action: "emitAgentTriggerEvent",
+  params: {
+    eventName: "daily-review",
+    payload: "第3章"
+  }
+}, "*");
+```
+
+例如 trigger 配置了消息模板 `"请回顾 {{payload}} 的写作进度"`，触发时会拼接为 `"请回顾 第3章 的写作进度"`。
+
+事件触发后，所有匹配该事件名且启用的触发器将自动执行（创建会话或向已有会话发送消息）。此操作为单向触发，无返回值。
+
 ## 完整示例
 
 ### 交互式欢迎页

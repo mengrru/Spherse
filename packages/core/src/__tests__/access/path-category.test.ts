@@ -37,13 +37,13 @@ describe("categorizePath", () => {
     );
   });
 
-  it("classifies both agent schedule filenames", () => {
-    expect(categorizePath(".spherse/agents/historian-abc123/schedules/index.yml")).toBe(
-      "agentSchedules",
+  it("classifies both agent trigger filenames", () => {
+    expect(categorizePath(".spherse/agents/historian-abc123/triggers/index.yml")).toBe(
+      "agentTriggers",
     );
     expect(
-      categorizePath(".spherse/agents/historian-abc123/schedules/logs.jsonl"),
-    ).toBe("agentScheduleLogs");
+      categorizePath(".spherse/agents/historian-abc123/triggers/logs.jsonl"),
+    ).toBe("agentTriggerLogs");
   });
 
   it("falls back to spherseOther for unknown files under .spherse/", () => {
