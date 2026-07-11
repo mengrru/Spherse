@@ -120,4 +120,93 @@ describe("createListFilesTool", () => {
       tool.execute("tc1", { path: "../../etc" }, undefined as any),
     ).rejects.toThrow("Path traversal denied");
   });
+
+  describe(".spherse listing", () => {
+    it("lists .spherse in root listing and shows readable files", async () => {
+      await writeFile(projectRoot, ".spherse/theme.css", "body{}");
+      await writeFile(projectRoot, ".spherse/project.yaml", "name: test");
+      const tool = createListFilesTool(projectRoot, permissivePolicy(projectRoot));
+
+      const result = await tool.execute("tc1", { path: "." }, undefined as any);
+      const text = result.content[0].text;
+      expect(text).toContain("📁 .spherse");
+    });
+
+    it("lists readable .spherse files directly", async () => {
+      await writeFile(projectRoot, ".spherse/theme.css", "body{}");
+      await writeFile(projectRoot, ".spherse/project.yaml", "name: test");
+      const tool = createListFilesTool(projectRoot, permissivePolicy(projectRoot));
+
+      const result = await tool.execute("tc1", { path: ".spherse" }, undefined as any);
+      const text = result.content[0].text;
+      expect(text).toContain("📄 theme.css");
+      expect(text).toContain("📄 project.yaml");
+    });
+
+    it("hides spherseOther files in .spherse listing", async () => {
+      await writeFile(projectRoot, ".spherse/theme.css", "body{}");
+      await writeFile(projectRoot, ".spherse/internal-secret.txt", "secret");
+      const tool = createListFilesTool(projectRoot, permissivePolicy(projectRoot));
+
+      const result = await tool.execute("tc1", { path: ".spherse" }, undefined as any);
+      const text = result.content[0].text;
+      expect(text).toContain("theme.css");
+      expect(text).not.toContain("internal-secret.txt");
+    });
+
+    it("lists .spherse/agents directory and shows only own agent", async () => {
+      await writeFile(projectRoot, ".spherse/agents/my-agent/profile.md", "# Me");
+      await writeFile(projectRoot, ".spherse/agents/my-agent/theme.css", "body{}");
+      await writeFile(projectRoot, ".spherse/agents/other-agent/profile.md", "# Other");
+      const tool = createListFilesTool(projectRoot, permissivePolicy(projectRoot), "my-agent");
+
+      const result = await tool.execute("tc1", { path: ".spherse/agents" }, undefined as any);
+      const text = result.content[0].text;
+      expect(text).toContain("my-agent");
+      expect(text).not.toContain("other-agent");
+    });
+
+    it("lists own agent readable files recursively", async () => {
+      await writeFile(projectRoot, ".spherse/agents/my-agent/profile.md", "# Me");
+      await writeFile(projectRoot, ".spherse/agents/my-agent/theme.css", "body{}");
+      await writeFile(projectRoot, ".spherse/agents/my-agent/sessions.db", "binary");
+      await writeFile(projectRoot, ".spherse/agents/my-agent/triggers/index.yml", "name: test");
+      const tool = createListFilesTool(projectRoot, permissivePolicy(projectRoot), "my-agent");
+
+      const result = await tool.execute("tc1", { path: ".spherse/agents/my-agent", recursive: true }, undefined as any);
+      const text = result.content[0].text;
+      expect(text).toContain("profile.md");
+      expect(text).toContain("theme.css");
+      expect(text).toContain("index.yml");
+      expect(text).not.toContain("sessions.db");
+    });
+
+    it("hides other agents when listing .spherse recursively from root", async () => {
+      await writeFile(projectRoot, ".spherse/agents/my-agent/profile.md", "# Me");
+      await writeFile(projectRoot, ".spherse/agents/other-agent/profile.md", "# Other");
+      await writeFile(projectRoot, "content.md", "content");
+      const tool = createListFilesTool(projectRoot, permissivePolicy(projectRoot), "my-agent");
+
+      const result = await tool.execute("tc1", { path: ".", recursive: true }, undefined as any);
+      const text = result.content[0].text;
+      expect(text).toContain("my-agent");
+      expect(text).not.toContain("other-agent");
+    });
+
+    it("denies listing other agents directory directly", async () => {
+      await writeFile(projectRoot, ".spherse/agents/other-agent/profile.md", "# Other");
+      const tool = createListFilesTool(projectRoot, permissivePolicy(projectRoot), "my-agent");
+
+      const result = await tool.execute("tc1", { path: ".spherse/agents/other-agent" }, undefined as any);
+      expect(result.details?.denied).toBe(true);
+    });
+
+    it("denies listing unknown .spherse subdirectory", async () => {
+      await writeFile(projectRoot, ".spherse/internal/data.txt", "data");
+      const tool = createListFilesTool(projectRoot, permissivePolicy(projectRoot), "my-agent");
+
+      const result = await tool.execute("tc1", { path: ".spherse/internal" }, undefined as any);
+      expect(result.details?.denied).toBe(true);
+    });
+  });
 });

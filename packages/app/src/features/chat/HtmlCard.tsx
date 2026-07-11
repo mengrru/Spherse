@@ -6,7 +6,7 @@ import type { HtmlCard } from "./types";
 import { useProjectCtx } from "../../context/project-context";
 import { useChatRuntime } from "./runtime-context";
 import { isPathInsideProject, toProjectRelative, joinProjectPath } from "../../lib/project-path";
-import { ensureCharset, ensureScrollable, buildFileSrcDoc } from "./html-card-src";
+import { ensureCharset, buildFileSrcDoc, buildInlineSrcDoc } from "./html-card-src";
 
 interface HtmlCardRendererProps {
   card: HtmlCard;
@@ -159,10 +159,11 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     }
 
     if (card.html) {
+      const previewBaseUrl = client ? `${client.getPreviewUrl("")}` : "";
       return (
         <iframe
           ref={iframeRef}
-          srcDoc={ensureScrollable(card.html)}
+          srcDoc={buildInlineSrcDoc(card.html, previewBaseUrl)}
           sandbox={sandbox}
           onLoad={onLoad}
           style={iframeStyle}

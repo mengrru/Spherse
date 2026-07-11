@@ -69,6 +69,21 @@ describe("createGenerateImageTool", () => {
     expect(written.equals(Buffer.from(MOCK_B64, "base64"))).toBe(true);
   });
 
+  it("includes image storage path in content text", async () => {
+    const tool = createGenerateImageTool(projectRoot);
+    const onUpdate = vi.fn();
+
+    const result = await tool.execute("tc1", { prompt: "一只猫" }, undefined as any, onUpdate);
+    const details = result.details as any;
+    const contentText = result.content[0].text;
+
+    expect(contentText).toContain("已保存至");
+    expect(contentText).toContain(details.path);
+
+    const updateText = onUpdate.mock.calls[1][0].content[0].text;
+    expect(updateText).toContain(details.path);
+  });
+
   it("calls onUpdate twice: generating placeholder before generateImages, then done", async () => {
     const tool = createGenerateImageTool(projectRoot);
     const onUpdate = vi.fn();

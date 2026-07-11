@@ -1,7 +1,7 @@
 import { DownloadIcon, Loader2Icon, AlertCircleIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
-import type { ImageCard } from "../../lib/types";
+import type { ImageCard } from "./types";
 import { useProjectCtx } from "../../context/project-context";
 import { isPathInsideProject, joinProjectPath } from "../../lib/project-path";
 

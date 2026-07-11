@@ -7,6 +7,7 @@ export class ToolContext {
   constructor(
     private projectStore: ProjectStore,
     readonly mutex: FileWriteMutex,
+    readonly agentSlug?: string,
   ) {}
 
   get root(): string {

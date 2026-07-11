@@ -9,11 +9,13 @@ export type PathCategory =
   | "projectTheme"
   | "generatedImages"
   | "skills"
+  | "agentsRoot"
   | "agentProfile"
   | "agentTheme"
   | "agentSessions"
   | "agentTriggers"
   | "agentTriggerLogs"
+  | "spherseMetaDir"
   | "spherseOther";
 
 const PATH_PATTERNS: Record<Exclude<PathCategory, "userFiles">, string> = {
@@ -23,11 +25,13 @@ const PATH_PATTERNS: Record<Exclude<PathCategory, "userFiles">, string> = {
   projectTheme: `${PROJECT_META_DIR}/theme.css`,
   generatedImages: `${PROJECT_META_DIR}/generated-images/**`,
   skills: `${PROJECT_META_DIR}/skills/**`,
+  agentsRoot: `${PROJECT_META_DIR}/agents`,
   agentProfile: `${PROJECT_META_DIR}/agents/*/profile.md`,
   agentTheme: `${PROJECT_META_DIR}/agents/*/theme.css`,
   agentSessions: `${PROJECT_META_DIR}/agents/*/sessions.db`,
   agentTriggers: `${PROJECT_META_DIR}/agents/*/triggers/index.yml`,
   agentTriggerLogs: `${PROJECT_META_DIR}/agents/*/triggers/logs.jsonl`,
+  spherseMetaDir: PROJECT_META_DIR,
   spherseOther: `${PROJECT_META_DIR}/**`,
 };
 

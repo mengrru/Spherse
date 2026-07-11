@@ -46,6 +46,14 @@ describe("categorizePath", () => {
     ).toBe("agentTriggerLogs");
   });
 
+  it("classifies .spherse directory itself as spherseMetaDir", () => {
+    expect(categorizePath(".spherse")).toBe("spherseMetaDir");
+  });
+
+  it("classifies .spherse/agents directory as agentsRoot", () => {
+    expect(categorizePath(".spherse/agents")).toBe("agentsRoot");
+  });
+
   it("falls back to spherseOther for unknown files under .spherse/", () => {
     expect(categorizePath(".spherse/random.md")).toBe("spherseOther");
     expect(categorizePath(".spherse/foo/bar.json")).toBe("spherseOther");

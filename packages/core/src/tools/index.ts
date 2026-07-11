@@ -22,7 +22,7 @@ export function createToolsForProject(
     read_file: createReadFileTool(ctx.root, getPolicy),
     write_file: createWriteFileTool(ctx.root, ctx.mutex, getPolicy),
     edit_file: createEditFileTool(ctx.root, ctx.mutex, getPolicy),
-    list_files: createListFilesTool(ctx.root, getPolicy),
+    list_files: createListFilesTool(ctx.root, getPolicy, ctx.agentSlug),
     search_content: createSearchContentTool(ctx.root, getPolicy),
     append_changelog: createAppendChangelogTool(ctx),
     render_card: createRenderCardTool(ctx.root, getPolicy),

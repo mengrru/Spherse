@@ -23,9 +23,19 @@ export function buildFileSrcDoc(html: string, previewUrl: string): string {
   const scrollable = ensureScrollable(withCharset);
   const lastSlash = previewUrl.lastIndexOf("/");
   const dirUrl = lastSlash >= 0 ? previewUrl.slice(0, lastSlash) : previewUrl;
-  const baseTag = `<base href="${dirUrl}/">`;
-  if (/<head[^>]*>/i.test(scrollable)) {
-    return scrollable.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
+  return injectBase(scrollable, `${dirUrl}/`);
+}
+
+export function buildInlineSrcDoc(html: string, previewBaseUrl: string): string {
+  const withCharset = ensureCharset(html);
+  const scrollable = ensureScrollable(withCharset);
+  return injectBase(scrollable, previewBaseUrl);
+}
+
+function injectBase(html: string, baseUrl: string): string {
+  const baseTag = `<base href="${baseUrl}">`;
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
   }
-  return `${baseTag}${scrollable}`;
+  return `${baseTag}${html}`;
 }

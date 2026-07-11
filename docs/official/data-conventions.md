@@ -175,8 +175,8 @@ Full skill instructions in Markdown...
 
 `render_card` tool 支持两种数据来源：
 
-- `content`：直接提供 inline HTML
-- `file_path`：提供项目根目录内的 HTML 文件相对路径
+- `content`：直接提供 inline HTML。inline HTML 注入 `<base href="${apiBase}/preview/">`，使相对路径（如 `<img src="assets/photo.png">`）相对于项目根解析，可直接引用项目内文件
+- `file_path`：提供项目根目录内的 HTML 文件相对路径。注入 `<base href="${apiBase}/preview/{dir}/">`（文件所在目录），使相对资源按文件系统目录关系解析
 
 tool update 的 `details.type === "html"` 时，前端 chat 会按 HTML card 渲染。
 
@@ -184,7 +184,7 @@ HTML 全文仅通过 `onUpdate`（`tool_execution_update`）传给前端，**不
 
 ## Image Card
 
-`generate_image` tool 接收文本 prompt，调用 pi-ai 图片生成 provider（OpenRouter 或智谱）生成图片，自动保存到 `.spherse/generated-images/{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`。文件名基于 UTC 时间戳 + 4 位随机 hex，避免并发写冲突，不使用 `FileWriteMutex`。
+`generate_image` tool 接收文本 prompt，调用 pi-ai 图片生成 provider（OpenRouter 或智谱）生成图片，自动保存到 `.spherse/generated-images/{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`。文件名基于 UTC 时间戳 + 4 位随机 hex，避免并发写冲突，不使用 `FileWriteMutex`。成功返回时 content text 包含图片存储路径。图片生成成功后自动以卡片展示，无需额外调用 `render_card`。
 
 tool update 的 `details.type === "image"` 时，前端 chat 会按 image card 渲染（三态：generating / done / error）。`done` 态通过 `GET /api/projects/:projectId/preview/<relPath>` 加载图片，卡片右上角提供导出按钮（经 `POST /api/projects/:projectId/images/export` 复制到用户选择的项目内路径）。
 

@@ -241,7 +241,7 @@ export class LiveSession {
     sessionId: string,
   ): Promise<Agent> {
     const projectRoot = ctx.projectRoot;
-    const toolContext = new ToolContext(ctx.projectStore, ctx.fileWriteMutex);
+    const toolContext = new ToolContext(ctx.projectStore, ctx.fileWriteMutex, profile.slug);
     const allTools = createToolsForProject(toolContext);
 
     const toolNames = profile.tools ?? [];

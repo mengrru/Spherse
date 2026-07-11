@@ -51,7 +51,7 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
     name: "generate_image",
     label: "Generate Image",
     description:
-      `这是一个**图片生成（AI 绘图）工具**，根据文本描述（prompt）调用 AI 模型从零生成一张全新图片，并在聊天中以 image card 展示。生成后图片自动保存到 ${GENERATED_DIR} 目录下，用户可通过卡片右上角按钮导出到项目文件。`,
+      `这是一个**图片生成（AI 绘图）工具**，根据文本描述（prompt）调用 AI 模型从零生成一张全新图片，并在聊天中以 image card 展示。生成后图片自动保存到 ${GENERATED_DIR} 目录下，用户可通过卡片右上角按钮导出到项目文件。**注意：图片生成成功后会自动以卡片形式展示给用户，无需额外调用 render_card 工具来渲染图片。**`,
     parameters: GenerateImageParams,
     async execute(_toolCallId, params, signal, onUpdate) {
       const prompt = params.prompt;
@@ -143,13 +143,15 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
         mimeType: imageContent.mimeType,
       };
 
+      const successText = `已生成图片：${prompt}\n图片已保存至：${destRel}`;
+
       onUpdate?.({
-        content: [{ type: "text" as const, text: `已生成图片：${prompt}` }],
+        content: [{ type: "text" as const, text: successText }],
         details,
       });
 
       return {
-        content: [{ type: "text" as const, text: `已生成图片：${prompt}` }],
+        content: [{ type: "text" as const, text: successText }],
         details,
       };
     },

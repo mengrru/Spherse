@@ -40,6 +40,7 @@
 - [x] **Skill 支持**：允许 agent 定义可复用的 skill（预设 prompt + tool 组合）
 - [x] **HTML Viewer Card**：在对话流中支持渲染 HTML 内容卡片
 - [x] **图片生成支持**：通过 generate_image AgentTool 接入图片生成（OpenRouter + 智谱），生成图片以 image card 展示，可一键导出到项目文件。参见 `docs/dev/features/2026-06-20-image-generation-support/design.md`
+- [x] **render_card 与 generate_image 功能增强**：generate_image 成功返回 content text 包含图片存储路径 + description 强调无需额外调用 render_card；render_card inline HTML 模式注入 `<base href="${apiBase}/preview/">`，使相对路径（如 `<img src="assets/photo.png">`）可直接引用项目内文件。list_files 工具支持列出 `.spherse` 中符合 LLM read policy 的文件，对 `.spherse/agents` 仅允许 agent 自身目录中可读的文件。新增 `spherseMetaDir`/`agentsRoot` path category 并加入 LLM_READ。
 - [x] **Viewer Card（write_file / edit_file 预览）**：agent run 结束时按文件聚合展示 write_file（全量内容）与 edit_file（左右分栏行级 diff）的只读预览 card，card 头部路径可点击跳转 ContentBrowser。参见 `docs/dev/features/2026-06-20-viewer-card/design.md`
 - [x] **文件/文件夹新建**：从文件浏览器新建文件或目录
 - [x] **文件删除**：从文件浏览器删除文件/目录

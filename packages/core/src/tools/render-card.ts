@@ -9,7 +9,7 @@ type AccessPolicyProvider = () => AccessPolicy;
 
 const RenderCardParams = Type.Object({
   type: Type.Literal("html", { description: "Card type" }),
-  content: Type.Optional(Type.String({ description: "Inline HTML content to render. Only for self-contained HTML with NO relative resource references (images, CSS, etc.)" })),
+  content: Type.Optional(Type.String({ description: "Inline HTML content to render. Relative paths (e.g. <img src=\"path/to/image.png\">) resolve relative to the project root. Only for self-contained HTML with NO relative resource references (images, CSS, etc.)" })),
   file_path: Type.Optional(Type.String({ description: "Path to HTML file relative to project root. PREFERRED when the HTML references relative resources — ensures images/CSS resolve correctly" })),
   title: Type.Optional(Type.String({ description: "Card title" })),
   width: Type.Optional(Type.Number({ description: "Card width in pixels" })),
