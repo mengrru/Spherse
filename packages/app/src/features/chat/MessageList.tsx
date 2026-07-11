@@ -11,7 +11,6 @@ interface MessageListProps {
   messages: ChatMessage[];
   agent: AgentProfile;
   streaming: boolean;
-  messagesEndRef: RefObject<HTMLDivElement | null>;
   containerRef: RefObject<HTMLDivElement | null>;
   isAtBottom: boolean;
   onScrollToBottom: () => void;
@@ -21,7 +20,7 @@ interface MessageListProps {
   onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, streaming, messagesEndRef, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, hasMore, loadingMore, onLoadMore }: MessageListProps) {
+export function MessageList({ messages, agent, streaming, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
   if (messages.length === 0) {
     return (
@@ -33,23 +32,19 @@ export function MessageList({ messages, agent, streaming, messagesEndRef, contai
   }
 
   const lastMessage = messages[messages.length - 1];
+  const reversed = messages
+    .map((message, index) => ({ message, index }))
+    .reverse();
 
   return (
     <div className="relative flex-1 min-h-0">
-      <div ref={containerRef} className="h-full overflow-y-auto p-4 flex flex-col gap-3" data-chat-messages>
-        {hasMore && (
-          <div className="flex justify-center py-2">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={loadingMore}
-              onClick={onLoadMore}
-            >
-              {loadingMore ? t("common.loading") : t("chat.loadMore")}
-            </Button>
+      <div ref={containerRef} className="h-full overflow-y-auto p-4 flex flex-col-reverse gap-3" data-chat-messages>
+        {streaming && lastMessage?.role === "user" && (
+          <div className="self-start">
+            <ThinkingIndicator />
           </div>
         )}
-        {messages.map((message, index) => {
+        {reversed.map(({ message, index }) => {
           const isLast = index === messages.length - 1;
           const showTime =
             message.role === "user" || isLast || messages[index + 1]?.role === "user";
@@ -63,12 +58,18 @@ export function MessageList({ messages, agent, streaming, messagesEndRef, contai
             />
           );
         })}
-        {streaming && lastMessage?.role === "user" && (
-          <div className="self-start">
-            <ThinkingIndicator />
+        {hasMore && (
+          <div className="flex justify-center py-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={loadingMore}
+              onClick={onLoadMore}
+            >
+              {loadingMore ? t("common.loading") : t("chat.loadMore")}
+            </Button>
           </div>
         )}
-        <div ref={messagesEndRef} />
       </div>
       {!isAtBottom && (
         <div className="absolute bottom-4 right-4">

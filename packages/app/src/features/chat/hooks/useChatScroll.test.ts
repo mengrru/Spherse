@@ -1,30 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { shouldStickToBottom } from "./useChatScroll";
+import { isNearBottom } from "./useChatScroll";
 
-describe("shouldStickToBottom", () => {
-  it("returns true when exactly at the bottom", () => {
-    expect(shouldStickToBottom(1000, 0, 1000)).toBe(true);
-    expect(shouldStickToBottom(2000, 1000, 1000)).toBe(true);
+describe("isNearBottom (column-reverse: scrollTop 0 = bottom, negative = scrolled up)", () => {
+  it("treats scrollTop 0 as pinned to the bottom", () => {
+    expect(isNearBottom(0)).toBe(true);
   });
 
-  it("returns true within the one-third-viewport threshold (inclusive)", () => {
-    expect(shouldStickToBottom(1333, 0, 1000)).toBe(true);
-    expect(shouldStickToBottom(2000, 667, 1000)).toBe(true);
+  it("returns true within the default 100px threshold (scrollTop between -100 and 0)", () => {
+    expect(isNearBottom(-50)).toBe(true);
+    expect(isNearBottom(-100)).toBe(true);
   });
 
-  it("returns false once scrolled up more than one-third of the viewport", () => {
-    expect(shouldStickToBottom(1334, 0, 1000)).toBe(false);
-    expect(shouldStickToBottom(3000, 0, 1000)).toBe(false);
-    expect(shouldStickToBottom(5000, 1000, 1000)).toBe(false);
+  it("returns false once scrolled up past the threshold (scrollTop < -100)", () => {
+    expect(isNearBottom(-101)).toBe(false);
+    expect(isNearBottom(-800)).toBe(false);
   });
 
-  it("scales with viewport height", () => {
-    expect(shouldStickToBottom(1066, 0, 800)).toBe(true);
-    expect(shouldStickToBottom(1067, 0, 800)).toBe(false);
-  });
-
-  it("guards against non-positive client height", () => {
-    expect(shouldStickToBottom(1000, 0, 0)).toBe(true);
-    expect(shouldStickToBottom(1000, 0, -5)).toBe(true);
+  it("honours a custom threshold", () => {
+    expect(isNearBottom(-40, 40)).toBe(true);
+    expect(isNearBottom(-41, 40)).toBe(false);
   });
 });
