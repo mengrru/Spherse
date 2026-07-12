@@ -263,6 +263,8 @@ export const zhCN = {
   "agent-trigger.menuItem": "触发器",
   // 触发器弹窗标题
   "agent-trigger.dialogTitle": "触发器",
+  // 触发器弹窗标题旁的提示（InfoIcon tooltip）：说明触发器依赖电脑开机与应用运行
+  "agent-trigger.dialogTitleHint": "触发器仅在电脑开机且本应用运行时才会执行，请保持两者开启。",
   // 触发器名称输入框标签
   "agent-trigger.name": "名称",
   // 触发器名称输入框占位

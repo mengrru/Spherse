@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +27,7 @@ import {
 } from "./trigger-form-reducer";
 import { EMPTY_RUNNING_TRIGGER_IDS, EMPTY_TRIGGERS } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
-import { PlusIcon } from "lucide-react";
+import { InfoIcon, PlusIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 
 interface TriggerDialogProps {
@@ -121,7 +122,18 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!flex h-[60vh] w-[38vw] !max-w-[38vw] flex-col sm:!max-w-[38vw]">
         <DialogHeader>
-          <DialogTitle>{agentName ? `${t("agent-trigger.dialogTitle")} | ${agentName}` : t("agent-trigger.dialogTitle")}</DialogTitle>
+          <DialogTitle className="flex items-center gap-1.5">
+            {agentName ? `${t("agent-trigger.dialogTitle")} | ${agentName}` : t("agent-trigger.dialogTitle")}
+            <Tooltip>
+              <TooltipTrigger
+                aria-label={t("agent-trigger.dialogTitleHint")}
+                className="inline-flex cursor-help text-muted-foreground"
+              >
+                <InfoIcon className="size-3.5" />
+              </TooltipTrigger>
+              <TooltipContent>{t("agent-trigger.dialogTitleHint")}</TooltipContent>
+            </Tooltip>
+          </DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="min-h-0 flex-1">

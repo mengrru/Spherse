@@ -128,6 +128,7 @@ export const en: Record<TranslationKey, string> = {
   "agent-trigger.typeEvent": "Event Trigger",
   "agent-trigger.menuItem": "Triggers",
   "agent-trigger.dialogTitle": "Triggers",
+  "agent-trigger.dialogTitleHint": "Triggers only run while your computer is on and this app is open. Keep both running for triggers to fire on time.",
   "agent-trigger.name": "Name",
   "agent-trigger.namePlaceholder": "Optional, e.g. \"Daily Greeting\"",
   "agent-trigger.eventName": "Event Name",

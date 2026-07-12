@@ -128,6 +128,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "agent-trigger.typeEvent": "事件觸發",
   "agent-trigger.menuItem": "觸發器",
   "agent-trigger.dialogTitle": "觸發器",
+  "agent-trigger.dialogTitleHint": "觸發器僅在電腦開機且本應用運行時才會執行，請保持兩者開啟。",
   "agent-trigger.name": "名稱",
   "agent-trigger.namePlaceholder": "可選，如「每日早安」",
   "agent-trigger.eventName": "事件名",
