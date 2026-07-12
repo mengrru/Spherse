@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 interface Size {
   width: number;
@@ -23,9 +23,12 @@ interface UseResizeOptions {
 }
 
 export function useResize({ size, position, onSizeChange, onPositionChange, onCommit, minWidth, minHeight }: UseResizeOptions) {
-  const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number; startPosX: number; startPosY: number; edge: ResizeEdge } | null>(null);
+  const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number; startPosX: number; startPosY: number; edge: ResizeEdge; pointerId: number; lastW: number; lastH: number; lastX: number; lastY: number } | null>(null);
+  const cleanupRef = useRef<(() => void) | null>(null);
 
-  const createHandler = useCallback((edge: ResizeEdge) => (e: React.MouseEvent) => {
+  useEffect(() => () => cleanupRef.current?.(), []);
+
+  const createHandler = useCallback((edge: ResizeEdge) => (e: React.PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     resizeRef.current = {
@@ -36,12 +39,24 @@ export function useResize({ size, position, onSizeChange, onPositionChange, onCo
       startPosX: position.x,
       startPosY: position.y,
       edge,
+      pointerId: e.pointerId,
+      lastW: size.width,
+      lastH: size.height,
+      lastX: position.x,
+      lastY: position.y,
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const target = e.currentTarget;
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch (err) {
+      console.warn("setPointerCapture failed — resize may freeze outside window bounds", err);
+    }
+
+    const handlePointerMove = (ev: PointerEvent) => {
       if (!resizeRef.current) return;
-      const dx = e.clientX - resizeRef.current.startX;
-      const dy = e.clientY - resizeRef.current.startY;
+      const dx = ev.clientX - resizeRef.current.startX;
+      const dy = ev.clientY - resizeRef.current.startY;
       const { startW, startH, startPosX, startPosY, edge } = resizeRef.current;
 
       let newW = startW;
@@ -65,15 +80,28 @@ export function useResize({ size, position, onSizeChange, onPositionChange, onCo
           newY = startPosY + dy;
         }
       }
+
+      resizeRef.current.lastW = newW;
+      resizeRef.current.lastH = newH;
+      resizeRef.current.lastX = newX;
+      resizeRef.current.lastY = newY;
 
       onSizeChange({ width: newW, height: newH });
       onPositionChange({ x: newX, y: newY });
     };
 
-    const handleMouseUp = (e: MouseEvent) => {
+    const cleanup = () => {
+      resizeRef.current = null;
+      cleanupRef.current = null;
+      target.removeEventListener("pointermove", handlePointerMove);
+      target.removeEventListener("pointerup", handlePointerUp);
+      target.removeEventListener("pointercancel", handlePointerCancel);
+    };
+
+    const handlePointerUp = (ev: PointerEvent) => {
       if (!resizeRef.current) return;
-      const dx = e.clientX - resizeRef.current.startX;
-      const dy = e.clientY - resizeRef.current.startY;
+      const dx = ev.clientX - resizeRef.current.startX;
+      const dy = ev.clientY - resizeRef.current.startY;
       const { startW, startH, startPosX, startPosY, edge } = resizeRef.current;
 
       let newW = startW;
@@ -98,14 +126,32 @@ export function useResize({ size, position, onSizeChange, onPositionChange, onCo
         }
       }
 
-      resizeRef.current = null;
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
+      const id = resizeRef.current.pointerId;
+      cleanup();
+      try {
+        target.releasePointerCapture(id);
+      } catch {
+        // pointer not captured or already released
+      }
       onCommit({ width: newW, height: newH }, { x: newX, y: newY });
     };
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+    const handlePointerCancel = () => {
+      if (!resizeRef.current) return;
+      const { lastW, lastH, lastX, lastY, pointerId } = resizeRef.current;
+      cleanup();
+      try {
+        target.releasePointerCapture(pointerId);
+      } catch {
+        // pointer not captured or already released
+      }
+      onCommit({ width: lastW, height: lastH }, { x: lastX, y: lastY });
+    };
+
+    target.addEventListener("pointermove", handlePointerMove);
+    target.addEventListener("pointerup", handlePointerUp);
+    target.addEventListener("pointercancel", handlePointerCancel);
+    cleanupRef.current = cleanup;
   }, [size.width, size.height, position.x, position.y, minWidth, minHeight, onSizeChange, onPositionChange, onCommit]);
 
   return { createHandler };

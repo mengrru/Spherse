@@ -23,6 +23,11 @@ export function FloatingChatContainer({
     setFloatingChat(projectId, null);
   };
 
+  const handleExpand = () => {
+    setFloatingChat(projectId, null);
+    navigate(`/project/${projectId}/chat/${floatingChat.sessionId}`);
+  };
+
   const handlePositionCommit = (pos: { x: number; y: number }) => {
     setFloatingChat(projectId, { ...floatingChat, position: pos });
   };
@@ -40,6 +45,7 @@ export function FloatingChatContainer({
         onPositionCommit={handlePositionCommit}
         onSizeCommit={handleSizeCommit}
         onClose={handleClose}
+        onExpand={handleExpand}
       >
         <Chat
           sessionId={floatingChat.sessionId}

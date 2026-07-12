@@ -25,6 +25,7 @@ interface FloatingChatFrameProps {
   onPositionCommit: (pos: { x: number; y: number }) => void;
   onSizeCommit: (size: { width: number; height: number }, pos: { x: number; y: number }) => void;
   onClose: () => void;
+  onExpand: () => void;
   children: ReactNode;
 }
 
@@ -35,6 +36,7 @@ export function FloatingChatFrame({
   onPositionCommit,
   onSizeCommit,
   onClose,
+  onExpand,
   children,
 }: FloatingChatFrameProps) {
   const { t } = useI18n();
@@ -69,10 +71,11 @@ export function FloatingChatFrame({
       <div
         data-chat-float-titlebar
         className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5 cursor-move select-none"
-        {...drag}
+        onPointerDown={drag.onPointerDown}
+        onDoubleClick={onExpand}
       >
         <span className="text-xs font-medium truncate">{title}</span>
-        <div className="ml-auto">
+        <div className="ml-auto" onDoubleClick={(e) => e.stopPropagation()}>
           <button
             data-chat-float-close
             onClick={onClose}
@@ -90,7 +93,7 @@ export function FloatingChatFrame({
         <div
           key={edge}
           className={`absolute ${className}`}
-          onMouseDown={createHandler(edge)}
+          onPointerDown={createHandler(edge)}
         />
       ))}
     </div>

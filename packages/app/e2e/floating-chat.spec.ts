@@ -72,6 +72,20 @@ async function createSessionViaApi(page: Page, projectId: string, agentId: strin
   return sessionId;
 }
 
+async function closeApp(app: ElectronApplication) {
+  try {
+    await Promise.race([
+      app.close(),
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error("app.close timeout")), 5_000)),
+    ]);
+  } catch {
+    const pid = app.process()?.pid;
+    if (pid) {
+      try { process.kill(pid, "SIGKILL"); } catch { /* already dead */ }
+    }
+  }
+}
+
 async function navigateToProject(page: Page, projectId: string) {
   const projectUrl = `/project/${projectId}`;
   await page.goto(`file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}`);
@@ -113,7 +127,7 @@ test("right-click float shows floating chat overlay", async () => {
     await expect(page.locator("[data-chat-float-root]")).toBeVisible({ timeout: 5000 });
     await expect(page.locator("[data-chat-float-root] [data-chat-composer]")).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -136,7 +150,7 @@ test("close button removes floating chat", async () => {
 
     await expect(page.locator("[data-chat-float-root]")).toHaveCount(0, { timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -163,7 +177,7 @@ test("floating a different session auto-closes current float", async () => {
     await expect(page.locator("[data-chat-float-root]")).toBeVisible({ timeout: 5000 });
     await expect(page.locator("[data-chat-float-root] [data-chat-composer]")).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -197,7 +211,7 @@ test("floating chat is draggable", async () => {
     expect(boxAfter!.x).toBeLessThan(boxBefore!.x);
     expect(boxAfter!.y).toBeLessThan(boxBefore!.y);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -228,7 +242,7 @@ test("main window session and floating session are independent", async () => {
     await expect(page.locator("[data-chat-float-root]")).toBeVisible();
     await expect(page.locator("[data-chat-root]")).toHaveCount(2);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -252,7 +266,7 @@ test("cancel float from context menu closes floating chat", async () => {
 
     await expect(page.locator("[data-chat-float-root]")).toHaveCount(0, { timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -289,7 +303,35 @@ test("floating chat is resizable", async () => {
     expect(boxAfter!.width).toBeGreaterThan(boxBefore!.width);
     expect(boxAfter!.height).toBeGreaterThan(boxBefore!.height);
   } finally {
-    await app.close();
+    await closeApp(app);
+  }
+});
+
+test("double-click title bar closes float and navigates to chat page", async () => {
+  const project = await createFloatingChatProject();
+  const { app, page } = await launchApp(project);
+
+  try {
+    const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToProject(page, project.projectId);
+    await expandAgent(page);
+
+    const sessionRow = getSessionRow(page, sessionId);
+    await sessionRow.waitFor({ state: "visible", timeout: 10000 });
+    await sessionRow.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "浮窗" }).click();
+    await expect(page.locator("[data-chat-float-root]")).toBeVisible({ timeout: 5000 });
+
+    const titlebar = page.locator("[data-chat-float-titlebar]");
+    await titlebar.dblclick();
+
+    await expect(page.locator("[data-chat-float-root]")).toHaveCount(0, { timeout: 5000 });
+    await expect(page).toHaveURL(
+      new RegExp(`#/project/${project.projectId}/chat/${sessionId}`),
+      { timeout: 5000 },
+    );
+  } finally {
+    await closeApp(app);
   }
 });
 
@@ -312,7 +354,7 @@ test("floating session row shows as active in sidebar", async () => {
       sessionRow.locator("button[class*='bg-sidebar-accent']"),
     ).toBeVisible({ timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -337,7 +379,7 @@ test("clicking floating session in sidebar does not navigate", async () => {
     await page.waitForTimeout(500);
     expect(page.url()).toBe(currentUrl);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -410,6 +452,6 @@ test("switching project clears floating chat", async () => {
     await page.waitForTimeout(1000);
     await expect(page.locator("[data-chat-float-root]")).toBeVisible({ timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
