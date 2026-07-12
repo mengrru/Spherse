@@ -240,6 +240,20 @@ spherse/
 │               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
 │               ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel，被 user-file-panel 与 skill-panel 共用
 │               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
+│   ├── landing/                      # @spherse/landing — GitHub Pages 项目介绍页
+│   │   ├── vite.config.ts            # 标准 Vite 构建配置（base: "/Spherse/"，GitHub Pages 路径）
+│   │   ├── index.html                # 入口 HTML
+│   │   ├── public/                   # 静态资源（截图、主题 CSS）
+│   │   │   ├── screenshots/          # 轮播截图 + feature 浮层截图
+│   │   │   └── themes/              # 轮播切换时动态加载的主题 CSS（覆盖 --sp-* 变量）
+│   │   └── src/
+│   │       ├── styles.css            # Tailwind v4 + --sp-* token 体系（从 app 精简复制）
+│   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型，自建 locale catalog）
+│   │       │   ├── index.ts          # useLandingI18n hook + localStorage 持久化
+│   │       │   └── locales/          # zh-CN / zh-TW / en 三语
+│   │       ├── components/           # 页面组件（Hero、Carousel、FeatureCards、FeatureModal、LanguageSwitcher 等）
+│   │       │   └── ui/              # 从 app 复制的 shadcn 组件（button、dialog）
+│   │       └── data/                # 轮播与 feature 配置数据
 ├── scripts/
 │   └── rebuild-native.mjs            # Electron native dependency rebuild
 ├── docs/
@@ -255,7 +269,8 @@ spherse/
 │           └── SKILL.md             # i18n 字符串迁移指导
 ├── .github/
 │   └── workflows/
-│       └── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布（win --publish always，mac --publish never + gh upload dmg）
+│       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布（win --publish always，mac --publish never + gh upload dmg）
+│       └── deploy-landing.yml        # main 分支 landing 变更触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
 ├── eslint.config.js                  # ESLint 9 flat config（全仓库 lint 规则）

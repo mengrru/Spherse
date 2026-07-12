@@ -1,0 +1,145 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@property --sp-background { syntax: "<color>"; inherits: true; initial-value: #fafafa; }
+@property --sp-foreground { syntax: "<color>"; inherits: true; initial-value: #171717; }
+@property --sp-card { syntax: "<color>"; inherits: true; initial-value: #ffffff; }
+@property --sp-card-foreground { syntax: "<color>"; inherits: true; initial-value: #171717; }
+@property --sp-popover { syntax: "<color>"; inherits: true; initial-value: #ffffff; }
+@property --sp-popover-foreground { syntax: "<color>"; inherits: true; initial-value: #171717; }
+@property --sp-primary { syntax: "<color>"; inherits: true; initial-value: #171717; }
+@property --sp-primary-foreground { syntax: "<color>"; inherits: true; initial-value: #fafafa; }
+@property --sp-secondary { syntax: "<color>"; inherits: true; initial-value: #f5f5f5; }
+@property --sp-secondary-foreground { syntax: "<color>"; inherits: true; initial-value: #171717; }
+@property --sp-muted { syntax: "<color>"; inherits: true; initial-value: #f5f5f5; }
+@property --sp-muted-foreground { syntax: "<color>"; inherits: true; initial-value: #737373; }
+@property --sp-accent { syntax: "<color>"; inherits: true; initial-value: #f5f5f5; }
+@property --sp-accent-foreground { syntax: "<color>"; inherits: true; initial-value: #171717; }
+@property --sp-destructive { syntax: "<color>"; inherits: true; initial-value: #dc2626; }
+@property --sp-border { syntax: "<color>"; inherits: true; initial-value: #e5e5e5; }
+@property --sp-input { syntax: "<color>"; inherits: true; initial-value: #e5e5e5; }
+@property --sp-ring { syntax: "<color>"; inherits: true; initial-value: #a3a3a3; }
+
+:root {
+  --sp-radius: 0.5rem;
+  --sp-background: #fafafa;
+  --sp-foreground: #171717;
+  --sp-card: #ffffff;
+  --sp-card-foreground: #171717;
+  --sp-popover: #ffffff;
+  --sp-popover-foreground: #171717;
+  --sp-primary: #171717;
+  --sp-primary-foreground: #fafafa;
+  --sp-secondary: #f5f5f5;
+  --sp-secondary-foreground: #171717;
+  --sp-muted: #f5f5f5;
+  --sp-muted-foreground: #737373;
+  --sp-accent: #f5f5f5;
+  --sp-accent-foreground: #171717;
+  --sp-destructive: #dc2626;
+  --sp-border: #e5e5e5;
+  --sp-input: #e5e5e5;
+  --sp-ring: #a3a3a3;
+  --sp-success: #16a34a;
+  --sp-success-foreground: #ffffff;
+  --sp-warning: #ea580c;
+  --sp-warning-foreground: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sp-background: #171717;
+    --sp-foreground: #fafafa;
+    --sp-card: #262626;
+    --sp-card-foreground: #fafafa;
+    --sp-popover: #262626;
+    --sp-popover-foreground: #fafafa;
+    --sp-primary: #fafafa;
+    --sp-primary-foreground: #171717;
+    --sp-secondary: #262626;
+    --sp-secondary-foreground: #fafafa;
+    --sp-muted: #262626;
+    --sp-muted-foreground: #a3a3a3;
+    --sp-accent: #262626;
+    --sp-accent-foreground: #fafafa;
+    --sp-destructive: #f87171;
+    --sp-border: #404040;
+    --sp-input: #404040;
+    --sp-ring: #737373;
+    --sp-success: #22c55e;
+    --sp-success-foreground: #052e16;
+    --sp-warning: #f97316;
+    --sp-warning-foreground: #1c1917;
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--sp-radius) - 4px);
+  --radius-md: calc(var(--sp-radius) - 2px);
+  --radius-lg: var(--sp-radius);
+  --radius-xl: calc(var(--sp-radius) + 4px);
+  --color-background: var(--sp-background);
+  --color-foreground: var(--sp-foreground);
+  --color-card: var(--sp-card);
+  --color-card-foreground: var(--sp-card-foreground);
+  --color-popover: var(--sp-popover);
+  --color-popover-foreground: var(--sp-popover-foreground);
+  --color-primary: var(--sp-primary);
+  --color-primary-foreground: var(--sp-primary-foreground);
+  --color-secondary: var(--sp-secondary);
+  --color-secondary-foreground: var(--sp-secondary-foreground);
+  --color-muted: var(--sp-muted);
+  --color-muted-foreground: var(--sp-muted-foreground);
+  --color-accent: var(--sp-accent);
+  --color-accent-foreground: var(--sp-accent-foreground);
+  --color-destructive: var(--sp-destructive);
+  --color-border: var(--sp-border);
+  --color-input: var(--sp-input);
+  --color-ring: var(--sp-ring);
+  --color-success: var(--sp-success);
+  --color-success-foreground: var(--sp-success-foreground);
+  --color-warning: var(--sp-warning);
+  --color-warning-foreground: var(--sp-warning-foreground);
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    transition:
+      background-color 0.6s ease,
+      border-color 0.6s ease,
+      color 0.6s ease,
+      box-shadow 0.6s ease;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    font-size: 100%;
+    color: var(--sp-foreground);
+    background: var(--sp-background);
+  }
+
+  body {
+    font-family:
+      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+      Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+
+  button {
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  input,
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+  }
+}

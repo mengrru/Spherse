@@ -1,0 +1,7 @@
+:root {
+  --sp-primary: hsl(40, 70%, 45%);
+  --sp-primary-foreground: #ffffff;
+  --sp-accent: hsl(40, 40%, 90%);
+  --sp-accent-foreground: hsl(40, 70%, 30%);
+  --sp-ring: hsl(40, 60%, 55%);
+}

@@ -58,7 +58,7 @@ export default [
     },
   },
   {
-    files: ["packages/app/src/**/*.{ts,tsx}"],
+    files: ["packages/app/src/**/*.{ts,tsx}", "packages/landing/src/**/*.{ts,tsx}"],
     languageOptions: {
       globals: globals.browser,
     },

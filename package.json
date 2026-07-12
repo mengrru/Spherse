@@ -13,6 +13,8 @@
     "dist": "npm run dist --workspace=packages/app",
     "dist:mac": "npm run dist:mac --workspace=packages/app",
     "dist:win": "npm run dist:win --workspace=packages/app",
+    "dev:landing": "npm run dev --workspace=packages/landing",
+    "build:landing": "npm run build --workspace=@spherse/i18n && npm run build --workspace=packages/landing",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "verify": "npm run lint && npm run build && npm test --workspace=packages/core && npm test --workspace=packages/server && npm test --workspace=packages/i18n && npm test --workspace=packages/app && npm run check:i18n",

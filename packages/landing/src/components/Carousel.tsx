@@ -1,0 +1,128 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Play, Pause } from "lucide-react";
+import { slides } from "../data/slides";
+import { cn } from "../lib/utils";
+
+const AUTOPLAY_INTERVAL = 5000;
+
+const ANCHOR = {
+  left: "0.69cqw",
+  top: "0.56cqw",
+  size: "2.5cqw",
+  gap: "0.49cqw",
+  glowBlur: "0.56cqw",
+  glowSpread: "0.14cqw",
+  glowInset: "0.14cqw",
+} as const;
+
+export function Carousel() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [autoplay, setAutoplay] = useState(true);
+  const linkRef = useRef<HTMLLinkElement | null>(null);
+
+  const loadTheme = useCallback((themeHref: string) => {
+    if (linkRef.current) {
+      linkRef.current.remove();
+    }
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = themeHref;
+    document.head.appendChild(link);
+    linkRef.current = link;
+  }, []);
+
+  const goToSlide = useCallback(
+    (index: number) => {
+      const next = ((index % slides.length) + slides.length) % slides.length;
+      setActiveIndex(next);
+      loadTheme(slides[next].theme);
+    },
+    [loadTheme],
+  );
+
+  // Load initial theme on mount, cleanup on unmount
+  useEffect(() => {
+    loadTheme(slides[0].theme);
+    return () => {
+      if (linkRef.current) {
+        linkRef.current.remove();
+        linkRef.current = null;
+      }
+    };
+  }, [loadTheme]);
+
+  // Autoplay: timer restarts whenever activeIndex changes (autoplay tick or user click)
+  useEffect(() => {
+    if (!autoplay) return;
+    const timer = setTimeout(() => {
+      const next = (activeIndex + 1) % slides.length;
+      setActiveIndex(next);
+      loadTheme(slides[next].theme);
+    }, AUTOPLAY_INTERVAL);
+    return () => clearTimeout(timer);
+  }, [activeIndex, autoplay, loadTheme]);
+
+  const handleAnchorClick = (index: number) => {
+    goToSlide(index);
+  };
+
+  return (
+    <section className="px-6 py-8">
+      <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        <div className="relative aspect-[16/10] w-full" style={{ containerType: "inline-size" }}>
+          {slides.map((slide, idx) => (
+            <img
+              key={idx}
+              src={slide.screenshot}
+              alt={`Screenshot ${idx + 1}`}
+              className={cn(
+                "absolute inset-0 h-full w-full object-cover object-bottom transition-opacity duration-500",
+                idx === activeIndex ? "opacity-100" : "opacity-0",
+              )}
+              loading={idx === 0 ? "eager" : "lazy"}
+            />
+          ))}
+
+          {/* Anchor buttons — positioned with relative units (cqw) to align with avatar at any carousel size */}
+          <div
+            className="absolute flex flex-col"
+            style={{ top: ANCHOR.top, left: ANCHOR.left, gap: ANCHOR.gap }}
+          >
+            {slides.map((slide, idx) => {
+              const isActive = idx === activeIndex;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => handleAnchorClick(idx)}
+                  aria-label={`Go to slide ${idx + 1}`}
+                  className={cn(
+                    "rounded-lg transition-all duration-200",
+                    isActive ? "opacity-100" : "opacity-0 hover:opacity-30",
+                  )}
+                  style={{
+                    width: ANCHOR.size,
+                    aspectRatio: "1",
+                    boxShadow: isActive
+                      ? `0 0 ${ANCHOR.glowBlur} ${ANCHOR.glowSpread} ${slide.avatarColor}, inset 0 0 0 ${ANCHOR.glowInset} ${slide.avatarColor}`
+                      : "none",
+                  }}
+                >
+                  <span className="sr-only">{slide.avatarLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Autoplay toggle */}
+          <button
+            onClick={() => setAutoplay((v) => !v)}
+            aria-label={autoplay ? "Pause autoplay" : "Play autoplay"}
+            className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-lg bg-background/80 text-foreground backdrop-blur-sm transition-colors hover:bg-background"
+          >
+            {autoplay ? <Pause className="size-4" /> : <Play className="size-4" />}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}

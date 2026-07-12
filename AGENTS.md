@@ -1,6 +1,6 @@
 # Spherse
 
-一个全平台、本地运行、开箱即用的 AI 辅助世界观创作桌面工具。基于 Electron + React + Fastify，使用 pi-agent-core 作为 agent 运行时，pi-ai 作为 LLM provider。
+一个本地运行、开箱即用的AI辅助文字创作与演绎的桌面工具。基于 Electron + React + Fastify，使用 pi-agent-core 作为 agent 运行时，pi-ai 作为 LLM provider。
 
 设计文档：`docs/official/`
 待办事项：`docs/dev/backlog.md`
@@ -14,7 +14,8 @@ spherse/
 │   ├── presets/     # @spherse/presets — 内置模板与预置静态内容
 │   ├── i18n/        # @spherse/i18n — i18n 基础设施与翻译资源
 │   ├── server/      # @spherse/server — Fastify API 层
-│   └── app/         # @spherse/app — Electron + React
+│   ├── app/         # @spherse/app — Electron + React
+│   └── landing/     # @spherse/landing — GitHub Pages 项目介绍页
 ├── docs/
 │   ├── official/    # 正式项目文档（始终与代码同步）
 │   └── dev/         # 开发过程文档（容易过时）
@@ -72,6 +73,13 @@ npm run verify:e2e                          # verify + Electron E2E
 npm run dist        # 构建安装包（当前平台）
 npm run dist:mac    # 构建 macOS DMG
 npm run dist:win    # 构建 Windows NSIS 安装包
+```
+
+**Landing page 命令**：
+
+```bash
+npm run dev:landing     # 启动 landing page 开发服务器
+npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建）
 ```
 
 **核心层调试**：`packages/core`、`packages/presets` 和 `packages/server` 不依赖 Electron，可以直接用 Node.js 编译或测试。
