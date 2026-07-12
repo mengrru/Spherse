@@ -1,0 +1,68 @@
+/* ============================================ */
+/*  「霓虹深渊 · 赛博朋克 × Synthwave」         */
+/*  Cyberpunk 2077 meets 1980s Miami            */
+/*  热粉 #ff2d95 | 电青 #00e5ff | 毒绿 #39ff14  */
+/* ============================================ */
+
+:root {
+    --sp-background: #050510;
+    --sp-foreground: #f0e8f0;
+    --sp-card: #0c0c1d;
+    --sp-card-foreground: #f0e8f0;
+    --sp-popover: #0f0f22;
+    --sp-popover-foreground: #f0e8f0;
+    --sp-primary: #ff2d95;
+    --sp-primary-foreground: #050510;
+    --sp-secondary: #111128;
+    --sp-secondary-foreground: #f0e8f0;
+    --sp-muted: #0a0a1c;
+    --sp-muted-foreground: #6e6488;
+    --sp-accent: #161636;
+    --sp-accent-foreground: #f0e8f0;
+    --sp-destructive: #ff4466;
+    --sp-success: #22c55e;
+    --sp-success-foreground: #052e16;
+    --sp-warning: #f97316;
+    --sp-warning-foreground: #1c1917;
+    --sp-diff-added: #22c55e;
+    --sp-border: #252545;
+    --sp-input: #2e2e55;
+    --sp-ring: #ff2d95;
+    --sp-radius: 0.5rem;
+}
+
+[data-landing-root] {
+  background-color: #050510;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgba(255, 45, 149, 0.08) 3px,
+    rgba(255, 45, 149, 0.08) 4px
+  );
+}
+
+[data-landing-root] h1 {
+  color: #f0e8f0;
+  text-shadow:
+    2px 0 0 rgba(255, 45, 149, 0.7),
+    -2px 0 0 rgba(0, 229, 255, 0.7);
+  background: linear-gradient(
+    180deg,
+    #f0e8f0 0%,
+    #f0e8f0 40%,
+    #ff2d95 50%,
+    #f0e8f0 60%,
+    #f0e8f0 100%
+  );
+  background-size: 100% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: cyberpunk-scan 3s steps(8) infinite;
+}
+
+@keyframes cyberpunk-scan {
+  0%   { background-position: 0% -100%; }
+  100% { background-position: 0% 200%; }
+}

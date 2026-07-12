@@ -1,0 +1,173 @@
+/* ============================================
+   格兰芬多全局 UI 主题 — Gryffindor Great Hall
+   猩红与金 · 勇气 · 温暖 · 典雅 · 俏皮
+   ============================================ */
+
+/* ============================================
+   亮色模式 — 羊皮纸上的格兰芬多
+   ============================================ */
+:root {
+  /* 页面 */
+  --sp-background: #fdf6ee;
+  --sp-foreground: #2c1810;
+
+  /* 卡片 & 弹出层 */
+  --sp-card: #ffffff;
+  --sp-card-foreground: #2c1810;
+  --sp-popover: #ffffff;
+  --sp-popover-foreground: #2c1810;
+
+  /* 主操作 — 格兰芬多猩红 */
+  --sp-primary: #9e2a2a;
+  --sp-primary-foreground: #fdf3e0;
+
+  /* 次要操作 — 温暖金色调 */
+  --sp-secondary: #faf0e2;
+  --sp-secondary-foreground: #5c3020;
+
+  /* 悬停/选中 */
+  --sp-accent: #fdf0e0;
+  --sp-accent-foreground: #2c1810;
+
+  /* 弱化文字 */
+  --sp-muted: #f5ede2;
+  --sp-muted-foreground: #a08070;
+
+  /* 边框 & 输入 */
+  --sp-border: #e8d8c4;
+  --sp-input: #e0d0b8;
+  --sp-ring: rgba(158, 42, 42, 0.35);
+
+  /* 圆角 — 稍微活泼 */
+  --sp-radius: 0.6rem;
+
+  /* 语义色 */
+  --sp-destructive: #c0392b;
+  --sp-success: #2d8a4e;
+  --sp-success-foreground: #ffffff;
+  --sp-warning: #d4782a;
+  --sp-warning-foreground: #ffffff;
+  --sp-diff-added: #2d8a4e;
+}
+
+/* ============================================
+   暗色模式 — 壁炉深处的夜晚
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 页面 */
+    --sp-background: #1a1012;
+    --sp-foreground: #f3e8d6;
+
+    /* 卡片 & 弹出层 */
+    --sp-card: #241818;
+    --sp-card-foreground: #f3e8d6;
+    --sp-popover: #241818;
+    --sp-popover-foreground: #f3e8d6;
+
+    /* 主操作 — 格兰芬多金 */
+    --sp-primary: #d4a04a;
+    --sp-primary-foreground: #1c1212;
+
+    /* 次要操作 */
+    --sp-secondary: #2a1c1c;
+    --sp-secondary-foreground: #f3e8d6;
+
+    /* 悬停/选中 — 微红调 */
+    --sp-accent: #2a1a1a;
+    --sp-accent-foreground: #f3e8d6;
+
+    /* 弱化文字 */
+    --sp-muted: #2a1c1c;
+    --sp-muted-foreground: #b09888;
+
+    /* 边框 & 输入 */
+    --sp-border: #3a2828;
+    --sp-input: #3a2828;
+    --sp-ring: rgba(212, 160, 74, 0.4);
+
+    /* 语义色 */
+    --sp-destructive: #f87171;
+    --sp-success: #4ade80;
+    --sp-success-foreground: #052e16;
+    --sp-warning: #fb923c;
+    --sp-warning-foreground: #1c1917;
+    --sp-diff-added: #4ade80;
+  }
+}
+
+/* ============================================
+   Hero 区域装饰 — 散布星空
+   ============================================ */
+[data-landing-root]::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    /* 银河光带 */
+    radial-gradient(ellipse 600px 80px at 50% 12%, rgba(180, 170, 210, 0.08) 0%, transparent 100%),
+    radial-gradient(ellipse 400px 50px at 30% 20%, rgba(200, 190, 230, 0.05) 0%, transparent 100%),
+    /* 亮星 */
+    radial-gradient(3.5px 3.5px at 12% 8%,  #ffffff 100%, transparent),
+    radial-gradient(3.0px 3.0px at 28% 5%,  #faf6ec 100%, transparent),
+    radial-gradient(3.8px 3.8px at 55% 11%, #ffffff 100%, transparent),
+    radial-gradient(3.2px 3.2px at 72% 7%,  #f2ecdc 100%, transparent),
+    radial-gradient(3.0px 3.0px at 85% 13%, #ffffff 100%, transparent),
+    radial-gradient(3.5px 3.5px at 42% 18%, #faf4e4 100%, transparent),
+    radial-gradient(2.8px 2.8px at 18% 22%, #ffffff 100%, transparent),
+    radial-gradient(3.2px 3.2px at 66% 16%, #f0e6d0 100%, transparent),
+    radial-gradient(3.4px 3.4px at 90% 25%, #ffffff 100%, transparent),
+    radial-gradient(2.6px 2.6px at 35% 10%, #f8f0dc 100%, transparent),
+    radial-gradient(3.6px 3.6px at 78% 20%, #ffffff 100%, transparent),
+    radial-gradient(3.0px 3.0px at 52% 26%, #ede0c8 100%, transparent),
+    /* 中星 */
+    radial-gradient(2.0px 2.0px at 8%  18%, rgba(255,255,255,0.9) 100%, transparent),
+    radial-gradient(2.2px 2.2px at 22% 28%, rgba(255,250,240,0.85) 100%, transparent),
+    radial-gradient(1.8px 1.8px at 48% 8%,  rgba(255,255,255,0.8) 100%, transparent),
+    radial-gradient(2.0px 2.0px at 62% 24%, rgba(255,250,235,0.85) 100%, transparent),
+    radial-gradient(2.2px 2.2px at 80% 10%, rgba(255,255,255,0.8) 100%, transparent),
+    radial-gradient(1.8px 1.8px at 15% 32%, rgba(255,255,255,0.85) 100%, transparent),
+    radial-gradient(2.0px 2.0px at 70% 30%, rgba(255,248,230,0.8) 100%, transparent);
+  animation: gryffindor-twinkle 6s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+[data-landing-root]::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(3.8px 3.8px at 55% 11%, #ffffff 100%, transparent),
+    radial-gradient(3.5px 3.5px at 12% 8%,  #ffffff 100%, transparent),
+    radial-gradient(3.2px 3.2px at 72% 7%,  #f2ecdc 100%, transparent),
+    radial-gradient(3.5px 3.5px at 42% 18%, #faf4e4 100%, transparent),
+    radial-gradient(3.4px 3.4px at 90% 25%, #ffffff 100%, transparent),
+    radial-gradient(3.6px 3.6px at 78% 20%, #ffffff 100%, transparent);
+  animation: gryffindor-twinkle 6s cubic-bezier(0.4, 0, 0.6, 1) infinite 3s;
+  opacity: 0;
+}
+
+@keyframes gryffindor-twinkle {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* ============================================
+   Spherse 大标题 — 鎏金流光效果
+   ============================================ */
+[data-landing-root] h1 {
+  background: linear-gradient(130deg, #9e2a2a 30%, #d4a04a 55%, #9e2a2a 80%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gryffindor-shimmer 4s ease-in-out infinite;
+}
+
+@keyframes gryffindor-shimmer {
+  0%, 100% { background-position: 0% center; }
+  50%      { background-position: 100% center; }
+}
