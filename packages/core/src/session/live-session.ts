@@ -4,6 +4,7 @@ import type { Message, Model, Api } from "@earendil-works/pi-ai";
 import type { AgentProfile } from "../types.js";
 import { resolveModelById, getChatStreamFn } from "../model-providers/index.js";
 import { createToolsForProject, ToolContext } from "../tools/index.js";
+import type { SkillStore } from "../store/skill.js";
 import { readContextFiles } from "../context/read-context-files.js";
 import { logAgentEvent } from "../engine/log-agent-event.js";
 import { NotFoundError, ModelNotConfiguredError } from "../errors.js";
@@ -54,7 +55,7 @@ export class LiveSession {
     const agentStore = ctx.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
     const profile = agentStore.getProfile();
-    const agent = await this.buildAgent(ctx, profile, sessionId);
+    const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills);
     return new LiveSession(agent, agentId, sessionId, ctx);
   }
 
@@ -69,7 +70,7 @@ export class LiveSession {
     if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
 
     const profile = agentStore.getProfile();
-    const agent = await this.buildAgent(ctx, profile, sessionId);
+    const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills);
     const live = new LiveSession(agent, agentId, sessionId, ctx);
 
     const latest = agentStore.sessions.getLatestCompaction(sessionId);
@@ -239,9 +240,15 @@ export class LiveSession {
     ctx: SessionContext,
     profile: AgentProfile,
     sessionId: string,
+    agentSkillStore?: SkillStore,
   ): Promise<Agent> {
     const projectRoot = ctx.projectRoot;
-    const toolContext = new ToolContext(ctx.projectStore, ctx.fileWriteMutex, profile.slug);
+    const toolContext = new ToolContext(
+      ctx.projectStore,
+      ctx.fileWriteMutex,
+      profile.slug,
+      agentSkillStore,
+    );
     const allTools = createToolsForProject(toolContext);
 
     const toolNames = profile.tools ?? [];
@@ -262,10 +269,14 @@ export class LiveSession {
       }),
     );
 
-    const skills = await ctx.projectStore.skill.list();
-    blocks.push(
-      buildSkillCatalog(skills.map((s) => ({ name: s.name, description: s.description }))),
-    );
+    const globalSkills = await ctx.projectStore.skill.list();
+    const byName = new Map<string, { name: string; description: string }>();
+    for (const s of globalSkills) byName.set(s.name, { name: s.name, description: s.description });
+    if (agentSkillStore) {
+      const agentSkills = await agentSkillStore.list();
+      for (const s of agentSkills) byName.set(s.name, { name: s.name, description: s.description });
+    }
+    blocks.push(buildSkillCatalog([...byName.values()]));
 
     const files = await readContextFiles(projectRoot, profile.context, () => toolContext.llmPolicy);
     blocks.push(buildPreloadedContext(files));

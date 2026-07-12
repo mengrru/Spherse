@@ -16,9 +16,11 @@ project-root/
 │   │       ├── profile.md
 │   │       ├── theme.css
 │   │       ├── sessions.db
-    │   │       └── triggers/
-│   │           ├── index.yml
-│   │           └── logs.jsonl
+   │   │       ├── triggers/
+│   │       │   ├── index.yml
+│   │       │   └── logs.jsonl
+│   │       └── skills/              # 可选：agent-level 私有 skill（按需创建）
+│   │           └── <skill-name>/SKILL.md
 │   ├── generated-images/          # generate_image 工具自动保存的图片（按时间戳+hex 命名）
 │   └── skills/
 │       └── <skill-name>/SKILL.md

@@ -77,6 +77,7 @@
 - [x] **内置 Skill：主题制作 Skill**：提供内置 skill，用于制作自定义主题。`create-ui-theme` 与 `create-agent-chat-theme` 两个 builtin skill 已存在，并在 `docs/dev/features/2026-06-26-theme-customization-experience/design.md` 中进一步增强（token 重命名、原生 CSS nesting、dark mode、自动重载、data-* 钩子补齐）
 - [x] **内置 skill 真内置化**：将 preset skill 从 per-project 注入改为 app 内置只读（builtin skill 通过 SkillStore 内存合并；启用 use-ui-sdk）
 - [x] **Skill 附加文件发现**：project skill 目录可携带 SKILL.md 之外的附加文件（references/*、scripts/* 等），SkillStore 递归枚举填入 SkillDefinition.files，load_skill 输出文件清单供 agent 用 read_file 读取。参见 docs/dev/bugfix/2026-06-28-skill-companion-files-discovery/design.md
+- [x] **Agent-level skill 支持**：agent 自身目录（`.spherse/agents/{slug}/skills/`）可存放 per-agent 私有 skill。system prompt 合并三层 catalog（agent-level > project > builtin，按 name 去重），`load_skill` 按 agent-level > global 优先级解析。agent-level skill 由 `AgentStore` 的 lazy `SkillStore` 管理（无 builtin 来源），companion files 经新增 `agentSkills` 路径分类纳入 LLM 读白名单。前端暂不展示 agent-level skill
 - [x] **文本模型全局 temperature**：settings 文本模型 tab 新增「高级设置」折叠区，支持全局 temperature 调节（可选，默认不传=provider 默认），对活跃会话即时热替换（`setTemperature`/`setDefaultModel` 遍历 activeSessions 热替换 streamFn/model，下一轮生效）。参见 `docs/dev/features/2026-06-28-model-temperature/design.md`
 - [ ] **文本模型 top_p 支持**：高级设置支持 top_p 采样参数（需先确认 pi-ai 各 provider top_p 覆盖与注入方式）
 

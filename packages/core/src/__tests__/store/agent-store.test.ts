@@ -68,6 +68,18 @@ describe("AgentStore", () => {
     expect(store.triggers.list()).toHaveLength(1);
   });
 
+  it("skills getter provides a SkillStore scoped to the agent dir", async () => {
+    await writeFile(agentDir, "skills/my-agent-skill/SKILL.md", "---\nname: my-agent-skill\ndescription: Agent-local\n---\n\nLocal instructions.");
+    const skills = await store.skills.list();
+    expect(skills).toHaveLength(1);
+    expect(skills[0].name).toBe("my-agent-skill");
+  });
+
+  it("skills getter returns empty list when no agent skills dir exists", async () => {
+    const skills = await store.skills.list();
+    expect(skills).toEqual([]);
+  });
+
   it("close closes session db", () => {
     store.sessions.createSession();
     expect(() => store.close()).not.toThrow();

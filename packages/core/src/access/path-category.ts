@@ -13,6 +13,7 @@ export type PathCategory =
   | "agentProfile"
   | "agentTheme"
   | "agentSessions"
+  | "agentSkills"
   | "agentTriggers"
   | "agentTriggerLogs"
   | "spherseMetaDir"
@@ -29,6 +30,7 @@ const PATH_PATTERNS: Record<Exclude<PathCategory, "userFiles">, string> = {
   agentProfile: `${PROJECT_META_DIR}/agents/*/profile.md`,
   agentTheme: `${PROJECT_META_DIR}/agents/*/theme.css`,
   agentSessions: `${PROJECT_META_DIR}/agents/*/sessions.db`,
+  agentSkills: `${PROJECT_META_DIR}/agents/*/skills/**`,
   agentTriggers: `${PROJECT_META_DIR}/agents/*/triggers/index.yml`,
   agentTriggerLogs: `${PROJECT_META_DIR}/agents/*/triggers/logs.jsonl`,
   spherseMetaDir: PROJECT_META_DIR,

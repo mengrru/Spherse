@@ -46,6 +46,18 @@ describe("categorizePath", () => {
     ).toBe("agentTriggerLogs");
   });
 
+  it("classifies agent-level skills directory", () => {
+    expect(categorizePath(".spherse/agents/historian-abc123/skills")).toBe(
+      "agentSkills",
+    );
+    expect(
+      categorizePath(".spherse/agents/historian-abc123/skills/my-skill/SKILL.md"),
+    ).toBe("agentSkills");
+    expect(
+      categorizePath(".spherse/agents/historian-abc123/skills/my-skill/references/foo.md"),
+    ).toBe("agentSkills");
+  });
+
   it("classifies .spherse directory itself as spherseMetaDir", () => {
     expect(categorizePath(".spherse")).toBe("spherseMetaDir");
   });

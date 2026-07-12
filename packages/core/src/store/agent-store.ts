@@ -3,6 +3,7 @@ import type { AgentProfile } from "../types.js";
 import { AgentProfileStore } from "./agent-profile.js";
 import { SessionStore } from "./session.js";
 import { TriggerStore } from "./trigger.js";
+import { SkillStore } from "./skill.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 
 export class AgentStore {
@@ -12,6 +13,7 @@ export class AgentStore {
   private _profileStore: AgentProfileStore;
   private _sessionStore: SessionStore | null = null;
   private _triggerStore: TriggerStore;
+  private _skillStore: SkillStore | null = null;
   private logger: Logger;
 
   constructor(agentDir: string, agentId: string, logger?: Logger) {
@@ -70,6 +72,13 @@ export class AgentStore {
 
   get triggers(): TriggerStore {
     return this._triggerStore;
+  }
+
+  get skills(): SkillStore {
+    if (!this._skillStore) {
+      this._skillStore = new SkillStore(path.join(this.agentDir, "skills"));
+    }
+    return this._skillStore;
   }
 
   close(): void {

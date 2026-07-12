@@ -10,6 +10,7 @@ const LoadSkillParams = Type.Object({
 export function createLoadSkillTool(
   projectRoot: string,
   skillStore: SkillStore,
+  agentSkillStore?: SkillStore,
 ): AgentTool<typeof LoadSkillParams> {
   return {
     name: "load_skill",
@@ -18,7 +19,9 @@ export function createLoadSkillTool(
       "Load a skill's full instructions. Use this when you want to activate a skill from the available skills list.",
     parameters: LoadSkillParams,
     async execute(_toolCallId, params, _signal) {
-      const skill = await skillStore.get(params.skill_name);
+      const skill =
+        (await agentSkillStore?.get(params.skill_name)) ??
+        (await skillStore.get(params.skill_name));
       if (!skill) {
         return {
           content: [

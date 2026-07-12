@@ -8,6 +8,7 @@ export class ToolContext {
     private projectStore: ProjectStore,
     readonly mutex: FileWriteMutex,
     readonly agentSlug?: string,
+    private readonly agentSkillStore?: SkillStore,
   ) {}
 
   get root(): string {
@@ -16,6 +17,10 @@ export class ToolContext {
 
   get skill(): SkillStore {
     return this.projectStore.skill;
+  }
+
+  get agentSkill(): SkillStore | undefined {
+    return this.agentSkillStore;
   }
 
   get llmPolicy(): AccessPolicy {

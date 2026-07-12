@@ -150,6 +150,47 @@ describe("LiveSession context engineering", () => {
     expect(agentOf(live).transformContext).toBeUndefined();
   });
 
+  it("buildAgent merges agent-level skills into skill-catalog with priority over global", async () => {
+    const projectStore = runtime.projectManager.projectStore as any;
+    const agentStore = getAgentStore(runtime, agentId);
+
+    await projectStore.skill.createSkill(
+      "shared-skill",
+      "Global description",
+      "Global instructions.",
+    );
+    await projectStore.skill.createSkill(
+      "global-only",
+      "Global only skill",
+      "Only global.",
+    );
+
+    const agentSkillsDir = path.join(agentStore.getAgentDir(), "skills");
+    await fs.promises.mkdir(path.join(agentSkillsDir, "shared-skill"), { recursive: true });
+    await fs.promises.writeFile(
+      path.join(agentSkillsDir, "shared-skill", "SKILL.md"),
+      "---\nname: shared-skill\ndescription: Agent-local description\n---\n\nAgent-local instructions.",
+      "utf-8",
+    );
+    await fs.promises.mkdir(path.join(agentSkillsDir, "agent-only"), { recursive: true });
+    await fs.promises.writeFile(
+      path.join(agentSkillsDir, "agent-only", "SKILL.md"),
+      "---\nname: agent-only\ndescription: Agent only skill\n---\n\nOnly agent.",
+      "utf-8",
+    );
+
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const prompt = agentOf(live).state.systemPrompt;
+
+    expect(prompt).toContain("<skill-catalog>");
+    expect(prompt).toContain('name="shared-skill"');
+    expect(prompt).toContain('description="Agent-local description"');
+    expect(prompt).not.toContain('description="Global description"');
+    expect(prompt).toContain('name="global-only"');
+    expect(prompt).toContain('name="agent-only"');
+  });
+
   it("liveMessageDbIds starts empty on create", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();

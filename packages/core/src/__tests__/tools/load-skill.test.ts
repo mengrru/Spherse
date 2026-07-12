@@ -59,4 +59,67 @@ describe("createLoadSkillTool", () => {
     const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
     expect(result.content[0].text).not.toContain("## Skill Files");
   });
+
+  describe("agent-level skill priority", () => {
+    let agentSkillDir: string;
+
+    beforeEach(async () => {
+      agentSkillDir = await createTempProject();
+      await writeFile(
+        agentSkillDir,
+        "brainstorming/SKILL.md",
+        "---\nname: brainstorming\ndescription: Agent-local brainstorming\n---\n\nAgent-local instructions.",
+      );
+      await writeFile(
+        agentSkillDir,
+        "agent-only/SKILL.md",
+        "---\nname: agent-only\ndescription: Only in agent\n---\n\nAgent-only skill content.",
+      );
+    });
+
+    afterEach(async () => {
+      await cleanupDir(agentSkillDir);
+    });
+
+    it("prefers agent-level skill over global when names collide", async () => {
+      const tool = createLoadSkillTool(
+        skillDir,
+        new SkillStore(skillDir),
+        new SkillStore(agentSkillDir),
+      );
+      const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
+      expect(result.content[0].text).toContain("Agent-local instructions.");
+      expect(result.content[0].text).not.toContain("Do creative brainstorming here.");
+    });
+
+    it("falls back to global skill when not present at agent level", async () => {
+      const tool = createLoadSkillTool(
+        skillDir,
+        new SkillStore(skillDir),
+        new SkillStore(agentSkillDir),
+      );
+      const result = await tool.execute("tc1", { skill_name: "agent-only" }, undefined as any);
+      expect(result.content[0].text).toContain("Agent-only skill content.");
+    });
+
+    it("loads agent-only skill that does not exist globally", async () => {
+      const tool = createLoadSkillTool(
+        skillDir,
+        new SkillStore(skillDir),
+        new SkillStore(agentSkillDir),
+      );
+      const result = await tool.execute("tc1", { skill_name: "agent-only" }, undefined as any);
+      expect(result.details).toEqual({ name: "agent-only" });
+    });
+
+    it("returns error when skill missing from both levels", async () => {
+      const tool = createLoadSkillTool(
+        skillDir,
+        new SkillStore(skillDir),
+        new SkillStore(agentSkillDir),
+      );
+      const result = await tool.execute("tc1", { skill_name: "missing" }, undefined as any);
+      expect(result.content[0].text).toContain('skill "missing" not found');
+    });
+  });
 });

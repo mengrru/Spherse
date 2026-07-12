@@ -29,7 +29,7 @@ export function createToolsForProject(
     generate_image: createGenerateImageTool(ctx.root),
     move_file: createMoveFileTool(ctx.root, ctx.mutex, getPolicy),
     copy_file: createCopyFileTool(ctx.root, ctx.mutex, getPolicy),
-    load_skill: createLoadSkillTool(ctx.root, ctx.skill),
+    load_skill: createLoadSkillTool(ctx.root, ctx.skill, ctx.agentSkill),
   };
 
   return tools;
