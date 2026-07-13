@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>蒂尔达·博恩斯 · 人物档案</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel:wght@400;600;700;900&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Serif SC', serif;
+      background: linear-gradient(170deg, #2d2216 0%, #1e140c 50%, #0f0a06 100%);
+      min-height: 100vh;
+      padding: 14px;
+      overflow-y: auto;
+      color: #1f1408;
+    }
+
+    .archives {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* === 档案封套 — 更像是"秘密卷宗"而非公开档案 === */
+    .dossier-cover {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .dossier-tab {
+      display: inline-block;
+      background: #2c1a0a;
+      color: #d4a84b;
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      letter-spacing: 2px;
+      padding: 6px 18px 4px 18px;
+      border-radius: 3px 3px 0 0;
+      border: 1px solid rgba(212, 168, 75, 0.2);
+      border-bottom: none;
+      position: relative;
+      z-index: 3;
+      margin-left: 20px;
+    }
+
+    .dossier-tab .tab-icon {
+      margin-right: 4px;
+    }
+
+    .folio-page {
+      background: linear-gradient(160deg, #f5e6c8 0%, #efe0b8 30%, #f0dfb5 60%, #e8d5a0 100%);
+      border-radius: 3px;
+      padding: 0;
+      box-shadow:
+        0 4px 30px rgba(0,0,0,0.5),
+        0 1px 0 rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(212, 168, 75, 0.15);
+    }
+
+    .folio-page::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 28px,
+          rgba(139,115,85,0.04) 28px,
+          rgba(139,115,85,0.04) 29px
+        );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .folio-inner {
+      padding: 28px 24px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* === 页眉 === */
+    .folio-header {
+      text-align: center;
+      border-bottom: 2px solid rgba(139,115,85,0.2);
+      padding-bottom: 16px;
+      margin-bottom: 18px;
+      position: relative;
+    }
+
+    .folio-header .classification {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      color: #7a2a0a;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .folio-header .classification::before,
+    .folio-header .classification::after {
+      content: " ✦ ";
+      color: #8b7355;
+      font-size: 8px;
+    }
+
+    .folio-header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 26px;
+      color: #1f1408;
+      letter-spacing: 4px;
+      margin: 6px 0 2px 0;
+      line-height: 1.2;
+    }
+
+    .folio-header .subhead {
+      font-size: 12px;
+      color: #8b7355;
+      letter-spacing: 2px;
+      font-style: italic;
+    }
+
+    .folio-header .house-strip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .house-strip .badge {
+      width: 40px;
+      height: 40px;
+      background: radial-gradient(circle at 40% 35%, #1a1a1a 0%, #0a0a0a 60%, #050505 100%);
+      border-radius: 50%;
+      border: 2px solid #d4a84b;
+      box-shadow: inset 0 2px 4px rgba(255,200,150,0.15), inset 0 -4px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .house-strip .house-name {
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      color: #2c1a0a;
+      letter-spacing: 6px;
+      font-weight: 600;
+    }
+
+    .house-strip .house-year {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      color: #8b7355;
+      letter-spacing: 1px;
+    }
+
+    /* === 信息表格 === */
+    .info-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .info-row {
+      display: flex;
+      border-bottom: 1px solid rgba(139,115,85,0.08);
+      padding: 7px 0;
+      align-items: baseline;
+    }
+
+    .info-row .label {
+      font-size: 11px;
+      color: #8b7355;
+      letter-spacing: 2px;
+      width: 80px;
+      flex-shrink: 0;
+      font-weight: 400;
+    }
+
+    .info-row .value {
+      font-size: 13px;
+      color: #1f1408;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .info-row .value .badge-text {
+      background: rgba(212, 168, 75, 0.2);
+      padding: 1px 8px;
+      border-radius: 2px;
+      border: 1px solid rgba(212, 168, 75, 0.25);
+      font-size: 11px;
+    }
+
+    /* === 核心信念 — 引文块 === */
+    .credo-section {
+      margin: 18px 0 16px 0;
+      padding: 16px 18px;
+      background: rgba(139,115,85,0.08);
+      border-left: 3px solid #7a2a0a;
+      border-radius: 2px;
+    }
+
+    .credo-section .credo-label {
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      color: #7a2a0a;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .credo-section .credo-quote {
+      font-size: 16px;
+      line-height: 1.7;
+      color: #1f1408;
+      font-weight: 700;
+      font-style: italic;
+    }
+
+    .credo-section .credo-quote .quote-mark {
+      color: #7a2a0a;
+      font-size: 20px;
+      font-style: normal;
+    }
+
+    .credo-section .credo-source {
+      font-size: 11px;
+      color: #8b7355;
+      text-align: right;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    /* === 一级章节标题 === */
+    .section-title {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: #2c1a0a;
+      letter-spacing: 3px;
+      padding: 10px 0 6px 0;
+      border-bottom: 1px solid rgba(139,115,85,0.12);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title .sec-icon {
+      font-size: 16px;
+    }
+
+    .section-title .sec-num {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      color: #8b7355;
+      letter-spacing: 1px;
+      margin-left: auto;
+    }
+
+    /* === 正文段落 === */
+    .body-text {
+      font-size: 13px;
+      line-height: 1.9;
+      color: #2c1a0a;
+      margin-bottom: 12px;
+      text-align: justify;
+    }
+
+    .body-text em {
+      color: #7a2a0a;
+      font-style: normal;
+      font-weight: 700;
+    }
+
+    .body-text strong {
+      color: #1f1408;
+    }
+
+    /* === 三栏信念卡 === */
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    @media (max-width: 520px) {
+      .pillars-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pillar-card {
+      background: rgba(139,115,85,0.06);
+      border: 1px solid rgba(139,115,85,0.12);
+      border-radius: 3px;
+      padding: 12px 10px;
+    }
+
+    .pillar-card .pillar-icon {
+      font-size: 20px;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .pillar-card .pillar-title {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      color: #2c1a0a;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .pillar-card .pillar-desc {
+      font-size: 11px;
+      line-height: 1.6;
+      color: #4a3018;
+    }
+
+    /* === 双栏表格（用于信念对立等） === */
+    .duel-table {
+      margin: 12px 0;
+      border: 1px solid rgba(139,115,85,0.12);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .duel-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid rgba(139,115,85,0.08);
+    }
+
+    .duel-row:last-child {
+      border-bottom: none;
+    }
+
+    .duel-cell {
+      padding: 8px 12px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .duel-cell.duel-left {
+      background: rgba(139,115,85,0.04);
+      border-right: 1px solid rgba(139,115,85,0.08);
+      color: #4a3018;
+    }
+
+    .duel-cell.duel-right {
+      color: #1f1408;
+      font-weight: 600;
+    }
+
+    .duel-cell .duel-label {
+      font-family: 'Cinzel', serif;
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: #8b7355;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    /* === 人物关系 === */
+    .rel-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 10px 0;
+    }
+
+    .rel-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 6px 10px;
+      background: rgba(139,115,85,0.04);
+      border-radius: 3px;
+    }
+
+    .rel-item .rel-emoji {
+      font-size: 18px;
+      flex-shrink: 0;
+      width: 28px;
+      text-align: center;
+    }
+
+    .rel-item .rel-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1f1408;
+    }
+
+    .rel-item .rel-desc {
+      font-size: 11px;
+      color: #4a3018;
+      line-height: 1.5;
+    }
+
+    /* === 软肋列表 === */
+    .flaw-list {
+      margin: 10px 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .flaw-list li {
+      padding: 6px 0 6px 20px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #2c1a0a;
+      position: relative;
+      border-bottom: 1px dotted rgba(139,115,85,0.08);
+    }
+
+    .flaw-list li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: #7a2a0a;
+      font-weight: 700;
+    }
+
+    .flaw-list li:last-child {
+      border-bottom: none;
+    }
+
+    /* === 油印机社 === */
+    .society-card {
+      background: rgba(139,115,85,0.06);
+      border: 1px solid rgba(139,115,85,0.1);
+      border-radius: 3px;
+      padding: 14px;
+      margin: 10px 0;
+    }
+
+    .society-card .soc-name {
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      color: #1f1408;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+
+    .society-card .soc-tagline {
+      font-size: 11px;
+      font-style: italic;
+      color: #7a2a0a;
+      margin-bottom: 8px;
+    }
+
+    .society-card .soc-body {
+      font-size: 12px;
+      line-height: 1.7;
+      color: #4a3018;
+    }
+
+    .society-card .soc-member {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 0;
+      font-size: 12px;
+      color: #2c1a0a;
+      border-bottom: 1px dotted rgba(139,115,85,0.06);
+    }
+
+    .society-card .soc-member:last-child {
+      border-bottom: none;
+    }
+
+    .society-card .soc-member .mem-icon {
+      width: 20px;
+      text-align: center;
+    }
+
+    .society-card .soc-member .mem-house {
+      font-size: 10px;
+      color: #8b7355;
+      letter-spacing: 1px;
+      margin-left: auto;
+    }
+
+    /* === 封印区域 === */
+    .seal-area {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 2px solid rgba(139,115,85,0.15);
+    }
+
+    .seal-stamp {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      background: radial-gradient(circle at 40% 35%, #2c1a0a 0%, #1a0e06 60%, #0f0804 100%);
+      border-radius: 50%;
+      border: 2px solid #d4a84b;
+      box-shadow: inset 0 2px 4px rgba(255,200,150,0.1), inset 0 -4px 6px rgba(0,0,0,0.3);
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      color: #d4a84b;
+      font-weight: 700;
+    }
+
+    .seal-caption {
+      font-size: 10px;
+      color: #8b7355;
+      letter-spacing: 3px;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    /* === 页脚 === */
+    .folio-footer {
+      text-align: center;
+      margin-top: 12px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: #8b7355;
+      letter-spacing: 2px;
+      border-top: 1px solid rgba(139,115,85,0.12);
+      padding-top: 10px;
+    }
+
+    .folio-footer .footer-line {
+      margin-bottom: 2px;
+    }
+
+    /* === 档案反面封底 === */
+    .back-cover {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 9px;
+      color: rgba(139,115,85,0.3);
+      letter-spacing: 2px;
+      font-family: 'Courier Prime', monospace;
+    }
+
+    /* 高亮关键词 */
+    .keyword {
+      background: rgba(212, 168, 75, 0.15);
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-weight: 700;
+    }
+
+    .redacted {
+      background: #1f1408;
+      color: #1f1408;
+      padding: 0 6px;
+      border-radius: 2px;
+      cursor: default;
+    }
+
+    /* 分隔线装饰 */
+    .sig-divider {
+      text-align: center;
+      font-size: 14px;
+      color: rgba(139,115,85,0.2);
+      letter-spacing: 6px;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="archives">
+
+  <!-- 档案标签 -->
+  <div class="dossier-cover">
+    <div class="dossier-tab">
+      <span class="tab-icon">📁</span> 机密 · 人物卷宗
+    </div>
+  </div>
+
+  <!-- 主页面 -->
+  <div class="folio-page">
+    <div class="folio-inner">
+
+      <!-- ═══════ 页眉 ═══════ -->
+      <div class="folio-header">
+        <div class="classification">机密 · 封缄体制研究会 · 分类编号 B-06</div>
+        <h1>蒂尔达·博恩斯</h1>
+        <div class="subhead">Tilda Selena Bones · 油印机社创始人兼主笔</div>
+        <div class="house-strip">
+          <div class="badge">🦡</div>
+          <div>
+            <div class="house-name">Hufflepuff</div>
+            <div class="house-year">赫奇帕奇 · 六年级（就读中）</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════ 基础信息 ═══════ -->
+      <div class="info-grid">
+        <div class="info-row">
+          <span class="label">全名</span>
+          <span class="value">蒂尔达·塞琳娜·博恩斯</span>
+        </div>
+        <div class="info-row">
+          <span class="label">出生</span>
+          <span class="value">约 2007年 · 奥特里-圣卡奇波尔德村</span>
+        </div>
+        <div class="info-row">
+          <span class="label">血统</span>
+          <span class="value"><span class="badge-text">纯血统</span> — 博恩斯家族</span>
+        </div>
+        <div class="info-row">
+          <span class="label">魔杖</span>
+          <span class="value">鹅耳枥木 · 独角兽毛 · 11¾英寸 · 柔韧</span>
+        </div>
+        <div class="info-row">
+          <span class="label">守护神</span>
+          <span class="value">獾（待确认）</span>
+        </div>
+        <div class="info-row">
+          <span class="label">身份</span>
+          <span class="value">油印机社（The Mimeograph Society）创始人 · 地下刊物《猫头鹰的视角》主笔</span>
+        </div>
+      </div>
+
+      <!-- ═══════ 信念宣言 ═══════ -->
+      <div class="credo-section">
+        <div class="credo-label">⚡ 第一原理</div>
+        <div class="credo-quote">
+          <span class="quote-mark">"</span>魔法世界的真正不平等，不在于血统，而在于<span class="keyword">谁有权知道什么</span>。<span class="quote-mark">"</span>
+        </div>
+        <div class="credo-source">—— 蒂尔达·博恩斯，六年级，《猫头鹰的视角》创刊号底稿</div>
+      </div>
+
+      <div class="sig-divider">✦ ✦ ✦ ✦ ✦</div>
+
+      <!-- ═══════ 一、她相信什么 ═══════ -->
+      <div class="section-title">
+        <span class="sec-icon">📖</span> 第一章 · 信条
+        <span class="sec-num">01 / 05</span>
+      </div>
+
+      <p class="body-text">
+        蒂尔达不是那种被某种宏大理想点燃的人。她的信念是一次次从母亲的笔记本里、从图书馆的尘封角落中、从赫奇帕奇公共休息室炉火边的长夜里——<strong>一粒一粒地攒出来的</strong>。
+      </p>
+
+      <div class="pillars-grid">
+        <div class="pillar-card">
+          <span class="pillar-icon">🔓</span>
+          <div class="pillar-title">知识应当开放</div>
+          <div class="pillar-desc">没有任何一本书应该被锁在禁书区里，只因为"太危险"。危险与否，应该由读者自己判断。封条是对智识的侮辱。</div>
+        </div>
+        <div class="pillar-card">
+          <span class="pillar-icon">📜</span>
+          <div class="pillar-title">历史是胜利者写的</div>
+          <div class="pillar-desc">每一句"众所周知"背后，都有一群人的声音被抹掉了。魔法史的脚注里藏着比正文更真实的故事。</div>
+        </div>
+        <div class="pillar-card">
+          <span class="pillar-icon">🤫</span>
+          <div class="pillar-title">沉默是一种特权</div>
+          <div class="pillar-desc">那些说"政治不该掺进学校"的人，往往正是体制的受益者。真正的奢侈，是有资格选择沉默。</div>
+        </div>
+      </div>
+
+      <div class="sig-divider">✦ ✦ ✦ ✦ ✦</div>
+
+      <!-- ═══════ 二、她在反对什么 ═══════ -->
+      <div class="section-title">
+        <span class="sec-icon">⚔️</span> 第二章 · 敌手
+        <span class="sec-num">02 / 05</span>
+      </div>
+
+      <p class="body-text">
+        她反对的不是一个人、一个组织、一个家族。她给它起了一个名字——<em>「封缄体制」（The Seal）</em>。
+      </p>
+
+      <p class="body-text">
+        "封缄"不是伏地魔式的恐怖统治，也不是乌姆里奇式的官僚压迫。它是<strong>更温和、更隐形、更被接受的控制</strong>——禁书区的锁是"为了保护你"，魔法部的审查是"为了维护秩序"，纯血家族的书房秘藏是"祖上传下来的，外人看不懂而已"。"封缄"最可怕的地方在于：<em>大多数巫师甚至不觉得自己被控制</em>。
+      </p>
+
+      <div class="duel-table">
+        <div class="duel-row">
+          <div class="duel-cell duel-left">
+            <span class="duel-label">封缄说</span>
+            ⛓️ "有些知识太危险了，你们不该接触。"
+          </div>
+          <div class="duel-cell duel-right">
+            <span class="duel-label">蒂尔达说</span>
+            🔓 "武器危险，所以你把武器藏起来而不是教人如何使用？"
+          </div>
+        </div>
+        <div class="duel-row">
+          <div class="duel-cell duel-left">
+            <span class="duel-label">封缄说</span>
+            ⛓️ "这是传统，向来如此。"
+          </div>
+          <div class="duel-cell duel-right">
+            <span class="duel-label">蒂尔达说</span>
+            🔓 "'向来如此'是魔法史上最腐朽的四个字。"
+          </div>
+        </div>
+        <div class="duel-row">
+          <div class="duel-cell duel-left">
+            <span class="duel-label">封缄说</span>
+            ⛓️ "保持沉默才能维持和平。"
+          </div>
+          <div class="duel-cell duel-right">
+            <span class="duel-label">蒂尔达说</span>
+            🔓 "那不是和平，那是投降——只是你们已经投降到不觉得自己在投降了。"
+          </div>
+        </div>
+      </div>
+
+      <div class="sig-divider">✦ ✦ ✦ ✦ ✦</div>
+
+      <!-- ═══════ 三、她想变革什么 ═══════ -->
+      <div class="section-title">
+        <span class="sec-icon">🕊️</span> 第三章 · 愿景
+        <span class="sec-num">03 / 05</span>
+      </div>
+
+      <p class="body-text">
+        蒂尔达的变革目标异常具体。她不是想推翻魔法部，不是想发动战争——她想做的事，用她自己的话说，是：
+      </p>
+
+      <div class="credo-section">
+        <div class="credo-quote" style="font-size:14px;">
+          <span class="quote-mark">"</span>让沉默的开口，让被抹去的被看见。<span class="quote-mark">"</span>
+        </div>
+      </div>
+
+      <p class="body-text">
+        她用《猫头鹰的视角》做三件事：
+      </p>
+
+      <div class="society-card">
+        <div class="soc-member">
+          <span class="mem-icon">📜</span>
+          <span><strong>挖掘被抹去的</strong> —— 翻出那些被官方魔法史"遗漏"的篇章。比如：第一次巫师战争中，有多少"英雄"其实和食死徒做过交易？霍格沃茨城堡地下的某些结界，是谁布置的，代价是什么？</span>
+        </div>
+        <div class="soc-member">
+          <span class="mem-icon">📢</span>
+          <span><strong>让沉默的发声</strong> —— 给那些不敢说话的人一个匿名平台。混血学生讲述纯血室友的隐性歧视；家养小精灵被虐待的真实记录；出身"污点"家庭的巫师如何被迫沉默。</span>
+        </div>
+        <div class="soc-member">
+          <span class="mem-icon">🤔</span>
+          <span><strong>拆解"理所当然"</strong> —— 直指那些"大家都这么做"背后的问题。为什么只有纯血家族可以在古灵阁开家族金库？麻瓜出身的巫师为什么不能继承？魁地奇世界杯的票价为什么连年飞涨但账目从不公开？</span>
+        </div>
+      </div>
+
+      <p class="body-text">
+        她的变革工具不是魔杖——是<em>油印机、猫头鹰、和赫奇帕奇式的耐心</em>。
+      </p>
+
+      <div class="sig-divider">✦ ✦ ✦ ✦ ✦</div>
+
+      <!-- ═══════ 四、家族的暗影 ═══════ -->
+      <div class="section-title">
+        <span class="sec-icon">🏚️</span> 第四章 · 来处
+        <span class="sec-num">04 / 05</span>
+      </div>
+
+      <p class="body-text">
+        蒂尔达来到霍格沃茨时，<span class="keyword">博恩斯</span>这个姓氏已经在魔法史上被鲜血浸透了。
+      </p>
+
+      <div class="rel-grid">
+        <div class="rel-item">
+          <span class="rel-emoji">🩸</span>
+          <div>
+            <div class="rel-name">祖父：埃德加·博恩斯</div>
+            <div class="rel-desc">初代凤凰社骨干，1981年被食死徒闯入家中杀害，与妻子一同遇难。案发时蒂尔达的父亲只有八岁，躲在飞路粉储备柜中幸存。</div>
+          </div>
+        </div>
+        <div class="rel-item">
+          <span class="rel-emoji">⚖️</span>
+          <div>
+            <div class="rel-name">姑祖母：阿米莉亚·博恩斯</div>
+            <div class="rel-desc">魔法部魔法法律执行司司长，铁面无私的女巫。1996年拒绝乌姆里奇的拉拢，两周后被发现死在家中。官方记录："死因可疑，调查中"——从未结案。</div>
+          </div>
+        </div>
+        <div class="rel-item">
+          <span class="rel-emoji">🤐</span>
+          <div>
+            <div class="rel-name">父亲：阿尔伯特·博恩斯</div>
+            <div class="rel-desc">神秘事务司缄默人。从不对女儿谈起自己的工作，也从不谈论那个夜晚。沉默不是因为他没有话，而是因为他知道的话太沉重。</div>
+          </div>
+        </div>
+        <div class="rel-item">
+          <span class="rel-emoji">🖋️</span>
+          <div>
+            <div class="rel-name">母亲：克莱门汀·弗莱彻</div>
+            <div class="rel-desc">混血女巫，前《预言家日报》记者，婚后辞职。从未停止写作——蒂尔达的书架上偷偷藏着母亲的手稿：关于魔法部如何打压麻瓜出身者的未刊文章，关于纯血家族之间的权力交易。"你的笔是你唯一的魔杖，"她对女儿说，"不是所有魔法都需要挥动。"</div>
+          </div>
+        </div>
+        <div class="rel-item">
+          <span class="rel-emoji">👤</span>
+          <div>
+            <div class="rel-name">远亲：苏珊·博恩斯</div>
+            <div class="rel-desc">与哈利·波特同年级的赫奇帕奇学生，战后魔法部要员。蒂尔达的家族光环与阴影——她既是被看见的榜样，也是一把无形的标尺。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sig-divider">✦ ✦ ✦ ✦ ✦</div>
+
+      <!-- ═══════ 五、软肋与内在张力 ═══════ -->
+      <div class="section-title">
+        <span class="sec-icon">🕸️</span> 第五章 · 暗伤
+        <span class="sec-num">05 / 05</span>
+      </div>
+
+      <p class="body-text">
+        只有信念没有软肋的角色是扁平的。蒂尔达的信念之所以真实，是因为她每一天都在与自己的恐惧角力。
+      </p>
+
+      <ul class="flaw-list">
+        <li>
+          <strong>她害怕被看见。</strong> 油印机社之所以是秘密的，不仅仅因为危险——也因为她自己不知道，站到台前之后，还能不能承受众人的目光。躲在油印机后面写文章是一回事，被人指着名字谈论是另一回事。
+        </li>
+        <li>
+          <strong>她害怕博恩斯这个姓氏的重量。</strong> 她的祖父和姑祖母是为了反抗而死去的。如果她失败了，她配不上这个姓氏；如果她成功了，别人会说"博恩斯的血统让她勇敢"——她的成就永远被归因于家族，而不是她自己。她永远无法知道，自己做的事究竟是出于信念，还是出于姓氏的惯性。
+        </li>
+        <li>
+          <strong>她害怕自己也成了"封缄体制"的一部分。</strong> 当她写文章时，她在筛选信息、选择立场——她决定读者能看到什么、不能看到什么。这何尝不是另一种对真相的剪裁？她有什么资格决定"该让其他人知道什么"？如果她成功了，她和那些她反对的人，又有什么区别？
+        </li>
+        <li>
+          <strong>她害怕孤独。</strong> 油印机社的四个人都是她精心挑选的，但她从未向他们完全袒露自己的恐惧。她身边围着人，但没有一个人真正了解她的全貌。
+        </li>
+      </ul>
+
+      <div class="sig-divider">✦ ✦ ✦ ✦ ✦</div>
+
+      <!-- ═══════ 附录：油印机社 ═══════ -->
+      <div class="section-title">
+        <span class="sec-icon">🖨️</span> 附录甲 · 油印机社
+        <span class="sec-num">附录</span>
+      </div>
+
+      <div class="society-card">
+        <div class="soc-name">The Mimeograph Society</div>
+        <div class="soc-tagline">—— 一份刊物的重量，可以是一卷历史被掀翻的支点。</div>
+        <div class="soc-body">
+          成立于蒂尔达六年级的圣诞节，受麻瓜印刷术启发。设备是一台老式滚筒油印机（Mimeograph）——通过麻瓜研究课渠道获得，无任何魔法波动，不可被魔法探测追踪。刊物名为《猫头鹰的视角》（The Owl's Perspective），每期约五十份手印传单，秘密分布在学校各处。
+        </div>
+        <div style="margin-top: 10px; border-top: 1px solid rgba(139,115,85,0.08); padding-top: 8px;">
+          <div style="font-size:11px; color:#8b7355; letter-spacing:2px; margin-bottom:6px;">核心成员</div>
+          <div class="soc-member">
+            <span class="mem-icon">🦡</span>
+            <span><strong>蒂尔达·博恩斯</strong>（赫奇帕奇六年级）— 创始人 · 主笔</span>
+            <span class="mem-house">❖</span>
+          </div>
+          <div class="soc-member">
+            <span class="mem-icon">🦅</span>
+            <span><strong>匿名·拉文克劳</strong>（三年级）— 资料员 · 禁书区边缘借阅</span>
+            <span class="mem-house">🦅</span>
+          </div>
+          <div class="soc-member">
+            <span class="mem-icon">🦁</span>
+            <span><strong>匿名·格兰芬多</strong>（五年级）— 邮路 · 霍格莫德猫头鹰联络</span>
+            <span class="mem-house">🦁</span>
+          </div>
+          <div class="soc-member">
+            <span class="mem-icon">🐍</span>
+            <span><strong>匿名·斯莱特林</strong>（同年级）— 风险预警 · 纯血家族信息网</span>
+            <span class="mem-house">🐍</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════ 封印 ═══════ -->
+      <div class="seal-area">
+        <div class="seal-stamp">B</div>
+        <div class="seal-caption">博恩斯 · 封缄体制研究会 · 存档于火漆之下</div>
+      </div>
+
+      <div class="folio-footer">
+        <div class="footer-line">"印在纸上的东西，比魔法更持久。"</div>
+        <div class="footer-line">✦ 油印机社 · 内部传阅 · 阅后即焚 ✦</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 封底 -->
+  <div class="back-cover">
+    ✦ 机密 · 未经授权不得复制 · 如有发现请投入赫奇帕奇公共休息室的炉火中 ✦
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>赫敏的聊天记录 · 捡手机文学</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Courier+Prime:ital@0;1&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Serif SC', serif;
+      background: linear-gradient(170deg, #1a0f08 0%, #0d0805 40%, #050302 100%);
+      min-height: 100vh;
+      padding: 16px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+    }
+
+    /* ===== 标题 ===== */
+    .page-header {
+      text-align: center;
+      margin-bottom: 14px;
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .page-header .title-line {
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      color: #d4a84b;
+      letter-spacing: 4px;
+      font-weight: 600;
+    }
+
+    .page-header .sub-line {
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      color: #8b7355;
+      letter-spacing: 2px;
+      margin-top: 2px;
+    }
+
+    .page-header .divider-stars {
+      color: #4a3520;
+      letter-spacing: 6px;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    /* ===== 手机外壳 ===== */
+    .phone-wrapper {
+      max-width: 400px;
+      width: 100%;
+      position: relative;
+    }
+
+    .phone-frame {
+      background: linear-gradient(165deg, #2c1a0a 0%, #1e1006 50%, #140a04 100%);
+      border-radius: 28px;
+      padding: 10px;
+      box-shadow:
+        0 0 0 2px rgba(212, 168, 75, 0.15),
+        0 0 40px rgba(212, 168, 75, 0.06),
+        0 20px 60px rgba(0,0,0,0.7),
+        inset 0 0 30px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .phone-frame::before {
+      content: "";
+      position: absolute;
+      top: -1px; left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 18px;
+      background: linear-gradient(180deg, rgba(212, 168, 75, 0.3) 0%, transparent 100%);
+      border-radius: 0 0 50% 50%;
+      filter: blur(4px);
+      pointer-events: none;
+    }
+
+    /* 顶部装饰 — 霍格沃茨纹章 */
+    .phone-notch-area {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      margin-bottom: 2px;
+    }
+
+    .phone-notch {
+      width: 100px;
+      height: 20px;
+      background: #0a0603;
+      border-radius: 0 0 12px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid rgba(212, 168, 75, 0.08);
+      border-top: none;
+    }
+
+    .phone-notch .notch-icon {
+      font-size: 9px;
+      color: #d4a84b;
+    }
+
+    .phone-notch .notch-text {
+      font-family: 'Cinzel', serif;
+      font-size: 7px;
+      color: #d4a84b;
+      letter-spacing: 2px;
+    }
+
+    /* ===== 屏幕 ===== */
+    .phone-screen {
+      background: linear-gradient(175deg, #f5e6c8 0%, #efe0b8 20%, #f0dfb5 50%, #f2e2c0 80%, #e8d5a0 100%);
+      border-radius: 20px;
+      overflow: hidden;
+      position: relative;
+      min-height: 600px;
+      max-height: 700px;
+      overflow-y: auto;
+      border: 1px solid rgba(212, 168, 75, 0.1);
+    }
+
+    .phone-screen::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .phone-screen::-webkit-scrollbar-track {
+      background: rgba(139, 115, 85, 0.05);
+    }
+
+    .phone-screen::-webkit-scrollbar-thumb {
+      background: rgba(139, 115, 85, 0.2);
+      border-radius: 2px;
+    }
+
+    /* 羊皮纸纹理叠加 */
+    .phone-screen::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 29px,
+          rgba(139,115,85,0.03) 29px,
+          rgba(139,115,85,0.03) 30px
+        );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .screen-inner {
+      position: relative;
+      z-index: 1;
+      padding: 0;
+    }
+
+    /* ===== 状态栏 ===== */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px 6px;
+      background: rgba(44, 26, 10, 0.03);
+      border-bottom: 1px solid rgba(139, 115, 85, 0.08);
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: #5a3a1a;
+      letter-spacing: 1px;
+    }
+
+    .status-bar .status-time {
+      font-weight: 700;
+    }
+
+    .status-bar .status-icons {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .status-bar .status-icons .magic-icon {
+      font-size: 10px;
+    }
+
+    /* ===== 聊天头部 ===== */
+    .chat-header {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, rgba(122, 42, 10, 0.06) 0%, rgba(212, 168, 75, 0.04) 100%);
+      border-bottom: 1px solid rgba(139, 115, 85, 0.1);
+      gap: 10px;
+    }
+
+    .chat-header .back-btn {
+      font-size: 16px;
+      color: #7a2a0a;
+      cursor: default;
+      opacity: 0.6;
+    }
+
+    .chat-header .header-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .chat-header .header-avatar.hermione {
+      background: linear-gradient(135deg, #7a2a0a, #b85a20);
+      border: 2px solid #d4a84b;
+    }
+
+    .chat-header .header-avatar .house-ring {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 14px;
+      height: 14px;
+      background: #740001;
+      border-radius: 50%;
+      border: 1.5px solid #d4a84b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 7px;
+      color: #d4a84b;
+    }
+
+    .chat-header .header-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-header .header-info .header-name {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: #2c1a0a;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .chat-header .header-info .header-status {
+      font-size: 10px;
+      color: #8b7355;
+      font-style: italic;
+    }
+
+    .chat-header .header-meta {
+      font-size: 10px;
+      color: #8b7355;
+      text-align: right;
+      font-family: 'Courier Prime', monospace;
+    }
+
+    .chat-header .header-meta .meta-online {
+      color: #2d6a2d;
+      font-size: 8px;
+    }
+
+    /* ===== 日期分隔线 ===== */
+    .date-divider {
+      text-align: center;
+      padding: 10px 16px 6px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: #8b7355;
+      letter-spacing: 2px;
+    }
+
+    .date-divider span {
+      background: rgba(139, 115, 85, 0.08);
+      padding: 2px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(139, 115, 85, 0.06);
+    }
+
+    /* ===== 消息气泡 ===== */
+    .msg-group {
+      padding: 2px 14px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .msg-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 3px;
+      max-width: 100%;
+    }
+
+    .msg-row.received {
+      justify-content: flex-start;
+    }
+
+    .msg-row.sent {
+      justify-content: flex-end;
+    }
+
+    .msg-row.system {
+      justify-content: center;
+    }
+
+    /* 头像 */
+    .msg-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      align-self: flex-end;
+      border: 1.5px solid rgba(44, 26, 10, 0.1);
+    }
+
+    .msg-avatar.av-harry {
+      background: linear-gradient(135deg, #740001, #a00a0a);
+    }
+
+    .msg-avatar.av-ron {
+      background: linear-gradient(135deg, #b85a20, #d48330);
+    }
+
+    .msg-avatar.av-hermione {
+      background: linear-gradient(135deg, #7a2a0a, #b85a20);
+    }
+
+    .msg-avatar.av-mcgonagall {
+      background: linear-gradient(135deg, #2a4a1a, #3a6a2a);
+    }
+
+    .msg-avatar.av-ginny {
+      background: linear-gradient(135deg, #8a2a50, #c04070);
+    }
+
+    .msg-avatar.av-luna {
+      background: linear-gradient(135deg, #4a2a6a, #7a4a9a);
+    }
+
+    /* 气泡本身 */
+    .msg-bubble {
+      max-width: 78%;
+      padding: 7px 11px;
+      border-radius: 12px;
+      font-size: 12.5px;
+      line-height: 1.65;
+      position: relative;
+      word-break: break-word;
+    }
+
+    .msg-row.received .msg-bubble {
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(139, 115, 85, 0.12);
+      border-bottom-left-radius: 4px;
+      color: #2c1a0a;
+    }
+
+    .msg-row.sent .msg-bubble {
+      background: linear-gradient(135deg, rgba(122, 42, 10, 0.08) 0%, rgba(180, 80, 30, 0.06) 100%);
+      border: 1px solid rgba(122, 42, 10, 0.1);
+      border-bottom-right-radius: 4px;
+      color: #2c1a0a;
+    }
+
+    .msg-row.system .msg-bubble {
+      background: rgba(139, 115, 85, 0.06);
+      border: 1px dashed rgba(139, 115, 85, 0.15);
+      color: #8b7355;
+      font-size: 9px;
+      letter-spacing: 1px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      text-align: center;
+      font-family: 'Courier Prime', monospace;
+      max-width: 90%;
+    }
+
+    /* 气泡内样式 */
+    .msg-bubble .msg-name {
+      font-size: 9px;
+      color: #8b7355;
+      letter-spacing: 1px;
+      font-weight: 700;
+      font-family: 'Cinzel', serif;
+      display: block;
+      margin-bottom: 1px;
+    }
+
+    .msg-bubble .msg-sender.harry { color: #740001; }
+    .msg-bubble .msg-sender.ron { color: #b85a20; }
+    .msg-bubble .msg-sender.hermione { color: #7a2a0a; }
+    .msg-bubble .msg-sender.mcgonagall { color: #2a5a1a; }
+
+    .msg-bubble .msg-text {
+      font-size: 12.5px;
+    }
+
+    .msg-bubble .msg-text em {
+      font-style: italic;
+      color: #7a2a0a;
+    }
+
+    .msg-bubble .msg-text strong {
+      font-weight: 700;
+      color: #1f1408;
+    }
+
+    .msg-bubble .msg-text .spell-embed {
+      display: inline-block;
+      background: rgba(212, 168, 75, 0.12);
+      border: 1px solid rgba(212, 168, 75, 0.15);
+      border-radius: 3px;
+      padding: 0 4px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      color: #7a2a0a;
+    }
+
+    /* 消息时间戳 */
+    .msg-time {
+      font-size: 8px;
+      color: #a08060;
+      margin-top: 2px;
+      font-family: 'Courier Prime', monospace;
+      letter-spacing: 0.5px;
+      padding: 0 2px;
+    }
+
+    .msg-row.received .msg-time {
+      text-align: left;
+      padding-left: 36px;
+    }
+
+    .msg-row.sent .msg-time {
+      text-align: right;
+      padding-right: 4px;
+    }
+
+    /* ===== 已读 / 未读标记 ===== */
+    .read-status {
+      font-size: 9px;
+      color: #a08060;
+      font-family: 'Courier Prime', monospace;
+      text-align: right;
+      padding-right: 4px;
+      margin-top: -1px;
+      margin-bottom: 4px;
+    }
+
+    .read-status .read-done {
+      color: #5a7a3a;
+    }
+
+    /* ===== 图片消息占位 ===== */
+    .msg-img-placeholder {
+      display: inline-block;
+      background: rgba(139, 115, 85, 0.06);
+      border: 1px solid rgba(139, 115, 85, 0.1);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11px;
+      color: #8b7355;
+      font-family: 'Courier Prime', monospace;
+    }
+
+    .msg-img-placeholder .img-emoji {
+      font-size: 24px;
+      display: block;
+      text-align: center;
+      margin-bottom: 2px;
+    }
+
+    /* ===== 输入栏 ===== */
+    .chat-input-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-top: 1px solid rgba(139, 115, 85, 0.1);
+      background: rgba(255, 255, 255, 0.3);
+      margin-top: 6px;
+    }
+
+    .chat-input-bar .input-field {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.4);
+      border: 1px solid rgba(139, 115, 85, 0.12);
+      border-radius: 16px;
+      padding: 7px 12px;
+      font-family: 'Noto Serif SC', serif;
+      font-size: 11px;
+      color: #2c1a0a;
+      outline: none;
+    }
+
+    .chat-input-bar .input-field::placeholder {
+      color: #b09878;
+      font-size: 10px;
+      font-style: italic;
+    }
+
+    .chat-input-bar .send-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7a2a0a, #b85a20);
+      border: 1px solid #d4a84b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: default;
+      box-shadow: 0 2px 6px rgba(122, 42, 10, 0.2);
+    }
+
+    /* ===== 群聊特殊样式 ===== */
+    .msg-group.group-notice {
+      background: rgba(212, 168, 75, 0.03);
+      border-left: 2px solid rgba(212, 168, 75, 0.1);
+      margin: 4px 14px;
+      padding: 4px 10px;
+      border-radius: 0 4px 4px 0;
+    }
+
+    .group-notice .notice-label {
+      font-family: 'Cinzel', serif;
+      font-size: 8px;
+      color: #8b7355;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* ===== 底部导航 ===== */
+    .screen-nav {
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 8px 20px 6px;
+      border-top: 1px solid rgba(139, 115, 85, 0.06);
+      background: rgba(44, 26, 10, 0.02);
+    }
+
+    .screen-nav .nav-item {
+      text-align: center;
+      font-size: 9px;
+      color: #8b7355;
+      letter-spacing: 1px;
+      font-family: 'Courier Prime', monospace;
+      opacity: 0.5;
+      transition: opacity 0.2s;
+    }
+
+    .screen-nav .nav-item .nav-icon {
+      font-size: 16px;
+      display: block;
+      margin-bottom: 1px;
+    }
+
+    .screen-nav .nav-item.active {
+      opacity: 1;
+      color: #7a2a0a;
+    }
+
+    .screen-nav .nav-item.active .nav-icon {
+      filter: none;
+    }
+
+    /* ===== 锁屏解读 ===== */
+    .lockscreen-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 16px;
+      background: rgba(212, 168, 75, 0.04);
+      border-bottom: 1px solid rgba(139, 115, 85, 0.06);
+    }
+
+    .lockscreen-badge .ls-text {
+      font-family: 'Cinzel', serif;
+      font-size: 9px;
+      color: #8b7355;
+      letter-spacing: 3px;
+    }
+
+    .lockscreen-badge .ls-icon {
+      font-size: 12px;
+    }
+
+    /* ===== 消息中引号特殊样式 ===== */
+    .msg-bubble .msg-text .quote-block {
+      border-left: 2px solid rgba(139, 115, 85, 0.2);
+      padding-left: 8px;
+      margin: 3px 0;
+      font-size: 11px;
+      color: #5a3a1a;
+      font-style: italic;
+    }
+
+    /* ===== 响应式 ===== */
+    @media (max-width: 420px) {
+      body { padding: 10px 6px; }
+      .phone-frame { border-radius: 22px; padding: 8px; }
+      .phone-screen { border-radius: 16px; min-height: 560px; max-height: 660px; }
+      .msg-bubble { font-size: 12px; max-width: 85%; }
+    }
+
+    /* ===== 结尾装饰 ===== */
+    .page-footer {
+      text-align: center;
+      margin-top: 14px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: rgba(139, 115, 85, 0.3);
+      letter-spacing: 3px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="title-line">✦ 赫敏·格兰杰 ✦</div>
+  <div class="sub-line">📱 捡 · 手 · 机 · 文 · 学</div>
+  <div class="divider-stars">✧ ✧ ✧ ✧ ✧</div>
+</div>
+
+<div class="phone-wrapper">
+
+  <div class="phone-frame">
+
+    <!-- 霍格沃茨刘海 -->
+    <div class="phone-notch-area">
+      <div class="phone-notch">
+        <span class="notch-icon">🪄</span>
+        <span class="notch-text">HOGWARTS</span>
+        <span class="notch-icon">🦉</span>
+      </div>
+    </div>
+
+    <!-- 手机屏幕 -->
+    <div class="phone-screen">
+      <div class="screen-inner">
+
+        <!-- 状态栏 -->
+        <div class="status-bar">
+          <span class="status-time">9:41</span>
+          <div class="status-icons">
+            <span class="magic-icon">📶</span>
+            <span class="magic-icon">🪄</span>
+            <span class="magic-icon">🔋</span>
+          </div>
+        </div>
+
+        <!-- ===== 对话一：赫敏 & 哈利 ===== -->
+        <div class="lockscreen-badge">
+          <span class="ls-icon">💬</span>
+          <span class="ls-text">对话 · 哈利·波特</span>
+          <span class="ls-icon">🦁</span>
+        </div>
+
+        <div class="date-divider"><span>✦ 周二 · 魔药课之后 ✦</span></div>
+
+        <div class="msg-group">
+          <div class="msg-row received">
+            <div class="msg-avatar av-harry">⚡</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender harry">哈利</span>
+              <div class="msg-text">赫敏，你看见斯内普刚才的眼神了吗？就因为我把坩埚的颜色搅成了紫色……</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 2:17</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">哈利，我跟你说过至少四次了——月长石粉末必须在加入前先研磨三圈半，不是两圈半。你少的那一圈就是为什么你的药剂变成了紫罗兰色而不是透明的。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 2:18</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-harry">⚡</div>
+            <div class="msg-bubble">
+              <div class="msg-text">😅 我就说我记得你说了什么"半圈"……但三圈半和两圈半真的差很多吗？</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 2:19</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">差很多——就像<em>羽加迪姆勒维奥萨</em>和<em>羽加迪姆勒维奥——</em>的区别。你把重音放错位置，羽毛就飞不起来。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 2:19</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-harry">⚡</div>
+            <div class="msg-bubble">
+              <div class="msg-text">……所以你把我的魔药课作业比作你的漂浮咒教学？</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 2:20</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">我是说——<em>如果你认真听了</em>——这两件事的共同点在于<span class="spell-embed">精确度</span>。魔药学和魔咒学都不是靠"感觉差不多"就能掌握的。顺便，你明天的黑魔法防御术论文写了吗？</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 2:21</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-harry">⚡</div>
+            <div class="msg-bubble">
+              <div class="msg-text">……🙈</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 2:21</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">我就知道。图书馆，晚上八点。我把我的笔记带上，你最好把羽毛笔带上。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 2:22</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-harry">⚡</div>
+            <div class="msg-bubble">
+              <div class="msg-text">你怎么知道我还没写……我明明是打算今晚写的！</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 2:23</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">因为你的"打算"和你的"实际行动"之间的差距，大概和纳威的蟾蜍从城堡到禁林的距离一样大。🦉 八点，别迟到。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 2:24</div>
+
+          <div class="read-status"><span class="read-done">✓✓ 已读</span></div>
+        </div>
+
+        <div class="date-divider"><span>✦ 图书馆 · 当晚 ✦</span></div>
+
+        <div class="msg-group">
+          <div class="msg-row received">
+            <div class="msg-avatar av-harry">⚡</div>
+            <div class="msg-bubble">
+              <div class="msg-text">我到平斯夫人的"死亡凝视"范围了。你在哪排书架？</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:58</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">禁书区旁边靠窗第三张桌子。我已经占了四个座位——用《魔法理论》和《千种神奇草药》叠起来的。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 7:59</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-harry">⚡</div>
+            <div class="msg-bubble">
+              <div class="msg-text">四个座位？罗恩也来？</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:59</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">他说他要来。我保留意见。他上次说"来图书馆"的结果是在《预言家日报》的魁地奇版后面睡着了。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 8:00</div>
+
+          <div class="msg-row system">
+            <div class="msg-bubble">🦉 罗恩加入了群聊</div>
+          </div>
+
+          <div class="msg-group group-notice">
+            <span class="notice-label">📲 黄金三角 · 三人组</span>
+          </div>
+
+          <div class="msg-row received" style="margin-top:4px;">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender ron">罗恩</span>
+              <div class="msg-text">谁说我会睡着！我这次带了滋滋蜜蜂糖！写论文需要糖分！</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 8:01</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">滋滋蜜蜂糖会粘在书页上。平斯夫人会把你变成一本禁书。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 8:01</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">值得。😎</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 8:02</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-harry">⚡</div>
+            <div class="msg-bubble">
+              <div class="msg-text">你俩能不能先停一下……我这篇论文的题目是"狼人在满月期间的变形与月长石使用的相关性分析"，我连开头都写不出来。</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 8:03</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">首先，题目很好。其次，开头应该直接引用《狼人：从野兽到人》第237页的案例研究。第三——罗恩，放下那袋蜜蜂糖，打开你的魔药学课本。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 8:04</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">你怎么知道我拿着蜜蜂糖……</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 8:04</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">因为我还知道你左手拿着蜜蜂糖、右手拿着羽毛笔、面前的羊皮纸是空的。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 8:05</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">……赫敏你是不是在眼镜上施了什么咒？？</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 8:05</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">不需要咒语。我了解你们。🪄 现在——写论文。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 8:06</div>
+
+          <div class="read-status"><span class="read-done">✓✓ 已读 · 半小时后两人都开始写了</span></div>
+        </div>
+
+        <!-- ===== 对话二：赫敏 & 麦格教授 ===== -->
+        <div class="date-divider"><span>✦ ✦ ✦ ✦ ✦</span></div>
+
+        <div class="lockscreen-badge">
+          <span class="ls-icon">📜</span>
+          <span class="ls-text">对话 · 米勒娃·麦格教授</span>
+          <span class="ls-icon">🦁</span>
+        </div>
+
+        <div class="date-divider"><span>✦ 周三 · 变形课课后 ✦</span></div>
+
+        <div class="msg-group">
+          <div class="msg-row received">
+            <div class="msg-avatar av-mcgonagall">🐱</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender mcgonagall">麦格教授</span>
+              <div class="msg-text">格兰杰小姐，请来我的办公室一趟。关于你上周提交的变形术拓展论文，我想和你讨论一些内容。</div>
+            </div>
+          </div>
+          <div class="msg-time">上午 11:30</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">好的，教授。我马上到。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">上午 11:31</div>
+
+          <div class="msg-row system">
+            <div class="msg-bubble">🕐 一小时后 ……</div>
+          </div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-mcgonagall">🐱</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender mcgonagall">麦格教授</span>
+              <div class="msg-text">格兰杰小姐，你的论文论证非常出色。你对<em>高迪点变形理论</em>的理解已经达到了N.E.W.T.级别的深度。</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 12:35</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">谢谢您，教授！我参考了《高级变形术》和《二十世纪变形理论发展》两本书，我发现如果结合——</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 12:36</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-mcgonagall">🐱</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender mcgonagall">麦格教授</span>
+              <div class="msg-text">（微笑）我很欣赏你的热情。不过，我建议你——<em>偶尔</em>也把这种热情分给睡眠。我注意到你上个月的借书记录里，有七本书是在凌晨两点到五点之间归还的。</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 12:37</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text"><em>……平斯夫人告密了？</em></div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 12:38</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-mcgonagall">🐱</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender mcgonagall">麦格教授</span>
+              <div class="msg-text">不必责怪平斯夫人。作为院长，我有责任关心学生的作息。格兰杰小姐，我知道你对自己要求很高，但——知识固然重要，<em>健康的身体才能承载知识</em>。</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 12:39</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">我会注意的，教授。只是……有太多东西想学了。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 12:40</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-mcgonagall">🐱</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender mcgonagall">麦格教授</span>
+              <div class="msg-text">我知道。这正是你为什么是格兰芬多。🦁 但记住——阿不思·邓布利多也曾是个学生。他读书时也没有读完禁书区的所有藏书。</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 12:41</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">……等一下。邓布利多教授<em>没有读完</em>禁书区？</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 12:42</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-mcgonagall">🐱</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender mcgonagall">麦格教授</span>
+              <div class="msg-text">据他所言，他读到第三层就停下了。说是"有些秘密，留给学生时代去探索才有趣"。当然——我不确定这是不是他为自己的拖延找的借口。</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 12:43</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">😮 我……我需要消化一下这个信息。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 12:44</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-mcgonagall">🐱</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender mcgonagall">麦格教授</span>
+              <div class="msg-text">晚安，格兰杰小姐。顺便——你的论文我给了<em> Outstanding</em>。</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 12:45</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">！谢谢您教授！晚安！</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 12:46</div>
+
+          <div class="read-status"><span class="read-done">✓✓ 已读 · 赫敏当晚真的在一点前睡了（虽然定了五点的闹钟）</span></div>
+        </div>
+
+        <!-- ===== 对话三：赫敏 & 金妮 & 卢娜 ===== -->
+        <div class="date-divider"><span>✦ ✦ ✦ ✦ ✦</span></div>
+
+        <div class="lockscreen-badge">
+          <span class="ls-icon">💬</span>
+          <span class="ls-text">群聊 · 女巫茶话会</span>
+          <span class="ls-icon">🫖</span>
+        </div>
+
+        <div class="date-divider"><span>✦ 周四 · 晚餐后 ✦</span></div>
+
+        <div class="msg-group">
+          <div class="msg-row received">
+            <div class="msg-avatar av-ginny">🦁</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">金妮</span>
+              <div class="msg-text">姐妹们 重大发现！</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 6:52</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-luna">🌙</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">卢娜</span>
+              <div class="msg-text">你的泡泡鼻涕虫耳环终于孵出小泡泡鼻涕虫了吗？🪸</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 6:53</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ginny">🦁</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">金妮</span>
+              <div class="msg-text">不！比那个还重要——我刚刚看到罗恩在公共休息室主动写魔药学作业！<em>主动！</em>没有人逼他！</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 6:53</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">我让他写的。昨天图书馆之行的成果。🥇</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 6:54</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ginny">🦁</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">金妮</span>
+              <div class="msg-text">我就知道是你干的！！赫敏你是天才 你怎么做到的？？</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 6:54</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">很简单。我告诉他，如果他在周五之前把魔药学论文写完并且正确率达到70%以上，我就帮他补魁地奇策略课的笔记——下周五他有战术测验。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 6:55</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-luna">🌙</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">卢娜</span>
+              <div class="msg-text">所以你把魁地奇当作猫头鹰的蜂蜜糖来吸引他完成作业。很聪明的策略。歪腿也会用类似的方法——它会假装不理我，直到我拿出鳃囊草。🐈‍⬛</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 6:56</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">……我不确定把罗恩比作歪腿是否公平，但——效果是一样的。🤷‍♀️</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 6:57</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ginny">🦁</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">金妮</span>
+              <div class="msg-text">等一下 所以你现在掌握了"让韦斯莱家男人乖乖写作业"的技术？这比凤凰社的任何机密都值钱</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 6:58</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">我只掌握了一个样本。需要更多实验对象才能确认普适性。你有推荐人选吗？</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 6:59</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ginny">🦁</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">金妮</span>
+              <div class="msg-text">我哥弗雷德和乔治？？</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 6:59</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">实验终止。他们不属于"乖乖写作业"的物种范畴。他们属于——<em>另一种生物分类</em>。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 7:00</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-luna">🌙</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">卢娜</span>
+              <div class="msg-text">他们可能是弯角鼾兽的近亲。我在《神奇动物在哪里》的修订本备注里读到过类似的行为模式。🧐</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:01</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ginny">🦁</div>
+            <div class="msg-bubble">
+              <div class="msg-text">OML 卢娜你是我见过最离谱最可爱的人 没有之一</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:02</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-luna">🌙</div>
+            <div class="msg-bubble">
+              <div class="msg-text">谢谢。你也是。尤其是你的蝙蝠咒语耳环——它们在发光。✨</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:03</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">顺便问一下——你们这周末有什么安排？霍格莫德去吗？</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 7:04</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ginny">🦁</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">金妮</span>
+              <div class="msg-text">我去！要去蜂蜜公爵买新出的巧克力蛙那——他们有邓布多多的新版卡片 笑得特别慈祥 收集癖狂喜</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:05</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-luna">🌙</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">卢娜</span>
+              <div class="msg-text">我也去。我想去《唱唱反调》编辑部看最新一期的校样。爸爸说这一期有关于<em>隐形牛头怪</em>的独家报道。🐂👻</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:06</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">好。那我去三把扫帚订一桌黄油啤酒。下午两点？</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 7:06</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ginny">🦁</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">金妮</span>
+              <div class="msg-text">👌👌👌</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:07</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-luna">🌙</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">卢娜</span>
+              <div class="msg-text">我会准时到的。除非被骚扰虻干扰了时间感知。🕰️✨</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:08</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">那我提前十五分钟去蜂蜜公爵门口接你们。谁迟到了谁请客下一轮黄油啤酒。😌</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 7:09</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ginny">🦁</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">金妮</span>
+              <div class="msg-text">你明知道我最受不了这种挑战！！我肯定准时！！！</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:09</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-luna">🌙</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender">卢娜</span>
+              <div class="msg-text">骚扰虻可不会为黄油啤酒付账。我得想想怎么对付它们。🔮</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 7:10</div>
+
+          <div class="read-status"><span class="read-done">✓✓ 全部已读 · 霍格莫德日见！</span></div>
+        </div>
+
+        <!-- ===== 对话四：赫敏 & 罗恩 深夜 ===== -->
+        <div class="date-divider"><span>✦ ✦ ✦ ✦ ✦</span></div>
+
+        <div class="lockscreen-badge">
+          <span class="ls-icon">🌙</span>
+          <span class="ls-text">对话 · 罗恩·韦斯莱（深夜版）</span>
+          <span class="ls-icon">♟️</span>
+        </div>
+
+        <div class="date-divider"><span>✦ 周四 · 23:47 ✦</span></div>
+
+        <div class="msg-group">
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <span class="msg-name msg-sender ron">罗恩</span>
+              <div class="msg-text">赫敏你睡了吗</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 11:47</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">现在是晚上11:47。我通常11:30睡。所以你猜呢。😑</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 11:48</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">哦 你没睡 太好了 我问你一个问题</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 11:48</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">你已经问了三个问题了。但请说。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 11:49</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">你说 如果一个人想给另一个人送圣诞礼物 但是不知道对方喜不喜欢自己挑的东西 是该送实用的东西 还是送……有趣的东西？</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 11:50</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">……罗恩。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 11:51</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">嗯？</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 11:51</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">现在是十一月。离圣诞节还有六个星期。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 11:52</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">我知道！但是！我！焦虑！提前焦虑不行吗！🔥</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 11:53</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">……好吧。送<em>对方会喜欢的东西</em>。不是"实用的"，也不是"有趣的"——是"对方的"。如果你观察过她，你会知道她需要什么。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 11:54</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">……你怎么知道是"她"</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 11:54</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">罗恩，你半夜十一点半发信息问我圣诞礼物的事。你觉得会是谁？😌</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 11:55</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">………………</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 11:55</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">晚安赫敏！！！！！</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 11:56</div>
+
+          <div class="msg-row sent">
+            <div class="msg-bubble">
+              <div class="msg-text">晚安，罗恩。🦁 顺便——她会喜欢<em>用心做的东西</em>，不是用金子买的东西。</div>
+            </div>
+          </div>
+          <div class="msg-time sent">下午 11:57</div>
+
+          <div class="msg-row received">
+            <div class="msg-avatar av-ron">♟️</div>
+            <div class="msg-bubble">
+              <div class="msg-text">……👀💥（已读已炸）</div>
+            </div>
+          </div>
+          <div class="msg-time">下午 11:58</div>
+
+          <div class="read-status"><span class="read-done">✓✓ 已读 · 赫敏微笑着锁了手机</span></div>
+        </div>
+
+        <!-- ===== 底部导航 ===== -->
+        <div class="screen-nav">
+          <div class="nav-item">
+            <span class="nav-icon">💬</span>
+            消息
+          </div>
+          <div class="nav-item active">
+            <span class="nav-icon">🪄</span>
+            聊天
+          </div>
+          <div class="nav-item">
+            <span class="nav-icon">📖</span>
+            笔记
+          </div>
+          <div class="nav-item">
+            <span class="nav-icon">🦉</span>
+            猫头鹰
+          </div>
+        </div>
+
+      </div><!-- /screen-inner -->
+    </div><!-- /phone-screen -->
+
+  </div><!-- /phone-frame -->
+
+</div><!-- /phone-wrapper -->
+
+<div class="page-footer">
+  ✦ 捡手机文学 · 赫敏·格兰杰 · 黄金三角的日常 ✦
+</div>
+
+</body>
+</html>

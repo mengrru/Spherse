@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mengru · 学生档案</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Cinzel:wght@400;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Noto Serif SC', serif;
+      background: linear-gradient(170deg, #3a2a1a 0%, #2a1a0e 40%, #1e1008 100%);
+      min-height: 100vh;
+      padding: 14px;
+      overflow-y: auto;
+      color: #2c1a0a;
+    }
+    .archives {
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    /* 档案封皮 */
+    .folio-cover {
+      position: relative;
+    }
+    .folio-page {
+      background: linear-gradient(160deg, #f5e6c8 0%, #efe0b8 30%, #f0dfb5 60%, #e8d5a0 100%);
+      border-radius: 3px;
+      padding: 0;
+      box-shadow:
+        0 4px 30px rgba(0,0,0,0.5),
+        0 1px 0 rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .folio-page::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 28px,
+          rgba(139,115,85,0.04) 28px,
+          rgba(139,115,85,0.04) 29px
+        );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .folio-inner {
+      padding: 24px 22px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* 页眉 */
+    .folio-header {
+      text-align: center;
+      border-bottom: 2px solid rgba(139,115,85,0.2);
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+    }
+    .folio-header .crest-line {
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      color: #8b7355;
+      letter-spacing: 4px;
+    }
+    .folio-header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 24px;
+      color: #3a2010;
+      letter-spacing: 6px;
+      margin: 4px 0;
+    }
+    .folio-header .tagline {
+      font-size: 11px;
+      color: #8b7355;
+      letter-spacing: 3px;
+      font-style: italic;
+    }
+
+    /* 学生信息表 */
+    .info-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .info-row {
+      display: flex;
+      border-bottom: 1px solid rgba(139,115,85,0.08);
+      padding: 8px 0;
+      align-items: baseline;
+    }
+    .info-row .label {
+      font-size: 11px;
+      color: #8b7355;
+      letter-spacing: 2px;
+      width: 80px;
+      flex-shrink: 0;
+    }
+    .info-row .value {
+      font-size: 13px;
+      color: #3a2010;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .info-row .value.highlight {
+      color: #7a2a0a;
+    }
+    .info-row .value .crest-icon {
+      font-size: 14px;
+    }
+
+    /* 魔杖档案 */
+    .wand-section {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(139,115,85,0.12);
+    }
+    .wand-section h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: #5a3a1a;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+    }
+    .wand-card {
+      background: rgba(139,115,85,0.06);
+      border: 1px solid rgba(139,115,85,0.1);
+      border-radius: 4px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .wand-icon { font-size: 28px; flex-shrink: 0; }
+    .wand-info { flex: 1; }
+    .wand-info .wand-name {
+      font-family: 'Cinzel', serif;
+      font-size: 14px;
+      color: #3a2010;
+      letter-spacing: 2px;
+    }
+    .wand-info .wand-detail {
+      font-size: 11px;
+      color: #8b7355;
+      margin-top: 2px;
+      line-height: 1.5;
+    }
+
+    /* 科目清单 */
+    .subjects-section {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(139,115,85,0.12);
+    }
+    .subjects-section h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: #5a3a1a;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+    }
+    .subjects-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 10px;
+    }
+    .subject-item {
+      font-size: 12px;
+      color: #4a3018;
+      padding: 4px 0;
+      border-bottom: 1px dotted rgba(139,115,85,0.08);
+    }
+    .subject-item .subject-icon {
+      margin-right: 4px;
+    }
+
+    /* 账户摘要 */
+    .account-section {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(139,115,85,0.12);
+    }
+    .account-section h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: #5a3a1a;
+      letter-spacing: 3px;
+      margin-bottom: 6px;
+    }
+    .account-row {
+      display: flex;
+      gap: 16px;
+      font-size: 12px;
+      color: #4a3018;
+    }
+    .account-row .coin {
+      font-family: 'Cinzel', serif;
+      color: #8b6914;
+      font-weight: 700;
+    }
+
+    /* 旅程时间线 */
+    .timeline-section {
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(139,115,85,0.12);
+    }
+    .timeline-section h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 13px;
+      color: #5a3a1a;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+    }
+    .tl-item {
+      display: flex;
+      gap: 10px;
+      padding: 4px 0;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+    .tl-item .tl-icon {
+      width: 20px;
+      text-align: center;
+      flex-shrink: 0;
+      font-size: 12px;
+    }
+    .tl-item .tl-text {
+      color: #4a3018;
+    }
+    .tl-item .tl-text strong {
+      color: #7a2a0a;
+    }
+
+    /* 封印 */
+    .seal-area {
+      text-align: center;
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(139,115,85,0.12);
+    }
+    .seal-stamp {
+      display: inline-block;
+      width: 56px; height: 56px;
+      background: radial-gradient(circle at 40% 35%, #8a1a1a 0%, #5a0a0a 60%, #3a0808 100%);
+      border-radius: 50%;
+      border: 2px solid #4a0808;
+      box-shadow: inset 0 2px 4px rgba(255,200,150,0.2), inset 0 -4px 6px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Cinzel', serif;
+      font-size: 16px;
+      color: #d4a84b;
+      font-weight: 700;
+    }
+    .seal-caption {
+      font-size: 10px;
+      color: #8b7355;
+      letter-spacing: 2px;
+      margin-top: 4px;
+    }
+
+    /* 底部 */
+    .folio-footer {
+      text-align: center;
+      margin-top: 10px;
+      font-family: 'Cinzel', serif;
+      font-size: 10px;
+      color: #8b7355;
+      letter-spacing: 3px;
+      border-top: 2px solid rgba(139,115,85,0.2);
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="archives">
+
+  <div class="folio-page">
+    <div class="folio-inner">
+
+      <!-- 页眉 -->
+      <div class="folio-header">
+        <div class="crest-line">✦ HOGWARTS SCHOOL of WITCHCRAFT and WIZARDRY ✦</div>
+        <h1>学生档案</h1>
+        <div class="tagline">— 一年级新生 · 正式登记在册 —</div>
+      </div>
+
+      <!-- 基本信息 -->
+      <div class="info-grid">
+        <div class="info-row">
+          <span class="label">姓名</span>
+          <span class="value">Mengru</span>
+        </div>
+        <div class="info-row">
+          <span class="label">入学年份</span>
+          <span class="value">一年级</span>
+        </div>
+        <div class="info-row">
+          <span class="label">所属学院</span>
+          <span class="value highlight"><span class="crest-icon">🦁</span> 格兰芬多 · GRYFFINDOR</span>
+        </div>
+        <div class="info-row">
+          <span class="label">血统状况</span>
+          <span class="value">待登记</span>
+        </div>
+        <div class="info-row">
+          <span class="label">监护人</span>
+          <span class="value">待登记</span>
+        </div>
+        <div class="info-row">
+          <span class="label">宠物</span>
+          <span class="value">无（可补登）</span>
+        </div>
+      </div>
+
+      <!-- 魔杖 -->
+      <div class="wand-section">
+        <h3>🪄 魔杖档案</h3>
+        <div class="wand-card">
+          <div class="wand-icon">🌿</div>
+          <div class="wand-info">
+            <div class="wand-name">Holly · 冬青木</div>
+            <div class="wand-detail">
+              杖芯：Phoenix Feather（凤凰尾羽）<br>
+              长度：11¼ 英寸 · 弹性适中<br>
+              购自：奥利凡德魔杖店（对角巷）<br>
+              <em>——冬青木择主极严，凤凰尾羽认主不移。一根不凡的魔杖。</em>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 科目 -->
+      <div class="subjects-section">
+        <h3>📚 一年级课程</h3>
+        <div class="subjects-grid">
+          <div class="subject-item"><span class="subject-icon">📖</span> 魔咒学</div>
+          <div class="subject-item"><span class="subject-icon">📕</span> 魔法史</div>
+          <div class="subject-item"><span class="subject-icon">🌿</span> 草药学</div>
+          <div class="subject-item"><span class="subject-icon">🧪</span> 魔法理论</div>
+          <div class="subject-item"><span class="subject-icon">⚗️</span> 变形术</div>
+          <div class="subject-item"><span class="subject-icon">🍄</span> 魔药学</div>
+          <div class="subject-item"><span class="subject-icon">🦉</span> 神奇动物课</div>
+          <div class="subject-item"><span class="subject-icon">☄️</span> 黑魔法防御术</div>
+        </div>
+      </div>
+
+      <!-- 账户 -->
+      <div class="account-section">
+        <h3>💰 古灵阁账户</h3>
+        <div class="account-row">
+          <span>🪙 <span class="coin">50</span> 加隆</span>
+          <span>🪙 <span class="coin">8</span> 银西可</span>
+          <span>🪙 <span class="coin">8</span> 铜纳特</span>
+          <span style="font-size:11px;color:#8b7355;">状态：充足</span>
+        </div>
+      </div>
+
+      <!-- 旅程时间线 -->
+      <div class="timeline-section">
+        <h3>📜 入学前旅程</h3>
+        <div class="tl-item">
+          <span class="tl-icon">📨</span>
+          <span class="tl-text">收到<strong>霍格沃茨录取通知</strong>——猫头鹰送达</span>
+        </div>
+        <div class="tl-item">
+          <span class="tl-icon">🪄</span>
+          <span class="tl-text"><strong>奥利凡德魔杖店</strong>——Holly · Phoenix Feather · 11¼"</span>
+        </div>
+        <div class="tl-item">
+          <span class="tl-icon">📚</span>
+          <span class="tl-text"><strong>丽痕书店</strong>——购齐八本一年级课本</span>
+        </div>
+        <div class="tl-item">
+          <span class="tl-icon">🍺</span>
+          <span class="tl-text"><strong>破釜酒吧</strong>——一杯南瓜汁，壁炉边歇脚</span>
+        </div>
+        <div class="tl-item">
+          <span class="tl-icon">🏛️</span>
+          <span class="tl-text"><strong>古灵阁</strong>——确认巫师账户余额</span>
+        </div>
+        <div class="tl-item">
+          <span class="tl-icon">🚂</span>
+          <span class="tl-text"><strong>九又四分之三站台</strong>——穿墙而过，登上特快</span>
+        </div>
+        <div class="tl-item">
+          <span class="tl-icon">⛵</span>
+          <span class="tl-text"><strong>穿湖而过</strong>——初见城堡，夜色中灯火璀璨</span>
+        </div>
+        <div class="tl-item">
+          <span class="tl-icon">🦁</span>
+          <span class="tl-text"><strong>分院仪式</strong>——🎩 格兰芬多！</span>
+        </div>
+      </div>
+
+      <!-- 封印 -->
+      <div class="seal-area">
+        <div class="seal-stamp">H</div>
+        <div class="seal-caption">霍格沃茨魔法学校 · 正式注册</div>
+      </div>
+
+      <div class="folio-footer">
+        Draco Dormiens Nunquam Titillandus<br>
+        ✦ 眠龙勿扰 ✦
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

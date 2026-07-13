@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>《猫头鹰的视角》创刊号</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Special+Elite&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: linear-gradient(170deg, #2d2216 0%, #1e140c 50%, #0f0a06 100%);
+      min-height: 100vh;
+      padding: 20px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Noto Serif SC', serif;
+    }
+
+    /* 档案外封 */
+    .dossier-wrapper {
+      max-width: 700px;
+      width: 100%;
+    }
+    .dossier-tab {
+      display: inline-block;
+      background: #2c1a0a;
+      color: #d4a84b;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      letter-spacing: 2px;
+      padding: 6px 18px 4px 18px;
+      border-radius: 3px 3px 0 0;
+      border: 1px solid rgba(212,168,75,0.15);
+      border-bottom: none;
+      position: relative;
+      z-index: 3;
+      margin-left: 16px;
+    }
+
+    /* ===== 油印传单主体 ===== */
+    .handbill {
+      background: linear-gradient(165deg, #f5e6c8 0%, #efe0b8 20%, #f0dfb5 50%, #f2e2c0 80%, #e8d5a0 100%);
+      border-radius: 3px;
+      padding: 0;
+      box-shadow:
+        0 4px 30px rgba(0,0,0,0.5),
+        0 1px 0 rgba(255,255,255,0.08),
+        inset 0 0 60px rgba(139,115,85,0.05);
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(180,150,100,0.2);
+    }
+
+    /* 油墨斑驳纹理 */
+    .handbill::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 29px,
+          rgba(80,60,40,0.025) 29px,
+          rgba(80,60,40,0.025) 30px
+        ),
+        radial-gradient(circle at 20% 80%, rgba(80,60,40,0.02) 0%, transparent 50%),
+        radial-gradient(circle at 90% 30%, rgba(80,60,40,0.015) 0%, transparent 40%);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* 滚筒压痕 — 横向条纹 */
+    .handbill::after {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          transparent,
+          transparent 2px,
+          rgba(180,150,100,0.02) 2px,
+          transparent 4px
+        );
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hb-inner {
+      padding: 32px 30px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ===== 报头 ===== */
+    .masthead {
+      text-align: center;
+      border-bottom: 2px solid #2c1a0a;
+      padding-bottom: 14px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .masthead .owl-icon {
+      font-size: 32px;
+      display: block;
+      margin-bottom: 4px;
+      letter-spacing: 0;
+    }
+
+    .masthead h1 {
+      font-family: 'Courier Prime', monospace;
+      font-size: 28px;
+      color: #1f1408;
+      letter-spacing: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .masthead .subtitle-en {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      color: #5a3a1a;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      margin-top: 2px;
+      font-weight: 400;
+      font-style: italic;
+    }
+
+    .masthead .issue-line {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 8px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      color: #7a2a0a;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-top: 1px solid rgba(44,26,10,0.15);
+      padding-top: 6px;
+    }
+
+    .masthead .issue-line span {
+      position: relative;
+    }
+
+    /* ===== 发刊词 ===== */
+    .manifesto {
+      margin-bottom: 18px;
+      padding: 14px 16px;
+      border: 1px solid rgba(44,26,10,0.15);
+      background: rgba(44,26,10,0.03);
+      border-radius: 2px;
+    }
+
+    .manifesto .manif-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: #7a2a0a;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .manifesto .manif-text {
+      font-size: 14px;
+      line-height: 1.9;
+      color: #1f1408;
+      font-weight: 400;
+    }
+
+    .manifesto .manif-text .dropcap {
+      font-family: 'Courier Prime', monospace;
+      font-size: 28px;
+      font-weight: 700;
+      color: #2c1a0a;
+      float: left;
+      line-height: 1;
+      margin-right: 6px;
+      margin-top: 2px;
+    }
+
+    .manifesto .manif-text em {
+      color: #7a2a0a;
+      font-style: normal;
+      font-weight: 700;
+    }
+
+    .manifesto .manif-sig {
+      font-family: 'Courier Prime', monospace;
+      font-size: 11px;
+      color: #5a3a1a;
+      text-align: right;
+      margin-top: 6px;
+      letter-spacing: 1px;
+    }
+
+    /* ===== 文章区域 ===== */
+    .article {
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(44,26,10,0.1);
+    }
+
+    .article:last-of-type {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+
+    .article .art-head {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .article .art-category {
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      color: #fff;
+      background: #2c1a0a;
+      padding: 2px 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border-radius: 1px;
+      flex-shrink: 0;
+    }
+
+    .article .art-title {
+      font-family: 'Courier Prime', monospace;
+      font-size: 15px;
+      color: #1f1408;
+      font-weight: 700;
+      letter-spacing: 1px;
+      line-height: 1.3;
+    }
+
+    .article .art-byline {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: #7a2a0a;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .article .art-body {
+      font-size: 12px;
+      line-height: 1.9;
+      color: #2c1a0a;
+    }
+
+    .article .art-body strong {
+      color: #1f1408;
+    }
+
+    .article .art-body em {
+      color: #7a2a0a;
+      font-style: normal;
+      font-weight: 700;
+    }
+
+    .article .art-body .pull-quote {
+      margin: 10px 0;
+      padding: 8px 14px;
+      border-left: 2px solid #7a2a0a;
+      font-style: italic;
+      font-size: 13px;
+      color: #1f1408;
+      background: rgba(139,115,85,0.05);
+      border-radius: 0 2px 2px 0;
+    }
+
+    .article .art-body .redacted-blank {
+      background: #1f1408;
+      color: #1f1408;
+      padding: 0 10px;
+      border-radius: 2px;
+      user-select: none;
+    }
+
+    /* ===== 匿名投稿栏 ===== */
+    .letter-box {
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      border: 1px dashed rgba(44,26,10,0.2);
+      background: rgba(139,115,85,0.04);
+      border-radius: 2px;
+    }
+
+    .letter-box .letter-label {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: #5a3a1a;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .letter-box .letter-body {
+      font-size: 12px;
+      line-height: 1.8;
+      color: #2c1a0a;
+      font-style: italic;
+    }
+
+    .letter-box .letter-body .anon-sig {
+      display: block;
+      text-align: right;
+      font-family: 'Courier Prime', monospace;
+      font-size: 10px;
+      color: #5a3a1a;
+      font-style: normal;
+      letter-spacing: 1px;
+      margin-top: 4px;
+    }
+
+    /* ===== 底部 ===== */
+    .footer-section {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 2px solid #2c1a0a;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .footer-section .foot-col {
+      font-size: 10px;
+      line-height: 1.6;
+      color: #4a3018;
+    }
+
+    .footer-section .foot-col .foot-head {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: #2c1a0a;
+      letter-spacing: 2px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .footer-section .foot-col .foot-head .foot-icon {
+      margin-right: 4px;
+    }
+
+    .footer-section .foot-divider {
+      grid-column: 1 / -1;
+      border-top: 1px solid rgba(44,26,10,0.08);
+      padding-top: 8px;
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: #7a2a0a;
+      text-align: center;
+      letter-spacing: 3px;
+    }
+
+    /* ===== 油印手写标注 ===== */
+    .hand-annotation {
+      font-family: 'Courier Prime', monospace;
+      font-size: 9px;
+      color: #7a2a0a;
+      transform: rotate(-1deg);
+      display: inline-block;
+      font-style: italic;
+    }
+
+    .stamp-corner {
+      position: absolute;
+      bottom: 20px;
+      right: 24px;
+      width: 50px;
+      height: 50px;
+      border: 2px solid rgba(122,42,10,0.25);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Courier Prime', monospace;
+      font-size: 8px;
+      color: rgba(122,42,10,0.2);
+      letter-spacing: 2px;
+      transform: rotate(-15deg);
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    /* ===== 响应式 ===== */
+    @media (max-width: 520px) {
+      .hb-inner { padding: 20px 16px; }
+      .masthead h1 { font-size: 22px; letter-spacing: 3px; }
+      .footer-section { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="dossier-wrapper">
+
+  <!-- 档案标签 -->
+  <div class="dossier-tab">📰 证物 · 创刊号 (油印原件扫描)</div>
+
+  <!-- ===== 油印传单 ===== -->
+  <div class="handbill">
+    <div class="hb-inner">
+
+      <!-- 【报头】 -->
+      <div class="masthead">
+        <div class="owl-icon">🦉</div>
+        <h1>猫头鹰的视角</h1>
+        <div class="subtitle-en">The Owl's Perspective</div>
+        <div class="issue-line">
+          <span>创刊号 · VOL. I</span>
+          <span>✦ 霍格沃茨发行 ✦</span>
+          <span>阅后即焚</span>
+        </div>
+      </div>
+
+      <!-- 【发刊词】 -->
+      <div class="manifesto">
+        <div class="manif-label">⸻ 发刊词 ⸻</div>
+        <div class="manif-text">
+          <span class="dropcap">猫</span>头鹰为什么总在夜间出没？<br>
+          不是因为它们属于黑暗——而是因为在黑暗中，它们<em>看得比谁都清楚</em>。<br><br>
+          这份刊物叫《猫头鹰的视角》。它不承诺提供"全部真相"——那是一种傲慢。它承诺的是：<em>提供那些被刻意放在暗处的东西</em>，然后把判断的权利还给你。<br><br>
+          我们不会告诉你"该想什么"。我们只会说：<strong>"这里有一些你可能没听说过的事。你自己决定。"</strong><br><br>
+          魔法世界的沉默已经太久了。不是因为我们无话可说——而是因为那些有话要说的人，<em>没有一张可以落笔的纸</em>。<br><br>
+          现在，你手上有了。
+        </div>
+        <div class="manif-sig">—— 一只猫头鹰</div>
+      </div>
+
+      <!-- 【文章一：挖掘被抹去的】 -->
+      <div class="article">
+        <div class="art-head">
+          <span class="art-category">📜 挖掘 · 被抹去的</span>
+          <span class="art-title">沉默的契约</span>
+        </div>
+        <div class="art-byline">—— 关于霍格沃茨城堡地下的另一段历史</div>
+        <div class="art-body">
+          <p>每个霍格沃茨的学生都知道城堡是四巨头建造的。戈德里克·格兰芬多提供勇气，萨拉查·斯莱特林提供野心，罗伊纳·拉文克劳提供智慧，赫尔加·赫奇帕奇提供忠诚——然后他们用魔法把石头垒在一起，城堡就立起来了。</p>
+          <p>但有一件事，课本没有告诉你：<strong>城堡本身就是活的</strong>。</p>
+          <p>它的楼梯会动，是因为有魔法维持。它的天花板会反映天空，是因为有魔法维持。它的结界能抵御外敌，是因为有魔法维持。每一个在霍格沃茨过夜的人都知道，城堡里有一种温暖——不是壁炉的火，而是一种更深层的、像呼吸一样的东西。</p>
+          <p>维持这种"呼吸"，需要代价。</p>
+          <div class="pull-quote">
+            "城堡的结界不是一次施咒就一劳永逸的。它需要持续的能量输入。那么问题来了——<br>
+            <strong>谁来付这笔账？</strong>"
+          </div>
+          <p>答案写在某个被遗忘的地方。在管理员办公室档案柜背后的暗格里。在四巨头时代留下的一份羊皮纸上。上面写着一种古老的契约形式——现在魔法部已经不再承认其合法性，但契约的效力从未解除。</p>
+          <p>我们将在下一期继续追查这份契约的具体内容。但我们可以先告诉你一件事：<em>这座城堡的温暖灯火，不完全来自魔法。</em></p>
+          <p style="font-size:10px; color:#7a2a0a; font-family:'Courier Prime',monospace; letter-spacing:1px; margin-top:6px;">—— 待续 · 下一期将公布契约签署方的身份</p>
+        </div>
+      </div>
+
+      <!-- 【文章二：让沉默的发声】 -->
+      <div class="article">
+        <div class="art-head">
+          <span class="art-category">📢 沉默 · 在发声</span>
+          <span class="art-title">一封没有署名的信</span>
+        </div>
+        <div class="art-byline">—— 来稿 · 赫奇帕奇学生</div>
+        <div class="art-body">
+          <p><em>编者按：</em>以下信件由一位学生匿名投递。我们无法核实其中的每一个细节，但我们选择刊出——不是因为它是"真相"，而是因为它是<em>一种声音</em>。沉默太久了，任何一种声音都值得被听见。</p>
+        </div>
+
+        <div class="letter-box">
+          <div class="letter-label">✉️ 来函照登</div>
+          <div class="letter-body">
+            三年了。我和我的室友同住了三年。<br><br>
+            她从来没有说过一句"泥巴种"。她不是一个坏人。她会在圣诞节送我亲手织的围巾，会在我生病时帮我抄魔药学笔记。<br><br>
+            但她也会在谈起某个麻瓜出身的教授时说："她其实挺聪明的，<em>对于她那种出身来说</em>。"<br><br>
+            她说那句话的语气不是恶意的。她甚至没有意识到这句话有什么问题。就像在说"今天的南瓜汁有点咸"一样自然。<br><br>
+            我不知道该怎么告诉她。如果我指出她的话有问题，我就会变成"那个太敏感的混血"——我们宿舍的和谐就会被打破。如果我什么都不说，这句话就像一颗灰尘一样落在我的枕头底下，日复一日，年复一年。<br><br>
+            我还没有想好该怎么办。但我想，<em>至少有人知道这件事了</em>。
+            <span class="anon-sig">—— 一个不想再"算了"的人 · 赫奇帕奇四年级</span>
+          </div>
+        </div>
+
+        <div class="art-body">
+          <p style="font-size:11px; color:#5a3a1a;">
+            <em>如果你也有想说但没有地方说的话——</em> 把信塞进图书馆五楼靠窗书架第三层那本《不列颠麻瓜植物图鉴》的第237页与238页之间。你的声音不会消失。
+          </p>
+        </div>
+      </div>
+
+      <!-- 【文章三：拆解"理所当然"】 -->
+      <div class="article">
+        <div class="art-head">
+          <span class="art-category">🤔 拆解 · 理所当然</span>
+          <span class="art-title">古灵阁的家族金库，是谁的？</span>
+        </div>
+        <div class="art-byline">—— 本刊调查组</div>
+        <div class="art-body">
+          <p>这是一道选择题：</p>
+          <p style="padding-left: 14px; margin: 6px 0;">
+            <strong>霍格沃茨的学生中，谁可以拥有古灵阁的"家族金库"？</strong><br>
+            A. 纯血统出身的学生<br>
+            B. 混血学生，如果父系或母系是纯血<br>
+            C. 所有学生都可以——只要他们有金子<br>
+            D. 麻瓜出身的学生没有资格申请家族金库
+          </p>
+          <p>答案你可能已经猜到了。但问题不是"答案是什么"——问题是<strong>"为什么这是理所当然的？"</strong></p>
+          <p>古灵阁的官方说法是：家族金库需要"可追溯的巫师血系档案"，由戈德里克山谷的谱系登记处认证。谱系登记处的认证标准……恰好和纯血统家族谱系表几乎完全重合。</p>
+          <p>换句话说：<em>你有金子还不够，你得先证明你的祖先也有金子。</em></p>
+          <p>而那些祖先中恰好有巫师的人——他们的后裔自然就是纯血统。</p>
+          <div class="pull-quote">
+            "这不是一个魔法问题。这是一个<strong>档案问题</strong>。<br>
+            而档案是可以被书写、被修改、和被封存的。"
+          </div>
+          <p>我们不是说古灵阁在歧视麻瓜出身的巫师。我们是说：<em>如果一个制度运转了几百年，从未有人质疑过它的前提——那你至少应该问一次："等等，这合理吗？"</em></p>
+          <p style="font-size:11px; color:#5a3a1a; margin-top:4px;">
+            📎 下期预告：魁地奇世界杯的票价——为什么连年飞涨但账目从不公开？
+          </p>
+        </div>
+      </div>
+
+      <!-- 【底部信息】 -->
+      <div class="footer-section">
+        <div class="foot-col">
+          <div class="foot-head"><span class="foot-icon">🦉</span> 投稿方式</div>
+          把信塞进图书馆五楼靠窗书架第三层<br>
+          《不列颠麻瓜植物图鉴》第237–238页之间。<br>
+          我们不会追踪来源，不会保留原件。<br>
+          你的声音是安全的。
+        </div>
+        <div class="foot-col">
+          <div class="foot-head"><span class="foot-icon">⚠️</span> 阅读须知</div>
+          这份刊物的每一期都由手工油印，<br>
+          数量有限，<em>阅后即焚</em>。<br>
+          你读到的每一个字都有来源，<br>
+          但我们不署名——因为重要的不是"谁说的"，<br>
+          而是"说了什么"。
+        </div>
+        <div class="foot-col" style="grid-column:1/-1;">
+          <div class="foot-head"><span class="foot-icon">🔮</span> 下一期预告</div>
+          沉默的契约（续）—— 城堡结界真正的维持者是谁？<br>
+          古灵阁的谱系登记处——谁在管理？标准是什么？<br>
+          匿名来稿继续征集中。
+        </div>
+        <div class="foot-divider">
+          ✦ 猫头鹰的视角 · 油印机社 · 内部传阅 ✦
+        </div>
+      </div>
+
+      <!-- 油印戳 -->
+      <div class="stamp-corner">DRAFT</div>
+
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

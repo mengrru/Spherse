@@ -1,0 +1,12 @@
+- id: GcGAXtsODkfvTUwmU68ef
+  name: 预言家日报更新
+  enabled: true
+  type: time
+  cron: 0 9 * * *
+  mode: existing_session
+  targetSessionId: 3d8ab14d-9212-4ff1-bdbc-d48860d79986
+  message: 今天是{{date}}，预言家日报的数据在「预言家日报/今日预言家日报.data.json」，将旧的重命名为那天的日期，然后写一份新的预言家日报数据。
+  notify: true
+  createdAt: 1783794638788
+  updatedAt: 1783965626764
+  notificationMessage: 今天的预言家日报送达！

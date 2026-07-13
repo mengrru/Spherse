@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>格兰芬多公共休息室</title>
+  <style>
+    /* ============================================
+       格兰芬多公共休息室 — 壁炉·挂毯·羊皮纸
+       ============================================ */
+
+    :root {
+      --scarlet: #8b1a1a;
+      --scarlet-light: #b83830;
+      --scarlet-deep: #5c1010;
+      --gold: #d4a04a;
+      --gold-light: #e8c878;
+      --gold-pale: #f5e6c8;
+      --cream: #fdf6ee;
+      --cream-dark: #f0e4d0;
+      --brown: #3a2010;
+      --brown-light: #6b4c38;
+      --card-bg: rgba(255, 252, 246, 0.92);
+      --shadow: 0 1px 3px rgba(60, 20, 10, 0.06);
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "SimSun", "STSong", Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(ellipse at 70% 30%, rgba(212, 160, 74, 0.12) 0%, transparent 55%),
+        radial-gradient(ellipse at 30% 90%, rgba(180, 60, 40, 0.07) 0%, transparent 50%),
+        linear-gradient(175deg, #fdf6ee 0%, #f9eedc 40%, #fef8f2 100%);
+      color: #3a2010;
+      min-height: 100vh;
+      padding: 2rem 1.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ---- 主容器 ---- */
+    .common-room {
+      max-width: 780px;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* 全宽元素 */
+    .header,
+    .divider,
+    .footer {
+      grid-column: 1 / -1;
+    }
+
+    /* 左栏：档案 + 推门 + 收报箱 */
+    .profile-card { grid-column: 1; grid-row: 3; }
+    .door-card    { grid-column: 1; grid-row: 4; }
+    .paper-card   { grid-column: 1; grid-row: 5; }
+
+    /* 右栏：待办清单从第3行跨到第6行 */
+    .todo-wrapper  { grid-column: 2; grid-row: 3 / 6; }
+
+    /* ---- 标题区 ---- */
+    .header {
+      text-align: center;
+      padding: 1.5rem 1rem 0.5rem;
+    }
+
+    .header__crest {
+      width: 10px;
+      height: 10px;
+      margin: 0 auto 0.5rem;
+      border-radius: 50%;
+      background: #f8f4e0;
+      box-shadow: 0 0 6px rgba(255, 250, 230, 0.6), 0 0 14px rgba(200, 180, 220, 0.25);
+      animation: northStar 3s ease-in-out infinite;
+    }
+    @keyframes northStar {
+      0%, 100% { box-shadow: 0 0 6px rgba(255, 250, 230, 0.6), 0 0 14px rgba(200, 180, 220, 0.25); }
+      50%      { box-shadow: 0 0 10px rgba(255, 250, 230, 0.85), 0 0 20px rgba(200, 180, 220, 0.40); }
+    }
+
+    /* ---- 散布穹顶星空 ---- */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        /* 银河光带 — 隐约横跨顶部 */
+        radial-gradient(ellipse 600px 80px at 50% 12%, rgba(180, 170, 210, 0.06) 0%, transparent 100%),
+        radial-gradient(ellipse 400px 50px at 30% 20%, rgba(200, 190, 230, 0.04) 0%, transparent 100%),
+        /* 亮星 */
+        radial-gradient(1.4px 1.4px at 12% 8%,  #ffffff 100%, transparent),
+        radial-gradient(1.0px 1.0px at 28% 5%,  #faf6ec 100%, transparent),
+        radial-gradient(1.6px 1.6px at 55% 11%, #ffffff 100%, transparent),
+        radial-gradient(1.2px 1.2px at 72% 7%,  #f2ecdc 100%, transparent),
+        radial-gradient(1.0px 1.0px at 85% 13%, #ffffff 100%, transparent),
+        radial-gradient(1.4px 1.4px at 42% 18%, #faf4e4 100%, transparent),
+        radial-gradient(0.9px 0.9px at 18% 22%, #ffffff 100%, transparent),
+        radial-gradient(1.1px 1.1px at 66% 16%, #f0e6d0 100%, transparent),
+        radial-gradient(1.3px 1.3px at 90% 25%, #ffffff 100%, transparent),
+        radial-gradient(0.8px 0.8px at 35% 10%, #f8f0dc 100%, transparent),
+        radial-gradient(1.5px 1.5px at 78% 20%, #ffffff 100%, transparent),
+        radial-gradient(1.0px 1.0px at 52% 26%, #ede0c8 100%, transparent),
+        /* 中星 */
+        radial-gradient(0.6px 0.6px at 8%  18%, rgba(255,255,255,0.85) 100%, transparent),
+        radial-gradient(0.7px 0.7px at 22% 28%, rgba(255,250,240,0.8)  100%, transparent),
+        radial-gradient(0.5px 0.5px at 48% 8%,  rgba(255,255,255,0.75) 100%, transparent),
+        radial-gradient(0.6px 0.6px at 62% 24%, rgba(255,250,235,0.8)  100%, transparent),
+        radial-gradient(0.7px 0.7px at 80% 10%, rgba(255,255,255,0.7)  100%, transparent),
+        radial-gradient(0.5px 0.5px at 15% 32%, rgba(255,255,255,0.8)  100%, transparent),
+        radial-gradient(0.6px 0.6px at 70% 30%, rgba(255,248,230,0.75) 100%, transparent),
+        radial-gradient(0.5px 0.5px at 38% 14%, rgba(255,255,255,0.7)  100%, transparent),
+        radial-gradient(0.6px 0.6px at 58% 20%, rgba(255,250,235,0.8)  100%, transparent),
+        radial-gradient(0.5px 0.5px at 92% 8%,  rgba(255,255,255,0.65) 100%, transparent),
+        /* 微星 */
+        radial-gradient(0.35px 0.35px at 5%  28%,  rgba(255,255,255,0.5) 100%, transparent),
+        radial-gradient(0.35px 0.35px at 32% 22%,  rgba(255,255,255,0.45) 100%, transparent),
+        radial-gradient(0.3px 0.3px  at 44% 32%,  rgba(255,255,255,0.4)  100%, transparent),
+        radial-gradient(0.35px 0.35px at 68% 12%,  rgba(255,255,255,0.5)  100%, transparent),
+        radial-gradient(0.3px 0.3px  at 76% 28%,  rgba(255,255,255,0.4)  100%, transparent),
+        radial-gradient(0.35px 0.35px at 10% 38%,  rgba(255,255,255,0.35) 100%, transparent),
+        radial-gradient(0.3px 0.3px  at 54% 35%,  rgba(255,255,255,0.4)  100%, transparent),
+        radial-gradient(0.35px 0.35px at 86% 34%,  rgba(255,255,255,0.45) 100%, transparent)
+      ;
+      animation: starsTwinkle 5s ease-in-out infinite;
+    }
+
+    /* 闪烁层 — 精选星点交替亮暗 */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(1.6px 1.6px at 55% 11%, #fff 100%, transparent),
+        radial-gradient(1.4px 1.4px at 12% 8%,  #fff 100%, transparent),
+        radial-gradient(1.2px 1.2px at 72% 7%,  #f2ecdc 100%, transparent),
+        radial-gradient(1.4px 1.4px at 42% 18%, #faf4e4 100%, transparent),
+        radial-gradient(1.3px 1.3px at 90% 25%, #fff 100%, transparent),
+        radial-gradient(1.5px 1.5px at 78% 20%, #fff 100%, transparent),
+        radial-gradient(0.7px 0.7px at 22% 28%, rgba(255,250,240,0.8) 100%, transparent),
+        radial-gradient(0.6px 0.6px at 62% 24%, rgba(255,250,235,0.8) 100%, transparent)
+      ;
+      animation: starsTwinkle 5s ease-in-out infinite 2.5s;
+      opacity: 0;
+    }
+    @keyframes starsTwinkle {
+      0%, 100% { opacity: 1; }
+      50%      { opacity: 0.3; }
+    }
+
+    .header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--scarlet);
+      letter-spacing: 0.06em;
+      margin-bottom: 0.35rem;
+      background: linear-gradient(130deg, var(--scarlet) 30%, var(--gold) 55%, var(--scarlet) 80%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: titleShimmer 4s ease-in-out infinite;
+    }
+    @keyframes titleShimmer {
+      0%, 100% { background-position: 0% center; }
+      50%      { background-position: 100% center; }
+    }
+
+    .header__greeting {
+      font-size: 0.95rem;
+      color: var(--brown);
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      animation: fadeSlideIn 0.6s ease-out;
+    }
+
+    .header__quote {
+      font-size: 0.82rem;
+      color: var(--brown-light);
+      font-style: italic;
+      letter-spacing: 0.03em;
+      min-height: 1.3em;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .header__quote.fading {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ---- 装饰线 ---- */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      opacity: 0.5;
+    }
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+    .divider__icon {
+      font-size: 0.85rem;
+      color: var(--gold);
+    }
+
+    /* ---- 卡片通用 ---- */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid rgba(180, 140, 90, 0.18);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(4px);
+      transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+    .card:hover {
+      box-shadow: 0 1px 6px rgba(60, 20, 10, 0.08);
+      border-color: rgba(180, 140, 90, 0.30);
+    }
+
+    /* ---- 档案卡片 ---- */
+    .profile-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+    .profile-card__avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--scarlet-light), var(--scarlet-deep));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+      box-shadow: 0 1px 4px rgba(140, 30, 20, 0.12);
+    }
+    .profile-card__info h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--scarlet);
+      margin-bottom: 0.15rem;
+    }
+    .profile-card__info p {
+      font-size: 0.8rem;
+      color: var(--brown-light);
+    }
+    .profile-card__arrow {
+      margin-left: auto;
+      color: var(--gold);
+      font-size: 1.1rem;
+      opacity: 0.7;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .profile-card:hover .profile-card__arrow {
+      transform: translateX(4px);
+      opacity: 1;
+    }
+
+    /* ---- 推门按钮 ---- */
+    .door-card {
+      text-align: center;
+      padding: 1.5rem;
+    }
+    .door-card__label {
+      font-size: 0.8rem;
+      color: var(--brown-light);
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+      text-transform: uppercase;
+    }
+    .door-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.85rem 2.2rem;
+      background: linear-gradient(140deg, var(--scarlet-light), var(--scarlet));
+      color: #fdf3e0;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      font-family: inherit;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      box-shadow: 0 1px 6px rgba(140, 30, 20, 0.15);
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .door-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(140deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%);
+      transform: translateX(-100%);
+      transition: transform 0.4s ease;
+    }
+    .door-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 10px rgba(140, 30, 20, 0.20);
+    }
+    .door-btn:hover::after {
+      transform: translateX(100%);
+    }
+    .door-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 1px 3px rgba(140, 30, 20, 0.12);
+    }
+    .door-btn__icon {
+      font-size: 1.3rem;
+      transition: transform 0.3s ease;
+    }
+    .door-btn:hover .door-btn__icon {
+      transform: rotate(-12deg) scale(1.15);
+    }
+    .door-card__hint {
+      font-size: 0.72rem;
+      color: var(--brown-light);
+      margin-top: 0.6rem;
+      opacity: 0.7;
+    }
+
+    /* ---- 预言家日报收报箱 ---- */
+    .paper-card {
+      position: relative;
+    }
+    .paper-card__header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+    .paper-card__header-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #b09880, #8a7060);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .paper-card__header-text {
+      flex: 1;
+    }
+    .paper-card__header-text h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--brown);
+      line-height: 1.3;
+    }
+    .paper-card__header-text .sub {
+      font-size: 0.7rem;
+      color: var(--brown-light);
+    }
+    .paper-card__stamp {
+      font-size: 0.65rem;
+      color: var(--brown-light);
+      background: rgba(180, 140, 90, 0.10);
+      padding: 0.2rem 0.5rem;
+      border-radius: 8px;
+      white-space: nowrap;
+      border: 1px solid rgba(180, 140, 90, 0.12);
+    }
+
+    /* 取报按钮 */
+    .paper-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 1.1rem;
+      background: transparent;
+      color: var(--brown);
+      border: 1px solid rgba(180, 140, 90, 0.25);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .paper-btn:hover {
+      background: rgba(180, 140, 90, 0.10);
+      border-color: rgba(180, 140, 90, 0.35);
+    }
+    .paper-btn:active {
+      transform: scale(0.96);
+    }
+    .paper-btn__icon {
+      font-size: 0.9rem;
+      transition: transform 0.25s ease;
+    }
+    .paper-btn:hover .paper-btn__icon {
+      transform: translateX(3px);
+    }
+    .paper-card__footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.75rem;
+    }
+    .paper-card__footer .hint {
+      font-size: 0.68rem;
+      color: var(--brown-light);
+      opacity: 0.6;
+    }
+
+    /* ---- Todo 卡片 ---- */
+    .todo-card__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .todo-card__header h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--scarlet);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .todo-card__count {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: var(--brown-light);
+      background: rgba(180, 140, 90, 0.12);
+      padding: 0.15rem 0.55rem;
+      border-radius: 20px;
+    }
+
+    /* 添加栏 */
+    .todo-add {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .todo-add__input {
+      flex: 1;
+      padding: 0.6rem 0.9rem;
+      border: 1px solid rgba(180, 140, 90, 0.22);
+      border-radius: var(--radius-sm);
+      background: rgba(255, 250, 242, 0.7);
+      font-size: 0.9rem;
+      font-family: inherit;
+      color: var(--brown);
+      outline: none;
+      transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+    .todo-add__input:focus {
+      border-color: rgba(180, 140, 90, 0.45);
+      box-shadow: 0 0 0 3px rgba(212, 160, 74, 0.10);
+    }
+    .todo-add__input::placeholder {
+      color: #c0a890;
+      font-style: italic;
+      font-size: 0.85rem;
+    }
+    .todo-add__btn {
+      padding: 0.6rem 1.1rem;
+      background: linear-gradient(140deg, var(--gold), #b8862a);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 4px rgba(180, 130, 40, 0.15);
+    }
+    .todo-add__btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 1px 8px rgba(180, 130, 40, 0.20);
+    }
+    .todo-add__btn:active {
+      transform: translateY(0);
+    }
+
+    /* 列表 */
+    .todo-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      max-height: 320px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .todo-list::-webkit-scrollbar {
+      width: 5px;
+    }
+    .todo-list::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .todo-list::-webkit-scrollbar-thumb {
+      background: rgba(180, 140, 90, 0.25);
+      border-radius: 10px;
+    }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 0.7rem;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 250, 242, 0.5);
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+      animation: slideIn 0.25s ease-out;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .todo-item:hover {
+      background: rgba(255, 248, 238, 0.8);
+      border-color: rgba(180, 140, 90, 0.15);
+    }
+
+    /* 自定义复选框 */
+    .todo-check {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(180, 140, 90, 0.4);
+      border-radius: 50%;
+      flex-shrink: 0;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s ease;
+      background: transparent;
+    }
+    .todo-check:checked {
+      background: var(--gold);
+      border-color: var(--gold);
+    }
+    .todo-check:checked::after {
+      content: '✓';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: #fff;
+      font-weight: 700;
+    }
+    .todo-check:hover {
+      border-color: var(--gold);
+    }
+
+    .todo-text {
+      flex: 1;
+      font-size: 0.9rem;
+      color: var(--brown);
+      transition: all 0.25s ease;
+      word-break: break-word;
+    }
+    .todo-item.done .todo-text {
+      text-decoration: line-through;
+      color: #c0a890;
+      opacity: 0.65;
+    }
+
+    .todo-delete {
+      width: 26px;
+      height: 26px;
+      border: none;
+      background: transparent;
+      color: #c0a090;
+      cursor: pointer;
+      border-radius: 50%;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: all 0.2s ease;
+    }
+    .todo-item:hover .todo-delete {
+      opacity: 1;
+    }
+    .todo-delete:hover {
+      background: rgba(200, 60, 40, 0.10);
+      color: var(--scarlet-light);
+    }
+
+    /* 空状态 */
+    .todo-empty {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      color: #c0a890;
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+    .todo-empty__icon {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 0.4rem;
+      opacity: 0.5;
+    }
+
+    /* ---- 页脚 ---- */
+    .footer {
+      text-align: center;
+      margin-top: 0.5rem;
+      font-size: 0.72rem;
+      color: #c0a890;
+      letter-spacing: 0.03em;
+    }
+
+    /* ---- 响应式 ---- */
+    @media (max-width: 700px) {
+      body { padding: 1rem 0.75rem 2rem; }
+      .card { padding: 1rem 1.1rem; }
+      .header h1 { font-size: 1.35rem; }
+      .door-btn { padding: 0.75rem 1.6rem; font-size: 0.95rem; }
+      .common-room {
+        grid-template-columns: 1fr;
+      }
+      .profile-card,
+      .paper-card,
+      .door-card,
+      .todo-wrapper {
+        grid-column: 1;
+        grid-row: auto;
+      }
+    }
+
+    /* ---- 暗色模式适配 ---- */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background:
+          radial-gradient(ellipse at 70% 30%, rgba(212, 160, 74, 0.07) 0%, transparent 55%),
+          radial-gradient(ellipse at 30% 90%, rgba(180, 50, 40, 0.05) 0%, transparent 50%),
+          linear-gradient(175deg, #1a1012 0%, #1e1416 40%, #180e10 100%);
+        color: #f3e8d6;
+      }
+      :root {
+        --card-bg: rgba(30, 20, 20, 0.92);
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+        --brown: #f3e8d6;
+        --brown-light: #b09888;
+      }
+      .header h1 {
+        color: #e0b060;
+        background: linear-gradient(130deg, #e0b060 30%, #f0d78c 55%, #e0b060 80%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .header__greeting { color: #f3e8d6; }
+      .header__quote { color: #b09888; }
+      .card { border-color: rgba(212, 160, 74, 0.13); }
+      .card:hover { border-color: rgba(212, 160, 74, 0.25); }
+      .todo-add__input {
+        background: rgba(40, 28, 24, 0.7);
+        border-color: rgba(212, 160, 74, 0.15);
+        color: #f3e8d6;
+      }
+      .todo-add__input::placeholder { color: #8a7060; }
+      .todo-item {
+        background: rgba(40, 28, 24, 0.5);
+      }
+      .todo-item:hover {
+        background: rgba(45, 32, 26, 0.7);
+        border-color: rgba(212, 160, 74, 0.12);
+      }
+      .todo-check {
+        border-color: rgba(212, 160, 74, 0.3);
+      }
+      .todo-text { color: #f3e8d6; }
+      .todo-item.done .todo-text { color: #8a7060; }
+      .profile-card__info h3 { color: #e0b060; }
+      .todo-card__header h3 { color: #e0b060; }
+      .todo-empty { color: #8a7060; }
+      .footer { color: #8a7060; }
+      .paper-card__header-text h3 { color: #f3e8d6; }
+      .paper-btn { color: #f3e8d6; border-color: rgba(212, 160, 74, 0.2); }
+      .paper-btn:hover { background: rgba(212, 160, 74, 0.08); border-color: rgba(212, 160, 74, 0.3); }
+      .paper-card__stamp { border-color: rgba(212, 160, 74, 0.15); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="common-room">
+
+    <!-- ====== 标题区 ====== -->
+    <header class="header">
+      <div class="header__crest" aria-hidden="true"></div>
+      <h1>格兰芬多公共休息室</h1>
+      <p class="header__greeting" id="greeting"></p>
+      <p class="header__quote" id="quote"></p>
+    </header>
+
+    <div class="divider">
+      <span class="divider__icon">✦</span>
+    </div>
+
+    <!-- ====== 档案卡片 ====== -->
+    <div class="card profile-card" id="profileCard" title="查看巫师档案">
+      <div class="profile-card__avatar">🧙</div>
+      <div class="profile-card__info">
+        <h3>我的巫师档案</h3>
+        <p>魔杖 · 学院 · 守护神</p>
+      </div>
+      <span class="profile-card__arrow">→</span>
+    </div>
+
+    <!-- ====== 推门进入 ====== -->
+    <div class="card door-card">
+      <p class="door-card__label">胖夫人画像在此守护</p>
+      <button class="door-btn" id="doorBtn">
+        <span class="door-btn__icon">🚪</span>
+        推门进入
+      </button>
+      <p class="door-card__hint">推开画像，进入你的冥想盆会话</p>
+    </div>
+
+    <!-- ====== 预言家日报收报箱 ====== -->
+    <div class="card paper-card">
+      <div class="paper-card__header">
+        <div class="paper-card__header-icon">🦉</div>
+        <div class="paper-card__header-text">
+          <h3>预言家日报 · 收报箱</h3>
+          <span class="sub">每日猫头鹰专递</span>
+        </div>
+        <span class="paper-card__stamp" id="paperStamp">订阅中</span>
+      </div>
+
+      <div class="paper-card__footer">
+        <span class="hint">🪶 今日日报已送达</span>
+        <button class="paper-btn" id="paperBtn">
+          <span class="paper-btn__icon">📖</span>
+          打开今日日报
+        </button>
+      </div>
+    </div>
+
+    <!-- ====== 待办清单 ====== -->
+    <div class="card todo-wrapper">
+      <div class="todo-card__header">
+        <h3>📜 羊皮纸待办 <span class="todo-card__count" id="todoCount">0</span></h3>
+      </div>
+
+      <div class="todo-add">
+        <input
+          type="text"
+          class="todo-add__input"
+          id="todoInput"
+          placeholder="添加新的待办事项…"
+          maxlength="120"
+          autocomplete="off"
+        >
+        <button class="todo-add__btn" id="todoAddBtn">✦ 添加</button>
+      </div>
+
+      <ul class="todo-list" id="todoList">
+        <li class="todo-empty">
+          <span class="todo-empty__icon">🕯️</span>
+          羊皮纸空空如也<br>写下你今日的冒险计划吧
+        </li>
+      </ul>
+    </div>
+
+    <!-- ====== 页脚 ====== -->
+    <p class="footer">格兰芬多公共休息室 · 塔楼八层 · 胖夫人画像后</p>
+
+  </div>
+
+  <script>
+    /* ============================================
+       Spherse UI SDK — Promise Wrapper
+       ============================================ */
+    function spherseCall(action, params) {
+      return new Promise((resolve, reject) => {
+        const requestId = "r" + Date.now() + Math.random().toString(36).slice(2);
+        const timeout = setTimeout(() => { cleanup(); reject(new Error("spherse timeout")); }, 10000);
+        const handler = (e) => {
+          if (e.data?.type === "spherse:response" && e.data.requestId === requestId) {
+            cleanup();
+            e.data.ok ? resolve(e.data.data) : reject(new Error(e.data.data?.error || "spherse data error"));
+          }
+        };
+        function cleanup() { clearTimeout(timeout); window.removeEventListener("message", handler); }
+        window.addEventListener("message", handler);
+        window.parent.postMessage({ type: "spherse:action", action, params, requestId }, "*");
+      });
+    }
+
+    /* ============================================
+       常量
+       ============================================ */
+    const DATA_FILE = "common-room.data.json";
+    const SESSION_ID = "d7ca9b57-4ab0-4723-a53a-627891c1df6e";
+    const PROFILE_PATH = "入学资料/📋 Mengru · 学生档案.html";
+
+    /* ============================================
+       DOM 引用
+       ============================================ */
+    const todoList   = document.getElementById("todoList");
+    const todoInput  = document.getElementById("todoInput");
+    const todoAddBtn = document.getElementById("todoAddBtn");
+    const todoCount  = document.getElementById("todoCount");
+    const doorBtn    = document.getElementById("doorBtn");
+    const profileCard = document.getElementById("profileCard");
+    const greetingEl  = document.getElementById("greeting");
+    const quoteEl     = document.getElementById("quote");
+    const paperBtn    = document.getElementById("paperBtn");
+
+    /* ============================================
+       时间感知问候
+       ============================================ */
+    const greetings = {
+      morning: [
+        "早上好，勇敢的狮子 ☀️",
+        "晨光洒在魁地奇球场上，新的一天开始了 🧹",
+        "看来你今天起得比霍格沃茨的猫头鹰还早 ✨",
+      ],
+      afternoon: [
+        "下午好，冒险家 🦁",
+        "塔楼的风正好——适合来一场冒险",
+        "刚上完魔咒课吗？来壁炉边坐坐吧 🔥",
+      ],
+      evening: [
+        "傍晚好，归来的勇士 🌅",
+        "壁炉正旺，黄油啤酒还温热着 🍺",
+        "一天的冒险结束了——来，讲给我听听",
+      ],
+      night: [
+        "夜深了，守夜的狮子 🌙",
+        "公共休息室里只剩壁炉的噼啪声……和你的羊皮纸",
+        "星星在塔楼窗外闪烁——很适合静静想事情 ✨",
+      ],
+    };
+
+    function getGreeting() {
+      const h = new Date().getHours();
+      let pool;
+      if (h >= 5 && h < 12) pool = greetings.morning;
+      else if (h >= 12 && h < 17) pool = greetings.afternoon;
+      else if (h >= 17 && h < 21) pool = greetings.evening;
+      else pool = greetings.night;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    /* ============================================
+       滚动格言
+       ============================================ */
+    const quotes = [
+      "在格兰芬多，我们相信行动胜过千言万语。",
+      "胆识不是不害怕，而是害怕的时候依然向前。",
+      "壁炉的火从不问你是谁，它只是温暖每一个靠近的人。",
+      "真正的勇气，有时只是把手伸给需要的人。",
+      "胖夫人说：今天的口令是——「勇敢去闯」。",
+      "狮子不会为小事烦恼……除非那小事是斯莱特林赢了魁地奇。",
+      "分院帽看到你选择勇气的那一刻，眼睛里是亮的。",
+      "冒险在门外等着你——或者，在冥想盆里。",
+      "世界上最幸运的事，是在对的时间推开对的门。",
+      "别担心犯错——每年都有格兰芬多人炸掉坩埚，他们现在都是传奇。",
+    ];
+
+    function randomQuote(exclude) {
+      const pool = exclude ? quotes.filter(q => q !== exclude) : quotes;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function rotateQuote() {
+      const current = quoteEl.textContent;
+      quoteEl.classList.add("fading");
+      setTimeout(() => {
+        quoteEl.textContent = randomQuote(current);
+        quoteEl.classList.remove("fading");
+      }, 500);
+    }
+
+    /* ============================================
+       Todo 状态
+       ============================================ */
+    let todos = [];
+
+    /* 生成简单唯一 ID */
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    /* 从 data.json 加载 todos */
+    async function loadTodos() {
+      try {
+        const data = await spherseCall("data.get", { file: DATA_FILE, key: "todos" });
+        todos = Array.isArray(data) ? data : [];
+      } catch (e) {
+        console.warn("加载待办失败，使用空列表:", e.message);
+        todos = [];
+      }
+      renderTodos();
+    }
+
+    /* 保存 todos 到 data.json */
+    async function saveTodos() {
+      try {
+        await spherseCall("data.set", { file: DATA_FILE, key: "todos", value: todos });
+      } catch (e) {
+        console.error("保存待办失败:", e.message);
+      }
+    }
+
+    /* 渲染 todo 列表 */
+    function renderTodos() {
+      todoList.innerHTML = "";
+
+      if (todos.length === 0) {
+        todoList.innerHTML = `
+          <li class="todo-empty">
+            <span class="todo-empty__icon">🕯️</span>
+            羊皮纸空空如也<br>写下你今日的冒险计划吧
+          </li>`;
+      } else {
+        todos.forEach((todo, index) => {
+          const li = document.createElement("li");
+          li.className = "todo-item" + (todo.done ? " done" : "");
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "todo-check";
+          checkbox.checked = todo.done;
+          checkbox.addEventListener("change", () => toggleTodo(index));
+
+          const span = document.createElement("span");
+          span.className = "todo-text";
+          span.textContent = todo.text;
+
+          const delBtn = document.createElement("button");
+          delBtn.className = "todo-delete";
+          delBtn.innerHTML = "✕";
+          delBtn.title = "删除";
+          delBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            deleteTodo(index);
+          });
+
+          li.appendChild(checkbox);
+          li.appendChild(span);
+          li.appendChild(delBtn);
+          todoList.appendChild(li);
+        });
+      }
+
+      updateCount();
+    }
+
+    /* 更新计数 */
+    function updateCount() {
+      const undone = todos.filter(t => !t.done).length;
+      todoCount.textContent = undone;
+    }
+
+    /* 添加 todo */
+    async function addTodo() {
+      const text = todoInput.value.trim();
+      if (!text) return;
+
+      todos.unshift({ id: uid(), text, done: false });
+      todoInput.value = "";
+      renderTodos();
+      await saveTodos();
+      todoInput.focus();
+    }
+
+    /* 切换完成状态 */
+    async function toggleTodo(index) {
+      todos[index].done = !todos[index].done;
+      renderTodos();
+      await saveTodos();
+    }
+
+    /* 删除 todo */
+    async function deleteTodo(index) {
+      todos.splice(index, 1);
+      renderTodos();
+      await saveTodos();
+    }
+
+    /* ============================================
+       事件绑定
+       ============================================ */
+    todoAddBtn.addEventListener("click", addTodo);
+    todoInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addTodo();
+    });
+
+    /* 推门进入 */
+    doorBtn.addEventListener("click", async () => {
+      // 通过 floatSession 在浮窗中打开会话，如同推门进入另一个房间
+      window.parent.postMessage({
+        type: "spherse:action",
+        action: "floatSession",
+        params: { sessionId: SESSION_ID }
+      }, "*");
+    });
+
+    /* 档案链接 — 打开项目中的档案文件 */
+    profileCard.addEventListener("click", () => {
+      window.parent.postMessage({
+        type: "spherse:action",
+        action: "openFile",
+        params: { path: PROFILE_PATH }
+      }, "*");
+    });
+
+    /* 打开今日日报 */
+    paperBtn.addEventListener("click", () => {
+      window.parent.postMessage({
+        type: "spherse:action",
+        action: "openFile",
+        params: { path: "预言家日报/今日预言家日报.html" }
+      }, "*");
+    });
+
+    /* ============================================
+       初始化
+       ============================================ */
+    greetingEl.textContent = getGreeting();
+    quoteEl.textContent = randomQuote();
+    setInterval(rotateQuote, 15000);
+    loadTodos();
+  </script>
+</body>
+</html>

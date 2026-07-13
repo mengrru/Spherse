@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🪄 魔法手机</title>
+  <style>
+    /* ==========================================
+       魔法字体 —— 如古卷羊皮
+       ========================================== */
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      /* ——— 魔法深色调 ——— */
+      --bg-night: #0E0B14;
+      --bg-deep: #1A1525;
+      --bg-card: #221D30;
+      --bg-card-rise: #2A2440;
+      --gold: #D4A84B;
+      --gold-light: #F0E0B8;
+      --gold-glow: rgba(212, 168, 75, 0.15);
+      --gold-soft: rgba(212, 168, 75, 0.08);
+      --text-main: #EDE0CC;
+      --text-muted: #9A8A78;
+      --text-dim: #6A5A4A;
+      --border: #3D3450;
+      --amethyst: #8B7BB8;
+      --ember: #D46A3A;
+      --emerald: #5A9F6A;
+      --ink-blue: #4A6FA5;
+      --candle-warm: rgba(255, 200, 120, 0.06);
+
+      /* 气泡 */
+      --bubble-self: linear-gradient(135deg, #D4A84B, #C49A2A);
+      --bubble-self-text: #1A1525;
+      --bubble-other: rgba(42, 36, 64, 0.8);
+      --bubble-other-border: rgba(212, 168, 75, 0.15);
+      --bubble-other-text: #EDE0CC;
+
+      --shadow-card: 0 8px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(212, 168, 75, 0.06);
+      --shadow-glow: 0 0 30px rgba(212, 168, 75, 0.06);
+    }
+
+    body {
+      font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+      background: var(--bg-night);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      position: relative;
+      overflow-y: auto;
+    }
+
+    /* ——— 星夜背景 ——— */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.3), transparent),
+        radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1.5px 1.5px at 60% 20%, rgba(255,255,255,0.25), transparent),
+        radial-gradient(1px 1px at 80% 50%, rgba(255,255,255,0.15), transparent),
+        radial-gradient(1.5px 1.5px at 10% 80%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 90% 90%, rgba(255,255,255,0.3), transparent),
+        radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.15), transparent),
+        radial-gradient(1px 1px at 70% 60%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1.5px 1.5px at 30% 90%, rgba(255,255,255,0.1), transparent),
+        radial-gradient(1px 1px at 85% 15%, rgba(255,255,255,0.25), transparent);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ——— 月光辉 ——— */
+    body::after {
+      content: '';
+      position: fixed;
+      top: -20%;
+      right: -10%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(ellipse at center, rgba(212, 168, 75, 0.03) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ==========================================
+       魔法手机外壳 —— 如一面古镜
+       ========================================== */
+    .phone {
+      position: relative;
+      z-index: 1;
+      width: 390px;
+      max-width: 100%;
+      background: var(--bg-deep);
+      border-radius: 44px;
+      box-shadow:
+        0 0 0 1px rgba(212, 168, 75, 0.12),
+        0 0 40px rgba(212, 168, 75, 0.04),
+        0 20px 60px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+      border: 1px solid rgba(212, 168, 75, 0.08);
+    }
+
+    /* ——— 魔法外壳装饰角 ——— */
+    .phone::before {
+      content: '✦';
+      position: absolute;
+      top: 12px;
+      left: 16px;
+      font-size: 0.5rem;
+      color: var(--gold);
+      opacity: 0.3;
+      z-index: 5;
+    }
+    .phone::after {
+      content: '✦';
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      font-size: 0.5rem;
+      color: var(--gold);
+      opacity: 0.3;
+      z-index: 5;
+    }
+
+    /* ==========================================
+       上方法杖指示器 —— 取代"动态岛"
+       ========================================== */
+    .magic-indicator {
+      position: relative;
+      height: 48px;
+      background: var(--bg-deep);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 4px;
+    }
+
+    .magic-indicator .crystal {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 16px 4px 12px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(212, 168, 75, 0.08), rgba(139, 123, 184, 0.06));
+      border: 1px solid rgba(212, 168, 75, 0.12);
+      backdrop-filter: blur(4px);
+    }
+
+    .magic-indicator .crystal .wand-icon {
+      font-size: 0.7rem;
+      animation: wandPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes wandPulse {
+      0%, 100% { opacity: 0.6; filter: brightness(0.8); }
+      50% { opacity: 1; filter: brightness(1.2); text-shadow: 0 0 6px rgba(212,168,75,0.3); }
+    }
+
+    .magic-indicator .crystal .time {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.75rem;
+      color: var(--gold);
+      letter-spacing: 2px;
+      font-weight: 600;
+      font-variant-numeric: oldstyle-nums;
+    }
+
+    .magic-indicator .crystal .status-rune {
+      font-size: 0.5rem;
+      color: var(--text-muted);
+      letter-spacing: 3px;
+    }
+
+    /* ==========================================
+       顶部栏 —— 魔法师名片
+       ========================================== */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.4rem 1.25rem 0.6rem;
+      border-bottom: 1px solid rgba(212, 168, 75, 0.08);
+      position: relative;
+    }
+
+    .top-bar::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-glow), transparent);
+    }
+
+    .top-bar .back {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      cursor: default;
+      opacity: 0.5;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .top-bar .profile {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+
+    .top-bar .profile-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      color: var(--bg-deep);
+      font-weight: 700;
+      flex-shrink: 0;
+      box-shadow: 0 0 12px rgba(212, 168, 75, 0.15);
+      position: relative;
+    }
+
+    .top-bar .profile-avatar::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 50%;
+      border: 1px solid rgba(212, 168, 75, 0.2);
+    }
+
+    .top-bar .profile-info {
+      line-height: 1.3;
+    }
+
+    .top-bar .profile-info .name {
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+      color: var(--gold);
+      letter-spacing: 0.5px;
+    }
+
+    .top-bar .profile-info .status {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+    }
+
+    .top-bar .profile-info .status .highlight {
+      color: var(--gold);
+      font-style: italic;
+    }
+
+    .top-bar .menu-runes {
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+      cursor: default;
+    }
+
+    /* ==========================================
+       魔法标签页切换
+       ========================================== */
+    .tabs {
+      display: flex;
+      border-bottom: 1px solid rgba(212, 168, 75, 0.08);
+      background: var(--bg-deep);
+      position: relative;
+    }
+
+    .tabs::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 10%;
+      right: 10%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(212, 168, 75, 0.05), transparent);
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 0.65rem 0;
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-bottom: 2px solid transparent;
+      letter-spacing: 1.5px;
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      position: relative;
+    }
+
+    .tab:hover {
+      color: var(--text-muted);
+    }
+
+    .tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+      text-shadow: 0 0 10px rgba(212, 168, 75, 0.1);
+    }
+
+    /* ==========================================
+       内容区
+       ========================================== */
+    .content {
+      padding: 0;
+      min-height: 480px;
+      background: var(--bg-card);
+      position: relative;
+    }
+
+    .content::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(139, 123, 184, 0.02) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(212, 168, 75, 0.02) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .page {
+      display: none;
+      padding: 0.75rem 1.25rem;
+      position: relative;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* ==========================================
+       Tab 1: 魔法通信 (聊天)
+       ========================================== */
+    .chat-list {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.7rem 0;
+      border-bottom: 1px solid rgba(212, 168, 75, 0.05);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      margin: 0 -1.25rem;
+      padding-left: 1.25rem;
+      padding-right: 1.25rem;
+      position: relative;
+    }
+
+    .chat-item::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 4.5rem;
+      right: 1.25rem;
+      height: 1px;
+      background: rgba(212, 168, 75, 0.04);
+    }
+
+    .chat-item:hover {
+      background: rgba(212, 168, 75, 0.03);
+    }
+
+    /* ——— 魔法头像框 ——— */
+    .chat-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+      position: relative;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    .chat-avatar::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(212, 168, 75, 0.12);
+    }
+
+    /* ——— 头像颜色类由数据中的 cls 字段控制 ——— */
+    .chat-avatar.harry { background: linear-gradient(135deg, #2D5A3A, #4A7C59); }
+    .chat-avatar.ron { background: linear-gradient(135deg, #8A2A1A, #C0392B); }
+    .chat-avatar.ginny { background: linear-gradient(135deg, #6A3010, #8B4513); }
+    .chat-avatar.malfoy { background: linear-gradient(135deg, #2A4A5A, #5B7B8A); }
+    .chat-avatar.luna { background: linear-gradient(135deg, #5A3A7A, #8E6B9A); }
+    .chat-avatar.albus { background: linear-gradient(135deg, #2A3A5A, #4A6FA5); }
+    .chat-avatar.snape { background: linear-gradient(135deg, #1A1A1A, #2C2C2C); }
+    .chat-avatar.mcgonagall { background: linear-gradient(135deg, #1A2A3A, #2E4A62); }
+    .chat-avatar.hermione { background: linear-gradient(135deg, #D4A84B, #B8860B); }
+    .chat-avatar.dumbledore { background: linear-gradient(135deg, #2A3A5A, #4A6FA5); }
+    .chat-avatar.sirius { background: linear-gradient(135deg, #2A2A3A, #4A4A5A); }
+    .chat-avatar.remus { background: linear-gradient(135deg, #3A2A1A, #5A4A2A); }
+    .chat-avatar.tom { background: linear-gradient(135deg, #1A1A1A, #3A2A2A); }
+
+    .chat-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .chat-info .row1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.1rem;
+    }
+
+    .chat-info .row1 .name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+      color: var(--text-main);
+    }
+
+    .chat-info .row1 .time {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+    }
+
+    .chat-info .last-msg {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'Inter', sans-serif;
+      font-weight: 400;
+      opacity: 0.8;
+    }
+
+    .chat-badge {
+      background: var(--gold);
+      color: var(--bg-deep);
+      font-size: 0.6rem;
+      font-weight: 700;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 5px;
+      font-family: 'Inter', sans-serif;
+      box-shadow: 0 0 8px rgba(212, 168, 75, 0.2);
+    }
+
+    /* ==========================================
+       对话详情 —— 如展开一封羊皮信
+       ========================================== */
+    .chat-detail {
+      display: none;
+      flex-direction: column;
+      height: 450px;
+      position: relative;
+    }
+
+    .chat-detail.active {
+      display: flex;
+    }
+
+    .chat-detail-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.5rem 0 0.7rem;
+      border-bottom: 1px solid rgba(212, 168, 75, 0.08);
+      margin-bottom: 0.3rem;
+    }
+
+    .chat-detail-header .back-btn {
+      font-size: 1rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      opacity: 0.6;
+      transition: all 0.2s;
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .chat-detail-header .back-btn:hover {
+      opacity: 1;
+      color: var(--gold);
+    }
+
+    .chat-detail-header .cd-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+
+    .chat-detail-header .cd-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+      color: var(--gold);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.5rem 0;
+      scroll-behavior: smooth;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+      width: 3px;
+    }
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: rgba(212, 168, 75, 0.15);
+      border-radius: 3px;
+    }
+    .chat-messages::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .msg-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.5rem;
+    }
+
+    .msg-row.self {
+      flex-direction: row-reverse;
+    }
+
+    .msg-bubble {
+      max-width: 82%;
+      padding: 0.6rem 0.9rem;
+      border-radius: 14px;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      word-break: break-word;
+      position: relative;
+      font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+    }
+
+    .msg-row.self .msg-bubble {
+      background: var(--bubble-self);
+      color: var(--bubble-self-text);
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 2px 8px rgba(212, 168, 75, 0.15);
+    }
+
+    .msg-row:not(.self) .msg-bubble {
+      background: var(--bubble-other);
+      color: var(--bubble-other-text);
+      border: 1px solid var(--bubble-other-border);
+      border-bottom-left-radius: 4px;
+      backdrop-filter: blur(4px);
+    }
+
+    .msg-time {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      padding: 0 0.25rem 0.4rem;
+      text-align: center;
+      margin-top: 0.1rem;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.5px;
+    }
+
+    .msg-row.self .msg-time {
+      text-align: right;
+    }
+
+    .msg-separator {
+      text-align: center;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      padding: 0.5rem 0;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 1px;
+    }
+
+    .msg-separator span {
+      background: var(--bg-card-rise);
+      padding: 0.15rem 0.8rem;
+      border-radius: 10px;
+      border: 1px solid rgba(212, 168, 75, 0.08);
+      color: var(--text-muted);
+    }
+
+    /* ==========================================
+       Tab 2: 魔法动态 (朋友圈)
+       ========================================== */
+    .moment {
+      padding: 1rem 0;
+      border-bottom: 1px solid rgba(212, 168, 75, 0.05);
+    }
+
+    .moment:first-child {
+      padding-top: 0;
+    }
+
+    .moment:last-child {
+      border-bottom: none;
+    }
+
+    .moment-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+    }
+
+    .moment-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      position: relative;
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+
+    .moment-avatar::after {
+      content: '';
+      position: absolute;
+      inset: -1.5px;
+      border-radius: 50%;
+      border: 1px solid rgba(212, 168, 75, 0.1);
+    }
+
+    .moment-avatar.harry { background: linear-gradient(135deg, #2D5A3A, #4A7C59); }
+    .moment-avatar.ron { background: linear-gradient(135deg, #8A2A1A, #C0392B); }
+    .moment-avatar.ginny { background: linear-gradient(135deg, #6A3010, #8B4513); }
+    .moment-avatar.luna { background: linear-gradient(135deg, #5A3A7A, #8E6B9A); }
+    .moment-avatar.hermione { background: linear-gradient(135deg, #D4A84B, #B8860B); }
+    .moment-avatar.mcgonagall { background: linear-gradient(135deg, #1A2A3A, #2E4A62); }
+    .moment-avatar.snape { background: linear-gradient(135deg, #1A1A1A, #2C2C2C); }
+    .moment-avatar.albus { background: linear-gradient(135deg, #2A3A5A, #4A6FA5); }
+    .moment-avatar.dumbledore { background: linear-gradient(135deg, #2A3A5A, #4A6FA5); }
+    .moment-avatar.sirius { background: linear-gradient(135deg, #2A2A3A, #4A4A5A); }
+    .moment-avatar.remus { background: linear-gradient(135deg, #3A2A1A, #5A4A2A); }
+    .moment-avatar.tom { background: linear-gradient(135deg, #1A1A1A, #3A2A2A); }
+    .moment-avatar.malfoy { background: linear-gradient(135deg, #2A4A5A, #5B7B8A); }
+
+    .moment-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .moment-body .name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 0.1rem;
+      font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+    }
+
+    .moment-body .text {
+      font-size: 0.82rem;
+      line-height: 1.65;
+      margin-bottom: 0.5rem;
+      color: var(--text-main);
+      font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+    }
+
+    .moment-body .text .tag {
+      color: var(--amethyst);
+      font-style: italic;
+    }
+
+    .moment-images {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      max-width: 220px;
+      margin-bottom: 0.5rem;
+    }
+
+    .moment-images .img-placeholder {
+      aspect-ratio: 1;
+      border-radius: 6px;
+      background: rgba(212, 168, 75, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      border: 1px solid rgba(212, 168, 75, 0.06);
+      transition: all 0.2s;
+    }
+
+    .moment-images .img-placeholder:hover {
+      background: rgba(212, 168, 75, 0.1);
+    }
+
+    .moment-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      font-family: 'Inter', sans-serif;
+    }
+
+    .moment-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .moment-actions span {
+      cursor: default;
+      transition: color 0.2s;
+      font-size: 0.7rem;
+    }
+
+    .moment-actions span:hover {
+      color: var(--gold);
+    }
+
+    /* ==========================================
+       Tab 3: 羊皮笔记
+       ========================================== */
+    .notes-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .note-item {
+      padding: 0.85rem 1rem;
+      background: rgba(212, 168, 75, 0.04);
+      border-radius: 12px;
+      border-left: 2px solid var(--gold);
+      border: 1px solid rgba(212, 168, 75, 0.06);
+      border-left-width: 3px;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .note-item:hover {
+      background: rgba(212, 168, 75, 0.07);
+      border-left-color: var(--gold-light);
+    }
+
+    .note-item::before {
+      content: '✦';
+      position: absolute;
+      top: 0.5rem;
+      right: 0.75rem;
+      font-size: 0.4rem;
+      color: var(--gold);
+      opacity: 0.3;
+    }
+
+    .note-item .note-title {
+      font-weight: 700;
+      font-size: 0.88rem;
+      margin-bottom: 0.2rem;
+      color: var(--gold);
+      font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+      letter-spacing: 0.3px;
+    }
+
+    .note-item .note-preview {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      font-family: 'Cormorant Garamond', 'Noto Serif SC', serif;
+      opacity: 0.9;
+    }
+
+    .note-item .note-time {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      margin-top: 0.3rem;
+      opacity: 0.6;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.5px;
+    }
+
+    /* ==========================================
+       底部 —— 如魔法阵的收束
+       ========================================== */
+    .home-indicator {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-deep);
+      position: relative;
+    }
+
+    .home-indicator .bar {
+      width: 120px;
+      height: 4px;
+      background: rgba(212, 168, 75, 0.12);
+      border-radius: 2px;
+    }
+
+    /* ==========================================
+       浮动粒子动画
+       ========================================== */
+    .sparkle {
+      position: fixed;
+      pointer-events: none;
+      z-index: 0;
+      font-size: 0.4rem;
+      color: var(--gold);
+      opacity: 0;
+      animation: sparkleFloat 6s ease-in-out infinite;
+    }
+
+    @keyframes sparkleFloat {
+      0% { opacity: 0; transform: translateY(0) rotate(0deg) scale(0.5); }
+      20% { opacity: 0.3; }
+      80% { opacity: 0.3; }
+      100% { opacity: 0; transform: translateY(-120px) rotate(180deg) scale(1); }
+    }
+
+    /* ==========================================
+       响应式
+       ========================================== */
+    @media (max-width: 420px) {
+      .phone { border-radius: 28px; }
+      .content { min-height: 420px; }
+      .page { padding: 0.6rem 1rem; }
+      .chat-item { margin: 0 -1rem; padding-left: 1rem; padding-right: 1rem; }
+      .chat-item::after { left: 4rem; right: 1rem; }
+    }
+
+    /* ==========================================
+       深色模式 —— 已为默认深色，无需额外调整
+       ========================================== */
+    @media (prefers-color-scheme: light) {
+      /* 保留魔法世界的幽暗感，即使用户系统是浅色模式 */
+    }
+  </style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- ===== 魔法水晶指示器（取代动态岛） ===== -->
+  <div class="magic-indicator">
+    <div class="crystal">
+      <span class="wand-icon">🪄</span>
+      <span class="time">✦ 九时四十一分 ✦</span>
+      <span class="status-rune">ᛟ ᛗ ᛖᚾ</span>
+    </div>
+  </div>
+
+  <!-- ===== 顶部栏（内容由数据驱动） ===== -->
+  <div class="top-bar">
+    <span class="back">‹</span>
+    <div class="profile">
+      <div class="profile-avatar" id="ownerAvatar"></div>
+      <div class="profile-info">
+        <div class="name" id="ownerName"></div>
+        <div class="status" id="ownerStatus"></div>
+      </div>
+    </div>
+    <span class="menu-runes">ᛦ ᛏ ᛖ</span>
+  </div>
+
+  <!-- ===== 魔法标签页（内容由数据驱动） ===== -->
+  <div class="tabs" id="tabsContainer"></div>
+
+  <!-- ===== 内容区 ===== -->
+  <div class="content">
+
+    <!-- -------- 聊天列表 -------- -->
+    <div class="page active" id="page-chat">
+      <div class="chat-list" id="chatList"></div>
+      <div class="chat-detail" id="chatDetail">
+        <div class="chat-detail-header">
+          <span class="back-btn" id="detailBack">‹ 返回</span>
+          <div class="cd-avatar" id="detailAvatar"></div>
+          <span class="cd-name" id="detailName"></span>
+        </div>
+        <div class="chat-messages" id="detailMessages"></div>
+      </div>
+    </div>
+
+    <!-- -------- 月相动态 -------- -->
+    <div class="page" id="page-moments">
+      <div id="momentsList"></div>
+    </div>
+
+    <!-- -------- 羊皮笔记 -------- -->
+    <div class="page" id="page-notes">
+      <div class="notes-list" id="notesList"></div>
+    </div>
+
+  </div>
+
+  <!-- ===== 底部 ===== -->
+  <div class="home-indicator">
+    <div class="bar"></div>
+  </div>
+
+</div>
+
+<!-- ===== 浮动星尘粒子 ===== -->
+<div class="sparkle" style="left:12%; top:70%; animation-delay:0s;">✦</div>
+<div class="sparkle" style="left:75%; top:55%; animation-delay:1.2s;">✧</div>
+<div class="sparkle" style="left:40%; top:85%; animation-delay:2.5s;">✦</div>
+<div class="sparkle" style="left:88%; top:30%; animation-delay:3.8s;">⋆</div>
+<div class="sparkle" style="left:22%; top:40%; animation-delay:5s;">✧</div>
+
+<script>
+  // ================================================================
+  //  📌 数据源配置 —— 修改此处以指向不同的角色数据文件
+  //  ================================================================
+  //  将此模板复制给新角色时，只需修改下面这行路径，
+  //  指向对应的 {角色名}-魔法手机.data.json 即可。
+  //  示例：'./哈利-魔法手机.data.json'
+  // ================================================================
+  var DATA_SOURCE = './赫敏-魔法手机.data.json';
+  // ================================================================
+
+  var appData = null;
+
+  // ==========================================
+  // 加载数据
+  // ==========================================
+  fetch(DATA_SOURCE)
+    .then(function(r) {
+      if (!r.ok) throw new Error('无法加载数据文件：' + DATA_SOURCE);
+      return r.json();
+    })
+    .then(function(data) {
+      appData = data;
+      initApp();
+    })
+    .catch(function(err) {
+      document.getElementById('chatList').innerHTML =
+        '<div style="padding:2rem;text-align:center;color:var(--text-dim);font-family:serif;">' +
+        '✦ 数据未能加载 ✦<br><span style="font-size:0.8rem;">' + err.message + '</span></div>';
+      console.error(err);
+    });
+
+  // ==========================================
+  // 应用初始化
+  // ==========================================
+  function initApp() {
+    renderOwnerInfo();
+    renderTabs();
+    renderChatList();
+    renderMoments();
+    renderNotes();
+    setupTabSwitching();
+  }
+
+  // ==========================================
+  // 渲染主人信息
+  // ==========================================
+  function renderOwnerInfo() {
+    var o = appData.owner;
+    var avatarEl = document.getElementById('ownerAvatar');
+    avatarEl.textContent = o.avatarEmoji || '📜';
+    avatarEl.style.background = o.avatarGradient || 'linear-gradient(135deg, #D4A84B, #B8860B)';
+
+    document.getElementById('ownerName').textContent = o.name;
+    document.getElementById('ownerStatus').innerHTML =
+      o.status + ' <span class="highlight">' + (o.statusHighlight || '') + '</span>';
+
+    document.title = appData.title || ('📱 ' + o.name + '的魔法手机');
+  }
+
+  // ==========================================
+  // 渲染标签页
+  // ==========================================
+  function renderTabs() {
+    var t = appData.tabs;
+    var container = document.getElementById('tabsContainer');
+    container.innerHTML =
+      '<div class="tab active" data-tab="chat">' + (t.chat || '🪄 咒语通信') + '</div>' +
+      '<div class="tab" data-tab="moments">' + (t.moments || '🌙 月相动态') + '</div>' +
+      '<div class="tab" data-tab="notes">' + (t.notes || '📜 羊皮笔记') + '</div>';
+  }
+
+  // ==========================================
+  // 渲染聊天列表
+  // ==========================================
+  function renderChatList() {
+    var data = appData;
+    var html = '';
+    data.chatList.forEach(function(c) {
+      var badgeHtml = c.badge > 0 ? '<span class="chat-badge">' + c.badge + '</span>' : '';
+      html += '<div class="chat-item" data-chat="' + c.id + '">' +
+        '<div class="chat-avatar ' + c.cls + '">' + c.avatar + '</div>' +
+        '<div class="chat-info">' +
+          '<div class="row1"><span class="name">' + c.name + '</span><span class="time">' + c.time + '</span></div>' +
+          '<div class="last-msg">' + c.lastMsg + '</div>' +
+        '</div>' + badgeHtml +
+      '</div>';
+    });
+    document.getElementById('chatList').innerHTML = html;
+
+    document.querySelectorAll('.chat-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        openChat(el.getAttribute('data-chat'));
+      });
+    });
+  }
+
+  function openChat(id) {
+    var data = appData;
+    var detail = data.chats[id];
+    var contact = data.contacts[id];
+    if (!detail || !contact) return;
+
+    document.getElementById('chatList').style.display = 'none';
+    var detailEl = document.getElementById('chatDetail');
+    detailEl.classList.add('active');
+
+    document.getElementById('detailAvatar').className = 'cd-avatar ' + contact.cls;
+    document.getElementById('detailAvatar').textContent = contact.emoji;
+    document.getElementById('detailName').textContent = contact.name;
+
+    var msgsHtml = '';
+    detail.forEach(function(m) {
+      var cls = m.who === 'me' ? 'self' : '';
+      msgsHtml += '<div class="msg-row ' + cls + '"><div class="msg-bubble">' + m.text + '</div></div>';
+    });
+    document.getElementById('detailMessages').innerHTML = msgsHtml;
+    document.getElementById('detailMessages').scrollTop = document.getElementById('detailMessages').scrollHeight;
+  }
+
+  document.getElementById('detailBack').addEventListener('click', function() {
+    document.getElementById('chatDetail').classList.remove('active');
+    document.getElementById('chatList').style.display = '';
+  });
+
+  // ==========================================
+  // 渲染动态
+  // ==========================================
+  function renderMoments() {
+    var data = appData;
+    var html = '';
+    data.moments.forEach(function(m) {
+      var imagesHtml = '';
+      if (m.images) {
+        imagesHtml = '<div class="moment-images">' +
+          '<div class="img-placeholder">📊</div>' +
+          '<div class="img-placeholder">📝</div>' +
+          '<div class="img-placeholder">📎</div>' +
+        '</div>';
+      }
+      html += '<div class="moment">' +
+        '<div class="moment-header">' +
+          '<div class="moment-avatar ' + m.cls + '">' + m.avatar + '</div>' +
+          '<div class="moment-body">' +
+            '<div class="name">' + m.name + '</div>' +
+            '<div class="text">' + m.text + '</div>' +
+            imagesHtml +
+            '<div class="moment-footer">' +
+              '<span>' + m.time + '</span>' +
+              '<div class="moment-actions">' +
+                '<span>♥ ' + m.likes + '</span>' +
+                '<span>💬 ' + m.comments + '</span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    document.getElementById('momentsList').innerHTML = html;
+  }
+
+  // ==========================================
+  // 渲染笔记
+  // ==========================================
+  function renderNotes() {
+    var data = appData;
+    var html = '';
+    data.notes.forEach(function(n) {
+      html += '<div class="note-item">' +
+        '<div class="note-title">' + n.title + '</div>' +
+        '<div class="note-preview">' + n.preview + '</div>' +
+        '<div class="note-time">' + n.time + '</div>' +
+      '</div>';
+    });
+    document.getElementById('notesList').innerHTML = html;
+  }
+
+  // ==========================================
+  // 标签切换
+  // ==========================================
+  function setupTabSwitching() {
+    document.querySelectorAll('.tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+        tab.classList.add('active');
+        document.getElementById('page-' + tab.getAttribute('data-tab')).classList.add('active');
+
+        if (tab.getAttribute('data-tab') === 'chat') {
+          document.getElementById('chatDetail').classList.remove('active');
+          document.getElementById('chatList').style.display = '';
+        }
+      });
+    });
+  }
+</script>
+
+</body>
+</html>

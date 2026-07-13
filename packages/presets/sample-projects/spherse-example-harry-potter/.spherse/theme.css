@@ -1,0 +1,235 @@
+/* ============================================
+   格兰芬多全局 UI 主题 — Gryffindor Great Hall
+   猩红与金 · 勇气 · 温暖 · 典雅 · 俏皮
+   ============================================ */
+
+/* ============================================
+   亮色模式 — 羊皮纸上的格兰芬多
+   ============================================ */
+:root {
+  /* 页面 */
+  --sp-background: #fdf6ee;
+  --sp-foreground: #2c1810;
+
+  /* 卡片 & 弹出层 */
+  --sp-card: #ffffff;
+  --sp-card-foreground: #2c1810;
+  --sp-popover: #ffffff;
+  --sp-popover-foreground: #2c1810;
+
+  /* 主操作 — 格兰芬多猩红 */
+  --sp-primary: #9e2a2a;
+  --sp-primary-foreground: #fdf3e0;
+
+  /* 次要操作 — 温暖金色调 */
+  --sp-secondary: #faf0e2;
+  --sp-secondary-foreground: #5c3020;
+
+  /* 悬停/选中 */
+  --sp-accent: #fdf0e0;
+  --sp-accent-foreground: #2c1810;
+
+  /* 弱化文字 */
+  --sp-muted: #f5ede2;
+  --sp-muted-foreground: #a08070;
+
+  /* 边框 & 输入 */
+  --sp-border: #e8d8c4;
+  --sp-input: #e0d0b8;
+  --sp-ring: rgba(158, 42, 42, 0.35);
+
+  /* 圆角 — 稍微活泼 */
+  --sp-radius: 0.6rem;
+
+  /* 语义色 */
+  --sp-destructive: #c0392b;
+  --sp-success: #2d8a4e;
+  --sp-success-foreground: #ffffff;
+  --sp-warning: #d4782a;
+  --sp-warning-foreground: #ffffff;
+  --sp-diff-added: #2d8a4e;
+
+  /* 侧边栏 — 暖白底，猩红暗纹气息 */
+  --sp-sidebar: #fef9f3;
+  --sp-sidebar-foreground: #2c1810;
+  --sp-sidebar-primary: #9e2a2a;
+  --sp-sidebar-primary-foreground: #fdf3e0;
+  --sp-sidebar-accent: #fdf0e0;
+  --sp-sidebar-accent-foreground: #2c1810;
+  --sp-sidebar-border: #e8d8c4;
+  --sp-sidebar-ring: rgba(158, 42, 42, 0.35);
+}
+
+/* ============================================
+   暗色模式 — 壁炉深处的夜晚
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* 页面 */
+    --sp-background: #1a1012;
+    --sp-foreground: #f3e8d6;
+
+    /* 卡片 & 弹出层 */
+    --sp-card: #241818;
+    --sp-card-foreground: #f3e8d6;
+    --sp-popover: #241818;
+    --sp-popover-foreground: #f3e8d6;
+
+    /* 主操作 — 格兰芬多金 */
+    --sp-primary: #d4a04a;
+    --sp-primary-foreground: #1c1212;
+
+    /* 次要操作 */
+    --sp-secondary: #2a1c1c;
+    --sp-secondary-foreground: #f3e8d6;
+
+    /* 悬停/选中 — 微红调 */
+    --sp-accent: #2a1a1a;
+    --sp-accent-foreground: #f3e8d6;
+
+    /* 弱化文字 */
+    --sp-muted: #2a1c1c;
+    --sp-muted-foreground: #b09888;
+
+    /* 边框 & 输入 */
+    --sp-border: #3a2828;
+    --sp-input: #3a2828;
+    --sp-ring: rgba(212, 160, 74, 0.4);
+
+    /* 语义色 */
+    --sp-destructive: #f87171;
+    --sp-success: #4ade80;
+    --sp-success-foreground: #052e16;
+    --sp-warning: #fb923c;
+    --sp-warning-foreground: #1c1917;
+    --sp-diff-added: #4ade80;
+
+    /* 侧边栏 — 深红棕底，金色点缀 */
+    --sp-sidebar: #1e1414;
+    --sp-sidebar-foreground: #f3e8d6;
+    --sp-sidebar-primary: #d4a04a;
+    --sp-sidebar-primary-foreground: #1c1212;
+    --sp-sidebar-accent: #2a1a1a;
+    --sp-sidebar-accent-foreground: #f3e8d6;
+    --sp-sidebar-border: #3a2828;
+    --sp-sidebar-ring: rgba(212, 160, 74, 0.4);
+  }
+}
+
+/* ============================================
+   全局应用背景 — 微妙的光晕
+   ============================================ */
+[data-app-root] {
+  /* 亮色模式下温暖的金色光晕 */
+  background:
+    radial-gradient(ellipse at 75% 15%, rgba(212, 160, 74, 0.10) 0%, transparent 50%),
+    radial-gradient(ellipse at 25% 85%, rgba(180, 60, 40, 0.06) 0%, transparent 45%),
+    linear-gradient(175deg, #fdf6ee 0%, #faf0e2 50%, #fef8f2 100%);
+}
+
+/* 暗色模式下的壁炉光晕 */
+@media (prefers-color-scheme: dark) {
+  [data-app-root] {
+    background:
+      radial-gradient(ellipse at 75% 15%, rgba(212, 160, 74, 0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 25% 85%, rgba(180, 50, 40, 0.05) 0%, transparent 45%),
+      linear-gradient(175deg, #1a1012 0%, #1e1416 50%, #180e10 100%);
+  }
+}
+
+/* 应用根容器上的装饰纹理 — 极细微噪点，仿古羊皮纸 */
+[data-app-root]::before {
+  opacity: 0.025;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+/* ============================================
+   项目面板 — 格兰芬多公告栏
+   ============================================ */
+[data-project-panel] {
+  background:
+    linear-gradient(180deg,
+      rgba(253, 246, 238, 0.98) 0%,
+      rgba(250, 240, 226, 0.98) 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-project-panel] {
+    background:
+      linear-gradient(180deg,
+        rgba(30, 20, 20, 0.98) 0%,
+        rgba(26, 16, 18, 0.98) 100%);
+  }
+}
+
+/* ============================================
+   内容浏览器 — 文档阅读区
+   ============================================ */
+[data-content-browser] {
+  background: var(--sp-background);
+}
+
+/* 文档视图中的 Markdown 元素 */
+[data-content-doc] [data-md-code] {
+  background: rgba(180, 60, 30, 0.06);
+  border: 1px solid rgba(158, 42, 42, 0.12);
+  border-radius: 8px;
+}
+
+[data-content-doc] [data-md-code-inline] {
+  background: rgba(180, 60, 30, 0.08);
+  color: #a04030;
+  border-radius: 4px;
+  padding: 2px 5px;
+}
+
+[data-content-doc] [data-md-quote] {
+  border-left: 3px solid rgba(158, 42, 42, 0.35);
+  background: rgba(180, 60, 30, 0.04);
+  border-radius: 0 8px 8px 0;
+  padding: 8px 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-content-doc] [data-md-code] {
+    background: rgba(212, 160, 74, 0.06);
+    border-color: rgba(212, 160, 74, 0.12);
+  }
+
+  [data-content-doc] [data-md-code-inline] {
+    background: rgba(212, 160, 74, 0.10);
+    color: #e0c080;
+  }
+
+  [data-content-doc] [data-md-quote] {
+    border-left-color: rgba(212, 160, 74, 0.4);
+    background: rgba(212, 160, 74, 0.04);
+  }
+}
+
+/* ============================================
+   全局 Toast — 格兰芬多通知
+   ============================================ */
+[data-toast-root] [data-sonner-toast] {
+  border-radius: 10px;
+  border: 1px solid var(--sp-border);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+[data-toast-root] [data-type="success"] {
+  border-left: 3px solid var(--sp-success);
+}
+
+[data-toast-root] [data-type="error"] {
+  border-left: 3px solid var(--sp-destructive);
+}
+
+[data-toast-root] [data-type="warning"] {
+  border-left: 3px solid var(--sp-warning);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-toast-root] [data-sonner-toast] {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  }
+}

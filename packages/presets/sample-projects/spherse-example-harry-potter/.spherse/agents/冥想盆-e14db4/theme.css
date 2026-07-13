@@ -1,0 +1,276 @@
+/* ============================================
+   格兰芬多主题 — Gryffindor Common Room
+   猩红与金 · 勇气 · 壁炉旁的温暖
+   ============================================ */
+
+[data-chat-root] {
+  /* —— 根级配色变量 —— */
+  --sp-background: #1c1212;
+  --sp-foreground: #f3e8d6;
+  --sp-primary: #d4a04a;
+  --sp-primary-foreground: #1c1212;
+  --sp-card: rgba(30, 18, 18, 0.92);
+  --sp-card-foreground: #f3e8d6;
+  --sp-border: rgba(212, 160, 74, 0.14);
+  --sp-muted-foreground: #b8a088;
+  --sp-input: rgba(180, 50, 50, 0.15);
+  --sp-ring: rgba(212, 160, 74, 0.45);
+  --sp-destructive: #c0392b;
+  --sp-destructive-foreground: #fce4e4;
+
+  /* —— 聊天窗口背景：如同格兰芬多公共休息室的壁炉光晕 —— */
+  background:
+    radial-gradient(ellipse at 70% 20%, rgba(212, 160, 74, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 30% 80%, rgba(180, 50, 50, 0.06) 0%, transparent 50%),
+    linear-gradient(175deg, #1c1212 0%, #201615 40%, #1a1012 100%);
+
+  /* ========================================
+     Header
+     ======================================== */
+  [data-chat-header] {
+    color: #f3e8d6;
+    background: rgba(24, 14, 14, 0.94);
+    border-bottom: 1px solid rgba(212, 160, 74, 0.12);
+  }
+
+  /* ========================================
+     消息行
+     ======================================== */
+  [data-chat-message][data-role="assistant"] {
+    position: relative;
+  }
+
+  /* ---- 助手头像：冥想盆 —— 石盆与银蓝记忆迷雾 ---- */
+  [data-chat-message][data-role="assistant"]::before {
+    content: '';
+    display: block;
+    width: 34px;
+    height: 34px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background:
+      url(../../../杂物箱/avatar.png) center/cover no-repeat;
+    box-shadow:
+      0 0 12px rgba(160, 200, 230, 0.4),
+      0 0 4px rgba(180, 220, 255, 0.2);
+  }
+
+  /* ---- 用户头像：猩红火焰 ---- */
+  [data-chat-message][data-role="user"] {
+    /* 用户消息右侧布局，头像在右边 */
+    position: relative;
+  }
+
+  /* ========================================
+     消息气泡
+     ======================================== */
+
+  /* 用户气泡 — 格兰芬多猩红，活泼的不对称圆角 */
+  [data-chat-message][data-role="user"] [data-chat-bubble] {
+    color: #fdf3e0;
+    background: linear-gradient(140deg, #9e2a2a 0%, #b83830 40%, #8b1a1a 100%);
+    border: 1px solid rgba(255, 180, 100, 0.12);
+    border-radius: 20px 20px 6px 20px;
+    box-shadow: 0 2px 12px rgba(160, 40, 30, 0.25);
+  }
+
+  /* 助手气泡 — 温暖深色卡片，典雅轻盈 */
+  [data-chat-message][data-role="assistant"] [data-chat-bubble] {
+    color: #f3e8d6;
+    background: rgba(28, 20, 22, 0.88);
+    border: 1px solid rgba(212, 160, 74, 0.10);
+    border-radius: 20px 20px 20px 6px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+  }
+
+  /* ========================================
+     Composer 输入区
+     ======================================== */
+  [data-chat-composer] {
+    background: rgba(20, 12, 12, 0.94);
+    border-top: 1px solid rgba(212, 160, 74, 0.10);
+  }
+
+  [data-chat-composer-input] {
+    background: rgba(255, 240, 220, 0.025);
+    border: 1px solid rgba(212, 160, 74, 0.12);
+    border-radius: 14px;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  [data-chat-composer-input]:focus-within {
+    border-color: rgba(212, 160, 74, 0.35);
+    box-shadow: 0 0 0 3px rgba(212, 160, 74, 0.08);
+  }
+
+  [data-chat-composer] textarea {
+    color: #f3e8d6;
+  }
+
+  [data-chat-composer] textarea::placeholder {
+    color: #9a8070;
+    font-style: italic;
+  }
+
+  /* ========================================
+     Markdown 内容块
+     ======================================== */
+
+  /* 代码块 */
+  [data-md-code] {
+    background: rgba(18, 10, 10, 0.55);
+    border: 1px solid rgba(212, 160, 74, 0.13);
+    border-radius: 10px;
+  }
+
+  /* 行内代码 */
+  [data-md-code-inline] {
+    background: rgba(160, 60, 40, 0.15);
+    color: #f0c090;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.9em;
+  }
+
+  /* 引用块 — 左侧金色火焰条纹 */
+  [data-md-quote] {
+    border-left: 3px solid rgba(212, 160, 74, 0.55);
+    background: rgba(212, 160, 74, 0.05);
+    border-radius: 0 10px 10px 0;
+    padding: 10px 18px;
+    color: #e0d0b8;
+  }
+
+  /* ========================================
+     暗色模式微调（OS 偏好）
+     ======================================== */
+  @media (prefers-color-scheme: dark) {
+    /* 暗色模式下本已是暗色基调，微调加深对比 */
+    --sp-background: #160e0e;
+    --sp-foreground: #f6ede0;
+    --sp-card: rgba(26, 16, 16, 0.94);
+    --sp-border: rgba(212, 160, 74, 0.16);
+
+    background:
+      radial-gradient(ellipse at 70% 20%, rgba(212, 160, 74, 0.06) 0%, transparent 55%),
+      radial-gradient(ellipse at 30% 80%, rgba(160, 40, 30, 0.05) 0%, transparent 50%),
+      linear-gradient(175deg, #160e0e 0%, #1a1012 40%, #140c0e 100%);
+  }
+
+  /* ========================================
+     亮色模式（OS 偏好）
+     ======================================== */
+  @media (prefers-color-scheme: light) {
+    --sp-background: #fdf6ee;
+    --sp-foreground: #2c1810;
+    --sp-primary: #b8862a;
+    --sp-primary-foreground: #fdf6ee;
+    --sp-card: rgba(255, 248, 240, 0.94);
+    --sp-card-foreground: #2c1810;
+    --sp-border: rgba(184, 134, 42, 0.18);
+    --sp-muted-foreground: #8c7060;
+    --sp-input: rgba(180, 50, 30, 0.08);
+    --sp-ring: rgba(184, 134, 42, 0.4);
+
+    background:
+      radial-gradient(ellipse at 70% 20%, rgba(184, 134, 42, 0.10) 0%, transparent 55%),
+      radial-gradient(ellipse at 30% 80%, rgba(180, 70, 50, 0.06) 0%, transparent 50%),
+      linear-gradient(175deg, #fdf6ee 0%, #faf0e2 40%, #fef8f2 100%);
+
+    [data-chat-header] {
+      color: #2c1810;
+      background: rgba(255, 248, 240, 0.94);
+      border-bottom: 1px solid rgba(184, 134, 42, 0.16);
+    }
+
+    [data-chat-message][data-role="user"] [data-chat-bubble] {
+      color: #fef8f0;
+      background: linear-gradient(140deg, #b83830 0%, #c94a3a 40%, #9e2a2a 100%);
+      box-shadow: 0 2px 14px rgba(160, 40, 30, 0.2);
+    }
+
+    [data-chat-message][data-role="assistant"] [data-chat-bubble] {
+      color: #2c1810;
+      background: rgba(255, 250, 245, 0.9);
+      border: 1px solid rgba(184, 134, 42, 0.14);
+      box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+    }
+
+    [data-chat-composer] {
+      background: rgba(255, 248, 240, 0.94);
+      border-top: 1px solid rgba(184, 134, 42, 0.12);
+    }
+
+    [data-chat-composer-input] {
+      background: rgba(184, 134, 42, 0.04);
+      border-color: rgba(184, 134, 42, 0.16);
+    }
+
+    [data-chat-composer] textarea {
+      color: #2c1810;
+    }
+
+    [data-chat-composer] textarea::placeholder {
+      color: #b09080;
+    }
+
+    [data-md-code] {
+      background: rgba(184, 134, 42, 0.06);
+      border-color: rgba(184, 134, 42, 0.14);
+    }
+
+    [data-md-code-inline] {
+      background: rgba(180, 60, 30, 0.10);
+      color: #a04030;
+    }
+
+    [data-md-quote] {
+      border-left-color: rgba(184, 134, 42, 0.5);
+      background: rgba(184, 134, 42, 0.06);
+      color: #4a3020;
+    }
+  }
+}
+
+/* ========================================
+   浮动窗口 — 格兰芬多旗帜般的边框
+   ======================================== */
+[data-chat-float-root] {
+  border-radius: 14px;
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(212, 160, 74, 0.12);
+  backdrop-filter: blur(16px);
+  background: rgba(22, 14, 14, 0.96);
+  border: 1px solid rgba(212, 160, 74, 0.15);
+
+  [data-chat-float-titlebar] {
+    background: rgba(28, 14, 14, 0.7);
+    color: #f0d8b0;
+    border-bottom: 1px solid rgba(212, 160, 74, 0.08);
+  }
+
+  [data-chat-float-close]:hover {
+    background: rgba(200, 60, 40, 0.25);
+    color: #ffc0a0;
+  }
+
+  @media (prefers-color-scheme: light) {
+    background: rgba(255, 248, 240, 0.96);
+    border-color: rgba(184, 134, 42, 0.18);
+    box-shadow:
+      0 8px 40px rgba(0, 0, 0, 0.12),
+      0 0 0 1px rgba(184, 134, 42, 0.08);
+
+    [data-chat-float-titlebar] {
+      background: rgba(255, 245, 235, 0.7);
+      color: #3a2010;
+    }
+
+    [data-chat-float-close]:hover {
+      background: rgba(200, 60, 40, 0.12);
+      color: #b04030;
+    }
+  }
+}

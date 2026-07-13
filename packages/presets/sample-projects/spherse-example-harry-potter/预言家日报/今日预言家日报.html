@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>预言家日报 · 今日快讯</title>
+  <style>
+    /* ============================================
+       预言家日报 — The Daily Prophet
+       ============================================ */
+
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Cinzel:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+    :root {
+      --parchment: #f5e8d0;
+      --parchment-light: #fdf6ee;
+      --parchment-dark: #e8d4b0;
+      --ink: #2a1a0a;
+      --ink-light: #5a4030;
+      --ink-faded: #8a7060;
+      --red: #8b1a1a;
+      --red-light: #c04030;
+      --gold: #c8942a;
+      --gold-light: #e8c878;
+      --blue: #1a3a5c;
+      --green: #2a5a2a;
+      --shadow: 0 2px 12px rgba(30, 15, 5, 0.10);
+      --radius: 12px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: "Noto Serif SC", "Source Han Serif SC", "Songti SC", Georgia, "Times New Roman", serif;
+      background:
+        radial-gradient(ellipse at 30% 10%, rgba(200, 148, 42, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 90%, rgba(139, 26, 26, 0.04) 0%, transparent 50%),
+        linear-gradient(175deg, #f5e8d0 0%, #f0dec0 30%, #f8ecdc 70%, #f0dcc0 100%);
+      color: var(--ink);
+      min-height: 100vh;
+      padding: 1.5rem 1rem 2.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ---- 报纸容器 ---- */
+    .newspaper {
+      max-width: 680px;
+      width: 100%;
+      position: relative;
+    }
+
+    /* ---- 报纸纸张效果 ---- */
+    .paper {
+      background: linear-gradient(170deg, #fdf6ee 0%, #f8ecd6 40%, #f5e6cc 100%);
+      border: 1px solid rgba(180, 140, 90, 0.20);
+      border-radius: var(--radius);
+      box-shadow:
+        0 1px 4px rgba(30, 15, 5, 0.06),
+        0 4px 20px rgba(30, 15, 5, 0.08),
+        inset 0 1px 0 rgba(255, 255, 240, 0.6);
+      padding: 1.8rem 1.8rem 1.2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* 纸张纹理 */
+    .paper::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 26px,
+          rgba(139, 115, 85, 0.03) 26px,
+          rgba(139, 115, 85, 0.03) 27px
+        );
+      pointer-events: none;
+    }
+
+    /* 纸张磨损边缘 */
+    .paper::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius);
+      box-shadow: inset 0 0 30px rgba(139, 115, 85, 0.04);
+      pointer-events: none;
+    }
+
+    .paper > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ---- 报头 ---- */
+    .masthead {
+      text-align: center;
+      border-bottom: 3px double var(--ink);
+      padding-bottom: 0.6rem;
+      margin-bottom: 1.2rem;
+      position: relative;
+    }
+
+    .masthead__topline {
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      color: var(--ink-faded);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 0.2rem;
+    }
+
+    .masthead__title {
+      font-family: 'Cinzel', serif;
+      font-size: 2.6rem;
+      font-weight: 900;
+      letter-spacing: 8px;
+      background: linear-gradient(135deg, var(--red) 0%, var(--gold) 40%, var(--red-light) 70%, var(--gold) 100%);
+      background-size: 300% auto;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: titleShimmer 6s ease-in-out infinite;
+      line-height: 1.2;
+      text-shadow: none;
+      position: relative;
+    }
+
+    .masthead__title::after {
+      content: '☽';
+      position: absolute;
+      right: -8px;
+      top: -6px;
+      font-size: 1rem;
+      -webkit-text-fill-color: initial;
+      color: var(--gold);
+      opacity: 0.4;
+      animation: moonPulse 4s ease-in-out infinite;
+    }
+
+    @keyframes titleShimmer {
+      0%, 100% { background-position: 0% center; }
+      50% { background-position: 100% center; }
+    }
+
+    @keyframes moonPulse {
+      0%, 100% { opacity: 0.3; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.15); }
+    }
+
+    .masthead__subtitle {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      color: var(--ink-faded);
+      letter-spacing: 6px;
+      margin: 0.2rem 0;
+      font-weight: 400;
+    }
+
+    .masthead__meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--ink-faded);
+      border-top: 1px solid rgba(139, 115, 85, 0.15);
+      padding-top: 0.4rem;
+      margin-top: 0.4rem;
+    }
+
+    .masthead__meta span {
+      letter-spacing: 0.5px;
+    }
+
+    /* ---- 头条文章 ---- */
+    .headline-section {
+      margin-bottom: 1.2rem;
+      border-bottom: 1px solid rgba(139, 115, 85, 0.10);
+      padding-bottom: 1rem;
+    }
+
+    .headline-section__image {
+      font-size: 4rem;
+      text-align: center;
+      margin-bottom: 0.5rem;
+      animation: pictureFloat 5s ease-in-out infinite;
+      display: block;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.05));
+    }
+
+    @keyframes pictureFloat {
+      0%, 100% { transform: translateY(0) scale(1); }
+      25% { transform: translateY(-3px) scale(1.02); }
+      50% { transform: translateY(0) scale(1); }
+      75% { transform: translateY(2px) scale(0.98); }
+    }
+
+    .headline-section__title {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: var(--ink);
+      line-height: 1.3;
+      margin-bottom: 0.3rem;
+      font-family: 'Playfair Display', 'Noto Serif SC', serif;
+      letter-spacing: 0.02em;
+    }
+
+    .headline-section__subtitle {
+      font-size: 0.85rem;
+      color: var(--ink-light);
+      font-style: italic;
+      margin-bottom: 0.4rem;
+      line-height: 1.4;
+    }
+
+    .headline-section__author {
+      font-size: 0.7rem;
+      color: var(--red);
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-bottom: 0.6rem;
+    }
+
+    .headline-section__body {
+      font-size: 0.85rem;
+      line-height: 1.7;
+      color: var(--ink);
+      text-indent: 2em;
+      margin-bottom: 0.4rem;
+    }
+
+    .headline-section__body p {
+      margin-bottom: 0.5rem;
+    }
+
+    /* ---- 双栏布局 ---- */
+    .columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .column {
+      min-width: 0;
+    }
+
+    .column__divider {
+      display: none;
+    }
+
+    /* ---- 普通文章 ---- */
+    .article {
+      margin-bottom: 1rem;
+      padding-bottom: 0.8rem;
+      border-bottom: 1px solid rgba(139, 115, 85, 0.08);
+      break-inside: avoid;
+    }
+
+    .article:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .article__icon {
+      font-size: 1.2rem;
+      display: inline-block;
+      margin-right: 0.3rem;
+      animation: pictureFloat 4s ease-in-out infinite;
+    }
+
+    .article__title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.3rem;
+      line-height: 1.3;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .article__body {
+      font-size: 0.78rem;
+      line-height: 1.6;
+      color: var(--ink-light);
+    }
+
+    /* ---- 次条（右边栏） ---- */
+    .secondary-article {
+      margin-bottom: 1rem;
+    }
+
+    .secondary-article__image {
+      font-size: 2.5rem;
+      text-align: center;
+      margin-bottom: 0.3rem;
+      animation: pictureFloat 5s ease-in-out infinite 1s;
+    }
+
+    .secondary-article__title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.3;
+      margin-bottom: 0.2rem;
+    }
+
+    .secondary-article__subtitle {
+      font-size: 0.75rem;
+      color: var(--ink-faded);
+      font-style: italic;
+      margin-bottom: 0.3rem;
+      line-height: 1.4;
+    }
+
+    .secondary-article__author {
+      font-size: 0.65rem;
+      color: var(--red);
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+
+    .secondary-article__body {
+      font-size: 0.78rem;
+      line-height: 1.6;
+      color: var(--ink-light);
+    }
+
+    /* ---- 魁地奇比分 ---- */
+    .quidditch-card {
+      background: linear-gradient(135deg, rgba(139, 26, 26, 0.03), rgba(200, 148, 42, 0.05));
+      border: 1px solid rgba(200, 148, 42, 0.15);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .quidditch-card::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: conic-gradient(from 0deg, transparent, rgba(200, 148, 42, 0.02), transparent, rgba(200, 148, 42, 0.02), transparent);
+      animation: quidditchSpin 10s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes quidditchSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .quidditch-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .quidditch-card__title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--red);
+      margin-bottom: 0.3rem;
+      letter-spacing: 1px;
+    }
+
+    .quidditch-card__subtitle {
+      font-size: 0.7rem;
+      color: var(--ink-faded);
+      margin-bottom: 0.4rem;
+    }
+
+    .quidditch-card__score {
+      font-family: 'Cinzel', serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--ink);
+      text-align: center;
+      margin-bottom: 0.3rem;
+      letter-spacing: 3px;
+    }
+
+    .quidditch-card__score .divider {
+      color: var(--gold);
+      margin: 0 0.5rem;
+    }
+
+    .quidditch-card__winner {
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--green);
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+
+    .quidditch-card__details {
+      font-size: 0.72rem;
+      line-height: 1.6;
+      color: var(--ink-light);
+    }
+
+    .quidditch-card__highlight {
+      font-size: 0.7rem;
+      font-style: italic;
+      color: var(--ink-faded);
+      margin-top: 0.3rem;
+      padding: 0.3rem 0.5rem;
+      background: rgba(200, 148, 42, 0.06);
+      border-radius: 4px;
+      border-left: 2px solid var(--gold);
+    }
+
+    /* ---- 天气 ---- */
+    .weather-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      padding: 0.6rem 0.8rem;
+      background: rgba(26, 58, 92, 0.03);
+      border: 1px solid rgba(26, 58, 92, 0.08);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+
+    .weather-card__icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+      animation: weatherDrift 4s ease-in-out infinite;
+    }
+
+    @keyframes weatherDrift {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      33% { transform: translateY(-2px) rotate(2deg); }
+      66% { transform: translateY(1px) rotate(-1deg); }
+    }
+
+    .weather-card__info h4 {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--blue);
+      margin-bottom: 0.2rem;
+    }
+
+    .weather-card__info .temp {
+      font-family: 'Cinzel', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .weather-card__info .detail {
+      font-size: 0.7rem;
+      color: var(--ink-faded);
+      line-height: 1.5;
+    }
+
+    .weather-card__info .magical-note {
+      font-size: 0.65rem;
+      color: var(--red-light);
+      font-weight: 600;
+      margin-top: 0.2rem;
+    }
+
+    /* ---- 分类广告 ---- */
+    .classifieds {
+      margin-top: 0.5rem;
+      padding-top: 0.8rem;
+      border-top: 2px solid var(--ink);
+    }
+
+    .classifieds__header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .classifieds__header h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    .classifieds__header::before,
+    .classifieds__header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--ink-faded), transparent);
+    }
+
+    .classified-item {
+      display: flex;
+      gap: 0.4rem;
+      padding: 0.35rem 0;
+      font-size: 0.7rem;
+      color: var(--ink-light);
+      line-height: 1.4;
+      border-bottom: 1px dotted rgba(139, 115, 85, 0.06);
+    }
+
+    .classified-item:last-child {
+      border-bottom: none;
+    }
+
+    .classified-item__icon {
+      flex-shrink: 0;
+      font-size: 0.85rem;
+    }
+
+    /* ---- 编者的话 ---- */
+    .editorial {
+      margin-top: 1rem;
+      padding: 0.8rem 1rem;
+      background: rgba(200, 148, 42, 0.04);
+      border: 1px solid rgba(200, 148, 42, 0.10);
+      border-radius: 8px;
+    }
+
+    .editorial__title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 0.3rem;
+    }
+
+    .editorial__author {
+      font-size: 0.65rem;
+      color: var(--ink-faded);
+      margin-bottom: 0.4rem;
+    }
+
+    .editorial__body {
+      font-size: 0.75rem;
+      line-height: 1.7;
+      color: var(--ink-light);
+      font-style: italic;
+    }
+
+    .editorial__signature {
+      font-size: 0.7rem;
+      color: var(--ink-faded);
+      margin-top: 0.4rem;
+      text-align: right;
+    }
+
+    /* ---- 页脚 ---- */
+    .newspaper__footer {
+      text-align: center;
+      margin-top: 1rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid rgba(139, 115, 85, 0.12);
+      font-size: 0.6rem;
+      color: var(--ink-faded);
+      letter-spacing: 2px;
+      font-family: 'Cinzel', serif;
+    }
+
+    .newspaper__footer .owl {
+      font-size: 0.9rem;
+      animation: owlBob 3s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    @keyframes owlBob {
+      0%, 100% { transform: translateY(0); }
+      25% { transform: translateY(-2px); }
+      75% { transform: translateY(1px); }
+    }
+
+    /* ---- 响应式 ---- */
+    @media (max-width: 540px) {
+      body { padding: 0.8rem 0.5rem 1.5rem; }
+      .paper { padding: 1.2rem 1rem 0.8rem; }
+      .masthead__title { font-size: 1.8rem; letter-spacing: 4px; }
+      .headline-section__title { font-size: 1.2rem; }
+      .columns { grid-template-columns: 1fr; gap: 0.5rem; }
+      .headline-section__image { font-size: 3rem; }
+      .quidditch-card__score { font-size: 1.3rem; }
+    }
+
+    /* ---- 暗色模式 ---- */
+    @media (prefers-color-scheme: dark) {
+      body {
+        background:
+          radial-gradient(ellipse at 30% 10%, rgba(200, 148, 42, 0.03) 0%, transparent 50%),
+          radial-gradient(ellipse at 70% 90%, rgba(139, 26, 26, 0.03) 0%, transparent 50%),
+          linear-gradient(175deg, #1a1210 0%, #221a14 30%, #1e1610 70%, #180e0a 100%);
+        color: #f3e8d6;
+      }
+      :root {
+        --parchment: #2a2018;
+        --parchment-light: #322820;
+        --parchment-dark: #1e1610;
+        --ink: #f3e8d6;
+        --ink-light: #c8b8a0;
+        --ink-faded: #8a7868;
+        --red: #e07050;
+        --red-light: #e89070;
+        --gold: #d4a84b;
+        --gold-light: #e8c878;
+        --blue: #6a9ac8;
+        --green: #6aaa6a;
+        --shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+      }
+      .paper {
+        background: linear-gradient(170deg, #2a2018 0%, #241c14 40%, #1e1610 100%);
+        border-color: rgba(200, 148, 42, 0.08);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.15), 0 4px 20px rgba(0,0,0,0.2);
+      }
+      .paper::before {
+        background:
+          repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 26px,
+            rgba(200, 180, 150, 0.02) 26px,
+            rgba(200, 180, 150, 0.02) 27px
+          );
+      }
+      .masthead__title {
+        background: linear-gradient(135deg, #e07050 0%, #d4a84b 40%, #e89070 70%, #d4a84b 100%);
+        background-size: 300% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .masthead__topline { color: var(--ink-faded); }
+      .masthead__subtitle { color: var(--ink-faded); }
+      .masthead__meta { color: var(--ink-faded); }
+      .headline-section__title { color: var(--ink); }
+      .headline-section__subtitle { color: var(--ink-light); }
+      .headline-section__author { color: var(--red); }
+      .headline-section__body { color: var(--ink); }
+      .article__title { color: var(--ink); }
+      .article__body { color: var(--ink-light); }
+      .secondary-article__title { color: var(--ink); }
+      .secondary-article__subtitle { color: var(--ink-faded); }
+      .secondary-article__author { color: var(--red); }
+      .secondary-article__body { color: var(--ink-light); }
+      .quidditch-card {
+        background: linear-gradient(135deg, rgba(224, 112, 80, 0.05), rgba(212, 168, 75, 0.05));
+        border-color: rgba(212, 168, 75, 0.10);
+      }
+      .quidditch-card__title { color: var(--red); }
+      .quidditch-card__score { color: var(--ink); }
+      .quidditch-card__winner { color: var(--green); }
+      .quidditch-card__details { color: var(--ink-light); }
+      .quidditch-card__highlight {
+        background: rgba(212, 168, 75, 0.06);
+        border-left-color: var(--gold);
+        color: var(--ink-faded);
+      }
+      .weather-card {
+        background: rgba(106, 154, 200, 0.03);
+        border-color: rgba(106, 154, 200, 0.08);
+      }
+      .weather-card__info h4 { color: var(--blue); }
+      .weather-card__info .temp { color: var(--ink); }
+      .weather-card__info .detail { color: var(--ink-faded); }
+      .weather-card__info .magical-note { color: var(--red-light); }
+      .classifieds { border-top-color: var(--ink); }
+      .classifieds__header h3 { color: var(--ink); }
+      .classified-item { color: var(--ink-light); }
+      .editorial {
+        background: rgba(212, 168, 75, 0.03);
+        border-color: rgba(212, 168, 75, 0.08);
+      }
+      .editorial__title { color: var(--ink); }
+      .editorial__body { color: var(--ink-light); }
+      .editorial__author { color: var(--ink-faded); }
+      .editorial__signature { color: var(--ink-faded); }
+      .newspaper__footer { color: var(--ink-faded); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="newspaper">
+
+    <div class="paper">
+
+      <!-- ====== 报头 ====== -->
+      <header class="masthead">
+        <div class="masthead__topline">⚡ 魔法世界的权威之声 ⚡</div>
+        <h1 class="masthead__title">预言家日报</h1>
+        <div class="masthead__subtitle">✦ T H E &nbsp; D A I L Y &nbsp; P R O P H E T ✦</div>
+        <div class="masthead__meta">
+          <span id="edition">📰 早间版</span>
+          <span id="date">📅 加载中…</span>
+          <span id="price">🪙 1 加隆</span>
+        </div>
+      </header>
+
+      <!-- ====== 头条 ====== -->
+      <section class="headline-section" id="headlineSection">
+        <div class="headline-section__image" id="headlineImage">🚂✨</div>
+        <h2 class="headline-section__title" id="headlineTitle">加载中…</h2>
+        <p class="headline-section__subtitle" id="headlineSubtitle"></p>
+        <p class="headline-section__author" id="headlineAuthor"></p>
+        <div class="headline-section__body" id="headlineBody"></div>
+      </section>
+
+      <!-- ====== 双栏内容 ====== -->
+      <div class="columns">
+
+        <!-- 左栏 -->
+        <div class="column column--left" id="leftColumn">
+          <!-- 动态填充：文章列表 -->
+        </div>
+
+        <!-- 右栏 -->
+        <div class="column column--right" id="rightColumn">
+          <!-- 动态填充：次条 + 魁地奇 + 天气 -->
+        </div>
+
+      </div>
+
+      <!-- ====== 分类广告 ====== -->
+      <div class="classifieds" id="classifieds">
+        <div class="classifieds__header">
+          <h3>分类广告</h3>
+        </div>
+        <div id="classifiedsList"></div>
+      </div>
+
+      <!-- ====== 编者的话 ====== -->
+      <div class="editorial" id="editorial">
+        <div class="editorial__title" id="editorialTitle"></div>
+        <div class="editorial__author" id="editorialAuthor"></div>
+        <div class="editorial__body" id="editorialBody"></div>
+        <div class="editorial__signature" id="editorialSignature"></div>
+      </div>
+
+      <!-- ====== 页脚 ====== -->
+      <div class="newspaper__footer">
+        <span class="owl">🦉</span> 预言家日报社 · 对角巷 · 魔法世界的每一刻<br>
+        ✦ 本日报送范围涵盖全英魔法界及部分国际飞路网点 ✦
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* ============================================
+       预言家日报 — 数据加载
+       ============================================ */
+
+    (async function loadNewspaper() {
+      try {
+        const resp = await fetch('./今日预言家日报.data.json');
+        if (!resp.ok) throw new Error('Failed to load data');
+        const data = await resp.json();
+
+        // ---- 报头 ----
+        document.getElementById('edition').textContent = '📰 ' + data.edition;
+        document.getElementById('date').textContent = '📅 ' + data.date;
+        document.getElementById('price').textContent = '🪙 ' + data.price;
+
+        // ---- 头条 ----
+        document.getElementById('headlineImage').textContent = data.headline.image;
+        document.getElementById('headlineTitle').textContent = data.headline.title;
+        document.getElementById('headlineSubtitle').textContent = data.headline.subtitle;
+        document.getElementById('headlineAuthor').textContent = '✍️ ' + data.headline.author;
+        document.getElementById('headlineBody').innerHTML = data.headline.body
+          .split('\n')
+          .filter(p => p.trim())
+          .map(p => `<p>${p.trim()}</p>`)
+          .join('');
+
+        // ---- 左栏：文章 ----
+        const leftCol = document.getElementById('leftColumn');
+        leftCol.innerHTML = data.articles.map(article => `
+          <div class="article">
+            <div class="article__title">
+              <span class="article__icon">${article.icon}</span>
+              ${article.title}
+            </div>
+            <div class="article__body">${article.body}</div>
+          </div>
+        `).join('');
+
+        // ---- 右栏：次条 + 魁地奇 + 天气 ----
+        const rightCol = document.getElementById('rightColumn');
+
+        // 次条
+        const secondaryHTML = `
+          <div class="secondary-article">
+            <div class="secondary-article__image">${data.secondary.image}</div>
+            <h3 class="secondary-article__title">${data.secondary.title}</h3>
+            <p class="secondary-article__subtitle">${data.secondary.subtitle}</p>
+            <p class="secondary-article__author">✍️ ${data.secondary.author}</p>
+            <div class="secondary-article__body">${data.secondary.body}</div>
+          </div>
+        `;
+
+        // 魁地奇
+        const quidditchHTML = `
+          <div class="quidditch-card">
+            <div class="quidditch-card__title">🏆 魁地奇快讯</div>
+            <div class="quidditch-card__subtitle">${data.quidditch.subtitle}</div>
+            <div class="quidditch-card__score">
+              ${data.quidditch.score.split(':')[0].trim()}
+              <span class="divider">:</span>
+              ${data.quidditch.score.split(':')[1].trim()}
+            </div>
+            <div class="quidditch-card__winner">🏅 ${data.quidditch.winner} 胜</div>
+            <div class="quidditch-card__details">${data.quidditch.details}</div>
+            <div class="quidditch-card__highlight">💬 ${data.quidditch.highlight}</div>
+          </div>
+        `;
+
+        rightCol.innerHTML = secondaryHTML + quidditchHTML;
+
+        // ---- 分类广告 ----
+        const classifiedsList = document.getElementById('classifiedsList');
+        classifiedsList.innerHTML = data.classifieds.map(ad => `
+          <div class="classified-item">
+            <span class="classified-item__icon">${ad.icon}</span>
+            <span>${ad.text}</span>
+          </div>
+        `).join('');
+
+        // ---- 编者的话 ----
+        document.getElementById('editorialTitle').textContent = '📜 ' + data.editorial.title;
+        document.getElementById('editorialAuthor').textContent = '—— ' + data.editorial.author;
+        document.getElementById('editorialBody').textContent = data.editorial.body;
+        document.getElementById('editorialSignature').textContent = data.editorial.signature;
+
+      } catch (e) {
+        console.error('预言家日报加载失败:', e.message);
+        // 如果数据加载失败，显示友好的错误信息
+        document.getElementById('headlineTitle').textContent = '报纸正在印刷中…';
+        document.getElementById('headlineBody').innerHTML =
+          '<p>🦉 抱歉，猫头鹰送报员似乎遇到了飞路网拥堵。请稍后再试。</p>';
+      }
+    })();
+  </script>
+</body>
+</html>
