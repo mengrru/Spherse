@@ -21,7 +21,7 @@ const RenderCardParams = Type.Object({
   title: Type.Optional(Type.String({ description: "Card title" })),
   width: Type.Optional(Type.Number({ description: "Card width in pixels" })),
   height: Type.Optional(Type.Number({ description: "Card height in pixels (default 400)" })),
-  max_width: Type.Optional(Type.Number({ description: "Maximum width in pixels (default 800)" })),
+  max_width: Type.Optional(Type.Number({ description: "Reserved — no longer affects layout (card width is capped by the chat bubble)." })),
   max_height: Type.Optional(Type.Number({ description: "Maximum height in pixels (default 600)" })),
 });
 

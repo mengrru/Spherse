@@ -66,7 +66,8 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     }
   }
 
-  const width = card.width ? `${Math.min(card.width, card.max_width ?? 800)}px` : "100%";
+  const explicitWidth = card.width ?? card.max_width;
+  const width = explicitWidth ? `${explicitWidth}px` : "100%";
   const height = Math.min(card.height ?? 400, card.max_height ?? 600);
 
   async function handleSave() {
@@ -196,7 +197,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   return (
     <div
       className="group/card my-2 overflow-hidden rounded-lg border border-border"
-      style={{ maxWidth: `min(${card.max_width ?? 800}px, 100%)`, width }}
+      style={{ maxWidth: "100%", width }}
     >
       {card.title ? (
         <div className="group-title flex items-center justify-between border-b border-border bg-muted px-3 py-1.5">
