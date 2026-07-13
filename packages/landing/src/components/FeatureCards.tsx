@@ -2,7 +2,7 @@ import { useState } from "react";
 import { features, type Feature } from "../data/features";
 import { FeatureModal } from "./FeatureModal";
 import { UseCasesModal } from "./UseCasesModal";
-import { Button } from "./ui/button";
+// import { Button } from "./ui/button";
 import type { TranslationKey } from "../i18n";
 
 interface FeatureCardsProps {
@@ -14,10 +14,10 @@ export function FeatureCards({ t }: FeatureCardsProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [useCasesOpen, setUseCasesOpen] = useState(false);
 
-  const handleClick = (feature: Feature) => {
-    setSelected(feature);
-    setModalOpen(true);
-  };
+  // const handleClick = (feature: Feature) => {
+  //   setSelected(feature);
+  //   setModalOpen(true);
+  // };
 
   const handleOpenChange = (open: boolean) => {
     setModalOpen(open);
@@ -34,7 +34,7 @@ export function FeatureCards({ t }: FeatureCardsProps) {
           return (
             <button
               key={feature.id}
-              onClick={() => handleClick(feature)}
+              // onClick={() => handleClick(feature)}
               className="group flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="flex size-12 items-center justify-center rounded-lg bg-muted transition-colors group-hover:bg-accent">
@@ -50,11 +50,11 @@ export function FeatureCards({ t }: FeatureCardsProps) {
           );
         })}
       </div>
-      <div className="mt-8 flex justify-center">
+      {/* <div className="mt-8 flex justify-center">
         <Button variant="outline" onClick={() => setUseCasesOpen(true)}>
           {t("feature.moreCases")}
         </Button>
-      </div>
+      </div> */}
       <p className="mx-auto mt-12 max-w-3xl text-center text-base text-muted-foreground md:text-lg">
         {t("feature.slogan")}
       </p>

@@ -37,6 +37,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.about.upToDate": "已是最新版本",
   "settings.about.checkFailed": "檢查更新失敗，請稍後重試",
   "settings.about.retry": "重試",
+  "settings.about.gotoReleases": "前往 GitHub Releases 下載",
   "settings.update.newVersion": "發現新版本 v{version}",
   "settings.update.releaseNotes": "更新內容",
   "settings.update.download": "立即更新",

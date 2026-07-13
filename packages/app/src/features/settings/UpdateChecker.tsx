@@ -56,9 +56,21 @@ export function UpdateChecker() {
                 ? t("settings.update.downloadError")
                 : t("settings.about.checkFailed")}
             </p>
-            <Button variant="outline" onClick={() => void check()}>
-              {t("settings.about.retry")}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => void check()}>
+                {t("settings.about.retry")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void window.electronAPI.openExternal(
+                    "https://github.com/mengrru/Spherse/releases/"
+                  )
+                }
+              >
+                {t("settings.about.gotoReleases")}
+              </Button>
+            </div>
           </div>
         )}
         {state.status === "downloading" && (

@@ -37,6 +37,7 @@ export const en: Record<TranslationKey, string> = {
   "settings.about.upToDate": "Up to date",
   "settings.about.checkFailed": "Update check failed, please try again later",
   "settings.about.retry": "Retry",
+  "settings.about.gotoReleases": "Download from GitHub Releases",
   "settings.update.newVersion": "New version available v{version}",
   "settings.update.releaseNotes": "Release notes",
   "settings.update.download": "Update now",
