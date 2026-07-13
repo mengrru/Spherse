@@ -1,5 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { buildFileSrcDoc, ensureCharset, ensureScrollable } from "./html-card-src";
+import { buildFileSrcDoc, ensureCharset, ensureScrollable, isImageFile } from "./html-card-src";
+
+describe("isImageFile", () => {
+  it("detects supported image extensions (case-insensitive)", () => {
+    expect(isImageFile("assets/photo.png")).toBe(true);
+    expect(isImageFile("PHOTO.JPG")).toBe(true);
+    expect(isImageFile("a/b/c.JPEG")).toBe(true);
+    expect(isImageFile("icon.gif")).toBe(true);
+    expect(isImageFile("logo.svg")).toBe(true);
+    expect(isImageFile("fav.ico")).toBe(true);
+    expect(isImageFile("pic.webp")).toBe(true);
+  });
+
+  it("rejects non-image files", () => {
+    expect(isImageFile("card.html")).toBe(false);
+    expect(isImageFile("data.json")).toBe(false);
+    expect(isImageFile("noext")).toBe(false);
+    expect(isImageFile("script.js")).toBe(false);
+  });
+});
 
 describe("ensureCharset", () => {
   it("preserves html that already declares a charset", () => {

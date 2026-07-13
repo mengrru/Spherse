@@ -1,6 +1,13 @@
 const SCROLLABLE_MARKER = "data-spherse-card-scroll";
 const SCROLLABLE_STYLE = `<style ${SCROLLABLE_MARKER}>html,body{overflow-y:auto!important}</style>`;
 
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "ico", "webp"]);
+
+export function isImageFile(filePath: string): boolean {
+  const ext = filePath.slice(filePath.lastIndexOf(".") + 1).toLowerCase();
+  return IMAGE_EXTENSIONS.has(ext);
+}
+
 export function ensureCharset(html: string): string {
   return html.includes("charset") ? html : html.replace(/<head([^>]*)>/i, `<head$1><meta charset="UTF-8">`);
 }

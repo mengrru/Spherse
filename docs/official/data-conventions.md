@@ -172,17 +172,21 @@ Full skill instructions in Markdown...
 - 文件读取、写入、删除、新建文件、新建目录都必须做 `path.resolve` 后的项目根目录边界校验
 - AI 工具（read_file/write_file/edit_file/list_files/search_content/move_file/copy_file/render_card）和 server 通用路由（content/preview/images）的读写权限由 `@spherse/core` 的 access policy 统一管理：`categorizePath` 将路径分类为语义 category，`llmAccessPolicy`/`serverAccessPolicy` 基于 category 白名单控制读写范围
 - 会写文件的 agent tools 共享 `FileWriteMutex`，避免同一文件并发写覆盖
+- **二进制文件处理**：`read_file` 和 `search_content` 通过 null-byte 启发式（前 8KB 采样）检测二进制文件。`read_file` 检测到二进制时拒绝读取并返回提示（图片文件引导使用 `render_card` 展示）；`search_content` 静默跳过二进制文件
+- **`.spherse` 元数据目录**：`list_files` 和 `search_content` 默认不列出/搜索 `.spherse` 目录及其子路径（参数 `include_meta`，默认 false）；设置 `include_meta=true` 可进入。`spherseOther` category（`.spherse/**` 兜底）对 LLM 可读；`agentSessions`（`sessions.db*`，含 WAL/SHM sidecar）始终不可读
 
 ## HTML Card
 
-`render_card` tool 支持两种数据来源：
+`render_card` tool 支持以下数据来源：
 
-- `content`：直接提供 inline HTML。inline HTML 注入 `<base href="${apiBase}/preview/">`，使相对路径（如 `<img src="assets/photo.png">`）相对于项目根解析，可直接引用项目内文件
-- `file_path`：提供项目根目录内的 HTML 文件相对路径。注入 `<base href="${apiBase}/preview/{dir}/">`（文件所在目录），使相对资源按文件系统目录关系解析
+- `file_path`（推荐）：项目根目录内的文件相对路径。
+  - HTML 文件：注入 `<base href="${apiBase}/preview/{dir}/">`（文件所在目录），使相对资源（图片/CSS/JS）按文件系统目录关系解析
+  - 图片文件（png/jpg/jpeg/gif/webp/svg/ico）：**不**以文本读取，前端直接以 `<img src="${previewUrl}">` 渲染，避免二进制被当 UTF-8 读成乱码
+- `content`：直接提供 inline 自包含 HTML（无外部资源引用）。注入 `<base href="${apiBase}/preview/">`，使相对路径相对于项目根解析
 
 tool update 的 `details.type === "html"` 时，前端 chat 会按 HTML card 渲染。
 
-HTML 全文仅通过 `onUpdate`（`tool_execution_update`）传给前端，**不**包含在 tool 返回值的 `details` 中（避免持久化到 DB 和浪费 context window）。历史恢复时，前端从 tool call 的 `arguments.content`（inline）或 `details.file_path`（file 来源，通过 preview URL 加载）重建卡片。
+HTML 全文仅通过 `onUpdate`（`tool_execution_update`）传给前端，**不**包含在 tool 返回值的 `details` 中（避免持久化到 DB 和浪费 context window）。历史恢复时：inline 来源从 tool call 的 `arguments.content` 重建；HTML 文件来源经 preview URL 重新加载；图片来源仅凭 `details.file_path` 重建（前端按扩展名识别为图片直接渲染，无需读取文件内容）。
 
 ## Image Card
 

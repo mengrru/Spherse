@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { llmAccessPolicy } from "../../access/access-policy.js";
 import { createRenderCardTool } from "../../tools/render-card.js";
 import { createTempProject, cleanupDir, writeFile, permissivePolicy } from "../helpers.js";
@@ -90,6 +92,66 @@ describe("createRenderCardTool", () => {
     expect(details.html).toBe("<h2>Report</h2>");
     expect(details.file_path).toBe("output/report.html");
     expect(result.content[0].text).toBe("HTML card rendered successfully");
+  });
+
+  it("does not read image file_path as UTF-8 text (avoids garbled output)", async () => {
+    const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0xff, 0xfe, 0xfd]);
+    const imgPath = path.join(projectRoot, "assets/photo.png");
+    await fs.mkdir(path.dirname(imgPath), { recursive: true });
+    await fs.writeFile(imgPath, pngBytes);
+    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const onUpdate = vi.fn();
+
+    const result = await tool.execute(
+      "tc1",
+      { type: "html", file_path: "assets/photo.png" },
+      undefined as any,
+      onUpdate,
+    );
+
+    const details = onUpdate.mock.calls[0][0].details;
+    expect(details.type).toBe("html");
+    expect(details.html).toBe("");
+    expect(details.file_path).toBe("assets/photo.png");
+    expect(result.content[0].text).toBe("HTML card rendered successfully");
+    expect(result.details.cardType).toBe("html");
+    expect(result.details.file_path).toBe("assets/photo.png");
+  });
+
+  it("returns error when image file_path does not exist", async () => {
+    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const onUpdate = vi.fn();
+
+    const result = await tool.execute(
+      "tc1",
+      { type: "html", file_path: "missing/pic.png" },
+      undefined as any,
+      onUpdate,
+    );
+
+    expect(result.content[0].text).toContain("Error");
+    expect(result.details?.error).toBe(true);
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it("denies blocked image file_path without reading it", async () => {
+    const pngBytes = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+    const imgPath = path.join(projectRoot, "secrets/pic.png");
+    await fs.mkdir(path.dirname(imgPath), { recursive: true });
+    await fs.writeFile(imgPath, pngBytes);
+    const policy = () => llmAccessPolicy(projectRoot, ["secrets"]);
+    const tool = createRenderCardTool(projectRoot, policy);
+    const onUpdate = vi.fn();
+
+    const result = await tool.execute(
+      "tc1",
+      { type: "html", file_path: "secrets/pic.png" },
+      undefined as any,
+      onUpdate,
+    );
+
+    expect(result.content[0].text).toContain("Access denied");
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 
   it("returns error when neither content nor file_path is provided", async () => {

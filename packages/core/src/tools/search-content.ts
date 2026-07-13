@@ -5,7 +5,9 @@ import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicy } from "../access/access-policy.js";
 import { shouldSkipDirEntry } from "../utils/fs-walk.js";
-import { resolveProjectPath } from "../utils/path-safety.js";
+import { resolveProjectPath, isProjectMetaPath } from "../utils/path-safety.js";
+import { isBinaryBuffer } from "../utils/binary-detect.js";
+import { PROJECT_META_DIR } from "../types.js";
 
 type AccessPolicyProvider = () => AccessPolicy;
 
@@ -13,6 +15,11 @@ const SearchContentParams = Type.Object({
   query: Type.String({ description: "Search query (substring match)" }),
   path: Type.Optional(Type.String({ description: "Directory path relative to project root. Defaults to project root." })),
   includePatterns: Type.Optional(Type.Array(Type.String(), { description: "File patterns to include, e.g. ['*.md', '*.txt']" })),
+  include_meta: Type.Optional(Type.Boolean({
+    description:
+      "Whether to search inside the .spherse project-metadata directory. Default: false. .spherse stores agent definitions, session databases, skills, generated images, and project config. Keep the default unless you specifically need to inspect project metadata.",
+    default: false,
+  })),
 });
 
 function matchesPattern(fileName: string, patterns: string[] | undefined): boolean {
@@ -31,6 +38,11 @@ function globToRegex(glob: string): RegExp {
   return new RegExp(`^${escaped}$`, "i");
 }
 
+function shouldSkipInSearch(name: string, includeMeta: boolean): boolean {
+  if (name === PROJECT_META_DIR) return !includeMeta;
+  return shouldSkipDirEntry(name);
+}
+
 interface SearchResult {
   file: string;
   line: number;
@@ -45,13 +57,16 @@ async function searchInFile(
 ): Promise<void> {
   if (results.length >= maxResults) return;
 
-  let content: string;
+  let buf: Buffer;
   try {
-    content = await fs.readFile(filePath, "utf-8");
+    buf = await fs.readFile(filePath);
   } catch {
     return;
   }
 
+  if (isBinaryBuffer(buf)) return;
+
+  const content = buf.toString("utf-8");
   const lines = content.split("\n");
   const lowerQuery = query.toLowerCase();
 
@@ -74,6 +89,7 @@ async function searchDir(
   maxResults: number,
   projectRoot: string,
   policy: AccessPolicy,
+  includeMeta: boolean,
 ): Promise<void> {
   if (results.length >= maxResults) return;
 
@@ -87,7 +103,7 @@ async function searchDir(
     if (!policy.canRead(relativePath)) continue;
 
     if (entry.isDirectory()) {
-      if (shouldSkipDirEntry(entry.name)) continue;
+      if (shouldSkipInSearch(entry.name, includeMeta)) continue;
       await searchDir(
         entryPath,
         query,
@@ -96,6 +112,7 @@ async function searchDir(
         maxResults,
         projectRoot,
         policy,
+        includeMeta,
       );
     } else if (entry.isFile()) {
       if (!matchesPattern(entry.name, includePatterns)) continue;
@@ -114,11 +131,19 @@ export function createSearchContentTool(
   return {
     name: "search_content",
     label: "Search Content",
-    description: "Search file contents in the project for a query string. Returns matching file:line:text. Skips dotfiles and node_modules.",
+    description: "Search file contents in the project for a query string. Returns matching file:line:text. Skips dotfiles, node_modules, and binary files. The .spherse metadata directory is excluded by default; set include_meta=true to search it.",
     parameters: SearchContentParams,
     async execute(_toolCallId, params, _signal) {
       const searchPath = params.path ? resolveProjectPath(root, params.path) : root;
       const policy = getPolicy();
+      const includeMeta = params.include_meta ?? false;
+
+      if (params.path && !includeMeta && isProjectMetaPath(params.path)) {
+        return {
+          content: [{ type: "text" as const, text: `Set include_meta=true to search the ${PROJECT_META_DIR} directory.` }],
+          details: { query: params.query, path: params.path, matches: 0, denied: true },
+        };
+      }
 
       if (params.path) {
         try {
@@ -139,7 +164,7 @@ export function createSearchContentTool(
       }
 
       const results: SearchResult[] = [];
-      await searchDir(searchPath, params.query, params.includePatterns, results, MAX_RESULTS, root, policy);
+      await searchDir(searchPath, params.query, params.includePatterns, results, MAX_RESULTS, root, policy, includeMeta);
 
       const text = results.length > 0
         ? results.map((r) => `${r.file}:${r.line}: ${r.text}`).join("\n")

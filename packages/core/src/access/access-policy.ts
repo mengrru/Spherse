@@ -27,6 +27,7 @@ const LLM_READ: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "agentTriggers",
   "agentTriggerLogs",
   "spherseMetaDir",
+  "spherseOther",
 ]);
 
 const LLM_WRITE: ReadonlySet<PathCategory> = new Set<PathCategory>([

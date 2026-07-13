@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { llmAccessPolicy } from "../../access/access-policy.js";
 import { createReadFileTool } from "../../tools/read-file.js";
 import { createTempProject, cleanupDir, writeFile, permissivePolicy } from "../helpers.js";
@@ -60,5 +62,57 @@ describe("createReadFileTool", () => {
     await expect(
       tool.execute("tc1", { path: "/etc/passwd" }, undefined as any),
     ).rejects.toThrow("Path traversal denied");
+  });
+
+  async function writeBinary(relativePath: string, bytes: Buffer): Promise<void> {
+    const fullPath = path.join(projectRoot, relativePath);
+    await fs.mkdir(path.dirname(fullPath), { recursive: true });
+    await fs.writeFile(fullPath, bytes);
+  }
+
+  it("refuses binary files and does not return garbled content", async () => {
+    const binary = Buffer.from([0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x00, 0xff, 0xfe, 0xfd]);
+    await writeBinary("data/store.db", binary);
+    const tool = createReadFileTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute("tc1", { path: "data/store.db" }, undefined as any);
+
+    expect(result.content[0].text).toContain("binary file");
+    expect(result.content[0].text).toContain("data/store.db");
+    expect(result.details).toEqual({ path: "data/store.db", binary: true, image: false, size: 10 });
+    expect(result.content[0].text).not.toContain("\u0000");
+  });
+
+  it("guides LLM to render_card for image files", async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+    await writeBinary("assets/photo.png", png);
+    const tool = createReadFileTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute("tc1", { path: "assets/photo.png" }, undefined as any);
+
+    expect(result.content[0].text).toContain("image file");
+    expect(result.content[0].text).toContain("render_card");
+    expect(result.content[0].text).toContain("assets/photo.png");
+    expect(result.details).toEqual({ path: "assets/photo.png", binary: true, image: true, size: 10 });
+  });
+
+  it("still reads text files that lack null bytes", async () => {
+    await writeFile(projectRoot, "code.ts", "export const x = 1;\n");
+    const tool = createReadFileTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute("tc1", { path: "code.ts" }, undefined as any);
+
+    expect(result.content[0].text).toBe("export const x = 1;\n");
+    expect(result.details).toEqual({ path: "code.ts", size: 20 });
+  });
+
+  it("treats empty file as text", async () => {
+    await writeBinary("empty.txt", Buffer.alloc(0));
+    const tool = createReadFileTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute("tc1", { path: "empty.txt" }, undefined as any);
+
+    expect(result.content[0].text).toBe("");
+    expect(result.details).toEqual({ path: "empty.txt", size: 0 });
   });
 });

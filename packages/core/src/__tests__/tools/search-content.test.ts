@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { llmAccessPolicy } from "../../access/access-policy.js";
 import { createSearchContentTool } from "../../tools/search-content.js";
 import { createTempProject, cleanupDir, writeFile, permissivePolicy } from "../helpers.js";
@@ -102,7 +104,7 @@ describe("createSearchContentTool", () => {
     expect(deniedResult.content[0].text).toContain("Access denied");
   });
 
-  it("searches .spherse but never leaks sqlite sidecar or agent-internal data", async () => {
+  it("searches .spherse files but hides sessions.db (agentSessions unreadable)", async () => {
     await writeFile(projectRoot, ".spherse/agents/bot-abc/sessions.db-wal", "needle in wal");
     await writeFile(projectRoot, ".spherse/agents/bot-abc/sessions.db-shm", "needle in shm");
     await writeFile(projectRoot, ".spherse/agents/bot-abc/sessions.db", "needle in db");
@@ -110,15 +112,82 @@ describe("createSearchContentTool", () => {
     await writeFile(projectRoot, ".spherse/theme.css", "needle in theme");
     const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
 
-    const result = await tool.execute("tc1", { query: "needle", path: ".spherse" }, undefined as any);
+    const result = await tool.execute("tc1", { query: "needle", path: ".spherse", include_meta: true }, undefined as any);
     const text = result.content[0].text as string;
-    expect(text).not.toContain("sessions.db-wal");
-    expect(text).not.toContain("sessions.db-shm");
-    expect(text).not.toContain("sessions.db");
-    expect(text).not.toContain("in wal");
-    expect(text).not.toContain("in shm");
     expect(text).not.toContain("in db");
-    expect(text).not.toContain("in profile");
+    expect(text).toContain("needle in profile");
     expect(text).toContain("needle in theme");
+  });
+
+  it("excludes .spherse from search by default (include_meta=false)", async () => {
+    await writeFile(projectRoot, ".spherse/theme.css", "needle in theme");
+    await writeFile(projectRoot, "notes.txt", "needle in notes");
+    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute("tc1", { query: "needle" }, undefined as any);
+    const text = result.content[0].text as string;
+    expect(text).not.toContain("theme.css");
+    expect(text).toContain("needle in notes");
+  });
+
+  it("denies searching .spherse directly without include_meta", async () => {
+    await writeFile(projectRoot, ".spherse/theme.css", "needle");
+    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute("tc1", { query: "needle", path: ".spherse" }, undefined as any);
+    expect(result.details?.denied).toBe(true);
+    expect(result.content[0].text).toContain("include_meta");
+  });
+
+  it("denies searching .spherse subdirectories without include_meta", async () => {
+    await writeFile(projectRoot, ".spherse/agents/bot/profile.md", "needle");
+    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute("tc1", { query: "needle", path: ".spherse/agents" }, undefined as any);
+    expect(result.details?.denied).toBe(true);
+    expect(result.content[0].text).toContain("include_meta");
+  });
+
+  it("searches .spherse recursively from root when include_meta=true", async () => {
+    await writeFile(projectRoot, ".spherse/agents/bot/profile.md", "needle in profile");
+    await writeFile(projectRoot, "notes.txt", "needle in notes");
+    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+
+    const result = await tool.execute("tc1", { query: "needle", include_meta: true }, undefined as any);
+    const text = result.content[0].text as string;
+    expect(text).toContain("needle in profile");
+    expect(text).toContain("needle in notes");
+  });
+
+  it("skips binary files and does not return garbled matches", async () => {
+    const binary = Buffer.from([0x53, 0x51, 0x4c, 0x69, 0x74, 0x65, 0x00, 0xff, 0xfe, 0xfd]);
+    const binPath = path.join(projectRoot, "data/store.db");
+    await fs.mkdir(path.dirname(binPath), { recursive: true });
+    await fs.writeFile(binPath, binary);
+
+    await writeFile(projectRoot, "notes.txt", "needle in text");
+
+    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { query: "needle" }, undefined as any);
+    const text = result.content[0].text as string;
+
+    expect(text).toContain("notes.txt");
+    expect(text).not.toContain("store.db");
+    expect(result.details?.matches).toBe(1);
+  });
+
+  it("skips binary images that happen to match the query as bytes", async () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x6e, 0x65, 0x65, 0x64, 0x6c, 0x65]);
+    await writeFile(projectRoot, "img.txt", "needle text");
+    const imgPath = path.join(projectRoot, "assets/photo.png");
+    await fs.mkdir(path.dirname(imgPath), { recursive: true });
+    await fs.writeFile(imgPath, png);
+
+    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { query: "needle" }, undefined as any);
+
+    expect(result.details?.matches).toBe(1);
+    expect(result.content[0].text as string).toContain("img.txt");
+    expect(result.content[0].text as string).not.toContain("photo.png");
   });
 });

@@ -29,13 +29,13 @@ const MATRIX: MatrixRow[] = [
   { category: "agentProfile", path: ".spherse/agents/bot-abc123/profile.md", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "agentTheme", path: ".spherse/agents/bot-abc123/theme.css", llmRead: true, llmWrite: true, srvRead: true, srvWrite: false },
   { category: "agentSessions", path: ".spherse/agents/bot-abc123/sessions.db", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
+  { category: "agentSessions", path: ".spherse/agents/bot-abc123/sessions.db-wal", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
+  { category: "agentSessions", path: ".spherse/agents/bot-abc123/sessions.db-shm", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "agentSkills", path: ".spherse/agents/bot-abc123/skills/my-skill/SKILL.md", llmRead: true, llmWrite: true, srvRead: false, srvWrite: false },
-  { category: "spherseOther", path: ".spherse/agents/bot-abc123/sessions.db-wal", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
-  { category: "spherseOther", path: ".spherse/agents/bot-abc123/sessions.db-shm", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "agentTriggers", path: ".spherse/agents/bot-abc123/triggers/index.yml", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "spherseMetaDir", path: ".spherse", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "agentsRoot", path: ".spherse/agents", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
-  { category: "spherseOther", path: ".spherse/unknown.txt", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },
+  { category: "spherseOther", path: ".spherse/unknown.txt", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
 ];
 
 describe("access policy matrix", () => {

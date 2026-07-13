@@ -6,7 +6,7 @@ import type { HtmlCard } from "./types";
 import { useProjectCtx } from "../../context/project-context";
 import { useChatRuntime } from "./runtime-context";
 import { isPathInsideProject, toProjectRelative, joinProjectPath } from "../../lib/project-path";
-import { ensureCharset, buildFileSrcDoc, buildInlineSrcDoc } from "./html-card-src";
+import { ensureCharset, buildFileSrcDoc, buildInlineSrcDoc, isImageFile } from "./html-card-src";
 
 interface HtmlCardRendererProps {
   card: HtmlCard;
@@ -25,9 +25,10 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const [fetchError, setFetchError] = useState(false);
 
   const previewUrl = card.file_path && client ? client.getPreviewUrl(card.file_path) : null;
+  const isImage = !!card.file_path && isImageFile(card.file_path);
 
   useEffect(() => {
-    if (!previewUrl || card.html) return;
+    if (!previewUrl || card.html || isImage) return;
     let cancelled = false;
     setFetchedHtml(null);
     setFetchError(false);
@@ -42,7 +43,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     return () => {
       cancelled = true;
     };
-  }, [previewUrl, card.html]);
+  }, [previewUrl, card.html, isImage]);
 
   function injectRuntime(iframe: HTMLIFrameElement | null) {
     if (!iframe || !runtime) return;
@@ -117,6 +118,24 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
       display: "block" as const,
     };
     const onLoad = () => injectRuntime(iframeRef.current);
+
+    // 图片 file_path 直接用 <img> 加载 preview URL，避免把二进制当文本读取产生乱码。
+    if (isImage && previewUrl) {
+      return (
+        <img
+          src={previewUrl}
+          alt={card.title ?? ""}
+          style={{
+            display: "block",
+            maxWidth: "100%",
+            maxHeight: `${height}px`,
+            width: "auto",
+            height: "auto",
+            margin: "0 auto",
+          }}
+        />
+      );
+    }
 
     // file_path 卡片统一经 srcDoc 同源渲染：preview 服务器（localhost）与父窗口不同源，
     // 直接用 src 加载会让 injectRuntime 写入 window.__SPHERSE__ 触发 SecurityError 被吞掉，

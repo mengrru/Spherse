@@ -37,6 +37,15 @@ describe("categorizePath", () => {
     );
   });
 
+  it("classifies session db sidecar files as agentSessions", () => {
+    expect(categorizePath(".spherse/agents/historian-abc123/sessions.db-wal")).toBe(
+      "agentSessions",
+    );
+    expect(categorizePath(".spherse/agents/historian-abc123/sessions.db-shm")).toBe(
+      "agentSessions",
+    );
+  });
+
   it("classifies both agent trigger filenames", () => {
     expect(categorizePath(".spherse/agents/historian-abc123/triggers/index.yml")).toBe(
       "agentTriggers",

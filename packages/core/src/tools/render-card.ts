@@ -7,10 +7,17 @@ import { resolveProjectPath } from "../utils/path-safety.js";
 
 type AccessPolicyProvider = () => AccessPolicy;
 
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "ico", "webp"]);
+
+function isImageFile(filePath: string): boolean {
+  const ext = path.extname(filePath).slice(1).toLowerCase();
+  return IMAGE_EXTENSIONS.has(ext);
+}
+
 const RenderCardParams = Type.Object({
   type: Type.Literal("html", { description: "Card type" }),
-  content: Type.Optional(Type.String({ description: "Inline HTML content to render. Relative paths (e.g. <img src=\"path/to/image.png\">) resolve relative to the project root. Only for self-contained HTML with NO relative resource references (images, CSS, etc.)" })),
-  file_path: Type.Optional(Type.String({ description: "Path to HTML file relative to project root. PREFERRED when the HTML references relative resources — ensures images/CSS resolve correctly" })),
+  content: Type.Optional(Type.String({ description: "Inline HTML content (self-contained, no external resources)." })),
+  file_path: Type.Optional(Type.String({ description: "Path to a file relative to project root. Can be an HTML file (renders as a rich HTML card) or an image file — png/jpg/jpeg/gif/webp/svg/ico — which renders the image directly." })),
   title: Type.Optional(Type.String({ description: "Card title" })),
   width: Type.Optional(Type.Number({ description: "Card width in pixels" })),
   height: Type.Optional(Type.Number({ description: "Card height in pixels (default 400)" })),
@@ -28,7 +35,7 @@ export function createRenderCardTool(
     name: "render_card",
     label: "Render Card",
     description:
-      "Render HTML content as a visual card in the chat. Use this to display rich HTML content such as web pages, charts, diagrams, or styled documents. You can provide HTML inline via the `content` parameter or reference a project file via `file_path`. **Important: when the HTML references relative resources (images, CSS, fonts, scripts), ALWAYS use `file_path` instead of `content`** — this ensures relative paths resolve correctly. Only use `content` for self-contained HTML with no external resources. Use `width`, `height`, `max_width`, and `max_height` to control the card dimensions.",
+      "Render content as a visual card in the chat. Provide a project file via `file_path`: an HTML file renders as a rich HTML card (web pages, charts, diagrams, styled documents); an image file (png/jpg/jpeg/gif/webp/svg/ico) renders the image directly. You may also pass self-contained HTML inline via `content`, but prefer `file_path` for anything that references project resources. Use `width`, `height`, `max_width`, and `max_height` to control the card dimensions.",
     parameters: RenderCardParams,
     async execute(_toolCallId, params, _signal, onUpdate) {
       let html: string;
@@ -44,13 +51,25 @@ export function createRenderCardTool(
           };
         }
 
-        try {
-          html = await fs.readFile(resolved, "utf-8");
-        } catch {
-          return {
-            content: [{ type: "text" as const, text: `Error: file not found at ${params.file_path}` }],
-            details: { error: true },
-          };
+        if (isImageFile(params.file_path)) {
+          try {
+            await fs.access(resolved, fs.constants.R_OK);
+          } catch {
+            return {
+              content: [{ type: "text" as const, text: `Error: file not found at ${params.file_path}` }],
+              details: { error: true },
+            };
+          }
+          html = "";
+        } else {
+          try {
+            html = await fs.readFile(resolved, "utf-8");
+          } catch {
+            return {
+              content: [{ type: "text" as const, text: `Error: file not found at ${params.file_path}` }],
+              details: { error: true },
+            };
+          }
         }
       } else if (params.content) {
         html = params.content;
