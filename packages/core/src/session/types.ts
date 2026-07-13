@@ -1,5 +1,6 @@
 import type { ProjectStore } from "../store/project.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+import type { TriggerManager } from "../trigger/trigger-manager.js";
 import type { Logger } from "../logger.js";
 
 export interface SessionContext {
@@ -9,6 +10,7 @@ export interface SessionContext {
   logger: Logger;
   defaultModel?: string;
   temperature?: number;
+  triggerManager?: TriggerManager;
 }
 
 export interface TurnContextSnapshot {

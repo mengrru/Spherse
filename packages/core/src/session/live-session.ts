@@ -248,6 +248,7 @@ export class LiveSession {
       ctx.fileWriteMutex,
       profile.slug,
       agentSkillStore,
+      ctx.triggerManager,
     );
     const allTools = createToolsForProject(toolContext);
 

@@ -43,6 +43,7 @@ export async function createProject(
     logger,
   });
   const triggerManager = new TriggerManager({ sessionRuntime, projectStore, logger });
+  sessionRuntime.setTriggerManager(triggerManager);
   const timerService = new TimerService(() => triggerManager.onTimeTick(), logger);
   timerService.start();
 

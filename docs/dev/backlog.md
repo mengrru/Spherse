@@ -62,6 +62,7 @@
 - [x] **定时任务（scheduler）体验优化**：cron 输入由 Select 下拉改为常驻 Input + 模板按钮；统一术语 定时消息→定时任务（三语）；发送后通知→完成后通知（文案，逻辑本就基于 agent_end 触发）；新增绑定已有会话模式（填写 session ID 在指定 session 内执行）
 - [x] **定时任务完成后刷新对应 session 的历史**：定时任务后台触发 session 时 chat 流事件仅走 scheduler 私有回调、不广播到前端，导致 streaming-store 缓存的 session 历史过期。修复：在 `schedule_completed` 事件中对受影响的 sessionId 调用 `streaming-store.refreshHistory` 重新拉取最新历史（守卫：session 未缓存或正在流式时跳过）
 - [x] **触发器系统（scheduler → trigger 全量重构）**：将 scheduler 全面重构为 trigger（触发器）系统，支持时间触发（cron）和事件触发（自定义事件名）；引入 TimerService（10 分钟轮询回调）和 TriggerManager（磁盘为唯一真相源，每次事件读盘扫描，不在内存维护注册表）；payload 为纯字符串通过 `{{payload}}` 注入 message；前端通过 `/ws/bus` 的 `emit-trigger-event` 消息触发事件（含 UI SDK `emitAgentTriggerEvent` action）。参见 `docs/dev/features/2026-07-11-trigger-system/design.md`
+- [x] **LLM tool 触发 trigger event**：新增 `emit_trigger_event` LLM tool，允许 agent 在对话中触发其它 agent 的事件触发器；in-core 直接调用 `TriggerManager.onUserEvent`（不经 ws-bus / server contract），与 UI SDK 路径等价；`TriggerManager` 经 `SessionContext`（mutable 字段）+ `ToolContext` 注入到 tool，`sp:` 前缀保留、payload 纯字符串、agent profile `tools` 显式启用
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
 - [x] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话
 - [x] **UI SDK**：iframe 与 App 内统一 action 通信框架，支持 postMessage 触发和 App 内 dispatchAction 调用。参见 `docs/dev/features/2026-06-11-ui-sdk/design.md`

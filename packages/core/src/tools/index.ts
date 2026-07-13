@@ -10,6 +10,7 @@ import { createRenderCardTool } from "./render-card.js";
 import { createGenerateImageTool } from "./generate-image.js";
 import { createMoveFileTool } from "./move-file.js";
 import { createCopyFileTool } from "./copy-file.js";
+import { createEmitTriggerEventTool } from "./emit-trigger-event.js";
 import { ToolContext } from "./tool-context.js";
 
 export { ToolContext };
@@ -31,6 +32,10 @@ export function createToolsForProject(
     copy_file: createCopyFileTool(ctx.root, ctx.mutex, getPolicy),
     load_skill: createLoadSkillTool(ctx.root, ctx.skill, ctx.agentSkill),
   };
+
+  if (ctx.triggerManager) {
+    tools.emit_trigger_event = createEmitTriggerEventTool(ctx.triggerManager);
+  }
 
   return tools;
 }

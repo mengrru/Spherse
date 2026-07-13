@@ -173,8 +173,12 @@ export const zhCN = {
   "agent-dialog.toolsHint": "允许 AI 在对话过程中使用的工具",
   // 权限分组：读取类（read_file/list_files/search_content）
   "agent-dialog.permRead": "读取文件",
+  // 权限分组 tooltip：读取文件的作用说明
+  "agent-dialog.permReadHint": "允许 AI 读取项目中的文件内容、浏览目录结构和搜索文本",
   // 权限分组：写入类（write_file/edit_file/move_file/copy_file）
   "agent-dialog.permWrite": "写入文件",
+  // 权限分组 tooltip：写入文件的作用说明
+  "agent-dialog.permWriteHint": "允许 AI 创建、编辑、移动和复制项目中的文件",
   // Agent 参考资料字段标签
   "agent-dialog.refsLabel": "参考资料",
   // Agent 参考资料字段 tooltip：说明参考资料是 AI 一开始就记住的内容
@@ -578,12 +582,24 @@ export const zhCN = {
   // --- Tool Labels ---
   // 独立工具标签：追加日志
   "tool.append_log": "追加日志",
+  // 独立工具 tooltip：追加日志的作用说明
+  "tool.append_log_hint": "允许 AI 向项目变更日志（CHANGELOG.md）追加操作记录",
   // 独立工具标签：使用技能
   "tool.load_skill": "使用技能",
+  // 独立工具 tooltip：使用技能的作用说明
+  "tool.load_skill_hint": "允许 AI 加载并激活技能（Skill）的完整指令",
   // 独立工具标签：渲染卡片
   "tool.render_card": "渲染卡片",
+  // 独立工具 tooltip：渲染卡片的作用说明
+  "tool.render_card_hint": "允许 AI 在对话中渲染 HTML 卡片",
   // 独立工具标签：生成图片
   "tool.generate_image": "生成图片",
+  // 独立工具 tooltip：生成图片的作用说明
+  "tool.generate_image_hint": "允许 AI 根据文字描述生成图片",
+  // 独立工具标签：触发事件（emit trigger event，agent 在对话中调用，触发其它 agent 的事件触发器）
+  "tool.emit_trigger_event": "触发事件",
+  // 独立工具 tooltip：触发事件的作用说明
+  "tool.emit_trigger_event_hint": "允许 AI 发出自定义事件，触发本项目内其它 Agent 的事件触发器，使其自动执行预设任务",
 
   // --- Viewer Card ---
   // edit_file diff 左栏标题，显示原始内容

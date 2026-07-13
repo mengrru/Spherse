@@ -112,9 +112,10 @@ export class TriggerManager extends EventEmitter {
     }
   }
 
-  onUserEvent(eventName: string, payload: string): void {
-    if (eventName.startsWith("sp:")) return;
+  onUserEvent(eventName: string, payload: string): number {
+    if (eventName.startsWith("sp:")) return 0;
 
+    let fired = 0;
     const allTriggers = this.readAllTriggers();
     for (const { agentId, agentName, entry } of allTriggers) {
       if (entry.type !== "event" || !entry.enabled || !entry.eventName) continue;
@@ -122,10 +123,12 @@ export class TriggerManager extends EventEmitter {
       if (entry.eventName !== eventName) continue;
 
       this.inProgress.add(entry.id);
+      fired++;
       void this.fire(entry, agentId, agentName, payload, eventName).finally(() => {
         this.inProgress.delete(entry.id);
       });
     }
+    return fired;
   }
 
   list(agentId: string): TriggerEntry[] {

@@ -5,6 +5,7 @@ import { NotFoundError } from "../errors.js";
 import { LiveSession, type AgentEventHandler } from "./live-session.js";
 import { computeSessionStatus, type SessionStatus } from "./status.js";
 import type { SessionContext, TurnContextSnapshot } from "./types.js";
+import type { TriggerManager } from "../trigger/trigger-manager.js";
 
 export class SessionManager {
   private readonly sessions = new Map<string, LiveSession>();
@@ -22,6 +23,10 @@ export class SessionManager {
       defaultModel: options?.defaultModel,
       temperature: options?.temperature,
     };
+  }
+
+  setTriggerManager(triggerManager: TriggerManager): void {
+    this.ctx.triggerManager = triggerManager;
   }
 
   async createSession(agentId: string, source?: string): Promise<string> {

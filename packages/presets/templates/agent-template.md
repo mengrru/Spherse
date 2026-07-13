@@ -11,4 +11,5 @@ tools:
   - load_skill
   - render_card
   - generate_image
+  - emit_trigger_event
 ---
