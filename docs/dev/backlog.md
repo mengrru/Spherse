@@ -78,6 +78,7 @@
 - [ ] **Agent 编辑 UI 增强**：改善 agent 编辑界面的用户体验和功能
 - [x] **内置 Agent 模板**：提供多个内置 agent profile 模板（世界观构建者、角色设计、历史记录员等），创建 Agent 时可选择模板快速开始（一期实现 prompt 模板徽章载入：世界观创作助手、角色扮演）
 - [ ] **内置 Skill：Card 生成 Skill 的 Skill**：提供内置 skill，用于制作 card 生成类 skill
+- [x] **内置 Skill：创建 Skill 的 Skill**：提供内置 skill `create-skill`，讲解 skill 的两个层级（project-level `.spherse/skills/**` 与 agent-level `.spherse/agents/*/skills/**`）、标准目录结构与 SKILL.md 格式，指导 agent 用 write_file 创建自定义 skill。同时将 `skills` 类别加入 LLM 写白名单（`agentSkills` 已在），使 AI 可直接创建/修改 project-level skill
 - [x] **内置 Skill：主题制作 Skill**：提供内置 skill，用于制作自定义主题。`create-ui-theme` 与 `create-agent-chat-theme` 两个 builtin skill 已存在，并在 `docs/dev/features/2026-06-26-theme-customization-experience/design.md` 中进一步增强（token 重命名、原生 CSS nesting、dark mode、自动重载、data-* 钩子补齐）
 - [x] **内置 skill 真内置化**：将 preset skill 从 per-project 注入改为 app 内置只读（builtin skill 通过 SkillStore 内存合并；启用 use-ui-sdk）
 - [x] **Skill 附加文件发现**：project skill 目录可携带 SKILL.md 之外的附加文件（references/*、scripts/* 等），SkillStore 递归枚举填入 SkillDefinition.files，load_skill 输出文件清单供 agent 用 read_file 读取。参见 docs/dev/bugfix/2026-06-28-skill-companion-files-discovery/design.md

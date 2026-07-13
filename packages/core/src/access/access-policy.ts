@@ -33,6 +33,7 @@ const LLM_READ: ReadonlySet<PathCategory> = new Set<PathCategory>([
 const LLM_WRITE: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "userFiles",
   "projectTheme",
+  "skills",
   "agentTheme",
   "agentSkills",
 ]);

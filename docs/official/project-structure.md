@@ -67,7 +67,9 @@ spherse/
 │   │   │   │   └── SKILL.md
 │   │   │   ├── use-ui-sdk/             # iframe 与 App 交互 postMessage 协议指南（含 data key-value 持久化）
 │   │   │   │   └── SKILL.md
-│   │   │   └── write-html/             # HTML 页面数据读写与 App 能力调用指南（charset、数据外置、postMessage 交互）
+│   │   │   ├── write-html/             # HTML 页面数据读写与 App 能力调用指南（charset、数据外置、postMessage 交互）
+│   │   │   │   └── SKILL.md
+│   │   │   └── create-skill/           # 自定义 skill 创建指南（两层 skill 体系与 SKILL.md 格式）
 │   │   │       └── SKILL.md
 │   │   ├── scripts/
 │   │   │   └── sync-templates.mjs    # 模板与预置内容同步脚本（.md → .ts 常量 + presets.json → 预置常量 + skills/ → skill 源码常量）

@@ -25,7 +25,7 @@ const MATRIX: MatrixRow[] = [
   { category: "projectConfig", path: ".spherse/project.yaml", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "projectTheme", path: ".spherse/theme.css", llmRead: true, llmWrite: true, srvRead: true, srvWrite: true },
   { category: "generatedImages", path: ".spherse/generated-images/img.png", llmRead: true, llmWrite: false, srvRead: true, srvWrite: false },
-  { category: "skills", path: ".spherse/skills/my-skill/SKILL.md", llmRead: true, llmWrite: false, srvRead: true, srvWrite: true },
+  { category: "skills", path: ".spherse/skills/my-skill/SKILL.md", llmRead: true, llmWrite: true, srvRead: true, srvWrite: true },
   { category: "agentProfile", path: ".spherse/agents/bot-abc123/profile.md", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "agentTheme", path: ".spherse/agents/bot-abc123/theme.css", llmRead: true, llmWrite: true, srvRead: true, srvWrite: false },
   { category: "agentSessions", path: ".spherse/agents/bot-abc123/sessions.db", llmRead: false, llmWrite: false, srvRead: false, srvWrite: false },

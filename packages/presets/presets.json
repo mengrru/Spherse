@@ -3,7 +3,8 @@
     { "dir": "create-ui-theme" },
     { "dir": "create-agent-chat-theme" },
     { "dir": "use-ui-sdk" },
-    { "dir": "write-html" }
+    { "dir": "write-html" },
+    { "dir": "create-skill" }
   ],
   "presetAgents": [],
   "presetPromptTemplates": [

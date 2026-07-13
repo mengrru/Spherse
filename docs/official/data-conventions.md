@@ -215,7 +215,8 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
     { "dir": "create-ui-theme" },
     { "dir": "create-agent-chat-theme" },
     { "dir": "use-ui-sdk" },
-    { "dir": "write-html" }
+    { "dir": "write-html" },
+    { "dir": "create-skill" }
   ],
   "presetAgents": [],
   "presetPromptTemplates": [
