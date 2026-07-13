@@ -691,7 +691,7 @@ export const zhCN = {
   // 引导卡片2描述
   "onboarding.desc.openSample": "将内置示例项目拷贝到选定位置并打开",
   // 引导卡片2（打开示例项目）的 tooltip：说明示例项目的搭建方式与用途，鼠标悬浮于卡片时展示
-  "onboarding.tooltip.openSample": "该示例项目使用 Spherse 从零开始搭建，模型为 DeepSeek V4 Flash。通过该项目学习 Spherse 的使用方式，从而搭建完全属于你自己的世界。",
+  "onboarding.tooltip.openSample": "该示例项目在 Spherse 中从零开始搭建，使用的模型为 DeepSeek V4 Flash。通过该项目熟悉 Spherse 的使用方式，从而搭建完全属于你自己的世界。",
   // 拷贝示例项目失败时的错误提示
   "onboarding.error.copyFailed": "拷贝示例项目失败，请重试",
   // 示例项目拷贝成功但注册/打开失败时的错误提示（区分于拷贝失败）

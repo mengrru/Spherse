@@ -325,7 +325,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "onboarding.action.openSample": "開啟範例專案：{name}",
   "onboarding.desc.openOrCreate": "選擇已有專案資料夾，或新建一個資料夾從空專案開始",
   "onboarding.desc.openSample": "將內建範例專案複製到選定位置並開啟",
-  "onboarding.tooltip.openSample": "該範例專案使用 Spherse 從零開始搭建，模型為 DeepSeek V4 Flash。透過該專案學習 Spherse 的使用方式，進而搭建完全屬於你自己的世界。",
+  "onboarding.tooltip.openSample": "該範例專案在 Spherse 中從零開始搭建，使用的模型為 DeepSeek V4 Flash。透過該專案熟悉 Spherse 的使用方式，進而搭建完全屬於你自己的世界。",
   "onboarding.error.copyFailed": "複製範例專案失敗，請重試",
   "onboarding.error.openFailed": "開啟範例專案失敗，請重試",
   "onboarding.error.unexpected": "操作失敗，請重試",

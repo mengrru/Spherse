@@ -325,7 +325,7 @@ export const en: Record<TranslationKey, string> = {
   "onboarding.action.openSample": "Open sample project: {name}",
   "onboarding.desc.openOrCreate": "Pick an existing project folder, or create a new folder to start an empty project",
   "onboarding.desc.openSample": "Copy the built-in sample project to a chosen location and open it",
-  "onboarding.tooltip.openSample": "This sample project was built from scratch with Spherse, using the DeepSeek V4 Flash model. Learn how to use Spherse through it, then build a world that is entirely your own.",
+  "onboarding.tooltip.openSample": "This sample project was built from scratch in Spherse, using the DeepSeek V4 Flash model. Get familiar with Spherse through it, then build a world that is entirely your own.",
   "onboarding.error.copyFailed": "Failed to copy sample project. Please try again.",
   "onboarding.error.openFailed": "Failed to open sample project. Please try again.",
   "onboarding.error.unexpected": "Operation failed. Please try again.",
