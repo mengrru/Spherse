@@ -97,7 +97,7 @@ export function useFileTreeController(
         return;
       }
 
-      const children = node.loaded
+      const children = node.expanded
         ? node.children
         : buildNodes(await loadChildren(node.path), node.path);
       setRootNodes((prev) =>

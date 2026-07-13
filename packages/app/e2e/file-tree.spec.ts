@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 import { createFileTreeProject, launchFileTreeApp } from "./helpers/file-tree";
 
 test.setTimeout(60_000);
@@ -59,6 +61,30 @@ test("folder expand and collapse", async () => {
     await srcRow.click();
     await expect(treeButton(page, "components")).not.toBeVisible();
     await expect(treeButton(page, "main.ts")).not.toBeVisible();
+  } finally {
+    await app.close();
+  }
+});
+
+test("re-expanding a collapsed folder shows fresh content", async () => {
+  const project = await createFileTreeProject();
+  const { app, page } = await launchFileTreeApp(project);
+
+  try {
+    const srcRow = treeButton(page, "src");
+    await expect(srcRow).toBeVisible();
+
+    await srcRow.click();
+    await expect(treeButton(page, "main.ts")).toBeVisible();
+
+    await srcRow.click();
+    await expect(treeButton(page, "main.ts")).not.toBeVisible();
+
+    await writeFile(path.join(project.root, "src", "new-file.ts"), "export const Y = 2;\n");
+    await page.waitForTimeout(1000);
+
+    await srcRow.click();
+    await expect(treeButton(page, "new-file.ts")).toBeVisible({ timeout: 5000 });
   } finally {
     await app.close();
   }
