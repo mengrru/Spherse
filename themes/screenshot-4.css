@@ -1,7 +1,109 @@
+/* ================================================
+   淡雅 · 清透 · 性冷淡主题（雾蓝版）
+
+   设计关键词：
+   - 主色调：雾蓝 #9aacb8 → #b8c8d0
+   - 低饱和度莫兰迪色系 × 清冷雾蓝
+   - 半透明毛玻璃质感（backdrop-filter: blur）
+   - 柔和蓝灰色渐变背景
+   - 极简、干净、呼吸感
+   ================================================ */
+
+/* ---------- 亮色模式设计令牌 ---------- */
 :root {
-  --sp-primary: hsl(40, 70%, 45%);
-  --sp-primary-foreground: #ffffff;
-  --sp-accent: hsl(40, 40%, 90%);
-  --sp-accent-foreground: hsl(40, 70%, 30%);
-  --sp-ring: hsl(40, 60%, 55%);
+  --sp-background: #f1f2f0;
+  --sp-foreground: #3a3c3d;
+
+  --sp-card: rgba(255, 255, 255, 0.55);
+  --sp-card-foreground: #3a3c3d;
+
+  --sp-popover: rgba(255, 255, 255, 0.72);
+  --sp-popover-foreground: #3a3c3d;
+
+  --sp-primary: #9aacb8;
+  --sp-primary-foreground: #fbfbfa;
+  --sp-secondary: #e2e6e8;
+  --sp-secondary-foreground: #3a3c3d;
+  --sp-accent: #d8e0e4;
+  --sp-accent-foreground: #3a3c3d;
+
+  --sp-muted: #e8ebec;
+  --sp-muted-foreground: #969ea3;
+
+  --sp-border: #d8dcde;
+  --sp-input: #d8dcde;
+  --sp-ring: #b0c0c8;
+
+  --sp-destructive: #c4877a;
+  --sp-success: #7aad7a;
+  --sp-success-foreground: #fbfbfa;
+  --sp-warning: #c49e7a;
+  --sp-warning-foreground: #fbfbfa;
+  --sp-diff-added: #7aad7a;
+
+  --sp-radius: 0.625rem;
+}
+
+/* ---------- 暗色模式（雾蓝暗调） ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --sp-background: #17191a;
+    --sp-foreground: #d0d2d0;
+
+    --sp-card: rgba(26, 28, 30, 0.6);
+    --sp-card-foreground: #d0d2d0;
+
+    --sp-popover: rgba(26, 28, 30, 0.78);
+    --sp-popover-foreground: #d0d2d0;
+
+    --sp-primary: #7a8e9a;
+    --sp-primary-foreground: #17191a;
+    --sp-secondary: #282a2c;
+    --sp-secondary-foreground: #d0d2d0;
+    --sp-accent: #2c2e30;
+    --sp-accent-foreground: #d0d2d0;
+
+    --sp-muted: #282a2c;
+    --sp-muted-foreground: #767c80;
+
+    --sp-border: #303234;
+    --sp-input: #303234;
+    --sp-ring: #506068;
+
+    --sp-destructive: #8c665e;
+    --sp-success: #5e7a5e;
+    --sp-success-foreground: #d0d2d0;
+    --sp-warning: #8c7a5e;
+    --sp-warning-foreground: #d0d2d0;
+    --sp-diff-added: #5e7a5e;
+  }
+}
+
+/* ================================================
+   全局背景装饰 — 雾蓝光晕渐变
+   ================================================ */
+[data-landing-root] {
+  background:
+    radial-gradient(ellipse at 18% 75%, rgba(154, 172, 184, 0.20) 0%, transparent 55%),
+    radial-gradient(ellipse at 82% 22%, rgba(180, 196, 206, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(200, 210, 215, 0.07) 0%, transparent 70%),
+    var(--sp-background);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-landing-root] {
+    background:
+      radial-gradient(ellipse at 18% 75%, rgba(90, 120, 140, 0.15) 0%, transparent 55%),
+      radial-gradient(ellipse at 82% 22%, rgba(70, 100, 120, 0.10) 0%, transparent 50%),
+      var(--sp-background);
+  }
+}
+
+/* ================================================
+   Spherse 大标题 — 去除流光，降低字重，雾蓝冷调
+   ================================================ */
+[data-landing-root] h1 {
+  font-weight: 400;
+  color: #6f8794;
+  letter-spacing: 0.04em;
 }
