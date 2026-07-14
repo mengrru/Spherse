@@ -242,10 +242,11 @@ spherse/
 │               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
 │               ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel，被 user-file-panel 与 skill-panel 共用
 │               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
-│   ├── landing/                      # @spherse/landing — GitHub Pages 项目介绍页
-│   │   ├── vite.config.ts            # 标准 Vite 构建配置（base: "/Spherse/"，GitHub Pages 路径）
+│   ├── landing/                      # @spherse/landing — GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）
+│   │   ├── vite.config.ts            # 标准 Vite 构建配置（base: "/"，自定义域名根路径部署）
 │   │   ├── index.html                # 入口 HTML
 │   │   ├── public/                   # 静态资源（截图、主题 CSS）
+│   │   │   ├── CNAME                # GitHub Pages 自定义域名声明（内容 spherse.mengru.work）
 │   │   │   ├── screenshots/          # 轮播截图 + feature 浮层截图
 │   │   │   └── themes/              # 轮播切换时动态加载的主题 CSS（覆盖 --sp-* 变量）
 │   │   └── src/

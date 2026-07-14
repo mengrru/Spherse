@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { ShieldCheck, Bot, Clock, Palette } from "lucide-react";
+import { asset } from "@/lib/utils";
 
 export interface Feature {
   id: "local" | "agents" | "trigger" | "theme";
@@ -14,7 +15,7 @@ export const features: Feature[] = [
     icon: ShieldCheck,
     i18nKeyPrefix: "feature.local",
     screenshots: [
-      "/Spherse/screenshots/features/local/1.png",
+      asset("screenshots/features/local/1.png"),
     ],
   },
   {
@@ -22,8 +23,8 @@ export const features: Feature[] = [
     icon: Bot,
     i18nKeyPrefix: "feature.agents",
     screenshots: [
-      "/Spherse/screenshots/features/agents/1.png",
-      "/Spherse/screenshots/features/agents/2.png",
+      asset("screenshots/features/agents/1.png"),
+      asset("screenshots/features/agents/2.png"),
     ],
   },
   {
@@ -31,8 +32,8 @@ export const features: Feature[] = [
     icon: Palette,
     i18nKeyPrefix: "feature.theme",
     screenshots: [
-      "/Spherse/screenshots/features/theme/1.png",
-      "/Spherse/screenshots/features/theme/2.png",
+      asset("screenshots/features/theme/1.png"),
+      asset("screenshots/features/theme/2.png"),
     ],
   },
   {
@@ -40,9 +41,9 @@ export const features: Feature[] = [
     icon: Clock,
     i18nKeyPrefix: "feature.trigger",
     screenshots: [
-      "/Spherse/screenshots/features/trigger/1.png",
-      "/Spherse/screenshots/features/trigger/2.png",
-      "/Spherse/screenshots/features/trigger/3.png",
+      asset("screenshots/features/trigger/1.png"),
+      asset("screenshots/features/trigger/2.png"),
+      asset("screenshots/features/trigger/3.png"),
     ],
   },
 ];
