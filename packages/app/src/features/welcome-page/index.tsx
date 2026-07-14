@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../lib/events";
+import { useBusSubscription } from "../../hooks/useBusSubscription";
 
 const HTML_EXTENSIONS = new Set(["html", "htm"]);
 
@@ -10,15 +11,27 @@ function getFileExtension(filePath: string): string {
   return ext;
 }
 
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, "/");
+}
+
 export function WelcomePage({
   fallback,
 }: {
   fallback: React.ReactNode;
 }) {
   const { t } = useI18n();
-  const { client } = useProjectCtx();
+  const { client, projectId } = useProjectCtx();
   const [path, setPath] = useState<string | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  const pathRef = useRef(path);
+  useEffect(() => {
+    pathRef.current = path;
+  }, [path]);
+
+  const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +61,24 @@ export function WelcomePage({
     };
   }, [client]);
 
+  useBusSubscription(projectId, "fs-watch", (_type, payload) => {
+    const current = pathRef.current;
+    if (!current) return;
+    const changedPath = normalizePath((payload as { path?: string } | null)?.path ?? "");
+    if (changedPath !== normalizePath(current)) return;
+    if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+    reloadTimerRef.current = setTimeout(() => {
+      setLoadError(false);
+      setReloadKey((k) => k + 1);
+    }, 300);
+  });
+
+  useEffect(() => {
+    return () => {
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+    };
+  }, []);
+
   if (path === undefined) return null;
   if (path === null) return <>{fallback}</>;
 
@@ -61,11 +92,12 @@ export function WelcomePage({
 
   const ext = getFileExtension(path);
   const isHtml = HTML_EXTENSIONS.has(ext);
+  const previewUrl = `${client.getPreviewUrl(path)}?t=${reloadKey}`;
 
   if (isHtml) {
     return (
       <iframe
-        src={client.getPreviewUrl(path)}
+        src={previewUrl}
         className="flex-1 w-full border-0"
         title="Welcome Page"
         sandbox="allow-scripts allow-same-origin"
@@ -77,7 +109,7 @@ export function WelcomePage({
   return (
     <div className="flex h-full items-center justify-center p-8">
       <img
-        src={client.getPreviewUrl(path)}
+        src={previewUrl}
         alt="Welcome Page"
         className="max-h-full max-w-full object-contain"
         onError={() => setLoadError(true)}
