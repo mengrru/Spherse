@@ -274,8 +274,9 @@ export function createApiClient(baseUrl: string, projectId: string) {
       return parseJsonResponse<TurnContextSnapshotContract>(res, schemas.turnContextSnapshot);
     },
 
-    getPreviewUrl(filePath: string): string {
-      return `${apiBase}/preview/${filePath.split("/").map(encodeURIComponent).join("/")}`;
+    getPreviewUrl(filePath: string, version?: number): string {
+      const base = `${apiBase}/preview/${filePath.split("/").map(encodeURIComponent).join("/")}`;
+      return version !== undefined ? `${base}?v=${version}` : base;
     },
 
     async getSupportedProviders(): Promise<ProviderCatalogContract> {

@@ -49,7 +49,7 @@ export function registerPreviewRoutes(fastify: FastifyInstance, _registry: Proje
 
       try {
         const buffer = await fs.readFile(absolutePath);
-        return reply.type(CONTENT_TYPES[ext]).send(buffer);
+        return reply.type(CONTENT_TYPES[ext]).header("Cache-Control", "no-store").send(buffer);
       } catch {
         throw notFound("Not found");
       }

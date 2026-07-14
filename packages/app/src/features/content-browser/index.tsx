@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
@@ -43,6 +43,10 @@ export function ContentBrowser({
     reloadContent();
     setRefreshKey((k) => k + 1);
   }, [reloadContent]);
+
+  useEffect(() => {
+    setRefreshKey((k) => k + 1);
+  }, [filePath]);
 
   useContentAutoRefresh({ projectId, filePath, enabled: !editor.isEditing, onReload: handleRefresh });
 

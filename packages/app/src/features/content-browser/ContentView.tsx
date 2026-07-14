@@ -97,7 +97,7 @@ export function ContentView({
       <div className="flex flex-1 items-center justify-center overflow-auto bg-muted p-4">
         <img
           key={refreshKey}
-          src={client.getPreviewUrl(filePath)}
+          src={client.getPreviewUrl(filePath, refreshKey)}
           alt={filePath}
           className="max-h-full max-w-full rounded-lg object-contain"
         />
