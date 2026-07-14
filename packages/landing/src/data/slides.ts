@@ -24,4 +24,10 @@ export const slides: Slide[] = [
     avatarColor: "#ff2d95",
     avatarLabel: "F",
   },
+  {
+    screenshot: "/Spherse/screenshots/carousel-4.png",
+    theme: "/Spherse/themes/screenshot-4.css",
+    avatarColor: "#9aacb8",
+    avatarLabel: "M",
+  },
 ];
