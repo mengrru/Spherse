@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - env:
+      - name: Create draft release for tag
+        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes
 
@@ -24,9 +25,17 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            publish-mode: never
+            build-args: --mac
+            artifact: dmg
+            arch-label: arm64
+          - os: macos-13
+            build-args: --mac
+            artifact: dmg
+            arch-label: intel
           - os: windows-latest
-            publish-mode: always
+            build-args: --win
+            artifact: exe
+            arch-label: ""
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -37,18 +46,34 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build
-
-      - name: Build & publish (electron-builder)
+      - name: Sync app version from tag
+        shell: bash
         working-directory: packages/app
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --${{ matrix.publish-mode }}
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
 
-      - name: Upload macOS dmg to release (manual, no auto-update metadata)
-        if: matrix.os == 'macos-latest'
+      - name: Build all packages
+        run: npm run build
+
+      - name: Rebuild native deps for Electron (better-sqlite3)
+        run: node scripts/rebuild-native.mjs
+
+      - name: Build installer (electron-builder)
+        working-directory: packages/app
+        run: npx electron-builder ${{ matrix.build-args }} --publish never
+
+      - name: Upload macOS dmg
+        if: runner.os == 'macOS'
         working-directory: packages/app
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          mv release/*.dmg "release/Spherse-${GITHUB_REF_NAME#v}-${{ matrix.arch-label }}.dmg"
           gh release upload "${GITHUB_REF_NAME}" release/*.dmg --clobber
+
+      - name: Upload Windows installer
+        if: runner.os == 'Windows'
+        working-directory: packages/app
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" release/*.exe --clobber
