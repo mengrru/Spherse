@@ -16,14 +16,14 @@ interface HeroProps {
 
 export function Hero({ t }: HeroProps) {
   return (
-    <section className="flex flex-col items-center gap-6 px-6 py-12 text-center md:py-16">
+    <section className="flex flex-col items-center gap-8 px-6 py-12 text-center md:py-16">
       <h1 className="text-5xl font-bold tracking-tight text-foreground md:text-7xl">
         {t("hero.title")}
       </h1>
-      <p className="max-w-2xl text-lg text-muted-foreground md:text-xl">
+      <p className="-mt-3 max-w-2xl text-lg text-muted-foreground md:text-xl">
         {t("hero.subtitle")}
       </p>
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <div className="mt-2 flex flex-col gap-3 sm:flex-row">
         <Button size="lg" variant="default" render={<a href="#" />}>
           <Download className="size-5" />
           {t("hero.downloadMac")}

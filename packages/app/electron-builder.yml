@@ -18,9 +18,11 @@ extraMetadata:
   main: dist/main/index.js
 mac:
   category: public.app-category.productivity
+  icon: build/spherse-icon.icns
   target:
     - dmg
 win:
+  icon: build/spherse-icon.ico
   target:
     - nsis
 nsis:
