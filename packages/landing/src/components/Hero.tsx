@@ -1,5 +1,7 @@
-import { Download } from "lucide-react";
+import { useState } from "react";
+import { Download, LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
+import { resolveDownloadUrl, type Platform } from "../lib/release";
 import type { TranslationKey } from "../i18n";
 
 function GithubIcon({ className }: { className?: string }) {
@@ -15,6 +17,19 @@ interface HeroProps {
 }
 
 export function Hero({ t }: HeroProps) {
+  const [pending, setPending] = useState<Platform | null>(null);
+
+  const handleDownload = async (platform: Platform) => {
+    if (pending) return;
+    setPending(platform);
+    try {
+      const url = await resolveDownloadUrl(platform);
+      window.location.href = url;
+    } finally {
+      setPending(null);
+    }
+  };
+
   return (
     <section className="flex flex-col items-center gap-8 px-6 py-12 text-center md:py-16">
       <h1 className="text-5xl font-bold tracking-tight text-foreground md:text-7xl">
@@ -24,12 +39,30 @@ export function Hero({ t }: HeroProps) {
         {t("hero.subtitle")}
       </p>
       <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-        <Button size="lg" variant="default" render={<a href="#" />}>
-          <Download className="size-5" />
+        <Button
+          size="lg"
+          variant="default"
+          disabled={pending !== null}
+          onClick={() => handleDownload("mac")}
+        >
+          {pending === "mac" ? (
+            <LoaderCircle className="size-5 animate-spin" />
+          ) : (
+            <Download className="size-5" />
+          )}
           {t("hero.downloadMac")}
         </Button>
-        <Button size="lg" variant="outline" render={<a href="#" />}>
-          <Download className="size-5" />
+        <Button
+          size="lg"
+          variant="outline"
+          disabled={pending !== null}
+          onClick={() => handleDownload("win")}
+        >
+          {pending === "win" ? (
+            <LoaderCircle className="size-5 animate-spin" />
+          ) : (
+            <Download className="size-5" />
+          )}
           {t("hero.downloadWin")}
         </Button>
         <Button size="lg" variant="ghost" render={<a href="https://github.com/mengrru/Spherse" target="_blank" rel="noopener noreferrer" />}>
