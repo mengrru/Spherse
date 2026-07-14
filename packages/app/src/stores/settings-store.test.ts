@@ -13,7 +13,7 @@ function createApi(overrides: Partial<SettingsApi> = {}): SettingsApi {
 
 describe("useSettingsStore", () => {
   beforeEach(() => {
-    useSettingsStore.setState({ locale: "zh-CN", debugToolsEnabled: false });
+    useSettingsStore.setState({ locale: "zh-CN", debugToolsEnabled: false, theme: "system" });
   });
 
   it("loads locale from settings", async () => {
@@ -51,6 +51,7 @@ describe("useSettingsStore", () => {
       locale: "en",
       models,
       debugToolsEnabled: false,
+      theme: "system",
     });
   });
 
@@ -85,6 +86,58 @@ describe("useSettingsStore", () => {
       locale: "zh-CN",
       models: undefined,
       debugToolsEnabled: true,
+      theme: "system",
+    });
+  });
+
+  it("loads theme from settings", async () => {
+    const api = createApi({
+      getSettings: vi.fn().mockResolvedValue({ theme: "dark" }),
+    });
+
+    await useSettingsStore.getState().loadLocale(api);
+
+    expect(useSettingsStore.getState().theme).toBe("dark");
+  });
+
+  it("defaults theme to system when absent", async () => {
+    const api = createApi();
+
+    await useSettingsStore.getState().loadLocale(api);
+
+    expect(useSettingsStore.getState().theme).toBe("system");
+  });
+
+  it("setTheme updates state and persists", async () => {
+    const api = createApi({
+      getSettings: vi.fn().mockResolvedValue({ locale: "zh-CN", models: undefined }),
+    });
+
+    const ok = await useSettingsStore.getState().setTheme(api, "dark");
+
+    expect(ok).toBe(true);
+    expect(useSettingsStore.getState().theme).toBe("dark");
+    expect(api.saveSettings).toHaveBeenCalledWith({
+      locale: "zh-CN",
+      models: undefined,
+      debugToolsEnabled: false,
+      theme: "dark",
+    });
+  });
+
+  it("setTheme preserves existing debugToolsEnabled and locale", async () => {
+    useSettingsStore.setState({ locale: "en", debugToolsEnabled: true });
+    const api = createApi({
+      getSettings: vi.fn().mockResolvedValue({ locale: "en", models: undefined }),
+    });
+
+    await useSettingsStore.getState().setTheme(api, "light");
+
+    expect(api.saveSettings).toHaveBeenCalledWith({
+      locale: "en",
+      models: undefined,
+      debugToolsEnabled: true,
+      theme: "light",
     });
   });
 });

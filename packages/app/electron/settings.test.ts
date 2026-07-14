@@ -12,7 +12,11 @@ vi.mock("electron-store", () => ({
   },
 }));
 
-import { maskModelGroup, mergeModelGroup } from "./settings";
+vi.mock("electron", () => ({
+  nativeTheme: { themeSource: "system" },
+}));
+
+import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore } from "./settings";
 
 describe("mergeModelGroup temperature passthrough", () => {
   it("uses incoming temperature when present", () => {
@@ -68,5 +72,53 @@ describe("maskModelGroup temperature passthrough", () => {
     const result = maskModelGroup({ defaultModel: "", providers: {} });
 
     expect(result.temperature).toBeUndefined();
+  });
+});
+
+describe("theme persistence", () => {
+  it("getMaskedSettings defaults theme to system when absent", () => {
+    settingsStore.set("settings", {
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    const masked = getMaskedSettings();
+
+    expect(masked?.theme).toBe("system");
+  });
+
+  it("getMaskedSettings returns stored theme", () => {
+    settingsStore.set("settings", {
+      locale: "zh-CN",
+      theme: "dark",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    expect(getMaskedSettings()?.theme).toBe("dark");
+  });
+
+  it("saveSettings defaults theme to system when not provided and no previous value", () => {
+    settingsStore.set("settings", undefined);
+    saveSettings({
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    expect(settingsStore.get("settings")?.theme).toBe("system");
+  });
+
+  it("saveSettings preserves previous theme when incoming omits it", () => {
+    settingsStore.set("settings", {
+      locale: "zh-CN",
+      theme: "light",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    saveSettings({
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    expect(settingsStore.get("settings")?.theme).toBe("light");
   });
 });

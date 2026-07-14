@@ -85,6 +85,8 @@ export interface ModelGroupSettings {
   temperature?: number;
 }
 
+export type ThemeMode = "light" | "dark" | "system";
+
 export interface AppSettings {
   locale: string;
   models: {
@@ -92,6 +94,7 @@ export interface AppSettings {
     image: ModelGroupSettings;
   };
   debugToolsEnabled?: boolean;
+  theme?: ThemeMode;
 }
 
 export interface ProviderCatalogItem {

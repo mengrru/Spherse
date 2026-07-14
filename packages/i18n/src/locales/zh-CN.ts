@@ -550,6 +550,14 @@ export const zhCN = {
   // --- Settings ---
   // 设置中语言选择器的标签
   "settings.language": "语言 / Language",
+  // 设置 > 通用：外观（亮色/暗色/跟随系统）模式选择器的标签
+  "settings.appearance": "外观",
+  // 设置 > 通用：外观选择器的「亮色」选项
+  "settings.appearance.light": "亮色",
+  // 设置 > 通用：外观选择器的「暗色」选项
+  "settings.appearance.dark": "暗色",
+  // 设置 > 通用：外观选择器的「跟随系统」选项
+  "settings.appearance.system": "跟随系统",
   // 设置 > 通用：调试工具开关的标题（开启后在侧边栏显示调试入口）
   "settings.debugTools": "调试工具",
   // 设置 > 通用：调试工具开关下方的说明文案

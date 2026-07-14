@@ -4,7 +4,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../components/ui/dialog";
-import { FieldGroup } from "../../components/ui/field";
+import { Field, FieldGroup, FieldLabel } from "../../components/ui/field";
 import { NativeSelect, NativeSelectOption } from "../../components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Switch } from "../../components/ui/switch";
@@ -18,6 +18,7 @@ import { AdvancedSettings } from "./AdvancedSettings";
 import { UpdateChecker } from "./UpdateChecker";
 import { SUPPORTED_LOCALES } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
+import type { ThemeMode } from "@shared/electron-api";
 import { InfoIcon } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 
@@ -123,6 +124,8 @@ function SettingsTabs() {
   const { t } = useI18n();
   const locale = useSettingsStore((s) => s.locale);
   const changeLocale = useSettingsStore((s) => s.changeLocale);
+  const theme = useSettingsStore((s) => s.theme);
+  const setTheme = useSettingsStore((s) => s.setTheme);
   const debugToolsEnabled = useSettingsStore((s) => s.debugToolsEnabled);
   const setDebugToolsEnabled = useSettingsStore((s) => s.setDebugToolsEnabled);
   const form = useSettingsForm(electronAPI);
@@ -146,14 +149,22 @@ function SettingsTabs() {
         </TabsContent>
 
         <TabsContent value="general" className="mt-3">
-          <FieldGroup>
-            <SectionTitle>{t("settings.language")}</SectionTitle>
+          <Field>
+            <SectionTitle as={FieldLabel}>{t("settings.language")}</SectionTitle>
             <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(electronAPI, e.target.value)}>
               {SUPPORTED_LOCALES.map((loc) => (
                 <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>
               ))}
             </NativeSelect>
-          </FieldGroup>
+          </Field>
+          <Field className="mt-5">
+            <SectionTitle as={FieldLabel}>{t("settings.appearance")}</SectionTitle>
+            <NativeSelect className="w-full" value={theme} onChange={(e) => void setTheme(electronAPI, e.target.value as ThemeMode)}>
+              <NativeSelectOption value="light">{t("settings.appearance.light")}</NativeSelectOption>
+              <NativeSelectOption value="dark">{t("settings.appearance.dark")}</NativeSelectOption>
+              <NativeSelectOption value="system">{t("settings.appearance.system")}</NativeSelectOption>
+            </NativeSelect>
+          </Field>
           <FieldGroup className="mt-5">
             <div className="flex items-center justify-between gap-3">
               <div className="flex flex-col gap-1">

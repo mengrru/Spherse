@@ -1,4 +1,5 @@
 import path from "node:path";
+import { nativeTheme } from "electron";
 import Store from "electron-store";
 import type { AppSettings, ModelGroupSettings, ProviderCredentials } from "@spherse/core";
 import { getSupportedProviders } from "@spherse/core";
@@ -49,6 +50,7 @@ export function getMaskedSettings(): AppSettings | null {
       image: maskModelGroup(settings.models?.image),
     },
     debugToolsEnabled: settings.debugToolsEnabled ?? false,
+    theme: settings.theme ?? "system",
   };
 }
 
@@ -84,6 +86,7 @@ export function saveSettings(incoming: AppSettings): void {
       image: mergeModelGroup(incoming.models?.image, prev?.models?.image),
     },
     debugToolsEnabled: incoming.debugToolsEnabled ?? prev?.debugToolsEnabled ?? false,
+    theme: incoming.theme ?? prev?.theme ?? "system",
   };
   settingsStore.set("settings", merged);
   applySettingsToEnv(merged);
@@ -95,7 +98,12 @@ export function restoreEnvFromSettings(): void {
   applySettingsToEnv(settings);
 }
 
+export function applyThemeSource(theme: AppSettings["theme"]): void {
+  nativeTheme.themeSource = theme ?? "system";
+}
+
 function applySettingsToEnv(settings: AppSettings): void {
+  applyThemeSource(settings.theme);
   const textCatalog = getSupportedProviders();
   for (const [id, creds] of Object.entries(settings.models?.text?.providers ?? {})) {
     if (creds?.apiKey) {

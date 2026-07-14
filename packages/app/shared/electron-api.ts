@@ -23,6 +23,8 @@ export interface SampleManifestEntry {
   dirName: string;
 }
 
+export type ThemeMode = "light" | "dark" | "system";
+
 export interface IpcAppSettings {
   locale?: string;
   models?: {
@@ -30,6 +32,7 @@ export interface IpcAppSettings {
     image?: ModelGroupSettings;
   };
   debugToolsEnabled?: boolean;
+  theme?: ThemeMode;
 }
 
 export type UpdateStatus =

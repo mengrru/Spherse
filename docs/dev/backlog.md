@@ -57,6 +57,7 @@
 - [x] **用户自定义欢迎页**：项目头像右键菜单支持设置项目级 HTML/图片欢迎页，项目根路由展示欢迎页，Chat 页面提供显式关闭按钮返回欢迎页。参见 `docs/dev/features/2026-06-07-user-custom-welcome-page/design.md`
 - [x] **项目设置子菜单 + 主题编辑器**：项目头像右键菜单的「设置欢迎页」改为二级菜单「设置」（含「欢迎页」「主题」），新增主题 CSS 编辑器弹窗直接读写 `.spherse/theme.css`，保存后热更新。参见 `docs/dev/features/2026-06-19-project-settings-dialog/design.md`
 - [x] **自定义主题体验优化**：token 重命名为 `--sp-*` 命名空间（废弃 `--shadcn-*`/`--agent-*`）、废弃 `scopeCss` 改用原生 CSS nesting、聊天主题 dark mode 支持、聊天主题自动重载、补齐 data-* 钩子（`data-chat-bubble`/`data-chat-composer-input`/`data-chat-float-close`/`data-md-code`/`data-md-code-inline`/`data-md-quote`/`data-content-doc`）与文档视图 markdown 自定义。参见 `docs/dev/features/2026-06-26-theme-customization-experience/design.md`
+- [x] **外观模式切换（亮色/暗色/跟随系统）**：设置 > 通用新增「外观」选择（`AppSettings.theme`）；Electron main 在启动与保存设置时调用 `nativeTheme.themeSource`，renderer 的 `@media (prefers-color-scheme)` / Tailwind `dark:` / 项目级与 agent 主题全部自动跟随应用选择的外观模式，无需改造 CSS 与主题生态。
 - [x] **全局 toast 样式钩子**：全局 toast（sonner）暴露 `data-toast-root` 语义锚点（`<div data-toast-root className="contents">` 包裹 `<Sonner>`，因 sonner `ToasterProps` 封闭不透传 `data-*`），供项目级主题用 `[data-toast-root]` 前缀 + sonner 原生 `[data-sonner-toast]`/`[data-type]`/`[data-title]`/`[data-description]` 等后代选择器定制 toast 外观；同步更新 `create-ui-theme` skill、`architecture.md` 与 `AGENTS.md` 维护契约，新增 `sonner.structure.test.ts` 守卫。
 - [x] **支持 Agent 定时执行**：按 cron 表达式定时触发 agent 运行
 - [x] **定时任务（scheduler）体验优化**：cron 输入由 Select 下拉改为常驻 Input + 模板按钮；统一术语 定时消息→定时任务（三语）；发送后通知→完成后通知（文案，逻辑本就基于 agent_end 触发）；新增绑定已有会话模式（填写 session ID 在指定 session 内执行）
