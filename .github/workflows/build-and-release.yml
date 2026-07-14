@@ -44,7 +44,8 @@ jobs:
         with:
           node-version: 20
 
-      - run: npm ci
+      - name: Install dependencies (skip native compilation)
+        run: npm ci --ignore-scripts
 
       - name: Sync app version from tag
         shell: bash
@@ -53,6 +54,10 @@ jobs:
 
       - name: Build all packages
         run: npm run build
+
+      - name: Download Electron binary
+        shell: bash
+        run: node node_modules/electron/install.js
 
       - name: Rebuild native deps for Electron (better-sqlite3)
         run: node scripts/rebuild-native.mjs
