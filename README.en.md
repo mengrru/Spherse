@@ -1,3 +1,5 @@
+<div align="center">
+
 # Spherse
 
 [中文](README.md)｜EN
@@ -6,9 +8,13 @@ A local-first, out-of-the-box desktop tool for AI-assisted writing and roleplay.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+<img src="packages/landing/public/screenshots/carousel-2.png" alt="Spherse Screenshot" />
+
+</div>
+
 ## Overview
 
-Spherse is a desktop application built on Electron + React + Fastify. It provides a foundational agent runtime framework and core features that support a variety of text-based creative needs — including but not limited to worldbuilding, roleplay, or personal journals.
+Spherse is a desktop application built on Electron. It provides a foundational agent runtime framework and core features that support a variety of text-based creative needs — including but not limited to worldbuilding, roleplay, or personal journals.
 
 All data is stored locally on the user's machine.
 

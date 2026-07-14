@@ -1,3 +1,5 @@
+<div align="center">
+
 # Spherse
 
 中文｜[EN](README.en.md)
@@ -6,9 +8,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+<img src="packages/landing/public/screenshots/carousel-2.png" alt="Spherse Screenshot" />
+
+</div>
+
 ## 简介
 
-Spherse 是一个基于 Electron + React + Fastify 的桌面应用。它提供了基础的 Agent 运行框架与核心功能，能支持用户不同的文字创作需求——包括但不限于世界观创作、角色扮演，或是个人的生活记录台。
+Spherse 是一个基于 Electron 的桌面应用。它提供了基础的 Agent 运行框架与核心功能，能支持用户不同的文字创作需求——包括但不限于世界观创作、角色扮演，或是个人的生活记录台。
 
 所有数据存储在用户本地。
 
