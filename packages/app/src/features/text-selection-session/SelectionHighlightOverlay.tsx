@@ -1,3 +1,5 @@
+import { createPortal } from "react-dom";
+
 interface HighlightRect {
   left: number;
   top: number;
@@ -10,7 +12,7 @@ interface SelectionHighlightOverlayProps {
 }
 
 export function SelectionHighlightOverlay({ rects }: SelectionHighlightOverlayProps) {
-  return (
+  return createPortal(
     <div className="pointer-events-none fixed inset-0 z-40" data-testid="text-selection-highlight">
       {rects.map((rect, index) => (
         <div
@@ -24,6 +26,7 @@ export function SelectionHighlightOverlay({ rects }: SelectionHighlightOverlayPr
           }}
         />
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }

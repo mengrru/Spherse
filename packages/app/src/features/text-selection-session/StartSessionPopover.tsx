@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
@@ -80,7 +81,7 @@ export function StartSessionPopover({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
       ref={ref}
       className="fixed z-50 flex flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-xl"
@@ -143,6 +144,7 @@ export function StartSessionPopover({
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

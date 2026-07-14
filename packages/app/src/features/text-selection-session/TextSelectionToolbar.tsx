@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
 import { useDismissable } from "../../hooks/useDismissable";
@@ -17,7 +18,7 @@ export function TextSelectionToolbar({ position, selectedText, onStart, onCopy, 
   const { t } = useI18n();
   useDismissable({ ref, onDismiss: onClose });
 
-  return (
+  return createPortal(
     <div
       ref={ref}
       className="fixed z-50 flex -translate-x-1/2 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-lg ring-1 ring-border/60"
@@ -52,6 +53,7 @@ export function TextSelectionToolbar({ position, selectedText, onStart, onCopy, 
         <MessageCircleIcon className="size-3.5" />
         {t("text-selection.startSession")}
       </Button>
-    </div>
+    </div>,
+    document.body,
   );
 }
