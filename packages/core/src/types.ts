@@ -79,10 +79,15 @@ export interface ProviderCredentials {
   apiKey?: string;
 }
 
+export interface SamplingParams {
+  temperature?: number;
+  topP?: number;
+}
+
 export interface ModelGroupSettings {
   defaultModel: string;
   providers: Record<string, ProviderCredentials>;
-  temperature?: number;
+  sampling?: SamplingParams;
 }
 
 export type ThemeMode = "light" | "dark" | "system";

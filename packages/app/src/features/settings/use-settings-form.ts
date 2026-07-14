@@ -1,15 +1,15 @@
 import { useEffect, useState, useCallback } from "react";
+import type { SamplingParams } from "@spherse/core";
 import type { ProviderConfig, SettingsApi } from "./types";
 
 interface GroupFormState {
   providers: Record<string, ProviderConfig>;
   apiKeys: Record<string, string>;
   defaultModel: string;
-  temperature?: number;
+  sampling?: SamplingParams;
   setApiKey: (id: string, value: string) => void;
   changeDefaultModel: (model: string) => Promise<boolean>;
-  setTemperature: (value?: number) => Promise<boolean>;
-  resetTemperature: () => Promise<boolean>;
+  patchSampling: (params: SamplingParams) => Promise<boolean>;
   connect: (id: string) => Promise<boolean>;
   disconnect: (id: string) => Promise<boolean>;
 }
@@ -17,7 +17,7 @@ interface GroupFormState {
 interface GroupData {
   apiKeys: Record<string, string>;
   defaultModel: string;
-  temperature?: number;
+  sampling?: SamplingParams;
 }
 
 function extractKeys(providers: Record<string, { apiKey?: string }> | undefined): Record<string, string> {
@@ -55,7 +55,7 @@ export function useSettingsForm(api: SettingsApi) {
       setTextData({
         apiKeys: extractKeys(settings?.models?.text?.providers),
         defaultModel: settings?.models?.text?.defaultModel ?? "",
-        temperature: settings?.models?.text?.temperature,
+        sampling: settings?.models?.text?.sampling,
       });
       setImageData({
         apiKeys: extractKeys(settings?.models?.image?.providers),
@@ -75,7 +75,7 @@ export function useSettingsForm(api: SettingsApi) {
       try {
         await api.saveSettings({
           models: {
-            text: { defaultModel: t.defaultModel, providers: keysToProviders(t.apiKeys), temperature: t.temperature },
+            text: { defaultModel: t.defaultModel, providers: keysToProviders(t.apiKeys), sampling: t.sampling },
             image: { defaultModel: i.defaultModel, providers: keysToProviders(i.apiKeys) },
           },
         });
@@ -98,7 +98,7 @@ export function useSettingsForm(api: SettingsApi) {
     providers,
     apiKeys: data.apiKeys,
     defaultModel: data.defaultModel,
-    temperature: data.temperature,
+    sampling: data.sampling,
     setApiKey: (id, value) => {
       setData({ ...data, apiKeys: { ...data.apiKeys, [id]: value } });
     },
@@ -107,13 +107,8 @@ export function useSettingsForm(api: SettingsApi) {
       setData(next);
       return kind === "text" ? save(next, undefined) : save(undefined, next);
     },
-    setTemperature: async (value) => {
-      const next = { ...data, temperature: value };
-      setData(next);
-      return kind === "text" ? save(next, undefined) : save(undefined, next);
-    },
-    resetTemperature: async () => {
-      const next = { ...data, temperature: undefined };
+    patchSampling: async (params) => {
+      const next = { ...data, sampling: mergeSampling(data.sampling, params) };
       setData(next);
       return kind === "text" ? save(next, undefined) : save(undefined, next);
     },
@@ -136,4 +131,9 @@ export function useSettingsForm(api: SettingsApi) {
     text: makeGroup("text", textProviders, textData, setTextData),
     image: makeGroup("image", imageProviders, imageData, setImageData),
   };
+}
+
+function mergeSampling(prev: SamplingParams | undefined, patch: SamplingParams): SamplingParams {
+  const merged: SamplingParams = { ...prev, ...patch };
+  return merged.temperature === undefined && merged.topP === undefined ? {} : merged;
 }

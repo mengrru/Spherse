@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { createMultiProjectServer } from "@spherse/server";
 import type { ProjectRegistry } from "@spherse/server";
+import type { SamplingParams } from "@spherse/core";
 import { getSettings } from "./settings.js";
 
 let serverHandle: { fastify: FastifyInstance; registry: ProjectRegistry } | null = null;
@@ -10,7 +11,7 @@ export async function ensureServer(): Promise<void> {
   const settings = getSettings();
   const result = await createMultiProjectServer({
     defaultModel: settings?.models?.text?.defaultModel,
-    temperature: settings?.models?.text?.temperature,
+    sampling: settings?.models?.text?.sampling,
   });
   serverHandle = { fastify: result.fastify, registry: result.registry };
 }
@@ -37,9 +38,9 @@ export function updateDefaultModel(defaultModel: string | undefined): void {
   serverHandle.registry.setDefaultModel(defaultModel);
 }
 
-export function updateTemperature(temperature: number | undefined): void {
+export function updateSampling(sampling: SamplingParams | undefined): void {
   if (!serverHandle) return;
-  serverHandle.registry.setTemperature(temperature);
+  serverHandle.registry.setSampling(sampling);
 }
 
 export async function stopServer(): Promise<void> {

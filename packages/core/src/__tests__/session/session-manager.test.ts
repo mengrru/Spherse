@@ -66,7 +66,7 @@ describe("SessionManager temperature propagation", () => {
     resolveModelByIdMock.mockClear();
     runtime = (await createProject(tmpDir, {
       projectName: "Test",
-      temperature: 0.3,
+      sampling: { temperature: 0.3 },
       logger: createSilentLogger(),
     })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
     const projectStore = runtime.projectManager.projectStore;
@@ -79,36 +79,36 @@ describe("SessionManager temperature propagation", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("passes constructor temperature to getChatStreamFn on buildAgent", async () => {
+  it("passes constructor sampling.temperature to getChatStreamFn on buildAgent", async () => {
     await runtime.sessionRuntime.createSession(agentId);
 
     expect(getChatStreamFnMock).toHaveBeenCalledTimes(1);
-    expect(getChatStreamFnMock).toHaveBeenLastCalledWith(0.3);
+    expect(getChatStreamFnMock).toHaveBeenLastCalledWith({ temperature: 0.3 });
   });
 
-  it("updates temperature via setTemperature for subsequent buildAgent", async () => {
-    runtime.sessionRuntime.setTemperature(0.5);
+  it("updates temperature via setSampling for subsequent buildAgent", async () => {
+    runtime.sessionRuntime.setSampling({ temperature: 0.5 });
     await runtime.sessionRuntime.createSession(agentId);
 
-    expect(getChatStreamFnMock).toHaveBeenLastCalledWith(0.5);
+    expect(getChatStreamFnMock).toHaveBeenLastCalledWith({ temperature: 0.5 });
   });
 
-  it("passes undefined after setTemperature(undefined)", async () => {
-    runtime.sessionRuntime.setTemperature(undefined);
+  it("passes undefined after setSampling(undefined)", async () => {
+    runtime.sessionRuntime.setSampling(undefined);
     await runtime.sessionRuntime.createSession(agentId);
 
     expect(getChatStreamFnMock).toHaveBeenLastCalledWith(undefined);
   });
 
-  it("hot-swaps streamFn on existing agents when setTemperature is called", async () => {
+  it("hot-swaps streamFn on existing agents when setSampling is called", async () => {
     const sessionId = await runtime.sessionRuntime.createSession(agentId);
     expect(getChatStreamFnMock).toHaveBeenCalledTimes(1);
-    expect(getChatStreamFnMock).toHaveBeenLastCalledWith(0.3);
+    expect(getChatStreamFnMock).toHaveBeenLastCalledWith({ temperature: 0.3 });
 
-    runtime.sessionRuntime.setTemperature(0.5);
+    runtime.sessionRuntime.setSampling({ temperature: 0.5 });
 
     expect(getChatStreamFnMock).toHaveBeenCalledTimes(2);
-    expect(getChatStreamFnMock).toHaveBeenLastCalledWith(0.5);
+    expect(getChatStreamFnMock).toHaveBeenLastCalledWith({ temperature: 0.5 });
 
     const agent = activeAgent(runtime as RuntimeInternals, sessionId);
     const swappedStreamFn = getChatStreamFnMock.mock.results[1].value;
@@ -125,14 +125,77 @@ describe("SessionManager temperature propagation", () => {
     const fnBeforeB = activeAgent(runtime as RuntimeInternals, sessionIdB).streamFn;
     const fnBeforeC = activeAgent(runtime as RuntimeInternals, sessionIdC).streamFn;
 
-    runtime.sessionRuntime.setTemperature(0.9);
+    runtime.sessionRuntime.setSampling({ temperature: 0.9 });
 
     expect(getChatStreamFnMock.mock.calls.length).toBe(callsBefore + 3);
-    expect(getChatStreamFnMock.mock.calls.slice(callsBefore)).toEqual([[0.9], [0.9], [0.9]]);
+    expect(getChatStreamFnMock.mock.calls.slice(callsBefore)).toEqual([
+      [{ temperature: 0.9 }],
+      [{ temperature: 0.9 }],
+      [{ temperature: 0.9 }],
+    ]);
 
     expect(activeAgent(runtime as RuntimeInternals, sessionIdA).streamFn).not.toBe(fnBeforeA);
     expect(activeAgent(runtime as RuntimeInternals, sessionIdB).streamFn).not.toBe(fnBeforeB);
     expect(activeAgent(runtime as RuntimeInternals, sessionIdC).streamFn).not.toBe(fnBeforeC);
+  });
+});
+
+describe("SessionManager sampling (temperature + topP) propagation", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-topp-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      sampling: { temperature: 0.3, topP: 0.8 },
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore;
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
+    runtime.timerService.stop();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("passes constructor sampling to getChatStreamFn on buildAgent", async () => {
+    await runtime.sessionRuntime.createSession(agentId);
+
+    expect(getChatStreamFnMock).toHaveBeenCalledTimes(1);
+    expect(getChatStreamFnMock).toHaveBeenLastCalledWith({ temperature: 0.3, topP: 0.8 });
+  });
+
+  it("updates topP via setSampling while preserving temperature", async () => {
+    runtime.sessionRuntime.setSampling({ temperature: 0.3, topP: 0.5 });
+    await runtime.sessionRuntime.createSession(agentId);
+
+    expect(getChatStreamFnMock).toHaveBeenLastCalledWith({ temperature: 0.3, topP: 0.5 });
+  });
+
+  it("passes undefined sampling after setSampling(undefined)", async () => {
+    runtime.sessionRuntime.setSampling(undefined);
+    await runtime.sessionRuntime.createSession(agentId);
+
+    expect(getChatStreamFnMock).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it("hot-swaps streamFn on existing agents when setSampling is called", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    expect(getChatStreamFnMock).toHaveBeenLastCalledWith({ temperature: 0.3, topP: 0.8 });
+
+    runtime.sessionRuntime.setSampling({ temperature: 0.3, topP: 0.1 });
+
+    expect(getChatStreamFnMock).toHaveBeenLastCalledWith({ temperature: 0.3, topP: 0.1 });
+
+    const agent = activeAgent(runtime as RuntimeInternals, sessionId);
+    const swappedStreamFn = getChatStreamFnMock.mock.results[1].value;
+    expect(agent.streamFn).toBe(swappedStreamFn);
   });
 });
 

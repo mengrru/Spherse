@@ -1,7 +1,7 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { createProject } from "@spherse/core";
-import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger } from "@spherse/core";
+import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger, SamplingParams } from "@spherse/core";
 
 export interface ProjectContext {
   runtime: ProjectRuntime;
@@ -16,12 +16,15 @@ export class ProjectRegistry {
   private pending = new Map<string, Promise<ProjectContext>>();
   private logger: Logger;
   private defaultModel?: string;
-  private temperature?: number;
+  private sampling?: SamplingParams;
 
-  constructor(logger: Logger, options?: { defaultModel?: string; temperature?: number }) {
+  constructor(
+    logger: Logger,
+    options?: { defaultModel?: string; sampling?: SamplingParams },
+  ) {
     this.logger = logger;
     this.defaultModel = options?.defaultModel;
-    this.temperature = options?.temperature;
+    this.sampling = options?.sampling;
   }
 
   async register(projectRoot: string): Promise<ProjectContext> {
@@ -49,7 +52,7 @@ export class ProjectRegistry {
     const projectLogger = this.logger.child({ projectRoot: resolvedRoot });
     const runtime = await createProject(resolvedRoot, {
       defaultModel: this.defaultModel,
-      temperature: this.temperature,
+      sampling: this.sampling,
       logger: projectLogger,
     });
 
@@ -115,13 +118,13 @@ export class ProjectRegistry {
     }
   }
 
-  setTemperature(temperature: number | undefined): void {
-    this.temperature = temperature;
+  setSampling(sampling: SamplingParams | undefined): void {
+    this.sampling = sampling;
     for (const ctx of this.projects.values()) {
       try {
-        ctx.sessionRuntime.setTemperature(temperature);
+        ctx.sessionRuntime.setSampling(sampling);
       } catch (err) {
-        this.logger.error({ err }, "failed to update temperature for project");
+        this.logger.error({ err }, "failed to update sampling for project");
       }
     }
   }

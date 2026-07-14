@@ -33,7 +33,7 @@ export const zhCN = {
   "settings.models.saveFailed": "保存失败",
   // 关闭按钮
   "settings.models.close": "关闭",
-  // 文本模型 tab → 高级设置折叠区标题（点击展开/收起 temperature 等参数）
+  // 文本模型 tab → 高级设置折叠区标题（点击展开/收起 temperature、top_p 等采样参数）
   "settings.models.advanced": "高级设置",
   // 高级设置折叠区顶部的警示文案（提示用户改参数有副作用、无需求不要动）
   "settings.models.advancedTip": "调整这些参数会影响模型的输出表现。如果没有明确的需求，建议保持默认。",
@@ -45,6 +45,14 @@ export const zhCN = {
   "settings.models.temperatureHint": "通常 0–2，值越低输出越确定，越高越随机。留空使用模型默认值。",
   // 高级设置 → temperature「恢复默认」按钮（清空回 unset 状态）
   "settings.models.temperatureReset": "恢复默认",
+  // 高级设置 → top_p 数字输入框的标签
+  "settings.models.topP": "Top P",
+  // 高级设置 → top_p 输入框的 placeholder（未设置时显示，代表用 provider 默认）
+  "settings.models.topPPlaceholder": "默认",
+  // 高级设置 → top_p 输入框下方的范围说明与行为提示
+  "settings.models.topPHint": "通常 0–1，与 temperature 共同控制采样：只从累积概率达到 top_p 的候选词中选取。留空使用模型默认值。",
+  // 高级设置 → top_p「恢复默认」按钮（清空回 unset 状态）
+  "settings.models.topPReset": "恢复默认",
   // provider 状态标签：已填写 API Key
   "settings.provider.apiKeyProvided": "已提供 API Key",
   // provider API Key 输入框占位提示

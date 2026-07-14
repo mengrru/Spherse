@@ -1,7 +1,7 @@
 import { type Models, type ImagesModels, type MutableImagesModels } from "@earendil-works/pi-ai";
 import { builtinModels, builtinImagesModels } from "@earendil-works/pi-ai/providers/all";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
-import type { ProviderCatalog, ProviderCatalogItem, ProviderModelItem } from "../types.js";
+import type { ProviderCatalog, ProviderCatalogItem, ProviderModelItem, SamplingParams } from "../types.js";
 import { createZhipuImagesProvider } from "./zhipu-images.js";
 
 export const ENABLED_PROVIDERS = [
@@ -154,12 +154,34 @@ export function getImageSupportedProviders(): ProviderCatalog {
   return catalog;
 }
 
-export function getChatStreamFn(temperature?: number): StreamFn {
+export function getChatStreamFn(sampling?: SamplingParams): StreamFn {
+  const { temperature, topP } = sampling ?? {};
   return (model, context, options) =>
     models.streamSimple(model, context, {
       ...options,
       ...(temperature != null ? { temperature } : {}),
+      ...(topP != null ? { onPayload: injectTopP(topP) } : {}),
     });
+}
+
+function injectTopP(topP: number) {
+  return (payload: unknown, model: { api?: string }) => {
+    const api = model?.api;
+    if (api === "google-generative-ai") {
+      const p = (payload ?? {}) as Record<string, unknown>;
+      const config = (p.config ?? {}) as Record<string, unknown>;
+      return { ...p, config: { ...config, topP } };
+    }
+    if (
+      api === "openai-completions" ||
+      api === "openai-responses" ||
+      api === "anthropic-messages"
+    ) {
+      const p = (payload ?? {}) as Record<string, unknown>;
+      return { ...p, top_p: topP };
+    }
+    return undefined;
+  };
 }
 
 export function getImagesModels(): ImagesModels {

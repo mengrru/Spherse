@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import type { AddressInfo } from "node:net";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
-import type { Logger } from "@spherse/core";
+import type { Logger, SamplingParams } from "@spherse/core";
 import { NotFoundError, ValidationError, AccessDeniedError, ConflictError } from "@spherse/core";
 import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
@@ -20,7 +20,7 @@ export interface MultiProjectServer {
 }
 
 export async function createMultiProjectServer(
-  options?: { defaultModel?: string; temperature?: number },
+  options?: { defaultModel?: string; sampling?: SamplingParams },
 ): Promise<MultiProjectServer> {
   const prettyStream = createPrettyStream();
   const logger = createServerLogger(prettyStream);
@@ -59,7 +59,7 @@ export async function createMultiProjectServer(
 
   const registry = new ProjectRegistry(logger, {
     defaultModel: options?.defaultModel,
-    temperature: options?.temperature,
+    sampling: options?.sampling,
   });
 
   registerAllRoutes(fastify, registry);

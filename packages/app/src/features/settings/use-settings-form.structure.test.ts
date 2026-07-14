@@ -6,40 +6,40 @@ import { describe, expect, it } from "vitest";
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(currentDir, "use-settings-form.ts"), "utf8");
 
-describe("useSettingsForm temperature wiring", () => {
-  it("reads text temperature from settings on init", () => {
-    expect(source).toContain("temperature: settings?.models?.text?.temperature");
+describe("useSettingsForm sampling wiring", () => {
+  it("reads text sampling from settings on init", () => {
+    expect(source).toContain("sampling: settings?.models?.text?.sampling");
   });
 
-  it("includes temperature in the text group of the save payload", () => {
-    expect(source).toContain("temperature: t.temperature");
+  it("includes sampling in the text group of the save payload", () => {
+    expect(source).toContain("sampling: t.sampling");
   });
 
-  it("omits temperature from the image group of the save payload", () => {
+  it("omits sampling from the image group of the save payload", () => {
     const imageLine = source
       .split("\n")
       .find((l) => l.includes("image:") && l.includes("keysToProviders(i.apiKeys)"));
     expect(imageLine).toBeDefined();
-    expect(imageLine).not.toContain("temperature");
+    expect(imageLine).not.toContain("sampling");
   });
 
-  it("exposes setTemperature / resetTemperature via makeGroup", () => {
-    expect(source).toContain("setTemperature: async");
-    expect(source).toContain("resetTemperature: async");
+  it("exposes a single patchSampling (no setTemperature/resetTemperature/setTopP/resetTopP)", () => {
+    expect(source).toContain("patchSampling: async");
+    expect(source).not.toContain("setTemperature: async");
+    expect(source).not.toContain("setTopP: async");
   });
 
-  it("persists temperature immediately (data + save) like changeDefaultModel", () => {
-    expect(source).toContain("const next = { ...data, temperature: value }");
-    expect(source).toContain("const next = { ...data, temperature: undefined }");
+  it("persists sampling immediately via mergeSampling + save", () => {
+    expect(source).toContain("mergeSampling(data.sampling, params)");
   });
 
-  it("preserves sibling fields (e.g. temperature) when disconnecting a provider", () => {
+  it("preserves sampling (via spread of data) when disconnecting a provider", () => {
     expect(source).toContain(
       "const next = { ...data, apiKeys: nextKeys, defaultModel: nextModel }",
     );
   });
 
-  it("does not read image temperature from settings on init", () => {
-    expect(source).not.toContain("settings?.models?.image?.temperature");
+  it("does not read image sampling from settings on init", () => {
+    expect(source).not.toContain("settings?.models?.image?.sampling");
   });
 });

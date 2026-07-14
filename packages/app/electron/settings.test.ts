@@ -18,60 +18,60 @@ vi.mock("electron", () => ({
 
 import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore } from "./settings";
 
-describe("mergeModelGroup temperature passthrough", () => {
-  it("uses incoming temperature when present", () => {
+describe("mergeModelGroup sampling passthrough", () => {
+  it("uses incoming sampling when present", () => {
     const result = mergeModelGroup(
-      { defaultModel: "deepseek/v4", providers: {}, temperature: 0.7 },
-      { defaultModel: "", providers: {}, temperature: 0.3 },
+      { defaultModel: "deepseek/v4", providers: {}, sampling: { temperature: 0.7, topP: 0.9 } },
+      { defaultModel: "", providers: {}, sampling: { temperature: 0.3, topP: 0.1 } },
     );
 
-    expect(result.temperature).toBe(0.7);
+    expect(result.sampling).toEqual({ temperature: 0.7, topP: 0.9 });
   });
 
-  it("does not fall back to prev when incoming has no temperature", () => {
+  it("does not fall back to prev when incoming has no sampling", () => {
     const result = mergeModelGroup(
       { defaultModel: "deepseek/v4", providers: {} },
-      { defaultModel: "", providers: {}, temperature: 0.3 },
+      { defaultModel: "", providers: {}, sampling: { temperature: 0.3 } },
     );
 
-    expect(result.temperature).toBeUndefined();
+    expect(result.sampling).toBeUndefined();
   });
 
-  it("is undefined when neither has temperature", () => {
+  it("is undefined when neither has sampling", () => {
     const result = mergeModelGroup(
       { defaultModel: "deepseek/v4", providers: {} },
       { defaultModel: "", providers: {} },
     );
 
-    expect(result.temperature).toBeUndefined();
+    expect(result.sampling).toBeUndefined();
   });
 
-  it("clears temperature when incoming is explicitly undefined", () => {
+  it("clears sampling when incoming is explicitly undefined", () => {
     const result = mergeModelGroup(
-      { defaultModel: "deepseek/v4", providers: {}, temperature: undefined },
-      { defaultModel: "", providers: {}, temperature: 0.5 },
+      { defaultModel: "deepseek/v4", providers: {}, sampling: undefined },
+      { defaultModel: "", providers: {}, sampling: { temperature: 0.5 } },
     );
 
-    expect(result.temperature).toBeUndefined();
+    expect(result.sampling).toBeUndefined();
   });
 });
 
-describe("maskModelGroup temperature passthrough", () => {
-  it("preserves temperature without masking", () => {
+describe("maskModelGroup sampling passthrough", () => {
+  it("preserves sampling without masking", () => {
     const result = maskModelGroup({
       defaultModel: "deepseek/v4",
       providers: { deepseek: { apiKey: "sk-secret-key-12345" } },
-      temperature: 0.4,
+      sampling: { temperature: 0.4, topP: 0.5 },
     });
 
-    expect(result.temperature).toBe(0.4);
+    expect(result.sampling).toEqual({ temperature: 0.4, topP: 0.5 });
     expect(result.providers.deepseek?.apiKey).toBe("sk-s****2345");
   });
 
-  it("passes through undefined temperature", () => {
+  it("passes through undefined sampling", () => {
     const result = maskModelGroup({ defaultModel: "", providers: {} });
 
-    expect(result.temperature).toBeUndefined();
+    expect(result.sampling).toBeUndefined();
   });
 });
 

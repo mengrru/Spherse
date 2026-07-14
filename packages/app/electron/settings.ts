@@ -37,7 +37,7 @@ export function maskModelGroup(group: ModelGroupSettings | undefined): ModelGrou
       providers[id] = { apiKey: maskApiKey(creds.apiKey) };
     }
   }
-  return { defaultModel: group?.defaultModel ?? "", providers, temperature: group?.temperature };
+  return { defaultModel: group?.defaultModel ?? "", providers, sampling: group?.sampling };
 }
 
 export function getMaskedSettings(): AppSettings | null {
@@ -74,7 +74,7 @@ export function mergeModelGroup(
       providers[id] = { apiKey: newKey };
     }
   }
-  return { defaultModel, providers, temperature: incoming?.temperature };
+  return { defaultModel, providers, sampling: incoming?.sampling };
 }
 
 export function saveSettings(incoming: AppSettings): void {

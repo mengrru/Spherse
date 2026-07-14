@@ -1,7 +1,7 @@
 import { Agent } from "@earendil-works/pi-agent-core";
 import type { AgentEvent, AgentTool, AgentMessage } from "@earendil-works/pi-agent-core";
 import type { Message, Model, Api } from "@earendil-works/pi-ai";
-import type { AgentProfile } from "../types.js";
+import type { AgentProfile, SamplingParams } from "../types.js";
 import { resolveModelById, getChatStreamFn } from "../model-providers/index.js";
 import { createToolsForProject, ToolContext } from "../tools/index.js";
 import type { SkillStore } from "../store/skill.js";
@@ -170,8 +170,8 @@ export class LiveSession {
     }
   }
 
-  applyTemperature(temperature: number | undefined): void {
-    this.agent.streamFn = getChatStreamFn(temperature);
+  applySampling(sampling: SamplingParams | undefined): void {
+    this.agent.streamFn = getChatStreamFn(sampling);
   }
 
   private async maybeCompact(): Promise<void> {
@@ -302,7 +302,7 @@ export class LiveSession {
         tools,
       },
       sessionId,
-      streamFn: getChatStreamFn(ctx.temperature),
+      streamFn: getChatStreamFn(ctx.sampling),
     });
   }
 }

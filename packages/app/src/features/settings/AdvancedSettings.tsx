@@ -3,35 +3,95 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../compo
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Field, FieldLabel } from "../../components/ui/field";
-import { ChevronDownIcon } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
+import { ChevronDownIcon, InfoIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { parseTemperature } from "./parse-temperature";
+import { parseTopP } from "./parse-top-p";
 import { cn } from "../../lib/utils";
+import type { SamplingParams } from "@spherse/core";
 
 interface AdvancedSettingsProps {
-  temperature?: number;
-  onSetTemperature: (value?: number) => void;
-  onReset: () => void;
+  sampling?: SamplingParams;
+  onSetSampling: (params: SamplingParams) => void;
   className?: string;
 }
 
-export function AdvancedSettings({ temperature, onSetTemperature, onReset, className }: AdvancedSettingsProps) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
-  const [localValue, setLocalValue] = useState<string>(
-    temperature == null ? "" : String(temperature),
-  );
+interface ParamFieldConfig {
+  label: string;
+  hint: string;
+  placeholder: string;
+  resetLabel: string;
+  min: number;
+  max?: number;
+  step: number;
+  parse: (value: string) => number | undefined;
+}
 
+function ParamField({
+  value,
+  config,
+  onSet,
+}: {
+  value: number | undefined;
+  config: ParamFieldConfig;
+  onSet: (value?: number) => void;
+}) {
+  const [local, setLocal] = useState<string>(value == null ? "" : String(value));
   useEffect(() => {
-    setLocalValue(temperature == null ? "" : String(temperature));
-  }, [temperature]);
+    setLocal(value == null ? "" : String(value));
+  }, [value]);
 
   const handleBlur = () => {
-    const parsed = parseTemperature(localValue);
-    if (parsed !== temperature) {
-      onSetTemperature(parsed);
+    const parsed = config.parse(local);
+    if (parsed !== value) {
+      onSet(parsed);
     }
   };
+
+  return (
+    <Field className="mt-3">
+      <FieldLabel className="items-center">
+        {config.label}
+        <Tooltip>
+          <TooltipTrigger
+            aria-label={config.hint}
+            className="inline-flex cursor-help text-muted-foreground"
+          >
+            <InfoIcon className="size-3.5" />
+          </TooltipTrigger>
+          <TooltipContent>
+            <span>{config.hint}</span>
+          </TooltipContent>
+        </Tooltip>
+      </FieldLabel>
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          min={config.min}
+          max={config.max}
+          step={config.step}
+          className="max-w-[10rem]"
+          value={local}
+          placeholder={config.placeholder}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={handleBlur}
+        />
+        <Button variant="ghost" size="sm" onClick={() => onSet(undefined)}>
+          {config.resetLabel}
+        </Button>
+      </div>
+    </Field>
+  );
+}
+
+export function AdvancedSettings({
+  sampling,
+  onSetSampling,
+  className,
+}: AdvancedSettingsProps) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen} className={cn("mt-2", className)}>
@@ -46,25 +106,33 @@ export function AdvancedSettings({ temperature, onSetTemperature, onReset, class
       </CollapsibleTrigger>
       <CollapsibleContent>
         <p className="mt-2 text-xs text-muted-foreground">{t("settings.models.advancedTip")}</p>
-        <Field className="mt-3">
-          <FieldLabel>{t("settings.models.temperature")}</FieldLabel>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              min={0}
-              step={0.1}
-              className="max-w-[10rem]"
-              value={localValue}
-              placeholder={t("settings.models.temperaturePlaceholder")}
-              onChange={(e) => setLocalValue(e.target.value)}
-              onBlur={handleBlur}
-            />
-            <Button variant="ghost" size="sm" onClick={onReset}>
-              {t("settings.models.temperatureReset")}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground">{t("settings.models.temperatureHint")}</p>
-        </Field>
+        <ParamField
+          value={sampling?.temperature}
+          onSet={(v) => onSetSampling({ temperature: v })}
+          config={{
+            label: t("settings.models.temperature"),
+            hint: t("settings.models.temperatureHint"),
+            placeholder: t("settings.models.temperaturePlaceholder"),
+            resetLabel: t("settings.models.temperatureReset"),
+            min: 0,
+            step: 0.1,
+            parse: parseTemperature,
+          }}
+        />
+        <ParamField
+          value={sampling?.topP}
+          onSet={(v) => onSetSampling({ topP: v })}
+          config={{
+            label: t("settings.models.topP"),
+            hint: t("settings.models.topPHint"),
+            placeholder: t("settings.models.topPPlaceholder"),
+            resetLabel: t("settings.models.topPReset"),
+            min: 0,
+            max: 1,
+            step: 0.1,
+            parse: parseTopP,
+          }}
+        />
       </CollapsibleContent>
     </Collapsible>
   );

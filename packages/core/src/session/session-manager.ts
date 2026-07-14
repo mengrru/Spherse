@@ -4,6 +4,7 @@ import { type Logger, createSilentLogger } from "../logger.js";
 import { NotFoundError } from "../errors.js";
 import { LiveSession, type AgentEventHandler } from "./live-session.js";
 import { computeSessionStatus, type SessionStatus } from "./status.js";
+import type { SamplingParams } from "../types.js";
 import type { SessionContext, TurnContextSnapshot } from "./types.js";
 import type { TriggerManager } from "../trigger/trigger-manager.js";
 
@@ -13,7 +14,7 @@ export class SessionManager {
 
   constructor(
     projectStore: ProjectStore,
-    options?: { defaultModel?: string; temperature?: number; logger?: Logger },
+    options?: { defaultModel?: string; sampling?: SamplingParams; logger?: Logger },
   ) {
     this.ctx = {
       projectStore,
@@ -21,7 +22,7 @@ export class SessionManager {
       fileWriteMutex: new FileWriteMutex(),
       logger: options?.logger ?? createSilentLogger(),
       defaultModel: options?.defaultModel,
-      temperature: options?.temperature,
+      sampling: options?.sampling,
     };
   }
 
@@ -106,10 +107,10 @@ export class SessionManager {
     }
   }
 
-  setTemperature(temperature: number | undefined): void {
-    this.ctx.temperature = temperature;
+  setSampling(sampling: SamplingParams | undefined): void {
+    this.ctx.sampling = sampling;
     for (const session of this.sessions.values()) {
-      session.applyTemperature(temperature);
+      session.applySampling(sampling);
     }
   }
 }

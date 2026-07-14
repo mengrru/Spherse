@@ -1,5 +1,6 @@
 import path from "node:path";
 import { PROJECT_META_DIR } from "./types.js";
+import type { SamplingParams } from "./types.js";
 import { ProjectStore } from "./store/project.js";
 import { ProjectManager } from "./project-manager.js";
 import { SessionManager } from "./session/session-manager.js";
@@ -14,7 +15,7 @@ export async function createProject(
   options?: {
     projectName?: string;
     defaultModel?: string;
-    temperature?: number;
+    sampling?: SamplingParams;
     logger?: Logger;
   },
 ): Promise<ProjectRuntime> {
@@ -39,7 +40,7 @@ export async function createProject(
   const projectManager = new ProjectManager(projectStore, logger);
   const sessionRuntime = new SessionManager(projectStore, {
     defaultModel: options?.defaultModel,
-    temperature: options?.temperature,
+    sampling: options?.sampling,
     logger,
   });
   const triggerManager = new TriggerManager({ sessionRuntime, projectStore, logger });

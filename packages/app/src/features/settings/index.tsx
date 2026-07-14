@@ -69,9 +69,8 @@ function ModelGroupTab({
       {kind === "text" && (
         <AdvancedSettings
           className="mt-3"
-          temperature={group.temperature}
-          onSetTemperature={(value) => { void group.setTemperature(value); }}
-          onReset={() => { void group.resetTemperature(); }}
+          sampling={group.sampling}
+          onSetSampling={(value) => { void group.patchSampling(value); }}
         />
       )}
       <SectionTitle className={kind === "text" ? "mt-5 flex items-center gap-1.5" : "mt-5"}>
