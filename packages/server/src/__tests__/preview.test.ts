@@ -37,29 +37,70 @@ describe("preview route", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("serves an svg with correct content-type and no-store cache header", async () => {
+  it("serves an svg with correct content-type and no-cache cache header", async () => {
     const res = await app.inject({ method: "GET", url: "/api/projects/p1/preview/icon.svg" });
     expect(res.statusCode).toBe(200);
     expect(res.headers["content-type"]).toBe("image/svg+xml");
-    expect(res.headers["cache-control"]).toBe("no-store");
-    expect(res.body).toBe("<svg></svg>");
+    expect(res.headers["cache-control"]).toBe("no-cache");
+    expect(res.headers["cache-control"]).toBe("no-cache");
+    expect(res.headers.etag).toMatch(/^"\d+-\d+(\.\d+)?"$/);
   });
 
-  it("serves a png with no-store cache header", async () => {
+  it("serves a png with no-cache cache header", async () => {
     const res = await app.inject({ method: "GET", url: "/api/projects/p1/preview/pic.png" });
     expect(res.statusCode).toBe(200);
     expect(res.headers["content-type"]).toBe("image/png");
-    expect(res.headers["cache-control"]).toBe("no-store");
+    expect(res.headers["cache-control"]).toBe("no-cache");
+    expect(res.headers.etag).toMatch(/^"\d+-\d+(\.\d+)?"$/);
   });
 
-  it("applies no-store to css and font assets too", async () => {
+  it("applies no-cache to css and font assets too", async () => {
     const css = await app.inject({ method: "GET", url: "/api/projects/p1/preview/style.css" });
     expect(css.statusCode).toBe(200);
-    expect(css.headers["cache-control"]).toBe("no-store");
+    expect(css.headers["cache-control"]).toBe("no-cache");
+    expect(css.headers.etag).toMatch(/^"\d+-\d+(\.\d+)?"$/);
 
     const font = await app.inject({ method: "GET", url: "/api/projects/p1/preview/font.woff2" });
     expect(font.statusCode).toBe(200);
-    expect(font.headers["cache-control"]).toBe("no-store");
+    expect(font.headers["cache-control"]).toBe("no-cache");
+    expect(font.headers.etag).toMatch(/^"\d+-\d+(\.\d+)?"$/);
+  });
+
+  it("returns 304 when If-None-Match matches the current etag and omits the body", async () => {
+    const first = await app.inject({ method: "GET", url: "/api/projects/p1/preview/icon.svg" });
+    const etag = first.headers.etag;
+    expect(etag).toBeTruthy();
+
+    const revalidate = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/icon.svg",
+      headers: { "if-none-match": etag! },
+    });
+    expect(revalidate.statusCode).toBe(304);
+    expect(revalidate.headers["cache-control"]).toBe("no-cache");
+    expect(revalidate.headers.etag).toBe(etag);
+    expect(revalidate.body).toBe("");
+  });
+
+  it("returns 200 with a new etag after the file is modified", async () => {
+    const iconPath = path.join(tmpDir, "icon.svg");
+    const original = fs.readFileSync(iconPath, "utf8");
+
+    const first = await app.inject({ method: "GET", url: "/api/projects/p1/preview/icon.svg" });
+    const oldEtag = first.headers.etag;
+
+    fs.writeFileSync(iconPath, "<svg>updated</svg>");
+
+    const second = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/icon.svg",
+      headers: { "if-none-match": oldEtag! },
+    });
+    expect(second.statusCode).toBe(200);
+    expect(second.headers.etag).not.toBe(oldEtag);
+    expect(second.body).toBe("<svg>updated</svg>");
+
+    fs.writeFileSync(iconPath, original);
   });
 
   it("ignores the cache-bust version query param", async () => {

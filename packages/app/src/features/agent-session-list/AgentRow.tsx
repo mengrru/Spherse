@@ -9,7 +9,8 @@ import {
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
 import { Badge } from "../../components/ui/badge";
-import { ChevronRightIcon, Clock } from "lucide-react";
+import { Button } from "../../components/ui/button";
+import { ChevronRightIcon, Clock, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ export function AgentRow({ agent, active }: AgentRowProps) {
     (s) => s.projects[projectId]?.hasEnabledTriggersByAgent?.[agent.id] ?? false,
   );
   return (
-    <div className="group/agent-row">
+    <div className="group/agent-row relative">
       <ContextMenu>
         <ContextMenuTrigger
           render={
@@ -45,7 +46,7 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           </span>
           {hasEnabled && (
             <Clock
-              className="ml-auto h-3 w-3 shrink-0 text-muted-foreground"
+              className="ml-auto h-3 w-3 shrink-0 text-muted-foreground group-hover/agent-row:hidden"
               title={t("agent-trigger.indicatorTooltip")}
               aria-label={t("agent-trigger.indicatorTooltip")}
             />
@@ -77,6 +78,17 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        className="absolute end-1 top-1/2 hidden -translate-y-1/2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground group-hover/agent-row:flex"
+        title={t("agent-session-list.newSession")}
+        aria-label={t("agent-session-list.newSession")}
+        onClick={() => actions.newSession(agent)}
+      >
+        <PlusIcon />
+      </Button>
     </div>
   );
 }

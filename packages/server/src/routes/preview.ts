@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import type { Stats } from "node:fs";
 import type { FastifyInstance } from "fastify";
 import { resolveProjectPath, serverAccessPolicy, AccessDeniedError } from "@spherse/core";
 import type { ProjectRegistry } from "../registry.js";
@@ -47,9 +48,29 @@ export function registerPreviewRoutes(fastify: FastifyInstance, _registry: Proje
         throw forbidden("File type not allowed");
       }
 
+      let stat: Stats;
+      try {
+        stat = await fs.stat(absolutePath);
+      } catch {
+        throw notFound("Not found");
+      }
+
+      const etag = `"${stat.size}-${stat.mtimeMs}"`;
+      if (req.headers["if-none-match"] === etag) {
+        return reply
+          .code(304)
+          .header("Cache-Control", "no-cache")
+          .header("ETag", etag)
+          .send();
+      }
+
       try {
         const buffer = await fs.readFile(absolutePath);
-        return reply.type(CONTENT_TYPES[ext]).header("Cache-Control", "no-store").send(buffer);
+        return reply
+          .type(CONTENT_TYPES[ext])
+          .header("Cache-Control", "no-cache")
+          .header("ETag", etag)
+          .send(buffer);
       } catch {
         throw notFound("Not found");
       }
