@@ -33,6 +33,14 @@ Spherse 是一个基于 Electron 的桌面应用。它提供了基础的 Agent �
 - **macOS**：下载 `.dmg` 文件，拖拽安装
 - **Windows**：下载 `.exe` 安装包，运行安装
 
+> **macOS 用户注意**：由于当前未进行 Apple Developer 签名，首次打开时可能提示"已损坏"或"无法验证开发者"。请在终端执行：
+>
+> ```bash
+> xattr -cr /Applications/Spherse.app
+> ```
+>
+> 然后重新打开应用即可。
+
 ## 开发指南
 
 参见 AGENTS.md。

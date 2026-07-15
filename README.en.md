@@ -33,6 +33,14 @@ Visit the [Releases page](https://github.com/mengrru/Spherse/releases) to downlo
 - **macOS**: Download the `.dmg` file and drag to install
 - **Windows**: Download the `.exe` installer and run it
 
+> **Note for macOS users**: The app is currently not signed with an Apple Developer certificate. On first launch you may see a "damaged" or "unidentified developer" warning. Run this in Terminal:
+>
+> ```bash
+> xattr -cr /Applications/Spherse.app
+> ```
+>
+> Then reopen the app.
+
 ## Development
 
 See AGENTS.md.

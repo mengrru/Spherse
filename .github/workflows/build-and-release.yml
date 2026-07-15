@@ -71,6 +71,7 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
         run: |
           if [[ "$RUNNER_OS" == "macOS" && -z "${CSC_LINK:-}${CSC_NAME:-}" ]]; then
+            unset CSC_LINK CSC_NAME CSC_KEY_PASSWORD
             npx electron-builder ${{ matrix.build-args }} --config.mac.identity=- --config.mac.hardenedRuntime=false --publish never
           else
             npx electron-builder ${{ matrix.build-args }} --publish never
