@@ -9,6 +9,8 @@ export const en: Record<TranslationKey, string> = {
   "settings.models.defaultModel": "Default Model",
   "settings.models.selectPlaceholder": "-- Select --",
   "settings.models.configureFirst": "Please configure an API Key first",
+  "settings.models.searchPlaceholder": "Search models…",
+  "settings.models.noResults": "No models found",
   "settings.models.providers": "Model Providers",
   "settings.models.providersHintPre": "You only need an API key for one provider. Don't have one yet? We recommend ",
   "settings.models.providersHintPost": ".",

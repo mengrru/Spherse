@@ -16,6 +16,12 @@ export const ENABLED_PROVIDERS = [
   "moonshotai",
   "moonshotai-cn",
   "xai",
+  "openrouter",
+  "github-copilot",
+  "groq",
+  "together",
+  "mistral",
+  "fireworks",
 ] as const;
 
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
@@ -30,6 +36,12 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   moonshotai: "Moonshot AI",
   "moonshotai-cn": "Moonshot AI（国内）",
   xai: "xAI",
+  openrouter: "OpenRouter",
+  "github-copilot": "GitHub Copilot",
+  groq: "Groq",
+  together: "Together AI",
+  mistral: "Mistral AI",
+  fireworks: "Fireworks AI",
 };
 
 const PROVIDER_ENV_KEYS: Record<string, string[]> = {
@@ -44,6 +56,12 @@ const PROVIDER_ENV_KEYS: Record<string, string[]> = {
   moonshotai: ["MOONSHOT_API_KEY"],
   "moonshotai-cn": ["MOONSHOT_API_KEY"],
   xai: ["XAI_API_KEY"],
+  openrouter: ["OPENROUTER_API_KEY"],
+  "github-copilot": ["COPILOT_GITHUB_TOKEN"],
+  groq: ["GROQ_API_KEY"],
+  together: ["TOGETHER_API_KEY"],
+  mistral: ["MISTRAL_API_KEY"],
+  fireworks: ["FIREWORKS_API_KEY"],
 };
 
 const models: Models = builtinModels();

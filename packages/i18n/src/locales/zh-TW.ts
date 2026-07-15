@@ -9,6 +9,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.models.defaultModel": "預設模型",
   "settings.models.selectPlaceholder": "-- 請選擇 --",
   "settings.models.configureFirst": "請先設定 API Key",
+  "settings.models.searchPlaceholder": "搜尋模型…",
+  "settings.models.noResults": "未找到符合的模型",
   "settings.models.providers": "模型提供商",
   "settings.models.providersHintPre": "只需填寫任一提供商的 API Key 即可使用。還沒有金鑰？推薦使用 ",
   "settings.models.providersHintPost": "。",

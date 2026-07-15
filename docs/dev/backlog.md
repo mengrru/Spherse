@@ -86,8 +86,11 @@
 - [x] **Agent-level skill 支持**：agent 自身目录（`.spherse/agents/{slug}/skills/`）可存放 per-agent 私有 skill。system prompt 合并三层 catalog（agent-level > project > builtin，按 name 去重），`load_skill` 按 agent-level > global 优先级解析。agent-level skill 由 `AgentStore` 的 lazy `SkillStore` 管理（无 builtin 来源），companion files 经新增 `agentSkills` 路径分类纳入 LLM 读白名单。前端暂不展示 agent-level skill
 - [x] **文本模型全局 temperature**：settings 文本模型 tab 新增「高级设置」折叠区，支持全局 temperature 调节（可选，默认不传=provider 默认），对活跃会话即时热替换（`setTemperature`/`setDefaultModel` 遍历 activeSessions 热替换 streamFn/model，下一轮生效）。参见 `docs/dev/features/2026-06-28-model-temperature/design.md`
 - [x] **文本模型 top_p 支持**：高级设置支持 top_p 采样参数（0–1）。pi-ai 无 typed topP 字段且 `buildBaseOptions` 是 allowlist 会丢弃未知 key，故通过 `onPayload` 按 `model.api` 分支注入（openai-completions/responses、anthropic-messages 根级 `top_p`；google-generative-ai 走 `config.topP`；未知 api no-op）。全链路镜像 temperature plumbing。参见 `docs/dev/features/2026-07-14-model-top-p/design.md`
+- [x] **更多文本模型供应商**：启用 6 个 pi-ai 内置的常见 API-key 类文本 provider——OpenRouter（256 模型）、GitHub Copilot、Groq、Together AI、Mistral AI、Fireworks AI。架构本就数据驱动，仅需在 `core/model-providers/index.ts` 的 `ENABLED_PROVIDERS`/`PROVIDER_DISPLAY_NAMES`/`PROVIDER_ENV_KEYS` 三张表各加一行，catalog/模型解析/UI/env 注入全部自动贯通。同时将默认模型选择器从原生 `<select>` 改为基于 Base UI Combobox 的可搜索下拉（新增 `components/ui/combobox.tsx`），支持按模型名/供应商名搜索过滤。参见 `docs/dev/features/2026-07-16-more-model-providers/design.md`
 
 ## 基础设施
+
+- [ ] **GitHub Copilot OAuth 登录**：当前 GitHub Copilot 走 apiKey 路径（用户手动粘贴 `COPILOT_GITHUB_TOKEN`）。pi-ai 的 `githubCopilotProvider()` 同时声明了 `lazyOAuth` device-flow；接入需 electron 层调用 pi-ai OAuth helper + 持久化 refresh token + 前端「用 GitHub 登录」按钮，实现免粘贴 token。
 
 - [x] **本地验证流水线**：新增 root `npm run verify` 覆盖 lint/build/core+i18n+app unit tests/i18n check，新增 `npm run verify:e2e` 在此基础上运行 app E2E。
 - [ ] **app 包类型检查纳入 verify**：`packages/app` 的 build 走 `electron-vite build`，只做转译不做类型检查；`tsconfig.node.json`（electron 目录）与 `tsconfig.json`（renderer）的类型错误会被静默放过（如 schema 变更后遗留的 `settings.defaultModel` 读取）。应新增 `npm run typecheck`（`tsc --noEmit` 双 project）并纳入 root `npm run verify`，防止类型错误漏到运行时。

@@ -15,6 +15,10 @@ export const zhCN = {
   "settings.models.selectPlaceholder": "-- 请选择 --",
   // 尚未配置任何 API Key 时的提示
   "settings.models.configureFirst": "请先配置 API Key",
+  // 默认模型下拉搜索框的占位提示（打开下拉后输入模型名称筛选）
+  "settings.models.searchPlaceholder": "搜索模型…",
+  // 默认模型下拉搜索无匹配结果时的提示
+  "settings.models.noResults": "未找到匹配的模型",
   // 模型提供商区域标题
   "settings.models.providers": "模型提供商",
   // 文本模型 tab「模型提供商」标题旁 info tooltip 的前半段文案（后接可点击的 DeepSeek 链接），提示只需填一个提供商的密钥、推荐 DeepSeek
