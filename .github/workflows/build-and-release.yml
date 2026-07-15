@@ -64,7 +64,17 @@ jobs:
 
       - name: Build installer (electron-builder)
         working-directory: packages/app
-        run: npx electron-builder ${{ matrix.build-args }} --publish never
+        shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_NAME: ${{ secrets.CSC_NAME }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if [[ "$RUNNER_OS" == "macOS" && -z "${CSC_LINK:-}${CSC_NAME:-}" ]]; then
+            npx electron-builder ${{ matrix.build-args }} --config.mac.identity=- --config.mac.hardenedRuntime=false --publish never
+          else
+            npx electron-builder ${{ matrix.build-args }} --publish never
+          fi
 
       - name: Upload macOS dmg
         if: runner.os == 'macOS'
