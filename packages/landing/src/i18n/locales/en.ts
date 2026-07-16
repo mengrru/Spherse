@@ -25,6 +25,8 @@ export const en: Record<keyof typeof zhCN, string> = {
 
   "upcoming.memory.title": "Cross-Session Memory",
   "upcoming.memory.desc": "Agents will maintain long-term memory across sessions",
+  "upcoming.connector.title": "Connector (MCP)",
+  "upcoming.connector.desc": "Integrate with the MCP protocol to connect external tools and data sources",
   "upcoming.mobile.title": "Mobile",
   "upcoming.mobile.desc": "Continue your creation anywhere, anytime",
   "upcoming.label": "Coming Soon",

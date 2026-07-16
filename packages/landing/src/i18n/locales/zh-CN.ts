@@ -22,6 +22,8 @@ export const zhCN = {
 
   "upcoming.memory.title": "Agent 跨 Session 记忆",
   "upcoming.memory.desc": "Agent 将能跨会话保持长期记忆",
+  "upcoming.connector.title": "连接器（MCP）",
+  "upcoming.connector.desc": "接入 MCP 协议，连接外部工具与数据源",
   "upcoming.mobile.title": "移动端",
   "upcoming.mobile.desc": "随时随地继续你的创作",
   "upcoming.label": "即将到来",

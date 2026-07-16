@@ -4,6 +4,21 @@ const FALLBACK_URL = "https://github.com/mengrru/Spherse/releases/latest";
 
 export type Platform = "mac" | "win";
 
+export function detectPlatform(): Platform {
+  try {
+    const uaData = (
+      navigator as Navigator & { userAgentData?: { platform?: string } }
+    ).userAgentData;
+    const platform = (uaData?.platform ?? navigator.platform ?? "").toLowerCase();
+    if (platform.includes("win")) return "win";
+    if (platform.includes("mac")) return "mac";
+  } catch {
+    // ignore — fall through to userAgent check
+  }
+  if (/win(?:dows)?/i.test(navigator.userAgent)) return "win";
+  return "mac";
+}
+
 interface ReleaseAsset {
   name: string;
   browser_download_url: string;

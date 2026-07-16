@@ -24,6 +24,8 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
 
   "upcoming.memory.title": "Agent 跨 Session 記憶",
   "upcoming.memory.desc": "Agent 將能跨會話保持長期記憶",
+  "upcoming.connector.title": "連接器（MCP）",
+  "upcoming.connector.desc": "接入 MCP 協定，連接外部工具與資料來源",
   "upcoming.mobile.title": "行動端",
   "upcoming.mobile.desc": "隨時隨地繼續你的創作",
   "upcoming.label": "即將到來",
