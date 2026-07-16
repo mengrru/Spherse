@@ -90,7 +90,7 @@ export function ToolCallSection({ toolCalls, onNavigateToPath }: ToolCallSection
                               {value}
                             </button>
                           ) : (
-                            <code className="rounded bg-muted px-1 py-[1px] break-all whitespace-pre-wrap">
+                            <code className="block max-h-60 overflow-y-auto rounded bg-muted px-1 py-[1px] break-all whitespace-pre-wrap">
                               {formatArgValue(value)}
                             </code>
                           )}

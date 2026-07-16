@@ -54,6 +54,8 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 | 行内代码 | `[data-md-code-inline]` |
 | 引用块 | `[data-md-quote]` |
 
+> **滚动条**：在 `[data-chat-root] { ... }` 内覆盖 `--sp-scrollbar-*` 变量（`--sp-scrollbar-thumb` / `--sp-scrollbar-thumb-hover` / `--sp-scrollbar-size` / `--sp-scrollbar-track`）即可只改变聊天窗口的滚动条外观；变量与默认值详见 `create-ui-theme` skill 的「滚动条」一节。agent theme 的 `<link>` 在 DOM 中比 project theme 更靠后，相同特异性下自然覆盖项目级滚动条设置。
+
 ## 完整选择器参考
 
 所有可用 `data-*` 钩子（嵌套在 `[data-chat-root] { ... }` 内使用）：

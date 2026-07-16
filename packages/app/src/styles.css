@@ -36,6 +36,10 @@
   --sp-sidebar-border: #e5e5e5;
   --sp-sidebar-ring: #a3a3a3;
   --sp-diff-added: #16a34a;
+  --sp-scrollbar-size: 10px;
+  --sp-scrollbar-thumb: rgba(115, 115, 115, 0.4);
+  --sp-scrollbar-thumb-hover: rgba(115, 115, 115, 0.65);
+  --sp-scrollbar-track: transparent;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -71,6 +75,10 @@
     --sp-sidebar-border: #404040;
     --sp-sidebar-ring: #737373;
     --sp-diff-added: #22c55e;
+    --sp-scrollbar-size: 10px;
+    --sp-scrollbar-thumb: rgba(163, 163, 163, 0.4);
+    --sp-scrollbar-thumb-hover: rgba(163, 163, 163, 0.65);
+    --sp-scrollbar-track: transparent;
   }
 }
 
@@ -110,6 +118,7 @@
   --color-sidebar-border: var(--sp-sidebar-border);
   --color-sidebar-ring: var(--sp-sidebar-ring);
   --color-diff-added: var(--sp-diff-added);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Source Han Sans SC", monospace;
 }
 
 @layer base {
@@ -139,6 +148,36 @@
   [data-app-root]::after {
     position: absolute;
     pointer-events: none;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sp-scrollbar-thumb) var(--sp-scrollbar-track);
+  }
+
+  ::-webkit-scrollbar {
+    width: var(--sp-scrollbar-size);
+    height: var(--sp-scrollbar-size);
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--sp-scrollbar-track);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--sp-scrollbar-thumb);
+    border-radius: var(--sp-scrollbar-size);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    transition: background-color 0.15s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--sp-scrollbar-thumb-hover);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }
 
