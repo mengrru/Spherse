@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ChatMessage } from "../types";
 import { useStreamingStore } from "../streaming-store";
 
@@ -17,6 +17,7 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
   const prevCountRef = useRef(0);
   const scrollTopRef = useRef(0);
   const pendingLoadingMoreRef = useRef(false);
+  const preLoadMoreScrollTopRef = useRef<number | null>(null);
 
   const syncBottomState = useCallback(() => {
     const container = containerRef.current;
@@ -48,13 +49,22 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
     restoredScrollRef.current = false;
     prevCountRef.current = 0;
     pendingLoadingMoreRef.current = false;
+    preLoadMoreScrollTopRef.current = null;
   }, [sessionId]);
 
   useEffect(() => {
-    if (loadingMore) pendingLoadingMoreRef.current = true;
+    if (loadingMore) {
+      pendingLoadingMoreRef.current = true;
+      const container = containerRef.current;
+      if (container) preLoadMoreScrollTopRef.current = container.scrollTop;
+    } else {
+      // clear stale capture if the fetch failed without a messages change
+      pendingLoadingMoreRef.current = false;
+      preLoadMoreScrollTopRef.current = null;
+    }
   }, [loadingMore]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container || messages.length === 0) return;
 
@@ -74,6 +84,12 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
     if (pendingLoadingMoreRef.current) {
       pendingLoadingMoreRef.current = false;
       prevCountRef.current = messages.length;
+      if (preLoadMoreScrollTopRef.current !== null) {
+        container.scrollTop = preLoadMoreScrollTopRef.current;
+        scrollTopRef.current = preLoadMoreScrollTopRef.current;
+        preLoadMoreScrollTopRef.current = null;
+        syncBottomState();
+      }
       return;
     }
 

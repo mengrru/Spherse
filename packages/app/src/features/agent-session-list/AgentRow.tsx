@@ -78,17 +78,19 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        className="absolute end-1 top-1/2 hidden -translate-y-1/2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground group-hover/agent-row:flex"
-        title={t("agent-session-list.newSession")}
-        aria-label={t("agent-session-list.newSession")}
-        onClick={() => actions.newSession(agent)}
-      >
-        <PlusIcon />
-      </Button>
+      <div className="absolute inset-y-0 end-1 hidden items-center group-hover/agent-row:flex">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+          title={t("agent-session-list.newSession")}
+          aria-label={t("agent-session-list.newSession")}
+          onClick={() => actions.newSession(agent)}
+        >
+          <PlusIcon />
+        </Button>
+      </div>
     </div>
   );
 }
