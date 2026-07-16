@@ -17,6 +17,7 @@ vi.mock("electron", () => ({
 }));
 
 import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore } from "./settings";
+import { getSupportedProviders } from "@spherse/core";
 
 describe("mergeModelGroup sampling passthrough", () => {
   it("uses incoming sampling when present", () => {
@@ -120,5 +121,102 @@ describe("theme persistence", () => {
     });
 
     expect(settingsStore.get("settings")?.theme).toBe("light");
+  });
+});
+
+describe("customProviders persistence", () => {
+  const customDef = {
+    id: "my-openai",
+    name: "My OpenAI",
+    baseUrl: "https://api.example.com/v1",
+    models: ["gpt-4o"],
+    keyless: false,
+  };
+
+  it("saveSettings persists incoming customProviders", () => {
+    settingsStore.set("settings", undefined);
+    saveSettings({
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+      customProviders: [customDef],
+    });
+
+    expect(settingsStore.get("settings")?.customProviders).toEqual([customDef]);
+  });
+
+  it("saveSettings preserves previous customProviders when incoming omits them", () => {
+    settingsStore.set("settings", {
+      locale: "zh-CN",
+      customProviders: [customDef],
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    saveSettings({
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    expect(settingsStore.get("settings")?.customProviders).toEqual([customDef]);
+  });
+
+  it("saveSettings replaces customProviders wholesale when provided", () => {
+    settingsStore.set("settings", {
+      locale: "zh-CN",
+      customProviders: [customDef],
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    const updated = { ...customDef, name: "Renamed" };
+    saveSettings({
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+      customProviders: [updated],
+    });
+
+    expect(settingsStore.get("settings")?.customProviders).toEqual([updated]);
+  });
+
+  it("getMaskedSettings passes through customProviders unchanged", () => {
+    settingsStore.set("settings", {
+      locale: "zh-CN",
+      customProviders: [customDef],
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    const masked = getMaskedSettings();
+
+    expect(masked?.customProviders).toEqual([customDef]);
+  });
+
+  it("getMaskedSettings defaults customProviders to empty array when absent", () => {
+    settingsStore.set("settings", {
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    const masked = getMaskedSettings();
+
+    expect(masked?.customProviders).toEqual([]);
+  });
+
+  it("saveSettings registers custom providers into the core catalog via syncCustomProviders", () => {
+    settingsStore.set("settings", undefined);
+    saveSettings({
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+      customProviders: [customDef],
+    });
+
+    const catalog = getSupportedProviders();
+    expect(catalog["my-openai"]).toBeDefined();
+    expect(catalog["my-openai"].custom).toBe(true);
+    expect(catalog["my-openai"].baseUrl).toBe("https://api.example.com/v1");
+
+    saveSettings({
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+      customProviders: [],
+    });
+    expect(getSupportedProviders()["my-openai"]).toBeUndefined();
   });
 });

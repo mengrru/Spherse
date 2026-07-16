@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,18 +9,21 @@ import { Field, FieldGroup, FieldLabel } from "../../components/ui/field";
 import { NativeSelect, NativeSelectOption } from "../../components/ui/native-select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Switch } from "../../components/ui/switch";
+import { Button } from "../../components/ui/button";
 import { useSettingsStore } from "../../stores/settings-store";
 import { useSettingsForm } from "./use-settings-form";
 import { type SettingsApi } from "./types";
 import { DefaultModelField } from "./DefaultModelField";
 import { ModelProviderItem } from "./ModelProviderItem";
+import { CustomProviderDialog } from "./CustomProviderDialog";
 import { SectionTitle } from "./SectionTitle";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { UpdateChecker } from "./UpdateChecker";
 import { SUPPORTED_LOCALES } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
+import type { CustomProviderDef } from "@spherse/core";
 import type { ThemeMode } from "@shared/electron-api";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, Plus } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 
 const LOCALE_LABELS: Record<string, string> = {
@@ -56,6 +60,7 @@ function ModelGroupTab({
   kind: "text" | "image";
 }) {
   const { t } = useI18n();
+  const [dialog, setDialog] = useState<{ mode: "add" } | { mode: "edit"; def: CustomProviderDef } | null>(null);
   return (
     <>
       <FieldGroup>
@@ -112,9 +117,43 @@ function ModelGroupTab({
             onApiKeyChange={(value) => group.setApiKey(id, value)}
             onConnect={() => void group.connect(id)}
             onDisconnect={() => void group.disconnect(id)}
+            onEdit={
+              config.custom
+                ? () => {
+                    const def = group.customProviders?.find((c) => c.id === id);
+                    if (def) setDialog({ mode: "edit", def });
+                  }
+                : undefined
+            }
+            onDelete={
+              config.custom
+                ? () => { void group.removeCustomProvider?.(id); }
+                : undefined
+            }
           />
         ))}
       </div>
+      {kind === "text" && (
+        <Button variant="outline" className="mt-2 w-full" onClick={() => setDialog({ mode: "add" })}>
+          <Plus className="size-4" />
+          {t("settings.provider.addCustom")}
+        </Button>
+      )}
+      {kind === "text" && (
+        <CustomProviderDialog
+          open={dialog !== null}
+          onClose={() => setDialog(null)}
+          initial={dialog?.mode === "edit" ? dialog.def : undefined}
+          onSubmit={(def) => {
+            if (dialog?.mode === "edit") {
+              void group.updateCustomProvider?.(dialog.def.id, def);
+            } else {
+              void group.addCustomProvider?.(def);
+            }
+            setDialog(null);
+          }}
+        />
+      )}
     </>
   );
 }

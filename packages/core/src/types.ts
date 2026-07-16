@@ -98,6 +98,7 @@ export interface AppSettings {
     text: ModelGroupSettings;
     image: ModelGroupSettings;
   };
+  customProviders?: CustomProviderDef[];
   debugToolsEnabled?: boolean;
   theme?: ThemeMode;
 }
@@ -110,6 +111,9 @@ export interface ProviderCatalogItem {
     envKeys: string[];
   };
   models: ProviderModelItem[];
+  custom?: boolean;
+  keyless?: boolean;
+  baseUrl?: string;
 }
 
 export interface ProviderModelItem {
@@ -124,3 +128,11 @@ export interface ProviderModelItem {
 }
 
 export type ProviderCatalog = Record<string, ProviderCatalogItem>;
+
+export interface CustomProviderDef {
+  id: string;
+  name: string;
+  baseUrl: string;
+  models: string[];
+  keyless: boolean;
+}

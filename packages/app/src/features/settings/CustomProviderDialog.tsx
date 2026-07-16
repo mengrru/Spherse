@@ -1,0 +1,182 @@
+import { useEffect, useState } from "react";
+import { useI18n } from "@spherse/i18n/react";
+import type { CustomProviderDef } from "@spherse/core";
+import { Button } from "../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "../../components/ui/field";
+import { Input } from "../../components/ui/input";
+import { Switch } from "../../components/ui/switch";
+import { Textarea } from "../../components/ui/textarea";
+
+interface CustomProviderDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (def: CustomProviderDef) => void;
+  initial?: CustomProviderDef;
+}
+
+function parseModelIds(text: string): string[] {
+  const parts = text
+    .split(/[,\n]/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  return [...new Set(parts)];
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function CustomProviderDialog({
+  open,
+  onClose,
+  onSubmit,
+  initial,
+}: CustomProviderDialogProps) {
+  const { t } = useI18n();
+
+  const [name, setName] = useState("");
+  const [baseUrl, setBaseUrl] = useState("");
+  const [modelsText, setModelsText] = useState("");
+  const [keyless, setKeyless] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(initial?.name ?? "");
+    setBaseUrl(initial?.baseUrl ?? "");
+    setModelsText(initial?.models?.join("\n") ?? "");
+    setKeyless(initial?.keyless ?? false);
+  }, [open, initial]);
+
+  const parsedModels = parseModelIds(modelsText);
+  const trimmedName = name.trim();
+  const trimmedBaseUrl = baseUrl.trim();
+
+  const nameError =
+    trimmedName.length === 0
+      ? t("settings.provider.dialog.errNameRequired")
+      : "";
+  const baseUrlError =
+    trimmedBaseUrl.length === 0
+      ? t("settings.provider.dialog.errBaseUrlRequired")
+      : isHttpUrl(trimmedBaseUrl)
+        ? ""
+        : t("settings.provider.dialog.errBaseUrlInvalid");
+  const modelsError =
+    parsedModels.length === 0
+      ? t("settings.provider.dialog.errModelsRequired")
+      : "";
+
+  const hasErrors = Boolean(nameError || baseUrlError || modelsError);
+
+  const handleSubmit = () => {
+    if (hasErrors) return;
+    onSubmit({
+      id: initial?.id ?? "",
+      name: trimmedName,
+      baseUrl: trimmedBaseUrl,
+      models: parsedModels,
+      keyless,
+    });
+    onClose();
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(openValue) => {
+        if (!openValue) onClose();
+      }}
+    >
+      <DialogContent className="sm:max-w-[480px]">
+        <DialogHeader>
+          <DialogTitle>
+            {initial
+              ? t("settings.provider.dialog.titleEdit")
+              : t("settings.provider.dialog.titleAdd")}
+          </DialogTitle>
+        </DialogHeader>
+        <FieldGroup>
+          <Field>
+            <FieldLabel htmlFor="custom-provider-name">
+              {t("settings.provider.dialog.name")}
+            </FieldLabel>
+            <Input
+              id="custom-provider-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("settings.provider.dialog.namePlaceholder")}
+              aria-invalid={Boolean(nameError)}
+            />
+            {nameError ? <FieldError>{nameError}</FieldError> : null}
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="custom-provider-base-url">
+              {t("settings.provider.dialog.baseUrl")}
+            </FieldLabel>
+            <Input
+              id="custom-provider-base-url"
+              value={baseUrl}
+              onChange={(event) => setBaseUrl(event.target.value)}
+              placeholder={t("settings.provider.dialog.baseUrlPlaceholder")}
+              aria-invalid={Boolean(baseUrlError)}
+            />
+            {baseUrlError ? <FieldError>{baseUrlError}</FieldError> : null}
+          </Field>
+          <Field>
+            <FieldLabel htmlFor="custom-provider-models">
+              {t("settings.provider.dialog.models")}
+            </FieldLabel>
+            <Textarea
+              id="custom-provider-models"
+              value={modelsText}
+              onChange={(event) => setModelsText(event.target.value)}
+              placeholder={t("settings.provider.dialog.modelsPlaceholder")}
+              aria-invalid={Boolean(modelsError)}
+            />
+            <FieldDescription>
+              {t("settings.provider.dialog.modelsHint")}
+            </FieldDescription>
+            {modelsError ? <FieldError>{modelsError}</FieldError> : null}
+          </Field>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <span className="text-sm font-medium leading-none">
+                {t("settings.provider.dialog.keyless")}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {t("settings.provider.dialog.keylessDesc")}
+              </span>
+            </div>
+            <Switch checked={keyless} onCheckedChange={setKeyless} />
+          </div>
+        </FieldGroup>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            {t("settings.provider.dialog.cancel")}
+          </Button>
+          <Button type="button" onClick={handleSubmit} disabled={hasErrors}>
+            {t("settings.provider.dialog.save")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

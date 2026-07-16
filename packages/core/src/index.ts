@@ -13,5 +13,5 @@ export type { PathCategory } from "./access/path-category.js";
 export { serverAccessPolicy } from "./access/access-policy.js";
 export type { AccessPolicy, Decision } from "./access/access-policy.js";
 export { shouldSkipDirEntry } from "./utils/fs-walk.js";
-export { getSupportedProviders, getImageSupportedProviders } from "./model-providers/index.js";
+export { getSupportedProviders, getImageSupportedProviders, syncCustomProviders } from "./model-providers/index.js";
 export type { Logger } from "./logger.js";

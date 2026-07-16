@@ -211,6 +211,23 @@ describe("api contracts", () => {
     expect(() => parseApiResponse(schemas.themeSettingsResponse, { ok: true })).toThrow(/Invalid payload/);
   });
 
+  it("accepts provider catalog items with custom/keyless/baseUrl fields", () => {
+    const catalog = {
+      "custom-foo": {
+        id: "custom-foo",
+        name: "Foo",
+        auth: { type: "unknown", envKeys: [] },
+        models: [
+          { id: "m1", name: "m1", provider: "custom-foo", api: "openai-completions", reasoning: false, input: ["text"] },
+        ],
+        custom: true,
+        keyless: true,
+        baseUrl: "http://localhost:11434/v1",
+      },
+    };
+    expect(parseApiResponse(schemas.providerCatalog, catalog)).toEqual(catalog);
+  });
+
   it("preserves null welcome-page path through Fastify body coercion", async () => {
     const app = Fastify();
     app.put<{ Body: { path: string | null } }>(

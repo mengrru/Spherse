@@ -68,6 +68,48 @@ export const zhCN = {
   "settings.provider.disconnect": "断开连接",
   // provider 连接按钮
   "settings.provider.connect": "连接",
+  // 文本模型 tab → 模型提供商列表下方的「添加自定义供应商」按钮文案
+  "settings.provider.addCustom": "+ 添加自定义供应商",
+  // ModelProviderItem 行内 badge，标识该供应商为用户自定义
+  "settings.provider.customBadge": "自定义",
+  // ModelProviderItem 行内 badge，标识本地服务器等无需鉴权的供应商
+  "settings.provider.keylessBadge": "无需 API Key",
+  // keyless badge 旁的辅助说明（tooltip），说明本地服务通常无需 API Key
+  "settings.provider.keylessHint": "本地服务通常无需 API Key",
+  // 新建自定义供应商对话框标题
+  "settings.provider.dialog.titleAdd": "添加自定义供应商",
+  // 编辑自定义供应商对话框标题
+  "settings.provider.dialog.titleEdit": "编辑自定义供应商",
+  // 自定义供应商对话框「名称」字段标签
+  "settings.provider.dialog.name": "名称",
+  // 名称输入框 placeholder
+  "settings.provider.dialog.namePlaceholder": "我的供应商",
+  // 自定义供应商对话框「Base URL」字段标签
+  "settings.provider.dialog.baseUrl": "Base URL",
+  // Base URL 输入框 placeholder（示例：Ollama）
+  "settings.provider.dialog.baseUrlPlaceholder": "http://localhost:11434/v1",
+  // 自定义供应商对话框「模型 ID」字段标签
+  "settings.provider.dialog.models": "模型 ID",
+  // 模型 ID 输入框 placeholder
+  "settings.provider.dialog.modelsPlaceholder": "llama3.1, qwen2.5",
+  // 模型 ID 字段下方辅助说明
+  "settings.provider.dialog.modelsHint": "多个模型 ID 用逗号或换行分隔",
+  // 自定义供应商对话框 keyless 开关标签
+  "settings.provider.dialog.keyless": "无需 API Key",
+  // keyless 开关描述，说明适用于本地部署无鉴权的服务
+  "settings.provider.dialog.keylessDesc": "适用于本地部署（Ollama、LM Studio 等）无鉴权的服务",
+  // 自定义供应商对话框保存按钮
+  "settings.provider.dialog.save": "保存",
+  // 自定义供应商对话框取消按钮
+  "settings.provider.dialog.cancel": "取消",
+  // 校验错误：名称为空
+  "settings.provider.dialog.errNameRequired": "请输入名称",
+  // 校验错误：Base URL 为空
+  "settings.provider.dialog.errBaseUrlRequired": "请输入 Base URL",
+  // 校验错误：Base URL 格式非法
+  "settings.provider.dialog.errBaseUrlInvalid": "Base URL 必须是合法的 http(s) 地址",
+  // 校验错误：未填写模型 ID
+  "settings.provider.dialog.errModelsRequired": "请至少填写一个模型 ID",
 
   // 设置弹窗「关于」tab 标签
   "settings.tabs.about": "关于",

@@ -1,7 +1,8 @@
-import { type Models, type ImagesModels, type MutableImagesModels } from "@earendil-works/pi-ai";
+import { type Models, type MutableModels, type ImagesModels, type MutableImagesModels, createProvider, type ApiKeyAuth } from "@earendil-works/pi-ai";
 import { builtinModels, builtinImagesModels } from "@earendil-works/pi-ai/providers/all";
+import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
-import type { ProviderCatalog, ProviderCatalogItem, ProviderModelItem, SamplingParams } from "../types.js";
+import type { CustomProviderDef, ProviderCatalog, ProviderCatalogItem, ProviderModelItem, SamplingParams } from "../types.js";
 import { createZhipuImagesProvider } from "./zhipu-images.js";
 
 export const ENABLED_PROVIDERS = [
@@ -17,11 +18,6 @@ export const ENABLED_PROVIDERS = [
   "moonshotai-cn",
   "xai",
   "openrouter",
-  "github-copilot",
-  "groq",
-  "together",
-  "mistral",
-  "fireworks",
 ] as const;
 
 const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
@@ -29,7 +25,7 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   anthropic: "Anthropic",
   google: "Google",
   deepseek: "DeepSeek",
-  zai: "z.ai",
+  zai: "Zhipu",
   minimax: "MiniMax",
   "minimax-cn": "MiniMax（国内）",
   xiaomi: "小米",
@@ -37,11 +33,6 @@ const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   "moonshotai-cn": "Moonshot AI（国内）",
   xai: "xAI",
   openrouter: "OpenRouter",
-  "github-copilot": "GitHub Copilot",
-  groq: "Groq",
-  together: "Together AI",
-  mistral: "Mistral AI",
-  fireworks: "Fireworks AI",
 };
 
 const PROVIDER_ENV_KEYS: Record<string, string[]> = {
@@ -57,16 +48,63 @@ const PROVIDER_ENV_KEYS: Record<string, string[]> = {
   "moonshotai-cn": ["MOONSHOT_API_KEY"],
   xai: ["XAI_API_KEY"],
   openrouter: ["OPENROUTER_API_KEY"],
-  "github-copilot": ["COPILOT_GITHUB_TOKEN"],
-  groq: ["GROQ_API_KEY"],
-  together: ["TOGETHER_API_KEY"],
-  mistral: ["MISTRAL_API_KEY"],
-  fireworks: ["FIREWORKS_API_KEY"],
 };
 
-const models: Models = builtinModels();
+const models: MutableModels = builtinModels();
 const imagesModels: MutableImagesModels = builtinImagesModels();
 imagesModels.setProvider(createZhipuImagesProvider());
+
+let registeredDefs: CustomProviderDef[] = [];
+const customIds = new Set<string>();
+const KEYLESS_PLACEHOLDER = "sk-no-key";
+
+function customAuth(apiKey: string | undefined, keyless: boolean): ApiKeyAuth {
+  return {
+    name: "API Key",
+    resolve: async () => {
+      if (apiKey) return { auth: { apiKey }, source: "API Key" };
+      if (keyless) return { auth: { apiKey: KEYLESS_PLACEHOLDER }, source: "Keyless" };
+      return undefined;
+    },
+  };
+}
+
+function buildCustomProvider(def: CustomProviderDef, apiKey: string | undefined) {
+  const input: ("text" | "image")[] = ["text"];
+  const modelList = def.models.map((m) => ({
+    id: m,
+    name: m,
+    api: "openai-completions" as const,
+    provider: def.id,
+    baseUrl: def.baseUrl,
+    reasoning: false,
+    input,
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: 32768,
+    maxTokens: 4096,
+  }));
+  return createProvider({
+    id: def.id,
+    name: def.name,
+    baseUrl: def.baseUrl,
+    auth: { apiKey: customAuth(apiKey, def.keyless) },
+    models: modelList,
+    api: openAICompletionsApi(),
+  });
+}
+
+export function syncCustomProviders(defs: CustomProviderDef[], apiKeys: Record<string, string>): void {
+  const nextIds = new Set(defs.map((d) => d.id));
+  for (const id of [...customIds].filter((i) => !nextIds.has(i))) {
+    models.deleteProvider(id);
+    customIds.delete(id);
+  }
+  for (const def of defs) {
+    models.setProvider(buildCustomProvider(def, apiKeys[def.id]));
+    customIds.add(def.id);
+  }
+  registeredDefs = defs;
+}
 
 function toDisplayName(id: string): string {
   return (
@@ -115,6 +153,27 @@ export function getSupportedProviders(): ProviderCatalog {
       models: items,
     };
     catalog[provider.id] = item;
+  }
+
+  for (const def of registeredDefs) {
+    catalog[def.id] = {
+      id: def.id,
+      name: def.name,
+      auth: { type: def.keyless ? "unknown" : "apiKey", envKeys: [] },
+      models: def.models.map((m) => ({
+        id: m,
+        name: m,
+        provider: def.id,
+        api: "openai-completions",
+        reasoning: false,
+        input: ["text"],
+        contextWindow: 32768,
+        maxTokens: 4096,
+      })),
+      custom: true,
+      keyless: def.keyless,
+      baseUrl: def.baseUrl,
+    };
   }
 
   return catalog;
@@ -204,4 +263,8 @@ function injectTopP(topP: number) {
 
 export function getImagesModels(): ImagesModels {
   return imagesModels;
+}
+
+export function getChatModels(): Models {
+  return models;
 }

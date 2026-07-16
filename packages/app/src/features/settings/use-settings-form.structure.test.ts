@@ -43,3 +43,58 @@ describe("useSettingsForm sampling wiring", () => {
     expect(source).not.toContain("settings?.models?.image?.sampling");
   });
 });
+
+describe("useSettingsForm custom provider wiring", () => {
+  it("reads customProviders from settings on init", () => {
+    expect(source).toContain("setCustomProviders(settings?.customProviders ?? [])");
+  });
+
+  it("includes customProviders in the save payload", () => {
+    expect(source).toContain("customProviders: cp");
+  });
+
+  it("accepts a customProvidersOverride param on save", () => {
+    expect(source).toContain("customProvidersOverride?: CustomProviderDef[]");
+    expect(source).toContain("const cp = customProvidersOverride ?? customProviders");
+  });
+
+  it("exposes customProviders and the three mutation methods on the text group", () => {
+    expect(source).toMatch(/text:\s*\{/);
+    expect(source).toContain("customProviders,");
+    expect(source).toContain("addCustomProvider,");
+    expect(source).toContain("updateCustomProvider,");
+    expect(source).toContain("removeCustomProvider,");
+  });
+
+  it("addCustomProvider generates an id and refreshes the catalog on success", () => {
+    expect(source).toContain("generateCustomProviderId(def.name, existingIds)");
+    expect(source).toContain("const existingIds = [...Object.keys(textProviders), ...customProviders.map((c) => c.id)]");
+    expect(source).toContain("if (ok) await refreshTextCatalog();");
+  });
+
+  it("refreshTextCatalog refetches supported providers", () => {
+    expect(source).toContain("const textCatalog = await api.getSupportedProviders();");
+    expect(source).toContain("setTextProviders(textCatalog ?? {})");
+  });
+
+  it("updateCustomProvider keeps the id stable", () => {
+    expect(source).toContain(
+      "customProviders.map((c) => (c.id === id ? { ...def, id } : c))",
+    );
+  });
+
+  it("removeCustomProvider clears apiKey and defaultModel referencing the provider", () => {
+    expect(source).toContain("customProviders.filter((c) => c.id !== id)");
+    expect(source).toContain("delete nextApiKeys[id];");
+    expect(source).toContain(
+      'textData.defaultModel.startsWith(`${id}/`) ? "" : textData.defaultModel',
+    );
+  });
+
+  it("does not expose custom provider methods on the image group", () => {
+    const imageLine = source
+      .split("\n")
+      .find((l) => l.includes('image: makeGroup("image"'));
+    expect(imageLine).toBeDefined();
+  });
+});

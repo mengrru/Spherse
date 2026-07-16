@@ -19,6 +19,9 @@ const providerCatalogItem = Type.Object({
     envKeys: Type.Array(Type.String()),
   }),
   models: Type.Array(providerModelItem),
+  custom: Type.Optional(Type.Boolean()),
+  keyless: Type.Optional(Type.Boolean()),
+  baseUrl: Type.Optional(Type.String()),
 });
 
 export const schemas = {

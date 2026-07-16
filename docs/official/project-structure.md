@@ -11,7 +11,7 @@ spherse/
 │   │       ├── presets.ts            # initPresets()：新项目预置 agent 注入 + 创建空 .spherse/skills/ 目录
 │   │       ├── project-runtime.ts    # ProjectRuntime：运行时 session 管理 + agent/profile 操作门面
 │   │       ├── model-providers/     # pi-ai provider catalog adapter（文本 + 图片 provider）
-│   │       │   ├── index.ts        # ENABLED_PROVIDERS 过滤、getSupportedProviders / getImageSupportedProviders、model resolution
+│   │       │   ├── index.ts        # ENABLED_PROVIDERS 过滤、getSupportedProviders / getImageSupportedProviders、model resolution、syncCustomProviders（运行时注入自定义 OpenAI 兼容供应商）
 │   │       │   └── zhipu-images.ts # 智谱图片 provider 元数据 + createZhipuImagesProvider()（createImagesProvider 工厂，模块加载时注入 imagesModels 单例）
     │   │       ├── engine/
     │   │       │   ├── read-context-files.ts # 读取 agent profile context 文件并注入 system prompt
@@ -149,7 +149,7 @@ spherse/
 │       │   │   └── debug.ts          # 开发模式 debug 动作
 │       │   ├── window.ts             # BrowserWindow 创建与管理
 │       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新
-    │   │       └── settings.ts           # electron-store 封装 + env 管理 + openProjects/locale 持久化
+    │   │       └── settings.ts           # electron-store 封装 + env 管理（含自定义供应商 syncCustomProviders 注册）+ openProjects/locale 持久化
 │       ├── playwright.config.ts      # Playwright E2E 测试配置
 │       ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
 │       ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS、extraResources、publish GitHub Releases）
@@ -227,7 +227,7 @@ spherse/
 │           │   ├── project-panel/         # 项目侧栏薄组合层，按序渲染 AgentSessionList/UserFilePanel/SkillPanel，自治 side-panel 浮动/隐藏布局
 │           │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │           │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）
-│           │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab）、更新检查 hook（useUpdateChecker reducer）与 UpdateChecker 组件、设置 store、类型与测试
+│           │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer）与 UpdateChecker 组件、设置 store、类型与测试
 │           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
 │           │   ├── project-settings/     # 项目设置弹窗集合
 │           │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗

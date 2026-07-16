@@ -2,7 +2,7 @@ import path from "node:path";
 import { nativeTheme } from "electron";
 import Store from "electron-store";
 import type { AppSettings, ModelGroupSettings, ProviderCredentials } from "@spherse/core";
-import { getSupportedProviders } from "@spherse/core";
+import { getSupportedProviders, syncCustomProviders } from "@spherse/core";
 
 export interface OpenProjectEntry {
   id: string;
@@ -23,6 +23,14 @@ export const settingsStore = new Store<SettingsSchema>({
 
 export function getSettings(): AppSettings | undefined {
   return settingsStore.get("settings");
+}
+
+function extractProviderKeys(providers: Record<string, { apiKey?: string }> | undefined): Record<string, string> {
+  const keys: Record<string, string> = {};
+  for (const [id, c] of Object.entries(providers ?? {})) {
+    if (c?.apiKey) keys[id] = c.apiKey;
+  }
+  return keys;
 }
 
 function maskApiKey(key: string): string {
@@ -49,6 +57,7 @@ export function getMaskedSettings(): AppSettings | null {
       text: maskModelGroup(settings.models?.text),
       image: maskModelGroup(settings.models?.image),
     },
+    customProviders: settings.customProviders ?? [],
     debugToolsEnabled: settings.debugToolsEnabled ?? false,
     theme: settings.theme ?? "system",
   };
@@ -85,6 +94,7 @@ export function saveSettings(incoming: AppSettings): void {
       text: mergeModelGroup(incoming.models?.text, prev?.models?.text),
       image: mergeModelGroup(incoming.models?.image, prev?.models?.image),
     },
+    customProviders: incoming.customProviders ?? prev?.customProviders ?? [],
     debugToolsEnabled: incoming.debugToolsEnabled ?? prev?.debugToolsEnabled ?? false,
     theme: incoming.theme ?? prev?.theme ?? "system",
   };
@@ -124,6 +134,8 @@ function applySettingsToEnv(settings: AppSettings): void {
     delete process.env.SPHERSE_IMAGE_MODEL;
     delete process.env.SPHERSE_IMAGE_API_KEY;
   }
+
+  syncCustomProviders(settings.customProviders ?? [], extractProviderKeys(settings.models?.text?.providers));
 }
 
 export function getOpenProjects(): OpenProjectEntry[] {

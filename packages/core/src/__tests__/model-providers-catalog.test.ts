@@ -14,11 +14,6 @@ const EXPECTED_ENV_KEYS: Record<string, string[]> = {
   "moonshotai-cn": ["MOONSHOT_API_KEY"],
   xai: ["XAI_API_KEY"],
   openrouter: ["OPENROUTER_API_KEY"],
-  "github-copilot": ["COPILOT_GITHUB_TOKEN"],
-  groq: ["GROQ_API_KEY"],
-  together: ["TOGETHER_API_KEY"],
-  mistral: ["MISTRAL_API_KEY"],
-  fireworks: ["FIREWORKS_API_KEY"],
 };
 
 describe("getSupportedProviders catalog", () => {
@@ -43,15 +38,12 @@ describe("getSupportedProviders catalog", () => {
     }
   });
 
-  it("includes the newly enabled providers", () => {
-    const ids = Object.keys(catalog);
-    for (const id of ["openrouter", "github-copilot", "groq", "together", "mistral", "fireworks"]) {
-      expect(ids, `expected ${id} in catalog`).toContain(id);
-    }
-  });
-
   it("does not leak providers that are not enabled", () => {
-    expect(catalog["groq"]).toBeDefined();
+    expect(catalog["github-copilot"]).toBeUndefined();
+    expect(catalog["groq"]).toBeUndefined();
+    expect(catalog["together"]).toBeUndefined();
+    expect(catalog["mistral"]).toBeUndefined();
+    expect(catalog["fireworks"]).toBeUndefined();
     expect(catalog["cerebras"]).toBeUndefined();
     expect(catalog["nvidia"]).toBeUndefined();
   });

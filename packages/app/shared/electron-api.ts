@@ -1,4 +1,4 @@
-import type { ProviderCatalogItem, ModelGroupSettings } from "@spherse/core";
+import type { ProviderCatalogItem, ModelGroupSettings, CustomProviderDef } from "@spherse/core";
 
 export interface RestoredProject {
   id: string;
@@ -31,6 +31,7 @@ export interface IpcAppSettings {
     text?: ModelGroupSettings;
     image?: ModelGroupSettings;
   };
+  customProviders?: CustomProviderDef[];
   debugToolsEnabled?: boolean;
   theme?: ThemeMode;
 }
