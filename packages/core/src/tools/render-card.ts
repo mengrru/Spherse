@@ -17,7 +17,7 @@ function isImageFile(filePath: string): boolean {
 const RenderCardParams = Type.Object({
   type: Type.Literal("html", { description: "Card type" }),
   content: Type.Optional(Type.String({ description: "Inline HTML content (self-contained, no external resources)." })),
-  file_path: Type.Optional(Type.String({ description: "Path to a file relative to project root. Can be an HTML file (renders as a rich HTML card) or an image file — png/jpg/jpeg/gif/webp/svg/ico — which renders the image directly." })),
+  file_path: Type.Optional(Type.String({ description: "Path to a file relative to project root. Can be an HTML file (renders as a rich HTML card) or an image file — png/jpg/jpeg/gif/webp/svg/ico — which renders the image directly. Do not pass a path returned by `generate_image`; its result is already shown as an image card, so rendering it again here is redundant." })),
   title: Type.Optional(Type.String({ description: "Card title" })),
   width: Type.Optional(Type.Number({ description: "Card width in pixels" })),
   height: Type.Optional(Type.Number({ description: "Card height in pixels (default 400)" })),
@@ -35,7 +35,7 @@ export function createRenderCardTool(
     name: "render_card",
     label: "Render Card",
     description:
-      "Render content as a visual card in the chat. Provide a project file via `file_path`: an HTML file renders as a rich HTML card (web pages, charts, diagrams, styled documents); an image file (png/jpg/jpeg/gif/webp/svg/ico) renders the image directly. You may also pass self-contained HTML inline via `content`, but prefer `file_path` for anything that references project resources. Use `width`, `height`, `max_width`, and `max_height` to control the card dimensions.",
+      "Render content as a visual card in the chat. Provide a project file via `file_path`: an HTML file renders as a rich HTML card (web pages, charts, diagrams, styled documents); an image file (png/jpg/jpeg/gif/webp/svg/ico) renders the image directly. You may also pass self-contained HTML inline via `content`, but prefer `file_path` for anything that references project resources. Use `width`, `height`, `max_width`, and `max_height` to control the card dimensions. Do NOT use this tool to display images just produced by `generate_image` — a successful `generate_image` call already renders the result as an image card in the chat, so calling `render_card` afterward only duplicates the display.",
     parameters: RenderCardParams,
     async execute(_toolCallId, params, _signal, onUpdate) {
       let html: string;
