@@ -176,7 +176,6 @@ spherse/
 │           ├── lib/
 │           │   ├── api.ts            # HTTP/WS 客户端封装
 │           │   ├── agent-markdown.ts # Agent 定义 Markdown 生成/解析辅助
-│           │   ├── avatar-color.ts   # 项目头像颜色生成（路径 hash → HSL）
 │           │   ├── context.ts        # AppContext 定义
 │           │   ├── events.ts         # renderer 内部自定义事件名常量
     │           │   ├── project-key.ts    # project path → URL projectKey 生成

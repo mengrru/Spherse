@@ -208,6 +208,36 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 > - 装饰默认处于内容之下：内容区的背景多为半透明或 `--sp-background`，叠在最外层根容器上的装饰会从内容半透明处透出。若要让装饰**盖在内容之上**，给伪元素或固定层显式设较高的 `z-index` 并加 `pointer-events: none`，避免遮挡交互。
 > - 本地图片用相对路径（`url('./assets/x.png')` 基于项目 `.spherse/` 目录解析），或远程 URL（项目主题同样以 `<link>` 从 preview 路由载入，相对 `url()` 解析到项目文件）。
 
+## Activity Bar 项目头像
+
+应用最左侧 activity bar 上的项目头像暴露了语义钩子，可在项目级 `.spherse/theme.css` 中定制其外观（背景、边框、圆角、选中/未选中态等）。
+
+| 钩子 | 作用对象 |
+|------|---------|
+| `data-project-avatar` | 项目头像根容器（含 fallback 字母） |
+| `[data-project-avatar][data-active]` | 当前选中项目的头像（`data-active` 仅在选中态存在） |
+
+示例：
+
+```css
+/* .spherse/theme.css —— 项目头像自定义背景与圆角 */
+[data-project-avatar] {
+  background: var(--sp-primary);
+  color: var(--sp-primary-foreground);
+  border-radius: 9999px;
+}
+
+/* 选中态加描边，未选中态降低透明度 */
+[data-project-avatar][data-active] {
+  outline: 2px solid var(--sp-primary);
+}
+[data-project-avatar]:not([data-active]) {
+  opacity: 0.4;
+}
+```
+
+> 头像默认选中态为 `opacity-100`、未选中态为 `opacity-30`，均通过 class 而非 inline style 控制，可被相同或更高特异性的主题规则覆盖。
+
 ## 项目面板与内容浏览器
 
 除了聊天窗口，项目级 `.spherse/theme.css` 还可以定制项目面板和内容浏览器的背景与外观。

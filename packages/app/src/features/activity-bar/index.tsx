@@ -56,8 +56,8 @@ export function ActivityBar({
       <div
         className={
           pinned
-            ? "relative z-40 h-full shrink-0 w-14"
-            : `absolute top-0 left-0 z-40 h-full w-14 transition-transform duration-200 ease-out ${
+            ? "relative z-40 h-full shrink-0 w-[52px]"
+            : `absolute top-0 left-0 z-40 h-full w-[52px] transition-transform duration-200 ease-out ${
                 visible ? "translate-x-0" : "-translate-x-full"
               }`
         }
@@ -69,7 +69,7 @@ export function ActivityBar({
         <div className="h-full">
           <div
             className={cn(
-              "flex h-full w-14 shrink-0 flex-col border-r border-border",
+              "flex h-full w-[52px] shrink-0 flex-col border-r border-border",
               pinned ? "bg-muted/30" : "bg-muted",
             )}
           >
@@ -83,7 +83,6 @@ export function ActivityBar({
                   <ContextMenuTrigger>
                     <ProjectAvatar
                       name={info.name}
-                      path={info.path}
                       active={projectId === activeProjectId}
                       onClick={() => onSelect(projectId)}
                     />

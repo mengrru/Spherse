@@ -14,7 +14,7 @@ export function ProjectPanel() {
       className={
         pinned
           ? "relative z-30 h-full shrink-0 transition-[width] duration-200 ease-out w-65"
-          : `absolute top-0 left-14 z-50 h-full w-65 transition-transform duration-200 ease-out ${
+          : `absolute top-0 left-[52px] z-50 h-full w-65 transition-transform duration-200 ease-out ${
               visible ? "translate-x-0" : "-translate-x-[calc(100%+3.5rem)]"
             }`
       }

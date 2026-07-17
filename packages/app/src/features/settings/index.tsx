@@ -135,7 +135,7 @@ function ModelGroupTab({
       </div>
       {kind === "text" && (
         <Button variant="outline" className="mt-2 w-full" onClick={() => setDialog({ mode: "add" })}>
-          <Plus className="size-4" />
+          <Plus className="size-3.5" />
           {t("settings.provider.addCustom")}
         </Button>
       )}

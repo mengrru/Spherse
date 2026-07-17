@@ -69,7 +69,7 @@ export const zhCN = {
   // provider 连接按钮
   "settings.provider.connect": "连接",
   // 文本模型 tab → 模型提供商列表下方的「添加自定义供应商」按钮文案
-  "settings.provider.addCustom": "+ 添加自定义供应商",
+  "settings.provider.addCustom": "添加自定义供应商",
   // ModelProviderItem 行内 badge，标识该供应商为用户自定义
   "settings.provider.customBadge": "自定义",
   // ModelProviderItem 行内 badge，标识本地服务器等无需鉴权的供应商
@@ -429,6 +429,8 @@ export const zhCN = {
   "chat.imageExportFailed": "导出失败：{message}",
   // image card 右上角导出按钮的悬停提示
   "chat.exportImage": "导出图片",
+  // html card 右上角「展开全屏」按钮的悬停提示
+  "chat.htmlCard.expand": "全屏查看",
   // 复制按钮悬停提示
   "chat.copyTooltip": "复制",
   // Chat 关闭按钮悬停提示

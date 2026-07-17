@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { DownloadIcon } from "lucide-react";
+import { DownloadIcon, Maximize2Icon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { HtmlCard } from "./types";
+import { Button } from "../../components/ui/button";
 import { useProjectCtx } from "../../context/project-context";
 import { useChatRuntime } from "./runtime-context";
 import { isPathInsideProject, toProjectRelative, joinProjectPath } from "../../lib/project-path";
@@ -23,6 +24,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [fetchedHtml, setFetchedHtml] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const previewUrl = card.file_path && client ? client.getPreviewUrl(card.file_path) : null;
   const isImage = !!card.file_path && isImageFile(card.file_path);
@@ -44,6 +46,15 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
       cancelled = true;
     };
   }, [previewUrl, card.html, isImage]);
+
+  useEffect(() => {
+    if (!expanded) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setExpanded(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expanded]);
 
   function injectRuntime(iframe: HTMLIFrameElement | null) {
     if (!iframe || !runtime) return;
@@ -100,21 +111,40 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     }
   }
 
+  const actionBtnClass =
+    "text-muted-foreground opacity-0 transition-opacity hover:bg-transparent hover:text-foreground group-hover/card:opacity-100 [.group-title_&]:opacity-100";
+
   const saveButton = card.html ? (
-    <button
-      type="button"
-      onClick={handleSave}
-      className="shrink-0 rounded-sm p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/card:opacity-100 [.group-title_&]:opacity-100"
-    >
+    <Button variant="ghost" size="icon-xs" onClick={handleSave} className={actionBtnClass}>
       <DownloadIcon className="size-3.5" />
-    </button>
+    </Button>
   ) : null;
 
-  function renderIframe() {
+  const expandButton = (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onClick={() => setExpanded(true)}
+      className={actionBtnClass}
+      title={t("chat.htmlCard.expand")}
+    >
+      <Maximize2Icon className="size-3.5" />
+    </Button>
+  );
+
+  const headerActions = (
+    <div className="flex items-center gap-1.5">
+      {saveButton}
+      {expandButton}
+    </div>
+  );
+
+  function renderIframe(h: string | number = height) {
+    const cssHeight = typeof h === "number" ? `${h}px` : h;
     const sandbox = "allow-scripts allow-same-origin";
     const iframeStyle = {
       width: "100%",
-      height: `${height}px`,
+      height: cssHeight,
       border: "none",
       display: "block" as const,
     };
@@ -129,7 +159,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
           style={{
             display: "block",
             maxWidth: "100%",
-            maxHeight: `${height}px`,
+            maxHeight: cssHeight,
             width: "auto",
             height: "auto",
             margin: "0 auto",
@@ -204,17 +234,37 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
           <span className="truncate text-xs font-semibold text-muted-foreground">
             {card.title}
           </span>
-          {saveButton}
+          {headerActions}
         </div>
       ) : undefined}
       <div className="relative">
         {!card.title && (
           <div className="absolute right-1.5 top-1.5 z-10 rounded-md bg-background/80 p-0.5 backdrop-blur-sm">
-            {saveButton}
+            {headerActions}
           </div>
         )}
         {renderIframe()}
       </div>
+      {expanded && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-background">
+          <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+            <span className="truncate text-sm font-medium text-foreground">
+              {card.title ?? ""}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setExpanded(false)}
+              title={t("chat.close")}
+            >
+              <XIcon />
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1 p-2">
+            {renderIframe("100%")}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
