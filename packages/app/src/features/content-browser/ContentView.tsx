@@ -127,7 +127,7 @@ export function ContentView({
             <MarkdownContent variant="document" resolveImageSrc={resolveImageSrc} onLinkClick={handleLinkClick}>{body}</MarkdownContent>
           </div>
         ) : (
-          <pre className="rounded-lg border border-border bg-card p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">{content}</pre>
+          <pre className="break-words rounded-lg border border-border bg-card p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">{content}</pre>
         )
       )}
     </div>
