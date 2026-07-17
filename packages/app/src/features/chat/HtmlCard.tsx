@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DownloadIcon, Maximize2Icon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
@@ -245,26 +246,28 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
         )}
         {renderIframe()}
       </div>
-      {expanded && (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-background">
-          <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
-            <span className="truncate text-sm font-medium text-foreground">
-              {card.title ?? ""}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => setExpanded(false)}
-              title={t("chat.close")}
-            >
-              <XIcon />
-            </Button>
-          </div>
-          <div className="min-h-0 flex-1 p-2">
-            {renderIframe("100%")}
-          </div>
-        </div>
-      )}
+      {expanded &&
+        createPortal(
+          <div className="fixed inset-0 z-[100] flex flex-col bg-background">
+            <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
+              <span className="truncate text-sm font-medium text-foreground">
+                {card.title ?? ""}
+              </span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => setExpanded(false)}
+                title={t("chat.close")}
+              >
+                <XIcon />
+              </Button>
+            </div>
+            <div className="min-h-0 flex-1 p-2">
+              {renderIframe("100%")}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
