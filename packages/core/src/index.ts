@@ -15,3 +15,17 @@ export type { AccessPolicy, Decision } from "./access/access-policy.js";
 export { shouldSkipDirEntry } from "./utils/fs-walk.js";
 export { getSupportedProviders, getImageSupportedProviders, syncCustomProviders } from "./model-providers/index.js";
 export type { Logger } from "./logger.js";
+export type { AgentMessage } from "@earendil-works/pi-agent-core";
+export type {
+  Message,
+  UserMessage,
+  AssistantMessage,
+  ToolResultMessage,
+  TextContent,
+  ImageContent,
+  ThinkingContent,
+  ToolCall,
+  StopReason,
+} from "@earendil-works/pi-ai";
+export type { RenderCardDetails, RenderCardResultDetails } from "./tools/render-card.js";
+export type { ImageCardDetails, ImageCardResultDetails } from "./tools/generate-image.js";

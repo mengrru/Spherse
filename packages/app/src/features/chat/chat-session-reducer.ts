@@ -1,6 +1,24 @@
-import type { AgentEvent } from "../../lib/types";
+import type {
+  AssistantMessage,
+  ImageCardDetails,
+  Message,
+  RenderCardDetails,
+  ToolCall as AgentToolCall,
+} from "@spherse/core";
 import type { ErrorEventCode } from "@spherse/server/contracts";
-import type { ChatMessage, ToolCallInfo } from "./types";
+import type { ChatCard, ChatMessage, ToolCallInfo } from "./types";
+import {
+  isAssistantMessage,
+  isImageCardDetails,
+  isImageCardResultDetails,
+  isRenderCardDetails,
+  isRenderCardResultDetails,
+  isTextContent,
+  isToolCall,
+  isToolResultMessage,
+  isUserMessage,
+  type AgentEvent,
+} from "./agent-event-parse";
 import { aggregateFileChanges, attachRunChanges } from "./lib/aggregate-file-changes";
 
 export interface StreamingSessionData {
@@ -65,18 +83,36 @@ function applyEventToStreaming(event: AgentEvent): boolean | null {
   return null;
 }
 
+function extractText(content: Message["content"]): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content.filter(isTextContent).map((c) => c.text).join("");
+}
+
+function extractToolCallsFromAssistantContent(message: AssistantMessage): ToolCallInfo[] | undefined {
+  if (!Array.isArray(message.content)) return undefined;
+  const toolCalls = message.content.filter(isToolCall);
+  return toolCalls.length > 0 ? toolCalls.map(buildToolCallInfo) : undefined;
+}
+
+function buildToolCallInfo(toolCall: AgentToolCall): ToolCallInfo {
+  return {
+    toolCallId: toolCall.id,
+    toolName: toolCall.name,
+    args: toolCall.arguments ?? {},
+    status: "running",
+  };
+}
+
 function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: number): ChatMessage[] {
-  if (event.type === "message_start" && event.message?.role === "assistant") {
+  if (event.type === "message_start" && isAssistantMessage(event.message)) {
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._streaming) return prev;
     return [...prev, { role: "assistant", content: "", _streaming: true }];
   }
 
-  if (event.type === "message_update" && event.message?.role === "assistant") {
-    const textContent = event.message.content?.find(
-      (content: any) => content.type === "text",
-    );
-    const text = textContent?.text ?? "";
+  if (event.type === "message_update" && isAssistantMessage(event.message)) {
+    const text = extractText(event.message.content);
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._streaming) {
       return [...prev.slice(0, -1), { ...last, content: text, _streaming: true }];
@@ -87,20 +123,23 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
     return prev;
   }
 
-  if (event.type === "message_end" && event.message?.role === "assistant") {
-    const textContent = event.message.content?.find(
-      (content: any) => content.type === "text",
-    );
-    const text = textContent?.text ?? "";
+  if (event.type === "message_end" && isAssistantMessage(event.message)) {
+    const text = extractText(event.message.content);
     const isError = event.message.stopReason === "error";
     const error = isError ? (event.message.errorMessage ?? "Unknown error") : undefined;
     const timestamp = event.message.timestamp ?? now;
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._streaming) {
-      return [...prev.slice(0, -1), { ...last, content: text, _streaming: false, timestamp, ...(error && { _error: error }) }];
+      return [
+        ...prev.slice(0, -1),
+        { ...last, content: text, _streaming: false, timestamp, ...(error && { _error: error }) },
+      ];
     }
     if (text || error || last?.role !== "assistant") {
-      return [...prev, { role: "assistant", content: text, _streaming: false, timestamp, ...(error && { _error: error }) }];
+      return [
+        ...prev,
+        { role: "assistant", content: text, _streaming: false, timestamp, ...(error && { _error: error }) },
+      ];
     }
     return prev;
   }
@@ -109,7 +148,7 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
     const toolCall: ToolCallInfo = {
       toolCallId: event.toolCallId,
       toolName: event.toolName,
-      args: event.args ?? {},
+      args: event.args,
       status: "running",
     };
     const last = prev[prev.length - 1];
@@ -126,7 +165,7 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
         toolCall.toolCallId === event.toolCallId
           ? {
               ...toolCall,
-              status: (event.isError ? "error" : "completed") as ToolCallInfo["status"],
+              status: event.isError ? ("error" as const) : ("completed" as const),
               result: typeof event.result === "string" ? event.result : JSON.stringify(event.result),
             }
           : toolCall,
@@ -139,27 +178,16 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
   if (event.type === "tool_execution_update") {
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._toolCalls) {
+      const partialDetails = extractCardDetailsFromPartial(event.toolName, event.partialResult);
       const calls = last._toolCalls.map((toolCall) => {
         if (toolCall.toolCallId !== event.toolCallId) return toolCall;
         const updated: ToolCallInfo = {
           ...toolCall,
-          partialResult: typeof event.partialResult === "string" ? event.partialResult : JSON.stringify(event.partialResult),
+          partialResult:
+            typeof event.partialResult === "string" ? event.partialResult : JSON.stringify(event.partialResult),
         };
-        if (
-          toolCall.toolName === "render_card" &&
-          event.partialResult &&
-          typeof event.partialResult === "object" &&
-          (event.partialResult as any).details?.type === "html"
-        ) {
-          updated._card = (event.partialResult as any).details;
-        }
-        if (
-          toolCall.toolName === "generate_image" &&
-          event.partialResult &&
-          typeof event.partialResult === "object" &&
-          (event.partialResult as any).details?.type === "image"
-        ) {
-          updated._card = (event.partialResult as any).details;
+        if (partialDetails) {
+          updated._card = partialDetails;
         }
         return updated;
       });
@@ -189,89 +217,109 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
   return prev;
 }
 
-export function parseHistoryMessages(history: any[]): ChatMessage[] {
-  const toolResultMap = new Map<string, { result: string; isError: boolean; details?: any }>();
-  for (const message of history) {
-    if (message.role === "toolResult" && message.toolCallId) {
-      const text = (message.content ?? [])
-        .filter((content: any) => content.type === "text")
-        .map((content: any) => content.text)
-        .join("");
-      toolResultMap.set(message.toolCallId, {
-        result: text,
-        isError: message.isError ?? false,
-        details: message.details,
-      });
-    }
+function extractCardDetailsFromPartial(
+  toolName: string,
+  partialResult: unknown,
+): ChatCard | undefined {
+  if (!isObject(partialResult)) return undefined;
+  const details = partialResult.details;
+  if (toolName === "render_card" && isRenderCardDetails(details)) {
+    return details;
   }
+  if (toolName === "generate_image" && isImageCardDetails(details)) {
+    return details;
+  }
+  return undefined;
+}
+
+function isObject(x: unknown): x is Record<string, unknown> {
+  return typeof x === "object" && x !== null;
+}
+
+interface ToolResultDetailsBag {
+  result: string;
+  isError: boolean;
+  details: unknown;
+}
+
+function collectToolResultDetails(history: unknown[]): Map<string, ToolResultDetailsBag> {
+  const map = new Map<string, ToolResultDetailsBag>();
+  for (const entry of history) {
+    if (!isToolResultMessage(entry)) continue;
+    const text = extractText(entry.content);
+    map.set(entry.toolCallId, {
+      result: text,
+      isError: entry.isError ?? false,
+      details: entry.details,
+    });
+  }
+  return map;
+}
+
+function buildCardFromToolResult(
+  toolName: string,
+  toolCall: AgentToolCall,
+  details: unknown,
+): ChatCard | undefined {
+  if (toolName === "render_card" && isRenderCardResultDetails(details)) {
+    const card: RenderCardDetails = {
+      type: "html",
+      html: details.html ?? (details.file_path ? undefined : getStringArg(toolCall.arguments, "content")),
+      file_path: details.file_path,
+      title: details.title,
+      width: details.width,
+      height: details.height ?? 400,
+      max_width: details.max_width ?? 800,
+      max_height: details.max_height ?? 600,
+    };
+    return card;
+  }
+  if (toolName === "generate_image" && isImageCardResultDetails(details)) {
+    const card: ImageCardDetails = {
+      type: "image",
+      status: details.status ?? "done",
+      path: details.path,
+      prompt: details.prompt ?? "",
+      model: details.model,
+      mimeType: details.mimeType,
+      errorMessage: details.errorMessage,
+    };
+    return card;
+  }
+  return undefined;
+}
+
+function getStringArg(args: unknown, key: string): string | undefined {
+  if (!isObject(args)) return undefined;
+  const v = args[key];
+  return typeof v === "string" ? v : undefined;
+}
+
+export function parseHistoryMessages(history: unknown[]): ChatMessage[] {
+  const toolResultMap = collectToolResultDetails(history);
 
   const loaded: ChatMessage[] = [];
-  for (const message of history) {
-    if (message.role === "toolResult") continue;
-
-    const text =
-      typeof message.content === "string"
-        ? message.content
-        : Array.isArray(message.content)
-          ? message.content
-              .filter((content: any) => content.type === "text")
-              .map((content: any) => content.text)
-              .join("")
-          : "";
-
-    const toolCalls: ToolCallInfo[] | undefined =
-      Array.isArray(message.content)
-        ? message.content
-            .filter((content: any) => content.type === "toolCall")
-            .map((content: any) => {
-              const toolResult = toolResultMap.get(content.id);
-              const base: ToolCallInfo = {
-                toolCallId: content.id,
-                toolName: content.name,
-                args: content.arguments ?? {},
-                result: toolResult?.result,
-                status: toolResult ? (toolResult.isError ? "error" as const : "completed" as const) : "completed" as const,
-              };
-              if (
-                content.name === "render_card" &&
-                toolResult?.details?.cardType === "html"
-              ) {
-                base._card = {
-                  type: "html",
-                  html: toolResult.details.html ?? (toolResult.details.file_path ? undefined : (content.arguments as any)?.content),
-                  file_path: toolResult.details.file_path,
-                  title: toolResult.details.title,
-                  width: toolResult.details.width,
-                  height: toolResult.details.height ?? 400,
-                  max_width: toolResult.details.max_width ?? 800,
-                  max_height: toolResult.details.max_height ?? 600,
-                };
-              }
-              if (
-                content.name === "generate_image" &&
-                toolResult?.details?.cardType === "image"
-              ) {
-                base._card = {
-                  type: "image",
-                  status: toolResult.details.status ?? "done",
-                  path: toolResult.details.path,
-                  prompt: toolResult.details.prompt ?? "",
-                  model: toolResult.details.model,
-                  mimeType: toolResult.details.mimeType,
-                  errorMessage: toolResult.details.errorMessage,
-                };
-              }
-              return base;
-            })
-        : undefined;
-
-    loaded.push({
-      role: message.role,
-      content: text,
-      ...(toolCalls && toolCalls.length > 0 ? { _toolCalls: toolCalls } : {}),
-      ...(message.stopReason === "error" ? { _error: message.errorMessage ?? "Unknown error" } : {}),
-      timestamp: message.timestamp,
-    });
+  for (const entry of history) {
+    if (isUserMessage(entry)) {
+      loaded.push({
+        role: "user",
+        content: extractText(entry.content),
+        timestamp: entry.timestamp,
+      });
+      continue;
+    }
+    if (isAssistantMessage(entry)) {
+      const toolCalls = extractToolCallsFromAssistantContent(entry);
+      const enrichedToolCalls = enrichToolCalls(toolCalls, entry.content, toolResultMap);
+      loaded.push({
+        role: "assistant",
+        content: extractText(entry.content),
+        ...(enrichedToolCalls && enrichedToolCalls.length > 0 ? { _toolCalls: enrichedToolCalls } : {}),
+        ...(entry.stopReason === "error" ? { _error: entry.errorMessage ?? "Unknown error" } : {}),
+        timestamp: entry.timestamp,
+      });
+      continue;
+    }
   }
 
   const runEndIndices: number[] = [];
@@ -292,4 +340,31 @@ export function parseHistoryMessages(history: any[]): ChatMessage[] {
     }
   }
   return result;
+}
+
+function enrichToolCalls(
+  toolCalls: ToolCallInfo[] | undefined,
+  content: AssistantMessage["content"],
+  toolResultMap: Map<string, ToolResultDetailsBag>,
+): ToolCallInfo[] | undefined {
+  if (!toolCalls) return undefined;
+  if (!Array.isArray(content)) return toolCalls;
+  return toolCalls.map((info) => {
+    const original = content.find(
+      (c): c is AgentToolCall => isToolCall(c) && c.id === info.toolCallId,
+    );
+    if (!original) return info;
+    const toolResult = toolResultMap.get(info.toolCallId);
+    const card = buildCardFromToolResult(original.name, original, toolResult?.details);
+    return {
+      ...info,
+      result: toolResult?.result,
+      status: toolResult
+        ? toolResult.isError
+          ? ("error" as const)
+          : ("completed" as const)
+        : ("completed" as const),
+      ...(card ? { _card: card } : {}),
+    };
+  });
 }

@@ -10,6 +10,18 @@ export const CHAT_CLOSE_CODES = {
   SESSION_UNRECOVERABLE: 4401,
 } as const;
 
+/**
+ * Chat WebSocket server events.
+ *
+ * Server is a transparent transport: it forwards pi-agent-core events to the
+ * renderer without interpreting message/tool payloads. The `Type.Unknown()`
+ * fields below carry pi-ai Message / tool details objects whose typed shape is
+ * reconstructed on the consumer side via `@spherse/core` re-exports and type
+ * guards (see `packages/app/src/features/chat/agent-event-parse.ts`).
+ *
+ * Keeping the contract payload-agnostic prevents coupling server to specific
+ * message schemas or tools, and avoids type drift between server and pi-ai.
+ */
 const chatServerEvent = Type.Union([
   Type.Object({ type: Type.Literal("agent_start") }),
   Type.Object({ type: Type.Literal("agent_end"), messages: Type.Array(Type.Unknown()) }),

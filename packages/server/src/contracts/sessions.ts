@@ -19,6 +19,13 @@ export const schemas = {
   }),
   sessionCreateResponse: Type.Object({ sessionId: Type.String() }),
   sessionRenameRequest: Type.Object({ title: Type.String() }),
+  /**
+   * Session message history. Carries pi-agent-core AgentMessage objects as
+   * opaque JSON: server persists and forwards them without interpreting the
+   * shape. Consumers reconstruct the typed structure via `@spherse/core`
+   * re-exports and type guards (`parseAgentMessage` in
+   * `packages/app/src/features/chat/agent-event-parse.ts`).
+   */
   sessionMessagesResponse: Type.Array(Type.Unknown()),
   sessionMessagesPageResponse: Type.Object({
     messages: Type.Array(Type.Unknown()),

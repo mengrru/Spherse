@@ -7,6 +7,7 @@ import {
   reduceSessionEvents,
   type StreamingSessionData,
 } from "./chat-session-reducer";
+import type { AgentEvent } from "./agent-event-parse";
 
 function session(overrides: Partial<StreamingSessionData> = {}): StreamingSessionData {
   return {
@@ -74,7 +75,7 @@ describe("chat session reducer", () => {
 
     const next = reduceSessionEvents(current, [
       { type: "error", message: "no model", code: ErrorEventCode.ModelNotConfigured },
-    ], 200);
+    ] as unknown as AgentEvent[], 200);
 
     const last = next.messages[next.messages.length - 1];
     expect(last._errorCode).toBe(ErrorEventCode.ModelNotConfigured);
@@ -125,7 +126,7 @@ describe("chat session reducer", () => {
 
     const next = reduceSessionEvents(current, [
       { type: "message_start", message: { role: "assistant", content: [] } },
-    ], 200);
+    ] as unknown as AgentEvent[], 200);
 
     expect(next.messages).toEqual([
       { role: "user", content: "Hello" },
@@ -174,7 +175,7 @@ describe("chat session reducer", () => {
       { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "Hi there" }] } },
       { type: "turn_end", message: {}, toolResults: [] },
       { type: "agent_end", messages: [] },
-    ], 200);
+    ] as unknown as AgentEvent[], 200);
 
     expect(afterAgentEnd.streaming).toBe(false);
     expect(afterAgentEnd.messages).toEqual([
@@ -192,7 +193,7 @@ describe("chat session reducer", () => {
     const next = reduceSessionEvents(current, [
       { type: "message_start", message: { role: "assistant", content: [] } },
       { type: "message_end", message: { role: "assistant", content: [], stopReason: "error", errorMessage: "Rate limit exceeded" } },
-    ], 200);
+    ] as unknown as AgentEvent[], 200);
 
     expect(next.messages).toEqual([
       { role: "user", content: "Hello" },
@@ -209,7 +210,7 @@ describe("chat session reducer", () => {
     const next = reduceSessionEvents(current, [
       { type: "message_start", message: { role: "assistant", content: [] } },
       { type: "message_end", message: { role: "assistant", content: [], stopReason: "error" } },
-    ], 200);
+    ] as unknown as AgentEvent[], 200);
 
     expect(next.messages[1]._error).toBe("Unknown error");
   });
@@ -223,7 +224,7 @@ describe("chat session reducer", () => {
     const next = reduceSessionEvents(current, [
       { type: "message_start", message: { role: "assistant", content: [] } },
       { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "Hi" }], stopReason: "stop" } },
-    ], 200);
+    ] as unknown as AgentEvent[], 200);
 
     expect(next.messages[1]._error).toBeUndefined();
   });
@@ -605,7 +606,8 @@ describe("chat session reducer", () => {
 
     const parsed = parseHistoryMessages(history);
 
-    expect(parsed[1]._toolCalls?.[0]._card?.html).toBe("<h1>Legacy</h1>");
+    const card = parsed[1]._toolCalls?.[0]._card;
+    expect(card?.type === "html" ? card.html : undefined).toBe("<h1>Legacy</h1>");
   });
 
   it("parseHistoryMessages ignores arguments.content when file_path present (both-args edge case)", () => {
@@ -626,8 +628,9 @@ describe("chat session reducer", () => {
 
     const parsed = parseHistoryMessages(history);
 
-    expect(parsed[1]._toolCalls?.[0]._card?.html).toBeUndefined();
-    expect(parsed[1]._toolCalls?.[0]._card?.file_path).toBe("card.html");
+    const card = parsed[1]._toolCalls?.[0]._card;
+    expect(card?.type === "html" ? card.html : undefined).toBeUndefined();
+    expect(card?.type === "html" ? card.file_path : undefined).toBe("card.html");
   });
 
   it("message_end writes timestamp from event.message.timestamp", () => {
@@ -639,7 +642,7 @@ describe("chat session reducer", () => {
     const next = reduceSessionEvents(current, [
       { type: "message_start", message: { role: "assistant", content: [] } },
       { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "Hi" }], timestamp: 9999 } },
-    ], 200);
+    ] as unknown as AgentEvent[], 200);
 
     expect(next.messages[1].timestamp).toBe(9999);
   });
@@ -653,7 +656,7 @@ describe("chat session reducer", () => {
     const next = reduceSessionEvents(current, [
       { type: "message_start", message: { role: "assistant", content: [] } },
       { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "Hi" }] } },
-    ], 4242);
+    ] as unknown as AgentEvent[], 4242);
 
     expect(next.messages[1].timestamp).toBe(4242);
   });

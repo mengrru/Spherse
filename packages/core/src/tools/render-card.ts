@@ -14,6 +14,34 @@ function isImageFile(filePath: string): boolean {
   return IMAGE_EXTENSIONS.has(ext);
 }
 
+export interface RenderCardDetails {
+  type: "html";
+  html?: string;
+  file_path?: string;
+  title?: string;
+  width?: number;
+  height?: number;
+  max_width?: number;
+  max_height?: number;
+}
+
+export interface RenderCardResultDetails {
+  cardType: "html";
+  /**
+   * Backward-compat: legacy persisted toolResult.details may carry the inline
+   * HTML payload here. Current tool no longer writes this field (HTML lives
+   * only in onUpdate details), but consumers still read it to reconstruct
+   * historical cards.
+   */
+  html?: string;
+  title?: string;
+  file_path?: string;
+  width?: number;
+  height?: number;
+  max_width?: number;
+  max_height?: number;
+}
+
 const RenderCardParams = Type.Object({
   type: Type.Literal("html", { description: "Card type" }),
   content: Type.Optional(Type.String({ description: "Inline HTML content (self-contained, no external resources)." })),
@@ -91,20 +119,20 @@ export function createRenderCardTool(
           height: params.height ?? 400,
           max_width: params.max_width ?? 800,
           max_height: params.max_height ?? 600,
-        },
+        } satisfies RenderCardDetails,
       });
 
       return {
         content: [{ type: "text" as const, text: "HTML card rendered successfully" }],
         details: {
-          cardType: "html",
+          cardType: "html" as const,
           title: params.title,
           file_path: params.file_path,
           width: params.width,
           height: params.height ?? 400,
           max_width: params.max_width ?? 800,
           max_height: params.max_height ?? 600,
-        },
+        } satisfies RenderCardResultDetails,
       };
     },
   };

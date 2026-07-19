@@ -15,11 +15,21 @@ export type {
   ThemeSettingsResponse,
 } from "@spherse/server/contracts";
 
+export type {
+  AgentMessage,
+  Message,
+  UserMessage,
+  AssistantMessage,
+  ToolResultMessage,
+  TextContent,
+  ImageContent,
+  ThinkingContent,
+  ToolCall,
+} from "@spherse/core";
+
 export interface ActiveSessionInfo {
   sessionId: string;
   agentName: string;
   sessionTitle?: string;
   floating?: boolean;
 }
-
-export type { ChatServerEvent as AgentEvent } from "@spherse/server/contracts";

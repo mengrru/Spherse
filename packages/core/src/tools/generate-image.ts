@@ -20,6 +20,20 @@ const MIME_TO_EXT: Record<string, string> = {
 
 const GENERATED_DIR = ".spherse/generated-images";
 
+export interface ImageCardDetails {
+  type: "image";
+  status: "generating" | "done" | "error";
+  path?: string;
+  prompt: string;
+  model?: string;
+  mimeType?: string;
+  errorMessage?: string;
+}
+
+export interface ImageCardResultDetails extends ImageCardDetails {
+  cardType: "image";
+}
+
 function readImageConfig(): { provider: string; modelId: string; apiKey: string } | null {
   const modelStr = process.env.SPHERSE_IMAGE_MODEL;
   const apiKey = process.env.SPHERSE_IMAGE_API_KEY;
@@ -133,10 +147,10 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
       await fs.writeFile(abs, buf);
 
       const modelLabel = `${config.provider}/${config.modelId}`;
-      const details = {
-        type: "image" as const,
-        cardType: "image" as const,
-        status: "done" as const,
+      const details: ImageCardResultDetails = {
+        type: "image",
+        cardType: "image",
+        status: "done",
         path: destRel,
         prompt,
         model: modelLabel,

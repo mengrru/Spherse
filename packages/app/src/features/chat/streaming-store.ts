@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import { CHAT_CLOSE_CODES, parseChatServerEvent } from "@spherse/server/contracts";
 import type { ApiClient } from "../../lib/api";
-import type { AgentEvent } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
+import { parseAgentEvent, type AgentEvent } from "./agent-event-parse";
 import {
   mergeHistoryMessages,
   parseHistoryMessages,
@@ -267,7 +267,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
             lastPongAt.set(sessionId, Date.now());
             return;
           }
-          const parsed = parseChatServerEvent(raw) as AgentEvent;
+          const parsed = parseAgentEvent(parseChatServerEvent(raw));
           enqueueEvent(sessionId, parsed);
         } catch (err) {
           console.warn("[streaming-store] unparseable ws event:", err);
