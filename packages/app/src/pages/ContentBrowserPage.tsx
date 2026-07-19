@@ -61,6 +61,7 @@ export function ContentBrowserPage() {
       key={filePath}
       filePath={filePath}
       onBack={back}
+      onClose={() => navigate(`/project/${projectId}`, { replace: true })}
       agents={agents}
       activeSessions={activeSessions}
       onStartSession={handleStartSession}

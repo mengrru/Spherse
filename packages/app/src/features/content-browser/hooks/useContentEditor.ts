@@ -24,6 +24,7 @@ export function useContentEditor({
   const [conflict, setConflict] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const pendingLeaveRef = useRef<(() => void) | null>(null);
   const isDirty = isEditing && editedContent !== (content ?? "");
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export function useContentEditor({
     setSaveError(null);
     setShowLeaveConfirm(false);
     setShowCancelConfirm(false);
+    pendingLeaveRef.current = null;
   }, [filePath]);
 
   const enterEdit = () => {
@@ -60,16 +62,19 @@ export function useContentEditor({
 
   const requestLeave = (onLeave: () => void) => {
     if (isDirty) {
+      pendingLeaveRef.current = onLeave;
       setShowLeaveConfirm(true);
     } else {
       onLeave();
     }
   };
 
-  const confirmLeave = (onLeave: () => void) => {
+  const confirmLeave = () => {
+    const cb = pendingLeaveRef.current;
+    pendingLeaveRef.current = null;
     setShowLeaveConfirm(false);
     setIsEditing(false);
-    onLeave();
+    cb?.();
   };
 
   const save = useCallback(async () => {

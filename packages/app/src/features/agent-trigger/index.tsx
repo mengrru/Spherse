@@ -120,7 +120,7 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!flex h-[60vh] w-[38vw] !max-w-[38vw] flex-col sm:!max-w-[38vw]">
+      <DialogContent className="flex h-[80vh] flex-col sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1.5">
             {agentName ? `${t("agent-trigger.dialogTitle")} | ${agentName}` : t("agent-trigger.dialogTitle")}

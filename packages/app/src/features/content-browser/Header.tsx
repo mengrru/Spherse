@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
-import { ArrowLeftIcon, CheckIcon, CopyIcon, RefreshCwIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckIcon, CopyIcon, RefreshCwIcon, XIcon } from "lucide-react";
 
 interface HeaderProps {
   filePath: string;
@@ -13,6 +13,7 @@ interface HeaderProps {
   htmlView: "preview" | "source";
   saving: boolean;
   onBack: () => void;
+  onClose: () => void;
   onEnterEdit: () => void;
   onCancelEdit: () => void;
   onSave: () => void;
@@ -29,6 +30,7 @@ export function Header({
   htmlView,
   saving,
   onBack,
+  onClose,
   onEnterEdit,
   onCancelEdit,
   onSave,
@@ -39,13 +41,15 @@ export function Header({
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-center gap-3 border-b border-border bg-background px-4 py-3">
-      <Button variant="outline" onClick={onBack}>
-        <ArrowLeftIcon />
-        {t("common.back")}
-      </Button>
-      <div className="group/header flex min-w-0 items-center gap-0">
+      <div className="flex shrink-0 items-center gap-1">
+        <Button variant="outline" size="sm" onClick={onBack} title={t("common.back")}>
+          <ArrowLeftIcon />
+          {t("common.back")}
+        </Button>
+      </div>
+      <div className="group/header flex min-w-0 flex-1 items-center gap-0">
         <span className="me-1 truncate font-mono text-sm text-muted-foreground">
-          {isDirty && <span className="mr-1 text-primary">●</span>}
+          {isDirty && <span className="me-1 text-primary">●</span>}
           {filePath}
         </span>
         <Button
@@ -68,25 +72,7 @@ export function Header({
           </Button>
         )}
       </div>
-      <div className="ml-auto flex items-center gap-2">
-        {isEditing ? (
-          <>
-            <Button variant="outline" size="sm" onClick={onCancelEdit}>
-              {t("common.cancel")}
-            </Button>
-            <Button
-              size="sm"
-              onClick={onSave}
-              disabled={!isDirty || saving}
-            >
-              {saving ? t("common.saving") : t("common.save")}
-            </Button>
-          </>
-        ) : isEditable ? (
-          <Button variant="outline" size="sm" onClick={onEnterEdit}>
-            {t("common.edit")}
-          </Button>
-        ) : null}
+      <div className="flex shrink-0 items-center gap-2">
         {isHtml && !isEditing && (
           <ToggleGroup
             variant="outline"
@@ -107,6 +93,29 @@ export function Header({
               {t("content-browser.source")}
             </ToggleGroupItem>
           </ToggleGroup>
+        )}
+        {isEditing ? (
+          <>
+            <Button variant="outline" size="sm" onClick={onCancelEdit}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              size="sm"
+              onClick={onSave}
+              disabled={!isDirty || saving}
+            >
+              {saving ? t("common.saving") : t("common.save")}
+            </Button>
+          </>
+        ) : isEditable ? (
+          <Button variant="outline" size="sm" onClick={onEnterEdit}>
+            {t("common.edit")}
+          </Button>
+        ) : null}
+        {!isEditing && (
+          <Button variant="ghost" size="icon-sm" onClick={onClose} title={t("common.close")} aria-label={t("common.close")}>
+            <XIcon />
+          </Button>
         )}
       </div>
     </div>

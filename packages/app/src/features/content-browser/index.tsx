@@ -14,6 +14,7 @@ import { useContentFile } from "./hooks/useContentFile";
 export interface ContentBrowserProps {
   filePath: string;
   onBack: () => void;
+  onClose: () => void;
   agents: AgentProfile[];
   activeSessions?: ActiveSessionInfo[];
   onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;
@@ -22,6 +23,7 @@ export interface ContentBrowserProps {
 export function ContentBrowser({
   filePath,
   onBack,
+  onClose,
   agents,
   activeSessions,
   onStartSession,
@@ -70,6 +72,7 @@ export function ContentBrowser({
         htmlView={htmlView}
         saving={editor.saving}
         onBack={() => editor.requestLeave(onBack)}
+        onClose={() => editor.requestLeave(onClose)}
         onEnterEdit={editor.enterEdit}
         onCancelEdit={editor.cancelEdit}
         onSave={() => void editor.save()}
@@ -118,7 +121,7 @@ export function ContentBrowser({
         showCancelConfirm={editor.showCancelConfirm}
         onLeaveOpenChange={editor.setShowLeaveConfirm}
         onCancelOpenChange={editor.setShowCancelConfirm}
-        onConfirmLeave={() => editor.confirmLeave(onBack)}
+        onConfirmLeave={editor.confirmLeave}
         onConfirmCancel={editor.confirmCancel}
       />
     </div>
