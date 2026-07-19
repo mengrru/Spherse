@@ -7,13 +7,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDirs": ["electron", "shared"],
+    "rootDirs": ["electron"],
     "baseUrl": ".",
-    "paths": {
-      "@shared/*": ["./shared/*"]
-    },
     "declaration": false,
     "sourceMap": true
   },
-  "include": ["electron", "shared"]
+  "include": ["electron"]
 }

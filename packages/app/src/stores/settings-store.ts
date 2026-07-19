@@ -1,15 +1,16 @@
 import { create } from "zustand";
-import type { ThemeMode } from "@shared/electron-api";
-import type { SettingsApi } from "../features/settings/types";
+import type { HostBridge, ThemeMode } from "../lib/host-bridge";
+
+export type SettingsStoreApi = Pick<HostBridge, "getSettings" | "saveSettings">;
 
 interface SettingsStore {
   locale: string;
   debugToolsEnabled: boolean;
   theme: ThemeMode;
-  loadLocale: (api: SettingsApi) => Promise<void>;
-  changeLocale: (api: SettingsApi, locale: string) => Promise<boolean>;
-  setDebugToolsEnabled: (api: SettingsApi, enabled: boolean) => Promise<boolean>;
-  setTheme: (api: SettingsApi, theme: ThemeMode) => Promise<boolean>;
+  loadLocale: (api: SettingsStoreApi) => Promise<void>;
+  changeLocale: (api: SettingsStoreApi, locale: string) => Promise<boolean>;
+  setDebugToolsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
+  setTheme: (api: SettingsStoreApi, theme: ThemeMode) => Promise<boolean>;
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({

@@ -34,19 +34,20 @@ export default defineConfig({
   },
   renderer: {
     plugins: [react(), tailwindcss()],
-    root: ".",
+    root: resolve(__dirname, "src"),
     resolve: {
       alias: {
-        "@": resolve(__dirname, "src"),
+        "@": resolve(__dirname, "../app/src"),
+        "@spherse/app/src": resolve(__dirname, "../app/src"),
         "@spherse/i18n/react": resolve(__dirname, "../i18n/dist/react.js"),
         "@spherse/i18n": resolve(__dirname, "../i18n/dist/index.js"),
       },
     },
     build: {
-      outDir: "dist/renderer",
+      outDir: resolve(__dirname, "dist/renderer"),
       rollupOptions: {
         input: {
-          index: resolve(__dirname, "index.html"),
+          index: resolve(__dirname, "src/index.html"),
         },
       },
     },

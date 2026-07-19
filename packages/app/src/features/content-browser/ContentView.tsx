@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
 import { useProjectCtx } from "../../context/project-context";
+import { useHostBridge } from "../../context/host-bridge-context";
 import { FrontMatterPanel } from "./FrontMatterPanel";
 import { resolveMarkdownImagePath } from "./image-path";
 import { resolveMarkdownLink } from "./markdown-link";
@@ -43,6 +44,7 @@ export function ContentView({
 }: ContentViewProps) {
   const { t } = useI18n();
   const { client, projectId } = useProjectCtx();
+  const bridge = useHostBridge();
   const navigate = useNavigate();
   const { frontmatter, body } = useMemo(
     () => (isMarkdown && content ? parseFrontmatter(content) : { frontmatter: null, body: content ?? "" }),
@@ -60,7 +62,7 @@ export function ContentView({
       const resolved = resolveMarkdownLink(href, filePath);
       if (resolved.kind === "external") {
         event.preventDefault();
-        await window.electronAPI.openExternal(href);
+        await bridge.openExternal(href);
         return;
       }
       if (resolved.kind === "anchor") {
@@ -79,7 +81,7 @@ export function ContentView({
       }
       navigate(`/project/${projectId}/content?path=${encodeURIComponent(resolved.path)}`);
     },
-    [filePath, client, projectId, navigate, t],
+    [filePath, client, projectId, navigate, t, bridge],
   );
   if (isHtml && htmlView === "preview" && !isEditing && !loading && !error) {
     return (

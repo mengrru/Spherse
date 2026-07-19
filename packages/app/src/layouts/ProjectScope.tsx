@@ -11,11 +11,13 @@ import { useProjectDataStore } from "../stores/project-data-store";
 import { useAppStore } from "../stores/app-store";
 import { useProjectNavHistory } from "../lib/use-project-navigation";
 import { ProjectProvider } from "../context/project-context";
+import { useHostBridge } from "../context/host-bridge-context";
 
 export function ProjectScope() {
   const { projectId } = useParams();
   const location = useLocation();
   const { t } = useI18n();
+  const bridge = useHostBridge();
   const project = useAppStore((s) => (projectId ? s.projects.get(projectId) : undefined));
   const client = project?.ctx.client;
   const initializing = useAppStore((s) => s.initializing);
@@ -38,8 +40,8 @@ export function ProjectScope() {
   useSpherseMessageListener(projectId ?? "", client);
 
   useEffect(() => {
-    if (projectId) void setActiveProject(projectId);
-  }, [projectId, setActiveProject]);
+    if (projectId) void setActiveProject(bridge, projectId);
+  }, [projectId, setActiveProject, bridge]);
 
   useEffect(() => {
     if (!projectId) return;

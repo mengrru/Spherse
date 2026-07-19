@@ -132,115 +132,125 @@ spherse/
 │       │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，trigger/fs-watch/debug 按 projectId×channel 订阅）
 │       │       └── lib/
 │       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
-│   └── app/                          # @spherse/app — Electron + React
-│       ├── electron/
-│       │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main
-│       │   ├── main.ts               # Electron 主进程：组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
-│       │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
-│       │   ├── updater.ts            # electron-updater 封装：autoDownload/autoInstall 关闭、Windows 完整流程、macOS 通知模式（GitHub Releases API）、CancellationToken 取消、compareVersions、silent 抑制
-│       │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）
-│       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
-│       │   │   ├── index.ts          # registerAllIpc 聚合
-│       │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化、打开示例项目、打开项目文件夹（shell.openPath）
-│       │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
-│       │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）
-│       │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
-│       │   │   ├── context-menu.ts   # 文本框原生右键菜单：webContents 'context-menu' 事件（isEditable 门控，editFlags 控制 enable，i18n 本地化 undo/redo/cut/copy/paste/selectAll）
-│       │   │   └── debug.ts          # 开发模式 debug 动作
-│       │   ├── window.ts             # BrowserWindow 创建与管理
-│       │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新
-    │   │       └── settings.ts           # electron-store 封装 + env 管理（含自定义供应商 syncCustomProviders 注册）+ openProjects/locale 持久化
-│       ├── playwright.config.ts      # Playwright E2E 测试配置
-│       ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
-│       ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS、extraResources、publish GitHub Releases）
-│       ├── build/                    # electron-builder buildResources（icon 等资源）
-│       ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
-│       ├── e2e/                      # Playwright E2E 测试
-│       │   ├── helpers/
-│       │   │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
-│       │   │   └── file-tree.ts      # 文件树 E2E 测试辅助（项目创建、app launch）
-│       │   ├── agent-dialog.spec.ts  # Agent 对话框搜索文件 E2E 测试
-│       │   ├── app-launch.spec.ts    # App 启动验证 smoke test
-│       │   ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
-│       │   ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
-│       │   ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
-│       │   ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）
-│       │   ├── text-selection-session.spec.ts  # 划选会话 E2E 测试
-│       │   ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
-│       │   └── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
-│       └── src/
-│           ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化
-│           ├── main.tsx              # renderer 入口，挂载 RouterProvider
-│           ├── router.tsx            # React Router Hash Router 路由表
-│           ├── styles.css            # Tailwind CSS v4 + shadcn 语义 token（单一 token 体系）
-│           ├── lib/
-│           │   ├── api.ts            # HTTP/WS 客户端封装
-│           │   ├── agent-markdown.ts # Agent 定义 Markdown 生成/解析辅助
-│           │   ├── context.ts        # AppContext 定义
-│           │   ├── events.ts         # renderer 内部自定义事件名常量
-    │           │   ├── project-key.ts    # project path → URL projectKey 生成
-    │           │   ├── tool-registry.ts  # 前端权限分组元数据（TOOL_GROUPS：读取文件/写入文件/独立工具）
-    │           │   ├── types.ts          # 前端类型
-    │           │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界，模块级 per-project 历史栈）
-    │           │   ├── utils.ts          # shadcn/ui cn() 工具
-    │           │   └── localstorage/
-    │           │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
-│           ├── context/
-│           │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（client/projectId/projectRoot）
-    │           ├── stores/
-    │           │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
-    │           │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledTriggersByAgent 等项目数据缓存
-    │           │   ├── settings-store.ts     # 应用级 locale 设置
-    │           │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）
-    │           │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
-│           ├── layouts/
-│           │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/trigger WS/数据刷新/各 agent trigger 启用态预加载）
-│           ├── hooks/
-│           │   ├── useSidePanel.ts       # side panel pinned/hover 状态合并派生 + clickAway props
-│           │   ├── useCustomTheme.ts
-│           │   ├── useDismissable.ts
-│           │   └── use-mobile.ts
-│           ├── ui-sdk/
-│           │   ├── types.ts              # ActionContext, ActionHandler 类型
-│           │   ├── registry.ts           # registerAction / dispatchAction
-│           │   ├── rate-limit.ts         # 外部调用频率限制（含白名单豁免）
-│           │   ├── respond.ts            # request-response 回复工具（requestId → spherse:response postMessage）
-│           │   ├── use-spherse-message-listener.ts # postMessage → dispatchAction 桥梁
-│           │   ├── index.ts              # barrel export + handler side-effect import
-│           │   └── handlers/
-│           │       ├── create-session.ts # 创建会话并导航，支持 float 参数直达浮窗
-│           │       ├── float-session.ts  # 将指定会话移入浮窗
-│           │       ├── open-file.ts      # 在 Content Browser 打开文件
-│           │       ├── send-message.ts   # 向已有会话发送消息并导航，支持 float 参数与 request-response（session_busy 反馈）；已浮窗会话不导航
-│           │       ├── unfloat-session.ts # 取消浮窗
-│           │       └── data.ts           # data.get/set/delete key-value 持久化
-│           ├── features/
-│           │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
-│   │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 trigger feature store
-│           │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
-│           │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、HtmlCard（含 UI SDK 运行时上下文注入）、chat 运行时 context（runtime-context.tsx）、chat 专属类型（types.ts）、thinking 指示器（ThinkingIndicator）、聚合/diff 纯函数（lib/，含 format-time）
-│           │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）
-│           │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
-│           │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
-│           │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
-│           │   ├── project-panel/         # 项目侧栏薄组合层，按序渲染 AgentSessionList/UserFilePanel/SkillPanel，自治 side-panel 浮动/隐藏布局
-│           │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
-│           │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）
-│           │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer）与 UpdateChecker 组件、设置 store、类型与测试
-│           │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
-│           │   ├── project-settings/     # 项目设置弹窗集合
-│           │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
-│           │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗
-│           │   └── text-selection-session/ # 划选文本后发起会话
-│           ├── pages/
-│           │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat
-│           │   ├── ContentBrowserPage.tsx # Content 路由 page，从 ?path= 查询参数渲染 ContentBrowser
-│           │   ├── OnboardingPage.tsx    # App index 路由 page，re-export onboarding 引导页（无项目时显示）
-│           │   └── WelcomePagePage.tsx   # Project index 路由 page，渲染 WelcomePage 空状态
-│           └── components/
-│               ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
-│               ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel，被 user-file-panel 与 skill-panel 共用
-│               └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
+│   ├── app/                          # @spherse/app — 共享 React renderer（前端源码，被 desktop/web 消费）
+│   │   ├── index.html                # renderer 入口 HTML（vite 入口）
+│   │   ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
+│   │   ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
+│   │   └── src/
+│   │       ├── App.tsx               # App shell：Activity Bar、设置弹窗、全局初始化
+│   │       ├── main.tsx              # renderer 入口，挂载 RouterProvider
+│   │       ├── router.tsx            # React Router Hash Router 路由表
+│   │       ├── styles.css            # Tailwind CSS v4 + shadcn 语义 token（单一 token 体系）
+│   │       ├── lib/
+│   │       │   ├── api.ts            # HTTP/WS 客户端封装
+│   │       │   ├── agent-markdown.ts # Agent 定义 Markdown 生成/解析辅助
+│   │       │   ├── context.ts        # AppContext 定义
+│   │       │   ├── events.ts         # renderer 内部自定义事件名常量
+│   │       │   ├── project-key.ts    # project path → URL projectKey 生成
+│   │       │   ├── tool-registry.ts  # 前端权限分组元数据（TOOL_GROUPS：读取文件/写入文件/独立工具）
+│   │       │   ├── types.ts          # 前端类型
+│   │       │   ├── electron-api.ts   # 全局 Window.electronAPI 类型声明（类型来自 @shared/electron-api）
+│   │       │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界，模块级 per-project 历史栈）
+│   │       │   ├── utils.ts          # shadcn/ui cn() 工具
+│   │       │   └── localstorage/
+│   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
+│   │       ├── context/
+│   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（client/projectId/projectRoot）
+│   │       ├── stores/
+│   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
+│   │       │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledTriggersByAgent 等项目数据缓存
+│   │       │   ├── settings-store.ts     # 应用级 locale 设置
+│   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）
+│   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
+│   │       ├── layouts/
+│   │       │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/trigger WS/数据刷新/各 agent trigger 启用态预加载）
+│   │       ├── hooks/
+│   │       │   ├── useSidePanel.ts       # side panel pinned/hover 状态合并派生 + clickAway props
+│   │       │   ├── useCustomTheme.ts
+│   │       │   ├── useDismissable.ts
+│   │       │   └── use-mobile.ts
+│   │       ├── ui-sdk/
+│   │       │   ├── types.ts              # ActionContext, ActionHandler 类型
+│   │       │   ├── registry.ts           # registerAction / dispatchAction
+│   │       │   ├── rate-limit.ts         # 外部调用频率限制（含白名单豁免）
+│   │       │   ├── respond.ts            # request-response 回复工具（requestId → spherse:response postMessage）
+│   │       │   ├── use-spherse-message-listener.ts # postMessage → dispatchAction 桥梁
+│   │       │   ├── index.ts              # barrel export + handler side-effect import
+│   │       │   └── handlers/
+│   │       │       ├── create-session.ts # 创建会话并导航，支持 float 参数直达浮窗
+│   │       │       ├── float-session.ts  # 将指定会话移入浮窗
+│   │       │       ├── open-file.ts      # 在 Content Browser 打开文件
+│   │       │       ├── send-message.ts   # 向已有会话发送消息并导航，支持 float 参数与 request-response（session_busy 反馈）；已浮窗会话不导航
+│   │       │       ├── unfloat-session.ts # 取消浮窗
+│   │       │       └── data.ts           # data.get/set/delete key-value 持久化
+│   │       ├── features/
+│   │       │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
+│   │       │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 trigger feature store
+│   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
+│   │       │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、HtmlCard（含 UI SDK 运行时上下文注入）、chat 运行时 context（runtime-context.tsx）、chat 专属类型（types.ts）、thinking 指示器（ThinkingIndicator）、聚合/diff 纯函数（lib/，含 format-time）
+│   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）
+│   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
+│   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
+│   │       │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
+│   │       │   ├── project-panel/         # 项目侧栏薄组合层，按序渲染 AgentSessionList/UserFilePanel/SkillPanel，自治 side-panel 浮动/隐藏布局
+│   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
+│   │       │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）
+│   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer）与 UpdateChecker 组件、设置 store、类型与测试
+│   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
+│   │       │   ├── project-settings/     # 项目设置弹窗集合
+│   │       │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
+│   │       │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗
+│   │       │   └── text-selection-session/ # 划选文本后发起会话
+│   │       ├── pages/
+│   │       │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat
+│   │       │   ├── ContentBrowserPage.tsx # Content 路由 page，从 ?path= 查询参数渲染 ContentBrowser
+│   │       │   ├── OnboardingPage.tsx    # App index 路由 page，re-export onboarding 引导页（无项目时显示）
+│   │       │   └── WelcomePagePage.tsx   # Project index 路由 page，渲染 WelcomePage 空状态
+│   │       └── components/
+│   │           ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
+│   │           ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel，被 user-file-panel 与 skill-panel 共用
+│   │           └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
+│   ├── desktop/                      # @spherse/desktop — Electron 桌面壳（main/preload/electron 基础设施）
+│   │   ├── electron.vite.config.ts   # electron-vite 配置（main + preload + renderer，renderer root 指向 ../app）
+│   │   ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS、extraResources、publish GitHub Releases）
+│   │   ├── playwright.config.ts      # Playwright E2E 测试配置
+│   │   ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
+│   │   ├── shared/
+│   │   │   └── electron-api.ts       # Electron IPC 类型契约（renderer 与 main 共享，renderer 经 tsconfig @shared 别名引用）
+│   │   ├── electron/
+│   │   │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main
+│   │   │   ├── main.ts               # Electron 主进程：组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
+│   │   │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
+│   │   │   ├── updater.ts            # electron-updater 封装：autoDownload/autoInstall 关闭、Windows 完整流程、macOS 通知模式（GitHub Releases API）、CancellationToken 取消、compareVersions、silent 抑制
+│   │   │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）
+│   │   │   ├── ipc/                  # IPC handler 注册，按业务域拆分
+│   │   │   │   ├── index.ts          # registerAllIpc 聚合
+│   │   │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化、打开示例项目、打开项目文件夹（shell.openPath）
+│   │   │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
+│   │   │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）
+│   │   │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
+│   │   │   │   ├── context-menu.ts   # 文本框原生右键菜单：webContents 'context-menu' 事件（isEditable 门控，editFlags 控制 enable，i18n 本地化 undo/redo/cut/copy/paste/selectAll）
+│   │   │   │   └── debug.ts          # 开发模式 debug 动作
+│   │   │   ├── window.ts             # BrowserWindow 创建与管理
+│   │   │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新
+│   │   │   └── settings.ts           # electron-store 封装 + env 管理（含自定义供应商 syncCustomProviders 注册）+ openProjects/locale 持久化
+│   │   └── e2e/                      # Playwright E2E 测试
+│   │       ├── helpers/
+│   │       │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
+│   │       │   └── file-tree.ts      # 文件树 E2E 测试辅助（项目创建、app launch）
+│   │       ├── agent-dialog.spec.ts  # Agent 对话框搜索文件 E2E 测试
+│   │       ├── app-launch.spec.ts    # App 启动验证 smoke test
+│   │       ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
+│   │       ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
+│   │       ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
+│   │       ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）
+│   │       ├── text-selection-session.spec.ts  # 划选会话 E2E 测试
+│   │       ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
+│   │       └── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
+│   ├── web/                          # @spherse/web — Web 版本壳（规划中）
+│   │   ├── vite.config.ts            # 标准 Vite 构建配置
+│   │   ├── index.html                # 入口 HTML
+│   │   └── src/                      # Web 版本专属源码（规划中）
 │   ├── landing/                      # @spherse/landing — GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）
 │   │   ├── vite.config.ts            # 标准 Vite 构建配置（base: "/"，自定义域名根路径部署）
 │   │   ├── index.html                # 入口 HTML

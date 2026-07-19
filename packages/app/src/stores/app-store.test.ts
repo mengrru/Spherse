@@ -1,18 +1,38 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore, type ProjectState } from "./app-store";
+import type { HostBridge } from "../lib/host-bridge";
 
-const electronAPI = {
-  selectDirectory: vi.fn(),
-  getServerPort: vi.fn().mockResolvedValue(5173),
-  restoreProjects: vi.fn(),
-  openProject: vi.fn(),
-  openSampleProject: vi.fn(),
-  addOpenProject: vi.fn(),
-  closeProject: vi.fn(),
-  openProjectFolder: vi.fn(),
-  setLastActiveProject: vi.fn(),
-  getLastActiveProject: vi.fn(),
-};
+function createMockHostBridge(overrides: Partial<HostBridge> = {}): HostBridge {
+  return {
+    kind: "electron",
+    capabilities: {
+      projectManagement: true,
+      filePicker: true,
+      appUpdate: true,
+      devTools: true,
+      settings: { editable: true, scope: "local-only" },
+      content: { editable: true },
+    },
+    getServerBaseUrl: vi.fn().mockResolvedValue("http://localhost:5173"),
+    getSettings: vi.fn().mockResolvedValue(null),
+    saveSettings: vi.fn().mockResolvedValue({ success: true }),
+    openExternal: vi.fn(),
+    project: {
+      selectDirectory: vi.fn(),
+      selectSkillZip: vi.fn(),
+      openProject: vi.fn(),
+      restoreProjects: vi.fn(),
+      addOpenProject: vi.fn(),
+      closeProject: vi.fn(),
+      openProjectFolder: vi.fn(),
+      setLastActiveProject: vi.fn(),
+      getLastActiveProject: vi.fn(),
+      openSampleProject: vi.fn(),
+      getSampleManifest: vi.fn(),
+    },
+    ...overrides,
+  } as HostBridge;
+}
 
 const LAST_ROUTE_KEY = "spherse:last-route:project-a";
 
@@ -36,18 +56,6 @@ const storage = new Map<string, string>();
 
 function setupStoreTest(initializing = false): void {
   vi.resetAllMocks();
-  electronAPI.getServerPort.mockResolvedValue(5173);
-  vi.stubGlobal("localStorage", {
-    clear: () => storage.clear(),
-    getItem: (key: string) => storage.get(key) ?? null,
-    removeItem: (key: string) => storage.delete(key),
-    setItem: (key: string, value: string) => storage.set(key, value),
-  });
-  localStorage.clear();
-  Object.defineProperty(globalThis, "window", {
-    value: { electronAPI },
-    configurable: true,
-  });
   useAppStore.setState({
     projects: new Map(),
     activeProjectId: null,
@@ -58,21 +66,41 @@ function setupStoreTest(initializing = false): void {
 describe("useAppStore lastRoute", () => {
   beforeEach(() => {
     setupStoreTest(true);
+    storage.clear();
+    vi.stubGlobal("localStorage", {
+      clear: () => storage.clear(),
+      getItem: (key: string) => storage.get(key) ?? null,
+      removeItem: (key: string) => storage.delete(key),
+      setItem: (key: string, value: string) => storage.set(key, value),
+    });
   });
 
   it("caches each restored project's last route", async () => {
-    localStorage.setItem(LAST_ROUTE_KEY, "/chat/session-1");
-    electronAPI.restoreProjects.mockResolvedValue([
-      {
-        id: "project-a",
-        path: "/tmp/project-a",
-        name: "project-a",
-        lastOpened: "2026-01-01T00:00:00.000Z",
+    const bridge = createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject: vi.fn(),
+        restoreProjects: vi.fn().mockResolvedValue([
+          {
+            id: "project-a",
+            path: "/tmp/project-a",
+            name: "project-a",
+            lastOpened: "2026-01-01T00:00:00.000Z",
+          },
+        ]),
+        addOpenProject: vi.fn(),
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        setLastActiveProject: vi.fn(),
+        getLastActiveProject: vi.fn().mockResolvedValue("project-a"),
+        openSampleProject: vi.fn(),
+        getSampleManifest: vi.fn(),
       },
-    ]);
-    electronAPI.getLastActiveProject.mockResolvedValue("project-a");
+    });
+    localStorage.setItem(LAST_ROUTE_KEY, "/chat/session-1");
 
-    const activeProjectId = await useAppStore.getState().restoreProjects();
+    const activeProjectId = await useAppStore.getState().restoreProjects(bridge);
 
     expect(activeProjectId).toBe("project-a");
     expect(useAppStore.getState().projects.get("project-a")?.lastRoute).toBe(
@@ -125,14 +153,30 @@ describe("useAppStore openSampleProject", () => {
   });
 
   it("registers the project on success and returns its id", async () => {
-    electronAPI.openSampleProject.mockResolvedValue({
-      projectId: "sample-1",
-      path: "/tmp/sample-world",
+    const addOpenProject = vi.fn();
+    const setLastActiveProject = vi.fn();
+    const bridge = createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject: vi.fn(),
+        restoreProjects: vi.fn(),
+        addOpenProject,
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        setLastActiveProject,
+        getLastActiveProject: vi.fn(),
+        openSampleProject: vi.fn().mockResolvedValue({
+          projectId: "sample-1",
+          path: "/tmp/sample-world",
+        }),
+        getSampleManifest: vi.fn(),
+      },
     });
 
-    const result = await useAppStore.getState().openSampleProject("starter");
+    const result = await useAppStore.getState().openSampleProject(bridge, "starter");
 
-    expect(electronAPI.openSampleProject).toHaveBeenCalledWith({
+    expect(bridge.project?.openSampleProject).toHaveBeenCalledWith({
       sampleId: "starter",
     });
     expect(result).toEqual({ projectId: "sample-1" });
@@ -142,27 +186,57 @@ describe("useAppStore openSampleProject", () => {
       name: "sample-world",
     });
     expect(useAppStore.getState().activeProjectId).toBe("sample-1");
-    expect(electronAPI.addOpenProject).toHaveBeenCalledWith(
+    expect(addOpenProject).toHaveBeenCalledWith(
       "sample-1",
       "/tmp/sample-world",
     );
-    expect(electronAPI.setLastActiveProject).toHaveBeenCalledWith("sample-1");
+    expect(setLastActiveProject).toHaveBeenCalledWith("sample-1");
   });
 
   it("returns the error and writes nothing when main reports an error", async () => {
-    electronAPI.openSampleProject.mockResolvedValue({ error: "sample.missing" });
+    const addOpenProject = vi.fn();
+    const bridge = createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject: vi.fn(),
+        restoreProjects: vi.fn(),
+        addOpenProject,
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        setLastActiveProject: vi.fn(),
+        getLastActiveProject: vi.fn(),
+        openSampleProject: vi.fn().mockResolvedValue({ error: "sample.missing" }),
+        getSampleManifest: vi.fn(),
+      },
+    });
 
-    const result = await useAppStore.getState().openSampleProject("starter");
+    const result = await useAppStore.getState().openSampleProject(bridge, "starter");
 
     expect(result).toEqual({ projectId: null, error: "sample.missing" });
     expect(useAppStore.getState().projects.size).toBe(0);
-    expect(electronAPI.addOpenProject).not.toHaveBeenCalled();
+    expect(addOpenProject).not.toHaveBeenCalled();
   });
 
   it("returns a null id and writes nothing when the user cancels", async () => {
-    electronAPI.openSampleProject.mockResolvedValue(null);
+    const addOpenProject = vi.fn();
+    const bridge = createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject: vi.fn(),
+        restoreProjects: vi.fn(),
+        addOpenProject,
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        setLastActiveProject: vi.fn(),
+        getLastActiveProject: vi.fn(),
+        openSampleProject: vi.fn().mockResolvedValue(null),
+        getSampleManifest: vi.fn(),
+      },
+    });
 
-    const result = await useAppStore.getState().openSampleProject("starter");
+    const result = await useAppStore.getState().openSampleProject(bridge, "starter");
 
     expect(result).toEqual({ projectId: null });
     expect(useAppStore.getState().projects.size).toBe(0);

@@ -2,7 +2,7 @@ import { app } from "electron";
 import type { BrowserWindow } from "electron";
 import electronUpdater from "electron-updater";
 const { autoUpdater, CancellationToken } = electronUpdater;
-import type { UpdateState, UpdateEvent } from "../shared/electron-api.js";
+import type { UpdateState, UpdateEvent } from "./types.js";
 import { getMainWindow } from "./window.js";
 
 autoUpdater.autoDownload = false;

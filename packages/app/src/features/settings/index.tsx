@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,17 +22,16 @@ import { UpdateChecker } from "./UpdateChecker";
 import { SUPPORTED_LOCALES } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
 import type { CustomProviderDef } from "@spherse/core";
-import type { ThemeMode } from "@shared/electron-api";
+import type { ThemeMode } from "../../lib/host-bridge";
 import { InfoIcon, Plus } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
+import { useHostBridge } from "../../context/host-bridge-context";
 
 const LOCALE_LABELS: Record<string, string> = {
   "zh-CN": "简体中文",
   "zh-TW": "繁體中文",
   en: "English",
 };
-
-const electronAPI: SettingsApi = window.electronAPI;
 
 interface SettingsModalProps {
   onClose: () => void;
@@ -60,6 +59,7 @@ function ModelGroupTab({
   kind: "text" | "image";
 }) {
   const { t } = useI18n();
+  const bridge = useHostBridge();
   const [dialog, setDialog] = useState<{ mode: "add" } | { mode: "edit"; def: CustomProviderDef } | null>(null);
   return (
     <>
@@ -96,7 +96,7 @@ function ModelGroupTab({
                   href="https://platform.deepseek.com/api_keys"
                   onClick={(e) => {
                     e.preventDefault();
-                    void window.electronAPI.openExternal("https://platform.deepseek.com/api_keys");
+                    void bridge.openExternal("https://platform.deepseek.com/api_keys");
                   }}
                 >
                   DeepSeek
@@ -160,13 +160,20 @@ function ModelGroupTab({
 
 function SettingsTabs() {
   const { t } = useI18n();
+  const bridge = useHostBridge();
   const locale = useSettingsStore((s) => s.locale);
   const changeLocale = useSettingsStore((s) => s.changeLocale);
   const theme = useSettingsStore((s) => s.theme);
   const setTheme = useSettingsStore((s) => s.setTheme);
   const debugToolsEnabled = useSettingsStore((s) => s.debugToolsEnabled);
   const setDebugToolsEnabled = useSettingsStore((s) => s.setDebugToolsEnabled);
-  const form = useSettingsForm(electronAPI);
+  const settingsApi = useMemo<SettingsApi>(() => ({
+    getSettings: bridge.getSettings,
+    saveSettings: bridge.saveSettings,
+    getSupportedProviders: bridge.getSupportedProviders ?? (async () => ({})),
+    getImageProviders: bridge.getImageProviders ?? (async () => ({})),
+  }), [bridge]);
+  const form = useSettingsForm(settingsApi);
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -189,7 +196,7 @@ function SettingsTabs() {
         <TabsContent value="general" className="mt-3">
           <Field>
             <SectionTitle as={FieldLabel}>{t("settings.language")}</SectionTitle>
-            <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(electronAPI, e.target.value)}>
+            <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(settingsApi, e.target.value)}>
               {SUPPORTED_LOCALES.map((loc) => (
                 <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>
               ))}
@@ -197,7 +204,7 @@ function SettingsTabs() {
           </Field>
           <Field className="mt-5">
             <SectionTitle as={FieldLabel}>{t("settings.appearance")}</SectionTitle>
-            <NativeSelect className="w-full" value={theme} onChange={(e) => void setTheme(electronAPI, e.target.value as ThemeMode)}>
+            <NativeSelect className="w-full" value={theme} onChange={(e) => void setTheme(settingsApi, e.target.value as ThemeMode)}>
               <NativeSelectOption value="light">{t("settings.appearance.light")}</NativeSelectOption>
               <NativeSelectOption value="dark">{t("settings.appearance.dark")}</NativeSelectOption>
               <NativeSelectOption value="system">{t("settings.appearance.system")}</NativeSelectOption>
@@ -211,7 +218,7 @@ function SettingsTabs() {
               </div>
               <Switch
                 checked={debugToolsEnabled}
-                onCheckedChange={(checked) => { void setDebugToolsEnabled(electronAPI, checked); }}
+                onCheckedChange={(checked) => { void setDebugToolsEnabled(settingsApi, checked); }}
               />
             </div>
           </FieldGroup>

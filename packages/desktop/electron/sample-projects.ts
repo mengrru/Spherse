@@ -1,7 +1,7 @@
 import { app } from "electron";
 import path from "node:path";
 import fs from "node:fs/promises";
-import type { SampleManifestEntry } from "@shared/electron-api.js";
+import type { SampleManifestEntry } from "./types.js";
 
 export function getSampleProjectsRoot(): string {
   if (app.isPackaged) {

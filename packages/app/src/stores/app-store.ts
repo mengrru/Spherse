@@ -1,6 +1,7 @@
 import { create, type StoreApi } from "zustand";
 import { initAppContext, type AppContext } from "../context/app-context";
 import { getLastRoute, setLastRoute } from "../lib/localstorage/last-route";
+import type { HostBridge } from "../lib/host-bridge";
 
 export interface ProjectState {
   id: string;
@@ -15,12 +16,12 @@ interface AppStore {
   projects: Map<string, ProjectState>;
   activeProjectId: string | null;
   initializing: boolean;
-  restoreProjects: () => Promise<string | null>;
-  openProject: () => Promise<string | null>;
-  openSampleProject: (sampleId: string) => Promise<{ projectId: string | null; error?: string }>;
-  closeProject: (projectId: string) => Promise<string | null>;
-  openProjectFolder: (projectId: string) => Promise<void>;
-  setActiveProject: (projectId: string | null) => Promise<void>;
+  restoreProjects: (bridge: HostBridge) => Promise<string | null>;
+  openProject: (bridge: HostBridge) => Promise<string | null>;
+  openSampleProject: (bridge: HostBridge, sampleId: string) => Promise<{ projectId: string | null; error?: string }>;
+  closeProject: (bridge: HostBridge, projectId: string) => Promise<string | null>;
+  openProjectFolder: (bridge: HostBridge, projectId: string) => Promise<void>;
+  setActiveProject: (bridge: HostBridge, projectId: string | null) => Promise<void>;
   setProjectLastRoute: (projectId: string, route: string) => Promise<void>;
 }
 
@@ -37,11 +38,11 @@ type StoreGetter = StoreApi<AppStore>["getState"];
 async function registerProject(
   set: StoreSetter,
   get: StoreGetter,
+  bridge: HostBridge,
   projectId: string,
   projectPath: string,
 ): Promise<void> {
-  const port = await window.electronAPI.getServerPort();
-  const baseUrl = `http://localhost:${port}`;
+  const baseUrl = await bridge.getServerBaseUrl();
   const name = projectPath.split(/[\\/]/).filter(Boolean).pop() || projectPath;
   const projects = new Map(get().projects);
   projects.set(projectId, {
@@ -52,8 +53,8 @@ async function registerProject(
     lastOpened: new Date().toISOString(),
   });
   set({ projects, activeProjectId: projectId });
-  await window.electronAPI.addOpenProject(projectId, projectPath);
-  await window.electronAPI.setLastActiveProject(projectId);
+  await bridge.project?.addOpenProject(projectId, projectPath);
+  await bridge.project?.setLastActiveProject(projectId);
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -61,11 +62,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
   activeProjectId: null,
   initializing: true,
 
-  async restoreProjects() {
+  async restoreProjects(bridge) {
     set({ initializing: true });
-    const port = await window.electronAPI.getServerPort();
-    const baseUrl = `http://localhost:${port}`;
-    const restored = await window.electronAPI.restoreProjects();
+    const baseUrl = await bridge.getServerBaseUrl();
+    const restored = (await bridge.project?.restoreProjects()) ?? [];
     const projects = new Map<string, ProjectState>();
 
     for (const { id, path, name, lastOpened } of restored) {
@@ -79,41 +79,43 @@ export const useAppStore = create<AppStore>((set, get) => ({
       });
     }
 
-    const lastActiveId = await window.electronAPI.getLastActiveProject();
+    const lastActiveId = (await bridge.project?.getLastActiveProject()) ?? null;
     const fallbackId = projects.keys().next().value ?? null;
     const nextActiveId = lastActiveId && projects.has(lastActiveId) ? lastActiveId : fallbackId;
     set({ projects, activeProjectId: nextActiveId, initializing: false });
     return nextActiveId;
   },
 
-  async openProject() {
-    const dir = await window.electronAPI.selectDirectory();
+  async openProject(bridge) {
+    const dir = (await bridge.project?.selectDirectory()) ?? null;
     if (!dir) return null;
 
     const existing = findProjectIdByPath(get().projects, dir);
     if (existing) {
-      await get().setActiveProject(existing);
+      await get().setActiveProject(bridge, existing);
       return existing;
     }
 
-    const { projectId } = await window.electronAPI.openProject(dir);
-    await registerProject(set, get, projectId, dir);
+    const result = await bridge.project?.openProject(dir);
+    if (!result) return null;
+    const { projectId } = result;
+    await registerProject(set, get, bridge, projectId, dir);
     return projectId;
   },
 
-  async openSampleProject(sampleId) {
-    const result = await window.electronAPI.openSampleProject({ sampleId });
+  async openSampleProject(bridge, sampleId) {
+    const result = await bridge.project?.openSampleProject({ sampleId });
     if (!result) return { projectId: null };
     if ("error" in result) return { projectId: null, error: result.error };
-    await registerProject(set, get, result.projectId, result.path);
+    await registerProject(set, get, bridge, result.projectId, result.path);
     return { projectId: result.projectId };
   },
 
-  async closeProject(projectId) {
+  async closeProject(bridge, projectId) {
     const project = get().projects.get(projectId);
     if (!project) return get().activeProjectId;
 
-    await window.electronAPI.closeProject(projectId, project.path);
+    await bridge.project?.closeProject(projectId, project.path);
 
     let nextActiveId: string | null = get().activeProjectId;
     set((state) => {
@@ -132,23 +134,23 @@ export const useAppStore = create<AppStore>((set, get) => ({
     });
 
     if (nextActiveId) {
-      await window.electronAPI.setLastActiveProject(nextActiveId);
+      await bridge.project?.setLastActiveProject(nextActiveId);
     }
 
     return nextActiveId;
   },
 
-  async openProjectFolder(projectId) {
+  async openProjectFolder(bridge, projectId) {
     const project = get().projects.get(projectId);
     if (!project) return;
-    await window.electronAPI.openProjectFolder(project.path);
+    await bridge.project?.openProjectFolder(project.path);
   },
 
-  async setActiveProject(projectId) {
+  async setActiveProject(bridge, projectId) {
     const project = projectId ? get().projects.get(projectId) : null;
     set({ activeProjectId: project ? projectId : null });
     if (project) {
-      await window.electronAPI.setLastActiveProject(projectId);
+      await bridge.project?.setLastActiveProject(projectId);
     }
   },
 

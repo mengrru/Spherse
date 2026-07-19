@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { ElectronAPI, UpdateEvent } from "@shared/electron-api.js";
+import type { ElectronAPI, UpdateEvent } from "./types.js";
 
 const UPDATE_EVENT_CHANNELS = [
   "update-available",

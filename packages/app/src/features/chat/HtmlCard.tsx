@@ -6,6 +6,7 @@ import { useI18n } from "@spherse/i18n/react";
 import type { HtmlCard } from "./types";
 import { Button } from "../../components/ui/button";
 import { useProjectCtx } from "../../context/project-context";
+import { useHostBridge } from "../../context/host-bridge-context";
 import { useChatRuntime } from "./runtime-context";
 import { isPathInsideProject, toProjectRelative, joinProjectPath } from "../../lib/project-path";
 import { ensureCharset, buildFileSrcDoc, buildInlineSrcDoc, isImageFile } from "./html-card-src";
@@ -21,6 +22,7 @@ function sanitizeFileName(name: string): string {
 export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const { t } = useI18n();
   const { client, projectRoot, projectId } = useProjectCtx();
+  const bridge = useHostBridge();
   const runtime = useChatRuntime();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [fetchedHtml, setFetchedHtml] = useState<string | null>(null);
@@ -90,7 +92,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
       : "untitled.html";
     const defaultPath = joinProjectPath(projectRoot, suggestedName);
 
-    const filePath = await window.electronAPI.showSaveDialog({
+    const filePath = await bridge.showSaveDialog?.({
       defaultPath,
       filters: [{ name: "HTML", extensions: ["html", "htm"] }],
     });

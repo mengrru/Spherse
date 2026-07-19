@@ -7,13 +7,12 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "outDir": "dist/renderer",
-    "rootDirs": ["src"],
+    "outDir": "dist",
     "declaration": false,
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["../app/src/*"]
     }
   },
   "include": ["src"]

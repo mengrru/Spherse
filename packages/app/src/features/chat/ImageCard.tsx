@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { ImageCard } from "./types";
 import { useProjectCtx } from "../../context/project-context";
+import { useHostBridge } from "../../context/host-bridge-context";
 import { isPathInsideProject, joinProjectPath } from "../../lib/project-path";
 
 interface ImageCardRendererProps {
@@ -12,6 +13,7 @@ interface ImageCardRendererProps {
 export function ImageCardRenderer({ card }: ImageCardRendererProps) {
   const { t } = useI18n();
   const { client, projectRoot } = useProjectCtx();
+  const bridge = useHostBridge();
 
   async function handleExport() {
     if (!client || !projectRoot || !card.path) return;
@@ -19,7 +21,7 @@ export function ImageCardRenderer({ card }: ImageCardRendererProps) {
     const ext = card.path.split(".").pop() ?? "png";
     const defaultPath = joinProjectPath(projectRoot, `image-${Date.now()}.${ext}`);
 
-    const filePath = await window.electronAPI.showSaveDialog({
+    const filePath = await bridge.showSaveDialog?.({
       defaultPath,
       filters: [
         { name: ext.toUpperCase(), extensions: [ext] },

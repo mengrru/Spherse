@@ -7,7 +7,8 @@ import globals from "globals";
 
 const tsFiles = [
   "packages/*/src/**/*.{ts,tsx}",
-  "packages/app/electron/**/*.ts",
+  "packages/*/electron/**/*.ts",
+  "packages/*/shared/**/*.ts",
   "packages/*/*.{ts,tsx}",
   "packages/*/scripts/**/*.mjs",
   "scripts/**/*.mjs",
@@ -58,7 +59,12 @@ export default [
     },
   },
   {
-    files: ["packages/app/src/**/*.{ts,tsx}", "packages/landing/src/**/*.{ts,tsx}"],
+    files: [
+      "packages/app/src/**/*.{ts,tsx}",
+      "packages/landing/src/**/*.{ts,tsx}",
+      "packages/desktop/src/**/*.{ts,tsx}",
+      "packages/web/src/**/*.{ts,tsx}",
+    ],
     languageOptions: {
       globals: globals.browser,
     },
@@ -81,7 +87,8 @@ export default [
       "packages/core/src/**/*.ts",
       "packages/server/src/**/*.ts",
       "packages/presets/src/**/*.ts",
-      "packages/app/electron/**/*.ts",
+      "packages/*/electron/**/*.ts",
+      "packages/*/shared/**/*.ts",
       "packages/*/*.{ts,tsx}",
       "packages/*/scripts/**/*.mjs",
       "scripts/**/*.mjs",

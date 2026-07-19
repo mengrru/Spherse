@@ -1,0 +1,71 @@
+import type {
+  HostBridge,
+  HostCapabilities,
+  ProjectHostApi,
+  UpdaterHostApi,
+  DevToolsHostApi,
+} from "@spherse/app/src/lib/host-bridge";
+
+const ELECTRON_CAPABILITIES: HostCapabilities = {
+  projectManagement: true,
+  filePicker: true,
+  appUpdate: true,
+  devTools: true,
+  settings: { editable: true, scope: "local-only" },
+  content: { editable: true },
+};
+
+export function createElectronHostBridge(): HostBridge {
+  const api = window.electronAPI;
+
+  const project: ProjectHostApi = {
+    selectDirectory: api.selectDirectory,
+    selectSkillZip: api.selectSkillZip,
+    openProject: api.openProject,
+    restoreProjects: api.restoreProjects,
+    addOpenProject: api.addOpenProject,
+    closeProject: api.closeProject,
+    openProjectFolder: api.openProjectFolder,
+    setLastActiveProject: api.setLastActiveProject,
+    getLastActiveProject: api.getLastActiveProject,
+    openSampleProject: api.openSampleProject,
+    getSampleManifest: api.getSampleManifest,
+  };
+
+  const updater: UpdaterHostApi = {
+    checkForUpdates: api.checkForUpdates,
+    downloadUpdate: api.downloadUpdate,
+    installUpdate: api.installUpdate,
+    cancelUpdate: api.cancelUpdate,
+    getUpdateState: api.getUpdateState,
+    getAppVersion: api.getAppVersion,
+    onUpdateEvent: api.onUpdateEvent,
+  };
+
+  const devTools: DevToolsHostApi = {
+    isDev: api.isDev,
+    toggleDevTools: api.toggleDevTools,
+    isDevToolsOpen: api.isDevToolsOpen,
+    getElectronStoreData: api.getElectronStoreData,
+    reloadRenderer: api.reloadRenderer,
+    resetAppData: api.resetAppData,
+  };
+
+  return {
+    kind: "electron",
+    capabilities: ELECTRON_CAPABILITIES,
+    getServerBaseUrl: async () => {
+      const port = await api.getServerPort();
+      return `http://localhost:${port}`;
+    },
+    getSettings: api.getSettings,
+    saveSettings: api.saveSettings,
+    openExternal: api.openExternal,
+    showSaveDialog: api.showSaveDialog,
+    getSupportedProviders: api.getSupportedProviders,
+    getImageProviders: api.getImageProviders,
+    project,
+    updater,
+    devTools,
+  };
+}

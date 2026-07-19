@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer } from "react";
-import type { UpdateState } from "@shared/electron-api";
+import type { UpdateState } from "../../lib/host-bridge";
+import { useHostBridge } from "../../context/host-bridge-context";
 
 export type Action =
   | { type: "CHECK" }
@@ -49,15 +50,19 @@ export function reducer(state: UpdateState, action: Action): UpdateState {
 }
 
 export function useUpdateChecker() {
+  const bridge = useHostBridge();
   const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
+    const updater = bridge.updater;
+    if (!updater) return;
+
     void (async () => {
-      const current = await window.electronAPI.getUpdateState();
+      const current = await updater.getUpdateState();
       dispatch({ type: "SET_STATE", state: current });
     })();
 
-    const unsubscribe = window.electronAPI.onUpdateEvent((event) => {
+    const unsubscribe = updater.onUpdateEvent((event) => {
       switch (event.type) {
         case "update-available":
           dispatch({
@@ -85,30 +90,30 @@ export function useUpdateChecker() {
     });
 
     return unsubscribe;
-  }, []);
+  }, [bridge]);
 
   const check = useCallback(async () => {
     dispatch({ type: "CHECK" });
-    await window.electronAPI.checkForUpdates({ silent: false });
-  }, []);
+    await bridge.updater?.checkForUpdates({ silent: false });
+  }, [bridge]);
 
   const acceptDownload = useCallback(() => {
     dispatch({ type: "DOWNLOADING" });
-    void window.electronAPI.downloadUpdate();
-  }, []);
+    void bridge.updater?.downloadUpdate();
+  }, [bridge]);
 
   const dismissUpdate = useCallback(() => {
     dispatch({ type: "RESET" });
   }, []);
 
   const cancelDownload = useCallback(() => {
-    void window.electronAPI.cancelUpdate();
+    void bridge.updater?.cancelUpdate();
     dispatch({ type: "RESET" });
-  }, []);
+  }, [bridge]);
 
   const acceptRestart = useCallback(() => {
-    void window.electronAPI.installUpdate();
-  }, []);
+    void bridge.updater?.installUpdate();
+  }, [bridge]);
 
   const dismissRestart = useCallback(() => {
     dispatch({ type: "RESET" });

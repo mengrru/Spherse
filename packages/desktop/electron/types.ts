@@ -1,61 +1,22 @@
-import type { ProviderCatalogItem, ModelGroupSettings, CustomProviderDef } from "@spherse/core";
+import type { ProviderCatalogItem } from "@spherse/core";
+import type {
+  HostSettings,
+  RestoredProject,
+  SaveDialogOptions,
+  SampleManifestEntry,
+  ThemeMode,
+  UpdateEvent,
+  UpdateState,
+} from "@spherse/app/src/lib/host-bridge";
 
-export interface RestoredProject {
-  id: string;
-  path: string;
-  name: string;
-  lastOpened: string;
-}
-
-export interface SaveDialogFilter {
-  name: string;
-  extensions: string[];
-}
-
-export interface SaveDialogOptions {
-  defaultPath?: string;
-  filters?: SaveDialogFilter[];
-}
-
-export interface SampleManifestEntry {
-  id: string;
-  displayName: string;
-  dirName: string;
-}
-
-export type ThemeMode = "light" | "dark" | "system";
-
-export interface IpcAppSettings {
-  locale?: string;
-  models?: {
-    text?: ModelGroupSettings;
-    image?: ModelGroupSettings;
-  };
-  customProviders?: CustomProviderDef[];
-  debugToolsEnabled?: boolean;
-  theme?: ThemeMode;
-}
-
-export type UpdateStatus =
-  | "idle" | "checking" | "upToDate"
-  | "available" | "downloading" | "downloaded" | "error";
-
-export interface UpdateState {
-  status: UpdateStatus;
-  version?: string;
-  releaseNotes?: string;
-  downloadUrl?: string;
-  percent?: number;
-  errorMessage?: string;
-  errorPhase?: "check" | "download";
-}
-
-export type UpdateEvent =
-  | { type: "update-available"; version: string; releaseNotes: string; downloadUrl?: string }
-  | { type: "update-not-available" }
-  | { type: "download-progress"; percent: number }
-  | { type: "update-downloaded" }
-  | { type: "update-error"; message: string };
+export type {
+  RestoredProject,
+  SaveDialogOptions,
+  SampleManifestEntry,
+  ThemeMode,
+  UpdateEvent,
+  UpdateState,
+};
 
 export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>;
@@ -69,8 +30,8 @@ export interface ElectronAPI {
   openExternal: (url: string) => Promise<void>;
   setLastActiveProject: (projectId: string) => Promise<void>;
   getLastActiveProject: () => Promise<string | null>;
-  getSettings: () => Promise<IpcAppSettings | null>;
-  saveSettings: (settings: IpcAppSettings) => Promise<{ success: boolean }>;
+  getSettings: () => Promise<HostSettings | null>;
+  saveSettings: (settings: HostSettings) => Promise<{ success: boolean }>;
   getSupportedProviders: () => Promise<Record<string, ProviderCatalogItem>>;
   getImageProviders: () => Promise<Record<string, ProviderCatalogItem>>;
   isDev: () => Promise<boolean>;
@@ -88,6 +49,5 @@ export interface ElectronAPI {
   cancelUpdate: () => Promise<void>;
   getUpdateState: () => Promise<UpdateState>;
   getAppVersion: () => Promise<string>;
-  openExternal: (url: string) => Promise<void>;
   onUpdateEvent: (callback: (event: UpdateEvent) => void) => () => void;
 }

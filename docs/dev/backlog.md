@@ -89,6 +89,10 @@
 - [x] **更多文本模型供应商**：启用 6 个 pi-ai 内置的常见 API-key 类文本 provider——OpenRouter（256 模型）、GitHub Copilot、Groq、Together AI、Mistral AI、Fireworks AI。架构本就数据驱动，仅需在 `core/model-providers/index.ts` 的 `ENABLED_PROVIDERS`/`PROVIDER_DISPLAY_NAMES`/`PROVIDER_ENV_KEYS` 三张表各加一行，catalog/模型解析/UI/env 注入全部自动贯通。同时将默认模型选择器从原生 `<select>` 改为基于 Base UI Combobox 的可搜索下拉（新增 `components/ui/combobox.tsx`），支持按模型名/供应商名搜索过滤。参见 `docs/dev/features/2026-07-16-more-model-providers/design.md`
 - [x] **自定义模型供应商**：设置文本模型 tab 支持用户添加自定义 OpenAI 兼容供应商（Ollama、vLLM、LM Studio、SiliconFlow、自建网关等）。core 新增 `syncCustomProviders(defs, apiKeys)`，运行时用 `createProvider()` + `MutableModels.setProvider()` 注入 `models` 单例（id 带 `custom-` 前缀避冲突），auth 闭包直取 apiKey（keyless 本地服务器返回占位 key）；内置 provider 仍 env-var 驱动零改动。定义存 `AppSettings.customProviders`（无密钥），apiKey 复用既有 providers map；启动 `restoreEnvFromSettings` → `syncCustomProviders` 在 `ensureServer` 之前注册。模型 id 手动填写、API Key 可选、仅文本 tab。参见 `docs/dev/features/2026-07-16-custom-model-provider/design.md`
 
+## 移动端
+
+- [ ] **移动端 App（进行中）**：基于三层分离（app/desktop/web）+ Cloudflare Quick Tunnel 中继 + Bearer Token 鉴权，支持手机 PWA 远程连接桌面 server 进行只读浏览和聊天。PR1（三层分离 + HostBridge 抽象）已完成；后续 PR 将实现 server auth、cloudflared 集成、移动端 PWA。参见 `docs/dev/features/2026-07-20-mobile-app/design.md`
+
 ## 基础设施
 
 - [ ] **GitHub Copilot OAuth 登录**：当前 GitHub Copilot 走 apiKey 路径（用户手动粘贴 `COPILOT_GITHUB_TOKEN`）。pi-ai 的 `githubCopilotProvider()` 同时声明了 `lazyOAuth` device-flow；接入需 electron 层调用 pi-ai OAuth helper + 持久化 refresh token + 前端「用 GitHub 登录」按钮，实现免粘贴 token。

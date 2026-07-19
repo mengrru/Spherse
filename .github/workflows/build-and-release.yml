@@ -49,11 +49,14 @@ jobs:
 
       - name: Sync app version from tag
         shell: bash
-        working-directory: packages/app
+        working-directory: packages/desktop
         run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
 
       - name: Build all packages
         run: npm run build
+
+      - name: Build desktop (electron-vite)
+        run: npm run build --workspace=packages/desktop
 
       - name: Download Electron binary
         shell: bash
@@ -63,7 +66,7 @@ jobs:
         run: node scripts/rebuild-native.mjs
 
       - name: Build installer (electron-builder)
-        working-directory: packages/app
+        working-directory: packages/desktop
         shell: bash
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
@@ -79,7 +82,7 @@ jobs:
 
       - name: Upload macOS dmg
         if: runner.os == 'macOS'
-        working-directory: packages/app
+        working-directory: packages/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -88,7 +91,7 @@ jobs:
 
       - name: Upload Windows installer
         if: runner.os == 'Windows'
-        working-directory: packages/app
+        working-directory: packages/desktop
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

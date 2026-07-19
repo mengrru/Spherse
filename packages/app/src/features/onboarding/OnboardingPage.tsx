@@ -3,8 +3,9 @@ import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import type { TranslationKey } from "@spherse/i18n";
 import { toast } from "sonner";
-import type { SampleManifestEntry } from "@shared/electron-api";
+import type { SampleManifestEntry } from "../../lib/host-bridge";
 import { useAppStore } from "../../stores/app-store";
+import { useHostBridge } from "../../context/host-bridge-context";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 
 const ERROR_KEYS: Record<string, TranslationKey> = {
@@ -26,6 +27,7 @@ function reportError(
 export function OnboardingPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const bridge = useHostBridge();
   const openProject = useAppStore((state) => state.openProject);
   const openSampleProject = useAppStore((state) => state.openSampleProject);
   const [samples, setSamples] = useState<SampleManifestEntry[]>([]);
@@ -33,11 +35,11 @@ export function OnboardingPage() {
 
   useEffect(() => {
     let cancelled = false;
-    void window.electronAPI.getSampleManifest()
-      .then((entries) => {
+    void bridge.project?.getSampleManifest()
+      ?.then((entries) => {
         if (!cancelled) setSamples(entries);
       })
-      .catch(() => {
+      ?.catch(() => {
         console.warn("[onboarding] failed to load sample manifest");
       });
     return () => {
@@ -49,7 +51,7 @@ export function OnboardingPage() {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
-      const projectId = await openProject();
+      const projectId = await openProject(bridge);
       if (projectId) navigate(`/project/${projectId}`);
     } catch {
       toast.error(t("onboarding.error.unexpected"));
@@ -62,7 +64,7 @@ export function OnboardingPage() {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
-      const { projectId, error } = await openSampleProject(sampleId);
+      const { projectId, error } = await openSampleProject(bridge, sampleId);
       if (projectId) {
         navigate(`/project/${projectId}`);
       } else {

@@ -15,9 +15,13 @@ describe("UpdateChecker structure", () => {
     expect(source).toContain("useI18n()");
   });
 
-  it("loads app version on mount via electronAPI", () => {
+  it("loads app version on mount via the host bridge updater", () => {
     expect(source).toContain("getAppVersion");
     expect(source).toContain("useEffect");
+  });
+
+  it("does not reference window.electronAPI directly", () => {
+    expect(source).not.toContain("window.electronAPI");
   });
 
   it("renders status-based buttons (idle/checking/upToDate/error/downloading)", () => {

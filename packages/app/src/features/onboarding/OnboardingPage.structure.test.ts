@@ -22,16 +22,21 @@ describe("OnboardingPage structure", () => {
     );
   });
 
-  it("loads the sample manifest once on mount", () => {
+  it("loads the sample manifest once on mount via host bridge", () => {
     const src = source();
 
-    expect(src).toContain(
-      "window.electronAPI.getSampleManifest()",
-    );
+    expect(src).toContain("bridge.project");
+    expect(src).toContain("getSampleManifest()");
     expect(src).toContain("setSamples(entries)");
     expect(src).toContain("if (!cancelled)");
     expect(src).toContain("cancelled = true");
     expect(src).toContain(".catch(");
+  });
+
+  it("does not reference window.electronAPI directly", () => {
+    const src = source();
+
+    expect(src).not.toContain("window.electronAPI");
   });
 
   it("guards open-or-create and open-sample actions against rapid re-entry", () => {

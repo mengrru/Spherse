@@ -12,8 +12,10 @@ import { FieldGroup } from "../../components/ui/field";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { SectionTitle } from "./SectionTitle";
 import { useUpdateChecker } from "./use-update-checker";
+import { useHostBridge } from "../../context/host-bridge-context";
 
 export function UpdateChecker() {
+  const bridge = useHostBridge();
   const { t } = useI18n();
   const {
     state,
@@ -27,7 +29,7 @@ export function UpdateChecker() {
   const [appVersion, setAppVersion] = useState("");
 
   useEffect(() => {
-    void window.electronAPI.getAppVersion().then(setAppVersion);
+    void bridge.updater?.getAppVersion()?.then(setAppVersion);
   }, []);
 
   return (
@@ -63,7 +65,7 @@ export function UpdateChecker() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  void window.electronAPI.openExternal(
+                  void bridge.openExternal(
                     "https://github.com/mengrru/Spherse/releases/"
                   )
                 }
@@ -127,7 +129,7 @@ export function UpdateChecker() {
             {state.downloadUrl ? (
               <Button
                 onClick={() => {
-                  void window.electronAPI.openExternal(state.downloadUrl!);
+                  void bridge.openExternal(state.downloadUrl!);
                   dismissUpdate();
                 }}
               >

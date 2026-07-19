@@ -1,8 +1,8 @@
 import type { ProviderCatalogItem } from "@spherse/core";
-import type { IpcAppSettings } from "@shared/electron-api";
+import type { HostSettings } from "../../lib/host-bridge";
 
 export type ProviderConfig = ProviderCatalogItem;
-export type AppSettings = IpcAppSettings;
+export type AppSettings = HostSettings;
 
 export interface SettingsApi {
   getSettings: () => Promise<AppSettings | null>;

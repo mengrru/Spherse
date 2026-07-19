@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { parseBusServerMessage } from "@spherse/server/contracts";
+import type { HostBridge } from "../lib/host-bridge";
 
 export type BusChannel = "trigger" | "fs-watch" | "debug";
 export type BusStatus = "idle" | "connecting" | "open" | "closed";
@@ -7,7 +8,7 @@ export type BusHandler = (type: string, payload: unknown) => void;
 
 interface BusStore {
   status: BusStatus;
-  init: () => Promise<void>;
+  init: (bridge: HostBridge) => Promise<void>;
   addHandler: (projectId: string, channel: BusChannel, handler: BusHandler) => void;
   removeHandler: (projectId: string, channel: BusChannel, handler: BusHandler) => void;
   emitAgentTriggerEvent: (projectId: string, eventName: string, payload?: string) => void;
@@ -25,6 +26,7 @@ let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
 let lastPongAt = 0;
 let reconnectAttempt = 0;
+let activeBridge: HostBridge | null = null;
 
 function keyFor(projectId: string, channel: BusChannel): string {
   return `${projectId}::${channel}`;
@@ -89,20 +91,21 @@ export const useBusStore = create<BusStore>((set, get) => {
     const delay = RECONNECT_BACKOFFS[Math.min(reconnectAttempt, RECONNECT_BACKOFFS.length - 1)];
     reconnectAttempt += 1;
     reconnectTimer = setTimeout(() => {
-      void get().init();
+      if (activeBridge) void get().init(activeBridge);
     }, delay);
   }
 
   return {
     status: "idle",
 
-    async init() {
+    async init(bridge: HostBridge) {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         return;
       }
       set({ status: "connecting" });
-      const port = await window.electronAPI.getServerPort();
-      const wsUrl = `ws://localhost:${port}/ws/bus`;
+      activeBridge = bridge;
+      const baseUrl = await bridge.getServerBaseUrl();
+      const wsUrl = baseUrl.replace(/^http/, "ws") + "/ws/bus";
       const socket = new WebSocket(wsUrl);
       ws = socket;
 
@@ -186,6 +189,7 @@ export const useBusStore = create<BusStore>((set, get) => {
       handlers.clear();
       reconnectAttempt = 0;
       lastPongAt = 0;
+      activeBridge = null;
       set({ status: "idle" });
     },
   };

@@ -7,6 +7,7 @@ import { Toaster } from "./components/ui/sonner";
 import { useAppStore } from "./stores/app-store";
 import { useProjectDataStore } from "./stores/project-data-store";
 import { clearLastRoute } from "./lib/localstorage/last-route";
+import { useHostBridge } from "./context/host-bridge-context";
 import { useAgentSessionListUiStore } from "./features/agent-session-list/store";
 import { useTriggerStore } from "./features/agent-trigger/store";
 import { useFloatingChatStore } from "./features/floating-chat/store";
@@ -22,6 +23,7 @@ function buildProjectRoute(projectId: string, lastRoute?: string): string {
 
 export function App() {
   const navigate = useNavigate();
+  const bridge = useHostBridge();
   const [showSettings, setShowSettings] = useState(false);
   const projects = useAppStore((state) => state.projects);
   const activeProjectId = useAppStore((state) => state.activeProjectId);
@@ -40,7 +42,7 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    restoreProjects().then((projectId) => {
+    restoreProjects(bridge).then((projectId) => {
       if (cancelled || !projectId) return;
       // Only auto-navigate when starting from the root path; if the URL already
       // points to a specific route (deep link, E2E direct entry), respect it.
@@ -49,18 +51,18 @@ export function App() {
       const project = useAppStore.getState().projects.get(projectId);
       navigate(buildProjectRoute(projectId, project?.lastRoute), { replace: true });
     });
-    void useBusStore.getState().init();
+    void useBusStore.getState().init(bridge);
     return () => {
       cancelled = true;
     };
-  }, [navigate, restoreProjects]);
+  }, [navigate, restoreProjects, bridge]);
 
   useEffect(() => {
-    void loadSettings(window.electronAPI);
-  }, [loadSettings]);
+    void loadSettings(bridge);
+  }, [loadSettings, bridge]);
 
   const handleAddProject = async () => {
-    const projectId = await openProject();
+    const projectId = await openProject(bridge);
     if (projectId) {
       const project = useAppStore.getState().projects.get(projectId);
       navigate(buildProjectRoute(projectId, project?.lastRoute));
@@ -68,13 +70,13 @@ export function App() {
   };
 
   const handleSelectProject = async (projectId: string) => {
-    await setActiveProject(projectId);
+    await setActiveProject(bridge, projectId);
     const project = useAppStore.getState().projects.get(projectId);
     navigate(buildProjectRoute(projectId, project?.lastRoute));
   };
 
   const handleCloseProject = async (projectId: string) => {
-    const nextProjectId = await closeProject(projectId);
+    const nextProjectId = await closeProject(bridge, projectId);
     clearProjectData(projectId);
     clearAgentSessionListUi(projectId);
     clearTriggerData(projectId);
@@ -86,6 +88,10 @@ export function App() {
     } else {
       navigate("/");
     }
+  };
+
+  const handleOpenProjectFolder = (projectId: string) => {
+    void openProjectFolder(bridge, projectId);
   };
 
   if (initializing) {
@@ -106,7 +112,7 @@ export function App() {
             onSelect={handleSelectProject}
             onAdd={handleAddProject}
             onClose={handleCloseProject}
-            onOpenProjectFolder={openProjectFolder}
+            onOpenProjectFolder={handleOpenProjectFolder}
             onSettings={() => setShowSettings(true)}
           />
           <Outlet />

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { reducer, initialState } from "./use-update-checker";
+
+const currentDir = dirname(fileURLToPath(import.meta.url));
+const source = readFileSync(join(currentDir, "use-update-checker.ts"), "utf8");
 
 describe("update checker reducer", () => {
   it("has initial state of idle", () => {
@@ -75,5 +81,20 @@ describe("update checker reducer", () => {
   it("replaces the entire state on SET_STATE", () => {
     const incoming = { status: "downloading" as const, percent: 80 };
     expect(reducer(initialState, { type: "SET_STATE", state: incoming })).toEqual(incoming);
+  });
+});
+
+describe("useUpdateChecker host bridge wiring", () => {
+  it("does not reference window.electronAPI directly", () => {
+    expect(source).not.toContain("window.electronAPI");
+  });
+
+  it("reads the updater through useHostBridge", () => {
+    expect(source).toContain("useHostBridge");
+    expect(source).toContain("bridge.updater");
+  });
+
+  it("no-ops the subscribe effect when updater is unavailable", () => {
+    expect(source).toContain("if (!updater) return");
   });
 });

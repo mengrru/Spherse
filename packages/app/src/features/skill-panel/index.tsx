@@ -17,10 +17,12 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { useProjectCtx } from "../../context/project-context";
+import { useHostBridge } from "../../context/host-bridge-context";
 import { CreateSkillDialog } from "./CreateSkillDialog";
 
 export function SkillPanel() {
   const { projectId, client } = useProjectCtx();
+  const bridge = useHostBridge();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -39,7 +41,7 @@ export function SkillPanel() {
   };
 
   const handleInstallClick = async () => {
-    const zipPath = await window.electronAPI.selectSkillZip();
+    const zipPath = await bridge.project?.selectSkillZip();
     if (!zipPath) return;
     try {
       const skill = await client.installSkill(zipPath);

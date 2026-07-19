@@ -1,4 +1,4 @@
-import { ipcMain, app, shell } from "electron";
+import { ipcMain, app } from "electron";
 import type { BrowserWindow } from "electron";
 import { updater } from "../updater.js";
 
@@ -13,7 +13,4 @@ export function registerUpdaterIpc(
   ipcMain.handle("cancel-update", () => updater.cancelUpdate());
   ipcMain.handle("get-update-state", () => updater.getState());
   ipcMain.handle("get-app-version", () => app.getVersion());
-  ipcMain.handle("open-external", (_event, url: string) =>
-    shell.openExternal(url),
-  );
 }

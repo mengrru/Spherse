@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useBusStore } from "./bus-store";
+import type { HostBridge } from "../lib/host-bridge";
 
 interface MockWebSocketInstance {
   url: string;
@@ -63,19 +64,33 @@ function allSends(instances: MockWebSocketInstance[], kind: string) {
     .filter((m) => m.kind === kind);
 }
 
+function createMockHostBridge(): HostBridge {
+  return {
+    kind: "electron",
+    capabilities: {
+      projectManagement: true,
+      filePicker: true,
+      appUpdate: true,
+      devTools: true,
+      settings: { editable: true, scope: "local-only" },
+      content: { editable: true },
+    },
+    getServerBaseUrl: vi.fn().mockResolvedValue("http://localhost:5173"),
+    getSettings: vi.fn().mockResolvedValue(null),
+    saveSettings: vi.fn().mockResolvedValue({ success: true }),
+    openExternal: vi.fn(),
+  } as unknown as HostBridge;
+}
+
 describe("bus-store", () => {
   let mock: ReturnType<typeof createMockWebSocket>;
-  let electronAPI: { getServerPort: ReturnType<typeof vi.fn> };
+  let bridge: HostBridge;
 
   beforeEach(() => {
     vi.useFakeTimers();
     mock = createMockWebSocket();
     vi.stubGlobal("WebSocket", mock.MockWebSocket);
-    electronAPI = { getServerPort: vi.fn().mockResolvedValue(5173) };
-    Object.defineProperty(globalThis, "window", {
-      value: { electronAPI },
-      configurable: true,
-    });
+    bridge = createMockHostBridge();
     useBusStore.getState().teardown();
     useBusStore.setState({ status: "idle" });
   });
@@ -87,7 +102,7 @@ describe("bus-store", () => {
   });
 
   async function connect() {
-    await useBusStore.getState().init();
+    await useBusStore.getState().init(bridge);
     const socket = mock.instances[mock.instances.length - 1];
     socket.readyState = OPEN;
     socket.onopen?.({} as Event);
@@ -95,7 +110,7 @@ describe("bus-store", () => {
   }
 
   it("init creates a WebSocket to ws://localhost:<port>/ws/bus and goes open", async () => {
-    await useBusStore.getState().init();
+    await useBusStore.getState().init(bridge);
     expect(useBusStore.getState().status).toBe("connecting");
     const socket = mock.instances[mock.instances.length - 1];
     expect(socket.url).toBe("ws://localhost:5173/ws/bus");

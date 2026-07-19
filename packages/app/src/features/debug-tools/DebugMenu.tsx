@@ -28,9 +28,11 @@ import { Button } from "../../components/ui/button";
 import { BugIcon, RefreshCwIcon, DatabaseIcon, TrashIcon, CodeIcon, ScrollTextIcon, DownloadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAppStore } from "../../stores/app-store";
+import { useHostBridge } from "../../context/host-bridge-context";
 import { LogPanel } from "./LogPanel";
 
 export function DebugMenu() {
+  const bridge = useHostBridge();
   const [overlay, setOverlay] = useState<null | "store" | "reset" | "logs">(null);
   const [storeData, setStoreData] = useState<string>("");
   const [downloading, setDownloading] = useState(false);
@@ -44,21 +46,22 @@ export function DebugMenu() {
   const sessionId = chatMatch?.params.sessionId ?? null;
 
   const handleToggleDevTools = () => {
-    void window.electronAPI.toggleDevTools();
+    void bridge.devTools?.toggleDevTools();
   };
 
   const handleOpenStoreViewer = async () => {
-    const data = await window.electronAPI.getElectronStoreData();
+    const data = await bridge.devTools?.getElectronStoreData();
+    if (!data) return;
     setStoreData(JSON.stringify(data, null, 2));
     setOverlay("store");
   };
 
   const handleReload = () => {
-    window.electronAPI.reloadRenderer();
+    void bridge.devTools?.reloadRenderer();
   };
 
   const handleReset = () => {
-    window.electronAPI.resetAppData();
+    void bridge.devTools?.resetAppData();
   };
 
   const handleDownloadTurnContext = async () => {

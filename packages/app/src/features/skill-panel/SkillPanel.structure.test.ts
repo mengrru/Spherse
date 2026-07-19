@@ -25,4 +25,12 @@ describe("SkillPanel structure", () => {
     expect(source).toContain("useProjectCtx");
     expect(source).toContain("useNavigate");
   });
+
+  it("installs via the host bridge instead of window.electronAPI", () => {
+    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
+
+    expect(source).toContain("useHostBridge");
+    expect(source).toContain("bridge.project?.selectSkillZip()");
+    expect(source).not.toContain("window.electronAPI");
+  });
 });
