@@ -13,9 +13,10 @@
     "pretest:e2e": "node ../../scripts/rebuild-native.mjs",
     "test:e2e": "npm run build --workspace=@spherse/i18n && npm run build && playwright test -c playwright.config.ts",
     "pack": "electron-builder --dir",
+    "predist": "electron-vite build",
     "dist": "electron-builder",
-    "dist:mac": "electron-builder --mac",
-    "dist:win": "electron-builder --win",
+    "dist:mac": "npm run dist -- --mac",
+    "dist:win": "npm run dist -- --win",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
