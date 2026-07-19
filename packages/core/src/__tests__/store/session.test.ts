@@ -3,7 +3,60 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import Database from "better-sqlite3";
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import type {
+  UserMessage,
+  AssistantMessage,
+  ToolResultMessage,
+  TextContent,
+} from "@earendil-works/pi-ai";
 import { SessionStore } from "../../store/session.js";
+
+function userMsg(text: string, timestamp = 1000): UserMessage {
+  return { role: "user", content: text, timestamp };
+}
+
+function asstMsg(text: string, timestamp = 2000): AssistantMessage {
+  return {
+    role: "assistant",
+    content: [{ type: "text", text }],
+    api: "anthropic",
+    provider: "anthropic",
+    model: "test-model",
+    usage: {
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      totalTokens: 0,
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+    },
+    stopReason: "stop",
+    timestamp,
+  };
+}
+
+function toolResultMsg(text: string, timestamp = 3000): ToolResultMessage {
+  return {
+    role: "toolResult",
+    toolCallId: "tc-1",
+    toolName: "test",
+    content: [{ type: "text", text }],
+    isError: false,
+    timestamp,
+  };
+}
+
+function textOf(msg: AgentMessage): string {
+  if (msg.role === "user") {
+    return typeof msg.content === "string" ? msg.content : "";
+  }
+  if (msg.role === "assistant" || msg.role === "toolResult") {
+    const block = (msg.content as TextContent[])[0];
+    return block?.text ?? "";
+  }
+  return "";
+}
 
 describe("SessionStore", () => {
   let store: SessionStore;
@@ -60,18 +113,18 @@ describe("SessionStore", () => {
 
   it("appends and retrieves messages", () => {
     const id = store.createSession();
-    store.appendMessage(id, { role: "user", content: "hello", timestamp: 1000 });
-    store.appendMessage(id, { role: "assistant", content: "world", timestamp: 2000 });
+    store.appendMessage(id, userMsg("hello", 1000));
+    store.appendMessage(id, asstMsg("world", 2000));
     const messages = store.getSessionMessages(id);
     expect(messages).toHaveLength(2);
-    expect(messages[0].content).toBe("hello");
-    expect(messages[1].content).toBe("world");
+    expect(textOf(messages[0])).toBe("hello");
+    expect(textOf(messages[1])).toBe("world");
   });
 
   it("updates session updated_at on message append", () => {
     const id = store.createSession();
     const before = store.getSession(id)!.updatedAt;
-    store.appendMessage(id, { role: "user", content: "hi", timestamp: Date.now() });
+    store.appendMessage(id, userMsg("hi", Date.now()));
     const after = store.getSession(id)!.updatedAt;
     expect(after).toBeGreaterThanOrEqual(before);
   });
@@ -135,7 +188,6 @@ describe("SessionStore", () => {
         insertSession(`s-${i}`, sameTs);
         allIds.push(`s-${i}`);
       }
-      // id is TEXT, so `id DESC` is lexicographic descending.
       const expectedOrder = [...allIds].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
 
       const page1 = store.listSessionsPage(10, 0);
@@ -177,18 +229,18 @@ describe("SessionStore", () => {
   });
 
   describe("getRecentTurns", () => {
-    const insertTurn = (sessionId: string, userContent: string, assistantCount = 1): void => {
-      store.appendMessage(sessionId, { role: "user", content: userContent, timestamp: Date.now() });
+    const insertTurn = (sessionId: string, userText: string, assistantCount = 1): void => {
+      store.appendMessage(sessionId, userMsg(userText));
       for (let i = 0; i < assistantCount; i++) {
-        store.appendMessage(sessionId, { role: "assistant", content: `${userContent}-reply-${i}`, timestamp: Date.now() });
+        store.appendMessage(sessionId, asstMsg(`${userText}-reply-${i}`));
       }
     };
 
-    const insertMultiMessageTurn = (sessionId: string, userContent: string): void => {
-      store.appendMessage(sessionId, { role: "user", content: userContent, timestamp: Date.now() });
-      store.appendMessage(sessionId, { role: "assistant", content: `${userContent}-reply-0`, timestamp: Date.now() });
-      store.appendMessage(sessionId, { role: "assistant", content: `${userContent}-reply-1`, timestamp: Date.now() });
-      store.appendMessage(sessionId, { role: "toolResult", content: `${userContent}-tool`, timestamp: Date.now() });
+    const insertMultiMessageTurn = (sessionId: string, userText: string): void => {
+      store.appendMessage(sessionId, userMsg(userText));
+      store.appendMessage(sessionId, asstMsg(`${userText}-reply-0`));
+      store.appendMessage(sessionId, asstMsg(`${userText}-reply-1`));
+      store.appendMessage(sessionId, toolResultMsg(`${userText}-tool`));
     };
 
     const getMessageIds = (sessionId: string): number[] => {
@@ -209,10 +261,10 @@ describe("SessionStore", () => {
       const ids = getMessageIds(id);
       const result = store.getRecentTurns(id, 2);
       expect(result.messages).toHaveLength(4);
-      expect(result.messages[0].content).toBe("t2");
-      expect(result.messages[1].content).toBe("t2-reply-0");
-      expect(result.messages[2].content).toBe("t3");
-      expect(result.messages[3].content).toBe("t3-reply-0");
+      expect(textOf(result.messages[0])).toBe("t2");
+      expect(textOf(result.messages[1])).toBe("t2-reply-0");
+      expect(textOf(result.messages[2])).toBe("t3");
+      expect(textOf(result.messages[3])).toBe("t3-reply-0");
       expect(result.hasMore).toBe(true);
       expect(result.oldestId).toBe(ids[2]);
     });
@@ -225,8 +277,8 @@ describe("SessionStore", () => {
 
       const result = store.getRecentTurns(id, 10);
       expect(result.messages).toHaveLength(6);
-      expect(result.messages[0].content).toBe("t1");
-      expect(result.messages[5].content).toBe("t3-reply-0");
+      expect(textOf(result.messages[0])).toBe("t1");
+      expect(textOf(result.messages[5])).toBe("t3-reply-0");
       expect(result.hasMore).toBe(false);
     });
 
@@ -262,10 +314,10 @@ describe("SessionStore", () => {
 
       const result = store.getRecentTurns(id, 2, turn4FirstId);
       expect(result.messages).toHaveLength(4);
-      expect(result.messages[0].content).toBe("t2");
-      expect(result.messages[1].content).toBe("t2-reply-0");
-      expect(result.messages[2].content).toBe("t3");
-      expect(result.messages[3].content).toBe("t3-reply-0");
+      expect(textOf(result.messages[0])).toBe("t2");
+      expect(textOf(result.messages[1])).toBe("t2-reply-0");
+      expect(textOf(result.messages[2])).toBe("t3");
+      expect(textOf(result.messages[3])).toBe("t3-reply-0");
       expect(result.hasMore).toBe(true);
       expect(result.oldestId).toBe(ids[2]);
     });
@@ -289,7 +341,7 @@ describe("SessionStore", () => {
       const result = store.getRecentTurns(id, 1);
       expect(result.messages).toHaveLength(4);
       expect(result.messages[0].role).toBe("user");
-      expect(result.messages[0].content).toBe("t2");
+      expect(textOf(result.messages[0])).toBe("t2");
       expect(result.messages[1].role).toBe("assistant");
       expect(result.messages[2].role).toBe("assistant");
       expect(result.messages[3].role).toBe("toolResult");
@@ -309,29 +361,29 @@ describe("SessionStore", () => {
 
     it("appendMessage returns a numeric row id", () => {
       const id = store.createSession();
-      const rowId = store.appendMessage(id, { role: "user", content: "hello" });
+      const rowId = store.appendMessage(id, userMsg("hello"));
       expect(typeof rowId).toBe("number");
       expect(rowId).toBeGreaterThan(0);
     });
 
     it("appendMessage with prevMessageId stores it correctly", () => {
       const id = store.createSession();
-      const firstId = store.appendMessage(id, { role: "user", content: "first" });
-      const secondId = store.appendMessage(id, { role: "assistant", content: "second" }, firstId);
+      const firstId = store.appendMessage(id, userMsg("first"));
+      const secondId = store.appendMessage(id, asstMsg("second"), firstId);
       expect(getPrevMessageId(secondId)).toBe(firstId);
     });
 
     it("appendMessage without prevMessageId stores NULL for the first message", () => {
       const id = store.createSession();
-      const rowId = store.appendMessage(id, { role: "user", content: "hello" });
+      const rowId = store.appendMessage(id, userMsg("hello"));
       expect(getPrevMessageId(rowId)).toBeNull();
     });
 
     it("appendMessage auto-chains prev_message_id to the last message when not provided", () => {
       const id = store.createSession();
-      const firstId = store.appendMessage(id, { role: "user", content: "first" });
-      const secondId = store.appendMessage(id, { role: "assistant", content: "second" });
-      const thirdId = store.appendMessage(id, { role: "user", content: "third" });
+      const firstId = store.appendMessage(id, userMsg("first"));
+      const secondId = store.appendMessage(id, asstMsg("second"));
+      const thirdId = store.appendMessage(id, userMsg("third"));
       expect(getPrevMessageId(secondId)).toBe(firstId);
       expect(getPrevMessageId(thirdId)).toBe(secondId);
     });
@@ -339,9 +391,9 @@ describe("SessionStore", () => {
     it("appendMessage auto-chain is scoped per session", () => {
       const a = store.createSession();
       const b = store.createSession();
-      const a1 = store.appendMessage(a, { role: "user", content: "a1" });
-      const b1 = store.appendMessage(b, { role: "user", content: "b1" });
-      const a2 = store.appendMessage(a, { role: "user", content: "a2" });
+      const a1 = store.appendMessage(a, userMsg("a1"));
+      const b1 = store.appendMessage(b, userMsg("b1"));
+      const a2 = store.appendMessage(a, userMsg("a2"));
       expect(getPrevMessageId(b1)).toBeNull();
       expect(getPrevMessageId(a2)).toBe(a1);
     });
@@ -392,23 +444,23 @@ describe("SessionStore", () => {
   describe("getMessagesAfter", () => {
     it("Returns messages with id > anchorId in ascending order", () => {
       const id = store.createSession();
-      store.appendMessage(id, { role: "user", content: "one" });
-      const anchor = store.appendMessage(id, { role: "assistant", content: "two" });
-      const m3 = store.appendMessage(id, { role: "user", content: "three" });
-      const m4 = store.appendMessage(id, { role: "assistant", content: "four" });
+      store.appendMessage(id, userMsg("one"));
+      const anchor = store.appendMessage(id, asstMsg("two"));
+      const m3 = store.appendMessage(id, userMsg("three"));
+      const m4 = store.appendMessage(id, asstMsg("four"));
 
       const result = store.getMessagesAfter(id, anchor);
       expect(result).toHaveLength(2);
       expect(result[0].id).toBe(m3);
-      expect(result[0].message.content).toBe("three");
+      expect(textOf(result[0].message)).toBe("three");
       expect(result[1].id).toBe(m4);
-      expect(result[1].message.content).toBe("four");
+      expect(textOf(result[1].message)).toBe("four");
     });
 
     it("Returns empty array when no messages after anchorId", () => {
       const id = store.createSession();
-      store.appendMessage(id, { role: "user", content: "one" });
-      const anchor = store.appendMessage(id, { role: "assistant", content: "two" });
+      store.appendMessage(id, userMsg("one"));
+      const anchor = store.appendMessage(id, asstMsg("two"));
 
       const result = store.getMessagesAfter(id, anchor);
       expect(result).toEqual([]);
@@ -416,37 +468,212 @@ describe("SessionStore", () => {
 
     it("Returns objects with both id and message fields", () => {
       const id = store.createSession();
-      store.appendMessage(id, { role: "user", content: "one" });
-      const anchor = store.appendMessage(id, { role: "assistant", content: "two" });
-      store.appendMessage(id, { role: "user", content: "three" });
+      store.appendMessage(id, userMsg("one"));
+      const anchor = store.appendMessage(id, asstMsg("two"));
+      store.appendMessage(id, userMsg("three"));
 
       const result = store.getMessagesAfter(id, anchor);
       expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({ id: expect.any(Number), message: expect.objectContaining({ content: "three" }) });
+      expect(result[0]).toEqual({
+        id: expect.any(Number),
+        message: expect.objectContaining({ role: "user", content: "three" }),
+      });
     });
   });
 
   describe("getSessionMessagesWithIds", () => {
     it("Returns objects with both id and message fields", () => {
       const id = store.createSession();
-      store.appendMessage(id, { role: "user", content: "one" });
-      store.appendMessage(id, { role: "assistant", content: "two" });
+      store.appendMessage(id, userMsg("one"));
+      store.appendMessage(id, asstMsg("two"));
 
       const result = store.getSessionMessagesWithIds(id);
       expect(result).toHaveLength(2);
-      expect(result[0]).toEqual({ id: expect.any(Number), message: expect.objectContaining({ role: "user", content: "one" }) });
-      expect(result[1]).toEqual({ id: expect.any(Number), message: expect.objectContaining({ role: "assistant", content: "two" }) });
+      expect(result[0]).toEqual({
+        id: expect.any(Number),
+        message: expect.objectContaining({ role: "user", content: "one" }),
+      });
+      expect(result[1]).toEqual({
+        id: expect.any(Number),
+        message: expect.objectContaining({ role: "assistant" }),
+      });
     });
 
     it("Returns same messages as getSessionMessages", () => {
       const id = store.createSession();
-      store.appendMessage(id, { role: "user", content: "one", timestamp: 1000 });
-      store.appendMessage(id, { role: "assistant", content: "two", timestamp: 2000 });
-      store.appendMessage(id, { role: "user", content: "three", timestamp: 3000 });
+      const u = userMsg("one", 1000);
+      const a = asstMsg("two", 2000);
+      const u2 = userMsg("three", 3000);
+      store.appendMessage(id, u);
+      store.appendMessage(id, a);
+      store.appendMessage(id, u2);
 
       const plain = store.getSessionMessages(id);
       const withIds = store.getSessionMessagesWithIds(id).map((r) => r.message);
       expect(withIds).toEqual(plain);
+    });
+  });
+
+  describe("corrupt message handling", () => {
+    const insertRawMessage = (sessionId: string, content: string): void => {
+      const db = new Database(dbPath);
+      db.prepare(
+        "INSERT INTO messages (session_id, role, content, timestamp, prev_message_id, message_content_schema_version) VALUES (?, ?, ?, ?, NULL, 1)",
+      ).run(sessionId, "user", content, Date.now());
+      db.close();
+    };
+
+    it("throws when getSessionMessagesWithIds encounters a non-object payload", () => {
+      const id = store.createSession();
+      insertRawMessage(id, JSON.stringify("not-an-object"));
+      expect(() => store.getSessionMessagesWithIds(id)).toThrow(/Corrupt message/);
+    });
+
+    it("throws when getMessagesAfter encounters a payload without a known role", () => {
+      const id = store.createSession();
+      store.appendMessage(id, userMsg("ok"));
+      const anchor = store.appendMessage(id, asstMsg("anchor"));
+      insertRawMessage(id, JSON.stringify({ foo: "bar" }));
+      expect(() => store.getMessagesAfter(id, anchor)).toThrow(/Corrupt message/);
+    });
+
+    it("throws when getRecentTurns encounters a payload without a known role", () => {
+      const id = store.createSession();
+      insertRawMessage(id, JSON.stringify({ role: "weird", content: "x" }));
+      expect(() => store.getRecentTurns(id, 5)).toThrow(/Corrupt message/);
+    });
+
+    it("appendMessage rejects an invalid AgentMessage at write time", () => {
+      const id = store.createSession();
+      expect(() =>
+        store.appendMessage(id, { role: "totally-fake" } as unknown as AgentMessage),
+      ).toThrow(/appendMessage rejected invalid AgentMessage/);
+      expect(store.getSessionMessages(id)).toHaveLength(0);
+    });
+  });
+
+  describe("message_content_schema_version", () => {
+    const getSchemaVersion = (messageId: number): number => {
+      const db = new Database(dbPath, { readonly: true });
+      const row = db
+        .prepare("SELECT message_content_schema_version FROM messages WHERE id = ?")
+        .get(messageId) as { message_content_schema_version: number };
+      db.close();
+      return row.message_content_schema_version;
+    };
+
+    const insertRawMessage = (sessionId: string, content: string, version: number): number => {
+      const db = new Database(dbPath);
+      const result = db
+        .prepare(
+          "INSERT INTO messages (session_id, role, content, timestamp, prev_message_id, message_content_schema_version) VALUES (?, ?, ?, ?, NULL, ?)",
+        )
+        .run(sessionId, "user", content, Date.now(), version);
+      db.close();
+      return Number(result.lastInsertRowid);
+    };
+
+    it("appendMessage writes the current schema version", () => {
+      const id = store.createSession();
+      const rowId = store.appendMessage(id, userMsg("v1"));
+      expect(getSchemaVersion(rowId)).toBe(1);
+    });
+
+    it("reads v1 messages transparently", () => {
+      const id = store.createSession();
+      store.appendMessage(id, userMsg("hello", 1));
+      const result = store.getSessionMessagesWithIds(id);
+      expect(result[0].message).toMatchObject({ role: "user", content: "hello" });
+    });
+
+    it("refuses to read a message with a future schema version", () => {
+      const id = store.createSession();
+      insertRawMessage(
+        id,
+        JSON.stringify({ role: "user", content: "from the future" }),
+        999,
+      );
+      expect(() => store.getSessionMessagesWithIds(id)).toThrow(
+        /schema_version=999.*up to 1.*upgrade/i,
+      );
+    });
+  });
+
+  describe("migration: message_content_schema_version column", () => {
+    it("adds the column with default 1 to an existing DB lacking it, and existing rows stay readable", () => {
+      store.close();
+
+      const legacyDbPath = path.join(tmpDir, "legacy.db");
+      const legacySessionId = "legacy-session";
+      const legacyMessage = userMsg("written-by-old-code", 12345);
+
+      const legacy = new Database(legacyDbPath);
+      legacy.exec(`
+        CREATE TABLE sessions (
+          id TEXT PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          title TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          status TEXT DEFAULT 'active',
+          source TEXT DEFAULT 'manual'
+        );
+        CREATE TABLE messages (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_id TEXT NOT NULL REFERENCES sessions(id),
+          role TEXT NOT NULL,
+          content TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          prev_message_id INTEGER
+        );
+        CREATE TABLE compactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_id TEXT NOT NULL REFERENCES sessions(id),
+          anchor_message_id INTEGER NOT NULL,
+          digest_content TEXT NOT NULL,
+          token_estimate INTEGER NOT NULL,
+          created_at INTEGER NOT NULL
+        );
+      `);
+      legacy
+        .prepare(
+          "INSERT INTO sessions (id, agent_id, title, created_at, updated_at, status, source) VALUES (?, ?, NULL, ?, ?, 'active', 'manual')",
+        )
+        .run(legacySessionId, agentId, 1, 1);
+      legacy
+        .prepare(
+          "INSERT INTO messages (session_id, role, content, timestamp, prev_message_id) VALUES (?, ?, ?, ?, NULL)",
+        )
+        .run(legacySessionId, "user", JSON.stringify(legacyMessage), 12345);
+      const legacyRowId = legacy
+        .prepare("SELECT id FROM messages WHERE session_id = ?")
+        .get(legacySessionId) as { id: number };
+      legacy.close();
+
+      const colsBefore = new Database(legacyDbPath, { readonly: true })
+        .prepare("PRAGMA table_info(messages)")
+        .all() as Array<{ name: string }>;
+      expect(colsBefore.map((c) => c.name)).not.toContain("message_content_schema_version");
+
+      const migrated = new SessionStore(legacyDbPath, agentId);
+      try {
+        const messages = migrated.getSessionMessages(legacySessionId);
+        expect(messages).toHaveLength(1);
+        expect(messages[0]).toEqual(legacyMessage);
+
+        const versionRow = new Database(legacyDbPath, { readonly: true })
+          .prepare("SELECT message_content_schema_version FROM messages WHERE id = ?")
+          .get(legacyRowId.id) as { message_content_schema_version: number };
+        expect(versionRow.message_content_schema_version).toBe(1);
+
+        const newRowId = migrated.appendMessage(legacySessionId, userMsg("after-migration"));
+        const newRow = new Database(legacyDbPath, { readonly: true })
+          .prepare("SELECT message_content_schema_version FROM messages WHERE id = ?")
+          .get(newRowId) as { message_content_schema_version: number };
+        expect(newRow.message_content_schema_version).toBe(1);
+      } finally {
+        migrated.close();
+      }
     });
   });
 });
