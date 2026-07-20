@@ -28,8 +28,8 @@ jobs:
       - name: Build landing
         run: npm run build:landing
 
-      - name: Build web app (i18n already built by landing step)
-        run: npm run build --workspace=packages/web
+      - name: Build web app
+        run: npm run build:web
 
       - name: Stage Pages content
         run: |
