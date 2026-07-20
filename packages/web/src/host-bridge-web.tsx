@@ -80,41 +80,36 @@ function createWebProjectApi(
       throw new Error("openProject is not supported on web");
     },
     async restoreProjects() {
-      try {
-        const entries = await fetchJson<Array<{ id: string; name: string }>>("/api/projects");
-        if (entries.length === 0) return [];
-        const infos = await Promise.allSettled(
-          entries.map((entry) =>
-            fetchJson<{ id: string; name: string; rootPath: string }>(
-              `/api/projects/${encodeURIComponent(entry.id)}/info`,
-            ),
+      const entries = await fetchJson<Array<{ id: string; name: string }>>("/api/projects");
+      if (entries.length === 0) return [];
+      const infos = await Promise.allSettled(
+        entries.map((entry) =>
+          fetchJson<{ id: string; name: string; rootPath: string }>(
+            `/api/projects/${encodeURIComponent(entry.id)}/info`,
           ),
-        );
-        const restored: RestoredProject[] = [];
-        infos.forEach((result, index) => {
-          if (result.status === "fulfilled") {
-            const info = result.value;
-            restored.push({
-              id: info.id,
-              path: info.rootPath,
-              name: info.name,
-              lastOpened: PLACEHOLDER_LAST_OPENED,
-            });
-          } else {
-            const entry = entries[index];
-            restored.push({
-              id: entry.id,
-              path: "",
-              name: entry.name,
-              lastOpened: PLACEHOLDER_LAST_OPENED,
-            });
-          }
-        });
-        return restored;
-      } catch (err) {
-        console.warn("[web-host-bridge] restoreProjects failed", err);
-        return [];
-      }
+        ),
+      );
+      const restored: RestoredProject[] = [];
+      infos.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          const info = result.value;
+          restored.push({
+            id: info.id,
+            path: info.rootPath,
+            name: info.name,
+            lastOpened: PLACEHOLDER_LAST_OPENED,
+          });
+        } else {
+          const entry = entries[index];
+          restored.push({
+            id: entry.id,
+            path: "",
+            name: entry.name,
+            lastOpened: PLACEHOLDER_LAST_OPENED,
+          });
+        }
+      });
+      return restored;
     },
     async addOpenProject() {
       void 0;

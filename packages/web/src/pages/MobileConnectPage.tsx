@@ -12,6 +12,7 @@ import { useAppStore } from "@spherse/app/src/stores/app-store";
 
 const CONNECTION_STORAGE_KEY = "spherse:connection";
 const DEEPLINK_PREFIX = "spherse://connect";
+const SCAN_INTERVAL_MS = 250;
 
 type Mode = "menu" | "scan" | "manual";
 
@@ -125,7 +126,7 @@ function ScanPanel({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const rafRef = useRef<number | null>(null);
+  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detectedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -165,36 +166,39 @@ function ScanPanel({
       const video = videoRef.current;
       const canvas = canvasRef.current;
       if (!video || !canvas || detectedRef.current) {
-        rafRef.current = requestAnimationFrame(tick);
         return;
       }
-      if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (ctx) {
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: "dontInvert",
-          });
-          if (decoded && decoded.payload) {
-            const conn = parseConnectionFromText(decoded.payload);
-            if (conn) {
-              detectedRef.current = true;
-              void onDetected(conn);
-              return;
-            }
+      if (video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) {
+        scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
+        return;
+      }
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (ctx) {
+        const maxDim = 600;
+        const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+        canvas.width = Math.round(video.videoWidth * scale);
+        canvas.height = Math.round(video.videoHeight * scale);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "attemptBoth",
+        });
+        if (decoded && decoded.payload) {
+          const conn = parseConnectionFromText(decoded.payload);
+          if (conn) {
+            detectedRef.current = true;
+            void onDetected(conn);
+            return;
           }
         }
       }
-      rafRef.current = requestAnimationFrame(tick);
+      scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
     }
 
     void start();
     return () => {
       cancelled = true;
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+      if (scanTimerRef.current !== null) clearTimeout(scanTimerRef.current);
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
