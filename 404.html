@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>Spherse</title>
+  <script>
+    (function () {
+      var path = location.pathname;
+      if (path === '/web') {
+        location.replace('/web/' + location.search + location.hash);
+        return;
+      }
+      location.replace('/' + location.search + location.hash);
+    })();
+  </script>
+</head>
+<body></body>
+</html>
