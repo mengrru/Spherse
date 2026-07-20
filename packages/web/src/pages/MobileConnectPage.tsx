@@ -149,9 +149,13 @@ function ScanPanel({
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
+          videoRef.current.onloadeddata = () => {
+            videoRef.current?.play().catch((err) => {
+              console.warn("[scan] video.play() rejected", err);
+            });
+          };
         }
-        tick();
+        scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
       } catch (err) {
         const name = (err as DOMException)?.name;
         if (name === "NotAllowedError" || name === "SecurityError") {
@@ -163,21 +167,28 @@ function ScanPanel({
     }
 
     function tick() {
+      if (cancelled) return;
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (!video || !canvas || detectedRef.current) {
+      if (detectedRef.current) return;
+      if (!video || !canvas) {
+        scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
         return;
       }
       if (video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) {
         scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
         return;
       }
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      if (ctx) {
-        const maxDim = 600;
+      try {
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (!ctx) {
+          scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
+          return;
+        }
+        const maxDim = 480;
         const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
-        canvas.width = Math.round(video.videoWidth * scale);
-        canvas.height = Math.round(video.videoHeight * scale);
+        canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+        canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
@@ -191,6 +202,8 @@ function ScanPanel({
             return;
           }
         }
+      } catch (err) {
+        console.warn("[scan] decode error", err);
       }
       scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
     }

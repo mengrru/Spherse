@@ -51,10 +51,6 @@ function readConnection(): { baseUrl?: string; token?: string } | null {
   }
 }
 
-function authHeaders(token: string | undefined): Record<string, string> {
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
 function createWebProjectApi(
   getBaseUrl: () => Promise<string>,
   getToken: () => Promise<string | null>,
@@ -62,8 +58,10 @@ function createWebProjectApi(
   async function fetchJson<T>(path: string): Promise<T> {
     const baseUrl = await getBaseUrl();
     const token = await getToken();
-    const res = await fetch(`${baseUrl}${path}`, {
-      headers: { ...authHeaders(token ?? undefined), Accept: "application/json" },
+    const url = new URL(`${baseUrl}${path}`);
+    if (token) url.searchParams.set("token", token);
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
     });
     if (!res.ok) throw new Error(`${path}: ${res.status} ${res.statusText}`);
     return (await res.json()) as T;
