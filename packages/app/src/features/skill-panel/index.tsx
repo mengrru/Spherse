@@ -58,6 +58,9 @@ export function SkillPanel() {
     }
   };
 
+  const canInstall = bridge.capabilities.filePicker;
+  const canCreate = bridge.capabilities.content.editable;
+
   return (
     <>
       <div className="border-b border-sidebar-border p-2">
@@ -65,22 +68,28 @@ export function SkillPanel() {
           <SidebarGroupLabel className="h-7 px-0 text-[11px] font-semibold tracking-wide uppercase">
             {t("project-panel.skills")}
           </SidebarGroupLabel>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<SidebarGroupAction className="top-1 right-0" />}
-            >
-              <MoreHorizontalIcon />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="bottom">
-              <DropdownMenuItem onClick={() => setCreateOpen(true)}>
-                {t("skill-panel.create")}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleInstallClick}>
-                {t("skill-panel.install")}
-                <span className="ms-auto text-[0.625rem] text-muted-foreground">{t("skill-panel.install.hint")}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {(canInstall || canCreate) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<SidebarGroupAction className="top-1 right-0" />}
+              >
+                <MoreHorizontalIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" side="bottom">
+                {canCreate && (
+                  <DropdownMenuItem onClick={() => setCreateOpen(true)}>
+                    {t("skill-panel.create")}
+                  </DropdownMenuItem>
+                )}
+                {canInstall && (
+                  <DropdownMenuItem onClick={handleInstallClick}>
+                    {t("skill-panel.install")}
+                    <span className="ms-auto text-[0.625rem] text-muted-foreground">{t("skill-panel.install.hint")}</span>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <SidebarGroupContent>
             <FileTree
               rootPath=".spherse/skills"
@@ -88,6 +97,7 @@ export function SkillPanel() {
               onSelectFile={handleSelectFile}
               onDeleted={handleFileDeleted}
               emptyLabel={t("skill-panel.empty")}
+              readOnly={!canCreate}
             />
           </SidebarGroupContent>
         </SidebarGroup>

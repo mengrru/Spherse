@@ -3,6 +3,8 @@ import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
+import { useHostBridge } from "../../context/host-bridge-context";
+import { useFeature } from "../../lib/use-feature";
 import { ConflictBanner } from "./ConflictBanner";
 import { ConfirmDialogs } from "./ConfirmDialogs";
 import { ContentView } from "./ContentView";
@@ -32,6 +34,8 @@ export function ContentBrowser({
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
+  const bridge = useHostBridge();
+  const textSelectionEnabled = useFeature("text-selection-session");
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
   const [refreshKey, setRefreshKey] = useState(0);
   const { content, setContent, loading, error, reload: reloadContent } = useContentFile(client, filePath);
@@ -61,7 +65,7 @@ export function ContentBrowser({
     filePath.endsWith(".agents.md");
   const isHtml = ext === "html" || ext === "htm";
   const isImage = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp"]).has(ext);
-  const isEditable = !isImage;
+  const isEditable = !isImage && bridge.capabilities.content.editable;
 
   return (
     <div data-content-browser className="flex flex-col h-full">
@@ -92,32 +96,49 @@ export function ContentBrowser({
           {t("content-browser.saveFailed", { error: editor.saveError })}
         </div>
       )}
-      <TextSelectionSession
-        disabled={editor.isEditing}
-        sourcePath={filePath}
-        agents={agents}
-        projectId={projectId}
-        activeSessions={activeSessions}
-        onStartSession={onStartSession}
-      >
-        {(contentRef) => (
-          <ContentView
-            filePath={filePath}
-            content={content}
-            contentRef={contentRef}
-            loading={loading}
-            error={error}
-            isMarkdown={isMarkdown}
-            isHtml={isHtml}
-            isImage={isImage}
-            htmlView={htmlView}
-            isEditing={editor.isEditing}
-            editedContent={editor.editedContent}
-            onEditedContentChange={editor.setEditedContent}
-            refreshKey={refreshKey}
-          />
-        )}
-      </TextSelectionSession>
+      {textSelectionEnabled ? (
+        <TextSelectionSession
+          disabled={editor.isEditing}
+          sourcePath={filePath}
+          agents={agents}
+          projectId={projectId}
+          activeSessions={activeSessions}
+          onStartSession={onStartSession}
+        >
+          {(contentRef) => (
+            <ContentView
+              filePath={filePath}
+              content={content}
+              contentRef={contentRef}
+              loading={loading}
+              error={error}
+              isMarkdown={isMarkdown}
+              isHtml={isHtml}
+              isImage={isImage}
+              htmlView={htmlView}
+              isEditing={editor.isEditing}
+              editedContent={editor.editedContent}
+              onEditedContentChange={editor.setEditedContent}
+              refreshKey={refreshKey}
+            />
+          )}
+        </TextSelectionSession>
+      ) : (
+        <ContentView
+          filePath={filePath}
+          content={content}
+          loading={loading}
+          error={error}
+          isMarkdown={isMarkdown}
+          isHtml={isHtml}
+          isImage={isImage}
+          htmlView={htmlView}
+          isEditing={editor.isEditing}
+          editedContent={editor.editedContent}
+          onEditedContentChange={editor.setEditedContent}
+          refreshKey={refreshKey}
+        />
+      )}
       <ConfirmDialogs
         showLeaveConfirm={editor.showLeaveConfirm}
         showCancelConfirm={editor.showCancelConfirm}

@@ -33,10 +33,18 @@ export function useChatSession({
   const streaming = useStreamingStore(
     (s) => s.sessions[sessionId]?.streaming ?? false,
   );
+  const historyLoaded = useStreamingStore(
+    (s) => s.sessions[sessionId]?.historyLoaded ?? false,
+  );
+  const wsConnecting = useStreamingStore(
+    (s) => s.sessions[sessionId]?.wsConnecting ?? false,
+  );
+  const loading = !historyLoaded || wsConnecting;
 
   return {
     messages,
     streaming,
+    loading,
     sendMessage: (text: string) => useStreamingStore.getState().sendMessage(sessionId, text),
     abort: () => useStreamingStore.getState().abort(sessionId),
   };

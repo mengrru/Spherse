@@ -10,6 +10,7 @@ export interface FileTreeContextValue {
   submitCreate: (parentPath: string, action: CreateAction, name: string) => void;
   cancelCreate: () => void;
   requestDelete: (node: TreeNode) => void;
+  readOnly?: boolean;
 }
 
 const FileTreeContext = createContext<FileTreeContextValue | null>(null);

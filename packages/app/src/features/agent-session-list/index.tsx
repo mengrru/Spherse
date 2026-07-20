@@ -30,6 +30,7 @@ import {
 import { EllipsisIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { dispatchAction } from "../../ui-sdk";
+import { useFeature } from "../../lib/use-feature";
 
 const EMPTY_AGENTS: AgentProfile[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
@@ -41,6 +42,7 @@ export function AgentSessionList() {
   const navigate = useNavigate();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
+  const agentDialogEnabled = useFeature("agent-dialog");
   const projectData = useProjectDataStore((state) => state.projects[projectId]);
   const createSession = useProjectDataStore((state) => state.createSession);
   const deleteSession = useProjectDataStore((state) => state.deleteSession);
@@ -152,23 +154,25 @@ export function AgentSessionList() {
         <SidebarGroupLabel className="h-7 px-0 text-[11px] font-semibold tracking-wide uppercase">
           {t("agent-session-list.groupLabel")}
         </SidebarGroupLabel>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <SidebarGroupAction
-                className="top-1 right-0"
-                title={t("agent-session-list.createAgentTooltip")}
-              />
-            }
-          >
-            <EllipsisIcon />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" side="bottom">
-            <DropdownMenuItem onClick={() => setDialog({ kind: "create-agent" })}>
-              {t("agent-session-list.createAgentTooltip")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {agentDialogEnabled && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <SidebarGroupAction
+                  className="top-1 right-0"
+                  title={t("agent-session-list.createAgentTooltip")}
+                />
+              }
+            >
+              <EllipsisIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="bottom">
+              <DropdownMenuItem onClick={() => setDialog({ kind: "create-agent" })}>
+                {t("agent-session-list.createAgentTooltip")}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         <SidebarGroupContent>
           <AgentSessionActionsProvider actions={actions}>
             <AgentSessionListView

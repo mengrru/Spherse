@@ -75,6 +75,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
   async restoreProjects(bridge) {
     set({ initializing: true });
     const connection = await fetchConnection(bridge);
+    if (!connection.baseUrl) {
+      set({ initializing: false, connection });
+      return null;
+    }
     const restored = (await bridge.project?.restoreProjects()) ?? [];
     const projects = new Map<string, ProjectState>();
 

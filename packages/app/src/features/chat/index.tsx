@@ -24,7 +24,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const { baseUrl, accessToken } = useConnection();
-  const { messages, streaming, sendMessage, abort } = useChatSession({
+  const { messages, streaming, loading, sendMessage, abort } = useChatSession({
     client,
     sessionId,
     baseUrl,
@@ -53,6 +53,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           messages={messages}
           agent={agent}
           streaming={streaming}
+          loading={loading}
           containerRef={containerRef}
           isAtBottom={isAtBottom}
           onScrollToBottom={() => scrollToBottom("smooth")}
@@ -63,6 +64,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
         />
         <Composer
           streaming={streaming}
+          loading={loading}
           sessionId={sessionId}
           onSend={sendMessage}
           onAbort={abort}

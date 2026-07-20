@@ -16,6 +16,8 @@ import { PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-reac
 import { DebugTools } from "../debug-tools";
 import { WelcomePageSettingsDialog } from "../project-settings/welcome-page-settings";
 import { ThemeSettingsDialog } from "../project-settings/theme-settings";
+import { useFeature } from "../../lib/use-feature";
+import { useHostBridge } from "../../context/host-bridge-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "../../lib/utils";
@@ -27,7 +29,7 @@ interface ActivityBarProps {
   onAdd: () => void;
   onClose: (projectId: string) => void;
   onOpenProjectFolder: (projectId: string) => void;
-  onSettings: () => void;
+  onSettings?: () => void;
 }
 
 export function ActivityBar({
@@ -40,6 +42,8 @@ export function ActivityBar({
   onSettings,
 }: ActivityBarProps) {
   const { t } = useI18n();
+  const openProjectEnabled = useFeature("open-project");
+  const canEditProject = useHostBridge().capabilities.content.editable;
   const [settingsProjectId, setSettingsProjectId] = useState<string | null>(null);
   const settingsProject = settingsProjectId ? projects.get(settingsProjectId) : null;
   const settingsClient = useApiClient(settingsProjectId);
@@ -91,7 +95,7 @@ export function ActivityBar({
                     />
                   </ContextMenuTrigger>
                   <ContextMenuContent>
-                    {projectId === activeProjectId && (
+                    {canEditProject && projectId === activeProjectId && (
                       <ContextMenuSub>
                         <ContextMenuSubTrigger>
                           {t("activity-bar.settings")}
@@ -132,23 +136,27 @@ export function ActivityBar({
               >
                 {pinned ? <PanelLeftCloseIcon /> : <PinIcon />}
               </Button>
-              <Button
-                variant="ghost"
-                size="icon-lg"
-                onClick={onSettings}
-                title={t("activity-bar.settingsTooltip")}
-              >
-                <SettingsIcon />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon-lg"
-                className="border-dashed"
-                onClick={onAdd}
-                title={t("activity-bar.addProjectTooltip")}
-              >
-                <PlusIcon />
-              </Button>
+              {onSettings && (
+                <Button
+                  variant="ghost"
+                  size="icon-lg"
+                  onClick={onSettings}
+                  title={t("activity-bar.settingsTooltip")}
+                >
+                  <SettingsIcon />
+                </Button>
+              )}
+              {openProjectEnabled && (
+                <Button
+                  variant="outline"
+                  size="icon-lg"
+                  className="border-dashed"
+                  onClick={onAdd}
+                  title={t("activity-bar.addProjectTooltip")}
+                >
+                  <PlusIcon />
+                </Button>
+              )}
             </div>
             {settingsProject && settingsClient && (
               <WelcomePageSettingsDialog

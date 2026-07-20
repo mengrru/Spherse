@@ -13,9 +13,10 @@ export interface FileTreeProps {
   onDeleted?: (path: string) => void;
   rootPath?: string;
   emptyLabel?: string;
+  readOnly?: boolean;
 }
 
-export function FileTree({ selectedFilePath, onSelectFile, onDeleted, rootPath, emptyLabel }: FileTreeProps) {
+export function FileTree({ selectedFilePath, onSelectFile, onDeleted, rootPath, emptyLabel, readOnly }: FileTreeProps) {
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
@@ -30,6 +31,7 @@ export function FileTree({ selectedFilePath, onSelectFile, onDeleted, rootPath, 
     submitCreate: ctrl.submitCreate,
     cancelCreate: ctrl.cancelCreate,
     requestDelete: ctrl.requestDelete,
+    readOnly,
   };
 
   return (
@@ -45,7 +47,7 @@ export function FileTree({ selectedFilePath, onSelectFile, onDeleted, rootPath, 
           ))}
         </FileTreeProvider>
       )}
-      {ctrl.creating && ctrl.creating.parentPath === basePath && (
+      {!readOnly && ctrl.creating && ctrl.creating.parentPath === basePath && (
         <InlineNameInput
           depth={0}
           onSubmit={(name) =>
@@ -54,11 +56,13 @@ export function FileTree({ selectedFilePath, onSelectFile, onDeleted, rootPath, 
           onCancel={ctrl.cancelCreate}
         />
       )}
-      <DeleteConfirmDialog
-        target={ctrl.deleteTarget}
-        onConfirm={ctrl.confirmDelete}
-        onCancel={ctrl.cancelDelete}
-      />
+      {!readOnly && (
+        <DeleteConfirmDialog
+          target={ctrl.deleteTarget}
+          onConfirm={ctrl.confirmDelete}
+          onCancel={ctrl.cancelDelete}
+        />
+      )}
     </div>
   );
 }

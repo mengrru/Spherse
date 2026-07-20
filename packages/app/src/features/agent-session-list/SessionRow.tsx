@@ -15,6 +15,7 @@ import {
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useProjectCtx } from "../../context/project-context";
+import { useFeature } from "../../lib/use-feature";
 import { useAgentSessionActions } from "./actions-context";
 
 interface SessionRowProps {
@@ -62,6 +63,7 @@ function renameReducer(state: RenameState, action: RenameAction): RenameState {
 export function SessionRow({ session, active, floating }: SessionRowProps) {
   const { t } = useI18n();
   const actions = useAgentSessionActions();
+  const floatingChatEnabled = useFeature("floating-chat");
   const [state, dispatch] = useReducer(renameReducer, { mode: "idle" } satisfies RenameState);
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurRef = useRef(false);
@@ -174,7 +176,7 @@ export function SessionRow({ session, active, floating }: SessionRowProps) {
           </TreeRow>
         </ContextMenuTrigger>
         <ContextMenuContent>
-          {floating ? (
+          {floatingChatEnabled && (floating ? (
             <ContextMenuItem onClick={actions.cancelFloat}>
               {t("agent-session-list.cancelFloat")}
             </ContextMenuItem>
@@ -182,7 +184,7 @@ export function SessionRow({ session, active, floating }: SessionRowProps) {
             <ContextMenuItem onClick={() => actions.floatSession(session)}>
               {t("agent-session-list.floatSession")}
             </ContextMenuItem>
-          )}
+          ))}
           <ContextMenuItem onClick={startEditing}>
             {t("common.rename")}
           </ContextMenuItem>

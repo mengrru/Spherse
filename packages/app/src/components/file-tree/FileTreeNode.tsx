@@ -19,6 +19,7 @@ export function FileTreeNode({ node, depth }: { node: TreeNode; depth: number })
     submitCreate,
     cancelCreate,
     requestDelete,
+    readOnly,
   } = useFileTreeCtx();
 
   const isCreatingInThisDir =
@@ -63,6 +64,23 @@ export function FileTreeNode({ node, depth }: { node: TreeNode; depth: number })
     ) : (
       row
     );
+
+  if (readOnly) {
+    return node.type === "file" ? (
+      menuTrigger
+    ) : (
+      <Collapsible open={node.expanded} onOpenChange={() => toggleNode(node)}>
+        {menuTrigger}
+        <CollapsibleContent className="ml-2">
+          <div className="flex flex-col gap-px">
+            {node.children.map((child) => (
+              <FileTreeNode key={child.path} node={child} depth={depth + 1} />
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  }
 
   if (node.type === "file") {
     return (

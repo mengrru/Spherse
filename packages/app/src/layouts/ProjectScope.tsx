@@ -4,6 +4,7 @@ import { useI18n } from "@spherse/i18n/react";
 import { ProjectPanel } from "../features/project-panel";
 import { FloatingChatManager } from "../features/floating-chat";
 import { TriggerEventBridge } from "../features/agent-trigger";
+import { FeatureGate } from "../components/FeatureGate";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useSidePanel } from "../hooks/use-side-panel";
 import { useSpherseMessageListener } from "../ui-sdk";
@@ -82,7 +83,9 @@ export function ProjectScope() {
         >
           <Outlet />
         </main>
-        <FloatingChatManager />
+        <FeatureGate feature="floating-chat">
+          <FloatingChatManager />
+        </FeatureGate>
         <TriggerEventBridge />
       </div>
     </ProjectProvider>

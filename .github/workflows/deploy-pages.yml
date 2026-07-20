@@ -1,0 +1,48 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/landing/**"
+      - "packages/web/**"
+      - "packages/i18n/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - name: Build landing
+        run: npm run build:landing
+
+      - name: Build web app (i18n already built by landing step)
+        run: npm run build --workspace=packages/web
+
+      - name: Stage Pages content
+        run: |
+          set -e
+          mkdir -p ./pages-out
+          cp -r packages/landing/dist/. ./pages-out/
+          mkdir -p ./pages-out/web
+          cp -r packages/web/dist/. ./pages-out/web/
+          cp packages/web/pages-assets/404.html ./pages-out/404.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./pages-out
+          keep_files: false

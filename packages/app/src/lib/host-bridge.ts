@@ -1,4 +1,5 @@
 import type { ProviderCatalogItem, ModelGroupSettings, CustomProviderDef } from "@spherse/core";
+import type { ReactNode } from "react";
 
 export interface RestoredProject {
   id: string;
@@ -142,4 +143,6 @@ export interface HostBridge {
   readonly updater?: UpdaterHostApi;
   readonly devTools?: DevToolsHostApi;
   readonly mobile?: MobileAccessHostApi;
+  readonly renderConnectPage?: () => ReactNode;
+  readonly renderMobileLayout?: (children: ReactNode) => ReactNode;
 }

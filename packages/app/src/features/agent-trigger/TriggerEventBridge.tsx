@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
+import { useFeature } from "../../lib/use-feature";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useStreamingStore } from "../chat/streaming-store";
 import { useTriggerStore } from "./store";
@@ -13,6 +14,7 @@ export function TriggerEventBridge() {
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const { t } = useI18n();
+  const triggerConfigEnabled = useFeature("agent-trigger");
   const agents = useProjectDataStore((s) => (projectId ? s.projects[projectId]?.agents ?? [] : []));
   const handleTriggerEvent = useTriggerStore((s) => s.handleTriggerEvent);
   const tRef = useRef(t);
@@ -21,7 +23,7 @@ export function TriggerEventBridge() {
   }, [t]);
 
   useEffect(() => {
-    if (!projectId || !client || agents.length === 0) return;
+    if (!triggerConfigEnabled || !projectId || !client || agents.length === 0) return;
     let cancelled = false;
     void Promise.allSettled(agents.map((agent) => client.listTriggers(agent.id))).then(
       (results) => {
@@ -41,7 +43,7 @@ export function TriggerEventBridge() {
     return () => {
       cancelled = true;
     };
-  }, [projectId, client, agents]);
+  }, [triggerConfigEnabled, projectId, client, agents]);
 
   const showTriggerNotification = async (agentId: string, triggerId: string) => {
     if (!projectId || !client) return;

@@ -12,12 +12,13 @@ const MAX_HEIGHT = 20 * LINE_HEIGHT + PADDING_Y;
 
 interface ComposerProps {
   streaming: boolean;
+  loading?: boolean;
   sessionId: string;
   onSend: (message: string) => void;
   onAbort: () => void;
 }
 
-export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProps) {
+export function Composer({ streaming, loading = false, sessionId, onSend, onAbort }: ComposerProps) {
   const { t } = useI18n();
   const draftKey = `spherse:draft:${sessionId}`;
   const [input, setInput] = useState(() => localStorage.getItem(draftKey) ?? "");
@@ -70,7 +71,7 @@ export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProp
 
   const send = () => {
     const message = input.trim();
-    if (!message || streaming) return;
+    if (!message || streaming || loading) return;
     onSend(message);
     setInput("");
     localStorage.removeItem(draftKey);
@@ -78,8 +79,8 @@ export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProp
   };
 
   useEffect(() => {
-    if (!streaming) textareaRef.current?.focus();
-  }, [streaming]);
+    if (!streaming && !loading) textareaRef.current?.focus();
+  }, [streaming, loading]);
 
   return (
     <div className="border-t border-border bg-background p-3" data-chat-composer>
@@ -97,7 +98,7 @@ export function Composer({ streaming, sessionId, onSend, onAbort }: ComposerProp
               send();
             }
           }}
-          disabled={streaming}
+          disabled={streaming || loading}
         />
         {contentExceeds3Lines && (
           <Button

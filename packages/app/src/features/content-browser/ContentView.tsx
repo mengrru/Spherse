@@ -15,7 +15,7 @@ import { parseFrontmatter } from "./frontmatter";
 interface ContentViewProps {
   filePath: string;
   content: string | null;
-  contentRef: RefObject<HTMLDivElement | null>;
+  contentRef?: RefObject<HTMLDivElement | null>;
   loading: boolean;
   error: string | null;
   isMarkdown: boolean;

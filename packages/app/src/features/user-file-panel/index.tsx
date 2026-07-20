@@ -10,15 +10,18 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from "../../components/ui/sidebar";
+import { useHostBridge } from "../../context/host-bridge-context";
 import { useProjectCtx } from "../../context/project-context";
 
 export function UserFilePanel() {
   const { projectId } = useProjectCtx();
+  const bridge = useHostBridge();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [aiDenylistOpen, setAiDenylistOpen] = useState(false);
   const { t } = useI18n();
   const contentPath = searchParams.get("path") ?? undefined;
+  const canMutate = bridge.capabilities.content.editable;
 
   const handleSelectFile = (filePath: string) => {
     if (!projectId) return;
@@ -38,23 +41,26 @@ export function UserFilePanel() {
           <SidebarGroupLabel className="h-7 px-0 text-[11px] font-semibold tracking-wide uppercase">
             {t("project-panel.files")}
           </SidebarGroupLabel>
-          <SidebarGroupAction
-            className="top-1 right-0"
-            onClick={() => setAiDenylistOpen(true)}
-            title={t("project-panel.aiReadDenylistTooltip")}
-          >
-            <FolderCogIcon />
-          </SidebarGroupAction>
+          {canMutate && (
+            <SidebarGroupAction
+              className="top-1 right-0"
+              onClick={() => setAiDenylistOpen(true)}
+              title={t("project-panel.aiReadDenylistTooltip")}
+            >
+              <FolderCogIcon />
+            </SidebarGroupAction>
+          )}
           <SidebarGroupContent>
             <FileTree
               selectedFilePath={contentPath}
               onSelectFile={handleSelectFile}
               onDeleted={handleFileDeleted}
+              readOnly={!canMutate}
             />
           </SidebarGroupContent>
         </SidebarGroup>
       </div>
-      <AiReadDenylistDialog open={aiDenylistOpen} onOpenChange={setAiDenylistOpen} />
+      {canMutate && <AiReadDenylistDialog open={aiDenylistOpen} onOpenChange={setAiDenylistOpen} />}
     </>
   );
 }

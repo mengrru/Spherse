@@ -92,7 +92,13 @@
 
 ## 移动端
 
-- [ ] **移动端 App（进行中）**：基于三层分离（app/desktop/web）+ Cloudflare Quick Tunnel 中继 + Bearer Token 鉴权，支持手机 PWA 远程连接桌面 server 进行只读浏览和聊天。PR1（三层分离 + HostBridge 抽象）、PR2/3（server auth + 新增 `/api/projects`、`/api/projects/:id/info`、`/api/connection/info` + cloudflared 集成 + 桌面「移动端」设置面板 + QR 码）已完成；剩余 PR4 移动端 PWA 实现（扫码、布局、project-panel drawer）、PR5 mobile UI 打磨 + skill 上传。参见 `docs/dev/features/2026-07-20-mobile-app/design.md`
+- [ ] **移动端 App（进行中）**：基于三层分离（app/desktop/web）+ Cloudflare Quick Tunnel 中继 + Bearer Token 鉴权，支持手机 PWA 远程连接桌面 server 进行只读浏览和聊天。已完成：PR1（三层分离 + HostBridge 抽象）、PR2/3（server auth + `/api/projects`、`/api/projects/:id/info`、`/api/connection/info` + cloudflared 集成 + 桌面「移动端」设置面板 + QR 码）、Section 3 feature-gating 基建（`feature-registry` + `<FeatureGate>` + `useFeature`）、PR4a 移动端最小可用版（`WebHostBridge` 实现 `ProjectHostApi` HTTP 子集 + 共享 router/App.tsx 加 kind 分支 + 扫码连接页 + chat 加载态 + GitHub Pages 部署到 `/web/` + 404 fallback）。剩余待办见下方独立条目。参见 `docs/dev/features/2026-07-20-mobile-app/design.md` 与 `design-pr4a.md`
+- [ ] **移动端 side panel 滑出浮动交互**：`ProjectPanel` 当前在移动端复用桌面的 hover/pin 机制，窄屏体验差。需要加移动端专属交互：未 pinned 时永远浮出 + 点击空白关闭 + 半透明遮罩。复用现有 `useSidePanel`，按 `host.kind` 或 CSS media query 分支。参见 `docs/dev/features/2026-07-20-mobile-app/design-pr4a.md` §2.6
+- [ ] **移动端 PWA manifest + service worker**：用 `vite-plugin-pwa` 配置 `manifest.webmanifest`（display standalone、theme_color、icons）+ `generateSW` precache app shell（不缓存 API）。参见 `docs/dev/features/2026-07-20-mobile-app/design.md` §3.3
+- [ ] **移动端 iOS Safari WebSocket 兼容性兜底**：当前 chat/bus WS 直接用 WebSocket + reconnect。iOS Safari 在 PWA 模式下 WS 可能不稳定，需要实测后按需加 HTTP polling 降级或更激进的心跳/重连策略。参见 `docs/dev/features/2026-07-20-mobile-app/design.md` §3.3
+- [ ] **移动端项目列表刷新策略**：当前 web 端首次连接拉一次 `/api/projects` 后不主动刷新。需要加 `visibilitychange`（用户切回 tab 时刷新）或 pull-to-refresh / refresh 按钮。参见 `docs/dev/features/2026-07-20-mobile-app/design-pr4a.md` §2.8
+- [ ] **移动端 MobileLayout 打磨 + 移动专属 UI**：当前 web 端复用桌面 ActivityBar 的 avatar 列表做项目切换。需要做移动专属的项目列表 UI（取代 avatar 列表）+ bottom-sheet 风格 Dialog + 移动专属 settings 入口（locale/theme 本地化）。参见 `docs/dev/features/2026-07-20-mobile-app/design.md` §3.2
+- [ ] **web app chunk 拆分优化**：web 端打包后单个 JS chunk ~1.4MB（gzip ~432KB），超过 vite 默认 500KB 警告阈值。需要用 dynamic import 或 `manualChunks` 拆分（如 chat / content-browser / 桌面专属 feature 懒加载）。非阻塞但影响首次加载体验。
 
 ## 基础设施
 

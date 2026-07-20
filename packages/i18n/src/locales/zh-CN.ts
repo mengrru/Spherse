@@ -820,6 +820,36 @@ export const zhCN = {
   // 打开示例项目时，选择示例项目拷贝目标位置的对话框标题（Electron 原生对话框）
   "onboarding.dialog.sampleLocation": "选择示例项目的保存位置",
 
+  // --- 移动端连接页（MobileConnectPage） ---
+  // 移动端未连接 server 时显示的连接页主标题
+  "mobile-connect.title": "Spherse",
+  // 移动端连接页副标题：提示用户该应用需要连接桌面端
+  "mobile-connect.subtitle": "连接到桌面端以继续",
+  // 移动端连接页「扫码连接」按钮文字
+  "mobile-connect.scan": "扫码连接",
+  // 移动端连接页「手动输入」按钮文字
+  "mobile-connect.manual": "手动输入",
+  // 移动端连接页扫码区提示：将桌面端 QR 码对准摄像头
+  "mobile-connect.scanHint": "将桌面端二维码对准摄像头",
+  // 移动端连接页手动输入模式下，baseUrl 字段的 label
+  "mobile-connect.baseUrl": "服务器地址",
+  // 移动端连接页手动输入模式下，token 字段的 label
+  "mobile-connect.token": "访问令牌",
+  // 移动端连接页手动输入模式下的「连接」按钮
+  "mobile-connect.connect": "连接",
+  // 移动端连接页「返回」按钮（关闭扫码/手动输入面板回到主入口）
+  "mobile-connect.back": "返回",
+  // 移动端连接页扫码时摄像头权限被拒绝的错误提示
+  "mobile-connect.cameraDenied": "无法访问摄像头，请改用手动输入",
+  // 移动端连接页扫码失败（无摄像头/无 BarcodeDetector 支持）的兜底提示
+  "mobile-connect.scanUnavailable": "当前设备不支持扫码，请改用手动输入",
+  // 移动端连接成功时 toast 提示
+  "mobile-connect.connected": "已连接",
+  // 移动端连接失败（fetch /api/projects 报错或 token 无效）时的错误提示，{error} 为详细错误
+  "mobile-connect.connectFailed": "连接失败：{error}",
+  // 移动端扫到的 QR 不是合法的 spherse://connect 链接时的提示
+  "mobile-connect.invalidQr": "无效的二维码，请扫描 Spherse 桌面端生成的二维码",
+
   // --- 文本框右键菜单（input/textarea 的原生 context-menu）---
   // 文本框右键菜单「撤销」
   "contextMenu.undo": "撤销",

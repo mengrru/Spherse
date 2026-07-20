@@ -79,6 +79,7 @@ interface StreamingSession extends StreamingSessionData {
   oldestLoadedId: number | null;
   loadingMore: boolean;
   historyLoaded: boolean;
+  wsConnecting: boolean;
 }
 
 interface StreamingStoreState {
@@ -234,6 +235,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         oldestLoadedId: null,
         loadingMore: false,
         historyLoaded: false,
+        wsConnecting: false,
       };
       return {
         sessions: {
@@ -296,7 +298,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
           }
           return session.ws === null && messages === session.messages
             ? session
-            : { ...session, ws: null, messages };
+            : { ...session, ws: null, wsConnecting: false, messages };
         });
         setStreamingAndNotify(sessionId, projectId, false);
         if (FATAL_CLOSE_CODES.has(event.code)) {
@@ -311,6 +313,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       ws.onopen = () => {
         startHeartbeat(sessionId, ws);
         reconnectAttempts.set(sessionId, 0);
+        updateSession(sessionId, (session) => ({ ...session, wsConnecting: false }));
         if (!initialMessage) return;
         let shouldSend = false;
         updateSession(sessionId, (session) => {
@@ -332,7 +335,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         }
       };
 
-      updateSession(sessionId, (session) => ({ ...session, ws }));
+      updateSession(sessionId, (session) => ({ ...session, ws, wsConnecting: true }));
 
       if (!get().sessions[sessionId]?.historyLoaded) {
         client.getSessionMessagesPage(agentId, sessionId, { turns: 10 }).then((result) => {

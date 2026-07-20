@@ -16,6 +16,7 @@ import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
 import { useProjectCtx } from "../../context/project-context";
 import { useProjectDataStore } from "../../stores/project-data-store";
+import { useFeature } from "../../lib/use-feature";
 import { useAgentSessionActions } from "./actions-context";
 
 interface AgentRowProps {
@@ -27,6 +28,8 @@ export function AgentRow({ agent, active }: AgentRowProps) {
   const { t } = useI18n();
   const actions = useAgentSessionActions();
   const { projectId } = useProjectCtx();
+  const agentDialogEnabled = useFeature("agent-dialog");
+  const triggerEnabled = useFeature("agent-trigger");
   const hasEnabled = useProjectDataStore(
     (s) => s.projects[projectId]?.hasEnabledTriggersByAgent?.[agent.id] ?? false,
   );
@@ -56,13 +59,17 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           <ContextMenuItem onClick={() => actions.newSession(agent)}>
             {t("agent-session-list.newSession")}
           </ContextMenuItem>
-          <ContextMenuItem onClick={() => actions.editAgent(agent)}>
-            {t("common.edit")}
-          </ContextMenuItem>
-          <ContextMenuItem onClick={() => actions.triggerAgent(agent)}>
-            {t("agent-trigger.menuItem")}
-            <Badge variant="secondary" className="ml-auto">Beta</Badge>
-          </ContextMenuItem>
+          {agentDialogEnabled && (
+            <ContextMenuItem onClick={() => actions.editAgent(agent)}>
+              {t("common.edit")}
+            </ContextMenuItem>
+          )}
+          {triggerEnabled && (
+            <ContextMenuItem onClick={() => actions.triggerAgent(agent)}>
+              {t("agent-trigger.menuItem")}
+              <Badge variant="secondary" className="ml-auto">Beta</Badge>
+            </ContextMenuItem>
+          )}
           <ContextMenuSeparator />
           <ContextMenuItem
             onClick={() => {
@@ -72,10 +79,14 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           >
             {t("agent-session-list.copyAgentId")}
           </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem variant="destructive" onClick={() => actions.deleteAgent(agent)}>
-            {t("common.delete")}
-          </ContextMenuItem>
+          {agentDialogEnabled && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem variant="destructive" onClick={() => actions.deleteAgent(agent)}>
+                {t("common.delete")}
+              </ContextMenuItem>
+            </>
+          )}
         </ContextMenuContent>
       </ContextMenu>
       <div className="absolute inset-y-0 end-1 hidden items-center group-hover/agent-row:flex">

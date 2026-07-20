@@ -8,6 +8,7 @@ import { useAppStore } from "./stores/app-store";
 import { useProjectDataStore } from "./stores/project-data-store";
 import { clearLastRoute } from "./lib/localstorage/last-route";
 import { useHostBridge } from "./context/host-bridge-context";
+import { useFeature } from "./lib/use-feature";
 import { useAgentSessionListUiStore } from "./features/agent-session-list/store";
 import { useTriggerStore } from "./features/agent-trigger/store";
 import { useFloatingChatStore } from "./features/floating-chat/store";
@@ -24,6 +25,7 @@ function buildProjectRoute(projectId: string, lastRoute?: string): string {
 export function App() {
   const navigate = useNavigate();
   const bridge = useHostBridge();
+  const settingsEnabled = useFeature("settings");
   const [showSettings, setShowSettings] = useState(false);
   const projects = useAppStore((state) => state.projects);
   const activeProjectId = useAppStore((state) => state.activeProjectId);
@@ -106,17 +108,23 @@ export function App() {
     <I18nProvider locale={locale ?? DEFAULT_LOCALE}>
       <TooltipProvider>
         <div data-app-root className="relative flex h-screen overflow-hidden bg-background text-foreground">
-          <ActivityBar
-            projects={projects}
-            activeProjectId={activeProjectId}
-            onSelect={handleSelectProject}
-            onAdd={handleAddProject}
-            onClose={handleCloseProject}
-            onOpenProjectFolder={handleOpenProjectFolder}
-            onSettings={() => setShowSettings(true)}
-          />
-          <Outlet />
-          {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+          {bridge.renderMobileLayout ? (
+            bridge.renderMobileLayout(<Outlet />)
+          ) : (
+            <>
+              <ActivityBar
+                projects={projects}
+                activeProjectId={activeProjectId}
+                onSelect={handleSelectProject}
+                onAdd={handleAddProject}
+                onClose={handleCloseProject}
+                onOpenProjectFolder={handleOpenProjectFolder}
+                onSettings={settingsEnabled ? () => setShowSettings(true) : undefined}
+              />
+              <Outlet />
+              {showSettings && settingsEnabled && <SettingsModal onClose={() => setShowSettings(false)} />}
+            </>
+          )}
           <Toaster />
         </div>
       </TooltipProvider>

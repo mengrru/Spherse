@@ -11,6 +11,7 @@ interface MessageListProps {
   messages: ChatMessage[];
   agent: AgentProfile;
   streaming: boolean;
+  loading?: boolean;
   containerRef: RefObject<HTMLDivElement | null>;
   isAtBottom: boolean;
   onScrollToBottom: () => void;
@@ -20,8 +21,15 @@ interface MessageListProps {
   onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, streaming, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, hasMore, loadingMore, onLoadMore }: MessageListProps) {
+export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
+  if (loading && messages.length === 0) {
+    return (
+      <div className="flex flex-1 items-center justify-center p-4">
+        <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
+      </div>
+    );
+  }
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-2 p-4">

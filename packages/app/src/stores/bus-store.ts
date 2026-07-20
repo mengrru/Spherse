@@ -103,9 +103,12 @@ export const useBusStore = create<BusStore>((set, get) => {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         return;
       }
+      const baseUrl = await bridge.getServerBaseUrl();
+      if (!baseUrl) {
+        return;
+      }
       set({ status: "connecting" });
       activeBridge = bridge;
-      const baseUrl = await bridge.getServerBaseUrl();
       const accessToken = (await bridge.getServerAccessToken?.()) ?? null;
       const wsUrl = buildWsUrl(baseUrl, "/ws/bus", accessToken);
       const socket = new WebSocket(wsUrl);
