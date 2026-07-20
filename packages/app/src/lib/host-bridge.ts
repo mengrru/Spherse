@@ -59,11 +59,36 @@ export interface HostSettings {
   theme?: ThemeMode;
 }
 
+export type TunnelStatus = "stopped" | "starting" | "running" | "error";
+
+export interface MobileAccessState {
+  enabled: boolean;
+  token: string | null;
+  tunnel: {
+    status: TunnelStatus;
+    publicUrl: string | null;
+    startedAt: string | null;
+    error: string | null;
+  };
+}
+
+export type MobileAccessEvent = { type: "state"; state: MobileAccessState };
+
+export interface MobileAccessHostApi {
+  getMobileAccessState(): Promise<MobileAccessState>;
+  enableMobileAccess(): Promise<MobileAccessState>;
+  disableMobileAccess(): Promise<MobileAccessState>;
+  regenerateToken(): Promise<MobileAccessState>;
+  restartTunnel(): Promise<MobileAccessState>;
+  onMobileAccessEvent(callback: (event: MobileAccessEvent) => void): () => void;
+}
+
 export interface HostCapabilities {
   projectManagement: boolean;
   filePicker: boolean;
   appUpdate: boolean;
   devTools: boolean;
+  mobileAccess: boolean;
   settings: { editable: boolean; scope: "local-only" | "synced" };
   content: { editable: boolean };
 }
@@ -104,6 +129,7 @@ export interface DevToolsHostApi {
 export interface HostBridge {
   readonly kind: HostKind;
   getServerBaseUrl(): Promise<string>;
+  getServerAccessToken?(): Promise<string | null>;
   readonly capabilities: HostCapabilities;
   getSettings(): Promise<HostSettings | null>;
   saveSettings(settings: HostSettings): Promise<{ success: boolean }>;
@@ -115,4 +141,5 @@ export interface HostBridge {
   readonly project?: ProjectHostApi;
   readonly updater?: UpdaterHostApi;
   readonly devTools?: DevToolsHostApi;
+  readonly mobile?: MobileAccessHostApi;
 }

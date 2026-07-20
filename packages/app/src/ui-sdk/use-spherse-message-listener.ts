@@ -18,12 +18,13 @@ export function isAllowedOrigin(
 
 export function useSpherseMessageListener(
   projectId: string,
-  client: ApiClient,
+  client: ApiClient | null,
 ): void {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const serverOrigin = client?.baseUrl ?? null;
+    if (!client) return;
+    const serverOrigin = client.baseUrl ?? null;
     const rendererOrigin = window.location.origin;
 
     const handler = (event: MessageEvent) => {

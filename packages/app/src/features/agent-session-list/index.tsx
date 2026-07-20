@@ -16,6 +16,7 @@ import {
 import type { AgentProfile, SessionInfo } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { useFloatingSessionId } from "../floating-chat/use-floating-session-id";
 import { AgentSessionListView } from "./AgentSessionListView";
 import { AgentSessionActionsProvider, type AgentSessionActions } from "./actions-context";
@@ -38,7 +39,8 @@ export function AgentSessionList() {
   const { t } = useI18n();
   const { sessionId: activeSessionId = null } = useParams();
   const navigate = useNavigate();
-  const { projectId, client } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const projectData = useProjectDataStore((state) => state.projects[projectId]);
   const createSession = useProjectDataStore((state) => state.createSession);
   const deleteSession = useProjectDataStore((state) => state.deleteSession);

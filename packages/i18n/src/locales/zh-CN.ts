@@ -111,6 +111,57 @@ export const zhCN = {
   // 校验错误：未填写模型 ID
   "settings.provider.dialog.errModelsRequired": "请至少填写一个模型 ID",
 
+  // 设置弹窗「移动端」tab 标签（仅桌面端 mobile access 启用时可见）
+  "settings.tabs.mobile": "移动端",
+  // 移动端 tab → 面板顶部简介文案，说明该功能用于在手机上远程访问当前桌面应用
+  "settings.mobile.description": "启用后可通过 Cloudflare Quick Tunnel 把本地服务暴露到公网，使用手机扫描下方二维码即可远程连接到本桌面。",
+  // 移动端 tab → 启用按钮文案（disabled → enabled）
+  "settings.mobile.enable": "启用移动端访问",
+  // 移动端 tab → 停用按钮文案（enabled → disabled）
+  "settings.mobile.disable": "停用移动端访问",
+  // 移动端 tab → 令牌字段「显示」按钮（切换令牌明文/掩码）
+  "settings.mobile.tokenShow": "显示",
+  // 移动端 tab → 令牌字段「隐藏」按钮（切换令牌明文/掩码）
+  "settings.mobile.tokenHide": "隐藏",
+  // 移动端 tab → 「访问令牌」字段标签（脱敏显示的 Bearer Token）
+  "settings.mobile.token": "访问令牌",
+  // 移动端 tab → 令牌字段下方说明（提示令牌等同完整访问权限，不要外泄）
+  "settings.mobile.tokenHint": "令牌等同完整访问权限。任何持有令牌的人都可以读取项目内容并与 agent 对话，请勿外泄。",
+  // 移动端 tab → 「复制令牌」按钮文案
+  "settings.mobile.copyToken": "复制令牌",
+  // 移动端 tab → 「重新生成令牌」按钮文案
+  "settings.mobile.regenerateToken": "重新生成令牌",
+  // 移动端 tab → 重新生成令牌前的确认提示（提醒会让所有已连接手机掉线、需重新扫码）
+  "settings.mobile.regenerateConfirm": "重新生成令牌会使所有已连接的手机立即掉线，且需要重新扫码。确定继续？",
+  // 移动端 tab → 「隧道状态」字段标签（Cloudflare Quick Tunnel 当前状态）
+  "settings.mobile.tunnelStatus": "隧道状态",
+  // 移动端 tab → 隧道状态值：已停止
+  "settings.mobile.tunnelStatus.stopped": "已停止",
+  // 移动端 tab → 隧道状态值：启动中
+  "settings.mobile.tunnelStatus.starting": "启动中…",
+  // 移动端 tab → 隧道状态值：运行中
+  "settings.mobile.tunnelStatus.running": "运行中",
+  // 移动端 tab → 隧道状态值：错误
+  "settings.mobile.tunnelStatus.error": "错误",
+  // 移动端 tab → 「重启隧道」按钮文案（手动重启 cloudflared 进程，URL 会变化）
+  "settings.mobile.restartTunnel": "重启隧道",
+  // 移动端 tab → 「公网地址」字段标签（当前 tunnel 的 *.trycloudflare.com URL）
+  "settings.mobile.publicUrl": "公网地址",
+  // 移动端 tab → 公网地址旁「复制」按钮文案
+  "settings.mobile.copyUrl": "复制地址",
+  // 移动端 tab → QR 码下方提示文案，引导用户用手机扫码
+  "settings.mobile.scanQr": "用手机扫描下方二维码以连接",
+  // 移动端 tab → 未启用时显示的占位说明
+  "settings.mobile.disabledHint": "尚未启用移动端访问。启用后会生成本机专属的访问令牌并通过 Cloudflare Quick Tunnel 暴露服务。",
+  // 移动端 tab → 操作进行中的通用 loading 文案
+  "settings.mobile.working": "处理中…",
+  // 移动端 tab → cloudflared 二进制未找到时的错误提示
+  "settings.mobile.cloudflaredMissing": "未找到 cloudflared 可执行文件。请确认系统 PATH 中已安装 cloudflared，或参考 Cloudflare 官方文档安装。",
+  // 移动端 tab → 复制令牌成功后的 toast
+  "settings.mobile.tokenCopied": "令牌已复制到剪贴板",
+  // 移动端 tab → 复制公网地址成功后的 toast
+  "settings.mobile.urlCopied": "地址已复制到剪贴板",
+
   // 设置弹窗「关于」tab 标签
   "settings.tabs.about": "关于",
   // 关于 tab → 当前版本号前的标签

@@ -1,22 +1,27 @@
 import { create, type StoreApi } from "zustand";
-import { initAppContext, type AppContext } from "../context/app-context";
 import { getLastRoute, setLastRoute } from "../lib/localstorage/last-route";
 import type { HostBridge } from "../lib/host-bridge";
+
+export interface ConnectionConfig {
+  baseUrl: string;
+  accessToken: string | null;
+}
 
 export interface ProjectState {
   id: string;
   path: string;
   name: string;
-  ctx: AppContext;
   lastRoute?: string;
   lastOpened: string;
 }
 
 interface AppStore {
+  connection: ConnectionConfig;
   projects: Map<string, ProjectState>;
   activeProjectId: string | null;
   initializing: boolean;
   restoreProjects: (bridge: HostBridge) => Promise<string | null>;
+  refreshConnection: (bridge: HostBridge) => Promise<void>;
   openProject: (bridge: HostBridge) => Promise<string | null>;
   openSampleProject: (bridge: HostBridge, sampleId: string) => Promise<{ projectId: string | null; error?: string }>;
   closeProject: (bridge: HostBridge, projectId: string) => Promise<string | null>;
@@ -35,6 +40,12 @@ function findProjectIdByPath(projects: Map<string, ProjectState>, projectPath: s
 type StoreSetter = StoreApi<AppStore>["setState"];
 type StoreGetter = StoreApi<AppStore>["getState"];
 
+async function fetchConnection(bridge: HostBridge): Promise<ConnectionConfig> {
+  const baseUrl = await bridge.getServerBaseUrl();
+  const accessToken = (await bridge.getServerAccessToken?.()) ?? null;
+  return { baseUrl, accessToken };
+}
+
 async function registerProject(
   set: StoreSetter,
   get: StoreGetter,
@@ -42,14 +53,12 @@ async function registerProject(
   projectId: string,
   projectPath: string,
 ): Promise<void> {
-  const baseUrl = await bridge.getServerBaseUrl();
   const name = projectPath.split(/[\\/]/).filter(Boolean).pop() || projectPath;
   const projects = new Map(get().projects);
   projects.set(projectId, {
     id: projectId,
     path: projectPath,
     name,
-    ctx: initAppContext(baseUrl, projectId, projectPath),
     lastOpened: new Date().toISOString(),
   });
   set({ projects, activeProjectId: projectId });
@@ -58,13 +67,14 @@ async function registerProject(
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
+  connection: { baseUrl: "", accessToken: null },
   projects: new Map(),
   activeProjectId: null,
   initializing: true,
 
   async restoreProjects(bridge) {
     set({ initializing: true });
-    const baseUrl = await bridge.getServerBaseUrl();
+    const connection = await fetchConnection(bridge);
     const restored = (await bridge.project?.restoreProjects()) ?? [];
     const projects = new Map<string, ProjectState>();
 
@@ -73,7 +83,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
         id,
         path,
         name,
-        ctx: initAppContext(baseUrl, id, path),
         lastRoute: getLastRoute(id) ?? undefined,
         lastOpened,
       });
@@ -82,8 +91,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const lastActiveId = (await bridge.project?.getLastActiveProject()) ?? null;
     const fallbackId = projects.keys().next().value ?? null;
     const nextActiveId = lastActiveId && projects.has(lastActiveId) ? lastActiveId : fallbackId;
-    set({ projects, activeProjectId: nextActiveId, initializing: false });
+    set({ connection, projects, activeProjectId: nextActiveId, initializing: false });
     return nextActiveId;
+  },
+
+  async refreshConnection(bridge) {
+    const connection = await fetchConnection(bridge);
+    set((state) => (state.connection === connection ? {} : { connection }));
   },
 
   async openProject(bridge) {

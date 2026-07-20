@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { CHAT_CLOSE_CODES, parseChatServerEvent } from "@spherse/server/contracts";
 import type { ApiClient } from "../../lib/api";
+import { buildWsUrl } from "../../lib/api";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { parseAgentEvent, type AgentEvent } from "./agent-event-parse";
 import {
@@ -25,6 +26,7 @@ interface ConnectParams {
   projectId: string;
   agentId: string;
   initialMessage?: string;
+  accessToken: string | null;
 }
 
 const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -84,7 +86,7 @@ interface StreamingStoreState {
 }
 
 interface StreamingStoreActions {
-  attach: (client: ApiClient, sessionId: string, baseUrl: string, projectId: string, agentId: string, initialMessage?: string) => void;
+  attach: (client: ApiClient, sessionId: string, baseUrl: string, projectId: string, agentId: string, initialMessage?: string, accessToken?: string | null) => void;
   detach: (sessionId: string) => void;
   disconnect: (sessionId: string) => void;
   touch: (sessionId: string) => void;
@@ -193,14 +195,14 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     const attempt = reconnectAttempts.get(sessionId) ?? 0;
     const delay = RECONNECT_BACKOFFS[Math.min(attempt, RECONNECT_BACKOFFS.length - 1)];
     reconnectAttempts.set(sessionId, attempt + 1);
-    reconnectTimers.set(
-      sessionId,
-      setTimeout(() => {
-        reconnectTimers.delete(sessionId);
-        const { client, baseUrl, projectId, agentId, initialMessage } = params;
-        connect(client, sessionId, baseUrl, projectId, agentId, initialMessage);
-      }, delay),
-    );
+      reconnectTimers.set(
+        sessionId,
+        setTimeout(() => {
+          reconnectTimers.delete(sessionId);
+          const { client, baseUrl, projectId, agentId, initialMessage, accessToken } = params;
+          connect(client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken);
+        }, delay),
+      );
   }
 
   function ensureSession(sessionId: string, attachedDelta: number, projectId: string) {
@@ -242,7 +244,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     });
   }
 
-  function connect(client: ApiClient, sessionId: string, baseUrl: string, projectId: string, agentId: string, initialMessage?: string) {
+  function connect(client: ApiClient, sessionId: string, baseUrl: string, projectId: string, agentId: string, initialMessage: string | undefined, accessToken: string | null) {
     if (pendingCreation.has(sessionId)) return;
     pendingCreation.add(sessionId);
 
@@ -253,11 +255,11 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         try { current.ws.close(); } catch { /* already closed */ }
       }
 
-      connectParams.set(sessionId, { client, baseUrl, projectId, agentId, initialMessage });
+      connectParams.set(sessionId, { client, baseUrl, projectId, agentId, initialMessage, accessToken });
       manuallyClosed.set(sessionId, false);
       clearReconnectTimer(sessionId);
 
-      const ws = new WebSocket(`${baseUrl.replace(/^http/, "ws")}/ws/projects/${projectId}/chat/${agentId}/${sessionId}`);
+      const ws = new WebSocket(buildWsUrl(baseUrl, `/ws/projects/${projectId}/chat/${agentId}/${sessionId}`, accessToken));
 
       ws.onmessage = (wsEvent) => {
         if (get().sessions[sessionId]?.ws !== ws) return;
@@ -359,9 +361,9 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
   return {
     sessions: {},
 
-    attach(client, sessionId, baseUrl, projectId, agentId, initialMessage) {
+    attach(client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken) {
       ensureSession(sessionId, 1, projectId);
-      connect(client, sessionId, baseUrl, projectId, agentId, initialMessage);
+      connect(client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken ?? null);
     },
 
     detach(sessionId) {

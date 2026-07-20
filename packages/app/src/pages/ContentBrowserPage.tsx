@@ -2,13 +2,15 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { ContentBrowser } from "../features/content-browser";
 import { useProjectCtx } from "../context/project-context";
+import { useApiClient } from "../lib/use-connection";
 import { useProjectNavigation } from "../lib/use-project-navigation";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useFloatingSessionId } from "../features/floating-chat/use-floating-session-id";
 import type { ActiveSessionInfo } from "../lib/types";
 
 export function ContentBrowserPage() {
-  const { projectId, client } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { back } = useProjectNavigation();

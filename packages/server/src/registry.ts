@@ -11,6 +11,12 @@ export interface ProjectContext {
   projectId: string;
 }
 
+export interface ProjectInfo {
+  id: string;
+  name: string;
+  rootPath: string;
+}
+
 export class ProjectRegistry {
   private projects = new Map<string, ProjectContext>();
   private pending = new Map<string, Promise<ProjectContext>>();
@@ -88,6 +94,22 @@ export class ProjectRegistry {
 
   list(): string[] {
     return [...this.projects.keys()];
+  }
+
+  listInfo(): ProjectInfo[] {
+    const result: ProjectInfo[] = [];
+    for (const [id, ctx] of this.projects) {
+      const rootPath = ctx.projectManager.getRootPath();
+      result.push({ id, name: path.basename(rootPath), rootPath });
+    }
+    return result;
+  }
+
+  getInfo(projectId: string): ProjectInfo | undefined {
+    const ctx = this.projects.get(projectId);
+    if (!ctx) return undefined;
+    const rootPath = ctx.projectManager.getRootPath();
+    return { id: projectId, name: path.basename(rootPath), rootPath };
   }
 
   async remove(projectId: string): Promise<void> {

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AGENT_TEMPLATE } from "@spherse/presets";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +27,8 @@ interface AgentDialogProps {
 
 export function AgentDialog({ mode, agentId, onSubmit, onCancel }: AgentDialogProps) {
   const { t } = useI18n();
-  const { client } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const [data, setData] = useState<LoadedAgentData | null>(
     mode === "create" ? { raw: AGENT_TEMPLATE, theme: "" } : null,
   );

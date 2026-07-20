@@ -16,6 +16,7 @@ import { PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-reac
 import { DebugTools } from "../debug-tools";
 import { WelcomePageSettingsDialog } from "../project-settings/welcome-page-settings";
 import { ThemeSettingsDialog } from "../project-settings/theme-settings";
+import { useApiClient } from "../../lib/use-connection";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "../../lib/utils";
 
@@ -41,8 +42,10 @@ export function ActivityBar({
   const { t } = useI18n();
   const [settingsProjectId, setSettingsProjectId] = useState<string | null>(null);
   const settingsProject = settingsProjectId ? projects.get(settingsProjectId) : null;
+  const settingsClient = useApiClient(settingsProjectId);
   const [themeSettingsProjectId, setThemeSettingsProjectId] = useState<string | null>(null);
   const themeSettingsProject = themeSettingsProjectId ? projects.get(themeSettingsProjectId) : null;
+  const themeClient = useApiClient(themeSettingsProjectId);
   const { pinned, visible, togglePin, show, hide } = useSidePanel();
 
   return (
@@ -147,18 +150,18 @@ export function ActivityBar({
                 <PlusIcon />
               </Button>
             </div>
-            {settingsProject && (
+            {settingsProject && settingsClient && (
               <WelcomePageSettingsDialog
                 key={settingsProjectId}
-                client={settingsProject.ctx.client}
+                client={settingsClient}
                 open={true}
                 onOpenChange={(open) => { if (!open) setSettingsProjectId(null); }}
               />
             )}
-            {themeSettingsProject && (
+            {themeSettingsProject && themeClient && (
               <ThemeSettingsDialog
                 key={themeSettingsProjectId}
-                client={themeSettingsProject.ctx.client}
+                client={themeClient}
                 open={true}
                 onOpenChange={(open) => { if (!open) setThemeSettingsProjectId(null); }}
               />

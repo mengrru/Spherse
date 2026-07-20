@@ -3,7 +3,17 @@ import { useBusSubscription } from "./useBusSubscription";
 
 const THEME_CSS_PATH = ".spherse/theme.css";
 
-export function useCustomTheme(projectRoot: string | undefined, baseUrl: string | undefined, projectId: string | undefined) {
+function buildThemeHref(baseUrl: string, projectId: string, accessToken: string | null): string {
+  const authSegment = accessToken ? `__auth/${encodeURIComponent(accessToken)}/` : "";
+  return `${baseUrl}/api/projects/${projectId}/preview/${authSegment}.spherse/theme.css?t=${Date.now()}`;
+}
+
+export function useCustomTheme(
+  projectRoot: string | undefined,
+  baseUrl: string | undefined,
+  projectId: string | undefined,
+  accessToken: string | null = null,
+) {
   useEffect(() => {
     const existingLink = document.getElementById("custom-theme-link");
     if (existingLink) existingLink.remove();
@@ -13,12 +23,12 @@ export function useCustomTheme(projectRoot: string | undefined, baseUrl: string 
     const link = document.createElement("link");
     link.id = "custom-theme-link";
     link.rel = "stylesheet";
-    link.href = `${baseUrl}/api/projects/${projectId}/preview/.spherse/theme.css?t=${Date.now()}`;
+    link.href = buildThemeHref(baseUrl, projectId, accessToken);
     link.onerror = () => {
       link.remove();
     };
     document.head.appendChild(link);
-  }, [projectRoot, baseUrl, projectId]);
+  }, [projectRoot, baseUrl, projectId, accessToken]);
 
   useBusSubscription(projectId ?? "", "fs-watch", (_type, payload) => {
     if (!baseUrl || !projectId) return;
@@ -30,7 +40,7 @@ export function useCustomTheme(projectRoot: string | undefined, baseUrl: string 
     const fresh = document.createElement("link");
     fresh.id = "custom-theme-link";
     fresh.rel = "stylesheet";
-    fresh.href = `${baseUrl}/api/projects/${projectId}/preview/.spherse/theme.css?t=${Date.now()}`;
+    fresh.href = buildThemeHref(baseUrl, projectId, accessToken);
     fresh.onerror = () => {
       fresh.remove();
     };

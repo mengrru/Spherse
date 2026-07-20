@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../lib/events";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 
@@ -21,7 +22,8 @@ export function WelcomePage({
   fallback: React.ReactNode;
 }) {
   const { t } = useI18n();
-  const { client, projectId } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const [path, setPath] = useState<string | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -92,7 +94,7 @@ export function WelcomePage({
 
   const ext = getFileExtension(path);
   const isHtml = HTML_EXTENSIONS.has(ext);
-  const previewUrl = `${client.getPreviewUrl(path)}?t=${reloadKey}`;
+  const previewUrl = client.getPreviewUrl(path, reloadKey);
 
   if (isHtml) {
     return (

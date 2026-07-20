@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { Stats } from "node:fs";
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { resolveProjectPath, serverAccessPolicy, AccessDeniedError } from "@spherse/core";
 import type { ProjectRegistry } from "../registry.js";
 import { forbidden, notFound } from "../errors.js";
@@ -27,53 +27,75 @@ const CONTENT_TYPES: Record<string, string> = {
 
 const ALLOWED_EXTENSIONS = new Set(Object.keys(CONTENT_TYPES));
 
+type PreviewParams = { projectId: string; "*": string };
+
+function stripAuthPrefix(wildcard: string): string {
+  if (!wildcard.startsWith("__auth/")) return wildcard;
+  const afterMarker = wildcard.slice("__auth/".length);
+  const slash = afterMarker.indexOf("/");
+  return slash === -1 ? "" : afterMarker.slice(slash + 1);
+}
+
+async function handlePreview(req: FastifyRequest<{ Params: PreviewParams }>, reply: FastifyReply): Promise<unknown> {
+  const relativePath = req.params["*"];
+  const pm = req.projectCtx!.projectManager;
+  const root = pm.getRootPath();
+  const policy = serverAccessPolicy(root);
+  try {
+    policy.assertRead(relativePath);
+  } catch (err) {
+    if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+    throw err;
+  }
+  const absolutePath = resolveProjectPath(root, relativePath);
+
+  const ext = path.extname(absolutePath).slice(1).toLowerCase();
+  if (!ALLOWED_EXTENSIONS.has(ext)) {
+    throw forbidden("File type not allowed");
+  }
+
+  let stat: Stats;
+  try {
+    stat = await fs.stat(absolutePath);
+  } catch {
+    throw notFound("Not found");
+  }
+
+  const etag = `"${stat.size}-${stat.mtimeMs}"`;
+  if (req.headers["if-none-match"] === etag) {
+    return reply
+      .code(304)
+      .header("Cache-Control", "no-cache")
+      .header("ETag", etag)
+      .send();
+  }
+
+  try {
+    const buffer = await fs.readFile(absolutePath);
+    return reply
+      .type(CONTENT_TYPES[ext])
+      .header("Cache-Control", "no-cache")
+      .header("ETag", etag)
+      .send(buffer);
+  } catch {
+    throw notFound("Not found");
+  }
+}
+
 export function registerPreviewRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
-  fastify.get<{ Params: { projectId: string; "*": string } }>(
+  fastify.get<{ Params: PreviewParams }>(
     "/api/projects/:projectId/preview/*",
-    async (req, reply) => {
-      const relativePath = req.params["*"];
-      const pm = req.projectCtx!.projectManager;
-      const root = pm.getRootPath();
-      const policy = serverAccessPolicy(root);
-      try {
-        policy.assertRead(relativePath);
-      } catch (err) {
-        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
-        throw err;
-      }
-      const absolutePath = resolveProjectPath(root, relativePath);
+    async (req, reply) => handlePreview(req, reply),
+  );
 
-      const ext = path.extname(absolutePath).slice(1).toLowerCase();
-      if (!ALLOWED_EXTENSIONS.has(ext)) {
-        throw forbidden("File type not allowed");
-      }
-
-      let stat: Stats;
-      try {
-        stat = await fs.stat(absolutePath);
-      } catch {
-        throw notFound("Not found");
-      }
-
-      const etag = `"${stat.size}-${stat.mtimeMs}"`;
-      if (req.headers["if-none-match"] === etag) {
-        return reply
-          .code(304)
-          .header("Cache-Control", "no-cache")
-          .header("ETag", etag)
-          .send();
-      }
-
-      try {
-        const buffer = await fs.readFile(absolutePath);
-        return reply
-          .type(CONTENT_TYPES[ext])
-          .header("Cache-Control", "no-cache")
-          .header("ETag", etag)
-          .send(buffer);
-      } catch {
-        throw notFound("Not found");
-      }
+  fastify.get<{ Params: PreviewParams & { token: string } }>(
+    "/api/projects/:projectId/preview/__auth/:token/*",
+    {
+      async preHandler(req) {
+        const wildcard = (req.params as PreviewParams)["*"];
+        (req.params as PreviewParams)["*"] = stripAuthPrefix(wildcard);
+      },
     },
+    async (req, reply) => handlePreview(req as FastifyRequest<{ Params: PreviewParams }>, reply),
   );
 }

@@ -1,6 +1,8 @@
 import type { ProviderCatalogItem } from "@spherse/core";
 import type {
   HostSettings,
+  MobileAccessEvent,
+  MobileAccessState,
   RestoredProject,
   SaveDialogOptions,
   SampleManifestEntry,
@@ -10,6 +12,8 @@ import type {
 } from "@spherse/app/src/lib/host-bridge";
 
 export type {
+  MobileAccessEvent,
+  MobileAccessState,
   RestoredProject,
   SaveDialogOptions,
   SampleManifestEntry,
@@ -50,4 +54,10 @@ export interface ElectronAPI {
   getUpdateState: () => Promise<UpdateState>;
   getAppVersion: () => Promise<string>;
   onUpdateEvent: (callback: (event: UpdateEvent) => void) => () => void;
+  getMobileAccessState: () => Promise<MobileAccessState>;
+  enableMobileAccess: () => Promise<MobileAccessState>;
+  disableMobileAccess: () => Promise<MobileAccessState>;
+  regenerateToken: () => Promise<MobileAccessState>;
+  restartTunnel: () => Promise<MobileAccessState>;
+  onMobileAccessEvent: (callback: (event: MobileAccessEvent) => void) => () => void;
 }

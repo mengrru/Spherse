@@ -295,10 +295,14 @@ createRoot(...).render(
 ### 2.1 Bearer Token 鉴权
 
 - 桌面 Electron 首次启动 tunnel 时生成 256-bit 随机串，存入 `AppSettings.mobileAccess.token`
-- Token 通过环境变量 `SPHERSE_ACCESS_TOKEN` 注入 server
+- Token 通过 `createMultiProjectServer({ auth: { accessToken } })` 注入 server
 - Fastify `onRequest` 钩子校验所有 `/api/*` 与 `/ws/*`：HTTP 走 `Authorization: Bearer`，WebSocket 走 `?token=` query
-- 本地来源（`127.0.0.1` / `localhost`）豁免校验，避免影响桌面 renderer
-- 健康检查端点 `/health` 不校验，供 cloudflared 探测
+- `/health` 与 `/api/connection/info` 端点不校验（供 cloudflared 探测 + 移动端预连接探测）
+- 由于浏览器 `<img>`/`<link>`/`<iframe>` 标签无法设置自定义请求头，auth hook 对 `/api/*` 也支持 `?token=` query 兜底（`Authorization` 头优先）
+- **preview 端点的 path-based auth**：对于 `<iframe>` 内通过 `<base href>` 引用项目内相对资源的场景（典型为 HtmlCard），`?token=` query 会在浏览器解析相对 URL 时被丢掉。为此 preview 端点额外支持 path 段 token：`/api/projects/:projectId/preview/__auth/<token>/<file>`。server auth hook 从 path 提取 `<token>` 校验，preview 路由的 `preHandler` 剥掉 `__auth/<token>/` 前缀后照常处理。客户端 `getPreviewUrl()` 在 auth 启用时自动生成 path-based URL，`<base href>` 注入也用同款格式，相对路径（`assets/x.png`）解析后自动保留 token。该方案有先例（Nextcloud public share link 用 `/s/<token>/path`），但在通用 REST API 不常见——preview 端点本质是项目内静态文件托管，不是通用 API，故采用此方案合理
+- **不豁免 localhost**：cloudflared 进程是从 `127.0.0.1` 连入 fastify 的，所有经 tunnel 的流量对 fastify 来说都来自 loopback，按 IP 豁免 = 全部豁免。因此一旦启用 mobile access，**所有请求**都必须携带 token；桌面 renderer 通过 `HostBridge.getServerAccessToken()` 获取 token，由 `createApiClient` 注入 `Authorization` 头、由 `buildWsUrl()` 拼接 `?token=`、由 `getPreviewUrl()` 嵌入 path 段
+- **中继可见性说明**：L7 中继（Cloudflare Edge）在 TLS 终止后能解密看到所有 HTTP 内容（包括 path/query/header 中的 token 与请求体内容）。这是任何中继方案的固有前提——威胁模型不是「防止中继商窃取」，而是「防止 tunnel URL 泄露导致陌生人访问」。Token 把访问权限限制在「拿到 URL 且拿到 token」的人（即扫过 QR 的人）。启用 mobile access 的 UI 应明确告知用户数据将通过 Cloudflare 中继传输。
+- **Token 存储**：以明文存于 `electron-store`（与 provider API Key 一致），符合"用户拥有磁盘访问权"的威胁模型
 
 ### 2.2 新增 API 端点
 

@@ -2,18 +2,45 @@ import type { FastifyInstance } from "fastify";
 import { createMultiProjectServer } from "@spherse/server";
 import type { ProjectRegistry } from "@spherse/server";
 import type { SamplingParams } from "@spherse/core";
-import { getSettings } from "./settings.js";
+import { getSettings, getMobileAccess } from "./settings.js";
 
-let serverHandle: { fastify: FastifyInstance; registry: ProjectRegistry } | null = null;
+interface ServerHandle {
+  fastify: FastifyInstance;
+  registry: ProjectRegistry;
+}
+
+let serverHandle: ServerHandle | null = null;
+let activeAccessToken: string | undefined;
+let registeredProjectRoots: string[] = [];
 
 export async function ensureServer(): Promise<void> {
   if (serverHandle) return;
   const settings = getSettings();
+  const mobile = getMobileAccess();
+  activeAccessToken = mobile.enabled ? mobile.token : undefined;
   const result = await createMultiProjectServer({
     defaultModel: settings?.models?.text?.defaultModel,
     sampling: settings?.models?.text?.sampling,
+    auth: activeAccessToken ? { accessToken: activeAccessToken } : undefined,
   });
   serverHandle = { fastify: result.fastify, registry: result.registry };
+  for (const root of registeredProjectRoots) {
+    try {
+      await serverHandle.registry.register(root);
+    } catch {
+      // ignore projects that no longer exist
+    }
+  }
+}
+
+export async function restartServerWithAuth(token: string | undefined): Promise<void> {
+  if (serverHandle) {
+    registeredProjectRoots = [...serverHandle.registry.listInfo().map((info) => info.rootPath)];
+    await serverHandle.registry.removeAll();
+    await serverHandle.fastify.close();
+    serverHandle = null;
+  }
+  activeAccessToken = token;
 }
 
 export function getServerPort(): number {
@@ -25,6 +52,9 @@ export function getServerPort(): number {
 export async function registerProject(projectRoot: string): Promise<{ projectId: string }> {
   if (!serverHandle) throw new Error("Server not started");
   const ctx = await serverHandle.registry.register(projectRoot);
+  if (!registeredProjectRoots.includes(projectRoot)) {
+    registeredProjectRoots.push(projectRoot);
+  }
   return { projectId: ctx.projectId };
 }
 
@@ -48,4 +78,6 @@ export async function stopServer(): Promise<void> {
   await serverHandle.registry.removeAll();
   await serverHandle.fastify.close();
   serverHandle = null;
+  registeredProjectRoots = [];
+  activeAccessToken = undefined;
 }

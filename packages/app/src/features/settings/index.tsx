@@ -19,6 +19,7 @@ import { CustomProviderDialog } from "./CustomProviderDialog";
 import { SectionTitle } from "./SectionTitle";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { UpdateChecker } from "./UpdateChecker";
+import { MobileAccessPanel } from "./MobileAccessPanel";
 import { SUPPORTED_LOCALES } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
 import type { CustomProviderDef } from "@spherse/core";
@@ -167,6 +168,7 @@ function SettingsTabs() {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const debugToolsEnabled = useSettingsStore((s) => s.debugToolsEnabled);
   const setDebugToolsEnabled = useSettingsStore((s) => s.setDebugToolsEnabled);
+  const mobileAccessEnabled = bridge.capabilities.mobileAccess;
   const settingsApi = useMemo<SettingsApi>(() => ({
     getSettings: bridge.getSettings,
     saveSettings: bridge.saveSettings,
@@ -182,6 +184,7 @@ function SettingsTabs() {
           <TabsTrigger value="models">{t("settings.tabs.text")}</TabsTrigger>
           <TabsTrigger value="image">{t("settings.tabs.image")}</TabsTrigger>
           <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
+          {mobileAccessEnabled && <TabsTrigger value="mobile">{t("settings.tabs.mobile")}</TabsTrigger>}
           <TabsTrigger value="about">{t("settings.tabs.about")}</TabsTrigger>
         </TabsList>
 
@@ -223,6 +226,12 @@ function SettingsTabs() {
             </div>
           </FieldGroup>
         </TabsContent>
+
+        {mobileAccessEnabled && (
+          <TabsContent value="mobile" className="mt-3">
+            <MobileAccessPanel />
+          </TabsContent>
+        )}
 
         <TabsContent value="about" className="mt-3">
           <UpdateChecker />

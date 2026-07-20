@@ -12,6 +12,7 @@ import { registerFileTreeRoutes } from "./file-tree.js";
 import { registerDebugRoutes } from "./debug.js";
 import { registerTriggerRoutes } from "./trigger.js";
 import { registerImagesRoutes } from "./images.js";
+import { registerConnectionRoutes } from "./connection.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -19,7 +20,15 @@ declare module "fastify" {
   }
 }
 
-export function registerAllRoutes(fastify: FastifyInstance, registry: ProjectRegistry): void {
+export interface RouteOptions {
+  authRequired?: boolean;
+}
+
+export function registerAllRoutes(
+  fastify: FastifyInstance,
+  registry: ProjectRegistry,
+  options?: RouteOptions,
+): void {
   fastify.addHook("preHandler", async (req: FastifyRequest) => {
     const projectId = (req.params as Record<string, string> | undefined)?.projectId;
     if (projectId === undefined) return;
@@ -28,6 +37,7 @@ export function registerAllRoutes(fastify: FastifyInstance, registry: ProjectReg
     req.projectCtx = ctx;
   });
 
+  registerConnectionRoutes(fastify, registry, { authRequired: options?.authRequired ?? false });
   registerAgentRoutes(fastify, registry);
   registerAgentWriteRoutes(fastify, registry);
   registerSessionRoutes(fastify, registry);

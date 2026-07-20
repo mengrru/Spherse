@@ -1,7 +1,8 @@
 import path from "node:path";
+import crypto from "node:crypto";
 import { nativeTheme } from "electron";
 import Store from "electron-store";
-import type { AppSettings, ModelGroupSettings, ProviderCredentials } from "@spherse/core";
+import type { AppSettings, ModelGroupSettings, ProviderCredentials, MobileAccessSettings } from "@spherse/core";
 import { getSupportedProviders, syncCustomProviders } from "@spherse/core";
 
 export interface OpenProjectEntry {
@@ -204,4 +205,28 @@ export function setLocale(locale: string): void {
     settings.locale = locale;
     settingsStore.set("settings", settings);
   }
+}
+
+export function generateAccessToken(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+export function getMobileAccess(): MobileAccessSettings {
+  const settings = settingsStore.get("settings");
+  return {
+    enabled: settings?.mobileAccess?.enabled ?? false,
+    token: settings?.mobileAccess?.token,
+  };
+}
+
+export function setMobileAccess(patch: Partial<MobileAccessSettings>): MobileAccessSettings {
+  const settings = settingsStore.get("settings") ?? ({} as AppSettings);
+  const current: MobileAccessSettings = {
+    enabled: settings.mobileAccess?.enabled ?? false,
+    token: settings.mobileAccess?.token,
+  };
+  const next: MobileAccessSettings = { ...current, ...patch };
+  settings.mobileAccess = next;
+  settingsStore.set("settings", settings);
+  return next;
 }

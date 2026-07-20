@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, type KeyboardEvent } from "react";
 import { Input } from "../../components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 
 const FILE_TREE_EXCLUDE = new Set(["AGENTS.md", "CHANGELOG.md", "changelog.md"]);
 
@@ -20,7 +21,8 @@ interface SearchFileFieldProps {
 }
 
 export function SearchFileField({ exclude = [], onSelect, placeholder }: SearchFileFieldProps) {
-  const { client } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const [input, setInput] = useState("");
   const [fileTree, setFileTree] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<FileSuggestion[]>([]);

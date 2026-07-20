@@ -9,6 +9,7 @@ const WEB_CAPABILITIES: HostCapabilities = {
   filePicker: false,
   appUpdate: false,
   devTools: false,
+  mobileAccess: false,
   settings: { editable: true, scope: "local-only" },
   content: { editable: false },
 };
@@ -34,20 +35,29 @@ async function persistSettings(settings: HostSettings): Promise<{ success: boole
   }
 }
 
+function readConnection(): { baseUrl?: string; token?: string } | null {
+  try {
+    const raw = localStorage.getItem(CONNECTION_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as { baseUrl?: string; token?: string }) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function createWebHostBridge(): HostBridge {
   return {
     kind: "web",
     capabilities: WEB_CAPABILITIES,
     getServerBaseUrl: async () => {
-      const raw = localStorage.getItem(CONNECTION_STORAGE_KEY);
-      if (!raw) {
+      const conn = readConnection();
+      if (!conn?.baseUrl) {
         throw new Error("No server connection configured. Scan a QR code first.");
       }
-      const parsed = JSON.parse(raw) as { baseUrl?: string };
-      if (!parsed.baseUrl) {
-        throw new Error("Connection info missing baseUrl.");
-      }
-      return parsed.baseUrl;
+      return conn.baseUrl;
+    },
+    getServerAccessToken: async () => {
+      const conn = readConnection();
+      return conn?.token ?? null;
     },
     getSettings: loadSettings,
     saveSettings: persistSettings,

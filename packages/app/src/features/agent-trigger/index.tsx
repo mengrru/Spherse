@@ -14,7 +14,7 @@ import {
 } from "../../components/ui/alert-dialog";
 import type { TriggerEntry, TriggerInfo } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { useTriggerStore } from "./store";
 import { TriggerForm } from "./TriggerForm";
 import { TriggerList } from "./TriggerList";
@@ -38,7 +38,7 @@ interface TriggerDialogProps {
 }
 
 export function TriggerDialog({ open, onOpenChange, agentId, projectId }: TriggerDialogProps) {  const { t } = useI18n();
-  const { client } = useProjectCtx();
+  const client = useApiClient(projectId);
   const triggers = useTriggerStore((s) => s.byProject[projectId]?.triggersByAgent?.[agentId] ?? EMPTY_TRIGGERS);
   const runningTriggerIds = useTriggerStore((s) => s.byProject[projectId]?.runningTriggerIdsByAgent?.[agentId] ?? EMPTY_RUNNING_TRIGGER_IDS);
   const triggerEventVersion = useTriggerStore((s) => s.byProject[projectId]?.triggerEventVersion ?? 0);

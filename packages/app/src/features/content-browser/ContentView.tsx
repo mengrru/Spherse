@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { FrontMatterPanel } from "./FrontMatterPanel";
 import { resolveMarkdownImagePath } from "./image-path";
@@ -43,7 +44,8 @@ export function ContentView({
   refreshKey,
 }: ContentViewProps) {
   const { t } = useI18n();
-  const { client, projectId } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const bridge = useHostBridge();
   const navigate = useNavigate();
   const { frontmatter, body } = useMemo(

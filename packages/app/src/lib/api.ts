@@ -37,25 +37,38 @@ async function parseJsonResponse<T>(
   return parseApiResponse(schema, await res.json()) as T;
 }
 
-export function createApiClient(baseUrl: string, projectId: string) {
+export function createApiClient(baseUrl: string, projectId: string, accessToken?: string | null) {
   const apiBase = `${baseUrl}/api/projects/${projectId}`;
+  const authHeaders: Record<string, string> | undefined = accessToken
+    ? { Authorization: `Bearer ${accessToken}` }
+    : undefined;
+
+  function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+    if (!authHeaders) return fetch(url, init);
+    const userHeaders = init.headers as Record<string, string> | undefined;
+    return fetch(url, {
+      ...init,
+      headers: userHeaders ? { ...authHeaders, ...userHeaders } : authHeaders,
+    });
+  }
 
   return {
     baseUrl,
+    accessToken: accessToken ?? null,
     async listAgents(): Promise<AgentProfile[]> {
-      const res = await fetch(`${apiBase}/agents`);
+      const res = await authedFetch(`${apiBase}/agents`);
       await assertOk(res);
       return parseJsonResponse<AgentProfile[]>(res, schemas.agentListResponse);
     },
 
     async getAgent(id: string): Promise<AgentProfile> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(id)}`);
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(id)}`);
       await assertOk(res);
       return parseJsonResponse<AgentProfile>(res, schemas.agentProfile);
     },
 
     async createSession(agentId: string): Promise<{ sessionId: string }> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions`, {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions`, {
         method: "POST",
       });
       await assertOk(res);
@@ -63,13 +76,13 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async getSession(agentId: string, id: string): Promise<SessionInfo> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`);
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`);
       await assertOk(res);
       return parseJsonResponse<SessionInfo>(res, schemas.sessionInfo);
     },
 
     async listSessions(agentId: string): Promise<SessionInfo[]> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions`);
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions`);
       await assertOk(res);
       return parseJsonResponse<SessionInfo[]>(res, schemas.sessionListResponse);
     },
@@ -80,13 +93,13 @@ export function createApiClient(baseUrl: string, projectId: string) {
       if (opts?.offset !== undefined) params.set("offset", String(opts.offset));
       const query = params.toString();
       const url = `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions${query ? `?${query}` : ""}`;
-      const res = await fetch(url);
+      const res = await authedFetch(url);
       await assertOk(res);
       return parseJsonResponse<SessionListPageResponse>(res, schemas.sessionListPageResponse);
     },
 
     async getSessionMessages(agentId: string, id: string): Promise<SessionMessagesResponse> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages`);
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages`);
       await assertOk(res);
       return parseJsonResponse<SessionMessagesResponse>(res, schemas.sessionMessagesResponse);
     },
@@ -97,15 +110,13 @@ export function createApiClient(baseUrl: string, projectId: string) {
       if (opts?.before !== undefined) params.set("before", String(opts.before));
       const query = params.toString();
       const url = `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages${query ? `?${query}` : ""}`;
-      const res = await fetch(url);
+      const res = await authedFetch(url);
       await assertOk(res);
       return parseJsonResponse<SessionMessagesPageResponse>(res, schemas.sessionMessagesPageResponse);
     },
 
     async listContent(dirPath: string = ""): Promise<FileEntry[]> {
-      const res = await fetch(
-        `${apiBase}/content/${encodeURIComponent(dirPath)}`,
-      );
+      const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(dirPath)}`);
       if (!res.ok) return [];
       const data = await res.json();
       try {
@@ -116,65 +127,51 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async getContent(filePath: string): Promise<ContentResponse | null> {
-      const res = await fetch(
-        `${apiBase}/content/${encodeURIComponent(filePath)}`,
-      );
+      const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(filePath)}`);
       if (!res.ok) return null;
       return parseJsonResponse<ContentResponse>(res, schemas.contentResponse);
     },
 
     async saveContent(filePath: string, content: string): Promise<{ ok: boolean }> {
-      const res = await fetch(
-        `${apiBase}/content/${encodeURIComponent(filePath)}`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
-        },
-      );
+      const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(filePath)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
       await assertOk(res);
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async deleteContent(filePath: string): Promise<{ ok: boolean }> {
-      const res = await fetch(
-        `${apiBase}/content/${encodeURIComponent(filePath)}`,
-        {
-          method: "DELETE",
-        },
-      );
+      const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(filePath)}`, {
+        method: "DELETE",
+      });
       await assertOk(res);
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async mkdir(dirPath: string): Promise<{ ok: boolean }> {
-      const res = await fetch(
-        `${apiBase}/content/${encodeURIComponent(dirPath)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "mkdir" }),
-        },
-      );
+      const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(dirPath)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mkdir" }),
+      });
       await assertOk(res);
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async touchFile(filePath: string): Promise<{ ok: boolean }> {
-      const res = await fetch(
-        `${apiBase}/content/${encodeURIComponent(filePath)}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "touch" }),
-        },
-      );
+      const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(filePath)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "touch" }),
+      });
       await assertOk(res);
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async createAgent(slugBase: string, content: string, themeContent?: string): Promise<AgentCreateResponse> {
-      const res = await fetch(`${apiBase}/agents/create`, {
+      const res = await authedFetch(`${apiBase}/agents/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slugBase, content, themeContent }),
@@ -184,7 +181,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async createSkill(name: string, description: string, instructions: string): Promise<SkillDefinition> {
-      const res = await fetch(`${apiBase}/skills`, {
+      const res = await authedFetch(`${apiBase}/skills`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, description, instructions }),
@@ -194,7 +191,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async installSkill(zipPath: string): Promise<SkillDefinition> {
-      const res = await fetch(`${apiBase}/skills/install`, {
+      const res = await authedFetch(`${apiBase}/skills/install`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ zipPath }),
@@ -204,20 +201,20 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async getAgentRaw(id: string): Promise<string> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(id)}/raw`);
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(id)}/raw`);
       await assertOk(res);
       const data = await parseJsonResponse<{ content: string }>(res, schemas.agentRawResponse);
       return data.content;
     },
 
     async getAgentTheme(id: string): Promise<string> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(id)}/theme`);
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(id)}/theme`);
       if (!res.ok) return "";
       return res.text();
     },
 
     async updateAgent(id: string, content: string, themeContent?: string): Promise<AgentUpdateResponse> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(id)}`, {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(id)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, themeContent }),
@@ -227,7 +224,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async deleteAgent(id: string): Promise<{ ok: boolean }> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(id)}`, {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
       await assertOk(res);
@@ -235,7 +232,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async renameSession(agentId: string, id: string, title: string): Promise<SessionInfo> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`, {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title }),
@@ -245,7 +242,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async deleteSession(agentId: string, id: string): Promise<{ ok: boolean }> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`, {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}`, {
         method: "DELETE",
       });
       await assertOk(res);
@@ -253,7 +250,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async getSessionStatus(agentId: string, id: string): Promise<SessionStatusResponse> {
-      const res = await fetch(
+      const res = await authedFetch(
         `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/status`,
       );
       await assertOk(res);
@@ -261,13 +258,13 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async getFileTree(): Promise<string[]> {
-      const res = await fetch(`${apiBase}/file-tree`);
+      const res = await authedFetch(`${apiBase}/file-tree`);
       if (!res.ok) return [];
       return parseJsonResponse<string[]>(res, schemas.fileTreeResponse);
     },
 
     async getTurnContext(sessionId: string): Promise<TurnContextSnapshotContract> {
-      const res = await fetch(
+      const res = await authedFetch(
         `${apiBase}/debug/sessions/${encodeURIComponent(sessionId)}/turn-context`,
       );
       await assertOk(res);
@@ -275,24 +272,26 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     getPreviewUrl(filePath: string, version?: number): string {
-      const base = `${apiBase}/preview/${filePath.split("/").map(encodeURIComponent).join("/")}`;
+      const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+      const pathMiddle = accessToken ? `/preview/__auth/${encodeURIComponent(accessToken)}/${encodedPath}` : `/preview/${encodedPath}`;
+      const base = `${apiBase}${pathMiddle}`;
       return version !== undefined ? `${base}?v=${version}` : base;
     },
 
     async getSupportedProviders(): Promise<ProviderCatalogContract> {
-      const res = await fetch(`${baseUrl}/api/settings/providers`);
+      const res = await authedFetch(`${baseUrl}/api/settings/providers`);
       await assertOk(res);
       return parseJsonResponse<ProviderCatalogContract>(res, schemas.providerCatalog);
     },
 
     async getImageProviders(): Promise<ProviderCatalogContract> {
-      const res = await fetch(`${baseUrl}/api/settings/image-providers`);
+      const res = await authedFetch(`${baseUrl}/api/settings/image-providers`);
       await assertOk(res);
       return parseJsonResponse<ProviderCatalogContract>(res, schemas.providerCatalog);
     },
 
     async exportImage(srcRel: string, destAbs: string): Promise<{ ok: boolean }> {
-      const res = await fetch(`${apiBase}/images/export`, {
+      const res = await authedFetch(`${apiBase}/images/export`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ src: srcRel, dest: destAbs }),
@@ -302,13 +301,13 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async getAiAccessSettings(): Promise<AiAccessSettingsResponse> {
-      const res = await fetch(`${apiBase}/settings/ai-access`);
+      const res = await authedFetch(`${apiBase}/settings/ai-access`);
       if (!res.ok) return { ok: false, deniedPaths: [] };
       return parseJsonResponse<AiAccessSettingsResponse>(res, schemas.aiAccessSettingsResponse);
     },
 
     async updateAiAccessSettings(deniedPaths: string[]): Promise<AiAccessSettingsResponse> {
-      const res = await fetch(`${apiBase}/settings/ai-access`, {
+      const res = await authedFetch(`${apiBase}/settings/ai-access`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ deniedPaths }),
@@ -318,13 +317,13 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async getWelcomePageSettings(): Promise<WelcomePageSettingsResponse> {
-      const res = await fetch(`${apiBase}/settings/welcome-page`);
+      const res = await authedFetch(`${apiBase}/settings/welcome-page`);
       if (!res.ok) return { ok: false, path: null };
       return parseJsonResponse<WelcomePageSettingsResponse>(res, schemas.welcomePageSettingsResponse);
     },
 
     async updateWelcomePageSettings(path: string | null): Promise<WelcomePageSettingsResponse> {
-      const res = await fetch(`${apiBase}/settings/welcome-page`, {
+      const res = await authedFetch(`${apiBase}/settings/welcome-page`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path }),
@@ -334,13 +333,13 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async getThemeSettings(): Promise<ThemeSettingsResponse> {
-      const res = await fetch(`${apiBase}/settings/theme`);
+      const res = await authedFetch(`${apiBase}/settings/theme`);
       if (!res.ok) return { ok: false, content: "" };
       return parseJsonResponse<ThemeSettingsResponse>(res, schemas.themeSettingsResponse);
     },
 
     async updateThemeSettings(content: string): Promise<{ ok: boolean }> {
-      const res = await fetch(`${apiBase}/settings/theme`, {
+      const res = await authedFetch(`${apiBase}/settings/theme`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
@@ -350,7 +349,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async listTriggers(agentId: string): Promise<TriggerInfo[]> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers`);
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers`);
       await assertOk(res);
       return parseJsonResponse<TriggerInfo[]>(res, schemas.triggerListResponse);
     },
@@ -366,7 +365,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
       notify: boolean;
       notificationMessage?: string;
     }): Promise<TriggerEntry> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers`, {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -387,7 +386,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
       notify?: boolean;
       notificationMessage?: string;
     }): Promise<TriggerEntry> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}`, {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -397,7 +396,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async deleteTrigger(agentId: string, triggerId: string): Promise<{ ok: boolean }> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}`, {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}`, {
         method: "DELETE",
       });
       await assertOk(res);
@@ -405,7 +404,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
     },
 
     async runTrigger(agentId: string, triggerId: string): Promise<{ ok: boolean }> {
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}/run`, {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}/run`, {
         method: "POST",
       });
       await assertOk(res);
@@ -414,7 +413,7 @@ export function createApiClient(baseUrl: string, projectId: string) {
 
     async getTriggerLogs(agentId: string, limit?: number): Promise<TriggerLogEntry[]> {
       const params = limit ? `?limit=${limit}` : "";
-      const res = await fetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/trigger-logs${params}`);
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/trigger-logs${params}`);
       await assertOk(res);
       return parseJsonResponse<TriggerLogEntry[]>(res, schemas.triggerLogListResponse);
     },
@@ -422,3 +421,11 @@ export function createApiClient(baseUrl: string, projectId: string) {
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+export function buildWsUrl(baseUrl: string, path: string, accessToken?: string | null): string {
+  const wsBase = baseUrl.replace(/^http/, "ws");
+  const url = `${wsBase}${path}`;
+  if (!accessToken) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}token=${encodeURIComponent(accessToken)}`;
+}

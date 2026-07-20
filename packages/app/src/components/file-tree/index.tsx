@@ -1,5 +1,6 @@
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { useFileTreeController } from "./hooks/useFileTreeController";
 import { FileTreeNode } from "./FileTreeNode";
 import { FileTreeProvider } from "./file-tree-context";
@@ -16,7 +17,8 @@ export interface FileTreeProps {
 
 export function FileTree({ selectedFilePath, onSelectFile, onDeleted, rootPath, emptyLabel }: FileTreeProps) {
   const { t } = useI18n();
-  const { client, projectId } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const basePath = rootPath ?? "";
   const ctrl = useFileTreeController(client, onSelectFile, onDeleted, projectId, basePath);
 

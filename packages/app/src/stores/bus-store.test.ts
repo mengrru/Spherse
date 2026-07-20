@@ -72,6 +72,7 @@ function createMockHostBridge(): HostBridge {
       filePicker: true,
       appUpdate: true,
       devTools: true,
+      mobileAccess: false,
       settings: { editable: true, scope: "local-only" },
       content: { editable: true },
     },

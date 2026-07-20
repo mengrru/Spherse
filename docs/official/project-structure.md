@@ -144,18 +144,18 @@ spherse/
 │   │       ├── lib/
 │   │       │   ├── api.ts            # HTTP/WS 客户端封装
 │   │       │   ├── agent-markdown.ts # Agent 定义 Markdown 生成/解析辅助
-│   │       │   ├── context.ts        # AppContext 定义
 │   │       │   ├── events.ts         # renderer 内部自定义事件名常量
 │   │       │   ├── project-key.ts    # project path → URL projectKey 生成
 │   │       │   ├── tool-registry.ts  # 前端权限分组元数据（TOOL_GROUPS：读取文件/写入文件/独立工具）
 │   │       │   ├── types.ts          # 前端类型
 │   │       │   ├── electron-api.ts   # 全局 Window.electronAPI 类型声明（类型来自 @shared/electron-api）
 │   │       │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界，模块级 per-project 历史栈）
+│   │       │   ├── use-connection.ts  # useApiClient(projectId) / useConnection() — 基于 app-store connection 派生 ApiClient
 │   │       │   ├── utils.ts          # shadcn/ui cn() 工具
 │   │       │   └── localstorage/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
 │   │       ├── context/
-│   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（client/projectId/projectRoot）
+│   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（projectId/projectRoot）
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledTriggersByAgent 等项目数据缓存
@@ -230,10 +230,15 @@ spherse/
 │   │   │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）
 │   │   │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
 │   │   │   │   ├── context-menu.ts   # 文本框原生右键菜单：webContents 'context-menu' 事件（isEditable 门控，editFlags 控制 enable，i18n 本地化 undo/redo/cut/copy/paste/selectAll）
-│   │   │   │   └── debug.ts          # 开发模式 debug 动作
+│   │   │   │   ├── debug.ts          # 开发模式 debug 动作
+│   │   │   │   └── mobile.ts         # 移动端访问 IPC（get/enable/disable/regenerate-token/restart-tunnel）+ tunnel 状态推送
+│   │   │   ├── tunnel/                # Cloudflare Quick Tunnel 集成（移动端远程访问中继）
+│   │   │   │   ├── provider.ts        # TunnelProvider / TunnelSession 抽象接口（预留未来扩展）
+│   │   │   │   ├── cloudflare-provider.ts # Cloudflare Quick Tunnel 实现：spawn cloudflared tunnel --url、stdout 抓取 *.trycloudflare.com URL、packaged 二进制路径解析
+│   │   │   │   └── manager.ts         # TunnelManager 单例：start/stop/restart 状态机 + onStateChange 事件订阅
 │   │   │   ├── window.ts             # BrowserWindow 创建与管理
-│   │   │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新
-│   │   │   └── settings.ts           # electron-store 封装 + env 管理（含自定义供应商 syncCustomProviders 注册）+ openProjects/locale 持久化
+│   │   │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新 + restartServerWithAuth（启用/停用 mobile access 时带 token 重启）
+│   │   │   └── settings.ts           # electron-store 封装 + env 管理（含自定义供应商 syncCustomProviders 注册）+ openProjects/locale 持久化 + mobileAccess（token/enabled）持久化 + generateAccessToken
 │   │   └── e2e/                      # Playwright E2E 测试
 │   │       ├── helpers/
 │   │       │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）

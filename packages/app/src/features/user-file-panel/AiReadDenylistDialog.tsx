@@ -11,6 +11,7 @@ import {
 } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { useAiReadDenylist } from "./useAiReadDenylist";
 
 export function AiReadDenylistDialog({
@@ -20,7 +21,8 @@ export function AiReadDenylistDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { client } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const denylist = useAiReadDenylist(client, open);
   const { t } = useI18n();
 

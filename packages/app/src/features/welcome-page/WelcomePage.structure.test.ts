@@ -34,7 +34,7 @@ describe("WelcomePage structure", () => {
   });
 
   it("appends a cache-busting query to the preview url so the iframe/img reload", () => {
-    expect(source).toContain("?t=${reloadKey}");
+    expect(source).toContain("getPreviewUrl(path, reloadKey)");
     expect(source).toContain("const previewUrl = ");
     expect(source).toContain("src={previewUrl}");
   });

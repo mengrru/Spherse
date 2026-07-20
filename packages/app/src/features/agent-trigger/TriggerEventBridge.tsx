@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useStreamingStore } from "../chat/streaming-store";
 import { useTriggerStore } from "./store";
@@ -9,7 +10,8 @@ import { useBusSubscription } from "../../hooks/useBusSubscription";
 import type { TriggerServerEvent } from "../../lib/types";
 
 export function TriggerEventBridge() {
-  const { projectId, client } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const { t } = useI18n();
   const agents = useProjectDataStore((s) => (projectId ? s.projects[projectId]?.agents ?? [] : []));
   const handleTriggerEvent = useTriggerStore((s) => s.handleTriggerEvent);

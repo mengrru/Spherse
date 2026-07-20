@@ -92,6 +92,11 @@ export interface ModelGroupSettings {
 
 export type ThemeMode = "light" | "dark" | "system";
 
+export interface MobileAccessSettings {
+  enabled: boolean;
+  token?: string;
+}
+
 export interface AppSettings {
   locale: string;
   models: {
@@ -101,6 +106,7 @@ export interface AppSettings {
   customProviders?: CustomProviderDef[];
   debugToolsEnabled?: boolean;
   theme?: ThemeMode;
+  mobileAccess?: MobileAccessSettings;
 }
 
 export interface ProviderCatalogItem {

@@ -31,7 +31,7 @@ export function AgentRow({ agent, active }: AgentRowProps) {
     (s) => s.projects[projectId]?.hasEnabledTriggersByAgent?.[agent.id] ?? false,
   );
   return (
-    <div className="group/agent-row relative">
+    <div className="group/agent-row relative" data-agent-id={agent.id}>
       <ContextMenu>
         <ContextMenuTrigger
           render={

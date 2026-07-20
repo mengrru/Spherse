@@ -6,6 +6,7 @@ import { useI18n } from "@spherse/i18n/react";
 import type { HtmlCard } from "./types";
 import { Button } from "../../components/ui/button";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useChatRuntime } from "./runtime-context";
 import { isPathInsideProject, toProjectRelative, joinProjectPath } from "../../lib/project-path";
@@ -21,7 +22,8 @@ function sanitizeFileName(name: string): string {
 
 export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const { t } = useI18n();
-  const { client, projectRoot, projectId } = useProjectCtx();
+  const { projectRoot, projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const bridge = useHostBridge();
   const runtime = useChatRuntime();
   const iframeRef = useRef<HTMLIFrameElement>(null);

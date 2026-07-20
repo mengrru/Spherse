@@ -7,6 +7,7 @@
 - [x] **前端 store 边界整理（P1a）**：解耦 `project-data-store` 对 `settings` feature store 的反向依赖；引入 `ProjectContext` 消除 4+ 组件重复的 `ctx.client` 推导链；`collapsedAgentIds` 下沉到 `agent-session-list` feature store；合并 `sidePanel`/`floatingSessionId` 重复派生；修复 `FloatingChatManager` render 体 setState；移走错放 hooks/components；统一 `scopeCss`。参见 `docs/dev/features/2026-06-19-frontend-store-p1a/design.md`
 - [x] **前端路由 / Page / Layout 重构（P0 + P1b）**：真嵌套路由（`project/:projectId` layout route + `chat/:sessionId`/`content`/index 子路由）；新建 `ProjectScope` 替代 `ProjectLayout`，消除 `key={projectId}` remount；URL 成为 active project 唯一真相源；schedule 状态下沉到 `agent-schedule` feature store + WS locale 依赖 bug 修复；`resolveSessionViews`/`getProjectData` 死代码删除；`streamingSessionIds` 镜像解耦 `SessionRow` 与 `chat/streaming-store`；手写 URL 解析全消除（`useMatch`/`useLocation`）。参见 `docs/dev/features/2026-06-19-frontend-routing-p0/design.md`
 - [ ] **ActivityBar 自治化（D7，推迟）**：ActivityBar 改为 feature root 自治（自己读 store + navigate），App.tsx 精简为中转站。参见 `docs/dev/features/2026-06-19-frontend-routing-p0/design.md`（D7）
+- [x] **AppContext 提升至 app-wide，消除 per-project 重复**：`app-store` 顶层新增 `connection: { baseUrl, accessToken }`（单 server 单 token，所有项目共享）；`ProjectState` 瘦身为 `{ id, path, name, lastRoute, lastOpened }`；新增 `useApiClient(projectId)`/`useConnection()` hook，`ApiClient` 实例由消费者 `useMemo` 派生而非预创建缓存；`useProjectCtx` 返回瘦 `{ projectId, projectRoot }`；`refreshAccessTokens` 重命名为 `refreshConnection`（单次 `set` 即可，无需遍历 projects Map）；删除 `context/app-context.ts`；`useSpherseMessageListener` 接受 `ApiClient | null`。
 - [ ] **逐步禁止 `any`**：梳理 agent/runtime payload、SQLite row casting、测试 tool context 等现有 `any` 来源，优先通过明确事件/消息/数据库 row 类型替换；完成后开启 `@typescript-eslint/no-explicit-any` 的 warning 或 error 模式。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
 - [ ] **system-prompt XML 包裹对用户内容闭合标签不健壮**：`serializeSystemPrompt`（`packages/core/src/context/serialize.ts`）对 `<project-instructions>`/`<agent-profile>`/`<context-file>` 的 inner content 原样包裹、不转义。若用户的 AGENTS.md 或预载文件内含 `</project-instructions>` 等闭合标签，会破坏 system prompt 结构。需评估方案：对 inner content 转义、改用 CDATA、或在包裹时检测冲突标签；同时更新 `serialize.test.ts` 中「不转义 inner content」的现有断言。参见 `docs/dev/features/2026-07-02-context-engineering/design.md` §6.3
 - [ ] **`parseHistoryMessages` tool call arguments 类型化**：`packages/app/src/features/chat/chat-session-reducer.ts` 中 `parseHistoryMessages` 遍历历史 `message.content` 的 toolCall block 时，`content` 为 `any`，访问 `content.arguments` 需 `as any` 兜底（如 render_card 历史恢复读 `arguments.content`）。应给 toolCall content block 引入精确类型（含 `id`/`name`/`arguments: Record<string, unknown>`），消除 `as any`，并让 render_card/generate_image 等历史恢复分支获得类型安全。与「逐步禁止 `any`」相关但可单独推进。
@@ -91,7 +92,7 @@
 
 ## 移动端
 
-- [ ] **移动端 App（进行中）**：基于三层分离（app/desktop/web）+ Cloudflare Quick Tunnel 中继 + Bearer Token 鉴权，支持手机 PWA 远程连接桌面 server 进行只读浏览和聊天。PR1（三层分离 + HostBridge 抽象）已完成；后续 PR 将实现 server auth、cloudflared 集成、移动端 PWA。参见 `docs/dev/features/2026-07-20-mobile-app/design.md`
+- [ ] **移动端 App（进行中）**：基于三层分离（app/desktop/web）+ Cloudflare Quick Tunnel 中继 + Bearer Token 鉴权，支持手机 PWA 远程连接桌面 server 进行只读浏览和聊天。PR1（三层分离 + HostBridge 抽象）、PR2/3（server auth + 新增 `/api/projects`、`/api/projects/:id/info`、`/api/connection/info` + cloudflared 集成 + 桌面「移动端」设置面板 + QR 码）已完成；剩余 PR4 移动端 PWA 实现（扫码、布局、project-panel drawer）、PR5 mobile UI 打磨 + skill 上传。参见 `docs/dev/features/2026-07-20-mobile-app/design.md`
 
 ## 基础设施
 

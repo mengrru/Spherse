@@ -2,6 +2,7 @@ import { useEffect, useReducer } from "react";
 import { Loader2 } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import type { SessionInfo } from "../../lib/types";
 import {
   Dialog,
@@ -48,7 +49,8 @@ interface SessionStatusDialogProps {
 
 export function SessionStatusDialog({ session, open, onOpenChange }: SessionStatusDialogProps) {
   const { t } = useI18n();
-  const { client } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const [state, dispatch] = useReducer(statusReducer, { mode: "loading" } satisfies StatusState);
 
   useEffect(() => {

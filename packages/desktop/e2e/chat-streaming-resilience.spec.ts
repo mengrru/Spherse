@@ -231,10 +231,13 @@ test("sidebar shows streaming indicator on background session", async () => {
 
     await page.waitForSelector("text=Hello", { timeout: 5000 });
 
-    await navigateToSession(page, project.projectId, sessionB);
+    // 用 hash 导航(不重载页面),保留 streaming-store / streamingSessionIds 内存态
+    await page.evaluate((hash) => {
+      window.location.hash = hash;
+    }, `#/project/${project.projectId}/chat/${sessionB}`);
     await page.waitForSelector("[data-chat-composer]", { timeout: 5000 });
 
-    await page.locator('[data-slot="collapsible-trigger"]:has-text("Assistant")').click();
+    // assistant-1 是 active agent,agent group 初始展开,sessions 已在首次加载时 fetch
     const sessionARow = page.locator(`[data-session-id="${sessionA}"]`);
     await expect(sessionARow).toBeVisible({ timeout: 5000 });
     await expect(sessionARow.locator("svg.lucide-loader-circle")).toBeVisible({ timeout: 5000 });

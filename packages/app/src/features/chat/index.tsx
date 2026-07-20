@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { AgentProfile } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient, useConnection } from "../../lib/use-connection";
 import { Composer } from "./Composer";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
@@ -20,7 +21,9 @@ export interface ChatProps {
 }
 
 export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClose, hideHeader }: ChatProps) {
-  const { client, baseUrl, projectId } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
+  const { baseUrl, accessToken } = useConnection();
   const { messages, streaming, sendMessage, abort } = useChatSession({
     client,
     sessionId,
@@ -28,6 +31,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     projectId,
     agentId: agent.id,
     initialMessage,
+    accessToken,
   });
   const hasMore = useStreamingStore((s) => s.sessions[sessionId]?.hasMore ?? false);
   const loadingMore = useStreamingStore((s) => s.sessions[sessionId]?.loadingMore ?? false);

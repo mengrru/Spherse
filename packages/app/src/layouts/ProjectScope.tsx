@@ -12,6 +12,8 @@ import { useAppStore } from "../stores/app-store";
 import { useProjectNavHistory } from "../lib/use-project-navigation";
 import { ProjectProvider } from "../context/project-context";
 import { useHostBridge } from "../context/host-bridge-context";
+import { useApiClient } from "../lib/use-connection";
+import { useConnection } from "../lib/use-connection";
 
 export function ProjectScope() {
   const { projectId } = useParams();
@@ -19,7 +21,8 @@ export function ProjectScope() {
   const { t } = useI18n();
   const bridge = useHostBridge();
   const project = useAppStore((s) => (projectId ? s.projects.get(projectId) : undefined));
-  const client = project?.ctx.client;
+  const client = useApiClient(projectId);
+  const connection = useConnection();
   const initializing = useAppStore((s) => s.initializing);
   const setActiveProject = useAppStore((s) => s.setActiveProject);
   const setProjectLastRoute = useAppStore((s) => s.setProjectLastRoute);
@@ -32,9 +35,10 @@ export function ProjectScope() {
   }, [t]);
 
   useCustomTheme(
-    project?.ctx.projectRoot ?? "",
-    project?.ctx.baseUrl ?? "",
-    project?.ctx.projectId ?? "",
+    project?.path,
+    connection.baseUrl,
+    projectId,
+    connection.accessToken,
   );
   useProjectNavHistory(projectId ?? "");
   useSpherseMessageListener(projectId ?? "", client);
@@ -69,7 +73,7 @@ export function ProjectScope() {
   }
 
   return (
-    <ProjectProvider projectId={projectId} ctx={project.ctx}>
+    <ProjectProvider projectId={projectId} projectRoot={project.path}>
       <div className="relative flex h-full flex-1 overflow-hidden">
         <ProjectPanel />
         <main

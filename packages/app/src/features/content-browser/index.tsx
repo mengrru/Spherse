@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { ConflictBanner } from "./ConflictBanner";
 import { ConfirmDialogs } from "./ConfirmDialogs";
 import { ContentView } from "./ContentView";
@@ -29,7 +30,8 @@ export function ContentBrowser({
   onStartSession,
 }: ContentBrowserProps) {
   const { t } = useI18n();
-  const { client, projectId } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
   const [refreshKey, setRefreshKey] = useState(0);
   const { content, setContent, loading, error, reload: reloadContent } = useContentFile(client, filePath);

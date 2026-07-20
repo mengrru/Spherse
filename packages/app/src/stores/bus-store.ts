@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { parseBusServerMessage } from "@spherse/server/contracts";
 import type { HostBridge } from "../lib/host-bridge";
+import { buildWsUrl } from "../lib/api";
 
 export type BusChannel = "trigger" | "fs-watch" | "debug";
 export type BusStatus = "idle" | "connecting" | "open" | "closed";
@@ -105,7 +106,8 @@ export const useBusStore = create<BusStore>((set, get) => {
       set({ status: "connecting" });
       activeBridge = bridge;
       const baseUrl = await bridge.getServerBaseUrl();
-      const wsUrl = baseUrl.replace(/^http/, "ws") + "/ws/bus";
+      const accessToken = (await bridge.getServerAccessToken?.()) ?? null;
+      const wsUrl = buildWsUrl(baseUrl, "/ws/bus", accessToken);
       const socket = new WebSocket(wsUrl);
       ws = socket;
 

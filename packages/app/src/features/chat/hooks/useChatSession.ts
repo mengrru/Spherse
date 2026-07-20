@@ -12,6 +12,7 @@ export function useChatSession({
   projectId,
   agentId,
   initialMessage,
+  accessToken,
 }: {
   client: ApiClient;
   sessionId: string;
@@ -19,11 +20,12 @@ export function useChatSession({
   projectId: string;
   agentId: string;
   initialMessage?: string;
+  accessToken?: string | null;
 }) {
   useEffect(() => {
-    useStreamingStore.getState().attach(client, sessionId, baseUrl, projectId, agentId, initialMessage);
+    useStreamingStore.getState().attach(client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken);
     return () => useStreamingStore.getState().detach(sessionId);
-  }, [client, sessionId, baseUrl, projectId, agentId, initialMessage]);
+  }, [client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken]);
 
   const messages = useStreamingStore(
     (s) => s.sessions[sessionId]?.messages ?? EMPTY_MESSAGES,

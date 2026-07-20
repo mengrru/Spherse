@@ -30,6 +30,6 @@ export function useAgentTheme(
 
   if (!client || !agentId || !slug) return "";
 
-  const themeHref = `${client.getPreviewUrl(`.spherse/agents/${slug}/theme.css`)}?t=${ts}`;
+  const themeHref = client.getPreviewUrl(`.spherse/agents/${slug}/theme.css`, ts);
   return themeHref;
 }

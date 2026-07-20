@@ -28,6 +28,7 @@ import { Button } from "../../components/ui/button";
 import { BugIcon, RefreshCwIcon, DatabaseIcon, TrashIcon, CodeIcon, ScrollTextIcon, DownloadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useAppStore } from "../../stores/app-store";
+import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { LogPanel } from "./LogPanel";
 
@@ -42,6 +43,7 @@ export function DebugMenu() {
   const activeProjectId = useAppStore((s) => s.activeProjectId);
   const projects = useAppStore((s) => s.projects);
   const activeProject = activeProjectId ? projects.get(activeProjectId) : null;
+  const client = useApiClient(activeProjectId);
 
   const sessionId = chatMatch?.params.sessionId ?? null;
 
@@ -65,13 +67,13 @@ export function DebugMenu() {
   };
 
   const handleDownloadTurnContext = async () => {
-    if (!activeProject || !sessionId) {
+    if (!client || !sessionId) {
       toast.error(t("debug.downloadTurnContextNoSession"));
       return;
     }
     setDownloading(true);
     try {
-      const data = await activeProject.ctx.client.getTurnContext(sessionId);
+      const data = await client.getTurnContext(sessionId);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");

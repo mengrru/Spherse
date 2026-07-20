@@ -152,7 +152,9 @@ test("text selection session keeps long agent list scrollable in a compact viewp
       document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: x, clientY: y }));
     }, mouseUp);
 
-    await page.getByTestId("text-selection-toolbar").getByRole("button", { name: "发起会话" }).click();
+    const toolbar = page.getByTestId("text-selection-toolbar");
+    await expect(toolbar).toBeVisible();
+    await toolbar.getByRole("button", { name: "发起会话" }).click();
 
     const popover = page.getByTestId("text-selection-popover");
     const agentList = page.getByTestId("text-selection-agent-list");

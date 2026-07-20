@@ -119,4 +119,25 @@ describe("preview route", () => {
     const res = await app.inject({ method: "GET", url: "/api/projects/p1/preview/missing.svg" });
     expect(res.statusCode).toBe(404);
   });
+
+  it("serves a file via __auth/<token>/ path prefix and resolves the correct underlying file", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/__auth/some-token/icon.svg",
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("image/svg+xml");
+    expect(res.body).toBe("<svg></svg>");
+  });
+
+  it("supports nested directories through the __auth/ path prefix", async () => {
+    fs.mkdirSync(path.join(tmpDir, "assets"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, "assets", "nested.png"), Buffer.from([0x89, 0x50]));
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/__auth/some-token/assets/nested.png",
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("image/png");
+  });
 });

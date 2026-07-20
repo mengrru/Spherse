@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { ElectronAPI, UpdateEvent } from "./types.js";
+import type { MobileAccessEvent } from "@spherse/app/src/lib/host-bridge";
 
 const UPDATE_EVENT_CHANNELS = [
   "update-available",
@@ -8,6 +9,8 @@ const UPDATE_EVENT_CHANNELS = [
   "update-downloaded",
   "update-error",
 ] as const;
+
+const MOBILE_EVENT_CHANNEL = "mobile-access:event";
 
 contextBridge.exposeInMainWorld("electronAPI", {
   selectDirectory: () => ipcRenderer.invoke("select-directory"),
@@ -59,5 +62,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
       UPDATE_EVENT_CHANNELS.forEach((ch) =>
         ipcRenderer.removeListener(ch, handler),
       );
+  },
+  getMobileAccessState: () => ipcRenderer.invoke("mobile-access:get-state"),
+  enableMobileAccess: () => ipcRenderer.invoke("mobile-access:enable"),
+  disableMobileAccess: () => ipcRenderer.invoke("mobile-access:disable"),
+  regenerateToken: () => ipcRenderer.invoke("mobile-access:regenerate-token"),
+  restartTunnel: () => ipcRenderer.invoke("mobile-access:restart-tunnel"),
+  onMobileAccessEvent: (callback: (event: MobileAccessEvent) => void) => {
+    const handler = (_e: unknown, payload: MobileAccessEvent) => callback(payload);
+    ipcRenderer.on(MOBILE_EVENT_CHANNEL, handler);
+    return () => ipcRenderer.removeListener(MOBILE_EVENT_CHANNEL, handler);
   },
 } satisfies ElectronAPI);

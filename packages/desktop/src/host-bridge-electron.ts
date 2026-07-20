@@ -4,6 +4,7 @@ import type {
   ProjectHostApi,
   UpdaterHostApi,
   DevToolsHostApi,
+  MobileAccessHostApi,
 } from "@spherse/app/src/lib/host-bridge";
 
 const ELECTRON_CAPABILITIES: HostCapabilities = {
@@ -11,6 +12,7 @@ const ELECTRON_CAPABILITIES: HostCapabilities = {
   filePicker: true,
   appUpdate: true,
   devTools: true,
+  mobileAccess: true,
   settings: { editable: true, scope: "local-only" },
   content: { editable: true },
 };
@@ -51,12 +53,25 @@ export function createElectronHostBridge(): HostBridge {
     resetAppData: api.resetAppData,
   };
 
+  const mobile: MobileAccessHostApi = {
+    getMobileAccessState: api.getMobileAccessState,
+    enableMobileAccess: api.enableMobileAccess,
+    disableMobileAccess: api.disableMobileAccess,
+    regenerateToken: api.regenerateToken,
+    restartTunnel: api.restartTunnel,
+    onMobileAccessEvent: api.onMobileAccessEvent,
+  };
+
   return {
     kind: "electron",
     capabilities: ELECTRON_CAPABILITIES,
     getServerBaseUrl: async () => {
       const port = await api.getServerPort();
       return `http://localhost:${port}`;
+    },
+    getServerAccessToken: async () => {
+      const state = await api.getMobileAccessState();
+      return state.enabled ? state.token : null;
     },
     getSettings: api.getSettings,
     saveSettings: api.saveSettings,
@@ -67,5 +82,6 @@ export function createElectronHostBridge(): HostBridge {
     project,
     updater,
     devTools,
+    mobile,
   };
 }

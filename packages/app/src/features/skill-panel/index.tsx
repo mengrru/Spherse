@@ -17,11 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { CreateSkillDialog } from "./CreateSkillDialog";
 
 export function SkillPanel() {
-  const { projectId, client } = useProjectCtx();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const bridge = useHostBridge();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

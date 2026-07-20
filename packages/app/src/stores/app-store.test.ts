@@ -10,6 +10,7 @@ function createMockHostBridge(overrides: Partial<HostBridge> = {}): HostBridge {
       filePicker: true,
       appUpdate: true,
       devTools: true,
+      mobileAccess: false,
       settings: { editable: true, scope: "local-only" },
       content: { editable: true },
     },
@@ -41,12 +42,6 @@ function projectState(overrides: Partial<ProjectState> = {}): ProjectState {
     id: "project-a",
     path: "/tmp/project-a",
     name: "project-a",
-    ctx: {
-      client: {} as ProjectState["ctx"]["client"],
-      baseUrl: "http://localhost:5173",
-      projectId: "project-a",
-      projectRoot: "/tmp/project-a",
-    },
     lastOpened: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -57,6 +52,7 @@ const storage = new Map<string, string>();
 function setupStoreTest(initializing = false): void {
   vi.resetAllMocks();
   useAppStore.setState({
+    connection: { baseUrl: "http://localhost:5173", accessToken: null },
     projects: new Map(),
     activeProjectId: null,
     initializing,
@@ -144,6 +140,47 @@ describe("useAppStore lastRoute", () => {
     expect(useAppStore.getState().projects.get("project-a")?.lastRoute).toBe(
       "/content?path=foo.md",
     );
+  });
+});
+
+describe("useAppStore refreshConnection", () => {
+  beforeEach(() => {
+    setupStoreTest(false);
+  });
+
+  it("updates app-wide connection when bridge returns a new token", async () => {
+    const bridge = createMockHostBridge({
+      getServerAccessToken: vi.fn().mockResolvedValue("new-token-xyz"),
+    });
+    useAppStore.setState({
+      projects: new Map([["project-a", projectState()]]),
+      activeProjectId: "project-a",
+      initializing: false,
+    });
+
+    await useAppStore.getState().refreshConnection(bridge);
+
+    expect(bridge.getServerAccessToken).toHaveBeenCalled();
+    expect(useAppStore.getState().connection).toEqual({
+      baseUrl: "http://localhost:5173",
+      accessToken: "new-token-xyz",
+    });
+  });
+
+  it("preserves projects map (no per-project rebuild)", async () => {
+    const bridge = createMockHostBridge({
+      getServerAccessToken: vi.fn().mockResolvedValue("tok"),
+    });
+    const before = new Map([["project-a", projectState()]]);
+    useAppStore.setState({
+      projects: before,
+      activeProjectId: "project-a",
+      initializing: false,
+    });
+
+    await useAppStore.getState().refreshConnection(bridge);
+
+    expect(useAppStore.getState().projects).toBe(before);
   });
 });
 

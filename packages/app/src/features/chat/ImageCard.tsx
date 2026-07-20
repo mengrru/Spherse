@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { ImageCard } from "./types";
 import { useProjectCtx } from "../../context/project-context";
+import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { isPathInsideProject, joinProjectPath } from "../../lib/project-path";
 
@@ -12,7 +13,8 @@ interface ImageCardRendererProps {
 
 export function ImageCardRenderer({ card }: ImageCardRendererProps) {
   const { t } = useI18n();
-  const { client, projectRoot } = useProjectCtx();
+  const { projectRoot, projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const bridge = useHostBridge();
 
   async function handleExport() {

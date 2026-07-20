@@ -9,6 +9,7 @@ import * as skills from "./skills.js";
 import * as debug from "./debug.js";
 import * as bus from "./bus.js";
 import * as websocket from "./websocket.js";
+import * as connection from "./connection.js";
 
 export const schemas = {
   ...common.schemas,
@@ -22,6 +23,7 @@ export const schemas = {
   ...debug.schemas,
   ...bus.schemas,
   ...websocket.schemas,
+  ...connection.schemas,
 } as const;
 
 export { parseContract, parseApiResponse } from "./common.js";
@@ -81,6 +83,12 @@ export type {
 
 export type { SkillDefinitionContract, SkillListResponse, SkillCreateRequest, SkillInstallRequest } from "./skills.js";
 export type { TurnContextSnapshotContract } from "./debug.js";
+export type {
+  ProjectListEntry,
+  ProjectListResponse,
+  ProjectInfoResponse,
+  ConnectionInfoResponse,
+} from "./connection.js";
 
 export {
   parseChatClientMessage,

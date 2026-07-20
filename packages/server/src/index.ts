@@ -1,4 +1,4 @@
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import type { AddressInfo } from "node:net";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
@@ -7,11 +7,12 @@ import { NotFoundError, ValidationError, AccessDeniedError, ConflictError } from
 import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
+import { registerAuthHook, type AuthOptions } from "./auth.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleBusWebSocket } from "./ws-bus.js";
 
-export { ProjectRegistry, type ProjectContext } from "./registry.js";
+export { ProjectRegistry, type ProjectContext, type ProjectInfo } from "./registry.js";
 
 export interface MultiProjectServer {
   fastify: FastifyInstance;
@@ -19,16 +20,40 @@ export interface MultiProjectServer {
   logger: Logger;
 }
 
+export interface CreateServerOptions {
+  defaultModel?: string;
+  sampling?: SamplingParams;
+  auth?: AuthOptions;
+}
+
 export async function createMultiProjectServer(
-  options?: { defaultModel?: string; sampling?: SamplingParams },
+  options?: CreateServerOptions,
 ): Promise<MultiProjectServer> {
   const prettyStream = createPrettyStream();
   const logger = createServerLogger(prettyStream);
 
-  const fastify = Fastify({ logger: { level: "debug", stream: prettyStream } });
+  const fastify = Fastify({
+    logger: {
+      level: "debug",
+      stream: prettyStream,
+      serializers: {
+        req(req: FastifyRequest) {
+          const url = req.url ?? "";
+          const stripped = url.includes("?") ? `${url.split("?", 1)[0]}?<redacted>` : url;
+          return {
+            method: req.method,
+            url: stripped,
+            remotePort: req.socket?.remotePort,
+          };
+        },
+      },
+    },
+  });
 
   await fastify.register(cors, { origin: true });
   await fastify.register(websocket);
+
+  fastify.get("/health", { schema: { response: { 200: { type: "object", properties: { ok: { type: "boolean" } } } } } }, async () => ({ ok: true }));
 
   fastify.setErrorHandler((err, req, reply) => {
     if (err instanceof HttpError) {
@@ -62,7 +87,8 @@ export async function createMultiProjectServer(
     sampling: options?.sampling,
   });
 
-  registerAllRoutes(fastify, registry);
+  registerAuthHook(fastify, options?.auth ?? {});
+  registerAllRoutes(fastify, registry, { authRequired: Boolean(options?.auth?.accessToken) });
   handleChatWebSocket(fastify, registry);
   handleBusWebSocket(fastify, registry);
 
