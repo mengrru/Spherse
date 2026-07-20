@@ -1,9 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { toast } from "sonner";
-import jsQR from "jsqr";
-import { ArrowLeftIcon, CameraIcon, KeyboardIcon } from "lucide-react";
 import { Button } from "@spherse/app/src/components/ui/button";
 import { Input } from "@spherse/app/src/components/ui/input";
 import { Field, FieldLabel } from "@spherse/app/src/components/ui/field";
@@ -11,26 +9,10 @@ import { useHostBridge } from "@spherse/app/src/context/host-bridge-context";
 import { useAppStore } from "@spherse/app/src/stores/app-store";
 
 const CONNECTION_STORAGE_KEY = "spherse:connection";
-const DEEPLINK_PREFIX = "spherse://connect";
-const SCAN_INTERVAL_MS = 250;
-
-type Mode = "menu" | "scan" | "manual";
 
 interface ParsedConnection {
   baseUrl: string;
   token: string;
-}
-
-function parseConnectionFromText(text: string): ParsedConnection | null {
-  const trimmed = text.trim();
-  if (!trimmed.startsWith(DEEPLINK_PREFIX)) return null;
-  const queryStart = trimmed.indexOf("?");
-  if (queryStart < 0) return null;
-  const params = new URLSearchParams(trimmed.slice(queryStart + 1));
-  const baseUrl = params.get("base");
-  const token = params.get("token");
-  if (!baseUrl || !token) return null;
-  return { baseUrl, token };
 }
 
 function persistConnection(conn: ParsedConnection): void {
@@ -45,7 +27,7 @@ export function MobileConnectPage() {
   const navigate = useNavigate();
   const bridge = useHostBridge();
   const restoreProjects = useAppStore((state) => state.restoreProjects);
-  const [mode, setMode] = useState<Mode>("menu");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [submitting, setSubmitting] = useState(false);
 
   const handleConnect = async (conn: ParsedConnection) => {
@@ -66,6 +48,18 @@ export function MobileConnectPage() {
     }
   };
 
+  useEffect(() => {
+    const base = searchParams.get("base");
+    const token = searchParams.get("token");
+    if (!base || !token) return;
+    const cleaned = new URLSearchParams(searchParams);
+    cleaned.delete("base");
+    cleaned.delete("token");
+    setSearchParams(cleaned, { replace: true });
+    void handleConnect({ baseUrl: base, token });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="flex h-full flex-1 flex-col items-center justify-center overflow-auto bg-background px-6 text-foreground">
       <header className="mb-8 text-center">
@@ -73,235 +67,16 @@ export function MobileConnectPage() {
         <p className="text-sm text-muted-foreground">{t("mobile-connect.subtitle")}</p>
       </header>
 
-      {mode === "menu" && (
-        <div className="flex w-full max-w-sm flex-col gap-3">
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-2"
-            onClick={() => setMode("scan")}
-          >
-            <CameraIcon className="size-4" />
-            {t("mobile-connect.scan")}
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-2"
-            onClick={() => setMode("manual")}
-          >
-            <KeyboardIcon className="size-4" />
-            {t("mobile-connect.manual")}
-          </Button>
-        </div>
-      )}
-
-      {mode === "scan" && (
-        <ScanPanel
-          onBack={() => setMode("menu")}
-          onDetected={handleConnect}
-          onSwitchToManual={() => setMode("manual")}
-        />
-      )}
-
-      {mode === "manual" && (
-        <ManualPanel
-          submitting={submitting}
-          onBack={() => setMode("menu")}
-          onSubmit={handleConnect}
-        />
-      )}
-    </div>
-  );
-}
-
-function ScanPanel({
-  onBack,
-  onDetected,
-  onSwitchToManual,
-}: {
-  onBack: () => void;
-  onDetected: (conn: ParsedConnection) => void | Promise<void>;
-  onSwitchToManual: () => void;
-}) {
-  const { t } = useI18n();
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const detectedRef = useRef(false);
-  const scanCountRef = useRef(0);
-  const [error, setError] = useState<string | null>(null);
-  const [scanDebug, setScanDebug] = useState<string>("");
-
-  useEffect(() => {
-    let cancelled = false;
-    let detector: { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } | null = null;
-    let detectorAvailable = false;
-    const DetectorCtor = (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector;
-    if (typeof DetectorCtor === "function") {
-      try {
-        detector = new DetectorCtor({ formats: ["qr_code"] });
-        detectorAvailable = true;
-      } catch {
-        detectorAvailable = false;
-      }
-    }
-
-    async function start() {
-      if (!("mediaDevices" in navigator) || !navigator.mediaDevices?.getUserMedia) {
-        setError(t("mobile-connect.scanUnavailable"));
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-        });
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-        streamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.onloadeddata = () => {
-            videoRef.current?.play().catch((err) => {
-              console.warn("[scan] video.play() rejected", err);
-            });
-          };
-        }
-        scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
-      } catch (err) {
-        const name = (err as DOMException)?.name;
-        if (name === "NotAllowedError" || name === "SecurityError") {
-          setError(t("mobile-connect.cameraDenied"));
-        } else {
-          setError(t("mobile-connect.scanUnavailable"));
-        }
-      }
-    }
-
-    function tick() {
-      if (cancelled) return;
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      if (detectedRef.current) return;
-      if (!video || !canvas) {
-        setScanDebug("waiting for elements…");
-        scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
-        return;
-      }
-      if (video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) {
-        setScanDebug(`waiting for video… readyState=${video.readyState}`);
-        scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
-        return;
-      }
-      scanCountRef.current += 1;
-      const decodePromise = detectorAvailable
-        ? detector!.detect(video).then((results) => {
-            for (const r of results) {
-              const raw = typeof r.rawValue === "string" ? r.rawValue : "";
-              if (raw) return raw;
-            }
-            return null;
-          })
-        : decodeWithJsQr(video, canvas);
-      decodePromise
-        .then((payload) => {
-          if (!payload) {
-            setScanDebug(`scan #${scanCountRef.current} (${video.videoWidth}×${video.videoHeight})…`);
-            scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
-            return;
-          }
-          setScanDebug(`decoded: ${payload.slice(0, 40)}…`);
-          const conn = parseConnectionFromText(payload);
-          if (conn) {
-            detectedRef.current = true;
-            void onDetected(conn);
-            return;
-          }
-          setScanDebug(`scan #${scanCountRef.current}: not a spherse QR`);
-          scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
-        })
-        .catch((err) => {
-          console.warn("[scan] decode error", err);
-          setScanDebug(`error: ${(err as Error).message}`);
-          scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
-        });
-    }
-
-    async function decodeWithJsQr(video: HTMLVideoElement, canvas: HTMLCanvasElement): Promise<string | null> {
-      try {
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) return null;
-        const maxDim = 480;
-        const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
-        canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
-        canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: "attemptBoth",
-        });
-        return decoded?.payload ?? null;
-      } catch {
-        return null;
-      }
-    }
-
-    void start();
-    return () => {
-      cancelled = true;
-      if (scanTimerRef.current !== null) clearTimeout(scanTimerRef.current);
-      streamRef.current?.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    };
-  }, [onDetected, t]);
-
-  if (error) {
-    return (
-      <div className="flex w-full max-w-sm flex-col gap-3">
-        <p className="text-sm text-destructive">{error}</p>
-        <Button variant="outline" onClick={onSwitchToManual}>
-          {t("mobile-connect.manual")}
-        </Button>
-        <Button variant="ghost" onClick={onBack}>
-          {t("mobile-connect.back")}
-        </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex w-full max-w-sm flex-col gap-3">
-      <div className="relative aspect-square w-full overflow-hidden rounded-md border border-border bg-muted">
-        <video
-          ref={videoRef}
-          className="absolute inset-0 size-full object-cover"
-          muted
-          playsInline
-        />
-        <canvas ref={canvasRef} className="hidden" />
-      </div>
-      <p className="text-center text-sm text-muted-foreground">
-        {t("mobile-connect.scanHint")}
-      </p>
-      {scanDebug && (
-        <p className="text-center text-xs text-muted-foreground/60">{scanDebug}</p>
-      )}
-      <Button variant="ghost" onClick={onBack}>
-        <ArrowLeftIcon className="size-4" />
-        {t("mobile-connect.back")}
-      </Button>
+      <ManualPanel submitting={submitting} onSubmit={handleConnect} />
     </div>
   );
 }
 
 function ManualPanel({
   submitting,
-  onBack,
   onSubmit,
 }: {
   submitting: boolean;
-  onBack: () => void;
   onSubmit: (conn: ParsedConnection) => void | Promise<void>;
 }) {
   const { t } = useI18n();
@@ -340,15 +115,9 @@ function ManualPanel({
           spellCheck={false}
         />
       </Field>
-      <div className="flex gap-2">
-        <Button type="button" variant="ghost" onClick={onBack} disabled={submitting}>
-          <ArrowLeftIcon className="size-4" />
-          {t("mobile-connect.back")}
-        </Button>
-        <Button type="submit" disabled={!canSubmit} className="flex-1">
-          {t("mobile-connect.connect")}
-        </Button>
-      </div>
+      <Button type="submit" disabled={!canSubmit} className="w-full">
+        {submitting ? t("common.loading") : t("mobile-connect.connect")}
+      </Button>
     </form>
   );
 }

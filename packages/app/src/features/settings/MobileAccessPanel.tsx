@@ -13,9 +13,11 @@ import type { MobileAccessState, TunnelStatus } from "../../lib/host-bridge";
 import { useAppStore } from "../../stores/app-store";
 import { Copy, RefreshCw } from "lucide-react";
 
+const WEB_APP_URL = "https://spherse.mengru.work/web/";
+
 function buildDeeplink(publicUrl: string, token: string): string {
   const params = new URLSearchParams({ base: publicUrl, token });
-  return `spherse://connect?${params.toString()}`;
+  return `${WEB_APP_URL}#/?${params.toString()}`;
 }
 
 function statusTranslationKey(status: TunnelStatus): TranslationKey {
