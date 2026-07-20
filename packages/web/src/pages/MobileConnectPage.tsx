@@ -36,7 +36,7 @@ function parseConnectionFromText(text: string): ParsedConnection | null {
 function persistConnection(conn: ParsedConnection): void {
   localStorage.setItem(
     CONNECTION_STORAGE_KEY,
-    JSON.stringify({ baseUrl: conn.baseUrl, token: conn.token }),
+    JSON.stringify({ baseUrl: conn.baseUrl.replace(/\/+$/, ""), token: conn.token }),
   );
 }
 

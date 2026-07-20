@@ -163,7 +163,7 @@ export function createWebHostBridge(): HostBridge {
     capabilities: WEB_CAPABILITIES,
     getServerBaseUrl: async () => {
       const conn = readConnection();
-      return conn?.baseUrl ?? "";
+      return conn?.baseUrl.replace(/\/+$/, "") ?? "";
     },
     getServerAccessToken: async () => {
       const conn = readConnection();
