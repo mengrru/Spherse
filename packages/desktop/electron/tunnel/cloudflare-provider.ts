@@ -23,9 +23,52 @@ function resolveCloudflaredBinary(): string {
       const candidate = path.join(process.resourcesPath, "cloudflared", dir, exeName);
       if (fs.existsSync(candidate)) return candidate;
     }
+
+    for (const candidate of bundledBinaryCandidates(platform, exeName)) {
+      if (fs.existsSync(candidate)) return candidate;
+    }
   }
 
   return exeName;
+}
+
+function bundledBinaryCandidates(platform: NodeJS.Platform, exeName: string): string[] {
+  if (platform === "darwin") {
+    return [
+      "/opt/homebrew/bin/cloudflared",
+      "/usr/local/bin/cloudflared",
+      `${process.env.HOME ?? ""}/.local/bin/cloudflared`,
+    ];
+  }
+  if (platform === "win32") {
+    return [
+      `${process.env.PROGRAMFILES ?? "C:\\Program Files"}\\cloudflared\\${exeName}`,
+      `${process.env["PROGRAMFILES(X86)"] ?? "C:\\Program Files (x86)"}\\cloudflared\\${exeName}`,
+      `${process.env.LOCALAPPDATA ?? ""}\\Microsoft\\WinGet\\Links\\${exeName}`,
+    ];
+  }
+  if (platform === "linux") {
+    return [
+      "/usr/local/bin/cloudflared",
+      "/usr/bin/cloudflared",
+      `${process.env.HOME ?? ""}/.local/bin/cloudflared`,
+      "/snap/bin/cloudflared",
+    ];
+  }
+  return [];
+}
+
+function buildSpawnEnv(): NodeJS.ProcessEnv {
+  const extraPaths: string[] = [];
+  if (process.platform === "darwin") {
+    extraPaths.push("/opt/homebrew/bin", "/usr/local/bin");
+  } else if (process.platform === "linux") {
+    extraPaths.push("/usr/local/bin", "/usr/local/sbin", "/snap/bin");
+  }
+  if (extraPaths.length === 0) return process.env;
+  const pathSep = process.platform === "win32" ? ";" : ":";
+  const existingPath = process.env.PATH ?? "";
+  return { ...process.env, PATH: `${existingPath}${pathSep}${extraPaths.join(pathSep)}` };
 }
 
 interface CloudflareSessionOptions {
@@ -91,6 +134,7 @@ export class CloudflareTunnelProvider implements TunnelProvider {
       "--url", `http://localhost:${localPort}`,
     ], {
       stdio: ["ignore", "pipe", "pipe"],
+      env: buildSpawnEnv(),
     });
 
     let settled = false;
@@ -124,7 +168,10 @@ export class CloudflareTunnelProvider implements TunnelProvider {
       child.once("error", (err) => {
         clearTimeout(startupTimer);
         cleanup();
-        reject(new Error(`cloudflared failed to start: ${err.message}`));
+        const message = (err as NodeJS.ErrnoException).code === "ENOENT"
+          ? `cloudflared not found. Please install it (e.g. brew install cloudflared on macOS, scoop install cloudflared on Windows) and retry. Original error: ${err.message}`
+          : `cloudflared failed to start: ${err.message}`;
+        reject(new Error(message));
       });
 
       child.once("exit", (code) => {
