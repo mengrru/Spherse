@@ -67,7 +67,11 @@ function createWebProjectApi(
         headers: { Accept: "application/json" },
         signal: controller.signal,
       });
-      if (!res.ok) throw new Error(`${path}: ${res.status} ${res.statusText}`);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        const bodyHint = body.slice(0, 120).replace(/\s+/g, " ");
+        throw new Error(`${path}: ${res.status} ${res.statusText}${bodyHint ? ` — ${bodyHint}` : ""}`);
+      }
       return (await res.json()) as T;
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
