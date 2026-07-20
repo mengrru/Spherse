@@ -128,7 +128,9 @@ function ScanPanel({
   const streamRef = useRef<MediaStream | null>(null);
   const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detectedRef = useRef(false);
+  const scanCountRef = useRef(0);
   const [error, setError] = useState<string | null>(null);
+  const [scanDebug, setScanDebug] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -172,19 +174,23 @@ function ScanPanel({
       const canvas = canvasRef.current;
       if (detectedRef.current) return;
       if (!video || !canvas) {
+        setScanDebug("waiting for elements…");
         scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
         return;
       }
       if (video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth === 0) {
+        setScanDebug(`waiting for video… readyState=${video.readyState}`);
         scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
         return;
       }
       try {
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
         if (!ctx) {
+          setScanDebug("no canvas ctx");
           scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
           return;
         }
+        scanCountRef.current += 1;
         const maxDim = 480;
         const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
         canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
@@ -195,15 +201,20 @@ function ScanPanel({
           inversionAttempts: "attemptBoth",
         });
         if (decoded && decoded.payload) {
+          setScanDebug(`decoded: ${decoded.payload.slice(0, 40)}…`);
           const conn = parseConnectionFromText(decoded.payload);
           if (conn) {
             detectedRef.current = true;
             void onDetected(conn);
             return;
           }
+          setScanDebug(`scan #${scanCountRef.current}: not a spherse QR`);
+        } else {
+          setScanDebug(`scan #${scanCountRef.current} (${canvas.width}×${canvas.height})…`);
         }
       } catch (err) {
         console.warn("[scan] decode error", err);
+        setScanDebug(`error: ${(err as Error).message}`);
       }
       scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
     }
@@ -245,6 +256,9 @@ function ScanPanel({
       <p className="text-center text-sm text-muted-foreground">
         {t("mobile-connect.scanHint")}
       </p>
+      {scanDebug && (
+        <p className="text-center text-xs text-muted-foreground/60">{scanDebug}</p>
+      )}
       <Button variant="ghost" onClick={onBack}>
         <ArrowLeftIcon className="size-4" />
         {t("mobile-connect.back")}

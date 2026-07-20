@@ -60,11 +60,23 @@ function createWebProjectApi(
     const token = await getToken();
     const url = new URL(`${baseUrl}${path}`);
     if (token) url.searchParams.set("token", token);
-    const res = await fetch(url, {
-      headers: { Accept: "application/json" },
-    });
-    if (!res.ok) throw new Error(`${path}: ${res.status} ${res.statusText}`);
-    return (await res.json()) as T;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`${path}: ${res.status} ${res.statusText}`);
+      return (await res.json()) as T;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        throw new Error(`${path}: request timed out (10s)`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
   return {
