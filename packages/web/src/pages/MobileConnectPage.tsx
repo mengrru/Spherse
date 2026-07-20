@@ -134,6 +134,17 @@ function ScanPanel({
 
   useEffect(() => {
     let cancelled = false;
+    let detector: { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } | null = null;
+    let detectorAvailable = false;
+    const DetectorCtor = (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => { detect: (source: CanvasImageSource) => Promise<Array<{ rawValue: string }>> } }).BarcodeDetector;
+    if (typeof DetectorCtor === "function") {
+      try {
+        detector = new DetectorCtor({ formats: ["qr_code"] });
+        detectorAvailable = true;
+      } catch {
+        detectorAvailable = false;
+      }
+    }
 
     async function start() {
       if (!("mediaDevices" in navigator) || !navigator.mediaDevices?.getUserMedia) {
@@ -183,14 +194,44 @@ function ScanPanel({
         scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
         return;
       }
+      scanCountRef.current += 1;
+      const decodePromise = detectorAvailable
+        ? detector!.detect(video).then((results) => {
+            for (const r of results) {
+              const raw = typeof r.rawValue === "string" ? r.rawValue : "";
+              if (raw) return raw;
+            }
+            return null;
+          })
+        : decodeWithJsQr(video, canvas);
+      decodePromise
+        .then((payload) => {
+          if (!payload) {
+            setScanDebug(`scan #${scanCountRef.current} (${video.videoWidth}×${video.videoHeight})…`);
+            scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
+            return;
+          }
+          setScanDebug(`decoded: ${payload.slice(0, 40)}…`);
+          const conn = parseConnectionFromText(payload);
+          if (conn) {
+            detectedRef.current = true;
+            void onDetected(conn);
+            return;
+          }
+          setScanDebug(`scan #${scanCountRef.current}: not a spherse QR`);
+          scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
+        })
+        .catch((err) => {
+          console.warn("[scan] decode error", err);
+          setScanDebug(`error: ${(err as Error).message}`);
+          scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
+        });
+    }
+
+    async function decodeWithJsQr(video: HTMLVideoElement, canvas: HTMLCanvasElement): Promise<string | null> {
       try {
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) {
-          setScanDebug("no canvas ctx");
-          scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
-          return;
-        }
-        scanCountRef.current += 1;
+        if (!ctx) return null;
         const maxDim = 480;
         const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
         canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
@@ -200,23 +241,10 @@ function ScanPanel({
         const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
           inversionAttempts: "attemptBoth",
         });
-        if (decoded && decoded.payload) {
-          setScanDebug(`decoded: ${decoded.payload.slice(0, 40)}…`);
-          const conn = parseConnectionFromText(decoded.payload);
-          if (conn) {
-            detectedRef.current = true;
-            void onDetected(conn);
-            return;
-          }
-          setScanDebug(`scan #${scanCountRef.current}: not a spherse QR`);
-        } else {
-          setScanDebug(`scan #${scanCountRef.current} (${canvas.width}×${canvas.height})…`);
-        }
-      } catch (err) {
-        console.warn("[scan] decode error", err);
-        setScanDebug(`error: ${(err as Error).message}`);
+        return decoded?.payload ?? null;
+      } catch {
+        return null;
       }
-      scanTimerRef.current = setTimeout(tick, SCAN_INTERVAL_MS);
     }
 
     void start();

@@ -74,29 +74,34 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   async restoreProjects(bridge) {
     set({ initializing: true });
-    const connection = await fetchConnection(bridge);
-    if (!connection.baseUrl) {
-      set({ initializing: false, connection });
-      return null;
-    }
-    const restored = (await bridge.project?.restoreProjects()) ?? [];
-    const projects = new Map<string, ProjectState>();
+    try {
+      const connection = await fetchConnection(bridge);
+      if (!connection.baseUrl) {
+        set({ initializing: false, connection });
+        return null;
+      }
+      const restored = (await bridge.project?.restoreProjects()) ?? [];
+      const projects = new Map<string, ProjectState>();
 
-    for (const { id, path, name, lastOpened } of restored) {
-      projects.set(id, {
-        id,
-        path,
-        name,
-        lastRoute: getLastRoute(id) ?? undefined,
-        lastOpened,
-      });
-    }
+      for (const { id, path, name, lastOpened } of restored) {
+        projects.set(id, {
+          id,
+          path,
+          name,
+          lastRoute: getLastRoute(id) ?? undefined,
+          lastOpened,
+        });
+      }
 
-    const lastActiveId = (await bridge.project?.getLastActiveProject()) ?? null;
-    const fallbackId = projects.keys().next().value ?? null;
-    const nextActiveId = lastActiveId && projects.has(lastActiveId) ? lastActiveId : fallbackId;
-    set({ connection, projects, activeProjectId: nextActiveId, initializing: false });
-    return nextActiveId;
+      const lastActiveId = (await bridge.project?.getLastActiveProject()) ?? null;
+      const fallbackId = projects.keys().next().value ?? null;
+      const nextActiveId = lastActiveId && projects.has(lastActiveId) ? lastActiveId : fallbackId;
+      set({ connection, projects, activeProjectId: nextActiveId, initializing: false });
+      return nextActiveId;
+    } catch (err) {
+      set({ initializing: false });
+      throw err;
+    }
   },
 
   async refreshConnection(bridge) {
