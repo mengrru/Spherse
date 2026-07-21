@@ -6,10 +6,12 @@ import { describe, expect, it } from "vitest";
 const currentDir = dirname(fileURLToPath(import.meta.url));
 
 describe("ProjectPanel structure", () => {
-  it("owns its side panel floating and hidden layout", () => {
+  it("is a static flex child of SidePanel without own sliding logic", () => {
     const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
 
-    expect(source).toContain("useSidePanel");
-    expect(source).toContain("-translate-x-[calc(100%+3.5rem)]");
+    expect(source).not.toContain("useSidePanel");
+    expect(source).not.toContain("-translate-x");
+    expect(source).not.toContain("absolute");
+    expect(source).toContain("data-project-panel");
   });
 });

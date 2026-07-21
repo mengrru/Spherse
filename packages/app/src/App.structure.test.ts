@@ -12,4 +12,14 @@ describe("App structure", () => {
     expect(source).not.toContain("sidePanel");
     expect(source).not.toContain("useRef");
   });
+
+  it("does not forward project data or callbacks to ActivityBar", () => {
+    const source = readFileSync(join(currentDir, "App.tsx"), "utf8");
+
+    expect(source).not.toContain("handleAddProject");
+    expect(source).not.toContain("handleSelectProject");
+    expect(source).not.toContain("handleCloseProject");
+    expect(source).not.toContain("handleOpenProjectFolder");
+    expect(source).not.toContain("useProjectActions");
+  });
 });

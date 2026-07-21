@@ -159,7 +159,8 @@ spherse/
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledTriggersByAgent 等项目数据缓存
-│   │       │   ├── settings-store.ts     # 应用级 locale 设置
+│   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗 open 状态等）
+│   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools 等持久化设置（与设置文件同步）
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │   │       ├── layouts/
@@ -184,7 +185,7 @@ spherse/
 │   │       │       ├── unfloat-session.ts # 取消浮窗
 │   │       │       └── data.ts           # data.get/set/delete key-value 持久化
 │   │       ├── features/
-│   │       │   ├── activity-bar/         # 左侧项目 Activity Bar、ProjectAvatar 与 side panel 固定切换
+│   │       │   ├── activity-bar/         # 自治型 Activity Bar（项目头像轨、设置/添加按钮），内部读 app-store/app-ui-store 与 useProjectActions；pin 按钮通过 pinToggle prop 可选注入
 │   │       │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 trigger feature store
 │   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
 │   │       │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、HtmlCard（含 UI SDK 运行时上下文注入）、chat 运行时 context（runtime-context.tsx）、chat 专属类型（types.ts）、thinking 指示器（ThinkingIndicator）、聚合/diff 纯函数（lib/，含 format-time）
@@ -192,7 +193,8 @@ spherse/
 │   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
 │   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
 │   │       │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
-│   │       │   ├── project-panel/         # 项目侧栏薄组合层，按序渲染 AgentSessionList/UserFilePanel/SkillPanel，自治 side-panel 浮动/隐藏布局
+│   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child
+│   │       │   ├── side-panel/           # 项目工作区左侧滑动单元，物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）
 │   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer）与 UpdateChecker 组件、设置 store、类型与测试

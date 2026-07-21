@@ -121,7 +121,7 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
   - `app-store` 管理应用级状态（打开项目集合、当前项目、Electron IPC 动作），不持有项目内业务数据
   - `project-data-store` 按 projectKey 缓存项目内 agents、sessions、streaming 等业务数据
   - `settings-store` 管理 app 级 locale（跨 feature 消费）；dialog 专属的表单状态用 hook（`useSettingsForm`）保留在组件内，不进 store
-  - `side-panel-store` 管理侧栏 pinned/hover 折叠机制（全局 UI 状态，被 layout + activity-bar + project-panel 跨层消费）
+  - `side-panel-store` 管理侧栏 pinned/hover 折叠机制（全局 UI 状态，被 side-panel + layout（clickAwayProps）+ floating-chat（z-index）跨层消费）
   - 跨页面、跨 feature 持久的状态放 store；组件内短生命周期状态（表单、弹窗、输入框、WebSocket ref、编辑 dirty/conflict）用 `useState`/`useRef` 保留在组件内
   - 只被单个 feature 使用的状态不提升到全局 store，可在 feature 目录下建立自己的 store（如 `features/chat/streaming-store.ts`、`features/agent-schedule/store.ts`、`features/agent-session-list/store.ts`、`features/floating-chat/store.ts`）。feature-local store 不应被其它 feature 或全局 store import
   - 全局 store 不应依赖 feature-local store（如需要 locale 等跨层信息，应由调用方传入或由展示层翻译）

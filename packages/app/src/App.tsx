@@ -1,46 +1,30 @@
-import { useEffect, useState } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { useEffect } from "react";
+import { Outlet, useMatch, useNavigate } from "react-router";
 import { ActivityBar } from "./features/activity-bar";
+import { buildProjectRoute } from "./features/activity-bar/use-project-actions";
 import { SettingsModal } from "./features/settings";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "./components/ui/sonner";
 import { useAppStore } from "./stores/app-store";
-import { useProjectDataStore } from "./stores/project-data-store";
-import { clearLastRoute } from "./lib/localstorage/last-route";
+import { useAppUiStore } from "./stores/app-ui-store";
 import { useHostBridge } from "./context/host-bridge-context";
 import { useFeature } from "./lib/use-feature";
-import { useAgentSessionListUiStore } from "./features/agent-session-list/store";
-import { useTriggerStore } from "./features/agent-trigger/store";
-import { useFloatingChatStore } from "./features/floating-chat/store";
 import { I18nProvider } from "@spherse/i18n/react";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
 import { useSettingsStore } from "./stores/settings-store";
 import { useBusStore } from "./stores/bus-store";
 
-function buildProjectRoute(projectId: string, lastRoute?: string): string {
-  const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
-  return `/project/${projectId}${suffix}`;
-}
-
 export function App() {
   const navigate = useNavigate();
   const bridge = useHostBridge();
   const settingsEnabled = useFeature("settings");
-  const [showSettings, setShowSettings] = useState(false);
-  const projects = useAppStore((state) => state.projects);
-  const activeProjectId = useAppStore((state) => state.activeProjectId);
   const initializing = useAppStore((state) => state.initializing);
   const restoreProjects = useAppStore((state) => state.restoreProjects);
-  const openProject = useAppStore((state) => state.openProject);
-  const closeProject = useAppStore((state) => state.closeProject);
-  const openProjectFolder = useAppStore((state) => state.openProjectFolder);
-  const setActiveProject = useAppStore((state) => state.setActiveProject);
-  const clearProjectData = useProjectDataStore((state) => state.clearProjectData);
-  const clearAgentSessionListUi = useAgentSessionListUiStore((state) => state.clearProject);
-  const clearTriggerData = useTriggerStore((state) => state.clearProject);
-  const clearFloatingChat = useFloatingChatStore((state) => state.clearProject);
+  const settingsModalOpen = useAppUiStore((state) => state.settingsModalOpen);
+  const setSettingsModalOpen = useAppUiStore((state) => state.setSettingsModalOpen);
   const locale = useSettingsStore((state) => state.locale);
   const loadSettings = useSettingsStore((state) => state.loadLocale);
+  const inProject = useMatch("/project/:projectId/*") !== null;
 
   useEffect(() => {
     let cancelled = false;
@@ -63,39 +47,6 @@ export function App() {
     void loadSettings(bridge);
   }, [loadSettings, bridge]);
 
-  const handleAddProject = async () => {
-    const projectId = await openProject(bridge);
-    if (projectId) {
-      const project = useAppStore.getState().projects.get(projectId);
-      navigate(buildProjectRoute(projectId, project?.lastRoute));
-    }
-  };
-
-  const handleSelectProject = async (projectId: string) => {
-    await setActiveProject(bridge, projectId);
-    const project = useAppStore.getState().projects.get(projectId);
-    navigate(buildProjectRoute(projectId, project?.lastRoute));
-  };
-
-  const handleCloseProject = async (projectId: string) => {
-    const nextProjectId = await closeProject(bridge, projectId);
-    clearProjectData(projectId);
-    clearAgentSessionListUi(projectId);
-    clearTriggerData(projectId);
-    clearFloatingChat(projectId);
-    clearLastRoute(projectId);
-    if (nextProjectId) {
-      const project = useAppStore.getState().projects.get(nextProjectId);
-      navigate(buildProjectRoute(nextProjectId, project?.lastRoute));
-    } else {
-      navigate("/");
-    }
-  };
-
-  const handleOpenProjectFolder = (projectId: string) => {
-    void openProjectFolder(bridge, projectId);
-  };
-
   if (initializing) {
     return (
       <div data-app-root className="flex h-screen items-center justify-center bg-background text-muted-foreground">
@@ -112,17 +63,11 @@ export function App() {
             bridge.renderMobileLayout(<Outlet />)
           ) : (
             <>
-              <ActivityBar
-                projects={projects}
-                activeProjectId={activeProjectId}
-                onSelect={handleSelectProject}
-                onAdd={handleAddProject}
-                onClose={handleCloseProject}
-                onOpenProjectFolder={handleOpenProjectFolder}
-                onSettings={settingsEnabled ? () => setShowSettings(true) : undefined}
-              />
+              {!inProject && <ActivityBar />}
               <Outlet />
-              {showSettings && settingsEnabled && <SettingsModal onClose={() => setShowSettings(false)} />}
+              {settingsModalOpen && settingsEnabled && (
+                <SettingsModal onClose={() => setSettingsModalOpen(false)} />
+              )}
             </>
           )}
           <Toaster />

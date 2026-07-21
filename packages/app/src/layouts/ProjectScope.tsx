@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
-import { ProjectPanel } from "../features/project-panel";
+import { SidePanel } from "../features/side-panel";
 import { FloatingChatManager } from "../features/floating-chat";
 import { TriggerEventBridge } from "../features/agent-trigger";
 import { FeatureGate } from "../components/FeatureGate";
@@ -76,7 +76,7 @@ export function ProjectScope() {
   return (
     <ProjectProvider projectId={projectId} projectRoot={project.path}>
       <div className="relative flex h-full flex-1 overflow-hidden">
-        <ProjectPanel />
+        <SidePanel />
         <main
           className="flex-1 overflow-hidden flex flex-col"
           {...clickAwayProps}
