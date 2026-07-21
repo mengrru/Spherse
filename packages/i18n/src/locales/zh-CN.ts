@@ -113,8 +113,8 @@ export const zhCN = {
 
   // 设置弹窗「移动端」tab 标签（仅桌面端 mobile access 启用时可见）
   "settings.tabs.mobile": "移动端",
-  // 移动端 tab → 面板顶部简介文案，说明该功能用于在手机上远程访问当前桌面应用
-  "settings.mobile.description": "启用后可通过 Cloudflare Quick Tunnel 把本地服务暴露到公网，使用手机扫描下方二维码即可远程连接到本桌面。",
+  // 移动端 tab → 面板顶部简介文案：提示需先安装 cloudflared，启用后扫码即可远程连接，使用时需保持电脑与桌面端开启
+  "settings.mobile.description": "启用后使用手机扫描下方二维码，即可远程连接到本桌面端。需先自行下载安装 cloudflared。使用移动端期间请保持电脑开机、Spherse 桌面端运行。",
   // 移动端 tab → 启用按钮文案（disabled → enabled）
   "settings.mobile.enable": "启用移动端访问",
   // 移动端 tab → 停用按钮文案（enabled → disabled）
@@ -126,7 +126,7 @@ export const zhCN = {
   // 移动端 tab → 「访问令牌」字段标签（脱敏显示的 Bearer Token）
   "settings.mobile.token": "访问令牌",
   // 移动端 tab → 令牌字段下方说明（提示令牌等同完整访问权限，不要外泄）
-  "settings.mobile.tokenHint": "令牌等同完整访问权限。任何持有令牌的人都可以读取项目内容并与 agent 对话，请勿外泄。",
+  "settings.mobile.tokenHint": "令牌等同完整访问权限。任何持有令牌的人都可以读取项目内容并与你的 AI 对话，请勿外泄。",
   // 移动端 tab → 「复制令牌」按钮文案
   "settings.mobile.copyToken": "复制令牌",
   // 移动端 tab → 「重新生成令牌」按钮文案
@@ -151,6 +151,8 @@ export const zhCN = {
   "settings.mobile.copyUrl": "复制地址",
   // 移动端 tab → QR 码下方提示文案，引导用户用手机扫码
   "settings.mobile.scanQr": "用手机扫描下方二维码以连接",
+  // 移动端 tab → QR 码下方安全提示，提醒二维码等同访问权限、切勿外泄
+  "settings.mobile.qrWarning": "二维码包含访问令牌，请勿截图外泄或分享给他人。",
   // 移动端 tab → 未启用时显示的占位说明
   "settings.mobile.disabledHint": "尚未启用移动端访问。启用后会生成本机专属的访问令牌并通过 Cloudflare Quick Tunnel 暴露服务。",
   // 移动端 tab → 操作进行中的通用 loading 文案
@@ -250,6 +252,8 @@ export const zhCN = {
   "activity-bar.autoCollapseSidePanelTooltip": "自动收起项目面板",
   // 左侧活动栏收起图标悬停提示：点击后将项目面板固定显示
   "activity-bar.pinSidePanelTooltip": "固定项目面板",
+  // 移动端（窄屏）左下角浮动按钮的悬停提示与无障碍标签：点击后项目面板从左侧滑出
+  "side-panel.openTooltip": "打开项目面板",
 
   // --- Agent Dialog ---
   // 对话对象创建弹窗标题

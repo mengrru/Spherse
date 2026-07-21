@@ -3,10 +3,13 @@ import { create } from "zustand";
 interface SidePanelStore {
   pinned: boolean;
   hovered: boolean;
+  mobileOpen: boolean;
   setPinned: (pinned: boolean) => void;
   togglePinned: () => void;
   show: () => void;
   hide: () => void;
+  showMobile: () => void;
+  hideMobile: () => void;
 }
 
 const SIDE_PANEL_PINNED_STORAGE_KEY = "spherse:side-panel:pinned";
@@ -34,6 +37,7 @@ function writePinned(pinned: boolean) {
 export const useSidePanelStore = create<SidePanelStore>((set, get) => ({
   pinned: readPinned(),
   hovered: false,
+  mobileOpen: false,
 
   setPinned(pinned) {
     writePinned(pinned);
@@ -67,5 +71,13 @@ export const useSidePanelStore = create<SidePanelStore>((set, get) => ({
       set({ hovered: false });
       hideTimer = null;
     }, 120);
+  },
+
+  showMobile() {
+    set({ mobileOpen: true });
+  },
+
+  hideMobile() {
+    set({ mobileOpen: false });
   },
 }));

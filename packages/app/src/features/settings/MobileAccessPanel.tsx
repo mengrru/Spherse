@@ -206,8 +206,9 @@ export function MobileAccessPanel() {
 
           <Field className="mt-4">
             <SectionTitle as={FieldLabel}>{t("settings.mobile.scanQr")}</SectionTitle>
+            <p className="text-xs text-muted-foreground leading-relaxed">{t("settings.mobile.qrWarning")}</p>
             {deeplink ? (
-              <div className="flex justify-center p-3 bg-white rounded-md w-fit mx-auto">
+              <div className="mt-2 flex justify-center p-3 bg-white rounded-md w-fit mx-auto">
                 <QrImage value={deeplink} />
               </div>
             ) : (

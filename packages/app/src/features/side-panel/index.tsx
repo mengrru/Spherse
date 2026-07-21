@@ -1,9 +1,59 @@
 import { useSidePanel } from "../../hooks/use-side-panel";
+import { useIsMobile } from "../../hooks/use-mobile";
 import { ActivityBar } from "../activity-bar";
 import { ProjectPanel } from "../project-panel";
+import { Button } from "../../components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+} from "../../components/ui/sheet";
+import { PanelLeftIcon } from "lucide-react";
+import { useI18n } from "@spherse/i18n/react";
 
 export function SidePanel() {
-  const { pinned, visible, show, hide, togglePin } = useSidePanel();
+  const {
+    pinned,
+    visible,
+    mobileOpen,
+    show,
+    hide,
+    togglePin,
+    showMobile,
+    hideMobile,
+  } = useSidePanel();
+  const isMobile = useIsMobile();
+  const { t } = useI18n();
+
+  if (isMobile) {
+    return (
+      <>
+        <Button
+          variant="outline"
+          size="icon-lg"
+          className="fixed bottom-4 start-4 z-40 size-14 rounded-full bg-background shadow-lg"
+          onClick={showMobile}
+          aria-label={t("side-panel.openTooltip")}
+          title={t("side-panel.openTooltip")}
+          aria-haspopup="dialog"
+          aria-expanded={mobileOpen}
+        >
+          <PanelLeftIcon className="size-6" />
+        </Button>
+        <Sheet open={mobileOpen} onOpenChange={(open) => (open ? showMobile() : hideMobile())}>
+          <SheetContent
+            side="left"
+            showCloseButton={false}
+            className="data-[side=left]:w-auto max-w-full gap-0 p-0"
+          >
+            <div className="flex h-full">
+              <ActivityBar />
+              <ProjectPanel />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </>
+    );
+  }
 
   return (
     <>

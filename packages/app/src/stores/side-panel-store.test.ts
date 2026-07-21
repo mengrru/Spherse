@@ -12,7 +12,7 @@ describe("useSidePanelStore", () => {
       setItem: (key: string, value: string) => storage.set(key, value),
     });
     storage.clear();
-    useSidePanelStore.setState({ pinned: true, hovered: false });
+    useSidePanelStore.setState({ pinned: true, hovered: false, mobileOpen: false });
   });
 
   it("persists the pinned preference in localStorage", () => {
@@ -46,5 +46,22 @@ describe("useSidePanelStore", () => {
     vi.advanceTimersByTime(200);
     expect(useSidePanelStore.getState().hovered).toBe(true);
     vi.useRealTimers();
+  });
+
+  it("controls mobile open state independently from desktop pinned/hovered", () => {
+    useSidePanelStore.getState().setPinned(false);
+    useSidePanelStore.getState().show();
+    expect(useSidePanelStore.getState().hovered).toBe(true);
+
+    useSidePanelStore.getState().showMobile();
+    expect(useSidePanelStore.getState().mobileOpen).toBe(true);
+    expect(useSidePanelStore.getState().hovered).toBe(true);
+
+    useSidePanelStore.getState().hideMobile();
+    expect(useSidePanelStore.getState().mobileOpen).toBe(false);
+    expect(useSidePanelStore.getState().hovered).toBe(true);
+
+    useSidePanelStore.getState().showMobile();
+    expect(useSidePanelStore.getState().mobileOpen).toBe(true);
   });
 });

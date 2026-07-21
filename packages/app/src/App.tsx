@@ -59,17 +59,13 @@ export function App() {
     <I18nProvider locale={locale ?? DEFAULT_LOCALE}>
       <TooltipProvider>
         <div data-app-root className="relative flex h-screen overflow-hidden bg-background text-foreground">
-          {bridge.renderMobileLayout ? (
-            bridge.renderMobileLayout(<Outlet />)
-          ) : (
-            <>
-              {!inProject && <ActivityBar />}
-              <Outlet />
-              {settingsModalOpen && settingsEnabled && (
-                <SettingsModal onClose={() => setSettingsModalOpen(false)} />
-              )}
-            </>
-          )}
+          <>
+            {!inProject && bridge.kind !== "web" && <ActivityBar />}
+            <Outlet />
+            {settingsModalOpen && settingsEnabled && (
+              <SettingsModal onClose={() => setSettingsModalOpen(false)} />
+            )}
+          </>
           <Toaster />
         </div>
       </TooltipProvider>

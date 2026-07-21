@@ -161,12 +161,12 @@ spherse/
 │   │       │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledTriggersByAgent 等项目数据缓存
 │   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗 open 状态等）
 │   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools 等持久化设置（与设置文件同步）
-│   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）
+│   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │   │       ├── layouts/
 │   │       │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/trigger WS/数据刷新/各 agent trigger 启用态预加载）
 │   │       ├── hooks/
-│   │       │   ├── useSidePanel.ts       # side panel pinned/hover 状态合并派生 + clickAway props
+│   │       │   ├── useSidePanel.ts       # side panel pinned/hover/mobileOpen 状态合并派生 + clickAway props
 │   │       │   ├── useCustomTheme.ts
 │   │       │   ├── useDismissable.ts
 │   │       │   └── use-mobile.ts
@@ -194,7 +194,7 @@ spherse/
 │   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、拖拽/调整大小、主题隔离），含 useFloatingSessionId / useFloatingChatRedirect
 │   │       │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
 │   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child
-│   │       │   ├── side-panel/           # 项目工作区左侧滑动单元，物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）
+│   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + Sheet（side=left，自带遮罩）滑出，由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）
 │   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer）与 UpdateChecker 组件、设置 store、类型与测试

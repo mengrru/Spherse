@@ -144,5 +144,4 @@ export interface HostBridge {
   readonly devTools?: DevToolsHostApi;
   readonly mobile?: MobileAccessHostApi;
   readonly renderConnectPage?: () => ReactNode;
-  readonly renderMobileLayout?: (children: ReactNode) => ReactNode;
 }
