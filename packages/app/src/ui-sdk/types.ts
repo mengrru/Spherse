@@ -1,5 +1,6 @@
 import type { NavigateFunction } from "react-router";
 import type { ApiClient } from "../lib/api";
+import type { HostKind } from "../lib/host-bridge";
 
 export interface ActionContext {
   navigate: NavigateFunction;
@@ -7,6 +8,7 @@ export interface ActionContext {
   client?: ApiClient;
   source?: MessageEventSource | null;
   requestId?: string;
+  hostKind: HostKind;
 }
 
 export type ActionHandler<P = Record<string, unknown>> = (

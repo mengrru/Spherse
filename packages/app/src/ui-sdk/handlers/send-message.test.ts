@@ -5,8 +5,14 @@ const mockSetInitialMessage = vi.fn();
 const mockSetFloatingChat = vi.fn();
 const mockNavigate = vi.fn();
 const mockPostMessage = vi.fn();
+const mockToastError = vi.fn();
 
 const sessionsState = vi.fn(() => ({} as Record<string, unknown>));
+const projectSessions = vi.fn(() => [{ id: "s1" }] as any[]);
+
+vi.mock("sonner", () => ({
+  toast: { error: mockToastError },
+}));
 
 vi.mock("../../features/chat/streaming-store", () => ({
   useStreamingStore: {
@@ -18,7 +24,16 @@ vi.mock("../../features/chat/streaming-store", () => ({
 }));
 
 vi.mock("../../stores/project-data-store", () => ({
-  useProjectDataStore: { getState: () => ({ setInitialMessage: mockSetInitialMessage }) },
+  useProjectDataStore: {
+    getState: () => ({
+      projects: { "proj-1": { sessions: projectSessions() } },
+      setInitialMessage: mockSetInitialMessage,
+    }),
+  },
+}));
+
+vi.mock("../../stores/settings-store", () => ({
+  useSettingsStore: { getState: () => ({ locale: "zh-CN" }) },
 }));
 
 vi.mock("../../features/floating-chat/store", () => ({
@@ -40,6 +55,7 @@ function makeCtx(overrides: Record<string, unknown> = {}) {
     navigate: mockNavigate,
     source: { postMessage: mockPostMessage } as any,
     requestId: "req-1",
+    hostKind: "electron" as const,
     ...overrides,
   } as any;
 }
@@ -51,8 +67,11 @@ describe("sendMessage action", () => {
     mockSetFloatingChat.mockReset();
     mockNavigate.mockReset();
     mockPostMessage.mockReset();
+    mockToastError.mockReset();
     sessionsState.mockReset();
     sessionsState.mockReturnValue({});
+    projectSessions.mockReset();
+    projectSessions.mockReturnValue([{ id: "s1" }]);
   });
 
   it("is a no-op when sessionId is missing", async () => {
@@ -141,5 +160,37 @@ describe("sendMessage action", () => {
     );
     expect(mockSetFloatingChat).toHaveBeenCalledWith("proj-1", { sessionId: "s1" });
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("downgrades float to chat page navigation on web", async () => {
+    sessionsState.mockReturnValue({
+      "s1": { ws: { readyState: WebSocket.OPEN }, streaming: false },
+    });
+    await dispatchAction(
+      "sendMessage",
+      { sessionId: "s1", message: "hi", float: true },
+      makeCtx({ hostKind: "web" }),
+    );
+    expect(mockSetFloatingChat).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith("/project/proj-1/chat/s1");
+  });
+
+  it("rejects unknown sessionId with toast and session_not_found error", async () => {
+    await dispatchAction(
+      "sendMessage",
+      { sessionId: "nonexistent", message: "hi" },
+      makeCtx(),
+    );
+    expect(mockToastError).toHaveBeenCalledTimes(1);
+    expect(mockWsSend).not.toHaveBeenCalled();
+    expect(mockSetInitialMessage).not.toHaveBeenCalled();
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        data: { error: "session_not_found" },
+      }),
+      "*",
+    );
   });
 });

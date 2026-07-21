@@ -413,4 +413,6 @@ export const zhTW: Record<TranslationKey, string> = {
   "contextMenu.copy": "複製",
   "contextMenu.paste": "貼上",
   "contextMenu.selectAll": "全選",
+
+  "ui-sdk.sessionNotFound": "找不到該對話，可能已被刪除",
 };

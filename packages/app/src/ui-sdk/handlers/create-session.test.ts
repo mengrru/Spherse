@@ -12,7 +12,7 @@ vi.mock("../../stores/project-data-store", () => ({
 }));
 
 vi.mock("../../features/floating-chat/store", () => ({
-  useFloatingChatStore: { getState: () => ({ setFloatingChat: mockSetFloatingChat }) },
+  useFloatingChatStore: { getState: () => ({ byProject: {}, setFloatingChat: mockSetFloatingChat }) },
 }));
 
 vi.mock("../../features/floating-chat", () => ({
@@ -26,11 +26,12 @@ function makeClient(listAgents: () => Promise<any[]>) {
   return { listAgents: vi.fn(listAgents) } as any;
 }
 
-function makeCtx(client: any, projectId = "proj-1") {
+function makeCtx(client: any, projectId = "proj-1", hostKind: "electron" | "web" = "electron") {
   return {
     client,
     projectId,
     navigate: vi.fn(),
+    hostKind,
   } as any;
 }
 
@@ -168,9 +169,20 @@ describe("createSession action", () => {
     await dispatchAction(
       "createSession",
       { agentId: "agent-1", float: true },
-      { client: makeClient(async () => []), projectId: "proj-1", navigate } as any,
+      { client: makeClient(async () => []), projectId: "proj-1", navigate, hostKind: "electron" } as any,
     );
     expect(mockSetFloatingChat).toHaveBeenCalledWith("proj-1", { sessionId: "session-1" });
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("downgrades float to chat page navigation on web", async () => {
+    const navigate = vi.fn();
+    await dispatchAction(
+      "createSession",
+      { agentId: "agent-1", float: true },
+      { client: makeClient(async () => []), projectId: "proj-1", navigate, hostKind: "web" } as any,
+    );
+    expect(mockSetFloatingChat).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith("/project/proj-1/chat/session-1");
   });
 });

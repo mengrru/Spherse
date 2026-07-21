@@ -31,6 +31,7 @@ import { EllipsisIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { dispatchAction } from "../../ui-sdk";
 import { useFeature } from "../../lib/use-feature";
+import { useHostBridge } from "../../context/host-bridge-context";
 
 const EMPTY_AGENTS: AgentProfile[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
@@ -40,6 +41,7 @@ export function AgentSessionList() {
   const { t } = useI18n();
   const { sessionId: activeSessionId = null } = useParams();
   const navigate = useNavigate();
+  const { kind: hostKind } = useHostBridge();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const agentDialogEnabled = useFeature("agent-dialog");
@@ -139,10 +141,10 @@ export function AgentSessionList() {
     deleteSession: (session) => setDialog({ kind: "delete-session", session }),
     renameSession: handleRenameSession,
     floatSession: (s) => {
-      dispatchAction("floatSession", { sessionId: s.id }, { navigate, projectId });
+      dispatchAction("floatSession", { sessionId: s.id }, { navigate, projectId, hostKind });
     },
     cancelFloat: () => {
-      dispatchAction("unfloatSession", {}, { navigate, projectId });
+      dispatchAction("unfloatSession", {}, { navigate, projectId, hostKind });
     },
     exportSession: handleExportSession,
     showSessionStatus: (session) => setDialog({ kind: "session-status", session }),

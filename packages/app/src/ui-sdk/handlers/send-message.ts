@@ -1,9 +1,11 @@
 import { registerAction } from "../registry";
 import { respond } from "../respond";
+import { toast } from "sonner";
+import { translate, normalizeLocale } from "@spherse/i18n";
 import { useStreamingStore } from "../../features/chat/streaming-store";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { useFloatingChatStore } from "../../features/floating-chat/store";
-import { getDefaultFloatingState } from "../../features/floating-chat";
+import { useSettingsStore } from "../../stores/settings-store";
+import { openChat } from "./open-chat";
 
 registerAction("sendMessage", (params, ctx) => {
   const { sessionId, message, float } = params as {
@@ -14,8 +16,17 @@ registerAction("sendMessage", (params, ctx) => {
   if (!sessionId || typeof sessionId !== "string") return;
   if (!message || typeof message !== "string") return;
 
-  const { sendMessage: wsSend, sessions } = useStreamingStore.getState();
-  const session = sessions[sessionId];
+  // NOTE: store 校验不可靠——分页未加载或尚未 refresh 的 session 即使存在也会被判为不存在
+  const sessions = useProjectDataStore.getState().projects[ctx.projectId]?.sessions ?? [];
+  if (!sessions.some((s) => s.id === sessionId)) {
+    const locale = normalizeLocale(useSettingsStore.getState().locale);
+    toast.error(translate(locale, "ui-sdk.sessionNotFound"));
+    respond(ctx, false, { error: "session_not_found" });
+    return;
+  }
+
+  const { sendMessage: wsSend, sessions: wsSessions } = useStreamingStore.getState();
+  const session = wsSessions[sessionId];
   const ws = session?.ws;
 
   if (session?.streaming) {
@@ -28,11 +39,5 @@ registerAction("sendMessage", (params, ctx) => {
     respond(ctx, true);
   }
 
-  const floatingSessionId = useFloatingChatStore.getState().byProject[ctx.projectId]?.sessionId;
-  if (float && floatingSessionId !== sessionId) {
-    useFloatingChatStore.getState().setFloatingChat(ctx.projectId, getDefaultFloatingState(sessionId));
-  }
-  if (!float && floatingSessionId !== sessionId) {
-    ctx.navigate(`/project/${ctx.projectId}/chat/${sessionId}`);
-  }
+  openChat(ctx, sessionId, float);
 });

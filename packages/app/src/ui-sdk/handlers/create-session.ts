@@ -1,7 +1,6 @@
 import { registerAction } from "../registry";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { useFloatingChatStore } from "../../features/floating-chat/store";
-import { getDefaultFloatingState } from "../../features/floating-chat";
+import { openChat } from "./open-chat";
 import type { ApiClient } from "../../lib/api";
 
 async function resolveAgentId(
@@ -42,9 +41,5 @@ registerAction("createSession", async (params, ctx) => {
     .createSession(ctx.projectId, ctx.client, resolvedAgentId, message);
   if (!session) return;
 
-  if (float) {
-    useFloatingChatStore.getState().setFloatingChat(ctx.projectId, getDefaultFloatingState(session.id));
-  } else {
-    ctx.navigate(`/project/${ctx.projectId}/chat/${session.id}`);
-  }
+  openChat(ctx, session.id, float);
 });

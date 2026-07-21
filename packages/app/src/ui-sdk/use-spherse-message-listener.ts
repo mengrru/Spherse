@@ -4,6 +4,7 @@ import { dispatchAction } from "./registry";
 import { checkRateLimit } from "./rate-limit";
 import type { ActionContext } from "./types";
 import type { ApiClient } from "../lib/api";
+import { useHostBridge } from "../context/host-bridge-context";
 
 export function isAllowedOrigin(
   eventOrigin: string,
@@ -21,6 +22,7 @@ export function useSpherseMessageListener(
   client: ApiClient | null,
 ): void {
   const navigate = useNavigate();
+  const bridge = useHostBridge();
 
   useEffect(() => {
     if (!client) return;
@@ -38,6 +40,7 @@ export function useSpherseMessageListener(
         client,
         source: event.source,
         requestId: event.data.requestId,
+        hostKind: bridge.kind,
       };
       void dispatchAction(
         event.data.action,
@@ -48,5 +51,5 @@ export function useSpherseMessageListener(
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [navigate, projectId, client]);
+  }, [navigate, projectId, client, bridge.kind]);
 }

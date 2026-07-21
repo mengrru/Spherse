@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { useDismissable } from "../../hooks/useDismissable";
 import { dispatchAction } from "../../ui-sdk";
+import { useHostBridge } from "../../context/host-bridge-context";
 
 interface StartSessionPopoverProps {
   selectedText: string;
@@ -64,6 +65,7 @@ export function StartSessionPopover({
   const ref = useRef<HTMLDivElement>(null);
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { kind: hostKind } = useHostBridge();
   useDismissable({ ref, onDismiss: onClose });
 
   const previewText =
@@ -77,7 +79,7 @@ export function StartSessionPopover({
     const parts = [t("text-selection.promptPrefix", { path: sourcePath, text: quotedText })];
     if (trimmedComment) parts.push(`\n\n${trimmedComment}`);
     const message = parts.join("");
-    dispatchAction("sendMessage", { sessionId, message }, { navigate, projectId });
+    dispatchAction("sendMessage", { sessionId, message }, { navigate, projectId, hostKind });
     onClose();
   };
 

@@ -178,10 +178,11 @@ spherse/
 │   │       │   ├── use-spherse-message-listener.ts # postMessage → dispatchAction 桥梁
 │   │       │   ├── index.ts              # barrel export + handler side-effect import
 │   │       │   └── handlers/
-│   │       │       ├── create-session.ts # 创建会话并导航，支持 float 参数直达浮窗
-│   │       │       ├── float-session.ts  # 将指定会话移入浮窗
+│   │       │       ├── create-session.ts # 创建会话并导航，支持 float 参数直达浮窗（web 端降级为跳转 chat page）
+│   │       │       ├── float-session.ts  # 将指定会话移入浮窗（web 端降级为跳转 chat page）
+│   │       │       ├── open-chat.ts      # openChat 工具：按 hostKind 决定 setFloatingChat 或 navigate 到 chat page
 │   │       │       ├── open-file.ts      # 在 Content Browser 打开文件
-│   │       │       ├── send-message.ts   # 向已有会话发送消息并导航，支持 float 参数与 request-response（session_busy 反馈）；已浮窗会话不导航
+│   │       │       ├── send-message.ts   # 向已有会话发送消息并导航，支持 float 参数与 request-response（session_busy 反馈）；已浮窗会话不导航；web 端 float 降级为跳转
 │   │       │       ├── unfloat-session.ts # 取消浮窗
 │   │       │       └── data.ts           # data.get/set/delete key-value 持久化
 │   │       ├── features/

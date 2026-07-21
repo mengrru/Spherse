@@ -413,4 +413,6 @@ export const en: Record<TranslationKey, string> = {
   "contextMenu.copy": "Copy",
   "contextMenu.paste": "Paste",
   "contextMenu.selectAll": "Select All",
+
+  "ui-sdk.sessionNotFound": "Session not found. It may have been deleted.",
 };

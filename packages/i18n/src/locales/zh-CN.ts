@@ -867,4 +867,8 @@ export const zhCN = {
   "contextMenu.paste": "粘贴",
   // 文本框右键菜单「全选」
   "contextMenu.selectAll": "全选",
+
+  // --- UI SDK ---
+  // sendMessage action 收到失效/未知 sessionId 时弹出的 toast 提示
+  "ui-sdk.sessionNotFound": "找不到该会话，可能已被删除",
 } as const;
