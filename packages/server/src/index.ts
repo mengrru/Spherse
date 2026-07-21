@@ -92,6 +92,12 @@ export async function createMultiProjectServer(
   handleChatWebSocket(fastify, registry);
   handleBusWebSocket(fastify, registry);
 
+  fastify.addHook("onResponse", async (req, reply) => {
+    const urlPath = req.url.split("?", 1)[0];
+    if (!urlPath.includes("/preview/")) return;
+    req.log.info({ statusCode: reply.statusCode }, "preview response");
+  });
+
   await fastify.listen({ port: 0, host: "127.0.0.1" });
 
   const address = fastify.server.address() as AddressInfo;

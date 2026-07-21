@@ -94,11 +94,12 @@ export function WelcomePage({
 
   const ext = getFileExtension(path);
   const isHtml = HTML_EXTENSIONS.has(ext);
-  const previewUrl = client.getPreviewUrl(path, reloadKey);
+  const previewUrl = client.getPreviewUrl(path);
 
   if (isHtml) {
     return (
       <iframe
+        key={reloadKey}
         src={previewUrl}
         className="flex-1 w-full border-0"
         title="Welcome Page"
@@ -111,6 +112,7 @@ export function WelcomePage({
   return (
     <div className="flex h-full items-center justify-center p-8">
       <img
+        key={reloadKey}
         src={previewUrl}
         alt="Welcome Page"
         className="max-h-full max-w-full object-contain"

@@ -33,8 +33,10 @@ describe("WelcomePage structure", () => {
     expect(source).toContain("if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current)");
   });
 
-  it("appends a cache-busting query to the preview url so the iframe/img reload", () => {
-    expect(source).toContain("getPreviewUrl(path, reloadKey)");
+  it("uses a cache-stable preview URL and forces reload via React key on iframe/img", () => {
+    expect(source).toContain("getPreviewUrl(path)");
+    expect(source).not.toContain("getPreviewUrl(path, reloadKey)");
+    expect(source).toContain("key={reloadKey}");
     expect(source).toContain("const previewUrl = ");
     expect(source).toContain("src={previewUrl}");
   });
