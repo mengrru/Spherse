@@ -54,4 +54,11 @@ describe("SidePanel structure", () => {
     expect(source).toContain('aria-haspopup="dialog"');
     expect(source).toContain('aria-label={t("side-panel.openTooltip")}');
   });
+
+  it("closes the mobile drawer after navigating from within it", () => {
+    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
+
+    expect(source).toContain("useLocation");
+    expect(source).toContain("hideMobile()");
+  });
 });

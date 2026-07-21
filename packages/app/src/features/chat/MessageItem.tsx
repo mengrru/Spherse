@@ -22,13 +22,16 @@ export function MessageItem({ message, agent, showTime, onNavigateToPath }: Mess
 
   return (
     <div
-      className={`group max-w-[90%] min-w-0 flex items-end gap-1.5 ${isUser ? "self-end flex-row-reverse" : "self-start"}`}
+      className={`group max-w-[90%] min-w-0 flex items-start gap-1.5 ${isUser ? "self-end flex-row-reverse" : "self-start flex-row"}`}
       data-chat-message
       data-role={message.role}
     >
       <div
+        className={`flex min-w-0 flex-col gap-1 ${isUser ? "items-end md:flex-row-reverse" : "items-start md:flex-row"} md:items-end md:gap-1.5`}
+      >
+      <div
         data-chat-bubble
-        className={`min-w-0 overflow-hidden rounded-lg px-3.5 py-2.5 leading-7 break-words ${
+        className={`max-w-full min-w-0 overflow-hidden rounded-lg px-3.5 py-2.5 leading-7 break-words ${
           isUser
             ? "bg-primary text-primary-foreground"
             : "border border-border bg-card text-card-foreground"
@@ -70,7 +73,7 @@ export function MessageItem({ message, agent, showTime, onNavigateToPath }: Mess
         )}
       </div>
         {!message._streaming && (
-          <div className={`flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pb-1 ${isUser ? "flex-row-reverse" : ""}`}>
+          <div className={`flex items-center gap-1 pb-1 opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 ${isUser ? "md:flex-row-reverse" : ""}`}>
             <CopyButton text={message.content} />
             {showTime && message.timestamp && (
               <time className="text-[11px] text-muted-foreground whitespace-nowrap">
@@ -79,6 +82,7 @@ export function MessageItem({ message, agent, showTime, onNavigateToPath }: Mess
             )}
           </div>
         )}
+      </div>
     </div>
   );
 }

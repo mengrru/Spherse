@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { useLocation } from "react-router";
 import { useSidePanel } from "../../hooks/use-side-panel";
 import { useIsMobile } from "../../hooks/use-mobile";
 import { ActivityBar } from "../activity-bar";
@@ -23,6 +25,15 @@ export function SidePanel() {
   } = useSidePanel();
   const isMobile = useIsMobile();
   const { t } = useI18n();
+
+  const location = useLocation();
+  const lastLocationKey = useRef(location.key);
+  useEffect(() => {
+    if (location.key !== lastLocationKey.current) {
+      lastLocationKey.current = location.key;
+      hideMobile();
+    }
+  }, [location.key, hideMobile]);
 
   if (isMobile) {
     return (
