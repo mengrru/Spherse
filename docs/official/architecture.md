@@ -5,7 +5,7 @@
 - **@spherse/core**：纯 Node.js 核心逻辑，负责项目数据、agent profile、session、skill、tool 和运行时管理，不依赖 Electron 或 Fastify
 - **@spherse/presets**：内置模板与预置静态内容，构建前通过 `scripts/sync-templates.mjs` 将 `templates/*.md` 同步为可导入常量，并从 `presets.json` 及 `skills/` 目录生成预置 skill 源码、agent 配置和 prompt template（`PRESET_SKILLS`、`PRESET_AGENTS`、`PRESET_SKILL_SOURCES`、`PRESET_PROMPT_TEMPLATES`）；其中 `PRESET_SKILL_SOURCES` 由 core 的 `SkillStore` 在内存中合并为 builtin skill，`PRESET_AGENTS` 供 `initPresets()` 在新项目创建时注入，`PRESET_PROMPT_TEMPLATES` 供前端 Agent 创建对话框作为可复用 prompt 模板徽章选择（不参与项目创建注入）
 - **@spherse/server**：Fastify API 层，只负责把 HTTP/WebSocket 请求转发到 core 的运行时模块（ProjectManager、SessionRuntime、TriggerManager）
-- **前端三层分离**：`@spherse/app`（共享 React renderer，含 features/stores/lib/components 与 `HostBridge` 接口）+ `@spherse/desktop`（Electron 桌面壳，main/preload/electron 基础设施 + 桌面专属 feature，提供 `ElectronHostBridge`）+ `@spherse/web`（Web 版本壳/PWA，规划中，提供 `WebHostBridge`）。renderer 通过 `HostBridge` 抽象访问宿主能力（IPC/外部链接/更新等），不直接 `window.electronAPI`，从而可在桌面与 Web 两种宿主复用
+- **前端三层分离**：`@spherse/app`（共享 React renderer，含 features/stores/lib/components 与 `HostBridge` 接口）+ `@spherse/desktop`（Electron 桌面壳，main/preload/electron 基础设施 + 桌面专属 feature，提供 `ElectronHostBridge`）+ `@spherse/web`（移动端 PWA 壳，提供 `WebHostBridge`，经 Cloudflare Quick Tunnel 远程连接桌面 server）。renderer 通过 `HostBridge` 抽象访问宿主能力（IPC/外部链接/更新等），不直接 `window.electronAPI`，从而可在桌面与 Web 两种宿主复用
 
 ## Core 层
 

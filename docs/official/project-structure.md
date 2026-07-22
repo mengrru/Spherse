@@ -256,10 +256,17 @@ spherse/
 │   │       ├── text-selection-session.spec.ts  # 划选会话 E2E 测试
 │   │       ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
 │   │       └── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
-│   ├── web/                          # @spherse/web — Web 版本壳（规划中）
-│   │   ├── vite.config.ts            # 标准 Vite 构建配置
-│   │   ├── index.html                # 入口 HTML
-│   │   └── src/                      # Web 版本专属源码（规划中）
+│   ├── web/                          # @spherse/web — Web 版本壳 / 移动端 PWA（GitHub Pages 部署到 /web/）
+│   │   ├── vite.config.ts            # Vite + vite-plugin-pwa（manifest + generateSW app shell precache）+ manualChunks（vendor-react/vendor-markdown）
+│   │   ├── index.html                # 入口 HTML（theme-color / apple-mobile-web-app / viewport-fit=cover 元数据）
+│   │   ├── public/                   # PWA 静态资源
+│   │   │   ├── favicon.svg
+│   │   │   └── icons/                # PWA 图标（pwa-192/512、maskable-512、apple-touch-icon，从 desktop/build 派生）
+│   │   ├── pages-assets/404.html     # GitHub Pages SPA fallback（/web → /web/，其余 → /）
+│   │   └── src/                      # Web 版本专属源码
+│   │       ├── main.tsx              # 注入 WebHostBridge 调 createAppRoot
+│   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集、token 探活、disconnect）
+│   │       └── pages/MobileConnectPage.tsx # 扫码/手动输入连接页
 │   ├── landing/                      # @spherse/landing — GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）
 │   │   ├── vite.config.ts            # 标准 Vite 构建配置（base: "/"，自定义域名根路径部署）
 │   │   ├── index.html                # 入口 HTML

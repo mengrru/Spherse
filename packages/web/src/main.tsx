@@ -1,4 +1,7 @@
 import { createAppRoot } from "@spherse/app/src/main";
 import { createWebHostBridge } from "./host-bridge-web";
+import { setupWebResumeReload } from "./resume-reload";
 
-createAppRoot(createWebHostBridge());
+const bridge = createWebHostBridge();
+setupWebResumeReload();
+createAppRoot(bridge);
