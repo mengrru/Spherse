@@ -9,7 +9,7 @@ import {
   Sheet,
   SheetContent,
 } from "../../components/ui/sheet";
-import { PanelLeftIcon } from "lucide-react";
+import { ChevronRightIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 
 export function SidePanel() {
@@ -40,21 +40,20 @@ export function SidePanel() {
       <>
         <Button
           variant="outline"
-          size="icon-lg"
-          className="fixed bottom-4 start-4 z-40 size-14 rounded-full bg-background shadow-lg"
+          className="fixed start-0 top-1/2 z-40 flex h-14 w-5 -translate-y-1/2 flex-col items-center justify-center rounded-e-md border-s-0 bg-muted shadow-sm"
           onClick={showMobile}
           aria-label={t("side-panel.openTooltip")}
           title={t("side-panel.openTooltip")}
           aria-haspopup="dialog"
           aria-expanded={mobileOpen}
         >
-          <PanelLeftIcon className="size-6" />
+          <ChevronRightIcon className="size-4" />
         </Button>
         <Sheet open={mobileOpen} onOpenChange={(open) => (open ? showMobile() : hideMobile())}>
           <SheetContent
             side="left"
             showCloseButton={false}
-            className="data-[side=left]:w-auto max-w-full gap-0 p-0"
+            className="data-[side=left]:w-auto data-[side=left]:border-r-0 max-w-full gap-0 p-0"
           >
             <div className="flex h-full">
               <ActivityBar />

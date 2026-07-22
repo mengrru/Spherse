@@ -12,7 +12,7 @@ export function GlobalErrorBoundary() {
   }, [error]);
 
   return (
-    <div data-app-root className="flex h-screen flex-col items-center justify-center gap-4 bg-background p-8 text-center text-foreground">
+    <div data-app-root className="flex h-dvh flex-col items-center justify-center gap-4 bg-background p-8 text-center text-foreground">
       <h1 className="text-xl font-semibold">{translate(locale, "error.unexpectedTitle")}</h1>
       <p className="text-sm text-muted-foreground">{translate(locale, "error.unexpectedMessage")}</p>
       <div className="flex gap-2">
