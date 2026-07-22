@@ -12,7 +12,7 @@ import { registerAllRoutes } from "./routes/index.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleBusWebSocket } from "./ws-bus.js";
 
-export { ProjectRegistry, type ProjectContext, type ProjectInfo } from "./registry.js";
+export { ProjectRegistry, type ProjectContext, type ProjectInfo, type RegisterOptions } from "./registry.js";
 
 export interface MultiProjectServer {
   fastify: FastifyInstance;

@@ -15,11 +15,17 @@ export interface ProjectInfo {
   id: string;
   name: string;
   rootPath: string;
+  lastOpened?: string;
+}
+
+export interface RegisterOptions {
+  lastOpened?: string;
 }
 
 export class ProjectRegistry {
   private projects = new Map<string, ProjectContext>();
   private pending = new Map<string, Promise<ProjectContext>>();
+  private lastOpenedMap = new Map<string, string>();
   private logger: Logger;
   private defaultModel?: string;
   private sampling?: SamplingParams;
@@ -33,11 +39,14 @@ export class ProjectRegistry {
     this.sampling = options?.sampling;
   }
 
-  async register(projectRoot: string): Promise<ProjectContext> {
+  async register(projectRoot: string, options?: RegisterOptions): Promise<ProjectContext> {
     const resolvedRoot = path.resolve(projectRoot);
 
     for (const ctx of this.projects.values()) {
       if (ctx.projectManager.getRootPath() === resolvedRoot) {
+        if (options?.lastOpened) {
+          this.lastOpenedMap.set(ctx.projectId, options.lastOpened);
+        }
         return ctx;
       }
     }
@@ -45,7 +54,7 @@ export class ProjectRegistry {
     const existing = this.pending.get(resolvedRoot);
     if (existing) return existing;
 
-    const promise = this.doRegister(resolvedRoot);
+    const promise = this.doRegister(resolvedRoot, options);
     this.pending.set(resolvedRoot, promise);
     try {
       return await promise;
@@ -54,7 +63,7 @@ export class ProjectRegistry {
     }
   }
 
-  private async doRegister(resolvedRoot: string): Promise<ProjectContext> {
+  private async doRegister(resolvedRoot: string, options?: RegisterOptions): Promise<ProjectContext> {
     const projectLogger = this.logger.child({ projectRoot: resolvedRoot });
     const runtime = await createProject(resolvedRoot, {
       defaultModel: this.defaultModel,
@@ -81,6 +90,9 @@ export class ProjectRegistry {
       projectId,
     };
     this.projects.set(projectId, ctx);
+    if (options?.lastOpened) {
+      this.lastOpenedMap.set(projectId, options.lastOpened);
+    }
     return ctx;
   }
 
@@ -100,8 +112,14 @@ export class ProjectRegistry {
     const result: ProjectInfo[] = [];
     for (const [id, ctx] of this.projects) {
       const rootPath = ctx.projectManager.getRootPath();
-      result.push({ id, name: path.basename(rootPath), rootPath });
+      const lastOpened = this.lastOpenedMap.get(id);
+      result.push({ id, name: path.basename(rootPath), rootPath, lastOpened });
     }
+    result.sort((a, b) => {
+      const ta = a.lastOpened ?? "";
+      const tb = b.lastOpened ?? "";
+      return tb.localeCompare(ta);
+    });
     return result;
   }
 
@@ -109,7 +127,13 @@ export class ProjectRegistry {
     const ctx = this.projects.get(projectId);
     if (!ctx) return undefined;
     const rootPath = ctx.projectManager.getRootPath();
-    return { id: projectId, name: path.basename(rootPath), rootPath };
+    const lastOpened = this.lastOpenedMap.get(projectId);
+    return { id: projectId, name: path.basename(rootPath), rootPath, lastOpened };
+  }
+
+  setLastOpened(projectId: string, lastOpened: string): void {
+    if (!this.projects.has(projectId)) return;
+    this.lastOpenedMap.set(projectId, lastOpened);
   }
 
   async remove(projectId: string): Promise<void> {
@@ -117,6 +141,7 @@ export class ProjectRegistry {
     if (!ctx) return;
     await ctx.runtime.shutdown();
     this.projects.delete(projectId);
+    this.lastOpenedMap.delete(projectId);
   }
 
   async removeAll(): Promise<void> {

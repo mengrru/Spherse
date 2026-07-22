@@ -11,7 +11,7 @@ interface ServerHandle {
 
 let serverHandle: ServerHandle | null = null;
 let activeAccessToken: string | undefined;
-let registeredProjectRoots: string[] = [];
+let registeredProjects: Array<{ root: string; lastOpened?: string }> = [];
 
 export async function ensureServer(): Promise<void> {
   if (serverHandle) return;
@@ -24,9 +24,9 @@ export async function ensureServer(): Promise<void> {
     auth: activeAccessToken ? { accessToken: activeAccessToken } : undefined,
   });
   serverHandle = { fastify: result.fastify, registry: result.registry };
-  for (const root of registeredProjectRoots) {
+  for (const { root, lastOpened } of registeredProjects) {
     try {
-      await serverHandle.registry.register(root);
+      await serverHandle.registry.register(root, lastOpened ? { lastOpened } : undefined);
     } catch {
       // ignore projects that no longer exist
     }
@@ -35,7 +35,10 @@ export async function ensureServer(): Promise<void> {
 
 export async function restartServerWithAuth(token: string | undefined): Promise<void> {
   if (serverHandle) {
-    registeredProjectRoots = [...serverHandle.registry.listInfo().map((info) => info.rootPath)];
+    registeredProjects = serverHandle.registry.listInfo().map((info) => ({
+      root: info.rootPath,
+      lastOpened: info.lastOpened,
+    }));
     await serverHandle.registry.removeAll();
     await serverHandle.fastify.close();
     serverHandle = null;
@@ -49,13 +52,21 @@ export function getServerPort(): number {
   return typeof address === "object" && address ? address.port : 0;
 }
 
-export async function registerProject(projectRoot: string): Promise<{ projectId: string }> {
+export async function registerProject(
+  projectRoot: string,
+  options?: { lastOpened?: string },
+): Promise<{ projectId: string }> {
   if (!serverHandle) throw new Error("Server not started");
-  const ctx = await serverHandle.registry.register(projectRoot);
-  if (!registeredProjectRoots.includes(projectRoot)) {
-    registeredProjectRoots.push(projectRoot);
+  const ctx = await serverHandle.registry.register(projectRoot, options);
+  if (!registeredProjects.some((p) => p.root === projectRoot)) {
+    registeredProjects.push({ root: projectRoot, lastOpened: options?.lastOpened });
   }
   return { projectId: ctx.projectId };
+}
+
+export function setProjectLastOpened(projectId: string, lastOpened: string): void {
+  if (!serverHandle) return;
+  serverHandle.registry.setLastOpened(projectId, lastOpened);
 }
 
 export async function unregisterProject(projectId: string): Promise<void> {
@@ -78,6 +89,6 @@ export async function stopServer(): Promise<void> {
   await serverHandle.registry.removeAll();
   await serverHandle.fastify.close();
   serverHandle = null;
-  registeredProjectRoots = [];
+  registeredProjects = [];
   activeAccessToken = undefined;
 }

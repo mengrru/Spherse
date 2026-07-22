@@ -3,7 +3,7 @@ import type { BrowserWindow } from "electron";
 import path from "node:path";
 import { existsSync, mkdirSync, cpSync } from "node:fs";
 import { translate, normalizeLocale } from "@spherse/i18n";
-import { registerProject, unregisterProject, getServerPort } from "../server.js";
+import { registerProject, unregisterProject, getServerPort, setProjectLastOpened } from "../server.js";
 import {
   getOpenProjects,
   addOpenProject,
@@ -11,6 +11,7 @@ import {
   setLastActiveProject,
   getLastActiveProject,
   getLocale,
+  bumpLastOpenedById,
 } from "../settings.js";
 import { readSampleManifest, resolveSampleSrcDir } from "../sample-projects.js";
 
@@ -27,7 +28,7 @@ export function registerProjectIpc(
   });
 
   ipcMain.handle("open-project", async (_event, projectRoot: string) => {
-    return registerProject(projectRoot);
+    return registerProject(projectRoot, { lastOpened: new Date().toISOString() });
   });
 
   ipcMain.handle("get-server-port", () => {
@@ -39,11 +40,11 @@ export function registerProjectIpc(
   });
 
   ipcMain.handle("restore-projects", async () => {
-    const entries = getOpenProjects();
+    const entries = getOpenProjects().slice().sort((a, b) => (b.lastOpened ?? "").localeCompare(a.lastOpened ?? ""));
     const results: Array<{ id: string; path: string; name: string; lastOpened: string }> = [];
     for (const entry of entries) {
       try {
-        const { projectId } = await registerProject(entry.path);
+        const { projectId } = await registerProject(entry.path, { lastOpened: entry.lastOpened });
         results.push({ id: projectId, path: entry.path, name: entry.name, lastOpened: entry.lastOpened });
       } catch {
         // directory deleted or corrupt, skip silently
@@ -86,6 +87,8 @@ export function registerProjectIpc(
 
   ipcMain.handle("set-last-active-project", (_event, projectId: string) => {
     setLastActiveProject(projectId);
+    const ts = bumpLastOpenedById(projectId);
+    if (ts) setProjectLastOpened(projectId, ts);
   });
 
   ipcMain.handle("get-last-active-project", () => {
@@ -129,7 +132,7 @@ export function registerProjectIpc(
       return { error: "copyFailed" };
     }
     try {
-      const { projectId } = await registerProject(targetDir);
+      const { projectId } = await registerProject(targetDir, { lastOpened: new Date().toISOString() });
       return { projectId, path: targetDir };
     } catch (err) {
       console.error("[open-sample-project] register failed:", err);

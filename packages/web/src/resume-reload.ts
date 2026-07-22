@@ -13,8 +13,15 @@ export function setupWebResumeReload(): () => void {
       hiddenAt = null;
     }
   };
+  const onPageShow = (event: PageTransitionEvent) => {
+    if (event.persisted) {
+      window.location.reload();
+    }
+  };
   document.addEventListener("visibilitychange", onVisibility);
+  window.addEventListener("pageshow", onPageShow);
   return () => {
     document.removeEventListener("visibilitychange", onVisibility);
+    window.removeEventListener("pageshow", onPageShow);
   };
 }

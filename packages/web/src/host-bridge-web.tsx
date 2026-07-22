@@ -94,11 +94,11 @@ function createWebProjectApi(
       throw new Error("openProject is not supported on web");
     },
     async restoreProjects() {
-      const entries = await fetchJson<Array<{ id: string; name: string }>>("/api/projects");
+      const entries = await fetchJson<Array<{ id: string; name: string; lastOpened?: string }>>("/api/projects");
       if (entries.length === 0) return [];
       const infos = await Promise.allSettled(
         entries.map((entry) =>
-          fetchJson<{ id: string; name: string; rootPath: string }>(
+          fetchJson<{ id: string; name: string; rootPath: string; lastOpened?: string }>(
             `/api/projects/${encodeURIComponent(entry.id)}/info`,
           ),
         ),
@@ -111,7 +111,7 @@ function createWebProjectApi(
             id: info.id,
             path: info.rootPath,
             name: info.name,
-            lastOpened: PLACEHOLDER_LAST_OPENED,
+            lastOpened: info.lastOpened ?? PLACEHOLDER_LAST_OPENED,
           });
         } else {
           const entry = entries[index];
@@ -119,7 +119,7 @@ function createWebProjectApi(
             id: entry.id,
             path: "",
             name: entry.name,
-            lastOpened: PLACEHOLDER_LAST_OPENED,
+            lastOpened: entry.lastOpened ?? PLACEHOLDER_LAST_OPENED,
           });
         }
       });

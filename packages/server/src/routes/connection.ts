@@ -29,7 +29,7 @@ export function registerConnectionRoutes(
   fastify.get("/api/projects", {
     schema: { response: { 200: schemas.projectListResponse } },
     async handler() {
-      return registry.listInfo().map(({ id, name }) => ({ id, name }));
+      return registry.listInfo().map(({ id, name, lastOpened }) => ({ id, name, lastOpened }));
     },
   });
 
@@ -40,7 +40,8 @@ export function registerConnectionRoutes(
       async handler(req) {
         const info = registry.getInfo(req.params.projectId);
         if (!info) throw notFound("Unknown project");
-        return info;
+        const { id, name, rootPath, lastOpened } = info;
+        return { id, name, rootPath, lastOpened };
       },
     },
   );

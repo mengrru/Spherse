@@ -30,13 +30,15 @@ export function MobileConnectPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [submitting, setSubmitting] = useState(false);
 
-  const handleConnect = async (conn: ParsedConnection) => {
+  const handleConnect = async (conn: ParsedConnection, targetPath?: string) => {
     setSubmitting(true);
     try {
       persistConnection(conn);
       const firstProjectId = await restoreProjects(bridge);
       toast.success(t("mobile-connect.connected"));
-      if (firstProjectId) {
+      if (targetPath) {
+        navigate(targetPath, { replace: true });
+      } else if (firstProjectId) {
         navigate(`/project/${firstProjectId}`, { replace: true });
       } else {
         navigate("/", { replace: true });
@@ -52,11 +54,13 @@ export function MobileConnectPage() {
     const base = searchParams.get("base");
     const token = searchParams.get("token");
     if (!base || !token) return;
+    const path = searchParams.get("targetPath");
     const cleaned = new URLSearchParams(searchParams);
     cleaned.delete("base");
     cleaned.delete("token");
+    cleaned.delete("targetPath");
     setSearchParams(cleaned, { replace: true });
-    void handleConnect({ baseUrl: base, token });
+    void handleConnect({ baseUrl: base, token }, path ?? undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -3,11 +3,14 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { registerConnectionRoutes } from "../routes/connection.js";
 import type { ProjectRegistry, ProjectInfo } from "../registry.js";
 
-function buildRegistry(entries: Array<{ id: string; rootPath: string }>): ProjectRegistry {
+function buildRegistry(
+  entries: Array<{ id: string; rootPath: string; lastOpened?: string }>,
+): ProjectRegistry {
   const infos: ProjectInfo[] = entries.map((e) => ({
     id: e.id,
     rootPath: e.rootPath,
     name: e.rootPath.split("/").pop() ?? e.rootPath,
+    lastOpened: e.lastOpened,
   }));
   return {
     listInfo: () => infos,
@@ -51,7 +54,7 @@ describe("connection routes", () => {
     });
     afterAll(async () => { await app.close(); });
 
-    it("returns project list with sanitized fields (id + name only)", async () => {
+    it("returns project list with id, name, and lastOpened", async () => {
       const res = await app.inject({ method: "GET", url: "/api/projects" });
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.body);
@@ -85,6 +88,39 @@ describe("connection routes", () => {
     it("returns 404 for an unknown project", async () => {
       const res = await app.inject({ method: "GET", url: "/api/projects/unknown/info" });
       expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe("GET /api/projects with lastOpened", () => {
+    let app: FastifyInstance;
+    beforeAll(async () => {
+      app = buildApp(buildRegistry([
+        { id: "p1", rootPath: "/home/user/project-a", lastOpened: "2026-01-01T00:00:00.000Z" },
+        { id: "p2", rootPath: "/home/user/project-b", lastOpened: "2026-02-01T00:00:00.000Z" },
+      ]), false);
+      await app.ready();
+    });
+    afterAll(async () => { await app.close(); });
+
+    it("includes lastOpened in the list response", async () => {
+      const res = await app.inject({ method: "GET", url: "/api/projects" });
+      expect(res.statusCode).toBe(200);
+      const body = JSON.parse(res.body);
+      expect(body).toEqual([
+        { id: "p1", name: "project-a", lastOpened: "2026-01-01T00:00:00.000Z" },
+        { id: "p2", name: "project-b", lastOpened: "2026-02-01T00:00:00.000Z" },
+      ]);
+    });
+
+    it("includes lastOpened in the info response", async () => {
+      const res = await app.inject({ method: "GET", url: "/api/projects/p1/info" });
+      expect(res.statusCode).toBe(200);
+      expect(JSON.parse(res.body)).toEqual({
+        id: "p1",
+        name: "project-a",
+        rootPath: "/home/user/project-a",
+        lastOpened: "2026-01-01T00:00:00.000Z",
+      });
     });
   });
 });

@@ -3,12 +3,14 @@ import { Type, type Static } from "@sinclair/typebox";
 const projectListEntry = Type.Object({
   id: Type.String(),
   name: Type.String(),
+  lastOpened: Type.Optional(Type.String()),
 });
 
 const projectInfoResponse = Type.Object({
   id: Type.String(),
   name: Type.String(),
   rootPath: Type.String(),
+  lastOpened: Type.Optional(Type.String()),
 });
 
 const connectionInfoResponse = Type.Object({

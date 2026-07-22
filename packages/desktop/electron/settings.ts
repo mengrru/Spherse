@@ -187,6 +187,16 @@ export function updateLastOpened(projectPath: string): void {
   }
 }
 
+export function bumpLastOpenedById(projectId: string): string | null {
+  const projects = getOpenProjects();
+  const entry = projects.find((p) => p.id === projectId);
+  if (!entry) return null;
+  const ts = new Date().toISOString();
+  entry.lastOpened = ts;
+  settingsStore.set("openProjects", projects);
+  return ts;
+}
+
 export function getLastActiveProject(): string | null {
   return settingsStore.get("lastActiveProject") ?? null;
 }

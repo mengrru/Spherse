@@ -11,12 +11,16 @@ import { Input } from "../../components/ui/input";
 import { toast } from "sonner";
 import type { MobileAccessState, TunnelStatus } from "../../lib/host-bridge";
 import { useAppStore } from "../../stores/app-store";
+import { useLocation } from "react-router";
 import { Copy, RefreshCw } from "lucide-react";
 
 const WEB_APP_URL = "https://spherse.mengru.work/web/";
 
-function buildDeeplink(publicUrl: string, token: string): string {
+function buildDeeplink(publicUrl: string, token: string, targetPath?: string): string {
   const params = new URLSearchParams({ base: publicUrl, token });
+  if (targetPath) {
+    params.set("targetPath", targetPath);
+  }
   return `${WEB_APP_URL}#/?${params.toString()}`;
 }
 
@@ -42,6 +46,7 @@ export function MobileAccessPanel() {
   const [state, setState] = useState<MobileAccessState | null>(null);
   const [working, setWorking] = useState<null | "enable" | "disable" | "regenerate" | "restart">(null);
   const [revealToken, setRevealToken] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     if (!mobile) return;
@@ -87,7 +92,9 @@ export function MobileAccessPanel() {
   const tunnelStatus = state?.tunnel?.status ?? "stopped";
   const publicUrl = state?.tunnel?.publicUrl ?? null;
   const token = state?.token ?? null;
-  const deeplink = enabled && publicUrl && token ? buildDeeplink(publicUrl, token) : null;
+  const targetPath = location.pathname.startsWith("/project/") ? location.pathname : undefined;
+  const deeplink =
+    enabled && publicUrl && token ? buildDeeplink(publicUrl, token, targetPath) : null;
 
   return (
     <FieldGroup>
