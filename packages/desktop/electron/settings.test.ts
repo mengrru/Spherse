@@ -16,7 +16,7 @@ vi.mock("electron", () => ({
   nativeTheme: { themeSource: "system" },
 }));
 
-import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore } from "./settings";
+import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore, getMobileAccess, setMobileAccess } from "./settings";
 import { getSupportedProviders } from "@spherse/core";
 
 describe("mergeModelGroup sampling passthrough", () => {
@@ -218,5 +218,55 @@ describe("customProviders persistence", () => {
       customProviders: [],
     });
     expect(getSupportedProviders()["my-openai"]).toBeUndefined();
+  });
+});
+
+describe("mobileAccess persistence", () => {
+  it("getMobileAccess defaults mode to quick and other fields to empty", () => {
+    settingsStore.set("settings", undefined);
+    expect(getMobileAccess()).toEqual({ enabled: false, token: undefined, mode: "quick", publicDomain: undefined });
+  });
+
+  it("setMobileAccess round-trips mode and publicDomain", () => {
+    settingsStore.set("settings", undefined);
+    setMobileAccess({ enabled: true, token: "abc", mode: "manual", publicDomain: "https://spherse.example.com" });
+    expect(getMobileAccess()).toEqual({
+      enabled: true,
+      token: "abc",
+      mode: "manual",
+      publicDomain: "https://spherse.example.com",
+    });
+  });
+
+  it("setMobileAccess merges patch preserving untouched fields", () => {
+    settingsStore.set("settings", undefined);
+    setMobileAccess({ enabled: true, token: "abc", mode: "manual", publicDomain: "https://a.com" });
+    setMobileAccess({ publicDomain: "https://b.com" });
+    expect(getMobileAccess()).toEqual({
+      enabled: true,
+      token: "abc",
+      mode: "manual",
+      publicDomain: "https://b.com",
+    });
+  });
+
+  it("saveSettings preserves existing mobileAccess (regression)", () => {
+    settingsStore.set("settings", {
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+      mobileAccess: { enabled: true, token: "tok", mode: "manual", publicDomain: "https://x.com" },
+    });
+
+    saveSettings({
+      locale: "en",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+
+    expect(settingsStore.get("settings")?.mobileAccess).toEqual({
+      enabled: true,
+      token: "tok",
+      mode: "manual",
+      publicDomain: "https://x.com",
+    });
   });
 });

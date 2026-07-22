@@ -92,9 +92,13 @@ export interface ModelGroupSettings {
 
 export type ThemeMode = "light" | "dark" | "system";
 
+export type MobileTunnelMode = "quick" | "manual";
+
 export interface MobileAccessSettings {
   enabled: boolean;
   token?: string;
+  mode?: MobileTunnelMode;
+  publicDomain?: string;
 }
 
 export interface AppSettings {

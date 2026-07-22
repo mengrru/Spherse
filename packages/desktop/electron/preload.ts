@@ -64,10 +64,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
       );
   },
   getMobileAccessState: () => ipcRenderer.invoke("mobile-access:get-state"),
-  enableMobileAccess: () => ipcRenderer.invoke("mobile-access:enable"),
+  enableMobileAccess: (options?: { mode?: "quick" | "manual"; publicDomain?: string }) =>
+    ipcRenderer.invoke("mobile-access:enable", options),
   disableMobileAccess: () => ipcRenderer.invoke("mobile-access:disable"),
   regenerateToken: () => ipcRenderer.invoke("mobile-access:regenerate-token"),
   restartTunnel: () => ipcRenderer.invoke("mobile-access:restart-tunnel"),
+  setMobileMode: (mode: "quick" | "manual") => ipcRenderer.invoke("mobile-access:set-mode", mode),
+  setPublicDomain: (domain: string) => ipcRenderer.invoke("mobile-access:set-public-domain", domain),
   onMobileAccessEvent: (callback: (event: MobileAccessEvent) => void) => {
     const handler = (_e: unknown, payload: MobileAccessEvent) => callback(payload);
     ipcRenderer.on(MOBILE_EVENT_CHANNEL, handler);

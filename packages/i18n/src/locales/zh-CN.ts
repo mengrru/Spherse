@@ -114,9 +114,37 @@ export const zhCN = {
   // 设置弹窗「移动端」tab 标签（仅桌面端 mobile access 启用时可见）
   "settings.tabs.mobile": "移动端",
   // 移动端 tab → 面板顶部简介文案：提示需先安装 cloudflared，启用后扫码即可远程连接，使用时需保持电脑与桌面端开启
-  "settings.mobile.description": "启用后使用手机扫描下方二维码，即可远程连接到本桌面端。需先自行下载安装 cloudflared。使用移动端期间请保持电脑开机、Spherse 桌面端运行。",
-  // 移动端 tab → 启用按钮文案（disabled → enabled）
-  "settings.mobile.enable": "启用移动端访问",
+  "settings.mobile.description": "启用后使用手机扫描下方二维码，即可远程连接到本桌面端。使用移动端期间请保持电脑开机、Spherse 桌面端运行。",
+  // 移动端 tab → 快速隧道模式未启用时的前置提醒：需先安装 cloudflared 才能使用
+  "settings.mobile.cloudflaredPrerequisite": "开启前请先安装 cloudflared（macOS：brew install cloudflared；Windows：scoop install cloudflared）。",
+  // 移动端 tab → 「连接方式」字段标签（选择快速隧道或自有域名两种暴露方式）
+  "settings.mobile.mode": "连接方式",
+  // 移动端 tab → 连接方式选项：快速隧道（Cloudflare 自动分配 *.trycloudflare.com 临时域名，需本地安装 cloudflared）
+  "settings.mobile.mode.quick": "快速隧道",
+  // 移动端 tab → 连接方式选项：自有域名（用户自行运行 cloudflared / 反向代理，使用自己的域名）
+  "settings.mobile.mode.manual": "自有域名",
+  // 移动端 tab → 选中「快速隧道」时显示的说明（需安装 cloudflared，由应用自动启动）
+  "settings.mobile.mode.quickHint": "由应用自动启动 Cloudflare Quick Tunnel。此种连接方式下访问速度可能较慢、不稳定。需先安装 cloudflared。",
+  // 移动端 tab → 选中「自有域名」时显示的说明（用户自行配置并运行隧道 / 反向代理）
+  "settings.mobile.mode.manualHint": "使用你自己的域名。需自行运行 cloudflared 或其它反向代理工具。",
+  // 移动端 tab → 自有域名模式下「本地服务 URL」字段标签（供用户在 Cloudflare 隧道配置中填写的 service URL，如 http://localhost:12345）
+  "settings.mobile.serverUrl": "本地服务 URL",
+  // 移动端 tab → 本地服务 URL 旁「复制」按钮文案
+  "settings.mobile.copyServerUrl": "复制",
+  // 移动端 tab → 复制本地服务 URL 成功后的 toast
+  "settings.mobile.serverUrlCopied": "URL 已复制到剪贴板",
+  // 移动端 tab → 自有域名模式下「公网域名」字段标签（用户填写的自己的域名，用于生成二维码）
+  "settings.mobile.manualDomain": "公网域名",
+  // 移动端 tab → 公网域名旁「保存」按钮文案
+  "settings.mobile.saveDomain": "保存",
+  // 移动端 tab → 自有域名模式下的配置指引（提示用户将域名通过 cloudflared / 反代指向本地端口）
+  "settings.mobile.manualSetupHint": "请在本地运行 cloudflared 或其它反向代理工具，将你的域名指向上方本地服务 URL，然后在下方填写可访问的公网域名。",
+  // 移动端 tab → Cloudflare 隧道官方文档链接文案
+  "settings.mobile.cloudflareDocs": "查看 Cloudflare 隧道文档",
+  // 移动端 tab → 自有域名模式下尚未填写域名时二维码区域的占位提示
+  "settings.mobile.manualDomainEmpty": "请填写并保存公网域名以生成二维码",
+  // 移动端 tab → 启用按钮文案（disabled → enabled，快速隧道模式）
+  "settings.mobile.enable": "启用快速隧道开启移动端访问",
   // 移动端 tab → 停用按钮文案（enabled → disabled）
   "settings.mobile.disable": "停用移动端访问",
   // 移动端 tab → 令牌字段「显示」按钮（切换令牌明文/掩码）
@@ -153,8 +181,6 @@ export const zhCN = {
   "settings.mobile.scanQr": "用手机扫描下方二维码以连接",
   // 移动端 tab → QR 码下方安全提示，提醒二维码等同访问权限、切勿外泄
   "settings.mobile.qrWarning": "二维码包含访问令牌，请勿截图外泄或分享给他人。",
-  // 移动端 tab → 未启用时显示的占位说明
-  "settings.mobile.disabledHint": "尚未启用移动端访问。启用后会生成本机专属的访问令牌并通过 Cloudflare Quick Tunnel 暴露服务。",
   // 移动端 tab → 操作进行中的通用 loading 文案
   "settings.mobile.working": "处理中…",
   // 移动端 tab → cloudflared 二进制未找到时的错误提示

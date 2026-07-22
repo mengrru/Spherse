@@ -98,6 +98,7 @@ export function saveSettings(incoming: AppSettings): void {
     customProviders: incoming.customProviders ?? prev?.customProviders ?? [],
     debugToolsEnabled: incoming.debugToolsEnabled ?? prev?.debugToolsEnabled ?? false,
     theme: incoming.theme ?? prev?.theme ?? "system",
+    mobileAccess: prev?.mobileAccess,
   };
   settingsStore.set("settings", merged);
   applySettingsToEnv(merged);
@@ -226,6 +227,8 @@ export function getMobileAccess(): MobileAccessSettings {
   return {
     enabled: settings?.mobileAccess?.enabled ?? false,
     token: settings?.mobileAccess?.token,
+    mode: settings?.mobileAccess?.mode ?? "quick",
+    publicDomain: settings?.mobileAccess?.publicDomain,
   };
 }
 
@@ -234,6 +237,8 @@ export function setMobileAccess(patch: Partial<MobileAccessSettings>): MobileAcc
   const current: MobileAccessSettings = {
     enabled: settings.mobileAccess?.enabled ?? false,
     token: settings.mobileAccess?.token,
+    mode: settings.mobileAccess?.mode ?? "quick",
+    publicDomain: settings.mobileAccess?.publicDomain,
   };
   const next: MobileAccessSettings = { ...current, ...patch };
   settings.mobileAccess = next;

@@ -6,10 +6,14 @@ import { registerAllIpc } from "./ipc/index.js";
 import { checkForUpdatesSilently } from "./updater.js";
 import { setupContextMenu } from "./ipc/context-menu.js";
 import { getTunnelManager } from "./tunnel/manager.js";
-import { getMobileAccess } from "./settings.js";
+import { getMobileAccess, setMobileAccess, generateAccessToken } from "./settings.js";
 
 app.whenReady().then(async () => {
   restoreEnvFromSettings();
+  const mobile = getMobileAccess();
+  if ((mobile.mode ?? "quick") === "manual" && !mobile.token) {
+    setMobileAccess({ token: generateAccessToken() });
+  }
   await ensureServer();
   createWindow();
   setupContextMenu(getMainWindow()!);
@@ -18,8 +22,7 @@ app.whenReady().then(async () => {
     void checkForUpdatesSilently();
   }, 5000);
 
-  const mobile = getMobileAccess();
-  if (mobile.enabled) {
+  if (mobile.enabled && (mobile.mode ?? "quick") === "quick") {
     try {
       void getTunnelManager().start(getServerPort());
     } catch (err) {

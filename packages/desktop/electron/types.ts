@@ -3,6 +3,7 @@ import type {
   HostSettings,
   MobileAccessEvent,
   MobileAccessState,
+  MobileTunnelMode,
   RestoredProject,
   SaveDialogOptions,
   SampleManifestEntry,
@@ -14,6 +15,7 @@ import type {
 export type {
   MobileAccessEvent,
   MobileAccessState,
+  MobileTunnelMode,
   RestoredProject,
   SaveDialogOptions,
   SampleManifestEntry,
@@ -55,9 +57,11 @@ export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
   onUpdateEvent: (callback: (event: UpdateEvent) => void) => () => void;
   getMobileAccessState: () => Promise<MobileAccessState>;
-  enableMobileAccess: () => Promise<MobileAccessState>;
+  enableMobileAccess: (options?: { mode?: MobileTunnelMode; publicDomain?: string }) => Promise<MobileAccessState>;
   disableMobileAccess: () => Promise<MobileAccessState>;
   regenerateToken: () => Promise<MobileAccessState>;
   restartTunnel: () => Promise<MobileAccessState>;
+  setMobileMode: (mode: MobileTunnelMode) => Promise<MobileAccessState>;
+  setPublicDomain: (domain: string) => Promise<MobileAccessState>;
   onMobileAccessEvent: (callback: (event: MobileAccessEvent) => void) => () => void;
 }

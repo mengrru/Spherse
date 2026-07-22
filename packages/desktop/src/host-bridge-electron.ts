@@ -59,6 +59,8 @@ export function createElectronHostBridge(): HostBridge {
     disableMobileAccess: api.disableMobileAccess,
     regenerateToken: api.regenerateToken,
     restartTunnel: api.restartTunnel,
+    setMobileMode: api.setMobileMode,
+    setPublicDomain: api.setPublicDomain,
     onMobileAccessEvent: api.onMobileAccessEvent,
   };
 
@@ -71,7 +73,7 @@ export function createElectronHostBridge(): HostBridge {
     },
     getServerAccessToken: async () => {
       const state = await api.getMobileAccessState();
-      return state.enabled ? state.token : null;
+      return state.token;
     },
     getSettings: api.getSettings,
     saveSettings: api.saveSettings,

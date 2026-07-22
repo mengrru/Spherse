@@ -62,9 +62,14 @@ export interface HostSettings {
 
 export type TunnelStatus = "stopped" | "starting" | "running" | "error";
 
+export type MobileTunnelMode = "quick" | "manual";
+
 export interface MobileAccessState {
   enabled: boolean;
   token: string | null;
+  mode: MobileTunnelMode;
+  serverPort: number | null;
+  manualDomain: string | null;
   tunnel: {
     status: TunnelStatus;
     publicUrl: string | null;
@@ -75,12 +80,19 @@ export interface MobileAccessState {
 
 export type MobileAccessEvent = { type: "state"; state: MobileAccessState };
 
+export interface EnableMobileAccessOptions {
+  mode?: MobileTunnelMode;
+  publicDomain?: string;
+}
+
 export interface MobileAccessHostApi {
   getMobileAccessState(): Promise<MobileAccessState>;
-  enableMobileAccess(): Promise<MobileAccessState>;
+  enableMobileAccess(options?: EnableMobileAccessOptions): Promise<MobileAccessState>;
   disableMobileAccess(): Promise<MobileAccessState>;
   regenerateToken(): Promise<MobileAccessState>;
   restartTunnel(): Promise<MobileAccessState>;
+  setMobileMode(mode: MobileTunnelMode): Promise<MobileAccessState>;
+  setPublicDomain(domain: string): Promise<MobileAccessState>;
   onMobileAccessEvent(callback: (event: MobileAccessEvent) => void): () => void;
 }
 

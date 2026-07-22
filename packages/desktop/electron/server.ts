@@ -17,7 +17,7 @@ export async function ensureServer(): Promise<void> {
   if (serverHandle) return;
   const settings = getSettings();
   const mobile = getMobileAccess();
-  activeAccessToken = mobile.enabled ? mobile.token : undefined;
+  activeAccessToken = mobile.token;
   const result = await createMultiProjectServer({
     defaultModel: settings?.models?.text?.defaultModel,
     sampling: settings?.models?.text?.sampling,

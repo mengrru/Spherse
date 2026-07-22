@@ -9,12 +9,18 @@ import { Switch } from "../../components/ui/switch";
 import { SectionTitle } from "./SectionTitle";
 import { Input } from "../../components/ui/input";
 import { toast } from "sonner";
-import type { MobileAccessState, TunnelStatus } from "../../lib/host-bridge";
+import type {
+  MobileAccessState,
+  MobileTunnelMode,
+  TunnelStatus,
+} from "../../lib/host-bridge";
 import { useAppStore } from "../../stores/app-store";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
 import { useLocation } from "react-router";
 import { Copy, RefreshCw } from "lucide-react";
 
 const WEB_APP_URL = "https://spherse.mengru.work/web/";
+const CLOUDFLARE_DOCS_URL = "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/";
 
 function buildDeeplink(publicUrl: string, token: string, targetPath?: string): string {
   const params = new URLSearchParams({ base: publicUrl, token });
@@ -39,23 +45,32 @@ function maskToken(token: string | null): string {
   return `${token.slice(0, 6)}${"•".repeat(16)}${token.slice(-4)}`;
 }
 
+type WorkKind = null | "enable" | "disable" | "regenerate" | "restart" | "mode" | "domain";
+
 export function MobileAccessPanel() {
   const { t } = useI18n();
   const bridge = useHostBridge();
   const mobile = bridge.mobile;
   const [state, setState] = useState<MobileAccessState | null>(null);
-  const [working, setWorking] = useState<null | "enable" | "disable" | "regenerate" | "restart">(null);
+  const [working, setWorking] = useState<WorkKind>(null);
   const [revealToken, setRevealToken] = useState(false);
   const location = useLocation();
+  const [domainDraft, setDomainDraft] = useState("");
 
   useEffect(() => {
     if (!mobile) return;
     let mounted = true;
     void mobile.getMobileAccessState().then((s) => {
-      if (mounted) setState(s);
+      if (mounted) {
+        setState(s);
+        setDomainDraft(s.manualDomain ?? "");
+      }
     });
     const off = mobile.onMobileAccessEvent((event) => {
-      if (mounted && event.type === "state") setState(event.state);
+      if (mounted && event.type === "state") {
+        setState(event.state);
+        setDomainDraft(event.state.manualDomain ?? "");
+      }
     });
     return () => {
       mounted = false;
@@ -65,15 +80,15 @@ export function MobileAccessPanel() {
 
   if (!mobile) return null;
 
-  async function run(
-    action: "enable" | "disable" | "regenerate" | "restart",
-    fn: () => Promise<MobileAccessState>,
-  ): Promise<void> {
+  async function run(action: WorkKind, fn: () => Promise<MobileAccessState>): Promise<void> {
     setWorking(action);
     try {
       const next = await fn();
       setState(next);
-      if (action === "enable" || action === "disable" || action === "regenerate") {
+      if (action === "domain") {
+        setDomainDraft(next.manualDomain ?? "");
+      }
+      if (action === "enable" || action === "disable" || action === "regenerate" || action === "mode") {
         void useAppStore.getState().refreshConnection(bridge);
       }
     } catch (err) {
@@ -89,37 +104,90 @@ export function MobileAccessPanel() {
   }
 
   const enabled = state?.enabled ?? false;
+  const mode: MobileTunnelMode = state?.mode ?? "quick";
   const tunnelStatus = state?.tunnel?.status ?? "stopped";
+  const serverPort = state?.serverPort ?? null;
   const publicUrl = state?.tunnel?.publicUrl ?? null;
   const token = state?.token ?? null;
   const targetPath = location.pathname.startsWith("/project/") ? location.pathname : undefined;
-  const deeplink =
-    enabled && publicUrl && token ? buildDeeplink(publicUrl, token, targetPath) : null;
+  const showQR = mode === "manual"
+    ? Boolean(publicUrl && token)
+    : Boolean(enabled && publicUrl && token);
+  const deeplink = showQR && publicUrl && token ? buildDeeplink(publicUrl, token, targetPath) : null;
+
+  function selectMode(next: MobileTunnelMode): void {
+    if (next === mode || working !== null) return;
+    void run("mode", () => mobile!.setMobileMode(next));
+  }
 
   return (
     <FieldGroup>
       <p className="text-xs text-muted-foreground leading-relaxed">{t("settings.mobile.description")}</p>
 
-      <div className="flex items-center justify-between gap-3 mt-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-sm font-medium leading-none">{t("settings.mobile.enable")}</span>
+      <Field className="mt-3">
+        <SectionTitle as={FieldLabel}>{t("settings.mobile.mode")}</SectionTitle>
+        <div className="flex gap-2">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant={mode === "quick" ? "default" : "outline"}
+                  size="sm"
+                  className="h-8"
+                  disabled={enabled || working !== null}
+                  onClick={() => selectMode("quick")}
+                >
+                  {t("settings.mobile.mode.quick")}
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom" className="max-w-xs">{t("settings.mobile.mode.quickHint")}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant={mode === "manual" ? "default" : "outline"}
+                  size="sm"
+                  className="h-8"
+                  disabled={enabled || working !== null}
+                  onClick={() => selectMode("manual")}
+                >
+                  {t("settings.mobile.mode.manual")}
+                </Button>
+              }
+            />
+            <TooltipContent side="bottom" className="max-w-xs">{t("settings.mobile.mode.manualHint")}</TooltipContent>
+          </Tooltip>
         </div>
-        <Switch
-          checked={enabled}
-          disabled={working !== null}
-          onCheckedChange={(checked) => {
-            if (checked) {
-              void run("enable", () => mobile.enableMobileAccess());
-            } else {
-              void run("disable", () => mobile.disableMobileAccess());
-            }
-          }}
-        />
-      </div>
+      </Field>
 
-      {!enabled ? (
-        <p className="text-xs text-muted-foreground mt-2">{t("settings.mobile.disabledHint")}</p>
-      ) : (
+      {mode === "quick" && (
+        <div className="flex items-center justify-between gap-3 mt-3">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-medium leading-none">{t("settings.mobile.enable")}</span>
+          </div>
+          <Switch
+            checked={enabled}
+            disabled={working !== null}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                void run("enable", () => mobile.enableMobileAccess({ mode: "quick" }));
+              } else {
+                void run("disable", () => mobile.disableMobileAccess());
+              }
+            }}
+          />
+        </div>
+      )}
+
+      {mode === "quick" && !enabled && (
+        <p className="text-xs text-warning leading-relaxed">
+          {t("settings.mobile.cloudflaredPrerequisite")}
+        </p>
+      )}
+
+      {mode === "quick" && enabled ? (
         <>
           <Field className="mt-4">
             <SectionTitle as={FieldLabel}>{t("settings.mobile.tunnelStatus")}</SectionTitle>
@@ -165,7 +233,72 @@ export function MobileAccessPanel() {
               </Button>
             </div>
           </Field>
+        </>
+      ) : null}
 
+      {mode === "manual" && (
+        <>
+          <Field className="mt-4">
+            <SectionTitle as={FieldLabel}>{t("settings.mobile.serverUrl")}</SectionTitle>
+            <div className="flex items-center gap-2">
+              <Input
+                readOnly
+                value={serverPort ? `http://localhost:${serverPort}` : "—"}
+                className="text-xs h-8 font-mono"
+                placeholder="—"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={!serverPort}
+                onClick={() => {
+                  if (!serverPort) return;
+                  void navigator.clipboard.writeText(`http://localhost:${serverPort}`).then(() => toast.success(t("settings.mobile.serverUrlCopied")));
+                }}
+              >
+                <Copy className="size-3.5" />
+                {t("settings.mobile.copyServerUrl")}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+              {t("settings.mobile.manualSetupHint")}
+            </p>
+            <Button
+              variant="link"
+              size="sm"
+              className="h-7 p-0 mt-1 text-xs justify-start"
+              onClick={() => void bridge.openExternal(CLOUDFLARE_DOCS_URL)}
+            >
+              {t("settings.mobile.cloudflareDocs")}
+            </Button>
+          </Field>
+
+          <Field className="mt-3">
+            <SectionTitle as={FieldLabel}>{t("settings.mobile.manualDomain")}</SectionTitle>
+            <div className="flex items-center gap-2">
+              <Input
+                value={domainDraft}
+                onChange={(e) => setDomainDraft(e.target.value)}
+                className="text-xs h-8"
+                placeholder="https://spherse.example.com"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={working !== null}
+                onClick={() => void run("domain", () => mobile.setPublicDomain(domainDraft))}
+              >
+                {working === "domain" ? t("settings.mobile.working") : t("settings.mobile.saveDomain")}
+              </Button>
+            </div>
+          </Field>
+        </>
+      )}
+
+      {(mode === "manual" || enabled) && (
+        <>
           <Field className="mt-3">
             <SectionTitle as={FieldLabel}>{t("settings.mobile.token")}</SectionTitle>
             <div className="flex items-center gap-2">
@@ -218,6 +351,8 @@ export function MobileAccessPanel() {
               <div className="mt-2 flex justify-center p-3 bg-white rounded-md w-fit mx-auto">
                 <QrImage value={deeplink} />
               </div>
+            ) : mode === "manual" ? (
+              <p className="text-xs text-muted-foreground">{t("settings.mobile.manualDomainEmpty")}</p>
             ) : (
               <p className="text-xs text-muted-foreground">{t("settings.mobile.working")}</p>
             )}
