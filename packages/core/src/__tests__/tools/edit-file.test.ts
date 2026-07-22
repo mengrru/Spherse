@@ -111,4 +111,53 @@ describe("createEditFileTool", () => {
       tool.execute("tc1", { path: "../etc/hosts", old_string: "a", new_string: "b" }, undefined as any),
     ).rejects.toThrow("Path traversal denied");
   });
+
+  it("writes when edit produces valid JSON", async () => {
+    await writeFile(projectRoot, "data.json", '{"a":1}');
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute(
+      "tc1",
+      { path: "data.json", old_string: '"a":1', new_string: '"a":2' },
+      undefined as any,
+    );
+    expect(result.content[0].text).toContain("Successfully edited");
+    expect(await readFile(projectRoot, "data.json")).toBe('{"a":2}');
+  });
+
+  it("rejects edit that produces invalid JSON and leaves file unchanged", async () => {
+    await writeFile(projectRoot, "data.json", '{"a":1}');
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute(
+      "tc1",
+      { path: "data.json", old_string: '"a":1', new_string: '"a":1,' },
+      undefined as any,
+    );
+    expect(result.content[0].text).toContain("Invalid JSON");
+    expect(result.details).toEqual({ path: "data.json", jsonError: true });
+    expect(await readFile(projectRoot, "data.json")).toBe('{"a":1}');
+  });
+
+  it("allows editing a .json file down to empty content", async () => {
+    await writeFile(projectRoot, "data.json", '{"a":1}');
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute(
+      "tc1",
+      { path: "data.json", old_string: '{"a":1}', new_string: "" },
+      undefined as any,
+    );
+    expect(result.content[0].text).toContain("Successfully edited");
+    expect(await readFile(projectRoot, "data.json")).toBe("");
+  });
+
+  it("does not validate non-json files", async () => {
+    await writeFile(projectRoot, "notes.txt", "hello { broken");
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute(
+      "tc1",
+      { path: "notes.txt", old_string: "hello", new_string: "bye" },
+      undefined as any,
+    );
+    expect(result.content[0].text).toContain("Successfully edited");
+    expect(await readFile(projectRoot, "notes.txt")).toBe("bye { broken");
+  });
 });

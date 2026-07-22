@@ -76,6 +76,7 @@
 - [x] **HtmlCard overflow 裁剪 + dev 模式 postMessage origin 修复**：LLM 生成的页面常设 `body{overflow:hidden}`，在固定高度 iframe 中内容被裁剪无滚动条；`ensureScrollable` 在 `</body>` 前注入 `html,body{overflow-y:auto!important}` 覆盖（含幂等守卫），并在 write-html skill 增加禁止 overflow:hidden 的指引。同时修复 dev 模式下 srcDoc iframe 的 postMessage 被消息监听器 origin 校验丢弃的问题（dev renderer origin 如 `localhost:5173` ≠ server origin `localhost:3000`），提取 `isAllowedOrigin` 纯函数并放行 renderer 自身 origin
 - [x] **UI SDK createSession 支持 agent slug**：`createSession` action 新增可选 `agentSlug` 参数，作为 `agentId`（UUID）的人类可读替代（HTML 作者通常只知道 slug）。在 renderer handler 层解析 slug→id（优先读 project-data-store 缓存，未命中回退 `client.listAgents()`），不改 server/API contract；同时传 `agentId` 与 `agentSlug` 时以 `agentId` 为准
 - [x] **增加 edit file tool**：为 agent 提供编辑文件的工具（字符串替换模式：old_string + new_string）
+- [x] **write_file / edit_file JSON 校验**：新增共享 helper `packages/core/src/tools/json-check.ts`（基于 `JSON.parse` 严格校验，空/纯空白内容豁免），`write_file` 写盘前校验 content、`edit_file` 校验替换后的最终 newContent，仅对 `.json` 扩展名生效；校验失败不写盘并返回 `{ path, jsonError: true }` 错误结果（携带 SyntaxError 信息），防止 LLM 写坏 JSON 文件
 - [x] **Agent context 预注入**：agent profile 的 `context` 字段指定文件列表，buildAgent 时读取这些文件内容注入 systemPrompt，使 agent 从第一轮对话起就了解相关上下文
 - [ ] **Agent 编辑 UI 增强**：改善 agent 编辑界面的用户体验和功能
 - [x] **内置 Agent 模板**：提供多个内置 agent profile 模板（世界观构建者、角色设计、历史记录员等），创建 Agent 时可选择模板快速开始（一期实现 prompt 模板徽章载入：世界观创作助手、角色扮演）

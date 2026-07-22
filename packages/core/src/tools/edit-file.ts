@@ -5,6 +5,7 @@ import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicy } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
+import { checkJson } from "./json-check.js";
 
 type AccessPolicyProvider = () => AccessPolicy;
 
@@ -27,7 +28,8 @@ export function createEditFileTool(
     label: "Edit File",
     description:
       "Edit a file by replacing exact text matches. Provide old_string (must appear in the file) and new_string (replacement text). " +
-      "Fails if old_string is not found or matches multiple times unless replace_all is true.",
+      "Fails if old_string is not found or matches multiple times unless replace_all is true. " +
+      "For .json files the resulting content is validated and invalid JSON is rejected.",
     parameters: EditFileParams,
     async execute(_toolCallId, params, _signal) {
       const resolved = resolveProjectPath(root, params.path);
@@ -91,6 +93,21 @@ export function createEditFileTool(
         const newContent = replaceAll
           ? content.replaceAll(params.old_string, params.new_string)
           : content.replace(params.old_string, params.new_string);
+
+        if (path.extname(resolved).toLowerCase() === ".json") {
+          const check = checkJson(newContent);
+          if (!check.ok) {
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Invalid JSON in ${params.path}: ${check.error}. Fix the JSON and try again.`,
+                },
+              ],
+              details: { path: params.path, jsonError: true },
+            };
+          }
+        }
 
         await fs.writeFile(resolved, newContent, "utf-8");
 

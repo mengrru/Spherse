@@ -5,6 +5,7 @@ import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicy } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
+import { checkJson } from "./json-check.js";
 
 type AccessPolicyProvider = () => AccessPolicy;
 
@@ -24,7 +25,9 @@ export function createWriteFileTool(
   return {
     name: "write_file",
     label: "Write File",
-    description: "Write content to a file in the project. Creates parent directories by default.",
+    description:
+      "Write content to a file in the project. Creates parent directories by default. " +
+      "For .json files the content is validated and invalid JSON is rejected.",
     parameters: WriteFileParams,
     async execute(_toolCallId, params, _signal?: AbortSignal) {
       const resolved = resolveProjectPath(root, params.path);
@@ -40,6 +43,21 @@ export function createWriteFileTool(
       }
 
       return mutex.run(resolved, async () => {
+        if (path.extname(resolved).toLowerCase() === ".json") {
+          const check = checkJson(params.content);
+          if (!check.ok) {
+            return {
+              content: [
+                {
+                  type: "text" as const,
+                  text: `Invalid JSON in ${params.path}: ${check.error}. Fix the JSON and try again.`,
+                },
+              ],
+              details: { path: params.path, jsonError: true },
+            };
+          }
+        }
+
         if (createDirs) {
           await fs.mkdir(path.dirname(resolved), { recursive: true });
         }

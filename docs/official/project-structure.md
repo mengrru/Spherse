@@ -27,6 +27,7 @@ spherse/
 │   │       │   ├── read-file.ts
 │   │       │   ├── write-file.ts
 │   │       │   ├── edit-file.ts
+│   │       │   ├── json-check.ts   # .json 写入前 JSON 合法性校验（write_file/edit_file 共享）
 │   │       │   ├── list-files.ts
 │   │       │   ├── search-content.ts
 │   │       │   ├── move-file.ts
