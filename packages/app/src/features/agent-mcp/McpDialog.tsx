@@ -176,6 +176,12 @@ export function McpDialog({ open, onOpenChange, agentId, projectId }: McpDialogP
                       key={server.id}
                       className="flex items-center gap-2 rounded-md border border-border p-2.5"
                     >
+                      <Switch
+                        checked={server.enabled}
+                        onCheckedChange={(checked) => handleToggle(server, checked === true)}
+                        aria-label={t("agent-mcp.toggleEnabled")}
+                        className="me-1"
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
                           <span className="truncate text-sm font-medium">{server.name}</span>
@@ -187,29 +193,26 @@ export function McpDialog({ open, onOpenChange, agentId, projectId }: McpDialogP
                           {server.transport === "stdio" ? server.command : server.url}
                         </p>
                       </div>
-                      <Switch
-                        checked={server.enabled}
-                        onCheckedChange={(checked) => handleToggle(server, checked === true)}
-                        aria-label={t("agent-mcp.toggleEnabled")}
-                      />
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon-sm"
+                        size="icon"
+                        className="size-6"
                         onClick={() => handleStartEdit(server)}
                         disabled={editingId === server.id}
                         aria-label={t("common.edit")}
                       >
-                        <PencilIcon />
+                        <PencilIcon className="size-3.5" />
                       </Button>
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon-sm"
+                        size="icon"
+                        className="size-6 text-destructive"
                         onClick={() => setDeleteTarget(server)}
                         aria-label={t("common.delete")}
                       >
-                        <Trash2Icon />
+                        <Trash2Icon className="size-3.5" />
                       </Button>
                     </li>
                   ))}

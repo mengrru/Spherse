@@ -460,6 +460,8 @@ export const zhCN = {
   "agent-trigger.runningNow": "运行中",
   // 触发器配置页右上角创建按钮
   "agent-trigger.createTrigger": "创建触发器",
+  // 新增/编辑触发器表单点击保存时，必填项（消息、cron/事件名、已有会话 ID）未填写完整的提示
+  "agent-trigger.invalidTrigger": "触发器信息不完整：请检查消息、频率/事件名以及会话绑定是否已填写。",
   // 配置 tab 标题
   "agent-trigger.tabConfig": "配置",
   // 运行日志 tab 标题
@@ -467,7 +469,7 @@ export const zhCN = {
   // 日志列表为空时显示
   "agent-trigger.noLogs": "暂无运行日志",
   // 触发器列表为空时显示
-  "agent-trigger.noTriggers": "暂无触发器",
+  "agent-trigger.noTriggers": "暂无触发器，点击上方按钮添加",
   // 删除触发器确认提示
   "agent-trigger.confirmDelete": "确定删除此触发器吗？",
   // 日志状态：运行中
@@ -489,7 +491,7 @@ export const zhCN = {
   // 弹窗标题旁的警告图标 tooltip：提示连接 MCP server 可能执行任意代码或访问网络
   "agent-mcp.securityHint": "MCP 连接器会运行外部程序或访问网络地址，请仅添加你信任的服务。",
   // 服务列表为空时的占位文案
-  "agent-mcp.empty": "暂无 MCP 连接器，点击上方按钮添加。",
+  "agent-mcp.empty": "暂无 MCP 连接器，点击上方按钮添加",
   // 「添加连接器」按钮
   "agent-mcp.addServer": "添加连接器",
   // 单个连接器的启用开关的无障碍标签

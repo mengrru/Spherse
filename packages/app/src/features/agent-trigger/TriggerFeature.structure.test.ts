@@ -41,13 +41,14 @@ describe("agent trigger feature structure", () => {
     expect(source.indexOf("onTrigger(entry)")).toBeLessThan(source.indexOf("onEdit(entry)"));
   });
 
-  it("places the create button at the right side of the tab row", () => {
+  it("places the create button in the config content area, coexisting with the list", () => {
     const dialogSource = readFileSync(join(currentDir, "index.tsx"), "utf8");
     const listSource = readFileSync(join(currentDir, "TriggerList.tsx"), "utf8");
 
     expect(dialogSource).toContain("PlusIcon");
     expect(dialogSource).toContain("<TabsList>");
     expect(dialogSource).toContain('t("agent-trigger.createTrigger")');
+    expect(dialogSource).toContain("triggers.length === 0 && !draft");
     expect(listSource).not.toContain("onCreate");
   });
 
@@ -70,7 +71,7 @@ describe("agent trigger feature structure", () => {
     expect(source).toContain('t("agent-trigger.type")');
     expect(source).toContain('"time"');
     expect(source).toContain('"event"');
-    expect(source).toContain("onTypeChange");
+    expect(source).toContain("onChange({ type:");
   });
 
   it("shows event-specific fields only for event type", () => {
@@ -82,20 +83,30 @@ describe("agent trigger feature structure", () => {
     expect(source).toContain('t("agent-trigger.payloadVarHint")');
   });
 
-  it("lets users pick a session mode and bind an existing session id", () => {
+  it("uses a draft-based form contract instead of a mode reducer", () => {
     const formSource = readFileSync(join(currentDir, "TriggerForm.tsx"), "utf8");
-    const reducerSource = readFileSync(join(currentDir, "trigger-form-reducer.ts"), "utf8");
+    const helpersSource = readFileSync(join(currentDir, "trigger-form-helpers.ts"), "utf8");
     const dialogSource = readFileSync(join(currentDir, "index.tsx"), "utf8");
 
-    expect(reducerSource).toContain("sessionMode");
-    expect(reducerSource).toContain("targetSessionId");
-    expect(reducerSource).toContain("sessionMode: action.entry.mode");
-    expect(reducerSource).toContain('sessionMode: "new_session"');
-    expect(formSource).toContain("onSessionModeChange");
-    expect(formSource).toContain("onTargetSessionIdChange");
+    expect(formSource).toContain("draft: TriggerDraft");
+    expect(formSource).toContain("onChange: (patch: Partial<TriggerDraft>)");
+    expect(formSource).not.toContain("onSessionModeChange");
+    expect(formSource).not.toContain("onTargetSessionIdChange");
+    expect(formSource).toContain("draft.sessionMode");
+    expect(formSource).toContain("draft.targetSessionId");
     expect(formSource).toContain('"agent-trigger.modeNewSession"');
     expect(formSource).toContain('"agent-trigger.modeExistingSession"');
-    expect(dialogSource).toContain("mode: form.sessionMode");
-    expect(dialogSource).toContain("form.sessionMode === \"existing_session\"");
+
+    expect(helpersSource).toContain("export interface TriggerDraft");
+    expect(helpersSource).toContain("sessionMode");
+    expect(helpersSource).toContain("targetSessionId");
+    expect(helpersSource).toContain("sessionMode: entry.mode");
+    expect(helpersSource).toContain('sessionMode: "new_session"');
+
+    expect(dialogSource).toContain("useState<TriggerDraft | null>(null)");
+    expect(dialogSource).toContain("handleStartCreate");
+    expect(dialogSource).toContain("handleStartEdit");
+    expect(dialogSource).toContain("clearDraft");
+    expect(dialogSource).toContain("editingId === null");
   });
 });

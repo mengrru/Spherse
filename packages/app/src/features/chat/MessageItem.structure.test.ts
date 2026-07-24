@@ -19,4 +19,21 @@ describe("MessageItem structure", () => {
     expect(source.indexOf("<FileViewerCard")).toBeGreaterThan(-1);
     expect(source.indexOf("<FileViewerCard")).toBeGreaterThan(source.indexOf("<ToolCallSection"));
   });
+
+  it("opens chat bubble links in the external browser instead of navigating in place", () => {
+    const source = readFileSync(join(currentDir, "MessageItem.tsx"), "utf8");
+
+    expect(source).toContain("useHostBridge");
+    expect(source).toContain("handleLinkClick");
+    expect(source).toContain("bridge.openExternal");
+    expect(source).toContain("event.preventDefault()");
+    expect(source).toContain('onLinkClick={handleLinkClick}');
+  });
+
+  it("keeps in-page anchor links inside the chat instead of forwarding them to the browser", () => {
+    const source = readFileSync(join(currentDir, "MessageItem.tsx"), "utf8");
+
+    expect(source).toContain('href.startsWith("#")');
+    expect(source).toContain("scrollIntoView");
+  });
 });

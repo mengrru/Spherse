@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import type { AgentProfile } from "../../lib/types";
 import type { ChatMessage } from "./types";
 import { MarkdownContent } from "../../components/MarkdownContent";
@@ -8,6 +9,7 @@ import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
 import { FileViewerCard } from "./FileViewerCard";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+import { useHostBridge } from "../../context/host-bridge-context";
 import { formatMessageTime } from "./lib/format-time";
 
 interface MessageItemProps {
@@ -19,6 +21,22 @@ interface MessageItemProps {
 
 export function MessageItem({ message, agent, showTime, onNavigateToPath }: MessageItemProps) {
   const isUser = message.role === "user";
+  const bridge = useHostBridge();
+
+  const handleLinkClick = useCallback(
+    async (href: string, event: React.MouseEvent<HTMLAnchorElement>) => {
+      if (!href) return;
+      event.preventDefault();
+      if (href.startsWith("#")) {
+        if (href.length > 1) {
+          document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+        return;
+      }
+      await bridge.openExternal(href);
+    },
+    [bridge],
+  );
 
   return (
     <div
@@ -45,7 +63,7 @@ export function MessageItem({ message, agent, showTime, onNavigateToPath }: Mess
             <ThinkingIndicator />
           ) : (
             <>
-              <MarkdownContent variant="chat">{message.content}</MarkdownContent>
+              <MarkdownContent variant="chat" onLinkClick={handleLinkClick}>{message.content}</MarkdownContent>
               {message._streaming && message.content && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
             </>
           )}

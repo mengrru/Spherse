@@ -1,6 +1,6 @@
 import { Button } from "../../components/ui/button";
 import { Switch } from "../../components/ui/switch";
-import { ChevronDownIcon, LoaderCircleIcon, PencilIcon, PlayIcon, TrashIcon } from "lucide-react";
+import { ChevronDownIcon, LoaderCircleIcon, PencilIcon, PlayIcon, Trash2Icon } from "lucide-react";
 import type { TriggerEntry, TriggerInfo } from "../../lib/types";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ interface TriggerListProps {
   triggers: TriggerInfo[];
   runningTriggerIds: string[];
   expandedId: string | null;
+  editingId: string | null;
   onToggle: (entry: TriggerInfo) => void;
   onExpand: (id: string | null) => void;
   onTrigger: (entry: TriggerEntry) => void;
@@ -20,6 +21,7 @@ export function TriggerList({
   triggers,
   runningTriggerIds,
   expandedId,
+  editingId,
   onToggle,
   onExpand,
   onTrigger,
@@ -29,23 +31,17 @@ export function TriggerList({
   const { t } = useI18n();
 
   return (
-    <div className="h-full flex flex-col gap-3">
-      {triggers.length === 0 && (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-xs text-muted-foreground text-center">{t("agent-trigger.noTriggers")}</p>
-        </div>
-      )}
-
+    <div className="flex flex-col gap-3">
       {triggers.map((entry) => {
         const isExpanded = expandedId === entry.id;
         const isRunning = runningTriggerIds.includes(entry.id);
         return (
-          <div key={entry.id}>
-            <div className="flex items-center gap-2 p-2 rounded-md bg-muted">
-              <Switch checked={entry.enabled} onCheckedChange={() => onToggle(entry)} />
-              <span className="flex-1 text-sm truncate">{entry.name || (entry.type === "time" ? entry.cron : entry.eventName)}</span>
+          <div key={entry.id} className="rounded-md border border-border">
+            <div className="flex items-center gap-2 p-2.5">
+              <Switch checked={entry.enabled} onCheckedChange={() => onToggle(entry)} className="me-1" />
+              <span className="flex-1 text-sm font-medium truncate">{entry.name || (entry.type === "time" ? entry.cron : entry.eventName)}</span>
               {entry.type === "event" && (
-                <span className="text-xs text-muted-foreground shrink-0 rounded bg-background px-1.5 py-0.5">
+                <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
                   {t("agent-trigger.typeEvent")}
                 </span>
               )}
@@ -65,15 +61,22 @@ export function TriggerList({
               >
                 {isRunning ? <LoaderCircleIcon className="size-3.5 animate-spin" /> : <PlayIcon className="size-3.5" />}
               </Button>
-              <Button variant="ghost" size="icon" className="size-6" onClick={() => onEdit(entry)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6"
+                onClick={() => onEdit(entry)}
+                disabled={editingId === entry.id}
+                aria-label={t("common.edit")}
+              >
                 <PencilIcon className="size-3.5" />
               </Button>
               <Button variant="ghost" size="icon" className="size-6 text-destructive" onClick={() => onDelete(entry)}>
-                <TrashIcon className="size-3.5" />
+                <Trash2Icon className="size-3.5" />
               </Button>
             </div>
             {isExpanded && (
-              <div className="mt-1 mb-2 ml-8 space-y-1 text-xs text-muted-foreground">
+              <div className="space-y-1 border-t border-border p-2.5 ps-9 text-xs text-muted-foreground">
                 <p>{t("agent-trigger.type")}: {t(entry.type === "time" ? "agent-trigger.typeTime" : "agent-trigger.typeEvent")}</p>
                 {entry.type === "time" && <p>cron: {entry.cron}</p>}
                 {entry.type === "event" && <p>{t("agent-trigger.eventName")}: {entry.eventName}</p>}

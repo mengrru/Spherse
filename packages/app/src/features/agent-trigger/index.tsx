@@ -1,4 +1,5 @@
-import { useEffect, useReducer, useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
@@ -21,10 +22,11 @@ import { TriggerList } from "./TriggerList";
 import { TriggerLogs } from "./TriggerLogs";
 import { useTriggerLogs } from "./hooks/use-trigger-logs";
 import {
-  triggerFormReducer,
-  IDLE_FORM_STATE,
-  type TriggerFormFields,
-} from "./trigger-form-reducer";
+  draftToTriggerData,
+  emptyTriggerDraft,
+  entryToDraft,
+  type TriggerDraft,
+} from "./trigger-form-helpers";
 import { EMPTY_RUNNING_TRIGGER_IDS, EMPTY_TRIGGERS } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
 import { InfoIcon, PlusIcon } from "lucide-react";
@@ -37,12 +39,21 @@ interface TriggerDialogProps {
   projectId: string;
 }
 
-export function TriggerDialog({ open, onOpenChange, agentId, projectId }: TriggerDialogProps) {  const { t } = useI18n();
+export function TriggerDialog({ open, onOpenChange, agentId, projectId }: TriggerDialogProps) {
+  const { t } = useI18n();
   const client = useApiClient(projectId);
-  const triggers = useTriggerStore((s) => s.byProject[projectId]?.triggersByAgent?.[agentId] ?? EMPTY_TRIGGERS);
-  const runningTriggerIds = useTriggerStore((s) => s.byProject[projectId]?.runningTriggerIdsByAgent?.[agentId] ?? EMPTY_RUNNING_TRIGGER_IDS);
-  const triggerEventVersion = useTriggerStore((s) => s.byProject[projectId]?.triggerEventVersion ?? 0);
-  const agentName = useProjectDataStore((s) => s.projects[projectId]?.agents?.find((a) => a.id === agentId)?.name ?? "");
+  const triggers = useTriggerStore(
+    (s) => s.byProject[projectId]?.triggersByAgent?.[agentId] ?? EMPTY_TRIGGERS,
+  );
+  const runningTriggerIds = useTriggerStore(
+    (s) => s.byProject[projectId]?.runningTriggerIdsByAgent?.[agentId] ?? EMPTY_RUNNING_TRIGGER_IDS,
+  );
+  const triggerEventVersion = useTriggerStore(
+    (s) => s.byProject[projectId]?.triggerEventVersion ?? 0,
+  );
+  const agentName = useProjectDataStore(
+    (s) => s.projects[projectId]?.agents?.find((a) => a.id === agentId)?.name ?? "",
+  );
   const logFilePath = useProjectDataStore((s) => {
     const agent = s.projects[projectId]?.agents?.find((a) => a.id === agentId);
     return agent ? `.spherse/agents/${agent.slug}/triggers/logs.jsonl` : "";
@@ -54,54 +65,55 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
   const runTrigger = useTriggerStore((s) => s.runTrigger);
 
   const [activeTab, setActiveTab] = useState("config");
-  const [form, dispatch] = useReducer(triggerFormReducer, IDLE_FORM_STATE);
+  const [draft, setDraft] = useState<TriggerDraft | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TriggerEntry | null>(null);
   const logs = useTriggerLogs(client, agentId, open && activeTab === "logs", triggerEventVersion);
 
   const triggerNameMap: Record<string, string> = {};
   for (const trigger of triggers) {
-    triggerNameMap[trigger.id] = trigger.name || (trigger.type === "time" ? trigger.cron! : trigger.eventName!);
+    triggerNameMap[trigger.id] =
+      trigger.name || (trigger.type === "time" ? trigger.cron! : trigger.eventName!);
   }
 
   useEffect(() => {
     if (open) refreshTriggers(projectId, client, agentId);
   }, [open, projectId, client, agentId, refreshTriggers]);
 
-  function patchField<Field extends keyof TriggerFormFields>(field: Field, value: TriggerFormFields[Field]) {
-    dispatch({ type: "patch", patch: { [field]: value } });
+  function patchDraft(patch: Partial<TriggerDraft>) {
+    setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
+  }
+
+  function clearDraft() {
+    setDraft(null);
+    setEditingId(null);
+  }
+
+  function handleStartCreate() {
+    setDraft(emptyTriggerDraft());
+    setEditingId(null);
+  }
+
+  function handleStartEdit(entry: TriggerEntry) {
+    setDraft(entryToDraft(entry));
+    setEditingId(entry.id);
+    setExpandedId(null);
   }
 
   async function handleSave() {
-    if (form.type === "time") {
-      if (!form.cron.trim() || !form.message.trim()) return;
-    } else {
-      if (!form.eventName.trim() || !form.message.trim()) return;
+    if (!draft) return;
+    const data = draftToTriggerData(draft);
+    if (!data) {
+      toast.error(t("agent-trigger.invalidTrigger"));
+      return;
     }
-    if (form.sessionMode === "existing_session" && !form.targetSessionId.trim()) return;
-    const data = {
-      name: form.name || undefined,
-      type: form.type,
-      cron: form.type === "time" ? form.cron : undefined,
-      eventName: form.type === "event" ? form.eventName : undefined,
-      message: form.message,
-      mode: form.sessionMode,
-      targetSessionId: form.sessionMode === "existing_session" ? form.targetSessionId.trim() : "",
-      notify: form.notify,
-      notificationMessage: form.notify && form.notificationMessage.trim() ? form.notificationMessage.trim() : undefined,
-    };
-    if (form.mode === "create") {
+    if (editingId === null) {
       await createTrigger(projectId, client, agentId, data);
-    } else if (form.mode === "edit" && form.editingId) {
-      await updateTrigger(projectId, client, agentId, form.editingId, data);
+    } else {
+      await updateTrigger(projectId, client, agentId, editingId, data);
     }
-    dispatch({ type: "reset" });
-    setExpandedId(null);
-  }
-
-  function handleEdit(entry: TriggerEntry) {
-    dispatch({ type: "edit", entry });
-    setExpandedId(null);
+    clearDraft();
   }
 
   async function handleTrigger(entry: TriggerEntry) {
@@ -123,7 +135,9 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
       <DialogContent className="flex h-[80vh] flex-col sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-1.5">
-            {agentName ? `${t("agent-trigger.dialogTitle")} | ${agentName}` : t("agent-trigger.dialogTitle")}
+            {agentName
+              ? `${t("agent-trigger.dialogTitle")} | ${agentName}`
+              : t("agent-trigger.dialogTitle")}
             <Tooltip>
               <TooltipTrigger
                 aria-label={t("agent-trigger.dialogTitleHint")}
@@ -136,66 +150,73 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="min-h-0 flex-1">
-          <div className="mb-3 flex items-center justify-between">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex min-h-0 flex-1 flex-col">
+          <div className="mb-3 flex items-center">
             <TabsList>
               <TabsTrigger value="config">{t("agent-trigger.tabConfig")}</TabsTrigger>
               <TabsTrigger value="logs">{t("agent-trigger.tabLogs")}</TabsTrigger>
             </TabsList>
-            {activeTab === "config" && form.mode === "idle" && (
-              <Button size="default" onClick={() => dispatch({ type: "startCreate" })}>
-                <PlusIcon className="size-4" />
-                {t("agent-trigger.createTrigger")}
-              </Button>
-            )}
           </div>
 
           <TabsContent value="config" className="min-h-0 flex-1 overflow-y-auto">
-            {form.mode !== "idle" ? (
-              <TriggerForm
-                editingId={form.editingId ?? ""}
-                type={form.type}
-                name={form.name}
-                cron={form.cron}
-                eventName={form.eventName}
-                message={form.message}
-                sessionMode={form.sessionMode}
-                targetSessionId={form.targetSessionId}
-                notify={form.notify}
-                notificationMessage={form.notificationMessage}
-                onTypeChange={(v) => patchField("type", v)}
-                onNameChange={(v) => patchField("name", v)}
-                onCronChange={(v) => patchField("cron", v)}
-                onEventNameChange={(v) => patchField("eventName", v)}
-                onMessageChange={(v) => patchField("message", v)}
-                onSessionModeChange={(v) => patchField("sessionMode", v)}
-                onTargetSessionIdChange={(v) => patchField("targetSessionId", v)}
-                onNotifyChange={(v) => patchField("notify", v)}
-                onNotificationMessageChange={(v) => patchField("notificationMessage", v)}
-                onInsertVariable={(variable) => dispatch({ type: "patch", patch: { message: form.message + `{{${variable}}}` } })}
-                onSave={handleSave}
-                onCancel={() => dispatch({ type: "reset" })}
-              />
-            ) : (
-              <TriggerList
-                triggers={triggers}
-                runningTriggerIds={runningTriggerIds}
-                expandedId={expandedId}
-                onToggle={handleToggle}
-                onExpand={setExpandedId}
-                onTrigger={handleTrigger}
-                onEdit={handleEdit}
-                onDelete={setDeleteTarget}
-              />
-            )}
+            <div className="space-y-3">
+              {draft ? (
+                <TriggerForm
+                  key={draft.id}
+                  draft={draft}
+                  isNew={editingId === null}
+                  onChange={patchDraft}
+                  onInsertVariable={(variable) =>
+                    patchDraft({ message: `${draft.message}{{${variable}}}` })
+                  }
+                  onSave={handleSave}
+                  onCancel={clearDraft}
+                />
+              ) : (
+                <div className="flex justify-end">
+                  <Button size="default" onClick={handleStartCreate}>
+                    <PlusIcon className="size-4" />
+                    {t("agent-trigger.createTrigger")}
+                  </Button>
+                </div>
+              )}
+
+              {triggers.length === 0 && !draft ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  {t("agent-trigger.noTriggers")}
+                </p>
+              ) : (
+                <TriggerList
+                  triggers={triggers}
+                  runningTriggerIds={runningTriggerIds}
+                  expandedId={expandedId}
+                  editingId={editingId}
+                  onToggle={handleToggle}
+                  onExpand={setExpandedId}
+                  onTrigger={handleTrigger}
+                  onEdit={handleStartEdit}
+                  onDelete={setDeleteTarget}
+                />
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="logs" className="min-h-0 flex-1">
-            <TriggerLogs logs={logs} agentName={agentName} triggerNameMap={triggerNameMap} logFilePath={logFilePath} />
+            <TriggerLogs
+              logs={logs}
+              agentName={agentName}
+              triggerNameMap={triggerNameMap}
+              logFilePath={logFilePath}
+            />
           </TabsContent>
         </Tabs>
 
-        <AlertDialog open={!!deleteTarget} onOpenChange={(nextOpen) => { if (!nextOpen) setDeleteTarget(null); }}>
+        <AlertDialog
+          open={!!deleteTarget}
+          onOpenChange={(nextOpen) => {
+            if (!nextOpen) setDeleteTarget(null);
+          }}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>{t("common.delete")}</AlertDialogTitle>
@@ -203,7 +224,9 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
+              <AlertDialogAction variant="destructive" onClick={handleDelete}>
+                {t("common.delete")}
+              </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
