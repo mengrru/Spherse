@@ -21,18 +21,19 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@earendil-works/pi-ai": "0.80.2",
     "@earendil-works/pi-agent-core": "0.80.2",
+    "@earendil-works/pi-ai": "0.80.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@sinclair/typebox": "^0.34.0",
     "@spherse/i18n": "^0.1.0",
     "@spherse/presets": "^0.1.0",
+    "adm-zip": "^0.5.16",
     "better-sqlite3": "^12.10.0",
     "cron-parser": "^5.5.0",
     "gray-matter": "^4.0.3",
     "nanoid": "^3.3.12",
     "pino": "^10.3.1",
-    "yaml": "^2.7.0",
-    "adm-zip": "^0.5.16"
+    "yaml": "^2.7.0"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",

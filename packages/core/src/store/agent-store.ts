@@ -4,6 +4,7 @@ import { AgentProfileStore } from "./agent-profile.js";
 import { SessionStore } from "./session.js";
 import { TriggerStore } from "./trigger.js";
 import { SkillStore } from "./skill.js";
+import { McpConfigStore } from "./mcp-config.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 
 export class AgentStore {
@@ -14,6 +15,7 @@ export class AgentStore {
   private _sessionStore: SessionStore | null = null;
   private _triggerStore: TriggerStore;
   private _skillStore: SkillStore | null = null;
+  private _mcpStore: McpConfigStore | null = null;
   private logger: Logger;
 
   constructor(agentDir: string, agentId: string, logger?: Logger) {
@@ -79,6 +81,13 @@ export class AgentStore {
       this._skillStore = new SkillStore(path.join(this.agentDir, "skills"));
     }
     return this._skillStore;
+  }
+
+  get mcp(): McpConfigStore {
+    if (!this._mcpStore) {
+      this._mcpStore = new McpConfigStore(this.agentDir);
+    }
+    return this._mcpStore;
   }
 
   close(): void {

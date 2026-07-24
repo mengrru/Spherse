@@ -273,4 +273,50 @@ describe("api contracts", () => {
     expect(parseApiResponse(schemas.turnContextSnapshot, snapshot)).toEqual(snapshot);
     expect(() => parseApiResponse(schemas.turnContextSnapshot, { sessionId: "s1" })).toThrow(/Invalid payload/);
   });
+
+  it("serializes the mcp discriminated-union response without dropping variant fields", async () => {
+    const app = Fastify();
+    app.get<{ Params: { id: string } }>(
+      "/agents/:id/mcp",
+      { schema: { response: { 200: schemas.agentMcpResponse } } },
+      async () => ({
+        servers: [
+          {
+            id: "s1",
+            name: "fs",
+            enabled: true,
+            transport: "stdio",
+            command: "npx",
+            args: ["-y", "srv"],
+            env: { FOO: "bar" },
+          },
+          {
+            id: "s2",
+            name: "remote",
+            enabled: false,
+            transport: "http",
+            url: "http://localhost/mcp",
+            headers: { Authorization: "Bearer x" },
+          },
+        ],
+      }),
+    );
+
+    const res = await app.inject({ method: "GET", url: "/agents/a/mcp" });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+
+    const stdio = body.servers[0];
+    expect(stdio.transport).toBe("stdio");
+    expect(stdio.command).toBe("npx");
+    expect(stdio.args).toEqual(["-y", "srv"]);
+    expect(stdio.env).toEqual({ FOO: "bar" });
+
+    const http = body.servers[1];
+    expect(http.transport).toBe("http");
+    expect(http.url).toBe("http://localhost/mcp");
+    expect(http.headers).toEqual({ Authorization: "Bearer x" });
+
+    await app.close();
+  });
 });

@@ -7,6 +7,7 @@ describe("feature-registry", () => {
     expect(allFeatures.sort()).toEqual(
       [
         "agent-dialog",
+        "agent-mcp",
         "agent-trigger",
         "floating-chat",
         "open-project",

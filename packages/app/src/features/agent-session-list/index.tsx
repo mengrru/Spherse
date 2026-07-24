@@ -135,6 +135,7 @@ export function AgentSessionList() {
     toggleAgentCollapsed,
     newSession: handleNewSession,
     triggerAgent: (agent) => setDialog({ kind: "trigger", agent }),
+    mcpAgent: (agent) => setDialog({ kind: "mcp", agent }),
     editAgent: (agent) => setDialog({ kind: "edit-agent", id: agent.id }),
     deleteAgent: (agent) => setDialog({ kind: "delete-agent", agent }),
     selectSession: handleSelectSession,

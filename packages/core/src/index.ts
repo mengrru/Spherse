@@ -29,3 +29,4 @@ export type {
 } from "@earendil-works/pi-ai";
 export type { RenderCardDetails, RenderCardResultDetails } from "./tools/render-card.js";
 export type { ImageCardDetails, ImageCardResultDetails } from "./tools/generate-image.js";
+export type { McpTransportType } from "./mcp/index.js";

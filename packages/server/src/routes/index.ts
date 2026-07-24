@@ -3,6 +3,7 @@ import type { ProjectRegistry, ProjectContext } from "../registry.js";
 import { notFound } from "../errors.js";
 import { registerAgentRoutes } from "./agents.js";
 import { registerAgentWriteRoutes } from "./agent-write.js";
+import { registerAgentMcpRoutes } from "./agent-mcp.js";
 import { registerSessionRoutes } from "./sessions.js";
 import { registerContentRoutes } from "./content.js";
 import { registerSettingsRoutes } from "./settings.js";
@@ -40,6 +41,7 @@ export function registerAllRoutes(
   registerConnectionRoutes(fastify, registry, { authRequired: options?.authRequired ?? false });
   registerAgentRoutes(fastify, registry);
   registerAgentWriteRoutes(fastify, registry);
+  registerAgentMcpRoutes(fastify, registry);
   registerSessionRoutes(fastify, registry);
   registerContentRoutes(fastify, registry);
   registerSettingsRoutes(fastify, registry);

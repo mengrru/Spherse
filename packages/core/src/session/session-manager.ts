@@ -7,22 +7,37 @@ import { computeSessionStatus, type SessionStatus } from "./status.js";
 import type { SamplingParams } from "../types.js";
 import type { SessionContext, TurnContextSnapshot } from "./types.js";
 import type { TriggerManager } from "../trigger/trigger-manager.js";
+import { McpConnectionManager } from "../mcp/mcp-connection-manager.js";
 
 export class SessionManager {
   private readonly sessions = new Map<string, LiveSession>();
   private readonly ctx: SessionContext;
+  private readonly mcpConnectionManager: McpConnectionManager;
 
   constructor(
     projectStore: ProjectStore,
     options?: { defaultModel?: string; sampling?: SamplingParams; logger?: Logger },
   ) {
+    const logger = options?.logger ?? createSilentLogger();
+    const loadServers = async (agentId: string) => {
+      const agentStore = projectStore.getAgent(agentId);
+      if (!agentStore) return [];
+      try {
+        return (await agentStore.mcp.getConfig()).servers;
+      } catch (err) {
+        logger.warn({ err, agentId }, "failed to load agent mcp config");
+        return [];
+      }
+    };
+    this.mcpConnectionManager = new McpConnectionManager(logger, undefined, loadServers);
     this.ctx = {
       projectStore,
       projectRoot: projectStore.getRootPath(),
       fileWriteMutex: new FileWriteMutex(),
-      logger: options?.logger ?? createSilentLogger(),
+      logger,
       defaultModel: options?.defaultModel,
       sampling: options?.sampling,
+      mcpConnectionManager: this.mcpConnectionManager,
     };
   }
 
@@ -96,8 +111,13 @@ export class SessionManager {
     }
   }
 
-  closeAll(): void {
+  async invalidateMcpCache(agentId: string): Promise<void> {
+    await this.mcpConnectionManager.invalidate(agentId);
+  }
+
+  async closeAll(): Promise<void> {
     this.sessions.clear();
+    await this.mcpConnectionManager.closeAll();
   }
 
   setDefaultModel(model: string | undefined): void {

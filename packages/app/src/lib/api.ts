@@ -12,6 +12,8 @@ import type {
   AiAccessSettingsResponse,
   WelcomePageSettingsResponse,
   ThemeSettingsResponse,
+  AgentMcpConfig,
+  McpServerConfig,
 } from "./types";
 import type {
   ProviderCatalogContract,
@@ -221,6 +223,22 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       });
       await assertOk(res);
       return parseJsonResponse<AgentUpdateResponse>(res, schemas.agentUpdateResponse);
+    },
+
+    async getAgentMcp(id: string): Promise<AgentMcpConfig> {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(id)}/mcp`);
+      if (!res.ok) return { servers: [] };
+      return parseJsonResponse<AgentMcpConfig>(res, schemas.agentMcpResponse);
+    },
+
+    async updateAgentMcp(id: string, config: { servers: McpServerConfig[] }): Promise<AgentMcpConfig> {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(id)}/mcp`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
+      await assertOk(res);
+      return parseJsonResponse<AgentMcpConfig>(res, schemas.agentMcpResponse);
     },
 
     async deleteAgent(id: string): Promise<{ ok: boolean }> {

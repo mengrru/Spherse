@@ -15,6 +15,7 @@ project-root/
 │   │   └── {agent-slug}/
 │   │       ├── profile.md
 │   │       ├── theme.css
+│   │       ├── mcp.json               # 可选：MCP 连接器配置（agent 右键「连接器」对话框管理）
 │   │       ├── sessions.db
    │   │       ├── triggers/
 │   │       │   ├── index.yml
@@ -56,6 +57,8 @@ welcomePage:
 Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/{agent-slug}/profile.md`。agent slug（目录名）由 `slugBase`（从初始 agent name 派生：小写、空格替换为连字符）与 `shortId`（agent UUID 前 6 位）拼接而成，形如 `world-builder-a1b2c3`。目录名在创建时生成，之后不再变。
 
 Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent Dialog 的“主题”标签页编辑，正常新建流程会从 `@spherse/presets` 的 `agent-theme-template.css` 初始化。文件不存在时读取结果为空字符串，聊天窗口使用全局默认样式。
+
+Agent 的 MCP 连接器配置存放于同目录的 `mcp.json`（可选文件）。由 agent 右键菜单「连接器（MCP）」对话框管理，记录该 agent 启用的 MCP server 列表（stdio 子进程 / http streamable / sse 三种传输方式，每项含 `id`/`name`/`enabled`/`transport` 及对应的连接参数）。会话启动时，运行时连接所有 `enabled` 的 server，将发现的工具以 `mcp__{server}__{tool}` 命名合并进该 agent 的工具集；会话销毁时断开连接。文件不存在时视为无连接器。该文件可能含 `headers`/`env` 等敏感信息，因此对 LLM 工具（`read_file` 等）不可读（`agentMcp` category，不在 LLM 读取白名单内）。
 
 必需字段：
 
@@ -121,7 +124,7 @@ Agent system prompt content...
 
 `sessions.title` 是可选的用户可编辑展示标题。用户重命名 session 时只更新 `title`，不更新 `updated_at`，因此不会改变 session 列表按最近对话活动排序的行为。
 
-删除 agent 时，ProjectRuntime 关闭该 agent 的 DB 连接并删除整个 agent 目录，`sessions.db` 随 `profile.md`、`theme.css` 一起移除。
+删除 agent 时，ProjectRuntime 关闭该 agent 的 DB 连接并删除整个 agent 目录，`sessions.db` 随 `profile.md`、`theme.css`、`mcp.json` 一起移除。
 
 ## System Prompt XML 约定
 
@@ -173,7 +176,7 @@ Full skill instructions in Markdown...
 - AI 工具（read_file/write_file/edit_file/list_files/search_content/move_file/copy_file/render_card）和 server 通用路由（content/preview/images）的读写权限由 `@spherse/core` 的 access policy 统一管理：`categorizePath` 将路径分类为语义 category，`llmAccessPolicy`/`serverAccessPolicy` 基于 category 白名单控制读写范围
 - 会写文件的 agent tools 共享 `FileWriteMutex`，避免同一文件并发写覆盖
 - **二进制文件处理**：`read_file` 和 `search_content` 通过 null-byte 启发式（前 8KB 采样）检测二进制文件。`read_file` 检测到二进制时拒绝读取并返回提示（图片文件引导使用 `render_card` 展示）；`search_content` 静默跳过二进制文件
-- **`.spherse` 元数据目录**：`list_files` 和 `search_content` 默认不列出/搜索 `.spherse` 目录及其子路径（参数 `include_meta`，默认 false）；设置 `include_meta=true` 可进入。`spherseOther` category（`.spherse/**` 兜底）对 LLM 可读；`agentSessions`（`sessions.db*`，含 WAL/SHM sidecar）始终不可读
+- **`.spherse` 元数据目录**：`list_files` 和 `search_content` 默认不列出/搜索 `.spherse` 目录及其子路径（参数 `include_meta`，默认 false）；设置 `include_meta=true` 可进入。`spherseOther` category（`.spherse/**` 兜底）对 LLM 可读；`agentSessions`（`sessions.db*`，含 WAL/SHM sidecar）与 `agentMcp`（`mcp.json`，可能含 headers/env 敏感信息）始终不可读
 
 ## HTML Card
 

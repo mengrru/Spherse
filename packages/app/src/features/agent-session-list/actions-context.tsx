@@ -6,6 +6,7 @@ export interface AgentSessionActions {
   toggleAgentCollapsed: (agentId: string) => void;
   newSession: (agent: AgentProfile) => void;
   triggerAgent: (agent: AgentProfile) => void;
+  mcpAgent: (agent: AgentProfile) => void;
   editAgent: (agent: AgentProfile) => void;
   deleteAgent: (agent: AgentProfile) => void;
   selectSession: (session: SessionInfo) => void;

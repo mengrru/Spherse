@@ -21,6 +21,34 @@ const agentProfile = Type.Object({
   filePath: Type.String(),
 });
 
+const mcpServerConfig = Type.Union([
+  Type.Object({
+    id: Type.String(),
+    name: Type.String(),
+    enabled: Type.Boolean(),
+    transport: Type.Literal("stdio"),
+    command: Type.String(),
+    args: Type.Optional(Type.Array(Type.String())),
+    env: Type.Optional(Type.Record(Type.String(), Type.String())),
+  }),
+  Type.Object({
+    id: Type.String(),
+    name: Type.String(),
+    enabled: Type.Boolean(),
+    transport: Type.Literal("http"),
+    url: Type.String(),
+    headers: Type.Optional(Type.Record(Type.String(), Type.String())),
+  }),
+  Type.Object({
+    id: Type.String(),
+    name: Type.String(),
+    enabled: Type.Boolean(),
+    transport: Type.Literal("sse"),
+    url: Type.String(),
+    headers: Type.Optional(Type.Record(Type.String(), Type.String())),
+  }),
+]);
+
 export const schemas = {
   agentProfile,
   agentListResponse: Type.Array(agentProfile),
@@ -36,6 +64,13 @@ export const schemas = {
     themeContent: Type.Optional(Type.String()),
   }),
   agentUpdateResponse: Type.Object({ ok: Type.Boolean(), id: Type.String() }),
+  mcpServerConfig,
+  agentMcpResponse: Type.Object({
+    servers: Type.Array(mcpServerConfig),
+  }),
+  agentMcpUpdateRequest: Type.Object({
+    servers: Type.Array(mcpServerConfig),
+  }),
 } as const;
 
 export type AgentProfileContract = Static<typeof agentProfile>;
@@ -45,3 +80,6 @@ export type AgentCreateRequest = Static<typeof schemas.agentCreateRequest>;
 export type AgentCreateResponse = Static<typeof schemas.agentCreateResponse>;
 export type AgentUpdateRequest = Static<typeof schemas.agentUpdateRequest>;
 export type AgentUpdateResponse = Static<typeof schemas.agentUpdateResponse>;
+export type McpServerConfigContract = Static<typeof schemas.mcpServerConfig>;
+export type AgentMcpResponse = Static<typeof schemas.agentMcpResponse>;
+export type AgentMcpUpdateRequest = Static<typeof schemas.agentMcpUpdateRequest>;

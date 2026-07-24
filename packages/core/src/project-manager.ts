@@ -1,4 +1,5 @@
 import type { AgentProfile, SessionInfo, SkillDefinition } from "./types.js";
+import type { AgentMcpConfig } from "./mcp/index.js";
 import { ProjectStore } from "./store/project.js";
 import type { ChangelogEntry } from "./store/project.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
@@ -76,6 +77,21 @@ export class ProjectManager {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
     await agentStore.profile.saveTheme(content);
+  }
+
+  async getAgentMcp(agentId: string): Promise<AgentMcpConfig> {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    return agentStore.mcp.getConfig();
+  }
+
+  async updateAgentMcp(
+    agentId: string,
+    config: { servers: ReadonlyArray<Record<string, unknown>> },
+  ): Promise<AgentMcpConfig> {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    return agentStore.mcp.saveConfig(config);
   }
 
   getSession(agentId: string, sessionId: string): SessionInfo | null {

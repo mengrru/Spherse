@@ -30,6 +30,7 @@ export function AgentRow({ agent, active }: AgentRowProps) {
   const { projectId } = useProjectCtx();
   const agentDialogEnabled = useFeature("agent-dialog");
   const triggerEnabled = useFeature("agent-trigger");
+  const mcpEnabled = useFeature("agent-mcp");
   const hasEnabled = useProjectDataStore(
     (s) => s.projects[projectId]?.hasEnabledTriggersByAgent?.[agent.id] ?? false,
   );
@@ -68,6 +69,11 @@ export function AgentRow({ agent, active }: AgentRowProps) {
             <ContextMenuItem onClick={() => actions.triggerAgent(agent)}>
               {t("agent-trigger.menuItem")}
               <Badge variant="secondary" className="ml-auto">Beta</Badge>
+            </ContextMenuItem>
+          )}
+          {mcpEnabled && (
+            <ContextMenuItem onClick={() => actions.mcpAgent(agent)}>
+              {t("agent-mcp.menuItem")}
             </ContextMenuItem>
           )}
           <ContextMenuSeparator />

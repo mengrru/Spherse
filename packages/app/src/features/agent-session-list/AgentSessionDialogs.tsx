@@ -1,6 +1,7 @@
 import { useI18n } from "@spherse/i18n/react";
 import { AgentDialog } from "../agent-dialog";
 import { TriggerDialog } from "../agent-trigger";
+import { McpDialog } from "../agent-mcp";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,7 @@ export type DialogState =
   | { kind: "delete-agent"; agent: AgentProfile }
   | { kind: "delete-session"; session: SessionInfo }
   | { kind: "trigger"; agent: AgentProfile }
+  | { kind: "mcp"; agent: AgentProfile }
   | { kind: "session-status"; session: SessionInfo };
 
 interface AgentSessionDialogsProps {
@@ -100,6 +102,14 @@ export function AgentSessionDialogs({
       </AlertDialog>
       {dialog.kind === "trigger" && (
         <TriggerDialog
+          open={true}
+          onOpenChange={(open) => { if (!open) onClose(); }}
+          agentId={dialog.agent.id}
+          projectId={projectId}
+        />
+      )}
+      {dialog.kind === "mcp" && (
+        <McpDialog
           open={true}
           onOpenChange={(open) => { if (!open) onClose(); }}
           agentId={dialog.agent.id}

@@ -481,6 +481,64 @@ export const zhCN = {
   // agent 列表项上的 Clock icon tooltip：该 agent 至少有一条 enabled trigger，hover icon 时显示
   "agent-trigger.indicatorTooltip": "已开启触发器",
 
+  // --- Agent MCP (连接器) ---
+  // 搭档右键菜单中的「连接器（MCP）」入口，点击打开 MCP 配置弹窗
+  "agent-mcp.menuItem": "连接器（MCP）",
+  // MCP 配置弹窗标题
+  "agent-mcp.dialogTitle": "连接器（MCP）",
+  // 弹窗标题旁的警告图标 tooltip：提示连接 MCP server 可能执行任意代码或访问网络
+  "agent-mcp.securityHint": "MCP 连接器会运行外部程序或访问网络地址，请仅添加你信任的服务。",
+  // 服务列表为空时的占位文案
+  "agent-mcp.empty": "暂无 MCP 连接器，点击上方按钮添加。",
+  // 「添加连接器」按钮
+  "agent-mcp.addServer": "添加连接器",
+  // 单个连接器的启用开关的无障碍标签
+  "agent-mcp.toggleEnabled": "启用/停用此连接器",
+  // 删除确认弹窗标题
+  "agent-mcp.confirmDeleteTitle": "删除连接器",
+  // 删除确认弹窗正文，{name} 为连接器名称
+  "agent-mcp.confirmDeleteDescription": "确定要删除连接器「{name}」吗？",
+  // 保存失败时校验提示（如缺少名称/命令/地址）
+  "agent-mcp.invalidServer": "连接器信息不完整：请检查名称、命令或地址是否已填写。",
+  // 加载 MCP 配置失败的 toast，{message} 为错误信息
+  "agent-mcp.loadFailed": "加载连接器配置失败：{message}",
+  // 保存成功的 toast
+  "agent-mcp.saved": "连接器配置已保存",
+  // 保存失败的 toast，{message} 为错误信息
+  "agent-mcp.saveFailed": "保存连接器配置失败：{message}",
+  // 表单：连接器名称字段标签
+  "agent-mcp.fieldName": "名称",
+  // 表单：连接器名称字段占位
+  "agent-mcp.fieldNamePlaceholder": "如「文件系统」「搜索」",
+  // 表单：传输方式字段标签
+  "agent-mcp.fieldTransport": "传输方式",
+  // 传输方式：stdio（本地子进程）
+  "agent-mcp.transport-stdio": "本地进程",
+  // 传输方式：http（Streamable HTTP）
+  "agent-mcp.transport-http": "HTTP",
+  // 传输方式：sse（Server-Sent Events）
+  "agent-mcp.transport-sse": "SSE",
+  // 表单（stdio）：可执行命令字段标签
+  "agent-mcp.fieldCommand": "命令",
+  // 表单（stdio）：可执行命令字段占位
+  "agent-mcp.fieldCommandPlaceholder": "如 npx -y @modelcontextprotocol/server-filesystem",
+  // 表单（stdio）：启动参数字段标签
+  "agent-mcp.fieldArgs": "启动参数",
+  // 表单（stdio）：启动参数字段占位，每行一个参数
+  "agent-mcp.fieldArgsPlaceholder": "每行一个参数，如\n/path/to/dir",
+  // 表单（stdio）：环境变量字段标签
+  "agent-mcp.fieldEnv": "环境变量",
+  // 表单（stdio）：环境变量字段占位，每行一个 KEY=VALUE
+  "agent-mcp.fieldEnvPlaceholder": "每行一个，格式 KEY=VALUE",
+  // 表单（http/sse）：服务地址字段标签
+  "agent-mcp.fieldUrl": "服务地址",
+  // 表单（http/sse）：服务地址字段占位
+  "agent-mcp.fieldUrlPlaceholder": "如 http://localhost:3000/mcp",
+  // 表单（http/sse）：请求头字段标签
+  "agent-mcp.fieldHeaders": "请求头",
+  // 表单（http/sse）：请求头字段占位，每行一个 Key: Value
+  "agent-mcp.fieldHeadersPlaceholder": "每行一个，格式 Authorization: Bearer xxx",
+
   // --- Chat ---
   // 聊天输入框占位提示
   "chat.composerPlaceholder": "输入消息... (Shift+Enter 换行)",

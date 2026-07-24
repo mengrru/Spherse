@@ -37,6 +37,9 @@ export type {
   AgentCreateResponse,
   AgentUpdateRequest,
   AgentUpdateResponse,
+  McpServerConfigContract,
+  AgentMcpResponse,
+  AgentMcpUpdateRequest,
 } from "./agents.js";
 
 export type {

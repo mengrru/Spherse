@@ -32,6 +32,9 @@ describe("categorizePath", () => {
     expect(categorizePath(".spherse/agents/historian-abc123/theme.css")).toBe(
       "agentTheme",
     );
+    expect(categorizePath(".spherse/agents/historian-abc123/mcp.json")).toBe(
+      "agentMcp",
+    );
     expect(categorizePath(".spherse/agents/historian-abc123/sessions.db")).toBe(
       "agentSessions",
     );

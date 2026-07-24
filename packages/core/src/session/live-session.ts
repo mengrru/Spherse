@@ -28,12 +28,38 @@ import {
 
 export type AgentEventHandler = (event: AgentEvent) => void;
 
+function dedupeToolNames(
+  existing: AgentTool[],
+  incoming: AgentTool[],
+): AgentTool[] {
+  const used = new Set<string>();
+  for (const t of existing) used.add(t.name);
+  const result: AgentTool[] = [];
+  for (const tool of incoming) {
+    if (!used.has(tool.name)) {
+      used.add(tool.name);
+      result.push(tool);
+      continue;
+    }
+    let suffix = 2;
+    let candidate = `${tool.name}__${suffix}`;
+    while (used.has(candidate)) {
+      suffix += 1;
+      candidate = `${tool.name}__${suffix}`;
+    }
+    used.add(candidate);
+    result.push({ ...tool, name: candidate });
+  }
+  return result;
+}
+
 export class LiveSession {
   private readonly agent: Agent;
   private readonly agentId: string;
   private readonly sessionId: string;
   private readonly ctx: SessionContext;
   private readonly liveMessageDbIds: number[] = [];
+  private mcpMerged = false;
 
   private constructor(
     agent: Agent,
@@ -97,6 +123,7 @@ export class LiveSession {
 
   async sendMessage(message: string, onEvent: AgentEventHandler): Promise<void> {
     this.ensureModel();
+    await this.ensureMcpTools();
     const sessionLogger = this.ctx.logger.child({ sessionId: this.sessionId });
     const agentStore = this.ctx.projectStore.getAgent(this.agentId);
 
@@ -126,6 +153,19 @@ export class LiveSession {
       this.agent.state.model = resolveModelById(modelId);
     } catch {
       throw new ModelNotConfiguredError();
+    }
+  }
+
+  private async ensureMcpTools(): Promise<void> {
+    if (this.mcpMerged) return;
+    this.mcpMerged = true;
+    try {
+      const mcpTools = await this.ctx.mcpConnectionManager.getTools(this.agentId);
+      if (mcpTools.length === 0) return;
+      const current = this.agent.state.tools;
+      this.agent.state.tools = [...current, ...dedupeToolNames(current, mcpTools)];
+    } catch (err) {
+      this.ctx.logger.warn({ err, sessionId: this.sessionId }, "ensure mcp tools failed");
     }
   }
 

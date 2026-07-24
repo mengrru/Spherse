@@ -13,7 +13,11 @@ export type {
   AiAccessSettingsResponse,
   WelcomePageSettingsResponse,
   ThemeSettingsResponse,
+  McpServerConfigContract as McpServerConfig,
+  AgentMcpResponse as AgentMcpConfig,
 } from "@spherse/server/contracts";
+
+export type { McpTransportType } from "@spherse/core";
 
 export type {
   AgentMessage,

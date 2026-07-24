@@ -2,6 +2,7 @@ import type { ProjectManager } from "./project-manager.js";
 import type { SessionManager } from "./session/session-manager.js";
 import type { TriggerManager } from "./trigger/trigger-manager.js";
 import type { TimerService } from "./trigger/timer-service.js";
+import type { AgentMcpConfig } from "./mcp/index.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 
 export class ProjectRuntime {
@@ -36,8 +37,18 @@ export class ProjectRuntime {
 
   async deleteAgent(agentId: string): Promise<void> {
     this.sessionRuntime.evictAgent(agentId);
+    await this.sessionRuntime.invalidateMcpCache(agentId);
     this.triggerManager.deleteAllForAgent(agentId);
     await this.projectManager.deleteAgent(agentId);
+  }
+
+  async updateAgentMcp(
+    agentId: string,
+    config: { servers: ReadonlyArray<Record<string, unknown>> },
+  ): Promise<AgentMcpConfig> {
+    const result = await this.projectManager.updateAgentMcp(agentId, config);
+    await this.sessionRuntime.invalidateMcpCache(agentId);
+    return result;
   }
 
   async shutdown(): Promise<void> {
@@ -46,7 +57,7 @@ export class ProjectRuntime {
     this.logger.info({ projectId: this.projectId }, "project runtime shutting down");
     this.timerService.stop();
     this.triggerManager.stopAll();
-    this.sessionRuntime.closeAll();
+    await this.sessionRuntime.closeAll();
     this.projectManager.close();
   }
 }
