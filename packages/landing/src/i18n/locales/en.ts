@@ -15,6 +15,10 @@ export const en: Record<keyof typeof zhCN, string> = {
   "feature.trigger.desc": "Supports time-based and event-based triggers to automate AI tasks.",
   "feature.theme.title": "Highly Customizable UI",
   "feature.theme.desc": "Let AI craft an interface that is truly yours.",
+  "feature.connector.title": "Connector (MCP)",
+  "feature.connector.desc": "Integrate with the MCP protocol to connect external tools and data sources",
+  "feature.mobile.title": "Mobile",
+  "feature.mobile.desc": "One-tap setup, scan to connect — keep creating anywhere, anytime",
   "feature.slogan": "Spherse is your box of building blocks — use it to build a world entirely your own!",
   "feature.moreCases": "More use cases",
 
@@ -25,10 +29,6 @@ export const en: Record<keyof typeof zhCN, string> = {
 
   "upcoming.memory.title": "Cross-Session Memory",
   "upcoming.memory.desc": "Agents will maintain long-term memory across sessions",
-  "upcoming.connector.title": "Connector (MCP)",
-  "upcoming.connector.desc": "Integrate with the MCP protocol to connect external tools and data sources",
-  "upcoming.mobile.title": "Mobile",
-  "upcoming.mobile.desc": "Continue your creation anywhere, anytime",
   "upcoming.label": "Coming Soon",
 
   "lang.zhCN": "中文",

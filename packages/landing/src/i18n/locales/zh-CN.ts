@@ -12,6 +12,10 @@ export const zhCN = {
   "feature.trigger.desc": "支持定时触发与事件触发对话，可实现 AI 自动执行任务",
   "feature.theme.title": "高度可定制化 UI",
   "feature.theme.desc": "利用 AI 打造完全属于你自己的界面",
+  "feature.connector.title": "连接器（MCP）",
+  "feature.connector.desc": "接入 MCP 协议，连接外部工具与数据源",
+  "feature.mobile.title": "移动端",
+  "feature.mobile.desc": "一键配置，扫码连接，随时随地继续你的创作",
   "feature.slogan": "Spherse 是你的积木筐，用它来打造完全属于你自己的世界吧！",
   "feature.moreCases": "更多使用案例",
 
@@ -22,10 +26,6 @@ export const zhCN = {
 
   "upcoming.memory.title": "Agent 跨 Session 记忆",
   "upcoming.memory.desc": "Agent 将能跨会话保持长期记忆",
-  "upcoming.connector.title": "连接器（MCP）",
-  "upcoming.connector.desc": "接入 MCP 协议，连接外部工具与数据源",
-  "upcoming.mobile.title": "移动端",
-  "upcoming.mobile.desc": "随时随地继续你的创作",
   "upcoming.label": "即将到来",
 
   "lang.zhCN": "中文",

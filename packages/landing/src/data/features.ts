@@ -1,9 +1,9 @@
 import type { LucideIcon } from "lucide-react";
-import { ShieldCheck, Bot, Clock, Palette } from "lucide-react";
+import { ShieldCheck, Bot, Clock, Palette, Plug, Smartphone } from "lucide-react";
 import { asset } from "@/lib/utils";
 
 export interface Feature {
-  id: "local" | "agents" | "trigger" | "theme";
+  id: "local" | "agents" | "trigger" | "theme" | "connector" | "mobile";
   icon: LucideIcon;
   i18nKeyPrefix: string;
   screenshots: string[];
@@ -45,5 +45,17 @@ export const features: Feature[] = [
       asset("screenshots/features/trigger/2.png"),
       asset("screenshots/features/trigger/3.png"),
     ],
+  },
+  {
+    id: "connector",
+    icon: Plug,
+    i18nKeyPrefix: "feature.connector",
+    screenshots: [],
+  },
+  {
+    id: "mobile",
+    icon: Smartphone,
+    i18nKeyPrefix: "feature.mobile",
+    screenshots: [],
   },
 ];

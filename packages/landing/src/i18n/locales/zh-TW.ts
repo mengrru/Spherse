@@ -14,6 +14,10 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "feature.trigger.desc": "支援定時觸發與事件觸發對話，可實現 AI 自動執行任務",
   "feature.theme.title": "高度可自訂化 UI",
   "feature.theme.desc": "利用 AI 打造完全屬於你自己的介面",
+  "feature.connector.title": "連接器（MCP）",
+  "feature.connector.desc": "接入 MCP 協定，連接外部工具與資料來源",
+  "feature.mobile.title": "行動端",
+  "feature.mobile.desc": "一鍵配置，掃碼連接，隨時隨地繼續你的創作",
   "feature.slogan": "Spherse 是你的積木筐，用它來打造完全屬於你自己的世界吧！",
   "feature.moreCases": "更多使用案例",
 
@@ -24,10 +28,6 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
 
   "upcoming.memory.title": "Agent 跨 Session 記憶",
   "upcoming.memory.desc": "Agent 將能跨會話保持長期記憶",
-  "upcoming.connector.title": "連接器（MCP）",
-  "upcoming.connector.desc": "接入 MCP 協定，連接外部工具與資料來源",
-  "upcoming.mobile.title": "行動端",
-  "upcoming.mobile.desc": "隨時隨地繼續你的創作",
   "upcoming.label": "即將到來",
 
   "lang.zhCN": "中文",
