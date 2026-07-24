@@ -22,7 +22,8 @@ spherse/
     │   │       │   ├── trigger.ts        # 触发器配置读写（triggers/index.yml / triggers/logs.jsonl）
 │   │       │   ├── agent-profile.ts  # .spherse/agents/{agent-slug}/profile.md CRUD
     │   │       │   ├── skill.ts          # SkillStore：合并 builtin（PRESET_SKILL_SOURCES 内存）与 project（.spherse/skills/*/SKILL.md）skill；createSkill/installSkill 写逻辑（含 zip 校验、zip-slip 防护、原子安装）
-│   │       │   └── index.ts
+    │   │       │   ├── mcp-config.ts     # McpConfigStore：读写 {agentDir}/mcp.json（lazy，经 normalizeMcpConfig 校验）
+    │   │       │   └── index.ts
 │   │       ├── tools/                # pi-agent-core AgentTool 实现（engine 内部使用）
 │   │       │   ├── read-file.ts
 │   │       │   ├── write-file.ts
@@ -49,8 +50,15 @@ spherse/
 │   │       ├── access/
 │   │       │   ├── path-category.ts   # PathCategory 分类真相（PATH_PATTERNS + categorizePath）
 │   │       │   ├── access-policy.ts   # AccessPolicy 接口 + llmAccessPolicy / serverAccessPolicy 工厂
-│   │       │   └── denied-paths.ts    # deniedPaths 路径规范化与保留路径校验
-│   │       ├── __tests__/            # Vitest 单元测试
+    │   │       │   └── denied-paths.ts    # deniedPaths 路径规范化与保留路径校验
+    │   │       ├── mcp/                   # MCP 连接器运行时（per-agent 连接缓存 + 工具适配）
+    │   │       │   ├── types.ts           # McpServerConfig（stdio/http/sse 传输）、AgentMcpConfig
+    │   │       │   ├── config.ts          # normalizeMcpConfig 校验 + makeMcpToolName 命名（mcp__{server}_{shortid}__{tool}）
+    │   │       │   ├── mcp-client.ts      # connectMcpServer：transport 构建 + listTools + adaptMcpTool（JSON Schema → TypeBox）
+    │   │       │   ├── mcp-connection-manager.ts # McpConnectionManager：per-agent 连接/工具缓存（getTools/invalidate/closeAll）
+    │   │       │   ├── json-schema-to-typebox.ts # MCP inputSchema → TypeBox parameters 转换
+    │   │       │   └── index.ts
+    │   │       ├── __tests__/            # Vitest 单元测试
 │   │       └── index.ts              # 公开导出：ProjectRuntime, createProject, types
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
 │   │   ├── presets.json              # 预置 skill、agent 与 prompt template 声明配置
@@ -107,7 +115,7 @@ spherse/
     │   │       ├── contracts/            # HTTP/WebSocket runtime schema 与解析 helper（@spherse/server/contracts）
     │   │       │   ├── index.ts          # 聚合 schemas 与类型 re-export，对外稳定入口
     │   │       │   ├── common.ts         # okResponse/errorResponse、parseContract/parseApiResponse
-    │   │       │   ├── agents.ts         # AgentProfile、AgentCreate/Update Request/Response
+    │   │       │   ├── agents.ts         # AgentProfile、AgentCreate/Update、MCP（mcpServerConfig/AgentMcpResponse/AgentMcpUpdateRequest）Request/Response
     │   │       │   ├── sessions.ts       # SessionInfo、SessionList/Messages Response、SessionMessagesPage（分页信封）、rename 请求
     │   │       │   ├── content.ts        # FileEntry、ContentResponse、create/save 请求
     │   │       │   ├── file-tree.ts      # FileTreeResponse
@@ -119,7 +127,8 @@ spherse/
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
-│   │       │   ├── agent-write.ts    # Agent 创建/更新/删除
+    │   │       │   ├── agent-write.ts    # Agent 创建/更新/删除
+    │   │       │   ├── agent-mcp.ts      # Agent MCP 连接器配置读写（GET/PUT /api/projects/:projectId/agents/:id/mcp）
 │       │       │   ├── sessions.ts       # Session 创建/查询/重命名/删除与消息读取
 │   │       │   ├── content.ts        # 内容浏览、读取、保存、删除、新建文件/目录
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
