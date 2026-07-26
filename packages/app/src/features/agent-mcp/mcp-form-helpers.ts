@@ -9,6 +9,7 @@ export interface McpServerDraft {
   command: string;
   args: string;
   env: string;
+  cwd: string;
   url: string;
   headers: string;
 }
@@ -24,6 +25,7 @@ export function emptyMcpDraft(): McpServerDraft {
     command: "",
     args: "",
     env: "",
+    cwd: "",
     url: "",
     headers: "",
   };
@@ -57,6 +59,7 @@ export function draftToConfig(draft: McpServerDraft): McpServerConfig | null {
     if (!command) return null;
     const args = parseLines(draft.args);
     const envEntries = parseKeyValueEntries(draft.env, /=/);
+    const cwd = draft.cwd.trim();
     return {
       id: draft.id,
       name,
@@ -65,6 +68,7 @@ export function draftToConfig(draft: McpServerDraft): McpServerConfig | null {
       command,
       ...(args.length ? { args } : {}),
       ...(envEntries.length ? { env: Object.fromEntries(envEntries) } : {}),
+      ...(cwd ? { cwd } : {}),
     } as McpServerConfig;
   }
 
@@ -93,6 +97,7 @@ export function configToDraft(config: McpServerConfig): McpServerDraft {
       env: config.env
         ? Object.entries(config.env).map(([k, v]) => `${k}=${v}`).join("\n")
         : "",
+      cwd: config.cwd ?? "",
       url: "",
       headers: "",
     };
@@ -105,6 +110,7 @@ export function configToDraft(config: McpServerConfig): McpServerDraft {
     command: "",
     args: "",
     env: "",
+    cwd: "",
     url: config.url,
     headers: config.headers
       ? Object.entries(config.headers).map(([k, v]) => `${k}: ${v}`).join("\n")

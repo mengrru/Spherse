@@ -112,6 +112,7 @@ function buildTransport(config: McpServerConfig): StdioClientTransport | Streama
       command: config.command,
       args: config.args,
       env: config.env,
+      cwd: config.cwd,
       stderr: "pipe",
     });
   }
@@ -143,9 +144,25 @@ export async function connectMcpServer(
   const transport = buildTransport(config);
   const client = new Client(CLIENT_INFO, { capabilities: {} });
 
+  let stderrBuffer = "";
+  if (transport instanceof StdioClientTransport) {
+    transport.stderr?.on("data", (chunk: Buffer | string) => {
+      stderrBuffer += typeof chunk === "string" ? chunk : chunk.toString();
+    });
+  }
+
   try {
     await client.connect(transport);
   } catch (err) {
+    const stderr = stderrBuffer.trim();
+    if (stderr) {
+      log.error(
+        { err, server: config.name, stderr },
+        "mcp stdio server failed to start; captured stderr",
+      );
+    } else {
+      log.error({ err, server: config.name }, "mcp stdio server failed to start");
+    }
     try {
       await client.close();
     } catch {

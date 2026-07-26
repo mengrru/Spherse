@@ -30,6 +30,7 @@ const mcpServerConfig = Type.Union([
     command: Type.String(),
     args: Type.Optional(Type.Array(Type.String())),
     env: Type.Optional(Type.Record(Type.String(), Type.String())),
+    cwd: Type.Optional(Type.String()),
   }),
   Type.Object({
     id: Type.String(),

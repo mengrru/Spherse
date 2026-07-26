@@ -130,6 +130,20 @@ window.parent.postMessage({
 
 > `path` 为项目内相对路径。
 
+## 打开外部链接：openExternalLink
+
+页面中需要打开外部网页（http/https/mailto/tel）时，使用 ui-sdk 的 `openExternalLink` action 在系统默认浏览器中打开。**不要用 `<a href="https://...">` 直接链接**——iframe 中的原生外链只会在 iframe 内原地跳转，无法跳出 App。
+
+```javascript
+window.parent.postMessage({
+  type: "spherse:action",
+  action: "openExternalLink",
+  params: { url: "https://example.com" }
+}, "*");
+```
+
+> 仅 http/https/mailto/tel 协议生效，其它协议会被静默忽略。指向项目内文件请用 `openFile`。完整 API 见 `use-ui-sdk` skill。
+
 ## 交互式 HtmlCard：将用户选择回传当前会话
 
 当 HTML 作为**聊天 HtmlCard** 渲染时，可以为用户制作带交互性的卡片——例如让用户在多个选项中勾选，点击「提交」后把选择结果直接作为一条消息发回**当前会话**，驱动后续对话或 agent 行为。
@@ -219,6 +233,7 @@ window.parent.postMessage({
 - `emitAgentTriggerEvent` — 触发自定义事件，激活匹配的事件触发器
 - `floatSession` / `unfloatSession` — 浮窗显示/关闭会话
 - `openFile` — 在 Content Browser 打开项目文件
+- `openExternalLink` — 在系统默认浏览器打开外部链接（http/https/mailto/tel）
 - `data.get` / `data.set` / `data.delete` — key-value 数据读写
 
 所有 action 均通过 `window.parent.postMessage({ type: "spherse:action", action, params }, "*")` 触发，无需引入任何外部脚本。
@@ -236,6 +251,7 @@ window.parent.postMessage({
 | 字符串模式下加载展示数据 | 数据内联进 HTML，或用 ui-sdk `data.get` |
 | 持久化读写数据 | ui-sdk `data.get` / `data.set` / `data.delete` |
 | 点击打开项目内文件 | ui-sdk `openFile` |
+| 点击打开外部链接（网页/邮箱） | ui-sdk `openExternalLink`（http/https/mailto/tel），勿用 `<a href>` |
 | 打开/发送 chat 会话 | ui-sdk `createSession` / `sendMessage` / `floatSession` |
 | 触发事件驱动 agent 执行 | ui-sdk `emitAgentTriggerEvent`（配合 agent 触发器配置） |
 | 交互式卡片 / 向当前会话发消息 | 读 `window.__SPHERSE__.sessionId`，调 `sendMessage`（如收集用户选择后提交回传，会话忙碌返回 `session_busy`） |

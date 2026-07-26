@@ -9,7 +9,15 @@ export function isImageFile(filePath: string): boolean {
 }
 
 export function ensureCharset(html: string): string {
-  return html.includes("charset") ? html : html.replace(/<head([^>]*)>/i, `<head$1><meta charset="UTF-8">`);
+  if (html.includes("charset")) return html;
+  const meta = `<meta charset="UTF-8">`;
+  if (/<head([^>]*)>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1>${meta}`);
+  }
+  if (/<html([^>]*)>/i.test(html)) {
+    return html.replace(/<html([^>]*)>/i, `<html$1>${meta}`);
+  }
+  return `${meta}${html}`;
 }
 
 export function ensureScrollable(html: string): string {

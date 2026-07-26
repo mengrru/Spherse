@@ -261,6 +261,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "agent-mcp.fieldArgsPlaceholder": "每行一個參數，如\n/path/to/dir",
   "agent-mcp.fieldEnv": "環境變數",
   "agent-mcp.fieldEnvPlaceholder": "每行一個，格式 KEY=VALUE",
+  "agent-mcp.fieldCwd": "工作目錄",
+  "agent-mcp.fieldCwdPlaceholder": "可選，建議絕對路徑，如 /Users/me/work",
   "agent-mcp.fieldUrl": "服務位址",
   "agent-mcp.fieldUrlPlaceholder": "如 http://localhost:3000/mcp",
   "agent-mcp.fieldHeaders": "請求標頭",

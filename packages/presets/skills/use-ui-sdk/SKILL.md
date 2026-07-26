@@ -122,6 +122,26 @@ window.parent.postMessage({
 }, "*");
 ```
 
+### openExternalLink
+
+在系统默认浏览器中打开外部链接（http/https/mailto/tel）。HTML 中的外部链接若用原生 `<a href="https://...">`，会在 iframe 内原地跳转、无法跳出 App，应改用本 action。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| url | string | 是 | 外部绝对链接（http/https/mailto/tel） |
+
+```javascript
+window.parent.postMessage({
+  type: "spherse:action",
+  action: "openExternalLink",
+  params: {
+    url: "https://example.com/reference"
+  }
+}, "*");
+```
+
+> 仅 http/https/mailto/tel 协议生效，其它协议会被静默忽略；非 string 或空字符串也会被忽略。指向项目内文件请改用 `openFile`。
+
 ### sendMessage
 
 向已有会话发送消息并导航到聊天页面。
@@ -420,7 +440,7 @@ await spherseCall("data.delete", { file: "world/game.data.json", key: "score" })
 - **频率限制**：每分钟最多触发 10 次操作，超出会被静默丢弃。读取类 action（`data.get`）位于白名单内，不受频率限制，便于交互式页面频繁读取状态
 - **无需引入脚本**：使用浏览器原生 `postMessage`，零依赖
 - **适用场景**：欢迎页（Welcome Page）、Content Browser 预览、聊天 HtmlCard 中均可用
-- **单向触发**：导航类操作（createSession、openFile）是单向的，iframe 无法获取执行结果。`sendMessage` 与 Data action（data.get/set/delete）例外，支持通过 `requestId` 获取返回值（`sendMessage` 在目标会话忙碌时返回 `{ ok: false, data: { error: "session_busy" } }`）
+- **单向触发**：导航类操作（createSession、openFile、openExternalLink）是单向的，iframe 无法获取执行结果。`sendMessage` 与 Data action（data.get/set/delete）例外，支持通过 `requestId` 获取返回值（`sendMessage` 在目标会话忙碌时返回 `{ ok: false, data: { error: "session_busy" } }`）
 - **仅限 UI 操作与数据存取**：导航类操作不支持文件读写、删除等。Data action 支持 key-value 数据存取，数据存储在 HTML 同级的 `.data.json` 文件中
 - **参数校验**：缺少必填参数或类型不匹配时操作会被静默忽略
 - **action 严格匹配**：action 名称区分大小写，未知 action 会被忽略

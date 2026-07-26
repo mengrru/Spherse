@@ -261,6 +261,8 @@ export const en: Record<TranslationKey, string> = {
   "agent-mcp.fieldArgsPlaceholder": "One argument per line, e.g.\n/path/to/dir",
   "agent-mcp.fieldEnv": "Environment variables",
   "agent-mcp.fieldEnvPlaceholder": "One per line, format KEY=VALUE",
+  "agent-mcp.fieldCwd": "Working directory",
+  "agent-mcp.fieldCwdPlaceholder": "Optional, absolute path recommended, e.g. /Users/me/work",
   "agent-mcp.fieldUrl": "Server URL",
   "agent-mcp.fieldUrlPlaceholder": "e.g. http://localhost:3000/mcp",
   "agent-mcp.fieldHeaders": "Headers",

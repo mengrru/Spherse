@@ -45,4 +45,8 @@ describe("WelcomePage structure", () => {
     expect(source).toContain("function normalizePath(p: string): string");
     expect(source).toContain('.replace(/\\\\/g, "/")');
   });
+
+  it("falls back to project root index.html when no welcome page is configured", () => {
+    expect(source).toContain('getPreviewUrl("index.html")');
+  });
 });

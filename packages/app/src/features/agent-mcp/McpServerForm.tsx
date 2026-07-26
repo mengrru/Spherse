@@ -75,6 +75,15 @@ export function McpServerForm({ draft, onChange, onSave, onCancel }: McpServerFo
                 className="font-mono text-xs"
               />
             </Field>
+            <Field>
+              <FieldLabel>{t("agent-mcp.fieldCwd")}</FieldLabel>
+              <Input
+                value={draft.cwd}
+                onChange={(e) => onChange({ cwd: e.target.value })}
+                placeholder={t("agent-mcp.fieldCwdPlaceholder")}
+                className="font-mono text-xs"
+              />
+            </Field>
           </>
         ) : (
           <>

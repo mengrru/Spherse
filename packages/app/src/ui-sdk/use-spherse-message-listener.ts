@@ -41,6 +41,7 @@ export function useSpherseMessageListener(
         source: event.source,
         requestId: event.data.requestId,
         hostKind: bridge.kind,
+        openExternal: bridge.openExternal,
       };
       void dispatchAction(
         event.data.action,
@@ -51,5 +52,5 @@ export function useSpherseMessageListener(
 
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, [navigate, projectId, client, bridge.kind]);
+  }, [navigate, projectId, client, bridge.kind, bridge.openExternal]);
 }

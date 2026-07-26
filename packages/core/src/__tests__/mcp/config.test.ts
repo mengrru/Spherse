@@ -105,6 +105,35 @@ describe("normalizeMcpServer", () => {
     expect(result).not.toHaveProperty("env");
   });
 
+  it("preserves cwd when provided on a stdio server", () => {
+    const result = normalizeMcpServer({
+      id: "x",
+      name: "fs",
+      transport: "stdio",
+      command: "npx",
+      cwd: "/Users/me/work",
+    });
+    expect(result).toEqual({
+      id: "x",
+      name: "fs",
+      enabled: true,
+      transport: "stdio",
+      command: "npx",
+      cwd: "/Users/me/work",
+    });
+  });
+
+  it("strips blank/whitespace cwd", () => {
+    const result = normalizeMcpServer({
+      id: "x",
+      name: "fs",
+      transport: "stdio",
+      command: "npx",
+      cwd: "   ",
+    });
+    expect(result).not.toHaveProperty("cwd");
+  });
+
   it("returns null for unsupported transport", () => {
     expect(normalizeMcpServer({ id: "x", name: "f", transport: "ws", url: "u" })).toBeNull();
   });

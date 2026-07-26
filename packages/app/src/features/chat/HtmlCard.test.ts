@@ -30,6 +30,16 @@ describe("ensureCharset", () => {
     const html = "<html><head><title>x</title></head></html>";
     expect(ensureCharset(html)).toBe('<html><head><meta charset="UTF-8"><title>x</title></head></html>');
   });
+
+  it("injects charset meta after <html> when document has no <head>", () => {
+    const html = "<html><body>hi</body></html>";
+    expect(ensureCharset(html)).toBe('<html><meta charset="UTF-8"><body>hi</body></html>');
+  });
+
+  it("prepends charset meta when document has no <html>/<head> (fragment)", () => {
+    const html = "<div>hi</div><script>x()</script>";
+    expect(ensureCharset(html)).toBe('<meta charset="UTF-8"><div>hi</div><script>x()</script>');
+  });
 });
 
 describe("buildFileSrcDoc", () => {
@@ -55,7 +65,8 @@ describe("buildFileSrcDoc", () => {
     const html = "<html><body>hi</body></html>";
     const result = buildFileSrcDoc(html, previewUrl);
     expect(result.startsWith(`<base href="${dirUrl}/">`)).toBe(true);
-    expect(result).toContain("<html><body>hi");
+    expect(result).toContain("<body>hi");
+    expect(result).toContain('<meta charset="UTF-8">');
   });
 
   it("handles previewUrl without directory (file at root level)", () => {

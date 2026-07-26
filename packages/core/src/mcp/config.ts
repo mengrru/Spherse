@@ -77,6 +77,7 @@ export function normalizeMcpServer(raw: unknown): McpServerConfig | null {
     if (args) cfg.args = args;
     const env = coerceEnv(raw.env);
     if (env) cfg.env = env;
+    if (typeof raw.cwd === "string" && raw.cwd.trim()) cfg.cwd = raw.cwd.trim();
     return cfg;
   }
 

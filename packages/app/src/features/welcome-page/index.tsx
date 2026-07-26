@@ -43,7 +43,8 @@ export function WelcomePage({
       try {
         const settings = await client.getWelcomePageSettings();
         if (!settings.path) {
-          if (!cancelled) setPath(null);
+          const fallbackRes = await fetch(client.getPreviewUrl("index.html"));
+          if (!cancelled) setPath(fallbackRes.ok ? "index.html" : null);
           return;
         }
 
