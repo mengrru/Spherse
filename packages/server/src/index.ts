@@ -14,6 +14,8 @@ import { handleBusWebSocket } from "./ws-bus.js";
 
 export { ProjectRegistry, type ProjectContext, type ProjectInfo, type RegisterOptions } from "./registry.js";
 
+export const DEFAULT_SERVER_PORT = 53972;
+
 export interface MultiProjectServer {
   fastify: FastifyInstance;
   registry: ProjectRegistry;
@@ -24,6 +26,7 @@ export interface CreateServerOptions {
   defaultModel?: string;
   sampling?: SamplingParams;
   auth?: AuthOptions;
+  port?: number;
 }
 
 export async function createMultiProjectServer(
@@ -98,7 +101,14 @@ export async function createMultiProjectServer(
     req.log.info({ statusCode: reply.statusCode }, "preview response");
   });
 
-  await fastify.listen({ port: 0, host: "127.0.0.1" });
+  const preferredPort = options?.port ?? DEFAULT_SERVER_PORT;
+  try {
+    await fastify.listen({ port: preferredPort, host: "127.0.0.1" });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException | undefined)?.code !== "EADDRINUSE") throw err;
+    logger.warn({ port: preferredPort }, "default port in use, falling back to OS-assigned port");
+    await fastify.listen({ port: 0, host: "127.0.0.1" });
+  }
 
   const address = fastify.server.address() as AddressInfo;
   logger.info({ port: address.port }, "server listening");
