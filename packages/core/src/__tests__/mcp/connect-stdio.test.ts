@@ -53,4 +53,25 @@ describe("connectMcpServer (stdio failure logging)", () => {
     const errors = entries.filter((e) => e.level >= 50);
     expect(errors.length).toBeGreaterThan(0);
   });
+
+  it("merges config.env on top of process.env so spawned child keeps PATH and overrides", async () => {
+    const script = "process.stderr.write('FOO=' + process.env.SPHERSE_TEST_FOO + ';PATH_SET=' + (process.env.PATH ? 'yes' : 'no')); process.exit(1)";
+    const config: McpServerConfig = {
+      id: "env",
+      name: "env-merge",
+      enabled: true,
+      transport: "stdio",
+      command: process.execPath,
+      args: ["-e", script],
+      env: { SPHERSE_TEST_FOO: "bar" },
+    };
+    const { logger, entries } = makeCapturingLogger();
+
+    await expect(connectMcpServer(config, logger)).rejects.toThrow();
+
+    const errors = entries.filter((e) => e.level >= 50);
+    expect(errors.length).toBeGreaterThan(0);
+    const stderrLogged = errors.some((e) => e.data.stderr === "FOO=bar;PATH_SET=yes");
+    expect(stderrLogged).toBe(true);
+  });
 });

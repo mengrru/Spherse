@@ -106,12 +106,20 @@ export function adaptMcpTool(
   };
 }
 
+function cleanEnv(env: Record<string, string | undefined>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
 function buildTransport(config: McpServerConfig): StdioClientTransport | StreamableHTTPClientTransport | SSEClientTransport {
   if (config.transport === "stdio") {
     return new StdioClientTransport({
       command: config.command,
       args: config.args,
-      env: config.env,
+      env: { ...cleanEnv(process.env), ...config.env },
       cwd: config.cwd,
       stderr: "pipe",
     });

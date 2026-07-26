@@ -14,6 +14,7 @@ extraResources:
   - from: ../presets/sample-projects
     to: sample-projects
     filter: ["**/*"]
+npmRebuild: false
 extraMetadata:
   main: dist/main/index.js
 mac:

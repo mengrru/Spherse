@@ -234,9 +234,10 @@ spherse/
 │   │   ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
 │   │   ├── shared/
 │   │   │   └── electron-api.ts       # Electron IPC 类型契约（renderer 与 main 共享，renderer 经 tsconfig @shared 别名引用）
-│   │   ├── electron/
+ │   │   ├── electron/
 │   │   │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main
-│   │   │   ├── main.ts               # Electron 主进程：组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
+│   │   │   ├── main.ts               # Electron 主进程：启动时 fixPath（打包版 PATH 修复）→ restoreEnvFromSettings → 组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
+│   │   │   ├── fix-path.ts           # 打包版 PATH 修复：仅 packaged + darwin/linux，spawn 用户登录 shell（$SHELL -lic 'echo $PATH'，TERM=dumb，3s 超时）拉取登录 shell 的 PATH，剥离 ANSI/控制字节后按去重保序前置合并进 process.env.PATH（dev/test/win32 no-op，失败保留原 PATH 不阻断启动）；修复 GUI 进程不继承 shell PATH 导致 stdio MCP server（uvx/npx/python）找不到可执行文件
 │   │   │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
 │   │   │   ├── updater.ts            # electron-updater 封装：autoDownload/autoInstall 关闭、Windows 完整流程、macOS 通知模式（GitHub Releases API）、CancellationToken 取消、compareVersions、silent 抑制
 │   │   │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）

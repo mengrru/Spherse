@@ -1,6 +1,7 @@
 import { app } from "electron";
 import { createWindow, getMainWindow } from "./window.js";
 import { restoreEnvFromSettings } from "./settings.js";
+import { fixPath } from "./fix-path.js";
 import { ensureServer, stopServer, getServerPort } from "./server.js";
 import { registerAllIpc } from "./ipc/index.js";
 import { checkForUpdatesSilently } from "./updater.js";
@@ -9,6 +10,7 @@ import { getTunnelManager } from "./tunnel/manager.js";
 import { getMobileAccess, setMobileAccess, generateAccessToken } from "./settings.js";
 
 app.whenReady().then(async () => {
+  await fixPath();
   restoreEnvFromSettings();
   const mobile = getMobileAccess();
   if ((mobile.mode ?? "quick") === "manual" && !mobile.token) {
