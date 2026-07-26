@@ -25,6 +25,8 @@
 
 ## 功能增强
 
+- [x] **浮窗内容浏览器**：从文件树右键「浮窗」将文件以浮动窗口打开（仅文件本体，HTML 显示预览而非源码，无 header 工具栏）。支持多窗口（cascade 偏移定位，同文件不重复打开）、拖拽/调整大小、磁盘变更自动刷新、文件删除自动关闭、关闭项目自动清理。提取共享 `components/floating-frame/`（floating-chat 切换复用，hookPrefix 生成各自 `data-*-float-*` 主题钩子）。经 ui-sdk `floatContent`/`unfloatContent` action + `useFloatedFilePaths` selector hook 解耦触发。参见 `docs/dev/features/2026-07-26-floating-content-browser/design.md`
+
 - [x] **Content Browser front matter 显示优化**：markdown 文件顶部的 YAML front matter 原本被 remark-gfm 当作 `<hr>` 渲染破损，现新增 `parseFrontmatter`（safeLoad + 容错）在读视图层预解析，单独渲染轻量元信息面板（`dl` 网格 + 语义 token），正文剥离后交给 `MarkdownContent`；编辑态保留原始 front matter
 - [x] **Content Browser markdown 内部链接跳转**：支持 markdown 文件中的项目内链接（`[text](./other.md)` / `[text](/assets/x.png)`）点击后在应用内导航到对应 Content Browser 页面，而非浏览器原生打开/下载。路径解析复用 `image-path.ts`（抽公共函数 `markdown-link.ts`），链接 `<a>` 自定义拦截 onClick：`http(s)`/`mailto`/`tel` 走外部打开（`shell.openExternal`，含协议白名单），`#anchor` 走 `preventDefault` + `scrollIntoView`（配合 `rehype-slug` 给 heading 加 id，避免 hash router 冲突），其余项目内路径 `preventDefault` + `navigate` 到 `/project/:id/content?path=`。支持 `.md#section` 跨文件锚点拆分、不存在文件 toast 兜底、percent-编码中文路径解码。另新增全局 ErrorBoundary（router errorElement）防止全屏报错。
 - [x] **Agent 编辑**：支持编辑已有 agent 定义文件（当前只能创建）

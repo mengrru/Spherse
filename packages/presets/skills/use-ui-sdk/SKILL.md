@@ -213,6 +213,42 @@ window.parent.postMessage({
 }, "*");
 ```
 
+### floatContent
+
+将项目内某个文件以浮窗形式打开（仅显示文件内容，不含编辑/导航工具栏）。多个文件可同时浮窗，同一文件不会重复打开。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| path | string | 是 | 项目内文件相对路径 |
+
+```javascript
+window.parent.postMessage({
+  type: "spherse:action",
+  action: "floatContent",
+  params: {
+    path: "notes/outline.md"
+  }
+}, "*");
+```
+
+### unfloatContent
+
+关闭指定文件的浮窗。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| path | string | 是 | 要关闭浮窗的文件相对路径 |
+
+```javascript
+window.parent.postMessage({
+  type: "spherse:action",
+  action: "unfloatContent",
+  params: {
+    path: "notes/outline.md"
+  }
+}, "*");
+```
+
 ### emitAgentTriggerEvent
 
 触发一个自定义事件，用于激活配置了「事件触发器」的 agent。

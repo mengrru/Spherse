@@ -261,7 +261,36 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 }
 ```
 
-> 项目面板内部使用 shadcn/ui sidebar 组件（`--sp-sidebar` 系列变量控制纯色背景）。设 `background` / `background-image` 可覆盖纯色实现图片/渐变背景。
+ > 项目面板内部使用 shadcn/ui sidebar 组件（`--sp-sidebar` 系列变量控制纯色背景）。设 `background` / `background-image` 可覆盖纯色实现图片/渐变背景。
+
+## 浮窗内容浏览器
+
+从文件树右键「浮窗」打开的浮动内容窗口暴露了 `data-content-float-*` 钩子，可在 `.spherse/theme.css` 中定制窗口外观。
+
+可用钩子：
+
+| 钩子 | 作用对象 |
+|------|---------|
+| `data-content-float-root` | 浮窗根容器（`position: fixed`）。定制 border、border-radius、box-shadow、background、backdrop-filter |
+| `data-content-float-titlebar` | 标题栏（文件名 + 关闭按钮）。定制 background、text color、padding |
+| `data-content-float-close` | 关闭按钮。定制图标颜色、hover 态 |
+
+示例：
+
+```css
+/* .spherse/theme.css —— 浮窗内容浏览器样式 */
+[data-content-float-root] {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+[data-content-float-root] [data-content-float-titlebar] {
+  background: var(--sp-muted);
+}
+[data-content-float-root] [data-content-float-close]:hover {
+  background: var(--sp-destructive);
+  color: white;
+}
+```
 
 ## 全局聊天窗口默认样式
 

@@ -309,6 +309,8 @@ export const en: Record<TranslationKey, string> = {
   "file-tree.createFailed": "Create failed: {message}",
   "file-tree.deleteFailed": "Delete failed: {message}",
   "file-tree.copyPath": "Copy Path",
+  "file-tree.float": "Float",
+  "file-tree.cancelFloat": "Cancel Float",
   "file-tree.pathCopied": "Path copied",
   "file-tree.empty": "No files",
   "ai-read-denylist.title": "AI Read Restrictions",

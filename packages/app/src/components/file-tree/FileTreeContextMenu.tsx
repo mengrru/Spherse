@@ -1,4 +1,3 @@
-import { CopyIcon, FilePlusIcon, FolderPlusIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { toast } from "sonner";
 import {
@@ -15,23 +14,34 @@ export function FileTreeContextMenu({
   children,
   onCreate,
   onDelete,
+  onFloatFile,
+  floatedFilePaths,
 }: {
   node: TreeNode;
   children: React.ReactNode;
   onCreate: (action: CreateAction) => void;
   onDelete: () => void;
+  onFloatFile?: (filePath: string) => void;
+  floatedFilePaths?: Set<string>;
 }) {
   const { t } = useI18n();
+  const isFloated = floatedFilePaths?.has(node.path) ?? false;
   return (
     <ContextMenu>
       <ContextMenuTrigger>{children}</ContextMenuTrigger>
       <ContextMenuContent>
+        {onFloatFile && node.type === "file" && (
+          <>
+            <ContextMenuItem onClick={() => onFloatFile(node.path)}>
+              {isFloated ? t("file-tree.cancelFloat") : t("file-tree.float")}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
         <ContextMenuItem onClick={() => onCreate("new-file")}>
-          <FilePlusIcon className="size-4" />
           {t("file-tree.newFile")}
         </ContextMenuItem>
         <ContextMenuItem onClick={() => onCreate("new-folder")}>
-          <FolderPlusIcon className="size-4" />
           {t("file-tree.newFolder")}
         </ContextMenuItem>
         <ContextMenuSeparator />
@@ -41,7 +51,6 @@ export function FileTreeContextMenu({
             toast.success(t("file-tree.pathCopied"));
           }}
         >
-          <CopyIcon className="size-4" />
           {t("file-tree.copyPath")}
         </ContextMenuItem>
         <ContextMenuSeparator />

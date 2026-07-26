@@ -1,8 +1,8 @@
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import type { AgentProfile } from "../../lib/types";
+import { FloatingFrame } from "../../components/floating-frame";
 import { Chat } from "../chat";
-import { FloatingChatFrame } from "./FloatingChatFrame";
 import { useFloatingChatStore, type FloatingChatState } from "./store";
 
 interface FloatingChatContainerProps {
@@ -38,7 +38,8 @@ export function FloatingChatContainer({
 
   return createPortal(
     <div className="floating-chat-portal">
-      <FloatingChatFrame
+      <FloatingFrame
+        hookPrefix="chat"
         title={agent.name}
         position={floatingChat.position}
         size={floatingChat.size}
@@ -55,7 +56,7 @@ export function FloatingChatContainer({
             navigate(`/project/${projectId}/content?path=${encodeURIComponent(path)}`);
           }}
         />
-      </FloatingChatFrame>
+      </FloatingFrame>
     </div>,
     document.body,
   );

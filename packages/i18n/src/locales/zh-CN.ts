@@ -634,6 +634,10 @@ export const zhCN = {
   "file-tree.deleteFailed": "删除失败：{message}",
   // 文件树右键菜单：复制路径
   "file-tree.copyPath": "复制路径",
+  // 文件树右键菜单（仅文件）：将文件在浮窗中打开
+  "file-tree.float": "浮窗",
+  // 文件树右键菜单（仅文件）：该文件已在浮窗中打开，点击关闭其浮窗
+  "file-tree.cancelFloat": "取消浮窗",
   // 复制路径成功提示
   "file-tree.pathCopied": "路径已复制",
   // 文件树没有文件时的空状态提示

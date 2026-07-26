@@ -12,6 +12,9 @@ import {
 } from "../../components/ui/sidebar";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useProjectCtx } from "../../context/project-context";
+import { useFeature } from "../../lib/use-feature";
+import { dispatchAction } from "../../ui-sdk";
+import { useFloatedFilePaths } from "../floating-content-browser";
 
 export function UserFilePanel() {
   const { projectId } = useProjectCtx();
@@ -22,6 +25,8 @@ export function UserFilePanel() {
   const { t } = useI18n();
   const contentPath = searchParams.get("path") ?? undefined;
   const canMutate = bridge.capabilities.content.editable;
+  const floatEnabled = useFeature("floating-content-browser");
+  const floatedFilePaths = useFloatedFilePaths(projectId);
 
   const handleSelectFile = (filePath: string) => {
     if (!projectId) return;
@@ -55,6 +60,16 @@ export function UserFilePanel() {
               selectedFilePath={contentPath}
               onSelectFile={handleSelectFile}
               onDeleted={handleFileDeleted}
+              floatedFilePaths={floatEnabled ? floatedFilePaths : undefined}
+              onFloatFile={
+                floatEnabled
+                  ? (path) => {
+                      const ctx = { navigate, projectId, hostKind: bridge.kind };
+                      if (floatedFilePaths.has(path)) dispatchAction("unfloatContent", { path }, ctx);
+                      else dispatchAction("floatContent", { path }, ctx);
+                    }
+                  : undefined
+              }
               readOnly={!canMutate}
             />
           </SidebarGroupContent>

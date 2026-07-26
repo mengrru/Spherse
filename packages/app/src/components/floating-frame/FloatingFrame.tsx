@@ -18,18 +18,20 @@ const edges: Array<{ edge: ResizeEdge; className: string }> = [
   { edge: "se", className: "bottom-0 right-0 w-1.5 h-1.5 cursor-se-resize" },
 ];
 
-interface FloatingChatFrameProps {
+interface FloatingFrameProps {
+  hookPrefix: string;
   title: string;
   position: { x: number; y: number };
   size: { width: number; height: number };
   onPositionCommit: (pos: { x: number; y: number }) => void;
   onSizeCommit: (size: { width: number; height: number }, pos: { x: number; y: number }) => void;
   onClose: () => void;
-  onExpand: () => void;
+  onExpand?: () => void;
   children: ReactNode;
 }
 
-export function FloatingChatFrame({
+export function FloatingFrame({
+  hookPrefix,
   title,
   position: initialPosition,
   size: initialSize,
@@ -38,11 +40,16 @@ export function FloatingChatFrame({
   onClose,
   onExpand,
   children,
-}: FloatingChatFrameProps) {
+}: FloatingFrameProps) {
   const { t } = useI18n();
   const pinned = useSidePanelStore((s) => s.pinned);
   const [position, setPosition] = useState(initialPosition);
   const [size, setSize] = useState(initialSize);
+
+  const closeSelector = `[data-${hookPrefix}-float-close]`;
+  const rootAttr = { [`data-${hookPrefix}-float-root`]: true };
+  const titlebarAttr = { [`data-${hookPrefix}-float-titlebar`]: true };
+  const closeAttr = { [`data-${hookPrefix}-float-close`]: true };
 
   const drag = useDrag({
     position,
@@ -50,6 +57,7 @@ export function FloatingChatFrame({
     onCommit: onPositionCommit,
     containerWidth: size.width,
     containerHeight: size.height,
+    ignoreSelector: closeSelector,
   });
 
   const { createHandler } = useResize({
@@ -64,12 +72,12 @@ export function FloatingChatFrame({
 
   return (
     <div
-      data-chat-float-root
+      {...rootAttr}
       className={`fixed ${pinned ? "z-50" : "z-30"} flex flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg`}
       style={{ left: position.x, top: position.y, width: size.width, height: size.height }}
     >
       <div
-        data-chat-float-titlebar
+        {...titlebarAttr}
         className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5 cursor-move select-none"
         onPointerDown={drag.onPointerDown}
         onDoubleClick={onExpand}
@@ -77,7 +85,7 @@ export function FloatingChatFrame({
         <span className="text-xs font-medium truncate">{title}</span>
         <div className="ml-auto" onDoubleClick={(e) => e.stopPropagation()}>
           <button
-            data-chat-float-close
+            {...closeAttr}
             onClick={onClose}
             className="inline-flex h-5 w-5 items-center justify-center rounded-sm hover:bg-muted-foreground/10"
             aria-label={t("common.close")}

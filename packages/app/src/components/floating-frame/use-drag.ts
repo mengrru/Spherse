@@ -11,16 +11,17 @@ interface UseDragOptions {
   onCommit: (pos: Position) => void;
   containerWidth: number;
   containerHeight: number;
+  ignoreSelector?: string;
 }
 
-export function useDrag({ position, onPositionChange, onCommit, containerWidth, containerHeight }: UseDragOptions) {
+export function useDrag({ position, onPositionChange, onCommit, containerWidth, containerHeight, ignoreSelector }: UseDragOptions) {
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number; pointerId: number; lastX: number; lastY: number } | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => () => cleanupRef.current?.(), []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
-    if (e.target instanceof Element && e.target.closest("[data-chat-float-close]")) {
+    if (ignoreSelector && e.target instanceof Element && e.target.closest(ignoreSelector)) {
       return;
     }
 
@@ -93,7 +94,7 @@ export function useDrag({ position, onPositionChange, onCommit, containerWidth, 
     target.addEventListener("pointerup", handlePointerUp);
     target.addEventListener("pointercancel", handlePointerCancel);
     cleanupRef.current = cleanup;
-  }, [position.x, position.y, containerWidth, containerHeight, onPositionChange, onCommit]);
+  }, [position.x, position.y, containerWidth, containerHeight, onPositionChange, onCommit, ignoreSelector]);
 
   return { onPointerDown: handlePointerDown };
 }

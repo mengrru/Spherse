@@ -10,6 +10,7 @@ describe("feature-registry", () => {
         "agent-mcp",
         "agent-trigger",
         "floating-chat",
+        "floating-content-browser",
         "open-project",
         "settings",
         "text-selection-session",

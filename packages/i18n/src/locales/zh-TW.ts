@@ -309,6 +309,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "file-tree.createFailed": "建立失敗：{message}",
   "file-tree.deleteFailed": "刪除失敗：{message}",
   "file-tree.copyPath": "複製路徑",
+  "file-tree.float": "浮窗",
+  "file-tree.cancelFloat": "取消浮窗",
   "file-tree.pathCopied": "路徑已複製",
   "file-tree.empty": "暫無檔案",
   "ai-read-denylist.title": "AI 讀取限制",

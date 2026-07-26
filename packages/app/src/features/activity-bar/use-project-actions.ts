@@ -6,6 +6,7 @@ import { useHostBridge } from "../../context/host-bridge-context";
 import { useAgentSessionListUiStore } from "../agent-session-list/store";
 import { useTriggerStore } from "../agent-trigger/store";
 import { useFloatingChatStore } from "../floating-chat/store";
+import { useFloatingContentBrowserStore } from "../floating-content-browser/store";
 
 export function buildProjectRoute(projectId: string, lastRoute?: string): string {
   const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
@@ -23,6 +24,7 @@ export function useProjectActions() {
   const clearAgentSessionListUi = useAgentSessionListUiStore((s) => s.clearProject);
   const clearTriggerData = useTriggerStore((s) => s.clearProject);
   const clearFloatingChat = useFloatingChatStore((s) => s.clearProject);
+  const clearFloatingContentBrowser = useFloatingContentBrowserStore((s) => s.clearProject);
 
   const handleAddProject = async () => {
     const projectId = await openProject(bridge);
@@ -44,6 +46,7 @@ export function useProjectActions() {
     clearAgentSessionListUi(projectId);
     clearTriggerData(projectId);
     clearFloatingChat(projectId);
+    clearFloatingContentBrowser(projectId);
     clearLastRoute(projectId);
     if (nextProjectId) {
       const project = useAppStore.getState().projects.get(nextProjectId);

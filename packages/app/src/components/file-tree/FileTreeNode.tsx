@@ -19,6 +19,8 @@ export function FileTreeNode({ node, depth }: { node: TreeNode; depth: number })
     submitCreate,
     cancelCreate,
     requestDelete,
+    onFloatFile,
+    floatedFilePaths,
     readOnly,
   } = useFileTreeCtx();
 
@@ -88,6 +90,8 @@ export function FileTreeNode({ node, depth }: { node: TreeNode; depth: number })
         node={node}
         onCreate={(action) => requestCreate(node, action)}
         onDelete={() => requestDelete(node)}
+        onFloatFile={onFloatFile}
+        floatedFilePaths={floatedFilePaths}
       >
         {menuTrigger}
       </FileTreeContextMenu>

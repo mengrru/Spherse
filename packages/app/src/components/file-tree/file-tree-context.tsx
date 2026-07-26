@@ -10,6 +10,8 @@ export interface FileTreeContextValue {
   submitCreate: (parentPath: string, action: CreateAction, name: string) => void;
   cancelCreate: () => void;
   requestDelete: (node: TreeNode) => void;
+  onFloatFile?: (filePath: string) => void;
+  floatedFilePaths?: Set<string>;
   readOnly?: boolean;
 }
 
