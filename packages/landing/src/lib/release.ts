@@ -1,6 +1,6 @@
-const RELEASES_API =
-  "https://api.github.com/repos/mengrru/Spherse/releases/latest";
 const FALLBACK_URL = "https://github.com/mengrru/Spherse/releases/latest";
+
+const MANIFEST_URL: string | undefined = import.meta.env.VITE_OSS_MANIFEST_URL;
 
 export type Platform = "mac" | "win";
 
@@ -19,22 +19,17 @@ export function detectPlatform(): Platform {
   return "mac";
 }
 
-interface ReleaseAsset {
-  name: string;
-  browser_download_url: string;
+interface Manifest {
+  version: string;
+  mac: { arm64: string; intel: string };
+  win: { setup: string };
 }
 
-interface Release {
-  tag_name: string;
-  assets: ReleaseAsset[];
-}
-
-async function fetchLatestRelease(): Promise<Release> {
-  const res = await fetch(RELEASES_API, {
-    headers: { Accept: "application/vnd.github+json" },
-  });
-  if (!res.ok) throw new Error(`GitHub API responded ${res.status}`);
-  return (await res.json()) as Release;
+async function fetchLatestManifest(): Promise<Manifest> {
+  if (!MANIFEST_URL) throw new Error("VITE_OSS_MANIFEST_URL not configured");
+  const res = await fetch(MANIFEST_URL);
+  if (!res.ok) throw new Error(`OSS manifest responded ${res.status}`);
+  return (await res.json()) as Manifest;
 }
 
 function detectMacArch(): "arm64" | "intel" {
@@ -57,16 +52,13 @@ function detectMacArch(): "arm64" | "intel" {
 
 export async function resolveDownloadUrl(platform: Platform): Promise<string> {
   try {
-    const release = await fetchLatestRelease();
+    const manifest = await fetchLatestManifest();
     if (platform === "win") {
-      const exe = release.assets.find((a) => a.name.endsWith(".exe"));
-      if (exe) return exe.browser_download_url;
+      if (manifest.win?.setup) return manifest.win.setup;
     } else {
       const arch = detectMacArch();
-      const dmg =
-        release.assets.find((a) => a.name.includes(arch)) ??
-        release.assets.find((a) => a.name.endsWith(".dmg"));
-      if (dmg) return dmg.browser_download_url;
+      const url = manifest.mac?.[arch];
+      if (url) return url;
     }
   } catch {
     // ignore — fall through to fallback

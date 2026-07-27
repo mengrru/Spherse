@@ -26,6 +26,8 @@ jobs:
       - run: npm ci
 
       - name: Build landing
+        env:
+          VITE_OSS_MANIFEST_URL: ${{ vars.OSS_PUBLIC_BASE_URL }}/spherse/latest.json
         run: npm run build:landing
 
       - name: Build web app

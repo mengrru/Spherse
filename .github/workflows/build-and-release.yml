@@ -4,12 +4,19 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to re-publish to OSS (e.g. v1.2.3)"
+        required: true
+        type: string
 
 permissions:
   contents: write
 
 jobs:
   create-release:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,6 +27,7 @@ jobs:
 
   build:
     needs: create-release
+    if: github.event_name == 'push'
     strategy:
       fail-fast: false
       matrix:
@@ -96,3 +104,82 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload "${GITHUB_REF_NAME}" release/*.exe --clobber
+
+  publish-oss:
+    needs: build
+    if: >-
+      always() &&
+      (needs.build.result == 'success' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - name: Resolve version
+        id: ver
+        run: echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Install ossutil
+        run: |
+          curl -fsSL -o /tmp/ossutil https://gosspublic.alicdn.com/ossutil/1.7.18/ossutil64
+          chmod +x /tmp/ossutil
+
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p ./oss-out
+          gh release download "${RELEASE_TAG}" -D ./oss-out \
+            --pattern '*.dmg' --pattern '*.exe' --clobber
+
+      - name: Discover asset filenames
+        id: assets
+        run: |
+          arm64_dmg=$(basename "$(ls ./oss-out/*arm64*.dmg | head -n1)")
+          intel_dmg=$(basename "$(ls ./oss-out/*intel*.dmg | head -n1)")
+          win_exe=$(basename "$(ls ./oss-out/*.exe | head -n1)")
+          {
+            echo "arm64_dmg=${arm64_dmg}"
+            echo "intel_dmg=${intel_dmg}"
+            echo "win_exe=${win_exe}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload installers to OSS (versioned path)
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+        run: |
+          VER="${{ steps.ver.outputs.version }}"
+          for f in ./oss-out/*; do
+            /tmp/ossutil cp "$f" "oss://${OSS_BUCKET}/spherse/releases/${VER}/$(basename "$f")" \
+              -e "$OSS_ENDPOINT" \
+              -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET" \
+              --force -u
+          done
+
+      - name: Generate and upload latest.json
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+          OSS_PUBLIC_BASE_URL: ${{ vars.OSS_PUBLIC_BASE_URL }}
+        run: |
+          VER="${{ steps.ver.outputs.version }}"
+          BASE="${OSS_PUBLIC_BASE_URL}/spherse/releases/${VER}"
+          ARM64="${BASE}/${{ steps.assets.outputs.arm64_dmg }}"
+          INTEL="${BASE}/${{ steps.assets.outputs.intel_dmg }}"
+          WIN="${BASE}/${{ steps.assets.outputs.win_exe }}"
+          jq -n \
+            --arg version "$VER" \
+            --arg arm64 "$ARM64" \
+            --arg intel "$INTEL" \
+            --arg setup "$WIN" \
+            '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{setup:$setup}}' \
+            > /tmp/latest.json
+          jq empty /tmp/latest.json
+          /tmp/ossutil cp /tmp/latest.json "oss://${OSS_BUCKET}/spherse/latest.json" \
+            -e "$OSS_ENDPOINT" \
+            -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET" \
+            --force -u

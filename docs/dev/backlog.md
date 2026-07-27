@@ -107,6 +107,8 @@
 
 ## 基础设施
 
+- [x] **Release pipeline 上传 artifacts 到阿里云 OSS（国内下载镜像）**：发版流水线新增集中式 `publish-oss` job（`needs: build`），从 GitHub Release 下载安装包后上传到 OSS 版本化路径（`spherse/releases/{ver}/`，文件名保留原始大小写）+ 生成稳定 `spherse/latest.json` 清单；landing page 下载按钮改读 OSS 清单（脱离 GitHub API），fetch 失败回退 GitHub Releases 页面。electron-updater 自动更新链路不动。上传用阿里云官方 `ossutil`。参见 `docs/dev/infra/2026-07-27-release-oss-mirror/design.md`
+
 - [ ] **GitHub Copilot OAuth 登录**：当前 GitHub Copilot 走 apiKey 路径（用户手动粘贴 `COPILOT_GITHUB_TOKEN`）。pi-ai 的 `githubCopilotProvider()` 同时声明了 `lazyOAuth` device-flow；接入需 electron 层调用 pi-ai OAuth helper + 持久化 refresh token + 前端「用 GitHub 登录」按钮，实现免粘贴 token。
 
 - [x] **本地验证流水线**：新增 root `npm run verify` 覆盖 lint/build/core+i18n+app unit tests/i18n check，新增 `npm run verify:e2e` 在此基础上运行 app E2E。
