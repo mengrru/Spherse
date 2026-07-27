@@ -1,11 +1,12 @@
 export const zhCN = {
   "hero.title": "Spherse",
-  "hero.subtitle": "本地运行、开箱即用的AI辅助文字创作与演绎工具",
+  "hero.subtitle": "本地运行、开箱即用的AI agent App",
+  "hero.tagline": "构建沉浸式世界观/角色扮演/个人记录台/文游…为你的创意提供基础设施和运行时",
   "hero.downloadMac": "下载 macOS",
   "hero.downloadWin": "下载 Windows",
 
   "feature.local.title": "本地运行 · 数据自主",
-  "feature.local.desc": "开箱即用，只需配置 LLM API 密钥即可使用。全本地运行，你完全拥有自己的数据",
+  "feature.local.desc": "开箱即用，只需配置 LLM API 密钥即可使用。全本地运行，你完全拥有自己的数据。所有数据存放在项目文件夹下，迁移与备份轻松无忧",
   "feature.agents.title": "多 Agent 系统",
   "feature.agents.desc": "可创建多个角色，各角色可设置专属设定、工具、技能和聊天主题",
   "feature.trigger.title": "触发器与自动化",
@@ -15,7 +16,7 @@ export const zhCN = {
   "feature.connector.title": "连接器（MCP）",
   "feature.connector.desc": "接入 MCP 协议，连接外部工具与数据源",
   "feature.mobile.title": "移动端",
-  "feature.mobile.desc": "一键配置，扫码连接，随时随地继续你的创作",
+  "feature.mobile.desc": "一键配置，扫码连接，随时随地回到你的世界",
   "feature.slogan": "Spherse 是你的积木筐，用它来打造完全属于你自己的世界吧！",
   "feature.moreCases": "更多使用案例",
 

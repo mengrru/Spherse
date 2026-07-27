@@ -4,7 +4,9 @@
 
 中文｜[EN](README.en.md)
 
-一个本地运行、开箱即用的AI辅助文字创作与演绎工具。
+一个本地运行、开箱即用的AI agent App。
+
+构建沉浸式世界观/角色扮演/个人记录台/文游…为你的创意提供基础设施和运行时。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

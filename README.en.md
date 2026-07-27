@@ -4,7 +4,9 @@
 
 [中文](README.md)｜EN
 
-A local-first, out-of-the-box desktop tool for AI-assisted writing and roleplay.
+A local-first, out-of-the-box AI agent app.
+
+Build immersive worlds / roleplay / personal journals / text adventures… the infrastructure and runtime for your creativity.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 

@@ -6,8 +6,8 @@ import { cn } from "../lib/utils";
 const AUTOPLAY_INTERVAL = 5000;
 
 const ANCHOR = {
-  left: "0.69cqw",
-  top: "0.56cqw",
+  left: "0.45cqw",
+  top: "0.4cqw",
   size: "2.5cqw",
   gap: "0.49cqw",
   glowBlur: "0.56cqw",
@@ -16,8 +16,9 @@ const ANCHOR = {
 } as const;
 
 export function Carousel() {
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(() => Math.floor(Math.random() * slides.length));
   const [autoplay, setAutoplay] = useState(true);
+  const initialIndexRef = useRef(activeIndex);
   const linkRef = useRef<HTMLLinkElement | null>(null);
 
   const loadTheme = useCallback((themeHref: string) => {
@@ -42,7 +43,7 @@ export function Carousel() {
 
   // Load initial theme on mount, cleanup on unmount
   useEffect(() => {
-    loadTheme(slides[0].theme);
+    loadTheme(slides[initialIndexRef.current].theme);
     return () => {
       if (linkRef.current) {
         linkRef.current.remove();
@@ -68,60 +69,90 @@ export function Carousel() {
 
   return (
     <section className="px-6 py-8">
-      <div className="relative mx-auto max-w-[1400px] overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-        <div className="relative aspect-[16/10] w-full" style={{ containerType: "inline-size" }}>
-          {slides.map((slide, idx) => (
-            <img
-              key={idx}
-              src={slide.screenshot}
-              alt={`Screenshot ${idx + 1}`}
-              className={cn(
-                "absolute inset-0 h-full w-full object-cover object-bottom transition-opacity duration-500",
-                idx === activeIndex ? "opacity-100" : "opacity-0",
-              )}
-              loading={idx === 0 ? "eager" : "lazy"}
-            />
-          ))}
-
-          {/* Anchor buttons — positioned with relative units (cqw) to align with avatar at any carousel size */}
+      <div className="relative mx-auto max-w-[1400px]">
+        {/*
+          Grid columns sized by each screenshot's aspect ratio (desktop 16/10, mobile 1206/2622).
+          Since grid tracks divide width proportionally and each cell's height is derived from
+          its aspect-ratio, both columns end up with equal height.
+        */}
+        <div
+          className="grid gap-4"
+          style={{ gridTemplateColumns: "1.6fr 0.46fr" }}
+        >
+          {/* Desktop screenshot column — establishes container context for anchor positioning (cqw) */}
           <div
-            className="absolute flex flex-col"
-            style={{ top: ANCHOR.top, left: ANCHOR.left, gap: ANCHOR.gap }}
+            className="relative aspect-[16/10] overflow-hidden rounded-lg border border-border shadow-sm"
+            style={{ containerType: "inline-size" }}
           >
-            {slides.map((slide, idx) => {
-              const isActive = idx === activeIndex;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleAnchorClick(idx)}
-                  aria-label={`Go to slide ${idx + 1}`}
-                  className={cn(
-                    "rounded-lg transition-all duration-200",
-                    isActive ? "opacity-100" : "opacity-0 hover:opacity-30",
-                  )}
-                  style={{
-                    width: ANCHOR.size,
-                    aspectRatio: "1",
-                    boxShadow: isActive
-                      ? `0 0 ${ANCHOR.glowBlur} ${ANCHOR.glowSpread} ${slide.avatarColor}, inset 0 0 0 ${ANCHOR.glowInset} ${slide.avatarColor}`
-                      : "none",
-                  }}
-                >
-                  <span className="sr-only">{slide.avatarLabel}</span>
-                </button>
-              );
-            })}
+            {slides.map((slide, idx) => (
+              <img
+                key={idx}
+                src={slide.screenshot}
+                alt={`Screenshot ${idx + 1}`}
+                className={cn(
+                  "absolute inset-0 h-full w-full object-cover object-bottom transition-opacity duration-500",
+                  idx === activeIndex ? "opacity-100" : "opacity-0",
+                )}
+                loading={idx === 0 ? "eager" : "lazy"}
+              />
+            ))}
+
+            {/* Anchor buttons — positioned with relative units (cqw) to align with avatar at any carousel size */}
+            <div
+              className="absolute flex flex-col"
+              style={{ top: ANCHOR.top, left: ANCHOR.left, gap: ANCHOR.gap }}
+            >
+              {slides.map((slide, idx) => {
+                const isActive = idx === activeIndex;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleAnchorClick(idx)}
+                    aria-label={`Go to slide ${idx + 1}`}
+                    className={cn(
+                      "rounded-lg transition-all duration-200",
+                      isActive ? "opacity-100" : "opacity-0 hover:opacity-30",
+                    )}
+                    style={{
+                      width: ANCHOR.size,
+                      aspectRatio: "1",
+                      boxShadow: isActive
+                        ? `0 0 ${ANCHOR.glowBlur} ${ANCHOR.glowSpread} ${slide.avatarColor}, inset 0 0 0 ${ANCHOR.glowInset} ${slide.avatarColor}`
+                        : "none",
+                    }}
+                  >
+                    <span className="sr-only">{slide.avatarLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Autoplay toggle */}
-          <button
-            onClick={() => setAutoplay((v) => !v)}
-            aria-label={autoplay ? "Pause autoplay" : "Play autoplay"}
-            className="absolute top-3 right-3 flex size-9 items-center justify-center rounded-lg bg-background/80 text-foreground backdrop-blur-sm transition-colors hover:bg-background"
-          >
-            {autoplay ? <Pause className="size-4" /> : <Play className="size-4" />}
-          </button>
+          {/* Mobile screenshot column — natural phone aspect ratio */}
+          <div className="relative aspect-[1206/2622] overflow-hidden rounded-lg border border-border shadow-sm">
+            {slides.map((slide, idx) => (
+              <img
+                key={idx}
+                src={slide.mobileScreenshot}
+                alt={`Mobile screenshot ${idx + 1}`}
+                className={cn(
+                  "absolute inset-0 h-full w-full object-cover object-top transition-opacity duration-500",
+                  idx === activeIndex ? "opacity-100" : "opacity-0",
+                )}
+                loading="lazy"
+              />
+            ))}
+          </div>
         </div>
+
+        {/* Autoplay toggle */}
+        <button
+          onClick={() => setAutoplay((v) => !v)}
+          aria-label={autoplay ? "Pause autoplay" : "Play autoplay"}
+          className="absolute top-4 right-4 z-10 flex size-9 items-center justify-center rounded-lg bg-background/80 text-foreground backdrop-blur-sm transition-colors hover:bg-background"
+        >
+          {autoplay ? <Pause className="size-4" /> : <Play className="size-4" />}
+        </button>
       </div>
     </section>
   );

@@ -3,12 +3,14 @@ import type { zhCN } from "./zh-CN";
 export const en: Record<keyof typeof zhCN, string> = {
   "hero.title": "Spherse",
   "hero.subtitle":
-    "A local-first, out-of-the-box desktop tool for AI-assisted writing and roleplay",
+    "A local-first, out-of-the-box AI agent app",
+  "hero.tagline":
+    "Build immersive worlds / roleplay / personal journals / text adventures… the infrastructure and runtime for your creativity",
   "hero.downloadMac": "Download for macOS",
   "hero.downloadWin": "Download for Windows",
 
   "feature.local.title": "Local-first · Your Data Stays Yours",
-  "feature.local.desc": "Out of the box — just plug in your LLM API key. Runs entirely on your machine, so you fully own your data.",
+  "feature.local.desc": "Out of the box — just plug in your LLM API key. Runs entirely on your machine, so you fully own your data. All data lives in the project folder, making migration and backup effortless.",
   "feature.agents.title": "Multi-Agent System",
   "feature.agents.desc": "Create multiple characters, each with their own profile, tools, skills, and chat theme.",
   "feature.trigger.title": "Triggers & Automation",
@@ -18,7 +20,7 @@ export const en: Record<keyof typeof zhCN, string> = {
   "feature.connector.title": "Connector (MCP)",
   "feature.connector.desc": "Integrate with the MCP protocol to connect external tools and data sources",
   "feature.mobile.title": "Mobile",
-  "feature.mobile.desc": "One-tap setup, scan to connect — keep creating anywhere, anytime",
+  "feature.mobile.desc": "One-tap setup, scan to connect — return to your world anytime, anywhere.",
   "feature.slogan": "Spherse is your box of building blocks — use it to build a world entirely your own!",
   "feature.moreCases": "More use cases",
 

@@ -49,9 +49,14 @@ export function Hero({ t }: HeroProps) {
       <h1 className="text-5xl font-bold tracking-tight text-foreground md:text-7xl">
         {t("hero.title")}
       </h1>
-      <p className="-mt-3 max-w-2xl text-lg text-muted-foreground md:text-xl">
-        {t("hero.subtitle")}
-      </p>
+      <div className="-mt-3 flex flex-col items-center gap-1.5">
+        <p className="max-w-3xl text-lg text-muted-foreground md:text-xl">
+          {t("hero.subtitle")}
+        </p>
+        <p className="max-w-3xl text-lg text-muted-foreground md:text-xl">
+          {t("hero.tagline")}
+        </p>
+      </div>
       <div className="mt-2 flex flex-col gap-3 sm:flex-row">
         {downloadButtons.map(({ platform, variant }) => (
           <Button
