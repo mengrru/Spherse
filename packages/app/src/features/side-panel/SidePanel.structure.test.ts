@@ -45,13 +45,16 @@ describe("SidePanel structure", () => {
     expect(source).toContain("hideMobile");
   });
 
-  it("renders a fixed bottom-start floating button on mobile", () => {
+  it("renders a fixed start-edge vertical tab button on mobile", () => {
     const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
 
-    expect(source).toContain("fixed bottom-4 start-4");
-    expect(source).toContain("size-14");
-    expect(source).toContain("PanelLeftIcon");
+    expect(source).toContain("fixed start-0 top-1/2");
+    expect(source).toContain("-translate-y-1/2");
+    expect(source).toContain("rounded-e-md");
+    expect(source).toContain("ChevronRightIcon");
+    expect(source).toContain("onClick={showMobile}");
     expect(source).toContain('aria-haspopup="dialog"');
+    expect(source).toContain('aria-expanded={mobileOpen}');
     expect(source).toContain('aria-label={t("side-panel.openTooltip")}');
   });
 
