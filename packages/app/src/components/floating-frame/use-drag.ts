@@ -43,8 +43,8 @@ export function useDrag({ position, onPositionChange, onCommit, containerWidth, 
       console.warn("setPointerCapture failed — drag may freeze outside window bounds", err);
     }
 
-    const handlePointerMove = (ev: PointerEvent) => {
-      if (!dragRef.current) return;
+    const handlePointerMove = (ev: Event) => {
+      if (!dragRef.current || !(ev instanceof PointerEvent)) return;
       const dx = ev.clientX - dragRef.current.startX;
       const dy = ev.clientY - dragRef.current.startY;
       const newX = Math.max(0, Math.min(dragRef.current.startPosX + dx, window.innerWidth - containerWidth));
@@ -62,8 +62,8 @@ export function useDrag({ position, onPositionChange, onCommit, containerWidth, 
       target.removeEventListener("pointercancel", handlePointerCancel);
     };
 
-    const handlePointerUp = (ev: PointerEvent) => {
-      if (!dragRef.current) return;
+    const handlePointerUp = (ev: Event) => {
+      if (!dragRef.current || !(ev instanceof PointerEvent)) return;
       const dx = ev.clientX - dragRef.current.startX;
       const dy = ev.clientY - dragRef.current.startY;
       const newX = Math.max(0, Math.min(dragRef.current.startPosX + dx, window.innerWidth - containerWidth));

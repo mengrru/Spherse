@@ -53,8 +53,8 @@ export function useResize({ size, position, onSizeChange, onPositionChange, onCo
       console.warn("setPointerCapture failed — resize may freeze outside window bounds", err);
     }
 
-    const handlePointerMove = (ev: PointerEvent) => {
-      if (!resizeRef.current) return;
+    const handlePointerMove = (ev: Event) => {
+      if (!resizeRef.current || !(ev instanceof PointerEvent)) return;
       const dx = ev.clientX - resizeRef.current.startX;
       const dy = ev.clientY - resizeRef.current.startY;
       const { startW, startH, startPosX, startPosY, edge } = resizeRef.current;
@@ -98,8 +98,8 @@ export function useResize({ size, position, onSizeChange, onPositionChange, onCo
       target.removeEventListener("pointercancel", handlePointerCancel);
     };
 
-    const handlePointerUp = (ev: PointerEvent) => {
-      if (!resizeRef.current) return;
+    const handlePointerUp = (ev: Event) => {
+      if (!resizeRef.current || !(ev instanceof PointerEvent)) return;
       const dx = ev.clientX - resizeRef.current.startX;
       const dy = ev.clientY - resizeRef.current.startY;
       const { startW, startH, startPosX, startPosY, edge } = resizeRef.current;

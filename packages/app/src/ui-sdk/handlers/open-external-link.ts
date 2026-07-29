@@ -5,5 +5,5 @@ registerAction("openExternalLink", (params, ctx) => {
   if (typeof url !== "string") return;
   const trimmed = url.trim();
   if (!trimmed) return;
-  void ctx.openExternal(trimmed);
+  void ctx.openExternal?.(trimmed);
 });

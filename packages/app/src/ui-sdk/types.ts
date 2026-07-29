@@ -9,7 +9,7 @@ export interface ActionContext {
   source?: MessageEventSource | null;
   requestId?: string;
   hostKind: HostKind;
-  openExternal: (url: string) => Promise<void>;
+  openExternal?: (url: string) => Promise<void>;
 }
 
 export type ActionHandler<P = Record<string, unknown>> = (
