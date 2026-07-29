@@ -896,7 +896,7 @@ export const zhCN = {
   // 引导页（无项目打开时）主标题
   "onboarding.title": "Spherse",
   // 引导页副标题
-  "onboarding.subtitle": "你的文字创作与演绎空间",
+  "onboarding.subtitle": "搭建属于你自己的世界",
   // 引导卡片1按钮：打开已有项目或新建项目（合并入口，点击后弹出目录选择器，可选择已有文件夹，也可在其中新建文件夹）
   "onboarding.action.openOrCreate": "打开或创建项目",
   // 引导卡片2按钮：打开示例项目，{name} 为示例项目名称

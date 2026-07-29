@@ -426,7 +426,7 @@ export const en: Record<TranslationKey, string> = {
   "theme-settings.saveFailed": "Save failed: {message}",
   "theme-settings.saved": "Theme saved",
   "onboarding.title": "Spherse",
-  "onboarding.subtitle": "Your space for writing and storytelling",
+  "onboarding.subtitle": "Build your own world",
   "onboarding.action.openOrCreate": "Open or create project",
   "onboarding.action.openSample": "Open sample project: {name}",
   "onboarding.desc.openOrCreate": "Pick an existing project folder, or create a new folder to start an empty project",

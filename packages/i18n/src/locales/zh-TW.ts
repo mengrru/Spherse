@@ -426,7 +426,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "theme-settings.saveFailed": "儲存失敗：{message}",
   "theme-settings.saved": "主題已儲存",
   "onboarding.title": "Spherse",
-  "onboarding.subtitle": "你的文字創作與演繹空間",
+  "onboarding.subtitle": "搭建屬於你自己的世界",
   "onboarding.action.openOrCreate": "開啟或建立專案",
   "onboarding.action.openSample": "開啟範例專案：{name}",
   "onboarding.desc.openOrCreate": "選擇已有專案資料夾，或新建一個資料夾從空專案開始",
