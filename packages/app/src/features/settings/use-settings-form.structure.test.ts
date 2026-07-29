@@ -44,6 +44,19 @@ describe("useSettingsForm sampling wiring", () => {
   });
 });
 
+describe("useSettingsForm api key persistence", () => {
+  it("exposes commitApiKey on the group form state", () => {
+    expect(source).toContain("commitApiKey: (id: string, value: string) => void");
+  });
+
+  it("commitApiKey persists the key by saving the updated apiKeys (not only local state)", () => {
+    expect(source).toContain("commitApiKey: (id, value) => {");
+    expect(source).toContain(
+      "const next = { ...data, apiKeys: { ...data.apiKeys, [id]: value } }",
+    );
+  });
+});
+
 describe("useSettingsForm custom provider wiring", () => {
   it("reads customProviders from settings on init", () => {
     expect(source).toContain("setCustomProviders(settings?.customProviders ?? [])");

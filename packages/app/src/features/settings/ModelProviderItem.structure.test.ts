@@ -50,6 +50,11 @@ describe("ModelProviderItem structure", () => {
     expect(source).toContain('t("settings.provider.disconnect")');
   });
 
+  it("persists the api key on blur via onApiKeyCommit", () => {
+    expect(source).toContain("onApiKeyCommit: (value: string) => void");
+    expect(source).toContain("onBlur={() => onApiKeyCommit(apiKey)}");
+  });
+
   it("uses lucide-react Icon-suffix imports (matches feature convention)", () => {
     expect(source).toContain('from "lucide-react"');
   });

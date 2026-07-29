@@ -10,6 +10,7 @@ export function ModelProviderItem({
   config,
   apiKey,
   onApiKeyChange,
+  onApiKeyCommit,
   onConnect,
   onDisconnect,
   onEdit,
@@ -19,6 +20,7 @@ export function ModelProviderItem({
   config: ProviderConfig;
   apiKey: string;
   onApiKeyChange: (value: string) => void;
+  onApiKeyCommit: (value: string) => void;
   onConnect: () => void;
   onDisconnect: () => void;
   onEdit?: () => void;
@@ -85,6 +87,7 @@ export function ModelProviderItem({
             placeholder={t("settings.provider.apiKeyPlaceholder")}
             value={apiKey}
             onChange={(e) => onApiKeyChange(e.target.value)}
+            onBlur={() => onApiKeyCommit(apiKey)}
             autoComplete={`off-${id}`}
           />
           {configured ? (

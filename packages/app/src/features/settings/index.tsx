@@ -116,6 +116,7 @@ function ModelGroupTab({
             config={config}
             apiKey={group.apiKeys[id] ?? ""}
             onApiKeyChange={(value) => group.setApiKey(id, value)}
+            onApiKeyCommit={(value) => group.commitApiKey(id, value)}
             onConnect={() => void group.connect(id)}
             onDisconnect={() => void group.disconnect(id)}
             onEdit={

@@ -9,6 +9,7 @@ interface GroupFormState {
   defaultModel: string;
   sampling?: SamplingParams;
   setApiKey: (id: string, value: string) => void;
+  commitApiKey: (id: string, value: string) => void;
   changeDefaultModel: (model: string) => Promise<boolean>;
   patchSampling: (params: SamplingParams) => Promise<boolean>;
   connect: (id: string) => Promise<boolean>;
@@ -157,6 +158,12 @@ export function useSettingsForm(api: SettingsApi) {
     sampling: data.sampling,
     setApiKey: (id, value) => {
       setData({ ...data, apiKeys: { ...data.apiKeys, [id]: value } });
+    },
+    commitApiKey: (id, value) => {
+      const next = { ...data, apiKeys: { ...data.apiKeys, [id]: value } };
+      setData(next);
+      if (kind === "text") void save(next, undefined);
+      else void save(undefined, next);
     },
     changeDefaultModel: async (model) => {
       const next = { ...data, defaultModel: model };
