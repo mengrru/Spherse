@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useI18n } from "@spherse/i18n/react";
+import type { TranslationKey } from "@spherse/i18n";
 import { parseAgentMarkdown, buildAgentMarkdown } from "./agent-markdown";
 import type { AgentFormData } from "./agent-markdown";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
@@ -24,7 +25,7 @@ import { HintLabel } from "./HintLabel";
 import { PromptTemplatePicker, type PromptTemplate } from "./PromptTemplatePicker";
 import type { LoadedAgentData } from "./AgentDialog";
 
-function getErrorMessage(err: unknown, t: (key: string) => string): string {
+function getErrorMessage(err: unknown, t: (key: TranslationKey) => string): string {
   return err instanceof Error ? err.message : t("agent-dialog.saveFailed");
 }
 

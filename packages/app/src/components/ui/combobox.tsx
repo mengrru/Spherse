@@ -22,17 +22,8 @@ function ComboboxTrigger({
   )
 }
 
-function ComboboxValue({
-  className,
-  ...props
-}: React.ComponentProps<typeof ComboboxPrimitive.Value>) {
-  return (
-    <ComboboxPrimitive.Value
-      data-slot="combobox-value"
-      className={cn("flex-1 text-start truncate", className)}
-      {...props}
-    />
-  )
+function ComboboxValue(props: React.ComponentProps<typeof ComboboxPrimitive.Value>) {
+  return <ComboboxPrimitive.Value {...props} />
 }
 
 function ComboboxIcon({

@@ -113,7 +113,7 @@ describe("useFloatingContentBrowserStore", () => {
 
   it("persists state to localStorage", () => {
     useFloatingContentBrowserStore.getState().openFloat("project-1", "notes.md");
-    const raw = (globalThis.localStorage.getItem as ReturnType<typeof vi.fn>)("spherse:floating-content-browser");
+    const raw = globalThis.localStorage.getItem("spherse:floating-content-browser");
     expect(raw).toBeTruthy();
     expect(JSON.parse(raw!)["project-1"]["notes.md"]).toBeDefined();
   });

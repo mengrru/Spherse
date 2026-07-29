@@ -170,7 +170,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   async setActiveProject(bridge, projectId) {
-    const project = projectId ? get().projects.get(projectId) : null;
+    if (!projectId) {
+      set({ activeProjectId: null });
+      return;
+    }
+    const project = get().projects.get(projectId);
     set({ activeProjectId: project ? projectId : null });
     if (project) {
       await bridge.project?.setLastActiveProject(projectId);

@@ -12,6 +12,7 @@ import { Switch } from "../../components/ui/switch";
 import { Button } from "../../components/ui/button";
 import { useSettingsStore } from "../../stores/settings-store";
 import { useSettingsForm } from "./use-settings-form";
+import type { GroupFormState } from "./use-settings-form";
 import { type SettingsApi } from "./types";
 import { DefaultModelField } from "./DefaultModelField";
 import { ModelProviderItem } from "./ModelProviderItem";
@@ -20,7 +21,7 @@ import { SectionTitle } from "./SectionTitle";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { UpdateChecker } from "./UpdateChecker";
 import { MobileAccessPanel } from "./MobileAccessPanel";
-import { SUPPORTED_LOCALES } from "@spherse/i18n";
+import { SUPPORTED_LOCALES, normalizeLocale } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
 import type { CustomProviderDef } from "@spherse/core";
 import type { ThemeMode } from "../../lib/host-bridge";
@@ -56,7 +57,7 @@ function ModelGroupTab({
   group,
   kind,
 }: {
-  group: ReturnType<typeof useSettingsForm>["text"];
+  group: GroupFormState;
   kind: "text" | "image";
 }) {
   const { t } = useI18n();
@@ -200,7 +201,7 @@ function SettingsTabs() {
         <TabsContent value="general" className="mt-3">
           <Field>
             <SectionTitle as={FieldLabel}>{t("settings.language")}</SectionTitle>
-            <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(settingsApi, e.target.value)}>
+            <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(settingsApi, normalizeLocale(e.target.value))}>
               {SUPPORTED_LOCALES.map((loc) => (
                 <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>
               ))}

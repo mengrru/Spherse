@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { SettingsApi } from "../../features/settings/types";
+import type { SettingsApi } from "../features/settings/types";
 import { useSettingsStore } from "./settings-store";
 
 function createApi(overrides: Partial<SettingsApi> = {}): SettingsApi {
   return {
     getSupportedProviders: vi.fn().mockResolvedValue({}),
+    getImageProviders: vi.fn().mockResolvedValue({}),
     getSettings: vi.fn().mockResolvedValue(null),
     saveSettings: vi.fn().mockResolvedValue({ success: true }),
     ...overrides,

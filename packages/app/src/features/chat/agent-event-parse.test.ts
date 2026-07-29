@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ErrorEventCode } from "@spherse/server/contracts";
+import { ErrorEventCode, type ChatServerEvent } from "@spherse/server/contracts";
 import {
   isAgentMessage,
   isAssistantMessage,
@@ -107,7 +107,10 @@ describe("parseAgentMessage", () => {
   it("returns fallback for unknown shape", () => {
     const fallback = parseAgentMessage({ role: "custom" });
     expect(fallback.role).toBe("user");
-    expect(fallback.content).toBe("");
+    expect(isUserMessage(fallback)).toBe(true);
+    if (isUserMessage(fallback)) {
+      expect(fallback.content).toBe("");
+    }
   });
   it("returns fallback for non-object payload", () => {
     expect(parseAgentMessage(null).role).toBe("user");
@@ -198,7 +201,10 @@ describe("parseAgentEvent", () => {
     }
   });
   it("agent_end tolerates missing messages array", () => {
-    const result = parseAgentEvent({ type: "agent_end", messages: "not-an-array" });
+    const result = parseAgentEvent({
+      type: "agent_end",
+      messages: "not-an-array",
+    } as unknown as ChatServerEvent);
     if (result.type === "agent_end") {
       expect(result.messages).toEqual([]);
     }

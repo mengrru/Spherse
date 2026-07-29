@@ -20,6 +20,8 @@ interface GroupFormState {
   removeCustomProvider?: (id: string) => Promise<boolean>;
 }
 
+export type { GroupFormState };
+
 interface GroupData {
   apiKeys: Record<string, string>;
   defaultModel: string;

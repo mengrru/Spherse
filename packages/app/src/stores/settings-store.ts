@@ -1,14 +1,15 @@
 import { create } from "zustand";
+import { normalizeLocale, type Locale } from "@spherse/i18n";
 import type { HostBridge, ThemeMode } from "../lib/host-bridge";
 
 export type SettingsStoreApi = Pick<HostBridge, "getSettings" | "saveSettings">;
 
 interface SettingsStore {
-  locale: string;
+  locale: Locale;
   debugToolsEnabled: boolean;
   theme: ThemeMode;
   loadLocale: (api: SettingsStoreApi) => Promise<void>;
-  changeLocale: (api: SettingsStoreApi, locale: string) => Promise<boolean>;
+  changeLocale: (api: SettingsStoreApi, locale: Locale) => Promise<boolean>;
   setDebugToolsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
   setTheme: (api: SettingsStoreApi, theme: ThemeMode) => Promise<boolean>;
 }
@@ -21,7 +22,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   async loadLocale(api) {
     const settings = await api.getSettings();
     set({
-      locale: settings?.locale ?? "zh-CN",
+      locale: normalizeLocale(settings?.locale),
       debugToolsEnabled: settings?.debugToolsEnabled ?? false,
       theme: settings?.theme ?? "system",
     });

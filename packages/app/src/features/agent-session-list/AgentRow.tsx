@@ -51,9 +51,10 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           {hasEnabled && (
             <Clock
               className="ml-auto h-3 w-3 shrink-0 text-muted-foreground group-hover/agent-row:hidden"
-              title={t("agent-trigger.indicatorTooltip")}
               aria-label={t("agent-trigger.indicatorTooltip")}
-            />
+            >
+              <title>{t("agent-trigger.indicatorTooltip")}</title>
+            </Clock>
           )}
         </ContextMenuTrigger>
         <ContextMenuContent>

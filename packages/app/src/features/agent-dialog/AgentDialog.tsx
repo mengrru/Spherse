@@ -74,7 +74,7 @@ export function AgentDialog({ mode, agentId, onSubmit, onCancel }: AgentDialogPr
             {t("common.loading")}
           </div>
         )}
-        {loadErr && (
+        {loadErr != null && (
           <DialogFooter>
             <Button variant="outline" onClick={onCancel}>
               {t("common.cancel")}

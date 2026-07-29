@@ -15,7 +15,7 @@ export function parseFrontmatter(raw: string): ParsedFrontmatter {
 
   let parsed: unknown;
   try {
-    parsed = yaml.safeLoad(match[1]);
+    parsed = yaml.load(match[1]);
   } catch {
     return { frontmatter: null, body: raw };
   }
