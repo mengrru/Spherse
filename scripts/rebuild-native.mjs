@@ -19,10 +19,12 @@ if (!existsSync(betterSqlite3Dir)) {
   process.exit(0);
 }
 
+const targetArch = process.env.BUILD_TARGET_ARCH?.trim() || process.arch;
+
 function tryPrebuildInstall() {
   const prebuildInstallBin = resolve(nodeModulesDir, "prebuild-install/bin.js");
   if (!existsSync(prebuildInstallBin)) return false;
-  console.log(`Fetching better-sqlite3 prebuild for Electron ${electronVersion}...`);
+  console.log(`Fetching better-sqlite3 prebuild for Electron ${electronVersion} (${process.platform}/${targetArch})...`);
   try {
     execFileSync(
       process.execPath,
@@ -30,6 +32,7 @@ function tryPrebuildInstall() {
         prebuildInstallBin,
         "--runtime=electron",
         `--target=${electronVersion}`,
+        `--arch=${targetArch}`,
         "--path=" + betterSqlite3Dir,
       ],
       { cwd: betterSqlite3Dir, stdio: "inherit" },
@@ -46,12 +49,12 @@ function tryPrebuildInstall() {
 async function rebuildFromSource() {
   const { rebuild } = await import("@electron/rebuild");
   console.log(
-    `Building better-sqlite3 from source for Electron ${electronVersion} (${process.platform}/${process.arch})...`,
+    `Building better-sqlite3 from source for Electron ${electronVersion} (${process.platform}/${targetArch})...`,
   );
   await rebuild({
     buildPath: root,
     electronVersion,
-    arch: process.arch,
+    arch: targetArch,
     onlyModules: ["better-sqlite3"],
     force: true,
     buildFromSource: true,

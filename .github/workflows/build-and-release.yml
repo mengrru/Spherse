@@ -36,14 +36,17 @@ jobs:
             build-args: --mac
             artifact: dmg
             arch-label: arm64
-          - os: macos-13
-            build-args: --mac
+            target-arch: arm64
+          - os: macos-latest
+            build-args: --mac --x64
             artifact: dmg
             arch-label: intel
+            target-arch: x64
           - os: windows-latest
             build-args: --win
             artifact: exe
             arch-label: ""
+            target-arch: ""
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -71,6 +74,8 @@ jobs:
         run: node node_modules/electron/install.js
 
       - name: Rebuild native deps for Electron (better-sqlite3)
+        env:
+          BUILD_TARGET_ARCH: ${{ matrix.target-arch }}
         run: node scripts/rebuild-native.mjs
 
       - name: Build installer (electron-builder)
