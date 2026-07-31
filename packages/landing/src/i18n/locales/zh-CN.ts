@@ -1,6 +1,6 @@
 export const zhCN = {
   "hero.title": "Spherse",
-  "hero.subtitle": "本地运行、开箱即用的AI agent App",
+  "hero.subtitle": "本地运行、开箱即用的AI Agent APP",
   "hero.tagline": "构建沉浸式世界观/角色扮演/个人记录台/文游…为你的创意提供基础设施和运行时",
   "hero.downloadMac": "下载 macOS",
   "hero.downloadWin": "下载 Windows",
@@ -39,7 +39,7 @@ export const zhCN = {
   "cases.item1.title": "哈利波特",
   "cases.item1.desc": "走进霍格沃茨的魔法世界——预言家日报社、冥想盆等多个 Agent 协同演绎，展示如何用 Spherse 构建一个鲜活的交互式故事宇宙。",
 
-  "lang.zhCN": "中文",
-  "lang.zhTW": "繁體",
+  "lang.zhCN": "简体",
+  "lang.zhTW": "繁体",
   "lang.en": "EN",
 } as const;

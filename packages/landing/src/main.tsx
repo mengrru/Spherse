@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import "./styles.css";
 
-// GitHub Pages serves 404.html for unknown paths (e.g. direct access to /cases).
+// GitHub Pages serves 404.html for unknown paths (e.g. direct access to /explore).
 // 404.html stores the intended path here and redirects to "/", so restore it
 // before the router mounts.
 const REDIRECT_KEY = "spherse-landing-redirect";

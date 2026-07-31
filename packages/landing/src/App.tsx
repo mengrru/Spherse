@@ -26,7 +26,7 @@ export function App() {
                   <Carousel />
                   <div className="flex justify-center pb-10">
                     <Link
-                      to="/cases"
+                      to="/explore"
                       className="inline-flex items-center gap-1.5 rounded-md border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
                     >
                       {t("home.moreCases")} →
@@ -37,7 +37,7 @@ export function App() {
                 </>
               }
             />
-            <Route path="/cases" element={<CasesPage t={t} />} />
+            <Route path="/explore" element={<CasesPage t={t} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

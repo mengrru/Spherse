@@ -11,11 +11,11 @@ interface HeaderProps {
 
 export function Header({ locale, onLocaleChange, t }: HeaderProps) {
   const location = useLocation();
-  const isCases = location.pathname === "/cases";
+  const isExplore = location.pathname === "/explore";
 
   return (
     <header className="flex items-center px-6 py-3">
-      {isCases && (
+      {isExplore && (
         <Link
           to="/"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -25,7 +25,7 @@ export function Header({ locale, onLocaleChange, t }: HeaderProps) {
       )}
       <div className="ms-auto flex items-center gap-4">
         <Link
-          to="/cases"
+          to="/explore"
           className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           {t("nav.explore")}

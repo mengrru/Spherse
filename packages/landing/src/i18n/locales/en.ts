@@ -3,7 +3,7 @@ import type { zhCN } from "./zh-CN";
 export const en: Record<keyof typeof zhCN, string> = {
   "hero.title": "Spherse",
   "hero.subtitle":
-    "A local-first, out-of-the-box AI agent app",
+    "A local-first, out-of-the-box AI Agent APP",
   "hero.tagline":
     "Build immersive worlds / roleplay / personal journals / text adventures… the infrastructure and runtime for your creativity",
   "hero.downloadMac": "Download for macOS",
@@ -43,7 +43,7 @@ export const en: Record<keyof typeof zhCN, string> = {
   "cases.item1.title": "Harry Potter",
   "cases.item1.desc": "Step into the wizarding world of Hogwarts — the Daily Prophet, the Pensieve and more, with multiple agents collaborating to show how Spherse brings an interactive story universe to life.",
 
-  "lang.zhCN": "中文",
-  "lang.zhTW": "繁體",
+  "lang.zhCN": "简体",
+  "lang.zhTW": "繁体",
   "lang.en": "EN",
 };

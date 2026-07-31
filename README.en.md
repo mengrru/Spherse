@@ -4,7 +4,7 @@
 
 [中文](README.md)｜EN
 
-A local-first, out-of-the-box AI agent app.
+A local-first, out-of-the-box AI Agent APP.
 
 Build immersive worlds / roleplay / personal journals / text adventures… the infrastructure and runtime for your creativity.
 

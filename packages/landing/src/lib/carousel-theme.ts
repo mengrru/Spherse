@@ -1,6 +1,6 @@
 // Manages the carousel's theme stylesheet as a singleton <link> in <head>.
 // Lifted out of the Carousel component so the active theme survives route
-// changes (e.g. navigating to /cases keeps the theme that was cycling on home).
+// changes (e.g. navigating to /explore keeps the theme that was cycling on home).
 
 let linkEl: HTMLLinkElement | null = null;
 let currentHref: string | null = null;

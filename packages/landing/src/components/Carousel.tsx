@@ -29,7 +29,7 @@ export function Carousel() {
 
   // Apply the initial theme on mount. The <link> is a singleton managed by
   // carousel-theme.ts and intentionally NOT removed on unmount, so the active
-  // theme persists when navigating away (e.g. to /cases).
+  // theme persists when navigating away (e.g. to /explore).
   useEffect(() => {
     setCarouselTheme(slides[initialIndexRef.current].theme);
   }, []);
