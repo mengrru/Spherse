@@ -6,9 +6,16 @@
   <script>
     (function () {
       var path = location.pathname;
-      if (path === '/web') {
+      if (path === '/web' || path === '/web/') {
         location.replace('/web/' + location.search + location.hash);
         return;
+      }
+      // Landing client-side route (e.g. /cases): preserve the intended path so
+      // the SPA can restore it after redirecting to "/" (see main.tsx).
+      if (path !== '/') {
+        try {
+          sessionStorage.setItem('spherse-landing-redirect', path + location.search + location.hash);
+        } catch (e) { /* sessionStorage unavailable */ }
       }
       location.replace('/' + location.search + location.hash);
     })();
