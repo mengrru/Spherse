@@ -282,44 +282,44 @@ export const zhCN = {
   "side-panel.openTooltip": "打开项目面板",
 
   // --- Agent Dialog ---
-  // 对话对象创建弹窗标题
-  "agent-dialog.createTitle": "创建对话对象",
-  // 对话对象编辑弹窗标题
-  "agent-dialog.editTitle": "编辑对话对象",
-  // 对话对象名称字段标签
+  // 智能体创建弹窗标题
+  "agent-dialog.createTitle": "创建智能体",
+  // 智能体编辑弹窗标题
+  "agent-dialog.editTitle": "编辑智能体",
+  // 智能体名称字段标签
   "agent-dialog.nameLabel": "名称",
-  // 对话对象名称输入框占位提示
+  // 智能体名称输入框占位提示
   "agent-dialog.namePlaceholder": "名称",
-  // 对话对象名称必填校验提示
-  "agent-dialog.nameRequired": "请输入对话对象的名称",
-  // 对话对象别名（alias）字段标签：别名是可选的，设定后会显示在聊天气泡上代替名称
+  // 智能体名称必填校验提示
+  "agent-dialog.nameRequired": "请输入智能体的名称",
+  // 智能体别名（alias）字段标签：别名是可选的，设定后会显示在聊天气泡上代替名称
   "agent-dialog.aliasLabel": "别名",
-  // 对话对象别名输入框占位提示：留空时气泡上显示名称
+  // 智能体别名输入框占位提示：留空时气泡上显示名称
   "agent-dialog.aliasPlaceholder": "留空则显示名称",
-  // 对话对象别名 tooltip：说明别名会显示在 AI 消息气泡上，未设置时显示名称
-  "agent-dialog.aliasHint": "设置后在 AI 的消息气泡上显示该别名，未设置时显示名称。",
+  // 智能体别名 tooltip：说明别名会显示在智能体的消息气泡上，未设置时显示名称
+  "agent-dialog.aliasHint": "设置后在智能体的消息气泡上显示该别名，未设置时显示名称。",
   // Agent 提示词字段标签
   "agent-dialog.promptLabel": "提示词",
-  // Agent 提示词字段 tooltip：说明提示词的作用（对话对象的设定，AI 始终记住）
-  "agent-dialog.promptHint": "你的对话对象的设定。AI 会一直记住这些内容。",
-  // Agent 提示词输入框占位提示，引导用户描述对话对象的设定
-  "agent-dialog.promptPlaceholder": "描述这个对话对象的性格、语气与专长，例如「你是一位经验丰富的奇幻世界观顾问」",
+  // Agent 提示词字段 tooltip：说明提示词的作用（智能体的设定，智能体始终记住）
+  "agent-dialog.promptHint": "你的智能体的设定。智能体会一直记住这些内容。",
+  // Agent 提示词输入框占位提示，引导用户描述智能体的设定
+  "agent-dialog.promptPlaceholder": "描述这个智能体的性格、语气与专长，例如「你是一位经验丰富的奇幻世界观顾问」",
   // Agent 权限字段标签（读取/写入等权限分组的总标签）
   "agent-dialog.toolsLabel": "权限",
-  // Agent 权限字段 tooltip：说明权限表示 AI 可使用的工具
-  "agent-dialog.toolsHint": "允许 AI 在对话过程中使用的工具",
+  // Agent 权限字段 tooltip：说明权限表示智能体可使用的工具
+  "agent-dialog.toolsHint": "允许智能体在对话过程中使用的工具",
   // 权限分组：读取类（read_file/list_files/search_content）
   "agent-dialog.permRead": "读取文件",
   // 权限分组 tooltip：读取文件的作用说明
-  "agent-dialog.permReadHint": "允许 AI 读取项目中的文件内容、浏览目录结构和搜索文本",
+  "agent-dialog.permReadHint": "允许智能体读取项目中的文件内容、浏览目录结构和搜索文本",
   // 权限分组：写入类（write_file/edit_file/move_file/copy_file）
   "agent-dialog.permWrite": "写入文件",
   // 权限分组 tooltip：写入文件的作用说明
-  "agent-dialog.permWriteHint": "允许 AI 创建、编辑、移动和复制项目中的文件",
+  "agent-dialog.permWriteHint": "允许智能体创建、编辑、移动和复制项目中的文件",
   // Agent 参考资料字段标签
   "agent-dialog.refsLabel": "参考资料",
-  // Agent 参考资料字段 tooltip：说明参考资料是 AI 一开始就记住的内容
-  "agent-dialog.refsHint": "一开始就让 AI 记住的文件内容。AI 会一直记住这些内容。",
+  // Agent 参考资料字段 tooltip：说明参考资料是智能体一开始就记住的内容
+  "agent-dialog.refsHint": "一开始就让智能体记住的文件内容。智能体会一直记住这些内容。",
   // Agent 参考资料路径输入框占位提示
   "agent-dialog.refsPlaceholder": "输入路径搜索文件，回车添加",
   // Agent 保存失败提示
@@ -346,19 +346,19 @@ export const zhCN = {
   "agent-dialog.templateConfirmApply": "应用",
   // 确认弹窗「取消」按钮
   "agent-dialog.templateConfirmCancel": "取消",
-  // Agent dialog 主题 tab：textarea 上方说明，告知主题 CSS 的作用范围（仅当前对话对象的聊天窗口）
-  "agent-dialog.themeScopeHint": "仅作用于该对话对象的聊天窗口（气泡、输入框、Markdown 等）。",
-  // Agent dialog 主题 tab：textarea 占位提示，引导用户与 AI 对话来生成主题
-  "agent-dialog.themePlaceholder": "与 AI 对话来生成主题，或将主题 CSS 粘贴到这里",
+  // Agent dialog 主题 tab：textarea 上方说明，告知主题 CSS 的作用范围（仅当前智能体的聊天窗口）
+  "agent-dialog.themeScopeHint": "仅作用于该智能体的聊天窗口（气泡、输入框、Markdown 等）。",
+  // Agent dialog 主题 tab：textarea 占位提示，引导用户与智能体对话来生成主题
+  "agent-dialog.themePlaceholder": "与智能体对话来生成主题，或将主题 CSS 粘贴到这里",
 
   // --- Agent Session List ---
   // 新建对话按钮文案
   "agent-session-list.newSession": "新建对话",
-  // 创建对话对象按钮悬停提示
-  "agent-session-list.createAgentTooltip": "创建对话对象",
-  // 无对话对象时的空状态提示
+  // 创建智能体按钮悬停提示
+  "agent-session-list.createAgentTooltip": "创建智能体",
+  // 无智能体时的空状态提示
   "agent-session-list.emptyAgents": "暂无对话",
-  // 删除对话对象确认弹窗内容，{name} 为对话对象名称
+  // 删除智能体确认弹窗内容，{name} 为智能体名称
   "agent-session-list.confirmDeleteAgent": "确定要删除「{name}」吗？「{name}」下的所有会话也将被移除。",
   // 删除 Agent 失败提示，{message} 为错误信息
   "agent-session-list.deleteFailed": "删除失败：{message}",
@@ -368,17 +368,17 @@ export const zhCN = {
   "agent-session-list.sessionNameRequired": "请输入会话名称",
   // 会话名称长度超限提示
   "agent-session-list.sessionNameTooLong": "会话名称不能超过 80 个字符",
-  // 侧边栏对话对象分组标签
+  // 侧边栏智能体分组标签
   "agent-session-list.groupLabel": "对话",
   // 右键菜单：将对话显示为浮窗
   "agent-session-list.floatSession": "浮窗",
   // 右键菜单：取消对话浮窗
   "agent-session-list.cancelFloat": "取消浮窗",
-  // 对话对象会话列表分组底部的「加载更多」按钮，用于分页加载下一批会话
+  // 智能体会话列表分组底部的「加载更多」按钮，用于分页加载下一批会话
   "agent-session-list.loadMore": "加载更多",
-  // 对话对象右键菜单：复制该对话对象的 slug 到剪贴板
+  // 智能体右键菜单：复制该智能体的 slug 到剪贴板
   "agent-session-list.copyAgentId": "复制 slug",
-  // 复制对话对象 slug 成功后的提示
+  // 复制智能体 slug 成功后的提示
   "agent-session-list.agentIdCopied": "slug 已复制",
   // 会话右键菜单：复制该会话 ID 到剪贴板
   "agent-session-list.copySessionId": "复制会话 ID",
@@ -715,7 +715,7 @@ export const zhCN = {
 
   // --- Text Selection Session ---
   // 文本选择会话的角色下拉框占位提示
-  "text-selection.agentPlaceholder": "选择对话对象",
+  "text-selection.agentPlaceholder": "选择智能体",
   // 文本选择会话的补充说明输入框占位提示
   "text-selection.supplementPlaceholder": "添加补充说明（可选）...",
   // 引用来源提示，{path} 为文件路径
@@ -798,23 +798,23 @@ export const zhCN = {
   // 独立工具标签：追加日志
   "tool.append_log": "追加日志",
   // 独立工具 tooltip：追加日志的作用说明
-  "tool.append_log_hint": "允许 AI 向项目变更日志（CHANGELOG.md）追加操作记录",
+  "tool.append_log_hint": "允许智能体向项目变更日志（CHANGELOG.md）追加操作记录",
   // 独立工具标签：使用技能
   "tool.load_skill": "使用技能",
   // 独立工具 tooltip：使用技能的作用说明
-  "tool.load_skill_hint": "允许 AI 加载并激活技能（Skill）的完整指令",
+  "tool.load_skill_hint": "允许智能体加载并激活技能（Skill）的完整指令",
   // 独立工具标签：渲染卡片
   "tool.render_card": "渲染卡片",
   // 独立工具 tooltip：渲染卡片的作用说明
-  "tool.render_card_hint": "允许 AI 在对话中渲染 HTML 卡片",
+  "tool.render_card_hint": "允许智能体在对话中渲染 HTML 卡片",
   // 独立工具标签：生成图片
   "tool.generate_image": "生成图片",
   // 独立工具 tooltip：生成图片的作用说明
-  "tool.generate_image_hint": "允许 AI 根据文字描述生成图片",
+  "tool.generate_image_hint": "允许智能体根据文字描述生成图片",
   // 独立工具标签：触发事件（emit trigger event，agent 在对话中调用，触发其它 agent 的事件触发器）
   "tool.emit_trigger_event": "触发事件",
   // 独立工具 tooltip：触发事件的作用说明
-  "tool.emit_trigger_event_hint": "允许 AI 发出自定义事件，触发本项目内其它 Agent 的事件触发器，使其自动执行预设任务",
+  "tool.emit_trigger_event_hint": "允许智能体发出自定义事件，触发本项目内其它智能体的事件触发器，使其自动执行预设任务",
 
   // --- Viewer Card ---
   // edit_file diff 左栏标题，显示原始内容
