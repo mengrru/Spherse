@@ -31,6 +31,16 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "upcoming.memory.desc": "Agent 將能跨會話保持長期記憶",
   "upcoming.label": "即將到來",
 
+  "home.moreCases": "探索更多可能",
+  "nav.explore": "探索",
+
+  "cases.pageTitle": "案例",
+  "cases.pageSubtitle": "下載範例專案，體驗 Spherse 的更多可能",
+  "cases.download": "下載範例專案",
+  "cases.backHome": "返回首頁",
+  "cases.item1.title": "哈利波特",
+  "cases.item1.desc": "走進霍格沃茨的魔法世界——預言家日報社、冥想盆等多個 Agent 協同演繹，展示如何用 Spherse 構建一個鮮活的互動式故事宇宙。",
+
   "lang.zhCN": "中文",
   "lang.zhTW": "繁體",
   "lang.en": "EN",

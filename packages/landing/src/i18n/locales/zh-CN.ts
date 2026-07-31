@@ -29,6 +29,16 @@ export const zhCN = {
   "upcoming.memory.desc": "Agent 将能跨会话保持长期记忆",
   "upcoming.label": "即将到来",
 
+  "home.moreCases": "探索更多可能",
+  "nav.explore": "探索",
+
+  "cases.pageTitle": "案例",
+  "cases.pageSubtitle": "下载示例项目，体验 Spherse 的更多可能",
+  "cases.download": "下载示例项目",
+  "cases.backHome": "返回首页",
+  "cases.item1.title": "哈利波特",
+  "cases.item1.desc": "走进霍格沃茨的魔法世界——预言家日报社、冥想盆等多个 Agent 协同演绎，展示如何用 Spherse 构建一个鲜活的交互式故事宇宙。",
+
   "lang.zhCN": "中文",
   "lang.zhTW": "繁體",
   "lang.en": "EN",

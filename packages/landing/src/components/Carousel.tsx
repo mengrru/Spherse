@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Play, Pause } from "lucide-react";
 import { slides } from "../data/slides";
+import { setCarouselTheme } from "../lib/carousel-theme";
 import { cn } from "../lib/utils";
 
 const AUTOPLAY_INTERVAL = 5000;
@@ -19,38 +20,19 @@ export function Carousel() {
   const [activeIndex, setActiveIndex] = useState(() => Math.floor(Math.random() * slides.length));
   const [autoplay, setAutoplay] = useState(true);
   const initialIndexRef = useRef(activeIndex);
-  const linkRef = useRef<HTMLLinkElement | null>(null);
 
-  const loadTheme = useCallback((themeHref: string) => {
-    if (linkRef.current) {
-      linkRef.current.remove();
-    }
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = themeHref;
-    document.head.appendChild(link);
-    linkRef.current = link;
+  const goToSlide = useCallback((index: number) => {
+    const next = ((index % slides.length) + slides.length) % slides.length;
+    setActiveIndex(next);
+    setCarouselTheme(slides[next].theme);
   }, []);
 
-  const goToSlide = useCallback(
-    (index: number) => {
-      const next = ((index % slides.length) + slides.length) % slides.length;
-      setActiveIndex(next);
-      loadTheme(slides[next].theme);
-    },
-    [loadTheme],
-  );
-
-  // Load initial theme on mount, cleanup on unmount
+  // Apply the initial theme on mount. The <link> is a singleton managed by
+  // carousel-theme.ts and intentionally NOT removed on unmount, so the active
+  // theme persists when navigating away (e.g. to /cases).
   useEffect(() => {
-    loadTheme(slides[initialIndexRef.current].theme);
-    return () => {
-      if (linkRef.current) {
-        linkRef.current.remove();
-        linkRef.current = null;
-      }
-    };
-  }, [loadTheme]);
+    setCarouselTheme(slides[initialIndexRef.current].theme);
+  }, []);
 
   // Autoplay: timer restarts whenever activeIndex changes (autoplay tick or user click)
   useEffect(() => {
@@ -58,10 +40,10 @@ export function Carousel() {
     const timer = setTimeout(() => {
       const next = (activeIndex + 1) % slides.length;
       setActiveIndex(next);
-      loadTheme(slides[next].theme);
+      setCarouselTheme(slides[next].theme);
     }, AUTOPLAY_INTERVAL);
     return () => clearTimeout(timer);
-  }, [activeIndex, autoplay, loadTheme]);
+  }, [activeIndex, autoplay]);
 
   const handleAnchorClick = (index: number) => {
     goToSlide(index);

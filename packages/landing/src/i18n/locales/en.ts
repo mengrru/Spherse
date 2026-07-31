@@ -33,6 +33,16 @@ export const en: Record<keyof typeof zhCN, string> = {
   "upcoming.memory.desc": "Agents will maintain long-term memory across sessions",
   "upcoming.label": "Coming Soon",
 
+  "home.moreCases": "Explore more possibilities",
+  "nav.explore": "Explore",
+
+  "cases.pageTitle": "Examples",
+  "cases.pageSubtitle": "Download sample projects to explore what Spherse can do",
+  "cases.download": "Download sample",
+  "cases.backHome": "Back to home",
+  "cases.item1.title": "Harry Potter",
+  "cases.item1.desc": "Step into the wizarding world of Hogwarts — the Daily Prophet, the Pensieve and more, with multiple agents collaborating to show how Spherse brings an interactive story universe to life.",
+
   "lang.zhCN": "中文",
   "lang.zhTW": "繁體",
   "lang.en": "EN",

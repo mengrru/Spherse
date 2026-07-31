@@ -1,28 +1,49 @@
+import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router";
 import { useLandingI18n } from "./i18n";
-import { LanguageSwitcher } from "./components/LanguageSwitcher";
+import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
 import { Carousel } from "./components/Carousel";
 import { Footer } from "./components/Footer";
 import { FeatureCards } from "./components/FeatureCards";
 import { UpcomingFeatures } from "./components/UpcomingFeatures";
+import { CasesPage } from "./components/CasesPage";
 
 export function App() {
   const { locale, setLocale, t } = useLandingI18n();
 
   return (
-    <div data-landing-root className="flex min-h-full flex-col bg-background">
-      <header className="flex justify-end px-6 py-2">
-        <LanguageSwitcher locale={locale} onLocaleChange={setLocale} t={t} />
-      </header>
+    <BrowserRouter>
+      <div data-landing-root className="flex min-h-full flex-col bg-background">
+        <Header locale={locale} onLocaleChange={setLocale} t={t} />
 
-      <main className="flex-1">
-        <Hero t={t} />
-        <Carousel />
-        <FeatureCards t={t} />
-        <UpcomingFeatures t={t} />
-      </main>
+        <main className="flex-1">
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <>
+                  <Hero t={t} />
+                  <Carousel />
+                  <div className="flex justify-center pb-10">
+                    <Link
+                      to="/cases"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:border-foreground/30 hover:text-foreground"
+                    >
+                      {t("home.moreCases")} →
+                    </Link>
+                  </div>
+                  <FeatureCards t={t} />
+                  <UpcomingFeatures t={t} />
+                </>
+              }
+            />
+            <Route path="/cases" element={<CasesPage t={t} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </main>
 
-      <Footer />
-    </div>
+        <Footer />
+      </div>
+    </BrowserRouter>
   );
 }
