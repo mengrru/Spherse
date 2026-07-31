@@ -116,7 +116,7 @@ export const zhCN = {
   // 移动端 tab → 面板顶部简介文案：提示需先安装 cloudflared，启用后扫码即可远程连接，使用时需保持电脑与桌面端开启
   "settings.mobile.description": "启用后使用手机扫描下方二维码，即可远程连接到本桌面端。使用移动端期间请保持电脑开机、Spherse 桌面端运行。",
   // 移动端 tab → 快速隧道模式未启用时的前置提醒：需先安装 cloudflared 才能使用
-  "settings.mobile.cloudflaredPrerequisite": "开启前请先安装 cloudflared（macOS：brew install cloudflared；Windows：scoop install cloudflared）。",
+  "settings.mobile.cloudflaredPrerequisite": "开启前请先安装 cloudflared（macOS：brew install cloudflared；Windows：winget install cloudflared）。",
   // 移动端 tab → 「连接方式」字段标签（选择快速隧道或自有域名两种暴露方式）
   "settings.mobile.mode": "连接方式",
   // 移动端 tab → 连接方式选项：快速隧道（Cloudflare 自动分配 *.trycloudflare.com 临时域名，需本地安装 cloudflared）

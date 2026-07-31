@@ -59,7 +59,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.provider.dialog.errModelsRequired": "請至少填寫一個模型 ID",
   "settings.tabs.mobile": "行動裝置",
   "settings.mobile.description": "啟用後使用手機掃描下方 QR Code，即可遠端連線到本桌面端。使用行動裝置期間請保持電腦開機、Spherse 桌面端執行。",
-  "settings.mobile.cloudflaredPrerequisite": "開啟前請先安裝 cloudflared（macOS：brew install cloudflared；Windows：scoop install cloudflared）。",
+  "settings.mobile.cloudflaredPrerequisite": "開啟前請先安裝 cloudflared（macOS：brew install cloudflared；Windows：winget install cloudflared）。",
   "settings.mobile.mode": "連線方式",
   "settings.mobile.mode.quick": "快速通道",
   "settings.mobile.mode.manual": "自有網域",

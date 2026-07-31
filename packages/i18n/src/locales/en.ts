@@ -59,7 +59,7 @@ export const en: Record<TranslationKey, string> = {
   "settings.provider.dialog.errModelsRequired": "At least one model ID is required",
   "settings.tabs.mobile": "Mobile",
   "settings.mobile.description": "Scan the QR code below with your phone to connect to this desktop remotely. Keep your computer on and the Spherse desktop app running while using mobile.",
-  "settings.mobile.cloudflaredPrerequisite": "Please install cloudflared before enabling (macOS: brew install cloudflared; Windows: scoop install cloudflared).",
+  "settings.mobile.cloudflaredPrerequisite": "Please install cloudflared before enabling (macOS: brew install cloudflared; Windows: winget install cloudflared).",
   "settings.mobile.mode": "Connection mode",
   "settings.mobile.mode.quick": "Quick tunnel",
   "settings.mobile.mode.manual": "Custom domain",
