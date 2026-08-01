@@ -6,7 +6,7 @@ import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
-import { useHostBridge } from "../../context/host-bridge-context";
+import { useOpenExternalLink } from "../browser/open-external-url";
 import { FrontMatterPanel } from "./FrontMatterPanel";
 import { resolveMarkdownImagePath } from "./image-path";
 import { resolveMarkdownLink } from "./markdown-link";
@@ -46,7 +46,7 @@ export function ContentView({
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
-  const bridge = useHostBridge();
+  const openLink = useOpenExternalLink();
   const navigate = useNavigate();
   const { frontmatter, body } = useMemo(
     () => (isMarkdown && content ? parseFrontmatter(content) : { frontmatter: null, body: content ?? "" }),
@@ -64,7 +64,7 @@ export function ContentView({
       const resolved = resolveMarkdownLink(href, filePath);
       if (resolved.kind === "external") {
         event.preventDefault();
-        await bridge.openExternal(href);
+        openLink(href);
         return;
       }
       if (resolved.kind === "anchor") {
@@ -83,7 +83,7 @@ export function ContentView({
       }
       navigate(`/project/${projectId}/content?path=${encodeURIComponent(resolved.path)}`);
     },
-    [filePath, client, projectId, navigate, t, bridge],
+    [filePath, client, projectId, navigate, t, openLink],
   );
   if (isHtml && htmlView === "preview" && !isEditing && !loading && !error) {
     return (

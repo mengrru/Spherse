@@ -4,6 +4,7 @@ import { useI18n } from "@spherse/i18n/react";
 import { SidePanel } from "../features/side-panel";
 import { FloatingChatManager } from "../features/floating-chat";
 import { FloatingContentBrowserManager } from "../features/floating-content-browser";
+import { BrowserManager } from "../features/browser";
 import { TriggerEventBridge } from "../features/agent-trigger";
 import { FeatureGate } from "../components/FeatureGate";
 import { useCustomTheme } from "../hooks/useCustomTheme";
@@ -89,6 +90,9 @@ export function ProjectScope() {
         </FeatureGate>
         <FeatureGate feature="floating-content-browser">
           <FloatingContentBrowserManager />
+        </FeatureGate>
+        <FeatureGate feature="browser">
+          <BrowserManager />
         </FeatureGate>
         <TriggerEventBridge />
       </div>

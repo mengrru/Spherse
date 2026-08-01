@@ -7,6 +7,7 @@ export type FeatureName =
   | "agent-mcp"
   | "floating-chat"
   | "floating-content-browser"
+  | "browser"
   | "text-selection-session"
   | "open-project";
 
@@ -19,6 +20,7 @@ export const FEATURE_HOST_MATRIX: Record<FeatureName, ReadonlySet<HostKind>> = {
   "agent-mcp": ELECTRON_ONLY,
   "floating-chat": ELECTRON_ONLY,
   "floating-content-browser": ELECTRON_ONLY,
+  browser: ELECTRON_ONLY,
   "text-selection-session": ELECTRON_ONLY,
   "open-project": ELECTRON_ONLY,
 };

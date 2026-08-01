@@ -4,6 +4,7 @@ import { GlobalErrorBoundary } from "./components/GlobalErrorBoundary";
 import { ProjectScope } from "./layouts/ProjectScope";
 import { ChatPage } from "./pages/ChatPage";
 import { ContentBrowserPage } from "./pages/ContentBrowserPage";
+import { BrowserPage } from "./pages/BrowserPage";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { WelcomePagePage } from "./pages/WelcomePagePage";
 
@@ -32,6 +33,10 @@ export const router = createHashRouter([
           {
             path: "content",
             element: <ContentBrowserPage />,
+          },
+          {
+            path: "browser",
+            element: <BrowserPage />,
           },
         ],
       },

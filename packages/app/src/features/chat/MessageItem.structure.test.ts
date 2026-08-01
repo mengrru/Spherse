@@ -20,12 +20,12 @@ describe("MessageItem structure", () => {
     expect(source.indexOf("<FileViewerCard")).toBeGreaterThan(source.indexOf("<ToolCallSection"));
   });
 
-  it("opens chat bubble links in the external browser instead of navigating in place", () => {
+  it("opens chat bubble links via the shared link resolver instead of navigating in place", () => {
     const source = readFileSync(join(currentDir, "MessageItem.tsx"), "utf8");
 
-    expect(source).toContain("useHostBridge");
+    expect(source).toContain("useOpenExternalLink");
     expect(source).toContain("handleLinkClick");
-    expect(source).toContain("bridge.openExternal");
+    expect(source).toContain("openLink(href)");
     expect(source).toContain("event.preventDefault()");
     expect(source).toContain('onLinkClick={handleLinkClick}');
   });

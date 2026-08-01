@@ -643,6 +643,20 @@ export const zhCN = {
   // 文件树没有文件时的空状态提示
   "file-tree.empty": "暂无文件",
 
+  // --- In-App Browser ---
+  // 简易浏览器地址栏的占位提示（输入本地页面地址后回车跳转）
+  "browser.addressPlaceholder": "输入本地页面地址…",
+  // 简易浏览器工具栏「刷新」按钮的 tooltip
+  "browser.refresh": "刷新",
+  // 简易浏览器工具栏「在系统浏览器中打开」按钮的 tooltip
+  "browser.openInSystemBrowser": "在系统浏览器中打开",
+  // 浮窗级浏览器「展开为页面」按钮的 tooltip（从浮窗切换到整页）
+  "browser.expandToPage": "展开为页面",
+  // 页面级浏览器「收起为浮窗」按钮的 tooltip（从整页切换到浮窗）
+  "browser.collapseToFloat": "收起为浮窗",
+  // 地址栏输入非本地地址（非 localhost）时的错误提示
+  "browser.localOnly": "仅支持本地页面（localhost）",
+
   // --- AI Read Denylist ---
   // AI 读取限制面板标题
   "ai-read-denylist.title": "AI 读取限制",

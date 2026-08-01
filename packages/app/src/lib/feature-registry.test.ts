@@ -9,6 +9,7 @@ describe("feature-registry", () => {
         "agent-dialog",
         "agent-mcp",
         "agent-trigger",
+        "browser",
         "floating-chat",
         "floating-content-browser",
         "open-project",

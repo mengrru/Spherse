@@ -9,7 +9,7 @@ import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
 import { FileViewerCard } from "./FileViewerCard";
 import { ThinkingIndicator } from "./ThinkingIndicator";
-import { useHostBridge } from "../../context/host-bridge-context";
+import { useOpenExternalLink } from "../browser/open-external-url";
 import { formatMessageTime } from "./lib/format-time";
 
 interface MessageItemProps {
@@ -21,7 +21,7 @@ interface MessageItemProps {
 
 export function MessageItem({ message, agent, showTime, onNavigateToPath }: MessageItemProps) {
   const isUser = message.role === "user";
-  const bridge = useHostBridge();
+  const openLink = useOpenExternalLink();
 
   const handleLinkClick = useCallback(
     async (href: string, event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -33,9 +33,9 @@ export function MessageItem({ message, agent, showTime, onNavigateToPath }: Mess
         }
         return;
       }
-      await bridge.openExternal(href);
+      openLink(href);
     },
-    [bridge],
+    [openLink],
   );
 
   return (

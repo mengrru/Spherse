@@ -292,6 +292,35 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 }
 ```
 
+## 浮窗简易浏览器
+
+点击 localhost 链接（或在地址栏输入本地地址）打开的浮动简易浏览器窗口暴露了 `data-browser-float-*` 钩子，可在 `.spherse/theme.css` 中定制窗口外观（页签与浮窗共用同一套钩子）。
+
+可用钩子：
+
+| 钩子 | 作用对象 |
+|------|---------|
+| `data-browser-float-root` | 浮窗根容器（`position: fixed`）。定制 border、border-radius、box-shadow、background、backdrop-filter |
+| `data-browser-float-titlebar` | 标题栏（地址 + 工具栏按钮）。定制 background、text color、padding |
+| `data-browser-float-close` | 关闭按钮。定制图标颜色、hover 态 |
+
+示例：
+
+```css
+/* .spherse/theme.css —— 浮窗简易浏览器样式 */
+[data-browser-float-root] {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+[data-browser-float-root] [data-browser-float-titlebar] {
+  background: var(--sp-muted);
+}
+[data-browser-float-root] [data-browser-float-close]:hover {
+  background: var(--sp-destructive);
+  color: white;
+}
+```
+
 ## 全局聊天窗口默认样式
 
 `.spherse/theme.css` 除了覆盖 UI 变量，还可以用**原生 CSS nesting** 定义全局聊天窗口的默认样式。把规则包裹在 `[data-chat-root] { ... }` 内，它会作用于**所有** agent 的聊天窗口（inline 与 floating 都生效），作为单 agent 主题覆盖之前的全局默认。
