@@ -52,10 +52,10 @@ spherse/
 │   │       │   ├── access-policy.ts   # AccessPolicy 接口 + llmAccessPolicy / serverAccessPolicy 工厂
     │   │       │   └── denied-paths.ts    # deniedPaths 路径规范化与保留路径校验
     │   │       ├── mcp/                   # MCP 连接器运行时（per-agent 连接缓存 + 工具适配）
-    │   │       │   ├── types.ts           # McpServerConfig（stdio/http/sse 传输）、AgentMcpConfig
+    │   │       │   ├── types.ts           # McpServerConfig（stdio/http/sse 传输）、AgentMcpConfig、McpServerInfo（instructions/resources/prompts 描述符）
     │   │       │   ├── config.ts          # normalizeMcpConfig 校验 + makeMcpToolName 命名（mcp__{server}_{shortid}__{tool}）
-    │   │       │   ├── mcp-client.ts      # connectMcpServer：transport 构建 + listTools + adaptMcpTool（JSON Schema → TypeBox）
-    │   │       │   ├── mcp-connection-manager.ts # McpConnectionManager：per-agent 连接/工具缓存（getTools/invalidate/closeAll）
+    │   │       │   ├── mcp-client.ts      # connectMcpServer：transport 构建 + listTools/listResources/listPrompts + adaptMcpTool/adaptMcpReadResourceTool/adaptMcpGetPromptTool
+    │   │       │   ├── mcp-connection-manager.ts # McpConnectionManager：per-agent 连接/工具/info 缓存（load/invalidate/closeAll）
     │   │       │   ├── json-schema-to-typebox.ts # MCP inputSchema → TypeBox parameters 转换
     │   │       │   └── index.ts
     │   │       ├── __tests__/            # Vitest 单元测试

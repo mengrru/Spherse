@@ -2,34 +2,37 @@ import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { Logger } from "../logger.js";
 import { createSilentLogger } from "../logger.js";
 import { connectMcpServer, type McpConnection } from "./mcp-client.js";
-import type { McpServerConfig } from "./types.js";
+import type { McpServerConfig, McpServerInfo } from "./types.js";
 
 interface AgentEntry {
   tools: AgentTool[];
   connections: McpConnection[];
+  info: McpServerInfo[];
 }
 
 export type McpConnectFn = (
   servers: McpServerConfig[],
   logger: Logger,
-) => Promise<{ tools: AgentTool[]; connections: McpConnection[] }>;
+) => Promise<{ tools: AgentTool[]; connections: McpConnection[]; info: McpServerInfo[] }>;
 
 export type McpLoadServersFn = (agentId: string) => Promise<McpServerConfig[]>;
 
 async function defaultConnect(
   servers: McpServerConfig[],
   logger: Logger,
-): Promise<{ tools: AgentTool[]; connections: McpConnection[] }> {
+): Promise<{ tools: AgentTool[]; connections: McpConnection[]; info: McpServerInfo[] }> {
   const results = await Promise.allSettled(
     servers.map((server) => connectMcpServer(server, logger)),
   );
   const tools: AgentTool[] = [];
   const connections: McpConnection[] = [];
+  const info: McpServerInfo[] = [];
   results.forEach((result, index) => {
     const server = servers[index];
     if (result.status === "fulfilled") {
       connections.push(result.value.connection);
       tools.push(...result.value.tools);
+      info.push(result.value.info);
       logger.info(
         { server: server.name, tools: result.value.tools.length },
         "mcp server tools loaded",
@@ -41,7 +44,7 @@ async function defaultConnect(
       );
     }
   });
-  return { tools, connections };
+  return { tools, connections, info };
 }
 
 export class McpConnectionManager {
@@ -61,9 +64,9 @@ export class McpConnectionManager {
     this.loadServers = loadServers ?? (() => Promise.resolve([]));
   }
 
-  async getTools(agentId: string): Promise<AgentTool[]> {
+  async load(agentId: string): Promise<{ tools: AgentTool[]; info: McpServerInfo[] }> {
     const cached = this.entries.get(agentId);
-    if (cached) return cached.tools;
+    if (cached) return { tools: cached.tools, info: cached.info };
 
     let promise = this.inflight.get(agentId);
     if (!promise) {
@@ -72,18 +75,18 @@ export class McpConnectionManager {
     }
     try {
       const entry = await promise;
-      return entry.tools;
+      return { tools: entry.tools, info: entry.info };
     } catch (err) {
       this.logger.warn({ err, agentId }, "mcp tool cache connect failed");
-      return [];
+      return { tools: [], info: [] };
     }
   }
 
   private async doConnect(agentId: string): Promise<AgentEntry> {
     try {
       const servers = (await this.loadServers(agentId)).filter((s) => s.enabled);
-      const { tools, connections } = await this.connect(servers, this.logger);
-      const entry: AgentEntry = { tools, connections };
+      const { tools, connections, info } = await this.connect(servers, this.logger);
+      const entry: AgentEntry = { tools, connections, info };
       this.entries.set(agentId, entry);
       return entry;
     } finally {

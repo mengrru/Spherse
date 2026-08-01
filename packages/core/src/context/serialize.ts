@@ -41,6 +41,62 @@ function renderBlock(block: ContextBlock): string {
         .join("\n");
       return `<preloaded-context>\n${files}\n</preloaded-context>`;
     }
+    case "mcp-context": {
+      const servers = block.servers.map((s) => {
+        const parts: string[] = [];
+        const caps: string[] = [];
+        if (s.capabilities?.resources) caps.push("resources");
+        if (s.capabilities?.prompts) caps.push("prompts");
+        const capAttr = caps.length > 0 ? ` capabilities="${caps.join(",")}"` : "";
+        if (s.instructions && s.instructions.trim() !== "") {
+          parts.push(`<instructions>\n${s.instructions}\n</instructions>`);
+        }
+        const allResources = [
+          ...s.resources.map(
+            (r) =>
+              `<resource uri="${escapeAttr(r.uri)}" name="${escapeAttr(r.name)}"` +
+              (r.description ? ` description="${escapeAttr(r.description)}"` : "") +
+              (r.mimeType ? ` mimeType="${escapeAttr(r.mimeType)}"` : "") +
+              "/>",
+          ),
+          ...s.resourceTemplates.map(
+            (r) =>
+              `<resource-template uriTemplate="${escapeAttr(r.uriTemplate)}" name="${escapeAttr(r.name)}"` +
+              (r.description ? ` description="${escapeAttr(r.description)}"` : "") +
+              (r.mimeType ? ` mimeType="${escapeAttr(r.mimeType)}"` : "") +
+              "/>",
+          ),
+        ];
+        if (allResources.length > 0) {
+          parts.push(`<resources>\n${allResources.join("\n")}\n</resources>`);
+        }
+        if (s.prompts.length > 0) {
+          const prompts = s.prompts
+            .map((p) => {
+              const args = (p.arguments ?? [])
+                .map(
+                  (a) =>
+                    `<arg name="${escapeAttr(a.name)}"` +
+                    (a.required ? " required=\"true\"" : "") +
+                    (a.description ? ` description="${escapeAttr(a.description)}"` : "") +
+                    "/>",
+                )
+                .join("\n");
+              const header =
+                `<prompt name="${escapeAttr(p.name)}"` +
+                (p.description ? ` description="${escapeAttr(p.description)}"` : "") +
+                ">";
+              return args
+                ? `${header}\n${args}\n</prompt>`
+                : `${header}</prompt>`;
+            })
+            .join("\n");
+          parts.push(`<prompts>\n${prompts}\n</prompts>`);
+        }
+        return `<server name="${escapeAttr(s.serverName)}"${capAttr}>\n${parts.join("\n")}\n</server>`;
+      });
+      return `<mcp-context>\n${servers.join("\n")}\n</mcp-context>`;
+    }
   }
 }
 

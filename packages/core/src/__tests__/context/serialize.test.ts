@@ -5,6 +5,7 @@ import {
   buildSessionContext,
   buildSkillCatalog,
   buildPreloadedContext,
+  buildMcpContext,
   type ContextBlock,
 } from "../../context/blocks.js";
 import { serializeSystemPrompt } from "../../context/serialize.js";
@@ -81,6 +82,103 @@ describe("serializeSystemPrompt", () => {
           `<context-file path="world/magic-system.md">\nmagic!\n</context-file>\n` +
           `</preloaded-context>`,
       );
+    });
+
+    it("serializes mcp-context with instructions, resources and prompts", () => {
+      const out = serializeSystemPrompt([
+        {
+          kind: "mcp-context",
+          servers: [
+            {
+              serverName: "FS",
+              serverId: "s1",
+              instructions: "Use URIs starting with file://",
+              capabilities: { resources: true, prompts: true },
+              resources: [
+                { uri: "file:///foo", name: "foo", description: "a file", mimeType: "text/plain" },
+              ],
+              resourceTemplates: [
+                { uriTemplate: "file:///{path}", name: "files", description: "any file" },
+              ],
+              prompts: [
+                {
+                  name: "summarize",
+                  description: "Summarize",
+                  arguments: [{ name: "path", required: true, description: "File path" }],
+                },
+              ],
+            },
+          ],
+        },
+      ]);
+      expect(out).toBe(
+        `<mcp-context>\n` +
+          `<server name="FS" capabilities="resources,prompts">\n` +
+          `<instructions>\nUse URIs starting with file://\n</instructions>\n` +
+          `<resources>\n` +
+          `<resource uri="file:///foo" name="foo" description="a file" mimeType="text/plain"/>\n` +
+          `<resource-template uriTemplate="file:///{path}" name="files" description="any file"/>\n` +
+          `</resources>\n` +
+          `<prompts>\n` +
+          `<prompt name="summarize" description="Summarize">\n` +
+          `<arg name="path" required="true" description="File path"/>\n` +
+          `</prompt>\n` +
+          `</prompts>\n` +
+          `</server>\n` +
+          `</mcp-context>`,
+      );
+    });
+
+    it("omits empty sections in mcp-context", () => {
+      const out = serializeSystemPrompt([
+        {
+          kind: "mcp-context",
+          servers: [
+            {
+              serverName: "srv",
+              serverId: "s1",
+              capabilities: { resources: false },
+              resources: [],
+              resourceTemplates: [],
+              prompts: [],
+            },
+          ],
+        },
+      ]);
+      expect(out).toBe(
+        `<mcp-context>\n<server name="srv">\n\n</server>\n</mcp-context>`,
+      );
+    });
+
+    it("serializes multiple servers in mcp-context", () => {
+      const out = serializeSystemPrompt([
+        {
+          kind: "mcp-context",
+          servers: [
+            {
+              serverName: "a",
+              serverId: "s1",
+              instructions: "rules-a",
+              capabilities: {},
+              resources: [],
+              resourceTemplates: [],
+              prompts: [],
+            },
+            {
+              serverName: "b",
+              serverId: "s2",
+              capabilities: { prompts: true },
+              resources: [],
+              resourceTemplates: [],
+              prompts: [{ name: "p", description: "d" }],
+            },
+          ],
+        },
+      ]);
+      expect(out).toContain(`<server name="a">`);
+      expect(out).toContain(`<server name="b" capabilities="prompts">`);
+      expect(out).toContain(`rules-a`);
+      expect(out).toContain(`<prompt name="p" description="d"></prompt>`);
     });
   });
 
@@ -245,6 +343,50 @@ describe("block builders", () => {
         kind: "preloaded-context",
         files: [{ path: "f.md", content: "x" }],
       });
+    });
+  });
+
+  describe("buildMcpContext", () => {
+    const empty = (name: string) => ({
+      serverName: name,
+      serverId: "s",
+      resources: [],
+      resourceTemplates: [],
+      prompts: [],
+    });
+
+    it("returns null when all servers are empty", () => {
+      expect(buildMcpContext([empty("a"), empty("b")])).toBeNull();
+    });
+
+    it("returns null for empty array", () => {
+      expect(buildMcpContext([])).toBeNull();
+    });
+
+    it("filters out servers with only whitespace instructions and no resources/prompts", () => {
+      const block = buildMcpContext([
+        { ...empty("a"), instructions: "   " },
+        { ...empty("b"), instructions: "real" },
+      ]);
+      expect(block).not.toBeNull();
+      expect(block!.servers).toHaveLength(1);
+      expect(block!.servers[0].serverName).toBe("b");
+    });
+
+    it("keeps servers with resources even without instructions", () => {
+      const block = buildMcpContext([
+        { ...empty("a"), resources: [{ uri: "u", name: "n" }] },
+      ]);
+      expect(block).not.toBeNull();
+      expect(block!.servers[0].serverName).toBe("a");
+    });
+
+    it("keeps servers with prompts even without instructions", () => {
+      const block = buildMcpContext([
+        { ...empty("a"), prompts: [{ name: "p" }] },
+      ]);
+      expect(block).not.toBeNull();
+      expect(block!.servers[0].serverName).toBe("a");
     });
   });
 });

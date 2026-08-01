@@ -14,6 +14,7 @@ import {
   buildSessionContext,
   buildSkillCatalog,
   buildPreloadedContext,
+  buildMcpContext,
 } from "../context/blocks.js";
 import type { ContextBlock } from "../context/blocks.js";
 import { serializeSystemPrompt } from "../context/serialize.js";
@@ -160,10 +161,15 @@ export class LiveSession {
     if (this.mcpMerged) return;
     this.mcpMerged = true;
     try {
-      const mcpTools = await this.ctx.mcpConnectionManager.getTools(this.agentId);
-      if (mcpTools.length === 0) return;
-      const current = this.agent.state.tools;
-      this.agent.state.tools = [...current, ...dedupeToolNames(current, mcpTools)];
+      const { tools: mcpTools, info } = await this.ctx.mcpConnectionManager.load(this.agentId);
+      if (mcpTools.length > 0) {
+        const current = this.agent.state.tools;
+        this.agent.state.tools = [...current, ...dedupeToolNames(current, mcpTools)];
+      }
+      const block = buildMcpContext(info);
+      if (block) {
+        this.agent.state.systemPrompt += "\n\n" + serializeSystemPrompt([block]);
+      }
     } catch (err) {
       this.ctx.logger.warn({ err, sessionId: this.sessionId }, "ensure mcp tools failed");
     }

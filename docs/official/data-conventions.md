@@ -58,7 +58,7 @@ Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/
 
 Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent Dialog 的“主题”标签页编辑，正常新建流程会从 `@spherse/presets` 的 `agent-theme-template.css` 初始化。文件不存在时读取结果为空字符串，聊天窗口使用全局默认样式。
 
-Agent 的 MCP 连接器配置存放于同目录的 `mcp.json`（可选文件）。由 agent 右键菜单「连接器（MCP）」对话框管理，记录该 agent 启用的 MCP server 列表（stdio 子进程 / http streamable / sse 三种传输方式，每项含 `id`/`name`/`enabled`/`transport` 及对应的连接参数）。运行时按 agent 维度连接所有 `enabled` 的 server（连接按 agent 缓存、跨会话共享），将发现的工具以 `mcp__{server}_{shortid}__{tool}` 命名（`shortid` 为 server id 前 8 位）合并进该 agent 的工具集——合并发生在首次向会话发送消息时（懒加载），而非会话创建时。单个 server 连接失败不影响其它 server（降级为告警，不阻断会话）。连接在 MCP 配置更新 / 删除 agent / 项目关闭时断开（由 `McpConnectionManager.invalidate` / `closeAll` 处理）。文件不存在时视为无连接器。该文件可能含 `headers`/`env` 等敏感信息，因此对 LLM 工具不可读写（`agentMcp` category，不在 LLM 读/写白名单内）。
+Agent 的 MCP 连接器配置存放于同目录的 `mcp.json`（可选文件）。由 agent 右键菜单「连接器（MCP）」对话框管理，记录该 agent 启用的 MCP server 列表（stdio 子进程 / http streamable / sse 三种传输方式，每项含 `id`/`name`/`enabled`/`transport` 及对应的连接参数）。运行时按 agent 维度连接所有 `enabled` 的 server（连接按 agent 缓存、跨会话共享），将发现的工具以 `mcp__{server}_{shortid}__{tool}` 命名（`shortid` 为 server id 前 8 位）合并进该 agent 的工具集——合并发生在首次向会话发送消息时（懒加载），而非会话创建时。连接时还按 server capability 消费 instructions / resources / prompts：server `instructions` 连同 resources / prompts 目录序列化为 `<mcp-context>` block 注入 system prompt；声明 `resources` capability 的 server 创建 `read_resource` 工具，声明 `prompts` capability 的 server 创建 `get_prompt` 工具。单个 server 连接失败不影响其它 server（降级为告警，不阻断会话）。连接在 MCP 配置更新 / 删除 agent / 项目关闭时断开（由 `McpConnectionManager.invalidate` / `closeAll` 处理）。文件不存在时视为无连接器。该文件可能含 `headers`/`env` 等敏感信息，因此对 LLM 工具不可读写（`agentMcp` category，不在 LLM 读/写白名单内）。
 
 必需字段：
 

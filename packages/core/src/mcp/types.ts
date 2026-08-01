@@ -36,3 +36,39 @@ export interface AgentMcpConfig {
 }
 
 export const EMPTY_MCP_CONFIG: AgentMcpConfig = { servers: [] };
+
+export interface McpResourceDescriptor {
+  uri: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
+}
+
+export interface McpResourceTemplateDescriptor {
+  uriTemplate: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
+}
+
+export interface McpPromptArgumentDescriptor {
+  name: string;
+  description?: string;
+  required?: boolean;
+}
+
+export interface McpPromptDescriptor {
+  name: string;
+  description?: string;
+  arguments?: McpPromptArgumentDescriptor[];
+}
+
+export interface McpServerInfo {
+  serverName: string;
+  serverId: string;
+  instructions?: string;
+  capabilities?: { resources?: boolean; prompts?: boolean };
+  resources: McpResourceDescriptor[];
+  resourceTemplates: McpResourceTemplateDescriptor[];
+  prompts: McpPromptDescriptor[];
+}
