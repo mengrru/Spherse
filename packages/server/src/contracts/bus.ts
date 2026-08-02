@@ -29,6 +29,12 @@ const triggerUpdatedPayload = Type.Object({
   trigger: Type.Optional(triggerEntry),
 });
 
+const agentUpdatedPayload = Type.Object({
+  agentId: Type.String(),
+  action: Type.Union([Type.Literal("created"), Type.Literal("updated"), Type.Literal("deleted")]),
+});
+export type AgentUpdatedEvent = Static<typeof agentUpdatedPayload>;
+
 export const fsWatchChangeEvent = Type.Object({
   eventType: Type.Union([Type.Literal("rename"), Type.Literal("change")]),
   path: Type.String(),
@@ -42,6 +48,7 @@ export type DebugLogEvent = Static<typeof debugLogEvent>;
 
 const busClientChannel = Type.Union([
   Type.Literal("trigger"),
+  Type.Literal("agent"),
   Type.Literal("fs-watch"),
   Type.Literal("debug"),
 ]);
@@ -70,6 +77,12 @@ const busServerMessage = Type.Union([
     projectId: Type.String(),
     type: Type.Literal("trigger_updated"),
     payload: triggerUpdatedPayload,
+  }),
+  Type.Object({
+    channel: Type.Literal("agent"),
+    projectId: Type.String(),
+    type: Type.Literal("agent_updated"),
+    payload: agentUpdatedPayload,
   }),
   Type.Object({
     channel: Type.Literal("fs-watch"),

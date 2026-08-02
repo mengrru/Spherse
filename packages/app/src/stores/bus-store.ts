@@ -3,7 +3,7 @@ import { parseBusServerMessage } from "@spherse/server/contracts";
 import type { HostBridge } from "../lib/host-bridge";
 import { buildWsUrl } from "../lib/api";
 
-export type BusChannel = "trigger" | "fs-watch" | "debug";
+export type BusChannel = "trigger" | "agent" | "fs-watch" | "debug";
 export type BusStatus = "idle" | "connecting" | "open" | "closed";
 export type BusHandler = (type: string, payload: unknown) => void;
 

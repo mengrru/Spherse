@@ -21,12 +21,16 @@ export interface ApprovalGate {
 export function withApproval<TParams extends TSchema, TDetails>(
   tool: AgentTool<TParams, TDetails>,
   gate: ApprovalGate | undefined,
+  shouldApprove?: (params: unknown) => boolean,
 ): AgentTool<TParams, TDetails> {
   if (!gate) return tool;
   const original = tool.execute;
   return {
     ...tool,
     async execute(toolCallId, params, signal, onUpdate) {
+      if (shouldApprove && !shouldApprove(params)) {
+        return original(toolCallId, params, signal, onUpdate);
+      }
       const decision = await gate.request({
         requestId: crypto.randomUUID(),
         toolCallId,

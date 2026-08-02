@@ -36,7 +36,15 @@ export interface CommandCard {
   requestId?: string;
 }
 
-export type ChatCard = HtmlCard | ImageCard | CommandCard;
+export interface ApprovalCard {
+  type: "approval";
+  status: "pending" | "approved" | "rejected";
+  toolName: string;
+  args: Record<string, unknown>;
+  requestId?: string;
+}
+
+export type ChatCard = HtmlCard | ImageCard | CommandCard | ApprovalCard;
 
 export interface ToolCallInfo {
   toolCallId: string;

@@ -312,6 +312,7 @@ export class LiveSession {
       agentSkillStore,
       ctx.triggerManager,
       approvalGate,
+      profile.id,
     );
     const allTools = createToolsForProject(toolContext);
 

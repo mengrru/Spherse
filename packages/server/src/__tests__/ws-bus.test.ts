@@ -55,9 +55,19 @@ function createMockTriggerManager() {
 }
 
 function createMockRegistry(triggerManager: EventEmitter, projectRoot = "/proj/p1", projectId = "p1") {
+  const agentEmitter = new EventEmitter();
   const ctx = {
     triggerManager,
-    projectManager: { getRootPath: () => projectRoot },
+    projectManager: {
+      getRootPath: () => projectRoot,
+      onAgentChange: vi.fn((listener: (...args: unknown[]) => void) => {
+        agentEmitter.on("agent_updated", listener);
+      }),
+      offAgentChange: vi.fn((listener: (...args: unknown[]) => void) => {
+        agentEmitter.off("agent_updated", listener);
+      }),
+      agentEmitter,
+    },
     projectId,
   };
   return {
@@ -101,11 +111,13 @@ const mockFastify = {
 describe("ws-bus /ws/bus handler", () => {
   let socket: MockSocket;
   let triggerManager: EventEmitter & { onUserEvent: ReturnType<typeof vi.fn> };
+  let agentEmitter: EventEmitter;
 
   beforeEach(() => {
     routeHandler = null;
     triggerManager = createMockTriggerManager();
-    const { registry } = createMockRegistry(triggerManager);
+    const { registry, ctx } = createMockRegistry(triggerManager);
+    agentEmitter = ctx.projectManager.agentEmitter;
     handleBusWebSocket(mockFastify as never, registry as never);
     socket = createMockSocket();
     routeHandler!(socket);
@@ -312,6 +324,36 @@ describe("ws-bus /ws/bus handler", () => {
         type: "pong",
         payload: {},
       });
+    });
+  });
+
+  describe("agent channel", () => {
+    it("forwards agent_updated events as bus envelopes", () => {
+      socket.simulateMessage(subMsg("p1", "agent"));
+
+      agentEmitter.emit("agent_updated", { agentId: "a1", action: "created" });
+
+      expect(sentObjects(socket)).toContainEqual({
+        channel: "agent",
+        projectId: "p1",
+        type: "agent_updated",
+        payload: { agentId: "a1", action: "created" },
+      });
+    });
+
+    it("stops forwarding after unsubscribe", () => {
+      socket.simulateMessage(subMsg("p1", "agent"));
+      socket.simulateMessage(unsubMsg("p1", "agent"));
+
+      agentEmitter.emit("agent_updated", { agentId: "a1", action: "updated" });
+
+      expect(socket.send).not.toHaveBeenCalled();
+    });
+
+    it("silently ignores subscribe with unknown projectId", () => {
+      socket.simulateMessage(subMsg("unknown", "agent"));
+      agentEmitter.emit("agent_updated", { agentId: "a1", action: "created" });
+      expect(socket.send).not.toHaveBeenCalled();
     });
   });
 

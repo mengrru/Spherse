@@ -34,4 +34,16 @@ export const TOOL_GROUPS: ToolGroup[] = [
     toolIds: ["run_command"],
     advanced: true,
   },
+  {
+    label: "tool.manage_agent",
+    hint: "tool.manage_agent_hint",
+    toolIds: ["manage_agent"],
+    advanced: true,
+  },
+  {
+    label: "tool.manage_trigger",
+    hint: "tool.manage_trigger_hint",
+    toolIds: ["manage_trigger"],
+    advanced: true,
+  },
 ];

@@ -21,6 +21,7 @@ spherse/
 │   │       │   ├── session.ts        # SQLite session 持久化（每 agent 独立 sessions.db, lazy open 连接池）
     │   │       │   ├── trigger.ts        # 触发器配置读写（triggers/index.yml / triggers/logs.jsonl）
 │   │       │   ├── agent-profile.ts  # .spherse/agents/{agent-slug}/profile.md CRUD
+    │   │       │   ├── agent-slug.ts      # deriveAgentSlugBase（name → 文件系统安全 slug，保留 CJK）+ buildAgentDirName（{slug}-{shortId} 碰撞检测）
     │   │       │   ├── skill.ts          # SkillStore：合并 builtin（PRESET_SKILL_SOURCES 内存）与 project（.spherse/skills/*/SKILL.md）skill；createSkill/installSkill 写逻辑（含 zip 校验、zip-slip 防护、原子安装）
     │   │       │   ├── mcp-config.ts     # McpConfigStore：读写 {agentDir}/mcp.json（lazy，经 normalizeMcpConfig 校验）
     │   │       │   └── index.ts
@@ -37,12 +38,17 @@ spherse/
 │   │       │   ├── load-skill.ts
     │   │       │   ├── render-card.ts    # HTML card 渲染工具
     │   │       │   ├── generate-image.ts # 图片生成工具（经 getImagesModels() 解析模型并生成，结果落盘 .spherse/generated-images/）
+    │   │       │   ├── run-command.ts     # shell 命令执行工具（withApproval 包装，逐次人工确认）
+    │   │       │   ├── manage-agent.ts    # agent 元数据工具（list/get/create/update），create/update 经 withApproval 审批
+    │   │       │   ├── manage-trigger.ts  # 触发器管理工具（list/create/update/delete），写操作经 withApproval 审批
+    │   │       │   ├── with-approval.ts   # 审批包装器（可选 shouldApprove 谓词，仅对写 action 请求确认）
     │   │       │   ├── tool-context.ts   # ToolContext：收窄 ProjectStore 接口，约束 tool 可用的读写方法
     │   │       │   └── index.ts          # createToolsForProject(ctx: ToolContext) 工厂
 │   │       ├── trigger/
 │   │       │   ├── trigger-manager.ts # TriggerManager：trigger 配置读取与触发执行（磁盘为唯一真相源）
 │   │       │   ├── timer-service.ts   # TimerService：10 分钟轮询，每次 tick 调用 triggerManager.onTimeTick()
-│   │       │   └── template.ts        # trigger 消息模板变量注入（{{payload}} 等）
+│   │       │   ├── template.ts        # trigger 消息模板变量注入（{{payload}} 等）
+    │   │       │   └── validation.ts       # trigger 输入校验共享真相（isValidCron / isReservedEventName / requiresTargetSession），server route 与 manage_trigger 复用
 │   │       ├── utils/
 │   │       │   ├── file-write-mutex.ts # 文件写入互斥，避免并发写覆盖
 │   │       │   ├── fs-walk.ts         # 目录遍历过滤（shouldSkipDirEntry）

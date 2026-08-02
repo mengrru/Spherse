@@ -5,6 +5,7 @@ import { MarkdownContent } from "../../components/MarkdownContent";
 import { HtmlCardRenderer } from "./HtmlCard";
 import { ImageCardRenderer } from "./ImageCard";
 import { CommandCardRenderer } from "./CommandCard";
+import { ApprovalCardRenderer } from "./ApprovalCard";
 import { ToolCallSection } from "./ToolCallSection";
 import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
@@ -83,6 +84,9 @@ export function MessageItem({ message, agent, showTime, onNavigateToPath, onResp
             }
             if (card.type === "command") {
               return <CommandCardRenderer key={toolCall.toolCallId} card={card} onRespondApproval={onRespondApproval} />;
+            }
+            if (card.type === "approval") {
+              return <ApprovalCardRenderer key={toolCall.toolCallId} card={card} onRespondApproval={onRespondApproval} />;
             }
             return <ImageCardRenderer key={toolCall.toolCallId} card={card} />;
           })}

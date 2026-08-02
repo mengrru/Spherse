@@ -833,6 +833,14 @@ export const zhCN = {
   "tool.run_command": "运行命令",
   // 独立工具 tooltip：运行命令的安全提示——强调任意命令、逐次确认、有风险
   "tool.run_command_hint": "允许智能体执行 shell 命令（unix sh / Windows PowerShell）。每次执行前都会要求你确认；进程将以你的系统权限运行，请仅在你信任该智能体时启用",
+  // 独立工具标签：管理智能体（manage_agent，agent 可查看/新建/修改本项目内智能体的名称、提示词、工具、上下文，高危，写操作需人工确认）
+  "tool.manage_agent": "管理智能体",
+  // 独立工具 tooltip：管理智能体的作用与风险说明
+  "tool.manage_agent_hint": "允许智能体查看、创建和修改本项目内其它智能体的配置（名称、别名、提示词、模型、工具权限、上下文文件）。新建和修改前都会要求你确认；智能体 ID 和目录名由应用生成，无法指定；删除智能体仍需你在界面中手动操作",
+  // 独立工具标签：管理触发器（manage_trigger，agent 可查看/新建/修改/删除定时与事件触发器，高危，写操作需人工确认）
+  "tool.manage_trigger": "管理触发器",
+  // 独立工具 tooltip：管理触发器的作用与风险说明
+  "tool.manage_trigger_hint": "允许智能体查看、创建、修改和删除本项目内智能体的定时/事件触发器。新建、修改和删除前都会要求你确认；触发器可让智能体在无人值守时自动运行",
   // agent 配置工具权限区的高级功能折叠分组标题（高危工具收起在此）
   "tool.advanced_section": "高级 / 危险操作",
 
@@ -857,6 +865,20 @@ export const zhCN = {
   "command.exitCode": "退出码 {code}",
   // 结果态：命令无任何输出时显示
   "command.noOutput": "（无输出）",
+
+  // --- Approval Card（manage_agent / manage_trigger 等配置类工具的通用审批卡片） ---
+  // 审批态标题：等待用户批准某个高级工具调用，{tool} 为工具的中文名（如「管理智能体」）
+  "approval.pending": "等待确认：智能体请求使用「{tool}」",
+  // 审批态安全警告：该操作会修改项目配置
+  "approval.warning": "此操作会修改本项目的配置，请核对下方参数后再批准。",
+  // 审批按钮：拒绝该操作
+  "approval.reject": "拒绝",
+  // 审批按钮：批准该操作（destructive 配色，需刻意点击）
+  "approval.approve": "批准操作",
+  // 结果态标记：操作已被用户批准并执行
+  "approval.approved": "已批准",
+  // 结果态标记：操作已被用户拒绝
+  "approval.rejected": "已拒绝",
 
   // --- Viewer Card ---
   // edit_file diff 左栏标题，显示原始内容

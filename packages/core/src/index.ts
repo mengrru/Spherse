@@ -29,4 +29,8 @@ export type {
 } from "@earendil-works/pi-ai";
 export type { RenderCardDetails, RenderCardResultDetails } from "./tools/render-card.js";
 export type { ImageCardDetails, ImageCardResultDetails } from "./tools/generate-image.js";
+export type { ManageAgentDetails } from "./tools/manage-agent.js";
+export type { ManageTriggerDetails } from "./tools/manage-trigger.js";
+export type { AgentChangePayload, AgentChangeAction } from "./store/project.js";
+export { isValidCron, isReservedEventName, requiresTargetSession } from "./trigger/validation.js";
 export type { McpTransportType } from "./mcp/index.js";

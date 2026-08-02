@@ -16,9 +16,14 @@ export class ToolContext {
     private readonly agentSkillStore?: SkillStore,
     triggerManager?: TriggerManager,
     approvalGate?: ApprovalGate,
+    readonly agentId?: string,
   ) {
     this.triggerManagerField = triggerManager;
     this.approvalGateField = approvalGate;
+  }
+
+  get store(): ProjectStore {
+    return this.projectStore;
   }
 
   get root(): string {

@@ -166,6 +166,7 @@ export class TriggerManager extends EventEmitter {
   delete(agentId: string, triggerId: string): void {
     this.getTriggerStore(agentId)?.delete(triggerId);
     this.triggerState.delete(triggerId);
+    this.emit("trigger_updated", { agentId, triggerId });
   }
 
   deleteAllForAgent(agentId: string): void {

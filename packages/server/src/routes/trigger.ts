@@ -1,22 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import { nanoid } from "nanoid";
-import { CronExpressionParser } from "cron-parser";
+import { isValidCron, isReservedEventName, requiresTargetSession } from "@spherse/core";
 import { schemas } from "@spherse/server/contracts";
 import type { TriggerCreateRequest, TriggerUpdateRequest } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { badRequest, notFound } from "../errors.js";
 
-function isValidCron(cron: string): boolean {
-  try {
-    CronExpressionParser.parse(cron);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 function isValidTriggerMode(mode: string, targetSessionId: string | undefined): boolean {
-  return mode !== "existing_session" || !!targetSessionId;
+  return !requiresTargetSession(mode, targetSessionId);
 }
 
 export function registerTriggerRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
@@ -62,7 +53,7 @@ export function registerTriggerRoutes(fastify: FastifyInstance, _registry: Proje
         if (!data.cron || !isValidCron(data.cron)) throw badRequest("invalid cron expression");
       } else if (data.type === "event") {
         if (!data.eventName?.trim()) throw badRequest("eventName is required for event type");
-        if (data.eventName.startsWith("sp:")) throw badRequest("eventName cannot use reserved prefix 'sp:'");
+        if (isReservedEventName(data.eventName)) throw badRequest("eventName cannot use reserved prefix 'sp:'");
       }
 
       if (!isValidTriggerMode(data.mode, data.targetSessionId)) {
@@ -103,7 +94,7 @@ export function registerTriggerRoutes(fastify: FastifyInstance, _registry: Proje
       const data = req.body;
 
       if (data.cron !== undefined && !isValidCron(data.cron)) throw badRequest("invalid cron expression");
-      if (data.eventName !== undefined && data.eventName.startsWith("sp:")) {
+      if (data.eventName !== undefined && isReservedEventName(data.eventName)) {
         throw badRequest("eventName cannot use reserved prefix 'sp:'");
       }
 

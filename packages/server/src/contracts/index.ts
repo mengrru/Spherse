@@ -110,4 +110,5 @@ export type {
   BusServerMessage,
   BusClientMessage,
   TriggerServerEvent,
+  AgentUpdatedEvent,
 } from "./bus.js";

@@ -1,7 +1,7 @@
 import { Writable } from "node:stream";
 import type { FastifyInstance, FastifyBaseLogger } from "fastify";
 import type { WebSocket } from "@fastify/websocket";
-import type { TriggerEventPayload, TriggerManager } from "@spherse/core";
+import type { TriggerEventPayload, TriggerManager, ProjectManager, AgentChangePayload } from "@spherse/core";
 import { parseBusClientMessage } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "./registry.js";
 import { acquireFsWatch, releaseFsWatch } from "./lib/fs-watcher.js";
@@ -41,7 +41,7 @@ export function createDebugBusStream(): Writable {
 const EVENT_TYPES = ["trigger_triggered", "trigger_completed", "trigger_failed", "trigger_updated"] as const;
 type TriggerEventType = (typeof EVENT_TYPES)[number];
 
-type BusChannel = "trigger" | "fs-watch" | "debug";
+type BusChannel = "trigger" | "agent" | "fs-watch" | "debug";
 
 interface TriggerHandle {
   triggerManager: TriggerManager;
@@ -83,6 +83,7 @@ function buildTriggerPayload(type: TriggerEventType, payload: TriggerEventPayloa
 class BusConnectionHandler {
   private readonly subscriptions = new Set<string>();
   private readonly triggerHandles = new Map<string, TriggerHandle>();
+  private readonly agentHandles = new Map<string, { projectManager: ProjectManager; handler: (payload: AgentChangePayload) => void }>();
   private readonly fsWatchListener: FsWatchListener = (projectId, evt) => {
     this.safeSend({
       channel: "fs-watch",
@@ -159,13 +160,31 @@ class BusConnectionHandler {
         this.subscriptions.add(key);
         break;
       }
+      case "agent": {
+        const ctx = this.registry.get(projectId);
+        if (!ctx) {
+          this.logger.debug({ projectId }, "bus subscribe agent: unknown project");
+          return;
+        }
+        const handler = (payload: AgentChangePayload) => {
+          this.safeSend({
+            channel: "agent",
+            projectId,
+            type: "agent_updated",
+            payload: { agentId: payload.agentId, action: payload.action },
+          });
+        };
+        ctx.projectManager.onAgentChange(handler);
+        this.agentHandles.set(projectId, { projectManager: ctx.projectManager, handler });
+        this.subscriptions.add(key);
+        break;
+      }
       case "fs-watch": {
         const ctx = this.registry.get(projectId);
         if (!ctx) {
           this.logger.debug({ projectId }, "bus subscribe fs-watch: unknown project");
           return;
-        }
-        const projectRoot = ctx.projectManager.getRootPath();
+        }        const projectRoot = ctx.projectManager.getRootPath();
         const result = acquireFsWatch(projectRoot, projectId, this.fsWatchListener);
         if (!result.ok) {
           this.safeSend({
@@ -203,6 +222,14 @@ class BusConnectionHandler {
             handle.triggerManager.off(type, handler);
           }
           this.triggerHandles.delete(projectId);
+        }
+        break;
+      }
+      case "agent": {
+        const handle = this.agentHandles.get(projectId);
+        if (handle) {
+          handle.projectManager.offAgentChange(handle.handler);
+          this.agentHandles.delete(projectId);
         }
         break;
       }

@@ -12,10 +12,31 @@ import { createMoveFileTool } from "./move-file.js";
 import { createCopyFileTool } from "./copy-file.js";
 import { createEmitTriggerEventTool } from "./emit-trigger-event.js";
 import { createRunCommandTool } from "./run-command.js";
+import { createManageAgentTool, isManageAgentWriteAction } from "./manage-agent.js";
+import { createManageTriggerTool, isManageTriggerWriteAction } from "./manage-trigger.js";
 import { withApproval } from "./with-approval.js";
 import { ToolContext } from "./tool-context.js";
 
 export { ToolContext };
+
+/** Every built-in tool name an agent profile may enable. */
+export const BUILTIN_TOOL_NAMES = [
+  "read_file",
+  "write_file",
+  "edit_file",
+  "list_files",
+  "search_content",
+  "append_changelog",
+  "render_card",
+  "generate_image",
+  "move_file",
+  "copy_file",
+  "load_skill",
+  "run_command",
+  "manage_agent",
+  "manage_trigger",
+  "emit_trigger_event",
+] as const;
 
 export function createToolsForProject(
   ctx: ToolContext,
@@ -34,10 +55,20 @@ export function createToolsForProject(
     copy_file: createCopyFileTool(ctx.root, ctx.mutex, getPolicy),
     load_skill: createLoadSkillTool(ctx.root, ctx.skill, ctx.agentSkill),
     run_command: withApproval(createRunCommandTool(ctx.root), ctx.approvalGate),
+    manage_agent: withApproval(
+      createManageAgentTool(ctx.store, BUILTIN_TOOL_NAMES, ctx.agentId),
+      ctx.approvalGate,
+      isManageAgentWriteAction,
+    ),
   };
 
   if (ctx.triggerManager) {
     tools.emit_trigger_event = createEmitTriggerEventTool(ctx.triggerManager);
+    tools.manage_trigger = withApproval(
+      createManageTriggerTool(ctx.triggerManager, ctx.store, ctx.agentId),
+      ctx.approvalGate,
+      isManageTriggerWriteAction,
+    );
   }
 
   return tools;

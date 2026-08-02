@@ -203,23 +203,44 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
   if (event.type === "control_request" && event.kind === "approval") {
     return updateLastToolCall(prev, (tc) => tc.toolCallId === event.toolCallId, (tc) => ({
       ...tc,
-      _card: {
-        type: "command",
-        status: "pending_approval",
-        command: typeof tc.args.command === "string" ? tc.args.command : "",
-        cwd: typeof tc.args.cwd === "string" ? tc.args.cwd : undefined,
-        stdout: "",
-        stderr: "",
-        requestId: event.requestId,
-      },
+      _card:
+        tc.toolName === "run_command"
+          ? {
+              type: "command",
+              status: "pending_approval",
+              command: typeof tc.args.command === "string" ? tc.args.command : "",
+              cwd: typeof tc.args.cwd === "string" ? tc.args.cwd : undefined,
+              stdout: "",
+              stderr: "",
+              requestId: event.requestId,
+            }
+          : {
+              type: "approval",
+              status: "pending",
+              toolName: tc.toolName,
+              args: tc.args,
+              requestId: event.requestId,
+            },
     }));
   }
 
   if (event.type === "control_resolved" && event.kind === "approval") {
     return updateLastToolCall(
       prev,
-      (tc) => tc._card?.type === "command" && tc._card.requestId === event.requestId,
+      (tc) =>
+        (tc._card?.type === "command" || tc._card?.type === "approval") &&
+        tc._card.requestId === event.requestId,
       (tc) => {
+        if (tc._card?.type === "approval") {
+          return {
+            ...tc,
+            _card: {
+              ...tc._card,
+              status: event.approved ? "approved" : "rejected",
+              requestId: undefined,
+            },
+          };
+        }
         if (tc._card?.type !== "command") return tc;
         return {
           ...tc,

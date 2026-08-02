@@ -735,3 +735,58 @@ describe("run_command approval + command card lifecycle", () => {
     expect(card).toMatchObject({ type: "command", status: "error", rejected: true, command: "ls" });
   });
 });
+
+describe("generic approval card lifecycle", () => {
+  function pendingManageAgent() {
+    const start = reduceSessionEvents(session(), [
+      {
+        type: "tool_execution_start",
+        toolCallId: "tc1",
+        toolName: "manage_agent",
+        args: { action: "create", name: "Reviewer" },
+      },
+    ] as unknown as AgentEvent[], 1);
+    return reduceSessionEvents(start, [
+      {
+        type: "control_request",
+        requestId: "r1",
+        kind: "approval",
+        toolCallId: "tc1",
+        toolName: "manage_agent",
+        args: { action: "create", name: "Reviewer" },
+      },
+    ] as unknown as AgentEvent[], 2);
+  }
+
+  it("renders an approval card for non-run_command tools", () => {
+    const pending = pendingManageAgent();
+    expect(pending.messages[0]._toolCalls![0]._card).toMatchObject({
+      type: "approval",
+      status: "pending",
+      toolName: "manage_agent",
+      args: { action: "create", name: "Reviewer" },
+      requestId: "r1",
+    });
+  });
+
+  it("marks the card approved and drops the request id", () => {
+    const approved = reduceSessionEvents(pendingManageAgent(), [
+      { type: "control_resolved", requestId: "r1", kind: "approval", approved: true },
+    ] as unknown as AgentEvent[], 3);
+    expect(approved.messages[0]._toolCalls![0]._card).toMatchObject({
+      type: "approval",
+      status: "approved",
+    });
+    expect((approved.messages[0]._toolCalls![0]._card as { requestId?: string }).requestId).toBeUndefined();
+  });
+
+  it("marks the card rejected when denied", () => {
+    const rejected = reduceSessionEvents(pendingManageAgent(), [
+      { type: "control_resolved", requestId: "r1", kind: "approval", approved: false },
+    ] as unknown as AgentEvent[], 3);
+    expect(rejected.messages[0]._toolCalls![0]._card).toMatchObject({
+      type: "approval",
+      status: "rejected",
+    });
+  });
+});

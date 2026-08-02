@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { EventEmitter } from "node:events";
 import matter from "gray-matter";
 import { nanoid } from "nanoid";
 import { PRESET_SKILL_SOURCES, AGENTS_INDEX_TEMPLATE } from "@spherse/presets";
@@ -11,8 +12,9 @@ import { ProjectConfigStore } from "./project-config.js";
 import { SkillStore } from "./skill.js";
 import { AgentStore } from "./agent-store.js";
 import { AgentProfileStore, assertSafeSlug } from "./agent-profile.js";
+import { deriveAgentSlugBase, buildAgentDirName } from "./agent-slug.js";
 import { type Logger, createSilentLogger } from "../logger.js";
-import { ValidationError } from "../errors.js";
+import { ValidationError, NotFoundError } from "../errors.js";
 
 export interface ChangelogEntry {
   agent: string;
@@ -21,7 +23,15 @@ export interface ChangelogEntry {
   description: string;
 }
 
-export class ProjectStore {
+export type AgentChangeAction = "created" | "updated" | "deleted";
+
+export interface AgentChangePayload {
+  agentId: string;
+  action: AgentChangeAction;
+}
+
+/** Emits `agent_updated` (`AgentChangePayload`) whenever an agent is created, updated or deleted. */
+export class ProjectStore extends EventEmitter {
   private rootPath: string;
   private spherseDir: string;
   private logger: Logger;
@@ -31,6 +41,7 @@ export class ProjectStore {
   private _agents: Map<string, AgentStore> = new Map();
 
   constructor(rootPath: string, logger?: Logger) {
+    super();
     this.rootPath = path.resolve(rootPath);
     this.spherseDir = path.join(this.rootPath, PROJECT_META_DIR);
     this.logger = logger ?? createSilentLogger();
@@ -128,9 +139,23 @@ export class ProjectStore {
     return this._agents.get(agentId);
   }
 
-  async createAgent(slugBase: string, content: string, themeContent?: string): Promise<AgentStore> {
-    assertSafeSlug(slugBase);
+  private async readAgentDirNames(): Promise<Set<string>> {
+    const taken = new Set<string>();
+    for (const agentStore of this._agents.values()) {
+      taken.add(path.basename(agentStore.getAgentDir()));
+    }
+    try {
+      const entries = await fs.readdir(path.join(this.spherseDir, "agents"), { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory()) taken.add(entry.name);
+      }
+    } catch {
+      // agents dir may not exist yet
+    }
+    return taken;
+  }
 
+  async createAgent(slugBase: string | undefined, content: string, themeContent?: string): Promise<AgentStore> {
     const { data, content: body } = matter(content);
     if (typeof data.name !== "string") {
       throw new ValidationError("agent profile name is required");
@@ -141,10 +166,9 @@ export class ProjectStore {
     const frontmatter = { ...data, id, createdAt };
     const serialized = matter.stringify(body, frontmatter);
 
-    const shortId = id.slice(0, 6);
-    const dirName = `${slugBase}-${shortId}`;
-    // TODO: 该处可能需要 slug 碰撞检测（查 agents Map + 文件系统），
-    //       当前先假设 slug-shortid 不碰撞，后续按需补全
+    const base = deriveAgentSlugBase(slugBase?.trim() ? slugBase : data.name);
+    const dirName = buildAgentDirName(base, id, await this.readAgentDirNames());
+    assertSafeSlug(dirName);
     const agentDir = path.join(this.spherseDir, "agents", dirName);
     await fs.mkdir(agentDir, { recursive: true });
     await fs.writeFile(path.join(agentDir, "profile.md"), serialized, "utf-8");
@@ -157,6 +181,18 @@ export class ProjectStore {
     await agentStore.open();
     this._agents.set(id, agentStore);
     this.logger.info({ agentId: id, slug: dirName }, "agent created");
+    this.emitAgentChange(id, "created");
+    return agentStore;
+  }
+
+  async updateAgent(agentId: string, content: string, themeContent?: string): Promise<AgentStore> {
+    const agentStore = this._agents.get(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    await agentStore.saveProfile(content);
+    if (themeContent !== undefined) {
+      await agentStore.profile.saveTheme(themeContent);
+    }
+    this.emitAgentChange(agentId, "updated");
     return agentStore;
   }
 
@@ -169,6 +205,11 @@ export class ProjectStore {
     await fs.rm(agentDir, { recursive: true, force: true });
     this._agents.delete(agentId);
     this.logger.info({ agentId }, "agent deleted");
+    this.emitAgentChange(agentId, "deleted");
+  }
+
+  private emitAgentChange(agentId: string, action: AgentChangeAction): void {
+    this.emit("agent_updated", { agentId, action } satisfies AgentChangePayload);
   }
 
   async readIndex(): Promise<string> {

@@ -170,10 +170,22 @@ describe("ProjectStore — agent management", () => {
     expect(store.getAgent(id)).toBeUndefined();
   });
 
-  it("rejects unsafe slug", async () => {
-    await expect(store.createAgent("../bad", VALID_PROFILE)).rejects.toThrow(
-      "invalid agent slug",
-    );
+  it("sanitizes unsafe slug input instead of writing outside the agents dir", async () => {
+    const created = await store.createAgent("../bad", VALID_PROFILE);
+    const slug = created.getProfile().slug;
+    expect(slug).toMatch(/^bad-[0-9a-f]{6}$/);
+    expect(pathExists(projectRoot, `.spherse/agents/${slug}/profile.md`)).toBe(true);
+  });
+
+  it("derives the slug from the profile name when no slug base is given", async () => {
+    const created = await store.createAgent(undefined, VALID_PROFILE);
+    expect(created.getProfile().slug).toMatch(/^world-builder-[0-9a-f]{6}$/);
+  });
+
+  it("avoids slug collisions between agents with the same name", async () => {
+    const a = await store.createAgent("world-builder", VALID_PROFILE);
+    const b = await store.createAgent("world-builder", VALID_PROFILE);
+    expect(a.getProfile().slug).not.toBe(b.getProfile().slug);
   });
 
   it("rejects profile without name", async () => {

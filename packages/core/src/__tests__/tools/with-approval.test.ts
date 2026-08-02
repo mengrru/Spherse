@@ -45,4 +45,23 @@ describe("withApproval", () => {
     await wrapped.execute("tc1", { value: "x" }, undefined, undefined);
     expect(execute).toHaveBeenCalled();
   });
+
+  it("skips the gate when shouldApprove returns false", async () => {
+    const { tool, execute } = makeTool();
+    const approvalGate = gate({ approved: false });
+    const wrapped = withApproval(tool, approvalGate, (params) => (params as { value: string }).value === "write");
+    const res = await wrapped.execute("tc1", { value: "read" }, undefined, undefined);
+    expect(approvalGate.request).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalled();
+    expect(res.details).toEqual({ ok: true });
+  });
+
+  it("still asks the gate when shouldApprove returns true", async () => {
+    const { tool, execute } = makeTool();
+    const approvalGate = gate({ approved: false });
+    const wrapped = withApproval(tool, approvalGate, (params) => (params as { value: string }).value === "write");
+    await wrapped.execute("tc1", { value: "write" }, undefined, undefined);
+    expect(approvalGate.request).toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+  });
 });

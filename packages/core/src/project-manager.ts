@@ -1,7 +1,7 @@
 import type { AgentProfile, SessionInfo, SkillDefinition } from "./types.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
 import { ProjectStore } from "./store/project.js";
-import type { ChangelogEntry } from "./store/project.js";
+import type { ChangelogEntry, AgentChangePayload } from "./store/project.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { NotFoundError, ValidationError } from "./errors.js";
@@ -42,19 +42,22 @@ export class ProjectManager {
     return agentStore ? agentStore.getProfile() : null;
   }
 
-  async createAgent(slugBase: string, content: string, themeContent?: string): Promise<AgentProfile> {
+  async createAgent(slugBase: string | undefined, content: string, themeContent?: string): Promise<AgentProfile> {
     const agentStore = await this.projectStore.createAgent(slugBase, content, themeContent);
     return agentStore.getProfile();
   }
 
   async updateAgent(agentId: string, content: string, themeContent?: string): Promise<AgentProfile> {
-    const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
-    const updated = await agentStore.saveProfile(content);
-    if (themeContent !== undefined) {
-      await agentStore.profile.saveTheme(themeContent);
-    }
-    return updated;
+    const agentStore = await this.projectStore.updateAgent(agentId, content, themeContent);
+    return agentStore.getProfile();
+  }
+
+  onAgentChange(listener: (payload: AgentChangePayload) => void): void {
+    this.projectStore.on("agent_updated", listener);
+  }
+
+  offAgentChange(listener: (payload: AgentChangePayload) => void): void {
+    this.projectStore.off("agent_updated", listener);
   }
 
   async deleteAgent(agentId: string): Promise<void> {

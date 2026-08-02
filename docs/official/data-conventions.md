@@ -54,7 +54,7 @@ welcomePage:
 
 ## Agent 定义格式
 
-Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/{agent-slug}/profile.md`。agent slug（目录名）由 `slugBase`（从初始 agent name 派生：小写、空格替换为连字符）与 `shortId`（agent UUID 前 6 位）拼接而成，形如 `world-builder-a1b2c3`。目录名在创建时生成，之后不再变。
+Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/{agent-slug}/profile.md`。agent slug（目录名）由 `slugBase` 与 `shortId`（agent UUID 去连字符后的前 6 位）拼接而成，形如 `world-builder-a1b2c3`。`slugBase` 由 `deriveAgentSlugBase` 从初始 agent name 派生（trim、小写、空白替换为连字符、仅保留 `[a-z0-9\u4e00-\u9fff-]` 以兼容中文名、折叠连续连字符、去首尾连字符、截断 40 字符，为空时回退 `agent`）；`buildAgentDirName` 在目录名已存在时依次把 shortId 加长到 8/10/12 位，仍冲突则追加 `-2`/`-3`… 后缀。agent id 恒由 core `crypto.randomUUID()` 生成。目录名在创建时生成，之后不再变（`manage_agent` 的 `update` 也不会改动 id 与 slug）。
 
 Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent Dialog 的“主题”标签页编辑，正常新建流程会从 `@spherse/presets` 的 `agent-theme-template.css` 初始化。文件不存在时读取结果为空字符串，聊天窗口使用全局默认样式。
 

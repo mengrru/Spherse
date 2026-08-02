@@ -8,6 +8,7 @@ import { BrowserManager } from "../features/browser";
 import { TriggerEventBridge } from "../features/agent-trigger";
 import { FeatureGate } from "../components/FeatureGate";
 import { useCustomTheme } from "../hooks/useCustomTheme";
+import { useAgentBusRefresh } from "../hooks/useAgentBusRefresh";
 import { useSidePanel } from "../hooks/use-side-panel";
 import { useSpherseMessageListener } from "../ui-sdk";
 import { useProjectDataStore } from "../stores/project-data-store";
@@ -45,6 +46,7 @@ export function ProjectScope() {
   );
   useProjectNavHistory(projectId ?? "");
   useSpherseMessageListener(projectId ?? "", client);
+  useAgentBusRefresh(projectId, client);
 
   useEffect(() => {
     if (projectId) void setActiveProject(bridge, projectId);

@@ -86,6 +86,33 @@ describe("bus server message contract", () => {
     });
   });
 
+  it("accepts agent_updated envelope", () => {
+    expect(
+      parseBusServerMessage({
+        channel: "agent",
+        projectId: "p1",
+        type: "agent_updated",
+        payload: { agentId: "a1", action: "created" },
+      }),
+    ).toEqual({
+      channel: "agent",
+      projectId: "p1",
+      type: "agent_updated",
+      payload: { agentId: "a1", action: "created" },
+    });
+  });
+
+  it("rejects an unknown agent_updated action", () => {
+    expect(() =>
+      parseBusServerMessage({
+        channel: "agent",
+        projectId: "p1",
+        type: "agent_updated",
+        payload: { agentId: "a1", action: "renamed" },
+      }),
+    ).toThrow();
+  });
+
   it("accepts fs-watch change envelope", () => {
     expect(
       parseBusServerMessage({
