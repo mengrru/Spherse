@@ -1,6 +1,6 @@
 # Spherse
 
-一个本地运行、开箱即用的AI辅助文字创作与演绎的桌面工具。基于 Electron + React + Fastify，使用 pi-agent-core 作为 agent 运行时，pi-ai 作为 LLM provider。
+一个本地运行、开箱即用的个人 Agent 运行时。多个拥有独立系统提示词、工具权限、Skill、MCP 与自动化能力的 Agent 围绕同一用户数据空间工作，并通过 HTML 与 UI SDK 构建可交互、可分发的 Agent Workspace。基于 Electron + React + Fastify，使用 pi-agent-core 作为 Agent 运行时，pi-ai 作为 LLM Provider。
 
 设计文档：`docs/official/`
 待办事项：`docs/dev/backlog.md`

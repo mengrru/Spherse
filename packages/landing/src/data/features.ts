@@ -1,9 +1,16 @@
 import type { LucideIcon } from "lucide-react";
-import { ShieldCheck, Bot, Clock, Palette, Plug, Smartphone } from "lucide-react";
+import {
+  Bot,
+  FolderOpen,
+  PackageOpen,
+  PanelsTopLeft,
+  Smartphone,
+  Workflow,
+} from "lucide-react";
 import { asset } from "@/lib/utils";
 
 export interface Feature {
-  id: "local" | "agents" | "trigger" | "theme" | "connector" | "mobile";
+  id: "workspace" | "agents" | "automation" | "apps" | "portable" | "mobile";
   icon: LucideIcon;
   i18nKeyPrefix: string;
   screenshots: string[];
@@ -11,9 +18,9 @@ export interface Feature {
 
 export const features: Feature[] = [
   {
-    id: "local",
-    icon: ShieldCheck,
-    i18nKeyPrefix: "feature.local",
+    id: "workspace",
+    icon: FolderOpen,
+    i18nKeyPrefix: "feature.workspace",
     screenshots: [
       asset("screenshots/features/local/1.png"),
     ],
@@ -28,18 +35,9 @@ export const features: Feature[] = [
     ],
   },
   {
-    id: "theme",
-    icon: Palette,
-    i18nKeyPrefix: "feature.theme",
-    screenshots: [
-      asset("screenshots/features/theme/1.png"),
-      asset("screenshots/features/theme/2.png"),
-    ],
-  },
-  {
-    id: "trigger",
-    icon: Clock,
-    i18nKeyPrefix: "feature.trigger",
+    id: "automation",
+    icon: Workflow,
+    i18nKeyPrefix: "feature.automation",
     screenshots: [
       asset("screenshots/features/trigger/1.png"),
       asset("screenshots/features/trigger/2.png"),
@@ -47,9 +45,18 @@ export const features: Feature[] = [
     ],
   },
   {
-    id: "connector",
-    icon: Plug,
-    i18nKeyPrefix: "feature.connector",
+    id: "apps",
+    icon: PanelsTopLeft,
+    i18nKeyPrefix: "feature.apps",
+    screenshots: [
+      asset("screenshots/features/theme/1.png"),
+      asset("screenshots/features/theme/2.png"),
+    ],
+  },
+  {
+    id: "portable",
+    icon: PackageOpen,
+    i18nKeyPrefix: "feature.portable",
     screenshots: [],
   },
   {

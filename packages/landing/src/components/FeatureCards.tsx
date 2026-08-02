@@ -1,8 +1,4 @@
-import { useState } from "react";
-import { features, type Feature } from "../data/features";
-import { FeatureModal } from "./FeatureModal";
-import { UseCasesModal } from "./UseCasesModal";
-// import { Button } from "./ui/button";
+import { features } from "../data/features";
 import type { TranslationKey } from "../i18n";
 
 interface FeatureCardsProps {
@@ -10,65 +6,42 @@ interface FeatureCardsProps {
 }
 
 export function FeatureCards({ t }: FeatureCardsProps) {
-  const [selected, setSelected] = useState<Feature | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [useCasesOpen, setUseCasesOpen] = useState(false);
-
-  // const handleClick = (feature: Feature) => {
-  //   setSelected(feature);
-  //   setModalOpen(true);
-  // };
-
-  const handleOpenChange = (open: boolean) => {
-    setModalOpen(open);
-    if (!open) {
-      setSelected(null);
-    }
-  };
-
   return (
     <section className="px-6 py-16">
+      <div className="mx-auto mb-10 max-w-3xl text-center">
+        <h2 className="text-3xl font-bold tracking-tight text-foreground md:text-4xl">
+          {t("feature.heading")}
+        </h2>
+        <p className="mt-3 text-base text-muted-foreground md:text-lg">
+          {t("feature.subheading")}
+        </p>
+      </div>
       <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {features.map((feature) => {
           const Icon = feature.icon;
           return (
-            <button
+            <article
               key={feature.id}
-              // onClick={() => handleClick(feature)}
-              className="group flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center transition-all hover:-translate-y-0.5 hover:shadow-md"
+              className="group flex h-full flex-col items-start gap-4 rounded-xl border border-border bg-card p-6 transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="flex size-12 items-center justify-center rounded-lg bg-muted transition-colors group-hover:bg-accent">
                 <Icon className="size-6 text-foreground" />
               </div>
-              <h3 className="font-semibold text-foreground">
-                {t(`${feature.i18nKeyPrefix}.title` as TranslationKey)}
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                {t(`${feature.i18nKeyPrefix}.desc` as TranslationKey)}
-              </p>
-            </button>
+              <div>
+                <h3 className="font-semibold text-foreground">
+                  {t(`${feature.i18nKeyPrefix}.title` as TranslationKey)}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {t(`${feature.i18nKeyPrefix}.desc` as TranslationKey)}
+                </p>
+              </div>
+            </article>
           );
         })}
       </div>
-      {/* <div className="mt-8 flex justify-center">
-        <Button variant="outline" onClick={() => setUseCasesOpen(true)}>
-          {t("feature.moreCases")}
-        </Button>
-      </div> */}
       <p className="mx-auto mt-12 max-w-3xl text-center text-base text-muted-foreground md:text-lg">
         {t("feature.slogan")}
       </p>
-      <UseCasesModal
-        open={useCasesOpen}
-        onOpenChange={setUseCasesOpen}
-        t={t}
-      />
-      <FeatureModal
-        feature={selected}
-        open={modalOpen}
-        onOpenChange={handleOpenChange}
-        t={t}
-      />
     </section>
   );
 }
