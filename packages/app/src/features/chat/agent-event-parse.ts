@@ -40,6 +40,21 @@ export type AgentEvent =
       result: unknown;
       isError: boolean;
     }
+  | {
+      type: "control_request";
+      requestId: string;
+      kind: "approval";
+      toolCallId: string;
+      toolName: string;
+      args: Record<string, unknown>;
+    }
+  | {
+      type: "control_resolved";
+      requestId: string;
+      kind: "approval";
+      approved: boolean;
+      reason?: string;
+    }
   | { type: "error"; message: string; code?: ErrorEventCode }
   | { type: "pong" };
 
@@ -116,6 +131,14 @@ export function isImageCardResultDetails(x: unknown): x is ImageCardResultDetail
   );
 }
 
+export function isCommandCardDetails(x: unknown): x is Record<string, unknown> {
+  return isObject(x) && x.cardType === "command";
+}
+
+export function isRejectedToolDetails(x: unknown): boolean {
+  return isObject(x) && x.rejected === true;
+}
+
 export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
   switch (event.type) {
     case "agent_start":
@@ -145,6 +168,23 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
         toolName: event.toolName,
         result: event.result,
         isError: event.isError,
+      };
+    case "control_request":
+      return {
+        type: "control_request",
+        requestId: event.requestId,
+        kind: event.kind,
+        toolCallId: event.toolCallId,
+        toolName: event.toolName,
+        args: toArgsRecord(event.args),
+      };
+    case "control_resolved":
+      return {
+        type: "control_resolved",
+        requestId: event.requestId,
+        kind: event.kind,
+        approved: event.approved,
+        reason: event.reason,
       };
     case "agent_end":
       return {

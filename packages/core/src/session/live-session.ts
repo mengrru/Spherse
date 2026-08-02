@@ -4,6 +4,7 @@ import type { Message, Model, Api } from "@earendil-works/pi-ai";
 import type { AgentProfile, SamplingParams } from "../types.js";
 import { resolveModelById, getChatStreamFn } from "../model-providers/index.js";
 import { createToolsForProject, ToolContext } from "../tools/index.js";
+import type { ApprovalGate } from "../tools/with-approval.js";
 import type { SkillStore } from "../store/skill.js";
 import { readContextFiles } from "../context/read-context-files.js";
 import { logAgentEvent } from "../engine/log-agent-event.js";
@@ -20,14 +21,16 @@ import type { ContextBlock } from "../context/blocks.js";
 import { serializeSystemPrompt } from "../context/serialize.js";
 import { estimateTokens } from "../context/token-estimate.js";
 import { planCompaction, wrapDigestContent } from "../context/compaction.js";
-import type { SessionContext, TurnContextSnapshot } from "./types.js";
+import type { SessionContext, TurnContextSnapshot, SessionControlEvent } from "./types.js";
+import { SessionControlBus } from "./control-bus.js";
+import { createApprovalGate } from "./approval-gate.js";
 import {
   resolveEffectiveModelId,
   extractLastUsageTotalTokens,
   type SessionStatus,
 } from "./status.js";
 
-export type AgentEventHandler = (event: AgentEvent) => void;
+export type AgentEventHandler = (event: AgentEvent | SessionControlEvent) => void;
 
 function dedupeToolNames(
   existing: AgentTool[],
@@ -60,6 +63,7 @@ export class LiveSession {
   private readonly sessionId: string;
   private readonly ctx: SessionContext;
   private readonly liveMessageDbIds: number[] = [];
+  private readonly controlBus: SessionControlBus;
   private mcpMerged = false;
 
   private constructor(
@@ -67,11 +71,13 @@ export class LiveSession {
     agentId: string,
     sessionId: string,
     ctx: SessionContext,
+    controlBus: SessionControlBus,
   ) {
     this.agent = agent;
     this.agentId = agentId;
     this.sessionId = sessionId;
     this.ctx = ctx;
+    this.controlBus = controlBus;
   }
 
   static async create(
@@ -82,8 +88,9 @@ export class LiveSession {
     const agentStore = ctx.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
     const profile = agentStore.getProfile();
-    const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills);
-    return new LiveSession(agent, agentId, sessionId, ctx);
+    const controlBus = new SessionControlBus();
+    const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills, createApprovalGate(controlBus));
+    return new LiveSession(agent, agentId, sessionId, ctx, controlBus);
   }
 
   static async restore(
@@ -97,8 +104,9 @@ export class LiveSession {
     if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
 
     const profile = agentStore.getProfile();
-    const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills);
-    const live = new LiveSession(agent, agentId, sessionId, ctx);
+    const controlBus = new SessionControlBus();
+    const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills, createApprovalGate(controlBus));
+    const live = new LiveSession(agent, agentId, sessionId, ctx, controlBus);
 
     const latest = agentStore.sessions.getLatestCompaction(sessionId);
     if (latest) {
@@ -128,6 +136,7 @@ export class LiveSession {
     const sessionLogger = this.ctx.logger.child({ sessionId: this.sessionId });
     const agentStore = this.ctx.projectStore.getAgent(this.agentId);
 
+    this.controlBus.setEventSink(onEvent);
     const unsubscribe = this.agent.subscribe((event) => {
       logAgentEvent(sessionLogger, event);
       onEvent(event);
@@ -142,6 +151,7 @@ export class LiveSession {
       await this.maybeCompact();
     } finally {
       unsubscribe();
+      this.controlBus.setEventSink(null);
     }
   }
 
@@ -176,7 +186,12 @@ export class LiveSession {
   }
 
   abort(): void {
+    this.controlBus.rejectAll("session aborted");
     this.agent.abort();
+  }
+
+  resolveControlRequest(requestId: string, decision: unknown): void {
+    this.controlBus.resolve(requestId, decision);
   }
 
   getTurnContext(): TurnContextSnapshot {
@@ -287,6 +302,7 @@ export class LiveSession {
     profile: AgentProfile,
     sessionId: string,
     agentSkillStore?: SkillStore,
+    approvalGate?: ApprovalGate,
   ): Promise<Agent> {
     const projectRoot = ctx.projectRoot;
     const toolContext = new ToolContext(
@@ -295,6 +311,7 @@ export class LiveSession {
       profile.slug,
       agentSkillStore,
       ctx.triggerManager,
+      approvalGate,
     );
     const allTools = createToolsForProject(toolContext);
 

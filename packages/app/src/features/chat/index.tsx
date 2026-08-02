@@ -58,6 +58,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           isAtBottom={isAtBottom}
           onScrollToBottom={() => scrollToBottom("smooth")}
           onNavigateToPath={onNavigateToPath}
+          onRespondApproval={(requestId, approved) => useStreamingStore.getState().respondApproval(sessionId, requestId, approved)}
           hasMore={hasMore}
           loadingMore={loadingMore}
           onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}

@@ -55,6 +55,21 @@ const chatServerEvent = Type.Union([
     isError: Type.Boolean(),
   }),
   Type.Object({
+    type: Type.Literal("control_request"),
+    requestId: Type.String(),
+    kind: Type.Literal("approval"),
+    toolCallId: Type.String(),
+    toolName: Type.String(),
+    args: Type.Unknown(),
+  }),
+  Type.Object({
+    type: Type.Literal("control_resolved"),
+    requestId: Type.String(),
+    kind: Type.Literal("approval"),
+    approved: Type.Boolean(),
+    reason: Type.Optional(Type.String()),
+  }),
+  Type.Object({
     type: Type.Literal("error"),
     message: Type.String(),
     code: Type.Optional(Type.Enum(ErrorEventCode)),
@@ -67,6 +82,13 @@ export const schemas = {
     Type.Object({ type: Type.Literal("message"), content: Type.String() }),
     Type.Object({ type: Type.Literal("abort") }),
     Type.Object({ type: Type.Literal("ping") }),
+    Type.Object({
+      type: Type.Literal("resolve_control_request"),
+      requestId: Type.String(),
+      kind: Type.Literal("approval"),
+      approved: Type.Boolean(),
+      reason: Type.Optional(Type.String()),
+    }),
   ]),
   chatServerEvent,
 } as const;

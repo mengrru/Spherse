@@ -16,12 +16,13 @@ interface MessageListProps {
   isAtBottom: boolean;
   onScrollToBottom: () => void;
   onNavigateToPath?: (path: string) => void;
+  onRespondApproval?: (requestId: string, approved: boolean) => void;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, hasMore, loadingMore, onLoadMore }: MessageListProps) {
+export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
   if (loading && messages.length === 0) {
     return (
@@ -63,6 +64,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
               agent={agent}
               showTime={showTime}
               onNavigateToPath={onNavigateToPath}
+              onRespondApproval={onRespondApproval}
             />
           );
         })}

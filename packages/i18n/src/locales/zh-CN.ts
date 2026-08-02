@@ -829,6 +829,34 @@ export const zhCN = {
   "tool.emit_trigger_event": "触发事件",
   // 独立工具 tooltip：触发事件的作用说明
   "tool.emit_trigger_event_hint": "允许智能体发出自定义事件，触发本项目内其它智能体的事件触发器，使其自动执行预设任务",
+  // 独立工具标签：运行命令（run_command，agent 执行 shell 命令，高危，需逐次人工确认）
+  "tool.run_command": "运行命令",
+  // 独立工具 tooltip：运行命令的安全提示——强调任意命令、逐次确认、有风险
+  "tool.run_command_hint": "允许智能体执行 shell 命令（unix sh / Windows PowerShell）。每次执行前都会要求你确认；进程将以你的系统权限运行，请仅在你信任该智能体时启用",
+  // agent 配置工具权限区的高级功能折叠分组标题（高危工具收起在此）
+  "tool.advanced_section": "高级 / 危险操作",
+
+  // --- Command Card（run_command 工具调用结果卡片与审批） ---
+  // 审批态标题：等待用户批准执行命令
+  "command.pendingApproval": "等待确认：智能体请求执行命令",
+  // 审批态工作目录标签，{cwd} 为相对项目根的路径
+  "command.cwd": "工作目录",
+  // 审批态安全警告：命令将以用户权限在系统上执行
+  "command.warning": "此命令将以你的系统权限执行，可读写项目外文件、发起网络请求，请仔细核对后再批准。",
+  // 审批按钮：拒绝执行
+  "command.reject": "拒绝",
+  // 审批按钮：批准执行（destructive 配色，需刻意点击）
+  "command.approve": "批准执行",
+  // 结果态标记：命令被用户拒绝
+  "command.rejected": "已拒绝",
+  // 结果态标记：命令执行超时被强制终止
+  "command.timedOut": "已超时",
+  // 结果态标记：命令被用户中途取消
+  "command.aborted": "已取消",
+  // 结果态退出码徽标，{code} 为进程退出码
+  "command.exitCode": "退出码 {code}",
+  // 结果态：命令无任何输出时显示
+  "command.noOutput": "（无输出）",
 
   // --- Viewer Card ---
   // edit_file diff 左栏标题，显示原始内容

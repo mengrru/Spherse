@@ -661,3 +661,77 @@ describe("chat session reducer", () => {
     expect(next.messages[1].timestamp).toBe(4242);
   });
 });
+
+describe("run_command approval + command card lifecycle", () => {
+  it("flows pending_approval -> running -> completed with streamed output", () => {
+    const start = reduceSessionEvents(session(), [
+      { type: "tool_execution_start", toolCallId: "tc1", toolName: "run_command", args: { command: "echo hi", cwd: "." } },
+    ] as unknown as AgentEvent[], 1);
+    const tc = start.messages[0]._toolCalls![0];
+    expect(tc.status).toBe("running");
+    expect(tc._card).toBeUndefined();
+
+    const pending = reduceSessionEvents(start, [
+      { type: "control_request", requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command", args: { command: "echo hi" } },
+    ] as unknown as AgentEvent[], 2);
+    expect(pending.messages[0]._toolCalls![0]._card).toMatchObject({
+      type: "command",
+      status: "pending_approval",
+      command: "echo hi",
+      requestId: "r1",
+    });
+
+    const running = reduceSessionEvents(pending, [
+      { type: "control_resolved", requestId: "r1", kind: "approval", approved: true },
+    ] as unknown as AgentEvent[], 3);
+    expect(running.messages[0]._toolCalls![0]._card).toMatchObject({ type: "command", status: "running" });
+
+    const streamed = reduceSessionEvents(running, [
+      {
+        type: "tool_execution_update",
+        toolCallId: "tc1",
+        toolName: "run_command",
+        args: {},
+        partialResult: { details: { cardType: "command", status: "running", command: "echo hi", stdout: "hi\n", stderr: "" } },
+      },
+    ] as unknown as AgentEvent[], 4);
+    expect(streamed.messages[0]._toolCalls![0]._card).toMatchObject({ stdout: "hi\n" });
+
+    const done = reduceSessionEvents(streamed, [
+      {
+        type: "tool_execution_end",
+        toolCallId: "tc1",
+        toolName: "run_command",
+        isError: false,
+        result: { details: { cardType: "command", status: "completed", command: "echo hi", stdout: "hi\n", stderr: "", exitCode: 0, durationMs: 12 } },
+      },
+    ] as unknown as AgentEvent[], 5);
+    const finalCard = done.messages[0]._toolCalls![0]._card;
+    expect(finalCard).toMatchObject({ type: "command", status: "completed", exitCode: 0, durationMs: 12 });
+    expect(done.messages[0]._toolCalls![0].status).toBe("completed");
+  });
+
+  it("marks the command card as rejected when approval is denied", () => {
+    const seeded = reduceSessionEvents(session(), [
+      { type: "tool_execution_start", toolCallId: "tc2", toolName: "run_command", args: { command: "rm -rf x" } },
+      { type: "control_request", requestId: "r2", kind: "approval", toolCallId: "tc2", toolName: "run_command", args: { command: "rm -rf x" } },
+    ] as unknown as AgentEvent[], 1);
+
+    const denied = reduceSessionEvents(seeded, [
+      { type: "control_resolved", requestId: "r2", kind: "approval", approved: false },
+    ] as unknown as AgentEvent[], 2);
+
+    expect(denied.messages[0]._toolCalls![0]._card).toMatchObject({ type: "command", status: "error", rejected: true });
+  });
+
+  it("reconstructs a command card from history on rejected tool results", () => {
+    const history = [
+      { role: "assistant", content: [{ type: "toolCall", id: "tc3", name: "run_command", arguments: { command: "ls" } }], timestamp: 1 },
+      { role: "toolResult", toolCallId: "tc3", content: [{ type: "text", text: "Execution rejected by user." }], details: { rejected: true, reason: undefined }, isError: false },
+    ] as unknown[];
+
+    const parsed = parseHistoryMessages(history);
+    const card = parsed[0]._toolCalls![0]._card;
+    expect(card).toMatchObject({ type: "command", status: "error", rejected: true, command: "ls" });
+  });
+});

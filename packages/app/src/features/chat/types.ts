@@ -21,7 +21,22 @@ export interface ImageCard {
   errorMessage?: string;
 }
 
-export type ChatCard = HtmlCard | ImageCard;
+export interface CommandCard {
+  type: "command";
+  status: "pending_approval" | "running" | "completed" | "error";
+  command: string;
+  cwd?: string;
+  stdout: string;
+  stderr: string;
+  exitCode?: number;
+  durationMs?: number;
+  timedOut?: boolean;
+  aborted?: boolean;
+  rejected?: boolean;
+  requestId?: string;
+}
+
+export type ChatCard = HtmlCard | ImageCard | CommandCard;
 
 export interface ToolCallInfo {
   toolCallId: string;

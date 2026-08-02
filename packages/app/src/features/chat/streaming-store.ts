@@ -93,6 +93,7 @@ interface StreamingStoreActions {
   touch: (sessionId: string) => void;
   sendMessage: (sessionId: string, text: string) => void;
   abort: (sessionId: string) => void;
+  respondApproval: (sessionId: string, requestId: string, approved: boolean) => void;
   setScrollPosition: (sessionId: string, position: number) => void;
   cleanupExpired: (ttlMs: number) => void;
   loadMore: (client: ApiClient, sessionId: string, agentId: string) => void;
@@ -430,6 +431,14 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       }
       session.ws.send(JSON.stringify({ type: "abort" }));
       setStreamingAndNotify(sessionId, session.projectId, false);
+    },
+
+    respondApproval(sessionId, requestId, approved) {
+      const session = get().sessions[sessionId];
+      if (!session?.ws || session.ws.readyState !== WebSocket.OPEN) return;
+      session.ws.send(
+        JSON.stringify({ type: "resolve_control_request", requestId, kind: "approval", approved }),
+      );
     },
 
     setScrollPosition(sessionId, position) {

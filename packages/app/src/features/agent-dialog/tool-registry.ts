@@ -4,6 +4,8 @@ export interface ToolGroup {
   label: TranslationKey;
   hint?: TranslationKey;
   toolIds: string[];
+  /** Advanced/dangerous groups render collapsed under a warning header. */
+  advanced?: boolean;
 }
 
 export const TOOL_GROUPS: ToolGroup[] = [
@@ -25,5 +27,11 @@ export const TOOL_GROUPS: ToolGroup[] = [
     label: "tool.emit_trigger_event",
     hint: "tool.emit_trigger_event_hint",
     toolIds: ["emit_trigger_event"],
+  },
+  {
+    label: "tool.run_command",
+    hint: "tool.run_command_hint",
+    toolIds: ["run_command"],
+    advanced: true,
   },
 ];

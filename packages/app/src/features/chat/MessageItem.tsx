@@ -4,6 +4,7 @@ import type { ChatMessage } from "./types";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { HtmlCardRenderer } from "./HtmlCard";
 import { ImageCardRenderer } from "./ImageCard";
+import { CommandCardRenderer } from "./CommandCard";
 import { ToolCallSection } from "./ToolCallSection";
 import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
@@ -17,9 +18,10 @@ interface MessageItemProps {
   agent: AgentProfile;
   showTime?: boolean;
   onNavigateToPath?: (path: string) => void;
+  onRespondApproval?: (requestId: string, approved: boolean) => void;
 }
 
-export function MessageItem({ message, agent, showTime, onNavigateToPath }: MessageItemProps) {
+export function MessageItem({ message, agent, showTime, onNavigateToPath, onRespondApproval }: MessageItemProps) {
   const isUser = message.role === "user";
   const openLink = useOpenExternalLink();
 
@@ -76,11 +78,13 @@ export function MessageItem({ message, agent, showTime, onNavigateToPath }: Mess
           ?.filter((toolCall) => toolCall._card)
           .map((toolCall) => {
             const card = toolCall._card!;
-            return card.type === "html" ? (
-              <HtmlCardRenderer key={toolCall.toolCallId} card={card} />
-            ) : (
-              <ImageCardRenderer key={toolCall.toolCallId} card={card} />
-            );
+            if (card.type === "html") {
+              return <HtmlCardRenderer key={toolCall.toolCallId} card={card} />;
+            }
+            if (card.type === "command") {
+              return <CommandCardRenderer key={toolCall.toolCallId} card={card} onRespondApproval={onRespondApproval} />;
+            }
+            return <ImageCardRenderer key={toolCall.toolCallId} card={card} />;
           })}
         {message._runChanges && message._runChanges.length > 0 && (
           <div className="mt-5">

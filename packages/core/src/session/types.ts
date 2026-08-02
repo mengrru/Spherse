@@ -27,3 +27,22 @@ export interface TurnContextSnapshot {
     parameters: unknown;
   }>;
 }
+
+export type ControlRequestKind = "approval";
+
+export type SessionControlEvent =
+  | {
+      type: "control_request";
+      requestId: string;
+      kind: "approval";
+      toolCallId: string;
+      toolName: string;
+      args: unknown;
+    }
+  | {
+      type: "control_resolved";
+      requestId: string;
+      kind: "approval";
+      approved: boolean;
+      reason?: string;
+    };

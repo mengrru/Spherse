@@ -6,11 +6,13 @@ import type {
   ToolCall as AgentToolCall,
 } from "@spherse/core";
 import type { ErrorEventCode } from "@spherse/server/contracts";
-import type { ChatCard, ChatMessage, ToolCallInfo } from "./types";
+import type { ChatCard, ChatMessage, CommandCard, ToolCallInfo } from "./types";
 import {
   isAssistantMessage,
+  isCommandCardDetails,
   isImageCardDetails,
   isImageCardResultDetails,
+  isRejectedToolDetails,
   isRenderCardDetails,
   isRenderCardResultDetails,
   isTextContent,
@@ -161,15 +163,17 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
   if (event.type === "tool_execution_end") {
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._toolCalls) {
-      const calls = last._toolCalls.map((toolCall) =>
-        toolCall.toolCallId === event.toolCallId
-          ? {
-              ...toolCall,
-              status: event.isError ? ("error" as const) : ("completed" as const),
-              result: typeof event.result === "string" ? event.result : JSON.stringify(event.result),
-            }
-          : toolCall,
-      );
+      const calls = last._toolCalls.map((toolCall) => {
+        if (toolCall.toolCallId !== event.toolCallId) return toolCall;
+        const updated: ToolCallInfo = {
+          ...toolCall,
+          status: event.isError ? ("error" as const) : ("completed" as const),
+          result: typeof event.result === "string" ? event.result : JSON.stringify(event.result),
+        };
+        const finalCard = event.toolName === "run_command" ? commandCardFromResult(event.result, toolCall) : undefined;
+        if (finalCard) updated._card = finalCard;
+        return updated;
+      });
       return [...prev.slice(0, -1), { ...last, _toolCalls: calls }];
     }
     return prev;
@@ -194,6 +198,37 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
       return [...prev.slice(0, -1), { ...last, _toolCalls: calls }];
     }
     return prev;
+  }
+
+  if (event.type === "control_request" && event.kind === "approval") {
+    return updateLastToolCall(prev, (tc) => tc.toolCallId === event.toolCallId, (tc) => ({
+      ...tc,
+      _card: {
+        type: "command",
+        status: "pending_approval",
+        command: typeof tc.args.command === "string" ? tc.args.command : "",
+        cwd: typeof tc.args.cwd === "string" ? tc.args.cwd : undefined,
+        stdout: "",
+        stderr: "",
+        requestId: event.requestId,
+      },
+    }));
+  }
+
+  if (event.type === "control_resolved" && event.kind === "approval") {
+    return updateLastToolCall(
+      prev,
+      (tc) => tc._card?.type === "command" && tc._card.requestId === event.requestId,
+      (tc) => {
+        if (tc._card?.type !== "command") return tc;
+        return {
+          ...tc,
+          _card: event.approved
+            ? { ...tc._card, status: "running", requestId: undefined }
+            : { ...tc._card, status: "error", rejected: true, requestId: undefined },
+        };
+      },
+    );
   }
 
   if (event.type === "agent_end") {
@@ -229,7 +264,63 @@ function extractCardDetailsFromPartial(
   if (toolName === "generate_image" && isImageCardDetails(details)) {
     return details;
   }
+  if (toolName === "run_command" && isCommandCardDetails(details)) {
+    return commandCardFromDetails(details);
+  }
   return undefined;
+}
+
+function commandCardFromDetails(details: Record<string, unknown>): CommandCard {
+  const status = details.status === "error" ? "error" : "running";
+  return {
+    type: "command",
+    status,
+    command: typeof details.command === "string" ? details.command : "",
+    cwd: typeof details.cwd === "string" ? details.cwd : undefined,
+    stdout: typeof details.stdout === "string" ? details.stdout : "",
+    stderr: typeof details.stderr === "string" ? details.stderr : "",
+    exitCode: typeof details.exitCode === "number" ? details.exitCode : undefined,
+    durationMs: typeof details.durationMs === "number" ? details.durationMs : undefined,
+    timedOut: details.timedOut === true ? true : undefined,
+    aborted: details.aborted === true ? true : undefined,
+  };
+}
+
+function commandCardFromResult(result: unknown, toolCall: ToolCallInfo): CommandCard | undefined {
+  const details = isObject(result) ? result.details : undefined;
+  if (isRejectedToolDetails(details)) {
+    return {
+      type: "command",
+      status: "error",
+      rejected: true,
+      command: typeof toolCall.args.command === "string" ? toolCall.args.command : "",
+      cwd: typeof toolCall.args.cwd === "string" ? toolCall.args.cwd : undefined,
+      stdout: "",
+      stderr: "",
+    };
+  }
+  if (isCommandCardDetails(details)) {
+    const card = commandCardFromDetails(details);
+    return { ...card, status: details.status === "error" ? "error" : "completed" };
+  }
+  return undefined;
+}
+
+function updateLastToolCall(
+  prev: ChatMessage[],
+  match: (tc: ToolCallInfo) => boolean,
+  update: (tc: ToolCallInfo) => ToolCallInfo,
+): ChatMessage[] {
+  const last = prev[prev.length - 1];
+  if (!last || last.role !== "assistant" || !last._toolCalls) return prev;
+  let changed = false;
+  const calls = last._toolCalls.map((tc) => {
+    if (!match(tc)) return tc;
+    changed = true;
+    return update(tc);
+  });
+  if (!changed) return prev;
+  return [...prev.slice(0, -1), { ...last, _toolCalls: calls }];
 }
 
 function isObject(x: unknown): x is Record<string, unknown> {
@@ -285,6 +376,21 @@ function buildCardFromToolResult(
       errorMessage: details.errorMessage,
     };
     return card;
+  }
+  if (toolName === "run_command") {
+    if (isRejectedToolDetails(details)) {
+      return {
+        type: "command",
+        status: "error",
+        rejected: true,
+        command: getStringArg(toolCall.arguments, "command") ?? "",
+        stdout: "",
+        stderr: "",
+      };
+    }
+    if (isCommandCardDetails(details)) {
+      return { ...commandCardFromDetails(details), status: details.status === "error" ? "error" : "completed" };
+    }
   }
   return undefined;
 }

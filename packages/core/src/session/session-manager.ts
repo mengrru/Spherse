@@ -77,6 +77,10 @@ export class SessionManager {
     this.sessions.get(sessionId)?.abort();
   }
 
+  resolveControlRequest(sessionId: string, requestId: string, decision: unknown): void {
+    this.sessions.get(sessionId)?.resolveControlRequest(requestId, decision);
+  }
+
   getTurnContext(sessionId: string): TurnContextSnapshot {
     const session = this.sessions.get(sessionId);
     if (!session) throw new NotFoundError(`No active session "${sessionId}"`);

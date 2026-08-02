@@ -63,6 +63,11 @@ export function handleChatWebSocket(
           }
         } else if (msg.type === "abort") {
           ctx.sessionRuntime.abortSession(sessionId);
+        } else if (msg.type === "resolve_control_request") {
+          ctx.sessionRuntime.resolveControlRequest(sessionId, msg.requestId, {
+            approved: msg.approved,
+            reason: msg.reason,
+          });
         } else if (msg.type === "ping") {
           socket.send(JSON.stringify(parseChatServerEvent({ type: "pong" })));
         }

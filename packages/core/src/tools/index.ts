@@ -11,6 +11,8 @@ import { createGenerateImageTool } from "./generate-image.js";
 import { createMoveFileTool } from "./move-file.js";
 import { createCopyFileTool } from "./copy-file.js";
 import { createEmitTriggerEventTool } from "./emit-trigger-event.js";
+import { createRunCommandTool } from "./run-command.js";
+import { withApproval } from "./with-approval.js";
 import { ToolContext } from "./tool-context.js";
 
 export { ToolContext };
@@ -31,6 +33,7 @@ export function createToolsForProject(
     move_file: createMoveFileTool(ctx.root, ctx.mutex, getPolicy),
     copy_file: createCopyFileTool(ctx.root, ctx.mutex, getPolicy),
     load_skill: createLoadSkillTool(ctx.root, ctx.skill, ctx.agentSkill),
+    run_command: withApproval(createRunCommandTool(ctx.root), ctx.approvalGate),
   };
 
   if (ctx.triggerManager) {
