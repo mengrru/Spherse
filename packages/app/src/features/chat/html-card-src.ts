@@ -1,3 +1,6 @@
+import { SDK_MARK, injectHeadScript } from "@spherse/sdk";
+import { SDK_SOURCE } from "@spherse/sdk/source";
+
 const SCROLLABLE_MARKER = "data-spherse-card-scroll";
 const SCROLLABLE_STYLE = `<style ${SCROLLABLE_MARKER}>html,body{overflow-y:auto!important}</style>`;
 
@@ -33,18 +36,30 @@ export function ensureScrollable(html: string): string {
   return `${html}${SCROLLABLE_STYLE}`;
 }
 
+export function ensureSdk(html: string): string {
+  const tag = `<script ${SDK_MARK}>${SDK_SOURCE}</script>`;
+  return injectHeadScript(html, tag, SDK_MARK);
+}
+
 export function buildFileSrcDoc(html: string, previewUrl: string): string {
   const withCharset = ensureCharset(html);
   const scrollable = ensureScrollable(withCharset);
+  // SDK before <base>: file mode fetches HTML from the preview server, which has
+  // already injected `<script src="__spherse-sdk.js" data-spherse-sdk>` (same
+  // marker) — ensureSdk is idempotent and skips. For string-mode HTML passed
+  // through this path, it inlines the bundle. <base> is applied last so it sits
+  // first in <head> and the relative script-src resolves to the preview origin.
+  const withSdk = ensureSdk(scrollable);
   const lastSlash = previewUrl.lastIndexOf("/");
   const dirUrl = lastSlash >= 0 ? previewUrl.slice(0, lastSlash) : previewUrl;
-  return injectBase(scrollable, `${dirUrl}/`);
+  return injectBase(withSdk, `${dirUrl}/`);
 }
 
 export function buildInlineSrcDoc(html: string, previewBaseUrl: string): string {
   const withCharset = ensureCharset(html);
   const scrollable = ensureScrollable(withCharset);
-  return injectBase(scrollable, previewBaseUrl);
+  const withSdk = ensureSdk(scrollable);
+  return injectBase(withSdk, previewBaseUrl);
 }
 
 function injectBase(html: string, baseUrl: string): string {

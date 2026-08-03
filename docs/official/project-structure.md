@@ -80,9 +80,9 @@ spherse/
 │   │   │   │   └── SKILL.md
 │   │   │   ├── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
 │   │   │   │   └── SKILL.md
-│   │   │   ├── use-ui-sdk/             # iframe 与 App 交互 postMessage 协议指南（含 data key-value 持久化）
+│   │   │   ├── use-ui-sdk/             # window.spherse 注入 SDK 使用指南（触发型 action、data CRUD、api 只读 HTTP bridge、运行时上下文）
 │   │   │   │   └── SKILL.md
-│   │   │   ├── write-html/             # HTML 页面数据读写与 App 能力调用指南（charset、数据外置、postMessage 交互）
+│   │   │   ├── write-html/             # HTML 页面数据读写与 App 能力调用指南（charset、数据外置、window.spherse 调用）
 │   │   │   │   └── SKILL.md
 │   │   │   └── create-skill/           # 自定义 skill 创建指南（两层 skill 体系与 SKILL.md 格式）
 │   │   │       └── SKILL.md
@@ -113,6 +113,25 @@ spherse/
 │   │       │   └── en.ts             # English
 │   │       ├── __tests__/            # Vitest 单元测试
 │   │       └── index.ts              # 主入口：纯函数 API
+│   ├── sdk/                          # @spherse/sdk — 注入到 iframe HTML 的 UI SDK 运行时
+│   │   ├── scripts/
+│   │   │   ├── build.mjs             # esbuild 将 src/runtime 打包为单文件 IIFE（dist/browser.js），并据此生成 SDK_SOURCE 字符串（dist/source.js）
+│   │   │   └── dev.mjs               # watch：runtime 变动重建 browser.js/source.js + tsc --watch
+│   │   └── src/
+│   │       ├── meta.ts               # SDK_VERSION / SDK_MARK（data-spherse-sdk）/ SDK_FILENAME（__spherse-sdk.js）
+│   │       ├── inject-head-script.ts # injectHeadScript() — 幂等 HTML <head> 注入（renderer 与 server 共享）
+│   │       ├── index.ts              # node-facing 公开导出（meta 常量 + injectHeadScript，零依赖，browser-safe）
+│   │       ├── runtime/              # 浏览器运行时（可读 TS，由 esbuild 打包为 IIFE）
+│   │       │   ├── index.ts          # 入口：幂等守护（window.__SPHERSE_SDK__）+ 组装 window.spherse（call/fire/getRuntime + actions/data/api）
+│   │       │   ├── messaging.ts      # call/fire + spherse:response 监听（requestId 匹配，10s 超时）
+│   │       │   ├── context.ts        # 运行时上下文种子化（window.__SPHERSE__ 同步 / spherse:runtime 异步）
+│   │       │   ├── actions.ts        # 触发型便捷方法（openFile/createSession/float* 等）
+│   │       │   ├── data.ts           # data.get/set/delete 键值存储
+│   │       │   └── api.ts            # api.* 只读 HTTP bridge（api.call + agents/sessions/content/... 子命名空间）
+│   │       └── __tests__/
+│   │           ├── inject-head-script.test.ts # injectHeadScript + 打包产物（SDK_SOURCE）断言
+│   │           ├── messaging.test.ts          # postAction/fire/call（resolve/reject/超时/并发 requestId 匹配）
+│   │           └── context.test.ts            # 运行时种子化（window.__SPHERSE__ 同步 + spherse:runtime 异步 + waiter 队列）
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
     │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry
@@ -186,7 +205,6 @@ spherse/
 │   │       │   ├── useCustomTheme.ts
 │   │       │   ├── useDismissable.ts
 │   │       │   └── use-mobile.ts
-│   │       ├── ui-sdk/
 │   │       │   ├── types.ts              # ActionContext, ActionHandler 类型
 │   │       │   ├── registry.ts           # registerAction / dispatchAction
 │   │       │   ├── rate-limit.ts         # 外部调用频率限制（含白名单豁免）
@@ -202,7 +220,8 @@ spherse/
 │   │       │       ├── send-message.ts   # 向已有会话发送消息并导航，支持 float 参数与 request-response（session_busy 反馈）；已浮窗会话不导航；web 端 float 降级为跳转
 │   │       │       ├── unfloat-content.ts # 关闭指定文件的浮窗
 │   │       │       ├── unfloat-session.ts # 取消浮窗
-│   │       │       └── data.ts           # data.get/set/delete key-value 持久化
+│   │       │       ├── data.ts           # data.get/set/delete key-value 持久化
+│   │       │       └── api.ts            # api.call 只读 HTTP bridge（op 白名单转发 ApiClient，agents/sessions/content/fileTree）
 │   │       ├── features/
 │   │       │   ├── activity-bar/         # 自治型 Activity Bar（项目头像轨、设置/添加按钮），内部读 app-store/app-ui-store 与 useProjectActions；pin 按钮通过 pinToggle prop 可选注入
 │   │       │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 trigger feature store
@@ -275,7 +294,8 @@ spherse/
 │   │       ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）
 │   │       ├── text-selection-session.spec.ts  # 划选会话 E2E 测试
 │   │       ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
-│   │       └── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
+│   │       ├── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
+│   │       └── ui-sdk-bridge.spec.ts   # 注入式 @spherse/sdk 桥接 E2E 测试（window.spherse.* 暴露面 / fire 导航 / call 往返 / api.* HTTP 桥接 resolve+reject）
 │   ├── web/                          # @spherse/web — Web 版本壳 / 移动端 PWA（GitHub Pages 部署到 /web/）
 │   │   ├── vite.config.ts            # Vite + vite-plugin-pwa（manifest + generateSW app shell precache）+ manualChunks（vendor-react/vendor-markdown）
 │   │   ├── index.html                # 入口 HTML（theme-color / apple-mobile-web-app / viewport-fit=cover 元数据）

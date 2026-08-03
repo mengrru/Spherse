@@ -13,6 +13,7 @@
     "@spherse/core": "*",
     "@spherse/i18n": "*",
     "@spherse/presets": "*",
+    "@spherse/sdk": "*",
     "@spherse/server": "*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

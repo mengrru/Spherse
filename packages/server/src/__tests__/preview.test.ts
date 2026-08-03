@@ -140,4 +140,49 @@ describe("preview route", () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers["content-type"]).toBe("image/png");
   });
+
+  it("serves the SDK bundle at the reserved filename with javascript content-type", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/preview/__spherse-sdk.js" });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("application/javascript");
+    expect(res.headers["cache-control"]).toBe("no-cache");
+    expect(res.body).toContain("window.spherse");
+  });
+
+  it("serves the SDK bundle at the reserved filename under __auth/ prefix and nested dirs", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/__auth/some-token/sub/__spherse-sdk.js",
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("application/javascript");
+    expect(res.body).toContain("window.spherse");
+  });
+
+  it("injects the SDK script tag into served HTML", async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "card.html"),
+      "<html><head><title>x</title></head><body>hi</body></html>",
+    );
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/preview/card.html" });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("text/html");
+    expect(res.body).toContain('<script src="__spherse-sdk.js" data-spherse-sdk></script>');
+    // script goes into <head>, before existing content
+    expect(res.body.indexOf("data-spherse-sdk")).toBeLessThan(res.body.indexOf("<title>"));
+  });
+
+  it("does not double-inject HTML that already carries the SDK marker", async () => {
+    const pre = '<html><head><script src="x.js" data-spherse-sdk></script></head><body>hi</body></html>';
+    fs.writeFileSync(path.join(tmpDir, "marked.html"), pre);
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/preview/marked.html" });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toBe(pre);
+  });
+
+  it("leaves non-HTML assets untouched (no SDK injection)", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/preview/icon.svg" });
+    expect(res.statusCode).toBe(200);
+    expect(res.body).not.toContain("data-spherse-sdk");
+  });
 });
