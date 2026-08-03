@@ -107,42 +107,34 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 
 ## 持久化读写：使用 ui-sdk data action
 
-页面需要**写入/持久化**数据（如表单、进度、勾选状态）时，使用 Spherse 提供的基于 `postMessage` 的 key-value 数据接口（ui-sdk data action）。请读取 `use-ui-sdk` skill 获取完整 API。
+页面需要**写入/持久化**数据（如表单、进度、勾选状态）时，使用注入的 `window.spherse.data.*` key-value 接口。请读取 `use-ui-sdk` skill 获取完整 API。
 
 要点速览（详情见 `use-ui-sdk`）：
 
-- `data.get` / `data.set` / `data.delete`：对 key-value 数据的读写删
-- 数据文件路径通过 action 的 `file` 参数显式指定，约定命名为 `{HTML文件名}.data.json` 并与 HTML 同级（如 `world/atlas.html` → `world/atlas.data.json`）；**字符串模式**下 HTML 不是文件，需自行指定一个项目内的 `.data.json` 路径
+- `spherse.data.get` / `spherse.data.set` / `spherse.data.delete`：对 key-value 数据的读写删（均返回 Promise）
+- 数据文件路径通过 `file` 参数显式指定，约定命名为 `{HTML文件名}.data.json` 并与 HTML 同级（如 `world/atlas.html` → `world/atlas.data.json`）；**字符串模式**下 HTML 不是文件，需自行指定一个项目内的 `.data.json` 路径
 - 数据文件**不能**放在 `.spherse/` 目录下
-- 两种渲染模式都可用（基于 `postMessage`，不依赖 `fetch`）
+- 两种渲染模式都可用（经 App 注入的 SDK，不依赖 `fetch`）
 
 ## 跳转到项目内其它文件：openFile
 
-页面中点击跳转/打开项目内的其它文件时，使用 ui-sdk 的 `openFile` action（在 Content Browser 中打开）。不要用 `<a href="...">` 直接链接（iframe 内的链接不会触发 App 导航）。
+页面中点击跳转/打开项目内的其它文件时，使用 `spherse.openFile`（在 Content Browser 中打开）。不要用 `<a href="...">` 直接链接（iframe 内的链接不会触发 App 导航）。
 
 ```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "openFile",
-  params: { path: "world/characters/主角设定.md" }
-}, "*");
+spherse.openFile("world/characters/主角设定.md");
 ```
 
-> `path` 为项目内相对路径。
+> `path` 为项目内相对路径。`spherse` 全局对象由 App 自动注入，无需自己引入脚本。完整 API 见 `use-ui-sdk` skill。
 
 ## 打开外部链接：openExternalLink
 
-页面中需要打开外部网页（http/https/mailto/tel）时，使用 ui-sdk 的 `openExternalLink` action 在系统默认浏览器中打开。**不要用 `<a href="https://...">` 直接链接**——iframe 中的原生外链只会在 iframe 内原地跳转，无法跳出 App。
+页面中需要打开外部网页（http/https/mailto/tel）时，使用 `spherse.openExternalLink` 在系统默认浏览器中打开。**不要用 `<a href="https://...">` 直接链接**——iframe 中的原生外链只会在 iframe 内原地跳转，无法跳出 App。
 
 ```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "openExternalLink",
-  params: { url: "https://example.com" }
-}, "*");
+spherse.openExternalLink("https://example.com");
 ```
 
-> 仅 http/https/mailto/tel 协议生效，其它协议会被静默忽略。指向项目内文件请用 `openFile`。完整 API 见 `use-ui-sdk` skill。
+> 仅 http/https/mailto/tel 协议生效，其它协议会被静默忽略。指向项目内文件请用 `spherse.openFile`。完整 API 见 `use-ui-sdk` skill。
 
 ## 交互式 HtmlCard：将用户选择回传当前会话
 
@@ -150,11 +142,12 @@ window.parent.postMessage({
 
 实现要点：
 
-1. App 在卡片 iframe 加载时注入运行时上下文 `window.__SPHERSE__`（含 `sessionId`/`agentId`/`projectId`）。
-2. 用户点击提交时，读取 `window.__SPHERSE__.sessionId`，组装消息文本，通过 `sendMessage` action 发送。
-3. `sendMessage` 支持 request-response，会话忙碌时返回 `{ ok: false, data: { error: "session_busy" } }`，消息**不会发出**，应提示用户稍后重试。
+1. App 会自动向每个 HTML 注入 `window.spherse` SDK。
+2. 当 HTML 作为聊天 HtmlCard 渲染时，`spherse.runtime` 携带当前会话上下文（`sessionId`/`agentId`/`projectId`）；加载即使用时用 `await spherse.getRuntime()`（内部已处理竞态）。
+3. 用户点击提交时，读取 `sessionId`，组装消息文本，通过 `spherse.sendMessage` 发送。
+4. `spherse.sendMessage` 是请求型，会话忙碌时会 reject（`session_busy`），消息**不会发出**，应提示用户稍后重试。
 
-> 完整的 `spherseCall` Promise wrapper 与 `sendMessage` 签名见 `use-ui-sdk` skill。本示例内联了 wrapper 以便自包含。
+> `spherse.sendMessage` / `spherse.getRuntime` 的完整签名见 `use-ui-sdk` skill。
 
 示例：选项卡片，用户勾选后提交，结果回传当前会话。
 
@@ -180,36 +173,20 @@ window.parent.postMessage({
   <div id="tip"></div>
 
   <script>
-    function spherseCall(action, params) {
-      return new Promise((resolve, reject) => {
-        const requestId = "r" + Date.now() + Math.random().toString(36).slice(2);
-        const timeout = setTimeout(() => { cleanup(); reject(new Error("spherse timeout")); }, 10000);
-        const handler = (e) => {
-          if (e.data?.type === "spherse:response" && e.data.requestId === requestId) {
-            cleanup();
-            e.data.ok ? resolve(e.data.data) : reject(new Error(e.data.data?.error || "spherse data error"));
-          }
-        };
-        function cleanup() { clearTimeout(timeout); window.removeEventListener("message", handler); }
-        window.addEventListener("message", handler);
-        window.parent.postMessage({ type: "spherse:action", action, params, requestId }, "*");
-      });
-    }
-
     async function submit() {
       const picks = [...document.querySelectorAll("input:checked")].map((i) => i.value);
       if (picks.length === 0) {
         document.getElementById("tip").textContent = "请至少选择一项";
         return;
       }
-      const rt = window.__SPHERSE__;
+      const rt = spherse.runtime;
       if (!rt?.sessionId) {
         document.getElementById("tip").textContent = "未找到当前会话，无法提交";
         return;
       }
       const message = "我选择了展开以下方向：" + picks.join("、");
       try {
-        await spherseCall("sendMessage", { sessionId: rt.sessionId, message });
+        await spherse.sendMessage({ sessionId: rt.sessionId, message });
         document.getElementById("tip").textContent = "已发送";
       } catch (e) {
         document.getElementById("tip").textContent =
@@ -221,24 +198,25 @@ window.parent.postMessage({
 </html>
 ```
 
-> - 此模式仅适用于**聊天 HtmlCard**（Welcome Page / Content Browser 预览不注入 `window.__SPHERSE__`）。
+> - 此模式仅适用于**聊天 HtmlCard**（Welcome Page / Content Browser 预览中 `spherse.runtime` 为 `null`）。
 > - 提交内容应是有意义的、可被会话/agent 理解的自然语言，而非原始参数。
 
 ## 其它 App 能力调用
 
-需要触发 App 内其它能力（如创建/打开 chat session、向会话发消息、浮窗会话等）时，阅读 `use-ui-sdk` skill，按其中定义的 action 名称与参数调用。可用 action 包括：
+需要触发 App 内其它能力时，阅读 `use-ui-sdk` skill，通过 `window.spherse.*` 调用。可用方法包括：
 
-- `createSession` — 创建新会话并导航到聊天页
-- `sendMessage` — 向已有会话发送消息（支持 request-response，会话忙碌时返回 `session_busy`）
-- `emitAgentTriggerEvent` — 触发自定义事件，激活匹配的事件触发器
-- `floatSession` / `unfloatSession` — 浮窗显示/关闭会话
-- `openFile` — 在 Content Browser 打开项目文件
-- `openExternalLink` — 在系统默认浏览器打开外部链接（http/https/mailto/tel）
-- `data.get` / `data.set` / `data.delete` — key-value 数据读写
+- `spherse.createSession(params)` — 创建新会话并导航到聊天页
+- `spherse.sendMessage(params)` → `Promise` — 向已有会话发送消息（会话忙碌时 reject `session_busy`）
+- `spherse.emitAgentTriggerEvent(params)` — 触发自定义事件，激活匹配的事件触发器
+- `spherse.floatSession(id)` / `spherse.unfloatSession()` — 浮窗显示/关闭会话
+- `spherse.openFile(path)` — 在 Content Browser 打开项目文件
+- `spherse.openExternalLink(url)` — 在系统默认浏览器打开外部链接（http/https/mailto/tel）
+- `spherse.data.get/set/delete(params)` → `Promise` — key-value 数据读写
+- `spherse.api.*` — 只读查询项目信息（agents / sessions / content / triggers / settings）
 
-所有 action 均通过 `window.parent.postMessage({ type: "spherse:action", action, params }, "*")` 触发，无需引入任何外部脚本。
+`spherse` 全局对象由 App 自动注入到每个 HTML，无需自己写 `<script>` 加载或内联 wrapper。
 
-> **向当前会话发消息**：当 HTML 作为聊天 HtmlCard 渲染时，App 会注入运行时上下文 `window.__SPHERSE__`（含 `sessionId`/`agentId`/`projectId`），卡片可直接用它向当前会话发消息。详见 `use-ui-sdk` skill 的「运行时上下文」一节。
+> **向当前会话发消息**：当 HTML 作为聊天 HtmlCard 渲染时，`spherse.runtime`（或 `await spherse.getRuntime()`）携带当前会话上下文（`sessionId`/`agentId`/`projectId`）。详见 `use-ui-sdk` skill 的「运行时上下文」一节。
 
 ## 速查：场景 → 方案
 
@@ -254,4 +232,4 @@ window.parent.postMessage({
 | 点击打开外部链接（网页/邮箱） | ui-sdk `openExternalLink`（http/https/mailto/tel），勿用 `<a href>` |
 | 打开/发送 chat 会话 | ui-sdk `createSession` / `sendMessage` / `floatSession` |
 | 触发事件驱动 agent 执行 | ui-sdk `emitAgentTriggerEvent`（配合 agent 触发器配置） |
-| 交互式卡片 / 向当前会话发消息 | 读 `window.__SPHERSE__.sessionId`，调 `sendMessage`（如收集用户选择后提交回传，会话忙碌返回 `session_busy`） |
+| 交互式卡片 / 向当前会话发消息 | 读 `spherse.runtime.sessionId`，调 `spherse.sendMessage`（如收集用户选择后提交回传，会话忙碌 reject `session_busy`） |

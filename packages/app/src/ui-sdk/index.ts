@@ -1,3 +1,4 @@
+import "./handlers/api";
 import "./handlers/create-session";
 import "./handlers/data";
 import "./handlers/emit-agent-trigger-event";

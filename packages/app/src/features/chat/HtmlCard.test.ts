@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildFileSrcDoc, ensureCharset, ensureScrollable, isImageFile } from "./html-card-src";
+import { buildFileSrcDoc, buildInlineSrcDoc, ensureCharset, ensureScrollable, ensureSdk, isImageFile } from "./html-card-src";
 
 describe("isImageFile", () => {
   it("detects supported image extensions (case-insensitive)", () => {
@@ -64,9 +64,15 @@ describe("buildFileSrcDoc", () => {
   it("prepends <base> when document has no <head> tag", () => {
     const html = "<html><body>hi</body></html>";
     const result = buildFileSrcDoc(html, previewUrl);
-    expect(result.startsWith(`<base href="${dirUrl}/">`)).toBe(true);
+    // No original <head>: ensureSdk synthesizes one, then injectBase inserts <base>
+    // as its first child so relative script-src resolves to the preview origin.
+    expect(result).toContain(`<base href="${dirUrl}/">`);
     expect(result).toContain("<body>hi");
     expect(result).toContain('<meta charset="UTF-8">');
+    const baseIdx = result.indexOf(`<base href="${dirUrl}/">`);
+    const headIdx = result.indexOf("<head");
+    expect(baseIdx).toBeGreaterThan(headIdx);
+    expect(baseIdx).toBeLessThan(result.indexOf("<body"));
   });
 
   it("handles previewUrl without directory (file at root level)", () => {
@@ -129,5 +135,55 @@ describe("ensureScrollable", () => {
     const result = ensureScrollable(html);
     expect(result).toContain("data-spherse-card-scroll");
     expect(result).toContain("html,body{overflow-y:auto!important}");
+  });
+});
+
+describe("ensureSdk", () => {
+  it("inlines the SDK bundle with the idempotency marker into <head>", () => {
+    const html = "<html><head><title>x</title></head><body>hi</body></html>";
+    const result = ensureSdk(html);
+    expect(result).toContain("data-spherse-sdk");
+    expect(result).toContain("window.spherse");
+    // injected at <head> start, before <title>
+    expect(result.indexOf("data-spherse-sdk")).toBeLessThan(result.indexOf("<title>"));
+  });
+
+  it("is idempotent — skips when the marker is already present (server-injected)", () => {
+    const pre =
+      '<html><head><script src="__spherse-sdk.js" data-spherse-sdk></script><title>x</title></head></html>';
+    expect(ensureSdk(pre)).toBe(pre);
+  });
+});
+
+describe("buildFileSrcDoc / buildInlineSrcDoc SDK wiring", () => {
+  const previewUrl = "http://localhost:3000/api/projects/p1/preview/sub/card.html";
+  const dirUrl = "http://localhost:3000/api/projects/p1/preview/sub";
+
+  it("buildFileSrcDoc injects both the SDK and <base>, with <base> first in <head>", () => {
+    const html = "<html><head><title>x</title></head><body>hi</body></html>";
+    const result = buildFileSrcDoc(html, previewUrl);
+    expect(result).toContain("data-spherse-sdk");
+    expect(result).toContain(`<base href="${dirUrl}/">`);
+    // <base> must precede the SDK so the relative script-src resolves to preview origin
+    expect(result.indexOf(`<base href="${dirUrl}/">`)).toBeLessThan(
+      result.indexOf("data-spherse-sdk"),
+    );
+  });
+
+  it("buildFileSrcDoc is idempotent when the server already injected script-src", () => {
+    const pre =
+      `<html><head><script src="__spherse-sdk.js" data-spherse-sdk></script><title>x</title></head><body>hi</body></html>`;
+    const result = buildFileSrcDoc(pre, previewUrl);
+    // exactly one SDK script tag remains
+    expect(result.match(/data-spherse-sdk/g)?.length).toBe(1);
+    expect(result).toContain(`<base href="${dirUrl}/">`);
+  });
+
+  it("buildInlineSrcDoc inlines the SDK bundle for string-mode HTML", () => {
+    const html = "<html><head></head><body>hi</body></html>";
+    const result = buildInlineSrcDoc(html, previewUrl);
+    expect(result).toContain("data-spherse-sdk");
+    expect(result).toContain("window.spherse");
+    expect(result).toContain(`<base href="${previewUrl}">`);
   });
 });

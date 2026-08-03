@@ -2,7 +2,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { Stats } from "node:fs";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { resolveProjectPath, serverAccessPolicy, AccessDeniedError } from "@spherse/core";
+import {
+  resolveProjectPath,
+  serverAccessPolicy,
+  AccessDeniedError,
+} from "@spherse/core";
+import { injectHeadScript, SDK_MARK, SDK_FILENAME } from "@spherse/sdk";
+import { SDK_SOURCE } from "@spherse/sdk/source";
 import type { ProjectRegistry } from "../registry.js";
 import { forbidden, notFound } from "../errors.js";
 
@@ -40,6 +46,17 @@ async function handlePreview(req: FastifyRequest<{ Params: PreviewParams }>, rep
   const relativePath = req.params["*"];
   const pm = req.projectCtx!.projectManager;
   const root = pm.getRootPath();
+
+  // Reserved: serve the Spherse SDK bundle at any directory level. Every injected
+  // HTML loads it via a relative `<script src="__spherse-sdk.js">`, which resolves
+  // against the document URL (preview src) or the renderer-injected <base> (srcDoc).
+  if (path.basename(relativePath) === SDK_FILENAME) {
+    return reply
+      .type("application/javascript")
+      .header("Cache-Control", "no-cache")
+      .send(SDK_SOURCE);
+  }
+
   const policy = serverAccessPolicy(root);
   try {
     policy.assertRead(relativePath);
@@ -72,11 +89,25 @@ async function handlePreview(req: FastifyRequest<{ Params: PreviewParams }>, rep
 
   try {
     const buffer = await fs.readFile(absolutePath);
+    const isHtml = ext === "html" || ext === "htm";
+    // Inject the SDK as a same-origin relative script so the iframe keeps its real
+    // origin (preview server) and the SDK can postMessage the renderer. Idempotent:
+    // files that already carry the marker (e.g. hand-authored) are left untouched.
+    const payload = isHtml
+      ? Buffer.from(
+          injectHeadScript(
+            buffer.toString("utf8"),
+            `<script src="${SDK_FILENAME}" ${SDK_MARK}></script>`,
+            SDK_MARK,
+          ),
+          "utf8",
+        )
+      : buffer;
     return reply
       .type(CONTENT_TYPES[ext])
       .header("Cache-Control", "no-cache")
       .header("ETag", etag)
-      .send(buffer);
+      .send(payload);
   } catch {
     throw notFound("Not found");
   }

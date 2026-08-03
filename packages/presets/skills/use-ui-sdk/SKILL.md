@@ -1,277 +1,209 @@
 ---
 name: use-ui-sdk
-description: 在 Spherse 的 HTML 内容中嵌入 postMessage 调用，实现 iframe 与 App 的交互（如创建会话、打开文件、key-value 数据读写）
+description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话、打开文件、读写数据、只读查询项目信息）
 ---
 
-# UI SDK — iframe 与 App 交互
+# UI SDK — `window.spherse`
 
-Spherse 中的 HTML 文件（欢迎页、Content Browser 预览、聊天 HtmlCard）通过 iframe 展示。你可以使用浏览器原生 `postMessage` API 从 iframe 内触发 App 操作，无需引入任何脚本或依赖。
+Spherse 中的 HTML 内容（欢迎页、Content Browser 预览、聊天 HtmlCard）都在 iframe 中展示。**App 会自动向每个 HTML 注入一个零依赖的 SDK 脚本**，暴露 `window.spherse`（大小写不敏感，`window.Spherse` 是别名）。你**不需要**手写 `postMessage`、不需要内联 Promise wrapper、不需要引入任何脚本标签 —— 直接用即可。
 
-## 消息格式
+## 快速上手
 
-所有交互通过 `window.parent.postMessage` 发送，消息必须包含以下结构：
+```html
+<button onclick="spherse.openFile('world/characters.md')">打开角色档案</button>
+<button onclick="startWriting()">开始写作</button>
 
-```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "<action-name>",
-  params: { /* action 参数 */ }
-}, "*");
+<script>
+  function startWriting() {
+    spherse.createSession({ agentId: "writer", message: "开始新的写作会话" });
+  }
+</script>
 ```
 
-- `type` 必须为 `"spherse:action"`，其他值会被忽略
-- `action` 为操作名称，见下方可用 action 列表
-- `params` 为操作参数对象
+SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不要**复制 `spherseCall` 之类的 wrapper —— 那些都已内置。
+
+## API 总览
+
+`window.spherse` 提供三类方法：
+
+| 类别 | 方法 | 说明 |
+|------|------|------|
+| 触发型（fire-and-forget） | `createSession` / `openFile` / `openExternalLink` / `floatSession` / `unfloatSession` / `floatContent` / `unfloatContent` / `emitAgentTriggerEvent` | 单向触发，无返回值 |
+| 请求型（Promise） | `sendMessage(params)` → `Promise` | 等待发送结果 |
+| 请求型（Promise） | `data.get` / `data.set` / `data.delete` | key-value 持久化 |
+| 请求型（Promise） | `api.call(op, args)` 及 `api.*` 命名方法 | 只读查询项目信息（agents / sessions / content / triggers / settings） |
+| 运行时 | `spherse.runtime`（同步读）/ `spherse.getRuntime()`（Promise） | 获取当前会话上下文（仅 HtmlCard 有值） |
+
+所有请求型方法都返回 Promise，内部已处理 `requestId` 匹配与 10 秒超时，失败时 reject。
 
 ## 运行时上下文（聊天 HtmlCard 专属）
 
-当 HTML 作为**聊天 HtmlCard** 渲染时，App 会向卡片所在的 iframe 注入当前会话的运行时信息，卡片无需硬编码任何 ID 即可向「当前会话」发消息或读取上下文。Welcome Page 与 Content Browser 预览**不注入**运行时上下文。
+当 HTML 作为**聊天 HtmlCard** 渲染时，`spherse.runtime` 携带当前会话信息；Welcome Page 与 Content Browser 预览中为 `null`。
 
-注入方式有两种（同时提供，任选其一读取）：
-
-1. **全局变量**：`window.__SPHERSE__`，在 iframe 加载后由 App 写入。
-
-   ```javascript
-   const { sessionId, agentId, projectId } = window.__SPHERSE__;
-   ```
-
-2. **postMessage 通知**：App 在 iframe 加载时发送 `{ type: "spherse:runtime", sessionId, agentId, projectId }`。在卡片脚本最早期注册监听器即可竞态安全地拿到（推荐用于需要在脚本初始化阶段就使用的场景）：
-
-   ```javascript
-   window.addEventListener("message", (e) => {
-     if (e.data?.type === "spherse:runtime") {
-       window.__SPHERSE__ = e.data;
-       init();
-     }
-   });
-   ```
-
-> 对「用户点击按钮才触发」的交互式卡片，直接读 `window.__SPHERSE__` 即可（此时必然已注入）；对「加载时立即使用」的场景，使用 postMessage 监听更稳妥。
-
-### 完整运行时读取封装（推荐）
+- **交互式卡片**（用户点击才触发）：直接读 `spherse.runtime`
+- **加载即使用**：用 `await spherse.getRuntime()`（内部已处理竞态，无需自己注册 message 监听）
 
 ```javascript
-function getSpherseRuntime() {
-  return new Promise((resolve) => {
-    if (window.__SPHERSE__) return resolve(window.__SPHERSE__);
-    const handler = (e) => {
-      if (e.data?.type === "spherse:runtime") {
-        window.removeEventListener("message", handler);
-        resolve(e.data);
-      }
-    };
-    window.addEventListener("message", handler);
-  });
-}
+const rt = await spherse.getRuntime();
+// rt.sessionId / rt.agentId / rt.projectId
+await spherse.sendMessage({ sessionId: rt.sessionId, message: "继续分析" });
 ```
 
-## 可用 Action
+## 触发型 Action
 
-### createSession
+### `spherse.createSession(params)`
 
-创建新会话并导航到聊天页面，可选附带初始消息。
+创建新会话并导航到聊天页面。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | agentId | string | 否 | 目标 agent 的 ID（UUID，与 `agentSlug` 二选一，同时提供时以 `agentId` 为准） |
-| agentSlug | string | 否 | 目标 agent 的 slug（即 agent 目录名，形如 `writer-a1b2c3`，可在 agent 右键菜单「复制 ID」获取），作为 `agentId` 的替代 |
+| agentSlug | string | 否 | 目标 agent 的 slug（即 agent 目录名，形如 `writer-a1b2c3`，可在 agent 右键菜单「复制 ID」获取） |
 | message | string | 否 | 初始消息内容 |
-| float | boolean | 否 | 为 `true` 时在浮窗中打开新会话，而非导航到聊天页 |
+| float | boolean | 否 | 为 `true` 时在浮窗中打开 |
 
 ```javascript
-// 通过 agent ID 创建会话
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "createSession",
-  params: {
-    agentId: "my-writer",
-    message: "请帮我扩展这段世界观设定"
-  }
-}, "*");
+spherse.createSession({ agentId: "writer", message: "请帮我扩展这段设定" });
+// 或用 slug
+spherse.createSession({ agentSlug: "writer-a1b2c3" });
 ```
 
-也可以用人类可读的 agent slug（即 agent 目录名，形如 `writer-a1b2c3`，可在 agent 右键菜单「复制 ID」获取）替代 ID（二者二选一）：
+### `spherse.openFile(path)`
+
+在 Content Browser 中打开项目文件。`path` 可传字符串或 `{ path }`。
 
 ```javascript
-// 通过 agent slug 创建会话
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "createSession",
-  params: {
-    agentSlug: "writer-a1b2c3",
-    message: "请帮我扩展这段世界观设定"
-  }
-}, "*");
+spherse.openFile("world/characters/主角设定.md");
 ```
 
-### openFile
+### `spherse.openExternalLink(url)`
 
-在 Content Browser 中打开指定项目文件。
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| path | string | 是 | 项目内相对文件路径 |
+在系统默认浏览器中打开外部链接（http/https/mailto/tel）。HTML 中的外部链接若用原生 `<a href>`，会在 iframe 内原地跳转，应改用本方法。`url` 可传字符串或 `{ url }`。
 
 ```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "openFile",
-  params: {
-    path: "world/characters/主角设定.md"
-  }
-}, "*");
+spherse.openExternalLink("https://example.com/reference");
 ```
 
-### openExternalLink
+> 仅 http/https/mailto/tel 协议生效，其它协议会被静默忽略。
 
-在系统默认浏览器中打开外部链接（http/https/mailto/tel）。HTML 中的外部链接若用原生 `<a href="https://...">`，会在 iframe 内原地跳转、无法跳出 App，应改用本 action。
+### `spherse.floatSession(sessionId)` / `spherse.unfloatSession()`
 
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| url | string | 是 | 外部绝对链接（http/https/mailto/tel） |
+将指定会话显示为浮窗 / 关闭当前浮窗。`sessionId` 可传字符串或 `{ sessionId }`。一次只能有一个浮窗。
 
-```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "openExternalLink",
-  params: {
-    url: "https://example.com/reference"
-  }
-}, "*");
-```
+### `spherse.floatContent(path)` / `spherse.unfloatContent(path)`
 
-> 仅 http/https/mailto/tel 协议生效，其它协议会被静默忽略；非 string 或空字符串也会被忽略。指向项目内文件请改用 `openFile`。
+将项目内文件以浮窗形式打开 / 关闭。多个文件可同时浮窗。
 
-### sendMessage
+### `spherse.emitAgentTriggerEvent(params)`
 
-向已有会话发送消息并导航到聊天页面。
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| sessionId | string | 是 | 目标会话 ID（HtmlCard 中可用 `window.__SPHERSE__.sessionId` 获取当前会话） |
-| message | string | 是 | 消息内容 |
-| float | boolean | 否 | 为 `true` 时确保该会话在浮窗中显示再发送消息 |
-
-`sendMessage` 支持 request-response 模式：传入 `requestId`（配合下文 Promise wrapper）可获取发送结果。
-
-- 发送成功：`{ ok: true }`
-- 目标会话仍在生成中（未到达 `agent_end`）：`{ ok: false, data: { error: "session_busy" } }`。此时消息**不会被发送**，卡片应提示用户稍后重试，或在会话空闲后再发。
-
-```javascript
-// 向当前会话发消息（HtmlCard 内）
-const rt = window.__SPHERSE__;
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "sendMessage",
-  params: {
-    sessionId: rt.sessionId,
-    message: "请继续分析这个角色的动机"
-  }
-}, "*");
-```
-
-带结果反馈的写法（推荐，可感知 busy 状态）：
-
-```javascript
-try {
-  await spherseCall("sendMessage", { sessionId: rt.sessionId, message: "继续" });
-  // 发送成功
-} catch (e) {
-  // 会话忙碌或发送失败，提示用户稍后重试
-}
-```
-
-### floatSession
-
-将会话显示为浮窗。一次只能有一个浮窗，新的浮窗会自动替换旧的。
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| sessionId | string | 是 | 要浮窗的会话 ID |
-
-```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "floatSession",
-  params: {
-    sessionId: "session-abc123"
-  }
-}, "*");
-```
-
-### unfloatSession
-
-关闭当前浮窗。
-
-无需参数。
-
-```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "unfloatSession",
-  params: {}
-}, "*");
-```
-
-### floatContent
-
-将项目内某个文件以浮窗形式打开（仅显示文件内容，不含编辑/导航工具栏）。多个文件可同时浮窗，同一文件不会重复打开。
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| path | string | 是 | 项目内文件相对路径 |
-
-```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "floatContent",
-  params: {
-    path: "notes/outline.md"
-  }
-}, "*");
-```
-
-### unfloatContent
-
-关闭指定文件的浮窗。
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| path | string | 是 | 要关闭浮窗的文件相对路径 |
-
-```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "unfloatContent",
-  params: {
-    path: "notes/outline.md"
-  }
-}, "*");
-```
-
-### emitAgentTriggerEvent
-
-触发一个自定义事件，用于激活配置了「事件触发器」的 agent。
+触发自定义事件，激活配置了「事件触发器」的 agent。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | eventName | string | 是 | 自定义事件名（不能以 `sp:` 开头，该前缀为系统保留） |
-| payload | string | 否 | 事件附带的数据，会通过 `{{payload}}` 注入触发器的消息模板（是否使用取决于 trigger 配置） |
+| payload | string | 否 | 事件附带数据，会通过 `{{payload}}` 注入触发器消息模板 |
 
 ```javascript
-window.parent.postMessage({
-  type: "spherse:action",
-  action: "emitAgentTriggerEvent",
-  params: {
-    eventName: "daily-review",
-    payload: "第3章"
-  }
-}, "*");
+spherse.emitAgentTriggerEvent({ eventName: "daily-review", payload: "第3章" });
 ```
 
-例如 trigger 配置了消息模板 `"请回顾 {{payload}} 的写作进度"`，触发时会拼接为 `"请回顾 第3章 的写作进度"`。
+## 请求型 Action — 发送消息
 
-事件触发后，所有匹配该事件名且启用的触发器将自动执行（创建会话或向已有会话发送消息）。此操作为单向触发，无返回值。
+### `spherse.sendMessage(params)` → `Promise<void>`
+
+向已有会话发送消息并导航到聊天页面。返回 Promise：
+
+- 发送成功：resolve
+- 目标会话仍在生成中（`session_busy`）：reject，消息**不会**被发送，应提示用户稍后重试
+
+```javascript
+const rt = await spherse.getRuntime();
+try {
+  await spherse.sendMessage({ sessionId: rt.sessionId, message: "继续" });
+} catch (e) {
+  // 会话忙碌或发送失败
+}
+```
+
+## 请求型 Action — key-value 数据
+
+`data.*` 系列在 HTML 同级的 `.data.json` 文件中读写 key-value。
+
+### `spherse.data.get(params)` → `Promise<any>`
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | string | 是 | 数据文件路径（如 `world/game.data.json`） |
+| key | string | 是 | 要读取的 key |
+
+返回值：对应的 value（任意 JSON 类型），key 不存在时返回 `null`。
+
+```javascript
+const score = await spherse.data.get({ file: "world/game.data.json", key: "score" });
+```
+
+### `spherse.data.set(params)` → `Promise<any>`
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | string | 是 | 数据文件路径 |
+| key | string | 是 | key 名 |
+| value | any | 是 | 任意 JSON 可序列化值 |
+
+返回写入后的 value。文件不存在时自动创建。
+
+```javascript
+await spherse.data.set({ file: "world/game.data.json", key: "score", value: 100 });
+await spherse.data.set({ file: "world/game.data.json", key: "player", value: { name: "Alice", hp: 80 } });
+```
+
+### `spherse.data.delete(params)` → `Promise<true>`
+
+```javascript
+await spherse.data.delete({ file: "world/game.data.json", key: "score" });
+```
+
+### 数据文件命名规范
+
+- 文件名必须为 `{HTML文件名}.data.json`，放在 HTML 同级目录（`world/game.html` → `world/game.data.json`）
+- 顶层 JSON object，仅支持顶层 key 操作（不支持 `a.b.c` 嵌套路径）
+- value 支持任意 JSON 可序列化类型
+
+## 请求型 Action — 只读项目信息（HTTP bridge）
+
+`spherse.api.*` 提供对项目信息的只读查询，底层经 App 已认证的 HTTP client 转发。**只读**：需要写入或触发副作用时用上述专用 action。
+
+### 命名便捷方法
+
+```javascript
+// agents
+const agents = await spherse.api.agents.list();
+const agent = await spherse.api.agents.get("agent-id");
+
+// sessions
+const sessions = await spherse.api.sessions.list("agent-id");
+const msgs = await spherse.api.sessions.messages("agent-id", "session-id");
+const status = await spherse.api.sessions.status("agent-id", "session-id");
+
+// content
+const file = await spherse.api.content.get("notes/outline.md");
+
+// 杂项
+const tree = await spherse.api.fileTree();
+```
+
+### 通用入口
+
+```javascript
+const data = await spherse.api.call("agents.list");
+const data = await spherse.api.call("sessions.messages", { agentId: "a1", id: "s1" });
+```
+
+可用 op 白名单（未列出的 op 返回 reject，`error: "unknown_op"`）：
+
+`agents.list` · `agents.get` · `sessions.list` · `sessions.messages` · `sessions.status` · `content.get` · `fileTree`
+
+> 读取走 server 既有访问策略（如 `.spherse/` 目录会被拒绝）。非白名单 op 一律拒绝 —— 需要新 op 时扩展 App 的 `api.call` handler 白名单。
 
 ## 完整示例
 
@@ -289,144 +221,15 @@ window.parent.postMessage({
 </head>
 <body>
   <h1>我的世界观</h1>
-  <div class="card" onclick="openCharacters()">角色档案</div>
-  <div class="card" onclick="startWriting()">开始写作</div>
-
-  <script>
-    function openCharacters() {
-      window.parent.postMessage({
-        type: "spherse:action",
-        action: "openFile",
-        params: { path: "world/characters.md" }
-      }, "*");
-    }
-
-    function startWriting() {
-      window.parent.postMessage({
-        type: "spherse:action",
-        action: "createSession",
-        params: { agentId: "writer", message: "开始新的写作会话" }
-      }, "*");
-    }
-  </script>
+  <div class="card" onclick="spherse.openFile('world/characters.md')">角色档案</div>
+  <div class="card" onclick="spherse.createSession({ agentId: 'writer', message: '开始新的写作会话' })">开始写作</div>
 </body>
 </html>
 ```
 
-### 带 Agent 选择的内容页
+### 带数据持久化的游戏存档
 
-```html
-<!DOCTYPE html>
-<html>
-<body>
-  <h2>势力关系图</h2>
-  <p>北境王国与南方联盟之间维持着脆弱的和平。</p>
-  <button onclick="analyzeWith('historian')">历史分析</button>
-  <button onclick="analyzeWith('strategist')">战略推演</button>
-
-  <script>
-    function analyzeWith(agentId) {
-      window.parent.postMessage({
-        type: "spherse:action",
-        action: "createSession",
-        params: {
-          agentId: agentId,
-          message: "请分析北境王国与南方联盟的关系动态"
-        }
-      }, "*");
-    }
-  </script>
-</body>
-</html>
-```
-
-## Data Action — key-value 数据持久化
-
-Data action 支持在 HTML 内读写持久化的 key-value 数据。数据存储在与 HTML 文件同级的 `.data.json` 文件中。
-
-Data action 使用 request-response 模式，通过 `requestId` 匹配响应。
-
-### Promise Wrapper（推荐）
-
-将以下代码嵌入 HTML `<script>` 中即可使用 `await` 方式调用：
-
-```javascript
-function spherseCall(action, params) {
-  return new Promise((resolve, reject) => {
-    const requestId = "r" + Date.now() + Math.random().toString(36).slice(2);
-    const timeout = setTimeout(() => { cleanup(); reject(new Error("spherse timeout")); }, 10000);
-    const handler = (e) => {
-      if (e.data?.type === "spherse:response" && e.data.requestId === requestId) {
-        cleanup();
-        e.data.ok ? resolve(e.data.data) : reject(new Error(e.data.data?.error || "spherse data error"));
-      }
-    };
-    function cleanup() { clearTimeout(timeout); window.removeEventListener("message", handler); }
-    window.addEventListener("message", handler);
-    window.parent.postMessage({ type: "spherse:action", action, params, requestId }, "*");
-  });
-}
-```
-
-### data.get
-
-读取指定 key 的值。
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| file | string | 是 | 数据文件路径（项目内相对路径，如 `world/game.data.json`） |
-| key | string | 是 | 要读取的 key |
-
-返回值：对应的 value（任意 JSON 类型），key 不存在时返回 `null`。
-
-```javascript
-const score = await spherseCall("data.get", { file: "world/game.data.json", key: "score" });
-```
-
-### data.set
-
-写入 key-value，已存在的 key 覆盖。文件不存在时自动创建。
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| file | string | 是 | 数据文件路径 |
-| key | string | 是 | key 名 |
-| value | any | 是 | 任意 JSON 可序列化值 |
-
-返回值：写入后的 value。
-
-```javascript
-await spherseCall("data.set", { file: "world/game.data.json", key: "score", value: 100 });
-await spherseCall("data.set", { file: "world/game.data.json", key: "player", value: { name: "Alice", hp: 80 } });
-```
-
-### data.delete
-
-删除指定 key。key 不存在时也返回成功。
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| file | string | 是 | 数据文件路径 |
-| key | string | 是 | 要删除的 key |
-
-返回值：`true`。
-
-```javascript
-await spherseCall("data.delete", { file: "world/game.data.json", key: "score" });
-```
-
-### 数据文件命名规范
-
-- **文件名**：数据文件必须命名为 `{HTML文件名}.data.json`，放在 HTML 文件的同级目录
-  - `world/game.html` → `world/game.data.json`
-  - `welcome.html` → `welcome.data.json`
-- **文件格式**：顶层 JSON object：`{ "key1": value1, "key2": value2 }`
-- 仅支持顶层 key 操作，不支持嵌套路径（如 `a.b.c`）
-- 所有 value 支持任意 JSON 可序列化类型（number、string、boolean、null、object、array）
-
-### 完整示例
-
-假设 HTML 文件为 `world/game.html`，数据文件约定为 `world/game.data.json`。
+假设 HTML 为 `world/game.html`，数据文件为 `world/game.data.json`。
 
 ```html
 <!DOCTYPE html>
@@ -441,29 +244,13 @@ await spherseCall("data.delete", { file: "world/game.data.json", key: "score" })
   <script>
     const DATA_FILE = "world/game.data.json";
 
-    function spherseCall(action, params) {
-      return new Promise((resolve, reject) => {
-        const requestId = "r" + Date.now() + Math.random().toString(36).slice(2);
-        const timeout = setTimeout(() => { cleanup(); reject(new Error("spherse timeout")); }, 10000);
-        const handler = (e) => {
-          if (e.data?.type === "spherse:response" && e.data.requestId === requestId) {
-            cleanup();
-            e.data.ok ? resolve(e.data.data) : reject(new Error(e.data.data?.error || "spherse data error"));
-          }
-        };
-        function cleanup() { clearTimeout(timeout); window.removeEventListener("message", handler); }
-        window.addEventListener("message", handler);
-        window.parent.postMessage({ type: "spherse:action", action, params, requestId }, "*");
-      });
-    }
-
     async function loadScore() {
-      const score = await spherseCall("data.get", { file: DATA_FILE, key: "score" });
+      const score = await spherse.data.get({ file: DATA_FILE, key: "score" });
       document.getElementById("score").textContent = score ?? "无存档";
     }
 
     async function saveScore() {
-      await spherseCall("data.set", { file: DATA_FILE, key: "score", value: 42 });
+      await spherse.data.set({ file: DATA_FILE, key: "score", value: 42 });
       document.getElementById("score").textContent = "42（已保存）";
     }
   </script>
@@ -471,12 +258,18 @@ await spherseCall("data.delete", { file: "world/game.data.json", key: "score" })
 </html>
 ```
 
+### 查询 agent 列表渲染选择器
+
+```javascript
+const agents = await spherse.api.agents.list();
+const html = agents.map(a => `<option value="${a.id}">${a.slug}</option>`).join("");
+document.getElementById("agent-select").innerHTML = html;
+```
+
 ## 注意事项
 
-- **频率限制**：每分钟最多触发 10 次操作，超出会被静默丢弃。读取类 action（`data.get`）位于白名单内，不受频率限制，便于交互式页面频繁读取状态
-- **无需引入脚本**：使用浏览器原生 `postMessage`，零依赖
-- **适用场景**：欢迎页（Welcome Page）、Content Browser 预览、聊天 HtmlCard 中均可用
-- **单向触发**：导航类操作（createSession、openFile、openExternalLink）是单向的，iframe 无法获取执行结果。`sendMessage` 与 Data action（data.get/set/delete）例外，支持通过 `requestId` 获取返回值（`sendMessage` 在目标会话忙碌时返回 `{ ok: false, data: { error: "session_busy" } }`）
-- **仅限 UI 操作与数据存取**：导航类操作不支持文件读写、删除等。Data action 支持 key-value 数据存取，数据存储在 HTML 同级的 `.data.json` 文件中
+- **SDK 自动注入**：App 向每个 HTML 注入 `<script src="__spherse-sdk.js">`（同源加载，保留 iframe 真实 origin）。**不要**自己加载或复制 SDK 源码
+- **频率限制**：每分钟最多触发 10 次操作，超出会被静默丢弃。`data.get` 与 `api.call` 受同一限制，交互式页面避免高频轮询
+- **无 script-src 加载失败时**：若 HTML 自身设了限制性 CSP（如 `meta http-equiv="Content-Security-Policy"` 禁止同源 script），SDK 可能无法加载。应放宽 CSP 允许同源 script 加载，不要绕开 SDK 自行拼装 `postMessage`
 - **参数校验**：缺少必填参数或类型不匹配时操作会被静默忽略
-- **action 严格匹配**：action 名称区分大小写，未知 action 会被忽略
+- **action 严格匹配**：名称区分大小写
