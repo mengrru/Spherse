@@ -478,6 +478,8 @@ export const zhCN = {
   "agent-trigger.notificationMessagePlaceholder": "通知内容，最多 30 字",
   // 触发器完成后，用户开启通知但未填写自定义通知内容时显示的 toast 文案
   "agent-trigger.notificationDefault": "触发器已完成",
+  // 触发器完成通知 toast 上的「查看会话」按钮，点击后跳转到触发器产生的会话
+  "agent-trigger.openSession": "查看会话",
   // 触发器列表行上的手动执行按钮悬停提示
   "agent-trigger.triggerNow": "立即触发",
   // 触发器列表行上的手动执行按钮运行中状态提示

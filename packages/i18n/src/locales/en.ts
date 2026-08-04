@@ -235,6 +235,7 @@ export const en: Record<TranslationKey, string> = {
   "agent-trigger.notify": "Notify on Completion",
   "agent-trigger.notificationMessagePlaceholder": "Notification text, up to 30 characters",
   "agent-trigger.notificationDefault": "Trigger completed",
+  "agent-trigger.openSession": "View Session",
   "agent-trigger.triggerNow": "Trigger Now",
   "agent-trigger.runningNow": "Running",
   "agent-trigger.createTrigger": "Create Trigger",

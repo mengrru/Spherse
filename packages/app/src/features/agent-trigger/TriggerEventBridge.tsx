@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
@@ -13,6 +14,7 @@ import type { TriggerServerEvent } from "../../lib/types";
 export function TriggerEventBridge() {
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
+  const navigate = useNavigate();
   const { t } = useI18n();
   const triggerConfigEnabled = useFeature("agent-trigger");
   const agents = useProjectDataStore((s) => (projectId ? s.projects[projectId]?.agents ?? [] : []));
@@ -45,7 +47,7 @@ export function TriggerEventBridge() {
     };
   }, [triggerConfigEnabled, projectId, client, agents]);
 
-  const showTriggerNotification = async (agentId: string, triggerId: string) => {
+  const showTriggerNotification = async (agentId: string, triggerId: string, sessionId: string) => {
     if (!projectId || !client) return;
     const cachedTriggers =
       useTriggerStore.getState().byProject[projectId]?.triggersByAgent?.[agentId] ?? [];
@@ -55,7 +57,12 @@ export function TriggerEventBridge() {
       trigger = triggers.find((item) => item.id === triggerId);
     }
     if (!trigger?.notify) return;
-    toast.success(trigger.notificationMessage?.trim() || tRef.current("agent-trigger.notificationDefault"));
+    toast.success(trigger.notificationMessage?.trim() || tRef.current("agent-trigger.notificationDefault"), {
+      action: {
+        label: tRef.current("agent-trigger.openSession"),
+        onClick: () => navigate(`/project/${projectId}/chat/${sessionId}`),
+      },
+    });
   };
 
   useBusSubscription(projectId ?? "", "trigger", (type, payload) => {
@@ -63,7 +70,7 @@ export function TriggerEventBridge() {
     handleTriggerEvent(projectId, client, { type, ...(payload as object) } as TriggerServerEvent);
     if (type === "trigger_completed") {
       const p = payload as { agentId: string; triggerId: string; sessionId: string };
-      void showTriggerNotification(p.agentId, p.triggerId);
+      void showTriggerNotification(p.agentId, p.triggerId, p.sessionId);
       useStreamingStore.getState().refreshHistory(client, p.agentId, p.sessionId);
     }
   });

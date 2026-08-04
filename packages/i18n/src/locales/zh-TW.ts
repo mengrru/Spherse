@@ -235,6 +235,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "agent-trigger.notify": "完成後通知",
   "agent-trigger.notificationMessagePlaceholder": "通知內容，最多 30 字",
   "agent-trigger.notificationDefault": "觸發器已完成",
+  "agent-trigger.openSession": "查看會話",
   "agent-trigger.triggerNow": "立即觸發",
   "agent-trigger.runningNow": "執行中",
   "agent-trigger.createTrigger": "建立觸發器",
