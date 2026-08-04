@@ -3,7 +3,7 @@ import type { zhCN } from "./zh-CN";
 export const zhTW: Record<keyof typeof zhCN, string> = {
   "hero.title": "Spherse",
   "hero.subtitle": "本地運行、開箱即用的個人 Agent 執行環境",
-  "hero.tagline": "讓多個 Agent 圍繞你的資料協作，把檔案、自動化與互動頁面組合成可運行、可分享的 Workspace",
+  "hero.tagline": "在這裡搭建故事世界、創造角色、記錄生活，讓散落的想法慢慢長成一個會回應你、不斷生長的世界",
   "hero.downloadMac": "下載 macOS",
   "hero.downloadWin": "下載 Windows",
 

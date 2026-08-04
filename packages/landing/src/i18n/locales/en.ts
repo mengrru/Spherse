@@ -5,7 +5,7 @@ export const en: Record<keyof typeof zhCN, string> = {
   "hero.subtitle":
     "A local, ready-to-use personal agent runtime",
   "hero.tagline":
-    "Let multiple agents collaborate over your data, then combine files, automation, and interactive pages into a Workspace you can run and share",
+    "Build story worlds, create characters, and capture your life here—then watch scattered ideas slowly grow into a living world that responds to you",
   "hero.downloadMac": "Download for macOS",
   "hero.downloadWin": "Download for Windows",
 

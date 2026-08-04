@@ -2,8 +2,8 @@ export const zhCN = {
   "hero.title": "Spherse",
   // 首页 Hero 主定位，紧跟产品名说明 Spherse 的产品类别与使用门槛。
   "hero.subtitle": "本地运行、开箱即用的个人 Agent 运行时",
-  // 首页 Hero 价值说明，概括多 Agent、用户数据和可分发 Workspace 的核心关系。
-  "hero.tagline": "让多个 Agent 围绕你的数据协作，把文件、自动化与交互页面组合成可运行、可分享的 Workspace",
+  // 首页 Hero 价值说明，用具体使用场景直观表达多个 Agent 能为用户做什么。
+  "hero.tagline": "在这里搭建故事世界、创造角色、记录生活，让散落的想法慢慢长成一个会回应你、不断生长的世界",
   "hero.downloadMac": "下载 macOS",
   "hero.downloadWin": "下载 Windows",
 
