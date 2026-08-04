@@ -8,6 +8,14 @@ export interface ProjectConfig {
   welcomePage?: { path: string };
 }
 
+export interface TimePerceptionConfig {
+  enabled: boolean;
+  epochMs: number;
+  startMs: number;
+  flowRate: number;
+  timeZone?: string;
+}
+
 export interface AgentProfile {
   id: string;
   name: string;
@@ -22,6 +30,7 @@ export interface AgentProfile {
     naming: string;
     frontmatter?: Record<string, string>;
   };
+  timePerception?: TimePerceptionConfig;
   systemPrompt: string;
   filePath: string;
 }

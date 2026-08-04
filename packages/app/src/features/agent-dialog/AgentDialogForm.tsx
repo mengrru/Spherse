@@ -21,6 +21,7 @@ import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { ToolPicker } from "./ToolPicker";
 import { ContextPathField } from "./ContextPathField";
+import { TimePerceptionField } from "./TimePerceptionField";
 import { HintLabel } from "./HintLabel";
 import { PromptTemplatePicker, type PromptTemplate } from "./PromptTemplatePicker";
 import type { LoadedAgentData } from "./AgentDialog";
@@ -141,6 +142,10 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
               />
               <PromptTemplatePicker onSelect={handleSelectTemplate} />
             </Field>
+            <TimePerceptionField
+              value={formData.timePerception}
+              onChange={(tp) => setFormData((prev) => ({ ...prev, timePerception: tp }))}
+            />
             {error && <p className="text-xs text-destructive">{error}</p>}
           </FieldGroup>
         </TabsContent>

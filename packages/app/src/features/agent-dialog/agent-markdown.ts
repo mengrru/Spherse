@@ -1,4 +1,21 @@
 import yaml from "js-yaml";
+import type { TimePerceptionConfig } from "@spherse/core";
+
+export type TimePerceptionFormData = {
+  enabled: boolean;
+} & Partial<Omit<TimePerceptionConfig, "enabled">>;
+
+function parseTimePerception(raw: unknown): TimePerceptionFormData | undefined {
+  if (raw == null || typeof raw !== "object") return undefined;
+  const obj = raw as Record<string, unknown>;
+  return {
+    enabled: obj.enabled === true,
+    epochMs: typeof obj.epochMs === "number" ? obj.epochMs : undefined,
+    startMs: typeof obj.startMs === "number" ? obj.startMs : undefined,
+    flowRate: typeof obj.flowRate === "number" ? obj.flowRate : undefined,
+    timeZone: typeof obj.timeZone === "string" ? obj.timeZone : undefined,
+  };
+}
 
 export interface AgentFormData {
   name: string;
@@ -6,6 +23,7 @@ export interface AgentFormData {
   tools: string[];
   context: string[];
   systemPrompt: string;
+  timePerception?: TimePerceptionFormData;
 }
 
 export interface ParsedAgent {
@@ -32,7 +50,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
   const body = raw.slice(match[0].length).trim();
   const frontmatter = yaml.load(frontmatterRaw) as Record<string, unknown>;
 
-  const { name, alias, tools, context, ...extra } = frontmatter;
+  const { name, alias, tools, context, timePerception, ...extra } = frontmatter;
 
   return {
     formData: {
@@ -45,6 +63,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
         ? context.filter((c): c is string => typeof c === "string")
         : [],
       systemPrompt: body,
+      timePerception: parseTimePerception(timePerception),
     },
     extraFrontmatter: extra,
   };
@@ -65,6 +84,17 @@ export function buildAgentMarkdown(
   }
   if (formData.context.length > 0) {
     frontmatter.context = formData.context;
+  }
+  if (formData.timePerception?.enabled) {
+    frontmatter.timePerception = {
+      enabled: true,
+      epochMs: formData.timePerception.epochMs,
+      startMs: formData.timePerception.startMs,
+      flowRate: formData.timePerception.flowRate,
+      ...(formData.timePerception.timeZone
+        ? { timeZone: formData.timePerception.timeZone }
+        : {}),
+    };
   }
 
   const cleaned = Object.fromEntries(

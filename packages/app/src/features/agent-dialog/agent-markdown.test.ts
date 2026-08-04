@@ -93,6 +93,42 @@ describe("parseAgentMarkdown", () => {
     expect(result.formData.tools).toEqual(["read_file"]);
     expect(result.formData.name).toBe("Agent");
   });
+
+  it("returns undefined timePerception when field is missing", () => {
+    const raw = "---\nname: Agent\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.timePerception).toBeUndefined();
+  });
+
+  it("parses timePerception when present", () => {
+    const raw = [
+      "---",
+      "name: Agent",
+      "timePerception:",
+      "  enabled: true",
+      "  epochMs: 1700000000000",
+      "  startMs: 1600000000000",
+      "  flowRate: 60",
+      "  timeZone: Asia/Shanghai",
+      "---",
+      "",
+      "system prompt",
+    ].join("\n");
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.timePerception).toEqual({
+      enabled: true,
+      epochMs: 1700000000000,
+      startMs: 1600000000000,
+      flowRate: 60,
+      timeZone: "Asia/Shanghai",
+    });
+  });
+
+  it("does not leak timePerception into extra frontmatter", () => {
+    const raw = "---\nname: Agent\ntimePerception:\n  enabled: true\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.extraFrontmatter).not.toHaveProperty("timePerception");
+  });
 });
 
 describe("buildAgentMarkdown", () => {
@@ -164,5 +200,49 @@ describe("buildAgentMarkdown", () => {
     expect(parsed.formData.alias).toBe("小明");
     expect(parsed.extraFrontmatter).toEqual({ model: "gpt-4" });
     expect(parsed.extraFrontmatter).not.toHaveProperty("alias");
+  });
+
+  it("writes timePerception when enabled", () => {
+    const md = buildAgentMarkdown(
+      {
+        name: "Agent",
+        tools: [],
+        context: [],
+        systemPrompt: "hello",
+        timePerception: {
+          enabled: true,
+          epochMs: 1700000000000,
+          startMs: 1600000000000,
+          flowRate: 60,
+          timeZone: "Asia/Shanghai",
+        },
+      },
+      {},
+      false,
+    );
+    expect(md).toContain("timePerception");
+    const parsed = parseAgentMarkdown(md);
+    expect(parsed.formData.timePerception).toEqual({
+      enabled: true,
+      epochMs: 1700000000000,
+      startMs: 1600000000000,
+      flowRate: 60,
+      timeZone: "Asia/Shanghai",
+    });
+  });
+
+  it("omits timePerception when disabled", () => {
+    const md = buildAgentMarkdown(
+      {
+        name: "Agent",
+        tools: [],
+        context: [],
+        systemPrompt: "hello",
+        timePerception: { enabled: false, epochMs: 1700000000000 },
+      },
+      {},
+      false,
+    );
+    expect(md).not.toContain("timePerception");
   });
 });

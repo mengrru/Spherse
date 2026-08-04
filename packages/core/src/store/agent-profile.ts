@@ -2,8 +2,29 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
-import type { AgentProfile } from "../types.js";
+import type { AgentProfile, TimePerceptionConfig } from "../types.js";
 import { ValidationError } from "../errors.js";
+
+function parseTimePerception(raw: unknown): TimePerceptionConfig | undefined {
+  if (raw == null || typeof raw !== "object") return undefined;
+  const obj = raw as Record<string, unknown>;
+  const enabled = obj.enabled === true;
+  const epochMs = typeof obj.epochMs === "number" ? obj.epochMs : undefined;
+  const startMs = typeof obj.startMs === "number" ? obj.startMs : undefined;
+  const flowRate = typeof obj.flowRate === "number" ? obj.flowRate : undefined;
+
+  if (!enabled && epochMs === undefined && startMs === undefined && flowRate === undefined) {
+    return undefined;
+  }
+
+  return {
+    enabled,
+    epochMs: epochMs ?? Date.now(),
+    startMs: startMs ?? epochMs ?? Date.now(),
+    flowRate: flowRate ?? 1,
+    timeZone: typeof obj.timeZone === "string" ? obj.timeZone : undefined,
+  };
+}
 
 export class AgentProfileStore {
   private profilePath: string;
@@ -96,6 +117,7 @@ export class AgentProfileStore {
         tools: data.tools,
         context: data.context,
         output: data.output,
+        timePerception: parseTimePerception(data.timePerception),
         systemPrompt: content.trim(),
         filePath: this.profilePath,
       };

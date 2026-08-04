@@ -21,6 +21,10 @@ function renderBlock(block: ContextBlock): string {
       }
       lines.push(`agent-slug: ${block.meta.slug}`);
       lines.push(`session-id: ${block.meta.sessionId}`);
+      if (block.meta.timePerceptionEnabled) {
+        lines.push("time-perception: enabled");
+        lines.push("Do not output <time> tags in your replies; they are metadata for your awareness only.");
+      }
       return `<session-context>\n${lines.join("\n")}\n</session-context>`;
     }
     case "skill-catalog": {

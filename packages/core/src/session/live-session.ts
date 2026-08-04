@@ -1,7 +1,7 @@
 import { Agent } from "@earendil-works/pi-agent-core";
-import type { AgentEvent, AgentTool, AgentMessage } from "@earendil-works/pi-agent-core";
+import type { AgentEvent, AgentTool, AgentMessage, StreamFn } from "@earendil-works/pi-agent-core";
 import type { Message, Model, Api } from "@earendil-works/pi-ai";
-import type { AgentProfile, SamplingParams } from "../types.js";
+import type { AgentProfile, SamplingParams, TimePerceptionConfig } from "../types.js";
 import { resolveModelById, getChatStreamFn } from "../model-providers/index.js";
 import { createToolsForProject, ToolContext } from "../tools/index.js";
 import type { ApprovalGate } from "../tools/with-approval.js";
@@ -24,6 +24,7 @@ import { planCompaction, wrapDigestContent } from "../context/compaction.js";
 import type { SessionContext, TurnContextSnapshot, SessionControlEvent } from "./types.js";
 import { SessionControlBus } from "./control-bus.js";
 import { createApprovalGate } from "./approval-gate.js";
+import { isActiveTimePerception, wrapWithTimePerception } from "../context/time-perception.js";
 import {
   resolveEffectiveModelId,
   extractLastUsageTotalTokens,
@@ -55,6 +56,16 @@ function dedupeToolNames(
     result.push({ ...tool, name: candidate });
   }
   return result;
+}
+
+function composeStreamFn(
+  sampling: SamplingParams | undefined,
+  timePerception: TimePerceptionConfig | undefined,
+): StreamFn {
+  const base = getChatStreamFn(sampling);
+  return isActiveTimePerception(timePerception)
+    ? wrapWithTimePerception(base, timePerception)
+    : base;
 }
 
 export class LiveSession {
@@ -232,7 +243,8 @@ export class LiveSession {
   }
 
   applySampling(sampling: SamplingParams | undefined): void {
-    this.agent.streamFn = getChatStreamFn(sampling);
+    const profile = this.ctx.projectStore.getAgent(this.agentId)?.getProfile();
+    this.agent.streamFn = composeStreamFn(sampling, profile?.timePerception);
   }
 
   private async maybeCompact(): Promise<void> {
@@ -331,6 +343,7 @@ export class LiveSession {
         alias: profile.alias,
         slug: profile.slug,
         sessionId,
+        timePerceptionEnabled: isActiveTimePerception(profile.timePerception),
       }),
     );
 
@@ -358,6 +371,8 @@ export class LiveSession {
       }
     }
 
+    const streamFn = composeStreamFn(ctx.sampling, profile.timePerception);
+
     return new Agent({
       initialState: {
         systemPrompt,
@@ -366,7 +381,7 @@ export class LiveSession {
         tools,
       },
       sessionId,
-      streamFn: getChatStreamFn(ctx.sampling),
+      streamFn,
     });
   }
 }

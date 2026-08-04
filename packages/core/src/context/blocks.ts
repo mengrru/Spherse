@@ -15,6 +15,7 @@ export interface SessionMeta {
   alias?: string;
   slug: string;
   sessionId: string;
+  timePerceptionEnabled?: boolean;
 }
 
 export type ContextBlock =

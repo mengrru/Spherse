@@ -1,5 +1,13 @@
 import { Type, type Static } from "@sinclair/typebox";
 
+const timePerceptionConfig = Type.Object({
+  enabled: Type.Boolean(),
+  epochMs: Type.Number(),
+  startMs: Type.Number(),
+  flowRate: Type.Number(),
+  timeZone: Type.Optional(Type.String()),
+});
+
 const agentProfile = Type.Object({
   id: Type.String(),
   name: Type.String(),
@@ -17,6 +25,7 @@ const agentProfile = Type.Object({
       frontmatter: Type.Optional(Type.Record(Type.String(), Type.String())),
     }),
   ),
+  timePerception: Type.Optional(timePerceptionConfig),
   systemPrompt: Type.String(),
   filePath: Type.String(),
 });

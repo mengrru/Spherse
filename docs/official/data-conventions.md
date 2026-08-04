@@ -73,6 +73,7 @@ Agent 的 MCP 连接器配置存放于同目录的 `mcp.json`（可选文件）�
 - `tools`：允许使用的 tool 名称列表；缺省时不分配任何工具（空列表）
 - `context`：项目根目录内相对路径列表，SessionRuntime 构建 system prompt 时预读取并注入
 - `output`：预留的输出路径、命名和 frontmatter 配置
+- `timePerception`：时间感知配置（per-agent），启用后 Agent 在对话中看到的时间线可与真实世界不同步。含 `enabled`（布尔）、`epochMs`（锚定真实时刻）、`startMs`（感知时间起点）、`flowRate`（感知/真实时间比率，1 = 正常速度）、`timeZone`（可选 IANA 时区名）。感知时间由纯函数 `perceivedMs = startMs + (realMs - epochMs) × flowRate` 从每条消息的真实时间戳推导，通过模块级函数 `composeStreamFn` 在 streamFn 边界对每条 user 消息注入 `<time>感知时间</time>` XML 标签（不持久化），system prompt 的 `<session-context>` 标记是否启用并指示 Agent 不要在回复中输出 `<time>` 标签。
 
 示例：
 
@@ -134,7 +135,7 @@ Agent system prompt content...
 |---|---|
 | `<project-instructions>` | AGENTS.md 内容 |
 | `<agent-profile>` | agent profile 主体 |
-| `<session-context>` | 当前会话上下文（agent name/alias/slug, session id，key-value 格式） |
+| `<session-context>` | 当前会话上下文（agent name/alias/slug, session id，key-value 格式；时间感知启用时含 `time-perception: enabled` 标记） |
 | `<skill-catalog>` | 可用技能目录（仅 name+description） |
 | `<skill-item name="…" description="…"/>` | 单个技能条目（自闭合，嵌套在 skill-catalog 内） |
 | `<preloaded-context>` | 预载文件区 |

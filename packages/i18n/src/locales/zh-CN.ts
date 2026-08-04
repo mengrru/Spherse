@@ -350,6 +350,30 @@ export const zhCN = {
   "agent-dialog.themeScopeHint": "仅作用于该智能体的聊天窗口（气泡、输入框、Markdown 等）。",
   // Agent dialog 主题 tab：textarea 占位提示，引导用户与智能体对话来生成主题
   "agent-dialog.themePlaceholder": "与智能体对话来生成主题，或将主题 CSS 粘贴到这里",
+  // 时间感知配置区块标签
+  "agent-dialog.timePerceptionLabel": "时间感知",
+  // 锚定真实时刻字段标签
+  "agent-dialog.epochLabel": "锚定时刻",
+  // 锚定时刻 tooltip：真实世界的参照时刻，从这一刻起计算感知时间
+  "agent-dialog.epochHint": "真实世界的参照时刻。从此刻起，感知时间开始计算，默认自动设为开启时的当前时刻。",
+  // 感知时间起点字段标签
+  "agent-dialog.startLabel": "感知起点",
+  // 感知起点 tooltip：锚定时刻对应的虚拟时间——Agent 感知到的初始时刻
+  "agent-dialog.startHint": "锚定时刻对应的虚拟时间——即 Agent 感知到的初始时刻。两者共同定义「真实→虚拟」的时间映射。",
+  // 时间流速字段标签
+  "agent-dialog.flowRateLabel": "时间流速",
+  // 时间流速 tooltip：感知时间与真实时间的比率
+  "agent-dialog.flowRateHint": "感知时间 ÷ 真实时间。1 = 正常速度，60 = 加速 60 倍，0 = 冻结。",
+  // 时区字段标签
+  "agent-dialog.timeZoneLabel": "时区",
+  // 时区下拉选项：系统时区
+  "agent-dialog.timeZoneSystem": "系统时区",
+  // 时区 tooltip
+  "agent-dialog.timeZoneHint": "选择感知时间的时区，默认使用系统时区。",
+  // 时间感知预览文案前缀
+  "agent-dialog.timePerceptionPreview": "当前感知时间",
+  // 时间感知举例说明
+  "agent-dialog.timePerceptionExample": "举例：锚定 = 现在，感知起点 = 2024-01-01，流速 = 60 → 真实过去 1 分钟，感知时间前进 1 小时。",
 
   // --- Agent Session List ---
   // 新建对话按钮文案
