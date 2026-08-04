@@ -80,7 +80,7 @@ spherse/
 │   │   │   │   └── SKILL.md
 │   │   │   ├── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
 │   │   │   │   └── SKILL.md
-│   │   │   ├── use-ui-sdk/             # window.spherse 注入 SDK 使用指南（触发型 action、data CRUD、api 只读 HTTP bridge、运行时上下文）
+│   │   │   ├── use-ui-sdk/             # window.spherse 注入 SDK 使用指南（action、data CRUD、api 只读 bridge、文件变化事件、运行时上下文）
 │   │   │   │   └── SKILL.md
 │   │   │   ├── write-html/             # HTML 页面数据读写与 App 能力调用指南（charset、数据外置、window.spherse 调用）
 │   │   │   │   └── SKILL.md
@@ -122,16 +122,18 @@ spherse/
 │   │       ├── inject-head-script.ts # injectHeadScript() — 幂等 HTML <head> 注入（renderer 与 server 共享）
 │   │       ├── index.ts              # node-facing 公开导出（meta 常量 + injectHeadScript，零依赖，browser-safe）
 │   │       ├── runtime/              # 浏览器运行时（可读 TS，由 esbuild 打包为 IIFE）
-│   │       │   ├── index.ts          # 入口：幂等守护（window.__SPHERSE_SDK__）+ 组装 window.spherse（call/fire/getRuntime + actions/data/api）
+│   │       │   ├── index.ts          # 入口：幂等守护（window.__SPHERSE_SDK__）+ 组装 window.spherse（call/fire/getRuntime + actions/data/api/events）
 │   │       │   ├── messaging.ts      # call/fire + spherse:response 监听（requestId 匹配，10s 超时）
 │   │       │   ├── context.ts        # 运行时上下文种子化（window.__SPHERSE__ 同步 / spherse:runtime 异步）
 │   │       │   ├── actions.ts        # 触发型便捷方法（openFile/createSession/float* 等）
 │   │       │   ├── data.ts           # data.get/set/delete 键值存储
-│   │       │   └── api.ts            # api.* 只读 HTTP bridge（api.call + agents/sessions/content/... 子命名空间）
+│   │       │   ├── api.ts            # api.* 只读 HTTP bridge（api.call + agents/sessions/content/... 子命名空间）
+│   │       │   └── events.ts         # events.on 订阅 API + spherse:event 消息分发与 pagehide 清理
 │   │       └── __tests__/
 │   │           ├── inject-head-script.test.ts # injectHeadScript + 打包产物（SDK_SOURCE）断言
 │   │           ├── messaging.test.ts          # postAction/fire/call（resolve/reject/超时/并发 requestId 匹配）
-│   │           └── context.test.ts            # 运行时种子化（window.__SPHERSE__ 同步 + spherse:runtime 异步 + waiter 队列）
+│   │           ├── context.test.ts            # 运行时种子化（window.__SPHERSE__ 同步 + spherse:runtime 异步 + waiter 队列）
+│   │           └── events.test.ts             # 文件事件订阅、定向分发与幂等取消
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
     │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry
@@ -199,17 +201,24 @@ spherse/
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │   │       ├── layouts/
-│   │       │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet，承载项目级生命周期 effect（主题/postMessage 桥/trigger WS/数据刷新/各 agent trigger 启用态预加载）
+│   │       │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet 与自治基础设施 bridge，承载项目级生命周期
 │   │       ├── hooks/
 │   │       │   ├── useSidePanel.ts       # side panel pinned/hover/mobileOpen 状态合并派生 + clickAway props
 │   │       │   ├── useCustomTheme.ts
 │   │       │   ├── useDismissable.ts
 │   │       │   └── use-mobile.ts
+│   │       ├── ui-sdk/
+│   │       │   ├── UiSdkBridge.tsx       # 自治集成组件：从 ProjectContext 派生 client，统一挂载 action/event bridge
 │   │       │   ├── types.ts              # ActionContext, ActionHandler 类型
 │   │       │   ├── registry.ts           # registerAction / dispatchAction
 │   │       │   ├── rate-limit.ts         # 外部调用频率限制（含白名单豁免）
 │   │       │   ├── respond.ts            # request-response 回复工具（requestId → spherse:response postMessage）
 │   │       │   ├── use-spherse-message-listener.ts # postMessage → dispatchAction 桥梁
+│   │       │   ├── event/
+│   │       │   │   ├── use-event-bridge.ts      # event control listener + fs-watch 路由
+│   │       │   │   ├── subscription-registry.ts # iframe 订阅、过滤与定向投递
+│   │       │   │   ├── types.ts                 # subscribe/unsubscribe/push 协议类型
+│   │       │   │   └── file-update.ts           # 文件路径规范化、payload 校验与 300ms 去抖
 │   │       │   ├── index.ts              # barrel export + handler side-effect import
 │   │       │   └── handlers/
 │   │       │       ├── create-session.ts # 创建会话并导航，支持 float 参数直达浮窗（web 端降级为跳转 chat page）

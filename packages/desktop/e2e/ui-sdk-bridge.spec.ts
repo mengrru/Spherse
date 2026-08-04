@@ -31,11 +31,12 @@ const BRIDGE_HTML = [
   '<button id="btn-agents">List agents</button>',
   '<button id="btn-filetree">File tree</button>',
   '<button id="btn-unknown">Unknown op</button>',
+  '<button id="btn-watch">Watch file</button>',
   "<script>",
   "function show(text){document.getElementById('status').textContent=text;}",
   "document.getElementById('btn-surface').onclick=function(){",
   "  var s=window.spherse;",
-  "  show([typeof s, typeof s.call, typeof s.fire, typeof s.getRuntime, typeof s.data, typeof s.api, typeof s.openFile].join(','));",
+  "  show([typeof s, typeof s.call, typeof s.fire, typeof s.getRuntime, typeof s.data, typeof s.api, typeof s.events, typeof s.openFile].join(','));",
   "};",
   "document.getElementById('btn-open').onclick=function(){window.spherse.openFile('world/target-file.md');};",
   "document.getElementById('btn-data-set').onclick=async function(){",
@@ -58,6 +59,11 @@ const BRIDGE_HTML = [
   "  try{await window.spherse.api.call('nonexistent_op');show('unknown:resolved');}",
   "  catch(e){show('unknown:rejected:'+e.message);}",
   "};",
+  "document.getElementById('btn-watch').onclick=function(){",
+  "  window.spherse.events.on('file:update',{path:'./sdk-watch.json'},function(e){show('event:'+e.path);});",
+  "  show('watching');",
+  "};",
+  "document.body.dataset.bridgeReady='true';",
   "</script></body></html>",
 ].join("\n");
 
@@ -93,9 +99,11 @@ async function createBridgeProject() {
     path.join(root, "world", "target-file.md"),
     "# Target File\n",
   );
-  await writeFile(path.join(root, "sdk-bridge.html"), BRIDGE_HTML);
+  await mkdir(path.join(root, "pages"), { recursive: true });
+  await writeFile(path.join(root, "pages", "sdk-bridge.html"), BRIDGE_HTML);
+  await writeFile(path.join(root, "pages", "sdk-watch.json"), "{}\n");
 
-  return { root, bridgeHtmlPath: "sdk-bridge.html", projectId };
+  return { root, bridgeHtmlPath: "pages/sdk-bridge.html", projectId };
 }
 
 async function launchApp(project: { root: string; projectId: string }): Promise<{
@@ -131,6 +139,7 @@ async function openBridge(page: Page, project: { projectId: string; bridgeHtmlPa
   );
   const frame = page.frameLocator("iframe");
   await expect(frame.locator("#btn-surface")).toBeVisible({ timeout: 30_000 });
+  await expect(frame.locator("body")).toHaveAttribute("data-bridge-ready", "true");
   return frame;
 }
 
@@ -141,9 +150,8 @@ test("window.spherse is injected with the documented surface", async () => {
   try {
     const frame = await openBridge(page, project);
     await frame.locator("#btn-surface").click();
-    // object, function (call), function (fire), function (getRuntime), object (data), object (api), function (openFile)
     await expect(frame.locator("#status")).toHaveText(
-      "object,function,function,function,object,object,function",
+      "object,function,function,function,object,object,object,function",
       { timeout: 10_000 },
     );
   } finally {
@@ -225,6 +233,26 @@ test("spherse.api.call() rejects when the op is not allowlisted", async () => {
     await expect(frame.locator("#status")).toHaveText("unknown:rejected:unknown_op", {
       timeout: 10_000,
     });
+  } finally {
+    await app.close();
+  }
+});
+
+test("spherse.events.on() receives filtered file:update events", async () => {
+  const project = await createBridgeProject();
+  const { app, page } = await launchApp(project);
+
+  try {
+    const frame = await openBridge(page, project);
+    await frame.locator("#btn-watch").click();
+    await expect(frame.locator("#status")).toHaveText("watching");
+
+    await writeFile(path.join(project.root, "pages", "sdk-watch.json"), '{"updated":true}\n');
+
+    await expect(frame.locator("#status")).toHaveText(
+      "event:pages/sdk-watch.json",
+      { timeout: 10_000 },
+    );
   } finally {
     await app.close();
   }

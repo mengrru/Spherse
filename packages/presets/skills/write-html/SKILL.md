@@ -90,13 +90,19 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
   <ul id="list"></ul>
   <script>
     // 相对路径基于 HTML 自身 URL 解析，指向同目录的 atlas.data.json
-    fetch("./atlas.data.json")
-      .then((r) => r.json())
-      .then((data) => {
-        document.getElementById("list").innerHTML = data.regions
-          .map((r) => `<li>${r.name}（${r.climate}）</li>`)
-          .join("");
-      });
+    async function render() {
+      const data = await fetch("./atlas.data.json").then((r) => r.json());
+      document.getElementById("list").innerHTML = data.regions
+        .map((r) => `<li>${r.name}（${r.climate}）</li>`)
+        .join("");
+    }
+
+    spherse.events.on(
+      "file:update",
+      { path: "./atlas.data.json" },
+      render,
+    );
+    render();
   </script>
 </body>
 </html>
@@ -104,6 +110,7 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 
 > - **字符串模式**下 `fetch` 相对路径会解析到 `about:srcdoc` 而失败。此时把数据直接内联进 HTML（如 `<script>` 中的 JS 对象），或改用 ui-sdk 的 data action（见下文）。
 > - preview 路由支持 `json`、`css`、`js`、图片、字体等常见静态资源类型，同目录的 CSS / JS / 图片同样可用相对路径引用。
+> - 需要在 JSON 被外部工具或 agent 修改后自动刷新页面时，用 `spherse.events.on("file:update", { path: "./atlas.data.json" }, handler)` 订阅。`./` / `../` 路径与 `fetch` 一样基于当前 HTML 的 base 解析；也可以传项目根目录相对路径。完整说明见 `use-ui-sdk` skill。
 
 ## 持久化读写：使用 ui-sdk data action
 
@@ -213,6 +220,7 @@ spherse.openExternalLink("https://example.com");
 - `spherse.openExternalLink(url)` — 在系统默认浏览器打开外部链接（http/https/mailto/tel）
 - `spherse.data.get/set/delete(params)` → `Promise` — key-value 数据读写
 - `spherse.api.*` — 只读查询项目信息（agents / sessions / content / triggers / settings）
+- `spherse.events.on("file:update", filter, handler)` — 订阅指定项目文件的变化信号
 
 `spherse` 全局对象由 App 自动注入到每个 HTML，无需自己写 `<script>` 加载或内联 wrapper。
 

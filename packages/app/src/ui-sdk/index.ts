@@ -11,4 +11,4 @@ import "./handlers/unfloat-content";
 import "./handlers/unfloat-session";
 
 export { dispatchAction } from "./registry";
-export { useSpherseMessageListener } from "./use-spherse-message-listener";
+export { UiSdkBridge } from "./UiSdkBridge";

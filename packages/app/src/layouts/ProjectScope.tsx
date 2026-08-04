@@ -10,7 +10,7 @@ import { FeatureGate } from "../components/FeatureGate";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useAgentBusRefresh } from "../hooks/useAgentBusRefresh";
 import { useSidePanel } from "../hooks/use-side-panel";
-import { useSpherseMessageListener } from "../ui-sdk";
+import { UiSdkBridge } from "../ui-sdk";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useAppStore } from "../stores/app-store";
 import { useProjectNavHistory } from "../lib/use-project-navigation";
@@ -45,7 +45,6 @@ export function ProjectScope() {
     connection.accessToken,
   );
   useProjectNavHistory(projectId ?? "");
-  useSpherseMessageListener(projectId ?? "", client);
   useAgentBusRefresh(projectId, client);
 
   useEffect(() => {
@@ -96,6 +95,7 @@ export function ProjectScope() {
         <FeatureGate feature="browser">
           <BrowserManager />
         </FeatureGate>
+        <UiSdkBridge />
         <TriggerEventBridge />
       </div>
     </ProjectProvider>

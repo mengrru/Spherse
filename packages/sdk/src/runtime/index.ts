@@ -9,6 +9,7 @@ import {
 import { actions } from "./actions.js";
 import { data } from "./data.js";
 import { api } from "./api.js";
+import { events, installEventListener } from "./events.js";
 
 declare global {
   interface Window {
@@ -31,6 +32,7 @@ if (!window.__SPHERSE_SDK__) {
 
   installResponseListener();
   installRuntimeListener();
+  installEventListener();
   seedFromInjectedGlobal();
 
   const spherse = {
@@ -44,6 +46,7 @@ if (!window.__SPHERSE_SDK__) {
     ...actions,
     data,
     api,
+    events,
   };
 
   window.spherse = spherse;

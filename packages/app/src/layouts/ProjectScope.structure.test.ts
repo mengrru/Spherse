@@ -10,7 +10,10 @@ describe("ProjectScope structure", () => {
     const source = readFileSync(join(currentDir, "ProjectScope.tsx"), "utf8");
 
     expect(source).not.toContain("useState");
+    expect(source).not.toContain("useSpherseMessageListener");
+    expect(source).not.toContain("useEventBridge");
     expect(source).toContain("useSidePanel");
+    expect(source).toContain("<UiSdkBridge />");
     expect(source).toContain("Outlet");
   });
 });

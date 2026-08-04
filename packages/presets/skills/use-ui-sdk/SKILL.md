@@ -1,6 +1,6 @@
 ---
 name: use-ui-sdk
-description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话、打开文件、读写数据、只读查询项目信息）
+description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话、打开文件、读写数据、订阅文件变化、只读查询项目信息）
 ---
 
 # UI SDK — `window.spherse`
@@ -24,7 +24,7 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 
 ## API 总览
 
-`window.spherse` 提供三类方法：
+`window.spherse` 提供以下能力：
 
 | 类别 | 方法 | 说明 |
 |------|------|------|
@@ -32,6 +32,7 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 | 请求型（Promise） | `sendMessage(params)` → `Promise` | 等待发送结果 |
 | 请求型（Promise） | `data.get` / `data.set` / `data.delete` | key-value 持久化 |
 | 请求型（Promise） | `api.call(op, args)` 及 `api.*` 命名方法 | 只读查询项目信息（agents / sessions / content / triggers / settings） |
+| 事件型 | `events.on("file:update", filter, handler)` | 订阅指定项目文件的变化信号 |
 | 运行时 | `spherse.runtime`（同步读）/ `spherse.getRuntime()`（Promise） | 获取当前会话上下文（仅 HtmlCard 有值） |
 
 所有请求型方法都返回 Promise，内部已处理 `requestId` 匹配与 10 秒超时，失败时 reject。
@@ -169,6 +170,46 @@ await spherse.data.delete({ file: "world/game.data.json", key: "score" });
 - 顶层 JSON object，仅支持顶层 key 操作（不支持 `a.b.c` 嵌套路径）
 - value 支持任意 JSON 可序列化类型
 
+## 事件订阅 — 文件变化
+
+### `spherse.events.on("file:update", filter, handler)` → `unsubscribe`
+
+订阅指定项目文件的变化信号。`filter.path` 支持两种写法：
+
+- `./data.json`、`../shared/data.json`：基于当前 HTML 的 `document.baseURI` 解析，SDK 自动转换为项目相对路径，适合与 `fetch("./data.json")` 共用路径。
+- `world/data.json`：直接作为项目根目录相对路径。
+
+App 只发送变化信号，不发送文件内容。收到信号后由页面重新 `fetch` 或调用其它 SDK 读取方法。绝对 URL、越过 preview 项目根目录的相对路径会被拒绝。
+
+```javascript
+async function render() {
+  const data = await fetch("./atlas.data.json").then((response) => response.json());
+  // 使用 data 更新页面
+}
+
+const unsubscribe = spherse.events.on(
+  "file:update",
+  { path: "./atlas.data.json" },
+  render,
+);
+
+render();
+```
+
+返回的 `unsubscribe()` 可重复调用且只会取消一次。页面卸载时 SDK 也会自动清理订阅。
+
+handler 收到的事件结构：
+
+```javascript
+{
+  path: "world/atlas.data.json"
+}
+```
+
+handler 中的 `path` 始终是归一化后的项目根目录相对路径，即使订阅时传入的是 `./atlas.data.json`。
+
+`file:update` 的语义是“该文件可能已经变化”。handler 应重新读取目标文件并处理读取失败；短时间内同一路径的连续变化会被合并。操作系统底层的文件事件类型不会暴露给用户 HTML，因为它无法可靠区分创建、删除和编辑器的原子替换。
+
 ## 请求型 Action — 只读项目信息（HTTP bridge）
 
 `spherse.api.*` 提供对项目信息的只读查询，底层经 App 已认证的 HTTP client 转发。**只读**：需要写入或触发副作用时用上述专用 action。
@@ -270,6 +311,7 @@ document.getElementById("agent-select").innerHTML = html;
 
 - **SDK 自动注入**：App 向每个 HTML 注入 `<script src="__spherse-sdk.js">`（同源加载，保留 iframe 真实 origin）。**不要**自己加载或复制 SDK 源码
 - **频率限制**：每分钟最多触发 10 次操作，超出会被静默丢弃。`data.get` 与 `api.call` 受同一限制，交互式页面避免高频轮询
+- **事件订阅限制**：每个 HTML 最多同时订阅 100 个事件；订阅控制消息不计入 action 频率限制
 - **无 script-src 加载失败时**：若 HTML 自身设了限制性 CSP（如 `meta http-equiv="Content-Security-Policy"` 禁止同源 script），SDK 可能无法加载。应放宽 CSP 允许同源 script 加载，不要绕开 SDK 自行拼装 `postMessage`
 - **参数校验**：缺少必填参数或类型不匹配时操作会被静默忽略
 - **action 严格匹配**：名称区分大小写
