@@ -7,11 +7,13 @@ import {
   parseChatServerEvent,
 } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "./registry.js";
+import { ChatSessionHub } from "./chat-session-hub.js";
 
 export function handleChatWebSocket(
   fastify: FastifyInstance,
   registry: ProjectRegistry,
 ) {
+  const hub = new ChatSessionHub(fastify.log);
   fastify.get<{ Params: { projectId: string; agentId: string; sessionId: string } }>(
     "/ws/projects/:projectId/chat/:agentId/:sessionId",
     { websocket: true },
@@ -22,16 +24,34 @@ export function handleChatWebSocket(
         return;
       }
       const { agentId, sessionId } = req.params;
+      let closed = false;
+      const send = (event: unknown): void => {
+        if (closed) return;
+        try {
+          socket.send(JSON.stringify(parseChatServerEvent(event)));
+        } catch (err) {
+          fastify.log.debug({ err, sessionId }, "chat ws send skipped");
+        }
+      };
       fastify.log.info({ sessionId, agentId }, "chat ws connected");
 
-      ctx.sessionRuntime.restoreSession(agentId, sessionId).catch((err) => {
-        const message = err instanceof Error ? err.message : "request failed";
-        const code = err instanceof NotFoundError
-          ? CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE
-          : 1000;
-        socket.send(JSON.stringify(parseChatServerEvent({ type: "error", message })));
-        socket.close(code, message);
-      });
+      const attachment = hub.attach(
+        req.params.projectId,
+        ctx.sessionRuntime,
+        agentId,
+        sessionId,
+        send,
+      );
+      const ready = attachment.ready
+        .catch((err) => {
+          const message = err instanceof Error ? err.message : "request failed";
+          const code = err instanceof NotFoundError
+            ? CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE
+            : 1000;
+          send({ type: "error", message });
+          socket.close(code, message);
+          return false;
+        });
 
       socket.on("message", async (raw: Buffer) => {
         let msg: ReturnType<typeof parseChatClientMessage>;
@@ -39,42 +59,42 @@ export function handleChatWebSocket(
           msg = parseChatClientMessage(JSON.parse(raw.toString()));
         } catch (err) {
           fastify.log.warn({ err, sessionId }, "invalid chat ws message");
-          socket.send(
-            JSON.stringify({
-              type: "error",
-              message: "Invalid WebSocket message",
-            }),
-          );
+          send({ type: "error", message: "Invalid WebSocket message" });
+          return;
+        }
+
+        if (msg.type === "ping") {
+          send({ type: "pong" });
           return;
         }
 
         if (msg.type === "message") {
           try {
-            await ctx.sessionRuntime.sendMessage(sessionId, msg.content, (event) => {
-              socket.send(JSON.stringify(parseChatServerEvent(event)));
-            });
+            await attachment.sendMessage(msg.content);
           } catch (err) {
+            if (closed) return;
             fastify.log.error({ err, sessionId }, "chat ws message error");
             const message = err instanceof Error ? err.message : "chat error";
             const code = err instanceof ModelNotConfiguredError
               ? ErrorEventCode.ModelNotConfigured
               : ErrorEventCode.Unknown;
-            socket.send(JSON.stringify(parseChatServerEvent({ type: "error", message, code })));
+            send({ type: "error", message, code });
           }
         } else if (msg.type === "abort") {
-          ctx.sessionRuntime.abortSession(sessionId);
+          if (!(await ready) || closed) return;
+          attachment.abort();
         } else if (msg.type === "resolve_control_request") {
-          ctx.sessionRuntime.resolveControlRequest(sessionId, msg.requestId, {
+          if (!(await ready) || closed) return;
+          attachment.resolveControlRequest(msg.requestId, {
             approved: msg.approved,
             reason: msg.reason,
           });
-        } else if (msg.type === "ping") {
-          socket.send(JSON.stringify(parseChatServerEvent({ type: "pong" })));
         }
       });
 
       socket.on("close", () => {
-        ctx.sessionRuntime.destroySession(sessionId);
+        closed = true;
+        attachment.close();
         fastify.log.info({ sessionId }, "chat ws disconnected");
       });
     },

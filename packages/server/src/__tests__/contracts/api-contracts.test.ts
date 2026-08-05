@@ -42,6 +42,10 @@ describe("api contracts", () => {
       type: "agent_end",
       messages: [],
     });
+    expect(parseChatServerEvent({ type: "run_status", active: true })).toEqual({
+      type: "run_status",
+      active: true,
+    });
     expect(parseChatServerEvent({ type: "error", message: "boom" })).toEqual({
       type: "error",
       message: "boom",

@@ -150,11 +150,11 @@ export class LiveSession {
     this.controlBus.setEventSink(onEvent);
     const unsubscribe = this.agent.subscribe((event) => {
       logAgentEvent(sessionLogger, event);
-      onEvent(event);
       if (event.type === "message_end") {
         const msgId = agentStore?.sessions.appendMessage(this.sessionId, event.message);
         if (msgId !== undefined) this.liveMessageDbIds.push(msgId);
       }
+      onEvent(event);
     });
 
     try {

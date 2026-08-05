@@ -6,7 +6,7 @@ import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useFeature } from "../../lib/use-feature";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { useStreamingStore } from "../chat/streaming-store";
+import { useStreamingStore } from "../chat/runtime/streaming-store";
 import { useTriggerStore } from "./store";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import type { TriggerServerEvent } from "../../lib/types";

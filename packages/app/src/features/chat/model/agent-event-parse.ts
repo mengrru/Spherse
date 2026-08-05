@@ -10,53 +10,9 @@ import type {
   ToolResultMessage,
   UserMessage,
 } from "@spherse/core";
-import type { ChatServerEvent, ErrorEventCode } from "@spherse/server/contracts";
+import type { ChatServerEvent } from "@spherse/server/contracts";
 
-export type AgentEvent =
-  | { type: "agent_start" }
-  | { type: "agent_end"; messages: AgentMessage[] }
-  | { type: "turn_start" }
-  | { type: "turn_end"; message: AgentMessage; toolResults: ToolResultMessage[] }
-  | { type: "message_start"; message: AgentMessage }
-  | { type: "message_update"; message: AgentMessage }
-  | { type: "message_end"; message: AgentMessage }
-  | {
-      type: "tool_execution_start";
-      toolCallId: string;
-      toolName: string;
-      args: Record<string, unknown>;
-    }
-  | {
-      type: "tool_execution_update";
-      toolCallId: string;
-      toolName: string;
-      args: Record<string, unknown>;
-      partialResult: unknown;
-    }
-  | {
-      type: "tool_execution_end";
-      toolCallId: string;
-      toolName: string;
-      result: unknown;
-      isError: boolean;
-    }
-  | {
-      type: "control_request";
-      requestId: string;
-      kind: "approval";
-      toolCallId: string;
-      toolName: string;
-      args: Record<string, unknown>;
-    }
-  | {
-      type: "control_resolved";
-      requestId: string;
-      kind: "approval";
-      approved: boolean;
-      reason?: string;
-    }
-  | { type: "error"; message: string; code?: ErrorEventCode }
-  | { type: "pong" };
+export type AgentEvent = ChatServerEvent;
 
 function isObject(x: unknown): x is Record<string, unknown> {
   return typeof x === "object" && x !== null;
@@ -142,6 +98,7 @@ export function isRejectedToolDetails(x: unknown): boolean {
 export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
   switch (event.type) {
     case "agent_start":
+    case "run_status":
     case "turn_start":
     case "pong":
     case "error":

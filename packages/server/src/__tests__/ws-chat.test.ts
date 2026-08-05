@@ -53,6 +53,7 @@ function createMockRegistry() {
     restoreSession: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn().mockResolvedValue(undefined),
     abortSession: vi.fn(),
+    resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
   };
   const ctx = { sessionRuntime };
@@ -85,9 +86,36 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     expect(sentObjects(socket)).toContainEqual({ type: "pong" });
   });
 
-  it("destroys the session on close", () => {
+  it("destroys an idle restored session after the socket closes", async () => {
     socket.simulateClose();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sessionRuntime.destroySession).toHaveBeenCalledWith("s1");
+  });
+
+  it("forwards runtime events through the server chat hub", async () => {
+    routeHandler = null;
+    const mock = createMockRegistry();
+    mock.sessionRuntime.sendMessage.mockImplementation(
+      async (_sessionId, _content, onEvent) => {
+        onEvent({ type: "agent_start" });
+        onEvent({ type: "agent_end", messages: [] });
+      },
+    );
+    handleChatWebSocket(mockFastify as never, mock.registry as never);
+    const eventSocket = createMockSocket();
+    routeHandler!(eventSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    eventSocket.simulateMessage(
+      Buffer.from(JSON.stringify({ type: "message", content: "hi" })),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sentObjects(eventSocket)).toContainEqual({ type: "agent_start" });
+    expect(sentObjects(eventSocket)).toContainEqual({
+      type: "run_status",
+      active: false,
+    });
   });
 
   it("closes the socket when project is unknown", () => {

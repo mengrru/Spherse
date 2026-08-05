@@ -28,7 +28,10 @@ export const schemas = {
    */
   sessionMessagesResponse: Type.Array(Type.Unknown()),
   sessionMessagesPageResponse: Type.Object({
-    messages: Type.Array(Type.Unknown()),
+    entries: Type.Array(Type.Object({
+      id: Type.Number(),
+      message: Type.Unknown(),
+    })),
     hasMore: Type.Boolean(),
     oldestId: Type.Union([Type.Number(), Type.Null()]),
   }),

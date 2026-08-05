@@ -3,6 +3,7 @@ export { NotFoundError, ValidationError, AccessDeniedError, ConflictError, Model
 export type { ProjectRuntime } from "./project-runtime.js";
 export type { ProjectManager } from "./project-manager.js";
 export type { SessionManager } from "./session/session-manager.js";
+export type { SessionControlEvent } from "./session/types.js";
 export type { TriggerManager } from "./trigger/trigger-manager.js";
 export type { TriggerEventPayload } from "./trigger/trigger-manager.js";
 export type { TimerService } from "./trigger/timer-service.js";
@@ -15,7 +16,7 @@ export type { AccessPolicy, Decision } from "./access/access-policy.js";
 export { shouldSkipDirEntry } from "./utils/fs-walk.js";
 export { getSupportedProviders, getImageSupportedProviders, syncCustomProviders } from "./model-providers/index.js";
 export type { Logger } from "./logger.js";
-export type { AgentMessage } from "@earendil-works/pi-agent-core";
+export type { AgentEvent, AgentMessage } from "@earendil-works/pi-agent-core";
 export type {
   Message,
   UserMessage,

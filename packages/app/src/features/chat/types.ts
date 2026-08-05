@@ -59,6 +59,8 @@ export interface ToolCallInfo {
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  _messageId?: number;
+  _optimistic?: boolean;
   _streaming?: boolean;
   _toolCalls?: ToolCallInfo[];
   _error?: string;

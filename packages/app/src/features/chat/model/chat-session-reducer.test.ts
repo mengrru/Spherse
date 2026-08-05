@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { ErrorEventCode } from "@spherse/server/contracts";
 import {
   appendErrorMessage,
-  mergeHistoryMessages,
-  parseHistoryMessages,
   reduceSessionEvents,
   type StreamingSessionData,
 } from "./chat-session-reducer";
+import {
+  mergeHistoryMessages,
+  parseHistoryMessages,
+} from "./chat-history";
 import type { AgentEvent } from "./agent-event-parse";
 
 function session(overrides: Partial<StreamingSessionData> = {}): StreamingSessionData {
@@ -116,6 +118,22 @@ describe("chat session reducer", () => {
     const afterDone = reduceSessionEvents(current, [{ type: "agent_end", messages: [] }], 300);
     expect(afterDone.streaming).toBe(false);
     expect(afterDone.messages[0]._streaming).toBe(false);
+  });
+
+  it("run_status reconciles a run that ended while disconnected", () => {
+    const current = session({
+      messages: [{ role: "assistant", content: "partial", _streaming: true }],
+      streaming: true,
+    });
+
+    const next = reduceSessionEvents(
+      current,
+      [{ type: "run_status", active: false }],
+      300,
+    );
+
+    expect(next.streaming).toBe(false);
+    expect(next.messages[0]._streaming).toBe(false);
   });
 
   it("creates an assistant placeholder on assistant message_start", () => {

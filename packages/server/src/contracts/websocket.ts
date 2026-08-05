@@ -1,4 +1,10 @@
 import { Type, type Static } from "@sinclair/typebox";
+import type {
+  AgentEvent,
+  AgentMessage,
+  SessionControlEvent,
+  ToolResultMessage,
+} from "@spherse/core";
 import { parseContract } from "./common.js";
 
 export enum ErrorEventCode {
@@ -22,29 +28,50 @@ export const CHAT_CLOSE_CODES = {
  * Keeping the contract payload-agnostic prevents coupling server to specific
  * message schemas or tools, and avoids type drift between server and pi-ai.
  */
+type EventOf<
+  TEvent extends { type: string },
+  TType extends TEvent["type"],
+> = Extract<TEvent, { type: TType }>;
+
+const agentMessage = Type.Unsafe<AgentMessage>(Type.Unknown());
+const toolResultMessages = Type.Unsafe<ToolResultMessage[]>(
+  Type.Array(Type.Unknown()),
+);
+const toolArgs = Type.Unsafe<Record<string, unknown>>(Type.Unknown());
+
 const chatServerEvent = Type.Union([
   Type.Object({ type: Type.Literal("agent_start") }),
-  Type.Object({ type: Type.Literal("agent_end"), messages: Type.Array(Type.Unknown()) }),
+  Type.Object({
+    type: Type.Literal("agent_end"),
+    messages: Type.Unsafe<
+      EventOf<AgentEvent, "agent_end">["messages"]
+    >(Type.Array(Type.Unknown())),
+  }),
+  Type.Object({ type: Type.Literal("run_status"), active: Type.Boolean() }),
   Type.Object({ type: Type.Literal("turn_start") }),
   Type.Object({
     type: Type.Literal("turn_end"),
-    message: Type.Unknown(),
-    toolResults: Type.Array(Type.Unknown()),
+    message: agentMessage,
+    toolResults: toolResultMessages,
   }),
-  Type.Object({ type: Type.Literal("message_start"), message: Type.Unknown() }),
-  Type.Object({ type: Type.Literal("message_update"), message: Type.Unknown(), assistantMessageEvent: Type.Optional(Type.Unknown()) }),
-  Type.Object({ type: Type.Literal("message_end"), message: Type.Unknown() }),
+  Type.Object({ type: Type.Literal("message_start"), message: agentMessage }),
+  Type.Object({
+    type: Type.Literal("message_update"),
+    message: agentMessage,
+    assistantMessageEvent: Type.Optional(Type.Unknown()),
+  }),
+  Type.Object({ type: Type.Literal("message_end"), message: agentMessage }),
   Type.Object({
     type: Type.Literal("tool_execution_start"),
     toolCallId: Type.String(),
     toolName: Type.String(),
-    args: Type.Unknown(),
+    args: toolArgs,
   }),
   Type.Object({
     type: Type.Literal("tool_execution_update"),
     toolCallId: Type.String(),
     toolName: Type.String(),
-    args: Type.Unknown(),
+    args: toolArgs,
     partialResult: Type.Unknown(),
   }),
   Type.Object({
@@ -60,7 +87,9 @@ const chatServerEvent = Type.Union([
     kind: Type.Literal("approval"),
     toolCallId: Type.String(),
     toolName: Type.String(),
-    args: Type.Unknown(),
+    args: Type.Unsafe<
+      EventOf<SessionControlEvent, "control_request">["args"]
+    >(Type.Unknown()),
   }),
   Type.Object({
     type: Type.Literal("control_resolved"),

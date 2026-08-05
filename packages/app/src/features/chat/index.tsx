@@ -9,7 +9,7 @@ import { ChatRuntimeProvider } from "./runtime-context";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
-import { useStreamingStore } from "./streaming-store";
+import { useStreamingStore } from "./runtime/streaming-store";
 
 export interface ChatProps {
   sessionId: string;

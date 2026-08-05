@@ -235,7 +235,7 @@ spherse/
 │   │       │   ├── activity-bar/         # 自治型 Activity Bar（项目头像轨、设置/添加按钮），内部读 app-store/app-ui-store 与 useProjectActions；pin 按钮通过 pinToggle prop 可选注入
 │   │       │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 trigger feature store
 │   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
-│   │       │   ├── chat/                 # 对话页面入口、streaming store、消息 reducer、输入框、工具调用展示、viewer card（FileViewerCard/DiffViewer）、HtmlCard（含 UI SDK 运行时上下文注入）、chat 运行时 context（runtime-context.tsx）、chat 专属类型（types.ts）、thinking 指示器（ThinkingIndicator）、聚合/diff 纯函数（lib/，含 format-time）
+│   │       │   ├── chat/                 # 对话 feature；model/ 放事件解析、历史投影与 reducer，runtime/ 放 streaming store、WS/心跳/重连 runtime，hooks/ 放 UI hooks，lib/ 放聚合/diff/format-time 纯函数；根目录保留页面组件、运行时 context 与 chat 专属类型
 │   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示、只读自动刷新（hooks/ 含 useContentFile/useContentEditor/useContentAutoRefresh）
 │   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
 │   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、主题隔离），复用 components/floating-frame；含 useFloatingSessionId

@@ -147,10 +147,15 @@ export class ProjectManager {
     sessionId: string,
     turns: number,
     beforeId?: number,
-  ): { messages: unknown[]; hasMore: boolean; oldestId: number | null } {
+  ): { entries: Array<{ id: number; message: unknown }>; hasMore: boolean; oldestId: number | null } {
     const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) return { messages: [], hasMore: false, oldestId: null };
-    return agentStore.sessions.getRecentTurns(sessionId, turns, beforeId);
+    if (!agentStore) return { entries: [], hasMore: false, oldestId: null };
+    const result = agentStore.sessions.getRecentTurns(sessionId, turns, beforeId);
+    return {
+      entries: result.entries,
+      hasMore: result.hasMore,
+      oldestId: result.oldestId,
+    };
   }
 
   deleteSession(agentId: string, sessionId: string): void {

@@ -2,7 +2,7 @@ import { registerAction } from "../registry";
 import { respond } from "../respond";
 import { toast } from "sonner";
 import { translate, normalizeLocale } from "@spherse/i18n";
-import { useStreamingStore } from "../../features/chat/streaming-store";
+import { useStreamingStore } from "../../features/chat/runtime/streaming-store";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { useSettingsStore } from "../../stores/settings-store";
 import { openChat } from "./open-chat";
@@ -27,12 +27,10 @@ registerAction("sendMessage", (params, ctx) => {
 
   const { sendMessage: wsSend, sessions: wsSessions } = useStreamingStore.getState();
   const session = wsSessions[sessionId];
-  const ws = session?.ws;
 
   if (session?.streaming) {
     respond(ctx, false, { error: "session_busy" });
-  } else if (ws && ws.readyState === WebSocket.OPEN) {
-    wsSend(sessionId, message);
+  } else if (wsSend(sessionId, message)) {
     respond(ctx, true);
   } else {
     useProjectDataStore.getState().setInitialMessage(ctx.projectId, sessionId, message);

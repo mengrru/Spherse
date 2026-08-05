@@ -284,7 +284,12 @@ export class SessionStore {
     sessionId: string,
     turns: number,
     beforeId?: number,
-  ): { messages: AgentMessage[]; hasMore: boolean; oldestId: number | null } {
+  ): {
+    messages: AgentMessage[];
+    entries: MessageWithId[];
+    hasMore: boolean;
+    oldestId: number | null;
+  } {
     let cursor: number;
     if (beforeId !== undefined) {
       cursor = beforeId;
@@ -293,7 +298,7 @@ export class SessionStore {
         .prepare<[string], MaxIdRow>("SELECT MAX(id) AS maxId FROM messages WHERE session_id = ?")
         .get(sessionId);
       if (!maxRow || maxRow.maxId === null) {
-        return { messages: [], hasMore: false, oldestId: null };
+        return { messages: [], entries: [], hasMore: false, oldestId: null };
       }
       cursor = maxRow.maxId + 1;
     }
@@ -305,7 +310,7 @@ export class SessionStore {
       .all(sessionId, cursor);
 
     if (rows.length === 0) {
-      return { messages: [], hasMore: false, oldestId: null };
+      return { messages: [], entries: [], hasMore: false, oldestId: null };
     }
 
     const collected: MessageWithId[] = [];
@@ -327,8 +332,13 @@ export class SessionStore {
 
     const hasMore = collected.length < rows.length;
     const oldestId = collected.length > 0 ? collected[collected.length - 1].id : null;
-    const messages = collected.map((c) => c.message).reverse();
-    return { messages, hasMore, oldestId };
+    const entries = collected.reverse();
+    return {
+      messages: entries.map((entry) => entry.message),
+      entries,
+      hasMore,
+      oldestId,
+    };
   }
 
   updateSessionTitle(sessionId: string, title: string): void {

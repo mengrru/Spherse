@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { ApiClient } from "../../../lib/api";
 import type { ChatMessage } from "../types";
-import { useStreamingStore } from "../streaming-store";
+import { useStreamingStore } from "../runtime/streaming-store";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 
@@ -33,13 +33,14 @@ export function useChatSession({
   const streaming = useStreamingStore(
     (s) => s.sessions[sessionId]?.streaming ?? false,
   );
-  const historyLoaded = useStreamingStore(
-    (s) => s.sessions[sessionId]?.historyLoaded ?? false,
+  const historyStatus = useStreamingStore(
+    (s) => s.sessions[sessionId]?.historyStatus ?? "pending",
   );
-  const wsConnecting = useStreamingStore(
-    (s) => s.sessions[sessionId]?.wsConnecting ?? false,
+  const connectionStatus = useStreamingStore(
+    (s) => s.sessions[sessionId]?.connectionStatus ?? "disconnected",
   );
-  const loading = !historyLoaded || wsConnecting;
+  const loading =
+    historyStatus !== "ready" || connectionStatus === "connecting";
 
   return {
     messages,

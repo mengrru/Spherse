@@ -14,7 +14,7 @@ vi.mock("sonner", () => ({
   toast: { error: mockToastError },
 }));
 
-vi.mock("../../features/chat/streaming-store", () => ({
+vi.mock("../../features/chat/runtime/streaming-store", () => ({
   useStreamingStore: {
     getState: () => ({
       sendMessage: mockWsSend,
@@ -63,6 +63,7 @@ function makeCtx(overrides: Record<string, unknown> = {}) {
 describe("sendMessage action", () => {
   beforeEach(() => {
     mockWsSend.mockReset();
+    mockWsSend.mockReturnValue(false);
     mockSetInitialMessage.mockReset();
     mockSetFloatingChat.mockReset();
     mockNavigate.mockReset();
@@ -86,8 +87,9 @@ describe("sendMessage action", () => {
   });
 
   it("sends over websocket when connected and responds ok", async () => {
+    mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { ws: { readyState: WebSocket.OPEN }, streaming: false },
+      "s1": { streaming: false },
     });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
     expect(mockWsSend).toHaveBeenCalledWith("s1", "hi");
@@ -98,9 +100,9 @@ describe("sendMessage action", () => {
   });
 
   it("stores initial message when websocket not connected", async () => {
-    sessionsState.mockReturnValue({ "s1": { ws: null, streaming: false } });
+    sessionsState.mockReturnValue({ "s1": { streaming: false } });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
-    expect(mockWsSend).not.toHaveBeenCalled();
+    expect(mockWsSend).toHaveBeenCalledWith("s1", "hi");
     expect(mockSetInitialMessage).toHaveBeenCalledWith("proj-1", "s1", "hi");
     expect(mockPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({ ok: true }),
@@ -110,7 +112,7 @@ describe("sendMessage action", () => {
 
   it("responds session_busy and skips send when streaming", async () => {
     sessionsState.mockReturnValue({
-      "s1": { ws: { readyState: WebSocket.OPEN }, streaming: true },
+      "s1": { streaming: true },
     });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
     expect(mockWsSend).not.toHaveBeenCalled();
@@ -128,7 +130,7 @@ describe("sendMessage action", () => {
 
   it("does not respond when no requestId/source (fire-and-forget), still navigates", async () => {
     sessionsState.mockReturnValue({
-      "s1": { ws: { readyState: WebSocket.OPEN }, streaming: true },
+      "s1": { streaming: true },
     });
     await dispatchAction(
       "sendMessage",
@@ -142,16 +144,18 @@ describe("sendMessage action", () => {
   });
 
   it("navigates to chat route by default", async () => {
+    mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { ws: { readyState: WebSocket.OPEN }, streaming: false },
+      "s1": { streaming: false },
     });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
     expect(mockNavigate).toHaveBeenCalledWith("/project/proj-1/chat/s1");
   });
 
   it("opens floating chat when float is true", async () => {
+    mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { ws: { readyState: WebSocket.OPEN }, streaming: false },
+      "s1": { streaming: false },
     });
     await dispatchAction(
       "sendMessage",
@@ -163,8 +167,9 @@ describe("sendMessage action", () => {
   });
 
   it("downgrades float to chat page navigation on web", async () => {
+    mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { ws: { readyState: WebSocket.OPEN }, streaming: false },
+      "s1": { streaming: false },
     });
     await dispatchAction(
       "sendMessage",
