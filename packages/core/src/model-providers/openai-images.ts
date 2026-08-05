@@ -7,36 +7,76 @@ import type {
 } from "@earendil-works/pi-ai";
 import { createImagesProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
 
-export type ZhipuImagesApi = "zhipu-images";
+export type OpenaiImagesApi = "openai-images";
 
-export interface ZhipuImagesModelRecord {
+export interface OpenaiImagesModelRecord {
   id: string;
   name: string;
-  provider: "zhipu";
-  api: ZhipuImagesApi;
+  provider: "openai";
+  api: OpenaiImagesApi;
   baseUrl: string;
   input: ("text" | "image")[];
   output: ("text" | "image")[];
   cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
 }
 
-export const ZHIPU_IMAGE_MODELS: Record<string, ZhipuImagesModelRecord> = {
-  "glm-image": {
-    id: "glm-image",
-    name: "GLM Image",
-    provider: "zhipu",
-    api: "zhipu-images",
-    baseUrl: "https://open.bigmodel.cn/api/paas/v4",
+export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
+  "gpt-image-2": {
+    id: "gpt-image-2",
+    name: "GPT Image 2",
+    provider: "openai",
+    api: "openai-images",
+    baseUrl: "https://api.openai.com/v1",
+    input: ["text"],
+    output: ["image"],
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  },
+  "gpt-image-1.5": {
+    id: "gpt-image-1.5",
+    name: "GPT Image 1.5",
+    provider: "openai",
+    api: "openai-images",
+    baseUrl: "https://api.openai.com/v1",
+    input: ["text"],
+    output: ["image"],
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  },
+  "gpt-image-1": {
+    id: "gpt-image-1",
+    name: "GPT Image 1",
+    provider: "openai",
+    api: "openai-images",
+    baseUrl: "https://api.openai.com/v1",
+    input: ["text"],
+    output: ["image"],
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  },
+  "gpt-image-1-mini": {
+    id: "gpt-image-1-mini",
+    name: "GPT Image 1 Mini",
+    provider: "openai",
+    api: "openai-images",
+    baseUrl: "https://api.openai.com/v1",
+    input: ["text"],
+    output: ["image"],
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  },
+  "dall-e-3": {
+    id: "dall-e-3",
+    name: "DALL·E 3",
+    provider: "openai",
+    api: "openai-images",
+    baseUrl: "https://api.openai.com/v1",
     input: ["text"],
     output: ["image"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   },
 };
 
-export function resolveZhipuImageModel(modelId: string): ImagesModel<ZhipuImagesApi> {
-  const record = ZHIPU_IMAGE_MODELS[modelId];
+export function resolveOpenaiImageModel(modelId: string): ImagesModel<OpenaiImagesApi> {
+  const record = OPENAI_IMAGE_MODELS[modelId];
   if (!record) {
-    throw new Error(`Unknown Zhipu image model: ${modelId}`);
+    throw new Error(`Unknown OpenAI image model: ${modelId}`);
   }
   return {
     id: record.id,
@@ -50,7 +90,7 @@ export function resolveZhipuImageModel(modelId: string): ImagesModel<ZhipuImages
   };
 }
 
-type ZhipuImagesOptions = ProviderImagesOptions & {
+type OpenaiImagesOptions = ProviderImagesOptions & {
   size?: string;
   quality?: string;
 };
@@ -73,14 +113,17 @@ function inferMimeTypeFromUrl(url: string): string {
   }
 }
 
-export async function generateImagesZhipu(
-  model: ImagesModel<ZhipuImagesApi>,
+const DALLE_MODELS = new Set(["dall-e-2", "dall-e-3"]);
+
+export async function generateImagesOpenai(
+  model: ImagesModel<OpenaiImagesApi>,
   context: ImagesContext,
-  options?: ZhipuImagesOptions,
+  options?: OpenaiImagesOptions,
 ): Promise<AssistantImages> {
   const apiKey = options?.apiKey;
   const signal = options?.signal;
   const size = options?.size;
+  const quality = options?.quality;
   const base: AssistantImages = {
     api: model.api,
     provider: model.provider,
@@ -94,7 +137,7 @@ export async function generateImagesZhipu(
     return { ...base, stopReason: "aborted", errorMessage: "aborted" };
   }
   if (!apiKey) {
-    return { ...base, stopReason: "error", errorMessage: "No Zhipu api key provided" };
+    return { ...base, stopReason: "error", errorMessage: "No OpenAI api key provided" };
   }
 
   const promptText = context.input
@@ -102,13 +145,18 @@ export async function generateImagesZhipu(
     .map((c) => c.text)
     .join("\n");
 
-  const endpoint = `${model.baseUrl}/images/generations`;
   const body: Record<string, unknown> = {
     model: model.id,
     prompt: promptText,
-    response_format: "b64_json",
+    n: 1,
   };
   if (size) body.size = size;
+  if (quality) body.quality = quality;
+  if (DALLE_MODELS.has(model.id)) {
+    body.response_format = "b64_json";
+  }
+
+  const endpoint = `${model.baseUrl}/images/generations`;
   try {
     const res = await fetch(endpoint, {
       method: "POST",
@@ -122,14 +170,14 @@ export async function generateImagesZhipu(
 
     if (!res.ok) {
       const errBody = await res.json().catch(() => ({}));
-      const msg = (errBody as any)?.error?.message ?? `Zhipu API error: ${res.status}`;
+      const msg = (errBody as any)?.error?.message ?? `OpenAI API error: ${res.status}`;
       return { ...base, stopReason: "error", errorMessage: msg };
     }
 
     const json: any = await res.json();
     const items: any[] = Array.isArray(json?.data) ? json.data : [];
     if (items.length === 0) {
-      return { ...base, stopReason: "error", errorMessage: "Zhipu API returned no image data" };
+      return { ...base, stopReason: "error", errorMessage: "OpenAI API returned no image data" };
     }
 
     for (const item of items) {
@@ -137,7 +185,7 @@ export async function generateImagesZhipu(
         base.output.push({
           type: "image",
           data: item.b64_json,
-          mimeType: item.mime_type ?? "image/png",
+          mimeType: "image/png",
         });
       } else if (typeof item.url === "string" && item.url.length > 0) {
         const imgRes = await fetch(item.url, ...(signal ? [{ signal }] : []));
@@ -151,7 +199,7 @@ export async function generateImagesZhipu(
     }
 
     if (base.output.length === 0) {
-      return { ...base, stopReason: "error", errorMessage: "Zhipu API returned no usable image" };
+      return { ...base, stopReason: "error", errorMessage: "OpenAI API returned no usable image" };
     }
 
     return base;
@@ -163,21 +211,21 @@ export async function generateImagesZhipu(
   }
 }
 
-export function createZhipuImagesProvider(): ImagesProvider {
+export function createOpenaiImagesProvider(): ImagesProvider {
   return createImagesProvider({
-    id: "zhipu",
-    name: "智谱",
-    auth: { apiKey: envApiKeyAuth("Zhipu image API key", ["SPHERSE_IMAGE_API_KEY"]) },
-    models: Object.values(ZHIPU_IMAGE_MODELS).map((m) => ({
+    id: "openai",
+    name: "OpenAI",
+    auth: { apiKey: envApiKeyAuth("OpenAI image API key", ["SPHERSE_IMAGE_API_KEY"]) },
+    models: Object.values(OPENAI_IMAGE_MODELS).map((m) => ({
       id: m.id,
       name: m.name,
-      provider: "zhipu",
+      provider: "openai",
       api: m.api,
       baseUrl: m.baseUrl,
       input: m.input,
       output: m.output,
       cost: m.cost,
     })),
-    api: { generateImages: generateImagesZhipu as any },
+    api: { generateImages: generateImagesOpenai as any },
   });
 }

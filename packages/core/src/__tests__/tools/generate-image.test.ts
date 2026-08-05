@@ -162,4 +162,29 @@ describe("createGenerateImageTool", () => {
     const passedModel = mockImagesModels.generateImages.mock.calls[0][0];
     expect(passedModel.provider).toBe("zhipu");
   });
+
+  it("passes size and quality through to generateImages options", async () => {
+    const tool = createGenerateImageTool(projectRoot);
+    await tool.execute(
+      "tc1",
+      { prompt: "x", size: "1536x1024", quality: "high" },
+      undefined as any,
+      undefined as any,
+    );
+
+    expect(mockImagesModels.generateImages).toHaveBeenCalledTimes(1);
+    const passedOptions = mockImagesModels.generateImages.mock.calls[0][2];
+    expect(passedOptions.size).toBe("1536x1024");
+    expect(passedOptions.quality).toBe("high");
+    expect(passedOptions.apiKey).toBe("test-key");
+  });
+
+  it("omits size and quality from options when not provided", async () => {
+    const tool = createGenerateImageTool(projectRoot);
+    await tool.execute("tc1", { prompt: "x" }, undefined as any, undefined as any);
+
+    const passedOptions = mockImagesModels.generateImages.mock.calls[0][2];
+    expect(passedOptions.size).toBeUndefined();
+    expect(passedOptions.quality).toBeUndefined();
+  });
 });

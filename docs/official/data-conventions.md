@@ -194,7 +194,9 @@ HTML 全文仅通过 `onUpdate`（`tool_execution_update`）传给前端，**不
 
 ## Image Card
 
-`generate_image` tool 接收文本 prompt，调用 pi-ai 图片生成 provider（OpenRouter 或智谱）生成图片，自动保存到 `.spherse/generated-images/{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`。文件名基于 UTC 时间戳 + 4 位随机 hex，避免并发写冲突，不使用 `FileWriteMutex`。成功返回时 content text 包含图片存储路径。图片生成成功后自动以卡片展示，无需额外调用 `render_card`。
+`generate_image` tool 接收文本 prompt（及可选 `size` / `quality` 参数），调用 pi-ai 图片生成 provider（OpenRouter、智谱或 OpenAI）生成图片，自动保存到 `.spherse/generated-images/{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`。文件名基于 UTC 时间戳 + 4 位随机 hex，避免并发写冲突，不使用 `FileWriteMutex`。成功返回时 content text 包含图片存储路径。图片生成成功后自动以卡片展示，无需额外调用 `render_card`。
+
+`size` / `quality` 参数按 provider 能力透传：OpenAI 与智谱读取后写入各自请求体；OpenRouter（pi-ai 内置）忽略未知字段。各模型支持的具体取值不同（详见各 provider API 文档），留空则用模型默认值。
 
 tool update 的 `details.type === "image"` 时，前端 chat 会按 image card 渲染（三态：generating / done / error）。`done` 态通过 `GET /api/projects/:projectId/preview/<relPath>` 加载图片，卡片右上角提供导出按钮（经 `POST /api/projects/:projectId/images/export` 复制到用户选择的项目内路径）。
 

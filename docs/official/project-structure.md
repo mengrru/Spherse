@@ -11,8 +11,9 @@ spherse/
 │   │       ├── presets.ts            # initPresets()：新项目预置 agent 注入 + 创建空 .spherse/skills/ 目录
 │   │       ├── project-runtime.ts    # ProjectRuntime：运行时 session 管理 + agent/profile 操作门面
 │   │       ├── model-providers/     # pi-ai provider catalog adapter（文本 + 图片 provider）
-│   │       │   ├── index.ts        # ENABLED_PROVIDERS 过滤、getSupportedProviders / getImageSupportedProviders、model resolution、syncCustomProviders（运行时注入自定义 OpenAI 兼容供应商）
-│   │       │   └── zhipu-images.ts # 智谱图片 provider 元数据 + createZhipuImagesProvider()（createImagesProvider 工厂，模块加载时注入 imagesModels 单例）
+    │   │       │   ├── index.ts        # ENABLED_PROVIDERS 过滤、getSupportedProviders / getImageSupportedProviders、model resolution、syncCustomProviders（运行时注入自定义 OpenAI 兼容供应商）
+    │   │       │   ├── zhipu-images.ts # 智谱图片 provider 元数据 + createZhipuImagesProvider()（createImagesProvider 工厂，模块加载时注入 imagesModels 单例）
+    │   │       │   └── openai-images.ts # OpenAI 图片 provider 元数据（gpt-image-2 等）+ createOpenaiImagesProvider()（createImagesProvider 工厂，模块加载时注入 imagesModels 单例）
     │   │       ├── engine/
     │   │       │   ├── read-context-files.ts # 读取 agent profile context 文件并注入 system prompt
     │   │       │   └── log-agent-event.ts    # agent event → pino 日志映射（级别、截断、生命周期事件）

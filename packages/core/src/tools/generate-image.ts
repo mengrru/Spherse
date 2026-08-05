@@ -2,13 +2,31 @@ import fs from "node:fs/promises";
 import fsSync from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import type { ProviderImagesOptions } from "@earendil-works/pi-ai";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { resolveProjectPath } from "../utils/path-safety.js";
 import { getImagesModels } from "../model-providers/index.js";
 
+type ImageGenOptions = ProviderImagesOptions & {
+  size?: string;
+  quality?: string;
+};
+
 const GenerateImageParams = Type.Object({
-  prompt: Type.String({ description: "图片描述（prompt），用于生成图片" }),
+  prompt: Type.String({ description: "Text description (prompt) of the image to generate" }),
+  size: Type.Optional(
+    Type.String({
+      description:
+        'Image size, e.g. "1024x1024", "1536x1024", "1024x1536", "auto". Varies by model; omit to use the model default.',
+    }),
+  ),
+  quality: Type.Optional(
+    Type.String({
+      description:
+        'Image quality: GPT image models use "low" | "medium" | "high" | "auto"; dall-e-3 uses "standard" | "hd". Omit to use the model default.',
+    }),
+  ),
 });
 
 const MIME_TO_EXT: Record<string, string> = {
@@ -65,7 +83,7 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
     name: "generate_image",
     label: "Generate Image",
     description:
-      `这是一个**图片生成（AI 绘图）工具**，根据文本描述（prompt）调用 AI 模型从零生成一张全新图片，并在聊天中以 image card 展示。生成后图片自动保存到 ${GENERATED_DIR} 目录下，用户可通过卡片右上角按钮导出到项目文件。**注意：图片生成成功后会自动以卡片形式展示给用户，无需额外调用 render_card 工具来渲染图片。**`,
+      `**AI image generation tool.** Generates a brand-new image from a text description (prompt) using an AI model, displayed as an image card in the chat. The generated image is saved automatically under ${GENERATED_DIR}; the user can export it to a project file via the button at the top-right of the card. **Note: a successfully generated image is shown to the user as a card automatically — do not call the render_card tool to render it.**`,
     parameters: GenerateImageParams,
     async execute(_toolCallId, params, signal, onUpdate) {
       const prompt = params.prompt;
@@ -93,10 +111,16 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
 
       let result;
       try {
+        const genOptions: ImageGenOptions = {
+          apiKey: config.apiKey,
+          ...(signal ? { signal } : {}),
+          ...(params.size ? { size: params.size } : {}),
+          ...(params.quality ? { quality: params.quality } : {}),
+        };
         result = await imagesModels.generateImages(
           model,
           { input: [{ type: "text", text: prompt }] },
-          { apiKey: config.apiKey, ...(signal ? { signal } : {}) },
+          genOptions,
         );
       } catch (err) {
         const message = (err as Error).message ?? String(err);

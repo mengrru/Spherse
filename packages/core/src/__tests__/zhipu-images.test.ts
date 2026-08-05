@@ -174,6 +174,37 @@ describe("generateImagesZhipu", () => {
     });
     expect(result.stopReason).toBe("aborted");
   });
+
+  it("includes size in request body when provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [{ b64_json: "x" }] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateImagesZhipu(SAMPLE_MODEL as any, baseContext as any, {
+      apiKey: "k",
+      size: "1024x1024",
+    });
+
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    expect(body.size).toBe("1024x1024");
+  });
+
+  it("omits size when not provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [{ b64_json: "x" }] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateImagesZhipu(SAMPLE_MODEL as any, baseContext as any, { apiKey: "k" });
+
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as any).body);
+    expect(body.size).toBeUndefined();
+  });
 });
 
 describe("createZhipuImagesProvider", () => {

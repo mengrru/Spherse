@@ -4,6 +4,7 @@ import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completio
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type { CustomProviderDef, ProviderCatalog, ProviderCatalogItem, ProviderModelItem, SamplingParams } from "../types.js";
 import { createZhipuImagesProvider } from "./zhipu-images.js";
+import { createOpenaiImagesProvider } from "./openai-images.js";
 
 export const ENABLED_PROVIDERS = [
   "openai",
@@ -53,6 +54,7 @@ const PROVIDER_ENV_KEYS: Record<string, string[]> = {
 const models: MutableModels = builtinModels();
 const imagesModels: MutableImagesModels = builtinImagesModels();
 imagesModels.setProvider(createZhipuImagesProvider());
+imagesModels.setProvider(createOpenaiImagesProvider());
 
 let registeredDefs: CustomProviderDef[] = [];
 const customIds = new Set<string>();
@@ -199,11 +201,13 @@ export function resolveModelById(modelId: string) {
 const IMAGE_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openrouter: "OpenRouter",
   zhipu: "智谱",
+  openai: "OpenAI",
 };
 
 const IMAGE_PROVIDER_ENV_KEYS: Record<string, string[]> = {
   openrouter: ["SPHERSE_IMAGE_API_KEY"],
   zhipu: ["SPHERSE_IMAGE_API_KEY"],
+  openai: ["SPHERSE_IMAGE_API_KEY"],
 };
 
 export function getImageSupportedProviders(): ProviderCatalog {
