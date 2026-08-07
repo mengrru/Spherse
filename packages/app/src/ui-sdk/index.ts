@@ -6,7 +6,9 @@ import "./handlers/float-content";
 import "./handlers/float-session";
 import "./handlers/open-external-link";
 import "./handlers/open-file";
+import "./handlers/open-session";
 import "./handlers/send-message";
+import "./handlers/show-toast";
 import "./handlers/unfloat-content";
 import "./handlers/unfloat-session";
 

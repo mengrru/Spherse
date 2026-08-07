@@ -18,11 +18,12 @@ interface MessageItemProps {
   message: ChatMessage;
   agent: AgentProfile;
   showTime?: boolean;
+  supersededToolCallIds?: Set<string>;
   onNavigateToPath?: (path: string) => void;
   onRespondApproval?: (requestId: string, approved: boolean) => void;
 }
 
-export function MessageItem({ message, agent, showTime, onNavigateToPath, onRespondApproval }: MessageItemProps) {
+export function MessageItem({ message, agent, showTime, supersededToolCallIds, onNavigateToPath, onRespondApproval }: MessageItemProps) {
   const isUser = message.role === "user";
   const openLink = useOpenExternalLink();
 
@@ -80,7 +81,13 @@ export function MessageItem({ message, agent, showTime, onNavigateToPath, onResp
           .map((toolCall) => {
             const card = toolCall._card!;
             if (card.type === "html") {
-              return <HtmlCardRenderer key={toolCall.toolCallId} card={card} />;
+              return (
+                <HtmlCardRenderer
+                  key={toolCall.toolCallId}
+                  card={card}
+                  defaultCollapsed={supersededToolCallIds?.has(toolCall.toolCallId) ?? false}
+                />
+              );
             }
             if (card.type === "command") {
               return <CommandCardRenderer key={toolCall.toolCallId} card={card} onRespondApproval={onRespondApproval} />;

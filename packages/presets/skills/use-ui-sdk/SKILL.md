@@ -1,6 +1,6 @@
 ---
 name: use-ui-sdk
-description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话、打开文件、读写数据、订阅文件变化、只读查询项目信息）
+description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话、打开已有会话、打开文件、向会话发消息、读写数据、订阅文件变化、只读查询项目信息、弹 toast 提示）
 ---
 
 # UI SDK — `window.spherse`
@@ -28,7 +28,7 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 
 | 类别 | 方法 | 说明 |
 |------|------|------|
-| 触发型（fire-and-forget） | `createSession` / `openFile` / `openExternalLink` / `floatSession` / `unfloatSession` / `floatContent` / `unfloatContent` / `emitAgentTriggerEvent` | 单向触发，无返回值 |
+| 触发型（fire-and-forget） | `createSession` / `openSession` / `openFile` / `openExternalLink` / `floatSession` / `unfloatSession` / `floatContent` / `unfloatContent` / `emitAgentTriggerEvent` / `toast` | 单向触发，无返回值 |
 | 请求型（Promise） | `sendMessage(params)` → `Promise` | 等待发送结果 |
 | 请求型（Promise） | `data.get` / `data.set` / `data.delete` | key-value 持久化 |
 | 请求型（Promise） | `api.call(op, args)` 及 `api.*` 命名方法 | 只读查询项目信息（agents / sessions / content / triggers / settings） |
@@ -77,6 +77,19 @@ spherse.createSession({ agentSlug: "writer-a1b2c3" });
 spherse.openFile("world/characters/主角设定.md");
 ```
 
+### `spherse.openSession(sessionId)`
+
+打开**已有**会话并导航到聊天页面，**不发消息**。`sessionId` 可传字符串或 `{ sessionId, float }`。`float` 为 `true` 时在浮窗中打开（desktop），否则在主面板打开。
+
+> 这是「只跳转、不发消息」的正确方式。`sendMessage` 只用于发送消息。
+
+```javascript
+const rt = await spherse.getRuntime();
+spherse.openSession(rt.sessionId);
+// 或浮窗打开
+spherse.openSession({ sessionId: rt.sessionId, float: true });
+```
+
 ### `spherse.openExternalLink(url)`
 
 在系统默认浏览器中打开外部链接（http/https/mailto/tel）。HTML 中的外部链接若用原生 `<a href>`，会在 iframe 内原地跳转，应改用本方法。`url` 可传字符串或 `{ url }`。
@@ -108,11 +121,26 @@ spherse.openExternalLink("https://example.com/reference");
 spherse.emitAgentTriggerEvent({ eventName: "daily-review", payload: "第3章" });
 ```
 
+### `spherse.toast(params)`
+
+在 App 中弹出一条 toast 提示。`message` 必填，`variant` / `description` 可选。fire-and-forget，无返回值。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| message | string | 是 | 提示正文 |
+| variant | string | 否 | `"default"` \| `"success"` \| `"error"` \| `"warning"` \| `"info"`，默认 `default` |
+| description | string | 否 | 次要说明文字 |
+
+```javascript
+spherse.toast({ variant: "success", message: "已保存", description: "world/game.html" });
+spherse.toast({ variant: "error", message: "保存失败，请重试" });
+```
+
 ## 请求型 Action — 发送消息
 
 ### `spherse.sendMessage(params)` → `Promise<void>`
 
-向已有会话发送消息并导航到聊天页面。返回 Promise：
+向已有会话**发送消息**并导航到聊天页面。`message` 必填 —— 这是发消息动作，**不能**省略 `message`。如需只打开已有会话不发消息，请用 [`spherse.openSession`](#spherseopensessionsessionid)。返回 Promise：
 
 - 发送成功：resolve
 - 目标会话仍在生成中（`session_busy`）：reject，消息**不会**被发送，应提示用户稍后重试

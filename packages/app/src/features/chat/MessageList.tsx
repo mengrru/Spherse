@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { useMemo } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentProfile } from "../../lib/types";
 import type { ChatMessage } from "./types";
@@ -6,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import { ChevronDownIcon } from "lucide-react";
 import { MessageItem } from "./MessageItem";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+import { computeSupersededToolCallIds } from "./model/html-card-dedup";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -24,6 +26,13 @@ interface MessageListProps {
 
 export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
+
+  // 相同 file_path 的 html card 只展开最近一张；较早的同路径卡片折叠（不挂载 iframe）。
+  const supersededToolCallIds = useMemo(
+    () => computeSupersededToolCallIds(messages),
+    [messages],
+  );
+
   if (loading && messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center p-4">
@@ -41,6 +50,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
   }
 
   const lastMessage = messages[messages.length - 1];
+
   const reversed = messages
     .map((message, index) => ({ message, index }))
     .reverse();
@@ -63,6 +73,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
               message={message}
               agent={agent}
               showTime={showTime}
+              supersededToolCallIds={supersededToolCallIds}
               onNavigateToPath={onNavigateToPath}
               onRespondApproval={onRespondApproval}
             />

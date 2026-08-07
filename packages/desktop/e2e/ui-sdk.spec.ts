@@ -52,20 +52,28 @@ async function createUiSdkProject() {
       "<html><body>",
       '<button id="btn-open" onclick="openFile()">Open File</button>',
       '<button id="btn-session" onclick="createSession()">Create Session</button>',
+      '<button id="btn-toast" onclick="showToast()">Show Toast</button>',
       "<script>",
       "function openFile() {",
       "  window.parent.postMessage({",
       '    type: "spherse:action",',
       '    action: "openFile",',
       '    params: { path: "world/target-file.md" }',
-      '  }, "*");',
+      "  }, \"*\");",
       "}",
       "function createSession() {",
       "  window.parent.postMessage({",
       '    type: "spherse:action",',
       '    action: "createSession",',
       '    params: { agentId: "test-agent", message: "E2E test" }',
-      '  }, "*");',
+      "  }, \"*\");",
+      "}",
+      "function showToast() {",
+      "  window.parent.postMessage({",
+      '    type: "spherse:action",',
+      '    action: "showToast",',
+      '    params: { variant: "success", message: "E2E toast text" }',
+      "  }, \"*\");",
       "}",
       "</script></body></html>",
     ].join("\n"),
@@ -221,6 +229,89 @@ test("rate limit blocks excess calls", async () => {
 
     await page.waitForTimeout(2000);
     expect(navigatedCount).toBeLessThanOrEqual(10);
+  } finally {
+    await app.close();
+  }
+});
+
+async function createSessionViaApi(page: Page, projectId: string, agentId: string): Promise<string> {
+  const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const res = await fetch(
+    `http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`,
+    { method: "POST" },
+  );
+  const body = await res.json() as Record<string, unknown>;
+  if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
+  return (body as { sessionId: string }).sessionId;
+}
+
+async function getSessionMessageCount(
+  page: Page,
+  projectId: string,
+  sessionId: string,
+): Promise<number> {
+  const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const res = await fetch(
+    `http://localhost:${port}/api/projects/${projectId}/sessions/${encodeURIComponent(sessionId)}/messages`,
+  );
+  const body = (await res.json()) as { messages?: unknown[] };
+  return body.messages?.length ?? 0;
+}
+
+test("openSession action navigates to an existing session without sending a message", async () => {
+  const project = await createUiSdkProject();
+  const { app, page } = await launchAppWithSdkProject(project);
+
+  try {
+    const sessionId = await createSessionViaApi(page, project.projectId, "test-agent");
+    expect(getSessionMessageCount(page, project.projectId, sessionId)).resolves.toBe(0);
+
+    const projectUrl = `/project/${project.projectId}`;
+    await page.goto(
+      `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.triggerHtmlPath)}`,
+    );
+
+    const frame = page.frameLocator("iframe");
+    await expect(frame.locator("#btn-open")).toBeVisible({ timeout: 30_000 });
+
+    await page.evaluate((id) => {
+      window.postMessage(
+        { type: "spherse:action", action: "openSession", params: { sessionId: id } },
+        "*",
+      );
+    }, sessionId);
+
+    await expect(page).toHaveURL(
+      new RegExp(`#/project/${project.projectId}/chat/${sessionId}$`),
+    );
+    await expect(
+      page.getByPlaceholder("输入消息... (Shift+Enter 换行)"),
+    ).toBeVisible();
+
+    // openSession must NOT send a message — the session stays empty.
+    expect(await getSessionMessageCount(page, project.projectId, sessionId)).toBe(0);
+  } finally {
+    await app.close();
+  }
+});
+
+test("showToast action renders a sonner toast", async () => {
+  const project = await createUiSdkProject();
+  const { app, page } = await launchAppWithSdkProject(project);
+
+  try {
+    const projectUrl = `/project/${project.projectId}`;
+    await page.goto(
+      `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(project.triggerHtmlPath)}`,
+    );
+
+    const frame = page.frameLocator("iframe");
+    await expect(frame.locator("#btn-toast")).toBeVisible({ timeout: 30_000 });
+    await frame.locator("#btn-toast").click();
+
+    await expect(page.locator("[data-sonner-toast]")).toContainText("E2E toast text", {
+      timeout: 10_000,
+    });
   } finally {
     await app.close();
   }

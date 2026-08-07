@@ -295,6 +295,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "chat.imageExportFailed": "匯出失敗：{message}",
   "chat.exportImage": "匯出圖片",
   "chat.htmlCard.expand": "全螢幕檢視",
+  "chat.htmlCard.showCard": "展開此卡片",
+  "chat.htmlCard.collapse": "摺疊",
   "chat.copyTooltip": "複製",
   "chat.close": "關閉",
   "chat.responseGenerationFailed": "回覆產生失敗",

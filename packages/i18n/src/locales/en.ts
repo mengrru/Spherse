@@ -295,6 +295,8 @@ export const en: Record<TranslationKey, string> = {
   "chat.imageExportFailed": "Export failed: {message}",
   "chat.exportImage": "Export image",
   "chat.htmlCard.expand": "Open fullscreen",
+  "chat.htmlCard.showCard": "Show this card",
+  "chat.htmlCard.collapse": "Collapse",
   "chat.copyTooltip": "Copy",
   "chat.close": "Close",
   "chat.responseGenerationFailed": "Response generation failed",

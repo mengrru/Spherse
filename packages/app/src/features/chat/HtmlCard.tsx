@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { DownloadIcon, Maximize2Icon, XIcon } from "lucide-react";
+import { DownloadIcon, Maximize2Icon, XIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { HtmlCard } from "./types";
@@ -14,13 +14,14 @@ import { ensureCharset, buildFileSrcDoc, buildInlineSrcDoc, isImageFile } from "
 
 interface HtmlCardRendererProps {
   card: HtmlCard;
+  defaultCollapsed?: boolean;
 }
 
 function sanitizeFileName(name: string): string {
   return name.replace(/[\\/:*?"<>|]/g, "_").trim() || "untitled";
 }
 
-export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
+export function HtmlCardRenderer({ card, defaultCollapsed = false }: HtmlCardRendererProps) {
   const { t } = useI18n();
   const { projectRoot, projectId } = useProjectCtx();
   const client = useApiClient(projectId);
@@ -30,11 +31,20 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
   const [fetchedHtml, setFetchedHtml] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const userTouched = useRef(false);
+
+  // 当卡片被更新的同路径卡片取代（defaultCollapsed 由 false 变 true）时自动折叠，
+  // 除非用户已手动展开/折叠过这张卡片（尊重用户意图）。
+  useEffect(() => {
+    if (!userTouched.current) setCollapsed(defaultCollapsed);
+  }, [defaultCollapsed]);
 
   const previewUrl = card.file_path && client ? client.getPreviewUrl(card.file_path) : null;
   const isImage = !!card.file_path && isImageFile(card.file_path);
 
   useEffect(() => {
+    if (collapsed) return;
     if (!previewUrl || card.html || isImage) return;
     let cancelled = false;
     setFetchedHtml(null);
@@ -50,7 +60,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     return () => {
       cancelled = true;
     };
-  }, [previewUrl, card.html, isImage]);
+  }, [collapsed, previewUrl, card.html, isImage]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -125,6 +135,21 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     </Button>
   ) : null;
 
+  const collapseButton = defaultCollapsed ? (
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onClick={() => {
+        userTouched.current = true;
+        setCollapsed(true);
+      }}
+      className={actionBtnClass}
+      title={t("chat.htmlCard.collapse")}
+    >
+      <ChevronDownIcon className="size-3.5" />
+    </Button>
+  ) : null;
+
   const expandButton = (
     <Button
       variant="ghost"
@@ -139,6 +164,7 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
 
   const headerActions = (
     <div className="flex items-center gap-1.5">
+      {collapseButton}
       {saveButton}
       {expandButton}
     </div>
@@ -227,6 +253,26 @@ export function HtmlCardRenderer({ card }: HtmlCardRendererProps) {
     }
 
     return null;
+  }
+
+  // 同 file_path 的较早卡片：折叠为占位条，不挂载 iframe；点击展开后懒加载。
+  if (collapsed) {
+    return (
+      <div className="group/card my-2 overflow-hidden rounded-lg border border-border">
+        <button
+          type="button"
+          onClick={() => {
+            userTouched.current = true;
+            setCollapsed(false);
+          }}
+          className="flex w-full items-center gap-2 bg-muted px-3 py-2 text-start transition-colors hover:bg-accent"
+          title={t("chat.htmlCard.showCard")}
+        >
+          <ChevronRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="truncate text-xs text-muted-foreground">{card.file_path}</span>
+        </button>
+      </div>
+    );
   }
 
   return (

@@ -18,9 +18,11 @@ export const actions = {
   sendMessage: (params: Params): Promise<unknown> => call("sendMessage", params),
   openFile: (value: PathLike): void => fire("openFile", asPath(value)),
   openExternalLink: (value: PathLike): void => fire("openExternalLink", asUrl(value)),
+  openSession: (value: PathLike): void => fire("openSession", asSession(value)),
   floatSession: (value: PathLike): void => fire("floatSession", asSession(value)),
   unfloatSession: (): void => fire("unfloatSession", {}),
   floatContent: (value: PathLike): void => fire("floatContent", asPath(value)),
   unfloatContent: (value: PathLike): void => fire("unfloatContent", asPath(value)),
   emitAgentTriggerEvent: (params: Params): void => fire("emitAgentTriggerEvent", params),
+  toast: (params: Params): void => fire("showToast", params),
 };

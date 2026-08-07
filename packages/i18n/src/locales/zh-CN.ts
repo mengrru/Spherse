@@ -602,6 +602,10 @@ export const zhCN = {
   "chat.exportImage": "导出图片",
   // html card 右上角「展开全屏」按钮的悬停提示
   "chat.htmlCard.expand": "全屏查看",
+  // 相同 file_path 的较早 html card 默认折叠为占位条，点击展开此卡片的悬停提示
+  "chat.htmlCard.showCard": "展开此卡片",
+  // 已展开的较早 html card 右上角「折叠」按钮的悬停提示
+  "chat.htmlCard.collapse": "折叠",
   // 复制按钮悬停提示
   "chat.copyTooltip": "复制",
   // Chat 关闭按钮悬停提示
