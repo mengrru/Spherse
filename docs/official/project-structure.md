@@ -63,9 +63,12 @@ spherse/
     │   │       │   ├── config.ts          # normalizeMcpConfig 校验 + makeMcpToolName 命名（mcp__{server}_{shortid}__{tool}）
     │   │       │   ├── mcp-client.ts      # connectMcpServer：transport 构建 + listTools/listResources/listPrompts + adaptMcpTool/adaptMcpReadResourceTool/adaptMcpGetPromptTool
     │   │       │   ├── mcp-connection-manager.ts # McpConnectionManager：per-agent 连接/工具/info 缓存（load/invalidate/closeAll）
-    │   │       │   ├── json-schema-to-typebox.ts # MCP inputSchema → TypeBox parameters 转换
-    │   │       │   └── index.ts
-    │   │       ├── __tests__/            # Vitest 单元测试
+│   │       │   ├── json-schema-to-typebox.ts # MCP inputSchema → TypeBox parameters 转换
+│   │       │   └── index.ts
+│   │       ├── attachments/             # 通用附件处理（上传后→发送 LLM 前 preprocess，落库/轮后 strip）
+│   │       │   ├── index.ts            # Attachment/AttachmentProcessor 类型 + attachmentProcessors 注册表 + stripUserAttachments
+│   │       │   └── image-processor.ts  # createImageAttachmentProcessor：path→base64 ImageContent（落库/转发时剥离为文本）
+│   │       ├── __tests__/            # Vitest 单元测试
 │   │       └── index.ts              # 公开导出：ProjectRuntime, createProject, types
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
 │   │   ├── presets.json              # 预置 skill、agent 与 prompt template 声明配置
@@ -164,6 +167,7 @@ spherse/
 │   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
 │   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
+│   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
 │       │       │   ├── trigger.ts         # 触发器 CRUD 与手动触发（/triggers、/trigger-logs、/run）
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
 │       │       ├── ws-chat.ts            # WebSocket 对话流（/ws/projects/:projectId/chat/...，双向 session-scoped）

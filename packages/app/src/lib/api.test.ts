@@ -109,4 +109,91 @@ describe("createApiClient", () => {
       expect(buildWsUrl("https://tunnel.example.com", "/ws/bus", "tok")).toBe("wss://tunnel.example.com/ws/bus?token=tok");
     });
   });
+
+  describe("attachments", () => {
+    it("uploads an image via multipart POST and parses the response", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+        type: "image",
+        path: ".spherse/attachments/1-abc.png",
+        width: 100,
+        height: 50,
+        bytes: 12,
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const result = await createApiClient("http://localhost:1234", "p1").uploadAttachedImage(
+        new Blob([new Uint8Array(8)]),
+        { width: 100, height: 50 },
+      );
+
+      expect(result).toEqual({
+        type: "image",
+        path: ".spherse/attachments/1-abc.png",
+        width: 100,
+        height: 50,
+        bytes: 12,
+      });
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("http://localhost:1234/api/projects/p1/attachments");
+      expect(init.method).toBe("POST");
+      expect(init.body).toBeInstanceOf(FormData);
+      const headers = (init.headers ?? {}) as Record<string, string>;
+      expect(headers["Content-Type"]).toBeUndefined();
+      const form = init.body as FormData;
+      expect(form.get("file")).toBeInstanceOf(Blob);
+      expect(form.get("width")).toBe("100");
+      expect(form.get("height")).toBe("50");
+    });
+
+    it("omits width/height form fields when meta is not provided", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+        type: "image",
+        path: ".spherse/attachments/2.png",
+        bytes: 4,
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      const result = await createApiClient("http://localhost:1234", "p1").uploadAttachedImage(
+        new Blob([new Uint8Array(4)]),
+      );
+
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+      const form = init.body as FormData;
+      expect(form.get("width")).toBeNull();
+      expect(form.get("height")).toBeNull();
+      expect(result.width).toBeUndefined();
+      expect(result.height).toBeUndefined();
+    });
+
+    it("injects the Authorization header on the multipart upload", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+        type: "image",
+        path: ".spherse/attachments/3.png",
+        bytes: 4,
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await createApiClient("http://localhost:1234", "p1", "tok-abc").uploadAttachedImage(
+        new Blob([new Uint8Array(4)]),
+      );
+
+      const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+      const headers = (init.headers ?? {}) as Record<string, string>;
+      expect(headers.Authorization).toBe("Bearer tok-abc");
+    });
+
+    it("deletes an attachment via DELETE with a JSON body", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ ok: true }));
+      vi.stubGlobal("fetch", fetchMock);
+
+      await createApiClient("http://localhost:1234", "p1").deleteAttachment(".spherse/attachments/x.png");
+
+      const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("http://localhost:1234/api/projects/p1/attachments");
+      expect(init.method).toBe("DELETE");
+      expect(JSON.parse(init.body as string)).toEqual({ path: ".spherse/attachments/x.png" });
+      const headers = (init.headers ?? {}) as Record<string, string>;
+      expect(headers["Content-Type"]).toBe("application/json");
+    });
+  });
 });

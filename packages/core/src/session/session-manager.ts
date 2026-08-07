@@ -8,6 +8,7 @@ import type { SamplingParams } from "../types.js";
 import type { SessionContext, TurnContextSnapshot } from "./types.js";
 import type { TriggerManager } from "../trigger/trigger-manager.js";
 import { McpConnectionManager } from "../mcp/mcp-connection-manager.js";
+import type { Attachment } from "../attachments/index.js";
 
 export class SessionManager {
   private readonly sessions = new Map<string, LiveSession>();
@@ -72,11 +73,12 @@ export class SessionManager {
   async sendMessage(
     sessionId: string,
     message: string,
+    attachments: Attachment[],
     onEvent: AgentEventHandler,
   ): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new NotFoundError(`No active session "${sessionId}"`);
-    return session.sendMessage(message, onEvent);
+    return session.sendMessage(message, attachments, onEvent);
   }
 
   abortSession(sessionId: string): void {

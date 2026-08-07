@@ -20,6 +20,11 @@ describe("categorizePath", () => {
     );
   });
 
+  it("classifies attachments dir and its contents", () => {
+    expect(categorizePath(".spherse/attachments")).toBe("attachments");
+    expect(categorizePath(".spherse/attachments/photo.png")).toBe("attachments");
+  });
+
   it("classifies skills dir and its contents", () => {
     expect(categorizePath(".spherse/skills")).toBe("skills");
     expect(categorizePath(".spherse/skills/my-skill/SKILL.md")).toBe("skills");

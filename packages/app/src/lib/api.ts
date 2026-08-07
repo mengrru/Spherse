@@ -24,6 +24,23 @@ import type {
   SessionStatusResponse,
 } from "@spherse/server/contracts";
 import { parseApiResponse, schemas } from "@spherse/server/contracts";
+import { Type } from "@sinclair/typebox";
+
+const attachmentUploadResponse = Type.Object({
+  type: Type.Literal("image"),
+  path: Type.String(),
+  width: Type.Optional(Type.Number()),
+  height: Type.Optional(Type.Number()),
+  bytes: Type.Integer(),
+});
+
+export interface AttachmentUploadResponse {
+  type: "image";
+  path: string;
+  width?: number;
+  height?: number;
+  bytes: number;
+}
 
 async function assertOk(res: Response): Promise<void> {
   if (!res.ok) {
@@ -316,6 +333,31 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       });
       await assertOk(res);
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
+    },
+
+    async uploadAttachedImage(
+      blob: Blob,
+      meta?: { width?: number; height?: number },
+    ): Promise<AttachmentUploadResponse> {
+      const form = new FormData();
+      form.append("file", blob);
+      if (meta?.width !== undefined) form.append("width", String(meta.width));
+      if (meta?.height !== undefined) form.append("height", String(meta.height));
+      const res = await authedFetch(`${apiBase}/attachments`, {
+        method: "POST",
+        body: form,
+      });
+      await assertOk(res);
+      return parseJsonResponse<AttachmentUploadResponse>(res, attachmentUploadResponse);
+    },
+
+    async deleteAttachment(path: string): Promise<void> {
+      const res = await authedFetch(`${apiBase}/attachments`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path }),
+      });
+      await assertOk(res);
     },
 
     async getAiAccessSettings(): Promise<AiAccessSettingsResponse> {

@@ -11,6 +11,7 @@ import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
 import { FileViewerCard } from "./FileViewerCard";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+import { MessageAttachments } from "./MessageAttachments";
 import { useOpenExternalLink } from "../browser/open-external-url";
 import { formatMessageTime } from "./lib/format-time";
 
@@ -72,6 +73,9 @@ export function MessageItem({ message, agent, showTime, supersededToolCallIds, o
             </>
           )}
         </div>
+        {isUser && message._attachments && message._attachments.length > 0 && (
+          <MessageAttachments attachments={message._attachments} />
+        )}
         {message._toolCalls && message._toolCalls.length > 0 && (
           <ToolCallSection toolCalls={message._toolCalls} onNavigateToPath={onNavigateToPath} />
         )}

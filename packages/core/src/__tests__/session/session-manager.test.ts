@@ -303,7 +303,7 @@ describe("SessionManager lazy model resolution", () => {
   it("throws ModelNotConfiguredError on sendMessage when no model is configured", async () => {
     const sessionId = await runtime.sessionRuntime.createSession(agentId);
     await expect(
-      runtime.sessionRuntime.sendMessage(sessionId, "hi", () => {}),
+      runtime.sessionRuntime.sendMessage(sessionId, "hi", [], () => {}),
     ).rejects.toBeInstanceOf(ModelNotConfiguredError);
   });
 
@@ -316,9 +316,12 @@ describe("SessionManager lazy model resolution", () => {
     agent.prompt = vi.fn().mockResolvedValue(undefined) as FakeAgent["prompt"];
 
     await expect(
-      runtime.sessionRuntime.sendMessage(sessionId, "hi", () => {}),
+      runtime.sessionRuntime.sendMessage(sessionId, "hi", [], () => {}),
     ).resolves.toBeUndefined();
-    expect(agent.prompt).toHaveBeenCalledWith("hi");
+    expect(agent.prompt).toHaveBeenCalledTimes(1);
+    const promptArg = (agent.prompt as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(promptArg.role).toBe("user");
+    expect(promptArg.content).toEqual([{ type: "text", text: "hi" }]);
   });
 });
 

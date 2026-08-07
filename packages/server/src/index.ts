@@ -2,6 +2,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import type { AddressInfo } from "node:net";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
+import multipart from "@fastify/multipart";
 import type { Logger, SamplingParams } from "@spherse/core";
 import { NotFoundError, ValidationError, AccessDeniedError, ConflictError } from "@spherse/core";
 import { ProjectRegistry } from "./registry.js";
@@ -55,6 +56,9 @@ export async function createMultiProjectServer(
 
   await fastify.register(cors, { origin: true });
   await fastify.register(websocket);
+  await fastify.register(multipart, {
+    limits: { fileSize: 5 * 1024 * 1024 },
+  });
 
   fastify.get("/health", { schema: { response: { 200: { type: "object", properties: { ok: { type: "boolean" } } } } } }, async () => ({ ok: true }));
 

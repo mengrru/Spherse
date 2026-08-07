@@ -70,7 +70,7 @@ export function handleChatWebSocket(
 
         if (msg.type === "message") {
           try {
-            await attachment.sendMessage(msg.content);
+            await attachment.sendMessage(msg.content, msg.attachments ?? []);
           } catch (err) {
             if (closed) return;
             fastify.log.error({ err, sessionId }, "chat ws message error");

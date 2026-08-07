@@ -256,7 +256,7 @@ export class TriggerManager extends EventEmitter {
 
       const resolvedMessage = resolveTemplateVars(entry.message, { agentName, payload });
 
-      await this.sessionRuntime.sendMessage(sessionId, resolvedMessage, (event) => {
+      await this.sessionRuntime.sendMessage(sessionId, resolvedMessage, [], (event) => {
         if (event.type === "agent_end") {
           this.getTriggerStore(agentId)?.appendLog({
             ...logEntry,

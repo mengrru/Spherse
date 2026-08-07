@@ -96,7 +96,7 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     routeHandler = null;
     const mock = createMockRegistry();
     mock.sessionRuntime.sendMessage.mockImplementation(
-      async (_sessionId, _content, onEvent) => {
+      async (_sessionId: string, _content: string, _attachments: unknown, onEvent: (event: any) => void) => {
         onEvent({ type: "agent_start" });
         onEvent({ type: "agent_end", messages: [] });
       },

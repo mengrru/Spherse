@@ -56,6 +56,22 @@ export interface ToolCallInfo {
   _card?: ChatCard;
 }
 
+export interface ChatAttachment {
+  type: "image";
+  path: string;
+  mimeType: string;
+  width?: number;
+  height?: number;
+}
+
+export interface AttachedImage {
+  path: string;
+  mimeType: string;
+  width?: number;
+  height?: number;
+  previewUrl: string;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -66,6 +82,7 @@ export interface ChatMessage {
   _error?: string;
   _errorCode?: ErrorEventCode;
   _runChanges?: FileChangeCard[];
+  _attachments?: ChatAttachment[];
   timestamp?: number;
 }
 

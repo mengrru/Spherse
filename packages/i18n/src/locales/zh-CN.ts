@@ -614,6 +614,12 @@ export const zhCN = {
   "chat.responseGenerationFailed": "回复生成失败",
   // 用户尚未配置模型时尝试发消息，聊天区显示的错误提示（说明需先到设置中选择模型）
   "chat.error.modelNotConfigured": "尚未配置模型，请在设置中选择一个模型后再发送消息。",
+  // Composer 底部「附加图片」按钮的悬停提示
+  "chat.attachImage": "附加图片",
+  // 附加图片在压缩或上传过程中失败时的错误提示，{message} 为错误信息
+  "chat.imageAttachFailed": "添加图片失败：{message}",
+  // Composer 待发送图片缩略图上的「移除」按钮悬停提示
+  "chat.removeAttachment": "移除图片",
 
   // --- Content Browser ---
   // 文件被外部修改时的冲突提示横幅

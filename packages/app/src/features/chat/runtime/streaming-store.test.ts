@@ -399,4 +399,51 @@ describe("streaming-store resilience", () => {
 
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("attaches image metadata to the optimistic user message and the websocket payload", async () => {
+    const client = createMockClient();
+    useStreamingStore.getState().attach(client, "img1", BASE_URL, "p1", "a1");
+    const socket = mock.instances[mock.instances.length - 1];
+    socket.readyState = OPEN;
+    socket.onopen?.({} as Event);
+
+    const image = {
+      path: ".spherse/attachments/x.png",
+      mimeType: "image/png",
+      width: 10,
+      height: 20,
+      previewUrl: `${BASE_URL}/preview/x.png`,
+    };
+
+    useStreamingStore.getState().sendMessage("img1", "look", image);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const messages = useStreamingStore.getState().sessions.img1.messages;
+    expect(messages[messages.length - 1]).toMatchObject({
+      role: "user",
+      content: "look",
+      _optimistic: true,
+      _attachments: [
+        { type: "image", path: ".spherse/attachments/x.png", mimeType: "image/png", width: 10, height: 20 },
+      ],
+    });
+    expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({
+      type: "message",
+      content: "look",
+      attachments: [{ type: "image", path: ".spherse/attachments/x.png", mimeType: "image/png" }],
+    });
+  });
+
+  it("sends a text-only message without attachments when no image is provided", async () => {
+    await attachAndConnect("img2");
+    useStreamingStore.getState().sendMessage("img2", "hello");
+
+    const socket = mock.instances[mock.instances.length - 1];
+    const sent = socket.sent.map((s) => JSON.parse(s));
+    const messagePayload = sent.find((p) => p.type === "message" && p.content === "hello");
+    expect(messagePayload.attachments).toBeUndefined();
+
+    const messages = useStreamingStore.getState().sessions.img2.messages;
+    expect(messages[messages.length - 1]._attachments).toBeUndefined();
+  });
 });

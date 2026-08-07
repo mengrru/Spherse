@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { ApiClient } from "../../../lib/api";
-import type { ChatMessage } from "../types";
+import type { AttachedImage, ChatMessage } from "../types";
 import { useStreamingStore } from "../runtime/streaming-store";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
@@ -46,7 +46,7 @@ export function useChatSession({
     messages,
     streaming,
     loading,
-    sendMessage: (text: string) => useStreamingStore.getState().sendMessage(sessionId, text),
+    sendMessage: (text: string, image?: AttachedImage) => useStreamingStore.getState().sendMessage(sessionId, text, image),
     abort: () => useStreamingStore.getState().abort(sessionId),
   };
 }

@@ -7,7 +7,7 @@ function createRuntime() {
   const runtime = {
     restoreSession: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn(
-      (_sessionId: string, _content: string, onEvent: (event: any) => void) => {
+      (_sessionId: string, _content: string, _attachments: unknown, onEvent: (event: any) => void) => {
         emit = onEvent;
         return new Promise<void>((resolve) => {
           finish = resolve;

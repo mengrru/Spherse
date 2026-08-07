@@ -1,6 +1,13 @@
 import { Agent } from "@earendil-works/pi-agent-core";
 import type { AgentEvent, AgentTool, AgentMessage, StreamFn } from "@earendil-works/pi-agent-core";
-import type { Message, Model, Api } from "@earendil-works/pi-ai";
+import type { Message, Model, Api, UserMessage } from "@earendil-works/pi-ai";
+import {
+  prepareAttachmentUserMessage,
+  sanitizeAttachmentEvent,
+  stripUserAttachments,
+  type Attachment,
+  type UserMessageWithAttachments,
+} from "../attachments/index.js";
 import type { AgentProfile, SamplingParams, TimePerceptionConfig } from "../types.js";
 import { resolveModelById, getChatStreamFn } from "../model-providers/index.js";
 import { createToolsForProject, ToolContext } from "../tools/index.js";
@@ -149,7 +156,11 @@ export class LiveSession {
     this.pendingReload = true;
   }
 
-  async sendMessage(message: string, onEvent: AgentEventHandler): Promise<void> {
+  async sendMessage(
+    message: string,
+    attachments: Attachment[] = [],
+    onEvent: AgentEventHandler,
+  ): Promise<void> {
     if (this.pendingReload) {
       this.pendingReload = false;
       await this.applyReload();
@@ -159,9 +170,31 @@ export class LiveSession {
     const sessionLogger = this.ctx.logger.child({ sessionId: this.sessionId });
     const agentStore = this.ctx.projectStore.getAgent(this.agentId);
 
+    const userMessage = await prepareAttachmentUserMessage(
+      message,
+      attachments,
+      this.ctx.projectRoot,
+    );
+
+    let fullUserMsg: UserMessage | undefined;
+    let strippedMsg: UserMessageWithAttachments | undefined;
+
     this.controlBus.setEventSink(onEvent);
     const unsubscribe = this.agent.subscribe((event) => {
       logAgentEvent(sessionLogger, event);
+      if (attachments.length > 0) {
+        if (
+          !fullUserMsg &&
+          event.type === "message_start" &&
+          (event.message as UserMessage).role === "user"
+        ) {
+          fullUserMsg = event.message as UserMessage;
+          strippedMsg = stripUserAttachments(fullUserMsg, attachments);
+        }
+        if (fullUserMsg && strippedMsg) {
+          event = sanitizeAttachmentEvent(event, fullUserMsg, strippedMsg);
+        }
+      }
       if (event.type === "message_end") {
         const msgId = agentStore?.sessions.appendMessage(this.sessionId, event.message);
         if (msgId !== undefined) this.liveMessageDbIds.push(msgId);
@@ -170,9 +203,14 @@ export class LiveSession {
     });
 
     try {
-      await this.agent.prompt(message);
+      await this.agent.prompt(userMessage);
       await this.maybeCompact();
     } finally {
+      if (fullUserMsg && strippedMsg) {
+        this.agent.state.messages = this.agent.state.messages.map((m) =>
+          m === fullUserMsg ? strippedMsg : m,
+        ) as AgentMessage[];
+      }
       unsubscribe();
       this.controlBus.setEventSink(null);
     }
@@ -385,6 +423,24 @@ export class LiveSession {
       },
       sessionId,
       streamFn,
+      convertToLlm(messages) {
+        return messages
+          .map((m) => {
+            if (m.role === "user") {
+              const { _attachments, ...rest } = m as UserMessageWithAttachments;
+              if (Array.isArray(rest.content)) {
+                rest.content = rest.content.filter(
+                  (c) => !(c.type === "image" && !c.data),
+                );
+              }
+              return rest;
+            }
+            return m;
+          })
+          .filter(
+            (m) => m.role === "user" || m.role === "assistant" || m.role === "toolResult",
+          ) as Message[];
+      },
     });
   }
 

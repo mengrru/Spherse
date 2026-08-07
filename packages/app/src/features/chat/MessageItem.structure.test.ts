@@ -36,4 +36,22 @@ describe("MessageItem structure", () => {
     expect(source).toContain('href.startsWith("#")');
     expect(source).toContain("scrollIntoView");
   });
+
+  it("renders user message image attachments through the preview url", () => {
+    const source = readFileSync(join(currentDir, "MessageItem.tsx"), "utf8");
+
+    expect(source).toContain("_attachments");
+    expect(source).toContain("MessageAttachments");
+  });
+});
+
+describe("MessageAttachments structure", () => {
+  it("renders thumbnails from client.getPreviewUrl and portals the fullscreen viewer to document.body", () => {
+    const source = readFileSync(join(currentDir, "MessageAttachments.tsx"), "utf8");
+
+    expect(source).toContain("getPreviewUrl");
+    expect(source).toContain("createPortal");
+    expect(source).toContain("document.body");
+    expect(source).toContain("fixed inset-0");
+  });
 });

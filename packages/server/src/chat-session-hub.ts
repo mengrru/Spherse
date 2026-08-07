@@ -1,7 +1,7 @@
-import { ConflictError, type SessionManager } from "@spherse/core";
+import { ConflictError, type Attachment, type SessionManager } from "@spherse/core";
 import type { FastifyBaseLogger } from "fastify";
 
-type CoreEventHandler = Parameters<SessionManager["sendMessage"]>[2];
+type CoreEventHandler = Parameters<SessionManager["sendMessage"]>[3];
 type CoreEvent = Parameters<CoreEventHandler>[0];
 type Subscriber = (event: unknown) => void;
 
@@ -20,7 +20,7 @@ interface ChatChannel {
 
 export interface ChatSessionAttachment {
   ready: Promise<boolean>;
-  sendMessage(content: string): Promise<void>;
+  sendMessage(content: string, attachments?: Attachment[]): Promise<void>;
   abort(): void;
   resolveControlRequest(
     requestId: string,
@@ -67,9 +67,9 @@ export class ChatSessionHub {
 
     return {
       ready,
-      sendMessage: async (content) => {
+      sendMessage: async (content, attachments) => {
         if (!(await ready) || !active) return;
-        await this.startRun(channel, content);
+        await this.startRun(channel, content, attachments);
       },
       abort: () => {
         if (active) channel.runtime.abortSession(channel.sessionId);
@@ -130,7 +130,11 @@ export class ChatSessionHub {
     return channel;
   }
 
-  private async startRun(channel: ChatChannel, content: string): Promise<void> {
+  private async startRun(
+    channel: ChatChannel,
+    content: string,
+    attachments?: Attachment[],
+  ): Promise<void> {
     if (channel.running) {
       throw new ConflictError(`Session "${channel.sessionId}" is already running`);
     }
@@ -138,10 +142,15 @@ export class ChatSessionHub {
     channel.runEvents = [];
     this.publish(channel, { type: "run_status", active: true });
     try {
-      await channel.runtime.sendMessage(channel.sessionId, content, (event) => {
-        this.recordRunEvent(channel, event);
-        this.publish(channel, event);
-      });
+      await channel.runtime.sendMessage(
+        channel.sessionId,
+        content,
+        attachments ?? [],
+        (event) => {
+          this.recordRunEvent(channel, event);
+          this.publish(channel, event);
+        },
+      );
     } finally {
       channel.running = false;
       channel.runEvents = [];

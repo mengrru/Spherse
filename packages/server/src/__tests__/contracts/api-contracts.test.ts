@@ -17,6 +17,37 @@ describe("api contracts", () => {
     expect(parseChatClientMessage({ type: "ping" })).toEqual({ type: "ping" });
   });
 
+  it("accepts a chat message with optional attachments", () => {
+    expect(
+      parseChatClientMessage({
+        type: "message",
+        content: "hi",
+        attachments: [
+          { type: "image", path: ".spherse/attachments/x.png", mimeType: "image/png" },
+        ],
+      }),
+    ).toEqual({
+      type: "message",
+      content: "hi",
+      attachments: [
+        { type: "image", path: ".spherse/attachments/x.png", mimeType: "image/png" },
+      ],
+    });
+  });
+
+  it("rejects a chat message with malformed attachments", () => {
+    expect(() =>
+      parseChatClientMessage({ type: "message", content: "hi", attachments: "not-an-array" }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseChatClientMessage({
+        type: "message",
+        content: "hi",
+        attachments: [{ type: "image", path: "x.png" }],
+      }),
+    ).toThrow(/Invalid payload/);
+  });
+
   it("rejects malformed chat websocket client messages", () => {
     expect(() => parseChatClientMessage({ type: "message" })).toThrow(/Invalid payload/);
     expect(() => parseChatClientMessage("not-json")).toThrow(/Invalid payload/);

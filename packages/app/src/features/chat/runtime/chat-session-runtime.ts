@@ -2,6 +2,7 @@ import { CHAT_CLOSE_CODES, parseChatServerEvent } from "@spherse/server/contract
 import type { ApiClient } from "../../../lib/api";
 import { buildWsUrl } from "../../../lib/api";
 import { parseAgentEvent, type AgentEvent } from "../model/agent-event-parse";
+import type { AttachedImage } from "../types";
 import {
   mergeHistoryMessages,
   parseHistoryMessages,
@@ -227,9 +228,13 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 
-  sendMessage(content: string): boolean {
+  sendMessage(content: string, image?: AttachedImage): boolean {
     if (!this.isOpen()) return false;
-    this.ws?.send(JSON.stringify({ type: "message", content }));
+    const payload: Record<string, unknown> = { type: "message", content };
+    if (image) {
+      payload.attachments = [{ type: "image", path: image.path, mimeType: image.mimeType }];
+    }
+    this.ws?.send(JSON.stringify(payload));
     return true;
   }
 

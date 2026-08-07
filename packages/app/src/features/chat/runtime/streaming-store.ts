@@ -12,6 +12,7 @@ import {
   reduceSessionEvents,
   type StreamingSessionData,
 } from "../model/chat-session-reducer";
+import type { AttachedImage } from "../types";
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 30 * 1000;
@@ -36,7 +37,7 @@ interface StreamingStoreActions {
   detach: (sessionId: string) => void;
   disconnect: (sessionId: string) => void;
   touch: (sessionId: string) => void;
-  sendMessage: (sessionId: string, text: string) => boolean;
+  sendMessage: (sessionId: string, text: string, image?: AttachedImage) => boolean;
   abort: (sessionId: string) => void;
   respondApproval: (sessionId: string, requestId: string, approved: boolean) => void;
   setScrollPosition: (sessionId: string, position: number) => void;
@@ -279,7 +280,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       updateSession(sessionId, (session) => ({ ...session, lastActivityAt: Date.now() }));
     },
 
-    sendMessage(sessionId, text) {
+    sendMessage(sessionId, text, image) {
       const session = get().sessions[sessionId];
       const runtime = runtimes.get(sessionId);
       if (!session || !runtime?.isOpen()) return false;
@@ -294,13 +295,26 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
             content,
             timestamp: Date.now(),
             _optimistic: true,
+            ...(image
+              ? {
+                  _attachments: [
+                    {
+                      type: "image" as const,
+                      path: image.path,
+                      mimeType: image.mimeType,
+                      width: image.width,
+                      height: image.height,
+                    },
+                  ],
+                }
+              : {}),
           },
         ],
         streaming: true,
         lastActivityAt: Date.now(),
       }));
       useProjectDataStore.getState().setStreaming(session.projectId, sessionId, true);
-      runtime.sendMessage(content);
+      runtime.sendMessage(content, image);
       return true;
     },
 

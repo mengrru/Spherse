@@ -8,6 +8,7 @@ export type PathCategory =
   | "projectConfig"
   | "projectTheme"
   | "generatedImages"
+  | "attachments"
   | "skills"
   | "agentsRoot"
   | "agentProfile"
@@ -26,6 +27,7 @@ const PATH_PATTERNS: Record<Exclude<PathCategory, "userFiles">, string> = {
   projectConfig: `${PROJECT_META_DIR}/project.yaml`,
   projectTheme: `${PROJECT_META_DIR}/theme.css`,
   generatedImages: `${PROJECT_META_DIR}/generated-images/**`,
+  attachments: `${PROJECT_META_DIR}/attachments/**`,
   skills: `${PROJECT_META_DIR}/skills/**`,
   agentsRoot: `${PROJECT_META_DIR}/agents`,
   agentProfile: `${PROJECT_META_DIR}/agents/*/profile.md`,

@@ -108,7 +108,19 @@ const chatServerEvent = Type.Union([
 
 export const schemas = {
   chatClientMessage: Type.Union([
-    Type.Object({ type: Type.Literal("message"), content: Type.String() }),
+    Type.Object({
+      type: Type.Literal("message"),
+      content: Type.String(),
+      attachments: Type.Optional(
+        Type.Array(
+          Type.Object({
+            type: Type.String(),
+            path: Type.String(),
+            mimeType: Type.String(),
+          }),
+        ),
+      ),
+    }),
     Type.Object({ type: Type.Literal("abort") }),
     Type.Object({ type: Type.Literal("ping") }),
     Type.Object({

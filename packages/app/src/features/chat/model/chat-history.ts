@@ -74,10 +74,14 @@ export function parseHistoryMessages(
   const loaded: ChatMessage[] = [];
   for (const entry of entries) {
     if (isUserMessage(entry.message)) {
+      const rawAttachments = (entry.message as { _attachments?: unknown })._attachments;
       loaded.push({
         ...(entry.id !== undefined ? { _messageId: entry.id } : {}),
         role: "user",
         content: extractMessageText(entry.message.content),
+        ...(Array.isArray(rawAttachments) && rawAttachments.length > 0
+          ? { _attachments: rawAttachments as ChatMessage["_attachments"] }
+          : {}),
         timestamp: entry.message.timestamp,
       });
       continue;
