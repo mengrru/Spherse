@@ -34,7 +34,7 @@ export function registerAgentWriteRoutes(fastify: FastifyInstance, _registry: Pr
       const { content, themeContent } = req.body;
       if (!content) throw badRequest("content is required");
 
-      const updated = await req.projectCtx!.projectManager.updateAgent(req.params.id, content, themeContent);
+      const updated = await req.projectCtx!.runtime.updateAgent(req.params.id, content, themeContent);
       return { ok: true, id: updated.id };
     },
   );

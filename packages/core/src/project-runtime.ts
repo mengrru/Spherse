@@ -3,6 +3,7 @@ import type { SessionManager } from "./session/session-manager.js";
 import type { TriggerManager } from "./trigger/trigger-manager.js";
 import type { TimerService } from "./trigger/timer-service.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
+import type { AgentProfile } from "./types.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 
 export class ProjectRuntime {
@@ -49,6 +50,10 @@ export class ProjectRuntime {
     const result = await this.projectManager.updateAgentMcp(agentId, config);
     await this.sessionRuntime.invalidateMcpCache(agentId);
     return result;
+  }
+
+  async updateAgent(agentId: string, content: string, themeContent?: string): Promise<AgentProfile> {
+    return this.projectManager.updateAgent(agentId, content, themeContent);
   }
 
   async shutdown(): Promise<void> {

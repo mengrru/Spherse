@@ -75,7 +75,9 @@ export class LiveSession {
   private readonly ctx: SessionContext;
   private readonly liveMessageDbIds: number[] = [];
   private readonly controlBus: SessionControlBus;
+  private readonly agentSkillStore?: SkillStore;
   private mcpMerged = false;
+  private pendingReload = false;
 
   private constructor(
     agent: Agent,
@@ -83,12 +85,14 @@ export class LiveSession {
     sessionId: string,
     ctx: SessionContext,
     controlBus: SessionControlBus,
+    agentSkillStore?: SkillStore,
   ) {
     this.agent = agent;
     this.agentId = agentId;
     this.sessionId = sessionId;
     this.ctx = ctx;
     this.controlBus = controlBus;
+    this.agentSkillStore = agentSkillStore;
   }
 
   static async create(
@@ -101,7 +105,7 @@ export class LiveSession {
     const profile = agentStore.getProfile();
     const controlBus = new SessionControlBus();
     const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills, createApprovalGate(controlBus));
-    return new LiveSession(agent, agentId, sessionId, ctx, controlBus);
+    return new LiveSession(agent, agentId, sessionId, ctx, controlBus, agentStore.skills);
   }
 
   static async restore(
@@ -117,7 +121,7 @@ export class LiveSession {
     const profile = agentStore.getProfile();
     const controlBus = new SessionControlBus();
     const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills, createApprovalGate(controlBus));
-    const live = new LiveSession(agent, agentId, sessionId, ctx, controlBus);
+    const live = new LiveSession(agent, agentId, sessionId, ctx, controlBus, agentStore.skills);
 
     const latest = agentStore.sessions.getLatestCompaction(sessionId);
     if (latest) {
@@ -141,7 +145,15 @@ export class LiveSession {
     return this.agentId;
   }
 
+  markReloadPending(): void {
+    this.pendingReload = true;
+  }
+
   async sendMessage(message: string, onEvent: AgentEventHandler): Promise<void> {
+    if (this.pendingReload) {
+      this.pendingReload = false;
+      await this.applyReload();
+    }
     this.ensureModel();
     await this.ensureMcpTools();
     const sessionLogger = this.ctx.logger.child({ sessionId: this.sessionId });
@@ -193,6 +205,34 @@ export class LiveSession {
       }
     } catch (err) {
       this.ctx.logger.warn({ err, sessionId: this.sessionId }, "ensure mcp tools failed");
+    }
+  }
+
+  private async applyReload(): Promise<void> {
+    const agentStore = this.ctx.projectStore.getAgent(this.agentId);
+    if (!agentStore) return;
+    try {
+      const profile = agentStore.getProfile();
+      const { systemPrompt, tools } = await LiveSession.buildPromptAndTools(
+        this.ctx,
+        profile,
+        this.sessionId,
+        this.agentSkillStore,
+        createApprovalGate(this.controlBus),
+      );
+      this.agent.state.systemPrompt = systemPrompt;
+      this.agent.state.tools = tools;
+      this.agent.streamFn = composeStreamFn(this.ctx.sampling, profile.timePerception);
+      this.mcpMerged = false;
+      this.ctx.logger.info(
+        { sessionId: this.sessionId, agentId: this.agentId },
+        "agent config reloaded for live session",
+      );
+    } catch (err) {
+      this.ctx.logger.warn(
+        { err, sessionId: this.sessionId, agentId: this.agentId },
+        "agent config reload failed, keeping previous config",
+      );
     }
   }
 
@@ -316,6 +356,45 @@ export class LiveSession {
     agentSkillStore?: SkillStore,
     approvalGate?: ApprovalGate,
   ): Promise<Agent> {
+    const { systemPrompt, tools } = await this.buildPromptAndTools(
+      ctx,
+      profile,
+      sessionId,
+      agentSkillStore,
+      approvalGate,
+    );
+
+    const modelId = resolveEffectiveModelId(profile, ctx.defaultModel);
+    let model: Model<Api> | undefined;
+    if (modelId) {
+      try {
+        model = resolveModelById(modelId);
+      } catch (err) {
+        ctx.logger.warn({ err, modelId, agentId: profile.id }, "model not resolvable, agent will wait for model config");
+      }
+    }
+
+    const streamFn = composeStreamFn(ctx.sampling, profile.timePerception);
+
+    return new Agent({
+      initialState: {
+        systemPrompt,
+        model,
+        thinkingLevel: "medium",
+        tools,
+      },
+      sessionId,
+      streamFn,
+    });
+  }
+
+  private static async buildPromptAndTools(
+    ctx: SessionContext,
+    profile: AgentProfile,
+    sessionId: string,
+    agentSkillStore?: SkillStore,
+    approvalGate?: ApprovalGate,
+  ): Promise<{ systemPrompt: string; tools: AgentTool[] }> {
     const projectRoot = ctx.projectRoot;
     const toolContext = new ToolContext(
       ctx.projectStore,
@@ -360,28 +439,6 @@ export class LiveSession {
     blocks.push(buildPreloadedContext(files));
 
     const systemPrompt = serializeSystemPrompt(blocks);
-
-    const modelId = resolveEffectiveModelId(profile, ctx.defaultModel);
-    let model: Model<Api> | undefined;
-    if (modelId) {
-      try {
-        model = resolveModelById(modelId);
-      } catch (err) {
-        ctx.logger.warn({ err, modelId, agentId: profile.id }, "model not resolvable, agent will wait for model config");
-      }
-    }
-
-    const streamFn = composeStreamFn(ctx.sampling, profile.timePerception);
-
-    return new Agent({
-      initialState: {
-        systemPrompt,
-        model,
-        thinkingLevel: "medium",
-        tools,
-      },
-      sessionId,
-      streamFn,
-    });
+    return { systemPrompt, tools };
   }
 }

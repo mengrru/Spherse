@@ -1,4 +1,4 @@
-import type { ProjectStore } from "../store/project.js";
+import type { ProjectStore, AgentChangePayload } from "../store/project.js";
 import { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 import { NotFoundError } from "../errors.js";
@@ -39,6 +39,12 @@ export class SessionManager {
       sampling: options?.sampling,
       mcpConnectionManager: this.mcpConnectionManager,
     };
+    projectStore.on("agent_updated", (payload: AgentChangePayload) => {
+      if (payload.action !== "updated") return;
+      for (const session of this.sessions.values()) {
+        if (session.getAgentId() === payload.agentId) session.markReloadPending();
+      }
+    });
   }
 
   setTriggerManager(triggerManager: TriggerManager): void {

@@ -446,3 +446,85 @@ describe("SessionManager getSessionStatus", () => {
     );
   });
 });
+
+describe("SessionManager agent hot-reload", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-reload-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore;
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
+    runtime.timerService.stop();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function liveOf(sessionId: string): any {
+    const live = (runtime.sessionRuntime as any).sessions.get(sessionId);
+    if (!live) throw new Error(`no live session ${sessionId}`);
+    return live;
+  }
+
+  const UPDATED_CONTENT = `---
+name: Test Agent
+tools:
+  - read_file
+---
+
+Reloaded prompt body.`;
+
+  it("marks a live session pending reload when its agent profile is updated", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    const live = liveOf(sessionId);
+    expect(live.pendingReload).toBe(false);
+
+    await runtime.projectManager.projectStore.updateAgent(agentId, UPDATED_CONTENT);
+
+    expect(live.pendingReload).toBe(true);
+  });
+
+  it("marks all live sessions sharing the updated agent", async () => {
+    const sidA = await runtime.sessionRuntime.createSession(agentId);
+    const sidB = await runtime.sessionRuntime.createSession(agentId);
+
+    await runtime.projectManager.projectStore.updateAgent(agentId, UPDATED_CONTENT);
+
+    expect(liveOf(sidA).pendingReload).toBe(true);
+    expect(liveOf(sidB).pendingReload).toBe(true);
+  });
+
+  it("does not mark sessions belonging to a different agent", async () => {
+    const otherAgent = await runtime.projectManager.projectStore.createAgent(
+      "other-agent",
+      TEST_AGENT_PROFILE,
+    );
+    const otherId = otherAgent.getProfile().id;
+    const sidTarget = await runtime.sessionRuntime.createSession(agentId);
+    const sidOther = await runtime.sessionRuntime.createSession(otherId);
+
+    await runtime.projectManager.projectStore.updateAgent(agentId, UPDATED_CONTENT);
+
+    expect(liveOf(sidTarget).pendingReload).toBe(true);
+    expect(liveOf(sidOther).pendingReload).toBe(false);
+  });
+
+  it("does not mark sessions on agent creation", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    const live = liveOf(sessionId);
+
+    await runtime.projectManager.projectStore.createAgent("new-agent", TEST_AGENT_PROFILE);
+
+    expect(live.pendingReload).toBe(false);
+  });
+});

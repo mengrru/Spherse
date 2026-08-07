@@ -317,7 +317,77 @@ describe("LiveSession context engineering", () => {
     const restored = await LiveSession.restore(ctx, agentId, sessionId);
     const restoredAgent = agentOf(restored);
     expect(restoredAgent.state.messages.length).toBeLessThan(totalPersisted);
-    const restoredIds = liveIdsOf(restored);
-    expect(restoredIds[0]).toBeGreaterThan(0);
+  const restoredIds = liveIdsOf(restored);
+  expect(restoredIds[0]).toBeGreaterThan(0);
+  });
+
+  it("applyReload rebuilds system prompt and tools from fresh profile", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    agentStore._profile = { ...agentStore._profile, systemPrompt: "Original system prompt body." };
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const agent = agentOf(live);
+    expect(agent.state.systemPrompt).toContain("Original system prompt body.");
+    expect(agent.state.tools.length).toBeGreaterThan(0);
+
+    agentStore._profile = { ...agentStore._profile, systemPrompt: "Reloaded system prompt body.", tools: [] };
+
+    await (live as any).applyReload();
+
+    expect(agent.state.systemPrompt).toContain("Reloaded system prompt body.");
+    expect(agent.state.systemPrompt).not.toContain("Original system prompt body.");
+    expect(agent.state.tools).toEqual([]);
+  });
+
+  it("markReloadPending defers reload until the next sendMessage", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    agentStore._profile = { ...agentStore._profile, systemPrompt: "Original prompt." };
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const agent = agentOf(live);
+    const originalPrompt = agent.state.systemPrompt;
+
+    agentStore._profile = { ...agentStore._profile, systemPrompt: "New prompt not yet applied." };
+    live.markReloadPending();
+
+    expect((live as any).pendingReload).toBe(true);
+    expect(agent.state.systemPrompt).toBe(originalPrompt);
+  });
+
+  it("applyReload keeps previous config when reload fails", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const agent = agentOf(live);
+    const originalPrompt = agent.state.systemPrompt;
+
+    (agentStore as any)._profile = null;
+
+    await expect((live as any).applyReload()).resolves.toBeUndefined();
+    expect(agent.state.systemPrompt).toBe(originalPrompt);
+  });
+
+  it("applyReload is a no-op when the agent store no longer exists", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const agent = agentOf(live);
+    const originalPrompt = agent.state.systemPrompt;
+
+    (ctx.projectStore as any)._agents.delete(agentId);
+
+    await expect((live as any).applyReload()).resolves.toBeUndefined();
+    expect(agent.state.systemPrompt).toBe(originalPrompt);
+  });
+
+  it("applyReload resets mcpMerged so MCP tools re-merge on next turn", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    (live as any).mcpMerged = true;
+
+    await (live as any).applyReload();
+
+    expect((live as any).mcpMerged).toBe(false);
   });
 });
