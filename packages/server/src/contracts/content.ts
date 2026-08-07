@@ -11,6 +11,7 @@ export const schemas = {
   contentResponse: Type.Object({
     content: Type.String(),
     path: Type.String(),
+    binary: Type.Optional(Type.Boolean()),
   }),
   contentCreateRequest: Type.Object({
     action: Type.Union([Type.Literal("mkdir"), Type.Literal("touch")]),

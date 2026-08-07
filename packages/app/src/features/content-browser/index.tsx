@@ -9,6 +9,7 @@ import { ConflictBanner } from "./ConflictBanner";
 import { ConfirmDialogs } from "./ConfirmDialogs";
 import { ContentView } from "./ContentView";
 import { Header } from "./Header";
+import { classifyFileKind } from "./file-kind";
 import { TextSelectionSession } from "../text-selection-session";
 import { useContentAutoRefresh } from "./hooks/useContentAutoRefresh";
 import { useContentEditor } from "./hooks/useContentEditor";
@@ -38,7 +39,7 @@ export function ContentBrowser({
   const textSelectionEnabled = useFeature("text-selection-session");
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
   const [refreshKey, setRefreshKey] = useState(0);
-  const { content, setContent, loading, error, reload: reloadContent } = useContentFile(client, filePath);
+  const { content, setContent, binary, loading, error, reload: reloadContent } = useContentFile(client, filePath);
   const editor = useContentEditor({
     client,
     projectId,
@@ -58,14 +59,8 @@ export function ContentBrowser({
 
   useContentAutoRefresh({ projectId, filePath, enabled: !editor.isEditing, onReload: handleRefresh });
 
-  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
-  const isMarkdown =
-    ext === "md" ||
-    ext === "markdown" ||
-    filePath.endsWith(".agents.md");
-  const isHtml = ext === "html" || ext === "htm";
-  const isImage = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp"]).has(ext);
-  const isEditable = !isImage && bridge.capabilities.content.editable;
+  const { isMarkdown, isHtml, isImage } = classifyFileKind(filePath);
+  const isEditable = !isImage && !binary && !loading && bridge.capabilities.content.editable;
 
   return (
     <div data-content-browser className="flex flex-col h-full">
@@ -109,6 +104,7 @@ export function ContentBrowser({
             <ContentView
               filePath={filePath}
               content={content}
+              binary={binary}
               contentRef={contentRef}
               loading={loading}
               error={error}
@@ -127,6 +123,7 @@ export function ContentBrowser({
         <ContentView
           filePath={filePath}
           content={content}
+          binary={binary}
           loading={loading}
           error={error}
           isMarkdown={isMarkdown}

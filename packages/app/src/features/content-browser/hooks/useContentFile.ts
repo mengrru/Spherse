@@ -3,6 +3,7 @@ import type { ApiClient } from "../../../lib/api";
 
 export function useContentFile(client: ApiClient, filePath: string) {
   const [content, setContent] = useState<string | null>(null);
+  const [binary, setBinary] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadNonce, setReloadNonce] = useState(0);
@@ -21,6 +22,7 @@ export function useContentFile(client: ApiClient, filePath: string) {
       .then((data) => {
         if (data) {
           setContent(data.content);
+          setBinary(data.binary ?? false);
         } else {
           setError("File not found");
         }
@@ -34,6 +36,7 @@ export function useContentFile(client: ApiClient, filePath: string) {
   return {
     content,
     setContent,
+    binary,
     loading,
     setLoading,
     error,

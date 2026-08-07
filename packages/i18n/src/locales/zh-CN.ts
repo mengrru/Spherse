@@ -642,6 +642,12 @@ export const zhCN = {
   "content-browser.refresh": "刷新",
   // 点击 markdown 内部链接指向的文件不存在时的 toast 错误提示，{path} 为目标文件相对项目根的路径
   "content-browser.linkNotFound": "找不到文件：{path}",
+  // 打开无法在应用内预览的二进制文件（如 PDF / Word / 音视频 / 压缩包）时，占位卡的主标题
+  "content-browser.unsupported.title": "此文件类型无法在 Spherse 内预览",
+  // 占位卡说明文案，解释为何不能预览（二进制文件）以及可改用系统默认应用打开
+  "content-browser.unsupported.description": "Spherse 暂不支持预览此类文件，可以用系统默认应用打开。",
+  // 占位卡上「用默认应用打开」按钮的文案（仅桌面端显示，调用系统默认程序打开该文件）
+  "content-browser.unsupported.openExternally": "用默认应用打开",
 
   // --- File Tree ---
   // 新建文件按钮

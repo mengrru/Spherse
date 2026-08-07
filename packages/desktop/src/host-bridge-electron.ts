@@ -13,6 +13,7 @@ const ELECTRON_CAPABILITIES: HostCapabilities = {
   appUpdate: true,
   devTools: true,
   mobileAccess: true,
+  openFileExternal: true,
   settings: { editable: true, scope: "local-only" },
   content: { editable: true },
 };
@@ -28,6 +29,7 @@ export function createElectronHostBridge(): HostBridge {
     addOpenProject: api.addOpenProject,
     closeProject: api.closeProject,
     openProjectFolder: api.openProjectFolder,
+    openFileExternal: api.openFile,
     setLastActiveProject: api.setLastActiveProject,
     getLastActiveProject: api.getLastActiveProject,
     openSampleProject: api.openSampleProject,

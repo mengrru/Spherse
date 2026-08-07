@@ -102,6 +102,7 @@ export interface HostCapabilities {
   appUpdate: boolean;
   devTools: boolean;
   mobileAccess: boolean;
+  openFileExternal: boolean;
   settings: { editable: boolean; scope: "local-only" | "synced" };
   content: { editable: boolean };
 }
@@ -114,6 +115,7 @@ export interface ProjectHostApi {
   addOpenProject(projectId: string, projectRoot: string): Promise<void>;
   closeProject(projectId: string, projectPath: string): Promise<void>;
   openProjectFolder(projectRoot: string): Promise<void>;
+  openFileExternal(absolutePath: string): Promise<void>;
   setLastActiveProject(projectId: string): Promise<void>;
   getLastActiveProject(): Promise<string | null>;
   openSampleProject(opts: { sampleId: string }): Promise<{ projectId: string; path: string } | { error: string } | null>;

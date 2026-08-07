@@ -1,10 +1,25 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { resolveProjectPath, serverAccessPolicy, AccessDeniedError } from "@spherse/core";
+import { resolveProjectPath, serverAccessPolicy, AccessDeniedError, isBinaryBuffer, BINARY_SAMPLE_SIZE } from "@spherse/core";
 import { schemas, parseContract } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { forbidden, notFound, badRequest, conflict } from "../errors.js";
+
+async function readFileContent(absolutePath: string): Promise<{ content: string; binary: boolean }> {
+  const handle = await fs.open(absolutePath, "r");
+  try {
+    const head = Buffer.alloc(BINARY_SAMPLE_SIZE);
+    const { bytesRead } = await handle.read(head, 0, BINARY_SAMPLE_SIZE, 0);
+    if (isBinaryBuffer(head.subarray(0, bytesRead))) {
+      return { content: "", binary: true };
+    }
+  } finally {
+    await handle.close();
+  }
+  const content = await fs.readFile(absolutePath, "utf-8");
+  return { content, binary: false };
+}
 
 export function registerContentRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get<{ Params: { projectId: string; "*": string } }>(
@@ -37,8 +52,8 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
         }));
         return parseContract(schemas.fileEntries, fileEntries);
       }
-      const content = await fs.readFile(absolutePath, "utf-8");
-      return parseContract(schemas.contentResponse, { content, path: relativePath });
+      const { content, binary } = await readFileContent(absolutePath);
+      return parseContract(schemas.contentResponse, { content, path: relativePath, binary });
     },
   );
 

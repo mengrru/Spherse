@@ -14,6 +14,7 @@ export type { PathCategory } from "./access/path-category.js";
 export { serverAccessPolicy } from "./access/access-policy.js";
 export type { AccessPolicy, Decision } from "./access/access-policy.js";
 export { shouldSkipDirEntry } from "./utils/fs-walk.js";
+export { isBinaryBuffer, BINARY_SAMPLE_SIZE } from "./utils/binary-detect.js";
 export { getSupportedProviders, getImageSupportedProviders, syncCustomProviders } from "./model-providers/index.js";
 export type { Logger } from "./logger.js";
 export type { AgentEvent, AgentMessage } from "@earendil-works/pi-agent-core";

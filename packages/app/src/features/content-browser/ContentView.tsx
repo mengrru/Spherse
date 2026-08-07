@@ -8,6 +8,7 @@ import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useOpenExternalLink } from "../browser/open-external-url";
 import { FrontMatterPanel } from "./FrontMatterPanel";
+import { UnsupportedFileCard } from "./UnsupportedFileCard";
 import { resolveMarkdownImagePath } from "./image-path";
 import { resolveMarkdownLink } from "./markdown-link";
 import { parseFrontmatter } from "./frontmatter";
@@ -15,6 +16,7 @@ import { parseFrontmatter } from "./frontmatter";
 interface ContentViewProps {
   filePath: string;
   content: string | null;
+  binary: boolean;
   contentRef?: RefObject<HTMLDivElement | null>;
   loading: boolean;
   error: string | null;
@@ -31,6 +33,7 @@ interface ContentViewProps {
 export function ContentView({
   filePath,
   content,
+  binary,
   contentRef,
   loading,
   error,
@@ -124,7 +127,8 @@ export function ContentView({
     <div ref={contentRef} className="flex-1 overflow-y-auto p-4">
       {loading && <p className="p-8 text-center text-muted-foreground">{t("common.loading")}</p>}
       {error && <p className="p-8 text-center text-destructive">{error}</p>}
-      {content && !loading && (
+      {!loading && !error && binary && <UnsupportedFileCard filePath={filePath} />}
+      {!loading && !error && !binary && content !== null && (
         isMarkdown ? (
           <div data-content-doc className="rounded-lg border border-border bg-card p-6 text-card-foreground">
             {frontmatter && <FrontMatterPanel data={frontmatter} />}

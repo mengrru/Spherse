@@ -14,6 +14,7 @@ const WEB_CAPABILITIES: HostCapabilities = {
   appUpdate: false,
   devTools: false,
   mobileAccess: false,
+  openFileExternal: false,
   settings: { editable: true, scope: "local-only" },
   content: { editable: false },
 };
@@ -132,6 +133,9 @@ function createWebProjectApi(
       void 0;
     },
     async openProjectFolder() {
+      void 0;
+    },
+    async openFileExternal() {
       void 0;
     },
     async setLastActiveProject(projectId) {

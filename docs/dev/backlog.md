@@ -1,6 +1,7 @@
 # Backlog
 
 - [x] **单服务器多引擎重构**：将多 Fastify 实例合并为单实例多 engine，通过 URL 前缀 `/api/projects/:projectId/...` 区分项目，减少资源占用。参见 `docs/dev/infra/2026-06-13-single-server-refactor/design.md`
+- [x] **Content Browser 二进制文件拦截与外部打开**：PDF/Word/音视频/压缩包等二进制文件不再以 UTF-8 强解出乱码。白名单（md/html/image，含 ico）走专属 viewer，其余文件由 server content 路由读头 8KB 复用 `isBinaryBuffer` 嗅探——文本则放行 `<pre>`、二进制则返回 `binary:true` 并渲染占位卡（顺手修复大二进制整文件读进内存）。桌面端占位卡提供「用默认应用打开」按钮（新增 `open-file` IPC + `shell.openPath`，校验路径在已打开项目内；`HostCapabilities.openFileExternal` 控制按钮显隐，web 版不显示）。参见 `docs/dev/features/2026-08-07-content-browser-binary-files/design.md`
 
 ## 代码质量
 

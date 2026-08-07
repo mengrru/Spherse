@@ -2,6 +2,7 @@ import { ipcMain, dialog, shell } from "electron";
 import type { BrowserWindow } from "electron";
 import path from "node:path";
 import { existsSync, mkdirSync, cpSync } from "node:fs";
+import { isInsideAnyOpenProject } from "./open-file-path.js";
 import { translate, normalizeLocale } from "@spherse/i18n";
 import { registerProject, unregisterProject, getServerPort, setProjectLastOpened } from "../server.js";
 import {
@@ -63,6 +64,14 @@ export function registerProjectIpc(
 
   ipcMain.handle("open-project-folder", async (_event, projectPath: string) => {
     await shell.openPath(projectPath);
+  });
+
+  ipcMain.handle("open-file", async (_event, filePath: string) => {
+    if (typeof filePath !== "string" || filePath.length === 0) return;
+    const projectRoots = getOpenProjects().map((entry) => entry.path);
+    if (!isInsideAnyOpenProject(filePath, projectRoots)) return;
+    const error = await shell.openPath(path.resolve(filePath));
+    if (error) throw new Error(error);
   });
 
   ipcMain.handle("open-external", async (_event, url: string) => {

@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { FloatingFrame } from "../../components/floating-frame";
 import { ContentView } from "../content-browser/ContentView";
+import { classifyFileKind } from "../content-browser/file-kind";
 import { useContentAutoRefresh } from "../content-browser/hooks/useContentAutoRefresh";
 import { useContentFile } from "../content-browser/hooks/useContentFile";
 import { useApiClient } from "../../lib/use-connection";
@@ -13,14 +14,6 @@ interface FloatingContentBrowserContainerProps {
   window: FloatingContentWindow;
 }
 
-function detectFileKinds(filePath: string) {
-  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
-  const isMarkdown = ext === "md" || ext === "markdown" || filePath.endsWith(".agents.md");
-  const isHtml = ext === "html" || ext === "htm";
-  const isImage = new Set(["png", "jpg", "jpeg", "gif", "svg", "webp"]).has(ext);
-  return { isMarkdown, isHtml, isImage };
-}
-
 export function FloatingContentBrowserContainer({
   projectId,
   window: floatWindow,
@@ -28,7 +21,7 @@ export function FloatingContentBrowserContainer({
   const { filePath, position, size } = floatWindow;
   const navigate = useNavigate();
   const client = useApiClient(projectId);
-  const { content, loading, error, reload } = useContentFile(client, filePath);
+  const { content, binary, loading, error, reload } = useContentFile(client, filePath);
   const [refreshKey, setRefreshKey] = useState(0);
   const closeFloat = useFloatingContentBrowserStore((s) => s.closeFloat);
   const setPosition = useFloatingContentBrowserStore((s) => s.setPosition);
@@ -46,7 +39,7 @@ export function FloatingContentBrowserContainer({
     }
   }, [loading, content, error, closeFloat, projectId, filePath]);
 
-  const { isMarkdown, isHtml, isImage } = detectFileKinds(filePath);
+  const { isMarkdown, isHtml, isImage } = classifyFileKind(filePath);
   const fileName = filePath.split("/").pop() ?? filePath;
 
   return createPortal(
@@ -67,6 +60,7 @@ export function FloatingContentBrowserContainer({
         <ContentView
           filePath={filePath}
           content={content}
+          binary={binary}
           loading={loading}
           error={error}
           isMarkdown={isMarkdown}
