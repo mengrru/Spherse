@@ -5,10 +5,6 @@ import { useIsMobile } from "../../hooks/use-mobile";
 import { ActivityBar } from "../activity-bar";
 import { ProjectPanel } from "../project-panel";
 import { Button } from "../../components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-} from "../../components/ui/sheet";
 import { ChevronRightIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 
@@ -49,18 +45,22 @@ export function SidePanel() {
         >
           <ChevronRightIcon className="size-4" />
         </Button>
-        <Sheet open={mobileOpen} onOpenChange={(open) => (open ? showMobile() : hideMobile())}>
-          <SheetContent
-            side="left"
-            showCloseButton={false}
-            className="data-[side=left]:w-auto data-[side=left]:border-r-0 max-w-full gap-0 p-0"
-          >
-            <div className="flex h-full">
-              <ActivityBar />
-              <ProjectPanel />
-            </div>
-          </SheetContent>
-        </Sheet>
+        <div
+          className={`fixed inset-0 z-40 bg-black/80 supports-backdrop-filter:backdrop-blur-xs transition-opacity duration-200 ${
+            mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          }`}
+          onClick={hideMobile}
+          aria-hidden={!mobileOpen}
+        />
+        <div
+          className={`fixed inset-y-0 start-0 z-50 flex h-full transition-transform duration-200 ease-out ${
+            mobileOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+          inert={!mobileOpen}
+        >
+          <ActivityBar />
+          <ProjectPanel />
+        </div>
       </>
     );
   }
@@ -82,6 +82,7 @@ export function SidePanel() {
                 visible ? "translate-x-0" : "-translate-x-full"
               }`
         }
+        inert={!visible}
         {...(!pinned && {
           onMouseEnter: show,
           onMouseLeave: hide,

@@ -34,15 +34,14 @@ describe("SidePanel structure", () => {
     expect(source).not.toContain("onSettings=");
   });
 
-  it("branches into a mobile drawer path via useIsMobile", () => {
+  it("branches into a mobile sliding panel path via useIsMobile", () => {
     const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
 
     expect(source).toContain("useIsMobile");
-    expect(source).toContain("<Sheet");
-    expect(source).toContain('side="left"');
-    expect(source).toContain("showCloseButton={false}");
+    expect(source).not.toContain("<Sheet");
     expect(source).toContain("showMobile");
     expect(source).toContain("hideMobile");
+    expect(source).toContain("mobileOpen");
   });
 
   it("renders a fixed start-edge vertical tab button on mobile", () => {
@@ -63,5 +62,12 @@ describe("SidePanel structure", () => {
 
     expect(source).toContain("useLocation");
     expect(source).toContain("hideMobile()");
+  });
+
+  it("marks off-screen sliding containers with inert to prevent focus leaking", () => {
+    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
+
+    expect(source).toContain("inert={!mobileOpen}");
+    expect(source).toContain("inert={!visible}");
   });
 });
