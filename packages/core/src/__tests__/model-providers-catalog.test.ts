@@ -14,6 +14,8 @@ const EXPECTED_ENV_KEYS: Record<string, string[]> = {
   "moonshotai-cn": ["MOONSHOT_API_KEY"],
   xai: ["XAI_API_KEY"],
   openrouter: ["OPENROUTER_API_KEY"],
+  "kimi-coding": ["KIMI_API_KEY"],
+  "opencode-go": ["OPENCODE_API_KEY"],
 };
 
 describe("getSupportedProviders catalog", () => {
