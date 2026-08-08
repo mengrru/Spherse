@@ -2,7 +2,7 @@ import { CHAT_CLOSE_CODES, parseChatServerEvent } from "@spherse/server/contract
 import type { ApiClient } from "../../../lib/api";
 import { buildWsUrl } from "../../../lib/api";
 import { parseAgentEvent, type AgentEvent } from "../model/agent-event-parse";
-import type { AttachedImage } from "../types";
+import type { SendableImage } from "../types";
 import {
   mergeHistoryMessages,
   parseHistoryMessages,
@@ -13,6 +13,8 @@ import {
 } from "../model/chat-session-reducer";
 
 const RECONNECT_BACKOFFS = [1000, 2000, 5000, 10000, 30000];
+const MAX_RECONNECT_ATTEMPTS = 10;
+const RECONCILE_BACKOFFS = [1000, 2000, 5000];
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
 const HEARTBEAT_TIMEOUT_MS = 60 * 1000;
 const FATAL_CLOSE_CODES = new Set<number>([
@@ -24,6 +26,8 @@ export interface ChatSessionRuntimeState extends StreamingSessionData {
   oldestLoadedId: number | null;
   historyStatus: "pending" | "syncing" | "ready";
   connectionStatus: "disconnected" | "connecting" | "open";
+  historyError: boolean;
+  reconnectFailed: boolean;
 }
 
 interface ChatSessionRuntimeParams {
@@ -94,42 +98,54 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     const reconcileHistory = async () => {
       let succeeded = false;
       try {
-        const result = await params.client.getSessionMessagesPage(
-          params.agentId,
-          this.sessionId,
-          { turns: 10 },
-        );
-        if (this.ws !== ws || !this.callbacks.getSession()) return;
-        const historyMessages = parseHistoryMessages(result.entries);
-        this.callbacks.updateSession((session) => {
-          const reconciled = {
-            ...session,
-            messages: mergeHistoryMessages(session.messages, historyMessages),
-            hasMore: result.hasMore,
-            oldestLoadedId: result.oldestId,
-            historyStatus: "ready" as const,
-          };
-          return {
-            ...reconciled,
-            ...reduceSessionEvents(
-              reconciled,
-              connectionEvents.splice(0),
-              Date.now(),
-            ),
-          };
-        });
-        succeeded = true;
-      } catch (err) {
-        console.warn(
-          "[chat-session-runtime] failed to reconcile session history:",
-          err,
-        );
-        if (this.ws !== ws || !this.callbacks.getSession()) return;
-        applyConnectionEvents();
-        this.callbacks.updateSession((session) => ({
-          ...session,
-          historyStatus: historyWasReady ? "ready" : "pending",
-        }));
+        for (let attempt = 0; attempt <= RECONCILE_BACKOFFS.length; attempt++) {
+          try {
+            const result = await params.client.getSessionMessagesPage(
+              params.agentId,
+              this.sessionId,
+              { turns: 10 },
+            );
+            if (this.ws !== ws || !this.callbacks.getSession()) return;
+            const historyMessages = parseHistoryMessages(result.entries);
+            this.callbacks.updateSession((session) => {
+              const reconciled = {
+                ...session,
+                messages: mergeHistoryMessages(session.messages, historyMessages),
+                hasMore: result.hasMore,
+                oldestLoadedId: result.oldestId,
+                historyStatus: "ready" as const,
+                historyError: false,
+              };
+              return {
+                ...reconciled,
+                ...reduceSessionEvents(
+                  reconciled,
+                  connectionEvents.splice(0),
+                  Date.now(),
+                ),
+              };
+            });
+            succeeded = true;
+            return;
+          } catch (err) {
+            console.warn(
+              "[chat-session-runtime] failed to reconcile session history:",
+              err,
+            );
+            if (this.ws !== ws || !this.callbacks.getSession()) return;
+            if (attempt < RECONCILE_BACKOFFS.length) {
+              await new Promise((r) => setTimeout(r, RECONCILE_BACKOFFS[attempt]));
+              if (this.ws !== ws || !this.callbacks.getSession()) return;
+              continue;
+            }
+            applyConnectionEvents();
+            this.callbacks.updateSession((session) => ({
+              ...session,
+              historyStatus: historyWasReady ? "ready" : "pending",
+              historyError: !historyWasReady,
+            }));
+          }
+        }
       } finally {
         reconcilingHistory = false;
         const session = this.callbacks.getSession();
@@ -159,6 +175,11 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     ws.onerror = () => {
       if (this.ws !== ws || !this.callbacks.getSession()) return;
       console.warn("[chat-session-runtime] WebSocket connection error");
+      try {
+        ws.close();
+      } catch (err) {
+        console.warn("[chat-session-runtime] failed to close socket on error:", err);
+      }
     };
 
     ws.onclose = (event) => {
@@ -204,6 +225,7 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
       this.callbacks.updateSession((session) => ({
         ...session,
         connectionStatus: "open",
+        reconnectFailed: false,
         historyStatus: "syncing",
       }));
       void reconcileHistory();
@@ -228,7 +250,7 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 
-  sendMessage(content: string, image?: AttachedImage): boolean {
+  sendMessage(content: string, image?: SendableImage): boolean {
     if (!this.isOpen()) return false;
     const payload: Record<string, unknown> = { type: "message", content };
     if (image) {
@@ -241,6 +263,12 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
   abort(): boolean {
     if (!this.isOpen()) return false;
     this.ws?.send(JSON.stringify({ type: "abort" }));
+    return true;
+  }
+
+  retry(): boolean {
+    if (!this.isOpen()) return false;
+    this.ws?.send(JSON.stringify({ type: "retry" }));
     return true;
   }
 
@@ -270,8 +298,20 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     }
   }
 
+  reconnect(): void {
+    if (!this.params) return;
+    this.reconnectAttempt = 0;
+    this.callbacks.updateSession((session) => ({ ...session, reconnectFailed: false }));
+    this.clearReconnectTimer();
+    this.connect(this.params);
+  }
+
   private scheduleReconnect(): void {
     if (this.reconnectTimer || this.manuallyClosed || !this.params) return;
+    if (this.reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+      this.callbacks.updateSession((session) => ({ ...session, reconnectFailed: true }));
+      return;
+    }
     const delay = RECONNECT_BACKOFFS[
       Math.min(this.reconnectAttempt, RECONNECT_BACKOFFS.length - 1)
     ];

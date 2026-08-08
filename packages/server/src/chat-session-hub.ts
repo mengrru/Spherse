@@ -21,6 +21,7 @@ interface ChatChannel {
 export interface ChatSessionAttachment {
   ready: Promise<boolean>;
   sendMessage(content: string, attachments?: Attachment[]): Promise<void>;
+  retryLastTurn(): Promise<void>;
   abort(): void;
   resolveControlRequest(
     requestId: string,
@@ -69,7 +70,20 @@ export class ChatSessionHub {
       ready,
       sendMessage: async (content, attachments) => {
         if (!(await ready) || !active) return;
-        await this.startRun(channel, content, attachments);
+        await this.startRun(channel, (onEvent) =>
+          channel.runtime.sendMessage(
+            channel.sessionId,
+            content,
+            attachments ?? [],
+            onEvent,
+          ),
+        );
+      },
+      retryLastTurn: async () => {
+        if (!(await ready) || !active) return;
+        await this.startRun(channel, (onEvent) =>
+          channel.runtime.retryLastTurn(channel.sessionId, onEvent),
+        );
       },
       abort: () => {
         if (active) channel.runtime.abortSession(channel.sessionId);
@@ -132,8 +146,7 @@ export class ChatSessionHub {
 
   private async startRun(
     channel: ChatChannel,
-    content: string,
-    attachments?: Attachment[],
+    executor: (onEvent: CoreEventHandler) => Promise<void>,
   ): Promise<void> {
     if (channel.running) {
       throw new ConflictError(`Session "${channel.sessionId}" is already running`);
@@ -142,15 +155,10 @@ export class ChatSessionHub {
     channel.runEvents = [];
     this.publish(channel, { type: "run_status", active: true });
     try {
-      await channel.runtime.sendMessage(
-        channel.sessionId,
-        content,
-        attachments ?? [],
-        (event) => {
-          this.recordRunEvent(channel, event);
-          this.publish(channel, event);
-        },
-      );
+      await executor((event) => {
+        this.recordRunEvent(channel, event);
+        this.publish(channel, event);
+      });
     } finally {
       channel.running = false;
       channel.runEvents = [];

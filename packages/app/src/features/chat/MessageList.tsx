@@ -19,12 +19,13 @@ interface MessageListProps {
   onScrollToBottom: () => void;
   onNavigateToPath?: (path: string) => void;
   onRespondApproval?: (requestId: string, approved: boolean) => void;
+  onRetry?: () => void;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, hasMore, loadingMore, onLoadMore }: MessageListProps) {
+export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, onRetry, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
 
   // 相同 file_path 的 html card 只展开最近一张；较早的同路径卡片折叠（不挂载 iframe）。
@@ -76,6 +77,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
               supersededToolCallIds={supersededToolCallIds}
               onNavigateToPath={onNavigateToPath}
               onRespondApproval={onRespondApproval}
+              onRetry={isLast ? onRetry : undefined}
             />
           );
         })}

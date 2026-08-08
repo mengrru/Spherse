@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";
 import { Button } from "../../components/ui/button";
-import { ChevronRightIcon, AlertTriangleIcon } from "lucide-react";
+import { ChevronRightIcon, AlertTriangleIcon, RotateCwIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { ErrorEventCode } from "@spherse/server/contracts";
 
 interface ErrorMessageSectionProps {
   error: string;
   errorCode?: ErrorEventCode;
+  onRetry?: () => void;
 }
 
-export function ErrorMessageSection({ error, errorCode }: ErrorMessageSectionProps) {
+export function ErrorMessageSection({ error, errorCode, onRetry }: ErrorMessageSectionProps) {
   const [expanded, setExpanded] = useState(false);
   const { t } = useI18n();
 
@@ -19,7 +20,7 @@ export function ErrorMessageSection({ error, errorCode }: ErrorMessageSectionPro
     : error;
 
   return (
-    <div className="mt-2 border-t border-dashed border-border pt-2">
+    <div className="mt-2 border-t border-dashed border-border pt-2" data-chat-error>
       <Collapsible open={expanded}>
         <CollapsibleTrigger
           render={<Button variant="ghost" className="-mx-1 h-auto w-full justify-start gap-1 px-1 py-1 pe-3 text-xs text-destructive hover:text-destructive" />}
@@ -40,6 +41,18 @@ export function ErrorMessageSection({ error, errorCode }: ErrorMessageSectionPro
           </div>
         </CollapsibleContent>
       </Collapsible>
+      {onRetry && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ms-1 mb-1 h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={onRetry}
+          data-chat-retry
+        >
+          <RotateCwIcon className="size-3" />
+          {t("chat.retry")}
+        </Button>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ErrorEventCode } from "@spherse/server/contracts";
 import {
   appendErrorMessage,
+  markRetrying,
   reduceSessionEvents,
   type StreamingSessionData,
 } from "./chat-session-reducer";
@@ -10,6 +11,7 @@ import {
   parseHistoryMessages,
 } from "./chat-history";
 import type { AgentEvent } from "./agent-event-parse";
+import type { ChatMessage } from "../types";
 
 function session(overrides: Partial<StreamingSessionData> = {}): StreamingSessionData {
   return {
@@ -45,6 +47,7 @@ describe("chat session reducer", () => {
       content: "partial",
       _streaming: false,
       _error: "broken",
+      _turnError: true,
     });
   });
 
@@ -67,6 +70,14 @@ describe("chat session reducer", () => {
     const messages = appendErrorMessage([{ role: "user", content: "start" }], "broken");
 
     expect(messages[messages.length - 1]._errorCode).toBeUndefined();
+  });
+
+  it("does NOT set _turnError for a new pre-prompt error bubble (Source 1)", () => {
+    const messages = appendErrorMessage(
+      [{ role: "user", content: "start", _optimistic: true }],
+      "no model",
+    );
+    expect(messages[messages.length - 1]._turnError).toBeUndefined();
   });
 
   it("threads _errorCode through reduceSessionEvents for error events", () => {
@@ -215,7 +226,7 @@ describe("chat session reducer", () => {
 
     expect(next.messages).toEqual([
       { role: "user", content: "Hello" },
-      { role: "assistant", content: "", _streaming: false, _error: "Rate limit exceeded", timestamp: 200 },
+      { role: "assistant", content: "", _streaming: false, _error: "Rate limit exceeded", _errorCode: "TRANSIENT", _turnError: true, timestamp: 200 },
     ]);
   });
 
@@ -257,7 +268,7 @@ describe("chat session reducer", () => {
 
     expect(parsed).toEqual([
       { role: "user", content: "Hello" },
-      { role: "assistant", content: "", _error: "Rate limit exceeded" },
+      { role: "assistant", content: "", _error: "Rate limit exceeded", _errorCode: "TRANSIENT", _turnError: true },
     ]);
   });
 
@@ -806,5 +817,24 @@ describe("generic approval card lifecycle", () => {
       type: "approval",
       status: "rejected",
     });
+  });
+
+  it("markRetrying clears error and re-streams the last assistant message", () => {
+    const messages: ChatMessage[] = [
+      { role: "user", content: "Hello", _messageId: 1 },
+      { role: "assistant", content: "partial", _error: "timeout", _errorCode: ErrorEventCode.Transient },
+    ];
+    expect(markRetrying(messages)).toEqual([
+      { role: "user", content: "Hello", _messageId: 1 },
+      { role: "assistant", content: "partial", _streaming: true },
+    ]);
+  });
+
+  it("markRetrying is a no-op when the last message has no error", () => {
+    const messages: ChatMessage[] = [
+      { role: "user", content: "Hello" },
+      { role: "assistant", content: "Hi", _streaming: false },
+    ];
+    expect(markRetrying(messages)).toBe(messages);
   });
 });

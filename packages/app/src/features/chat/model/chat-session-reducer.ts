@@ -9,6 +9,7 @@ import {
   extractCardFromPartial,
   extractMessageText,
 } from "./chat-tool-projection";
+import { classifyErrorMessageString } from "./classify-error";
 import { aggregateFileChanges, attachRunChanges } from "../lib/aggregate-file-changes";
 
 export interface StreamingSessionData {
@@ -53,6 +54,7 @@ export function appendErrorMessage(prev: ChatMessage[], message: string, code?: 
         ...last,
         _streaming: false,
         _error: message,
+        _turnError: true,
         ...(code && { _errorCode: code }),
       },
     ];
@@ -91,18 +93,19 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
     const text = extractMessageText(event.message.content);
     const isError = event.message.stopReason === "error";
     const error = isError ? (event.message.errorMessage ?? "Unknown error") : undefined;
+    const errorCode = isError ? classifyErrorMessageString(error!) : undefined;
     const timestamp = event.message.timestamp ?? now;
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._streaming) {
       return [
         ...prev.slice(0, -1),
-        { ...last, content: text, _streaming: false, timestamp, ...(error && { _error: error }) },
+        { ...last, content: text, _streaming: false, timestamp, ...(error && { _error: error, _errorCode: errorCode, _turnError: true }) },
       ];
     }
     if (text || error || last?.role !== "assistant") {
       return [
         ...prev,
-        { role: "assistant", content: text, _streaming: false, timestamp, ...(error && { _error: error }) },
+        { role: "assistant", content: text, _streaming: false, timestamp, ...(error && { _error: error, _errorCode: errorCode, _turnError: true }) },
       ];
     }
     return prev;
@@ -243,6 +246,13 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
   }
 
   return prev;
+}
+
+export function markRetrying(messages: ChatMessage[]): ChatMessage[] {
+  const last = messages[messages.length - 1];
+  if (!last || last.role !== "assistant" || !last._error) return messages;
+  const { _error, _errorCode, _turnError, ...rest } = last;
+  return [...messages.slice(0, -1), { ...rest, _streaming: true }];
 }
 
 function updateLastToolCall(

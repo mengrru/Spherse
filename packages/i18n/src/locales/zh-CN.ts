@@ -622,6 +622,21 @@ export const zhCN = {
   "chat.responseGenerationFailed": "回复生成失败",
   // 用户尚未配置模型时尝试发消息，聊天区显示的错误提示（说明需先到设置中选择模型）
   "chat.error.modelNotConfigured": "尚未配置模型，请在设置中选择一个模型后再发送消息。",
+  // 失败的助手回复或发送失败的用户消息上的「重试」按钮文案
+  "chat.retry": "重试",
+  "chat.sendFailed": "发送失败",
+  // 会话历史加载失败时，ConnectionBanner 中显示的提示文案
+  "chat.historyLoadFailed": "会话历史加载失败",
+  // 会话历史加载失败时，「重试」按钮文案
+  "chat.historyLoadRetry": "重试",
+  // 连接已断开且正在自动重连时，ConnectionBanner 显示的文案
+  "chat.connectionReconnecting": "连接已断开，正在重连…",
+  // 重连次数耗尽、无法自动恢复时，ConnectionBanner 显示的文案
+  "chat.connectionReconnectFailed": "连接失败",
+  // 连接失败后，手动「点击重连」按钮文案
+  "chat.connectionReconnect": "重连",
+  // 审批/批准操作因连接断开未送达时显示的 toast 提示
+  "chat.approvalNotDelivered": "操作未送达，连接可能已断开",
   // Composer 底部「附加图片」按钮的悬停提示
   "chat.attachImage": "附加图片",
   // 附加图片在压缩或上传过程中失败时的错误提示，{message} 为错误信息

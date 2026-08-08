@@ -1,11 +1,11 @@
 import type { FastifyInstance } from "fastify";
-import { NotFoundError, ModelNotConfiguredError } from "@spherse/core";
+import { NotFoundError } from "@spherse/core";
 import {
   CHAT_CLOSE_CODES,
-  ErrorEventCode,
   parseChatClientMessage,
   parseChatServerEvent,
 } from "@spherse/server/contracts";
+import { classifyRunError } from "./classify-run-error.js";
 import type { ProjectRegistry } from "./registry.js";
 import { ChatSessionHub } from "./chat-session-hub.js";
 
@@ -75,10 +75,16 @@ export function handleChatWebSocket(
             if (closed) return;
             fastify.log.error({ err, sessionId }, "chat ws message error");
             const message = err instanceof Error ? err.message : "chat error";
-            const code = err instanceof ModelNotConfiguredError
-              ? ErrorEventCode.ModelNotConfigured
-              : ErrorEventCode.Unknown;
-            send({ type: "error", message, code });
+            send({ type: "error", message, code: classifyRunError(err) });
+          }
+        } else if (msg.type === "retry") {
+          try {
+            await attachment.retryLastTurn();
+          } catch (err) {
+            if (closed) return;
+            fastify.log.error({ err, sessionId }, "chat ws retry error");
+            const message = err instanceof Error ? err.message : "retry error";
+            send({ type: "error", message, code: classifyRunError(err) });
           }
         } else if (msg.type === "abort") {
           if (!(await ready) || closed) return;

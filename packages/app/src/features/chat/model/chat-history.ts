@@ -10,6 +10,7 @@ import {
   extractMessageText,
   extractToolCalls,
 } from "./chat-tool-projection";
+import { classifyErrorMessageString } from "./classify-error";
 import { aggregateFileChanges, attachRunChanges } from "../lib/aggregate-file-changes";
 import type { ChatMessage, ToolCallInfo } from "../types";
 
@@ -101,7 +102,13 @@ export function parseHistoryMessages(
           ? { _toolCalls: enrichedToolCalls }
           : {}),
         ...(entry.message.stopReason === "error"
-          ? { _error: entry.message.errorMessage ?? "Unknown error" }
+          ? {
+              _error: entry.message.errorMessage ?? "Unknown error",
+              _errorCode: classifyErrorMessageString(
+                entry.message.errorMessage ?? "Unknown error",
+              ),
+              _turnError: true,
+            }
           : {}),
         timestamp: entry.message.timestamp,
       });

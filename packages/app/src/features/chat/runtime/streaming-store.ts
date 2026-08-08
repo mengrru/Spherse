@@ -9,13 +9,16 @@ import {
 import { ChatRuntimeRegistry } from "./chat-runtime-registry";
 import { ChatSessionRuntime } from "./chat-session-runtime";
 import {
+  markRetrying,
   reduceSessionEvents,
   type StreamingSessionData,
 } from "../model/chat-session-reducer";
-import type { AttachedImage } from "../types";
+import { planRetry, shouldAutoRetry } from "../model/retry-plan";
+import type { SendableImage } from "../types";
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 30 * 1000;
+const AUTO_RETRY_BACKOFFS = [2000, 5000];
 
 interface StreamingSession extends StreamingSessionData {
   attachedCount: number;
@@ -26,6 +29,10 @@ interface StreamingSession extends StreamingSessionData {
   loadingMore: boolean;
   historyStatus: "pending" | "syncing" | "ready";
   connectionStatus: "disconnected" | "connecting" | "open";
+  historyError: boolean;
+  reconnectFailed: boolean;
+  retryCount: number;
+  autoRetrying: boolean;
 }
 
 interface StreamingStoreState {
@@ -37,9 +44,12 @@ interface StreamingStoreActions {
   detach: (sessionId: string) => void;
   disconnect: (sessionId: string) => void;
   touch: (sessionId: string) => void;
-  sendMessage: (sessionId: string, text: string, image?: AttachedImage) => boolean;
+  sendMessage: (sessionId: string, text: string, image?: SendableImage, opts?: { isRetry?: boolean }) => boolean;
+  retry: (sessionId: string) => void;
   abort: (sessionId: string) => void;
-  respondApproval: (sessionId: string, requestId: string, approved: boolean) => void;
+  reconnect: (sessionId: string) => void;
+  retryHistory: (client: ApiClient, agentId: string, sessionId: string) => void;
+  respondApproval: (sessionId: string, requestId: string, approved: boolean) => boolean;
   setScrollPosition: (sessionId: string, position: number) => void;
   cleanupExpired: (ttlMs: number) => void;
   loadMore: (client: ApiClient, sessionId: string, agentId: string) => void;
@@ -82,6 +92,34 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     }
   }
 
+  function executeRetry(sessionId: string, isAuto: boolean): void {
+    const session = get().sessions[sessionId];
+    const runtime = runtimes.get(sessionId);
+    if (!session || session.streaming || !runtime?.isOpen()) return;
+    const plan = planRetry(session.messages, session.retryCount, isAuto);
+    if (plan.kind === "none") return;
+
+    if (plan.kind === "retry-last") {
+      updateSession(sessionId, (current) => ({
+        ...current,
+        messages: markRetrying(current.messages),
+        streaming: true,
+        retryCount: isAuto ? current.retryCount + 1 : 0,
+        lastActivityAt: Date.now(),
+      }));
+      useProjectDataStore.getState().setStreaming(session.projectId, sessionId, true);
+      runtime.retry();
+      return;
+    }
+
+    updateSession(sessionId, (current) => ({
+      ...current,
+      messages: current.messages.slice(0, current.messages.length - plan.dropCount),
+      retryCount: isAuto ? current.retryCount + 1 : 0,
+    }));
+    get().sendMessage(sessionId, plan.content, plan.attachment, { isRetry: true });
+  }
+
   function flushQueuedEvents() {
     flushRaf = undefined;
     if (eventQueue.size === 0) return;
@@ -114,6 +152,24 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
       return changed ? { sessions: next } : state;
     });
+
+    for (const sessionId of queued.keys()) {
+      maybeAutoRetry(sessionId);
+    }
+  }
+
+  function maybeAutoRetry(sessionId: string): void {
+    const session = get().sessions[sessionId];
+    if (!session || session.streaming || session.autoRetrying) return;
+    if (!shouldAutoRetry(session.messages, session.retryCount)) return;
+    const backoff = AUTO_RETRY_BACKOFFS[Math.min(session.retryCount, AUTO_RETRY_BACKOFFS.length - 1)];
+    updateSession(sessionId, (current) => ({ ...current, autoRetrying: true }));
+    setTimeout(() => {
+      const current = get().sessions[sessionId];
+      if (!current || !current.autoRetrying) return;
+      updateSession(sessionId, (s) => ({ ...s, autoRetrying: false }));
+      executeRetry(sessionId, true);
+    }, backoff);
   }
 
   function enqueueEvent(sessionId: string, event: AgentEvent) {
@@ -164,6 +220,10 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         loadingMore: false,
         historyStatus: "pending",
         connectionStatus: "disconnected",
+        historyError: false,
+        reconnectFailed: false,
+        retryCount: 0,
+        autoRetrying: false,
       };
       return {
         sessions: {
@@ -193,6 +253,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
               sessionId,
               session.streaming,
             );
+            maybeAutoRetry(sessionId);
           }
         },
         flushEvents: flushQueuedEvents,
@@ -280,12 +341,25 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       updateSession(sessionId, (session) => ({ ...session, lastActivityAt: Date.now() }));
     },
 
-    sendMessage(sessionId, text, image) {
+    sendMessage(sessionId, text, image, opts) {
       const session = get().sessions[sessionId];
-      const runtime = runtimes.get(sessionId);
-      if (!session || !runtime?.isOpen()) return false;
+      if (!session) return false;
       const content = text.trim();
       if (!content || session.streaming) return false;
+      const isRetry = opts?.isRetry === true;
+
+      const runtime = runtimes.get(sessionId);
+      const attachments = image
+        ? [{
+            type: "image" as const,
+            path: image.path,
+            mimeType: image.mimeType,
+            width: image.width,
+            height: image.height,
+          }]
+        : undefined;
+
+      const canSend = runtime?.isOpen() ?? false;
       updateSession(sessionId, (current) => ({
         ...current,
         messages: [
@@ -295,27 +369,24 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
             content,
             timestamp: Date.now(),
             _optimistic: true,
-            ...(image
-              ? {
-                  _attachments: [
-                    {
-                      type: "image" as const,
-                      path: image.path,
-                      mimeType: image.mimeType,
-                      width: image.width,
-                      height: image.height,
-                    },
-                  ],
-                }
-              : {}),
+            ...(attachments ? { _attachments: attachments } : {}),
+            ...(!canSend ? { _sendFailed: true } : {}),
           },
         ],
-        streaming: true,
+        ...(canSend
+          ? { streaming: true, ...(isRetry ? {} : { retryCount: 0, autoRetrying: false }) }
+          : {}),
         lastActivityAt: Date.now(),
       }));
+
+      if (!canSend) return true;
       useProjectDataStore.getState().setStreaming(session.projectId, sessionId, true);
-      runtime.sendMessage(content, image);
+      runtime!.sendMessage(content, image);
       return true;
+    },
+
+    retry(sessionId) {
+      executeRetry(sessionId, false);
     },
 
     abort(sessionId) {
@@ -327,8 +398,17 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       setStreamingAndNotify(sessionId, session.projectId, false);
     },
 
+    reconnect(sessionId) {
+      runtimes.get(sessionId)?.reconnect();
+    },
+
+    retryHistory(client, agentId, sessionId) {
+      updateSession(sessionId, (s) => ({ ...s, historyError: false }));
+      get().refreshHistory(client, agentId, sessionId);
+    },
+
     respondApproval(sessionId, requestId, approved) {
-      runtimes.get(sessionId)?.respondApproval(requestId, approved);
+      return runtimes.get(sessionId)?.respondApproval(requestId, approved) ?? false;
     },
 
     setScrollPosition(sessionId, position) {
@@ -386,6 +466,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
               hasMore: result.hasMore,
               oldestLoadedId: result.oldestId,
               historyStatus: "ready",
+              historyError: false,
             };
           });
         })

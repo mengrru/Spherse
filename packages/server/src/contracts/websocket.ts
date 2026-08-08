@@ -9,7 +9,8 @@ import { parseContract } from "./common.js";
 
 export enum ErrorEventCode {
   ModelNotConfigured = "MODEL_NOT_CONFIGURED",
-  Unknown = "UNKNOWN",
+  Permanent = "PERMANENT",
+  Transient = "TRANSIENT",
 }
 
 export const CHAT_CLOSE_CODES = {
@@ -123,6 +124,7 @@ export const schemas = {
     }),
     Type.Object({ type: Type.Literal("abort") }),
     Type.Object({ type: Type.Literal("ping") }),
+    Type.Object({ type: Type.Literal("retry") }),
     Type.Object({
       type: Type.Literal("resolve_control_request"),
       requestId: Type.String(),

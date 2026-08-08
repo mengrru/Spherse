@@ -20,7 +20,7 @@ interface ComposerProps {
   streaming: boolean;
   loading?: boolean;
   sessionId: string;
-  onSend: (message: string, image?: AttachedImage) => void;
+  onSend: (message: string, image?: AttachedImage) => boolean;
   onAbort: () => void;
 }
 
@@ -85,7 +85,8 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
   const send = () => {
     const message = input.trim();
     if (!message || streaming || loading || attachBusy) return;
-    onSend(message, image ?? undefined);
+    const sent = onSend(message, image ?? undefined);
+    if (!sent) return;
     setInput("");
     setImage(null);
     setAttachStatus("idle");

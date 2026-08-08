@@ -2,9 +2,12 @@ import { useMemo } from "react";
 import type { AgentProfile } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient, useConnection } from "../../lib/use-connection";
+import { toast } from "sonner";
+import { useI18n } from "@spherse/i18n/react";
 import { Composer } from "./Composer";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
+import { ConnectionBanner } from "./ConnectionBanner";
 import { ChatRuntimeProvider } from "./runtime-context";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
@@ -24,7 +27,21 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const { baseUrl, accessToken } = useConnection();
-  const { messages, streaming, loading, sendMessage, abort } = useChatSession({
+  const { t } = useI18n();
+  const {
+    messages,
+    streaming,
+    loading,
+    connectionStatus,
+    historyError,
+    reconnectFailed,
+    sendMessage,
+    retry,
+    abort,
+    reconnect,
+    retryHistory,
+    respondApproval,
+  } = useChatSession({
     client,
     sessionId,
     baseUrl,
@@ -42,6 +59,11 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     onClose?.();
   };
 
+  const handleRespondApproval = (requestId: string, approved: boolean) => {
+    const delivered = respondApproval(requestId, approved);
+    if (!delivered) toast.error(t("chat.approvalNotDelivered"));
+  };
+
   const runtime = useMemo(() => ({ sessionId, agentId: agent.id }), [sessionId, agent.id]);
 
   return (
@@ -49,6 +71,13 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
       <div className="flex flex-col h-full" data-chat-root>
         {themeHref && <link rel="stylesheet" href={themeHref} />}
         {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
+        <ConnectionBanner
+          connectionStatus={connectionStatus}
+          reconnectFailed={reconnectFailed}
+          historyError={historyError}
+          onReconnect={reconnect}
+          onRetryHistory={retryHistory}
+        />
         <MessageList
           messages={messages}
           agent={agent}
@@ -58,7 +87,8 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           isAtBottom={isAtBottom}
           onScrollToBottom={() => scrollToBottom("smooth")}
           onNavigateToPath={onNavigateToPath}
-          onRespondApproval={(requestId, approved) => useStreamingStore.getState().respondApproval(sessionId, requestId, approved)}
+          onRespondApproval={handleRespondApproval}
+          onRetry={retry}
           hasMore={hasMore}
           loadingMore={loadingMore}
           onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}

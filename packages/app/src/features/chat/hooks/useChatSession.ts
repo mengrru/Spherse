@@ -39,6 +39,15 @@ export function useChatSession({
   const connectionStatus = useStreamingStore(
     (s) => s.sessions[sessionId]?.connectionStatus ?? "disconnected",
   );
+  const historyError = useStreamingStore(
+    (s) => s.sessions[sessionId]?.historyError ?? false,
+  );
+  const reconnectFailed = useStreamingStore(
+    (s) => s.sessions[sessionId]?.reconnectFailed ?? false,
+  );
+  const autoRetrying = useStreamingStore(
+    (s) => s.sessions[sessionId]?.autoRetrying ?? false,
+  );
   const loading =
     historyStatus !== "ready" || connectionStatus === "connecting";
 
@@ -46,7 +55,16 @@ export function useChatSession({
     messages,
     streaming,
     loading,
+    connectionStatus,
+    historyError,
+    reconnectFailed,
+    autoRetrying,
     sendMessage: (text: string, image?: AttachedImage) => useStreamingStore.getState().sendMessage(sessionId, text, image),
+    retry: () => useStreamingStore.getState().retry(sessionId),
     abort: () => useStreamingStore.getState().abort(sessionId),
+    reconnect: () => useStreamingStore.getState().reconnect(sessionId),
+    retryHistory: () => useStreamingStore.getState().retryHistory(client, agentId, sessionId),
+    respondApproval: (requestId: string, approved: boolean) =>
+      useStreamingStore.getState().respondApproval(sessionId, requestId, approved),
   };
 }

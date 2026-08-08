@@ -12,6 +12,7 @@ import { ErrorMessageSection } from "./ErrorMessageSection";
 import { FileViewerCard } from "./FileViewerCard";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { MessageAttachments } from "./MessageAttachments";
+import { SendFailedBar } from "./SendFailedBar";
 import { useOpenExternalLink } from "../browser/open-external-url";
 import { formatMessageTime } from "./lib/format-time";
 
@@ -22,9 +23,10 @@ interface MessageItemProps {
   supersededToolCallIds?: Set<string>;
   onNavigateToPath?: (path: string) => void;
   onRespondApproval?: (requestId: string, approved: boolean) => void;
+  onRetry?: () => void;
 }
 
-export function MessageItem({ message, agent, showTime, supersededToolCallIds, onNavigateToPath, onRespondApproval }: MessageItemProps) {
+export function MessageItem({ message, agent, showTime, supersededToolCallIds, onNavigateToPath, onRespondApproval, onRetry }: MessageItemProps) {
   const isUser = message.role === "user";
   const openLink = useOpenExternalLink();
 
@@ -79,7 +81,7 @@ export function MessageItem({ message, agent, showTime, supersededToolCallIds, o
         {message._toolCalls && message._toolCalls.length > 0 && (
           <ToolCallSection toolCalls={message._toolCalls} onNavigateToPath={onNavigateToPath} />
         )}
-        {message._error && <ErrorMessageSection error={message._error} errorCode={message._errorCode} />}
+        {message._error && <ErrorMessageSection error={message._error} errorCode={message._errorCode} onRetry={onRetry} />}
         {message._toolCalls
           ?.filter((toolCall) => toolCall._card)
           .map((toolCall) => {
@@ -109,6 +111,7 @@ export function MessageItem({ message, agent, showTime, supersededToolCallIds, o
           </div>
         )}
       </div>
+        {isUser && message._sendFailed && <SendFailedBar onRetry={onRetry} />}
         {!message._streaming && (
           <div className={`flex items-center gap-1 pb-1 opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 ${isUser ? "md:flex-row-reverse" : ""}`}>
             <CopyButton text={message.content} />

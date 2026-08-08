@@ -14,6 +14,14 @@ function createRuntime() {
         });
       },
     ),
+    retryLastTurn: vi.fn(
+      (_sessionId: string, onEvent: (event: any) => void) => {
+        emit = onEvent;
+        return new Promise<void>((resolve) => {
+          finish = resolve;
+        });
+      },
+    ),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
@@ -89,6 +97,61 @@ describe("ChatSessionHub", () => {
     second.close();
 
     expect(mock.runtime.destroySession).toHaveBeenCalledWith("s1");
+  });
+
+  it("routes retryLastTurn to the runtime and emits run_status", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach(
+      "p1",
+      mock.runtime as never,
+      "a1",
+      "s1",
+      (event) => events.push(event),
+    );
+    await attachment.ready;
+    events.length = 0;
+
+    const run = attachment.retryLastTurn();
+    await vi.waitFor(() => expect(mock.runtime.retryLastTurn).toHaveBeenCalled());
+    mock.emit({ type: "agent_start" });
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await run;
+
+    expect(mock.runtime.retryLastTurn).toHaveBeenCalledWith("s1", expect.any(Function));
+    expect(events.map((e) => e.type)).toEqual([
+      "run_status",
+      "agent_start",
+      "agent_end",
+      "run_status",
+    ]);
+    expect(events[0]).toEqual({ type: "run_status", active: true });
+    expect(events.at(-1)).toEqual({ type: "run_status", active: false });
+    attachment.close();
+  });
+
+  it("rejects retryLastTurn with ConflictError when a run is already active", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const attachment = hub.attach(
+      "p1",
+      mock.runtime as never,
+      "a1",
+      "s1",
+      () => {},
+    );
+    await attachment.ready;
+
+    const firstRun = attachment.sendMessage("hi");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+
+    await expect(attachment.retryLastTurn()).rejects.toThrow(/already running/);
+
+    mock.finish();
+    await firstRun;
+    attachment.close();
   });
 
   it("isolates a failed subscriber from the core run callback", async () => {

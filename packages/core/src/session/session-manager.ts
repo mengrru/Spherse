@@ -85,6 +85,15 @@ export class SessionManager {
     this.sessions.get(sessionId)?.abort();
   }
 
+  async retryLastTurn(
+    sessionId: string,
+    onEvent: AgentEventHandler,
+  ): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (!session) throw new NotFoundError(`No active session "${sessionId}"`);
+    return session.retryLastTurn(onEvent);
+  }
+
   resolveControlRequest(sessionId: string, requestId: string, decision: unknown): void {
     this.sessions.get(sessionId)?.resolveControlRequest(requestId, decision);
   }

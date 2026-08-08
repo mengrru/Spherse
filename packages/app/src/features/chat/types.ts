@@ -72,6 +72,13 @@ export interface AttachedImage {
   previewUrl: string;
 }
 
+export interface SendableImage {
+  path: string;
+  mimeType: string;
+  width?: number;
+  height?: number;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -81,6 +88,8 @@ export interface ChatMessage {
   _toolCalls?: ToolCallInfo[];
   _error?: string;
   _errorCode?: ErrorEventCode;
+  _turnError?: boolean;
+  _sendFailed?: boolean;
   _runChanges?: FileChangeCard[];
   _attachments?: ChatAttachment[];
   timestamp?: number;

@@ -15,7 +15,7 @@ import type { ApprovalGate } from "../tools/with-approval.js";
 import type { SkillStore } from "../store/skill.js";
 import { readContextFiles } from "../context/read-context-files.js";
 import { logAgentEvent } from "../engine/log-agent-event.js";
-import { NotFoundError, ModelNotConfiguredError } from "../errors.js";
+import { NotFoundError, ModelNotConfiguredError, ValidationError } from "../errors.js";
 import {
   buildProjectInstructions,
   buildAgentProfile,
@@ -70,9 +70,11 @@ function composeStreamFn(
   timePerception: TimePerceptionConfig | undefined,
 ): StreamFn {
   const base = getChatStreamFn(sampling);
+  const withRetry: StreamFn = (model, context, options) =>
+    base(model, context, { ...options, maxRetries: options?.maxRetries ?? 1 });
   return isActiveTimePerception(timePerception)
-    ? wrapWithTimePerception(base, timePerception)
-    : base;
+    ? wrapWithTimePerception(withRetry, timePerception)
+    : withRetry;
 }
 
 export class LiveSession {
@@ -211,6 +213,46 @@ export class LiveSession {
           m === fullUserMsg ? strippedMsg : m,
         ) as AgentMessage[];
       }
+      unsubscribe();
+      this.controlBus.setEventSink(null);
+    }
+  }
+
+  async retryLastTurn(onEvent: AgentEventHandler): Promise<void> {
+    const messages = this.agent.state.messages;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant" || (last as { stopReason?: string }).stopReason !== "error") {
+      throw new ValidationError(
+        `Session "${this.sessionId}" has no failed assistant turn to retry`,
+      );
+    }
+
+    this.ensureModel();
+    const agentStore = this.ctx.projectStore.getAgent(this.agentId);
+    if (agentStore) {
+      const dbId = this.liveMessageDbIds[this.liveMessageDbIds.length - 1];
+      if (dbId !== undefined) {
+        agentStore.sessions.deleteMessage(this.sessionId, dbId);
+      }
+    }
+    this.agent.state.messages = messages.slice(0, -1);
+    if (this.liveMessageDbIds.length > 0) this.liveMessageDbIds.pop();
+
+    const sessionLogger = this.ctx.logger.child({ sessionId: this.sessionId });
+    this.controlBus.setEventSink(onEvent);
+    const unsubscribe = this.agent.subscribe((event) => {
+      logAgentEvent(sessionLogger, event);
+      if (event.type === "message_end") {
+        const msgId = agentStore?.sessions.appendMessage(this.sessionId, event.message);
+        if (msgId !== undefined) this.liveMessageDbIds.push(msgId);
+      }
+      onEvent(event);
+    });
+
+    try {
+      await this.agent.continue();
+      await this.maybeCompact();
+    } finally {
       unsubscribe();
       this.controlBus.setEventSink(null);
     }

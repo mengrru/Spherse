@@ -221,6 +221,19 @@ export class SessionStore {
     return Number(info.lastInsertRowid);
   }
 
+  deleteMessage(sessionId: string, messageId: number): void {
+    const now = Date.now();
+    const deleteStmt = this.db
+      .prepare<[number]>("DELETE FROM messages WHERE id = ?");
+    const updateSession = this.db
+      .prepare<[number, string]>("UPDATE sessions SET updated_at = ? WHERE id = ?");
+    this.db.transaction(() => {
+      deleteStmt.run(messageId);
+      updateSession.run(now, sessionId);
+    })();
+    this.logger.debug({ sessionId, messageId }, "message deleted");
+  }
+
   getSessionMessages(sessionId: string): AgentMessage[] {
     return this.getSessionMessagesWithIds(sessionId).map((r) => r.message);
   }

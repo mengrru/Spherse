@@ -37,7 +37,7 @@ Test agent for sessions.`;
 
 interface FakeAgent {
   state: { model: { id: string; provider: string } };
-  streamFn: unknown;
+  streamFunction: unknown;
   subscribe: ReturnType<typeof vi.fn>;
   prompt: ReturnType<typeof vi.fn>;
 }
@@ -112,7 +112,9 @@ describe("SessionManager temperature propagation", () => {
 
     const agent = activeAgent(runtime as RuntimeInternals, sessionId);
     const swappedStreamFn = getChatStreamFnMock.mock.results[1].value;
-    expect(agent.streamFunction).toBe(swappedStreamFn);
+    const streamFn = agent.streamFunction as (m: unknown, c: unknown, o: Record<string, unknown>) => void;
+    streamFn(undefined, undefined, {});
+    expect(swappedStreamFn).toHaveBeenCalledWith(undefined, undefined, { maxRetries: 1 });
   });
 
   it("hot-swaps streamFn on ALL active agents (multiple sessions)", async () => {
@@ -195,7 +197,9 @@ describe("SessionManager sampling (temperature + topP) propagation", () => {
 
     const agent = activeAgent(runtime as RuntimeInternals, sessionId);
     const swappedStreamFn = getChatStreamFnMock.mock.results[1].value;
-    expect(agent.streamFunction).toBe(swappedStreamFn);
+    const streamFn = agent.streamFunction as (m: unknown, c: unknown, o: Record<string, unknown>) => void;
+    streamFn(undefined, undefined, {});
+    expect(swappedStreamFn).toHaveBeenCalledWith(undefined, undefined, { maxRetries: 1 });
   });
 });
 

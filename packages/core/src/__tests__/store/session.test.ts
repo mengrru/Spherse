@@ -121,6 +121,23 @@ describe("SessionStore", () => {
     expect(textOf(messages[1])).toBe("world");
   });
 
+  it("deleteMessage removes a single row and bumps updated_at", () => {
+    const id = store.createSession();
+    store.appendMessage(id, userMsg("hello", 1000));
+    const asstId = store.appendMessage(id, asstMsg("world", 2000));
+    store.appendMessage(id, userMsg("again", 3000));
+    expect(store.getSessionMessages(id)).toHaveLength(3);
+
+    const before = store.getSession(id)!.updatedAt;
+    store.deleteMessage(id, asstId);
+
+    const messages = store.getSessionMessages(id);
+    expect(messages).toHaveLength(2);
+    expect(textOf(messages[0])).toBe("hello");
+    expect(textOf(messages[1])).toBe("again");
+    expect(store.getSession(id)!.updatedAt).toBeGreaterThanOrEqual(before);
+  });
+
   it("updates session updated_at on message append", () => {
     const id = store.createSession();
     const before = store.getSession(id)!.updatedAt;

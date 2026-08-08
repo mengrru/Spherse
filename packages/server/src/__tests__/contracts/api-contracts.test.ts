@@ -85,8 +85,8 @@ describe("api contracts", () => {
       parseChatServerEvent({ type: "error", message: "x", code: "MODEL_NOT_CONFIGURED" }),
     ).toEqual({ type: "error", message: "x", code: "MODEL_NOT_CONFIGURED" });
     expect(
-      parseChatServerEvent({ type: "error", message: "y", code: "UNKNOWN" }),
-    ).toEqual({ type: "error", message: "y", code: "UNKNOWN" });
+      parseChatServerEvent({ type: "error", message: "y", code: "TRANSIENT" }),
+    ).toEqual({ type: "error", message: "y", code: "TRANSIENT" });
     expect(parseChatServerEvent({ type: "pong" })).toEqual({ type: "pong" });
   });
 

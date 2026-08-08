@@ -169,11 +169,11 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     expect(socket.close).not.toHaveBeenCalled();
   });
 
-  it("sends error with UNKNOWN code when sendMessage rejects a generic error", async () => {
+  it("sends error with TRANSIENT code when sendMessage rejects a generic error", async () => {
     sessionRuntime.sendMessage.mockRejectedValue(new Error("oops"));
     socket.simulateMessage(Buffer.from(JSON.stringify({ type: "message", content: "hi" })));
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(sentObjects(socket)).toContainEqual({ type: "error", message: "oops", code: "UNKNOWN" });
+    expect(sentObjects(socket)).toContainEqual({ type: "error", message: "oops", code: "TRANSIENT" });
     expect(socket.close).not.toHaveBeenCalled();
   });
 });

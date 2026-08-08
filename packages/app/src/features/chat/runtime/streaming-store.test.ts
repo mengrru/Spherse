@@ -446,4 +446,69 @@ describe("streaming-store resilience", () => {
     const messages = useStreamingStore.getState().sessions.img2.messages;
     expect(messages[messages.length - 1]._attachments).toBeUndefined();
   });
+
+  const transientFailureEvents = [
+    { type: "agent_start" },
+    { type: "message_start", message: { role: "assistant" } },
+    { type: "message_end", message: { role: "assistant", content: [], stopReason: "error", errorMessage: "rate limit exceeded" } },
+    { type: "agent_end", messages: [] },
+  ];
+
+  function emit(socket: MockWebSocketInstance, events: object[]) {
+    for (const event of events) {
+      socket.onmessage?.({ data: JSON.stringify(event) } as MessageEvent);
+    }
+  }
+
+  it("auto-retries a transient Source 2 failure via a retry message after backoff", async () => {
+    const socket = await attachAndConnect("rt1");
+    useStreamingStore.getState().sendMessage("rt1", "hi");
+    emit(socket, transientFailureEvents);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const session = useStreamingStore.getState().sessions.rt1;
+    const last = session.messages[session.messages.length - 1];
+    expect(last._error).toBe("rate limit exceeded");
+    expect(last._turnError).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({ type: "retry" });
+    expect(useStreamingStore.getState().sessions.rt1.retryCount).toBe(1);
+  });
+
+  it("caps auto-retry at the budget then leaves the error rendered", async () => {
+    const socket = await attachAndConnect("rt2");
+    useStreamingStore.getState().sendMessage("rt2", "hi");
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      emit(socket, transientFailureEvents);
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(6000);
+    }
+
+    const retryCount = socket.sent.filter((s) => JSON.parse(s).type === "retry").length;
+    expect(retryCount).toBe(2);
+    const session = useStreamingStore.getState().sessions.rt2;
+    const last = session.messages[session.messages.length - 1];
+    expect(last._error).toBe("rate limit exceeded");
+    expect(session.streaming).toBe(false);
+  });
+
+  it("manual retry resends the message for a Source 1 error event", async () => {
+    const socket = await attachAndConnect("rt3");
+    useStreamingStore.getState().sendMessage("rt3", "hi");
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "error", message: "no model", code: "MODEL_NOT_CONFIGURED" }),
+    } as MessageEvent);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const before = socket.sent.filter((s) => JSON.parse(s).type === "message").length;
+    useStreamingStore.getState().retry("rt3");
+    await vi.advanceTimersByTimeAsync(0);
+
+    const after = socket.sent.filter((s) => JSON.parse(s).type === "message").length;
+    expect(after).toBe(before + 1);
+    expect(socket.sent.map((s) => JSON.parse(s)).some((p) => p.type === "retry")).toBe(false);
+  });
 });

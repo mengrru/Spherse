@@ -390,4 +390,50 @@ describe("LiveSession context engineering", () => {
 
     expect((live as any).mcpMerged).toBe(false);
   });
+
+  it("retryLastTurn pops the failed assistant turn from agent state, DB, and liveMessageDbIds", async () => {
+    ctx.defaultModel = "provider/model";
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const agent = agentOf(live);
+
+    const userMsg = { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 };
+    const failedAssistant = {
+      role: "assistant",
+      content: [{ type: "text", text: "" }],
+      stopReason: "error",
+      errorMessage: "boom",
+      timestamp: 2,
+    };
+    const userId = agentStore.sessions.appendMessage(sessionId, userMsg);
+    const failedId = agentStore.sessions.appendMessage(sessionId, failedAssistant);
+    agent.state.messages = [userMsg, failedAssistant];
+    liveIdsOf(live).push(userId, failedId);
+
+    agent.continue = vi.fn().mockResolvedValue(undefined);
+
+    await live.retryLastTurn(() => {});
+
+    expect(agent.continue).toHaveBeenCalledTimes(1);
+    expect(agent.state.messages).toEqual([userMsg]);
+    expect(liveIdsOf(live)).toEqual([userId]);
+    const remaining = agentStore.sessions.getSessionMessagesWithIds(sessionId).map((r) => r.id);
+    expect(remaining).toContain(userId);
+    expect(remaining).not.toContain(failedId);
+  });
+
+  it("retryLastTurn rejects when the last message is not a failed assistant turn", async () => {
+    ctx.defaultModel = "provider/model";
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const agent = agentOf(live);
+    agent.state.messages = [
+      { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 },
+      { role: "assistant", content: [{ type: "text", text: "ok" }], stopReason: "stop", timestamp: 2 },
+    ];
+
+    await expect(live.retryLastTurn(() => {})).rejects.toThrow(/no failed assistant turn/);
+  });
 });
