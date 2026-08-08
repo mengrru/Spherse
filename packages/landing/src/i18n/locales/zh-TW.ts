@@ -42,6 +42,8 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "cases.backHome": "返回首頁",
   "cases.item1.title": "哈利波特",
   "cases.item1.desc": "走進霍格沃茨的魔法世界——預言家日報社、冥想盆等多個 Agent 協同演繹，展示如何用 Spherse 構建一個鮮活的互動式故事宇宙。",
+  "cases.item2.title": "世界觀創作框架",
+  "cases.item2.desc": "在 Spherse 中原生打造的世界觀創作應用。跟隨內建框架管理角色、陣營、地理與時間線，借助 AI 進行創作、審查與角色扮演。",
 
   "lang.zhCN": "简体",
   "lang.zhTW": "繁体",

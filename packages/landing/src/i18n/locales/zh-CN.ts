@@ -57,6 +57,10 @@ export const zhCN = {
   "cases.backHome": "返回首页",
   "cases.item1.title": "哈利波特",
   "cases.item1.desc": "走进霍格沃茨的魔法世界——预言家日报社、冥想盆等多个 Agent 协同演绎，展示如何用 Spherse 构建一个鲜活的交互式故事宇宙。",
+  // 案例页第二张卡片，在 Spherse 中原生打造的世界观创作应用。
+  "cases.item2.title": "世界观创作框架",
+  // 案例页第二张卡片描述，说明内置框架覆盖的创作维度与 AI 辅助能力。
+  "cases.item2.desc": "在 Spherse 中原生打造的世界观创作应用。跟随内置框架管理角色、阵营、地理与时间线，借助 AI 进行创作、审查与角色扮演。",
 
   "lang.zhCN": "简体",
   "lang.zhTW": "繁体",

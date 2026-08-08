@@ -23,6 +23,7 @@ project-root/
 │   │       └── skills/              # 可选：agent-level 私有 skill（按需创建）
 │   │           └── <skill-name>/SKILL.md
 │   ├── generated-images/          # generate_image 工具自动保存的图片（按时间戳+hex 命名）
+│   ├── attachments/               # chat 图片输入等用户上传附件落盘（POST /attachments 上传，base64 仅在本轮 LLM 调用瞬间存在）
 │   └── skills/
 │       └── <skill-name>/SKILL.md
 ├── AGENTS.md
@@ -177,7 +178,7 @@ Full skill instructions in Markdown...
 - 文件读取、写入、删除、新建文件、新建目录都必须做 `path.resolve` 后的项目根目录边界校验
 - AI 工具（read_file/write_file/edit_file/list_files/search_content/move_file/copy_file/render_card）和 server 通用路由（content/preview/images）的读写权限由 `@spherse/core` 的 access policy 统一管理：`categorizePath` 将路径分类为语义 category，`llmAccessPolicy`/`serverAccessPolicy` 基于 category 白名单控制读写范围
 - 会写文件的 agent tools 共享 `FileWriteMutex`，避免同一文件并发写覆盖
-- **二进制文件处理**：`read_file` 和 `search_content` 通过 null-byte 启发式（前 8KB 采样）检测二进制文件。`read_file` 检测到二进制时拒绝读取并返回提示（图片文件引导使用 `render_card` 展示）；`search_content` 静默跳过二进制文件
+- **二进制文件处理**：`read_file` 和 `search_content` 通过 null-byte 启发式（前 8KB 采样）检测二进制文件。`read_file` 检测到二进制时拒绝读取并返回提示（图片文件引导使用 `render_card` 展示）；`search_content` 静默跳过二进制文件。server content 路由同样用 `isBinaryBuffer`（前 8KB 采样）嗅探，二进制文件返回 `binary:true` + 空 content（白名单文本格式 md/html/image 含 ico 走专属 viewer，其余二进制由前端 Content Browser 渲染占位卡 `UnsupportedFileCard`，桌面端经 `HostCapabilities.openFileExternal` 提供「用默认应用打开」按钮）
 - **`.spherse` 元数据目录**：`list_files` 和 `search_content` 默认不列出/搜索 `.spherse` 目录及其子路径（参数 `include_meta`，默认 false）；设置 `include_meta=true` 可进入。`spherseOther` category（`.spherse/**` 兜底）对 LLM 可读；`agentSessions`（`sessions.db*`，含 WAL/SHM sidecar）与 `agentMcp`（`mcp.json`，可能含 headers/env 敏感信息）始终不可读
 
 ## HTML Card

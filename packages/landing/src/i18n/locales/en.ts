@@ -44,6 +44,8 @@ export const en: Record<keyof typeof zhCN, string> = {
   "cases.backHome": "Back to home",
   "cases.item1.title": "Harry Potter",
   "cases.item1.desc": "Step into the wizarding world of Hogwarts — the Daily Prophet, the Pensieve and more, with multiple agents collaborating to show how Spherse brings an interactive story universe to life.",
+  "cases.item2.title": "Worldbuilding Framework",
+  "cases.item2.desc": "A worldbuilding app crafted natively in Spherse. Follow the built-in framework to manage characters, factions, geography, and timelines — then use AI to create, review, and roleplay.",
 
   "lang.zhCN": "简体",
   "lang.zhTW": "繁体",

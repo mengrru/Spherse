@@ -123,7 +123,7 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
   - `settings-store` 管理 app 级 locale（跨 feature 消费）；dialog 专属的表单状态用 hook（`useSettingsForm`）保留在组件内，不进 store
   - `side-panel-store` 管理侧栏 pinned/hover 折叠机制（全局 UI 状态，被 side-panel + layout（clickAwayProps）+ floating-chat（z-index）跨层消费）
   - 跨页面、跨 feature 持久的状态放 store；组件内短生命周期状态（表单、弹窗、输入框、WebSocket ref、编辑 dirty/conflict）用 `useState`/`useRef` 保留在组件内
-  - 只被单个 feature 使用的状态不提升到全局 store，可在 feature 目录下建立自己的 store（如 `features/chat/streaming-store.ts`、`features/agent-schedule/store.ts`、`features/agent-session-list/store.ts`、`features/floating-chat/store.ts`）。feature-local store 不应被其它 feature 或全局 store import
+  - 只被单个 feature 使用的状态不提升到全局 store，可在 feature 目录下建立自己的 store（如 `features/chat/runtime/streaming-store.ts`、`features/agent-trigger/store.ts`、`features/agent-session-list/store.ts`、`features/floating-chat/store.ts`、`features/floating-content-browser/store.ts`）。feature-local store 不应被其它 feature 或全局 store import
   - 全局 store 不应依赖 feature-local store（如需要 locale 等跨层信息，应由调用方传入或由展示层翻译）
   - store 命名统一 `use{语义名}Store` 格式（PascalCase 语义名 + `Store` 后缀），如 `useAppStore`、`useProjectDataStore`、`useSettingsStore`、`useStreamingStore`。作用域（全局 vs feature-local）由文件位置表达（`stores/` vs `features/xxx/store.ts`），不在命名中编码
   - store 初始化用显式调用链（App.tsx 或编排组件里调 `load`/`restore` action），初始化的顺序和依赖应从代码顺序直接看出

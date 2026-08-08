@@ -1,4 +1,5 @@
 import { asset } from "@/lib/utils";
+import { sampleUrl } from "@/lib/sample";
 import type { TranslationKey } from "../i18n";
 
 export interface SampleCase {
@@ -16,5 +17,12 @@ export const cases: SampleCase[] = [
     titleKey: "cases.item1.title",
     descKey: "cases.item1.desc",
     zipFile: "spherse-example-harry-potter.zip",
+  },
+  {
+    id: "worldbuilding-framework",
+    screenshot: sampleUrl("worldbuilding-framework.png") ?? "",
+    titleKey: "cases.item2.title",
+    descKey: "cases.item2.desc",
+    zipFile: "worldbuilding-framework.zip",
   },
 ];
