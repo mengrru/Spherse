@@ -1,6 +1,8 @@
 import type {
   Message,
   UserMessage,
+  AssistantMessage,
+  ToolResultMessage,
   ToolCall,
 } from "@earendil-works/pi-ai";
 
@@ -10,7 +12,8 @@ const TRUNCATE_MARKER = "…";
 export interface CompactionOptions {
   currentTokens: number;
   contextWindow: number;
-  keepRecentTurns?: number;
+  keepRecentPrompts?: number;
+  maxTurns?: number;
   thresholdRatio?: number;
 }
 
@@ -101,12 +104,29 @@ export function wrapDigestContent(plainText: string, covers?: string): string {
   return lines.join("\n");
 }
 
+function isDigestMessage(msg: Message): boolean {
+  if (msg.role !== "user") return false;
+  if (typeof msg.content === "string") {
+    return msg.content.includes("<compaction-digest");
+  }
+  if (Array.isArray(msg.content)) {
+    return msg.content.some(
+      (block) =>
+        block.type === "text" &&
+        typeof block.text === "string" &&
+        block.text.includes("<compaction-digest"),
+    );
+  }
+  return false;
+}
+
 export function planCompaction(
   messages: Message[],
   options: CompactionOptions,
 ): CompactionPlan {
   const thresholdRatio = options.thresholdRatio ?? 0.75;
-  const keepRecentTurns = options.keepRecentTurns ?? 20;
+  const keepRecentPrompts = options.keepRecentPrompts ?? 20;
+  const maxTurns = options.maxTurns ?? 50;
 
   const shouldCompact =
     options.currentTokens > options.contextWindow * thresholdRatio;
@@ -114,32 +134,98 @@ export function planCompaction(
     return { shouldCompact: false, anchorIndex: -1, digest: null, tail: messages };
   }
 
-  let userCount = 0;
+  let promptCount = 0;
+  let turnCount = 0;
   for (const message of messages) {
-    if (message.role === "user") userCount++;
+    if (message.role === "user" && !isDigestMessage(message)) promptCount++;
+    if (message.role === "assistant") turnCount++;
   }
-  if (userCount <= keepRecentTurns) {
+  if (promptCount <= keepRecentPrompts && turnCount <= maxTurns) {
     return { shouldCompact: false, anchorIndex: -1, digest: null, tail: messages };
   }
 
-  let firstKeptUserIndex = -1;
-  let count = 0;
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role === "user") {
-      count++;
-      if (count === keepRecentTurns) {
-        firstKeptUserIndex = i;
-        break;
-      }
-    }
+  const promptSplit = findPromptSplit(messages, keepRecentPrompts);
+  const turnSplit = findTurnSplit(messages, maxTurns);
+
+  const firstKeptUserIndex = Math.max(promptSplit, turnSplit);
+  if (firstKeptUserIndex <= 0) {
+    return { shouldCompact: false, anchorIndex: -1, digest: null, tail: messages };
   }
 
   const anchorIndex = firstKeptUserIndex - 1;
-  if (anchorIndex < 0) {
-    return { shouldCompact: false, anchorIndex: -1, digest: null, tail: messages };
-  }
-
   const digest = generateDigest(messages.slice(0, anchorIndex + 1));
   const tail = messages.slice(anchorIndex + 1);
   return { shouldCompact: true, anchorIndex, digest, tail };
+}
+
+function findPromptSplit(
+  messages: Message[],
+  keepCount: number,
+): number {
+  let count = 0;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user" && !isDigestMessage(messages[i])) {
+      count++;
+      if (count === keepCount) return i;
+    }
+  }
+  return -1;
+}
+
+function findTurnSplit(
+  messages: Message[],
+  maxTurns: number,
+): number {
+  let assistantCount = 0;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "assistant") {
+      assistantCount++;
+      if (assistantCount > maxTurns) {
+        for (let j = i + 1; j < messages.length; j++) {
+          if (messages[j].role === "user") return j;
+        }
+        return messages.length;
+      }
+    }
+  }
+  return -1;
+}
+
+export interface SanitizeResult {
+  messages: Message[];
+  keptIndices: number[];
+}
+
+export function sanitizeToolCallPairs(messages: Message[]): SanitizeResult {
+  const result: Message[] = [];
+  const keptIndices: number[] = [];
+  const validToolCallIds = new Set<string>();
+
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    if (msg.role === "assistant") {
+      const am = msg as AssistantMessage;
+      if (am.stopReason === "error" || am.stopReason === "aborted") {
+        continue;
+      }
+      for (const block of am.content) {
+        if (block.type === "toolCall") {
+          validToolCallIds.add((block as ToolCall).id);
+        }
+      }
+      result.push(msg);
+      keptIndices.push(i);
+    } else if (msg.role === "toolResult") {
+      const tr = msg as ToolResultMessage;
+      if (validToolCallIds.has(tr.toolCallId)) {
+        result.push(msg);
+        keptIndices.push(i);
+      }
+    } else {
+      result.push(msg);
+      keptIndices.push(i);
+    }
+  }
+
+  return { messages: result, keptIndices };
 }

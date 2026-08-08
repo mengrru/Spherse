@@ -10,6 +10,7 @@ import {
   planCompaction,
   generateDigest,
   wrapDigestContent,
+  sanitizeToolCallPairs,
 } from "../../context/compaction.js";
 
 function makeUsage(): Usage {
@@ -35,6 +36,7 @@ function assistantMsg(opts: {
     name: string;
     arguments: Record<string, unknown>;
   }>;
+  stopReason?: AssistantMessage["stopReason"];
 }): AssistantMessage {
   const content: AssistantMessage["content"] = [];
   if (opts.text !== undefined) {
@@ -60,7 +62,7 @@ function assistantMsg(opts: {
     provider: "anthropic",
     model: "m",
     usage: makeUsage(),
-    stopReason: "stop",
+    stopReason: opts.stopReason ?? "stop",
     timestamp: 0,
   };
 }
@@ -97,7 +99,7 @@ describe("planCompaction", () => {
     expect(plan.tail).toBe(messages);
   });
 
-  it("compacts when over threshold with enough turns", () => {
+  it("compacts when over threshold with enough prompts", () => {
     const messages: Message[] = [];
     for (let i = 1; i <= 10; i++) {
       messages.push(userMsg(`turn ${i}`));
@@ -106,7 +108,8 @@ describe("planCompaction", () => {
     const plan = planCompaction(messages, {
       currentTokens: 100000,
       contextWindow: 32768,
-      keepRecentTurns: 3,
+      keepRecentPrompts: 3,
+      maxTurns: 100,
     });
     expect(plan.shouldCompact).toBe(true);
     expect(plan.anchorIndex).toBe(13);
@@ -116,7 +119,7 @@ describe("planCompaction", () => {
     expect(plan.tail[0]).toBe(messages[14]);
   });
 
-  it("does not compact when too few turns", () => {
+  it("does not compact when too few prompts", () => {
     const messages: Message[] = [
       userMsg("a"),
       assistantMsg({ text: "1" }),
@@ -126,14 +129,15 @@ describe("planCompaction", () => {
     const plan = planCompaction(messages, {
       currentTokens: 100000,
       contextWindow: 32768,
-      keepRecentTurns: 6,
+      keepRecentPrompts: 6,
+      maxTurns: 100,
     });
     expect(plan.shouldCompact).toBe(false);
     expect(plan.anchorIndex).toBe(-1);
     expect(plan.tail).toBe(messages);
   });
 
-  it("does not compact with exactly keepRecentTurns user messages", () => {
+  it("does not compact with exactly keepRecentPrompts user messages", () => {
     const messages: Message[] = [];
     for (let i = 1; i <= 6; i++) {
       messages.push(userMsg(`turn ${i}`));
@@ -147,7 +151,7 @@ describe("planCompaction", () => {
     expect(plan.anchorIndex).toBe(-1);
   });
 
-  it("defaults keepRecentTurns to 20 and thresholdRatio to 0.75", () => {
+  it("defaults keepRecentPrompts to 20, maxTurns to 50, thresholdRatio to 0.75", () => {
     const messages: Message[] = [];
     for (let i = 1; i <= 30; i++) {
       messages.push(userMsg(`turn ${i}`));
@@ -167,6 +171,68 @@ describe("planCompaction", () => {
     expect(userTailCount).toBe(20);
   });
 
+  it("triggers compaction by maxTurns even with few prompts", () => {
+    const messages: Message[] = [
+      userMsg("do complex task"),
+    ];
+    for (let i = 1; i <= 10; i++) {
+      messages.push(assistantMsg({
+        text: `step ${i}`,
+        toolCalls: [{ id: `tc${i}`, name: "read_file", arguments: {} }],
+      }));
+      messages.push(toolResultMsg({ toolCallId: `tc${i}`, toolName: "read_file", text: `result ${i}` }));
+    }
+    const plan = planCompaction(messages, {
+      currentTokens: 100000,
+      contextWindow: 32768,
+      keepRecentPrompts: 20,
+      maxTurns: 5,
+    });
+    expect(plan.shouldCompact).toBe(true);
+    const assistantTailCount = plan.tail.filter((m) => m.role === "assistant").length;
+    expect(assistantTailCount).toBeLessThanOrEqual(5);
+  });
+
+  it("uses the more restrictive split when both limits apply", () => {
+    const messages: Message[] = [];
+    for (let i = 1; i <= 10; i++) {
+      messages.push(userMsg(`prompt ${i}`));
+      for (let j = 1; j <= 3; j++) {
+        messages.push(assistantMsg({ text: `reply ${i}-${j}` }));
+      }
+    }
+    const plan = planCompaction(messages, {
+      currentTokens: 100000,
+      contextWindow: 32768,
+      keepRecentPrompts: 5,
+      maxTurns: 7,
+    });
+    expect(plan.shouldCompact).toBe(true);
+    const assistantTailCount = plan.tail.filter((m) => m.role === "assistant").length;
+    expect(assistantTailCount).toBeLessThanOrEqual(7);
+    const promptTailCount = plan.tail.filter((m) => m.role === "user").length;
+    expect(promptTailCount).toBeLessThanOrEqual(5);
+  });
+
+  it("does not count digest as a user prompt", () => {
+    const digestUserMsg = {
+      ...userMsg("earlier"),
+      content: "<compaction-digest>\n[user]: old stuff\n</compaction-digest>",
+    } as Message;
+    const messages: Message[] = [digestUserMsg];
+    for (let i = 1; i <= 5; i++) {
+      messages.push(userMsg(`prompt ${i}`));
+      messages.push(assistantMsg({ text: `reply ${i}` }));
+    }
+    const plan = planCompaction(messages, {
+      currentTokens: 100000,
+      contextWindow: 32768,
+      keepRecentPrompts: 5,
+      maxTurns: 100,
+    });
+    expect(plan.shouldCompact).toBe(false);
+  });
+
   it("produces a non-null digest string when compacting", () => {
     const messages: Message[] = [];
     for (let i = 1; i <= 10; i++) {
@@ -176,7 +242,8 @@ describe("planCompaction", () => {
     const plan = planCompaction(messages, {
       currentTokens: 100000,
       contextWindow: 32768,
-      keepRecentTurns: 3,
+      keepRecentPrompts: 3,
+      maxTurns: 100,
     });
     expect(plan.digest).not.toBeNull();
     expect(typeof plan.digest).toBe("string");
@@ -193,7 +260,8 @@ describe("planCompaction", () => {
     const plan = planCompaction(messages, {
       currentTokens: 100000,
       contextWindow: 32768,
-      keepRecentTurns: 3,
+      keepRecentPrompts: 3,
+      maxTurns: 100,
     });
     for (let i = 0; i < plan.tail.length; i++) {
       expect(plan.tail[i]).toBe(messages[14 + i]);
@@ -358,5 +426,123 @@ describe("wrapDigestContent", () => {
     const wrapped = wrapDigestContent("");
     expect(wrapped).toContain("<compaction-digest");
     expect(wrapped).toContain("</compaction-digest>");
+  });
+});
+
+describe("sanitizeToolCallPairs", () => {
+  it("passes through normal messages unchanged", () => {
+    const messages: Message[] = [
+      userMsg("hello"),
+      assistantMsg({ text: "hi" }),
+    ];
+    const { messages: result, keptIndices } = sanitizeToolCallPairs(messages);
+    expect(result.length).toBe(2);
+    expect(keptIndices).toEqual([0, 1]);
+  });
+
+  it("removes error/aborted assistant messages", () => {
+    const messages: Message[] = [
+      userMsg("hello"),
+      assistantMsg({ text: "", stopReason: "aborted" }),
+      assistantMsg({ text: "retry" }),
+    ];
+    const { messages: result, keptIndices } = sanitizeToolCallPairs(messages);
+    expect(result.length).toBe(2);
+    expect(result[0].role).toBe("user");
+    expect(result[1].role).toBe("assistant");
+    expect((result[1] as AssistantMessage).content[0]).toMatchObject({ text: "retry" });
+    expect(keptIndices).toEqual([0, 2]);
+  });
+
+  it("removes orphaned toolResult when parent assistant was error/aborted", () => {
+    const messages: Message[] = [
+      userMsg("hello"),
+      assistantMsg({
+        toolCalls: [{ id: "tc1", name: "read_file", arguments: { path: "foo" } }],
+        stopReason: "error",
+      }),
+      toolResultMsg({ toolCallId: "tc1", toolName: "read_file", text: "content" }),
+      assistantMsg({ text: "done" }),
+    ];
+    const { messages: result } = sanitizeToolCallPairs(messages);
+    expect(result.length).toBe(2);
+    expect(result[0].role).toBe("user");
+    expect(result[1].role).toBe("assistant");
+    expect((result[1] as AssistantMessage).content[0]).toMatchObject({ text: "done" });
+    expect(result.some((m) => m.role === "toolResult")).toBe(false);
+  });
+
+  it("keeps toolResult when parent assistant is normal", () => {
+    const messages: Message[] = [
+      userMsg("hello"),
+      assistantMsg({
+        text: "checking",
+        toolCalls: [{ id: "tc1", name: "read_file", arguments: { path: "foo" } }],
+      }),
+      toolResultMsg({ toolCallId: "tc1", toolName: "read_file", text: "content" }),
+      assistantMsg({ text: "done" }),
+    ];
+    const { messages: result } = sanitizeToolCallPairs(messages);
+    expect(result.length).toBe(4);
+    expect(result[2].role).toBe("toolResult");
+  });
+
+  it("removes orphaned toolResult at start of tail (no preceding assistant)", () => {
+    const messages: Message[] = [
+      toolResultMsg({ toolCallId: "orphan", toolName: "read_file", text: "ghost" }),
+      userMsg("hello"),
+      assistantMsg({ text: "hi" }),
+    ];
+    const { messages: result } = sanitizeToolCallPairs(messages);
+    expect(result.length).toBe(2);
+    expect(result[0].role).toBe("user");
+    expect(result.some((m) => m.role === "toolResult")).toBe(false);
+  });
+
+  it("handles mixed normal and error assistants with tool results", () => {
+    const messages: Message[] = [
+      userMsg("hello"),
+      assistantMsg({
+        toolCalls: [{ id: "tc1", name: "read_file", arguments: {} }],
+      }),
+      toolResultMsg({ toolCallId: "tc1", toolName: "read_file", text: "ok" }),
+      assistantMsg({
+        toolCalls: [{ id: "tc2", name: "write_file", arguments: {} }],
+        stopReason: "error",
+      }),
+      toolResultMsg({ toolCallId: "tc2", toolName: "write_file", text: "should be removed" }),
+      assistantMsg({ text: "final" }),
+    ];
+    const { messages: result, keptIndices } = sanitizeToolCallPairs(messages);
+    expect(result.length).toBe(4);
+    expect(keptIndices).toEqual([0, 1, 2, 5]);
+    expect(result.some((m) => m.role === "toolResult")).toBe(true);
+    const toolResults = result.filter((m) => m.role === "toolResult");
+    expect(toolResults.length).toBe(1);
+    expect((toolResults[0] as ToolResultMessage).toolCallId).toBe("tc1");
+  });
+
+  it("keptIndices correctly map to original positions", () => {
+    const messages: Message[] = [
+      userMsg("a"),
+      assistantMsg({ stopReason: "error" }),
+      userMsg("b"),
+      assistantMsg({ text: "ok" }),
+    ];
+    const { keptIndices } = sanitizeToolCallPairs(messages);
+    expect(keptIndices).toEqual([0, 2, 3]);
+    expect(messages[keptIndices[0]]).toBe(messages[0]);
+    expect(messages[keptIndices[1]]).toBe(messages[2]);
+    expect(messages[keptIndices[2]]).toBe(messages[3]);
+  });
+
+  it("returns empty for all-error input", () => {
+    const messages: Message[] = [
+      assistantMsg({ stopReason: "error" }),
+      assistantMsg({ stopReason: "aborted" }),
+    ];
+    const { messages: result, keptIndices } = sanitizeToolCallPairs(messages);
+    expect(result.length).toBe(0);
+    expect(keptIndices.length).toBe(0);
   });
 });

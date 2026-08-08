@@ -27,7 +27,7 @@ import {
 import type { ContextBlock } from "../context/blocks.js";
 import { serializeSystemPrompt } from "../context/serialize.js";
 import { estimateTokens } from "../context/token-estimate.js";
-import { planCompaction, wrapDigestContent } from "../context/compaction.js";
+import { planCompaction, wrapDigestContent, sanitizeToolCallPairs } from "../context/compaction.js";
 import type { SessionContext, TurnContextSnapshot, SessionControlEvent } from "./types.js";
 import { SessionControlBus } from "./control-bus.js";
 import { createApprovalGate } from "./approval-gate.js";
@@ -344,12 +344,14 @@ export class LiveSession {
     const anchorMessageId = this.liveMessageDbIds[plan.anchorIndex];
 
     try {
+      const { messages: sanitizedTail, keptIndices } = sanitizeToolCallPairs(plan.tail);
+
       const digestMessage: AgentMessage = {
         role: "user",
         content: wrapDigestContent(plan.digest),
         timestamp: Date.now(),
       } as any;
-      const postBuffer: AgentMessage[] = [digestMessage, ...plan.tail];
+      const postBuffer: AgentMessage[] = [digestMessage, ...sanitizedTail];
       const postEstimate =
         estimateTokens(this.agent.state.systemPrompt) + estimateTokens(postBuffer as Message[]);
 
@@ -360,9 +362,11 @@ export class LiveSession {
       });
 
       this.agent.state.messages = postBuffer;
-      const tail = this.liveMessageDbIds.slice(plan.anchorIndex + 1);
+      const tailDbIds = keptIndices.map(
+        (idx) => this.liveMessageDbIds[plan.anchorIndex + 1 + idx],
+      );
       this.liveMessageDbIds.length = 0;
-      this.liveMessageDbIds.push(anchorMessageId, ...tail);
+      this.liveMessageDbIds.push(anchorMessageId, ...tailDbIds);
       this.ctx.logger.info(
         {
           sessionId: this.sessionId,
