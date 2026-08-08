@@ -129,6 +129,8 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 
 ```javascript
 spherse.openFile("world/characters/主角设定.md");
+// 直接以浮窗打开（仅 desktop，web 端回退到主面板）
+spherse.openFile({ path: "world/characters/主角设定.md", float: true });
 ```
 
 > `path` 为项目内相对路径。`spherse` 全局对象由 App 自动注入，无需自己引入脚本。完整 API 见 `use-ui-sdk` skill。
@@ -218,7 +220,7 @@ spherse.openExternalLink("https://example.com");
 - `spherse.toast(params)` — 弹一条 toast 提示（`{ variant, message, description? }`）
 - `spherse.emitAgentTriggerEvent(params)` — 触发自定义事件，激活匹配的事件触发器
 - `spherse.floatSession(id)` / `spherse.unfloatSession()` — 浮窗显示/关闭会话
-- `spherse.openFile(path)` — 在 Content Browser 打开项目文件
+- `spherse.openFile(path | { path, float })` — 在 Content Browser 打开项目文件；`float:true` 以浮窗打开（desktop）
 - `spherse.openExternalLink(url)` — 在系统默认浏览器打开外部链接（http/https/mailto/tel）
 - `spherse.data.get/set/delete(params)` → `Promise` — key-value 数据读写
 - `spherse.api.*` — 只读查询项目信息（agents / sessions / content / triggers / settings）

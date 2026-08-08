@@ -69,13 +69,22 @@ spherse.createSession({ agentId: "writer", message: "请帮我扩展这段设定
 spherse.createSession({ agentSlug: "writer-a1b2c3" });
 ```
 
-### `spherse.openFile(path)`
+### `spherse.openFile(path)` / `spherse.openFile(params)`
 
-在 Content Browser 中打开项目文件。`path` 可传字符串或 `{ path }`。
+在 Content Browser 中打开项目文件。`path` 可传字符串或对象 `{ path, float }`。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| path | string | 是 | 项目内文件路径 |
+| float | boolean | 否 | 为 `true` 时在浮窗中打开（仅 desktop；web 端忽略并回退到主面板导航） |
 
 ```javascript
 spherse.openFile("world/characters/主角设定.md");
+// 直接以浮窗打开
+spherse.openFile({ path: "world/characters/主角设定.md", float: true });
 ```
+
+> 与 [`floatContent`](#sphersefloatcontentpath--spherseunfloatcontentpath) 的区别：`openFile({ float: true })` 是「一步直接浮窗打开」；`floatContent` 用于把文件浮窗化（可多窗口并存）。两者可按场景选用。
 
 ### `spherse.openSession(sessionId)`
 

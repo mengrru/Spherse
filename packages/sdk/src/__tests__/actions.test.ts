@@ -31,6 +31,11 @@ describe("actions surface", () => {
     expect(mockFire).toHaveBeenCalledWith("openFile", { path: "world/x.md" });
   });
 
+  it("openFile passes through an object including float", () => {
+    actions.openFile({ path: "world/x.md", float: true });
+    expect(mockFire).toHaveBeenCalledWith("openFile", { path: "world/x.md", float: true });
+  });
+
   it("openExternalLink accepts a plain string url", () => {
     actions.openExternalLink("https://example.com");
     expect(mockFire).toHaveBeenCalledWith("openExternalLink", { url: "https://example.com" });
