@@ -15,6 +15,7 @@ interface TriggerFormProps {
   onInsertVariable: (variable: string) => void;
   onSave: () => void;
   onCancel: () => void;
+  onResetBinding: () => void;
 }
 
 export function TriggerForm({
@@ -24,6 +25,7 @@ export function TriggerForm({
   onInsertVariable,
   onSave,
   onCancel,
+  onResetBinding,
 }: TriggerFormProps) {
   const { t } = useI18n();
 
@@ -124,19 +126,21 @@ export function TriggerForm({
 
       <div className="space-y-1.5">
         <Label>{t("agent-trigger.mode")}</Label>
-        <div className="grid grid-cols-2 gap-1.5">
-          {(["new_session", "existing_session"] as const).map((value) => (
+        <div className="grid grid-cols-3 gap-1.5">
+          {(
+            [
+              { value: "reusable_session", key: "agent-trigger.modeReusableSession" },
+              { value: "new_session", key: "agent-trigger.modeNewSession" },
+              { value: "existing_session", key: "agent-trigger.modeExistingSession" },
+            ] as const
+          ).map(({ value, key }) => (
             <Button
               key={value}
               variant={draft.sessionMode === value ? "default" : "outline"}
               size="sm"
               onClick={() => onChange({ sessionMode: value as TriggerSessionMode })}
             >
-              {t(
-                value === "new_session"
-                  ? "agent-trigger.modeNewSession"
-                  : "agent-trigger.modeExistingSession",
-              )}
+              {t(key)}
             </Button>
           ))}
         </div>
@@ -148,6 +152,23 @@ export function TriggerForm({
               onChange={(e) => onChange({ targetSessionId: e.target.value })}
               placeholder={t("agent-trigger.targetSessionIdPlaceholder")}
             />
+          </div>
+        )}
+        {draft.sessionMode === "reusable_session" && (
+          <div className="pt-1">
+            {draft.boundSessionId ? (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5">
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-xs text-muted-foreground">{t("agent-trigger.boundSession")}</span>
+                  <span className="truncate font-mono text-xs">{draft.boundSessionId}</span>
+                </div>
+                <Button variant="outline" size="sm" onClick={onResetBinding}>
+                  {t("agent-trigger.clearBinding")}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">{t("agent-trigger.boundSessionNone")}</p>
+            )}
           </div>
         )}
       </div>

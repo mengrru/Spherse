@@ -419,7 +419,7 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       type: "time" | "event";
       cron?: string;
       eventName?: string;
-      mode: "new_session" | "existing_session";
+      mode: "new_session" | "existing_session" | "reusable_session";
       targetSessionId?: string;
       message: string;
       notify: boolean;
@@ -440,7 +440,7 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       type?: "time" | "event";
       cron?: string;
       eventName?: string;
-      mode?: "new_session" | "existing_session";
+      mode?: "new_session" | "existing_session" | "reusable_session";
       targetSessionId?: string;
       message?: string;
       notify?: boolean;
@@ -469,6 +469,14 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       });
       await assertOk(res);
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
+    },
+
+    async resetTriggerBinding(agentId: string, triggerId: string): Promise<TriggerEntry> {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers/${encodeURIComponent(triggerId)}/reset-binding`, {
+        method: "POST",
+      });
+      await assertOk(res);
+      return parseJsonResponse<TriggerEntry>(res, schemas.triggerEntry);
     },
 
     async getTriggerLogs(agentId: string, limit?: number): Promise<TriggerLogEntry[]> {

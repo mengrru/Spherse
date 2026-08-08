@@ -53,8 +53,9 @@ export interface TriggerEntry {
   type: TriggerType;
   cron?: string;
   eventName?: string;
-  mode: "new_session" | "existing_session";
+  mode: "new_session" | "existing_session" | "reusable_session";
   targetSessionId?: string;
+  boundSessionId?: string;
   message: string;
   notify: boolean;
   notificationMessage?: string;

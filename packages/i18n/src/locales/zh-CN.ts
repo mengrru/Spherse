@@ -464,10 +464,18 @@ export const zhCN = {
   "agent-trigger.modeNewSession": "新建对话",
   // 执行模式：在已有对话中追加
   "agent-trigger.modeExistingSession": "已有对话",
+  // 执行模式：首次触发新建并绑定一个会话，之后每次触发复用该会话（新建 trigger 的默认模式）
+  "agent-trigger.modeReusableSession": "复用对话",
   // 绑定已有会话模式下，会话 ID 输入框标签
   "agent-trigger.targetSessionId": "会话 ID",
   // 绑定已有会话模式下，会话 ID 输入框占位
   "agent-trigger.targetSessionIdPlaceholder": "输入要绑定的会话 ID",
+  // 复用对话模式下，已绑定会话的状态标签（后接会话 ID）
+  "agent-trigger.boundSession": "已绑定会话",
+  // 复用对话模式下，尚未绑定会话时的提示（首次触发时自动创建）
+  "agent-trigger.boundSessionNone": "尚未绑定（首次触发时自动创建）",
+  // 复用对话模式下，解除当前绑定会话的按钮（点击后下次触发会新建并重新绑定）
+  "agent-trigger.clearBinding": "解除绑定",
   // 消息内容输入框标签
   "agent-trigger.message": "消息内容",
   // 消息内容输入框占位

@@ -16,6 +16,7 @@ interface TriggerStore {
   updateTrigger: (projectId: string, client: ApiClient, agentId: string, triggerId: string, data: Parameters<ApiClient["updateTrigger"]>[2]) => Promise<void>;
   deleteTrigger: (projectId: string, client: ApiClient, agentId: string, triggerId: string) => Promise<void>;
   runTrigger: (projectId: string, client: ApiClient, agentId: string, triggerId: string) => Promise<void>;
+  resetTriggerBinding: (projectId: string, client: ApiClient, agentId: string, triggerId: string) => Promise<void>;
   handleTriggerEvent: (projectId: string, client: ApiClient, event: TriggerServerEvent) => void;
   clearProject: (projectId: string) => void;
 }
@@ -122,6 +123,15 @@ export const useTriggerStore = create<TriggerStore>((set, get) => ({
     } catch {
       set((state) => updateTriggerProject(state, projectId, (data) =>
         removeRunningTrigger(data, agentId, triggerId)));
+    }
+  },
+
+  async resetTriggerBinding(projectId, client, agentId, triggerId) {
+    try {
+      await client.resetTriggerBinding(agentId, triggerId);
+      await get().refreshTriggers(projectId, client, agentId);
+    } catch {
+      // silent
     }
   },
 

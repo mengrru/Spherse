@@ -115,6 +115,12 @@ export class SessionManager {
     return this.sessions.has(sessionId);
   }
 
+  sessionExists(agentId: string, sessionId: string): boolean {
+    if (this.sessions.has(sessionId)) return true;
+    const agentStore = this.ctx.projectStore.getAgent(agentId);
+    return !!agentStore?.sessions.getSession(sessionId);
+  }
+
   evictAgent(agentId: string): void {
     for (const [sessionId, session] of this.sessions) {
       if (session.getAgentId() === agentId) {

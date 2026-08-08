@@ -13,10 +13,11 @@ const ManageTriggerParams = Type.Object({
       Type.Literal("create"),
       Type.Literal("update"),
       Type.Literal("delete"),
+      Type.Literal("reset_binding"),
     ],
     {
       description:
-        "`list` returns the triggers of an agent. `create` adds a trigger. `update` patches an existing trigger — only the fields you pass are changed. `delete` removes a trigger permanently.",
+        "`list` returns the triggers of an agent. `create` adds a trigger. `update` patches an existing trigger — only the fields you pass are changed. `delete` removes a trigger permanently. `reset_binding` clears the bound session of a `reusable_session` trigger so the next fire creates a fresh session.",
     },
   ),
   agent_id: Type.Optional(
@@ -50,10 +51,13 @@ const ManageTriggerParams = Type.Object({
     }),
   ),
   mode: Type.Optional(
-    Type.Union([Type.Literal("new_session"), Type.Literal("existing_session")], {
-      description:
-        "`new_session` starts a fresh session each time (recommended). `existing_session` continues `target_session_id`. Required for `create`.",
-    }),
+    Type.Union(
+      [Type.Literal("new_session"), Type.Literal("existing_session"), Type.Literal("reusable_session")],
+      {
+        description:
+          "`reusable_session` creates a session on the first fire and keeps reusing it (recommended). `new_session` starts a fresh session every fire. `existing_session` continues `target_session_id`. Required for `create`.",
+      },
+    ),
   ),
   target_session_id: Type.Optional(
     Type.String({ description: "Session the trigger continues. Required when `mode` is `existing_session`." }),
@@ -100,7 +104,7 @@ function fail(action: string, text: string): ManageTriggerResult {
 
 export function isManageTriggerWriteAction(params: unknown): boolean {
   const action = (params as { action?: unknown } | null)?.action;
-  return action === "create" || action === "update" || action === "delete";
+  return action === "create" || action === "update" || action === "delete" || action === "reset_binding";
 }
 
 function validateShape(
@@ -163,7 +167,9 @@ export function createManageTriggerTool(
           if (shapeError) return fail(action, shapeError);
 
           const mode = params.mode;
-          if (!mode) return fail(action, "`mode` is required for `create` (`new_session` or `existing_session`).");
+          if (!mode) {
+            return fail(action, "`mode` is required for `create` (`reusable_session`, `new_session` or `existing_session`).");
+          }
           if (requiresTargetSession(mode, params.target_session_id)) {
             return fail(action, "`target_session_id` is required when `mode` is `existing_session`.");
           }
@@ -243,6 +249,21 @@ export function createManageTriggerTool(
           if (!existing) return fail(action, `trigger "${triggerId}" not found on agent "${agentId}".`);
           triggerManager.delete(agentId, triggerId);
           return ok(action, `Trigger "${existing.name || triggerId}" deleted.`, { agentId, triggerId });
+        }
+        case "reset_binding": {
+          const triggerId = params.trigger_id;
+          if (!triggerId) return fail(action, "`trigger_id` is required for `reset_binding`.");
+          const existing = triggerManager.get(agentId, triggerId);
+          if (!existing) return fail(action, `trigger "${triggerId}" not found on agent "${agentId}".`);
+          if (existing.mode !== "reusable_session") {
+            return fail(action, "`reset_binding` only applies to `reusable_session` triggers.");
+          }
+          const updated = triggerManager.update(agentId, triggerId, { boundSessionId: undefined });
+          if (!updated) return fail(action, `trigger "${triggerId}" not found on agent "${agentId}".`);
+          return ok(action, `Binding cleared for trigger "${existing.name || triggerId}".`, {
+            agentId,
+            triggerId,
+          });
         }
       }
     },

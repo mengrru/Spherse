@@ -63,6 +63,7 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
   const updateTrigger = useTriggerStore((s) => s.updateTrigger);
   const deleteTrigger = useTriggerStore((s) => s.deleteTrigger);
   const runTrigger = useTriggerStore((s) => s.runTrigger);
+  const resetTriggerBinding = useTriggerStore((s) => s.resetTriggerBinding);
 
   const [activeTab, setActiveTab] = useState("config");
   const [draft, setDraft] = useState<TriggerDraft | null>(null);
@@ -120,6 +121,12 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
     await runTrigger(projectId, client, agentId, entry.id);
   }
 
+  async function handleResetBinding() {
+    if (!draft || editingId === null) return;
+    await resetTriggerBinding(projectId, client, agentId, editingId);
+    patchDraft({ boundSessionId: undefined });
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     await deleteTrigger(projectId, client, agentId, deleteTarget.id);
@@ -171,6 +178,7 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
                   }
                   onSave={handleSave}
                   onCancel={clearDraft}
+                  onResetBinding={handleResetBinding}
                 />
               ) : (
                 <div className="flex justify-end">

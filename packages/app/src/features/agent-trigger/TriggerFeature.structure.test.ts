@@ -94,14 +94,16 @@ describe("agent trigger feature structure", () => {
     expect(formSource).not.toContain("onTargetSessionIdChange");
     expect(formSource).toContain("draft.sessionMode");
     expect(formSource).toContain("draft.targetSessionId");
+    expect(formSource).toContain('"agent-trigger.modeReusableSession"');
     expect(formSource).toContain('"agent-trigger.modeNewSession"');
     expect(formSource).toContain('"agent-trigger.modeExistingSession"');
 
     expect(helpersSource).toContain("export interface TriggerDraft");
     expect(helpersSource).toContain("sessionMode");
     expect(helpersSource).toContain("targetSessionId");
+    expect(helpersSource).toContain("boundSessionId");
     expect(helpersSource).toContain("sessionMode: entry.mode");
-    expect(helpersSource).toContain('sessionMode: "new_session"');
+    expect(helpersSource).toContain('sessionMode: "reusable_session"');
 
     expect(dialogSource).toContain("useState<TriggerDraft | null>(null)");
     expect(dialogSource).toContain("handleStartCreate");

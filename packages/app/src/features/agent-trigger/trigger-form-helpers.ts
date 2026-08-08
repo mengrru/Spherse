@@ -2,7 +2,7 @@ import type { TriggerEntry } from "../../lib/types";
 
 export type TriggerType = "time" | "event";
 
-export type TriggerSessionMode = "new_session" | "existing_session";
+export type TriggerSessionMode = "new_session" | "existing_session" | "reusable_session";
 
 export interface TriggerDraft {
   id: string;
@@ -13,6 +13,7 @@ export interface TriggerDraft {
   message: string;
   sessionMode: TriggerSessionMode;
   targetSessionId: string;
+  boundSessionId?: string;
   notify: boolean;
   notificationMessage: string;
 }
@@ -25,7 +26,7 @@ export function emptyTriggerDraft(): TriggerDraft {
     cron: "",
     eventName: "",
     message: "",
-    sessionMode: "new_session",
+    sessionMode: "reusable_session",
     targetSessionId: "",
     notify: false,
     notificationMessage: "",
@@ -42,6 +43,7 @@ export function entryToDraft(entry: TriggerEntry): TriggerDraft {
     message: entry.message,
     sessionMode: entry.mode,
     targetSessionId: entry.targetSessionId ?? "",
+    boundSessionId: entry.boundSessionId,
     notify: entry.notify,
     notificationMessage: entry.notificationMessage ?? "",
   };

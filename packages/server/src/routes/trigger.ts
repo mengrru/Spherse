@@ -132,6 +132,24 @@ export function registerTriggerRoutes(fastify: FastifyInstance, _registry: Proje
     },
   );
 
+  fastify.post<{ Params: { projectId: string; agentId: string; triggerId: string } }>(
+    "/api/projects/:projectId/agents/:agentId/triggers/:triggerId/reset-binding",
+    { schema: { response: { 200: schemas.triggerEntry } } },
+    async (req) => {
+      const triggerManager = req.projectCtx!.triggerManager;
+      const entry = triggerManager.get(req.params.agentId, req.params.triggerId);
+      if (!entry) throw notFound("Trigger not found");
+      if (entry.mode !== "reusable_session") {
+        throw badRequest("reset-binding only applies to reusable_session triggers");
+      }
+      const updated = triggerManager.update(req.params.agentId, req.params.triggerId, {
+        boundSessionId: undefined,
+      });
+      if (!updated) throw notFound("Trigger not found");
+      return updated;
+    },
+  );
+
   fastify.get<{ Params: { projectId: string; agentId: string }; Querystring: { limit?: string } }>(
     "/api/projects/:projectId/agents/:agentId/trigger-logs",
     {

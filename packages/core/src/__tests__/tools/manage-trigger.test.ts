@@ -120,6 +120,18 @@ describe("createManageTriggerTool", () => {
     expect(manager.create).not.toHaveBeenCalled();
   });
 
+  it("creates a reusable_session trigger without a target session", async () => {
+    const result = await makeTool().execute(
+      "tc",
+      { action: "create", type: "event", event_name: "done", mode: "reusable_session", message: "m" },
+      undefined as any,
+    );
+    expect(result.details.error).toBeUndefined();
+    const [, entry] = manager.create.mock.calls[0];
+    expect(entry.mode).toBe("reusable_session");
+    expect(entry.targetSessionId).toBeUndefined();
+  });
+
   it("rejects an over-long notification message", async () => {
     const result = await makeTool().execute(
       "tc",
@@ -190,13 +202,36 @@ describe("createManageTriggerTool", () => {
     expect(result.details.error).toBe(true);
     expect(manager.delete).not.toHaveBeenCalled();
   });
+
+  it("reset_binding clears the bound session of a reusable_session trigger", async () => {
+    manager.get.mockReturnValue(makeEntry({ mode: "reusable_session", boundSessionId: "sess-1" }));
+    const result = await makeTool().execute(
+      "tc",
+      { action: "reset_binding", trigger_id: "trg-1" },
+      undefined as any,
+    );
+    expect(result.details.error).toBeUndefined();
+    expect(manager.update).toHaveBeenCalledWith(AGENT_ID, "trg-1", { boundSessionId: undefined });
+  });
+
+  it("reset_binding rejects a non-reusable_session trigger", async () => {
+    manager.get.mockReturnValue(makeEntry({ mode: "new_session" }));
+    const result = await makeTool().execute(
+      "tc",
+      { action: "reset_binding", trigger_id: "trg-1" },
+      undefined as any,
+    );
+    expect(result.details.error).toBe(true);
+    expect(manager.update).not.toHaveBeenCalled();
+  });
 });
 
 describe("isManageTriggerWriteAction", () => {
-  it("treats create/update/delete as write actions", () => {
+  it("treats create/update/delete/reset_binding as write actions", () => {
     expect(isManageTriggerWriteAction({ action: "create" })).toBe(true);
     expect(isManageTriggerWriteAction({ action: "update" })).toBe(true);
     expect(isManageTriggerWriteAction({ action: "delete" })).toBe(true);
+    expect(isManageTriggerWriteAction({ action: "reset_binding" })).toBe(true);
     expect(isManageTriggerWriteAction({ action: "list" })).toBe(false);
     expect(isManageTriggerWriteAction(undefined)).toBe(false);
   });

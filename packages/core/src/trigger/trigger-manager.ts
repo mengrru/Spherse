@@ -240,15 +240,37 @@ export class TriggerManager extends EventEmitter {
     try {
       let sessionId: string;
 
-      if (entry.mode === "new_session") {
-        sessionId = await this.sessionRuntime.createSession(agentId, "triggered");
-      } else if (entry.targetSessionId) {
-        sessionId = entry.targetSessionId;
-        await this.sessionRuntime.restoreSession(agentId, sessionId);
-      } else {
-        const err = "existing_session mode but no targetSessionId";
-        this.logger.error({ triggerId: entry.id }, err);
-        throw new Error(err);
+      switch (entry.mode) {
+        case "new_session": {
+          sessionId = await this.sessionRuntime.createSession(agentId, "triggered");
+          break;
+        }
+        case "existing_session": {
+          if (!entry.targetSessionId) {
+            const err = "existing_session mode but no targetSessionId";
+            this.logger.error({ triggerId: entry.id }, err);
+            throw new Error(err);
+          }
+          sessionId = entry.targetSessionId;
+          await this.sessionRuntime.restoreSession(agentId, sessionId);
+          break;
+        }
+        case "reusable_session": {
+          const bound = entry.boundSessionId;
+          if (bound && this.sessionRuntime.sessionExists(agentId, bound)) {
+            sessionId = bound;
+            await this.sessionRuntime.restoreSession(agentId, sessionId);
+          } else {
+            sessionId = await this.sessionRuntime.createSession(agentId, "triggered");
+            this.update(agentId, entry.id, { boundSessionId: sessionId });
+          }
+          break;
+        }
+        default: {
+          const err = `unknown trigger mode: ${(entry as TriggerEntry).mode}`;
+          this.logger.error({ triggerId: entry.id }, err);
+          throw new Error(err);
+        }
       }
 
       logEntry.sessionId = sessionId;

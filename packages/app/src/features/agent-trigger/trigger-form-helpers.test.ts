@@ -22,10 +22,10 @@ function makeEntry(overrides: Partial<TriggerEntry> = {}): TriggerEntry {
 }
 
 describe("emptyTriggerDraft", () => {
-  it("defaults to a time trigger in a new session with no message", () => {
+  it("defaults to a time trigger in a reusable session with no message", () => {
     const draft = emptyTriggerDraft();
     expect(draft.type).toBe("time");
-    expect(draft.sessionMode).toBe("new_session");
+    expect(draft.sessionMode).toBe("reusable_session");
     expect(draft.message).toBe("");
     expect(draft.notify).toBe(false);
     expect(draft.id).toBeTruthy();
@@ -72,11 +72,19 @@ describe("entryToDraft", () => {
     expect(draft.notify).toBe(true);
     expect(draft.notificationMessage).toBe("done");
   });
+
+  it("preserves the bound session for reusable_session mode", () => {
+    const draft = entryToDraft(
+      makeEntry({ mode: "reusable_session", boundSessionId: "bound-1" }),
+    );
+    expect(draft.sessionMode).toBe("reusable_session");
+    expect(draft.boundSessionId).toBe("bound-1");
+  });
 });
 
 describe("draftToTriggerData", () => {
   function base(overrides: Partial<TriggerDraft> = {}): TriggerDraft {
-    return { ...emptyTriggerDraft(), cron: "0 * * * *", message: "go", ...overrides };
+    return { ...emptyTriggerDraft(), sessionMode: "new_session", cron: "0 * * * *", message: "go", ...overrides };
   }
 
   it("returns null when the message is blank", () => {
@@ -136,6 +144,15 @@ describe("draftToTriggerData", () => {
       base({ sessionMode: "new_session", targetSessionId: "stale" }),
     );
     expect(data).not.toHaveProperty("targetSessionId");
+  });
+
+  it("drops targetSessionId and never sends boundSessionId for reusable_session mode", () => {
+    const data = draftToTriggerData(
+      base({ sessionMode: "reusable_session", targetSessionId: "stale", boundSessionId: "bound-1" }),
+    );
+    expect(data?.mode).toBe("reusable_session");
+    expect(data).not.toHaveProperty("targetSessionId");
+    expect(data).not.toHaveProperty("boundSessionId");
   });
 
   it("includes notificationMessage only when notify is on and the message is non-blank", () => {
