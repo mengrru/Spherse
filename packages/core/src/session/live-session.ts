@@ -260,7 +260,7 @@ export class LiveSession {
       );
       this.agent.state.systemPrompt = systemPrompt;
       this.agent.state.tools = tools;
-      this.agent.streamFn = composeStreamFn(this.ctx.sampling, profile.timePerception);
+      this.agent.streamFunction = composeStreamFn(this.ctx.sampling, profile.timePerception);
       this.mcpMerged = false;
       this.ctx.logger.info(
         { sessionId: this.sessionId, agentId: this.agentId },
@@ -322,7 +322,7 @@ export class LiveSession {
 
   applySampling(sampling: SamplingParams | undefined): void {
     const profile = this.ctx.projectStore.getAgent(this.agentId)?.getProfile();
-    this.agent.streamFn = composeStreamFn(sampling, profile?.timePerception);
+    this.agent.streamFunction = composeStreamFn(sampling, profile?.timePerception);
   }
 
   private async maybeCompact(): Promise<void> {

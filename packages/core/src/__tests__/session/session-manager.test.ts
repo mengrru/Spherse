@@ -112,7 +112,7 @@ describe("SessionManager temperature propagation", () => {
 
     const agent = activeAgent(runtime as RuntimeInternals, sessionId);
     const swappedStreamFn = getChatStreamFnMock.mock.results[1].value;
-    expect(agent.streamFn).toBe(swappedStreamFn);
+    expect(agent.streamFunction).toBe(swappedStreamFn);
   });
 
   it("hot-swaps streamFn on ALL active agents (multiple sessions)", async () => {
@@ -121,9 +121,9 @@ describe("SessionManager temperature propagation", () => {
     const sessionIdC = await runtime.sessionRuntime.createSession(agentId);
     const callsBefore = getChatStreamFnMock.mock.calls.length;
 
-    const fnBeforeA = activeAgent(runtime as RuntimeInternals, sessionIdA).streamFn;
-    const fnBeforeB = activeAgent(runtime as RuntimeInternals, sessionIdB).streamFn;
-    const fnBeforeC = activeAgent(runtime as RuntimeInternals, sessionIdC).streamFn;
+    const fnBeforeA = activeAgent(runtime as RuntimeInternals, sessionIdA).streamFunction;
+    const fnBeforeB = activeAgent(runtime as RuntimeInternals, sessionIdB).streamFunction;
+    const fnBeforeC = activeAgent(runtime as RuntimeInternals, sessionIdC).streamFunction;
 
     runtime.sessionRuntime.setSampling({ temperature: 0.9 });
 
@@ -134,9 +134,9 @@ describe("SessionManager temperature propagation", () => {
       [{ temperature: 0.9 }],
     ]);
 
-    expect(activeAgent(runtime as RuntimeInternals, sessionIdA).streamFn).not.toBe(fnBeforeA);
-    expect(activeAgent(runtime as RuntimeInternals, sessionIdB).streamFn).not.toBe(fnBeforeB);
-    expect(activeAgent(runtime as RuntimeInternals, sessionIdC).streamFn).not.toBe(fnBeforeC);
+    expect(activeAgent(runtime as RuntimeInternals, sessionIdA).streamFunction).not.toBe(fnBeforeA);
+    expect(activeAgent(runtime as RuntimeInternals, sessionIdB).streamFunction).not.toBe(fnBeforeB);
+    expect(activeAgent(runtime as RuntimeInternals, sessionIdC).streamFunction).not.toBe(fnBeforeC);
   });
 });
 
@@ -195,7 +195,7 @@ describe("SessionManager sampling (temperature + topP) propagation", () => {
 
     const agent = activeAgent(runtime as RuntimeInternals, sessionId);
     const swappedStreamFn = getChatStreamFnMock.mock.results[1].value;
-    expect(agent.streamFn).toBe(swappedStreamFn);
+    expect(agent.streamFunction).toBe(swappedStreamFn);
   });
 });
 
