@@ -25,10 +25,13 @@ describe("classifyRunError", () => {
     expect(classifyRunError(withStatus(503))).toBe(ErrorEventCode.Transient);
   });
 
-  it("classifies 4xx (non-429) as permanent", () => {
+  it("classifies 401/403 as auth", () => {
+    expect(classifyRunError(withStatus(401))).toBe(ErrorEventCode.Auth);
+    expect(classifyRunError(withStatus(403))).toBe(ErrorEventCode.Auth);
+  });
+
+  it("classifies 4xx (non-401/403/429) as permanent", () => {
     expect(classifyRunError(withStatus(400))).toBe(ErrorEventCode.Permanent);
-    expect(classifyRunError(withStatus(401))).toBe(ErrorEventCode.Permanent);
-    expect(classifyRunError(withStatus(403))).toBe(ErrorEventCode.Permanent);
     expect(classifyRunError(withStatus(404))).toBe(ErrorEventCode.Permanent);
   });
 

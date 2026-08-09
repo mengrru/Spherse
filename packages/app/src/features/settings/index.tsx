@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/ta
 import { Switch } from "../../components/ui/switch";
 import { Button } from "../../components/ui/button";
 import { useSettingsStore } from "../../stores/settings-store";
+import { useAppUiStore } from "../../stores/app-ui-store";
 import { useSettingsForm } from "./use-settings-form";
 import type { GroupFormState } from "./use-settings-form";
 import { type SettingsApi } from "./types";
@@ -178,10 +179,12 @@ function SettingsTabs() {
     getImageProviders: bridge.getImageProviders ?? (async () => ({})),
   }), [bridge]);
   const form = useSettingsForm(settingsApi);
+  const initialTab = useAppUiStore((s) => s.settingsModalTab) ?? "models";
+  const [tab, setTab] = useState(initialTab);
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
-      <Tabs defaultValue="models">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="models">{t("settings.tabs.text")}</TabsTrigger>
           <TabsTrigger value="image">{t("settings.tabs.image")}</TabsTrigger>

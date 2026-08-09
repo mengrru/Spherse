@@ -27,13 +27,22 @@ const TRANSIENT_PATTERNS = [
 ];
 
 const PERMANENT_HINT_PATTERNS = [
-  /unauthorized|forbidden/i,
-  /invalid (api key|key|request|model)/i,
+  /invalid (request|model)/i,
   /unsupported/i,
+];
+
+const AUTH_PATTERNS = [
+  /unauthorized|forbidden/i,
+  /invalid (api )?key/i,
+  /\b401\b|\b403\b/,
+  /authentication\s*(failed|required)/i,
 ];
 
 export function classifyErrorMessageString(message: string): ErrorEventCode {
   if (!message) return ErrorEventCode.Transient;
+  for (const re of AUTH_PATTERNS) {
+    if (re.test(message)) return ErrorEventCode.Auth;
+  }
   for (const re of PERMANENT_PATTERNS) {
     if (re.test(message)) return ErrorEventCode.Permanent;
   }

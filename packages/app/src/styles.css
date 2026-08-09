@@ -189,3 +189,15 @@
     opacity: 0;
   }
 }
+
+/*
+ * The `::highlight(sp-find-current)` rule is injected at runtime by
+ * `find-engine.ts` (see `ensureHighlightStyle`), because lightningcss (used by
+ * Tailwind v4's build pipeline) does not recognize the Custom Highlight API
+ * pseudo-element and would warn / risk stripping it. Keep `.sp-find-mark` here
+ * as the static fallback style for non-Highlight environments.
+ */
+.sp-find-mark {
+  background-color: var(--color-primary);
+  color: var(--color-primary-foreground);
+}

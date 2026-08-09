@@ -278,6 +278,8 @@ export const zhCN = {
   "activity-bar.autoCollapseSidePanelTooltip": "自动收起项目面板",
   // 左侧活动栏收起图标悬停提示：点击后将项目面板固定显示
   "activity-bar.pinSidePanelTooltip": "固定项目面板",
+  // 左侧活动栏「项目主页」按钮悬停提示与无障碍标签：仅在某个项目内时显示，点击回到当前项目的欢迎页（index.html 预览）
+  "activity-bar.projectHomeTooltip": "项目主页",
   // 移动端（窄屏）左下角浮动按钮的悬停提示与无障碍标签：点击后项目面板从左侧滑出
   "side-panel.openTooltip": "打开项目面板",
 
@@ -622,6 +624,10 @@ export const zhCN = {
   "chat.responseGenerationFailed": "回复生成失败",
   // 用户尚未配置模型时尝试发消息，聊天区显示的错误提示（说明需先到设置中选择模型）
   "chat.error.modelNotConfigured": "尚未配置模型，请在设置中选择一个模型后再发送消息。",
+  // LLM 返回鉴权失败（401/403、API Key 无效或缺失）时，错误气泡展开区显示的友好提示
+  "chat.error.authFailed": "API Key 可能无效或缺失，请到设置中检查对应模型服务的密钥配置。",
+  // 鉴权失败错误气泡上的「打开设置」按钮文案，点击后打开设置弹窗并定位到模型配置
+  "chat.error.openSettings": "打开设置",
   // 失败的助手回复或发送失败的用户消息上的「重试」按钮文案
   "chat.retry": "重试",
   "chat.sendFailed": "发送失败",
@@ -649,6 +655,16 @@ export const zhCN = {
   "chat.approvalToastAction": "前往会话",
 
   // --- Content Browser ---
+  // 内容浏览器文本查找栏：输入框占位文案，也是 Header 查找按钮与无障碍标签
+  "content-browser.find.placeholder": "查找",
+  // 查找栏「无匹配」计数占位（输入了关键词但无任何匹配时显示）
+  "content-browser.find.noMatch": "无匹配",
+  // 查找栏「上一个匹配」按钮的悬停提示与无障碍标签
+  "content-browser.find.previous": "上一个匹配",
+  // 查找栏「下一个匹配」按钮的悬停提示与无障碍标签
+  "content-browser.find.next": "下一个匹配",
+  // 查找栏「关闭查找」按钮的悬停提示与无障碍标签
+  "content-browser.find.close": "关闭查找",
   // 文件被外部修改时的冲突提示横幅
   "content-browser.conflictBannerText": "文件已被外部修改",
   // 冲突时保留本地修改按钮

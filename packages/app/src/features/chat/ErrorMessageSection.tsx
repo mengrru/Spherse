@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";
 import { Button } from "../../components/ui/button";
-import { ChevronRightIcon, AlertTriangleIcon, RotateCwIcon } from "lucide-react";
+import { ChevronRightIcon, AlertTriangleIcon, RotateCwIcon, SettingsIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { ErrorEventCode } from "@spherse/server/contracts";
+import { useAppUiStore } from "../../stores/app-ui-store";
 
 interface ErrorMessageSectionProps {
   error: string;
@@ -14,10 +15,14 @@ interface ErrorMessageSectionProps {
 export function ErrorMessageSection({ error, errorCode, onRetry }: ErrorMessageSectionProps) {
   const [expanded, setExpanded] = useState(false);
   const { t } = useI18n();
+  const openSettings = useAppUiStore((s) => s.openSettings);
 
   const detail = errorCode === ErrorEventCode.ModelNotConfigured
     ? t("chat.error.modelNotConfigured")
-    : error;
+    : errorCode === ErrorEventCode.Auth
+      ? t("chat.error.authFailed")
+      : error;
+  const isAuth = errorCode === ErrorEventCode.Auth;
 
   return (
     <div className="mt-2 border-t border-dashed border-border pt-2" data-chat-error>
@@ -41,6 +46,18 @@ export function ErrorMessageSection({ error, errorCode, onRetry }: ErrorMessageS
           </div>
         </CollapsibleContent>
       </Collapsible>
+      {isAuth && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ms-1 mb-1 h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => openSettings("models")}
+          data-chat-open-settings
+        >
+          <SettingsIcon className="size-3" />
+          {t("chat.error.openSettings")}
+        </Button>
+      )}
       {onRetry && (
         <Button
           variant="ghost"

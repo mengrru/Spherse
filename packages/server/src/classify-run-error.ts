@@ -9,6 +9,7 @@ export function classifyRunError(err: unknown): ErrorEventCode {
 
   const status = readStatus(err);
   if (status !== undefined) {
+    if (status === 401 || status === 403) return ErrorEventCode.Auth;
     if (status === 429 || status >= 500) return ErrorEventCode.Transient;
     if (status >= 400 && status < 500) return ErrorEventCode.Permanent;
   }

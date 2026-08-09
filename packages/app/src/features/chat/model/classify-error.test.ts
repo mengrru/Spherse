@@ -18,9 +18,16 @@ describe("classifyErrorMessageString", () => {
     expect(classifyErrorMessageString("exceeded model token limit")).toBe(ErrorEventCode.Permanent);
   });
 
+  it("classifies auth signals", () => {
+    expect(classifyErrorMessageString("invalid api key")).toBe(ErrorEventCode.Auth);
+    expect(classifyErrorMessageString("unauthorized access")).toBe(ErrorEventCode.Auth);
+    expect(classifyErrorMessageString("401 Unauthorized")).toBe(ErrorEventCode.Auth);
+    expect(classifyErrorMessageString("forbidden")).toBe(ErrorEventCode.Auth);
+  });
+
   it("classifies permanent hints", () => {
-    expect(classifyErrorMessageString("invalid api key")).toBe(ErrorEventCode.Permanent);
-    expect(classifyErrorMessageString("unauthorized access")).toBe(ErrorEventCode.Permanent);
+    expect(classifyErrorMessageString("invalid model")).toBe(ErrorEventCode.Permanent);
+    expect(classifyErrorMessageString("unsupported request")).toBe(ErrorEventCode.Permanent);
   });
 
   it("defaults indeterminate errors to transient", () => {

@@ -246,6 +246,7 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 |------|---------|
 | `data-project-panel` | 项目侧边面板（agent/session 列表 + 文件树的容器，默认 `--sp-sidebar` 背景） |
 | `data-content-browser` | 内容浏览器（文档/代码查看区根容器，包含 header 与内容滚动区） |
+| `data-content-findbar` | 内容浏览器文本查找栏（markdown/源码/纯文本页顶部，含输入框与上一个/下一个按钮） |
 
 示例：
 

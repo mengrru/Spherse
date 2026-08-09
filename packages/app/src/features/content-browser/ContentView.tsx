@@ -1,4 +1,4 @@
-import { type RefObject, useCallback, useMemo } from "react";
+import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { toast } from "sonner";
@@ -6,7 +6,9 @@ import { MarkdownContent } from "../../components/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
+import { mergeRefs } from "../../lib/utils";
 import { useOpenExternalLink } from "../browser/open-external-url";
+import { FindBar } from "./FindBar";
 import { FrontMatterPanel } from "./FrontMatterPanel";
 import { UnsupportedFileCard } from "./UnsupportedFileCard";
 import { resolveMarkdownImagePath } from "./image-path";
@@ -28,6 +30,8 @@ interface ContentViewProps {
   editedContent: string;
   onEditedContentChange: (content: string) => void;
   refreshKey: number;
+  findOpen?: boolean;
+  onFindOpenChange?: (open: boolean) => void;
 }
 
 export function ContentView({
@@ -45,6 +49,8 @@ export function ContentView({
   editedContent,
   onEditedContentChange,
   refreshKey,
+  findOpen: findOpenProp,
+  onFindOpenChange,
 }: ContentViewProps) {
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
@@ -88,6 +94,37 @@ export function ContentView({
     },
     [filePath, client, projectId, navigate, t, openLink],
   );
+
+  const findEnabled =
+    !isEditing &&
+    !loading &&
+    !error &&
+    !binary &&
+    content !== null &&
+    !isImage &&
+    !(isHtml && htmlView === "preview");
+
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [internalFindOpen, setInternalFindOpen] = useState(false);
+  const findOpen = (findOpenProp ?? internalFindOpen) && findEnabled;
+  const setFindOpen = onFindOpenChange ?? setInternalFindOpen;
+
+  useEffect(() => {
+    if (!findEnabled) setFindOpen(false);
+  }, [findEnabled, setFindOpen]);
+
+  useEffect(() => {
+    if (!findEnabled) return;
+    const handler = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        setFindOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [findEnabled, setFindOpen]);
+
   if (isHtml && htmlView === "preview" && !isEditing && !loading && !error) {
     return (
       <iframe
@@ -124,20 +161,29 @@ export function ContentView({
   }
 
   return (
-    <div ref={contentRef} className="flex-1 overflow-y-auto p-4">
-      {loading && <p className="p-8 text-center text-muted-foreground">{t("common.loading")}</p>}
-      {error && <p className="p-8 text-center text-destructive">{error}</p>}
-      {!loading && !error && binary && <UnsupportedFileCard filePath={filePath} />}
-      {!loading && !error && !binary && content !== null && (
-        isMarkdown ? (
-          <div data-content-doc className="rounded-lg border border-border bg-card p-6 text-card-foreground">
-            {frontmatter && <FrontMatterPanel data={frontmatter} />}
-            <MarkdownContent variant="document" resolveImageSrc={resolveImageSrc} onLinkClick={handleLinkClick}>{body}</MarkdownContent>
-          </div>
-        ) : (
-          <pre className="break-words rounded-lg border border-border bg-card p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">{content}</pre>
-        )
+    <div className="flex min-h-0 flex-1 flex-col">
+      {findOpen && (
+        <FindBar
+          containerRef={scrollRef}
+          contentKey={`${filePath}#${refreshKey}`}
+          onClose={() => setFindOpen(false)}
+        />
       )}
+      <div ref={mergeRefs(contentRef, scrollRef)} className="flex-1 overflow-y-auto p-4">
+        {loading && <p className="p-8 text-center text-muted-foreground">{t("common.loading")}</p>}
+        {error && <p className="p-8 text-center text-destructive">{error}</p>}
+        {!loading && !error && binary && <UnsupportedFileCard filePath={filePath} />}
+        {!loading && !error && !binary && content !== null && (
+          isMarkdown ? (
+            <div data-content-doc className="rounded-lg border border-border bg-card p-6 text-card-foreground">
+              {frontmatter && <FrontMatterPanel data={frontmatter} />}
+              <MarkdownContent variant="document" resolveImageSrc={resolveImageSrc} onLinkClick={handleLinkClick}>{body}</MarkdownContent>
+            </div>
+          ) : (
+            <pre className="break-words rounded-lg border border-border bg-card p-4 font-mono text-sm leading-relaxed whitespace-pre-wrap">{content}</pre>
+          )
+        )}
+      </div>
     </div>
   );
 }

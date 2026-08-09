@@ -67,6 +67,9 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 | `data-chat-messages` | 消息列表区 |
 | `data-chat-message` + `data-role="user"`/`"assistant"` | 单条消息外层 |
 | `data-chat-bubble` | 消息气泡（内容容器） |
+| `data-chat-error` | 助手消息气泡内的错误信息区（生成失败/鉴权失败等） |
+| `data-chat-retry` | 错误信息区内的「重试」按钮 |
+| `data-chat-open-settings` | 鉴权失败错误信息区内的「打开设置」按钮（仅 401/403 时出现） |
 | `data-chat-composer` | 输入区外层 |
 | `data-chat-composer-input` | 输入框外框 |
 | `data-chat-float-root` | 浮动窗根容器 |

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
-import { ArrowLeftIcon, CheckIcon, CopyIcon, RefreshCwIcon, XIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckIcon, CopyIcon, RefreshCwIcon, SearchIcon, XIcon } from "lucide-react";
 
 interface HeaderProps {
   filePath: string;
@@ -12,6 +12,7 @@ interface HeaderProps {
   isHtml: boolean;
   htmlView: "preview" | "source";
   saving: boolean;
+  findable: boolean;
   onBack: () => void;
   onClose: () => void;
   onEnterEdit: () => void;
@@ -19,6 +20,7 @@ interface HeaderProps {
   onSave: () => void;
   onHtmlViewChange: (view: "preview" | "source") => void;
   onRefresh: () => void;
+  onFindToggle: () => void;
 }
 
 export function Header({
@@ -29,6 +31,7 @@ export function Header({
   isHtml,
   htmlView,
   saving,
+  findable,
   onBack,
   onClose,
   onEnterEdit,
@@ -36,6 +39,7 @@ export function Header({
   onSave,
   onHtmlViewChange,
   onRefresh,
+  onFindToggle,
 }: HeaderProps) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
@@ -73,6 +77,17 @@ export function Header({
         )}
       </div>
       <div className="flex shrink-0 items-center gap-2">
+        {findable && !isEditing && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onFindToggle}
+            title={t("content-browser.find.placeholder")}
+            aria-label={t("content-browser.find.placeholder")}
+          >
+            <SearchIcon />
+          </Button>
+        )}
         {isHtml && !isEditing && (
           <ToggleGroup
             variant="outline"

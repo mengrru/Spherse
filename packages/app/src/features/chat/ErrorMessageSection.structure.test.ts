@@ -26,6 +26,13 @@ describe("ErrorMessageSection structure", () => {
     expect(source).toMatch(/errorCode === ErrorEventCode\.ModelNotConfigured[\s\S]*: error/);
   });
 
+  it("renders an open-settings button for Auth errors", () => {
+    expect(source).toContain("ErrorEventCode.Auth");
+    expect(source).toContain('t("chat.error.authFailed")');
+    expect(source).toContain('data-chat-open-settings');
+    expect(source).toContain('openSettings("models")');
+  });
+
   it("uses the useI18n hook", () => {
     expect(source).toContain("useI18n()");
   });

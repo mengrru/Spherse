@@ -9,6 +9,7 @@ import { parseContract } from "./common.js";
 
 export enum ErrorEventCode {
   ModelNotConfigured = "MODEL_NOT_CONFIGURED",
+  Auth = "AUTH_ERROR",
   Permanent = "PERMANENT",
   Transient = "TRANSIENT",
 }

@@ -39,6 +39,7 @@ export function ContentBrowser({
   const textSelectionEnabled = useFeature("text-selection-session");
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [findOpen, setFindOpen] = useState(false);
   const { content, setContent, binary, loading, error, reload: reloadContent } = useContentFile(client, filePath);
   const editor = useContentEditor({
     client,
@@ -61,6 +62,7 @@ export function ContentBrowser({
 
   const { isMarkdown, isHtml, isImage } = classifyFileKind(filePath);
   const isEditable = !isImage && !binary && !loading && bridge.capabilities.content.editable;
+  const findable = !loading && !error && !binary && !isImage && !(isHtml && htmlView === "preview");
 
   return (
     <div data-content-browser className="flex flex-col h-full">
@@ -72,6 +74,7 @@ export function ContentBrowser({
         isHtml={isHtml}
         htmlView={htmlView}
         saving={editor.saving}
+        findable={findable}
         onBack={() => editor.requestLeave(onBack)}
         onClose={() => editor.requestLeave(onClose)}
         onEnterEdit={editor.enterEdit}
@@ -79,6 +82,7 @@ export function ContentBrowser({
         onSave={() => void editor.save()}
         onHtmlViewChange={setHtmlView}
         onRefresh={handleRefresh}
+        onFindToggle={() => setFindOpen((v) => !v)}
       />
       {editor.conflict && editor.isEditing && (
         <ConflictBanner
@@ -116,6 +120,8 @@ export function ContentBrowser({
               editedContent={editor.editedContent}
               onEditedContentChange={editor.setEditedContent}
               refreshKey={refreshKey}
+              findOpen={findOpen}
+              onFindOpenChange={setFindOpen}
             />
           )}
         </TextSelectionSession>
@@ -134,6 +140,8 @@ export function ContentBrowser({
           editedContent={editor.editedContent}
           onEditedContentChange={editor.setEditedContent}
           refreshKey={refreshKey}
+          findOpen={findOpen}
+          onFindOpenChange={setFindOpen}
         />
       )}
       <ConfirmDialogs
