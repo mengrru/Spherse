@@ -316,6 +316,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "chat.attachImage": "附加圖片",
   "chat.imageAttachFailed": "新增圖片失敗：{message}",
   "chat.removeAttachment": "移除圖片",
+  "chat.approvalToastMessage": "一個 Agent 正在等待你的確認",
+  "chat.approvalToastAction": "前往工作階段",
   "content-browser.conflictBannerText": "檔案已被外部修改",
   "content-browser.conflictKeepMine": "保留我的修改",
   "content-browser.conflictReload": "重新載入檔案",

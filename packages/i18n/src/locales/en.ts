@@ -316,6 +316,8 @@ export const en: Record<TranslationKey, string> = {
   "chat.attachImage": "Attach image",
   "chat.imageAttachFailed": "Failed to attach image: {message}",
   "chat.removeAttachment": "Remove image",
+  "chat.approvalToastMessage": "An agent is waiting for your confirmation",
+  "chat.approvalToastAction": "Open session",
   "content-browser.conflictBannerText": "File has been modified externally",
   "content-browser.conflictKeepMine": "Keep my changes",
   "content-browser.conflictReload": "Reload file",

@@ -1,6 +1,7 @@
 # Backlog
 
 - [x] **单服务器多引擎重构**：将多 Fastify 实例合并为单实例多 engine，通过 URL 前缀 `/api/projects/:projectId/...` 区分项目，减少资源占用。参见 `docs/dev/infra/2026-06-13-single-server-refactor/design.md`
+- [x] **Chat composer IME 回车修复 + agent 等待确认 toast + 字号调整**：① 修复 macOS 中文输入法下用回车上屏英文/确认候选词时误触发发送——`Composer` keydown 守卫 `!event.nativeEvent.isComposing && !composingRef`（`onCompositionStart/End` 翻转 ref），双保险覆盖 WebKit 上屏 Enter `isComposing` 已为 false 的边界。② 新增全局 `ApprovalNoticeBridge`（挂载于 `App.tsx`，跨项目），观察 `streaming-store` 中 `_card.requestId` 真值（即停在 approval gate）的 tool call，对用户当前未查看的会话弹 sonner toast，点击「前往会话」跳转；当前会话抑制（内联 UI 足够）、按 `requestId` 去重、路由变化重扫；纯函数 `collectPendingApprovals` 收纳于 `model/approval-notice.ts` 并配单元测试锁定「pending ⟺ requestId 真值」不变量。③ Composer 正文字号 `text-sm`→`text-base`、`leading-5`→`leading-6`，同步 `LINE_HEIGHT 20→24` 保持 auto-resize 一致。参见 `docs/dev/features/2026-08-09-chat-composer-ime-approval-toast/design.md`
 - [x] **Content Browser 二进制文件拦截与外部打开**：PDF/Word/音视频/压缩包等二进制文件不再以 UTF-8 强解出乱码。白名单（md/html/image，含 ico）走专属 viewer，其余文件由 server content 路由读头 8KB 复用 `isBinaryBuffer` 嗅探——文本则放行 `<pre>`、二进制则返回 `binary:true` 并渲染占位卡（顺手修复大二进制整文件读进内存）。桌面端占位卡提供「用默认应用打开」按钮（新增 `open-file` IPC + `shell.openPath`，校验路径在已打开项目内；`HostCapabilities.openFileExternal` 控制按钮显隐，web 版不显示）。参见 `docs/dev/features/2026-08-07-content-browser-binary-files/design.md`
 
 ## 代码质量

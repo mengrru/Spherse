@@ -5,6 +5,7 @@ import { buildProjectRoute } from "./features/activity-bar/use-project-actions";
 import { SettingsModal } from "./features/settings";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "./components/ui/sonner";
+import { ApprovalNoticeBridge } from "./features/chat/ApprovalNoticeBridge";
 import { useAppStore } from "./stores/app-store";
 import { useAppUiStore } from "./stores/app-ui-store";
 import { useHostBridge } from "./context/host-bridge-context";
@@ -67,6 +68,7 @@ export function App() {
             )}
           </>
           <Toaster />
+          <ApprovalNoticeBridge />
         </div>
       </TooltipProvider>
     </I18nProvider>

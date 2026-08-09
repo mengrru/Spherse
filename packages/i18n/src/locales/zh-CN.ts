@@ -643,6 +643,10 @@ export const zhCN = {
   "chat.imageAttachFailed": "添加图片失败：{message}",
   // Composer 待发送图片缩略图上的「移除」按钮悬停提示
   "chat.removeAttachment": "移除图片",
+  // 某会话的 agent 工具调用等待用户批准、且用户当前未停留在该会话时弹出的 toast 文案
+  "chat.approvalToastMessage": "一个 Agent 正在等待你的确认",
+  // 上述 toast 上的「跳转」按钮文案，点击跳转到对应会话
+  "chat.approvalToastAction": "前往会话",
 
   // --- Content Browser ---
   // 文件被外部修改时的冲突提示横幅
