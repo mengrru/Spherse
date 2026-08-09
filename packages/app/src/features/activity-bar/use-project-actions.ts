@@ -63,10 +63,5 @@ export function useProjectActions() {
     void openProjectFolder(bridge, projectId);
   };
 
-  const handleGoProjectHome = () => {
-    const id = useAppStore.getState().activeProjectId;
-    if (id) navigate(`/project/${id}`);
-  };
-
-  return { handleAddProject, handleSelectProject, handleCloseProject, handleOpenProjectFolder, handleGoProjectHome };
+  return { handleAddProject, handleSelectProject, handleCloseProject, handleOpenProjectFolder };
 }

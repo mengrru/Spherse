@@ -8,6 +8,8 @@ import { useAppStore } from "../../stores/app-store";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 
+const EXPLORE_URL = "https://spherse.mengru.work/explore";
+
 const ERROR_KEYS: Record<string, TranslationKey> = {
   copyFailed: "onboarding.error.copyFailed",
   openFailed: "onboarding.error.openFailed",
@@ -99,6 +101,16 @@ export function OnboardingPage() {
           />
         ))}
       </div>
+      <a
+        href={EXPLORE_URL}
+        onClick={(e) => {
+          e.preventDefault();
+          void bridge.openExternal(EXPLORE_URL);
+        }}
+        className="mt-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        {t("onboarding.action.explore")} →
+      </a>
     </div>
   );
 }

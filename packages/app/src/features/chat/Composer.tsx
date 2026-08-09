@@ -10,7 +10,7 @@ import { AttachmentBar, type AttachStatus } from "./AttachmentBar";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 
-const LINE_HEIGHT = 24;
+const LINE_HEIGHT = 20;
 const PADDING_Y = 16;
 const MIN_HEIGHT = 2 * LINE_HEIGHT + PADDING_Y;
 const MID_HEIGHT = 10 * LINE_HEIGHT + PADDING_Y;
@@ -144,7 +144,7 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
       <div className="relative rounded-lg border border-input bg-background transition-colors focus-within:border-ring" data-chat-composer-input>
         <Textarea
           ref={textareaRef}
-          className="min-h-0 w-full resize-none border-none bg-transparent py-2 ps-3 pe-8 text-base leading-6 shadow-none focus-visible:ring-0"
+          className="min-h-0 w-full resize-none border-none bg-transparent py-2 ps-3 pe-8 text-sm md:text-sm leading-5 shadow-none focus-visible:ring-0"
           style={{ height: `${MIN_HEIGHT}px`, overflowY: "hidden" }}
           value={input}
           onChange={(event) => setInput(event.target.value)}

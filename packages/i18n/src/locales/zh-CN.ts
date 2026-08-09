@@ -192,6 +192,14 @@ export const zhCN = {
 
   // 设置弹窗「关于」tab 标签
   "settings.tabs.about": "关于",
+  // 设置弹窗「帮助」tab 标签
+  "settings.tabs.help": "帮助",
+  // 帮助 tab 内的小节标题，指代在线文档资源
+  "settings.help.title": "文档",
+  // 帮助 tab 内的说明文案，介绍文档涵盖的内容
+  "settings.help.description": "查看 Spherse 的使用文档、配置指南与示例。",
+  // 帮助 tab 内打开文档的按钮文案，点击在系统浏览器打开 landing /docs 页
+  "settings.help.openDocs": "查看文档",
   // 关于 tab → 当前版本号前的标签
   "settings.about.version": "当前版本",
   // 关于 tab → 检查更新按钮（idle 态）
@@ -278,8 +286,6 @@ export const zhCN = {
   "activity-bar.autoCollapseSidePanelTooltip": "自动收起项目面板",
   // 左侧活动栏收起图标悬停提示：点击后将项目面板固定显示
   "activity-bar.pinSidePanelTooltip": "固定项目面板",
-  // 左侧活动栏「项目主页」按钮悬停提示与无障碍标签：仅在某个项目内时显示，点击回到当前项目的欢迎页（index.html 预览）
-  "activity-bar.projectHomeTooltip": "项目主页",
   // 移动端（窄屏）左下角浮动按钮的悬停提示与无障碍标签：点击后项目面板从左侧滑出
   "side-panel.openTooltip": "打开项目面板",
 
@@ -649,8 +655,10 @@ export const zhCN = {
   "chat.imageAttachFailed": "添加图片失败：{message}",
   // Composer 待发送图片缩略图上的「移除」按钮悬停提示
   "chat.removeAttachment": "移除图片",
-  // 某会话的 agent 工具调用等待用户批准、且用户当前未停留在该会话时弹出的 toast 文案
+  // 某会话的 agent 工具调用等待用户批准、且用户当前未停留在该会话时弹出的 toast 文案（无法解析到 agent 名时的泛化兜底）
   "chat.approvalToastMessage": "一个 Agent 正在等待你的确认",
+  // 上述 toast 在能解析到 agent 名时的标题文案，{name} 为 agent 名称
+  "chat.approvalToastMessageWithName": "「{name}」正在等待你的确认",
   // 上述 toast 上的「跳转」按钮文案，点击跳转到对应会话
   "chat.approvalToastAction": "前往会话",
 
@@ -1054,6 +1062,8 @@ export const zhCN = {
   "onboarding.desc.openOrCreate": "选择已有项目文件夹，或新建一个文件夹从空项目开始",
   // 引导卡片2描述
   "onboarding.desc.openSample": "将内置示例项目拷贝到选定位置并打开",
+  // 引导页两卡片下方的「探索更多示例」文字链接：点击在系统浏览器打开 landing /explore 示例画廊
+  "onboarding.action.explore": "探索更多示例",
   // 引导卡片2（打开示例项目）的 tooltip：说明示例项目的搭建方式与用途，鼠标悬浮于卡片时展示
   "onboarding.tooltip.openSample": "该示例项目在 Spherse 中从零开始搭建，使用的模型为 DeepSeek V4 Flash。通过该项目熟悉 Spherse 的使用方式，从而搭建完全属于你自己的世界。",
   // 拷贝示例项目失败时的错误提示

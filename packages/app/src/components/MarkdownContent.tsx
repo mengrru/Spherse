@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface MarkdownContentProps {
   children: string;
   variant?: "chat" | "document";
+  breaks?: boolean;
   resolveImageSrc?: (src: string) => string;
   onLinkClick?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void;
 }
@@ -117,7 +118,7 @@ const CHAT_COMPONENTS: Components = {
   ),
 };
 
-export function MarkdownContent({ children, variant = "document", resolveImageSrc, onLinkClick }: MarkdownContentProps) {
+export function MarkdownContent({ children, variant = "document", breaks, resolveImageSrc, onLinkClick }: MarkdownContentProps) {
   const components = useMemo<Components>(() => {
     const base = variant === "chat" ? CHAT_COMPONENTS : DOCUMENT_COMPONENTS;
     const overrides: Partial<Components> = {};
@@ -151,7 +152,7 @@ export function MarkdownContent({ children, variant = "document", resolveImageSr
 
   return (
     <div className={variant === "chat" ? "text-sm leading-6" : "text-sm leading-7"}>
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} components={components}>
+      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} breaks={breaks} components={components}>
         {children}
       </Markdown>
     </div>

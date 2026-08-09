@@ -22,6 +22,7 @@ import { SectionTitle } from "./SectionTitle";
 import { AdvancedSettings } from "./AdvancedSettings";
 import { UpdateChecker } from "./UpdateChecker";
 import { MobileAccessPanel } from "./MobileAccessPanel";
+import { HelpPanel } from "./HelpPanel";
 import { SUPPORTED_LOCALES, normalizeLocale } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
 import type { CustomProviderDef } from "@spherse/core";
@@ -190,6 +191,7 @@ function SettingsTabs() {
           <TabsTrigger value="image">{t("settings.tabs.image")}</TabsTrigger>
           <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
           {mobileAccessEnabled && <TabsTrigger value="mobile">{t("settings.tabs.mobile")}</TabsTrigger>}
+          <TabsTrigger value="help">{t("settings.tabs.help")}</TabsTrigger>
           <TabsTrigger value="about">{t("settings.tabs.about")}</TabsTrigger>
         </TabsList>
 
@@ -237,6 +239,10 @@ function SettingsTabs() {
             <MobileAccessPanel />
           </TabsContent>
         )}
+
+        <TabsContent value="help" className="mt-3">
+          <HelpPanel />
+        </TabsContent>
 
         <TabsContent value="about" className="mt-3">
           <UpdateChecker />

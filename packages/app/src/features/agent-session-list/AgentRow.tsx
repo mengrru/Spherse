@@ -50,7 +50,7 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           </span>
           {hasEnabled && (
             <Clock
-              className="ml-auto h-3 w-3 shrink-0 text-muted-foreground group-hover/agent-row:hidden"
+              className="ml-auto size-3.5 shrink-0 text-muted-foreground group-hover/agent-row:hidden"
               aria-label={t("agent-trigger.indicatorTooltip")}
             >
               <title>{t("agent-trigger.indicatorTooltip")}</title>
@@ -106,7 +106,7 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           aria-label={t("agent-session-list.newSession")}
           onClick={() => actions.newSession(agent)}
         >
-          <PlusIcon />
+            <PlusIcon className="size-3.5" />
         </Button>
       </div>
     </div>

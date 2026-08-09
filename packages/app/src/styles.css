@@ -201,3 +201,42 @@
   background-color: var(--color-primary);
   color: var(--color-primary-foreground);
 }
+
+/*
+ * Sonner injects its own (unlayered) CSS at runtime, which beats Tailwind's
+ * layered utilities regardless of specificity — so the toast-level tokens on
+ * <Toaster> (bg-background/text-foreground/border-border) never apply and the
+ * toast renders Sonner's own #fff/#000 palette instead of the app theme. These
+ * unlayered rules win on specificity over Sonner's defaults and re-point its
+ * palette vars at the app theme, so the toast body, description and action
+ * button track the theme (and remain overridable by user theme.css).
+ */
+[data-toast-root] [data-sonner-toaster][data-sonner-theme] {
+  --normal-bg: var(--sp-background);
+  --normal-text: var(--sp-foreground);
+  --normal-border: var(--sp-border);
+}
+
+[data-toast-root] [data-sonner-toast][data-styled='true'] [data-description] {
+  color: var(--sp-muted-foreground);
+}
+
+[data-toast-root] [data-sonner-toast] [data-button][data-action] {
+  background: var(--sp-primary);
+  color: var(--sp-primary-foreground);
+}
+
+[data-toast-root] [data-sonner-toast] [data-button][data-action]:hover {
+  background: color-mix(in oklab, var(--sp-primary) 80%, transparent);
+}
+
+/*
+ * Project panel runs slightly larger small-text than the rest of the app.
+ * `text-xs` compiles to `font-size: var(--text-xs)`, so redefining the token
+ * on the panel scope makes every text-xs (rows via Button, containers, hints)
+ * resolve to 13px inside the panel only — no magic-number classes, no app-wide
+ * blast radius.
+ */
+[data-project-panel] {
+  --text-xs: 0.8125rem;
+}

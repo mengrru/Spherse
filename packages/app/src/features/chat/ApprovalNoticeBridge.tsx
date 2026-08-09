@@ -4,6 +4,7 @@ import { useMatch, useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { collectPendingApprovals } from "./model/approval-notice";
 import { useStreamingStore } from "./runtime/streaming-store";
+import { useProjectDataStore } from "../../stores/project-data-store";
 
 export function ApprovalNoticeBridge() {
   const navigate = useNavigate();
@@ -26,8 +27,13 @@ export function ApprovalNoticeBridge() {
         if (notifiedRef.current.has(item.requestId)) continue;
         if (item.sessionId === activeSessionId) continue;
         notifiedRef.current.add(item.requestId);
-        toast.success(tRef.current("chat.approvalToastMessage"), {
-          description: item.command ?? item.toolName,
+        const project = useProjectDataStore.getState().projects[item.projectId];
+        const session = project?.sessions.find((s) => s.id === item.sessionId);
+        const agent = session ? project?.agents.find((a) => a.id === session.agentId) : undefined;
+        const title = agent?.name
+          ? tRef.current("chat.approvalToastMessageWithName", { name: agent.name })
+          : tRef.current("chat.approvalToastMessage");
+        toast.success(title, {
           action: {
             label: tRef.current("chat.approvalToastAction"),
             onClick: () => navigate(`/project/${item.projectId}/chat/${item.sessionId}`),

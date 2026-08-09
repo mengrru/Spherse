@@ -40,12 +40,4 @@ describe("ActivityBar structure", () => {
     expect(source).not.toContain("useSidePanelStore");
     expect(source).not.toContain("-translate-x");
   });
-
-  it("renders a project-home button gated on inProject, driven by useProjectActions", () => {
-    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
-
-    expect(source).toContain('useMatch("/project/:projectId/*")');
-    expect(source).toContain("handleGoProjectHome");
-    expect(source).toContain('t("activity-bar.projectHomeTooltip")');
-  });
 });

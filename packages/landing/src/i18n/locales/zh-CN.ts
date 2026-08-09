@@ -54,7 +54,13 @@ export const zhCN = {
   "cases.pageTitle": "案例",
   "cases.pageSubtitle": "下载示例项目，体验 Spherse 的更多可能",
   "cases.download": "下载示例项目",
+  // 案例卡片截图的无障碍标签：点击放大查看
+  "cases.viewLarger": "查看大图",
   "cases.backHome": "返回首页",
+  // 文档页（/docs）标题，当前为施工中占位页
+  "docs.title": "文档",
+  // 文档页施工中占位提示
+  "docs.construction": "施工中…",
   "cases.item1.title": "哈利波特",
   "cases.item1.desc": "走进霍格沃茨的魔法世界——预言家日报社、冥想盆等多个 Agent 协同演绎，展示如何用 Spherse 构建一个鲜活的交互式故事宇宙。",
   // 案例页第二张卡片，在 Spherse 中原生打造的世界观创作应用。

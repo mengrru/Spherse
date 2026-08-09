@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useMatch } from "react-router";
 import { useAppStore } from "../../stores/app-store";
 import { useAppUiStore } from "../../stores/app-ui-store";
 import { useProjectActions } from "./use-project-actions";
@@ -14,7 +13,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
-import { HomeIcon, PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import { PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { DebugTools } from "../debug-tools";
 import { WelcomePageSettingsDialog } from "../project-settings/welcome-page-settings";
 import { ThemeSettingsDialog } from "../project-settings/theme-settings";
@@ -39,9 +38,8 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
   const settingsEnabled = useFeature("settings");
   const openProjectEnabled = useFeature("open-project");
   const openSettings = useAppUiStore((s) => s.openSettings);
-  const inProject = useMatch("/project/:projectId/*") !== null;
   const canEditProject = useHostBridge().capabilities.content.editable;
-  const { handleAddProject, handleSelectProject, handleCloseProject, handleOpenProjectFolder, handleGoProjectHome } =
+  const { handleAddProject, handleSelectProject, handleCloseProject, handleOpenProjectFolder } =
     useProjectActions();
   const [settingsProjectId, setSettingsProjectId] = useState<string | null>(null);
   const settingsProject = settingsProjectId ? projects.get(settingsProjectId) : null;
@@ -98,17 +96,6 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
             })}
         </div>
         <div className="mt-auto flex flex-col items-center gap-2 pb-3">
-          {inProject && (
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              onClick={handleGoProjectHome}
-              title={t("activity-bar.projectHomeTooltip")}
-              aria-label={t("activity-bar.projectHomeTooltip")}
-            >
-              <HomeIcon />
-            </Button>
-          )}
           <DebugTools />
           {pinToggle && (
             <Button

@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { cases } from "../data/cases";
 import { sampleUrl } from "../lib/sample";
 import { Hero } from "./Hero";
+import { Lightbox } from "./Lightbox";
 import type { TranslationKey } from "../i18n";
 
 interface CasesPageProps {
@@ -8,6 +10,8 @@ interface CasesPageProps {
 }
 
 export function CasesPage({ t }: CasesPageProps) {
+  const [active, setActive] = useState<{ src: string; alt: string } | null>(null);
+
   return (
     <>
       <Hero t={t} />
@@ -28,12 +32,19 @@ export function CasesPage({ t }: CasesPageProps) {
                 key={item.id}
                 className="flex flex-col overflow-hidden rounded-xl border border-border bg-card"
               >
-                <img
-                  src={item.screenshot}
-                  alt={t(item.titleKey)}
-                  className="aspect-[16/10] w-full object-cover"
-                  loading="lazy"
-                />
+                <button
+                  type="button"
+                  onClick={() => setActive({ src: item.screenshot, alt: t(item.titleKey) })}
+                  className="block w-full cursor-zoom-in"
+                  aria-label={t("cases.viewLarger")}
+                >
+                  <img
+                    src={item.screenshot}
+                    alt={t(item.titleKey)}
+                    className="aspect-[16/10] w-full object-cover"
+                    loading="lazy"
+                  />
+                </button>
                 <div className="flex flex-1 flex-col gap-2 p-4">
                   <h2 className="text-sm font-medium text-foreground">{t(item.titleKey)}</h2>
                   <p className="flex-1 text-xs text-muted-foreground">{t(item.descKey)}</p>
@@ -60,6 +71,9 @@ export function CasesPage({ t }: CasesPageProps) {
           })}
         </div>
       </div>
+      {active && (
+        <Lightbox src={active.src} alt={active.alt} onClose={() => setActive(null)} />
+      )}
     </>
   );
 }
