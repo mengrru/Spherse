@@ -1,6 +1,6 @@
 ---
 name: use-ui-sdk
-description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话、打开已有会话、打开文件、向会话发消息、读写数据、订阅文件变化、只读查询项目信息、弹 toast 提示）
+description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话、打开已有会话、打开文件、向会话发消息、读写数据、枚举数据、目录列表、文件元信息、订阅文件变化、只读查询项目信息、弹 toast 提示）
 ---
 
 # UI SDK — `window.spherse`
@@ -30,8 +30,8 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 |------|------|------|
 | 触发型（fire-and-forget） | `createSession` / `openSession` / `openFile` / `openExternalLink` / `floatSession` / `unfloatSession` / `floatContent` / `unfloatContent` / `emitAgentTriggerEvent` / `toast` | 单向触发，无返回值 |
 | 请求型（Promise） | `sendMessage(params)` → `Promise` | 等待发送结果 |
-| 请求型（Promise） | `data.get` / `data.set` / `data.delete` | key-value 持久化 |
-| 请求型（Promise） | `api.call(op, args)` 及 `api.*` 命名方法 | 只读查询项目信息（agents / sessions / content / triggers / settings） |
+| 请求型（Promise） | `data.get` / `data.set` / `data.delete` / `data.keys` / `data.entries` | key-value 持久化 |
+| 请求型（Promise） | `api.call(op, args)` 及 `api.*` 命名方法 | 只读查询项目信息（agents / sessions / content / fileTree） |
 | 事件型 | `events.on("file:update", filter, handler)` | 订阅指定项目文件的变化信号 |
 | 运行时 | `spherse.runtime`（同步读）/ `spherse.getRuntime()`（Promise） | 获取当前会话上下文（仅 HtmlCard 有值） |
 
@@ -201,6 +201,24 @@ await spherse.data.set({ file: "world/game.data.json", key: "player", value: { n
 await spherse.data.delete({ file: "world/game.data.json", key: "score" });
 ```
 
+### `spherse.data.keys(params)` → `Promise<string[]>`
+
+返回数据文件中所有顶层 key 列表。文件不存在时返回 `[]`。
+
+```javascript
+const keys = await spherse.data.keys({ file: "world/game.data.json" });
+// → ["score", "name", "items"]
+```
+
+### `spherse.data.entries(params)` → `Promise<Record<string, any>>`
+
+返回数据文件中全部 key-value 对象。文件不存在时返回 `{}`。
+
+```javascript
+const all = await spherse.data.entries({ file: "world/game.data.json" });
+// → { score: 100, name: "Alice", items: [1, 2] }
+```
+
 ### 数据文件命名规范
 
 - 文件名必须为 `{HTML文件名}.data.json`，放在 HTML 同级目录（`world/game.html` → `world/game.data.json`）
@@ -263,12 +281,14 @@ const sessions = await spherse.api.sessions.list("agent-id");
 const msgs = await spherse.api.sessions.messages("agent-id", "session-id");
 const status = await spherse.api.sessions.status("agent-id", "session-id");
 
-// content
-const file = await spherse.api.content.get("notes/outline.md");
+  // content
+  const file = await spherse.api.content.get("notes/outline.md");
+  const entries = await spherse.api.content.listDir("world");
+  const meta = await spherse.api.content.stat("notes/outline.md");
 
-// 杂项
-const tree = await spherse.api.fileTree();
-```
+  // 杂项
+  const tree = await spherse.api.fileTree();
+  ```
 
 ### 通用入口
 
@@ -279,9 +299,25 @@ const data = await spherse.api.call("sessions.messages", { agentId: "a1", id: "s
 
 可用 op 白名单（未列出的 op 返回 reject，`error: "unknown_op"`）：
 
-`agents.list` · `agents.get` · `sessions.list` · `sessions.messages` · `sessions.status` · `content.get` · `fileTree`
+`agents.list` · `agents.get` · `sessions.list` · `sessions.messages` · `sessions.status` · `content.get` · `content.listDir` · `content.stat` · `fileTree`
 
 > 读取走 server 既有访问策略（如 `.spherse/` 目录会被拒绝）。非白名单 op 一律拒绝 —— 需要新 op 时扩展 App 的 `api.call` handler 白名单。
+
+#### `content.listDir` 返回值
+
+```typescript
+{ name: string, type: "file" | "directory" }[]
+```
+
+列出指定目录的一层内容（非递归）。空目录返回 `[]`。返回所有条目（含 dotfiles / node_modules / .spherse），需在页面中自行过滤。
+
+#### `content.stat` 返回值
+
+```typescript
+{ size: number, mtime: number, isDirectory: boolean }
+```
+
+`size` 为字节数，`mtime` 为 Unix 毫秒时间戳。路径不存在时返回 `request_failed`。
 
 ## 完整示例
 
@@ -347,7 +383,8 @@ document.getElementById("agent-select").innerHTML = html;
 ## 注意事项
 
 - **SDK 自动注入**：App 向每个 HTML 注入 `<script src="__spherse-sdk.js">`（同源加载，保留 iframe 真实 origin）。**不要**自己加载或复制 SDK 源码
-- **频率限制**：每分钟最多触发 10 次操作，超出会被静默丢弃。`data.get` 与 `api.call` 受同一限制，交互式页面避免高频轮询
+- **媒体播放**：Preview Server 支持 mp3/mp4/wav/webm/ogg/flac/mov 等音视频格式（含 Range 请求，可拖动进度条）。HTML 中直接用相对路径的 `<audio src="music.mp3">` 或 `<video src="clip.mp4">` 即可播放
+- **频率限制**：每分钟最多触发 30 次操作，超出会被静默丢弃。`data.get`、`data.keys` 与 `data.entries` 不受限（便于交互式页面频繁读取状态），交互式页面避免高频轮询
 - **事件订阅限制**：每个 HTML 最多同时订阅 100 个事件；订阅控制消息不计入 action 频率限制
 - **无 script-src 加载失败时**：若 HTML 自身设了限制性 CSP（如 `meta http-equiv="Content-Security-Policy"` 禁止同源 script），SDK 可能无法加载。应放宽 CSP 允许同源 script 加载，不要绕开 SDK 自行拼装 `postMessage`
 - **参数校验**：缺少必填参数或类型不匹配时操作会被静默忽略

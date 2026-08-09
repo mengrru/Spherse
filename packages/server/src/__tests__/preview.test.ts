@@ -185,4 +185,89 @@ describe("preview route", () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).not.toContain("data-spherse-sdk");
   });
+
+  it("serves mp3 files with audio/mpeg content-type", async () => {
+    fs.writeFileSync(path.join(tmpDir, "song.mp3"), Buffer.alloc(100, 0xff));
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/preview/song.mp3" });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("audio/mpeg");
+    expect(res.headers["accept-ranges"]).toBe("bytes");
+  });
+
+  it("serves mp4 files with video/mp4 content-type", async () => {
+    fs.writeFileSync(path.join(tmpDir, "clip.mp4"), Buffer.alloc(100, 0x00));
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/preview/clip.mp4" });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("video/mp4");
+    expect(res.headers["accept-ranges"]).toBe("bytes");
+  });
+
+  it("returns 206 Partial Content for a valid range request", async () => {
+    const data = Buffer.alloc(1000, 0xab);
+    fs.writeFileSync(path.join(tmpDir, "range-test.mp4"), data);
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/range-test.mp4",
+      headers: { range: "bytes=0-99" },
+    });
+    expect(res.statusCode).toBe(206);
+    expect(res.headers["content-type"]).toBe("video/mp4");
+    expect(res.headers["accept-ranges"]).toBe("bytes");
+    expect(res.headers["content-range"]).toBe("bytes 0-99/1000");
+    expect(res.headers["content-length"]).toBe("100");
+    expect(res.rawPayload.length).toBe(100);
+  });
+
+  it("supports open-ended range (bytes=500-)", async () => {
+    const data = Buffer.alloc(1000, 0xcd);
+    fs.writeFileSync(path.join(tmpDir, "open-end.mp3"), data);
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/open-end.mp3",
+      headers: { range: "bytes=500-" },
+    });
+    expect(res.statusCode).toBe(206);
+    expect(res.headers["content-range"]).toBe("bytes 500-999/1000");
+    expect(res.headers["content-length"]).toBe("500");
+  });
+
+  it("supports suffix range (bytes=-200)", async () => {
+    const data = Buffer.alloc(1000, 0xef);
+    fs.writeFileSync(path.join(tmpDir, "suffix-range.mp4"), data);
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/suffix-range.mp4",
+      headers: { range: "bytes=-200" },
+    });
+    expect(res.statusCode).toBe(206);
+    expect(res.headers["content-range"]).toBe("bytes 800-999/1000");
+    expect(res.headers["content-length"]).toBe("200");
+  });
+
+  it("ignores an invalid range and returns 200 with full content", async () => {
+    const data = Buffer.alloc(100, 0x01);
+    fs.writeFileSync(path.join(tmpDir, "bad-range.mp3"), data);
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/bad-range.mp3",
+      headers: { range: "bytes=999999-" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["accept-ranges"]).toBe("bytes");
+    expect(res.rawPayload.length).toBe(100);
+  });
+
+  it("does not apply Range handling to HTML files", async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "range.html"),
+      "<html><head></head><body>hi</body></html>",
+    );
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/preview/range.html",
+      headers: { range: "bytes=0-2" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["accept-ranges"]).toBeUndefined();
+  });
 });

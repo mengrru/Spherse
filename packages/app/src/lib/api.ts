@@ -3,6 +3,7 @@ import type {
   SessionInfo,
   ContentResponse,
   FileEntry,
+  StatResponse,
   TriggerEntry,
   TriggerInfo,
   TriggerLogEntry,
@@ -143,6 +144,12 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       } catch {
         return [];
       }
+    },
+
+    async stat(filePath: string): Promise<StatResponse> {
+      const res = await authedFetch(`${apiBase}/stat/${encodeURIComponent(filePath)}`);
+      await assertOk(res);
+      return parseJsonResponse<StatResponse>(res, schemas.statResponse);
     },
 
     async getContent(filePath: string): Promise<ContentResponse | null> {

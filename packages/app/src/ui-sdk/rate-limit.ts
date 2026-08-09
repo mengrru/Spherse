@@ -1,8 +1,12 @@
-const MAX_CALLS_PER_MINUTE = 10;
+const MAX_CALLS_PER_MINUTE = 30;
 const WINDOW_MS = 60_000;
 const timestamps: number[] = [];
 
-export const RATE_LIMIT_WHITELIST: ReadonlySet<string> = new Set(["data.get"]);
+export const RATE_LIMIT_WHITELIST: ReadonlySet<string> = new Set([
+  "data.get",
+  "data.keys",
+  "data.entries",
+]);
 
 export function isRateLimitWhitelisted(action: string): boolean {
   return RATE_LIMIT_WHITELIST.has(action);

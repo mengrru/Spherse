@@ -26,6 +26,8 @@ export const api = {
   },
   content: {
     get: (filePath: string): Promise<unknown> => apiCall("content.get", { path: filePath }),
+    listDir: (dirPath: string): Promise<unknown> => apiCall("content.listDir", { path: dirPath }),
+    stat: (filePath: string): Promise<unknown> => apiCall("content.stat", { path: filePath }),
   },
   fileTree: (): Promise<unknown> => apiCall("fileTree"),
 };

@@ -24,6 +24,8 @@ const ALLOWLIST: Record<string, AllowEntry> = {
   "sessions.messages": (c, a) => c.getSessionMessages(str(a.agentId), str(a.id)),
   "sessions.status": (c, a) => c.getSessionStatus(str(a.agentId), str(a.id)),
   "content.get": (c, a) => c.getContent(str(a.path)),
+  "content.listDir": (c, a) => c.listContent(str(a.path)),
+  "content.stat": (c, a) => c.stat(str(a.path)),
   fileTree: (c) => c.getFileTree(),
 };
 

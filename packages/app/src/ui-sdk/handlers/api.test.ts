@@ -12,6 +12,8 @@ function makeClient() {
     getSessionMessages: vi.fn(async () => ({ sessionId: "s1", messages: [] })),
     getSessionStatus: vi.fn(async () => ({ sessionId: "s1", status: "idle" })),
     getContent: vi.fn(async () => ({ path: "notes.md", content: "hi" })),
+    listContent: vi.fn(async () => [{ name: "notes.md", type: "file" as const }]),
+    stat: vi.fn(async () => ({ size: 42, mtime: 1700000000, isDirectory: false })),
     getFileTree: vi.fn(async () => ["notes.md"]),
   } as any;
 }
@@ -98,5 +100,25 @@ describe("api.call action", () => {
       ctx,
     );
     expect(ctx.client.getAgent).toHaveBeenCalledWith("");
+  });
+
+  it("dispatches content.listDir and returns directory entries", async () => {
+    const ctx = makeCtx(makeClient());
+    await dispatchAction("api.call", { op: "content.listDir", args: { path: "world" } }, ctx);
+    expect(ctx.client.listContent).toHaveBeenCalledWith("world");
+    expect(lastResponse(ctx)).toMatchObject({
+      ok: true,
+      data: [{ name: "notes.md", type: "file" }],
+    });
+  });
+
+  it("dispatches content.stat and returns file metadata", async () => {
+    const ctx = makeCtx(makeClient());
+    await dispatchAction("api.call", { op: "content.stat", args: { path: "notes.md" } }, ctx);
+    expect(ctx.client.stat).toHaveBeenCalledWith("notes.md");
+    expect(lastResponse(ctx)).toMatchObject({
+      ok: true,
+      data: { size: 42, mtime: 1700000000, isDirectory: false },
+    });
   });
 });

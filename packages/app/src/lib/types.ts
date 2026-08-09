@@ -3,6 +3,7 @@ export type {
   SessionInfoContract as SessionInfo,
   FileEntryContract as FileEntry,
   ContentResponseContract as ContentResponse,
+  StatResponseContract as StatResponse,
   TriggerEntryContract as TriggerEntry,
   TriggerInfoEntryContract as TriggerInfo,
   TriggerLogEntryContract as TriggerLogEntry,

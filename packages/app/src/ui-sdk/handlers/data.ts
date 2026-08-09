@@ -74,3 +74,29 @@ registerAction("data.delete", async (params, ctx) => {
     respond(ctx, false);
   }
 });
+
+registerAction("data.keys", async (params, ctx) => {
+  const { file } = params as { file: unknown };
+  const validFile = validateFileParam(file);
+  if (!validFile || !ctx.client) return;
+
+  try {
+    const json = await readDataJson(ctx.client, validFile);
+    respond(ctx, true, Object.keys(json));
+  } catch {
+    respond(ctx, false);
+  }
+});
+
+registerAction("data.entries", async (params, ctx) => {
+  const { file } = params as { file: unknown };
+  const validFile = validateFileParam(file);
+  if (!validFile || !ctx.client) return;
+
+  try {
+    const json = await readDataJson(ctx.client, validFile);
+    respond(ctx, true, json);
+  } catch {
+    respond(ctx, false);
+  }
+});

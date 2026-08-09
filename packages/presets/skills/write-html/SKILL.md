@@ -240,6 +240,10 @@ spherse.openExternalLink("https://example.com");
 | 文件模式下加载展示数据 | 外置同目录 `.json`，用 `fetch()` |
 | 字符串模式下加载展示数据 | 数据内联进 HTML，或用 ui-sdk `data.get` |
 | 持久化读写数据 | ui-sdk `data.get` / `data.set` / `data.delete` |
+| 枚举数据文件 key / 批量读取 | ui-sdk `data.keys` / `data.entries` |
+| 列出目录内容 | ui-sdk `api.content.listDir` |
+| 获取文件大小/类型/修改时间 | ui-sdk `api.content.stat` |
+| 播放音视频 | HTML `<audio src="music.mp3">` / `<video src="clip.mp4">`（相对路径，支持拖动进度条） |
 | 点击打开项目内文件 | ui-sdk `openFile` |
 | 点击打开外部链接（网页/邮箱） | ui-sdk `openExternalLink`（http/https/mailto/tel），勿用 `<a href>` |
 | 打开/发送 chat 会话 | ui-sdk `createSession`（新建）/ `openSession`（只打开已有会话，不发消息）/ `sendMessage`（发消息）/ `floatSession` |

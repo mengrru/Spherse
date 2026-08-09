@@ -23,6 +23,36 @@ async function readFileContent(absolutePath: string): Promise<{ content: string;
 
 export function registerContentRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get<{ Params: { projectId: string; "*": string } }>(
+    "/api/projects/:projectId/stat/*",
+    { schema: { response: { 200: schemas.statResponse } } },
+    async (req) => {
+      const relativePath = req.params["*"];
+      const pm = req.projectCtx!.projectManager;
+      const root = pm.getRootPath();
+      const policy = serverAccessPolicy(root);
+      try {
+        policy.assertRead(relativePath);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        throw err;
+      }
+      const absolutePath = resolveProjectPath(root, relativePath);
+
+      let stat;
+      try {
+        stat = await fs.stat(absolutePath);
+      } catch {
+        throw notFound("Not found");
+      }
+      return {
+        size: stat.size,
+        mtime: stat.mtimeMs,
+        isDirectory: stat.isDirectory(),
+      };
+    },
+  );
+
+  fastify.get<{ Params: { projectId: string; "*": string } }>(
     "/api/projects/:projectId/content/*",
     async (req) => {
       const relativePath = req.params["*"];

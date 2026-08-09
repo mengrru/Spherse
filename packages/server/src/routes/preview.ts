@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { createReadStream } from "node:fs";
 import path from "node:path";
 import type { Stats } from "node:fs";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
@@ -29,6 +30,21 @@ const CONTENT_TYPES: Record<string, string> = {
   woff2: "font/woff2",
   ttf: "font/ttf",
   eot: "application/vnd.ms-fontobject",
+  mp3: "audio/mpeg",
+  wav: "audio/wav",
+  ogg: "audio/ogg",
+  oga: "audio/ogg",
+  flac: "audio/flac",
+  m4a: "audio/mp4",
+  aac: "audio/aac",
+  opus: "audio/opus",
+  mp4: "video/mp4",
+  m4v: "video/mp4",
+  webm: "video/webm",
+  mov: "video/quicktime",
+  ogv: "video/ogg",
+  avi: "video/x-msvideo",
+  mkv: "video/x-matroska",
 };
 
 const ALLOWED_EXTENSIONS = new Set(Object.keys(CONTENT_TYPES));
@@ -40,6 +56,29 @@ function stripAuthPrefix(wildcard: string): string {
   const afterMarker = wildcard.slice("__auth/".length);
   const slash = afterMarker.indexOf("/");
   return slash === -1 ? "" : afterMarker.slice(slash + 1);
+}
+
+function parseRange(rangeHeader: string, fileSize: number): { start: number; end: number } | null {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+  if (!match) return null;
+  const [, startStr, endStr] = match;
+  let start: number;
+  let end: number;
+  if (startStr && endStr) {
+    start = parseInt(startStr, 10);
+    end = parseInt(endStr, 10);
+  } else if (startStr) {
+    start = parseInt(startStr, 10);
+    end = fileSize - 1;
+  } else if (endStr) {
+    const suffix = parseInt(endStr, 10);
+    start = Math.max(0, fileSize - suffix);
+    end = fileSize - 1;
+  } else {
+    return null;
+  }
+  if (start > end || start < 0 || start >= fileSize) return null;
+  return { start, end: Math.min(end, fileSize - 1) };
 }
 
 async function handlePreview(req: FastifyRequest<{ Params: PreviewParams }>, reply: FastifyReply): Promise<unknown> {
@@ -88,26 +127,48 @@ async function handlePreview(req: FastifyRequest<{ Params: PreviewParams }>, rep
   }
 
   try {
-    const buffer = await fs.readFile(absolutePath);
     const isHtml = ext === "html" || ext === "htm";
-    // Inject the SDK as a same-origin relative script so the iframe keeps its real
-    // origin (preview server) and the SDK can postMessage the renderer. Idempotent:
-    // files that already carry the marker (e.g. hand-authored) are left untouched.
-    const payload = isHtml
-      ? Buffer.from(
-          injectHeadScript(
-            buffer.toString("utf8"),
-            `<script src="${SDK_FILENAME}" ${SDK_MARK}></script>`,
-            SDK_MARK,
-          ),
-          "utf8",
-        )
-      : buffer;
+
+    if (isHtml) {
+      const buffer = await fs.readFile(absolutePath);
+      const payload = Buffer.from(
+        injectHeadScript(
+          buffer.toString("utf8"),
+          `<script src="${SDK_FILENAME}" ${SDK_MARK}></script>`,
+          SDK_MARK,
+        ),
+        "utf8",
+      );
+      return reply
+        .type(CONTENT_TYPES[ext])
+        .header("Cache-Control", "no-cache")
+        .header("ETag", etag)
+        .send(payload);
+    }
+
+    const rangeHeader = req.headers.range;
+    const range = typeof rangeHeader === "string" ? parseRange(rangeHeader, stat.size) : null;
+
+    if (range) {
+      const { start, end } = range;
+      const length = end - start + 1;
+      return reply
+        .code(206)
+        .type(CONTENT_TYPES[ext])
+        .header("Cache-Control", "no-cache")
+        .header("ETag", etag)
+        .header("Accept-Ranges", "bytes")
+        .header("Content-Range", `bytes ${start}-${end}/${stat.size}`)
+        .header("Content-Length", length)
+        .send(createReadStream(absolutePath, { start, end }));
+    }
+
     return reply
       .type(CONTENT_TYPES[ext])
       .header("Cache-Control", "no-cache")
       .header("ETag", etag)
-      .send(payload);
+      .header("Accept-Ranges", "bytes")
+      .send(createReadStream(absolutePath));
   } catch {
     throw notFound("Not found");
   }

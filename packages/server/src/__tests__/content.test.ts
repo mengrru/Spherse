@@ -69,4 +69,32 @@ describe("content route", () => {
     const body = JSON.parse(res.body);
     expect(Array.isArray(body)).toBe(true);
   });
+
+  it("returns stat info for a file", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/stat/notes.txt" });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.size).toBe("hello world".length);
+    expect(body.isDirectory).toBe(false);
+    expect(typeof body.mtime).toBe("number");
+  });
+
+  it("returns stat info for a directory", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/stat/sub" });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.isDirectory).toBe(true);
+    expect(typeof body.size).toBe("number");
+    expect(typeof body.mtime).toBe("number");
+  });
+
+  it("returns 404 for a non-existent path in stat", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/stat/does-not-exist.txt" });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 403 for a denied path in stat", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/stat/.spherse" });
+    expect(res.statusCode).toBe(403);
+  });
 });

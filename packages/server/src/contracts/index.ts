@@ -57,6 +57,7 @@ export type {
   FileEntryContract,
   FileEntriesResponse,
   ContentResponseContract,
+  StatResponseContract,
   ContentCreateRequest,
   ContentSaveRequest,
 } from "./content.js";

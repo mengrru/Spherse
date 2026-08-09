@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { checkRateLimit, isRateLimitWhitelisted, RATE_LIMIT_WHITELIST, resetRateLimit } from "./rate-limit";
 
-const MAX_CALLS_PER_MINUTE = 10;
+const MAX_CALLS_PER_MINUTE = 30;
 
 describe("rate-limit", () => {
   beforeEach(() => resetRateLimit());
@@ -17,6 +17,16 @@ describe("rate-limit", () => {
   it("includes data.get in the whitelist", () => {
     expect(RATE_LIMIT_WHITELIST.has("data.get")).toBe(true);
     expect(isRateLimitWhitelisted("data.get")).toBe(true);
+  });
+
+  it("includes data.keys in the whitelist", () => {
+    expect(RATE_LIMIT_WHITELIST.has("data.keys")).toBe(true);
+    expect(isRateLimitWhitelisted("data.keys")).toBe(true);
+  });
+
+  it("includes data.entries in the whitelist", () => {
+    expect(RATE_LIMIT_WHITELIST.has("data.entries")).toBe(true);
+    expect(isRateLimitWhitelisted("data.entries")).toBe(true);
   });
 
   it("never rate-limits whitelisted actions regardless of call count", () => {
