@@ -81,7 +81,7 @@ function ModelGroupTab({
   }, [providerEntries, providerQuery, showProviderSearch]);
   return (
     <>
-      <FieldGroup>
+      <FieldGroup className="shrink-0">
         <DefaultModelField
           providers={group.providers}
           apiKeys={group.apiKeys}
@@ -91,12 +91,12 @@ function ModelGroupTab({
       </FieldGroup>
       {kind === "text" && (
         <AdvancedSettings
-          className="mt-3"
+          className="mt-3 shrink-0"
           sampling={group.sampling}
           onSetSampling={(value) => { void group.patchSampling(value); }}
         />
       )}
-      <SectionTitle className={kind === "text" ? "mt-5 flex items-center gap-1.5" : "mt-5"}>
+      <SectionTitle className={kind === "text" ? "mt-5 flex shrink-0 items-center gap-1.5" : "mt-5 shrink-0"}>
         {t("settings.models.providers")}
         {kind === "text" && (
           <Tooltip>
@@ -126,7 +126,7 @@ function ModelGroupTab({
         )}
       </SectionTitle>
       {showProviderSearch && (
-        <div className="relative">
+        <div className="relative mb-2 shrink-0">
           <SearchIcon className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             className="ps-8"
@@ -136,7 +136,7 @@ function ModelGroupTab({
           />
         </div>
       )}
-      <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {filteredProviderEntries.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             {t("settings.provider.noResults")}
@@ -169,7 +169,7 @@ function ModelGroupTab({
         ))}
       </div>
       {kind === "text" && (
-        <Button variant="outline" className="mt-2 w-full" onClick={() => setDialog({ mode: "add" })}>
+        <Button variant="outline" className="mt-2 w-full shrink-0" onClick={() => setDialog({ mode: "add" })}>
           <Plus className="size-3.5" />
           {t("settings.provider.addCustom")}
         </Button>
@@ -214,8 +214,8 @@ function SettingsTabs() {
   const [tab, setTab] = useState(initialTab);
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto">
-      <Tabs value={tab} onValueChange={setTab}>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <Tabs value={tab} onValueChange={setTab} className="min-h-0 flex-1">
         <TabsList>
           <TabsTrigger value="models">{t("settings.tabs.text")}</TabsTrigger>
           <TabsTrigger value="image">{t("settings.tabs.image")}</TabsTrigger>
@@ -225,15 +225,15 @@ function SettingsTabs() {
           <TabsTrigger value="about">{t("settings.tabs.about")}</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="models" className="mt-3">
+        <TabsContent value="models" className="mt-3 flex min-h-0 flex-col">
           <ModelGroupTab group={form.text} kind="text" />
         </TabsContent>
 
-        <TabsContent value="image" className="mt-3">
+        <TabsContent value="image" className="mt-3 flex min-h-0 flex-col">
           <ModelGroupTab group={form.image} kind="image" />
         </TabsContent>
 
-        <TabsContent value="general" className="mt-3">
+        <TabsContent value="general" className="mt-3 min-h-0 overflow-y-auto">
           <Field>
             <SectionTitle as={FieldLabel}>{t("settings.language")}</SectionTitle>
             <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(settingsApi, normalizeLocale(e.target.value))}>
@@ -265,16 +265,16 @@ function SettingsTabs() {
         </TabsContent>
 
         {mobileAccessEnabled && (
-          <TabsContent value="mobile" className="mt-3">
+          <TabsContent value="mobile" className="mt-3 min-h-0 overflow-y-auto">
             <MobileAccessPanel />
           </TabsContent>
         )}
 
-        <TabsContent value="help" className="mt-3">
+        <TabsContent value="help" className="mt-3 min-h-0 overflow-y-auto">
           <HelpPanel />
         </TabsContent>
 
-        <TabsContent value="about" className="mt-3">
+        <TabsContent value="about" className="mt-3 min-h-0 overflow-y-auto">
           <UpdateChecker />
         </TabsContent>
       </Tabs>
