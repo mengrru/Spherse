@@ -62,6 +62,10 @@ export const zhCN = {
   // provider API Key 输入框占位提示
   "settings.provider.apiKeyPlaceholder": "API密钥",  // provider 状态标签：尚未连接
   "settings.provider.notConnected": "未连接",
+  // 模型提供商列表的搜索框占位提示（当提供商数量超过 6 个时显示，输入名称或 id 筛选）
+  "settings.provider.searchPlaceholder": "搜索供应商…",
+  // 模型提供商列表搜索无匹配结果时的提示
+  "settings.provider.noResults": "未找到匹配的供应商",
   // provider 连接按钮的已连接状态
   "settings.provider.connected": "已连接",
   // provider 按钮悬停时的断开连接文案

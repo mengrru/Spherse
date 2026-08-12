@@ -10,6 +10,7 @@ import { NativeSelect, NativeSelectOption } from "../../components/ui/native-sel
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Switch } from "../../components/ui/switch";
 import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 import { useSettingsStore } from "../../stores/settings-store";
 import { useAppUiStore } from "../../stores/app-ui-store";
 import { useSettingsForm } from "./use-settings-form";
@@ -27,7 +28,7 @@ import { SUPPORTED_LOCALES, normalizeLocale } from "@spherse/i18n";
 import { useI18n } from "@spherse/i18n/react";
 import type { CustomProviderDef } from "@spherse/core";
 import type { ThemeMode } from "../../lib/host-bridge";
-import { InfoIcon, Plus } from "lucide-react";
+import { InfoIcon, Plus, SearchIcon } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { useHostBridge } from "../../context/host-bridge-context";
 
@@ -65,6 +66,19 @@ function ModelGroupTab({
   const { t } = useI18n();
   const bridge = useHostBridge();
   const [dialog, setDialog] = useState<{ mode: "add" } | { mode: "edit"; def: CustomProviderDef } | null>(null);
+  const [providerQuery, setProviderQuery] = useState("");
+  const providerEntries = Object.entries(group.providers);
+  const providerCount = providerEntries.length;
+  const showProviderSearch = providerCount > 6;
+  const filteredProviderEntries = useMemo(() => {
+    if (!showProviderSearch) return providerEntries;
+    const q = providerQuery.trim().toLowerCase();
+    if (!q) return providerEntries;
+    return providerEntries.filter(
+      ([id, config]) =>
+        config.name.toLowerCase().includes(q) || id.toLowerCase().includes(q),
+    );
+  }, [providerEntries, providerQuery, showProviderSearch]);
   return (
     <>
       <FieldGroup>
@@ -111,8 +125,24 @@ function ModelGroupTab({
           </Tooltip>
         )}
       </SectionTitle>
+      {showProviderSearch && (
+        <div className="relative">
+          <SearchIcon className="pointer-events-none absolute start-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="ps-8"
+            placeholder={t("settings.provider.searchPlaceholder")}
+            value={providerQuery}
+            onChange={(e) => setProviderQuery(e.target.value)}
+          />
+        </div>
+      )}
       <div className="flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
-        {Object.entries(group.providers).map(([id, config]) => (
+        {filteredProviderEntries.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            {t("settings.provider.noResults")}
+          </p>
+        ) : null}
+        {filteredProviderEntries.map(([id, config]) => (
           <ModelProviderItem
             key={id}
             id={id}

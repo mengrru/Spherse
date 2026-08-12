@@ -33,6 +33,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.provider.apiKeyProvided": "已提供 API Key",
   "settings.provider.apiKeyPlaceholder": "API金鑰",
   "settings.provider.notConnected": "未連線",
+  "settings.provider.searchPlaceholder": "搜尋供應商…",
+  "settings.provider.noResults": "未找到符合的供應商",
   "settings.provider.connected": "已連線",
   "settings.provider.disconnect": "斷開連線",
   "settings.provider.connect": "連線",
