@@ -6,6 +6,12 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "hero.tagline": "在這裡搭建故事世界、創造角色、記錄生活，讓散落的想法慢慢長成一個會回應你、不斷生長的世界",
   "hero.downloadMac": "下載 macOS",
   "hero.downloadWin": "下載 Windows",
+  // 首頁 Hero 點擊「下載 macOS」後在按鈕下方出現的提示：macOS Gatekeeper 首次開啟未簽章應用會攔截，引導使用者在終端機執行 xattr 指令解除隔離屬性。
+  "hero.macosTip": "首次開啟時如果出現「已損毀」或「無法驗證開發者」提示，請在終端機執行以下指令即可開啟：",
+  // 首頁 Hero 點擊「下載 Windows」後在按鈕下方出現的提示：未簽章 exe 會觸發瀏覽器下載警告（預設刪除）和 SmartScreen，引導使用者主動選擇保留並放行執行。
+  "hero.windowsTip": "Windows 版安裝包尚未進行程式碼簽章。下載時瀏覽器可能提示「可能危害您的電腦」並將「刪除」作為預設操作，請主動選擇「保留」或「更多 → 仍要保留」以儲存安裝包。執行安裝時若彈出「Windows 已保護您的電腦」，點擊「更多資訊」→「仍要執行」即可繼續。",
+  "hero.copyCommand": "複製指令",
+  "hero.copied": "已複製",
 
   "feature.heading": "從一個資料夾，搭建你的 Agent Workspace",
   "feature.subheading": "資料、Agent、自動化與互動頁面，在同一個本地執行環境中協作",

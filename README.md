@@ -40,6 +40,22 @@ Spherse 不预设唯一用途。一个项目可以是：
 
 真正可复用和分发的单位不是一段 Prompt，而是包含 **数据结构 + Agent + Skill + 自动化 + UI** 的完整 Workspace。
 
+## 下载与安装
+
+前往 [Releases](https://github.com/mengrru/Spherse/releases) 下载最新版本：
+
+- **macOS**：下载对应架构的 `.dmg` 文件并拖入“应用程序”
+- **Windows**：下载 `.exe` 安装包并运行
+
+> [!NOTE]
+> 当前 macOS 版本尚未使用 Apple Developer 证书签名。首次打开时如果出现“已损坏”或“无法验证开发者”提示，请在终端执行：
+>
+> ```bash
+> xattr -cr /Applications/Spherse.app
+> ```
+
+安装后配置一个受支持的 LLM Provider API Key，即可创建项目和 Agent。
+
 ## 核心能力
 
 ### 多 Agent，共享同一个数据空间
@@ -93,22 +109,6 @@ Spherse 以项目目录作为完整的分发单元。复制或分享整个目录
 ### 桌面运行，移动访问
 
 Spherse 提供 macOS 和 Windows 桌面应用，也可以通过带访问令牌的 Web 客户端在移动设备上连接桌面运行时。Quick Tunnel 模式可自动建立 Cloudflare Tunnel，也支持用户自行配置公网入口。
-
-## 下载与安装
-
-前往 [Releases](https://github.com/mengrru/Spherse/releases) 下载最新版本：
-
-- **macOS**：下载对应架构的 `.dmg` 文件并拖入“应用程序”
-- **Windows**：下载 `.exe` 安装包并运行
-
-> [!NOTE]
-> 当前 macOS 版本尚未使用 Apple Developer 证书签名。首次打开时如果出现“已损坏”或“无法验证开发者”提示，请在终端执行：
->
-> ```bash
-> xattr -cr /Applications/Spherse.app
-> ```
-
-安装后配置一个受支持的 LLM Provider API Key，即可创建项目和 Agent。
 
 ## 本地开发
 

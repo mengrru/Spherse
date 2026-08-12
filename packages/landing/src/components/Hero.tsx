@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Download, LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
+import { InstallTip } from "./InstallTip";
 import { detectPlatform, resolveDownloadUrl, type Platform } from "../lib/release";
 import type { TranslationKey } from "../i18n";
 
@@ -18,6 +19,7 @@ interface HeroProps {
 
 export function Hero({ t }: HeroProps) {
   const [pending, setPending] = useState<Platform | null>(null);
+  const [tipPlatform, setTipPlatform] = useState<Platform | null>(null);
 
   const downloadLabelKey: Record<Platform, TranslationKey> = {
     mac: "hero.downloadMac",
@@ -36,6 +38,7 @@ export function Hero({ t }: HeroProps) {
   const handleDownload = async (platform: Platform) => {
     if (pending) return;
     setPending(platform);
+    setTipPlatform(platform);
     try {
       const url = await resolveDownloadUrl(platform);
       window.location.href = url;
@@ -57,27 +60,30 @@ export function Hero({ t }: HeroProps) {
           {t("hero.tagline")}
         </p>
       </div>
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-        {downloadButtons.map(({ platform, variant }) => (
-          <Button
-            key={platform}
-            size="lg"
-            variant={variant}
-            disabled={pending !== null}
-            onClick={() => handleDownload(platform)}
-          >
-            {pending === platform ? (
-              <LoaderCircle className="size-5 animate-spin" />
-            ) : (
-              <Download className="size-5" />
-            )}
-            {t(downloadLabelKey[platform])}
+      <div className="mt-2 flex flex-col items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {downloadButtons.map(({ platform, variant }) => (
+            <Button
+              key={platform}
+              size="lg"
+              variant={variant}
+              disabled={pending !== null}
+              onClick={() => handleDownload(platform)}
+            >
+              {pending === platform ? (
+                <LoaderCircle className="size-5 animate-spin" />
+              ) : (
+                <Download className="size-5" />
+              )}
+              {t(downloadLabelKey[platform])}
+            </Button>
+          ))}
+          <Button size="lg" variant="ghost" render={<a href="https://github.com/mengrru/Spherse" target="_blank" rel="noopener noreferrer" />}>
+            <GithubIcon className="size-5" />
+            GitHub
           </Button>
-        ))}
-        <Button size="lg" variant="ghost" render={<a href="https://github.com/mengrru/Spherse" target="_blank" rel="noopener noreferrer" />}>
-          <GithubIcon className="size-5" />
-          GitHub
-        </Button>
+        </div>
+        {tipPlatform && <InstallTip platform={tipPlatform} t={t} />}
       </div>
     </section>
   );

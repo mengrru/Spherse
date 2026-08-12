@@ -40,6 +40,22 @@ Spherse does not prescribe a single use case. A project could be:
 
 The reusable, distributable unit is not merely a prompt. It is a complete Workspace composed of **data structures + agents + skills + automations + UI**.
 
+## Download and installation
+
+Download the latest build from [Releases](https://github.com/mengrru/Spherse/releases):
+
+- **macOS:** Download the `.dmg` for your architecture and drag Spherse into Applications
+- **Windows:** Download and run the `.exe` installer
+
+> [!NOTE]
+> The macOS build is not yet signed with an Apple Developer certificate. If macOS reports that the app is damaged or cannot verify the developer, run:
+>
+> ```bash
+> xattr -cr /Applications/Spherse.app
+> ```
+
+After installation, configure an API key for a supported LLM provider, then create your first project and agent.
+
 ## Core capabilities
 
 ### Multiple agents, one shared data space
@@ -93,22 +109,6 @@ Spherse treats the project folder as a complete distribution unit. Copy or share
 ### Desktop runtime, mobile access
 
 Spherse ships as a macOS and Windows desktop app. A token-protected Web client can connect mobile devices to the desktop runtime. Quick Tunnel mode can establish a Cloudflare Tunnel automatically, while manual public endpoints are also supported.
-
-## Download and installation
-
-Download the latest build from [Releases](https://github.com/mengrru/Spherse/releases):
-
-- **macOS:** Download the `.dmg` for your architecture and drag Spherse into Applications
-- **Windows:** Download and run the `.exe` installer
-
-> [!NOTE]
-> The macOS build is not yet signed with an Apple Developer certificate. If macOS reports that the app is damaged or cannot verify the developer, run:
->
-> ```bash
-> xattr -cr /Applications/Spherse.app
-> ```
-
-After installation, configure an API key for a supported LLM provider, then create your first project and agent.
 
 ## Local development
 

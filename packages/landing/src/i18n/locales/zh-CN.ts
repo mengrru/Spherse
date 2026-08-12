@@ -6,6 +6,14 @@ export const zhCN = {
   "hero.tagline": "在这里搭建故事世界、创造角色、记录生活，让散落的想法慢慢长成一个会回应你、不断生长的世界",
   "hero.downloadMac": "下载 macOS",
   "hero.downloadWin": "下载 Windows",
+  // 首页 Hero 点击「下载 macOS」后在按钮下方出现的提示：macOS Gatekeeper 首次打开未签名应用会拦截，引导用户在终端运行 xattr 命令解除隔离属性。
+  "hero.macosTip": "首次打开时如果出现“已损坏”或“无法验证开发者”提示，请在终端执行以下命令即可打开：",
+  // 首页 Hero 点击「下载 Windows」后在按钮下方出现的提示：未签名 exe 会触发浏览器下载警告（默认删除）和 SmartScreen，引导用户主动选择保留并放行运行。
+  "hero.windowsTip": "Windows 版安装包尚未进行代码签名。下载时浏览器可能提示「可能危害你的电脑」并将「删除」作为默认操作，请主动选择「保留」或「更多 → 仍要保留」以保存安装包。运行安装时若弹出「Windows 已保护你的电脑」，点击「更多信息」→「仍要运行」即可继续。",
+  // macOS 安装提示中复制命令按钮的无障碍标签（点击前）。
+  "hero.copyCommand": "复制命令",
+  // macOS 安装提示中复制命令按钮的无障碍标签（点击后短暂展示）。
+  "hero.copied": "已复制",
 
   // 首页功能卡片区标题，概括 Spherse 将文件、Agent 与应用组织为同一运行空间。
   "feature.heading": "从一个文件夹，搭建你的 Agent Workspace",

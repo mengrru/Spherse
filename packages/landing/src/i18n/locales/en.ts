@@ -8,6 +8,12 @@ export const en: Record<keyof typeof zhCN, string> = {
     "Build story worlds, create characters, and capture your life here—then watch scattered ideas slowly grow into a living world that responds to you",
   "hero.downloadMac": "Download for macOS",
   "hero.downloadWin": "Download for Windows",
+  // Shown below the download buttons after clicking "Download for macOS": macOS Gatekeeper blocks unsigned apps on first launch, so guide the user to run an xattr command in Terminal.
+  "hero.macosTip": "If you see a “damaged” or “cannot be verified” warning on first launch, run the following command in Terminal:",
+  // Shown below the download buttons after clicking "Download for Windows": an unsigned .exe triggers a browser download warning (Delete by default) and SmartScreen, so guide the user to actively keep the file and allow it to run.
+  "hero.windowsTip": "The Windows installer is not yet code-signed. When downloading, your browser may warn it “could harm your computer” and offer Delete as the default action — please choose “Keep” or “More → Keep anyway” to save it. If Windows shows “Windows protected your PC” when you run it, click “More info” → “Run anyway” to continue.",
+  "hero.copyCommand": "Copy command",
+  "hero.copied": "Copied",
 
   "feature.heading": "Build your Agent Workspace from one folder",
   "feature.subheading": "Bring data, agents, automation, and interactive pages together in one local runtime",
