@@ -31,6 +31,7 @@ export interface AgentProfile {
     frontmatter?: Record<string, string>;
   };
   timePerception?: TimePerceptionConfig;
+  yolo?: boolean;
   systemPrompt: string;
   filePath: string;
 }

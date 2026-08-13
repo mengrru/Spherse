@@ -498,13 +498,14 @@ export class LiveSession {
     approvalGate?: ApprovalGate,
   ): Promise<{ systemPrompt: string; tools: AgentTool[] }> {
     const projectRoot = ctx.projectRoot;
+    const gate = profile.yolo ? undefined : approvalGate;
     const toolContext = new ToolContext(
       ctx.projectStore,
       ctx.fileWriteMutex,
       profile.slug,
       agentSkillStore,
       ctx.triggerManager,
-      approvalGate,
+      gate,
       profile.id,
     );
     const allTools = createToolsForProject(toolContext);

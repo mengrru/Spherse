@@ -47,3 +47,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
     advanced: true,
   },
 ];
+
+export const ADVANCED_TOOL_IDS: string[] = TOOL_GROUPS.filter((g) => g.advanced).flatMap(
+  (g) => g.toolIds,
+);

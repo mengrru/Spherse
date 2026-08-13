@@ -6,6 +6,7 @@ describe("parseAgentMarkdown", () => {
     const result = parseAgentMarkdown("# Title\n\nbody text");
     expect(result.formData.tools).toEqual([]);
     expect(result.formData.systemPrompt).toBe("# Title\n\nbody text");
+    expect(result.formData.yolo).toBe(false);
   });
 
   it("returns empty tools when the tools field is missing", () => {
@@ -129,12 +130,36 @@ describe("parseAgentMarkdown", () => {
     const result = parseAgentMarkdown(raw);
     expect(result.extraFrontmatter).not.toHaveProperty("timePerception");
   });
+
+  it("returns false yolo when field is missing", () => {
+    const raw = "---\nname: Agent\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.yolo).toBe(false);
+  });
+
+  it("parses yolo true when present", () => {
+    const raw = "---\nname: Agent\nyolo: true\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.yolo).toBe(true);
+  });
+
+  it("parses yolo false when explicitly false", () => {
+    const raw = "---\nname: Agent\nyolo: false\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.yolo).toBe(false);
+  });
+
+  it("does not leak yolo into extra frontmatter", () => {
+    const raw = "---\nname: Agent\nyolo: true\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.extraFrontmatter).not.toHaveProperty("yolo");
+  });
 });
 
 describe("buildAgentMarkdown", () => {
   it("writes tools array into frontmatter", () => {
     const md = buildAgentMarkdown(
-      { name: "Agent", tools: ["read_file"], context: [], systemPrompt: "hello" },
+      { name: "Agent", tools: ["read_file"], context: [], systemPrompt: "hello", yolo: false },
       {},
       false,
     );
@@ -145,7 +170,7 @@ describe("buildAgentMarkdown", () => {
 
   it("omits context when empty", () => {
     const md = buildAgentMarkdown(
-      { name: "Agent", tools: [], context: [], systemPrompt: "hello" },
+      { name: "Agent", tools: [], context: [], systemPrompt: "hello", yolo: false },
       {},
       false,
     );
@@ -154,7 +179,7 @@ describe("buildAgentMarkdown", () => {
 
   it("preserves empty tools array through a round-trip", () => {
     const md = buildAgentMarkdown(
-      { name: "Agent", tools: [], context: [], systemPrompt: "hello" },
+      { name: "Agent", tools: [], context: [], systemPrompt: "hello", yolo: false },
       {},
       false,
     );
@@ -164,7 +189,7 @@ describe("buildAgentMarkdown", () => {
 
   it("writes alias into frontmatter when set", () => {
     const md = buildAgentMarkdown(
-      { name: "Agent", alias: "小明", tools: [], context: [], systemPrompt: "hello" },
+      { name: "Agent", alias: "小明", tools: [], context: [], systemPrompt: "hello", yolo: false },
       {},
       false,
     );
@@ -174,7 +199,7 @@ describe("buildAgentMarkdown", () => {
 
   it("omits alias from frontmatter when empty", () => {
     const md = buildAgentMarkdown(
-      { name: "Agent", alias: "", tools: [], context: [], systemPrompt: "hello" },
+      { name: "Agent", alias: "", tools: [], context: [], systemPrompt: "hello", yolo: false },
       {},
       false,
     );
@@ -183,7 +208,7 @@ describe("buildAgentMarkdown", () => {
 
   it("omits alias from frontmatter when whitespace-only", () => {
     const md = buildAgentMarkdown(
-      { name: "Agent", alias: "   ", tools: [], context: [], systemPrompt: "hello" },
+      { name: "Agent", alias: "   ", tools: [], context: [], systemPrompt: "hello", yolo: false },
       {},
       false,
     );
@@ -192,7 +217,7 @@ describe("buildAgentMarkdown", () => {
 
   it("preserves alias through a round-trip with extra frontmatter", () => {
     const md = buildAgentMarkdown(
-      { name: "Agent", alias: "小明", tools: ["read_file"], context: [], systemPrompt: "hello" },
+      { name: "Agent", alias: "小明", tools: ["read_file"], context: [], systemPrompt: "hello", yolo: false },
       { model: "gpt-4" },
       false,
     );
@@ -209,6 +234,7 @@ describe("buildAgentMarkdown", () => {
         tools: [],
         context: [],
         systemPrompt: "hello",
+        yolo: false,
         timePerception: {
           enabled: true,
           epochMs: 1700000000000,
@@ -238,11 +264,32 @@ describe("buildAgentMarkdown", () => {
         tools: [],
         context: [],
         systemPrompt: "hello",
+        yolo: false,
         timePerception: { enabled: false, epochMs: 1700000000000 },
       },
       {},
       false,
     );
     expect(md).not.toContain("timePerception");
+  });
+
+  it("writes yolo into frontmatter when true", () => {
+    const md = buildAgentMarkdown(
+      { name: "Agent", tools: [], context: [], systemPrompt: "hello", yolo: true },
+      {},
+      false,
+    );
+    expect(md).toContain("yolo");
+    const parsed = parseAgentMarkdown(md);
+    expect(parsed.formData.yolo).toBe(true);
+  });
+
+  it("omits yolo from frontmatter when false", () => {
+    const md = buildAgentMarkdown(
+      { name: "Agent", tools: [], context: [], systemPrompt: "hello", yolo: false },
+      {},
+      false,
+    );
+    expect(md).not.toContain("yolo");
   });
 });

@@ -437,3 +437,105 @@ describe("LiveSession context engineering", () => {
     await expect(live.retryLastTurn(() => {})).rejects.toThrow(/no failed assistant turn/);
   });
 });
+
+describe("LiveSession yolo mode", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let ctx: SessionContext;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-yolo-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore as any;
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
+    runtime.timerService.stop();
+    ctx = {
+      projectStore,
+      projectRoot: projectStore.getRootPath(),
+      fileWriteMutex: (runtime as any).sessionRuntime.ctx.fileWriteMutex,
+      logger: createSilentLogger(),
+    };
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function findTool(live: LiveSession, name: string): any {
+    return agentOf(live).state.tools.find((t: any) => t.name === name);
+  }
+
+  it("yolo agent runs run_command without approval", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    agentStore._profile = {
+      ...agentStore._profile,
+      tools: ["run_command"],
+      yolo: true,
+    };
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+
+    const runCommand = findTool(live, "run_command");
+    expect(runCommand).toBeDefined();
+
+    const result = await runCommand.execute("call-1", { command: "echo yolo-bypass" });
+    const text = result.content.map((c: any) => c.text).join("");
+    expect(text).toContain("yolo-bypass");
+    expect(result.details.status).toBe("completed");
+    expect(result.details.exitCode).toBe(0);
+  });
+
+  it("non-yolo agent requires approval before run_command executes", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    agentStore._profile = {
+      ...agentStore._profile,
+      tools: ["run_command"],
+      yolo: false,
+    };
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+
+    const runCommand = findTool(live, "run_command");
+    expect(runCommand).toBeDefined();
+
+    const PENDING = Symbol("pending");
+    const settled = await Promise.race([
+      runCommand.execute("call-2", { command: "echo should-not-run" }).then(
+        () => "completed" as const,
+        () => "rejected" as const,
+      ),
+      new Promise<typeof PENDING>((resolve) =>
+        setTimeout(() => resolve(PENDING), 400),
+      ),
+    ]);
+
+    expect(settled).toBe(PENDING);
+  });
+
+  it("applyReload picks up yolo change on next turn", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    agentStore._profile = {
+      ...agentStore._profile,
+      tools: ["run_command"],
+      yolo: false,
+    };
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+
+    agentStore._profile = { ...agentStore._profile, yolo: true };
+    await (live as any).applyReload();
+
+    const runCommand = findTool(live, "run_command");
+    const result = await runCommand.execute("call-3", { command: "echo yolo-reloaded" });
+    const text = result.content.map((c: any) => c.text).join("");
+    expect(text).toContain("yolo-reloaded");
+    expect(result.details.status).toBe("completed");
+  });
+});

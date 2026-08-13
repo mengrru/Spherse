@@ -26,6 +26,7 @@ const agentProfile = Type.Object({
     }),
   ),
   timePerception: Type.Optional(timePerceptionConfig),
+  yolo: Type.Optional(Type.Boolean()),
   systemPrompt: Type.String(),
   filePath: Type.String(),
 });

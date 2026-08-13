@@ -61,6 +61,20 @@ You are a world building assistant.`;
     expect(profile!.alias).toBeUndefined();
   });
 
+  it("parses yolo true from frontmatter", async () => {
+    await writeProfile("---\nname: Agent\nyolo: true\n---\n\nprompt");
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.yolo).toBe(true);
+  });
+
+  it("returns undefined yolo when frontmatter omits it", async () => {
+    await writeProfile(VALID_PROFILE);
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.yolo).toBeUndefined();
+  });
+
   it("returns null when profile.md does not exist", async () => {
     const profile = await store.read();
     expect(profile).toBeNull();

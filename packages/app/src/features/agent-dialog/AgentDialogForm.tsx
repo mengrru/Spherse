@@ -19,7 +19,10 @@ import { DialogFooter } from "../../components/ui/dialog";
 import { Field, FieldGroup, FieldLabel } from "../../components/ui/field";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
+import { Switch } from "../../components/ui/switch";
+import { Label } from "../../components/ui/label";
 import { ToolPicker } from "./ToolPicker";
+import { ADVANCED_TOOL_IDS } from "./tool-registry";
 import { ContextPathField } from "./ContextPathField";
 import { TimePerceptionField } from "./TimePerceptionField";
 import { HintLabel } from "./HintLabel";
@@ -74,21 +77,21 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
   const toggleGroup = (groupToolIds: string[]) => {
     setFormData((prev) => {
       const allSelected = groupToolIds.every((id) => prev.tools.includes(id));
-      if (allSelected) {
-        return { ...prev, tools: prev.tools.filter((t) => !groupToolIds.includes(t)) };
-      }
-      const newTools = [...prev.tools];
-      for (const id of groupToolIds) {
-        if (!newTools.includes(id)) newTools.push(id);
-      }
-      return { ...prev, tools: newTools };
+      const nextTools = allSelected
+        ? prev.tools.filter((t) => !groupToolIds.includes(t))
+        : [...prev.tools, ...groupToolIds.filter((id) => !prev.tools.includes(id))];
+      const hasAdvanced = nextTools.some((id) => ADVANCED_TOOL_IDS.includes(id));
+      return { ...prev, tools: nextTools, yolo: hasAdvanced ? prev.yolo : false };
     });
   };
+
+  const hasAdvancedTool = formData.tools.some((id) => ADVANCED_TOOL_IDS.includes(id));
 
   const handleSubmit = async () => {
     if (!formData.name.trim()) { setError(t("agent-dialog.nameRequired")); return; }
     setSaving(true); setError(null);
-    const content = buildAgentMarkdown(formData, parsed.extraFrontmatter, mode === "create");
+    const effectiveFormData = hasAdvancedTool ? formData : { ...formData, yolo: false };
+    const content = buildAgentMarkdown(effectiveFormData, parsed.extraFrontmatter, mode === "create");
     const slugBase = formData.name
       .trim()
       .toLowerCase()
@@ -126,6 +129,18 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
               />
             </Field>
             <ToolPicker selectedTools={formData.tools} onToggleGroup={toggleGroup} />
+            {hasAdvancedTool && (
+              <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                <div className="space-y-0.5 pe-3">
+                  <Label>{t("agent-dialog.yoloLabel")}</Label>
+                  <p className="text-xs text-muted-foreground">{t("agent-dialog.yoloHint")}</p>
+                </div>
+                <Switch
+                  checked={formData.yolo}
+                  onCheckedChange={(v) => setFormData((prev) => ({ ...prev, yolo: v }))}
+                />
+              </div>
+            )}
             <ContextPathField
               contextPaths={formData.context}
               onAdd={addContext}

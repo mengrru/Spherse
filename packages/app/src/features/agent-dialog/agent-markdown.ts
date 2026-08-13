@@ -24,6 +24,7 @@ export interface AgentFormData {
   context: string[];
   systemPrompt: string;
   timePerception?: TimePerceptionFormData;
+  yolo: boolean;
 }
 
 export interface ParsedAgent {
@@ -41,6 +42,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
         tools: [],
         context: [],
         systemPrompt: raw.trim(),
+        yolo: false,
       },
       extraFrontmatter: {},
     };
@@ -50,7 +52,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
   const body = raw.slice(match[0].length).trim();
   const frontmatter = yaml.load(frontmatterRaw) as Record<string, unknown>;
 
-  const { name, alias, tools, context, timePerception, ...extra } = frontmatter;
+  const { name, alias, tools, context, timePerception, yolo, ...extra } = frontmatter;
 
   return {
     formData: {
@@ -64,6 +66,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
         : [],
       systemPrompt: body,
       timePerception: parseTimePerception(timePerception),
+      yolo: yolo === true,
     },
     extraFrontmatter: extra,
   };
@@ -95,6 +98,9 @@ export function buildAgentMarkdown(
         ? { timeZone: formData.timePerception.timeZone }
         : {}),
     };
+  }
+  if (formData.yolo) {
+    frontmatter.yolo = true;
   }
 
   const cleaned = Object.fromEntries(

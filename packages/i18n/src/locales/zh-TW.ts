@@ -191,6 +191,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "agent-dialog.timeZoneHint": "選擇感知時間的時區，預設使用系統時區。",
   "agent-dialog.timePerceptionPreview": "目前感知時間",
   "agent-dialog.timePerceptionExample": "舉例：錨定 = 現在，感知起點 = 2024-01-01，流速 = 60 → 真實過去 1 分鐘，感知時間前進 1 小時。",
+  "agent-dialog.yoloLabel": "自動放行（Yolo）",
+  "agent-dialog.yoloHint": "啟用後，命令執行、Agent 與 Trigger 設定變更將跳過確認直接執行。檔案存取策略不受影響。",
   "agent-session-list.newSession": "新建對話",
   "agent-session-list.createAgentTooltip": "建立智能體",
   "agent-session-list.emptyAgents": "暫無對話",

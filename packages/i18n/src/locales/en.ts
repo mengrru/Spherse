@@ -191,6 +191,8 @@ export const en: Record<TranslationKey, string> = {
   "agent-dialog.timeZoneHint": "Select the timezone for perceived time. Defaults to system timezone.",
   "agent-dialog.timePerceptionPreview": "Current perceived time",
   "agent-dialog.timePerceptionExample": "Example: anchor = now, start = 2024-01-01, rate = 60 → 1 real minute = 1 perceived hour.",
+  "agent-dialog.yoloLabel": "Auto-approve (Yolo)",
+  "agent-dialog.yoloHint": "When enabled, command execution and Agent/Trigger config changes run without confirmation. File access policy is unaffected.",
   "agent-session-list.newSession": "New Session",
   "agent-session-list.createAgentTooltip": "Create Agent",
   "agent-session-list.emptyAgents": "No conversations yet",

@@ -386,6 +386,10 @@ export const zhCN = {
   "agent-dialog.timePerceptionPreview": "当前感知时间",
   // 时间感知举例说明
   "agent-dialog.timePerceptionExample": "举例：锚定 = 现在，感知起点 = 2024-01-01，流速 = 60 → 真实过去 1 分钟，感知时间前进 1 小时。",
+  // Yolo 模式开关标签（位于 Agent 基本设置的工具权限下方，开关行左侧标题）
+  "agent-dialog.yoloLabel": "自动放行（Yolo）",
+  // Yolo 模式开关行提示语：说明启用后哪些工具会跳过用户确认直接执行
+  "agent-dialog.yoloHint": "启用后，命令执行、Agent 与 Trigger 配置变更将跳过确认直接运行。文件访问策略不受影响。",
 
   // --- Agent Session List ---
   // 新建对话按钮文案
