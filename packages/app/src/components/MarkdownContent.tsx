@@ -9,6 +9,7 @@ interface MarkdownContentProps {
   variant?: "chat" | "document";
   breaks?: boolean;
   resolveImageSrc?: (src: string) => string;
+  linkClassName?: string;
   onLinkClick?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
@@ -118,7 +119,7 @@ const CHAT_COMPONENTS: Components = {
   ),
 };
 
-export function MarkdownContent({ children, variant = "document", breaks, resolveImageSrc, onLinkClick }: MarkdownContentProps) {
+export function MarkdownContent({ children, variant = "document", breaks, resolveImageSrc, linkClassName, onLinkClick }: MarkdownContentProps) {
   const components = useMemo<Components>(() => {
     const base = variant === "chat" ? CHAT_COMPONENTS : DOCUMENT_COMPONENTS;
     const overrides: Partial<Components> = {};
@@ -133,13 +134,13 @@ export function MarkdownContent({ children, variant = "document", breaks, resolv
         />
       );
     }
-    if (onLinkClick) {
+    if (onLinkClick || linkClassName) {
       overrides.a = ({ className, href, ...props }) => (
         <a
-          className={cn("text-primary underline underline-offset-4", className)}
+          className={cn("text-primary underline underline-offset-4", linkClassName, className)}
           href={href}
           onClick={(event) => {
-            if (!href) return;
+            if (!onLinkClick || !href) return;
             onLinkClick(href, event);
           }}
           {...props}
@@ -148,7 +149,7 @@ export function MarkdownContent({ children, variant = "document", breaks, resolv
     }
     if (Object.keys(overrides).length === 0) return base;
     return { ...base, ...overrides };
-  }, [variant, resolveImageSrc, onLinkClick]);
+  }, [variant, resolveImageSrc, linkClassName, onLinkClick]);
 
   return (
     <div className={variant === "chat" ? "text-sm leading-6" : "text-sm leading-7"}>

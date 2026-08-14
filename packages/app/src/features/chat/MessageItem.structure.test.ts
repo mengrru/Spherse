@@ -37,6 +37,13 @@ describe("MessageItem structure", () => {
     expect(source).toContain("scrollIntoView");
   });
 
+  it("makes chat bubble links inherit the bubble text color so themes that repaint bubbles keep them readable", () => {
+    const source = readFileSync(join(currentDir, "MessageItem.tsx"), "utf8");
+
+    expect(source).toContain('linkClassName="text-inherit"');
+    expect(source).not.toContain("text-primary-foreground\" : undefined");
+  });
+
   it("renders user message image attachments through the preview url", () => {
     const source = readFileSync(join(currentDir, "MessageItem.tsx"), "utf8");
 
