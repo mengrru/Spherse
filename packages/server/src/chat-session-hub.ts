@@ -1,5 +1,6 @@
 import { ConflictError, type Attachment, type SessionManager } from "@spherse/core";
 import type { FastifyBaseLogger } from "fastify";
+import { classifyRunError } from "./classify-run-error.js";
 
 type CoreEventHandler = Parameters<SessionManager["sendMessage"]>[3];
 type CoreEvent = Parameters<CoreEventHandler>[0];
@@ -105,6 +106,42 @@ export class ChatSessionHub {
         this.cleanupIfIdle(channel);
       },
     };
+  }
+
+  async startDetachedRun(
+    projectId: string,
+    runtime: SessionManager,
+    agentId: string,
+    sessionId: string,
+    content: string,
+  ): Promise<void> {
+    const channel = this.getOrCreateChannel(projectId, runtime, agentId, sessionId);
+    channel.attachments += 1;
+    try {
+      await channel.ready;
+      if (channel.running) {
+        throw new ConflictError(`Session "${sessionId}" is already running`);
+      }
+    } catch (err) {
+      channel.attachments -= 1;
+      this.cleanupIfIdle(channel);
+      throw err;
+    }
+    this.startRun(channel, (onEvent) =>
+      channel.runtime.sendMessage(sessionId, content, [], onEvent),
+    )
+      .catch((err) => {
+        this.logger.error({ err, sessionId }, "detached chat run failed");
+        this.publish(channel, {
+          type: "error",
+          message: err instanceof Error ? err.message : "chat error",
+          code: classifyRunError(err),
+        });
+      })
+      .finally(() => {
+        channel.attachments -= 1;
+        this.cleanupIfIdle(channel);
+      });
   }
 
   private getOrCreateChannel(

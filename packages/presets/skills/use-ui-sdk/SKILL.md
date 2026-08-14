@@ -1,6 +1,6 @@
 ---
 name: use-ui-sdk
-description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话、打开已有会话、打开文件、向会话发消息、读写数据、枚举数据、目录列表、文件元信息、订阅文件变化、只读查询项目信息、弹 toast 提示）
+description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话并获取会话 ID、静默后台发送消息、打开已有会话、打开文件、向会话发消息、读写数据、枚举数据、目录列表、文件元信息、订阅文件变化、只读查询项目信息、弹 toast 提示）
 ---
 
 # UI SDK — `window.spherse`
@@ -28,7 +28,8 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 
 | 类别 | 方法 | 说明 |
 |------|------|------|
-| 触发型（fire-and-forget） | `createSession` / `openSession` / `openFile` / `openExternalLink` / `floatSession` / `unfloatSession` / `floatContent` / `unfloatContent` / `emitAgentTriggerEvent` / `toast` | 单向触发，无返回值 |
+| 触发型（fire-and-forget） | `openSession` / `openFile` / `openExternalLink` / `floatSession` / `unfloatSession` / `floatContent` / `unfloatContent` / `emitAgentTriggerEvent` / `toast` | 单向触发，无返回值 |
+| 请求型（Promise） | `createSession(params)` → `Promise<{ sessionId }>` | 创建会话，返回新会话 ID |
 | 请求型（Promise） | `sendMessage(params)` → `Promise` | 等待发送结果 |
 | 请求型（Promise） | `data.get` / `data.set` / `data.delete` / `data.keys` / `data.entries` | key-value 持久化 |
 | 请求型（Promise） | `api.call(op, args)` 及 `api.*` 命名方法 | 只读查询项目信息（agents / sessions / content / fileTree） |
@@ -51,23 +52,6 @@ await spherse.sendMessage({ sessionId: rt.sessionId, message: "继续分析" });
 ```
 
 ## 触发型 Action
-
-### `spherse.createSession(params)`
-
-创建新会话并导航到聊天页面。
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| agentId | string | 否 | 目标 agent 的 ID（UUID，与 `agentSlug` 二选一，同时提供时以 `agentId` 为准） |
-| agentSlug | string | 否 | 目标 agent 的 slug（即 agent 目录名，形如 `writer-a1b2c3`，可在 agent 右键菜单「复制 ID」获取） |
-| message | string | 否 | 初始消息内容 |
-| float | boolean | 否 | 为 `true` 时在浮窗中打开 |
-
-```javascript
-spherse.createSession({ agentId: "writer", message: "请帮我扩展这段设定" });
-// 或用 slug
-spherse.createSession({ agentSlug: "writer-a1b2c3" });
-```
 
 ### `spherse.openFile(path)` / `spherse.openFile(params)`
 
@@ -145,14 +129,54 @@ spherse.toast({ variant: "success", message: "已保存", description: "world/ga
 spherse.toast({ variant: "error", message: "保存失败，请重试" });
 ```
 
+## 请求型 Action — 创建会话
+
+### `spherse.createSession(params)` → `Promise<{ sessionId }>`
+
+创建新会话，成功时 resolve `{ sessionId }`（新会话的 ID），默认导航到聊天页面。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| agentId | string | 否 | 目标 agent 的 ID（UUID，与 `agentSlug` 二选一，同时提供时以 `agentId` 为准） |
+| agentSlug | string | 否 | 目标 agent 的 slug（即 agent 目录名，形如 `writer-a1b2c3`，可在 agent 右键菜单「复制 ID」获取） |
+| message | string | 否 | 初始消息内容（`open: false` 时为排队语义：等会话被打开后才发出） |
+| open | boolean | 否 | 为 `false` 时只创建会话、不跳转不浮窗；省略即默认打开 |
+| float | boolean | 否 | 为 `true` 时在浮窗中打开（与 `open: false` 同给时以 `open: false` 为准） |
+
+- 成功：resolve `{ sessionId: string }`，可继续用于 `sendMessage` / `openSession` / `floatSession`
+- 失败：reject（`agent_not_found` / `create_failed`）
+
+```javascript
+const { sessionId } = await spherse.createSession({ agentId: "writer", message: "请帮我扩展这段设定" });
+// 或用 slug
+spherse.createSession({ agentSlug: "writer-a1b2c3" });
+```
+
+**后台会话 compose 模式**（创建即静默执行，不打开任何 UI）：
+
+```javascript
+const { sessionId } = await spherse.createSession({ agentId: "writer", open: false });
+await spherse.sendMessage({ sessionId, message: "后台整理设定集", open: false });
+```
+
 ## 请求型 Action — 发送消息
 
 ### `spherse.sendMessage(params)` → `Promise<void>`
 
-向已有会话**发送消息**并导航到聊天页面。`message` 必填 —— 这是发消息动作，**不能**省略 `message`。如需只打开已有会话不发消息，请用 [`spherse.openSession`](#spherseopensessionsessionid)。返回 Promise：
+向已有会话**发送消息**，默认导航到聊天页面。`message` 必填 —— 这是发消息动作，**不能**省略 `message`。如需只打开已有会话不发消息，请用 [`spherse.openSession`](#spherseopensessionsessionid)。
 
-- 发送成功：resolve
-- 目标会话仍在生成中（`session_busy`）：reject，消息**不会**被发送，应提示用户稍后重试
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| sessionId | string | 是 | 目标会话 ID |
+| message | string | 是 | 消息内容 |
+| open | boolean | 否 | 为 `false` 时静默发送：不跳转不浮窗，消息直接送达 server 立即执行（会话未打开也能发送） |
+| float | boolean | 否 | 为 `true` 时在浮窗中打开（与 `open: false` 同给时以 `open: false` 为准） |
+
+返回 Promise：
+
+- resolve：消息**已发出**（目标会话已打开时走实时通道，未打开时由 server 直接执行并持久化）
+- `session_busy`：目标会话正在生成中（含后台运行），消息不会被发送，应稍后重试
+- `session_not_found` / `send_failed`：会话不存在或发送失败
 
 ```javascript
 const rt = await spherse.getRuntime();

@@ -10,6 +10,7 @@ import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
 import { registerAuthHook, type AuthOptions } from "./auth.js";
 import { registerAllRoutes } from "./routes/index.js";
+import { ChatSessionHub } from "./chat-session-hub.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleBusWebSocket } from "./ws-bus.js";
 
@@ -94,9 +95,14 @@ export async function createMultiProjectServer(
     sampling: options?.sampling,
   });
 
+  const chatHub = new ChatSessionHub(logger);
+
   registerAuthHook(fastify, options?.auth ?? {});
-  registerAllRoutes(fastify, registry, { authRequired: Boolean(options?.auth?.accessToken) });
-  handleChatWebSocket(fastify, registry);
+  registerAllRoutes(fastify, registry, {
+    authRequired: Boolean(options?.auth?.accessToken),
+    hub: chatHub,
+  });
+  handleChatWebSocket(fastify, registry, chatHub);
   handleBusWebSocket(fastify, registry);
 
   fastify.addHook("onResponse", async (req, reply) => {

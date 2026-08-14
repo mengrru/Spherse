@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockCreateSession = vi.fn();
 const mockSetFloatingChat = vi.fn();
+const mockPostMessage = vi.fn();
 const mockGetState = vi.fn(() => ({
   projects: {} as Record<string, { agents: Array<{ id: string; slug: string }> }>,
   createSession: mockCreateSession,
@@ -35,10 +36,19 @@ function makeCtx(client: any, projectId = "proj-1", hostKind: "electron" | "web"
   } as any;
 }
 
+function makeRequestCtx(client: any, projectId = "proj-1") {
+  return {
+    ...makeCtx(client, projectId),
+    source: { postMessage: mockPostMessage } as any,
+    requestId: "req-1",
+  } as any;
+}
+
 describe("createSession action", () => {
   beforeEach(() => {
     mockCreateSession.mockReset();
     mockSetFloatingChat.mockReset();
+    mockPostMessage.mockReset();
     mockGetState.mockReset();
     mockGetState.mockReturnValue({
       projects: {},
@@ -184,5 +194,76 @@ describe("createSession action", () => {
     );
     expect(mockSetFloatingChat).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith("/project/proj-1/chat/session-1");
+  });
+
+  it("responds with the new sessionId on success", async () => {
+    await dispatchAction(
+      "createSession",
+      { agentId: "agent-1" },
+      makeRequestCtx(makeClient(async () => [])),
+    );
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "spherse:response",
+        requestId: "req-1",
+        ok: true,
+        data: { sessionId: "session-1" },
+      }),
+      "*",
+    );
+  });
+
+  it("responds agent_not_found when the slug cannot be resolved", async () => {
+    const client = makeClient(async () => [{ id: "id-x", slug: "x-112233" }]);
+    await dispatchAction(
+      "createSession",
+      { agentSlug: "missing-deadbe" },
+      makeRequestCtx(client),
+    );
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        data: { error: "agent_not_found" },
+      }),
+      "*",
+    );
+  });
+
+  it("responds create_failed when the store returns null", async () => {
+    mockCreateSession.mockResolvedValue(null);
+    await dispatchAction(
+      "createSession",
+      { agentId: "agent-1" },
+      makeRequestCtx(makeClient(async () => [])),
+    );
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        data: { error: "create_failed" },
+      }),
+      "*",
+    );
+  });
+
+  it("skips navigation when open is false", async () => {
+    const navigate = vi.fn();
+    await dispatchAction(
+      "createSession",
+      { agentId: "agent-1", open: false },
+      { client: makeClient(async () => []), projectId: "proj-1", navigate } as any,
+    );
+    expect(navigate).not.toHaveBeenCalled();
+    expect(mockSetFloatingChat).not.toHaveBeenCalled();
+  });
+
+  it("skips navigation when open is false even with float", async () => {
+    const navigate = vi.fn();
+    await dispatchAction(
+      "createSession",
+      { agentId: "agent-1", open: false, float: true },
+      { client: makeClient(async () => []), projectId: "proj-1", navigate, hostKind: "electron" } as any,
+    );
+    expect(navigate).not.toHaveBeenCalled();
+    expect(mockSetFloatingChat).not.toHaveBeenCalled();
   });
 });

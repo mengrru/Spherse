@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ProjectRegistry, ProjectContext } from "../registry.js";
+import type { ChatSessionHub } from "../chat-session-hub.js";
 import { notFound } from "../errors.js";
 import { registerAgentRoutes } from "./agents.js";
 import { registerAgentWriteRoutes } from "./agent-write.js";
@@ -24,12 +25,13 @@ declare module "fastify" {
 
 export interface RouteOptions {
   authRequired?: boolean;
+  hub: ChatSessionHub;
 }
 
 export function registerAllRoutes(
   fastify: FastifyInstance,
   registry: ProjectRegistry,
-  options?: RouteOptions,
+  options: RouteOptions,
 ): void {
   fastify.addHook("preHandler", async (req: FastifyRequest) => {
     const projectId = (req.params as Record<string, string> | undefined)?.projectId;
@@ -43,7 +45,7 @@ export function registerAllRoutes(
   registerAgentRoutes(fastify, registry);
   registerAgentWriteRoutes(fastify, registry);
   registerAgentMcpRoutes(fastify, registry);
-  registerSessionRoutes(fastify, registry);
+  registerSessionRoutes(fastify, registry, options.hub);
   registerContentRoutes(fastify, registry);
   registerSettingsRoutes(fastify, registry);
   registerPreviewRoutes(fastify, registry);

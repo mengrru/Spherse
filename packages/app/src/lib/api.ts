@@ -43,6 +43,15 @@ export interface AttachmentUploadResponse {
   bytes: number;
 }
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 async function assertOk(res: Response): Promise<void> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "request failed" }));
@@ -93,6 +102,22 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       });
       await assertOk(res);
       return parseJsonResponse<{ sessionId: string }>(res, schemas.sessionCreateResponse);
+    },
+
+    async sendMessage(agentId: string, id: string, content: string): Promise<{ ok: boolean }> {
+      const res = await authedFetch(
+        `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: "request failed" }));
+        throw new ApiError(body.error ?? "request failed", res.status);
+      }
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.sendMessageOkResponse);
     },
 
     async getSession(agentId: string, id: string): Promise<SessionInfo> {

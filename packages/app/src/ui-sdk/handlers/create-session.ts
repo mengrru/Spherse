@@ -1,4 +1,5 @@
 import { registerAction } from "../registry";
+import { respond } from "../respond";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { openChat } from "./open-chat";
 import type { ApiClient } from "../../lib/api";
@@ -25,21 +26,34 @@ async function resolveAgentId(
 }
 
 registerAction("createSession", async (params, ctx) => {
-  const { agentId, agentSlug, message, float } = params as {
+  const { agentId, agentSlug, message, open, float } = params as {
     agentId?: string;
     agentSlug?: string;
     message?: string;
+    open?: boolean;
     float?: boolean;
   };
-  if (!ctx.client) return;
+  if (!ctx.client) {
+    respond(ctx, false, { error: "create_failed" });
+    return;
+  }
 
   const resolvedAgentId = await resolveAgentId(ctx.projectId, ctx.client, agentId, agentSlug);
-  if (!resolvedAgentId) return;
+  if (!resolvedAgentId) {
+    respond(ctx, false, { error: "agent_not_found" });
+    return;
+  }
 
   const session = await useProjectDataStore
     .getState()
     .createSession(ctx.projectId, ctx.client, resolvedAgentId, message);
-  if (!session) return;
+  if (!session) {
+    respond(ctx, false, { error: "create_failed" });
+    return;
+  }
 
+  respond(ctx, true, { sessionId: session.id });
+
+  if (open === false) return;
   openChat(ctx, session.id, float);
 });

@@ -7,13 +7,13 @@ import {
 } from "@spherse/server/contracts";
 import { classifyRunError } from "./classify-run-error.js";
 import type { ProjectRegistry } from "./registry.js";
-import { ChatSessionHub } from "./chat-session-hub.js";
+import type { ChatSessionHub } from "./chat-session-hub.js";
 
 export function handleChatWebSocket(
   fastify: FastifyInstance,
   registry: ProjectRegistry,
+  hub: ChatSessionHub,
 ) {
-  const hub = new ChatSessionHub(fastify.log);
   fastify.get<{ Params: { projectId: string; agentId: string; sessionId: string } }>(
     "/ws/projects/:projectId/chat/:agentId/:sessionId",
     { websocket: true },

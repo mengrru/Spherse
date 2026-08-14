@@ -1,9 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { schemas, parseContract } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
+import type { ChatSessionHub } from "../chat-session-hub.js";
 import { notFound } from "../errors.js";
 
-export function registerSessionRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
+export function registerSessionRoutes(
+  fastify: FastifyInstance,
+  _registry: ProjectRegistry,
+  hub: ChatSessionHub,
+): void {
   fastify.get<{
     Params: { projectId: string; agentId: string };
     Querystring: { limit?: string; offset?: string };
@@ -70,6 +75,29 @@ export function registerSessionRoutes(fastify: FastifyInstance, _registry: Proje
       }
       const messages = req.projectCtx!.projectManager.getSessionHistory(req.params.agentId, req.params.id);
       return parseContract(schemas.sessionMessagesResponse, messages);
+    },
+  );
+
+  fastify.post<{
+    Params: { projectId: string; agentId: string; id: string };
+    Body: { content: string };
+  }>(
+    "/api/projects/:projectId/agents/:agentId/sessions/:id/messages",
+    {
+      schema: {
+        body: schemas.sendMessageRequest,
+        response: { 200: schemas.sendMessageOkResponse },
+      },
+    },
+    async (req) => {
+      await hub.startDetachedRun(
+        req.params.projectId,
+        req.projectCtx!.sessionRuntime,
+        req.params.agentId,
+        req.params.id,
+        req.body.content,
+      );
+      return parseContract(schemas.sendMessageOkResponse, { ok: true });
     },
   );
 

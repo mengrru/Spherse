@@ -214,9 +214,9 @@ spherse.openExternalLink("https://example.com");
 
 需要触发 App 内其它能力时，阅读 `use-ui-sdk` skill，通过 `window.spherse.*` 调用。可用方法包括：
 
-- `spherse.createSession(params)` — 创建新会话并导航到聊天页
+- `spherse.createSession(params)` → `Promise<{ sessionId }>` — 创建新会话并导航到聊天页；`open: false` 时只创建不跳转，resolve 返回新会话 ID
 - `spherse.openSession(sessionId)` — 打开已有会话并导航，**不发消息**（只跳转用这个）
-- `spherse.sendMessage(params)` → `Promise` — 向已有会话发送消息（`message` 必填；会话忙碌时 reject `session_busy`）
+- `spherse.sendMessage(params)` → `Promise` — 向已有会话发送消息（`message` 必填；会话忙碌时 reject `session_busy`；`open: false` 时静默发送——不跳转，未打开的会话由 server 直接执行）
 - `spherse.toast(params)` — 弹一条 toast 提示（`{ variant, message, description? }`）
 - `spherse.emitAgentTriggerEvent(params)` — 触发自定义事件，激活匹配的事件触发器
 - `spherse.floatSession(id)` / `spherse.unfloatSession()` — 浮窗显示/关闭会话
@@ -246,7 +246,8 @@ spherse.openExternalLink("https://example.com");
 | 播放音视频 | HTML `<audio src="music.mp3">` / `<video src="clip.mp4">`（相对路径，支持拖动进度条） |
 | 点击打开项目内文件 | ui-sdk `openFile` |
 | 点击打开外部链接（网页/邮箱） | ui-sdk `openExternalLink`（http/https/mailto/tel），勿用 `<a href>` |
-| 打开/发送 chat 会话 | ui-sdk `createSession`（新建）/ `openSession`（只打开已有会话，不发消息）/ `sendMessage`（发消息）/ `floatSession` |
+| 打开/发送 chat 会话 | ui-sdk `createSession`（新建，返回 sessionId）/ `openSession`（只打开已有会话，不发消息）/ `sendMessage`（发消息）/ `floatSession` |
+| 后台静默创建/驱动会话 | `await createSession({ ..., open: false })` 拿到 `sessionId`，再 `await sendMessage({ sessionId, message, open: false })` 静默执行 |
 | 弹 toast 提示 | ui-sdk `toast({ variant, message, description? })` |
 | 触发事件驱动 agent 执行 | ui-sdk `emitAgentTriggerEvent`（配合 agent 触发器配置） |
 | 交互式卡片 / 向当前会话发消息 | 读 `spherse.runtime.sessionId`，调 `spherse.sendMessage`（如收集用户选择后提交回传，会话忙碌 reject `session_busy`） |

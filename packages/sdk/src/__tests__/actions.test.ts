@@ -16,9 +16,10 @@ describe("actions surface", () => {
     mockCall.mockReset();
   });
 
-  it("createSession fires createSession with params", () => {
+  it("createSession calls (request-response) createSession with params", () => {
+    mockCall.mockResolvedValue({ sessionId: "s1" });
     actions.createSession({ agentId: "a" });
-    expect(mockFire).toHaveBeenCalledWith("createSession", { agentId: "a" });
+    expect(mockCall).toHaveBeenCalledWith("createSession", { agentId: "a" });
   });
 
   it("sendMessage calls (request-response) sendMessage", () => {

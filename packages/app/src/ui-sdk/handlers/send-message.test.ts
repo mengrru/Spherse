@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "../../lib/api";
 
 const mockWsSend = vi.fn();
-const mockSetInitialMessage = vi.fn();
 const mockSetFloatingChat = vi.fn();
 const mockNavigate = vi.fn();
 const mockPostMessage = vi.fn();
 const mockToastError = vi.fn();
+const mockClientSendMessage = vi.fn();
 
 const sessionsState = vi.fn(() => ({} as Record<string, unknown>));
-const projectSessions = vi.fn(() => [{ id: "s1" }] as any[]);
+const projectSessions = vi.fn(() => [{ id: "s1", agentId: "a1" }] as any[]);
 
 vi.mock("sonner", () => ({
   toast: { error: mockToastError },
@@ -27,7 +28,6 @@ vi.mock("../../stores/project-data-store", () => ({
   useProjectDataStore: {
     getState: () => ({
       projects: { "proj-1": { sessions: projectSessions() } },
-      setInitialMessage: mockSetInitialMessage,
     }),
   },
 }));
@@ -60,19 +60,24 @@ function makeCtx(overrides: Record<string, unknown> = {}) {
   } as any;
 }
 
+function makeClient() {
+  return { sendMessage: mockClientSendMessage } as any;
+}
+
 describe("sendMessage action", () => {
   beforeEach(() => {
     mockWsSend.mockReset();
     mockWsSend.mockReturnValue(false);
-    mockSetInitialMessage.mockReset();
     mockSetFloatingChat.mockReset();
     mockNavigate.mockReset();
     mockPostMessage.mockReset();
     mockToastError.mockReset();
+    mockClientSendMessage.mockReset();
+    mockClientSendMessage.mockResolvedValue({ ok: true });
     sessionsState.mockReset();
     sessionsState.mockReturnValue({});
     projectSessions.mockReset();
-    projectSessions.mockReturnValue([{ id: "s1" }]);
+    projectSessions.mockReturnValue([{ id: "s1", agentId: "a1" }]);
   });
 
   it("is a no-op when sessionId is missing", async () => {
@@ -99,13 +104,64 @@ describe("sendMessage action", () => {
     );
   });
 
-  it("stores initial message when websocket not connected", async () => {
+  it("falls back to the http client when websocket is not connected", async () => {
     sessionsState.mockReturnValue({ "s1": { streaming: false } });
-    await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
-    expect(mockWsSend).toHaveBeenCalledWith("s1", "hi");
-    expect(mockSetInitialMessage).toHaveBeenCalledWith("proj-1", "s1", "hi");
+    await dispatchAction(
+      "sendMessage",
+      { sessionId: "s1", message: "hi" },
+      makeCtx({ client: makeClient() }),
+    );
+    expect(mockClientSendMessage).toHaveBeenCalledWith("a1", "s1", "hi");
     expect(mockPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({ ok: true }),
+      "*",
+    );
+  });
+
+  it("maps http 409 to session_busy", async () => {
+    sessionsState.mockReturnValue({ "s1": { streaming: false } });
+    mockClientSendMessage.mockRejectedValue(
+      new ApiError("Session \"s1\" is already running", 409),
+    );
+    await dispatchAction(
+      "sendMessage",
+      { sessionId: "s1", message: "hi" },
+      makeCtx({ client: makeClient() }),
+    );
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        data: { error: "session_busy" },
+      }),
+      "*",
+    );
+  });
+
+  it("maps generic http failure to send_failed", async () => {
+    sessionsState.mockReturnValue({ "s1": { streaming: false } });
+    mockClientSendMessage.mockRejectedValue(new Error("network"));
+    await dispatchAction(
+      "sendMessage",
+      { sessionId: "s1", message: "hi" },
+      makeCtx({ client: makeClient() }),
+    );
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        data: { error: "send_failed" },
+      }),
+      "*",
+    );
+  });
+
+  it("responds send_failed when websocket is down and ctx has no client", async () => {
+    sessionsState.mockReturnValue({ "s1": { streaming: false } });
+    await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
+    expect(mockPostMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ok: false,
+        data: { error: "send_failed" },
+      }),
       "*",
     );
   });
@@ -116,7 +172,6 @@ describe("sendMessage action", () => {
     });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
     expect(mockWsSend).not.toHaveBeenCalled();
-    expect(mockSetInitialMessage).not.toHaveBeenCalled();
     expect(mockPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "spherse:response",
@@ -138,7 +193,6 @@ describe("sendMessage action", () => {
       { projectId: "proj-1", navigate: mockNavigate } as any,
     );
     expect(mockWsSend).not.toHaveBeenCalled();
-    expect(mockSetInitialMessage).not.toHaveBeenCalled();
     expect(mockPostMessage).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith("/project/proj-1/chat/s1");
   });
@@ -150,6 +204,33 @@ describe("sendMessage action", () => {
     });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
     expect(mockNavigate).toHaveBeenCalledWith("/project/proj-1/chat/s1");
+  });
+
+  it("skips navigation when open is false", async () => {
+    mockWsSend.mockReturnValue(true);
+    sessionsState.mockReturnValue({
+      "s1": { streaming: false },
+    });
+    await dispatchAction(
+      "sendMessage",
+      { sessionId: "s1", message: "hi", open: false },
+      makeCtx(),
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("skips navigation when open is false even with float", async () => {
+    mockWsSend.mockReturnValue(true);
+    sessionsState.mockReturnValue({
+      "s1": { streaming: false },
+    });
+    await dispatchAction(
+      "sendMessage",
+      { sessionId: "s1", message: "hi", open: false, float: true },
+      makeCtx(),
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockSetFloatingChat).not.toHaveBeenCalled();
   });
 
   it("opens floating chat when float is true", async () => {
@@ -188,7 +269,6 @@ describe("sendMessage action", () => {
     );
     expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockWsSend).not.toHaveBeenCalled();
-    expect(mockSetInitialMessage).not.toHaveBeenCalled();
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(mockPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({

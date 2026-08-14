@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotFoundError, ModelNotConfiguredError } from "@spherse/core";
 
 import { handleChatWebSocket } from "../ws-chat.js";
+import { ChatSessionHub } from "../chat-session-hub.js";
 import { CHAT_CLOSE_CODES } from "../contracts/index.js";
 
 interface MockSocket {
@@ -64,6 +65,13 @@ function createMockRegistry() {
   };
 }
 
+const hubLogger = {
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+};
+
 function req(params: Record<string, string>): unknown {
   return { params };
 }
@@ -76,7 +84,7 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     routeHandler = null;
     const mock = createMockRegistry();
     sessionRuntime = mock.sessionRuntime;
-    handleChatWebSocket(mockFastify as never, mock.registry as never);
+    handleChatWebSocket(mockFastify as never, mock.registry as never, new ChatSessionHub(hubLogger));
     socket = createMockSocket();
     routeHandler!(socket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
   });
@@ -101,7 +109,7 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
         onEvent({ type: "agent_end", messages: [] });
       },
     );
-    handleChatWebSocket(mockFastify as never, mock.registry as never);
+    handleChatWebSocket(mockFastify as never, mock.registry as never, new ChatSessionHub(hubLogger));
     const eventSocket = createMockSocket();
     routeHandler!(eventSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -122,7 +130,7 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     routeHandler = null;
     const mock = createMockRegistry();
     mock.registry.get = vi.fn(() => undefined);
-    handleChatWebSocket(mockFastify as never, mock.registry as never);
+    handleChatWebSocket(mockFastify as never, mock.registry as never, new ChatSessionHub(hubLogger));
     const unknownSocket = createMockSocket();
     routeHandler!(unknownSocket, req({ projectId: "missing", agentId: "a1", sessionId: "s1" }));
     expect(unknownSocket.close).toHaveBeenCalled();
@@ -134,7 +142,7 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     mock.sessionRuntime.restoreSession = vi
       .fn()
       .mockRejectedValue(new NotFoundError("Session s1 not found"));
-    handleChatWebSocket(mockFastify as never, mock.registry as never);
+    handleChatWebSocket(mockFastify as never, mock.registry as never, new ChatSessionHub(hubLogger));
     const errSocket = createMockSocket();
     routeHandler!(errSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -150,7 +158,7 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     routeHandler = null;
     const mock = createMockRegistry();
     mock.sessionRuntime.restoreSession = vi.fn().mockRejectedValue(new Error("boom"));
-    handleChatWebSocket(mockFastify as never, mock.registry as never);
+    handleChatWebSocket(mockFastify as never, mock.registry as never, new ChatSessionHub(hubLogger));
     const errSocket = createMockSocket();
     routeHandler!(errSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
     await new Promise((resolve) => setTimeout(resolve, 0));

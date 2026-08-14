@@ -49,11 +49,11 @@ export function postAction(
 }
 
 /** Call a host action and await its reply. Rejects on timeout or host error. */
-export function call(
+export function call<T = unknown>(
   action: string,
   params: Record<string, unknown> | null,
   timeoutMs = DEFAULT_TIMEOUT,
-): Promise<unknown> {
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const id = genId();
     const timer = setTimeout(() => {
@@ -65,7 +65,7 @@ export function call(
     pending[id] = (ok, data) => {
       clearTimeout(timer);
       delete pending[id];
-      if (ok) resolve(data);
+      if (ok) resolve(data as T);
       else reject(new Error((data as { error?: string } | null)?.error ?? "spherse:error"));
     };
 

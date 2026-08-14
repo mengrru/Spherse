@@ -174,4 +174,82 @@ describe("ChatSessionHub", () => {
     mock.finish();
     await expect(run).resolves.toBeUndefined();
   });
+
+  it("startDetachedRun resolves before the run completes and publishes events to subscribers", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await attachment.ready;
+    events.length = 0;
+
+    await hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi");
+
+    expect(mock.runtime.sendMessage).toHaveBeenCalledWith("s1", "hi", [], expect.any(Function));
+    expect(events).toContainEqual({ type: "run_status", active: true });
+    expect(mock.runtime.destroySession).not.toHaveBeenCalled();
+
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({ type: "run_status", active: false }),
+    );
+    attachment.close();
+  });
+
+  it("startDetachedRun rejects with ConflictError when a run is already active", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    await attachment.ready;
+
+    const run = attachment.sendMessage("hi");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+
+    await expect(
+      hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "again"),
+    ).rejects.toThrow(/already running/);
+
+    mock.finish();
+    await run;
+    attachment.close();
+  });
+
+  it("startDetachedRun logs and publishes an error event when the detached run fails", async () => {
+    const mock = createRuntime();
+    mock.runtime.sendMessage.mockRejectedValue(new Error("provider down"));
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await attachment.ready;
+    events.length = 0;
+
+    await expect(
+      hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi"),
+    ).resolves.toBeUndefined();
+
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({
+        type: "error",
+        message: "provider down",
+        code: "TRANSIENT",
+      }),
+    );
+    expect(logger.error).toHaveBeenCalled();
+    attachment.close();
+  });
+
+  it("startDetachedRun rethrows restore failures", async () => {
+    const mock = createRuntime();
+    mock.runtime.restoreSession.mockRejectedValue(new Error("no such session"));
+    const hub = new ChatSessionHub(logger);
+
+    await expect(
+      hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi"),
+    ).rejects.toThrow("no such session");
+  });
 });
