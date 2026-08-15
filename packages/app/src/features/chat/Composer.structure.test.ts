@@ -21,6 +21,10 @@ describe("Composer structure", () => {
     expect(source).not.toContain("PaperclipIcon");
   });
 
+  it("swaps the attach button icon for the spinner while busy", () => {
+    expect(source).toMatch(/attachBusy \? <Loader2Icon[^>]*\/> : <ImageIcon \/>/);
+  });
+
   it("runs the compress -> upload pipeline and deletes on remove", () => {
     expect(source).toContain("compressImage");
     expect(source).toContain("uploadAttachedImage");
