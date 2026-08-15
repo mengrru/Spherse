@@ -948,10 +948,6 @@ export const zhCN = {
   "tool.run_command": "运行命令",
   // 独立工具 tooltip：运行命令的安全提示——强调任意命令、逐次确认、有风险
   "tool.run_command_hint": "允许智能体执行 shell 命令（unix sh / Windows PowerShell）。每次执行前都会要求你确认；进程将以你的系统权限运行，请仅在你信任该智能体时启用",
-  // 独立工具标签：向用户提问（ask_user，agent 运行中向用户提出问题并等待回答）
-  "tool.ask_user": "向你提问",
-  // 独立工具 tooltip：向用户提问的作用说明
-  "tool.ask_user_hint": "允许智能体在运行中向你提问并等待回答，适合缺少关键信息时使用",
   // 独立工具标签：管理智能体（manage_agent，agent 可查看/新建/修改本项目内智能体的名称、提示词、工具、上下文，高危，写操作需人工确认）
   "tool.manage_agent": "管理智能体",
   // 独立工具 tooltip：管理智能体的作用与风险说明

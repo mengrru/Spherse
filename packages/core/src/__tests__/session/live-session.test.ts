@@ -336,7 +336,7 @@ describe("LiveSession context engineering", () => {
 
     expect(agent.state.systemPrompt).toContain("Reloaded system prompt body.");
     expect(agent.state.systemPrompt).not.toContain("Original system prompt body.");
-    expect(agent.state.tools).toEqual([]);
+    expect(agent.state.tools.map((t: any) => t.name)).toEqual(["ask_user"]);
   });
 
   it("markReloadPending defers reload until the next sendMessage", async () => {
@@ -517,6 +517,20 @@ describe("LiveSession yolo mode", () => {
     ]);
 
     expect(settled).toBe(PENDING);
+  });
+
+  it("ask_user is registered even when profile tools omit it", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    agentStore._profile = {
+      ...agentStore._profile,
+      tools: ["read_file"],
+    };
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+
+    const askTools = agentOf(live).state.tools.filter((t: any) => t.name === "ask_user");
+    expect(askTools).toHaveLength(1);
+    expect(findTool(live, "read_file")).toBeDefined();
   });
 
   it("ask_user routes through the control bus and resolves with the user's answer", async () => {

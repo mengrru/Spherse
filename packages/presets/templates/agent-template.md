@@ -12,5 +12,4 @@ tools:
   - render_card
   - generate_image
   - emit_trigger_event
-  - ask_user
 ---

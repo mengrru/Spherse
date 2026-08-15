@@ -42,6 +42,8 @@ import {
 
 export type AgentEventHandler = (event: AgentEvent | SessionControlEvent) => void;
 
+const ALWAYS_ENABLED_TOOL_NAMES = ["ask_user"];
+
 function dedupeToolNames(
   existing: AgentTool[],
   incoming: AgentTool[],
@@ -531,7 +533,7 @@ export class LiveSession {
     );
     const allTools = createToolsForProject(toolContext);
 
-    const toolNames = profile.tools ?? [];
+    const toolNames = [...new Set([...(profile.tools ?? []), ...ALWAYS_ENABLED_TOOL_NAMES])];
     const tools: AgentTool[] = toolNames
       .map((name) => allTools[name])
       .filter(Boolean);
