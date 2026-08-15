@@ -166,7 +166,7 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
               send();
             }
           }}
-          disabled={streaming || loading}
+          disabled={loading}
         />
         <input
           ref={fileInputRef}
