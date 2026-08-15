@@ -8,6 +8,8 @@
 
 ## 代码质量
 
+- [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。
+
 - [x] **Chat 前端状态边界拆分**：将 `features/chat/runtime/streaming-store.ts` 中的 WebSocket、心跳、重连和连接期对账提取为 per-session `ChatSessionRuntime`；Zustand 仅保留可观察状态与公开 actions，transport runtime 由 registry 管理；将纯数据逻辑收纳到 `features/chat/model/`，由 reducer、历史投影和 tool/card 投影模块分别负责，并以 `connectionStatus` 替代 `wsConnecting` 布尔值。参见 `docs/dev/bugfix/2026-08-04-chat-ws-lifecycle/design.md`
 - [x] **Chat 长响应断线恢复链路系统化**：由 server `ChatSessionHub` 将 Core run 生命周期与单条 WebSocket 解耦，负责 attachment 广播与当前 run 重放，Core session 保持执行/持久化边界；重连通过 `run_status` + 带稳定 message id 的最新历史页对账，移除一次性 `historyLoaded` 补丁语义；修复 renderer suspend 后心跳误判、socket send 失败阻断持久化及断线提前结束 loading。参见 `docs/dev/bugfix/2026-08-04-chat-ws-lifecycle/design.md`
 - [x] **压缩策略修复——sanitize orphaned toolResult + prompt/turn 双阈值**：`compaction.ts` 的 `sanitizeToolCallPairs` 在 toolCall 被截断但配对的 toolResult 落在保留窗口内时，将孤立的 toolResult 内容替换为占位文本，避免 LLM 看到「没有 toolCall 的 toolResult」困惑；压缩触发改为 prompt token 与 turn 数双阈值（任一超过即压缩），避免纯 toolResult-heavy 短轮次超出 token 但 turn 数未达阈值的情况漏压缩。
@@ -32,6 +34,7 @@
 
 ## 功能增强
 
+- [x] **LLM ask_user 工具（运行中向用户提问）**：新增内置工具 `ask_user`，agent 运行中向用户提一个问题（可选 2–6 候选项）并阻塞等待回答，答案作为 tool result 返回模型、同一 run 内继续执行。复用 `SessionControlBus` 新增 `kind: "question"`（`AskGate` 薄适配器），前端 QuestionCard 内联展示待答/已答/超时三态，跨会话 toast 复用 `ApprovalNoticeBridge`；超时默认 600s（`timeout_s` 可调，clamp 60–3600）返回 `{ timedOut: true }` 提示模型自行判断继续，abort 走 `bus.rejectAll`。per-agent opt-in（profile `tools:`，默认模板已启用）。参见 `docs/dev/features/2026-08-15-llm-ask-user-tool/design.md`
 - [x] **run_command 超时上限放宽**：`MAX_TIMEOUT_MS` 600s → 1800s（30min），默认 60s 与下限 1s 不变；`timeout_ms` 参数 description 更新 max 值并引导长任务显式传预估时长；导出 `clampTimeout` 供单测。不触碰审批 5min 超时。参见 `docs/dev/features/2026-08-15-run-command-timeout-relaxation/design.md`
 - [ ] **run_command 后台执行模式**：`background: true` 立即返回 job id、agent 轮询输出，长任务不再阻塞 agent 回合（超时放宽的根治方向）；per-agent 超时配置与 CommandCard 运行时长展示视后续诉求跟进。参见 `docs/dev/features/2026-08-15-run-command-timeout-relaxation/design.md`「未来演进」
 - [x] **Chat 图片输入（Vision Input）**：用户在 Composer 通过附件按钮发送一张图片（前端 Canvas 压缩 long edge ≤1568 / JPEG），agent 可看图说话。新增通用 `AttachmentProcessor` 抽象（`packages/core/src/attachments/`，图片为首个实现，未来 PDF 等扩展不动链路）；图片走磁盘（`.spherse/attachments/`），落库/WS 转发/轮后内存三处统一剥离为文本占位 + `_attachments` 路径引用，后续轮次 LLM 上下文不含 base64，历史气泡仍经 preview URL 显示原图。模型不支持 vision（`Model.input` 不含 `image`）时禁用附件按钮并提示。参见 `docs/dev/features/2026-08-06-chat-image-input/design.md`

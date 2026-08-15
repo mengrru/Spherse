@@ -86,4 +86,82 @@ describe("SessionControlBus", () => {
     await p;
     expect(sink).not.toHaveBeenCalled();
   });
+
+  it("emits control_request for question kind with correct shape", async () => {
+    const bus = new SessionControlBus();
+    const events: SessionControlEvent[] = [];
+    bus.setEventSink((e) => events.push(e));
+    const p = bus.request(
+      { requestId: "q1", kind: "question", toolCallId: "tcq1", toolName: "ask_user", args: { question: "continue?" } },
+      60_000,
+      { timedOut: true },
+    );
+    bus.resolve("q1", { answer: "yes", timedOut: false });
+    await p;
+    bus.setEventSink(null);
+    expect(events[0]).toEqual({
+      type: "control_request",
+      requestId: "q1",
+      kind: "question",
+      toolCallId: "tcq1",
+      toolName: "ask_user",
+      args: { question: "continue?" },
+    });
+  });
+
+  it("resolves a question request and emits control_resolved with answer", async () => {
+    const bus = new SessionControlBus();
+    const events: SessionControlEvent[] = [];
+    bus.setEventSink((e) => events.push(e));
+    const p = bus.request(
+      { requestId: "q2", kind: "question", toolCallId: "tcq2", toolName: "ask_user", args: { question: "pick one" } },
+      60_000,
+      { timedOut: true },
+    );
+    bus.resolve("q2", { answer: "xxx", timedOut: false });
+    const decision = await p;
+    bus.setEventSink(null);
+    expect(decision).toEqual({ answer: "xxx", timedOut: false });
+    expect(bus.pendingCount).toBe(0);
+    expect(events[1]).toEqual({
+      type: "control_resolved",
+      requestId: "q2",
+      kind: "question",
+      answer: "xxx",
+      timedOut: false,
+    });
+  });
+
+  it("resolves a question request with timeout fallback when the timer fires", async () => {
+    const bus = new SessionControlBus();
+    const events: SessionControlEvent[] = [];
+    bus.setEventSink((e) => events.push(e));
+    const p = bus.request(
+      { requestId: "q3", kind: "question", toolCallId: "tcq3", toolName: "ask_user", args: {} },
+      40,
+      { timedOut: true },
+    );
+    const decision = await p;
+    bus.setEventSink(null);
+    expect(decision).toEqual({ timedOut: true });
+    expect(bus.pendingCount).toBe(0);
+    expect(events[1]).toEqual({
+      type: "control_resolved",
+      requestId: "q3",
+      kind: "question",
+      timedOut: true,
+    });
+  });
+
+  it("rejects a pending question request on rejectAll()", async () => {
+    const bus = new SessionControlBus();
+    const p = bus.request(
+      { requestId: "q4", kind: "question", toolCallId: "tcq4", toolName: "ask_user", args: {} },
+      60_000,
+      { timedOut: true },
+    );
+    bus.rejectAll("session aborted");
+    await expect(p).rejects.toThrow("session aborted");
+    expect(bus.pendingCount).toBe(0);
+  });
 });

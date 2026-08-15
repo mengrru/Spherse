@@ -41,6 +41,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     reconnect,
     retryHistory,
     respondApproval,
+    respondQuestion,
   } = useChatSession({
     client,
     sessionId,
@@ -62,6 +63,12 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
   const handleRespondApproval = (requestId: string, approved: boolean) => {
     const delivered = respondApproval(requestId, approved);
     if (!delivered) toast.error(t("chat.approvalNotDelivered"));
+  };
+
+  const handleRespondQuestion = (requestId: string, answer: string): boolean => {
+    const delivered = respondQuestion(requestId, answer);
+    if (!delivered) toast.error(t("chat.questionNotDelivered"));
+    return delivered;
   };
 
   const runtime = useMemo(() => ({ sessionId, agentId: agent.id }), [sessionId, agent.id]);
@@ -88,6 +95,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           onScrollToBottom={() => scrollToBottom("smooth")}
           onNavigateToPath={onNavigateToPath}
           onRespondApproval={handleRespondApproval}
+          onRespondQuestion={handleRespondQuestion}
           onRetry={retry}
           hasMore={hasMore}
           loadingMore={loadingMore}

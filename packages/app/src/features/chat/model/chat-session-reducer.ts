@@ -220,6 +220,41 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
     );
   }
 
+  if (event.type === "control_request" && event.kind === "question") {
+    return updateLastToolCall(prev, (tc) => tc.toolCallId === event.toolCallId, (tc) => {
+      const filtered = Array.isArray(tc.args.options)
+        ? tc.args.options.filter((s): s is string => typeof s === "string")
+        : undefined;
+      const options = filtered && filtered.length >= 2 ? filtered : undefined;
+      return {
+        ...tc,
+        _card: {
+          type: "question",
+          status: "pending",
+          question: typeof tc.args.question === "string" ? tc.args.question : "",
+          options,
+          requestId: event.requestId,
+        },
+      };
+    });
+  }
+
+  if (event.type === "control_resolved" && event.kind === "question") {
+    return updateLastToolCall(
+      prev,
+      (tc) => tc._card?.type === "question" && tc._card.requestId === event.requestId,
+      (tc) => {
+        if (tc._card?.type !== "question") return tc;
+        return {
+          ...tc,
+          _card: event.timedOut
+            ? { ...tc._card, status: "timeout", requestId: undefined }
+            : { ...tc._card, status: "answered", answer: event.answer ?? "", requestId: undefined },
+        };
+      },
+    );
+  }
+
   if (event.type === "agent_end") {
     let updated = prev;
     const runEndIndex = updated.length - 1;
@@ -235,10 +270,12 @@ function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: numbe
   }
 
   if (event.type === "run_status" && !event.active) {
-    const last = prev[prev.length - 1];
+    const cleared = clearPendingQuestionCards(prev);
+    const last = cleared[cleared.length - 1];
     if (last?._streaming) {
-      return [...prev.slice(0, -1), { ...last, _streaming: false }];
+      return [...cleared.slice(0, -1), { ...last, _streaming: false }];
     }
+    return cleared;
   }
 
   if (event.type === "error") {
@@ -270,4 +307,12 @@ function updateLastToolCall(
   });
   if (!changed) return prev;
   return [...prev.slice(0, -1), { ...last, _toolCalls: calls }];
+}
+
+function clearPendingQuestionCards(prev: ChatMessage[]): ChatMessage[] {
+  return updateLastToolCall(
+    prev,
+    (tc) => tc._card?.type === "question" && !!tc._card.requestId,
+    (tc) => ({ ...tc, _card: undefined }),
+  );
 }

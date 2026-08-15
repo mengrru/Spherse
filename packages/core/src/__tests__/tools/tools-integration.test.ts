@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { createToolsForProject } from "../../tools/index.js";
+import { createToolsForProject, BUILTIN_TOOL_NAMES } from "../../tools/index.js";
 import { ToolContext } from "../../tools/tool-context.js";
 import { ProjectStore } from "../../store/project.js";
 import { FileWriteMutex } from "../../utils/file-write-mutex.js";
@@ -68,5 +68,20 @@ describe("createToolsForProject AI access policy forwarding", () => {
 
     const second = await tools.read_file.execute("tc", { path: "secrets/key.md" }, undefined as any);
     expect(second.content[0].text).toContain("Access denied");
+  });
+
+  it("registers ask_user in BUILTIN_TOOL_NAMES and createToolsForProject output", () => {
+    expect(BUILTIN_TOOL_NAMES).toContain("ask_user");
+    const tools = makeTools();
+    expect(tools.ask_user).toBeDefined();
+    expect(tools.ask_user.name).toBe("ask_user");
+    expect(tools.ask_user.label).toBe("Ask User");
+  });
+
+  it("ask_user without a gate reports asking as unavailable", async () => {
+    const tools = makeTools();
+    const result = await tools.ask_user.execute("tc", { question: "Proceed?" }, undefined as any);
+    expect(result.content[0].text.toLowerCase()).toContain("unavailable");
+    expect(result.details).toEqual({ cardType: "question", question: "Proceed?" });
   });
 });

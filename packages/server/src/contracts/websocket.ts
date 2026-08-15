@@ -94,11 +94,28 @@ const chatServerEvent = Type.Union([
     >(Type.Unknown()),
   }),
   Type.Object({
+    type: Type.Literal("control_request"),
+    requestId: Type.String(),
+    kind: Type.Literal("question"),
+    toolCallId: Type.String(),
+    toolName: Type.String(),
+    args: Type.Unsafe<
+      EventOf<SessionControlEvent, "control_request">["args"]
+    >(Type.Unknown()),
+  }),
+  Type.Object({
     type: Type.Literal("control_resolved"),
     requestId: Type.String(),
     kind: Type.Literal("approval"),
     approved: Type.Boolean(),
     reason: Type.Optional(Type.String()),
+  }),
+  Type.Object({
+    type: Type.Literal("control_resolved"),
+    requestId: Type.String(),
+    kind: Type.Literal("question"),
+    answer: Type.Optional(Type.String()),
+    timedOut: Type.Boolean(),
   }),
   Type.Object({
     type: Type.Literal("error"),
@@ -132,6 +149,12 @@ export const schemas = {
       kind: Type.Literal("approval"),
       approved: Type.Boolean(),
       reason: Type.Optional(Type.String()),
+    }),
+    Type.Object({
+      type: Type.Literal("resolve_control_request"),
+      requestId: Type.String(),
+      kind: Type.Literal("question"),
+      answer: Type.String({ minLength: 1 }),
     }),
   ]),
   chatServerEvent,

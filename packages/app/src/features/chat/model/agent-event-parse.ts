@@ -136,6 +136,15 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
         args: toArgsRecord(event.args),
       };
     case "control_resolved":
+      if (event.kind === "question") {
+        return {
+          type: "control_resolved",
+          requestId: event.requestId,
+          kind: event.kind,
+          answer: event.answer,
+          timedOut: event.timedOut,
+        };
+      }
       return {
         type: "control_resolved",
         requestId: event.requestId,

@@ -44,7 +44,16 @@ export interface ApprovalCard {
   requestId?: string;
 }
 
-export type ChatCard = HtmlCard | ImageCard | CommandCard | ApprovalCard;
+export interface QuestionCard {
+  type: "question";
+  status: "pending" | "answered" | "timeout";
+  question: string;
+  options?: string[];
+  answer?: string;
+  requestId?: string;
+}
+
+export type ChatCard = HtmlCard | ImageCard | CommandCard | ApprovalCard | QuestionCard;
 
 export interface ToolCallInfo {
   toolCallId: string;

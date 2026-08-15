@@ -12,6 +12,7 @@ import { createMoveFileTool } from "./move-file.js";
 import { createCopyFileTool } from "./copy-file.js";
 import { createEmitTriggerEventTool } from "./emit-trigger-event.js";
 import { createRunCommandTool } from "./run-command.js";
+import { createAskUserTool } from "./ask-user.js";
 import { createManageAgentTool, isManageAgentWriteAction } from "./manage-agent.js";
 import { createManageTriggerTool, isManageTriggerWriteAction } from "./manage-trigger.js";
 import { withApproval } from "./with-approval.js";
@@ -36,6 +37,7 @@ export const BUILTIN_TOOL_NAMES = [
   "manage_agent",
   "manage_trigger",
   "emit_trigger_event",
+  "ask_user",
 ] as const;
 
 export function createToolsForProject(
@@ -55,6 +57,7 @@ export function createToolsForProject(
     copy_file: createCopyFileTool(ctx.root, ctx.mutex, getPolicy),
     load_skill: createLoadSkillTool(ctx.root, ctx.skill, ctx.agentSkill),
     run_command: withApproval(createRunCommandTool(ctx.root), ctx.approvalGate),
+    ask_user: createAskUserTool(ctx.askGate),
     manage_agent: withApproval(
       createManageAgentTool(ctx.store, BUILTIN_TOOL_NAMES, ctx.agentId),
       ctx.approvalGate,

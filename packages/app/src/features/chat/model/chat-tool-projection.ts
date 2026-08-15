@@ -136,6 +136,30 @@ export function buildCardFromToolResult(
       };
     }
   }
+  if (toolName === "ask_user" && isObject(details) && details.cardType === "question") {
+    const question = typeof details.question === "string" ? details.question : "";
+    const rawOptions = Array.isArray(details.options)
+      ? details.options.filter((o): o is string => typeof o === "string")
+      : [];
+    const options = rawOptions.length > 0 ? rawOptions : undefined;
+    if (typeof details.answer === "string") {
+      return {
+        type: "question",
+        status: "answered",
+        question,
+        options,
+        answer: details.answer,
+      };
+    }
+    if (details.timedOut === true) {
+      return {
+        type: "question",
+        status: "timeout",
+        question,
+        options,
+      };
+    }
+  }
   return undefined;
 }
 

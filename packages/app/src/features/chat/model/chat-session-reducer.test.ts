@@ -765,6 +765,121 @@ describe("run_command approval + command card lifecycle", () => {
   });
 });
 
+describe("question card lifecycle", () => {
+  function pendingQuestion(args: Record<string, unknown>) {
+    const start = reduceSessionEvents(session(), [
+      { type: "tool_execution_start", toolCallId: "tq1", toolName: "ask_user", args },
+    ] as unknown as AgentEvent[], 1);
+    return reduceSessionEvents(start, [
+      { type: "control_request", requestId: "q1", kind: "question", toolCallId: "tq1", toolName: "ask_user", args },
+    ] as unknown as AgentEvent[], 2);
+  }
+
+  it("attaches a pending question card with sanitized options", () => {
+    const pending = pendingQuestion({ question: "Deploy?", options: ["yes", "no", 42, null] });
+    expect(pending.messages[0]._toolCalls![0]._card).toMatchObject({
+      type: "question",
+      status: "pending",
+      question: "Deploy?",
+      options: ["yes", "no"],
+      requestId: "q1",
+    });
+  });
+
+  it("drops options entirely when fewer than 2 survive filtering", () => {
+    const pending = pendingQuestion({ question: "Proceed?", options: ["only-one", 7] });
+    const card = pending.messages[0]._toolCalls![0]._card;
+    expect(card).toMatchObject({ type: "question", status: "pending", question: "Proceed?" });
+    expect((card as { options?: string[] }).options).toBeUndefined();
+  });
+
+  it("defaults question to empty string against illegal args", () => {
+    const pending = pendingQuestion({ question: 42 });
+    const card = pending.messages[0]._toolCalls![0]._card;
+    expect(card).toMatchObject({ type: "question", status: "pending", question: "" });
+    expect((card as { options?: string[] }).options).toBeUndefined();
+  });
+
+  it("marks the card answered with the answer and clears the request id", () => {
+    const answered = reduceSessionEvents(pendingQuestion({ question: "Deploy?" }), [
+      { type: "control_resolved", requestId: "q1", kind: "question", answer: "yes", timedOut: false },
+    ] as unknown as AgentEvent[], 3);
+    expect(answered.messages[0]._toolCalls![0]._card).toMatchObject({
+      type: "question",
+      status: "answered",
+      answer: "yes",
+    });
+    expect((answered.messages[0]._toolCalls![0]._card as { requestId?: string }).requestId).toBeUndefined();
+  });
+
+  it("marks the card timeout when resolution times out", () => {
+    const timedOut = reduceSessionEvents(pendingQuestion({ question: "Deploy?" }), [
+      { type: "control_resolved", requestId: "q1", kind: "question", timedOut: true },
+    ] as unknown as AgentEvent[], 3);
+    expect(timedOut.messages[0]._toolCalls![0]._card).toMatchObject({
+      type: "question",
+      status: "timeout",
+    });
+    expect((timedOut.messages[0]._toolCalls![0]._card as { requestId?: string }).requestId).toBeUndefined();
+  });
+
+  it("ignores a question resolution whose request id does not match", () => {
+    const pending = pendingQuestion({ question: "Deploy?" });
+    const next = reduceSessionEvents(pending, [
+      { type: "control_resolved", requestId: "other", kind: "question", answer: "yes", timedOut: false },
+    ] as unknown as AgentEvent[], 3);
+    expect(next).toBe(pending);
+  });
+
+  it("does not disturb approval cards with question events", () => {
+    const seeded = reduceSessionEvents(session(), [
+      { type: "tool_execution_start", toolCallId: "tc1", toolName: "run_command", args: { command: "ls" } },
+      { type: "control_request", requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command", args: { command: "ls" } },
+    ] as unknown as AgentEvent[], 1);
+    const next = reduceSessionEvents(seeded, [
+      { type: "control_resolved", requestId: "r1", kind: "question", answer: "yes", timedOut: false },
+    ] as unknown as AgentEvent[], 2);
+    expect(next.messages[0]._toolCalls![0]._card).toMatchObject({ type: "command", status: "pending_approval", requestId: "r1" });
+  });
+
+  it("clears a pending question card when the run ends without resolution (abort)", () => {
+    const pending = pendingQuestion({ question: "Deploy?" });
+    const next = reduceSessionEvents(pending, [
+      { type: "run_status", active: false },
+    ] as unknown as AgentEvent[], 3);
+    expect(next.messages[0]._toolCalls![0]._card).toBeUndefined();
+  });
+
+  it("keeps an answered question card when the run ends", () => {
+    const answered = reduceSessionEvents(pendingQuestion({ question: "Deploy?" }), [
+      { type: "control_resolved", requestId: "q1", kind: "question", answer: "yes", timedOut: false },
+    ] as unknown as AgentEvent[], 3);
+    const next = reduceSessionEvents(answered, [
+      { type: "run_status", active: false },
+    ] as unknown as AgentEvent[], 4);
+    expect(next.messages[0]._toolCalls![0]._card).toMatchObject({
+      type: "question",
+      status: "answered",
+      answer: "yes",
+    });
+  });
+
+  it("leaves pending approval cards untouched when the run ends", () => {
+    const seeded = reduceSessionEvents(session(), [
+      { type: "tool_execution_start", toolCallId: "tc1", toolName: "run_command", args: { command: "ls" } },
+      { type: "control_request", requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command", args: { command: "ls" } },
+    ] as unknown as AgentEvent[], 1);
+    const next = reduceSessionEvents(seeded, [
+      { type: "run_status", active: false },
+    ] as unknown as AgentEvent[], 2);
+    expect(next.messages[0]._toolCalls![0]._card).toMatchObject({
+      type: "command",
+      status: "pending_approval",
+      requestId: "r1",
+    });
+  });
+});
+
 describe("generic approval card lifecycle", () => {
   function pendingManageAgent() {
     const start = reduceSessionEvents(session(), [

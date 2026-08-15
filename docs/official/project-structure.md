@@ -26,6 +26,14 @@ spherse/
     │   │       │   ├── skill.ts          # SkillStore：合并 builtin（PRESET_SKILL_SOURCES 内存）与 project（.spherse/skills/*/SKILL.md）skill；createSkill/installSkill 写逻辑（含 zip 校验、zip-slip 防护、原子安装）
     │   │       │   ├── mcp-config.ts     # McpConfigStore：读写 {agentDir}/mcp.json（lazy，经 normalizeMcpConfig 校验）
     │   │       │   └── index.ts
+│   │       ├── session/              # 运行时 session 层
+│   │       │   ├── live-session.ts   # LiveSession：单会话执行（agent 构建、sendMessage/abort、resolveControlRequest）
+│   │       │   ├── session-manager.ts # SessionManager：LiveSession 生命周期与 per-agent 缓存（agent_updated 热重载）
+│   │       │   ├── control-bus.ts    # SessionControlBus：session 执行中途 core → renderer 请求/等待响应（requestId + kind 判别）
+│   │       │   ├── approval-gate.ts  # ApprovalGate：approval 控制请求的 bus 薄适配器（withApproval 用）
+│   │       │   ├── ask-gate.ts       # AskGate：question 控制请求的 bus 薄适配器（ask_user 用），超时 resolve { timedOut: true }
+│   │       │   ├── status.ts         # SessionStatus：上下文 token 用量估算与 contextWindow 解析
+│   │       │   └── types.ts          # SessionContext / TurnContextSnapshot 等 session 层类型
 │   │       ├── tools/                # pi-agent-core AgentTool 实现（engine 内部使用）
 │   │       │   ├── read-file.ts
 │   │       │   ├── write-file.ts
@@ -40,6 +48,7 @@ spherse/
     │   │       │   ├── render-card.ts    # HTML card 渲染工具
     │   │       │   ├── generate-image.ts # 图片生成工具（经 getImagesModels() 解析模型并生成，结果落盘 .spherse/generated-images/）
     │   │       │   ├── run-command.ts     # shell 命令执行工具（withApproval 包装，逐次人工确认）
+    │   │       │   ├── ask-user.ts       # 向用户提问工具（经 AskGate 发 question 控制请求，等待回答或超时）
     │   │       │   ├── manage-agent.ts    # agent 元数据工具（list/get/create/update），create/update 经 withApproval 审批
     │   │       │   ├── manage-trigger.ts  # 触发器管理工具（list/create/update/delete），写操作经 withApproval 审批
     │   │       │   ├── with-approval.ts   # 审批包装器（可选 shouldApprove 谓词，仅对写 action 请求确认）

@@ -6,6 +6,7 @@ import { HtmlCardRenderer } from "./HtmlCard";
 import { ImageCardRenderer } from "./ImageCard";
 import { CommandCardRenderer } from "./CommandCard";
 import { ApprovalCardRenderer } from "./ApprovalCard";
+import { QuestionCardRenderer } from "./QuestionCard";
 import { ToolCallSection } from "./ToolCallSection";
 import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
@@ -23,10 +24,11 @@ interface MessageItemProps {
   supersededToolCallIds?: Set<string>;
   onNavigateToPath?: (path: string) => void;
   onRespondApproval?: (requestId: string, approved: boolean) => void;
+  onRespondQuestion?: (requestId: string, answer: string) => boolean | void;
   onRetry?: () => void;
 }
 
-export function MessageItem({ message, agent, showTime, supersededToolCallIds, onNavigateToPath, onRespondApproval, onRetry }: MessageItemProps) {
+export function MessageItem({ message, agent, showTime, supersededToolCallIds, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry }: MessageItemProps) {
   const isUser = message.role === "user";
   const openLink = useOpenExternalLink();
 
@@ -101,7 +103,13 @@ export function MessageItem({ message, agent, showTime, supersededToolCallIds, o
             if (card.type === "approval") {
               return <ApprovalCardRenderer key={toolCall.toolCallId} card={card} onRespondApproval={onRespondApproval} />;
             }
-            return <ImageCardRenderer key={toolCall.toolCallId} card={card} />;
+            if (card.type === "image") {
+              return <ImageCardRenderer key={toolCall.toolCallId} card={card} />;
+            }
+            if (card.type === "question") {
+              return <QuestionCardRenderer key={toolCall.toolCallId} card={card} onRespondQuestion={onRespondQuestion} />;
+            }
+            return null;
           })}
         {message._runChanges && message._runChanges.length > 0 && (
           <div className="mt-5">

@@ -164,6 +164,72 @@ describe("parseAgentEvent", () => {
       isError: false,
     });
   });
+  it("passes through question control_request with fields intact", () => {
+    expect(
+      parseAgentEvent({
+        type: "control_request",
+        requestId: "q1",
+        kind: "question",
+        toolCallId: "tc1",
+        toolName: "ask_user",
+        args: { question: "Deploy?", options: ["yes", "no"] },
+      }),
+    ).toEqual({
+      type: "control_request",
+      requestId: "q1",
+      kind: "question",
+      toolCallId: "tc1",
+      toolName: "ask_user",
+      args: { question: "Deploy?", options: ["yes", "no"] },
+    });
+  });
+  it("passes through question control_resolved without losing answer or timedOut", () => {
+    expect(
+      parseAgentEvent({
+        type: "control_resolved",
+        requestId: "q1",
+        kind: "question",
+        answer: "yes",
+        timedOut: false,
+      }),
+    ).toEqual({
+      type: "control_resolved",
+      requestId: "q1",
+      kind: "question",
+      answer: "yes",
+      timedOut: false,
+    });
+    expect(
+      parseAgentEvent({
+        type: "control_resolved",
+        requestId: "q2",
+        kind: "question",
+        timedOut: true,
+      }),
+    ).toEqual({
+      type: "control_resolved",
+      requestId: "q2",
+      kind: "question",
+      timedOut: true,
+    });
+  });
+  it("keeps approval control_resolved fields", () => {
+    expect(
+      parseAgentEvent({
+        type: "control_resolved",
+        requestId: "r1",
+        kind: "approval",
+        approved: true,
+        reason: "ok",
+      }),
+    ).toEqual({
+      type: "control_resolved",
+      requestId: "r1",
+      kind: "approval",
+      approved: true,
+      reason: "ok",
+    });
+  });
   it("narrows assistant message in message_start", () => {
     const result = parseAgentEvent({
       type: "message_start",

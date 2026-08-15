@@ -519,6 +519,40 @@ describe("LiveSession yolo mode", () => {
     expect(settled).toBe(PENDING);
   });
 
+  it("ask_user routes through the control bus and resolves with the user's answer", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    agentStore._profile = {
+      ...agentStore._profile,
+      tools: ["ask_user"],
+    };
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+
+    const askUser = findTool(live, "ask_user");
+    expect(askUser).toBeDefined();
+
+    const controlBus = (live as any).controlBus;
+    controlBus.setEventSink((e: any) => {
+      if (e.type === "control_request" && e.kind === "question") {
+        expect(e.toolName).toBe("ask_user");
+        queueMicrotask(() =>
+          live.resolveControlRequest(e.requestId, { answer: "wired-answer", timedOut: false }),
+        );
+      }
+    });
+
+    try {
+      const result = await askUser.execute("call-ask-1", { question: "What next?" });
+      const text = result.content.map((c: any) => c.text).join("");
+      expect(text).toContain("User's answer:");
+      expect(text).toContain("wired-answer");
+      expect(result.details.cardType).toBe("question");
+      expect(result.details.answer).toBe("wired-answer");
+    } finally {
+      controlBus.setEventSink(null);
+    }
+  });
+
   it("applyReload picks up yolo change on next turn", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     agentStore._profile = {

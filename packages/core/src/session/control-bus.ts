@@ -84,5 +84,15 @@ export class SessionControlBus {
         reason: d.reason,
       });
     }
+    if (kind === "question") {
+      const d = decision as { answer?: string; timedOut: boolean };
+      this.emit({
+        type: "control_resolved",
+        requestId,
+        kind,
+        answer: d.answer,
+        timedOut: d.timedOut,
+      });
+    }
   }
 }

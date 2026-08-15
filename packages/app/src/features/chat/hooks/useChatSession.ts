@@ -66,5 +66,7 @@ export function useChatSession({
     retryHistory: () => useStreamingStore.getState().retryHistory(client, agentId, sessionId),
     respondApproval: (requestId: string, approved: boolean) =>
       useStreamingStore.getState().respondApproval(sessionId, requestId, approved),
+    respondQuestion: (requestId: string, answer: string) =>
+      useStreamingStore.getState().respondQuestion(sessionId, requestId, answer),
   };
 }

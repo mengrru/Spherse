@@ -30,9 +30,14 @@ export function ApprovalNoticeBridge() {
         const project = useProjectDataStore.getState().projects[item.projectId];
         const session = project?.sessions.find((s) => s.id === item.sessionId);
         const agent = session ? project?.agents.find((a) => a.id === session.agentId) : undefined;
-        const title = agent?.name
-          ? tRef.current("chat.approvalToastMessageWithName", { name: agent.name })
-          : tRef.current("chat.approvalToastMessage");
+        const title =
+          item.kind === "question"
+            ? agent?.name
+              ? tRef.current("chat.questionToastMessageWithName", { name: agent.name })
+              : tRef.current("chat.questionToastMessage")
+            : agent?.name
+              ? tRef.current("chat.approvalToastMessageWithName", { name: agent.name })
+              : tRef.current("chat.approvalToastMessage");
         toast.success(title, {
           action: {
             label: tRef.current("chat.approvalToastAction"),

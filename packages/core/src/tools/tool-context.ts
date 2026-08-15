@@ -3,11 +3,13 @@ import type { SkillStore } from "../store/skill.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import type { TriggerManager } from "../trigger/trigger-manager.js";
 import type { ApprovalGate } from "./with-approval.js";
+import type { AskGate } from "./ask-user.js";
 import { llmAccessPolicy, type AccessPolicy } from "../access/access-policy.js";
 
 export class ToolContext {
   private readonly triggerManagerField?: TriggerManager;
   private readonly approvalGateField?: ApprovalGate;
+  private readonly askGateField?: AskGate;
 
   constructor(
     private projectStore: ProjectStore,
@@ -17,9 +19,11 @@ export class ToolContext {
     triggerManager?: TriggerManager,
     approvalGate?: ApprovalGate,
     readonly agentId?: string,
+    askGate?: AskGate,
   ) {
     this.triggerManagerField = triggerManager;
     this.approvalGateField = approvalGate;
+    this.askGateField = askGate;
   }
 
   get store(): ProjectStore {
@@ -40,6 +44,10 @@ export class ToolContext {
 
   get approvalGate(): ApprovalGate | undefined {
     return this.approvalGateField;
+  }
+
+  get askGate(): AskGate | undefined {
+    return this.askGateField;
   }
 
   get llmPolicy(): AccessPolicy {

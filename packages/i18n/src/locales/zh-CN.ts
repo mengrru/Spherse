@@ -669,6 +669,20 @@ export const zhCN = {
   "chat.approvalToastMessageWithName": "「{name}」正在等待你的确认",
   // 上述 toast 上的「跳转」按钮文案，点击跳转到对应会话
   "chat.approvalToastAction": "前往会话",
+  // QuestionCard（ask_user 工具卡片）等待用户回答时，自由输入回答的文本框占位文案
+  "chat.questionInputPlaceholder": "输入你的回答…",
+  // QuestionCard 发送回答的按钮文案
+  "chat.questionSend": "发送",
+  // QuestionCard 已回答状态下，展示用户所填回答的标签文案
+  "chat.questionAnswerLabel": "你的回答",
+  // QuestionCard 等待超时、未收到用户回答时的状态标签
+  "chat.questionTimeoutLabel": "未回答（等待超时）",
+  // 用户提交的回答因连接断开未能送达时显示的 toast 提示
+  "chat.questionNotDelivered": "回答未送达，请检查连接后重试",
+  // 某会话的 agent 向用户提问等待回答、且用户当前未停留在该会话时弹出的 toast 文案（无法解析到 agent 名时的泛化兜底）
+  "chat.questionToastMessage": "一个 Agent 正在等待你的回答",
+  // 上述 toast 在能解析到 agent 名时的标题文案，{name} 为 agent 名称
+  "chat.questionToastMessageWithName": "「{name}」正在等待你的回答",
 
   // --- Content Browser ---
   // 内容浏览器文本查找栏：输入框占位文案，也是 Header 查找按钮与无障碍标签
@@ -934,6 +948,10 @@ export const zhCN = {
   "tool.run_command": "运行命令",
   // 独立工具 tooltip：运行命令的安全提示——强调任意命令、逐次确认、有风险
   "tool.run_command_hint": "允许智能体执行 shell 命令（unix sh / Windows PowerShell）。每次执行前都会要求你确认；进程将以你的系统权限运行，请仅在你信任该智能体时启用",
+  // 独立工具标签：向用户提问（ask_user，agent 运行中向用户提出问题并等待回答）
+  "tool.ask_user": "向你提问",
+  // 独立工具 tooltip：向用户提问的作用说明
+  "tool.ask_user_hint": "允许智能体在运行中向你提问并等待回答，适合缺少关键信息时使用",
   // 独立工具标签：管理智能体（manage_agent，agent 可查看/新建/修改本项目内智能体的名称、提示词、工具、上下文，高危，写操作需人工确认）
   "tool.manage_agent": "管理智能体",
   // 独立工具 tooltip：管理智能体的作用与风险说明

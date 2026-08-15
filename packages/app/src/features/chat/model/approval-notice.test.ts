@@ -36,6 +36,7 @@ describe("collectPendingApprovals", () => {
 
     expect(result).toEqual([
       {
+        kind: "approval",
         requestId: "r1",
         sessionId: "s1",
         projectId: "p1",
@@ -73,12 +74,91 @@ describe("collectPendingApprovals", () => {
 
     expect(result).toEqual([
       {
+        kind: "approval",
         requestId: "r2",
         sessionId: "s2",
         projectId: "p1",
         toolName: "manage_agent",
       },
     ]);
+  });
+
+  it("collects a pending ask_user question (question card with requestId)", () => {
+    const sessions = {
+      s3: {
+        projectId: "p1",
+        messages: [
+          assistantMessage([
+            {
+              toolCallId: "tc3",
+              toolName: "ask_user",
+              args: { question: "Deploy?" },
+              status: "running",
+              _card: {
+                type: "question",
+                status: "pending",
+                question: "Deploy?",
+                options: ["yes", "no"],
+                requestId: "r3",
+              },
+            },
+          ]),
+        ],
+      },
+    };
+
+    const result = collectPendingApprovals(sessions);
+
+    expect(result).toEqual([
+      {
+        kind: "question",
+        requestId: "r3",
+        sessionId: "s3",
+        projectId: "p1",
+        toolName: "ask_user",
+      },
+    ]);
+  });
+
+  it("excludes answered and timed-out question cards (requestId cleared)", () => {
+    const sessions = {
+      s1: {
+        projectId: "p1",
+        messages: [
+          assistantMessage([
+            {
+              toolCallId: "tc4",
+              toolName: "ask_user",
+              args: {},
+              status: "completed",
+              _card: {
+                type: "question",
+                status: "answered",
+                question: "Deploy?",
+                answer: "yes",
+                requestId: undefined,
+              },
+            },
+          ]),
+          assistantMessage([
+            {
+              toolCallId: "tc5",
+              toolName: "ask_user",
+              args: {},
+              status: "completed",
+              _card: {
+                type: "question",
+                status: "timeout",
+                question: "Rollback?",
+                requestId: undefined,
+              },
+            },
+          ]),
+        ],
+      },
+    };
+
+    expect(collectPendingApprovals(sessions)).toEqual([]);
   });
 
   it("excludes resolved approvals (requestId cleared to undefined)", () => {

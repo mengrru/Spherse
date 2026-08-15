@@ -283,6 +283,17 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     return true;
   }
 
+  respondQuestion(requestId: string, answer: string): boolean {
+    if (!this.isOpen()) return false;
+    this.ws?.send(JSON.stringify({
+      type: "resolve_control_request",
+      requestId,
+      kind: "question",
+      answer,
+    }));
+    return true;
+  }
+
   dispose(): void {
     this.manuallyClosed = true;
     this.clearReconnectTimer();

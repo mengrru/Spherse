@@ -6,6 +6,10 @@ type CoreEventHandler = Parameters<SessionManager["sendMessage"]>[3];
 type CoreEvent = Parameters<CoreEventHandler>[0];
 type Subscriber = (event: unknown) => void;
 
+export type ControlRequestDecision =
+  | { approved: boolean; reason?: string }
+  | { answer?: string; timedOut: boolean };
+
 interface ChatChannel {
   key: string;
   runtime: SessionManager;
@@ -26,7 +30,7 @@ export interface ChatSessionAttachment {
   abort(): void;
   resolveControlRequest(
     requestId: string,
-    decision: { approved: boolean; reason?: string },
+    decision: ControlRequestDecision,
   ): void;
   close(): void;
 }

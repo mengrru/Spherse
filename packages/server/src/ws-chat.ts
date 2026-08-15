@@ -91,10 +91,17 @@ export function handleChatWebSocket(
           attachment.abort();
         } else if (msg.type === "resolve_control_request") {
           if (!(await ready) || closed) return;
-          attachment.resolveControlRequest(msg.requestId, {
-            approved: msg.approved,
-            reason: msg.reason,
-          });
+          if (msg.kind === "question") {
+            attachment.resolveControlRequest(msg.requestId, {
+              answer: msg.answer,
+              timedOut: false,
+            });
+          } else {
+            attachment.resolveControlRequest(msg.requestId, {
+              approved: msg.approved,
+              reason: msg.reason,
+            });
+          }
         }
       });
 

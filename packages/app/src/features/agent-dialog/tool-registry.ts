@@ -21,6 +21,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
   },
   { label: "tool.append_log", hint: "tool.append_log_hint", toolIds: ["append_changelog"] },
   { label: "tool.load_skill", hint: "tool.load_skill_hint", toolIds: ["load_skill"] },
+  { label: "tool.ask_user", hint: "tool.ask_user_hint", toolIds: ["ask_user"] },
   { label: "tool.render_card", hint: "tool.render_card_hint", toolIds: ["render_card"] },
   { label: "tool.generate_image", hint: "tool.generate_image_hint", toolIds: ["generate_image"] },
   {

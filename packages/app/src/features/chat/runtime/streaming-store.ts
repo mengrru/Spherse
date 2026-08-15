@@ -50,6 +50,7 @@ interface StreamingStoreActions {
   reconnect: (sessionId: string) => void;
   retryHistory: (client: ApiClient, agentId: string, sessionId: string) => void;
   respondApproval: (sessionId: string, requestId: string, approved: boolean) => boolean;
+  respondQuestion: (sessionId: string, requestId: string, answer: string) => boolean;
   setScrollPosition: (sessionId: string, position: number) => void;
   cleanupExpired: (ttlMs: number) => void;
   loadMore: (client: ApiClient, sessionId: string, agentId: string) => void;
@@ -409,6 +410,10 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
     respondApproval(sessionId, requestId, approved) {
       return runtimes.get(sessionId)?.respondApproval(requestId, approved) ?? false;
+    },
+
+    respondQuestion(sessionId, requestId, answer) {
+      return runtimes.get(sessionId)?.respondQuestion(requestId, answer) ?? false;
     },
 
     setScrollPosition(sessionId, position) {

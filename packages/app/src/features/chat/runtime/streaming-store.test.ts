@@ -447,6 +447,22 @@ describe("streaming-store resilience", () => {
     expect(messages[messages.length - 1]._attachments).toBeUndefined();
   });
 
+  it("respondQuestion routes the answer to the session runtime", async () => {
+    const socket = await attachAndConnect("qs1");
+    const delivered = useStreamingStore.getState().respondQuestion("qs1", "req-1", "yes");
+    expect(delivered).toBe(true);
+    expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({
+      type: "resolve_control_request",
+      requestId: "req-1",
+      kind: "question",
+      answer: "yes",
+    });
+  });
+
+  it("respondQuestion returns false when no runtime is attached", () => {
+    expect(useStreamingStore.getState().respondQuestion("missing", "req-1", "yes")).toBe(false);
+  });
+
   const transientFailureEvents = [
     { type: "agent_start" },
     { type: "message_start", message: { role: "assistant" } },

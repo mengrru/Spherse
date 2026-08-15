@@ -28,7 +28,7 @@ export interface TurnContextSnapshot {
   }>;
 }
 
-export type ControlRequestKind = "approval";
+export type ControlRequestKind = "approval" | "question";
 
 export type SessionControlEvent =
   | {
@@ -45,4 +45,19 @@ export type SessionControlEvent =
       kind: "approval";
       approved: boolean;
       reason?: string;
+    }
+  | {
+      type: "control_request";
+      requestId: string;
+      kind: "question";
+      toolCallId: string;
+      toolName: string;
+      args: unknown;
+    }
+  | {
+      type: "control_resolved";
+      requestId: string;
+      kind: "question";
+      answer?: string;
+      timedOut: boolean;
     };

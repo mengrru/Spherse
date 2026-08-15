@@ -12,6 +12,7 @@ import type { AgentProfile, SamplingParams, TimePerceptionConfig } from "../type
 import { resolveModelById, getChatStreamFn } from "../model-providers/index.js";
 import { createToolsForProject, ToolContext } from "../tools/index.js";
 import type { ApprovalGate } from "../tools/with-approval.js";
+import type { AskGate } from "../tools/ask-user.js";
 import type { SkillStore } from "../store/skill.js";
 import { readContextFiles } from "../context/read-context-files.js";
 import { logAgentEvent } from "../engine/log-agent-event.js";
@@ -31,6 +32,7 @@ import { planCompaction, wrapDigestContent, sanitizeToolCallPairs } from "../con
 import type { SessionContext, TurnContextSnapshot, SessionControlEvent } from "./types.js";
 import { SessionControlBus } from "./control-bus.js";
 import { createApprovalGate } from "./approval-gate.js";
+import { createAskGate } from "./ask-gate.js";
 import { isActiveTimePerception, wrapWithTimePerception } from "../context/time-perception.js";
 import {
   resolveEffectiveModelId,
@@ -113,7 +115,14 @@ export class LiveSession {
     if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
     const profile = agentStore.getProfile();
     const controlBus = new SessionControlBus();
-    const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills, createApprovalGate(controlBus));
+    const agent = await this.buildAgent(
+      ctx,
+      profile,
+      sessionId,
+      agentStore.skills,
+      createApprovalGate(controlBus),
+      createAskGate(controlBus),
+    );
     return new LiveSession(agent, agentId, sessionId, ctx, controlBus, agentStore.skills);
   }
 
@@ -129,7 +138,14 @@ export class LiveSession {
 
     const profile = agentStore.getProfile();
     const controlBus = new SessionControlBus();
-    const agent = await this.buildAgent(ctx, profile, sessionId, agentStore.skills, createApprovalGate(controlBus));
+    const agent = await this.buildAgent(
+      ctx,
+      profile,
+      sessionId,
+      agentStore.skills,
+      createApprovalGate(controlBus),
+      createAskGate(controlBus),
+    );
     const live = new LiveSession(agent, agentId, sessionId, ctx, controlBus, agentStore.skills);
 
     const latest = agentStore.sessions.getLatestCompaction(sessionId);
@@ -299,6 +315,7 @@ export class LiveSession {
         this.sessionId,
         this.agentSkillStore,
         createApprovalGate(this.controlBus),
+        createAskGate(this.controlBus),
       );
       this.agent.state.systemPrompt = systemPrompt;
       this.agent.state.tools = tools;
@@ -439,6 +456,7 @@ export class LiveSession {
     sessionId: string,
     agentSkillStore?: SkillStore,
     approvalGate?: ApprovalGate,
+    askGate?: AskGate,
   ): Promise<Agent> {
     const { systemPrompt, tools } = await this.buildPromptAndTools(
       ctx,
@@ -446,6 +464,7 @@ export class LiveSession {
       sessionId,
       agentSkillStore,
       approvalGate,
+      askGate,
     );
 
     const modelId = resolveEffectiveModelId(profile, ctx.defaultModel);
@@ -496,6 +515,7 @@ export class LiveSession {
     sessionId: string,
     agentSkillStore?: SkillStore,
     approvalGate?: ApprovalGate,
+    askGate?: AskGate,
   ): Promise<{ systemPrompt: string; tools: AgentTool[] }> {
     const projectRoot = ctx.projectRoot;
     const gate = profile.yolo ? undefined : approvalGate;
@@ -507,6 +527,7 @@ export class LiveSession {
       ctx.triggerManager,
       gate,
       profile.id,
+      askGate,
     );
     const allTools = createToolsForProject(toolContext);
 

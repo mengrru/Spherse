@@ -94,6 +94,45 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     expect(sentObjects(socket)).toContainEqual({ type: "pong" });
   });
 
+  it("routes question resolve_control_request with answer and timedOut false", async () => {
+    socket.simulateMessage(
+      Buffer.from(
+        JSON.stringify({
+          type: "resolve_control_request",
+          requestId: "req1",
+          kind: "question",
+          answer: "option B",
+        }),
+      ),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sessionRuntime.resolveControlRequest).toHaveBeenCalledWith(
+      "s1",
+      "req1",
+      { answer: "option B", timedOut: false },
+    );
+  });
+
+  it("routes approval resolve_control_request with approved and reason", async () => {
+    socket.simulateMessage(
+      Buffer.from(
+        JSON.stringify({
+          type: "resolve_control_request",
+          requestId: "req2",
+          kind: "approval",
+          approved: false,
+          reason: "not allowed",
+        }),
+      ),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sessionRuntime.resolveControlRequest).toHaveBeenCalledWith(
+      "s1",
+      "req2",
+      { approved: false, reason: "not allowed" },
+    );
+  });
+
   it("destroys an idle restored session after the socket closes", async () => {
     socket.simulateClose();
     await new Promise((resolve) => setTimeout(resolve, 0));
