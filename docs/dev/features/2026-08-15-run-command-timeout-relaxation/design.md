@@ -1,7 +1,7 @@
 # Design：放宽 run_command 超时上限（10min → 30min）
 
 - 日期：2026-08-15
-- 状态：设计定稿，待实现
+- 状态：已实现（2026-08-15）
 - 需求：`run_command` 执行长任务（构建、安装、训练、大批量处理）时，10 分钟上限不够用，超时即被 kill。需放宽上限，并决策是 hardcode 更长的时间还是采用其它策略。
 
 ## 背景
@@ -61,7 +61,7 @@
 
 `packages/core/src/__tests__/tools/run-command.test.ts`：
 
-- 新增 `clampTimeout` 单测：`clampTimeout(undefined) === 60_000`、`clampTimeout(100) === 1_000`、`clampTimeout(600_001) === 1_800_000`（锁定新上限，防回归到 600s）、`clampTimeout(9_999_999) === 1_800_000`。
+- 新增 `clampTimeout` 单测：`clampTimeout(undefined) === 60_000`、`clampTimeout(100) === 1_000`、`clampTimeout(600_001) === 600_001`（600s→1800s 区间的值透传，若上限回归 600s 该断言失败，防回归）、`clampTimeout(1_800_001) === 1_800_000`、`clampTimeout(9_999_999) === 1_800_000`（锁定新上限）。
 - 既有用例回归：超时 kill（`timeout_ms: 150` 的 `sleep 5`）、abort 中途杀进程、cwd 越界拒绝、stdout/exit code 捕获——均不受影响。
 - 无 UI / 路由 / server 变更，不需 E2E。
 
