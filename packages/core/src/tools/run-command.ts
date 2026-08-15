@@ -1,7 +1,10 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import os from "node:os";
+import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import { resolveProjectPath } from "../utils/path-safety.js";
+import { isPathInside } from "../utils/path-safety.js";
+import { AccessDeniedError } from "../errors.js";
 
 const MAX_OUTPUT = 100 * 1024;
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -15,7 +18,8 @@ const RunCommandParams = Type.Object({
   }),
   cwd: Type.Optional(
     Type.String({
-      description: "Working directory relative to project root. Defaults to project root.",
+      description:
+        "Working directory. Relative paths resolve against the project root; absolute paths and ~/ paths are allowed anywhere within the user's home directory. Defaults to the project root.",
     }),
   ),
   timeout_ms: Type.Optional(
@@ -41,6 +45,23 @@ export interface CommandCardDetails {
 function clampTimeout(ms: number | undefined): number {
   const v = ms ?? DEFAULT_TIMEOUT_MS;
   return Math.min(Math.max(Math.trunc(v), MIN_TIMEOUT_MS), MAX_TIMEOUT_MS);
+}
+
+export function expandHome(input: string, home = os.homedir()): string {
+  if (input === "~") return home;
+  if (input.startsWith("~/") || input.startsWith("~\\")) return path.join(home, input.slice(2));
+  return input;
+}
+
+export function resolveCommandCwd(projectRoot: string, input: string, home = os.homedir()): string {
+  const expanded = expandHome(input, home);
+  const resolved = path.isAbsolute(expanded)
+    ? path.resolve(expanded)
+    : path.resolve(projectRoot, expanded);
+  if (!isPathInside(home, resolved) && !isPathInside(projectRoot, resolved)) {
+    throw new AccessDeniedError(`cwd outside allowed roots (project root or user home): ${input}`);
+  }
+  return resolved;
 }
 
 export interface SpawnTarget {
@@ -119,7 +140,7 @@ export function createRunCommandTool(projectRoot: string): AgentTool<typeof RunC
       const command = params.command;
       const cwdRel = params.cwd ?? ".";
       const timeoutMs = clampTimeout(params.timeout_ms);
-      const cwd = resolveProjectPath(projectRoot, cwdRel);
+      const cwd = resolveCommandCwd(projectRoot, cwdRel);
       const platform = process.platform;
       const winShell = platform === "win32" ? resolveWindowsShell() : "";
       const target = buildSpawnTarget(command, cwd, platform, winShell);
