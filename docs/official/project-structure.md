@@ -324,6 +324,7 @@ spherse/
 │   │       └── pages/MobileConnectPage.tsx # 扫码/手动输入连接页
 │   ├── landing/                      # @spherse/landing — GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）
 │   │   ├── vite.config.ts            # 标准 Vite 构建配置（base: "/"，自定义域名根路径部署）
+│   │   ├── vitest.config.ts          # 单测配置（jsdom 环境，release.ts 下载链接解析逻辑）
 │   │   ├── index.html                # 入口 HTML
 │   │   ├── public/                   # 静态资源（截图、主题 CSS）
 │   │   │   ├── CNAME                # GitHub Pages 自定义域名声明（内容 spherse.mengru.work）
@@ -331,6 +332,7 @@ spherse/
 │   │   │   └── themes/              # 轮播切换时动态加载的主题 CSS（覆盖 --sp-* 变量）
 │   │   └── src/
 │   │       ├── styles.css            # Tailwind v4 + --sp-* token 体系（从 app 精简复制）
+│   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）及单测
 │   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型，自建 locale catalog）
 │   │       │   ├── index.ts          # useLandingI18n hook + localStorage 持久化
 │   │       │   └── locales/          # zh-CN / zh-TW / en 三语
@@ -353,7 +355,7 @@ spherse/
 ├── .github/
 │   └── workflows/
 │       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布（win --publish always，mac --publish never + gh upload dmg）
-│       └── deploy-landing.yml        # main 分支 landing 变更触发的 CI：构建并部署到 GitHub Pages
+│       └── deploy-pages.yml          # main 分支 landing/web 变更触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
 ├── eslint.config.js                  # ESLint 9 flat config（全仓库 lint 规则）
