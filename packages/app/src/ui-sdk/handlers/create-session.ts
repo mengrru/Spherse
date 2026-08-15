@@ -26,13 +26,15 @@ async function resolveAgentId(
 }
 
 registerAction("createSession", async (params, ctx) => {
-  const { agentId, agentSlug, message, open, float } = params as {
+  const { agentId, agentSlug, message, open, float, name } = params as {
     agentId?: string;
     agentSlug?: string;
     message?: string;
     open?: boolean;
     float?: boolean;
+    name?: unknown;
   };
+  const title = typeof name === "string" && name.trim() ? name.trim() : undefined;
   if (!ctx.client) {
     respond(ctx, false, { error: "create_failed" });
     return;
@@ -46,7 +48,7 @@ registerAction("createSession", async (params, ctx) => {
 
   const session = await useProjectDataStore
     .getState()
-    .createSession(ctx.projectId, ctx.client, resolvedAgentId, message);
+    .createSession(ctx.projectId, ctx.client, resolvedAgentId, message, title);
   if (!session) {
     respond(ctx, false, { error: "create_failed" });
     return;

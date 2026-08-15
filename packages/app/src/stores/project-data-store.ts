@@ -29,6 +29,7 @@ interface ProjectDataStore {
     client: ApiClient,
     agentId: string,
     initialMessage?: string,
+    title?: string,
   ) => Promise<SessionInfo | null>;
   deleteSession: (projectId: string, client: ApiClient, sessionId: string) => Promise<void>;
   renameSession: (projectId: string, client: ApiClient, sessionId: string, title: string) => Promise<boolean>;
@@ -189,17 +190,18 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => {
     }
   },
 
-  async createSession(projectId, client, agentId, initialMessage) {
+  async createSession(projectId, client, agentId, initialMessage, title) {
     clearRequestError(projectId);
 
     try {
-      const { sessionId } = await client.createSession(agentId);
+      const { sessionId } = await client.createSession(agentId, title);
       if (typeof sessionId !== "string" || !sessionId) {
         throw new Error("sessionId is required");
       }
       const session: SessionInfo = {
         id: sessionId,
         agentId,
+        ...(title ? { title } : {}),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         status: "active",
