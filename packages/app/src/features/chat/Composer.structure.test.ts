@@ -17,7 +17,12 @@ describe("Composer structure", () => {
     expect(source).toContain('type="file"');
     expect(source).toContain('accept="image/*"');
     expect(source).toContain("fileInputRef");
-    expect(source).toContain("PaperclipIcon");
+    expect(source).toContain("<ImageIcon />");
+    expect(source).not.toContain("PaperclipIcon");
+  });
+
+  it("swaps the attach button icon for the spinner while busy", () => {
+    expect(source).toMatch(/attachBusy \? <Loader2Icon[^>]*\/> : <ImageIcon \/>/);
   });
 
   it("runs the compress -> upload pipeline and deletes on remove", () => {

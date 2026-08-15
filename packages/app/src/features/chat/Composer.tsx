@@ -3,7 +3,7 @@ import { useI18n } from "@spherse/i18n/react";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
-import { ChevronsDownIcon, ChevronsUpIcon, Loader2Icon, PaperclipIcon, SendIcon, SquareIcon } from "lucide-react";
+import { ChevronsDownIcon, ChevronsUpIcon, ImageIcon, Loader2Icon, SendIcon, SquareIcon } from "lucide-react";
 import type { AttachedImage } from "./types";
 import { compressImage } from "./utils/compress-image";
 import { AttachmentBar, type AttachStatus } from "./AttachmentBar";
@@ -194,7 +194,7 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
             onClick={handleAttachClick}
             title={t("chat.attachImage")}
           >
-            {attachBusy ? <Loader2Icon className="animate-spin" /> : <PaperclipIcon />}
+            {attachBusy ? <Loader2Icon className="animate-spin" /> : <ImageIcon />}
           </Button>
           {streaming ? (
             <Button variant="destructive" size="icon-lg" onClick={onAbort}>
