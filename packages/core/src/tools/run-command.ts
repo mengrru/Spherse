@@ -9,7 +9,7 @@ import { AccessDeniedError } from "../errors.js";
 const MAX_OUTPUT = 100 * 1024;
 const DEFAULT_TIMEOUT_MS = 60_000;
 const MIN_TIMEOUT_MS = 1000;
-const MAX_TIMEOUT_MS = 600_000;
+const MAX_TIMEOUT_MS = 1_800_000;
 
 const RunCommandParams = Type.Object({
   command: Type.String({
@@ -24,7 +24,7 @@ const RunCommandParams = Type.Object({
   ),
   timeout_ms: Type.Optional(
     Type.Number({
-      description: `Max execution time in ms. Default ${DEFAULT_TIMEOUT_MS}, max ${MAX_TIMEOUT_MS} (10min).`,
+      description: `Max execution time in ms. Default ${DEFAULT_TIMEOUT_MS}, max ${MAX_TIMEOUT_MS} (30min). For long-running tasks (builds, installs, training), pass an explicit estimate instead of relying on the default.`,
     }),
   ),
 });
@@ -42,7 +42,7 @@ export interface CommandCardDetails {
   aborted?: boolean;
 }
 
-function clampTimeout(ms: number | undefined): number {
+export function clampTimeout(ms: number | undefined): number {
   const v = ms ?? DEFAULT_TIMEOUT_MS;
   return Math.min(Math.max(Math.trunc(v), MIN_TIMEOUT_MS), MAX_TIMEOUT_MS);
 }

@@ -4,12 +4,29 @@ import path from "node:path";
 import {
   createRunCommandTool,
   buildSpawnTarget,
+  clampTimeout,
   expandHome,
   resolveCommandCwd,
   type CommandCardDetails,
 } from "../../tools/run-command.js";
 import { AccessDeniedError } from "../../errors.js";
 import { createTempProject, cleanupDir } from "../helpers.js";
+
+describe("clampTimeout", () => {
+  it("returns the 60s default when timeout is omitted", () => {
+    expect(clampTimeout(undefined)).toBe(60_000);
+  });
+  it("clamps values below the 1s minimum", () => {
+    expect(clampTimeout(100)).toBe(1_000);
+  });
+  it("passes values between the old 10min cap and the new cap through unclamped", () => {
+    expect(clampTimeout(600_001)).toBe(600_001);
+  });
+  it("clamps values above the 30min maximum", () => {
+    expect(clampTimeout(1_800_001)).toBe(1_800_000);
+    expect(clampTimeout(9_999_999)).toBe(1_800_000);
+  });
+});
 
 describe("createRunCommandTool", () => {
   let projectRoot: string;

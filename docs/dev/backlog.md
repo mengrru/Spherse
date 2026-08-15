@@ -32,6 +32,8 @@
 
 ## 功能增强
 
+- [x] **run_command 超时上限放宽**：`MAX_TIMEOUT_MS` 600s → 1800s（30min），默认 60s 与下限 1s 不变；`timeout_ms` 参数 description 更新 max 值并引导长任务显式传预估时长；导出 `clampTimeout` 供单测。不触碰审批 5min 超时。参见 `docs/dev/features/2026-08-15-run-command-timeout-relaxation/design.md`
+- [ ] **run_command 后台执行模式**：`background: true` 立即返回 job id、agent 轮询输出，长任务不再阻塞 agent 回合（超时放宽的根治方向）；per-agent 超时配置与 CommandCard 运行时长展示视后续诉求跟进。参见 `docs/dev/features/2026-08-15-run-command-timeout-relaxation/design.md`「未来演进」
 - [x] **Chat 图片输入（Vision Input）**：用户在 Composer 通过附件按钮发送一张图片（前端 Canvas 压缩 long edge ≤1568 / JPEG），agent 可看图说话。新增通用 `AttachmentProcessor` 抽象（`packages/core/src/attachments/`，图片为首个实现，未来 PDF 等扩展不动链路）；图片走磁盘（`.spherse/attachments/`），落库/WS 转发/轮后内存三处统一剥离为文本占位 + `_attachments` 路径引用，后续轮次 LLM 上下文不含 base64，历史气泡仍经 preview URL 显示原图。模型不支持 vision（`Model.input` 不含 `image`）时禁用附件按钮并提示。参见 `docs/dev/features/2026-08-06-chat-image-input/design.md`
 - [x] **触发器可复用会话模式**：新增第三种 trigger 会话模式 `reusable_session`（新建 trigger 默认值）——首次触发新建会话、绑定并落盘（`boundSessionId` 字段，仅运行时写入），之后每次触发复用；绑定会话被删时自动重建。`fire()` 由 if/else 重构为 `switch(mode)`；新增 `SessionManager.sessionExists`、`POST /reset-binding` 端点、`manage_trigger` tool 的 `reset_binding` action；UI 模式选择器 3 列、可只读展示绑定状态并解除绑定。参见 `docs/dev/features/2026-08-08-trigger-reusable-session/design.md`
 - [x] **Agent 配置热重载**：用户编辑 agent profile 后（`ProjectRuntime.updateAgent` → `ProjectManager.updateAgent` → `ProjectStore` 发出 `agent_updated` 事件），`SessionManager` 订阅该事件，对属于该 agent 的活跃 `LiveSession` 标记 `pendingReload`。下次 `sendMessage` 时先执行 `applyReload()`——从磁盘重读 profile 重建 systemPrompt + tools + streamFn，并重置 MCP merge 重新发现工具——再继续正常 prompt 流程。进行中的响应不受影响，下一轮用户消息才生效。reload 失败保留旧配置不中断对话。
