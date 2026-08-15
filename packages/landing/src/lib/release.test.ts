@@ -6,7 +6,7 @@ const FALLBACK_URL = "https://github.com/mengrru/Spherse/releases/latest";
 const fullManifest = {
   version: "1.2.3",
   mac: { arm64: "https://m/mac-arm64.dmg", intel: "https://m/mac-intel.dmg" },
-  win: { setup: "https://m/win-x64.exe", arm64: "https://m/win-arm64.exe" },
+  win: { x64: "https://m/win-x64.exe", arm64: "https://m/win-arm64.exe" },
 };
 
 function stubManifest(manifest: unknown) {
@@ -98,21 +98,28 @@ describe("resolveDownloadUrl (windows arch selection)", () => {
     await expect(resolveDownloadUrl("win")).resolves.toBe("https://m/win-x64.exe");
   });
 
-  it("returns win.setup for x64 devices even when manifest has arm64", async () => {
+  it("falls back to win.setup (legacy key) for x64 devices when manifest only has setup", async () => {
+    stubManifest({ ...fullManifest, win: { setup: "https://m/win-x64.exe" } });
+    stubWinArch("x86");
+    const { resolveDownloadUrl } = await loadReleaseModule();
+    await expect(resolveDownloadUrl("win")).resolves.toBe("https://m/win-x64.exe");
+  });
+
+  it("returns win.x64 for x64 devices even when manifest has arm64", async () => {
     stubManifest(fullManifest);
     stubWinArch("x86");
     const { resolveDownloadUrl } = await loadReleaseModule();
     await expect(resolveDownloadUrl("win")).resolves.toBe("https://m/win-x64.exe");
   });
 
-  it("defaults to win.setup when userAgentData is unavailable (non-Chromium browsers)", async () => {
+  it("defaults to win.x64 when userAgentData is unavailable (non-Chromium browsers)", async () => {
     stubManifest(fullManifest);
     stubUserAgentData(undefined);
     const { resolveDownloadUrl } = await loadReleaseModule();
     await expect(resolveDownloadUrl("win")).resolves.toBe("https://m/win-x64.exe");
   });
 
-  it("defaults to win.setup when the architecture probe rejects", async () => {
+  it("defaults to win.x64 when the architecture probe rejects", async () => {
     stubManifest(fullManifest);
     stubWinArchProbeFailure();
     const { resolveDownloadUrl } = await loadReleaseModule();

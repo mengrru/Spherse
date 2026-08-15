@@ -201,17 +201,17 @@ jobs:
               --arg version "$VER" \
               --arg arm64 "$ARM64" \
               --arg intel "$INTEL" \
-              --arg setup "$WIN" \
+              --arg x64 "$WIN" \
               --arg winArm64 "${BASE}/${WIN_ARM64_NAME}" \
-              '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{setup:$setup, arm64:$winArm64}}' \
+              '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{x64:$x64, arm64:$winArm64}}' \
               > /tmp/latest.json
           else
             jq -n \
               --arg version "$VER" \
               --arg arm64 "$ARM64" \
               --arg intel "$INTEL" \
-              --arg setup "$WIN" \
-              '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{setup:$setup}}' \
+              --arg x64 "$WIN" \
+              '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{x64:$x64}}' \
               > /tmp/latest.json
           fi
           jq empty /tmp/latest.json

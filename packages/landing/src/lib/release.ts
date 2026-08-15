@@ -22,7 +22,7 @@ export function detectPlatform(): Platform {
 interface Manifest {
   version: string;
   mac: { arm64: string; intel: string };
-  win: { setup: string; arm64?: string };
+  win: { x64?: string; arm64?: string; setup?: string };
 }
 
 async function fetchLatestManifest(): Promise<Manifest> {
@@ -75,6 +75,7 @@ export async function resolveDownloadUrl(platform: Platform): Promise<string> {
     if (platform === "win") {
       const arch = await detectWinArch();
       if (arch === "arm64" && manifest.win?.arm64) return manifest.win.arm64;
+      if (manifest.win?.x64) return manifest.win.x64;
       if (manifest.win?.setup) return manifest.win.setup;
     } else {
       const arch = detectMacArch();
