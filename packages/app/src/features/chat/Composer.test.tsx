@@ -127,6 +127,12 @@ describe("Composer input availability", () => {
     expect(onAbort).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the image icon on the attach button instead of the paperclip", () => {
+    renderComposer({ streaming: false });
+    expect(host.querySelector("[data-chat-composer] button svg.lucide-image")).not.toBeNull();
+    expect(host.querySelector("[data-chat-composer] button svg.lucide-paperclip")).toBeNull();
+  });
+
   it("still disables the textarea while session history is loading", () => {
     renderComposer({ loading: true });
     expect(textarea().hasAttribute("disabled")).toBe(true);

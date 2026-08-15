@@ -17,7 +17,8 @@ describe("Composer structure", () => {
     expect(source).toContain('type="file"');
     expect(source).toContain('accept="image/*"');
     expect(source).toContain("fileInputRef");
-    expect(source).toContain("PaperclipIcon");
+    expect(source).toContain("<ImageIcon />");
+    expect(source).not.toContain("PaperclipIcon");
   });
 
   it("runs the compress -> upload pipeline and deletes on remove", () => {
