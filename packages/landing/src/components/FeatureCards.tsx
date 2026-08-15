@@ -39,9 +39,14 @@ export function FeatureCards({ t }: FeatureCardsProps) {
           );
         })}
       </div>
-      <p className="mx-auto mt-12 max-w-3xl text-center text-base text-muted-foreground md:text-lg">
-        {t("feature.slogan")}
-      </p>
+      <div className="mx-auto mt-12 max-w-3xl text-center">
+        <p className="text-base text-muted-foreground md:text-lg">
+          {t("feature.slogan")}
+        </p>
+        <p className="mt-3 text-lg font-medium text-foreground md:text-xl">
+          {t("feature.motto")}
+        </p>
+      </div>
     </section>
   );
 }

@@ -45,6 +45,8 @@ export const zhCN = {
   "feature.mobile.desc": "通过受访问令牌保护的 Web 客户端和 Tunnel，扫码即可从移动设备连接你的桌面运行时。",
   // 首页功能卡片区结语，强化 Spherse 分发完整 Agent Workspace 而非单一提示词的差异。
   "feature.slogan": "你创造和分享的不只是一段 Prompt，而是一个可以直接运行的 Agent Workspace。",
+  // 首页功能卡片区最末的品牌邀请句，紧接 feature.slogan 定位句下方，用「积木筐」比喻邀请用户动手搭建属于自己的世界。
+  "feature.motto": "Spherse 是你的积木筐，用它来打造完全属于你自己的世界吧！",
   "feature.moreCases": "更多使用案例",
 
   "usecase.1": "（使用案例描述占位）",

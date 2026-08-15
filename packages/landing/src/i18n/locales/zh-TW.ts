@@ -28,6 +28,7 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "feature.mobile.title": "離開電腦也能繼續存取",
   "feature.mobile.desc": "透過受存取權杖保護的 Web 客戶端和 Tunnel，掃碼即可從行動裝置連接你的桌面執行環境。",
   "feature.slogan": "你創造和分享的不只是一段 Prompt，而是一個可以直接運行的 Agent Workspace。",
+  "feature.motto": "Spherse 是你的積木筐，用它來打造完全屬於你自己的世界吧！",
   "feature.moreCases": "更多使用案例",
 
   "usecase.1": "（使用案例描述佔位）",

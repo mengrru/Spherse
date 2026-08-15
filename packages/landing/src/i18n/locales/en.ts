@@ -30,6 +30,7 @@ export const en: Record<keyof typeof zhCN, string> = {
   "feature.mobile.title": "Keep access away from your desk",
   "feature.mobile.desc": "Use the token-protected Web client and a tunnel to scan and connect to your desktop runtime from a mobile device.",
   "feature.slogan": "Create and share more than a prompt: share an Agent Workspace that is ready to run.",
+  "feature.motto": "Spherse is your box of building blocks — use it to build a world entirely your own!",
   "feature.moreCases": "More use cases",
 
   "usecase.1": "(Use case description placeholder)",
