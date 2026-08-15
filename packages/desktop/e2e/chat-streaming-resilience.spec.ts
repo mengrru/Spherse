@@ -34,11 +34,15 @@ test("abort button visible throughout entire agent turn until agent_end", async 
     await expect(page.locator("[data-chat-composer] button svg.lucide-square")).toBeVisible();
     await expect(page.locator("[data-chat-composer] button svg.lucide-send")).toHaveCount(0);
 
+    await expect(textarea).toBeEnabled();
+    await textarea.fill("typed while streaming");
+
     complete();
 
     await page.waitForSelector("[data-chat-composer] button svg.lucide-send", { timeout: 5000 });
     await expect(page.locator("[data-chat-composer] button svg.lucide-square")).toHaveCount(0);
     await expect(page.locator("[data-chat-composer] button svg.lucide-send")).toBeVisible();
+    await expect(textarea).toHaveValue("typed while streaming");
   } finally {
     await app.close();
   }

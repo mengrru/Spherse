@@ -49,6 +49,7 @@ export function FloatingChatContainer({
         onExpand={handleExpand}
       >
         <Chat
+          key={floatingChat.sessionId}
           sessionId={floatingChat.sessionId}
           agent={agent}
           hideHeader
