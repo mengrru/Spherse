@@ -18,6 +18,7 @@ export const schemas = {
     hasMore: Type.Boolean(),
   }),
   sessionCreateResponse: Type.Object({ sessionId: Type.String() }),
+  sessionCreateRequest: Type.Object({ title: Type.Optional(Type.String({ minLength: 1 })) }),
   sessionRenameRequest: Type.Object({ title: Type.String() }),
   sendMessageRequest: Type.Object({ content: Type.String({ minLength: 1 }) }),
   sendMessageOkResponse: Type.Object({ ok: Type.Boolean() }),
@@ -47,6 +48,7 @@ export type SessionInfoContract = Static<typeof sessionInfo>;
 export type SessionListResponse = Static<typeof schemas.sessionListResponse>;
 export type SessionListPageResponse = Static<typeof schemas.sessionListPageResponse>;
 export type SessionCreateResponse = Static<typeof schemas.sessionCreateResponse>;
+export type SessionCreateRequest = Static<typeof schemas.sessionCreateRequest>;
 export type SessionRenameRequest = Static<typeof schemas.sessionRenameRequest>;
 export type SendMessageRequest = Static<typeof schemas.sendMessageRequest>;
 export type SendMessageOkResponse = Static<typeof schemas.sendMessageOkResponse>;

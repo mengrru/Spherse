@@ -65,7 +65,31 @@ describe("createSession action", () => {
       makeCtx(client),
     );
     expect(client.listAgents).not.toHaveBeenCalled();
-    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "agent-uuid-1", "hi");
+    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "agent-uuid-1", "hi", undefined);
+  });
+
+  it("passes a string name through as the session title", async () => {
+    const client = makeClient(async () => []);
+    await dispatchAction(
+      "createSession",
+      { agentId: "agent-1", name: "Trip Plan" },
+      makeCtx(client),
+    );
+    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "agent-1", undefined, "Trip Plan");
+  });
+
+  it("trims the name and ignores blank or non-string names", async () => {
+    const client = makeClient(async () => []);
+    await dispatchAction(
+      "createSession",
+      { agentId: "agent-1", name: "  Trip Plan  " },
+      makeCtx(client),
+    );
+    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "agent-1", undefined, "Trip Plan");
+
+    await dispatchAction("createSession", { agentId: "agent-1", name: "   " }, makeCtx(client));
+    await dispatchAction("createSession", { agentId: "agent-1", name: 42 }, makeCtx(client));
+    expect(mockCreateSession).toHaveBeenLastCalledWith("proj-1", client, "agent-1", undefined, undefined);
   });
 
   it("resolves agentSlug from cached agents without listing", async () => {
@@ -80,7 +104,7 @@ describe("createSession action", () => {
       makeCtx(client),
     );
     expect(client.listAgents).not.toHaveBeenCalled();
-    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "id-writer", undefined);
+    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "id-writer", undefined, undefined);
   });
 
   it("falls back to client.listAgents when slug not in cache", async () => {
@@ -94,7 +118,7 @@ describe("createSession action", () => {
       makeCtx(client),
     );
     expect(client.listAgents).toHaveBeenCalledTimes(1);
-    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "id-historian", undefined);
+    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "id-historian", undefined, undefined);
   });
 
   it("is a no-op when slug cannot be resolved", async () => {
@@ -132,7 +156,7 @@ describe("createSession action", () => {
       makeCtx(client),
     );
     expect(client.listAgents).not.toHaveBeenCalled();
-    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "explicit-id", undefined);
+    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "explicit-id", undefined, undefined);
   });
 
   it("falls through to slug resolution when agentId is an empty string", async () => {
@@ -146,7 +170,7 @@ describe("createSession action", () => {
       { agentId: "", agentSlug: "writer-a1b2c3" },
       makeCtx(client),
     );
-    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "id-writer", undefined);
+    expect(mockCreateSession).toHaveBeenCalledWith("proj-1", client, "id-writer", undefined, undefined);
   });
 
   it("is a no-op when neither agentId nor agentSlug is provided", async () => {

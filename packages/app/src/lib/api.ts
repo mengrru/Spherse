@@ -96,9 +96,12 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return parseJsonResponse<AgentProfile>(res, schemas.agentProfile);
     },
 
-    async createSession(agentId: string): Promise<{ sessionId: string }> {
+    async createSession(agentId: string, title?: string): Promise<{ sessionId: string }> {
       const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions`, {
         method: "POST",
+        ...(title !== undefined
+          ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) }
+          : {}),
       });
       await assertOk(res);
       return parseJsonResponse<{ sessionId: string }>(res, schemas.sessionCreateResponse);

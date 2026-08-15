@@ -27,17 +27,25 @@ export function registerSessionRoutes(
     return req.projectCtx!.projectManager.listSessions(req.params.agentId);
   });
 
-  fastify.post<{ Params: { projectId: string; agentId: string } }>(
+  fastify.post<{ Params: { projectId: string; agentId: string }; Body: { title?: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions",
     {
+      preValidation: async (req) => {
+        if (req.body === undefined) req.body = {};
+      },
       schema: {
+        body: schemas.sessionCreateRequest,
         response: {
           200: schemas.sessionCreateResponse,
         },
       },
     },
     async (req) => {
-      const sessionId = await req.projectCtx!.sessionRuntime.createSession(req.params.agentId);
+      const sessionId = await req.projectCtx!.sessionRuntime.createSession(
+        req.params.agentId,
+        undefined,
+        req.body?.title,
+      );
       return { sessionId };
     },
   );

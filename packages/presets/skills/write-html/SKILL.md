@@ -214,7 +214,7 @@ spherse.openExternalLink("https://example.com");
 
 需要触发 App 内其它能力时，阅读 `use-ui-sdk` skill，通过 `window.spherse.*` 调用。可用方法包括：
 
-- `spherse.createSession(params)` → `Promise<{ sessionId }>` — 创建新会话并导航到聊天页；`open: false` 时只创建不跳转，resolve 返回新会话 ID
+- `spherse.createSession(params)` → `Promise<{ sessionId }>` — 创建新会话并导航到聊天页；`open: false` 时只创建不跳转，resolve 返回新会话 ID；可选 `name` 参数为会话命名（显示在会话列表）
 - `spherse.openSession(sessionId)` — 打开已有会话并导航，**不发消息**（只跳转用这个）
 - `spherse.sendMessage(params)` → `Promise` — 向已有会话发送消息（`message` 必填；会话忙碌时 reject `session_busy`；`open: false` 时静默发送——不跳转，未打开的会话由 server 直接执行）
 - `spherse.toast(params)` — 弹一条 toast 提示（`{ variant, message, description? }`）

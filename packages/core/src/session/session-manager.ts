@@ -52,10 +52,10 @@ export class SessionManager {
     this.ctx.triggerManager = triggerManager;
   }
 
-  async createSession(agentId: string, source?: string): Promise<string> {
+  async createSession(agentId: string, source?: string, title?: string): Promise<string> {
     const agentStore = this.ctx.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
-    const sessionId = agentStore.sessions.createSession(undefined, source);
+    const sessionId = agentStore.sessions.createSession(title, source);
     const session = await LiveSession.create(this.ctx, agentId, sessionId);
     this.sessions.set(sessionId, session);
     this.ctx.logger.info({ sessionId, agentId }, "session created");

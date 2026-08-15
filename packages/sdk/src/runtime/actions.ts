@@ -6,6 +6,7 @@ export type CreateSessionParams = Params & {
   agentId?: string;
   agentSlug?: string;
   message?: string;
+  name?: string;
   open?: boolean;
   float?: boolean;
 };

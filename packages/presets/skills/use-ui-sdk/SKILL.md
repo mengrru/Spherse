@@ -140,6 +140,7 @@ spherse.toast({ variant: "error", message: "保存失败，请重试" });
 | agentId | string | 否 | 目标 agent 的 ID（UUID，与 `agentSlug` 二选一，同时提供时以 `agentId` 为准） |
 | agentSlug | string | 否 | 目标 agent 的 slug（即 agent 目录名，形如 `writer-a1b2c3`，可在 agent 右键菜单「复制 ID」获取） |
 | message | string | 否 | 初始消息内容（`open: false` 时为排队语义：等会话被打开后才发出） |
+| name | string | 否 | 会话名称（作为会话标题显示在会话列表中；空白字符串会被忽略） |
 | open | boolean | 否 | 为 `false` 时只创建会话、不跳转不浮窗；省略即默认打开 |
 | float | boolean | 否 | 为 `true` 时在浮窗中打开（与 `open: false` 同给时以 `open: false` 为准） |
 
@@ -150,6 +151,8 @@ spherse.toast({ variant: "error", message: "保存失败，请重试" });
 const { sessionId } = await spherse.createSession({ agentId: "writer", message: "请帮我扩展这段设定" });
 // 或用 slug
 spherse.createSession({ agentSlug: "writer-a1b2c3" });
+// 创建时命名（显示在会话列表）
+spherse.createSession({ agentSlug: "writer-a1b2c3", name: "角色设定整理" });
 ```
 
 **后台会话 compose 模式**（创建即静默执行，不打开任何 UI）：

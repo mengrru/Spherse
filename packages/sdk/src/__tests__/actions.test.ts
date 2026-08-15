@@ -22,6 +22,16 @@ describe("actions surface", () => {
     expect(mockCall).toHaveBeenCalledWith("createSession", { agentId: "a" });
   });
 
+  it("createSession passes name through with other params", () => {
+    mockCall.mockResolvedValue({ sessionId: "s1" });
+    actions.createSession({ agentId: "a", name: "Trip Plan", open: false });
+    expect(mockCall).toHaveBeenCalledWith("createSession", {
+      agentId: "a",
+      name: "Trip Plan",
+      open: false,
+    });
+  });
+
   it("sendMessage calls (request-response) sendMessage", () => {
     actions.sendMessage({ sessionId: "s", message: "m" });
     expect(mockCall).toHaveBeenCalledWith("sendMessage", { sessionId: "s", message: "m" });

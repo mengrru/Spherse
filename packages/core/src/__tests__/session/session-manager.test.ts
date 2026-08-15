@@ -535,3 +535,50 @@ Reloaded prompt body.`;
     expect(live.pendingReload).toBe(false);
   });
 });
+
+describe("SessionManager createSession title", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-title-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore;
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
+    runtime.timerService.stop();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("persists the title on the created session", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId, undefined, "Trip Plan");
+
+    const session = runtime.projectManager.listSessions(agentId).find((s) => s.id === sessionId);
+    expect(session?.title).toBe("Trip Plan");
+    expect(session?.source).toBe("manual");
+  });
+
+  it("keeps the title unset when not provided", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+
+    const session = runtime.projectManager.listSessions(agentId).find((s) => s.id === sessionId);
+    expect(session?.title).toBeUndefined();
+  });
+
+  it("keeps source and title independent", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId, "triggered", "Named");
+
+    const session = runtime.projectManager.listSessions(agentId).find((s) => s.id === sessionId);
+    expect(session?.title).toBe("Named");
+    expect(session?.source).toBe("triggered");
+  });
+});

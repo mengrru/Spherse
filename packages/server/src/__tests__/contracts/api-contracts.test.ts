@@ -132,6 +132,15 @@ describe("api contracts", () => {
     expect(parseApiResponse(schemas.sessionMessagesResponse, [{ role: "user" }])).toEqual([{ role: "user" }]);
   });
 
+  it("validates session create request", () => {
+    expect(parseApiResponse(schemas.sessionCreateRequest, {})).toEqual({});
+    expect(parseApiResponse(schemas.sessionCreateRequest, { title: "Trip Plan" })).toEqual({
+      title: "Trip Plan",
+    });
+    expect(() => parseApiResponse(schemas.sessionCreateRequest, { title: "" })).toThrow(/Invalid payload/);
+    expect(() => parseApiResponse(schemas.sessionCreateRequest, { title: 42 })).toThrow(/Invalid payload/);
+  });
+
   it("validates session list page response envelope", () => {
     const item = {
       id: "s1",

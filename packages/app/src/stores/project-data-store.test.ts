@@ -161,6 +161,44 @@ describe("useProjectDataStore", () => {
     });
   });
 
+  it("passes the title to the client and caches it on the created session", async () => {
+    const client = createClient({
+      createSession: vi.fn().mockResolvedValue({ sessionId: "session-1" }),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    const session = await useProjectDataStore.getState().createSession(
+      "project-1",
+      client,
+      "agent-1",
+      "initial message",
+      "Trip Plan",
+    );
+
+    expect(client.createSession).toHaveBeenCalledWith("agent-1", "Trip Plan");
+    expect(session?.title).toBe("Trip Plan");
+    expect(useProjectDataStore.getState().projects["project-1"]?.sessions).toMatchObject([
+      { id: "session-1", title: "Trip Plan" },
+    ]);
+  });
+
+  it("creates a session without a title", async () => {
+    const client = createClient({
+      createSession: vi.fn().mockResolvedValue({ sessionId: "session-1" }),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    const session = await useProjectDataStore.getState().createSession(
+      "project-1",
+      client,
+      "agent-1",
+      "initial message",
+    );
+
+    expect(client.createSession).toHaveBeenCalledWith("agent-1", undefined);
+    expect(session?.title).toBeUndefined();
+  });
+
   it("renames a session in the project cache", async () => {
     const client = createClient({
       listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
