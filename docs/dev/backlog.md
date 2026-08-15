@@ -11,6 +11,8 @@
 
 - [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。
 
+- [ ] **trigger/后台运行的 ask_user 提问长时间挂起**：trigger 运行（`TriggerManager.fire`）传入的 event sink 只处理 `agent_end`，`control_request` 无人应答——question（ask_user）默认等 600s（`timeout_s` 最高 3600s）、approval 等 5min 超时，期间 run 空转。ask_user 改为所有 agent 默认启用后暴露面扩大（此前仅 opt-in agent）。方向：非交互 run（无 UI event sink 消费 question）时 AskGate 自动 resolve `{ timedOut: true }` 或直接拒绝，与「审批卡 pending 态残留」同属控制请求在非交互场景的收敛问题。
+
 - [x] **Chat 前端状态边界拆分**：将 `features/chat/runtime/streaming-store.ts` 中的 WebSocket、心跳、重连和连接期对账提取为 per-session `ChatSessionRuntime`；Zustand 仅保留可观察状态与公开 actions，transport runtime 由 registry 管理；将纯数据逻辑收纳到 `features/chat/model/`，由 reducer、历史投影和 tool/card 投影模块分别负责，并以 `connectionStatus` 替代 `wsConnecting` 布尔值。参见 `docs/dev/bugfix/2026-08-04-chat-ws-lifecycle/design.md`
 - [x] **Chat 长响应断线恢复链路系统化**：由 server `ChatSessionHub` 将 Core run 生命周期与单条 WebSocket 解耦，负责 attachment 广播与当前 run 重放，Core session 保持执行/持久化边界；重连通过 `run_status` + 带稳定 message id 的最新历史页对账，移除一次性 `historyLoaded` 补丁语义；修复 renderer suspend 后心跳误判、socket send 失败阻断持久化及断线提前结束 loading。参见 `docs/dev/bugfix/2026-08-04-chat-ws-lifecycle/design.md`
 - [x] **压缩策略修复——sanitize orphaned toolResult + prompt/turn 双阈值**：`compaction.ts` 的 `sanitizeToolCallPairs` 在 toolCall 被截断但配对的 toolResult 落在保留窗口内时，将孤立的 toolResult 内容替换为占位文本，避免 LLM 看到「没有 toolCall 的 toolResult」困惑；压缩触发改为 prompt token 与 turn 数双阈值（任一超过即压缩），避免纯 toolResult-heavy 短轮次超出 token 但 turn 数未达阈值的情况漏压缩。

@@ -533,6 +533,20 @@ describe("LiveSession yolo mode", () => {
     expect(findTool(live, "read_file")).toBeDefined();
   });
 
+  it("ask_user is registered exactly once when profile tools already include it", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    agentStore._profile = {
+      ...agentStore._profile,
+      tools: ["ask_user", "read_file"],
+    };
+    const sessionId = agentStore.sessions.createSession();
+    const live = await LiveSession.create(ctx, agentId, sessionId);
+
+    const names = agentOf(live).state.tools.map((t: any) => t.name);
+    expect(names.filter((n: string) => n === "ask_user")).toHaveLength(1);
+    expect(findTool(live, "read_file")).toBeDefined();
+  });
+
   it("ask_user routes through the control bus and resolves with the user's answer", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     agentStore._profile = {

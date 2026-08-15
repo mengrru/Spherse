@@ -63,13 +63,21 @@ describe("sync-templates", () => {
     }
   });
 
-  it("generates agent-template.ts with AGENT_TEMPLATE constant", () => {
+  it("generates agent-template.ts with AGENT_TEMPLATE constant matching the source template", async () => {
     const content = fs.readFileSync(
       path.join(generatedDir, "agent-template.ts"),
-      "utf-8",
+      "utf8",
     );
     expect(content).toContain("export const AGENT_TEMPLATE");
     expect(content).toContain("tools:");
+    const { AGENT_TEMPLATE } = await import(
+      "../src/generated/agent-template.js"
+    );
+    const sourceFile = fs.readFileSync(
+      path.join(rootDir, "templates", "agent-template.md"),
+      "utf-8",
+    );
+    expect(AGENT_TEMPLATE).toBe(sourceFile);
   });
 
   it("generates agents-index-template.ts with AGENTS_INDEX_TEMPLATE constant", async () => {
