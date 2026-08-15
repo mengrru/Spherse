@@ -18,6 +18,7 @@ afterEach(() => {
     root = null;
   }
   host.remove();
+  localStorage.clear();
 });
 
 function renderComposer(props: { streaming?: boolean; loading?: boolean }) {
@@ -128,6 +129,11 @@ describe("Composer input availability", () => {
 
   it("still disables the textarea while session history is loading", () => {
     renderComposer({ loading: true });
+    expect(textarea().hasAttribute("disabled")).toBe(true);
+  });
+
+  it("keeps the textarea disabled when streaming and loading are both true", () => {
+    renderComposer({ streaming: true, loading: true });
     expect(textarea().hasAttribute("disabled")).toBe(true);
   });
 });

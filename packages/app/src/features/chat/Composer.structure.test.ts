@@ -32,6 +32,11 @@ describe("Composer structure", () => {
     expect(source).toMatch(/attachBusy|attachStatus/);
   });
 
+  it("keeps the textarea editable while streaming and only disables it while loading", () => {
+    expect(source).toContain("disabled={loading}");
+    expect(source).not.toContain("disabled={streaming || loading}");
+  });
+
   it("surfaces attach failures via the i18n toast", () => {
     expect(source).toContain("chat.imageAttachFailed");
     expect(source).toContain("toast.error");
