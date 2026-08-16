@@ -26,14 +26,39 @@ function sseBody(): string {
   ].join("\n");
 }
 
+function anthropicSseBody(): string {
+  return [
+    'event: message_start',
+    'data: {"type":"message_start","message":{"id":"msg_01","type":"message","role":"assistant","model":"kimi-for-coding","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":10,"output_tokens":1}}}',
+    "",
+    'event: content_block_start',
+    'data: {"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}',
+    "",
+    'event: content_block_delta',
+    'data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hi"}}',
+    "",
+    'event: content_block_stop',
+    'data: {"type":"content_block_stop","index":0}',
+    "",
+    'event: message_delta',
+    'data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"output_tokens":1}}',
+    "",
+    'event: message_stop',
+    'data: {"type":"message_stop"}',
+    "",
+    "",
+  ].join("\n");
+}
+
 async function captureRequestHeaders(
   model: Model,
   options: Record<string, unknown> = {},
+  body: string = sseBody(),
 ): Promise<Headers[]> {
   const requestHeaders: Headers[] = [];
   const fetch = async (_input: unknown, init?: RequestInit) => {
     requestHeaders.push(new Headers(init?.headers));
-    return new Response(sseBody(), {
+    return new Response(body, {
       status: 200,
       headers: { "content-type": "text/event-stream" },
     });
@@ -90,5 +115,51 @@ describe("custom provider user-agent", () => {
 
     expect(requestHeaders).toHaveLength(1);
     expect(requestHeaders[0].get("user-agent")).toBe("Spherse/1.0");
+  });
+
+  it("prefers an explicitly provided lowercase user-agent key over suppression", async () => {
+    const model = registerCustomProvider();
+
+    const requestHeaders = await captureRequestHeaders(model, {
+      apiKey: "sk-test",
+      headers: { "user-agent": "Spherse-Lower/1.0" },
+    });
+
+    expect(requestHeaders).toHaveLength(1);
+    expect(requestHeaders[0].get("user-agent")).toBe("Spherse-Lower/1.0");
+  });
+
+  it("does not send a user-agent header for keyless custom providers", async () => {
+    syncCustomProviders(
+      [{ id: "custom-keyless-ua", name: "Keyless UA", baseUrl: "https://keyless.example.com/v1", models: ["m"], keyless: true }],
+      {},
+    );
+    const model = resolveModelById("custom-keyless-ua/m");
+
+    const requestHeaders = await captureRequestHeaders(model);
+
+    expect(requestHeaders).toHaveLength(1);
+    expect(requestHeaders[0].has("user-agent")).toBe(false);
+  });
+
+  it("keeps the model-defined user-agent for builtin providers that require one", async () => {
+    const kimiModels = getChatModels()
+      .getModels("kimi-coding")
+      .filter((m) => m.api === "anthropic-messages");
+    expect(kimiModels.length).toBeGreaterThan(0);
+    const modelWithUa = kimiModels.find((m) => {
+      const headers = m.headers ?? {};
+      return Object.entries(headers).some(([name, value]) => name.toLowerCase() === "user-agent" && typeof value === "string");
+    });
+    expect(modelWithUa).toBeDefined();
+
+    const requestHeaders = await captureRequestHeaders(
+      modelWithUa!,
+      { apiKey: "sk-test" },
+      anthropicSseBody(),
+    );
+
+    expect(requestHeaders).toHaveLength(1);
+    expect(requestHeaders[0].get("user-agent")).toBe("KimiCLI/1.5");
   });
 });
