@@ -632,6 +632,8 @@ export const zhCN = {
   "chat.htmlCard.collapse": "折叠",
   // 复制按钮悬停提示
   "chat.copyTooltip": "复制",
+  // markdown 代码块右上角「复制代码」按钮的悬停提示
+  "markdown.copyCode": "复制代码",
   // Chat 关闭按钮悬停提示
   "chat.close": "关闭",
   // 消息生成失败时的固定提示文案，点击可展开查看具体错误

@@ -310,6 +310,7 @@ export const en: Record<TranslationKey, string> = {
   "chat.htmlCard.showCard": "Show this card",
   "chat.htmlCard.collapse": "Collapse",
   "chat.copyTooltip": "Copy",
+  "markdown.copyCode": "Copy code",
   "chat.close": "Close",
   "chat.responseGenerationFailed": "Response generation failed",
   "chat.error.modelNotConfigured": "No model configured. Please select a model in Settings before sending messages.",
