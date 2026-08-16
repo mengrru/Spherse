@@ -364,6 +364,7 @@ spherse/
 ├── .github/
 │   └── workflows/
 │       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布（win --publish always，mac --publish never + gh upload dmg）
+│       ├── pr-build.yml              # PR 触发的 CI：checkout + npm ci + npm run verify（lint/build/单测/i18n check）
 │       └── deploy-pages.yml          # main 分支 landing/web 变更触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
