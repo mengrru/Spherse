@@ -19,7 +19,7 @@
     "build:web": "npm run build --workspace=@spherse/i18n && npm run build --workspace=@spherse/presets && npm run build --workspace=@spherse/sdk && npm run build --workspace=@spherse/core && npm run build --workspace=@spherse/server && npm run build --workspace=packages/web",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "verify": "npm run lint && npm run build && npm test --workspace=packages/core && npm test --workspace=packages/server && npm test --workspace=packages/sdk && npm test --workspace=packages/i18n && npm test --workspace=packages/app && npm test --workspace=packages/desktop && npm run check:i18n",
+    "verify": "npm run lint && npm run build && npm test --workspace=packages/core && npm test --workspace=packages/server && npm test --workspace=packages/sdk && npm test --workspace=packages/i18n && npm test --workspace=packages/app && npm test --workspace=packages/desktop && npm test --workspace=packages/landing && npm run check:i18n",
     "verify:e2e": "npm run verify && npm run test:e2e --workspace=packages/desktop",
     "prepare": "husky"
   },

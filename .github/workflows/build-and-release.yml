@@ -43,10 +43,15 @@ jobs:
             arch-label: intel
             target-arch: x64
           - os: windows-latest
-            build-args: --win
+            build-args: --win --x64
             artifact: exe
             arch-label: ""
-            target-arch: ""
+            target-arch: x64
+          - os: windows-latest
+            build-args: --win --arm64
+            artifact: exe
+            arch-label: ""
+            target-arch: arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -145,11 +150,21 @@ jobs:
         run: |
           arm64_dmg=$(basename "$(ls ./oss-out/*arm64*.dmg | head -n1)")
           intel_dmg=$(basename "$(ls ./oss-out/*intel*.dmg | head -n1)")
-          win_exe=$(basename "$(ls ./oss-out/*.exe | head -n1)")
+          win_exe=$(basename "$(ls ./oss-out/*.exe | grep -v 'arm64' | head -n1)")
+          win_arm64_exe=$(basename "$(ls ./oss-out/*arm64*.exe 2>/dev/null | head -n1)" 2>/dev/null || true)
+          if [[ -z "$arm64_dmg" || -z "$intel_dmg" ]]; then
+            echo "::error::Required macOS dmg assets not found in release (arm64/intel)"
+            exit 1
+          fi
+          if [[ -z "$win_exe" ]]; then
+            echo "::error::Required x64 Windows installer not found in release assets"
+            exit 1
+          fi
           {
             echo "arm64_dmg=${arm64_dmg}"
             echo "intel_dmg=${intel_dmg}"
             echo "win_exe=${win_exe}"
+            echo "win_arm64_exe=${win_arm64_exe}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload installers to OSS (versioned path)
@@ -180,13 +195,25 @@ jobs:
           ARM64="${BASE}/${{ steps.assets.outputs.arm64_dmg }}"
           INTEL="${BASE}/${{ steps.assets.outputs.intel_dmg }}"
           WIN="${BASE}/${{ steps.assets.outputs.win_exe }}"
-          jq -n \
-            --arg version "$VER" \
-            --arg arm64 "$ARM64" \
-            --arg intel "$INTEL" \
-            --arg setup "$WIN" \
-            '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{setup:$setup}}' \
-            > /tmp/latest.json
+          WIN_ARM64_NAME="${{ steps.assets.outputs.win_arm64_exe }}"
+          if [[ -n "$WIN_ARM64_NAME" ]]; then
+            jq -n \
+              --arg version "$VER" \
+              --arg arm64 "$ARM64" \
+              --arg intel "$INTEL" \
+              --arg x64 "$WIN" \
+              --arg winArm64 "${BASE}/${WIN_ARM64_NAME}" \
+              '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{x64:$x64, arm64:$winArm64}}' \
+              > /tmp/latest.json
+          else
+            jq -n \
+              --arg version "$VER" \
+              --arg arm64 "$ARM64" \
+              --arg intel "$INTEL" \
+              --arg x64 "$WIN" \
+              '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{x64:$x64}}' \
+              > /tmp/latest.json
+          fi
           jq empty /tmp/latest.json
           /tmp/ossutil cp /tmp/latest.json "oss://${OSS_BUCKET}/spherse/latest.json" \
             -e "$OSS_ENDPOINT" \

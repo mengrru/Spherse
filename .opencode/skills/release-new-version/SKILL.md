@@ -45,7 +45,7 @@ description: Use when the user says "发新版本", "release", "publish a new ve
 5. **确认 CI 触发**
    提示用户可在 GitHub Actions 页面查看构建进度。CI 会：
    - 创建 GitHub Draft Release
-   - 构建 macOS arm64/intel DMG + Windows EXE
+   - 构建 macOS arm64/intel DMG + Windows x64/arm64 EXE
    - 上传到 GitHub Release
    - 上传到阿里云 OSS 镜像 + 更新 `latest.json`
 

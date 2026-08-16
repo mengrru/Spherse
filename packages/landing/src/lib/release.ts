@@ -22,7 +22,7 @@ export function detectPlatform(): Platform {
 interface Manifest {
   version: string;
   mac: { arm64: string; intel: string };
-  win: { setup: string };
+  win: { x64?: string; arm64?: string; setup?: string };
 }
 
 async function fetchLatestManifest(): Promise<Manifest> {
@@ -30,6 +30,25 @@ async function fetchLatestManifest(): Promise<Manifest> {
   const res = await fetch(MANIFEST_URL);
   if (!res.ok) throw new Error(`OSS manifest responded ${res.status}`);
   return (await res.json()) as Manifest;
+}
+
+async function detectWinArch(): Promise<"arm64" | "x64"> {
+  try {
+    const uaData = (
+      navigator as Navigator & {
+        userAgentData?: {
+          getHighEntropyValues?: (hints: string[]) => Promise<{
+            architecture?: string;
+          }>;
+        };
+      }
+    ).userAgentData;
+    const hints = await uaData?.getHighEntropyValues?.(["architecture"]);
+    if (hints?.architecture === "arm") return "arm64";
+  } catch {
+    // ignore — fall through to default
+  }
+  return "x64";
 }
 
 function detectMacArch(): "arm64" | "intel" {
@@ -54,6 +73,9 @@ export async function resolveDownloadUrl(platform: Platform): Promise<string> {
   try {
     const manifest = await fetchLatestManifest();
     if (platform === "win") {
+      const arch = await detectWinArch();
+      if (arch === "arm64" && manifest.win?.arm64) return manifest.win.arm64;
+      if (manifest.win?.x64) return manifest.win.x64;
       if (manifest.win?.setup) return manifest.win.setup;
     } else {
       const arch = detectMacArch();

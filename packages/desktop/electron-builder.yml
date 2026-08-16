@@ -24,8 +24,12 @@ mac:
     - dmg
 win:
   icon: build/spherse-icon.ico
+  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
   target:
-    - nsis
+    - target: nsis
+      arch:
+        - x64
+        - arm64
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
