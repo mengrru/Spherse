@@ -1,4 +1,13 @@
-import { type Models, type MutableModels, type ImagesModels, type MutableImagesModels, createProvider, type ApiKeyAuth } from "@earendil-works/pi-ai";
+import {
+  type Models,
+  type MutableModels,
+  type ImagesModels,
+  type MutableImagesModels,
+  createProvider,
+  type ApiKeyAuth,
+  type ProviderStreams,
+  type ProviderHeaders,
+} from "@earendil-works/pi-ai";
 import { builtinModels, builtinImagesModels } from "@earendil-works/pi-ai/providers/all";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
@@ -86,6 +95,24 @@ function customAuth(apiKey: string | undefined, keyless: boolean): ApiKeyAuth {
   };
 }
 
+function suppressUserAgent(api: ProviderStreams): ProviderStreams {
+  const inject = <T extends { headers?: ProviderHeaders }>(options?: T): T => ({
+    ...(options ?? ({} as T)),
+    headers: { "User-Agent": null, ...options?.headers },
+  });
+  const wrapped: ProviderStreams = {
+    stream: (model, context, options) => api.stream(model, context, inject(options)),
+    streamSimple: (model, context, options) => api.streamSimple(model, context, inject(options)),
+  };
+  if (api.fetchDeferred) {
+    wrapped.fetchDeferred = (model, handle, options) => api.fetchDeferred!(model, handle, inject(options));
+  }
+  if (api.cancelDeferred) {
+    wrapped.cancelDeferred = (model, handle, options) => api.cancelDeferred!(model, handle, inject(options));
+  }
+  return wrapped;
+}
+
 function buildCustomProvider(def: CustomProviderDef, apiKey: string | undefined) {
   const input: ("text" | "image")[] = ["text"];
   const modelList = def.models.map((m) => ({
@@ -106,7 +133,7 @@ function buildCustomProvider(def: CustomProviderDef, apiKey: string | undefined)
     baseUrl: def.baseUrl,
     auth: { apiKey: customAuth(apiKey, def.keyless) },
     models: modelList,
-    api: openAICompletionsApi(),
+    api: suppressUserAgent(openAICompletionsApi()),
   });
 }
 
