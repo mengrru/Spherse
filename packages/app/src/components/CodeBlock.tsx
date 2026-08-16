@@ -14,6 +14,7 @@ export function CodeBlock({ children, className, ...props }: CodeBlockProps) {
   const text = extractCodeText(children);
 
   const handleCopy = () => {
+    if (!navigator.clipboard) return;
     void navigator.clipboard.writeText(text).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -28,7 +29,7 @@ export function CodeBlock({ children, className, ...props }: CodeBlockProps) {
       <Button
         variant="ghost"
         size="icon-sm"
-        className="absolute top-2 end-2 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        className="absolute top-2 end-2 text-muted-foreground opacity-0 pointer-events-none transition-opacity group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
         onClick={handleCopy}
         title={t("markdown.copyCode")}
         aria-label={t("markdown.copyCode")}

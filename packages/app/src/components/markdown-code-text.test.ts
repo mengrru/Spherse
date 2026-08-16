@@ -1,4 +1,4 @@
-import { createElement } from "react";
+import { createElement, Fragment } from "react";
 import { describe, expect, it } from "vitest";
 import { extractCodeText } from "./markdown-code-text";
 
@@ -39,5 +39,17 @@ describe("extractCodeText", () => {
       "world",
     );
     expect(extractCodeText(deep)).toBe("hello world");
+  });
+
+  it("extracts text from a non-array iterable of nodes", () => {
+    expect(extractCodeText(new Set(["a", "b"]))).toBe("ab");
+  });
+
+  it("extracts text from a React fragment", () => {
+    expect(extractCodeText(createElement(Fragment, null, "foo", "bar"))).toBe("foobar");
+  });
+
+  it("extracts text from a bigint node", () => {
+    expect(extractCodeText(10n)).toBe("10");
   });
 });
