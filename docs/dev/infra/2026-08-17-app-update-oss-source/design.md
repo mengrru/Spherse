@@ -15,6 +15,8 @@
 
 两平台检测都硬依赖 GitHub，而目标用户主要在国内网络环境。
 
+**Windows in-app 自动更新从未实际生效**（作者确认）。考古 CI 历史：初版 pipeline（3d659a6）Windows 曾 `--publish always`（会上传 latest.yml），但随后的 pipeline 重构（fd86e0e/edbd11b「infra(release): update release pipeline」）起两平台统一改为 `--publish never` + `gh release upload`，`latest.yml` 不再上传至今；叠加 GitHub 国内不可达，electron-updater 的 in-app 下载/安装链路（`downloading`/`downloaded` 状态）从未对用户产生过实际价值。
+
 同时仓库已有现成资产：CI `publish-oss` job（`build-and-release.yml`）每次发版自动将安装包上传至 Aliyun OSS 并生成稳定清单 `https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse/latest.json`：
 
 ```json
@@ -115,6 +117,7 @@ interface OssUpdateManifest {
 
 - **OSS 单点依赖**：清单不可用/欠费时检测失败，与现状（GitHub 失败）等价，但 OSS 由作者自控、可观测性更好；landing 已同源依赖，风险已存在且被接受。
 - **存量旧版 app**：仍指向 GitHub 的旧版本用户无法收到引导——当前版本 0.1.19、用户量极小（早期阶段），可接受。
-- **Windows in-app 全自动更新事实下线**：由「前往下载」引导替代；NSIS 本就非 oneClick，损失有限；恢复路径已在 backlog #149 记录。
+- **Windows in-app 全自动更新事实下线**：由「前往下载」引导替代——**无回归**：如背景所述该功能从未实际生效（latest.yml 极早期即不再上传 + GitHub 不可达），方案 A 不损失任何实际可用功能；恢复路径已在 backlog #149 记录。
+- **in-app 死代码保留的说明**：electron-updater 依赖与 `downloadUpdate`/`installUpdate`/`cancelUpdate` 链路保留不删，仅为 #149 未来复活留低门槛；因从未生效，保留与删除对用户行为均无差异，选保留以缩小本次 diff。
 - **Mac x64 机器缺 intel 键**（极旧清单）：`downloadUrl` 为 undefined → UI 回退渲染「下载」按钮，点击后进入不可用的 in-app 路径（electron-updater 报 error）——UI 已有 error 展示与重试，不静默失败；实际清单始终含 intel 键（CI 必需资产校验），触发概率≈0。
 - **清单 version 非法**（如空串）：`compareVersions` NaN 分支返回 0 → 视为无更新，安全侧退化。
