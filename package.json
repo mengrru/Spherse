@@ -10,6 +10,7 @@
     "build": "npm run build -w @spherse/i18n && npm run build -w @spherse/presets && npm run build -w @spherse/sdk && npm run build -w @spherse/core && npm run build -w @spherse/server && npm run build:desktop",
     "build:desktop": "npm run build -w @spherse/desktop",
     "check:i18n": "npm run check -w @spherse/i18n",
+    "test:infra": "node --test scripts/branch-protection.test.mjs",
     "dev": "npm run dev --workspace=packages/desktop",
     "dist": "npm run dist --workspace=packages/desktop",
     "dist:mac": "npm run dist:mac --workspace=packages/desktop",
@@ -19,7 +20,7 @@
     "build:web": "npm run build --workspace=@spherse/i18n && npm run build --workspace=@spherse/presets && npm run build --workspace=@spherse/sdk && npm run build --workspace=@spherse/core && npm run build --workspace=@spherse/server && npm run build --workspace=packages/web",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "verify": "npm run lint && npm run build && npm test --workspace=packages/core && npm test --workspace=packages/server && npm test --workspace=packages/sdk && npm test --workspace=packages/i18n && npm test --workspace=packages/app && npm test --workspace=packages/desktop && npm test --workspace=packages/landing && npm run check:i18n",
+    "verify": "npm run lint && npm run build && npm test --workspace=packages/core && npm test --workspace=packages/server && npm test --workspace=packages/sdk && npm test --workspace=packages/i18n && npm test --workspace=packages/app && npm test --workspace=packages/desktop && npm test --workspace=packages/landing && npm run check:i18n && npm run test:infra",
     "verify:e2e": "npm run verify && npm run test:e2e --workspace=packages/desktop",
     "prepare": "husky"
   },

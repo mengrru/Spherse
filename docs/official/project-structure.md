@@ -349,7 +349,10 @@ spherse/
 │   │       │   └── ui/              # 从 app 复制的 shadcn 组件（button、dialog）
 │   │       └── data/                # 轮播与 feature 配置数据
 ├── scripts/
-│   └── rebuild-native.mjs            # Electron native dependency rebuild
+│   ├── rebuild-native.mjs            # Electron native dependency rebuild
+│   ├── enforce-branch-protection.sh  # 幂等设置 dev 分支保护：PR Build 检查 required（gh api，apply/--check）
+│   ├── branch-protection.json        # dev 分支保护载荷（required_status_checks 等，enforce 脚本读取）
+│   └── branch-protection.test.mjs    # node --test 单测：校验保护载荷与脚本一致性（纳入 root verify）
 ├── docs/
 │   ├── official/                     # 正式项目文档（始终与代码同步）
 │   └── dev/                          # 开发过程文档（容易过时）
@@ -364,7 +367,7 @@ spherse/
 ├── .github/
 │   └── workflows/
 │       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布（win --publish always，mac --publish never + gh upload dmg）
-│       ├── pr-build.yml              # PR 触发的 CI：checkout + npm ci + npm run verify（lint/build/单测/i18n check）
+│       ├── pr-build.yml              # PR 触发的 CI：checkout + npm ci + npm run verify（lint/build/单测/i18n check）；dev 分支保护已将其 required（见 scripts/enforce-branch-protection.sh）
 │       └── deploy-pages.yml          # main 分支 landing/web 变更触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
