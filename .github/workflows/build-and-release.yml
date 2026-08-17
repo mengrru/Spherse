@@ -219,3 +219,23 @@ jobs:
             -e "$OSS_ENDPOINT" \
             -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET" \
             --force -u
+
+  # 发版完成后联动部署 web 版（GitHub Pages：landing + web）。
+  # GITHUB_TOKEN 触发的事件默认不会级联 workflow run，但 workflow_dispatch 是官方例外，
+  # 因此用 gh workflow run（需要 actions: write 权限）触发 deploy-pages.yml；
+  # ref 用发版 tag，保证 Pages 内容与本次发版代码一致。
+  deploy-web:
+    needs: publish-oss
+    if: github.event_name == 'push' && needs.publish-oss.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - name: Trigger Pages deploy (landing + web)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run deploy-pages.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref "${GITHUB_REF_NAME}"
