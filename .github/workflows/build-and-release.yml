@@ -113,7 +113,9 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "${GITHUB_REF_NAME}" release/*.exe --clobber
+        # 只上传本 job arch 后缀的安装包：x64/arm64 两个 matrix job 并发运行，
+        # 若按 release/*.exe 全量上传，双 arch 时产物同名会并发 --clobber 互踩（曾致 HTTP 404）
+        run: gh release upload "${GITHUB_REF_NAME}" "release/*-${{ matrix.target-arch }}.exe" --clobber
 
   publish-oss:
     needs: build
