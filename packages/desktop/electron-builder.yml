@@ -25,11 +25,12 @@ mac:
 win:
   icon: build/spherse-icon.ico
   artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+  # 注意：不要在这里声明 arch 列表。config 里的 target.arch 会覆盖 CI 的 --x64/--arm64
+  # CLI flag（app-builder-lib computeArchToTargetNamesMap），导致每个 matrix job 都打出
+  # 双 arch + 一个无后缀的合并安装包，且各 job 产物同名并发上传互相 clobber 而 404。
+  # arch 由 build-and-release.yml 的 matrix（--win --x64 / --win --arm64）控制。
   target:
-    - target: nsis
-      arch:
-        - x64
-        - arm64
+    - nsis
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
