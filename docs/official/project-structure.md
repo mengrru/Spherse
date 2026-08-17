@@ -363,9 +363,9 @@ spherse/
 │           └── SKILL.md             # i18n 字符串迁移指导
 ├── .github/
 │   └── workflows/
-│       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布（win --publish always，mac --publish never + gh upload dmg）
+│       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + 末尾 dispatch deploy-pages 联动 web 部署
 │       ├── pr-build.yml              # PR 触发的 CI：checkout + npm ci + npm run verify（lint/build/单测/i18n check）
-│       └── deploy-pages.yml          # main 分支 landing/web 变更触发的 CI：构建并部署到 GitHub Pages
+│       └── deploy-pages.yml          # main 分支 landing/web/i18n 变更或发版流水线 workflow_dispatch 触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
 ├── eslint.config.js                  # ESLint 9 flat config（全仓库 lint 规则）
