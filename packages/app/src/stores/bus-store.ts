@@ -183,6 +183,7 @@ export const useBusStore = create<BusStore>((set, get) => {
     resumeProbe() {
       clearProbeTimer();
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      const socket = ws;
       if (Date.now() - lastPongAt > HEARTBEAT_TIMEOUT_MS) {
         try { ws.close(); } catch { /* already closed */ }
         return;
@@ -191,7 +192,8 @@ export const useBusStore = create<BusStore>((set, get) => {
       sendRaw({ kind: "ping" });
       probeTimer = setTimeout(() => {
         probeTimer = undefined;
-        if (ws && ws.readyState === WebSocket.OPEN && lastPongAt === pongAtStart) {
+        if (ws !== socket || ws.readyState !== WebSocket.OPEN) return;
+        if (lastPongAt === pongAtStart) {
           try { ws.close(); } catch { /* already closed */ }
         }
       }, RESUME_PROBE_TIMEOUT_MS);

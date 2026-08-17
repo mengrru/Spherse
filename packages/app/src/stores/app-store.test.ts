@@ -358,6 +358,89 @@ describe("useAppStore refreshProjects", () => {
     expect(useAppStore.getState().activeProjectId).toBe("project-b");
   });
 
+  it("persists the fallback project when the active project disappeared", async () => {
+    useAppStore.setState({
+      projects: new Map([["project-gone", projectState({ id: "project-gone", name: "gone" })]]),
+      activeProjectId: "project-gone",
+    });
+
+    const setLastActiveProject = vi.fn();
+    const bridge = createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject: vi.fn(),
+        restoreProjects: vi.fn().mockResolvedValue([
+          { id: "project-b", path: "/tmp/project-b", name: "project-b" },
+        ]),
+        addOpenProject: vi.fn(),
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        openFileExternal: vi.fn(),
+        setLastActiveProject,
+        getLastActiveProject: vi.fn(),
+        openSampleProject: vi.fn(),
+        getSampleManifest: vi.fn(),
+      },
+    });
+
+    await useAppStore.getState().refreshProjects(bridge);
+
+    expect(setLastActiveProject).toHaveBeenCalledWith("project-b");
+  });
+
+  it("keeps a project registered locally while the fetch was in flight", async () => {
+    useAppStore.setState({
+      projects: new Map([["project-a", projectState()]]),
+      activeProjectId: "project-a",
+    });
+
+    let resolveRestore: (value: Array<{ id: string; path: string; name: string }>) => void;
+    const restoreProjects = vi.fn().mockImplementation(
+      () => new Promise<Array<{ id: string; path: string; name: string }>>((resolve) => {
+        resolveRestore = resolve;
+      }),
+    );
+    const bridge = createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject: vi.fn(),
+        restoreProjects,
+        addOpenProject: vi.fn(),
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        openFileExternal: vi.fn(),
+        setLastActiveProject: vi.fn(),
+        getLastActiveProject: vi.fn(),
+        openSampleProject: vi.fn(),
+        getSampleManifest: vi.fn(),
+      },
+    });
+
+    const pending = useAppStore.getState().refreshProjects(bridge);
+    // Wait until the in-flight fetch actually started (after connection
+    // resolution), then simulate a concurrent local open.
+    await vi.waitFor(() => {
+      if (!resolveRestore) throw new Error("restoreProjects not called yet");
+    });
+    // User opens a new project while the snapshot request is in flight.
+    useAppStore.setState((state) => ({
+      projects: new Map(state.projects).set("project-new", projectState({
+        id: "project-new",
+        name: "project-new",
+        lastOpened: new Date().toISOString(),
+      })),
+      activeProjectId: "project-new",
+    }));
+    resolveRestore!([{ id: "project-a", path: "/tmp/project-a", name: "project-a" }]);
+    await pending;
+
+    const state = useAppStore.getState();
+    expect(state.projects.get("project-new")).toBeDefined();
+    expect(state.activeProjectId).toBe("project-new");
+  });
+
   it("keeps state untouched and rethrows when the fetch fails", async () => {
     useAppStore.setState({
       projects: new Map([["project-a", projectState()]]),

@@ -266,13 +266,31 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
   probe(): void {
     this.clearProbeTimer();
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-    if (this.awaitingPongSince !== undefined) return;
     const ws = this.ws;
+    if (this.awaitingPongSince !== undefined) {
+      // A ping is already pending (heartbeat or an earlier probe): re-arm the
+      // short probe against it instead of silently falling back to the 60s
+      // heartbeat watchdog.
+      const pendingSince = this.awaitingPongSince;
+      this.probeTimer = setTimeout(() => {
+        this.probeTimer = undefined;
+        if (this.ws !== ws || this.ws.readyState !== WebSocket.OPEN) return;
+        if (this.awaitingPongSince !== undefined && this.awaitingPongSince <= pendingSince) {
+          try {
+            ws.close();
+          } catch (err) {
+            console.warn("[chat-session-runtime] probe close failed:", err);
+          }
+        }
+      }, RESUME_PROBE_TIMEOUT_MS);
+      return;
+    }
     const probeStartedAt = Date.now();
     this.awaitingPongSince = probeStartedAt;
     try {
       ws.send(JSON.stringify({ type: "ping" }));
     } catch (err) {
+      this.awaitingPongSince = undefined;
       console.warn("[chat-session-runtime] probe ping failed:", err);
       return;
     }

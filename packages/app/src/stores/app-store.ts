@@ -47,6 +47,10 @@ async function fetchConnection(bridge: HostBridge): Promise<ConnectionConfig> {
   return { baseUrl, accessToken };
 }
 
+function connectionEquals(a: ConnectionConfig, b: ConnectionConfig): boolean {
+  return a.baseUrl === b.baseUrl && a.accessToken === b.accessToken;
+}
+
 async function registerProject(
   set: StoreSetter,
   get: StoreGetter,
@@ -109,17 +113,23 @@ export const useAppStore = create<AppStore>((set, get) => ({
    * Runtime (non-startup) refresh of the project list: merges the latest
    * snapshot into the existing map without flipping `initializing` (no
    * full-screen loading flash) and without disturbing the active project
-   * unless it disappeared. Connection config is refreshed as a side effect so
+   * unless it disappeared. Projects registered locally after the fetch
+   * started (concurrent openProject) are kept so an in-flight snapshot
+   * cannot undo them. Connection config is refreshed as a side effect so
    * baseUrl/token snapshots follow localStorage changes. Throws on fetch
    * failure so callers can surface a toast; state is left untouched then.
    */
   async refreshProjects(bridge: HostBridge) {
+    const fetchStartedAt = Date.now();
     const connection = await fetchConnection(bridge);
     if (!connection.baseUrl) {
-      set({ connection });
+      set((state) => (
+        connectionEquals(state.connection, connection) ? {} : { connection }
+      ));
       return;
     }
     const restored = (await bridge.project?.restoreProjects()) ?? [];
+    const activeBefore = get().activeProjectId;
     set((state) => {
       const projects = new Map<string, ProjectState>();
       for (const { id, path, name, lastOpened } of restored) {
@@ -132,12 +142,28 @@ export const useAppStore = create<AppStore>((set, get) => ({
           lastOpened,
         });
       }
+      // Keep projects registered locally while the fetch was in flight so an
+      // in-flight snapshot cannot drop a just-opened project.
+      for (const [id, local] of state.projects) {
+        if (!projects.has(id) && new Date(local.lastOpened).getTime() >= fetchStartedAt) {
+          projects.set(id, local);
+        }
+      }
       let activeProjectId = state.activeProjectId;
       if (activeProjectId !== null && !projects.has(activeProjectId)) {
-        activeProjectId = [...projects.keys()].pop() ?? null;
+        // Fall back to the most recently opened project (server list order).
+        activeProjectId = projects.keys().next().value ?? null;
       }
-      return { projects, activeProjectId, connection };
+      return {
+        projects,
+        activeProjectId,
+        ...(connectionEquals(state.connection, connection) ? {} : { connection }),
+      };
     });
+    const active = get().activeProjectId;
+    if (active !== null && active !== activeBefore) {
+      await bridge.project?.setLastActiveProject(active);
+    }
   },
 
   async refreshConnection(bridge) {

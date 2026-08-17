@@ -21,11 +21,13 @@ export function useAgentBusRefresh(projectId: string | undefined, client: ApiCli
 
   // Connection-recovered compensation: agent/session changes that were
   // broadcast while disconnected are not replayed, so re-read the lists.
+  // Sessions use "upsert" so a reconnect does not truncate a list the user
+  // has paginated deeper into.
   useReconnectedSync(() => {
     if (!projectId || !client) return;
     const store = useProjectDataStore.getState();
     void store.refreshAgents(projectId, client).then(() => {
-      void store.refreshSessions(projectId, client);
+      void store.refreshSessions(projectId, client, { mode: "upsert" });
     });
   });
 }

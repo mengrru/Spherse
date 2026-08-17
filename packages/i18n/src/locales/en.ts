@@ -2,7 +2,7 @@ import type { TranslationKey } from "../catalog.js";
 
 export const en: Record<TranslationKey, string> = {
   "app.loading": "Loading...",
-  "app.resumeSyncFailed": "Connection unavailable — refresh failed, will retry automatically",
+  "app.resumeSyncFailed": "Connection unavailable — some data may be stale",
   "settings.title": "Settings",
   "settings.tabs.text": "Text Models",
   "settings.tabs.image": "Image Models",

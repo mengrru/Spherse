@@ -32,9 +32,26 @@ export function App() {
   // Connection-recovered compensation: re-read the project list (may have
   // changed on the server while this client was disconnected).
   useReconnectedSync(() => {
-    void useAppStore.getState().refreshProjects(bridge).catch(() => {
-      toast.error(translate(locale ?? DEFAULT_LOCALE, "app.resumeSyncFailed"));
-    });
+    void useAppStore.getState().refreshProjects(bridge)
+      .then(() => {
+        // The project the user is looking at may have disappeared server-side;
+        // leaving the route pointing at it would strand the UI on a
+        // "project not found" page (the old reload behavior navigated away).
+        const state = useAppStore.getState();
+        const match = window.location.hash.replace(/^#/, "").match(/^\/project\/([^/]+)/);
+        const routeProjectId = match?.[1];
+        if (routeProjectId && !state.projects.has(routeProjectId)) {
+          if (state.activeProjectId) {
+            navigate(`/project/${state.activeProjectId}`, { replace: true });
+          } else {
+            navigate("/", { replace: true });
+          }
+        }
+      })
+      .catch((err: unknown) => {
+        console.warn("[app] resume project refresh failed:", err);
+        toast.error(translate(locale ?? DEFAULT_LOCALE, "app.resumeSyncFailed"));
+      });
   });
 
   useEffect(() => {

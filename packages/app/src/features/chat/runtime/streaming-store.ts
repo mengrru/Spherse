@@ -406,8 +406,9 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
     /**
      * Probe every attached session's socket for liveness after a host resume.
-     * Detached (cached) sessions are skipped: their runtimes reconnect on the
-     * next attach anyway.
+     * Detached (cached) sessions are skipped: nothing observes them until the
+     * next attach, and their stale sockets are handled by the heartbeat
+     * watchdog / attach-time reconnect.
      */
     resumeProbeAll() {
       for (const [sessionId, session] of Object.entries(get().sessions)) {

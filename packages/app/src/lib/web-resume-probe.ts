@@ -1,17 +1,20 @@
-import { useBusStore } from "@spherse/app/src/stores/bus-store";
-import { useStreamingStore } from "@spherse/app/src/features/chat/runtime/streaming-store";
-import { createResumeProbeScheduler } from "@spherse/app/src/lib/resume-probe-scheduler";
+import { useBusStore } from "../stores/bus-store";
+import { useStreamingStore } from "../features/chat/runtime/streaming-store";
+import { createResumeProbeScheduler } from "./resume-probe-scheduler";
 
 const RESUME_PROBE_THRESHOLD_MS = 30_000;
 const RESUME_PROBE_DEBOUNCE_MS = 10_000;
 
 /**
- * Web replacement for the old resume-reload: when the page resumes from
+ * Replacement for the old resume-reload: when the host page resumes from
  * background suspension (hidden >= threshold) or bfcache restore, actively
- * probe the bus/chat sockets for liveness instead of reloading the page. Dead
- * links are closed by the probe, after which the existing reconnect +
- * reconcile machinery (and `resumedAt` subscribers) resyncs all data — keeping
- * scroll position, route and UI state intact.
+ * probe the bus/chat sockets for liveness instead of reloading the page.
+ * Dead links are closed by the probe, after which the existing reconnect +
+ * reconcile machinery (and `resumedAt` subscribers) resyncs all data —
+ * keeping scroll position, route and UI state intact.
+ *
+ * Lives in the shared app package (DOM events work under jsdom) so the
+ * binding is unit-testable; only the web shell mounts it.
  */
 export function setupWebResumeProbe(): () => void {
   const scheduler = createResumeProbeScheduler({

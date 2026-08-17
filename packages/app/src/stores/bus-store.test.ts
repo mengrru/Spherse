@@ -252,13 +252,16 @@ describe("bus-store", () => {
     const firstResumedAt = useBusStore.getState().resumedAt;
     expect(firstResumedAt).toBeTypeOf("number");
 
+    await vi.advanceTimersByTimeAsync(1000);
     socket.close();
     await vi.advanceTimersByTimeAsync(1000);
     const reopened = mock.instances[mock.instances.length - 1];
     reopened.readyState = OPEN;
     reopened.onopen?.({} as Event);
 
-    expect(useBusStore.getState().resumedAt).toBeGreaterThanOrEqual(firstResumedAt);
+    // Strictly greater: catching a regression where onopen stops updating
+    // resumedAt (fake timers freeze the clock, so advance first).
+    expect(useBusStore.getState().resumedAt).toBeGreaterThan(firstResumedAt);
   });
 
   it("teardown resets resumedAt", async () => {

@@ -410,4 +410,57 @@ describe("useProjectDataStore", () => {
     expect(sessions).toHaveLength(11);
     expect(sessions.filter((s) => s.id === "s-0")).toHaveLength(1);
   });
+
+  it("refreshSessions upsert keeps locally paginated sessions and their depth (reconnect path)", async () => {
+    const firstPage = Array.from({ length: 10 }, (_, i) => createSession(`s-${i}`));
+    const secondPage = [createSession("s-10"), createSession("s-11")];
+    const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
+      listSessionsPage: vi.fn()
+        .mockResolvedValueOnce({ items: firstPage, hasMore: true })
+        .mockResolvedValueOnce({ items: secondPage, hasMore: false })
+        // Reconnect refresh: a fresh first page containing a brand-new session.
+        .mockResolvedValueOnce({ items: [createSession("s-new"), ...firstPage], hasMore: true }),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+    await useProjectDataStore.getState().loadMoreSessions("project-1", client, "agent-1");
+    expect(useProjectDataStore.getState().projects["project-1"]?.sessions).toHaveLength(12);
+
+    await useProjectDataStore.getState().refreshSessions("project-1", client, { mode: "upsert" });
+
+    const project = useProjectDataStore.getState().projects["project-1"];
+    const ids = project?.sessions.map((s) => s.id) ?? [];
+    // Deep pages are preserved (not truncated back to the first page)...
+    expect(ids).toContain("s-10");
+    expect(ids).toContain("s-11");
+    // ...new sessions from the fresh first page are prepended ...
+    expect(ids[0]).toBe("s-new");
+    expect(ids).toHaveLength(13);
+    // ...and the already-loaded paging depth is preserved.
+    expect(project?.sessionPaging["agent-1"]).toEqual({ hasMore: true, offset: 12, loadingMore: false });
+  });
+
+  it("refreshSessions replace mode still truncates to the fetched page", async () => {
+    const firstPage = Array.from({ length: 10 }, (_, i) => createSession(`s-${i}`));
+    const secondPage = [createSession("s-10")];
+    const client = createClient({
+      listAgents: vi.fn().mockResolvedValue([createAgent("agent-1")]),
+      listSessionsPage: vi.fn()
+        .mockResolvedValueOnce({ items: firstPage, hasMore: true })
+        .mockResolvedValueOnce({ items: secondPage, hasMore: false })
+        .mockResolvedValueOnce({ items: firstPage, hasMore: true }),
+    });
+
+    await useProjectDataStore.getState().refreshAgents("project-1", client);
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+    await useProjectDataStore.getState().loadMoreSessions("project-1", client, "agent-1");
+
+    await useProjectDataStore.getState().refreshSessions("project-1", client);
+
+    const project = useProjectDataStore.getState().projects["project-1"];
+    expect(project?.sessions.map((s) => s.id)).not.toContain("s-10");
+    expect(project?.sessionPaging["agent-1"]).toEqual({ hasMore: true, offset: 10, loadingMore: false });
+  });
 });
