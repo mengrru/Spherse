@@ -55,8 +55,7 @@ describe("build-and-release.yml: deploy-web job", () => {
 
     const run: string = step.run.replace(/\\\n/g, " ").replace(/\n/g, " ");
     expect(run).toContain("deploy-pages.yml");
-    expect(run).toContain("--ref");
-    expect(run).toContain("GITHUB_REF_NAME");
+    expect(run).toContain('--ref "${GITHUB_REF_NAME}"');
 
     expect(step.env?.GH_TOKEN).toBe("${{ secrets.GITHUB_TOKEN }}");
   });
