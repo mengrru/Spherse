@@ -58,6 +58,12 @@ describe("UpdateChecker structure", () => {
     expect(source).toContain("acceptDownload");
   });
 
+  it("error fallback opens the landing page (not GitHub releases)", () => {
+    // 检测失败兜底跳 landing page（含平台/架构选包，国内可达），不再指向 GitHub
+    expect(source).toContain("https://spherse.mengru.work/");
+    expect(source).not.toContain("github.com/mengrru/Spherse/releases");
+  });
+
   it("renders a downloaded dialog with restart actions", () => {
     expect(source).toContain('"downloaded"');
     expect(source).toContain("acceptRestart");

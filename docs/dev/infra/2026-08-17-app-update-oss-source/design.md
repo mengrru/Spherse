@@ -61,7 +61,7 @@ checkForUpdates(opts):
     releaseNotes = ""（清单无 notes，UI 自动隐藏）
     downloadUrl =
       darwin: process.arch === "arm64" ? mac.arm64 : mac.intel
-              # x64 Mac → intel 包；缺键 → undefined → UI 回退 in-app 分支（实际不触发）
+              # 缺键时互为回退（Rosetta 2 可跑 intel 包）；全缺 → undefined → UI 回退 in-app 分支
       win32:  process.arch === "arm64" ? (win.arm64 ?? win.x64 ?? win.setup)
                                        : (win.x64 ?? win.setup)
               # 旧清单 win.setup 兼容回退；x64 包在 ARM64 Windows 可模拟运行（与 landing 语义一致）
@@ -71,7 +71,7 @@ checkForUpdates(opts):
 
 ### 附带修正
 
-- `UpdateChecker.tsx` error 状态的「前往 Releases」兜底按钮当前指向 GitHub Releases（国内同样难打开），改为 landing page（`https://mengrru.github.io/Spherse/`）——landing 有按平台/架构选包的下载按钮且自身带 GitHub 回退。
+- `UpdateChecker.tsx` error 状态的「前往 Releases」兜底按钮当前指向 GitHub Releases（国内同样难打开），改为 landing page（`https://spherse.mengru.work/`，自定义域名，`github.io` 会 301 过去）——landing 有按平台/架构选包的下载按钮且自身带 GitHub 回退。
 
 ## 接口与数据
 
@@ -106,10 +106,10 @@ interface OssUpdateManifest {
 5. 版本相等 / 清单版本更低 → `update-not-available`。
 6. fetch 非 200 / JSON 非法 → `update-error`。
 7. dev 模式（`app.isPackaged=false`）→ upToDate 且不发 fetch。
-8. silent=true 时所有分支不 sendEvent（静默语义不变）。
+8. silent=true：available 分支仍通知（启动静默检查的目的就是发现新版本弹窗，与原实现语义一致），not-available / error 分支不 sendEvent。
 9. `compareVersions` 既有用例保留。
 
-`UpdateChecker.structure.test.ts`：error 兜底链接断言更新为 landing page。
+`UpdateChecker.structure.test.ts`：error 兜底链接断言更新为 landing page（且断言不再含 GitHub releases 链接）。
 
 回归：`npm run verify`（desktop 测试 + app 测试 + i18n + lint）。
 

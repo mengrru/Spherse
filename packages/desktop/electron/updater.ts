@@ -5,6 +5,43 @@ const { autoUpdater, CancellationToken } = electronUpdater;
 import type { UpdateState, UpdateEvent } from "./types.js";
 import { getMainWindow } from "./window.js";
 
+// 更新检测源：CI publish-oss job 每次发版自动维护的 OSS 清单（国内可达，
+// 与 landing page 下载按钮同源）。替代此前 GitHub API / electron-updater
+// GitHub feed（后者 latest.yml 自 ba8c049 起不再上传，检测必然 404）。
+const OSS_UPDATE_MANIFEST_URL =
+  "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse/latest.json";
+
+/**
+ * OSS latest.json 清单结构（与 landing `resolveDownloadUrl` / CI `publish-oss`
+ * 生成端对齐；`win.setup` 为旧版清单键名，保留兼容回退）。
+ */
+export interface OssUpdateManifest {
+  version: string;
+  mac?: { arm64?: string; intel?: string };
+  win?: { x64?: string; arm64?: string; setup?: string };
+}
+
+export function resolveDownloadUrlFromManifest(
+  manifest: OssUpdateManifest,
+  platform: NodeJS.Platform = process.platform,
+  arch: string = process.arch,
+): string | undefined {
+  if (platform === "darwin") {
+    // x64 Mac 跑的是 intel 包（反之亦然，缺键时互为回退）；全缺 → undefined
+    return arch === "arm64"
+      ? (manifest.mac?.arm64 ?? manifest.mac?.intel)
+      : (manifest.mac?.intel ?? manifest.mac?.arm64);
+  }
+  if (platform === "win32") {
+    // x64 包在 ARM64 Windows 可模拟运行（与 landing 语义一致）
+    if (arch === "arm64") {
+      return manifest.win?.arm64 ?? manifest.win?.x64 ?? manifest.win?.setup;
+    }
+    return manifest.win?.x64 ?? manifest.win?.setup;
+  }
+  return undefined;
+}
+
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
 
@@ -96,27 +133,22 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
     sendEvent({ type: "update-error", message: errorMessage });
   });
 
-  async function checkForUpdatesMacFallback(): Promise<void> {
+  async function checkForUpdatesViaOss(): Promise<void> {
     currentState = { status: "checking" };
     try {
-      const res = await fetch(
-        "https://api.github.com/repos/mengrru/Spherse/releases/latest",
-        { headers: { "User-Agent": "Spherse-Updater" } },
-      );
+      const res = await fetch(OSS_UPDATE_MANIFEST_URL);
       if (!res.ok) {
-        throw new Error(`GitHub API responded ${res.status}`);
+        throw new Error(`OSS manifest responded ${res.status}`);
       }
-      const data = (await res.json()) as {
-        tag_name?: string;
-        body?: string;
-        html_url?: string;
-      };
-      const tagName = data.tag_name ?? "";
-      const version = tagName.replace(/^v/, "");
+      const data = (await res.json()) as Partial<OssUpdateManifest>;
+      const version = typeof data.version === "string" ? data.version : "";
       const current = app.getVersion();
       if (compareVersions(version, current) > 0) {
-        const releaseNotes = data.body ?? "";
-        const downloadUrl = data.html_url;
+        const downloadUrl = resolveDownloadUrlFromManifest(
+          data as OssUpdateManifest,
+        );
+        // OSS 清单无 release notes，留空由 UI 自动隐藏
+        const releaseNotes = "";
         currentState = {
           status: "available",
           version,
@@ -159,12 +191,10 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
         return;
       }
       silent = opts.silent;
-      if (process.platform === "darwin") {
-        await checkForUpdatesMacFallback();
-        return;
-      }
-      currentState = { status: "checking" };
-      await autoUpdater.checkForUpdates();
+      // mac/win 统一走 OSS 清单检测 + 引导浏览器下载（前往下载）。
+      // electron-updater 的 GitHub feed 自 ba8c049 起无 latest.yml，不再使用；
+      // 其 in-app 下载 API 保留给未来恢复 feed（backlog #149）。
+      await checkForUpdatesViaOss();
     },
 
     async downloadUpdate(): Promise<void> {
