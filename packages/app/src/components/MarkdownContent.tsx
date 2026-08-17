@@ -3,6 +3,7 @@ import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import { cn } from "@/lib/utils";
+import { CodeBlock } from "./CodeBlock";
 
 interface MarkdownContentProps {
   children: string;
@@ -45,7 +46,7 @@ const DOCUMENT_COMPONENTS: Components = {
     <code data-md-code-inline className={cn("rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]", className)} {...props} />
   ),
   pre: ({ className, ...props }) => (
-    <pre data-md-code className={cn("mb-3 p-3 overflow-x-auto rounded-md bg-muted font-mono text-xs", className)} {...props} />
+    <CodeBlock className={cn("mb-3 p-3 overflow-x-auto rounded-md bg-muted font-mono text-xs", className)} {...props} />
   ),
   blockquote: ({ className, ...props }) => (
     <blockquote data-md-quote className={cn("mb-3 rounded-r border-l-4 border-border bg-muted/50 pl-3 text-foreground/80 text-[13px] italic", className)} {...props} />
@@ -95,7 +96,7 @@ const CHAT_COMPONENTS: Components = {
     <code data-md-code-inline className={cn("rounded bg-muted px-1 py-0.5 font-mono text-[0.85em]", className)} {...props} />
   ),
   pre: ({ className, ...props }) => (
-    <pre data-md-code className={cn("mb-2 p-2 overflow-x-auto rounded-md bg-muted font-mono text-xs", className)} {...props} />
+    <CodeBlock className={cn("mb-2 p-2 overflow-x-auto rounded-md bg-muted font-mono text-xs", className)} {...props} />
   ),
   blockquote: ({ className, ...props }) => (
     <blockquote data-md-quote className={cn("mb-3 rounded-r border-l-4 border-border bg-muted/50 pl-3 text-foreground/80 text-[13px] italic", className)} {...props} />

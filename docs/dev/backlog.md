@@ -35,6 +35,7 @@
 
 ## 功能增强
 
+- [x] **markdown 代码块复制按钮**：Markdown 渲染的 fenced code block 右上角新增复制按钮（hover 显现，成功后图标切换为对勾 2s 复位）。新增纯函数 `extractCodeText`（`packages/app/src/components/markdown-code-text.ts`，递归提取 react-markdown `<pre>` children 中的代码文本）+ `CodeBlock` 组件（`packages/app/src/components/CodeBlock.tsx`，包裹 `<pre data-md-code>` 与绝对定位按钮；`data-md-code` 钩子仍留在 `<pre>` 上，不影响既有主题选择器），`MarkdownContent` 两个 variant 的 `pre` 均改用 `CodeBlock`；新增 `markdown.copyCode` 三语 i18n 与 `markdown-code-text.test.ts` 单元测试
 - [x] **LLM ask_user 工具（运行中向用户提问）**：新增内置工具 `ask_user`，agent 运行中向用户提一个问题（可选 2–6 候选项）并阻塞等待回答，答案作为 tool result 返回模型、同一 run 内继续执行。复用 `SessionControlBus` 新增 `kind: "question"`（`AskGate` 薄适配器），前端 QuestionCard 内联展示待答/已答/超时三态，跨会话 toast 复用 `ApprovalNoticeBridge`；超时默认 600s（`timeout_s` 可调，clamp 60–3600）返回 `{ timedOut: true }` 提示模型自行判断继续，abort 走 `bus.rejectAll`。per-agent opt-in（profile `tools:`，默认模板已启用）。参见 `docs/dev/features/2026-08-15-llm-ask-user-tool/design.md`
 - [x] **run_command 超时上限放宽**：`MAX_TIMEOUT_MS` 600s → 1800s（30min），默认 60s 与下限 1s 不变；`timeout_ms` 参数 description 更新 max 值并引导长任务显式传预估时长；导出 `clampTimeout` 供单测。不触碰审批 5min 超时。参见 `docs/dev/features/2026-08-15-run-command-timeout-relaxation/design.md`
 - [ ] **run_command 后台执行模式**：`background: true` 立即返回 job id、agent 轮询输出，长任务不再阻塞 agent 回合（超时放宽的根治方向）；per-agent 超时配置与 CommandCard 运行时长展示视后续诉求跟进。参见 `docs/dev/features/2026-08-15-run-command-timeout-relaxation/design.md`「未来演进」

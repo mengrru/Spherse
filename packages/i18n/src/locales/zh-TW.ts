@@ -310,6 +310,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "chat.htmlCard.showCard": "展開此卡片",
   "chat.htmlCard.collapse": "摺疊",
   "chat.copyTooltip": "複製",
+  "markdown.copyCode": "複製程式碼",
   "chat.close": "關閉",
   "chat.responseGenerationFailed": "回覆產生失敗",
   "chat.error.modelNotConfigured": "尚未設定模型，請在設定中選擇一個模型後再傳送訊息。",
