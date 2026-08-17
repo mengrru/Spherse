@@ -142,24 +142,22 @@ describe("custom provider user-agent", () => {
     expect(requestHeaders[0].has("user-agent")).toBe(false);
   });
 
-  it("keeps the model-defined user-agent for builtin providers that require one", async () => {
+  it("sends pi's runtime user-agent for kimi-coding (pi-ai >=0.84.2)", async () => {
+    // pi-ai 0.84.2 起 kimi-coding 不再在模型上定义 KimiCLI/1.5 UA，
+    // 改为在请求层强制注入 pi 的运行时 UA（见 pi release v0.84.2 "Changed
+    // inherited Kimi Coding requests to use pi's runtime User-Agent header"）。
     const kimiModels = getChatModels()
       .getModels("kimi-coding")
       .filter((m) => m.api === "anthropic-messages");
     expect(kimiModels.length).toBeGreaterThan(0);
-    const modelWithUa = kimiModels.find((m) => {
-      const headers = m.headers ?? {};
-      return Object.entries(headers).some(([name, value]) => name.toLowerCase() === "user-agent" && typeof value === "string");
-    });
-    expect(modelWithUa).toBeDefined();
 
     const requestHeaders = await captureRequestHeaders(
-      modelWithUa!,
+      kimiModels[0],
       { apiKey: "sk-test" },
       anthropicSseBody(),
     );
 
     expect(requestHeaders).toHaveLength(1);
-    expect(requestHeaders[0].get("user-agent")).toBe("KimiCLI/1.5");
+    expect(requestHeaders[0].get("user-agent")).toMatch(/^pi \(/);
   });
 });
