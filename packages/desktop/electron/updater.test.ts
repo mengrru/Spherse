@@ -214,6 +214,14 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
     expect(updater.getState()).toEqual({ status: "upToDate" });
   });
 
+  it("dev mode silent check emits nothing (startup silent check in dev)", async () => {
+    appMock.isPackaged = false;
+    await updater.checkForUpdates({ silent: true });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(events).toEqual([]);
+    expect(updater.getState()).toEqual({ status: "upToDate" });
+  });
+
   it("darwin: newer manifest version emits update-available with OSS downloadUrl", async () => {
     mockManifestResponse(manifest);
     await withProcess("darwin", "arm64", () =>

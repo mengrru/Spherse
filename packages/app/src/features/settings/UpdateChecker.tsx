@@ -68,7 +68,7 @@ export function UpdateChecker() {
                   void bridge.openExternal("https://spherse.mengru.work/")
                 }
               >
-                {t("settings.about.gotoReleases")}
+                {t("settings.about.gotoDownloadPage")}
               </Button>
             </div>
           </div>

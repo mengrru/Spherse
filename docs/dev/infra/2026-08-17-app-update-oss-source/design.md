@@ -1,7 +1,7 @@
 # App 新版本检测切换 OSS 镜像源
 
 - 日期：2026-08-17
-- 状态：Proposed
+- 状态：Implemented（2026-08-17，4a67d77）
 - 关联：`docs/dev/infra/2026-07-27-release-oss-mirror/design.md`（OSS 镜像与 latest.json 清单）、backlog #149（恢复 Windows 自动更新 feed，本设计不解决、继续保留为 follow-up）、`docs/dev/infra/2026-07-03-app-update-mechanism/design.md`（原始更新机制）
 
 ## 背景
@@ -90,7 +90,8 @@ interface OssUpdateManifest {
 | 文件 | 变更 |
 |---|---|
 | `packages/desktop/electron/updater.ts` | 新增 `OSS_UPDATE_MANIFEST_URL` 常量、`OssUpdateManifest` 类型、`checkForUpdatesViaOss()`；`checkForUpdates` 两平台统一走之；删除 `checkForUpdatesMacFallback`；`compareVersions` 不变 |
-| `packages/app/src/features/settings/UpdateChecker.tsx` | error 兜底链接 GitHub Releases → landing page |
+| `packages/app/src/features/settings/UpdateChecker.tsx` | error 兜底链接 GitHub Releases → landing page；文案 key `gotoReleases` → `gotoDownloadPage` |
+| `packages/i18n/src/locales/{zh-CN,en,zh-TW}.ts` | 兜底按钮三语文案改为「前往官网下载」 |
 | `packages/desktop/electron/updater.test.ts` | 重写检测用例（见测试策略） |
 
 不改动：`host-bridge.ts` 契约（`UpdateState`/`UpdateEvent` 已有 `downloadUrl?` 字段）、`preload.ts`、`main.ts`（启动静默检查调用不变）、electron-builder.yml publish 配置（未来恢复 feed 用）、CI（`publish-oss` 已自动维护清单）。

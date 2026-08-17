@@ -216,8 +216,8 @@ export const zhCN = {
   "settings.about.checkFailed": "检查更新失败，请稍后重试",
   // error 态的重试按钮
   "settings.about.retry": "重试",
-  // error 态引导用户手动去 GitHub releases 页面下载新版本的按钮
-  "settings.about.gotoReleases": "前往 GitHub Releases 下载",
+  // error 态引导用户前往官网下载页（landing page，按平台/架构自动选包）手动下载新版本的按钮
+  "settings.about.gotoDownloadPage": "前往官网下载",
   // 更新确认弹窗标题，{version} 为新版本号
   "settings.update.newVersion": "发现新版本 v{version}",
   // 更新确认弹窗中 release notes 区域标题
