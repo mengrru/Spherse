@@ -143,6 +143,22 @@ server 重启 ────────────► onclose（自动）─►�
 - 回归：app/web build、既有 bus-store / streaming-store / app-store 测试全绿；`npm run lint` 0 error。
 - 手动验证：iOS PWA 真机挂起恢复（≥30s / bfcache）不 reload、列表与聊天自动追平；**网络闪断**（无可见性变化）后自动补偿；桌面 tab 后台 30s 回来零动作零 reload；桌面 electron 行为不变。
 
+## 侵入性评估（评审补充）
+
+按「删除 / 改动既有逻辑 / 新增」分类：
+
+| 类别 | 位置 | 量级 | 说明 |
+|---|---|---|---|
+| 删除 | `resume-reload.ts` + `web/main.tsx` 2 行 | ~26 行 | 需求目标本身，唯一被删的既有行为 |
+| **改动既有逻辑** | `bus-store.ts` | **~2 行** | `onopen` 既有 `set()` 加 `resumedAt` 字段 + `teardown` 复位；重连/心跳/退避/订阅重放一行不动 |
+| **改动既有逻辑** | `useCustomTheme.ts` | ~10 行 | 机械抽取 link 重建函数，逻辑零变化 |
+| 新增 | `resumeProbe()` / `probe()` / `resumeProbeAll()` / `refreshProjects()` / `useReconnectedSync.ts` / `resume-probe.ts` | 全新代码 | 新方法/新文件，不触碰既有执行路径 |
+| 新增 | `App.tsx` / `useAgentBusRefresh` / 5 个 fs-watch 消费者 | 各 1~5 行 | 挂订阅，同构于挂 fs-watch 事件 |
+
+侵入性低的结构保证：probe 只调用既有 `close()`（不碰连接状态机）；chat reconcile 原样复用；server 契约零改动；`resumedAt` 是普通 zustand state（无第二套通知体系）；v1 中最有侵入性的两处（绕过 `ProjectScope` 缓存守卫、改 `ProjectScope`）已消除。各改动块相互独立、可单独 revert。
+
+**desktop 语义决策点（唯一行为外溢）**：bus-store 为 desktop/web 共享，`resumedAt` 在 desktop 重连后同样触发补偿（IPC 读 + 列表刷新）。选定 **A. 接受统一语义**：「重连 = 补偿」语义自洽、desktop 读为本地 IPC 代价可忽略、desktop 本就存在同款陈旧问题类（server 重启窗口）、避免订阅点散落 `bridge.kind` 分支。备选 B（信号源一行 gate 到 web、desktop 逐字节不变）保留记录，若实现中发现 desktop 补偿有实际副作用可降级到 B。
+
 ## 风险
 
 | 风险 | 影响 | 缓解 |
