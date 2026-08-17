@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
+import { useReconnectedSync } from "../../../hooks/useReconnectedSync";
 
 export function useFsWatchRefresh(
   projectId: string,
@@ -12,6 +13,12 @@ export function useFsWatchRefresh(
     timerRef.current = setTimeout(() => {
       void refreshRoot();
     }, 300);
+  });
+
+  // Connection-recovered compensation: fs-watch events missed while the bus
+  // was down are not replayed, so re-pull the tree.
+  useReconnectedSync(() => {
+    void refreshRoot();
   });
 
   useEffect(() => {

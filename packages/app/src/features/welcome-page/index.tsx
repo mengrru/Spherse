@@ -4,6 +4,7 @@ import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../lib/events";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
+import { useReconnectedSync } from "../../hooks/useReconnectedSync";
 
 const HTML_EXTENSIONS = new Set(["html", "htm"]);
 
@@ -74,6 +75,14 @@ export function WelcomePage({
       setLoadError(false);
       setReloadKey((k) => k + 1);
     }, 300);
+  });
+
+  // Connection-recovered compensation: fs-watch events missed while the bus
+  // was down are not replayed, so reload the rendered welcome page.
+  useReconnectedSync(() => {
+    if (!pathRef.current) return;
+    setLoadError(false);
+    setReloadKey((k) => k + 1);
   });
 
   useEffect(() => {

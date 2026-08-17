@@ -2,6 +2,7 @@ import type { TranslationKey } from "../catalog.js";
 
 export const zhTW: Record<TranslationKey, string> = {
   "app.loading": "載入中...",
+  "app.resumeSyncFailed": "連線不可用，資料刷新失敗，將自動重試",
   "settings.title": "設定",
   "settings.tabs.text": "文本模型",
   "settings.tabs.image": "生圖模型",

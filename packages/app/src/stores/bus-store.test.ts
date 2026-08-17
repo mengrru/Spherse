@@ -245,4 +245,72 @@ describe("bus-store", () => {
     expect(socket.closeSpy).toHaveBeenCalled();
     expect(useBusStore.getState().status).toBe("connecting");
   });
+
+  it("sets resumedAt on open and updates it on reopen", async () => {
+    expect(useBusStore.getState().resumedAt).toBeNull();
+    const socket = await connect();
+    const firstResumedAt = useBusStore.getState().resumedAt;
+    expect(firstResumedAt).toBeTypeOf("number");
+
+    socket.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    const reopened = mock.instances[mock.instances.length - 1];
+    reopened.readyState = OPEN;
+    reopened.onopen?.({} as Event);
+
+    expect(useBusStore.getState().resumedAt).toBeGreaterThanOrEqual(firstResumedAt);
+  });
+
+  it("teardown resets resumedAt", async () => {
+    await connect();
+    expect(useBusStore.getState().resumedAt).not.toBeNull();
+    useBusStore.getState().teardown();
+    expect(useBusStore.getState().resumedAt).toBeNull();
+  });
+
+  describe("resumeProbe", () => {
+    it("is a no-op when the socket is not OPEN (existing reconnect owns it)", async () => {
+      await useBusStore.getState().init(bridge);
+      const socket = mock.instances[mock.instances.length - 1];
+      socket.readyState = CONNECTING;
+      expect(() => useBusStore.getState().resumeProbe()).not.toThrow();
+      expect(socket.closeSpy).not.toHaveBeenCalled();
+      expect(socket.sent).toHaveLength(0);
+    });
+
+    it("closes immediately when the heartbeat is already stale", async () => {
+      const socket = await connect();
+      await vi.advanceTimersByTimeAsync(61000);
+      socket.sent.length = 0;
+      socket.closeSpy.mockClear();
+      useBusStore.getState().resumeProbe();
+      expect(socket.closeSpy).toHaveBeenCalled();
+      expect(socket.sent.filter((s) => JSON.parse(s).kind === "ping")).toHaveLength(0);
+    });
+
+    it("pings a healthy socket and does not close when pong arrives in time", async () => {
+      const socket = await connect();
+      socket.sent.length = 0;
+      useBusStore.getState().resumeProbe();
+      expect(JSON.parse(socket.sent[0])).toEqual({ kind: "ping" });
+      socket.onmessage?.({ data: JSON.stringify({
+        channel: "__system__",
+        type: "pong",
+        payload: {},
+      }) } as MessageEvent);
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(socket.closeSpy).not.toHaveBeenCalled();
+      expect(useBusStore.getState().status).toBe("open");
+    });
+
+    it("closes the socket when no pong arrives within the probe timeout", async () => {
+      const socket = await connect();
+      socket.sent.length = 0;
+      useBusStore.getState().resumeProbe();
+      expect(JSON.parse(socket.sent[0])).toEqual({ kind: "ping" });
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(socket.closeSpy).toHaveBeenCalled();
+      expect(useBusStore.getState().status).toBe("connecting");
+    });
+  });
 });

@@ -527,4 +527,36 @@ describe("streaming-store resilience", () => {
     expect(after).toBe(before + 1);
     expect(socket.sent.map((s) => JSON.parse(s)).some((p) => p.type === "retry")).toBe(false);
   });
+
+  describe("resumeProbeAll", () => {
+    it("probes attached sessions and closes the socket when no pong arrives", async () => {
+      const socket = await attachAndConnect("s1");
+      socket.sent.length = 0;
+      useStreamingStore.getState().resumeProbeAll();
+      expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({ type: "ping" });
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(socket.closeSpy).toHaveBeenCalled();
+    });
+
+    it("keeps the socket open when a pong arrives within the probe timeout", async () => {
+      const socket = await attachAndConnect("s1");
+      socket.sent.length = 0;
+      useStreamingStore.getState().resumeProbeAll();
+      socket.onmessage?.({ data: JSON.stringify({ type: "pong" }) } as MessageEvent);
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(socket.closeSpy).not.toHaveBeenCalled();
+    });
+
+    it("skips detached sessions", async () => {
+      const socket = await attachAndConnect("s1");
+      useStreamingStore.getState().detach("s1");
+      socket.sent.length = 0;
+      useStreamingStore.getState().resumeProbeAll();
+      expect(socket.sent).toHaveLength(0);
+    });
+
+    it("is a no-op when no session ever attached", () => {
+      expect(() => useStreamingStore.getState().resumeProbeAll()).not.toThrow();
+    });
+  });
 });

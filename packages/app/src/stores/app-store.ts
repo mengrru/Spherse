@@ -21,6 +21,7 @@ interface AppStore {
   activeProjectId: string | null;
   initializing: boolean;
   restoreProjects: (bridge: HostBridge) => Promise<string | null>;
+  refreshProjects: (bridge: HostBridge) => Promise<void>;
   refreshConnection: (bridge: HostBridge) => Promise<void>;
   openProject: (bridge: HostBridge) => Promise<string | null>;
   openSampleProject: (bridge: HostBridge, sampleId: string) => Promise<{ projectId: string | null; error?: string }>;
@@ -102,6 +103,41 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set({ initializing: false });
       throw err;
     }
+  },
+
+  /**
+   * Runtime (non-startup) refresh of the project list: merges the latest
+   * snapshot into the existing map without flipping `initializing` (no
+   * full-screen loading flash) and without disturbing the active project
+   * unless it disappeared. Connection config is refreshed as a side effect so
+   * baseUrl/token snapshots follow localStorage changes. Throws on fetch
+   * failure so callers can surface a toast; state is left untouched then.
+   */
+  async refreshProjects(bridge: HostBridge) {
+    const connection = await fetchConnection(bridge);
+    if (!connection.baseUrl) {
+      set({ connection });
+      return;
+    }
+    const restored = (await bridge.project?.restoreProjects()) ?? [];
+    set((state) => {
+      const projects = new Map<string, ProjectState>();
+      for (const { id, path, name, lastOpened } of restored) {
+        const prev = state.projects.get(id);
+        projects.set(id, {
+          id,
+          path,
+          name,
+          lastRoute: prev?.lastRoute ?? getLastRoute(id) ?? undefined,
+          lastOpened,
+        });
+      }
+      let activeProjectId = state.activeProjectId;
+      if (activeProjectId !== null && !projects.has(activeProjectId)) {
+        activeProjectId = [...projects.keys()].pop() ?? null;
+      }
+      return { projects, activeProjectId, connection };
+    });
   },
 
   async refreshConnection(bridge) {

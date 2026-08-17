@@ -11,9 +11,11 @@ import { useAppUiStore } from "./stores/app-ui-store";
 import { useHostBridge } from "./context/host-bridge-context";
 import { useFeature } from "./lib/use-feature";
 import { I18nProvider } from "@spherse/i18n/react";
+import { toast } from "sonner";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
 import { useSettingsStore } from "./stores/settings-store";
 import { useBusStore } from "./stores/bus-store";
+import { useReconnectedSync } from "./hooks/useReconnectedSync";
 
 export function App() {
   const navigate = useNavigate();
@@ -26,6 +28,14 @@ export function App() {
   const locale = useSettingsStore((state) => state.locale);
   const loadSettings = useSettingsStore((state) => state.loadLocale);
   const inProject = useMatch("/project/:projectId/*") !== null;
+
+  // Connection-recovered compensation: re-read the project list (may have
+  // changed on the server while this client was disconnected).
+  useReconnectedSync(() => {
+    void useAppStore.getState().refreshProjects(bridge).catch(() => {
+      toast.error(translate(locale ?? DEFAULT_LOCALE, "app.resumeSyncFailed"));
+    });
+  });
 
   useEffect(() => {
     let cancelled = false;

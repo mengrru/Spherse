@@ -17,6 +17,7 @@ const MAX_RECONNECT_ATTEMPTS = 10;
 const RECONCILE_BACKOFFS = [1000, 2000, 5000];
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
 const HEARTBEAT_TIMEOUT_MS = 60 * 1000;
+const RESUME_PROBE_TIMEOUT_MS = 5 * 1000;
 const FATAL_CLOSE_CODES = new Set<number>([
   CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE,
 ]);
@@ -54,6 +55,7 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   private heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+  private probeTimer: ReturnType<typeof setTimeout> | undefined;
   private lastHeartbeatTickAt = 0;
   private awaitingPongSince: number | undefined;
   private reconnectAttempt = 0;
@@ -160,7 +162,10 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
       try {
         const raw = JSON.parse(event.data);
         this.awaitingPongSince = undefined;
-        if (raw?.type === "pong") return;
+        if (raw?.type === "pong") {
+          this.clearProbeTimer();
+          return;
+        }
         const parsed = parseAgentEvent(parseChatServerEvent(raw));
         if (reconcilingHistory) {
           connectionEvents.push(parsed);
@@ -250,6 +255,40 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     return this.ws?.readyState === WebSocket.OPEN;
   }
 
+  /**
+   * Actively probe the socket for liveness after a host resume (e.g. iOS
+   * background suspension may leave the socket silently dead). Sends a ping
+   * with a short probe timeout; a dead link is closed so the existing
+   * reconnect + history-reconcile path takes over. No-op when the socket is
+   * not OPEN or a ping is already pending (the heartbeat watchdog owns that
+   * case).
+   */
+  probe(): void {
+    this.clearProbeTimer();
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    if (this.awaitingPongSince !== undefined) return;
+    const ws = this.ws;
+    const probeStartedAt = Date.now();
+    this.awaitingPongSince = probeStartedAt;
+    try {
+      ws.send(JSON.stringify({ type: "ping" }));
+    } catch (err) {
+      console.warn("[chat-session-runtime] probe ping failed:", err);
+      return;
+    }
+    this.probeTimer = setTimeout(() => {
+      this.probeTimer = undefined;
+      if (this.ws !== ws || this.ws.readyState !== WebSocket.OPEN) return;
+      if (this.awaitingPongSince !== undefined && this.awaitingPongSince <= probeStartedAt) {
+        try {
+          ws.close();
+        } catch (err) {
+          console.warn("[chat-session-runtime] probe close failed:", err);
+        }
+      }
+    }, RESUME_PROBE_TIMEOUT_MS);
+  }
+
   sendMessage(content: string, image?: SendableImage): boolean {
     if (!this.isOpen()) return false;
     const payload: Record<string, unknown> = { type: "message", content };
@@ -298,6 +337,7 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     this.manuallyClosed = true;
     this.clearReconnectTimer();
     this.clearHeartbeatTimer();
+    this.clearProbeTimer();
     const ws = this.ws;
     this.ws = null;
     if (ws) {
@@ -375,5 +415,11 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     if (!this.heartbeatTimer) return;
     clearInterval(this.heartbeatTimer);
     this.heartbeatTimer = undefined;
+  }
+
+  private clearProbeTimer(): void {
+    if (!this.probeTimer) return;
+    clearTimeout(this.probeTimer);
+    this.probeTimer = undefined;
   }
 }

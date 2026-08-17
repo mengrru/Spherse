@@ -1,6 +1,7 @@
 export const zhCN = {
   // 应用初始化时的加载占位文案
   "app.loading": "加载中...",
+  "app.resumeSyncFailed": "连接不可用，数据刷新失败，将自动重试",
   // 设置弹窗标题
   "settings.title": "设置",
   // 设置弹窗中的文本模型 tab 标签
