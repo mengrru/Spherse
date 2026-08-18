@@ -65,12 +65,10 @@ export function UpdateChecker() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  void bridge.openExternal(
-                    "https://github.com/mengrru/Spherse/releases/"
-                  )
+                  void bridge.openExternal("https://spherse.mengru.work/")
                 }
               >
-                {t("settings.about.gotoReleases")}
+                {t("settings.about.gotoDownloadPage")}
               </Button>
             </div>
           </div>
