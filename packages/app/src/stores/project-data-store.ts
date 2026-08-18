@@ -22,7 +22,7 @@ interface ProjectData {
 interface ProjectDataStore {
   projects: Record<string, ProjectData>;
   refreshAgents: (projectId: string, client: ApiClient) => Promise<void>;
-  refreshSessions: (projectId: string, client: ApiClient) => Promise<void>;
+  refreshSessions: (projectId: string, client: ApiClient, options?: { mode?: "replace" | "upsert" }) => Promise<void>;
   loadMoreSessions: (projectId: string, client: ApiClient, agentId: string) => Promise<void>;
   createSession: (
     projectId: string,
@@ -118,7 +118,21 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => {
     }
   },
 
-  async refreshSessions(projectId, client) {
+  /**
+   * Re-reads the first page of sessions for every agent.
+   *
+   * mode "replace" (default): the fetched page becomes the whole list — used
+   * by the `agent_updated` event path where a full re-sync (including removal
+   * of deleted sessions) is wanted.
+   *
+   * mode "upsert": fetched sessions are merged into the existing list and
+   * locally paginated entries (loaded via loadMoreSessions) are preserved —
+   * used by the connection-recovered path so a reconnect does not truncate a
+   * list the user has scrolled deeper into. Sessions deleted while
+   * disconnected stay until the next "replace" refresh or app restart.
+   */
+  async refreshSessions(projectId, client, options) {
+    const mode = options?.mode ?? "replace";
     clearRequestError(projectId);
 
     try {
@@ -129,23 +143,47 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => {
           return { agent, page };
         }),
       );
-      const sessions = pages.flatMap(({ page }) => page.items);
+      const fetched = pages.flatMap(({ page }) => page.items);
       const sessionPaging: Record<string, SessionPaging> = {};
       for (const { agent, page } of pages) {
         sessionPaging[agent.id] = { hasMore: page.hasMore, offset: page.items.length, loadingMore: false };
       }
-      set((state) => updateProjectData(state, projectId, (project) => ({
-        ...project,
-        sessions: [
-          ...project.sessions.filter((session) =>
-            project.initialMessageBySessionId[session.id] &&
-            !sessions.some((item) => item.id === session.id),
-          ),
-          ...sessions,
-        ],
-        sessionPaging,
-        error: null,
-      }), { createIfMissing: false }));
+      set((state) => updateProjectData(state, projectId, (project) => {
+        if (mode === "upsert") {
+          const fetchedIds = new Set(fetched.map((s) => s.id));
+          // Prepend the fresh first page (newest), keep local-only entries
+          // (deeper pages / optimistic creates) after it in their order.
+          const kept = project.sessions.filter((s) => !fetchedIds.has(s.id));
+          const merged = [...fetched, ...kept];
+          const existingPaging = project.sessionPaging;
+          const mergedPaging: Record<string, SessionPaging> = {};
+          for (const [agentId, paging] of Object.entries(sessionPaging)) {
+            // Preserve the deeper offset the user already loaded for this agent.
+            const current = existingPaging[agentId];
+            mergedPaging[agentId] = current && current.offset > paging.offset
+              ? { hasMore: paging.hasMore, offset: current.offset, loadingMore: false }
+              : paging;
+          }
+          return {
+            ...project,
+            sessions: merged,
+            sessionPaging: mergedPaging,
+            error: null,
+          };
+        }
+        return {
+          ...project,
+          sessions: [
+            ...project.sessions.filter((session) =>
+              project.initialMessageBySessionId[session.id] &&
+              !fetched.some((item) => item.id === session.id),
+            ),
+            ...fetched,
+          ],
+          sessionPaging,
+          error: null,
+        };
+      }, { createIfMissing: false }));
     } catch (err) {
       handleRequestError(projectId, err);
     }

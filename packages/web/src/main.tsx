@@ -1,7 +1,7 @@
 import { createAppRoot } from "@spherse/app/src/main";
 import { createWebHostBridge } from "./host-bridge-web";
-import { setupWebResumeReload } from "./resume-reload";
+import { setupWebResumeProbe } from "@spherse/app/src/lib/web-resume-probe";
 
 const bridge = createWebHostBridge();
-setupWebResumeReload();
+setupWebResumeProbe();
 createAppRoot(bridge);

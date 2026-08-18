@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
+import { useReconnectedSync } from "../../../hooks/useReconnectedSync";
 
 export function useContentAutoRefresh({
   projectId,
@@ -32,6 +33,13 @@ export function useContentAutoRefresh({
     timerRef.current = setTimeout(() => {
       onReloadRef.current();
     }, 300);
+  });
+
+  // Connection-recovered compensation: fs-watch events missed while the bus
+  // was down are not replayed, so re-pull the open content.
+  useReconnectedSync(() => {
+    if (!enabledRef.current) return;
+    onReloadRef.current();
   });
 
   useEffect(() => {

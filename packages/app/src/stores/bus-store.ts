@@ -9,7 +9,10 @@ export type BusHandler = (type: string, payload: unknown) => void;
 
 interface BusStore {
   status: BusStatus;
+  /** Timestamp of the last successful (re)connection; null before the first connection. */
+  resumedAt: number | null;
   init: (bridge: HostBridge) => Promise<void>;
+  resumeProbe: () => void;
   addHandler: (projectId: string, channel: BusChannel, handler: BusHandler) => void;
   removeHandler: (projectId: string, channel: BusChannel, handler: BusHandler) => void;
   emitAgentTriggerEvent: (projectId: string, eventName: string, payload?: string) => void;
@@ -19,12 +22,14 @@ interface BusStore {
 const RECONNECT_BACKOFFS = [1000, 2000, 5000, 10000, 30000];
 const HEARTBEAT_INTERVAL_MS = 30000;
 const HEARTBEAT_TIMEOUT_MS = 60000;
+const RESUME_PROBE_TIMEOUT_MS = 5000;
 const DEBUG_KEY = "__global__::debug";
 
 let ws: WebSocket | null = null;
 const handlers = new Map<string, Set<BusHandler>>();
 let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+let probeTimer: ReturnType<typeof setTimeout> | undefined;
 let lastPongAt = 0;
 let reconnectAttempt = 0;
 let activeBridge: HostBridge | null = null;
@@ -63,6 +68,13 @@ function clearHeartbeatTimer(): void {
   }
 }
 
+function clearProbeTimer(): void {
+  if (probeTimer) {
+    clearTimeout(probeTimer);
+    probeTimer = undefined;
+  }
+}
+
 function startHeartbeat(): void {
   clearHeartbeatTimer();
   lastPongAt = Date.now();
@@ -98,6 +110,7 @@ export const useBusStore = create<BusStore>((set, get) => {
 
   return {
     status: "idle",
+    resumedAt: null,
 
     async init(bridge: HostBridge) {
       if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
@@ -117,7 +130,7 @@ export const useBusStore = create<BusStore>((set, get) => {
       socket.onopen = () => {
         if (ws !== socket) return;
         reconnectAttempt = 0;
-        set({ status: "open" });
+        set({ status: "open", resumedAt: Date.now() });
         replaySubscriptions();
         startHeartbeat();
       };
@@ -134,6 +147,7 @@ export const useBusStore = create<BusStore>((set, get) => {
         if (parsed.channel === "__system__") {
           if (parsed.type === "pong") {
             lastPongAt = Date.now();
+            clearProbeTimer();
           } else if (parsed.type === "fs_watch_error") {
             console.debug("[bus-store] fs_watch_error", parsed.payload);
           }
@@ -155,6 +169,34 @@ export const useBusStore = create<BusStore>((set, get) => {
       socket.onerror = () => {
         /* onclose will follow; handled by onclose */
       };
+    },
+
+    /**
+     * Actively probe the bus connection for liveness (e.g. after the host page
+     * resumed from background suspension where iOS silently drops sockets
+     * without firing onclose). If the socket is already stale it is closed
+     * immediately so the existing reconnect/backoff path takes over; otherwise
+     * a ping is sent and a short probe timeout closes the socket if no pong
+     * arrives. No-op when the socket is not OPEN (the existing reconnect
+     * machinery already owns that case).
+     */
+    resumeProbe() {
+      clearProbeTimer();
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      const socket = ws;
+      if (Date.now() - lastPongAt > HEARTBEAT_TIMEOUT_MS) {
+        try { ws.close(); } catch { /* already closed */ }
+        return;
+      }
+      const pongAtStart = lastPongAt;
+      sendRaw({ kind: "ping" });
+      probeTimer = setTimeout(() => {
+        probeTimer = undefined;
+        if (ws !== socket || ws.readyState !== WebSocket.OPEN) return;
+        if (lastPongAt === pongAtStart) {
+          try { ws.close(); } catch { /* already closed */ }
+        }
+      }, RESUME_PROBE_TIMEOUT_MS);
     },
 
     addHandler(projectId, channel, handler) {
@@ -187,6 +229,7 @@ export const useBusStore = create<BusStore>((set, get) => {
     teardown() {
       clearReconnectTimer();
       clearHeartbeatTimer();
+      clearProbeTimer();
       if (ws) {
         try { ws.close(); } catch { /* already closed */ }
       }
@@ -195,7 +238,7 @@ export const useBusStore = create<BusStore>((set, get) => {
       reconnectAttempt = 0;
       lastPongAt = 0;
       activeBridge = null;
-      set({ status: "idle" });
+      set({ status: "idle", resumedAt: null });
     },
   };
 });

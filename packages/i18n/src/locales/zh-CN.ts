@@ -1,6 +1,8 @@
 export const zhCN = {
   // 应用初始化时的加载占位文案
   "app.loading": "加载中...",
+  // web/桌面端断线重连后自动补拉数据失败时右下角 toast 提示（补偿会在下次重连时再次尝试）
+  "app.resumeSyncFailed": "连接不可用，部分数据可能未及时刷新",
   // 设置弹窗标题
   "settings.title": "设置",
   // 设置弹窗中的文本模型 tab 标签

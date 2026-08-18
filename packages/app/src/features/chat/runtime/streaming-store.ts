@@ -48,6 +48,7 @@ interface StreamingStoreActions {
   retry: (sessionId: string) => void;
   abort: (sessionId: string) => void;
   reconnect: (sessionId: string) => void;
+  resumeProbeAll: () => void;
   retryHistory: (client: ApiClient, agentId: string, sessionId: string) => void;
   respondApproval: (sessionId: string, requestId: string, approved: boolean) => boolean;
   respondQuestion: (sessionId: string, requestId: string, answer: string) => boolean;
@@ -401,6 +402,19 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
     reconnect(sessionId) {
       runtimes.get(sessionId)?.reconnect();
+    },
+
+    /**
+     * Probe every attached session's socket for liveness after a host resume.
+     * Detached (cached) sessions are skipped: nothing observes them until the
+     * next attach, and their stale sockets are handled by the heartbeat
+     * watchdog / attach-time reconnect.
+     */
+    resumeProbeAll() {
+      for (const [sessionId, session] of Object.entries(get().sessions)) {
+        if (session.attachedCount <= 0) continue;
+        runtimes.get(sessionId)?.probe();
+      }
     },
 
     retryHistory(client, agentId, sessionId) {

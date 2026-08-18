@@ -11,9 +11,11 @@ import { useAppUiStore } from "./stores/app-ui-store";
 import { useHostBridge } from "./context/host-bridge-context";
 import { useFeature } from "./lib/use-feature";
 import { I18nProvider } from "@spherse/i18n/react";
+import { toast } from "sonner";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
 import { useSettingsStore } from "./stores/settings-store";
 import { useBusStore } from "./stores/bus-store";
+import { useReconnectedSync } from "./hooks/useReconnectedSync";
 
 export function App() {
   const navigate = useNavigate();
@@ -26,6 +28,31 @@ export function App() {
   const locale = useSettingsStore((state) => state.locale);
   const loadSettings = useSettingsStore((state) => state.loadLocale);
   const inProject = useMatch("/project/:projectId/*") !== null;
+
+  // Connection-recovered compensation: re-read the project list (may have
+  // changed on the server while this client was disconnected).
+  useReconnectedSync(() => {
+    void useAppStore.getState().refreshProjects(bridge)
+      .then(() => {
+        // The project the user is looking at may have disappeared server-side;
+        // leaving the route pointing at it would strand the UI on a
+        // "project not found" page (the old reload behavior navigated away).
+        const state = useAppStore.getState();
+        const match = window.location.hash.replace(/^#/, "").match(/^\/project\/([^/]+)/);
+        const routeProjectId = match?.[1];
+        if (routeProjectId && !state.projects.has(routeProjectId)) {
+          if (state.activeProjectId) {
+            navigate(`/project/${state.activeProjectId}`, { replace: true });
+          } else {
+            navigate("/", { replace: true });
+          }
+        }
+      })
+      .catch((err: unknown) => {
+        console.warn("[app] resume project refresh failed:", err);
+        toast.error(translate(locale ?? DEFAULT_LOCALE, "app.resumeSyncFailed"));
+      });
+  });
 
   useEffect(() => {
     let cancelled = false;

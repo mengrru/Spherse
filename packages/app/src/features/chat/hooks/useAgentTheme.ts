@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { ApiClient } from "../../../lib/api";
 import { useBusSubscription } from "../../../hooks/useBusSubscription";
+import { useReconnectedSync } from "../../../hooks/useReconnectedSync";
 
 export function useAgentTheme(
   client: ApiClient | undefined,
@@ -20,6 +21,13 @@ export function useAgentTheme(
     timerRef.current = setTimeout(() => {
       setTs(Date.now());
     }, 250);
+  });
+
+  // Connection-recovered compensation: agent theme.css may have changed while
+  // the bus was down (missed fs-watch events are not replayed).
+  useReconnectedSync(() => {
+    if (!client || !agentId || !slug) return;
+    setTs(Date.now());
   });
 
   useEffect(() => {

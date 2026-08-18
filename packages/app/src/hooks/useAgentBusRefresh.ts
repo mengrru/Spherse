@@ -1,4 +1,5 @@
 import { useBusSubscription } from "./useBusSubscription";
+import { useReconnectedSync } from "./useReconnectedSync";
 import { useProjectDataStore } from "../stores/project-data-store";
 import type { ApiClient } from "../lib/api";
 
@@ -15,6 +16,18 @@ export function useAgentBusRefresh(projectId: string | undefined, client: ApiCli
       if (action === "created" || action === "deleted") {
         void store.refreshSessions(projectId, client);
       }
+    });
+  });
+
+  // Connection-recovered compensation: agent/session changes that were
+  // broadcast while disconnected are not replayed, so re-read the lists.
+  // Sessions use "upsert" so a reconnect does not truncate a list the user
+  // has paginated deeper into.
+  useReconnectedSync(() => {
+    if (!projectId || !client) return;
+    const store = useProjectDataStore.getState();
+    void store.refreshAgents(projectId, client).then(() => {
+      void store.refreshSessions(projectId, client, { mode: "upsert" });
     });
   });
 }
