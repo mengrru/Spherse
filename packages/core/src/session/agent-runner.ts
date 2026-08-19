@@ -18,11 +18,8 @@ import { createApprovalGate } from "./approval-gate.js";
 import { createAskGate } from "./ask-gate.js";
 import type { SessionStatus } from "./status.js";
 import type { RuntimeDeps } from "./runtime.js";
-import {
-  createAttachmentSanitizer,
-  logEventMiddleware,
-  persistEventMiddleware,
-} from "./event-middlewares.js";
+import { logEventMiddleware, persistEventMiddleware } from "./event-middlewares.js";
+import { createAttachmentSanitizer } from "../attachments/sanitizer.js";
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
 import { logFromCompaction, logFromRows, readCurrentTokens } from "./compactor.js";
 import { buildAgent, buildPromptAndTools, composeStreamFn } from "./agent-assembly.js";

@@ -6,7 +6,8 @@ import type { AgentEvent } from "@earendil-works/pi-agent-core";
 import { attachmentsCapability } from "../../capabilities/attachments/index.js";
 import { prepareAttachmentUserMessage, type Attachment } from "../../attachments/index.js";
 import { createEventPipeline } from "../../kernel/event-pipeline.js";
-import { createAttachmentSanitizer, logEventMiddleware } from "../../session/event-middlewares.js";
+import { logEventMiddleware } from "../../session/event-middlewares.js";
+import { createAttachmentSanitizer } from "../../attachments/sanitizer.js";
 import { createSilentLogger } from "../../logger.js";
 
 function imageAttachment(rel: string): Attachment {
