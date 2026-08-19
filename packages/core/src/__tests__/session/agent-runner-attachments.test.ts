@@ -25,6 +25,7 @@ import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
 import { createModelResolver } from "../../session/model-resolver.js";
 import { createImageAttachmentProcessor } from "../../attachments/image-processor.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
+import { attachmentsCapability } from "../../capabilities/attachments/index.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
 
 const TEST_AGENT_PROFILE = `---
@@ -77,7 +78,7 @@ describe("AgentRunner attachment handling", () => {
       runConfig: new RunConfigHolder({ defaultModel: "openai/gpt-4o" }),
       modelResolver: createModelResolver(stubCatalog),
       modelCatalog: stubCatalog,
-      capabilities: builtinToolCapabilities(),
+      capabilities: [...builtinToolCapabilities(), attachmentsCapability()],
       stores: createStoreRegistry(),
       attachmentProcessors: [createImageAttachmentProcessor()],
     };

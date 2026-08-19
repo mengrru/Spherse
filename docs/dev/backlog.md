@@ -207,3 +207,6 @@
 
 - [x] **契约测试层（mock 盲区对冲）**：C1 暴露的结构性税——层间解耦越彻底，双方各自 mock 对方的拼接缝盲区越大。对冲落地：AGENTS.md 新增契约测试规矩（PM 门面 5 方法 + SessionPort 方法，消费方包至少一条不 mock 被测方法的契约测试）；server 包新增 `write-facade-contract.test.ts`（9 条：经 `createProject` 装配真 runtime + 真 PM + 真路由——writeFile/createEntry 含 409/deletePath 含 no-op + 403/attachments 上传与删除 C1 接缝/images 导出与越界 403）。契约测试组装用 `createProject`（装配点产出真对象），不放宽 core 导出面（ProjectStore/FileWriteMutex 仍不导出——"server 不得见 store 实例"边界保持）
 - [ ] **跨层接缝契约清单对账**：SessionPort 5 方法（create/restore/sendMessage/abortSession/sessionExists）在 server/desktop 包的契约覆盖缺口逐条对账（trigger 路径、ws-chat 路径），按 AGENTS.md 契约规矩补齐
+
+- [x] **附件上下文投影能力化（session 域自查）**：kernel 新增 `contextProjectors` 贡献点（`ContextProjector = (view) => (messages) => messages | undefined`，管线序组合——convertToLlm 前清洗 AgentMessage，与 streamDecorators 构成"消息出入站变换"词汇对称）；convertToLlm 内联的附件清洗（剥 `_attachments`/空 image block）迁为 attachments capability 的 projector——附件域知识离开 assembly。为会话分支/消息撤回（历史投影）预铺。自查结论：yolo 审批旁路记条件触发（等第二个策略需求）；thinkingLevel 硬编码进 profile 配置（与 capability 无关）；身份 blocks/preloaded-context 维持 assembly 本体定位
+- [ ] **yolo 审批策略泛化（条件触发：第二个审批策略需求出现时）**：`profile.yolo ? undefined : approvalGate` 泛化为 `approvalPolicy` 贡献点（白名单命令免审批/分级审批等）

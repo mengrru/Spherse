@@ -1,5 +1,5 @@
 import { Agent } from "@earendil-works/pi-agent-core";
-import type { AgentTool, StreamFn } from "@earendil-works/pi-agent-core";
+import type { AgentMessage, AgentTool, StreamFn } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
 import type { AgentProfile, SamplingParams } from "../types.js";
 
@@ -7,7 +7,6 @@ import type { ApprovalGate, AskGate } from "../kernel/gates.js";
 import { readContextFiles, type ContextFile } from "../context/read-context-files.js";
 
 
-import type { UserMessageWithAttachments } from "../attachments/index.js";
 import type { ToolHost } from "../kernel/ports.js";
 import { serializeBlocks, type ContextBlock } from "../kernel/context-block.js";
 import { llmPolicyOf } from "../capabilities/shared/llm-policy.js";
@@ -25,6 +24,22 @@ export function composeStreamFn(
     fn = decorate(fn);
   }
   return fn;
+}
+
+export function contextProjectorsFor(
+  capabilities: ReadonlyArray<import("../kernel/capability.js").Capability>,
+  view: import("../kernel/ports.js").SessionView,
+): Array<(messages: readonly import("@earendil-works/pi-agent-core").AgentMessage[]) => import("@earendil-works/pi-agent-core").AgentMessage[]> {
+  const projectors: Array<
+    (messages: readonly import("@earendil-works/pi-agent-core").AgentMessage[]) => import("@earendil-works/pi-agent-core").AgentMessage[]
+  > = [];
+  for (const capability of capabilities) {
+    for (const source of capability.contextProjectors ?? []) {
+      const project = source(view);
+      if (project) projectors.push(project);
+    }
+  }
+  return projectors;
 }
 
 export function streamDecoratorsFor(
@@ -192,6 +207,14 @@ export async function buildAgent(
     streamDecoratorsFor(deps.capabilities, { agentId: profile.id, profile, projectStore: deps.projectStore, stores: deps.stores }),
   );
 
+  const view = {
+    agentId: profile.id,
+    profile,
+    projectStore: deps.projectStore,
+    stores: deps.stores,
+  };
+  const projectors = contextProjectorsFor(deps.capabilities, view);
+
   return new Agent({
     initialState: {
       systemPrompt,
@@ -202,22 +225,13 @@ export async function buildAgent(
     sessionId,
     streamFn,
     convertToLlm(messages) {
-      return messages
-        .map((m) => {
-          if (m.role === "user") {
-            const { _attachments, ...rest } = m as UserMessageWithAttachments;
-            if (Array.isArray(rest.content)) {
-              rest.content = rest.content.filter(
-                (c) => !(c.type === "image" && !c.data),
-              );
-            }
-            return rest;
-          }
-          return m;
-        })
-        .filter(
-          (m) => m.role === "user" || m.role === "assistant" || m.role === "toolResult",
-        ) as Message[];
+      let projected: AgentMessage[] = messages;
+      for (const project of projectors) {
+        projected = project(projected);
+      }
+      return projected.filter(
+        (m) => m.role === "user" || m.role === "assistant" || m.role === "toolResult",
+      ) as Message[];
     },
   });
 }
