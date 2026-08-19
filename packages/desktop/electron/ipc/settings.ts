@@ -1,6 +1,7 @@
 import { ipcMain } from "electron";
 import { getMaskedSettings, saveSettings } from "../settings.js";
-import { getSupportedProviders, getImageSupportedProviders } from "@spherse/core";
+import { getImageSupportedProviders } from "@spherse/core";
+import { getAppModelCatalog } from "../model-catalog.js";
 import { updateDefaultModel, updateSampling } from "../server.js";
 import type { AppSettings } from "@spherse/core";
 
@@ -20,7 +21,7 @@ export function registerSettingsIpc(): void {
   });
 
   ipcMain.handle("get-supported-providers", () => {
-    return getSupportedProviders();
+    return getAppModelCatalog().getSupportedProviders();
   });
 
   ipcMain.handle("get-image-providers", () => {

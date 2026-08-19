@@ -1,6 +1,5 @@
 import type { UserMessage } from "@earendil-works/pi-ai";
 import type { AgentEvent } from "@earendil-works/pi-agent-core";
-import { createImageAttachmentProcessor } from "./image-processor.js";
 
 export interface Attachment {
   type: string;
@@ -15,23 +14,24 @@ export type PreparedContentBlock =
 
 export interface AttachmentProcessor {
   readonly type: string;
-  preprocess(ctx: { projectRoot: string; attachment: Attachment }): Promise<PreparedContentBlock[]>;
+  preprocess(ctx: {
+    projectRoot: string;
+    attachment: Attachment;
+  }): Promise<PreparedContentBlock[]>;
 }
 
-export const attachmentProcessors: Record<string, AttachmentProcessor> = {
-  image: createImageAttachmentProcessor(),
-};
-
-export type UserMessageWithAttachments = UserMessage & { _attachments?: Attachment[] };
+export type UserMessageWithAttachments = UserMessage & { _attachments?: ReadonlyArray<Attachment> };
 
 export async function prepareAttachmentUserMessage(
   text: string,
-  attachments: Attachment[],
+  attachments: ReadonlyArray<Attachment>,
   projectRoot: string,
+  processors: ReadonlyArray<AttachmentProcessor>,
 ): Promise<UserMessage> {
-  const blocks: PreparedContentBlock[] = [];
+  const byType = new Map(processors.map((p) => [p.type, p]));
+  const blocks = [];
   for (const att of attachments) {
-    const proc = attachmentProcessors[att.type];
+    const proc = byType.get(att.type);
     if (!proc) throw new Error(`Unsupported attachment type: ${att.type}`);
     blocks.push(...(await proc.preprocess({ projectRoot, attachment: att })));
   }
@@ -51,7 +51,7 @@ export async function prepareAttachmentUserMessage(
 
 export function stripUserAttachments(
   userMessage: UserMessage,
-  attachments: Attachment[],
+  attachments: ReadonlyArray<Attachment>,
 ): UserMessageWithAttachments {
   const originalTextBlocks =
     typeof userMessage.content === "string"

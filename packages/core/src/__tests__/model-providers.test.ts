@@ -16,7 +16,7 @@ vi.mock("@earendil-works/pi-ai/providers/all", () => ({
   }),
 }));
 
-import { getChatStreamFn } from "../model-providers/index.js";
+import { ModelCatalog } from "../model-providers/catalog.js";
 
 describe("getChatStreamFn temperature injection", () => {
   beforeEach(() => {
@@ -24,7 +24,7 @@ describe("getChatStreamFn temperature injection", () => {
   });
 
   it("injects temperature into stream options when a value is provided", async () => {
-    const streamFn = getChatStreamFn({ temperature: 0.3 });
+    const streamFn = new ModelCatalog().getChatStreamFn({ temperature: 0.3 });
     const model = { id: "gemini-2.5-pro" } as never;
     const context = { input: [] } as never;
     const options = { maxTokens: 100 } as never;
@@ -38,7 +38,7 @@ describe("getChatStreamFn temperature injection", () => {
   });
 
   it("omits temperature from options when undefined", async () => {
-    const streamFn = getChatStreamFn(undefined);
+    const streamFn = new ModelCatalog().getChatStreamFn(undefined);
     const model = { id: "gemini-2.5-pro" } as never;
     const context = { input: [] } as never;
     const options = { maxTokens: 100 } as never;
@@ -52,7 +52,7 @@ describe("getChatStreamFn temperature injection", () => {
   });
 
   it("omits temperature from options when null sampling", async () => {
-    const streamFn = getChatStreamFn(null as never);
+    const streamFn = new ModelCatalog().getChatStreamFn(null as never);
     const model = { id: "gemini-2.5-pro" } as never;
     const context = { input: [] } as never;
     const options = { maxTokens: 100 } as never;
@@ -71,7 +71,7 @@ describe("getChatStreamFn topP injection", () => {
   });
 
   it("adds onPayload to options when topP is provided", async () => {
-    const streamFn = getChatStreamFn({ topP: 0.9 });
+    const streamFn = new ModelCatalog().getChatStreamFn({ topP: 0.9 });
     const model = { id: "gpt-4o", api: "openai-completions" } as never;
     const context = { input: [] } as never;
     const options = { maxTokens: 100 } as never;
@@ -84,7 +84,7 @@ describe("getChatStreamFn topP injection", () => {
   });
 
   it("omits onPayload when topP is undefined", async () => {
-    const streamFn = getChatStreamFn(undefined);
+    const streamFn = new ModelCatalog().getChatStreamFn(undefined);
     const model = { id: "gpt-4o" } as never;
     const context = { input: [] } as never;
 
@@ -95,7 +95,7 @@ describe("getChatStreamFn topP injection", () => {
   });
 
   it("injects root-level top_p for openai-completions", async () => {
-    const streamFn = getChatStreamFn({ topP: 0.5 });
+    const streamFn = new ModelCatalog().getChatStreamFn({ topP: 0.5 });
     const model = { id: "m", api: "openai-completions" } as never;
 
     await streamFn(model, { input: [] } as never, {});
@@ -106,7 +106,7 @@ describe("getChatStreamFn topP injection", () => {
   });
 
   it("injects root-level top_p for openai-responses", async () => {
-    const streamFn = getChatStreamFn({ topP: 0.5 });
+    const streamFn = new ModelCatalog().getChatStreamFn({ topP: 0.5 });
     const model = { id: "m", api: "openai-responses" } as never;
 
     await streamFn(model, { input: [] } as never, {});
@@ -117,7 +117,7 @@ describe("getChatStreamFn topP injection", () => {
   });
 
   it("injects root-level top_p for anthropic-messages", async () => {
-    const streamFn = getChatStreamFn({ topP: 0.5 });
+    const streamFn = new ModelCatalog().getChatStreamFn({ topP: 0.5 });
     const model = { id: "m", api: "anthropic-messages" } as never;
 
     await streamFn(model, { input: [] } as never, {});
@@ -128,7 +128,7 @@ describe("getChatStreamFn topP injection", () => {
   });
 
   it("injects topP into config for google-generative-ai", async () => {
-    const streamFn = getChatStreamFn({ topP: 0.5 });
+    const streamFn = new ModelCatalog().getChatStreamFn({ topP: 0.5 });
     const model = { id: "m", api: "google-generative-ai" } as never;
 
     await streamFn(model, { input: [] } as never, {});
@@ -139,7 +139,7 @@ describe("getChatStreamFn topP injection", () => {
   });
 
   it("initializes config for google when absent", async () => {
-    const streamFn = getChatStreamFn({ topP: 0.5 });
+    const streamFn = new ModelCatalog().getChatStreamFn({ topP: 0.5 });
     const model = { id: "m", api: "google-generative-ai" } as never;
 
     await streamFn(model, { input: [] } as never, {});
@@ -150,7 +150,7 @@ describe("getChatStreamFn topP injection", () => {
   });
 
   it("returns undefined (no-op) for unknown api", async () => {
-    const streamFn = getChatStreamFn({ topP: 0.5 });
+    const streamFn = new ModelCatalog().getChatStreamFn({ topP: 0.5 });
     const model = { id: "m", api: "some-other-api" } as never;
 
     await streamFn(model, { input: [] } as never, {});
@@ -161,7 +161,7 @@ describe("getChatStreamFn topP injection", () => {
   });
 
   it("coexists with temperature injection", async () => {
-    const streamFn = getChatStreamFn({ temperature: 0.7, topP: 0.5 });
+    const streamFn = new ModelCatalog().getChatStreamFn({ temperature: 0.7, topP: 0.5 });
     const model = { id: "m", api: "openai-completions" } as never;
 
     await streamFn(model, { input: [] } as never, {});

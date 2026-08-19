@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getSupportedProviders, ENABLED_PROVIDERS } from "../model-providers/index.js";
+import { ModelCatalog, ENABLED_PROVIDERS } from "../model-providers/catalog.js";
 
 const EXPECTED_ENV_KEYS: Record<string, string[]> = {
   openai: ["OPENAI_API_KEY"],
@@ -19,7 +19,7 @@ const EXPECTED_ENV_KEYS: Record<string, string[]> = {
 };
 
 describe("getSupportedProviders catalog", () => {
-  const catalog = getSupportedProviders();
+  const catalog = new ModelCatalog().getSupportedProviders();
 
   it("exposes every ENABLED_PROVIDERS entry with at least one model", () => {
     for (const id of ENABLED_PROVIDERS) {

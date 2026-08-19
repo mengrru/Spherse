@@ -3,7 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import { createImageAttachmentProcessor } from "../../attachments/image-processor.js";
-import { attachmentProcessors } from "../../attachments/index.js";
+import { attachmentsCapability } from "../../capabilities/attachments/index.js";
 import { AccessDeniedError } from "../../errors.js";
 
 const PNG_BYTES = Buffer.from([
@@ -86,9 +86,9 @@ describe("image attachment processor", () => {
     ).rejects.toBeInstanceOf(AccessDeniedError);
   });
 
-  it("is registered under the 'image' key in attachmentProcessors", () => {
-    expect(attachmentProcessors.image).toBeDefined();
-    expect(attachmentProcessors.image.type).toBe("image");
-    expect(attachmentProcessors["nonexistent"]).toBeUndefined();
+  it("is contributed by the attachments capability under the 'image' type", () => {
+    const processors = attachmentsCapability().attachmentProcessors ?? [];
+    expect(processors.find((p) => p.type === "image")).toBeDefined();
+    expect(processors.find((p) => p.type === "nonexistent")).toBeUndefined();
   });
 });

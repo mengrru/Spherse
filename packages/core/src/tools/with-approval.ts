@@ -1,22 +1,9 @@
 import crypto from "node:crypto";
 import type { TSchema } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
+import type { ApprovalGate } from "../kernel/gates.js";
 
-export interface ApprovalRequest {
-  requestId: string;
-  toolCallId: string;
-  toolName: string;
-  args: unknown;
-}
-
-export interface ApprovalDecision {
-  approved: boolean;
-  reason?: string;
-}
-
-export interface ApprovalGate {
-  request(req: ApprovalRequest): Promise<ApprovalDecision>;
-}
+export type { ApprovalRequest, ApprovalDecision, ApprovalGate } from "../kernel/gates.js";
 
 export function withApproval<TParams extends TSchema, TDetails>(
   tool: AgentTool<TParams, TDetails>,

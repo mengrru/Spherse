@@ -1,5 +1,6 @@
 import path from "node:path";
 import { PROJECT_META_DIR } from "../types.js";
+import type { PathRule } from "../kernel/ports.js";
 
 export type PathCategory =
   | "userFiles"
@@ -19,9 +20,10 @@ export type PathCategory =
   | "agentTriggers"
   | "agentTriggerLogs"
   | "spherseMetaDir"
-  | "spherseOther";
+  | "spherseOther"
+  | (string & {});
 
-const PATH_PATTERNS: Record<Exclude<PathCategory, "userFiles">, string> = {
+const PATH_PATTERNS: Record<string, string> = {
   rootIndex: "AGENTS.md",
   changelog: "CHANGELOG.md",
   projectConfig: `${PROJECT_META_DIR}/project.yaml`,
@@ -43,12 +45,26 @@ const PATH_PATTERNS: Record<Exclude<PathCategory, "userFiles">, string> = {
 
 const CATEGORY_ORDER = Object.keys(PATH_PATTERNS) as Exclude<PathCategory, "userFiles">[];
 
-export function categorizePath(relativePath: string): PathCategory {
+export function categorizePath(relativePath: string, extraRules?: ReadonlyArray<PathRule>): PathCategory {
   const p = normalizeInput(relativePath);
+  if (extraRules) {
+    for (const rule of extraRules) {
+      if (rule.match.test(p)) return rule.category;
+    }
+  }
   for (const category of CATEGORY_ORDER) {
     if (globToRegex(PATH_PATTERNS[category]).test(p)) return category;
   }
   return "userFiles";
+}
+
+export function ruleForPath(relativePath: string, extraRules?: ReadonlyArray<PathRule>): PathRule | null {
+  const p = normalizeInput(relativePath);
+  if (!extraRules) return null;
+  for (const rule of extraRules) {
+    if (rule.match.test(p)) return rule;
+  }
+  return null;
 }
 
 const regexCache = new Map<string, RegExp>();

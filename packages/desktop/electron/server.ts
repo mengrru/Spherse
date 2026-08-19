@@ -3,6 +3,7 @@ import { createMultiProjectServer } from "@spherse/server";
 import type { ProjectRegistry } from "@spherse/server";
 import type { SamplingParams } from "@spherse/core";
 import { getSettings, getMobileAccess } from "./settings.js";
+import { getAppModelCatalog } from "./model-catalog.js";
 
 interface ServerHandle {
   fastify: FastifyInstance;
@@ -22,6 +23,7 @@ export async function ensureServer(): Promise<void> {
     defaultModel: settings?.models?.text?.defaultModel,
     sampling: settings?.models?.text?.sampling,
     auth: activeAccessToken ? { accessToken: activeAccessToken } : undefined,
+    modelCatalog: getAppModelCatalog(),
   });
   serverHandle = { fastify: result.fastify, registry: result.registry };
   for (const { root, lastOpened } of registeredProjects) {

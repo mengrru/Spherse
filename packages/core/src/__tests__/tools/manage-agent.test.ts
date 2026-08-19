@@ -5,7 +5,7 @@ import { ProjectStore } from "../../store/project.js";
 import { createSilentLogger } from "../../logger.js";
 import { createTempProject, cleanupDir } from "../helpers.js";
 
-const KNOWN_TOOLS = ["read_file", "write_file", "manage_agent"] as const;
+const KNOWN_TOOLS = { names: ["read_file", "write_file", "manage_agent"] };
 
 const EXISTING_PROFILE = `---
 name: World Builder

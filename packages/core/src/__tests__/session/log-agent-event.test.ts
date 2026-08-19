@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { logAgentEvent } from "../../engine/log-agent-event.js";
+import { logAgentEvent } from "../../session/log-agent-event.js";
 import type { Logger } from "../../logger.js";
 import type { AgentEvent } from "@earendil-works/pi-agent-core";
 

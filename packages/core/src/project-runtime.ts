@@ -3,32 +3,47 @@ import type { SessionManager } from "./session/session-manager.js";
 import type { TriggerManager } from "./trigger/trigger-manager.js";
 import type { TimerService } from "./trigger/timer-service.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
+import type { TriggerCapability } from "./capabilities/trigger/index.js";
+import type { AgentConfigChangeKind, Capability } from "./kernel/capability.js";
 import type { AgentProfile } from "./types.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 
 export class ProjectRuntime {
   readonly projectManager: ProjectManager;
   readonly sessionRuntime: SessionManager;
-  readonly triggerManager: TriggerManager;
-  readonly timerService: TimerService;
   readonly projectId: string;
   private logger: Logger;
   private _shutdownDone = false;
+  private readonly capabilities: ReadonlyArray<Capability>;
 
   constructor(deps: {
     projectManager: ProjectManager;
     sessionRuntime: SessionManager;
-    triggerManager: TriggerManager;
-    timerService: TimerService;
     projectId: string;
     logger?: Logger;
+    capabilities: ReadonlyArray<Capability>;
   }) {
     this.projectManager = deps.projectManager;
     this.sessionRuntime = deps.sessionRuntime;
-    this.triggerManager = deps.triggerManager;
-    this.timerService = deps.timerService;
     this.projectId = deps.projectId;
     this.logger = deps.logger ?? createSilentLogger();
+    this.capabilities = deps.capabilities;
+  }
+
+  private triggerCapability(): TriggerCapability | undefined {
+    return this.capabilities.find((c): c is TriggerCapability => c.id === "trigger");
+  }
+
+  get triggerManager(): TriggerManager {
+    const trigger = this.triggerCapability();
+    if (!trigger) throw new Error("trigger capability is not registered");
+    return trigger.manager;
+  }
+
+  get timerService(): TimerService {
+    const trigger = this.triggerCapability();
+    if (!trigger) throw new Error("trigger capability is not registered");
+    return trigger.timerService;
   }
 
   deleteSession(agentId: string, sessionId: string): void {
@@ -38,9 +53,27 @@ export class ProjectRuntime {
 
   async deleteAgent(agentId: string): Promise<void> {
     this.sessionRuntime.evictAgent(agentId);
-    await this.sessionRuntime.invalidateMcpCache(agentId);
-    this.triggerManager.deleteAllForAgent(agentId);
+    for (const capability of this.capabilities) {
+      try {
+        await capability.onAgentDeleted?.(agentId);
+      } catch (err) {
+        this.logger.warn({ err, capability: capability.id, agentId }, "onAgentDeleted failed");
+      }
+    }
     await this.projectManager.deleteAgent(agentId);
+  }
+
+  async dispatchAgentConfigChanged(
+    agentId: string,
+    kind: AgentConfigChangeKind,
+  ): Promise<void> {
+    for (const capability of this.capabilities) {
+      try {
+        await capability.onAgentConfigChanged?.(agentId, kind);
+      } catch (err) {
+        this.logger.warn({ err, capability: capability.id, agentId, kind }, "onAgentConfigChanged failed");
+      }
+    }
   }
 
   async updateAgentMcp(
@@ -48,7 +81,7 @@ export class ProjectRuntime {
     config: { servers: ReadonlyArray<Record<string, unknown>> },
   ): Promise<AgentMcpConfig> {
     const result = await this.projectManager.updateAgentMcp(agentId, config);
-    await this.sessionRuntime.invalidateMcpCache(agentId);
+    await this.dispatchAgentConfigChanged(agentId, "mcp");
     return result;
   }
 
@@ -60,9 +93,10 @@ export class ProjectRuntime {
     if (this._shutdownDone) return;
     this._shutdownDone = true;
     this.logger.info({ projectId: this.projectId }, "project runtime shutting down");
-    this.timerService.stop();
-    this.triggerManager.stopAll();
     await this.sessionRuntime.closeAll();
+    for (const capability of this.capabilities) {
+      await capability.shutdown?.();
+    }
     this.projectManager.close();
   }
 }

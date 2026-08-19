@@ -1,5 +1,7 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { syncCustomProviders, resolveModelById, getChatModels } from "../../model-providers/index.js";
+import { ModelCatalog } from "../../model-providers/catalog.js";
+
+const catalog = new ModelCatalog();
 import type { Context, Model } from "@earendil-works/pi-ai";
 
 const chatContext: Context = {
@@ -63,7 +65,7 @@ async function captureRequestHeaders(
       headers: { "content-type": "text/event-stream" },
     });
   };
-  const stream = getChatModels().streamSimple(model, chatContext, {
+  const stream = catalog.getChatModels().streamSimple(model, chatContext, {
     fetch: fetch as typeof globalThis.fetch,
     ...options,
   });
@@ -72,15 +74,15 @@ async function captureRequestHeaders(
 }
 
 function registerCustomProvider() {
-  syncCustomProviders(
+  catalog.syncCustomProviders(
     [{ id: "custom-ua", name: "UA Test", baseUrl: "https://ua.example.com/v1", models: ["model-a"], keyless: false }],
     { "custom-ua": "sk-test" },
   );
-  return resolveModelById("custom-ua/model-a");
+  return catalog.resolveModelById("custom-ua/model-a");
 }
 
 afterEach(() => {
-  syncCustomProviders([], {});
+  catalog.syncCustomProviders([], {});
 });
 
 describe("custom provider user-agent", () => {
@@ -94,7 +96,7 @@ describe("custom provider user-agent", () => {
   });
 
   it("keeps the SDK default user-agent for builtin providers", async () => {
-    const builtinModels = getChatModels()
+    const builtinModels = catalog.getChatModels()
       .getModels("deepseek")
       .filter((m) => m.api === "openai-completions");
     expect(builtinModels.length).toBeGreaterThan(0);
@@ -130,11 +132,11 @@ describe("custom provider user-agent", () => {
   });
 
   it("does not send a user-agent header for keyless custom providers", async () => {
-    syncCustomProviders(
+    catalog.syncCustomProviders(
       [{ id: "custom-keyless-ua", name: "Keyless UA", baseUrl: "https://keyless.example.com/v1", models: ["m"], keyless: true }],
       {},
     );
-    const model = resolveModelById("custom-keyless-ua/m");
+    const model = catalog.resolveModelById("custom-keyless-ua/m");
 
     const requestHeaders = await captureRequestHeaders(model);
 
@@ -146,7 +148,7 @@ describe("custom provider user-agent", () => {
     // pi-ai 0.84.2 起 kimi-coding 不再在模型上定义 KimiCLI/1.5 UA，
     // 改为在请求层强制注入 pi 的运行时 UA（见 pi release v0.84.2 "Changed
     // inherited Kimi Coding requests to use pi's runtime User-Agent header"）。
-    const kimiModels = getChatModels()
+    const kimiModels = catalog.getChatModels()
       .getModels("kimi-coding")
       .filter((m) => m.api === "anthropic-messages");
     expect(kimiModels.length).toBeGreaterThan(0);

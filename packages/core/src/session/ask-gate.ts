@@ -1,4 +1,4 @@
-import type { AskGate, AskOutcome } from "../tools/ask-user.js";
+import type { AskGate, AskOutcome } from "../kernel/gates.js";
 import type { SessionControlBus } from "./control-bus.js";
 
 export function createAskGate(bus: SessionControlBus): AskGate {

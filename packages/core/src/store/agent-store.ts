@@ -5,6 +5,7 @@ import { SessionStore } from "./session.js";
 import { TriggerStore } from "./trigger.js";
 import { SkillStore } from "./skill.js";
 import { McpConfigStore } from "./mcp-config.js";
+import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 
 export class AgentStore {
@@ -18,16 +19,19 @@ export class AgentStore {
   private _mcpStore: McpConfigStore | null = null;
   private logger: Logger;
 
-  constructor(agentDir: string, agentId: string, logger?: Logger) {
+  constructor(agentDir: string, agentId: string, logger?: Logger, fileWriteMutex?: FileWriteMutex) {
     this.agentDir = agentDir;
     this.agentId = agentId;
     this.logger = logger ?? createSilentLogger();
+    this.fileWriteMutex = fileWriteMutex;
     this._profileStore = new AgentProfileStore(
       path.join(agentDir, "profile.md"),
       path.basename(agentDir),
     );
     this._triggerStore = new TriggerStore(agentDir, logger);
   }
+
+  private fileWriteMutex?: FileWriteMutex;
 
   async open(): Promise<AgentProfile> {
     const profile = await this._profileStore.read();
@@ -78,7 +82,7 @@ export class AgentStore {
 
   get skills(): SkillStore {
     if (!this._skillStore) {
-      this._skillStore = new SkillStore(path.join(this.agentDir, "skills"));
+      this._skillStore = new SkillStore(path.join(this.agentDir, "skills"), undefined, this.fileWriteMutex);
     }
     return this._skillStore;
   }

@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import { nativeTheme } from "electron";
 import Store from "electron-store";
 import type { AppSettings, ModelGroupSettings, ProviderCredentials, MobileAccessSettings } from "@spherse/core";
-import { getSupportedProviders, syncCustomProviders } from "@spherse/core";
+import { getAppModelCatalog } from "./model-catalog.js";
 
 export interface OpenProjectEntry {
   id: string;
@@ -116,7 +116,7 @@ export function applyThemeSource(theme: AppSettings["theme"]): void {
 
 function applySettingsToEnv(settings: AppSettings): void {
   applyThemeSource(settings.theme);
-  const textCatalog = getSupportedProviders();
+  const textCatalog = getAppModelCatalog().getSupportedProviders();
   for (const [id, creds] of Object.entries(settings.models?.text?.providers ?? {})) {
     if (creds?.apiKey) {
       const item = textCatalog[id];
@@ -137,7 +137,10 @@ function applySettingsToEnv(settings: AppSettings): void {
     delete process.env.SPHERSE_IMAGE_API_KEY;
   }
 
-  syncCustomProviders(settings.customProviders ?? [], extractProviderKeys(settings.models?.text?.providers));
+  getAppModelCatalog().syncCustomProviders(
+    settings.customProviders ?? [],
+    extractProviderKeys(settings.models?.text?.providers),
+  );
 }
 
 export function getOpenProjects(): OpenProjectEntry[] {

@@ -1,15 +1,14 @@
 import fs from "node:fs/promises";
-import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
-import { getSupportedProviders, getImageSupportedProviders, resolveProjectPath } from "@spherse/core";
+import { getImageSupportedProviders, resolveProjectPath } from "@spherse/core";
 import { schemas } from "@spherse/server/contracts";
 
-export function registerSettingsRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
+export function registerSettingsRoutes(fastify: FastifyInstance, registry: ProjectRegistry): void {
   fastify.get("/api/settings/providers", {
     schema: { response: { 200: schemas.providerCatalog } },
     async handler() {
-      return getSupportedProviders();
+      return registry.getSupportedProviders();
     },
   });
 
@@ -99,12 +98,7 @@ export function registerSettingsRoutes(fastify: FastifyInstance, _registry: Proj
       },
     },
     async (req) => {
-      const root = req.projectCtx!.projectManager.getRootPath();
-      const absolutePath = resolveProjectPath(root, ".spherse/theme.css");
-      await req.projectCtx!.projectManager.getFileWriteMutex().run(absolutePath, async () => {
-        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-        await fs.writeFile(absolutePath, req.body.content, "utf-8");
-      });
+      await req.projectCtx!.projectManager.writeFile(".spherse/theme.css", req.body.content);
       return { ok: true };
     },
   );

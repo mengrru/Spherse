@@ -1,7 +1,13 @@
 import fs from "node:fs/promises";
-import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { resolveProjectPath, serverAccessPolicy, AccessDeniedError, isBinaryBuffer, BINARY_SAMPLE_SIZE } from "@spherse/core";
+import {
+  resolveProjectPath,
+  serverAccessPolicy,
+  AccessDeniedError,
+  ConflictError,
+  isBinaryBuffer,
+  BINARY_SAMPLE_SIZE,
+} from "@spherse/core";
 import { schemas, parseContract } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { forbidden, notFound, badRequest, conflict } from "../errors.js";
@@ -93,29 +99,18 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
     async (req) => {
       const relativePath = req.params["*"];
       const pm = req.projectCtx!.projectManager;
-      const root = pm.getRootPath();
-      const policy = serverAccessPolicy(root);
-      try {
-        policy.assertWrite(relativePath);
-      } catch (err) {
-        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
-        throw err;
-      }
-      const absolutePath = resolveProjectPath(root, relativePath);
 
       const action = req.body?.action;
       if (action !== "mkdir" && action !== "touch") {
         throw badRequest("Invalid or missing 'action' (expected 'mkdir' or 'touch')");
       }
 
-      const stat = await fs.stat(absolutePath).catch(() => null);
-      if (stat) throw conflict("Already exists");
-
-      if (action === "mkdir") {
-        await fs.mkdir(absolutePath, { recursive: true });
-      } else {
-        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-        await fs.writeFile(absolutePath, "", "utf-8");
+      try {
+        await pm.createEntry(relativePath, action);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        if (err instanceof ConflictError) throw conflict("Already exists");
+        throw err;
       }
       return { ok: true };
     },
@@ -127,24 +122,16 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
     async (req) => {
       const relativePath = req.params["*"];
       const pm = req.projectCtx!.projectManager;
-      const root = pm.getRootPath();
-      const policy = serverAccessPolicy(root);
-      try {
-        policy.assertWrite(relativePath);
-      } catch (err) {
-        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
-        throw err;
-      }
-      const absolutePath = resolveProjectPath(root, relativePath);
-
       if (typeof req.body?.content !== "string") {
         throw badRequest("Missing or invalid 'content'");
       }
 
-      await req.projectCtx!.projectManager.getFileWriteMutex().run(absolutePath, async () => {
-        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-        await fs.writeFile(absolutePath, req.body.content, "utf-8");
-      });
+      try {
+        await pm.writeFile(relativePath, req.body.content);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        throw err;
+      }
       return { ok: true };
     },
   );
@@ -155,25 +142,12 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
     async (req) => {
       const relativePath = req.params["*"];
       const pm = req.projectCtx!.projectManager;
-      const root = pm.getRootPath();
-      const policy = serverAccessPolicy(root);
+
       try {
-        policy.assertWrite(relativePath);
+        await pm.deletePath(relativePath);
       } catch (err) {
         if (err instanceof AccessDeniedError) throw forbidden("Access denied");
         throw err;
-      }
-      const absolutePath = resolveProjectPath(root, relativePath);
-
-      try {
-        const stat = await fs.stat(absolutePath);
-        if (stat.isDirectory()) {
-          await fs.rm(absolutePath, { recursive: true });
-        } else {
-          await fs.unlink(absolutePath);
-        }
-      } catch {
-        throw notFound("Not found");
       }
       return { ok: true };
     },

@@ -15,13 +15,15 @@ const { getChatStreamFnMock, resolveModelByIdMock } = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../../model-providers/index.js", async (importOriginal) => {
+vi.mock("../../model-providers/catalog.js", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../model-providers/index.js")>();
+    await importOriginal<typeof import("../../model-providers/catalog.js")>();
   return {
     ...actual,
-    getChatStreamFn: getChatStreamFnMock,
-    resolveModelById: resolveModelByIdMock,
+    ModelCatalog: class {
+      getChatStreamFn = getChatStreamFnMock;
+      resolveModelById = resolveModelByIdMock;
+    },
   };
 });
 
@@ -52,7 +54,7 @@ interface RuntimeInternals {
 function activeAgent(runtime: RuntimeInternals, sessionId: string): any {
   const entry = (runtime.sessionRuntime as any).sessions.get(sessionId);
   if (!entry) throw new Error(`no active session ${sessionId}`);
-  return (entry as any).agent;
+  return (entry as any).agentRef;
 }
 
 describe("SessionManager temperature propagation", () => {
@@ -477,10 +479,14 @@ describe("SessionManager agent hot-reload", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  function runnerOf(sessionId: string): any {
+    const runner = (runtime.sessionRuntime as any).sessions.get(sessionId);
+    if (!runner) throw new Error(`no active session ${sessionId}`);
+    return runner;
+  }
+
   function liveOf(sessionId: string): any {
-    const live = (runtime.sessionRuntime as any).sessions.get(sessionId);
-    if (!live) throw new Error(`no live session ${sessionId}`);
-    return live;
+    return runnerOf(sessionId);
   }
 
   const UPDATED_CONTENT = `---
