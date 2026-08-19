@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@spherse/core", () => ({
-  createProject: vi.fn(),
-}));
+vi.mock("@spherse/core", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@spherse/core")>();
+  return {
+    ...actual,
+    createProject: vi.fn(),
+  };
+});
 
 import { createProject } from "@spherse/core";
 import { ProjectRegistry } from "../registry.js";

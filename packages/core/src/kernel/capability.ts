@@ -1,9 +1,16 @@
-import type { AgentTool } from "@earendil-works/pi-agent-core";
+import type { AgentEvent, AgentTool } from "@earendil-works/pi-agent-core";
 import { ConflictError } from "../errors.js";
 import type { ContextBlock } from "./context-block.js";
+import type { EventMiddleware } from "./event-pipeline.js";
 import type { TurnHooksFactory } from "./turn-hooks.js";
-import type { AttachmentProcessor, TurnMiddlewareSource } from "./attachments.js";
+import type { AttachmentProcessor } from "./attachments.js";
 import type { KernelServices, PathRule, SessionView, ToolHost } from "./ports.js";
+
+export type { KernelServices } from "./ports.js";
+
+export interface TurnMiddlewareSource {
+  eventMiddlewares?: ReadonlyArray<EventMiddleware<AgentEvent>>;
+}
 
 export interface Capability extends TurnMiddlewareSource {
   readonly id: string;

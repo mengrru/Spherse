@@ -1,5 +1,5 @@
+import type { KernelServices } from "../../kernel/ports.js";
 import type { Capability } from "../../kernel/capability.js";
-import type { SessionPort } from "../../kernel/ports.js";
 import { TriggerManager } from "../../trigger/trigger-manager.js";
 import { TimerService } from "../../trigger/timer-service.js";
 import { createEmitTriggerEventTool } from "../../tools/emit-trigger-event.js";
@@ -10,7 +10,6 @@ import type { Logger } from "../../logger.js";
 
 export interface TriggerCapabilityDeps {
   readonly projectStore: ProjectStore;
-  readonly getSessionPort: () => SessionPort;
   readonly logger?: Logger;
 }
 
@@ -20,38 +19,51 @@ export interface TriggerCapability extends Capability {
 }
 
 export function createTriggerCapability(deps: TriggerCapabilityDeps): TriggerCapability {
-  const port: SessionPort = {
-    createSession: (agentId, source) => deps.getSessionPort().createSession(agentId, source),
-    restoreSession: (agentId, sessionId) => deps.getSessionPort().restoreSession(agentId, sessionId),
-    sendMessage: (sessionId, message, onEvent) =>
-      deps.getSessionPort().sendMessage(sessionId, message, onEvent),
-    sessionExists: (agentId, sessionId) => deps.getSessionPort().sessionExists(agentId, sessionId),
+  let manager: TriggerManager | undefined;
+  let timerService: TimerService | undefined;
+
+  const ensure = (services: KernelServices): TriggerManager => {
+    if (!manager) {
+      manager = new TriggerManager({
+        sessionRuntime: services.session,
+        projectStore: deps.projectStore,
+        logger: deps.logger ?? services.logger,
+      });
+      timerService = new TimerService(() => manager!.onTimeTick(), deps.logger);
+      timerService.start();
+    }
+    return manager;
   };
-  const manager = new TriggerManager({
-    sessionRuntime: port,
-    projectStore: deps.projectStore,
-    logger: deps.logger,
-  });
-  const timerService = new TimerService(() => manager.onTimeTick(), deps.logger);
-  timerService.start();
 
   const capability: TriggerCapability = {
     id: "trigger",
-    tools: (host) => [
-      createEmitTriggerEventTool(manager),
-      withApproval(
-        createManageTriggerTool(manager, deps.projectStore, host.agentId),
-        host.approvalGate,
-        isManageTriggerWriteAction,
-      ),
-    ],
-    onAgentDeleted: (agentId) => manager.deleteAllForAgent(agentId),
-    shutdown: async () => {
-      timerService.stop();
-      manager.stopAll();
+    init: async (services) => {
+      ensure(services);
     },
-    manager,
-    timerService,
+    tools: (host) => {
+      if (!manager) throw new Error("trigger capability used before init");
+      return [
+        createEmitTriggerEventTool(manager),
+        withApproval(
+          createManageTriggerTool(manager, deps.projectStore, host.agentId),
+          host.approvalGate,
+          isManageTriggerWriteAction,
+        ),
+      ];
+    },
+    onAgentDeleted: (agentId) => manager?.deleteAllForAgent(agentId),
+    shutdown: async () => {
+      timerService?.stop();
+      manager?.stopAll();
+    },
+    get manager(): TriggerManager {
+      if (!manager) throw new Error("trigger capability used before init");
+      return manager;
+    },
+    get timerService(): TimerService {
+      if (!timerService) throw new Error("trigger capability used before init");
+      return timerService;
+    },
   };
   return capability;
 }

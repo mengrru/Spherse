@@ -57,6 +57,7 @@ const SRV_WRITE: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "rootIndex",
   "changelog",
   "projectTheme",
+  "attachments",
   "skills",
   "agentSkills",
 ]);

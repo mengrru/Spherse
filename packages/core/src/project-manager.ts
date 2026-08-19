@@ -17,9 +17,9 @@ export class ProjectManager {
 
   private serverPolicy: ReturnType<typeof serverAccessPolicy> | undefined;
 
-  constructor(projectStore: ProjectStore, logger?: Logger, fileWriteMutex?: FileWriteMutex) {
+  constructor(projectStore: ProjectStore, logger: Logger, fileWriteMutex: FileWriteMutex) {
     this.projectStore = projectStore;
-    this.fileWriteMutex = fileWriteMutex ?? new FileWriteMutex();
+    this.fileWriteMutex = fileWriteMutex;
     this.logger = logger ?? createSilentLogger();
   }
 
@@ -212,10 +212,6 @@ export class ProjectManager {
 
   async appendChangelog(entry: ChangelogEntry): Promise<void> {
     await this.projectStore.appendChangelog(entry);
-  }
-
-  getFileWriteMutex(): FileWriteMutex {
-    return this.fileWriteMutex;
   }
 
   private policy(): ReturnType<typeof serverAccessPolicy> {

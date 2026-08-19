@@ -1,8 +1,8 @@
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import type { Capability } from "../../kernel/capability.js";
-import type { ContextBlock } from "../../kernel/context-block.js";
 import type { ToolHost } from "../../kernel/ports.js";
+import type { Capability, KernelServices } from "../../kernel/capability.js";
+import type { ContextBlock } from "../../kernel/context-block.js";
 import { MemoryStore, MEMORY_PATH_RULE, memoryStoreOf } from "./store.js";
 
 const MemorySaveParams = Type.Object({
@@ -13,6 +13,10 @@ const MemorySaveParams = Type.Object({
 const MemoryRecallParams = Type.Object({
   query: Type.String({ description: "Keyword or tag to search memories with. Empty query lists all." }),
 });
+
+interface MemoryCapabilityState {
+  stores?: KernelServices["stores"];
+}
 
 function storeFor(host: ToolHost): MemoryStore | undefined {
   const agentStore = host.projectStore.getAgent(host.agentId);
@@ -79,13 +83,22 @@ function createMemoryRecallTool(host: ToolHost): AgentTool<typeof MemoryRecallPa
 const RECENT_LIMIT = 20;
 
 export function memoryCapability(): Capability {
+  const state: MemoryCapabilityState = {};
+
   return {
     id: "memory",
+    init: async (services) => {
+      state.stores = services.stores;
+    },
     pathRules: [MEMORY_PATH_RULE],
     tools: (host) => [createMemorySaveTool(host), createMemoryRecallTool(host)],
     contextBlocks: async (view) => {
-      const store = storeFor(view);
-      if (!store) return [];
+      const agentStore = view.projectStore.getAgent(view.agentId);
+      if (!agentStore) return [];
+      const scope = view.stores.forAgent(view.agentId);
+      const store =
+        scope.get<MemoryStore>("memory") ??
+        scope.set("memory", memoryStoreOf(agentStore.getAgentDir(), view.agentId));
       const entries = await store.list();
       if (entries.length === 0) return [];
       const recent = entries.slice(-RECENT_LIMIT);
@@ -95,6 +108,9 @@ export function memoryCapability(): Capability {
         render: () => `<memory>\n${lines.join("\n")}\n</memory>`,
       };
       return [block];
+    },
+    onAgentDeleted: (agentId) => {
+      state.stores?.clearAgent(agentId);
     },
   };
 }

@@ -33,10 +33,10 @@ export class ProjectRegistry {
   private defaultModel?: string;
   private sampling?: SamplingParams;
 
-  private readonly modelCatalog?: ModelCatalog;
+  private readonly modelCatalog: ModelCatalog;
 
   getSupportedProviders() {
-    return (this.modelCatalog ?? new ModelCatalog()).getSupportedProviders();
+    return this.modelCatalog.getSupportedProviders();
   }
 
   constructor(
@@ -46,7 +46,7 @@ export class ProjectRegistry {
     this.logger = logger;
     this.defaultModel = options?.defaultModel;
     this.sampling = options?.sampling;
-    this.modelCatalog = options?.modelCatalog;
+    this.modelCatalog = options?.modelCatalog ?? new ModelCatalog();
   }
 
   async register(projectRoot: string, options?: RegisterOptions): Promise<ProjectContextCompat> {

@@ -36,7 +36,6 @@ export interface StoreRegistry {
 export interface KernelServices {
   readonly projectRoot: string;
   readonly metaDir: string;
-  readonly projectStore: ProjectStore;
   readonly logger: Logger;
   readonly fileWriteMutex: FileWriteMutex;
   readonly stores: StoreRegistry;

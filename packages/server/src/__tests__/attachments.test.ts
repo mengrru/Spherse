@@ -10,7 +10,7 @@ import type { ProjectRegistry } from "../registry.js";
 
 interface FakeProjectManager {
   getRootPath: () => string;
-  getFileWriteMutex: () => { run: (absPath: string, fn: () => Promise<void>) => Promise<void> };
+  writeBinaryFile: (rel: string, data: Uint8Array) => Promise<void>;
 }
 
 declare module "fastify" {
@@ -59,7 +59,6 @@ describe("attachments routes", () => {
       req.projectCtx = {
         projectManager: {
           getRootPath: () => tmpDir,
-          getFileWriteMutex: () => ({ run: (_abs, fn) => fn() }),
           writeBinaryFile: async (rel: string, data: Uint8Array) => {
             const abs = path.join(tmpDir, rel);
             await fs.promises.mkdir(path.dirname(abs), { recursive: true });

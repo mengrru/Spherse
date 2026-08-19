@@ -6,14 +6,14 @@ import { ProjectStore } from "./store/project.js";
 import { ProjectManager } from "./project-manager.js";
 import { SessionManager } from "./session/session-manager.js";
 import { RunConfigHolder, createRuntimeDeps } from "./session/runtime.js";
-import { createTriggerCapability, type TriggerCapability } from "./capabilities/trigger/index.js";
-import { createMcpCapability, type McpCapability } from "./capabilities/mcp/index.js";
 import { builtinToolCapabilities } from "./capabilities/builtin.js";
+import { createTriggerCapability } from "./capabilities/trigger/index.js";
+import { createMcpCapability } from "./capabilities/mcp/index.js";
 import { attachmentsCapability } from "./capabilities/attachments/index.js";
 import { compactionCapability } from "./capabilities/compaction/index.js";
 import { memoryCapability } from "./capabilities/memory/index.js";
-import type { SessionPort } from "./kernel/ports.js";
-import { createStoreRegistry } from "./kernel/ports.js";
+import { createStoreRegistry, type SessionPort } from "./kernel/ports.js";
+import type { Capability } from "./kernel/capability.js";
 import { ProjectRuntime } from "./project-runtime.js";
 import { initPresets } from "./presets.js";
 import { type Logger, createSilentLogger } from "./logger.js";
@@ -25,6 +25,18 @@ export interface AssembleOptions {
   sampling?: SamplingParams;
   logger?: Logger;
   modelCatalog?: ModelCatalog;
+  capabilities?: Capability[] | ((builtin: Capability[]) => Capability[]);
+}
+
+export function defaultCapabilities(projectStore: ProjectStore, logger: Logger): Capability[] {
+  return [
+    ...builtinToolCapabilities(),
+    createTriggerCapability({ projectStore, logger }),
+    createMcpCapability({ projectStore, logger }),
+    attachmentsCapability(),
+    compactionCapability({ projectStore, logger }),
+    memoryCapability(),
+  ];
 }
 
 export async function assembleProject(
@@ -52,35 +64,10 @@ export async function assembleProject(
 
   const projectManager = new ProjectManager(projectStore, logger, fileWriteMutex);
   const stores = createStoreRegistry(logger);
-
-  const mcpCapability = createMcpCapability({
-    logger,
-    loadServers: async (agentId) => {
-      const agentStore = projectStore.getAgent(agentId);
-      if (!agentStore) return [];
-      try {
-        return (await agentStore.mcp.getConfig()).servers;
-      } catch (err) {
-        logger.warn({ err, agentId }, "failed to load agent mcp config");
-        return [];
-      }
-    },
-  });
-
-  const sessionRuntimeRef: { current?: SessionManager } = {};
-  const sessionPort: SessionPort = {
-    createSession: (agentId, source) => sessionRuntimeRef.current!.createSession(agentId, source),
-    restoreSession: (agentId, sessionId) => sessionRuntimeRef.current!.restoreSession(agentId, sessionId),
-    sendMessage: (sessionId, message, onEvent) =>
-      sessionRuntimeRef.current!.sendMessage(sessionId, message, [], onEvent as never),
-    sessionExists: (agentId, sessionId) => sessionRuntimeRef.current!.sessionExists(agentId, sessionId),
-  };
-
-  const triggerCapability = createTriggerCapability({
-    projectStore,
-    getSessionPort: () => sessionPort,
-    logger,
-  });
+  const capabilities =
+    typeof options?.capabilities === "function"
+      ? options.capabilities(defaultCapabilities(projectStore, logger))
+      : (options?.capabilities ?? defaultCapabilities(projectStore, logger));
 
   const runConfig = new RunConfigHolder({
     ...(options?.defaultModel !== undefined ? { defaultModel: options.defaultModel } : {}),
@@ -91,27 +78,44 @@ export async function assembleProject(
     logger,
     fileWriteMutex,
     modelCatalog: options?.modelCatalog,
-    capabilities: [
-      ...builtinToolCapabilities(),
-      triggerCapability,
-      mcpCapability,
-      attachmentsCapability(),
-      compactionCapability({ projectStore, logger }),
-      memoryCapability(),
-    ],
+    capabilities,
     stores,
     runConfig,
   });
 
   const sessionRuntime = new SessionManager(deps, { initialRunConfig: runConfig });
-  sessionRuntimeRef.current = sessionRuntime;
+
+  const sessionPort: SessionPort = {
+    createSession: (agentId, source) => sessionRuntime.createSession(agentId, source),
+    restoreSession: (agentId, sessionId) => sessionRuntime.restoreSession(agentId, sessionId),
+    sendMessage: (sessionId, message, onEvent) =>
+      sessionRuntime.sendMessage(
+        sessionId,
+        message,
+        [],
+        onEvent as Parameters<typeof sessionRuntime.sendMessage>[3],
+      ),
+    sessionExists: (agentId, sessionId) => sessionRuntime.sessionExists(agentId, sessionId),
+  };
+
+  for (const capability of capabilities) {
+    if (!capability.init) continue;
+    await capability.init({
+      projectRoot: projectStore.getRootPath(),
+      metaDir: path.join(projectStore.getRootPath(), PROJECT_META_DIR),
+      logger,
+      fileWriteMutex,
+      stores,
+      session: sessionPort,
+    });
+  }
 
   return new ProjectRuntime({
     projectManager,
     sessionRuntime,
     projectId: projectStore.config.getProjectId(),
     logger,
-    capabilities: deps.capabilities,
+    capabilities,
   });
 }
 
@@ -121,5 +125,3 @@ export async function createProject(
 ): Promise<ProjectRuntime> {
   return assembleProject(projectRoot, options);
 }
-
-export type { TriggerCapability, McpCapability };

@@ -1,7 +1,9 @@
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import { McpConnectionManager, type McpLoadServersFn } from "../../mcp/mcp-connection-manager.js";
+import { McpConnectionManager } from "../../mcp/mcp-connection-manager.js";
 import type { Capability } from "../../kernel/capability.js";
+import type { KernelServices } from "../../kernel/ports.js";
 import type { TurnHooksFactory } from "../../kernel/turn-hooks.js";
+import type { ProjectStore } from "../../store/project.js";
 import type { Logger } from "../../logger.js";
 import { mcpContextBlock } from "./block.js";
 
@@ -27,16 +29,38 @@ function dedupeToolNames(existing: AgentTool[], incoming: AgentTool[]): AgentToo
   return result;
 }
 
+export interface McpCapabilityDeps {
+  readonly projectStore: ProjectStore;
+  readonly logger?: Logger;
+}
+
 export interface McpCapability extends Capability {
-  readonly manager: McpConnectionManager;
   invalidate(agentId: string): Promise<void>;
 }
 
-export function createMcpCapability(deps: {
-  logger?: Logger;
-  loadServers: McpLoadServersFn;
-}): McpCapability {
-  const manager = new McpConnectionManager(deps.logger, undefined, deps.loadServers);
+export function createMcpCapability(deps: McpCapabilityDeps): McpCapability {
+  let manager: McpConnectionManager | undefined;
+  let currentLogger: Logger | undefined = deps.logger;
+
+  const ensure = (services?: KernelServices): McpConnectionManager => {
+    if (!manager) {
+      manager = new McpConnectionManager(
+        currentLogger ?? services?.logger,
+        undefined,
+        async (agentId) => {
+          const agentStore = deps.projectStore.getAgent(agentId);
+          if (!agentStore) return [];
+          try {
+            return (await agentStore.mcp.getConfig()).servers;
+          } catch (err) {
+            (currentLogger ?? services?.logger)?.warn({ err, agentId }, "failed to load agent mcp config");
+            return [];
+          }
+        },
+      );
+    }
+    return manager;
+  };
 
   const turnHooks: TurnHooksFactory = (agentId, sessionId) => {
     let merged = false;
@@ -45,7 +69,7 @@ export function createMcpCapability(deps: {
         if (merged) return;
         merged = true;
         try {
-          const { tools: mcpTools, info } = await manager.load(agentId);
+          const { tools: mcpTools, info } = await ensure().load(agentId);
           if (mcpTools.length > 0) {
             const current = agent.state.tools;
             agent.state.tools = [...current, ...dedupeToolNames(current, mcpTools)];
@@ -55,7 +79,7 @@ export function createMcpCapability(deps: {
             agent.state.systemPrompt += "\n\n" + block.render();
           }
         } catch (err) {
-          deps.logger?.warn({ err, sessionId }, "mcp merge hook failed");
+          (currentLogger)?.warn({ err, sessionId }, "mcp merge hook failed");
         }
       },
       onReload() {
@@ -66,9 +90,13 @@ export function createMcpCapability(deps: {
 
   return {
     id: "mcp",
+    init: async (services) => {
+      currentLogger = services.logger;
+      ensure(services);
+    },
     turnHooks,
-    shutdown: () => manager.closeAll(),
-    manager,
-    invalidate: (agentId) => manager.invalidate(agentId),
+    onAgentDeleted: undefined,
+    shutdown: () => (manager ? manager.closeAll() : Promise.resolve()),
+    invalidate: (agentId) => ensure().invalidate(agentId),
   };
 }
