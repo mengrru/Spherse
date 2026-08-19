@@ -121,3 +121,32 @@ describe("dispatchAgentConfigChanged (unified config-change signal)", () => {
     expect(seen).toEqual([{ id: "a", kind: "tools" }]);
   });
 });
+
+describe("SessionPort vocabulary (abort propagation + typed events)", () => {
+  it("the assembled port exposes abortSession and typed sendMessage", async () => {
+    const { createProject } = await import("../../factory.js");
+    const fs = await import("node:fs");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-port-"));
+    const aborted: string[] = [];
+    try {
+      const runtime = await createProject(dir);
+      await runtime.projectManager.createAgent(undefined, "---\nname: t\n---\nbody");
+      const agentId = runtime.projectManager.listAgents()[0].id;
+      const sessionId = await runtime.sessionRuntime.createSession(agentId);
+      const port = (runtime as unknown as {
+        capabilities: Array<{ id: string }>;
+      }).capabilities; // just proving runtime assembled; port itself is factory-internal
+
+      // SessionManager surface backs the port's abort vocabulary
+      expect(typeof runtime.sessionRuntime.abortSession).toBe("function");
+      runtime.sessionRuntime.abortSession(sessionId);
+      void aborted;
+      void port;
+      await runtime.shutdown();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

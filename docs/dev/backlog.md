@@ -201,3 +201,6 @@
 - [x] **统一配置变更信号**：kernel `invalidateAgent`（mcp 特化命名）泛化为 `onAgentConfigChanged(agentId, kind: "mcp" | "tools" | "profile")`；ProjectRuntime 暴露 `dispatchAgentConfigChanged` 广播（updateAgentMcp 发 kind="mcp"）。为 roadmap 的动态 tool 注入（kind="tools"）与运行时配置重载预铺统一语义——所有配置失效走同一信号，不再新增特化钩子
 
 - [x] **时间感知能力化**：kernel 新增 `streamDecorators` 贡献点（`StreamDecorator = (view) => (base: StreamFn) => StreamFn | undefined`，洋葱组合、后注册者最外层；SessionView/ToolHost 增 profile 字段）；time-perception 从 assembly 内联迁为 capability——贡献 stream decorator（替代 composeStreamFn 的 timePerception 参数）+ `time-perception: enabled` 提示 block（从 session-context 两行迁出）；composeStreamFn 保持 eager 解析（构造时一次）。为运行时动态 stream 改写（时间流速调整、请求观测等）预铺贡献面
+
+- [x] **SessionPort 原语补全（并发评审落地）**：port 增 `abortSession(sessionId)`（中止传播进 port 词汇表——TriggerManager/moderator 可止失控 run）与 `SessionEventPayload` 类型化（`onEvent` 不再 unknown，trigger 消费端去强转）。完成通知本就存在（sendMessage 返回的 Promise 在 turn 结束 resolve）
+- [ ] **run-state 下沉 core（条件触发：roundtable / 动态 tools 立项时）**：hub 的 channel.running 与 runner 的 inFlight boolean 合并为 core 单一 run-state 真相（server 409 与重连快照重放改为消费 core 派生；run-identity 下沉）。队列/优先级/来源区分等调度语义等第一个真实消费者（moderator 编排）定义后再做——in-flight fail-fast 是安全不变量，不是调度策略，两者正交

@@ -3,14 +3,19 @@ import type { Logger } from "../logger.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import type { ProjectStore } from "../store/project.js";
 
+export type SessionEventPayload =
+  | { type: string; [key: string]: unknown }
+  | { type: string; message: { role?: string; [key: string]: unknown }; [key: string]: unknown };
+
 export interface SessionPort {
   createSession(agentId: string, source?: string): Promise<string>;
   restoreSession(agentId: string, sessionId: string): Promise<string>;
   sendMessage(
     sessionId: string,
     message: string,
-    onEvent: (event: unknown) => void,
+    onEvent: (event: SessionEventPayload) => void,
   ): Promise<void>;
+  abortSession(sessionId: string): void;
   sessionExists(agentId: string, sessionId: string): boolean;
 }
 

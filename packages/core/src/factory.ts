@@ -91,12 +91,8 @@ export async function assembleProject(
     createSession: (agentId, source) => sessionRuntime.createSession(agentId, source),
     restoreSession: (agentId, sessionId) => sessionRuntime.restoreSession(agentId, sessionId),
     sendMessage: (sessionId, message, onEvent) =>
-      sessionRuntime.sendMessage(
-        sessionId,
-        message,
-        [],
-        onEvent as Parameters<typeof sessionRuntime.sendMessage>[3],
-      ),
+      sessionRuntime.sendMessage(sessionId, message, [], onEvent as never),
+    abortSession: (sessionId) => sessionRuntime.abortSession(sessionId),
     sessionExists: (agentId, sessionId) => sessionRuntime.sessionExists(agentId, sessionId),
   };
 
