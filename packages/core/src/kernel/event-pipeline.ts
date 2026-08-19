@@ -13,18 +13,3 @@ export function createEventPipeline<T>(
   };
   return (event: T) => dispatch(0, event);
 }
-
-export function pipeMiddleware<T>(
-  ...middlewares: ReadonlyArray<EventMiddleware<T>>
-): EventMiddleware<T> {
-  return (event, next) => {
-    const run = (index: number, current: T): void => {
-      if (index >= middlewares.length) {
-        next(current);
-        return;
-      }
-      middlewares[index](current, (nextEvent: T) => run(index + 1, nextEvent));
-    };
-    run(0, event);
-  };
-}

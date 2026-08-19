@@ -6,7 +6,6 @@ import {
   createLog,
   dropLast,
   emptyLog,
-  lastEntry,
   messagesOf,
   replaceMessage,
 } from "../../kernel/message-log.js";
@@ -92,12 +91,4 @@ describe("MessageLog", () => {
     expect(compacted.entries[0].dbId).toBeNull();
   });
 
-  it("exposes the last entry", () => {
-    const log = createLog([
-      { dbId: 1, message: msg("user", "a") },
-      { dbId: 2, message: msg("assistant", "b") },
-    ]);
-    expect(lastEntry(log)?.dbId).toBe(2);
-    expect(lastEntry(emptyLog())).toBeUndefined();
-  });
 });

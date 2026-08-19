@@ -3,15 +3,14 @@ import {
   buildProjectInstructions,
   buildAgentProfile,
   buildSessionContext,
-  buildSkillCatalog,
   buildPreloadedContext,
-  serializeSystemPrompt,
-} from "../../context/blocks.js";
+} from "../../session/agent-assembly.js";
+import { serializeBlocks } from "../../kernel/context-block.js";
 
-describe("serializeSystemPrompt", () => {
+describe("serializeBlocks", () => {
   describe("individual blocks", () => {
     it("serializes project-instructions", () => {
-      const out = serializeSystemPrompt([buildProjectInstructions("do good")]);
+      const out = serializeBlocks([buildProjectInstructions("do good")]);
       expect(out).toBe("<project-instructions>\ndo good\n</project-instructions>");
     });
 
@@ -20,7 +19,7 @@ describe("serializeSystemPrompt", () => {
     });
 
     it("serializes agent-profile", () => {
-      const out = serializeSystemPrompt([buildAgentProfile("You are a test")]);
+      const out = serializeBlocks([buildAgentProfile("You are a test")]);
       expect(out).toBe("<agent-profile>\nYou are a test\n</agent-profile>");
     });
 
@@ -29,7 +28,7 @@ describe("serializeSystemPrompt", () => {
     });
 
     it("serializes session-context with name, slug and session id", () => {
-      const out = serializeSystemPrompt([
+      const out = serializeBlocks([
         buildSessionContext({ name: "Helper", slug: "helper", sessionId: "s1" }),
       ]);
       expect(out).toBe(
@@ -38,7 +37,7 @@ describe("serializeSystemPrompt", () => {
     });
 
     it("includes alias and time perception when present", () => {
-      const out = serializeSystemPrompt([
+      const out = serializeBlocks([
         buildSessionContext({
           name: "Helper",
           alias: "小明",
@@ -52,22 +51,8 @@ describe("serializeSystemPrompt", () => {
       expect(out).toContain("Do not output <time> tags");
     });
 
-    it("serializes skill-catalog escaping attributes", () => {
-      const out = serializeSystemPrompt([
-        buildSkillCatalog([
-          { name: "write&style", description: 'Writes with "flair"' },
-        ]),
-      ]);
-      expect(out).toContain('name="write&amp;style"');
-      expect(out).toContain('description="Writes with &quot;flair&quot;"');
-    });
-
-    it("returns null block for empty skill catalog", () => {
-      expect(buildSkillCatalog([])).toBeNull();
-    });
-
     it("serializes preloaded-context files", () => {
-      const out = serializeSystemPrompt([
+      const out = serializeBlocks([
         buildPreloadedContext([
           { path: "docs/guide.md", content: "# Guide" },
           { path: "notes.txt", content: "plain" },
@@ -82,24 +67,22 @@ describe("serializeSystemPrompt", () => {
     });
 
     it("returns empty string when no block renders", () => {
-      expect(serializeSystemPrompt([null, null])).toBe("");
+      expect(serializeBlocks([null, null])).toBe("");
     });
   });
 
   it("combines all blocks with blank lines between sections", () => {
-    const out = serializeSystemPrompt([
+    const out = serializeBlocks([
       buildProjectInstructions("AGENTS"),
       buildAgentProfile("PROFILE"),
       buildSessionContext({ name: "N", slug: "n", sessionId: "s" }),
-      buildSkillCatalog([{ name: "sk", description: "d" }]),
       buildPreloadedContext([{ path: "f.md", content: "x" }]),
     ]);
     const sections = out.split("\n\n");
-    expect(sections).toHaveLength(5);
+    expect(sections).toHaveLength(4);
     expect(out).toContain("<project-instructions>\nAGENTS\n</project-instructions>");
     expect(out).toContain("<agent-profile>\nPROFILE\n</agent-profile>");
     expect(out).toContain("<session-context>");
-    expect(out).toContain("<skill-catalog>");
     expect(out).toContain("<preloaded-context>");
   });
 });

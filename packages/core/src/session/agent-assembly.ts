@@ -6,13 +6,8 @@ import type { AgentProfile, SamplingParams, TimePerceptionConfig } from "../type
 import type { ApprovalGate } from "../tools/with-approval.js";
 import type { AskGate } from "../tools/ask-user.js";
 import type { SkillStore } from "../store/skill.js";
-import { readContextFiles } from "../context/read-context-files.js";
-import {
-  buildProjectInstructions,
-  buildAgentProfile,
-  buildSessionContext,
-  buildPreloadedContext,
-} from "../context/blocks.js";
+import { readContextFiles, type ContextFile } from "../context/read-context-files.js";
+
 
 import { isActiveTimePerception, wrapWithTimePerception } from "../context/time-perception.js";
 import type { UserMessageWithAttachments } from "../attachments/index.js";
@@ -32,6 +27,70 @@ export function composeStreamFn(
   return isActiveTimePerception(timePerception)
     ? wrapWithTimePerception(withRetry, timePerception)
     : withRetry;
+}
+
+interface SessionMeta {
+  name: string;
+  alias?: string;
+  slug: string;
+  sessionId: string;
+  timePerceptionEnabled?: boolean;
+}
+
+function escapeAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+export function buildProjectInstructions(content: string): ContextBlock | null {
+  if (content.trim() === "") return null;
+  return {
+    kind: "project-instructions",
+    render: () => `<project-instructions>\n${content}\n</project-instructions>`,
+  };
+}
+
+export function buildAgentProfile(content: string): ContextBlock | null {
+  if (content.trim() === "") return null;
+  return {
+    kind: "agent-profile",
+    render: () => `<agent-profile>\n${content}\n</agent-profile>`,
+  };
+}
+
+export function buildSessionContext(meta: SessionMeta): ContextBlock {
+  return {
+    kind: "session-context",
+    render: () => {
+      const lines = [`agent-name: ${meta.name}`];
+      if (meta.alias) {
+        lines.push(`agent-alias: ${meta.alias}`);
+      }
+      lines.push(`agent-slug: ${meta.slug}`);
+      lines.push(`session-id: ${meta.sessionId}`);
+      if (meta.timePerceptionEnabled) {
+        lines.push("time-perception: enabled");
+        lines.push("Do not output <time> tags in your replies; they are metadata for your awareness only.");
+      }
+      return `<session-context>\n${lines.join("\n")}\n</session-context>`;
+    },
+  };
+}
+
+export function buildPreloadedContext(files: ContextFile[]): ContextBlock | null {
+  if (files.length === 0) return null;
+  return {
+    kind: "preloaded-context",
+    render: () => {
+      const rendered = files
+        .map((f) => `<context-file path="${escapeAttr(f.path)}">\n${f.content}\n</context-file>`)
+        .join("\n");
+      return `<preloaded-context>\n${rendered}\n</preloaded-context>`;
+    },
+  };
 }
 
 export async function buildPromptAndTools(

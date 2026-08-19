@@ -13,11 +13,6 @@ export interface SessionPort {
   sessionExists(agentId: string, sessionId: string): boolean;
 }
 
-export interface McpHost {
-  load(agentId: string): Promise<{ tools: unknown[]; info: unknown[] }>;
-  invalidate(agentId: string): Promise<void>;
-}
-
 export interface PathRule {
   readonly match: RegExp;
   readonly category: string;

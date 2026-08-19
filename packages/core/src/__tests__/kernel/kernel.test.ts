@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ConflictError } from "../../errors.js";
 import { CapabilityRegistry, type Capability } from "../../kernel/capability.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
-import { serializeBlocks, taggedBlock } from "../../kernel/context-block.js";
+import { serializeBlocks } from "../../kernel/context-block.js";
 
 function cap(id: string): Capability {
   return { id };
@@ -64,11 +64,11 @@ describe("StoreRegistry", () => {
 });
 
 describe("kernel ContextBlock", () => {
-  it("renders tagged blocks and joins non-empty renders in order", () => {
+  it("joins non-empty renders in order", () => {
     const text = serializeBlocks([
-      taggedBlock("agent-profile", "hello"),
+      { kind: "agent-profile", render: () => "<agent-profile>\nhello\n</agent-profile>" },
       null,
-      taggedBlock("memory", "known facts"),
+      { kind: "memory", render: () => "<memory>\nknown facts\n</memory>" },
     ]);
     expect(text).toBe("<agent-profile>\nhello\n</agent-profile>\n\n<memory>\nknown facts\n</memory>");
   });

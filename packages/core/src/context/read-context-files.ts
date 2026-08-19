@@ -1,6 +1,10 @@
 import fs from "node:fs/promises";
 import type { AccessPolicy } from "../access/access-policy.js";
-import type { ContextFile } from "./blocks.js";
+export interface ContextFile {
+  path: string;
+  content: string;
+}
+
 import { resolveProjectPath } from "../utils/path-safety.js";
 
 export async function readContextFiles(

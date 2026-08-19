@@ -39,10 +39,6 @@ export function messagesOf(log: MessageLog): AgentMessage[] {
   return log.entries.map((entry) => entry.message);
 }
 
-export function lastEntry(log: MessageLog): MessageEntry | undefined {
-  return log.entries[log.entries.length - 1];
-}
-
 export interface LogCompaction {
   readonly anchorIndex: number;
   readonly digestMessage: AgentMessage;
