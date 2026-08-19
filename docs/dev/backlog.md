@@ -204,3 +204,6 @@
 
 - [x] **SessionPort 原语补全（并发评审落地）**：port 增 `abortSession(sessionId)`（中止传播进 port 词汇表——TriggerManager/moderator 可止失控 run）与 `SessionEventPayload` 类型化（`onEvent` 不再 unknown，trigger 消费端去强转）。完成通知本就存在（sendMessage 返回的 Promise 在 turn 结束 resolve）
 - [ ] **run-state 下沉 core（条件触发：roundtable / 动态 tools 立项时）**：hub 的 channel.running 与 runner 的 inFlight boolean 合并为 core 单一 run-state 真相（server 409 与重连快照重放改为消费 core 派生；run-identity 下沉）。队列/优先级/来源区分等调度语义等第一个真实消费者（moderator 编排）定义后再做——in-flight fail-fast 是安全不变量，不是调度策略，两者正交
+
+- [x] **契约测试层（mock 盲区对冲）**：C1 暴露的结构性税——层间解耦越彻底，双方各自 mock 对方的拼接缝盲区越大。对冲落地：AGENTS.md 新增契约测试规矩（PM 门面 5 方法 + SessionPort 方法，消费方包至少一条不 mock 被测方法的契约测试）；server 包新增 `write-facade-contract.test.ts`（9 条：经 `createProject` 装配真 runtime + 真 PM + 真路由——writeFile/createEntry 含 409/deletePath 含 no-op + 403/attachments 上传与删除 C1 接缝/images 导出与越界 403）。契约测试组装用 `createProject`（装配点产出真对象），不放宽 core 导出面（ProjectStore/FileWriteMutex 仍不导出——"server 不得见 store 实例"边界保持）
+- [ ] **跨层接缝契约清单对账**：SessionPort 5 方法（create/restore/sendMessage/abortSession/sessionExists）在 server/desktop 包的契约覆盖缺口逐条对账（trigger 路径、ws-chat 路径），按 AGENTS.md 契约规矩补齐

@@ -155,3 +155,4 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
   - 用户主题可能在气泡等容器上设 `backdrop-filter`/`transform`/`filter`，这些属性会为后代的 `position: fixed` 创建新的 containing block，导致全屏遮罩、弹窗等浮层被限制在气泡内而非相对视口。需要脱离宿主样式的浮层（全屏 viewer、覆盖层等）应通过 `createPortal(..., document.body)` 渲染，颜色直接用全局主题 token，不注入聊天主题变量
 - **i18n 文案规范**：`packages/i18n/src/locales/zh-CN.ts` 是翻译基准，每条文案必须结合实际 UI 场景写注释（说明出现位置、上下文、交互状态等），用于指导其它语言版本（`zh-TW`、`en`）的翻译
 - **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试
+- **契约测试（跨层接缝）**：对 core 的 PM 写入门面（writeFile/writeBinaryFile/createEntry/deletePath/copyFileWithin）与 SessionPort 方法，消费方包（server/desktop）至少各有一条**不 mock 被测方法本身**的契约测试（真 ProjectManager / 真 runtime），钉住该包依赖的门面行为——层间解耦越彻底，双方 mock 拼接缝的盲区越大，契约测试是唯一的对冲
