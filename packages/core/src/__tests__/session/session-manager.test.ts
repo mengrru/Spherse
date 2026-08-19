@@ -54,7 +54,7 @@ interface RuntimeInternals {
 function activeAgent(runtime: RuntimeInternals, sessionId: string): any {
   const entry = (runtime.sessionRuntime as any).sessions.get(sessionId);
   if (!entry) throw new Error(`no active session ${sessionId}`);
-  return (entry as any).runner.agentRef;
+  return (entry as any).agentRef;
 }
 
 describe("SessionManager temperature propagation", () => {
@@ -480,9 +480,9 @@ describe("SessionManager agent hot-reload", () => {
   });
 
   function runnerOf(sessionId: string): any {
-    const live = (runtime.sessionRuntime as any).sessions.get(sessionId);
-    if (!live) throw new Error(`no live session ${sessionId}`);
-    return live.runner;
+    const runner = (runtime.sessionRuntime as any).sessions.get(sessionId);
+    if (!runner) throw new Error(`no active session ${sessionId}`);
+    return runner;
   }
 
   function liveOf(sessionId: string): any {

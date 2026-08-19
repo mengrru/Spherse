@@ -1,14 +1,14 @@
 import type { AgentChangePayload } from "../store/project.js";
 import type { Logger } from "../logger.js";
 import { NotFoundError } from "../errors.js";
-import { LiveSession, type AgentEventHandler } from "./live-session.js";
+import { AgentRunner, type RunnerEventHandler } from "./agent-runner.js";
 import { computeSessionStatus, type SessionStatus } from "./status.js";
 import type { TurnContextSnapshot } from "./types.js";
 import type { Attachment } from "../attachments/index.js";
 import { RunConfigHolder, type RuntimeDeps } from "./runtime.js";
 
 export class SessionManager {
-  private readonly sessions = new Map<string, LiveSession>();
+  private readonly sessions = new Map<string, AgentRunner>();
   private readonly deps: RuntimeDeps;
   private readonly runConfigHolder: RunConfigHolder;
 
@@ -39,7 +39,7 @@ export class SessionManager {
     const agentStore = this.deps.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
     const sessionId = agentStore.sessions.createSession(title, source);
-    const session = await LiveSession.create(this.deps, agentId, sessionId);
+    const session = await AgentRunner.init(this.deps, agentId, sessionId);
     this.sessions.set(sessionId, session);
     this.deps.logger.info({ sessionId, agentId }, "session created");
     return sessionId;
@@ -47,7 +47,7 @@ export class SessionManager {
 
   async restoreSession(agentId: string, sessionId: string): Promise<string> {
     if (this.sessions.has(sessionId)) return sessionId;
-    const session = await LiveSession.restore(this.deps, agentId, sessionId);
+    const session = await AgentRunner.initForRestore(this.deps, agentId, sessionId);
     this.sessions.set(sessionId, session);
     this.deps.logger.info({ sessionId }, "session restored");
     return sessionId;
@@ -57,7 +57,7 @@ export class SessionManager {
     sessionId: string,
     message: string,
     attachments: Attachment[],
-    onEvent: AgentEventHandler,
+    onEvent: RunnerEventHandler,
   ): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new NotFoundError(`No active session "${sessionId}"`);
@@ -70,7 +70,7 @@ export class SessionManager {
 
   async retryLastTurn(
     sessionId: string,
-    onEvent: AgentEventHandler,
+    onEvent: RunnerEventHandler,
   ): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new NotFoundError(`No active session "${sessionId}"`);
@@ -88,8 +88,8 @@ export class SessionManager {
   }
 
   getSessionStatus(agentId: string, sessionId: string): SessionStatus {
-    const live = this.sessions.get(sessionId);
-    if (live) return live.getStatus();
+    const runner = this.sessions.get(sessionId);
+    if (runner) return runner.getStatus();
     const agentStore = this.deps.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
     if (!agentStore.sessions.getSession(sessionId)) {
