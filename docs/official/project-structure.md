@@ -27,7 +27,7 @@ spherse/
 │   │       │   ├── interaction/      # run_command / ask_user 工具（经 kernel gates）
 │   │       │   ├── trigger/          # TriggerManager + TimerService（只见 SessionPort，循环依赖消解）
 │   │       │   ├── mcp/              # McpConnectionManager + turnHooks（按配置版本 memo 的工具合并）+ mcp-context block
-│   │       │   ├── attachments/      # image attachment processor 贡献（无全局注册表）
+│   │       │   ├── attachments/      # image processor 贡献 + contextProjector（convertToLlm 前剥 _attachments/空 image block）
 │   │       │   ├── compaction/       # maybeCompactLog 纯变换（transform.ts）+ capability
 │   │       │   ├── time-perception/ # streamDecorators 贡献（<time> 前缀注入）+ 提示 block
 │   │       │   ├── memory/           # per-agent JSONL MemoryStore（store.ts，含 MEMORY_PATH_RULE）+ memory_save/recall 工具 + <memory> block
