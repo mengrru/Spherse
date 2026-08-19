@@ -48,3 +48,62 @@ describe("ProjectManager write facade policy regression", () => {
     await expect(pm.writeBinaryFile("../escape.png", Buffer.from([1]))).rejects.toThrow();
   });
 });
+
+describe("ProjectManager extended write facades (M9)", () => {
+  let tmpDir: string;
+  let pm: ProjectManager;
+  let store: ProjectStore;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-ext-"));
+    store = new ProjectStore(tmpDir, createSilentLogger());
+    await store.create("Test");
+    pm = new ProjectManager(store, createSilentLogger(), new FileWriteMutex());
+  });
+
+  afterEach(async () => {
+    store.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("createEntry mkdir creates directories recursively", async () => {
+    await pm.createEntry("a/b/c", "mkdir");
+    expect(fs.statSync(path.join(tmpDir, "a/b/c")).isDirectory()).toBe(true);
+  });
+
+  it("createEntry touch creates an empty file", async () => {
+    await pm.createEntry("notes.md", "touch");
+    expect(fs.readFileSync(path.join(tmpDir, "notes.md"), "utf-8")).toBe("");
+  });
+
+  it("createEntry rejects existing entries with ConflictError", async () => {
+    await pm.createEntry("x.md", "touch");
+    await expect(pm.createEntry("x.md", "touch")).rejects.toThrow(/already exists/i);
+  });
+
+  it("createEntry denies engine-internal paths", async () => {
+    await expect(pm.createEntry(".spherse/project.yaml", "touch")).rejects.toThrow(
+      /not permitted/,
+    );
+  });
+
+  it("deletePath removes files and directories; missing paths are a no-op", async () => {
+    await pm.createEntry("dir/nested.txt", "touch");
+    await pm.deletePath("dir");
+    expect(fs.existsSync(path.join(tmpDir, "dir"))).toBe(false);
+    await expect(pm.deletePath("never-existed")).resolves.toBeUndefined();
+  });
+
+  it("copyFileWithin copies under the mutex with policy checks", async () => {
+    await pm.writeFile("src.md", "content");
+    await pm.copyFileWithin("src.md", "export/copy.md");
+    expect(fs.readFileSync(path.join(tmpDir, "export/copy.md"), "utf-8")).toBe("content");
+  });
+
+  it("copyFileWithin denies writing into engine-internal paths", async () => {
+    await pm.writeFile("src.md", "content");
+    await expect(pm.copyFileWithin("src.md", ".spherse/project.yaml")).rejects.toThrow(
+      /not permitted/,
+    );
+  });
+});

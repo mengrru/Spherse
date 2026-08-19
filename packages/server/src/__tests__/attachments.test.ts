@@ -64,6 +64,9 @@ describe("attachments routes", () => {
             await fs.promises.mkdir(path.dirname(abs), { recursive: true });
             await fs.promises.writeFile(abs, data);
           },
+          deletePath: async (rel: string) => {
+            await fs.promises.rm(path.join(tmpDir, rel), { force: true });
+          },
         },
       };
     });

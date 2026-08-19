@@ -1,4 +1,3 @@
-import fs from "node:fs/promises";
 import { randomBytes } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
@@ -114,9 +113,10 @@ export function registerAttachmentsRoutes(
     }
 
     try {
-      await fs.unlink(targetAbs);
+      await pm.deletePath(targetPath);
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+      throw err;
     }
     return { ok: true };
   });

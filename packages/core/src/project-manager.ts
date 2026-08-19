@@ -6,7 +6,7 @@ import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { resolveProjectPath } from "./utils/path-safety.js";
 import { serverAccessPolicy } from "./access/access-policy.js";
 import { type Logger, createSilentLogger } from "./logger.js";
-import { NotFoundError, ValidationError } from "./errors.js";
+import { ConflictError, NotFoundError, ValidationError } from "./errors.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -225,6 +225,46 @@ export class ProjectManager {
     await this.fileWriteMutex.run(resolved, async () => {
       await fs.mkdir(path.dirname(resolved), { recursive: true });
       await fs.writeFile(resolved, content, "utf-8");
+    });
+  }
+
+  async createEntry(relativePath: string, action: "mkdir" | "touch"): Promise<void> {
+    const resolved = resolveProjectPath(this.getRootPath(), relativePath);
+    this.policy().assertWrite(relativePath);
+    await this.fileWriteMutex.run(resolved, async () => {
+      const stat = await fs.stat(resolved).catch(() => null);
+      if (stat) throw new ConflictError(`Entry already exists: ${relativePath}`);
+      if (action === "mkdir") {
+        await fs.mkdir(resolved, { recursive: true });
+      } else {
+        await fs.mkdir(path.dirname(resolved), { recursive: true });
+        await fs.writeFile(resolved, "", "utf-8");
+      }
+    });
+  }
+
+  async deletePath(relativePath: string): Promise<void> {
+    const resolved = resolveProjectPath(this.getRootPath(), relativePath);
+    this.policy().assertWrite(relativePath);
+    await this.fileWriteMutex.run(resolved, async () => {
+      const stat = await fs.stat(resolved).catch(() => null);
+      if (!stat) return;
+      if (stat.isDirectory()) {
+        await fs.rm(resolved, { recursive: true });
+      } else {
+        await fs.unlink(resolved);
+      }
+    });
+  }
+
+  async copyFileWithin(fromRelative: string, toRelative: string): Promise<void> {
+    const src = resolveProjectPath(this.getRootPath(), fromRelative);
+    const dest = resolveProjectPath(this.getRootPath(), toRelative);
+    this.policy().assertRead(fromRelative);
+    this.policy().assertWrite(toRelative);
+    await this.fileWriteMutex.run(dest, async () => {
+      await fs.mkdir(path.dirname(dest), { recursive: true });
+      await fs.copyFile(src, dest);
     });
   }
 
