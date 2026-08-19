@@ -1,6 +1,5 @@
 import type { UserMessage } from "@earendil-works/pi-ai";
 import type { AgentEvent } from "@earendil-works/pi-agent-core";
-import type { AttachmentProcessor } from "../kernel/attachments.js";
 
 export interface Attachment {
   type: string;
@@ -9,7 +8,17 @@ export interface Attachment {
   meta?: Record<string, unknown>;
 }
 
-export type { AttachmentProcessor, PreparedContentBlock } from "../kernel/attachments.js";
+export type PreparedContentBlock =
+  | { type: "image"; data: string; mimeType: string }
+  | { type: "text"; text: string };
+
+export interface AttachmentProcessor {
+  readonly type: string;
+  preprocess(ctx: {
+    projectRoot: string;
+    attachment: Attachment;
+  }): Promise<PreparedContentBlock[]>;
+}
 
 export type UserMessageWithAttachments = UserMessage & { _attachments?: ReadonlyArray<Attachment> };
 

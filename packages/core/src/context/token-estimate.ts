@@ -71,3 +71,21 @@ export function estimateTokens(input: string | Message[]): number {
   }
   return estimateString(combined);
 }
+
+export function extractLastUsageTotalTokens(messages: unknown[]): number | null {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i] as { role?: string; usage?: { totalTokens?: unknown } };
+    if (msg?.role === "assistant" && typeof msg?.usage?.totalTokens === "number") {
+      return msg.usage.totalTokens;
+    }
+  }
+  return null;
+}
+
+export function readCurrentTokens(messages: unknown[], systemPrompt: string): number {
+  const lastUsage = extractLastUsageTotalTokens(messages);
+  if (lastUsage !== null) return lastUsage;
+  const systemPromptTokens = estimateTokens(systemPrompt as never);
+  const messageTokens = estimateTokens(messages as never);
+  return systemPromptTokens + messageTokens;
+}

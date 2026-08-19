@@ -21,7 +21,8 @@ import type { RuntimeDeps } from "./runtime.js";
 import { logEventMiddleware, persistEventMiddleware } from "./event-middlewares.js";
 import { createAttachmentSanitizer } from "../attachments/sanitizer.js";
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
-import { logFromCompaction, logFromRows, readCurrentTokens } from "./compactor.js";
+import { logFromCompaction, logFromRows } from "./compactor.js";
+import { readCurrentTokens } from "../context/token-estimate.js";
 import { buildAgent, buildPromptAndTools, composeStreamFn } from "./agent-assembly.js";
 import type { SessionStore } from "../store/session.js";
 
@@ -29,6 +30,7 @@ export type RunnerEventHandler = (event: AgentEvent | SessionControlEvent) => vo
 
 export class AgentRunner {
   private log: MessageLog;
+  private inFlight = false;
   private turnHooks: TurnHooks;
   private capabilityMiddlewares: ReadonlyArray<EventMiddleware<AgentEvent>> = [];
   private pendingReload = false;
@@ -127,6 +129,7 @@ export class AgentRunner {
     attachments: ReadonlyArray<Attachment>,
     onEvent: RunnerEventHandler,
   ): Promise<void> {
+    this.ensureNotBusy();
     if (this.pendingReload) {
       this.pendingReload = false;
       await this.applyReload();
@@ -156,24 +159,29 @@ export class AgentRunner {
       onEvent,
     );
 
-    this.controlBus.setEventSink(onEvent);
+    const previousSink = this.controlBus.swapEventSink(onEvent);
     const unsubscribe = this.agent.subscribe(dispatch);
+    this.inFlight = true;
 
     try {
       await this.agent.prompt(userMessage);
       await this.applyAfterTurnHooks();
     } finally {
-      const pair = sanitizer?.replacementPair() ?? null;
-      if (pair) {
-        this.agent.state.messages = sanitizer!.restoreStripped(this.agent.state.messages);
-        this.log = replaceMessage(this.log, pair.full, pair.stripped);
+      if (sanitizer) {
+        const result = sanitizer.finalize(this.agent.state.messages);
+        this.agent.state.messages = result.messages;
+        if (result.pair) {
+          this.log = replaceMessage(this.log, result.pair.full, result.pair.stripped);
+        }
       }
       unsubscribe();
-      this.controlBus.setEventSink(null);
+      this.controlBus.swapEventSink(previousSink);
+      this.inFlight = false;
     }
   }
 
   async retryLastTurn(onEvent: RunnerEventHandler): Promise<void> {
+    this.ensureNotBusy();
     const last = this.log.entries[this.log.entries.length - 1];
     const lastBuffered = this.agent.state.messages[this.agent.state.messages.length - 1];
     if (
@@ -205,15 +213,25 @@ export class AgentRunner {
       onEvent,
     );
 
-    this.controlBus.setEventSink(onEvent);
+    const previousSink = this.controlBus.swapEventSink(onEvent);
     const unsubscribe = this.agent.subscribe(dispatch);
+    this.inFlight = true;
 
     try {
       await this.agent.continue();
       await this.applyAfterTurnHooks();
     } finally {
       unsubscribe();
-      this.controlBus.setEventSink(null);
+      this.controlBus.swapEventSink(previousSink);
+      this.inFlight = false;
+    }
+  }
+
+  private ensureNotBusy(): void {
+    if (this.inFlight) {
+      throw new ValidationError(
+        `Session "${this.sessionId}" already has a turn in progress`,
+      );
     }
   }
 

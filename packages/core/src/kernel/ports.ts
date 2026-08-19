@@ -60,7 +60,11 @@ export interface ToolHost {
   readonly askGate?: import("./gates.js").AskGate;
 }
 
-export type SessionView = ToolHost;
+export interface SessionView {
+  readonly agentId: string;
+  readonly projectStore: ProjectStore;
+  readonly stores: StoreRegistry;
+}
 
 export function createStoreRegistry(logger?: Logger): StoreRegistry {
   const global = new Map<string, unknown>();

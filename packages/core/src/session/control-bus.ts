@@ -23,6 +23,12 @@ export class SessionControlBus {
     this.eventSink = sink;
   }
 
+  swapEventSink(sink: ((e: SessionControlEvent) => void) | null): ((e: SessionControlEvent) => void) | null {
+    const previous = this.eventSink;
+    this.eventSink = sink;
+    return previous;
+  }
+
   get pendingCount(): number {
     return this.pending.size;
   }

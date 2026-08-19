@@ -50,6 +50,7 @@ async function defaultConnect(
 export class McpConnectionManager {
   private readonly entries = new Map<string, AgentEntry>();
   private readonly inflight = new Map<string, Promise<AgentEntry>>();
+  private readonly configVersions = new Map<string, number>();
   private readonly logger: Logger;
   private readonly connect: McpConnectFn;
   private readonly loadServers: McpLoadServersFn;
@@ -94,7 +95,12 @@ export class McpConnectionManager {
     }
   }
 
+  configVersion(agentId: string): number {
+    return this.configVersions.get(agentId) ?? 0;
+  }
+
   async invalidate(agentId: string): Promise<void> {
+    this.configVersions.set(agentId, this.configVersion(agentId) + 1);
     const entry = this.entries.get(agentId);
     this.entries.delete(agentId);
     if (entry) {

@@ -35,6 +35,7 @@ export interface McpCapabilityDeps {
 }
 
 export interface McpCapability extends Capability {
+  readonly manager: McpConnectionManager;
   invalidate(agentId: string): Promise<void>;
 }
 
@@ -63,11 +64,12 @@ export function createMcpCapability(deps: McpCapabilityDeps): McpCapability {
   };
 
   const turnHooks: TurnHooksFactory = (agentId, sessionId) => {
-    let merged = false;
+    let mergedAtVersion: number | null = null;
     return {
       async beforeTurn(agent) {
-        if (merged) return;
-        merged = true;
+        const version = ensure().configVersion(agentId);
+        if (mergedAtVersion === version) return;
+        mergedAtVersion = version;
         try {
           const { tools: mcpTools, info } = await ensure().load(agentId);
           if (mcpTools.length > 0) {
@@ -83,20 +85,25 @@ export function createMcpCapability(deps: McpCapabilityDeps): McpCapability {
         }
       },
       onReload() {
-        merged = false;
+        mergedAtVersion = null;
       },
     };
   };
 
-  return {
+  const capability: McpCapability = {
     id: "mcp",
     init: async (services) => {
       currentLogger = services.logger;
       ensure(services);
     },
     turnHooks,
-    onAgentDeleted: undefined,
+    onAgentDeleted: (agentId) => ensure().invalidate(agentId),
+    invalidateAgent: (agentId) => ensure().invalidate(agentId),
     shutdown: () => (manager ? manager.closeAll() : Promise.resolve()),
     invalidate: (agentId) => ensure().invalidate(agentId),
+    get manager(): McpConnectionManager {
+      return ensure();
+    },
   };
+  return capability;
 }

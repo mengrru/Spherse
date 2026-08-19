@@ -7,7 +7,7 @@ import type { ModelResolver } from "./model-resolver.js";
 import { createModelResolver } from "./model-resolver.js";
 import { ModelCatalog } from "../model-providers/catalog.js";
 import type { Capability } from "../kernel/capability.js";
-import type { AttachmentProcessor } from "../kernel/attachments.js";
+import type { AttachmentProcessor } from "../attachments/index.js";
 import type { StoreRegistry } from "../kernel/ports.js";
 
 export interface RunConfig {

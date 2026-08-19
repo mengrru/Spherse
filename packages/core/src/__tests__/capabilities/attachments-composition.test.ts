@@ -117,6 +117,8 @@ describe("capability event middlewares compose into the turn pipeline", () => {
     const event = messageEndEvent();
     dispatch(event);
     expect(passthrough).not.toHaveBeenCalled();
-    expect(sanitizer.replacementPair()).toBeNull();
+    const result = sanitizer.finalize([event.message as never]);
+    expect(result.pair).toBeNull();
+    expect(result.messages).toHaveLength(1);
   });
 });

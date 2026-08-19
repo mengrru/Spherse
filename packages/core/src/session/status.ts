@@ -1,6 +1,8 @@
 import type { Message } from "@earendil-works/pi-ai";
 import type { AgentProfile } from "../types.js";
 import { estimateTokens } from "../context/token-estimate.js";
+import { extractLastUsageTotalTokens } from "../context/token-estimate.js";
+export { extractLastUsageTotalTokens } from "../context/token-estimate.js";
 
 export interface SessionStatus {
   currentTokens: number;
@@ -26,16 +28,6 @@ export function resolveContextWindow(
   } catch {
     return null;
   }
-}
-
-export function extractLastUsageTotalTokens(messages: unknown[]): number | null {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const msg = messages[i] as { role?: string; usage?: { totalTokens?: unknown } };
-    if (msg?.role === "assistant" && typeof msg?.usage?.totalTokens === "number") {
-      return msg.usage.totalTokens;
-    }
-  }
-  return null;
 }
 
 export function computeSessionStatus(

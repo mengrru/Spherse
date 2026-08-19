@@ -3,7 +3,7 @@ import { ConflictError } from "../errors.js";
 import type { ContextBlock } from "./context-block.js";
 import type { EventMiddleware } from "./event-pipeline.js";
 import type { TurnHooksFactory } from "./turn-hooks.js";
-import type { AttachmentProcessor } from "./attachments.js";
+import type { AttachmentProcessor } from "../attachments/index.js";
 import type { KernelServices, PathRule, SessionView, ToolHost } from "./ports.js";
 
 export type { KernelServices } from "./ports.js";
@@ -20,7 +20,8 @@ export interface Capability extends TurnMiddlewareSource {
   turnHooks?: TurnHooksFactory;
   attachmentProcessors?: ReadonlyArray<AttachmentProcessor>;
   readonly pathRules?: ReadonlyArray<PathRule>;
-  onAgentDeleted?(agentId: string): void;
+  onAgentDeleted?(agentId: string): Promise<void> | void;
+  invalidateAgent?(agentId: string): Promise<void>;
   shutdown?(): Promise<void>;
 }
 

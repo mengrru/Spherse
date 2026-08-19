@@ -10,8 +10,10 @@ import {
 
 export interface AttachmentSanitizer {
   readonly middleware: EventMiddleware<AgentEvent>;
-  restoreStripped(messages: AgentMessage[]): AgentMessage[];
-  replacementPair(): { full: AgentMessage; stripped: AgentMessage } | null;
+  finalize(messages: AgentMessage[]): {
+    messages: AgentMessage[];
+    pair: { full: AgentMessage; stripped: AgentMessage } | null;
+  };
 }
 
 export function createAttachmentSanitizer(
@@ -38,13 +40,12 @@ export function createAttachmentSanitizer(
       }
       next(event);
     },
-    restoreStripped(messages) {
-      if (!fullUserMsg || !strippedMsg) return messages;
-      return messages.map((m) => (m === fullUserMsg ? (strippedMsg as AgentMessage) : m));
-    },
-    replacementPair() {
-      if (!fullUserMsg || !strippedMsg) return null;
-      return { full: fullUserMsg as AgentMessage, stripped: strippedMsg as AgentMessage };
+    finalize(messages) {
+      if (!fullUserMsg || !strippedMsg) return { messages, pair: null };
+      return {
+        messages: messages.map((m) => (m === fullUserMsg ? (strippedMsg as AgentMessage) : m)),
+        pair: { full: fullUserMsg as AgentMessage, stripped: strippedMsg as AgentMessage },
+      };
     },
   };
 }
