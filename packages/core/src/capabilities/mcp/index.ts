@@ -98,7 +98,7 @@ export function createMcpCapability(deps: McpCapabilityDeps): McpCapability {
     },
     turnHooks,
     onAgentDeleted: (agentId) => ensure().invalidate(agentId),
-    invalidateAgent: (agentId) => ensure().invalidate(agentId),
+    onAgentConfigChanged: (agentId) => ensure().invalidate(agentId),
     shutdown: () => (manager ? manager.closeAll() : Promise.resolve()),
     invalidate: (agentId) => ensure().invalidate(agentId),
     get manager(): McpConnectionManager {

@@ -8,6 +8,8 @@ import type { KernelServices, PathRule, SessionView, ToolHost } from "./ports.js
 
 export type { KernelServices } from "./ports.js";
 
+export type AgentConfigChangeKind = "mcp" | "tools" | "profile";
+
 export interface TurnMiddlewareSource {
   eventMiddlewares?: ReadonlyArray<EventMiddleware<AgentEvent>>;
 }
@@ -21,7 +23,7 @@ export interface Capability extends TurnMiddlewareSource {
   attachmentProcessors?: ReadonlyArray<AttachmentProcessor>;
   readonly pathRules?: ReadonlyArray<PathRule>;
   onAgentDeleted?(agentId: string): Promise<void> | void;
-  invalidateAgent?(agentId: string): Promise<void>;
+  onAgentConfigChanged?(agentId: string, kind: AgentConfigChangeKind): Promise<void>;
   shutdown?(): Promise<void>;
 }
 

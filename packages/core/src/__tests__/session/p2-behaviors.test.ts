@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createMcpCapability } from "../../capabilities/mcp/index.js";
 import { logFromCompaction } from "../../session/compactor.js";
 import { SessionControlBus } from "../../session/control-bus.js";
+import { ProjectRuntime } from "../../project-runtime.js";
 import type { ProjectStore } from "../../store/project.js";
 import type { Logger } from "../../logger.js";
 import { createSilentLogger } from "../../logger.js";
@@ -46,7 +47,7 @@ describe("mcp config version memo (#9)", () => {
     const v0 = capability.manager.configVersion("agent-1");
     await hooks.beforeTurn!(agent);
 
-    await capability.invalidateAgent!("agent-1");
+    await capability.onAgentConfigChanged!("agent-1", "mcp");
     const v1 = capability.manager.configVersion("agent-1");
     expect(v1).toBe(v0 + 1);
 
@@ -96,5 +97,27 @@ describe("restore sanitization (#10)", () => {
 
     const log = logFromCompaction(200, "digest", 0, [assistant, toolResult]);
     expect(log.entries.map((e) => e.dbId)).toEqual([200, 201, 202]);
+  });
+});
+
+describe("dispatchAgentConfigChanged (unified config-change signal)", () => {
+  it("reaches every capability with the kind; unknown kinds are ignored by capabilities", async () => {
+    const seen: Array<{ id: string; kind: string }> = [];
+    const capA = {
+      id: "a",
+      onAgentConfigChanged: async (agentId: string, kind: string) => {
+        if (agentId === "agent-1") seen.push({ id: "a", kind });
+      },
+    };
+    const capB = { id: "b" };
+    const runtime = new ProjectRuntime({
+      projectManager: {} as never,
+      sessionRuntime: {} as never,
+      projectId: "p",
+      capabilities: [capA, capB],
+    });
+
+    await runtime.dispatchAgentConfigChanged("agent-1", "tools");
+    expect(seen).toEqual([{ id: "a", kind: "tools" }]);
   });
 });

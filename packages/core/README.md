@@ -54,7 +54,7 @@
    - `tools(host)`：工具在 `(host)` 时**闭包捕获 host**，禁止模块级可变状态存 host；
    - `contextBlocks(view)`：注入 system prompt 的知识块（`ContextBlock { kind, render() }`，kind 自由字符串）；
    - `turnHooks`：turn 生命周期行为（`beforeTurn` / `afterTurn(MessageLog→MessageLog)` / `onReload`）——注意 Runner 对你零感知，只能通过这些时机点行为；
-   - `attachmentProcessors` / `pathRules` / `eventMiddlewares` / `init(services)` / `onAgentDeleted` / `invalidateAgent` / `shutdown`：按需实现。
+   - `attachmentProcessors` / `pathRules` / `eventMiddlewares` / `init(services)` / `onAgentDeleted` / `onAgentConfigChanged(agentId, kind)`（统一配置变更信号，kind: `"mcp" | "tools" | "profile"`）/ `shutdown`：按需实现。
 3. **需要会话驱动的，声明依赖 `SessionPort`**，由 `init(services)` 接线——不要 import SessionManager，不要接受懒 ref。
 4. **需要私有存储**：布局知识（路径、格式）写在能力自己的 store 模块并导出 `PathRule`（自带 `llm: { read, write }` 裁决），capability 只引用注册。per-agent 存储用 `stores.forAgent(agentId)` 作用域，`onAgentDeleted` 里清理。
 5. **注册**：装配点 `defaultCapabilities`（或经 `assembleProject` 参数注入）加一行。**侵入面以 git diff 为验收**——如果新能力需要改 tools/session/access 的既有文件，先停下来检查是不是接口缺了贡献点（缺则在 kernel 补接口，而不是在消费方开洞）。

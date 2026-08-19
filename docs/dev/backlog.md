@@ -197,3 +197,5 @@
 - [x] **Review 修复（M9+M12 收尾）**：写入门面扩展 `createEntry(rel, mkdir|touch)` / `deletePath`（缺文件 no-op）/ `copyFileWithin`——content 文件树新建/删除、images 导出、attachments 删除四组 route 全部收口（resolve+policy+per-path mutex），server 端无锁直写清零（M9）；access 裁决优先级文档化：deniedPaths > pathRules > 内置白名单（用户 deny `.spherse` 连带禁用 memory 持久化为有意语义）、pathRules 仅作用 LLM 端（M12）。门面单测 11 条。剩余开放项：M1（条件触发）、M11（顺手）、M14 memory 产品化（独立 feature）
 
 - [x] **core README 开发守则**：`packages/core/README.md` 新增——架构总览（kernel/session/capabilities/装配点分层图）、六条设计哲学（贡献即数据/窄接口/管线/单源/磁盘契约/不可拔插不变量）、增加能力的七步原则（以 memory 为验收案例，侵入面以 git diff 验收）、关键约定（写入门面/唯一 mutex/catalog 所有权/in-flight guard/access 优先级/导出面/测试不伸私有）
+
+- [x] **统一配置变更信号**：kernel `invalidateAgent`（mcp 特化命名）泛化为 `onAgentConfigChanged(agentId, kind: "mcp" | "tools" | "profile")`；ProjectRuntime 暴露 `dispatchAgentConfigChanged` 广播（updateAgentMcp 发 kind="mcp"）。为 roadmap 的动态 tool 注入（kind="tools"）与运行时配置重载预铺统一语义——所有配置失效走同一信号，不再新增特化钩子

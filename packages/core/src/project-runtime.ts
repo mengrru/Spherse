@@ -4,7 +4,7 @@ import type { TriggerManager } from "./trigger/trigger-manager.js";
 import type { TimerService } from "./trigger/timer-service.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
 import type { TriggerCapability } from "./capabilities/trigger/index.js";
-import type { Capability } from "./kernel/capability.js";
+import type { AgentConfigChangeKind, Capability } from "./kernel/capability.js";
 import type { AgentProfile } from "./types.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 
@@ -63,18 +63,25 @@ export class ProjectRuntime {
     await this.projectManager.deleteAgent(agentId);
   }
 
+  async dispatchAgentConfigChanged(
+    agentId: string,
+    kind: AgentConfigChangeKind,
+  ): Promise<void> {
+    for (const capability of this.capabilities) {
+      try {
+        await capability.onAgentConfigChanged?.(agentId, kind);
+      } catch (err) {
+        this.logger.warn({ err, capability: capability.id, agentId, kind }, "onAgentConfigChanged failed");
+      }
+    }
+  }
+
   async updateAgentMcp(
     agentId: string,
     config: { servers: ReadonlyArray<Record<string, unknown>> },
   ): Promise<AgentMcpConfig> {
     const result = await this.projectManager.updateAgentMcp(agentId, config);
-    for (const capability of this.capabilities) {
-      try {
-        await capability.invalidateAgent?.(agentId);
-      } catch (err) {
-        this.logger.warn({ err, capability: capability.id, agentId }, "invalidateAgent failed");
-      }
-    }
+    await this.dispatchAgentConfigChanged(agentId, "mcp");
     return result;
   }
 
