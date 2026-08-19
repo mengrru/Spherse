@@ -1,3 +1,4 @@
+import type { ApprovalGate, AskGate } from "./gates.js";
 import type { Logger } from "../logger.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import type { ProjectStore } from "../store/project.js";
@@ -56,8 +57,8 @@ export interface ToolHost {
   readonly stores: StoreRegistry;
   readonly pathRules: ReadonlyArray<PathRule>;
   readonly toolCatalog: ToolCatalog;
-  readonly approvalGate?: import("./gates.js").ApprovalGate;
-  readonly askGate?: import("./gates.js").AskGate;
+  readonly approvalGate?: ApprovalGate;
+  readonly askGate?: AskGate;
 }
 
 export interface SessionView {

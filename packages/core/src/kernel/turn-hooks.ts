@@ -1,5 +1,5 @@
 import type { Agent } from "@earendil-works/pi-agent-core";
-import type { MessageLog } from "../kernel/message-log.js";
+import type { MessageLog } from "./message-log.js";
 
 export interface TurnHooks {
   beforeTurn?(agent: Agent): Promise<void>;

@@ -1,5 +1,5 @@
 import type { AgentEvent, AgentMessage } from "@earendil-works/pi-agent-core";
-import { logAgentEvent } from "../engine/log-agent-event.js";
+import { logAgentEvent } from "./log-agent-event.js";
 import type { EventMiddleware } from "../kernel/event-pipeline.js";
 import type { Logger } from "../logger.js";
 

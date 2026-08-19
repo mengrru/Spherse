@@ -1,4 +1,4 @@
-import type { ApprovalDecision, ApprovalGate, ApprovalRequest } from "../tools/with-approval.js";
+import type { ApprovalDecision, ApprovalGate, ApprovalRequest } from "../kernel/gates.js";
 import type { SessionControlBus } from "./control-bus.js";
 
 const APPROVAL_TIMEOUT_MS = 5 * 60 * 1000;

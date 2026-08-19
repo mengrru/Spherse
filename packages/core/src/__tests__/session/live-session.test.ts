@@ -100,9 +100,7 @@ describe("LiveSession context engineering", () => {
       projectRoot: projectStore.getRootPath(),
       fileWriteMutex: (runtime as any).sessionRuntime.deps.fileWriteMutex,
       logger: createSilentLogger(),
-      mcpConnectionManager: { load: async () => ({ tools: [], info: [] }) },
       runConfig,
-      getTriggerManager: () => undefined,
       modelResolver: createModelResolver(stubCatalog),
       modelCatalog: stubCatalog,
       capabilities: builtinToolCapabilities(),
@@ -221,7 +219,7 @@ describe("LiveSession context engineering", () => {
     expect(prompt).toContain('name="agent-only"');
   });
 
-  it("liveMessageDbIds starts empty on create", async () => {
+  it("message log starts empty on create", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
     const live = await LiveSession.create(deps, agentId, sessionId);
@@ -367,6 +365,26 @@ describe("LiveSession context engineering", () => {
     expect(agent.state.tools).toEqual([]);
   });
 
+  it("retryLastTurn also consumes a pending reload before continuing (M5)", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    runConfig.update({ defaultModel: "provider/model" });
+    const live = await LiveSession.create(deps, agentId, sessionId);
+    const onReload = vi.fn();
+    deps.createTurnHooks = () => ({ onReload });
+    live.markReloadPending();
+
+    const last = { role: "assistant", content: [{ type: "text", text: "" }], stopReason: "error", timestamp: 2 };
+    const user = { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 };
+    agentOf(live).state.messages = [user, last];
+    seedLiveLog(live, [user, last], [1, 2]);
+    agentOf(live).continue = vi.fn().mockResolvedValue(undefined);
+
+    await live.retryLastTurn(() => {});
+
+    expect(agentOf(live).continue).toHaveBeenCalledTimes(1);
+  });
+
   it("markReloadPending defers reload until the next sendMessage", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     agentStore._profile = { ...agentStore._profile, systemPrompt: "Original prompt." };
@@ -420,7 +438,7 @@ describe("LiveSession context engineering", () => {
     expect(onReload).toHaveBeenCalledTimes(1);
   });
 
-  it("retryLastTurn pops the failed assistant turn from agent state, DB, and liveMessageDbIds", async () => {
+  it("retryLastTurn pops the failed assistant turn from agent state, DB, and message log", async () => {
     runConfig.update({ defaultModel: "provider/model" });
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
@@ -489,9 +507,7 @@ describe("LiveSession yolo mode", () => {
       projectRoot: projectStore.getRootPath(),
       fileWriteMutex: (runtime as any).sessionRuntime.deps.fileWriteMutex,
       logger: createSilentLogger(),
-      mcpConnectionManager: { load: async () => ({ tools: [], info: [] }) },
       runConfig: new RunConfigHolder(),
-      getTriggerManager: () => undefined,
       modelResolver: createModelResolver(stubCatalog),
       modelCatalog: stubCatalog,
       capabilities: builtinToolCapabilities(),

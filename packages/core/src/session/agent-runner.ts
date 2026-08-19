@@ -1,7 +1,6 @@
 import type { Agent, AgentEvent, AgentTool } from "@earendil-works/pi-agent-core";
 import { prepareAttachmentUserMessage, type Attachment } from "../attachments/index.js";
 import type { SamplingParams } from "../types.js";
-import type { SkillStore } from "../store/skill.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { createEventPipeline, type EventMiddleware } from "../kernel/event-pipeline.js";
 import {
@@ -41,7 +40,6 @@ export class AgentRunner {
     private readonly sessionId: string,
     private readonly deps: RuntimeDeps,
     private readonly controlBus: SessionControlBus,
-    private readonly agentSkillStore?: SkillStore,
   ) {
     this.log = emptyLog();
     this.turnHooks = composeTurnHooks([]);
@@ -60,18 +58,10 @@ export class AgentRunner {
       deps,
       agentStore.getProfile(),
       sessionId,
-      agentStore.skills,
       createApprovalGate(controlBus),
       createAskGate(controlBus),
     );
-    const runner = new AgentRunner(
-      agent,
-      agentId,
-      sessionId,
-      deps,
-      controlBus,
-      agentStore.skills,
-    );
+    const runner = new AgentRunner(agent, agentId, sessionId, deps, controlBus);
     runner.turnHooks = composeTurnHooks(
       deps.createTurnHooks ? [deps.createTurnHooks(agentId, sessionId)] : [],
     );
@@ -182,6 +172,10 @@ export class AgentRunner {
 
   async retryLastTurn(onEvent: RunnerEventHandler): Promise<void> {
     this.ensureNotBusy();
+    if (this.pendingReload) {
+      this.pendingReload = false;
+      await this.applyReload();
+    }
     const last = this.log.entries[this.log.entries.length - 1];
     const lastBuffered = this.agent.state.messages[this.agent.state.messages.length - 1];
     if (
@@ -249,11 +243,11 @@ export class AgentRunner {
       sessionId: this.sessionId,
       capturedAt: new Date().toISOString(),
       systemPrompt: this.agent.state.systemPrompt,
-      messages: this.agent.state.messages,
+      messages: structuredClone(this.agent.state.messages),
       tools: this.agent.state.tools.map((tool: AgentTool) => ({
         name: tool.name,
         description: tool.description ?? "",
-        parameters: tool.parameters,
+        parameters: structuredClone(tool.parameters),
       })),
     };
   }
@@ -291,7 +285,6 @@ export class AgentRunner {
         this.deps,
         profile,
         this.sessionId,
-        this.agentSkillStore,
         createApprovalGate(this.controlBus),
         createAskGate(this.controlBus),
       );
