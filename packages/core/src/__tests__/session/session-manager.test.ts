@@ -52,7 +52,7 @@ interface RuntimeInternals {
 function activeAgent(runtime: RuntimeInternals, sessionId: string): any {
   const entry = (runtime.sessionRuntime as any).sessions.get(sessionId);
   if (!entry) throw new Error(`no active session ${sessionId}`);
-  return (entry as any).agent;
+  return (entry as any).runner.agentRef;
 }
 
 describe("SessionManager temperature propagation", () => {
@@ -477,10 +477,14 @@ describe("SessionManager agent hot-reload", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  function liveOf(sessionId: string): any {
+  function runnerOf(sessionId: string): any {
     const live = (runtime.sessionRuntime as any).sessions.get(sessionId);
     if (!live) throw new Error(`no live session ${sessionId}`);
-    return live;
+    return live.runner;
+  }
+
+  function liveOf(sessionId: string): any {
+    return runnerOf(sessionId);
   }
 
   const UPDATED_CONTENT = `---

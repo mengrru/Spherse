@@ -1,13 +1,9 @@
-import type { McpServerInfo } from "../mcp/types.js";
+import type { ContextBlock } from "../kernel/context-block.js";
+import { serializeBlocks } from "../kernel/context-block.js";
 
 export interface ContextFile {
   path: string;
   content: string;
-}
-
-export interface SkillItem {
-  name: string;
-  description: string;
 }
 
 export interface SessionMeta {
@@ -18,46 +14,80 @@ export interface SessionMeta {
   timePerceptionEnabled?: boolean;
 }
 
-export type ContextBlock =
-  | { kind: "project-instructions"; content: string }
-  | { kind: "agent-profile"; content: string }
-  | { kind: "session-context"; meta: SessionMeta }
-  | { kind: "skill-catalog"; skills: SkillItem[] }
-  | { kind: "preloaded-context"; files: ContextFile[] }
-  | { kind: "mcp-context"; servers: McpServerInfo[] };
+function escapeAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 export function buildProjectInstructions(content: string): ContextBlock | null {
   if (content.trim() === "") return null;
-  return { kind: "project-instructions", content };
+  return {
+    kind: "project-instructions",
+    render: () => `<project-instructions>\n${content}\n</project-instructions>`,
+  };
 }
 
 export function buildAgentProfile(content: string): ContextBlock | null {
   if (content.trim() === "") return null;
-  return { kind: "agent-profile", content };
+  return {
+    kind: "agent-profile",
+    render: () => `<agent-profile>\n${content}\n</agent-profile>`,
+  };
 }
 
 export function buildSessionContext(meta: SessionMeta): ContextBlock {
-  return { kind: "session-context", meta };
+  return {
+    kind: "session-context",
+    render: () => {
+      const lines = [`agent-name: ${meta.name}`];
+      if (meta.alias) {
+        lines.push(`agent-alias: ${meta.alias}`);
+      }
+      lines.push(`agent-slug: ${meta.slug}`);
+      lines.push(`session-id: ${meta.sessionId}`);
+      if (meta.timePerceptionEnabled) {
+        lines.push("time-perception: enabled");
+        lines.push("Do not output <time> tags in your replies; they are metadata for your awareness only.");
+      }
+      return `<session-context>\n${lines.join("\n")}\n</session-context>`;
+    },
+  };
+}
+
+export interface SkillItem {
+  name: string;
+  description: string;
 }
 
 export function buildSkillCatalog(skills: SkillItem[]): ContextBlock | null {
   if (skills.length === 0) return null;
-  return { kind: "skill-catalog", skills };
+  return {
+    kind: "skill-catalog",
+    render: () => {
+      const items = skills
+        .map((s) => `<skill-item name="${escapeAttr(s.name)}" description="${escapeAttr(s.description)}"/>`)
+        .join("\n");
+      return `<skill-catalog>\n${items}\n</skill-catalog>`;
+    },
+  };
 }
 
 export function buildPreloadedContext(files: ContextFile[]): ContextBlock | null {
   if (files.length === 0) return null;
-  return { kind: "preloaded-context", files };
+  return {
+    kind: "preloaded-context",
+    render: () => {
+      const rendered = files
+        .map((f) => `<context-file path="${escapeAttr(f.path)}">\n${f.content}\n</context-file>`)
+        .join("\n");
+      return `<preloaded-context>\n${rendered}\n</preloaded-context>`;
+    },
+  };
 }
 
-export function buildMcpContext(servers: McpServerInfo[]): ContextBlock | null {
-  const meaningful = servers.filter(
-    (s) =>
-      (s.instructions?.trim() ?? "") !== "" ||
-      s.resources.length > 0 ||
-      s.resourceTemplates.length > 0 ||
-      s.prompts.length > 0,
-  );
-  if (meaningful.length === 0) return null;
-  return { kind: "mcp-context", servers: meaningful };
+export function serializeSystemPrompt(blocks: ReadonlyArray<ContextBlock | null>): string {
+  return serializeBlocks(blocks);
 }

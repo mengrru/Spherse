@@ -1,7 +1,8 @@
-import { categorizePath, type PathCategory } from "./path-category.js";
+import { categorizePath, ruleForPath, type PathCategory } from "./path-category.js";
 import { normalizeProjectRelativePath } from "./denied-paths.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 import { AccessDeniedError } from "../errors.js";
+import type { PathRule } from "../kernel/ports.js";
 
 export type Decision = { allowed: true } | { allowed: false; reason: string };
 
@@ -66,6 +67,7 @@ function assertAllowed(
   deniedPaths: readonly string[],
   relativePath: string,
   action: "read" | "write",
+  extraRules?: ReadonlyArray<PathRule>,
 ): void {
   resolveProjectPath(projectRootPath, relativePath);
 
@@ -78,6 +80,17 @@ function assertAllowed(
         );
       }
     }
+  }
+
+  const matchedRule = ruleForPath(relativePath, extraRules);
+  if (matchedRule) {
+    const allowedByRule = action === "read" ? matchedRule.llm.read : matchedRule.llm.write;
+    if (!allowedByRule) {
+      throw new AccessDeniedError(
+        `Access denied: ${action} of "${relativePath}" (category "${matchedRule.category}") is not permitted`,
+      );
+    }
+    return;
   }
 
   const category = categorizePath(relativePath);
@@ -93,6 +106,7 @@ function createPolicy(
   readSet: ReadonlySet<PathCategory>,
   writeSet: ReadonlySet<PathCategory>,
   deniedPaths: readonly string[],
+  extraRules?: ReadonlyArray<PathRule>,
 ): AccessPolicy {
   const check = (
     set: ReadonlySet<PathCategory>,
@@ -100,7 +114,7 @@ function createPolicy(
     action: "read" | "write",
   ): boolean => {
     try {
-      assertAllowed(projectRootPath, set, deniedPaths, relativePath, action);
+      assertAllowed(projectRootPath, set, deniedPaths, relativePath, action, extraRules);
       return true;
     } catch (e) {
       if (e instanceof AccessDeniedError) return false;
@@ -109,8 +123,8 @@ function createPolicy(
   };
 
   return {
-    assertRead: (rel) => assertAllowed(projectRootPath, readSet, deniedPaths, rel, "read"),
-    assertWrite: (rel) => assertAllowed(projectRootPath, writeSet, deniedPaths, rel, "write"),
+    assertRead: (rel) => assertAllowed(projectRootPath, readSet, deniedPaths, rel, "read", extraRules),
+    assertWrite: (rel) => assertAllowed(projectRootPath, writeSet, deniedPaths, rel, "write", extraRules),
     canRead: (rel) => check(readSet, rel, "read"),
     canWrite: (rel) => check(writeSet, rel, "write"),
   };
@@ -119,8 +133,9 @@ function createPolicy(
 export function llmAccessPolicy(
   projectRootPath: string,
   aiDeniedPaths: readonly string[],
+  extraRules?: ReadonlyArray<PathRule>,
 ): AccessPolicy {
-  return createPolicy(projectRootPath, LLM_READ, LLM_WRITE, aiDeniedPaths);
+  return createPolicy(projectRootPath, LLM_READ, LLM_WRITE, aiDeniedPaths, extraRules);
 }
 
 export function serverAccessPolicy(projectRootPath: string): AccessPolicy {

@@ -1,22 +1,13 @@
 import crypto from "node:crypto";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
+import type { AskGate, AskOutcome } from "../kernel/gates.js";
+
+export type { AskOutcome, AskGate } from "../kernel/gates.js";
 
 const MIN_TIMEOUT_S = 60;
 const MAX_TIMEOUT_S = 3600;
 const DEFAULT_TIMEOUT_S = 600;
-
-export interface AskOutcome {
-  answer?: string;
-  timedOut: boolean;
-}
-
-export interface AskGate {
-  ask(
-    req: { requestId: string; toolCallId: string; toolName: string; args: unknown },
-    timeoutMs: number,
-  ): Promise<AskOutcome>;
-}
 
 export interface AskUserDetails {
   cardType: "question";

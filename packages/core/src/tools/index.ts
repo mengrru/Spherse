@@ -50,7 +50,7 @@ export function createToolsForProject(
     edit_file: createEditFileTool(ctx.root, ctx.mutex, getPolicy),
     list_files: createListFilesTool(ctx.root, getPolicy),
     search_content: createSearchContentTool(ctx.root, getPolicy),
-    append_changelog: createAppendChangelogTool(ctx),
+    append_changelog: createAppendChangelogTool((entry) => ctx.appendChangelog(entry)),
     render_card: createRenderCardTool(ctx.root, getPolicy),
     generate_image: createGenerateImageTool(ctx.root),
     move_file: createMoveFileTool(ctx.root, ctx.mutex, getPolicy),
@@ -59,7 +59,7 @@ export function createToolsForProject(
     run_command: withApproval(createRunCommandTool(ctx.root), ctx.approvalGate),
     ask_user: createAskUserTool(ctx.askGate),
     manage_agent: withApproval(
-      createManageAgentTool(ctx.store, BUILTIN_TOOL_NAMES, ctx.agentId),
+      createManageAgentTool(ctx.store, { names: BUILTIN_TOOL_NAMES }, ctx.agentId),
       ctx.approvalGate,
       isManageAgentWriteAction,
     ),

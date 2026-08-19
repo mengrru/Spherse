@@ -26,7 +26,12 @@ vi.mock("../../model-providers/index.js", async (importOriginal) => {
 
 import { createProject } from "../../factory.js";
 import { LiveSession } from "../../session/live-session.js";
-import type { SessionContext } from "../../session/types.js";
+import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
+import { createDefaultModelResolver } from "../../session/model-resolver.js";
+import { builtinToolCapabilities } from "../../capabilities/builtin.js";
+import { createStoreRegistry } from "../../kernel/ports.js";
+import { createLog } from "../../kernel/message-log.js";
+import { compactionCapability } from "../../capabilities/compaction/index.js";
 
 const TEST_AGENT_PROFILE = `---
 name: Test Agent
@@ -46,18 +51,40 @@ function getAgentStore(runtime: RuntimeInternals, agentId: string): any {
   return runtime.projectManager.projectStore.agents.get(agentId);
 }
 
+function runnerOf(live: LiveSession): any {
+  return (live as any).runner;
+}
+
 function agentOf(live: LiveSession): any {
-  return (live as any).agent;
+  return runnerOf(live).agentRef;
 }
 
 function liveIdsOf(live: LiveSession): number[] {
-  return (live as any).liveMessageDbIds as number[];
+  return runnerOf(live).log.entries.map((e: any) => e.dbId);
+}
+
+function seedLiveLog(live: LiveSession, msgs: any[], ids: number[]): void {
+  runnerOf(live).log = createLog(msgs.map((m, i) => ({ dbId: ids[i], message: m })));
+  agentOf(live).state.messages = msgs;
+}
+
+async function compactLive(
+  live: LiveSession,
+  deps: RuntimeDeps,
+  agentId: string,
+  sessionId: string,
+): Promise<void> {
+  const hook = (compactionCapability({ projectStore: deps.projectStore }).turnHooks ?? (() => ({})))(agentId, sessionId);
+  const next = await hook.afterTurn!(agentOf(live), runnerOf(live).log);
+  runnerOf(live).log = next;
+  agentOf(live).state.messages = next.entries.map((e: any) => e.message);
 }
 
 describe("LiveSession context engineering", () => {
   let tmpDir: string;
   let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
-  let ctx: SessionContext;
+  let deps: RuntimeDeps;
+  let runConfig: RunConfigHolder;
   let agentId: string;
 
   beforeEach(async () => {
@@ -72,11 +99,18 @@ describe("LiveSession context engineering", () => {
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
     runtime.timerService.stop();
-    ctx = {
+    runConfig = new RunConfigHolder();
+    deps = {
       projectStore,
       projectRoot: projectStore.getRootPath(),
-      fileWriteMutex: (runtime as any).sessionRuntime.ctx.fileWriteMutex,
+      fileWriteMutex: (runtime as any).sessionRuntime.deps.fileWriteMutex,
       logger: createSilentLogger(),
+      mcpConnectionManager: { load: async () => ({ tools: [], info: [] }) },
+      runConfig,
+      getTriggerManager: () => undefined,
+      modelResolver: createDefaultModelResolver(),
+      capabilities: builtinToolCapabilities(),
+      stores: createStoreRegistry(),
     };
   });
 
@@ -89,7 +123,7 @@ describe("LiveSession context engineering", () => {
     agentStore._profile = { ...agentStore._profile, systemPrompt: "You are a test assistant." };
 
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
 
     expect(agent.state.systemPrompt).toContain("<agent-profile>");
@@ -106,7 +140,7 @@ describe("LiveSession context engineering", () => {
 
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
 
     expect(agent.state.systemPrompt).toContain("<project-instructions>");
@@ -118,7 +152,7 @@ describe("LiveSession context engineering", () => {
     const profile = agentStore.getProfile();
 
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
 
     expect(agent.state.systemPrompt).toContain("<session-context>");
@@ -134,7 +168,7 @@ describe("LiveSession context engineering", () => {
     const profile = agentStore.getProfile();
 
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
 
     expect(agent.state.systemPrompt).toContain(`agent-name: ${profile.name}`);
@@ -145,7 +179,7 @@ describe("LiveSession context engineering", () => {
   it("does not wire transformContext into the Agent", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     expect(agentOf(live).transformContext).toBeUndefined();
   });
@@ -180,7 +214,7 @@ describe("LiveSession context engineering", () => {
     );
 
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const prompt = agentOf(live).state.systemPrompt;
 
     expect(prompt).toContain("<skill-catalog>");
@@ -194,7 +228,7 @@ describe("LiveSession context engineering", () => {
   it("liveMessageDbIds starts empty on create", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     expect(liveIdsOf(live)).toEqual([]);
   });
@@ -206,7 +240,7 @@ describe("LiveSession context engineering", () => {
     const msg = { role: "user", content: "hello world", timestamp: Date.now() };
     agentStore.sessions.appendMessage(sessionId, msg);
 
-    const live = await LiveSession.restore(ctx, agentId, sessionId);
+    const live = await LiveSession.restore(deps, agentId, sessionId);
     const agent = agentOf(live);
     expect(agent.state.messages.length).toBe(1);
     expect(agent.state.messages[0].role).toBe("user");
@@ -233,7 +267,7 @@ describe("LiveSession context engineering", () => {
       tokenEstimate: 100,
     });
 
-    const live = await LiveSession.restore(ctx, agentId, sessionId);
+    const live = await LiveSession.restore(deps, agentId, sessionId);
     const agent = agentOf(live);
     expect(agent.state.messages.length).toBe(3);
     expect(agent.state.messages[0].role).toBe("user");
@@ -253,7 +287,7 @@ describe("LiveSession context engineering", () => {
   it("maybeCompact records real anchorMessageId as digest placeholder", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
 
     const msgs: any[] = [];
@@ -270,11 +304,10 @@ describe("LiveSession context engineering", () => {
       msgs.push(a);
       ids.push(agentStore.sessions.appendMessage(sessionId, a));
     }
-    agent.state.messages = msgs;
-    liveIdsOf(live).push(...ids);
+    seedLiveLog(live, msgs, ids);
     agent.state.model.contextWindow = 10;
 
-    await (live as any).maybeCompact();
+    await compactLive(live, deps, agentId, sessionId);
 
     const latest = agentStore.sessions.getLatestCompaction(sessionId);
     expect(latest).not.toBeNull();
@@ -287,7 +320,7 @@ describe("LiveSession context engineering", () => {
   it("repeated compaction does not over-include messages on restore", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
 
     const msgs: any[] = [];
@@ -304,17 +337,16 @@ describe("LiveSession context engineering", () => {
       msgs.push(a);
       ids.push(agentStore.sessions.appendMessage(sessionId, a));
     }
-    agent.state.messages = msgs;
-    liveIdsOf(live).push(...ids);
+    seedLiveLog(live, msgs, ids);
     agent.state.model.contextWindow = 10;
 
-    await (live as any).maybeCompact();
-    await (live as any).maybeCompact();
+    await compactLive(live, deps, agentId, sessionId);
+    await compactLive(live, deps, agentId, sessionId);
 
     const totalPersisted = agentStore.sessions.getSessionMessages(sessionId).length;
     expect(totalPersisted).toBe(50);
 
-    const restored = await LiveSession.restore(ctx, agentId, sessionId);
+    const restored = await LiveSession.restore(deps, agentId, sessionId);
     const restoredAgent = agentOf(restored);
     expect(restoredAgent.state.messages.length).toBeLessThan(totalPersisted);
   const restoredIds = liveIdsOf(restored);
@@ -325,14 +357,14 @@ describe("LiveSession context engineering", () => {
     const agentStore = getAgentStore(runtime, agentId);
     agentStore._profile = { ...agentStore._profile, systemPrompt: "Original system prompt body." };
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
     expect(agent.state.systemPrompt).toContain("Original system prompt body.");
     expect(agent.state.tools.length).toBeGreaterThan(0);
 
     agentStore._profile = { ...agentStore._profile, systemPrompt: "Reloaded system prompt body.", tools: [] };
 
-    await (live as any).applyReload();
+    await runnerOf(live).applyReload();
 
     expect(agent.state.systemPrompt).toContain("Reloaded system prompt body.");
     expect(agent.state.systemPrompt).not.toContain("Original system prompt body.");
@@ -343,59 +375,60 @@ describe("LiveSession context engineering", () => {
     const agentStore = getAgentStore(runtime, agentId);
     agentStore._profile = { ...agentStore._profile, systemPrompt: "Original prompt." };
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
     const originalPrompt = agent.state.systemPrompt;
 
     agentStore._profile = { ...agentStore._profile, systemPrompt: "New prompt not yet applied." };
     live.markReloadPending();
 
-    expect((live as any).pendingReload).toBe(true);
+    expect(runnerOf(live).pendingReload).toBe(true);
     expect(agent.state.systemPrompt).toBe(originalPrompt);
   });
 
   it("applyReload keeps previous config when reload fails", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
     const originalPrompt = agent.state.systemPrompt;
 
     (agentStore as any)._profile = null;
 
-    await expect((live as any).applyReload()).resolves.toBeUndefined();
+    await expect(runnerOf(live).applyReload()).resolves.toBeUndefined();
     expect(agent.state.systemPrompt).toBe(originalPrompt);
   });
 
   it("applyReload is a no-op when the agent store no longer exists", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
     const originalPrompt = agent.state.systemPrompt;
 
-    (ctx.projectStore as any)._agents.delete(agentId);
+    (deps.projectStore as any)._agents.delete(agentId);
 
-    await expect((live as any).applyReload()).resolves.toBeUndefined();
+    await expect(runnerOf(live).applyReload()).resolves.toBeUndefined();
     expect(agent.state.systemPrompt).toBe(originalPrompt);
   });
 
-  it("applyReload resets mcpMerged so MCP tools re-merge on next turn", async () => {
+  it("applyReload notifies turn hooks to reset memoized state", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
-    (live as any).mcpMerged = true;
+    const onReload = vi.fn();
+    deps.createTurnHooks = () => ({ onReload });
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
-    await (live as any).applyReload();
+    await runnerOf(live).applyReload();
 
-    expect((live as any).mcpMerged).toBe(false);
+    expect(onReload).toHaveBeenCalledTimes(1);
   });
 
   it("retryLastTurn pops the failed assistant turn from agent state, DB, and liveMessageDbIds", async () => {
-    ctx.defaultModel = "provider/model";
+    runConfig.update({ defaultModel: "provider/model" });
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
 
     const userMsg = { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 };
@@ -408,8 +441,7 @@ describe("LiveSession context engineering", () => {
     };
     const userId = agentStore.sessions.appendMessage(sessionId, userMsg);
     const failedId = agentStore.sessions.appendMessage(sessionId, failedAssistant);
-    agent.state.messages = [userMsg, failedAssistant];
-    liveIdsOf(live).push(userId, failedId);
+    seedLiveLog(live, [userMsg, failedAssistant], [userId, failedId]);
 
     agent.continue = vi.fn().mockResolvedValue(undefined);
 
@@ -424,10 +456,10 @@ describe("LiveSession context engineering", () => {
   });
 
   it("retryLastTurn rejects when the last message is not a failed assistant turn", async () => {
-    ctx.defaultModel = "provider/model";
+    runConfig.update({ defaultModel: "provider/model" });
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
     agent.state.messages = [
       { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 },
@@ -441,7 +473,7 @@ describe("LiveSession context engineering", () => {
 describe("LiveSession yolo mode", () => {
   let tmpDir: string;
   let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
-  let ctx: SessionContext;
+  let deps: RuntimeDeps;
   let agentId: string;
 
   beforeEach(async () => {
@@ -456,11 +488,17 @@ describe("LiveSession yolo mode", () => {
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
     runtime.timerService.stop();
-    ctx = {
+    deps = {
       projectStore,
       projectRoot: projectStore.getRootPath(),
-      fileWriteMutex: (runtime as any).sessionRuntime.ctx.fileWriteMutex,
+      fileWriteMutex: (runtime as any).sessionRuntime.deps.fileWriteMutex,
       logger: createSilentLogger(),
+      mcpConnectionManager: { load: async () => ({ tools: [], info: [] }) },
+      runConfig: new RunConfigHolder(),
+      getTriggerManager: () => undefined,
+      modelResolver: createDefaultModelResolver(),
+      capabilities: builtinToolCapabilities(),
+      stores: createStoreRegistry(),
     };
   });
 
@@ -480,7 +518,7 @@ describe("LiveSession yolo mode", () => {
       yolo: true,
     };
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     const runCommand = findTool(live, "run_command");
     expect(runCommand).toBeDefined();
@@ -500,7 +538,7 @@ describe("LiveSession yolo mode", () => {
       yolo: false,
     };
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     const runCommand = findTool(live, "run_command");
     expect(runCommand).toBeDefined();
@@ -526,12 +564,12 @@ describe("LiveSession yolo mode", () => {
       tools: ["ask_user"],
     };
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     const askUser = findTool(live, "ask_user");
     expect(askUser).toBeDefined();
 
-    const controlBus = (live as any).controlBus;
+    const controlBus = runnerOf(live).controlBus;
     controlBus.setEventSink((e: any) => {
       if (e.type === "control_request" && e.kind === "question") {
         expect(e.toolName).toBe("ask_user");
@@ -561,10 +599,10 @@ describe("LiveSession yolo mode", () => {
       yolo: false,
     };
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     agentStore._profile = { ...agentStore._profile, yolo: true };
-    await (live as any).applyReload();
+    await runnerOf(live).applyReload();
 
     const runCommand = findTool(live, "run_command");
     const result = await runCommand.execute("call-3", { command: "echo yolo-reloaded" });

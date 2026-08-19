@@ -1,8 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createAppendChangelogTool } from "../../tools/append-changelog.js";
-import { ToolContext } from "../../tools/tool-context.js";
 import { ProjectStore } from "../../store/project.js";
-import { FileWriteMutex } from "../../utils/file-write-mutex.js";
 import { createSilentLogger } from "../../logger.js";
 import { createTempProject, cleanupDir, readFile } from "../helpers.js";
 
@@ -22,8 +20,7 @@ describe("createAppendChangelogTool", () => {
   });
 
   function makeTool(): ReturnType<typeof createAppendChangelogTool> {
-    const ctx = new ToolContext(projectStore, new FileWriteMutex());
-    return createAppendChangelogTool(ctx);
+    return createAppendChangelogTool((entry) => projectStore.appendChangelog(entry));
   }
 
   it("appends an entry to CHANGELOG.md", async () => {

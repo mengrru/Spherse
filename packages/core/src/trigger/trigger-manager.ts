@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { CronExpressionParser } from "cron-parser";
-import type { SessionManager } from "../session/session-manager.js";
+import type { SessionPort } from "../kernel/ports.js";
 import type { ProjectStore } from "../store/project.js";
 import type { TriggerStore } from "../store/trigger.js";
 import type { TriggerEntry, TriggerLogEntry } from "../types.js";
@@ -39,14 +39,14 @@ interface TriggerRef {
 }
 
 export class TriggerManager extends EventEmitter {
-  private sessionRuntime: SessionManager;
+  private sessionRuntime: SessionPort;
   private projectStore: ProjectStore;
   private logger: Logger;
   private inProgress: Set<string> = new Set();
   private triggerState: Map<string, TriggerStateItem> = new Map();
 
   constructor(deps: {
-    sessionRuntime: SessionManager;
+    sessionRuntime: SessionPort;
     projectStore: ProjectStore;
     logger?: Logger;
   }) {
@@ -278,8 +278,8 @@ export class TriggerManager extends EventEmitter {
 
       const resolvedMessage = resolveTemplateVars(entry.message, { agentName, payload });
 
-      await this.sessionRuntime.sendMessage(sessionId, resolvedMessage, [], (event) => {
-        if (event.type === "agent_end") {
+      await this.sessionRuntime.sendMessage(sessionId, resolvedMessage, (event) => {
+        if ((event as { type?: string }).type === "agent_end") {
           this.getTriggerStore(agentId)?.appendLog({
             ...logEntry,
             completedAt: Date.now(),

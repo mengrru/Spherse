@@ -12,6 +12,7 @@ import { ProjectConfigStore } from "./project-config.js";
 import { SkillStore } from "./skill.js";
 import { AgentStore } from "./agent-store.js";
 import { AgentProfileStore, assertSafeSlug } from "./agent-profile.js";
+import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { deriveAgentSlugBase, buildAgentDirName } from "./agent-slug.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 import { ValidationError, NotFoundError } from "../errors.js";
@@ -35,16 +36,18 @@ export class ProjectStore extends EventEmitter {
   private rootPath: string;
   private spherseDir: string;
   private logger: Logger;
+  private readonly fileWriteMutex?: FileWriteMutex;
 
   private _configStore: ProjectConfigStore | null = null;
   private _skillStore: SkillStore | null = null;
   private _agents: Map<string, AgentStore> = new Map();
 
-  constructor(rootPath: string, logger?: Logger) {
+  constructor(rootPath: string, logger?: Logger, fileWriteMutex?: FileWriteMutex) {
     super();
     this.rootPath = path.resolve(rootPath);
     this.spherseDir = path.join(this.rootPath, PROJECT_META_DIR);
     this.logger = logger ?? createSilentLogger();
+    this.fileWriteMutex = fileWriteMutex;
   }
 
   async open(): Promise<void> {
@@ -55,6 +58,7 @@ export class ProjectStore extends EventEmitter {
     this._skillStore = new SkillStore(
       path.join(this.spherseDir, "skills"),
       PRESET_SKILL_SOURCES,
+      this.fileWriteMutex,
     );
 
     await this.loadAgents();
@@ -75,6 +79,7 @@ export class ProjectStore extends EventEmitter {
     this._skillStore = new SkillStore(
       path.join(this.spherseDir, "skills"),
       PRESET_SKILL_SOURCES,
+      this.fileWriteMutex,
     );
 
     const indexPath = path.join(this.rootPath, "AGENTS.md");
@@ -103,7 +108,7 @@ export class ProjectStore extends EventEmitter {
       const profile = await profileStore.read();
       if (!profile) continue;
 
-      const agentStore = new AgentStore(agentDir, profile.id, this.logger);
+      const agentStore = new AgentStore(agentDir, profile.id, this.logger, this.fileWriteMutex);
       await agentStore.open();
       this._agents.set(profile.id, agentStore);
     }
@@ -177,7 +182,7 @@ export class ProjectStore extends EventEmitter {
       await fs.writeFile(path.join(agentDir, "theme.css"), themeContent, "utf-8");
     }
 
-    const agentStore = new AgentStore(agentDir, id, this.logger);
+    const agentStore = new AgentStore(agentDir, id, this.logger, this.fileWriteMutex);
     await agentStore.open();
     this._agents.set(id, agentStore);
     this.logger.info({ agentId: id, slug: dirName }, "agent created");

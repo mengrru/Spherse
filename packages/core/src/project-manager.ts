@@ -11,9 +11,9 @@ export class ProjectManager {
   private fileWriteMutex: FileWriteMutex;
   private logger: Logger;
 
-  constructor(projectStore: ProjectStore, logger?: Logger) {
+  constructor(projectStore: ProjectStore, logger?: Logger, fileWriteMutex?: FileWriteMutex) {
     this.projectStore = projectStore;
-    this.fileWriteMutex = new FileWriteMutex();
+    this.fileWriteMutex = fileWriteMutex ?? new FileWriteMutex();
     this.logger = logger ?? createSilentLogger();
   }
 

@@ -3,7 +3,7 @@ import path from "node:path";
 import { resolveProjectPath, isPathInside } from "../utils/path-safety.js";
 import { AccessDeniedError } from "../errors.js";
 import { PROJECT_META_DIR } from "../types.js";
-import type { AttachmentProcessor } from "./index.js";
+import type { AttachmentProcessor } from "../kernel/attachments.js";
 
 const ATTACHMENTS_DIR = path.join(PROJECT_META_DIR, "attachments");
 

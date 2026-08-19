@@ -26,7 +26,11 @@ vi.mock("../../model-providers/index.js", async (importOriginal) => {
 
 import { createProject } from "../../factory.js";
 import { LiveSession } from "../../session/live-session.js";
-import type { SessionContext } from "../../session/types.js";
+import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
+import { createDefaultModelResolver } from "../../session/model-resolver.js";
+import { createImageAttachmentProcessor } from "../../attachments/image-processor.js";
+import { builtinToolCapabilities } from "../../capabilities/builtin.js";
+import { createStoreRegistry } from "../../kernel/ports.js";
 
 const TEST_AGENT_PROFILE = `---
 name: Test Agent
@@ -49,13 +53,13 @@ interface RuntimeInternals {
 }
 
 function agentOf(live: LiveSession): any {
-  return (live as any).agent;
+  return (live as any).runner.agentRef;
 }
 
 describe("LiveSession attachment handling", () => {
   let tmpDir: string;
   let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
-  let ctx: SessionContext;
+  let deps: RuntimeDeps;
   let agentId: string;
 
   beforeEach(async () => {
@@ -70,13 +74,16 @@ describe("LiveSession attachment handling", () => {
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
     runtime.timerService.stop();
-    ctx = {
+    deps = {
       projectStore,
       projectRoot: projectStore.getRootPath(),
-      fileWriteMutex: (runtime as any).sessionRuntime.ctx.fileWriteMutex,
+      fileWriteMutex: (runtime as any).sessionRuntime.deps.fileWriteMutex,
       logger: createSilentLogger(),
-      defaultModel: "openai/gpt-4o",
-      mcpConnectionManager: { load: async () => ({ tools: [], info: [] }) } as any,
+      runConfig: new RunConfigHolder({ defaultModel: "openai/gpt-4o" }),
+      modelResolver: createDefaultModelResolver(),
+      capabilities: builtinToolCapabilities(),
+      stores: createStoreRegistry(),
+      attachmentProcessors: [createImageAttachmentProcessor()],
     };
 
     const attachmentsDir = path.join(tmpDir, ".spherse", "attachments");
@@ -145,7 +152,7 @@ describe("LiveSession attachment handling", () => {
       await capturedListener?.({ type: "agent_end", messages: [msg, assistantMsg] });
     });
 
-    const agentStore = (ctx.projectStore as any).getAgent(agentId) as any;
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
     vi.spyOn(agentStore.sessions, "appendMessage").mockImplementation((_sid: string, msg: any) => {
       persisted.push(msg);
       return persisted.length;
@@ -157,9 +164,9 @@ describe("LiveSession attachment handling", () => {
   }
 
   it("sends a real ImageContent to the LLM for the current turn", async () => {
-    const agentStore = (ctx.projectStore as any).getAgent(agentId) as any;
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     const attachment = {
       type: "image",
@@ -179,9 +186,9 @@ describe("LiveSession attachment handling", () => {
   });
 
   it("persists the stripped user message (no base64, text-only content, with _attachments)", async () => {
-    const agentStore = (ctx.projectStore as any).getAgent(agentId) as any;
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     const attachment = {
       type: "image",
@@ -198,9 +205,9 @@ describe("LiveSession attachment handling", () => {
   });
 
   it("forwards the stripped user message_end onEvent", async () => {
-    const agentStore = (ctx.projectStore as any).getAgent(agentId) as any;
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     const attachment = {
       type: "image",
@@ -219,9 +226,9 @@ describe("LiveSession attachment handling", () => {
   });
 
   it("rewrites the in-memory user message to the stripped version after the run", async () => {
-    const agentStore = (ctx.projectStore as any).getAgent(agentId) as any;
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     const attachment = {
       type: "image",
@@ -240,9 +247,9 @@ describe("LiveSession attachment handling", () => {
   });
 
   it("convertToLlm strips _attachments, drops empty-data image blocks, keeps real image blocks", async () => {
-    const agentStore = (ctx.projectStore as any).getAgent(agentId) as any;
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
     const agent = agentOf(live);
 
     const attachment = {
@@ -289,9 +296,9 @@ describe("LiveSession attachment handling", () => {
   });
 
   it("throws on unsupported attachment type", async () => {
-    const agentStore = (ctx.projectStore as any).getAgent(agentId) as any;
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     await expect(
       live.sendMessage("hi", [{ type: "pdf", path: "x", mimeType: "application/pdf" }], () => {}),
@@ -299,9 +306,9 @@ describe("LiveSession attachment handling", () => {
   });
 
   it("never transmits base64 over onEvent (message_start, message_end, agent_end all stripped)", async () => {
-    const agentStore = (ctx.projectStore as any).getAgent(agentId) as any;
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
     const sessionId = agentStore.sessions.createSession();
-    const live = await LiveSession.create(ctx, agentId, sessionId);
+    const live = await LiveSession.create(deps, agentId, sessionId);
 
     const attachment = {
       type: "image",

@@ -46,10 +46,10 @@ export class SkillStore {
   private builtinSources?: readonly PresetSkillSource[];
   private fileWriteMutex: FileWriteMutex;
 
-  constructor(skillDir: string, builtinSources?: readonly PresetSkillSource[]) {
+  constructor(skillDir: string, builtinSources?: readonly PresetSkillSource[], fileWriteMutex?: FileWriteMutex) {
     this.skillDir = path.resolve(skillDir);
     this.builtinSources = builtinSources;
-    this.fileWriteMutex = new FileWriteMutex();
+    this.fileWriteMutex = fileWriteMutex ?? new FileWriteMutex();
   }
 
   async list(): Promise<SkillDefinition[]> {

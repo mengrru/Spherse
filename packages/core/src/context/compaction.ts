@@ -37,31 +37,20 @@ function truncate(text: string): string {
   return text.slice(0, MAX_MESSAGE_CHARS) + TRUNCATE_MARKER;
 }
 
+const MAX_ARG_VALUE_CHARS = 120;
+
 function extractToolArg(
-  toolName: string,
+  _toolName: string,
   args: Record<string, unknown>,
 ): string {
-  if (toolName === "move_file" || toolName === "copy_file") {
-    const src = typeof args.source === "string" ? args.source : "";
-    const dst = typeof args.destination === "string" ? args.destination : "";
-    return `${src} → ${dst}`.trim();
+  const summaryValues: string[] = [];
+  for (const value of Object.values(args)) {
+    if (summaryValues.length >= 2) break;
+    if (typeof value === "string" && value.length > 0 && value.length <= MAX_ARG_VALUE_CHARS) {
+      summaryValues.push(value);
+    }
   }
-  const FILE_TOOLS = new Set(["read_file", "write_file", "edit_file"]);
-  if (FILE_TOOLS.has(toolName)) {
-    const path = args.path ?? args.file_path;
-    if (typeof path === "string") return path;
-    return "";
-  }
-  if (toolName === "search_content") {
-    return typeof args.query === "string" ? args.query : "";
-  }
-  if (toolName === "load_skill") {
-    return typeof args.skill_name === "string" ? args.skill_name : "";
-  }
-  const keys = Object.keys(args);
-  if (keys.length === 0) return "";
-  const value = args[keys[0]];
-  return value === undefined || value === null ? "" : String(value);
+  return summaryValues.join(" → ");
 }
 
 export function generateDigest(messages: Message[]): string {

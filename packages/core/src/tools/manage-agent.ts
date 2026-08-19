@@ -109,12 +109,14 @@ function applyOptionalString(
   else delete frontmatter[key];
 }
 
-function validateTools(tools: string[] | undefined, knownTools: readonly string[]): string[] | undefined {
+export type KnownToolsRef = { names: readonly string[] };
+
+function validateTools(tools: string[] | undefined, knownTools: KnownToolsRef): string[] | undefined {
   if (tools === undefined) return undefined;
-  const unknown = tools.filter((name) => !knownTools.includes(name));
+  const unknown = tools.filter((name) => !knownTools.names.includes(name));
   if (unknown.length > 0) {
     throw new ValidationError(
-      `unknown tool name(s): ${unknown.join(", ")}. Known tools: ${knownTools.join(", ")}`,
+      `unknown tool name(s): ${unknown.join(", ")}. Known tools: ${knownTools.names.join(", ")}`,
     );
   }
   return [...new Set(tools)];
@@ -122,7 +124,7 @@ function validateTools(tools: string[] | undefined, knownTools: readonly string[
 
 export function createManageAgentTool(
   projectStore: ProjectStore,
-  knownTools: readonly string[],
+  knownTools: KnownToolsRef,
   currentAgentId?: string,
 ): AgentTool<typeof ManageAgentParams, ManageAgentDetails> {
   return {

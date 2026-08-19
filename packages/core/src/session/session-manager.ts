@@ -1,46 +1,21 @@
-import type { ProjectStore, AgentChangePayload } from "../store/project.js";
-import { FileWriteMutex } from "../utils/file-write-mutex.js";
-import { type Logger, createSilentLogger } from "../logger.js";
+import type { AgentChangePayload } from "../store/project.js";
+import type { Logger } from "../logger.js";
 import { NotFoundError } from "../errors.js";
 import { LiveSession, type AgentEventHandler } from "./live-session.js";
 import { computeSessionStatus, type SessionStatus } from "./status.js";
-import type { SamplingParams } from "../types.js";
-import type { SessionContext, TurnContextSnapshot } from "./types.js";
-import type { TriggerManager } from "../trigger/trigger-manager.js";
-import { McpConnectionManager } from "../mcp/mcp-connection-manager.js";
+import type { TurnContextSnapshot } from "./types.js";
 import type { Attachment } from "../attachments/index.js";
+import { RunConfigHolder, type RuntimeDeps } from "./runtime.js";
 
 export class SessionManager {
   private readonly sessions = new Map<string, LiveSession>();
-  private readonly ctx: SessionContext;
-  private readonly mcpConnectionManager: McpConnectionManager;
+  private readonly deps: RuntimeDeps;
+  private readonly runConfigHolder: RunConfigHolder;
 
-  constructor(
-    projectStore: ProjectStore,
-    options?: { defaultModel?: string; sampling?: SamplingParams; logger?: Logger },
-  ) {
-    const logger = options?.logger ?? createSilentLogger();
-    const loadServers = async (agentId: string) => {
-      const agentStore = projectStore.getAgent(agentId);
-      if (!agentStore) return [];
-      try {
-        return (await agentStore.mcp.getConfig()).servers;
-      } catch (err) {
-        logger.warn({ err, agentId }, "failed to load agent mcp config");
-        return [];
-      }
-    };
-    this.mcpConnectionManager = new McpConnectionManager(logger, undefined, loadServers);
-    this.ctx = {
-      projectStore,
-      projectRoot: projectStore.getRootPath(),
-      fileWriteMutex: new FileWriteMutex(),
-      logger,
-      defaultModel: options?.defaultModel,
-      sampling: options?.sampling,
-      mcpConnectionManager: this.mcpConnectionManager,
-    };
-    projectStore.on("agent_updated", (payload: AgentChangePayload) => {
+  constructor(deps: RuntimeDeps, options?: { initialRunConfig?: RunConfigHolder }) {
+    this.deps = deps;
+    this.runConfigHolder = options?.initialRunConfig ?? new RunConfigHolder();
+    deps.projectStore.on("agent_updated", (payload: AgentChangePayload) => {
       if (payload.action !== "updated") return;
       for (const session of this.sessions.values()) {
         if (session.getAgentId() === payload.agentId) session.markReloadPending();
@@ -48,25 +23,33 @@ export class SessionManager {
     });
   }
 
-  setTriggerManager(triggerManager: TriggerManager): void {
-    this.ctx.triggerManager = triggerManager;
+  get logger(): Logger {
+    return this.deps.logger;
+  }
+
+  getRuntimeDeps(): RuntimeDeps {
+    return this.deps;
+  }
+
+  getRunConfigHolder(): RunConfigHolder {
+    return this.runConfigHolder;
   }
 
   async createSession(agentId: string, source?: string, title?: string): Promise<string> {
-    const agentStore = this.ctx.projectStore.getAgent(agentId);
+    const agentStore = this.deps.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
     const sessionId = agentStore.sessions.createSession(title, source);
-    const session = await LiveSession.create(this.ctx, agentId, sessionId);
+    const session = await LiveSession.create(this.deps, agentId, sessionId);
     this.sessions.set(sessionId, session);
-    this.ctx.logger.info({ sessionId, agentId }, "session created");
+    this.deps.logger.info({ sessionId, agentId }, "session created");
     return sessionId;
   }
 
   async restoreSession(agentId: string, sessionId: string): Promise<string> {
     if (this.sessions.has(sessionId)) return sessionId;
-    const session = await LiveSession.restore(this.ctx, agentId, sessionId);
+    const session = await LiveSession.restore(this.deps, agentId, sessionId);
     this.sessions.set(sessionId, session);
-    this.ctx.logger.info({ sessionId }, "session restored");
+    this.deps.logger.info({ sessionId }, "session restored");
     return sessionId;
   }
 
@@ -107,13 +90,13 @@ export class SessionManager {
   getSessionStatus(agentId: string, sessionId: string): SessionStatus {
     const live = this.sessions.get(sessionId);
     if (live) return live.getStatus();
-    const agentStore = this.ctx.projectStore.getAgent(agentId);
+    const agentStore = this.deps.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
     if (!agentStore.sessions.getSession(sessionId)) {
       throw new NotFoundError(`Session "${sessionId}" not found`);
     }
     const messages = agentStore.sessions.getSessionMessages(sessionId);
-    return computeSessionStatus(messages, agentStore.getProfile(), this.ctx.defaultModel);
+    return computeSessionStatus(messages, agentStore.getProfile(), this.runConfigHolder.current().defaultModel);
   }
 
   destroySession(sessionId: string): void {
@@ -126,7 +109,7 @@ export class SessionManager {
 
   sessionExists(agentId: string, sessionId: string): boolean {
     if (this.sessions.has(sessionId)) return true;
-    const agentStore = this.ctx.projectStore.getAgent(agentId);
+    const agentStore = this.deps.projectStore.getAgent(agentId);
     return !!agentStore?.sessions.getSession(sessionId);
   }
 
@@ -138,24 +121,19 @@ export class SessionManager {
     }
   }
 
-  async invalidateMcpCache(agentId: string): Promise<void> {
-    await this.mcpConnectionManager.invalidate(agentId);
-  }
-
   async closeAll(): Promise<void> {
     this.sessions.clear();
-    await this.mcpConnectionManager.closeAll();
   }
 
   setDefaultModel(model: string | undefined): void {
-    this.ctx.defaultModel = model;
+    this.runConfigHolder.update({ defaultModel: model });
     for (const session of this.sessions.values()) {
       session.applyDefaultModel(model);
     }
   }
 
-  setSampling(sampling: SamplingParams | undefined): void {
-    this.ctx.sampling = sampling;
+  setSampling(sampling: Parameters<RunConfigHolder["update"]>[0]["sampling"]): void {
+    this.runConfigHolder.update({ sampling });
     for (const session of this.sessions.values()) {
       session.applySampling(sampling);
     }
