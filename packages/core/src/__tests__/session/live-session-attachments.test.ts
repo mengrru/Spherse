@@ -14,20 +14,15 @@ const { getChatStreamFnMock, resolveModelByIdMock } = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../../model-providers/index.js", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../model-providers/index.js")>();
-  return {
-    ...actual,
-    getChatStreamFn: getChatStreamFnMock,
-    resolveModelById: resolveModelByIdMock,
-  };
-});
+const stubCatalog = {
+  getChatStreamFn: getChatStreamFnMock,
+  resolveModelById: resolveModelByIdMock,
+} as never;
 
 import { createProject } from "../../factory.js";
 import { LiveSession } from "../../session/live-session.js";
 import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
-import { createDefaultModelResolver } from "../../session/model-resolver.js";
+import { createModelResolver } from "../../session/model-resolver.js";
 import { createImageAttachmentProcessor } from "../../attachments/image-processor.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
@@ -80,7 +75,8 @@ describe("LiveSession attachment handling", () => {
       fileWriteMutex: (runtime as any).sessionRuntime.deps.fileWriteMutex,
       logger: createSilentLogger(),
       runConfig: new RunConfigHolder({ defaultModel: "openai/gpt-4o" }),
-      modelResolver: createDefaultModelResolver(),
+      modelResolver: createModelResolver(stubCatalog),
+      modelCatalog: stubCatalog,
       capabilities: builtinToolCapabilities(),
       stores: createStoreRegistry(),
       attachmentProcessors: [createImageAttachmentProcessor()],

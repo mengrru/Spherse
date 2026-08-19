@@ -15,13 +15,15 @@ const { getChatStreamFnMock, resolveModelByIdMock } = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../../model-providers/index.js", async (importOriginal) => {
+vi.mock("../../model-providers/catalog.js", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("../../model-providers/index.js")>();
+    await importOriginal<typeof import("../../model-providers/catalog.js")>();
   return {
     ...actual,
-    getChatStreamFn: getChatStreamFnMock,
-    resolveModelById: resolveModelByIdMock,
+    ModelCatalog: class {
+      getChatStreamFn = getChatStreamFnMock;
+      resolveModelById = resolveModelByIdMock;
+    },
   };
 });
 

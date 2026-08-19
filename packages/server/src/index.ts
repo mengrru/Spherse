@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import multipart from "@fastify/multipart";
-import type { Logger, SamplingParams } from "@spherse/core";
+import type { Logger, SamplingParams, ModelCatalog } from "@spherse/core";
 import { NotFoundError, ValidationError, AccessDeniedError, ConflictError } from "@spherse/core";
 import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
@@ -14,7 +14,7 @@ import { ChatSessionHub } from "./chat-session-hub.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleBusWebSocket } from "./ws-bus.js";
 
-export { ProjectRegistry, type ProjectContext, type ProjectInfo, type RegisterOptions } from "./registry.js";
+export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type ProjectInfo, type RegisterOptions } from "./registry.js";
 
 export const DEFAULT_SERVER_PORT = 53972;
 
@@ -29,6 +29,7 @@ export interface CreateServerOptions {
   sampling?: SamplingParams;
   auth?: AuthOptions;
   port?: number;
+  modelCatalog?: ModelCatalog;
 }
 
 export async function createMultiProjectServer(
@@ -93,6 +94,7 @@ export async function createMultiProjectServer(
   const registry = new ProjectRegistry(logger, {
     defaultModel: options?.defaultModel,
     sampling: options?.sampling,
+    modelCatalog: options?.modelCatalog,
   });
 
   const chatHub = new ChatSessionHub(logger);

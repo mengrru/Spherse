@@ -96,7 +96,12 @@ export class SessionManager {
       throw new NotFoundError(`Session "${sessionId}" not found`);
     }
     const messages = agentStore.sessions.getSessionMessages(sessionId);
-    return computeSessionStatus(messages, agentStore.getProfile(), this.runConfigHolder.current().defaultModel);
+    return computeSessionStatus(
+      messages,
+      agentStore.getProfile(),
+      this.deps.modelCatalog.resolveModelById.bind(this.deps.modelCatalog),
+      this.runConfigHolder.current().defaultModel,
+    );
   }
 
   destroySession(sessionId: string): void {

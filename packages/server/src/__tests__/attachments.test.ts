@@ -60,6 +60,11 @@ describe("attachments routes", () => {
         projectManager: {
           getRootPath: () => tmpDir,
           getFileWriteMutex: () => ({ run: (_abs, fn) => fn() }),
+          writeBinaryFile: async (rel: string, data: Uint8Array) => {
+            const abs = path.join(tmpDir, rel);
+            await fs.promises.mkdir(path.dirname(abs), { recursive: true });
+            await fs.promises.writeFile(abs, data);
+          },
         },
       };
     });

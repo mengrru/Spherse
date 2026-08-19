@@ -1,17 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-const { resolveModelByIdMock } = vi.hoisted(() => ({
-  resolveModelByIdMock: vi.fn((modelId: string) => ({ id: modelId, provider: "x", contextWindow: 32768 })),
-}));
-
-vi.mock("../../model-providers/index.js", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../model-providers/index.js")>();
-  return {
-    ...actual,
-    resolveModelById: resolveModelByIdMock,
-  };
-});
+const resolveModelByIdMock = vi.fn((modelId: string) => ({ id: modelId, provider: "x", contextWindow: 32768 }));
 
 import {
   resolveEffectiveModelId,
@@ -54,23 +43,23 @@ describe("resolveEffectiveModelId", () => {
 describe("resolveContextWindow", () => {
   it("returns the contextWindow from the resolved model", () => {
     resolveModelByIdMock.mockReturnValueOnce({ id: "m", provider: "p", contextWindow: 200000 });
-    expect(resolveContextWindow({ ...baseProfile, model: "p/m" })).toBe(200000);
+    expect(resolveContextWindow({ ...baseProfile, model: "p/m" }, resolveModelByIdMock)).toBe(200000);
   });
 
   it("returns null when no model can be resolved", () => {
-    expect(resolveContextWindow(baseProfile, undefined)).toBeNull();
+    expect(resolveContextWindow(baseProfile, resolveModelByIdMock, undefined)).toBeNull();
   });
 
   it("returns null when resolveModelById throws", () => {
     resolveModelByIdMock.mockImplementationOnce(() => {
       throw new Error("unknown model");
     });
-    expect(resolveContextWindow({ ...baseProfile, model: "p/missing" })).toBeNull();
+    expect(resolveContextWindow({ ...baseProfile, model: "p/missing" }, resolveModelByIdMock)).toBeNull();
   });
 
   it("returns null when the resolved model lacks contextWindow", () => {
     resolveModelByIdMock.mockReturnValueOnce({ id: "m", provider: "p" });
-    expect(resolveContextWindow({ ...baseProfile, model: "p/m" })).toBeNull();
+    expect(resolveContextWindow({ ...baseProfile, model: "p/m" }, resolveModelByIdMock)).toBeNull();
   });
 });
 
@@ -111,6 +100,7 @@ describe("computeSessionStatus", () => {
     const status = computeSessionStatus(
       [{ role: "assistant", usage: { totalTokens: 4242 } }],
       { ...baseProfile, model: "p/m" },
+      resolveModelByIdMock,
     );
     expect(status).toEqual({ currentTokens: 4242, contextWindowLimit: 1000 });
   });
@@ -120,6 +110,7 @@ describe("computeSessionStatus", () => {
     const status = computeSessionStatus(
       [{ role: "user", content: "hello world" }],
       { ...baseProfile, model: "p/m" },
+      resolveModelByIdMock,
     );
     expect(status.currentTokens).toBeGreaterThan(0);
     expect(status.currentTokens).toBe(3);
@@ -127,7 +118,7 @@ describe("computeSessionStatus", () => {
   });
 
   it("returns null contextWindowLimit when model cannot be resolved", () => {
-    const status = computeSessionStatus([], baseProfile, undefined);
+    const status = computeSessionStatus([], baseProfile, resolveModelByIdMock, undefined);
     expect(status.contextWindowLimit).toBeNull();
     expect(status.currentTokens).toBe(0);
   });

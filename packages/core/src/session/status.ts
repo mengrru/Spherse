@@ -1,7 +1,6 @@
 import type { Message } from "@earendil-works/pi-ai";
 import type { AgentProfile } from "../types.js";
 import { estimateTokens } from "../context/token-estimate.js";
-import { resolveModelById } from "../model-providers/index.js";
 
 export interface SessionStatus {
   currentTokens: number;
@@ -15,7 +14,11 @@ export function resolveEffectiveModelId(
   return profile.model || defaultModel || undefined;
 }
 
-export function resolveContextWindow(profile: AgentProfile, defaultModel?: string): number | null {
+export function resolveContextWindow(
+  profile: AgentProfile,
+  resolveModelById: (modelId: string) => unknown,
+  defaultModel?: string,
+): number | null {
   const modelId = resolveEffectiveModelId(profile, defaultModel);
   if (!modelId) return null;
   try {
@@ -38,12 +41,13 @@ export function extractLastUsageTotalTokens(messages: unknown[]): number | null 
 export function computeSessionStatus(
   messages: unknown[],
   profile: AgentProfile,
+  resolveModelById: (modelId: string) => unknown,
   defaultModel?: string,
 ): SessionStatus {
   const lastUsage = extractLastUsageTotalTokens(messages);
   const currentTokens = lastUsage ?? estimateTokens(messages as Message[]);
   return {
     currentTokens,
-    contextWindowLimit: resolveContextWindow(profile, defaultModel),
+    contextWindowLimit: resolveContextWindow(profile, resolveModelById, defaultModel),
   };
 }

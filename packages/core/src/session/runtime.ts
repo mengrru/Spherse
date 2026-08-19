@@ -4,7 +4,8 @@ import type { Logger } from "../logger.js";
 import type { SamplingParams } from "../types.js";
 import { composeTurnHooks, type TurnHooksFactory } from "../kernel/turn-hooks.js";
 import type { ModelResolver } from "./model-resolver.js";
-import { createDefaultModelResolver } from "./model-resolver.js";
+import { createModelResolver } from "./model-resolver.js";
+import { ModelCatalog } from "../model-providers/catalog.js";
 import type { Capability } from "../kernel/capability.js";
 import type { AttachmentProcessor } from "../kernel/attachments.js";
 import type { StoreRegistry } from "../kernel/ports.js";
@@ -42,6 +43,7 @@ export interface RuntimeDeps {
   readonly runConfig: RunConfigSource;
   readonly createTurnHooks?: TurnHooksFactory;
   readonly modelResolver: ModelResolver;
+  readonly modelCatalog: ModelCatalog;
   readonly capabilities: ReadonlyArray<Capability>;
   readonly stores: import("../kernel/ports.js").StoreRegistry;
   readonly attachmentProcessors: ReadonlyArray<AttachmentProcessor>;
@@ -59,8 +61,10 @@ export function createRuntimeDeps(input: {
   stores: StoreRegistry;
   runConfig: RunConfigSource;
   modelResolver?: ModelResolver;
+  modelCatalog?: ModelCatalog;
 }): Readonly<RuntimeDeps> {
   const capabilities = input.capabilities;
+  const catalog = input.modelCatalog ?? new ModelCatalog();
   return freezeRuntimeDeps({
     projectStore: input.projectStore,
     projectRoot: input.projectStore.getRootPath(),
@@ -73,7 +77,8 @@ export function createRuntimeDeps(input: {
           .map((c) => c.turnHooks?.(agentId, sessionId))
           .filter((h): h is NonNullable<ReturnType<TurnHooksFactory>> => Boolean(h)),
       ),
-    modelResolver: input.modelResolver ?? createDefaultModelResolver(),
+    modelCatalog: catalog,
+    modelResolver: input.modelResolver ?? createModelResolver(catalog),
     capabilities,
     stores: input.stores,
     attachmentProcessors: capabilities.flatMap((c) => c.attachmentProcessors ?? []),

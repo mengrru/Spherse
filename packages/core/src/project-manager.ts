@@ -3,13 +3,19 @@ import type { AgentMcpConfig } from "./mcp/index.js";
 import { ProjectStore } from "./store/project.js";
 import type { ChangelogEntry, AgentChangePayload } from "./store/project.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
+import { resolveProjectPath } from "./utils/path-safety.js";
+import { serverAccessPolicy } from "./access/access-policy.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { NotFoundError, ValidationError } from "./errors.js";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 export class ProjectManager {
   private projectStore: ProjectStore;
   private fileWriteMutex: FileWriteMutex;
   private logger: Logger;
+
+  private serverPolicy: ReturnType<typeof serverAccessPolicy> | undefined;
 
   constructor(projectStore: ProjectStore, logger?: Logger, fileWriteMutex?: FileWriteMutex) {
     this.projectStore = projectStore;
@@ -211,4 +217,28 @@ export class ProjectManager {
   getFileWriteMutex(): FileWriteMutex {
     return this.fileWriteMutex;
   }
+
+  private policy(): ReturnType<typeof serverAccessPolicy> {
+    this.serverPolicy ??= serverAccessPolicy(this.projectStore.getRootPath());
+    return this.serverPolicy;
+  }
+
+  async writeFile(relativePath: string, content: string): Promise<void> {
+    const resolved = resolveProjectPath(this.getRootPath(), relativePath);
+    this.policy().assertWrite(relativePath);
+    await this.fileWriteMutex.run(resolved, async () => {
+      await fs.mkdir(path.dirname(resolved), { recursive: true });
+      await fs.writeFile(resolved, content, "utf-8");
+    });
+  }
+
+  async writeBinaryFile(relativePath: string, data: Uint8Array): Promise<void> {
+    const resolved = resolveProjectPath(this.getRootPath(), relativePath);
+    this.policy().assertWrite(relativePath);
+    await this.fileWriteMutex.run(resolved, async () => {
+      await fs.mkdir(path.dirname(resolved), { recursive: true });
+      await fs.writeFile(resolved, data);
+    });
+  }
+
 }

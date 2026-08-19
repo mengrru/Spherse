@@ -127,24 +127,16 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
     async (req) => {
       const relativePath = req.params["*"];
       const pm = req.projectCtx!.projectManager;
-      const root = pm.getRootPath();
-      const policy = serverAccessPolicy(root);
-      try {
-        policy.assertWrite(relativePath);
-      } catch (err) {
-        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
-        throw err;
-      }
-      const absolutePath = resolveProjectPath(root, relativePath);
-
       if (typeof req.body?.content !== "string") {
         throw badRequest("Missing or invalid 'content'");
       }
 
-      await req.projectCtx!.projectManager.getFileWriteMutex().run(absolutePath, async () => {
-        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-        await fs.writeFile(absolutePath, req.body.content, "utf-8");
-      });
+      try {
+        await pm.writeFile(relativePath, req.body.content);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        throw err;
+      }
       return { ok: true };
     },
   );

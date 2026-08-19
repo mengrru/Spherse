@@ -1,15 +1,18 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
-import { createProject } from "@spherse/core";
+import { createProject, ModelCatalog } from "@spherse/core";
 import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger, SamplingParams } from "@spherse/core";
 
 export interface ProjectContext {
   runtime: ProjectRuntime;
-  projectManager: ProjectManager;
-  sessionRuntime: SessionManager;
-  triggerManager: TriggerManager;
   projectId: string;
 }
+
+export type ProjectContextCompat = ProjectContext & {
+  readonly projectManager: ProjectManager;
+  readonly sessionRuntime: SessionManager;
+  readonly triggerManager: TriggerManager;
+};
 
 export interface ProjectInfo {
   id: string;
@@ -23,27 +26,34 @@ export interface RegisterOptions {
 }
 
 export class ProjectRegistry {
-  private projects = new Map<string, ProjectContext>();
-  private pending = new Map<string, Promise<ProjectContext>>();
+  private projects = new Map<string, ProjectContextCompat>();
+  private pending = new Map<string, Promise<ProjectContextCompat>>();
   private lastOpenedMap = new Map<string, string>();
   private logger: Logger;
   private defaultModel?: string;
   private sampling?: SamplingParams;
 
+  private readonly modelCatalog?: ModelCatalog;
+
+  getSupportedProviders() {
+    return (this.modelCatalog ?? new ModelCatalog()).getSupportedProviders();
+  }
+
   constructor(
     logger: Logger,
-    options?: { defaultModel?: string; sampling?: SamplingParams },
+    options?: { defaultModel?: string; sampling?: SamplingParams; modelCatalog?: ModelCatalog },
   ) {
     this.logger = logger;
     this.defaultModel = options?.defaultModel;
     this.sampling = options?.sampling;
+    this.modelCatalog = options?.modelCatalog;
   }
 
-  async register(projectRoot: string, options?: RegisterOptions): Promise<ProjectContext> {
+  async register(projectRoot: string, options?: RegisterOptions): Promise<ProjectContextCompat> {
     const resolvedRoot = path.resolve(projectRoot);
 
     for (const ctx of this.projects.values()) {
-      if (ctx.projectManager.getRootPath() === resolvedRoot) {
+      if (ctx.runtime.projectManager.getRootPath() === resolvedRoot) {
         if (options?.lastOpened) {
           this.lastOpenedMap.set(ctx.projectId, options.lastOpened);
         }
@@ -63,12 +73,13 @@ export class ProjectRegistry {
     }
   }
 
-  private async doRegister(resolvedRoot: string, options?: RegisterOptions): Promise<ProjectContext> {
+  private async doRegister(resolvedRoot: string, options?: RegisterOptions): Promise<ProjectContextCompat> {
     const projectLogger = this.logger.child({ projectRoot: resolvedRoot });
     const runtime = await createProject(resolvedRoot, {
       defaultModel: this.defaultModel,
       sampling: this.sampling,
       logger: projectLogger,
+      ...(this.modelCatalog ? { modelCatalog: this.modelCatalog } : {}),
     });
 
     let projectId = runtime.projectId;
@@ -82,13 +93,19 @@ export class ProjectRegistry {
       projectId = newId;
     }
 
-    const ctx: ProjectContext = {
+    const ctx: ProjectContextCompat = Object.freeze({
       runtime,
-      projectManager: runtime.projectManager,
-      sessionRuntime: runtime.sessionRuntime,
-      triggerManager: runtime.triggerManager,
       projectId,
-    };
+      get projectManager() {
+        return runtime.projectManager;
+      },
+      get sessionRuntime() {
+        return runtime.sessionRuntime;
+      },
+      get triggerManager() {
+        return runtime.triggerManager;
+      },
+    });
     this.projects.set(projectId, ctx);
     if (options?.lastOpened) {
       this.lastOpenedMap.set(projectId, options.lastOpened);
@@ -96,7 +113,7 @@ export class ProjectRegistry {
     return ctx;
   }
 
-  get(projectId: string): ProjectContext | undefined {
+  get(projectId: string): ProjectContextCompat | undefined {
     return this.projects.get(projectId);
   }
 
@@ -111,7 +128,7 @@ export class ProjectRegistry {
   listInfo(): ProjectInfo[] {
     const result: ProjectInfo[] = [];
     for (const [id, ctx] of this.projects) {
-      const rootPath = ctx.projectManager.getRootPath();
+      const rootPath = ctx.runtime.projectManager.getRootPath();
       const lastOpened = this.lastOpenedMap.get(id);
       result.push({ id, name: path.basename(rootPath), rootPath, lastOpened });
     }
@@ -126,7 +143,7 @@ export class ProjectRegistry {
   getInfo(projectId: string): ProjectInfo | undefined {
     const ctx = this.projects.get(projectId);
     if (!ctx) return undefined;
-    const rootPath = ctx.projectManager.getRootPath();
+    const rootPath = ctx.runtime.projectManager.getRootPath();
     const lastOpened = this.lastOpenedMap.get(projectId);
     return { id: projectId, name: path.basename(rootPath), rootPath, lastOpened };
   }
@@ -158,7 +175,7 @@ export class ProjectRegistry {
     this.defaultModel = model;
     for (const ctx of this.projects.values()) {
       try {
-        ctx.sessionRuntime.setDefaultModel(model);
+        ctx.runtime.sessionRuntime.setDefaultModel(model);
       } catch (err) {
         this.logger.error({ err }, "failed to update default model for project");
       }
@@ -169,7 +186,7 @@ export class ProjectRegistry {
     this.sampling = sampling;
     for (const ctx of this.projects.values()) {
       try {
-        ctx.sessionRuntime.setSampling(sampling);
+        ctx.runtime.sessionRuntime.setSampling(sampling);
       } catch (err) {
         this.logger.error({ err }, "failed to update sampling for project");
       }

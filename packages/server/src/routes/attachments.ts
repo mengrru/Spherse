@@ -1,5 +1,4 @@
 import fs from "node:fs/promises";
-import path from "node:path";
 import { randomBytes } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
@@ -79,10 +78,7 @@ export function registerAttachmentsRoutes(
       throw forbidden("Access denied");
     }
 
-    await pm.getFileWriteMutex().run(destAbs, async () => {
-      await fs.mkdir(path.dirname(destAbs), { recursive: true });
-      await fs.writeFile(destAbs, fileBuffer!);
-    });
+    await pm.writeBinaryFile(destRel, fileBuffer!);
 
     return {
       type: "image",

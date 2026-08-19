@@ -17,12 +17,14 @@ import { createStoreRegistry } from "./kernel/ports.js";
 import { ProjectRuntime } from "./project-runtime.js";
 import { initPresets } from "./presets.js";
 import { type Logger, createSilentLogger } from "./logger.js";
+import { ModelCatalog } from "./model-providers/catalog.js";
 
 export interface AssembleOptions {
   projectName?: string;
   defaultModel?: string;
   sampling?: SamplingParams;
   logger?: Logger;
+  modelCatalog?: ModelCatalog;
 }
 
 export async function assembleProject(
@@ -88,6 +90,7 @@ export async function assembleProject(
     projectStore,
     logger,
     fileWriteMutex,
+    modelCatalog: options?.modelCatalog,
     capabilities: [
       ...builtinToolCapabilities(),
       triggerCapability,

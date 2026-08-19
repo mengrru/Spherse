@@ -17,7 +17,7 @@ vi.mock("electron", () => ({
 }));
 
 import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore, getMobileAccess, setMobileAccess } from "./settings";
-import { getSupportedProviders } from "@spherse/core";
+import { getAppModelCatalog } from "./model-catalog.js";
 
 describe("mergeModelGroup sampling passthrough", () => {
   it("uses incoming sampling when present", () => {
@@ -207,7 +207,7 @@ describe("customProviders persistence", () => {
       customProviders: [customDef],
     });
 
-    const catalog = getSupportedProviders();
+    const catalog = getAppModelCatalog().getSupportedProviders();
     expect(catalog["my-openai"]).toBeDefined();
     expect(catalog["my-openai"].custom).toBe(true);
     expect(catalog["my-openai"].baseUrl).toBe("https://api.example.com/v1");
@@ -217,7 +217,7 @@ describe("customProviders persistence", () => {
       models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
       customProviders: [],
     });
-    expect(getSupportedProviders()["my-openai"]).toBeUndefined();
+    expect(getAppModelCatalog().getSupportedProviders()["my-openai"]).toBeUndefined();
   });
 });
 

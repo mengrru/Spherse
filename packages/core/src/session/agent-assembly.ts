@@ -2,7 +2,7 @@ import { Agent } from "@earendil-works/pi-agent-core";
 import type { AgentTool, StreamFn } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
 import type { AgentProfile, SamplingParams, TimePerceptionConfig } from "../types.js";
-import { getChatStreamFn } from "../model-providers/index.js";
+
 import type { ApprovalGate } from "../tools/with-approval.js";
 import type { AskGate } from "../tools/ask-user.js";
 import type { SkillStore } from "../store/skill.js";
@@ -22,10 +22,11 @@ import { llmAccessPolicy } from "../access/access-policy.js";
 import type { RuntimeDeps } from "./runtime.js";
 
 export function composeStreamFn(
+  catalog: Pick<import("../model-providers/catalog.js").ModelCatalog, "getChatStreamFn">,
   sampling: SamplingParams | undefined,
   timePerception: TimePerceptionConfig | undefined,
 ): StreamFn {
-  const base = getChatStreamFn(sampling);
+  const base = catalog.getChatStreamFn(sampling);
   const withRetry: StreamFn = (model, context, options) =>
     base(model, context, { ...options, maxRetries: options?.maxRetries ?? 1 });
   return isActiveTimePerception(timePerception)
@@ -128,7 +129,7 @@ export async function buildAgent(
     deps.logger.warn({ agentId: profile.id }, "model not resolvable, agent will wait for model config");
   }
 
-  const streamFn = composeStreamFn(deps.runConfig.current().sampling, profile.timePerception);
+  const streamFn = composeStreamFn(deps.modelCatalog, deps.runConfig.current().sampling, profile.timePerception);
 
   return new Agent({
     initialState: {

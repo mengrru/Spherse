@@ -264,7 +264,7 @@ export class AgentRunner {
 
   applySampling(sampling: SamplingParams | undefined): void {
     const profile = this.deps.projectStore.getAgent(this.agentId)?.getProfile();
-    this.agent.streamFunction = composeStreamFn(sampling, profile?.timePerception);
+    this.agent.streamFunction = composeStreamFn(this.deps.modelCatalog, sampling, profile?.timePerception);
   }
 
   async applyReload(): Promise<void> {
@@ -283,6 +283,7 @@ export class AgentRunner {
       this.agent.state.systemPrompt = systemPrompt;
       this.agent.state.tools = tools;
       this.agent.streamFunction = composeStreamFn(
+        this.deps.modelCatalog,
         this.deps.runConfig.current().sampling,
         profile.timePerception,
       );

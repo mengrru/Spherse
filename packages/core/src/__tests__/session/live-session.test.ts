@@ -14,20 +14,15 @@ const { getChatStreamFnMock, resolveModelByIdMock } = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("../../model-providers/index.js", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../model-providers/index.js")>();
-  return {
-    ...actual,
-    getChatStreamFn: getChatStreamFnMock,
-    resolveModelById: resolveModelByIdMock,
-  };
-});
+const stubCatalog = {
+  getChatStreamFn: getChatStreamFnMock,
+  resolveModelById: resolveModelByIdMock,
+} as never;
 
 import { createProject } from "../../factory.js";
 import { LiveSession } from "../../session/live-session.js";
 import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
-import { createDefaultModelResolver } from "../../session/model-resolver.js";
+import { createModelResolver } from "../../session/model-resolver.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
 import { createLog } from "../../kernel/message-log.js";
@@ -108,7 +103,8 @@ describe("LiveSession context engineering", () => {
       mcpConnectionManager: { load: async () => ({ tools: [], info: [] }) },
       runConfig,
       getTriggerManager: () => undefined,
-      modelResolver: createDefaultModelResolver(),
+      modelResolver: createModelResolver(stubCatalog),
+      modelCatalog: stubCatalog,
       capabilities: builtinToolCapabilities(),
       stores: createStoreRegistry(),
     };
@@ -496,7 +492,8 @@ describe("LiveSession yolo mode", () => {
       mcpConnectionManager: { load: async () => ({ tools: [], info: [] }) },
       runConfig: new RunConfigHolder(),
       getTriggerManager: () => undefined,
-      modelResolver: createDefaultModelResolver(),
+      modelResolver: createModelResolver(stubCatalog),
+      modelCatalog: stubCatalog,
       capabilities: builtinToolCapabilities(),
       stores: createStoreRegistry(),
     };
