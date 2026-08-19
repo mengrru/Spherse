@@ -29,6 +29,7 @@ spherse/
 │   │       │   ├── mcp/              # McpConnectionManager + turnHooks（按配置版本 memo 的工具合并）+ mcp-context block
 │   │       │   ├── attachments/      # image attachment processor 贡献（无全局注册表）
 │   │       │   ├── compaction/       # maybeCompactLog 纯变换（transform.ts）+ capability
+│   │       │   ├── time-perception/ # streamDecorators 贡献（<time> 前缀注入）+ 提示 block
 │   │       │   ├── memory/           # per-agent JSONL MemoryStore（store.ts，含 MEMORY_PATH_RULE）+ memory_save/recall 工具 + <memory> block
 │   │       │   ├── shared/           # llmPolicyOf 等跨能力共享工具
 │   │       │   └── builtin.ts        # builtinToolCapabilities()：纯工具类 capability 集合

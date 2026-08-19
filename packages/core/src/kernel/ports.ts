@@ -50,6 +50,7 @@ export interface ToolCatalog {
 export interface ToolHost {
   readonly agentId: string;
   readonly sessionId: string;
+  readonly profile: import("../types.js").AgentProfile;
   readonly projectRoot: string;
   readonly projectStore: ProjectStore;
   readonly fileWriteMutex: FileWriteMutex;
@@ -63,6 +64,7 @@ export interface ToolHost {
 
 export interface SessionView {
   readonly agentId: string;
+  readonly profile: import("../types.js").AgentProfile;
   readonly projectStore: ProjectStore;
   readonly stores: StoreRegistry;
 }

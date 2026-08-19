@@ -12,6 +12,7 @@ import { createMcpCapability } from "./capabilities/mcp/index.js";
 import { attachmentsCapability } from "./capabilities/attachments/index.js";
 import { compactionCapability } from "./capabilities/compaction/index.js";
 import { memoryCapability } from "./capabilities/memory/index.js";
+import { timePerceptionCapability } from "./capabilities/time-perception/index.js";
 import { createStoreRegistry, type SessionPort } from "./kernel/ports.js";
 import type { Capability } from "./kernel/capability.js";
 import { ProjectRuntime } from "./project-runtime.js";
@@ -35,6 +36,7 @@ export function defaultCapabilities(projectStore: ProjectStore, logger: Logger):
     createMcpCapability({ projectStore, logger }),
     attachmentsCapability(),
     compactionCapability({ projectStore, logger }),
+    timePerceptionCapability(),
     memoryCapability(),
   ];
 }

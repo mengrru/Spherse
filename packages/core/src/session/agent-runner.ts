@@ -22,7 +22,12 @@ import { createAttachmentSanitizer } from "../attachments/sanitizer.js";
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
 import { logFromCompaction, logFromRows } from "./compactor.js";
 import { readCurrentTokens } from "../context/token-estimate.js";
-import { buildAgent, buildPromptAndTools, composeStreamFn } from "./agent-assembly.js";
+import {
+  buildAgent,
+  buildPromptAndTools,
+  composeStreamFn,
+  streamDecoratorsFor,
+} from "./agent-assembly.js";
 import type { SessionStore } from "../store/session.js";
 
 export type RunnerEventHandler = (event: AgentEvent | SessionControlEvent) => void;
@@ -273,7 +278,21 @@ export class AgentRunner {
 
   applySampling(sampling: SamplingParams | undefined): void {
     const profile = this.deps.projectStore.getAgent(this.agentId)?.getProfile();
-    this.agent.streamFunction = composeStreamFn(this.deps.modelCatalog, sampling, profile?.timePerception);
+    if (!profile) return;
+    this.agent.streamFunction = composeStreamFn(
+      this.deps.modelCatalog,
+      sampling,
+      streamDecoratorsFor(this.deps.capabilities, this.viewOf(profile)),
+    );
+  }
+
+  private viewOf(profile: import("../types.js").AgentProfile): import("../kernel/ports.js").SessionView {
+    return {
+      agentId: this.agentId,
+      profile,
+      projectStore: this.deps.projectStore,
+      stores: this.deps.stores,
+    };
   }
 
   async applyReload(): Promise<void> {
@@ -293,7 +312,7 @@ export class AgentRunner {
       this.agent.streamFunction = composeStreamFn(
         this.deps.modelCatalog,
         this.deps.runConfig.current().sampling,
-        profile.timePerception,
+        streamDecoratorsFor(this.deps.capabilities, this.viewOf(profile)),
       );
       this.turnHooks.onReload?.();
       this.deps.logger.info(

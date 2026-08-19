@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentTool } from "@earendil-works/pi-agent-core";
+import type { AgentEvent, AgentTool, StreamFn } from "@earendil-works/pi-agent-core";
 import { ConflictError } from "../errors.js";
 import type { ContextBlock } from "./context-block.js";
 import type { EventMiddleware } from "./event-pipeline.js";
@@ -10,6 +10,8 @@ export type { KernelServices } from "./ports.js";
 
 export type AgentConfigChangeKind = "mcp" | "tools" | "profile";
 
+export type StreamDecorator = (view: SessionView) => ((base: StreamFn) => StreamFn) | undefined;
+
 export interface TurnMiddlewareSource {
   eventMiddlewares?: ReadonlyArray<EventMiddleware<AgentEvent>>;
 }
@@ -20,6 +22,7 @@ export interface Capability extends TurnMiddlewareSource {
   tools?(host: ToolHost): AgentTool[];
   contextBlocks?(view: SessionView): Promise<ContextBlock[]>;
   turnHooks?: TurnHooksFactory;
+  streamDecorators?: ReadonlyArray<StreamDecorator>;
   attachmentProcessors?: ReadonlyArray<AttachmentProcessor>;
   readonly pathRules?: ReadonlyArray<PathRule>;
   onAgentDeleted?(agentId: string): Promise<void> | void;

@@ -36,19 +36,29 @@ describe("serializeBlocks", () => {
       );
     });
 
-    it("includes alias and time perception when present", () => {
+    it("includes alias when present; time perception is contributed by its capability, not session-context", async () => {
       const out = serializeBlocks([
         buildSessionContext({
           name: "Helper",
           alias: "小明",
           slug: "helper",
           sessionId: "s1",
-          timePerceptionEnabled: true,
         }),
       ]);
       expect(out).toContain("agent-alias: 小明");
-      expect(out).toContain("time-perception: enabled");
-      expect(out).toContain("Do not output <time> tags");
+      expect(out).not.toContain("time-perception");
+
+      const { timePerceptionCapability } = await import("../../capabilities/time-perception/index.js");
+      const view = {
+        agentId: "a",
+        profile: {
+          timePerception: { enabled: true, epochMs: 0, startMs: 0, flowRate: 60 },
+        },
+      } as never;
+      const blocks = await timePerceptionCapability().contextBlocks!(view);
+      expect(blocks).toHaveLength(1);
+      expect(blocks[0].render()).toContain("time-perception: enabled");
+      expect(blocks[0].render()).toContain("Do not output <time> tags");
     });
 
     it("serializes preloaded-context files", () => {

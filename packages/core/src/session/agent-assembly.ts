@@ -1,13 +1,12 @@
 import { Agent } from "@earendil-works/pi-agent-core";
 import type { AgentTool, StreamFn } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
-import type { AgentProfile, SamplingParams, TimePerceptionConfig } from "../types.js";
+import type { AgentProfile, SamplingParams } from "../types.js";
 
 import type { ApprovalGate, AskGate } from "../kernel/gates.js";
 import { readContextFiles, type ContextFile } from "../context/read-context-files.js";
 
 
-import { isActiveTimePerception, wrapWithTimePerception } from "../context/time-perception.js";
 import type { UserMessageWithAttachments } from "../attachments/index.js";
 import type { ToolHost } from "../kernel/ports.js";
 import { serializeBlocks, type ContextBlock } from "../kernel/context-block.js";
@@ -17,14 +16,29 @@ import type { RuntimeDeps } from "./runtime.js";
 export function composeStreamFn(
   catalog: Pick<import("../model-providers/catalog.js").ModelCatalog, "getChatStreamFn">,
   sampling: SamplingParams | undefined,
-  timePerception: TimePerceptionConfig | undefined,
+  decorators: ReadonlyArray<(base: StreamFn) => StreamFn> = [],
 ): StreamFn {
   const base = catalog.getChatStreamFn(sampling);
-  const withRetry: StreamFn = (model, context, options) =>
+  let fn: StreamFn = (model, context, options) =>
     base(model, context, { ...options, maxRetries: options?.maxRetries ?? 1 });
-  return isActiveTimePerception(timePerception)
-    ? wrapWithTimePerception(withRetry, timePerception)
-    : withRetry;
+  for (const decorate of decorators) {
+    fn = decorate(fn);
+  }
+  return fn;
+}
+
+export function streamDecoratorsFor(
+  capabilities: ReadonlyArray<import("../kernel/capability.js").Capability>,
+  view: import("../kernel/ports.js").SessionView,
+): Array<(base: StreamFn) => StreamFn> {
+  const decorators: Array<(base: StreamFn) => StreamFn> = [];
+  for (const capability of capabilities) {
+    for (const source of capability.streamDecorators ?? []) {
+      const decorate = source(view);
+      if (decorate) decorators.push(decorate);
+    }
+  }
+  return decorators;
 }
 
 interface SessionMeta {
@@ -32,7 +46,6 @@ interface SessionMeta {
   alias?: string;
   slug: string;
   sessionId: string;
-  timePerceptionEnabled?: boolean;
 }
 
 function escapeAttr(value: string): string {
@@ -69,10 +82,6 @@ export function buildSessionContext(meta: SessionMeta): ContextBlock {
       }
       lines.push(`agent-slug: ${meta.slug}`);
       lines.push(`session-id: ${meta.sessionId}`);
-      if (meta.timePerceptionEnabled) {
-        lines.push("time-perception: enabled");
-        lines.push("Do not output <time> tags in your replies; they are metadata for your awareness only.");
-      }
       return `<session-context>\n${lines.join("\n")}\n</session-context>`;
     },
   };
@@ -103,6 +112,7 @@ export async function buildPromptAndTools(
   const host: ToolHost = {
     agentId: profile.id,
     sessionId,
+    profile,
     projectRoot: deps.projectRoot,
     projectStore: deps.projectStore,
     fileWriteMutex: deps.fileWriteMutex,
@@ -136,7 +146,6 @@ export async function buildPromptAndTools(
       alias: profile.alias,
       slug: profile.slug,
       sessionId,
-      timePerceptionEnabled: isActiveTimePerception(profile.timePerception),
     }),
   );
 
@@ -177,7 +186,11 @@ export async function buildAgent(
     deps.logger.warn({ agentId: profile.id }, "model not resolvable, agent will wait for model config");
   }
 
-  const streamFn = composeStreamFn(deps.modelCatalog, deps.runConfig.current().sampling, profile.timePerception);
+  const streamFn = composeStreamFn(
+    deps.modelCatalog,
+    deps.runConfig.current().sampling,
+    streamDecoratorsFor(deps.capabilities, { agentId: profile.id, profile, projectStore: deps.projectStore, stores: deps.stores }),
+  );
 
   return new Agent({
     initialState: {

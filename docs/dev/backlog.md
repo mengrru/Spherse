@@ -199,3 +199,5 @@
 - [x] **core README 开发守则**：`packages/core/README.md` 新增——架构总览（kernel/session/capabilities/装配点分层图）、六条设计哲学（贡献即数据/窄接口/管线/单源/磁盘契约/不可拔插不变量）、增加能力的七步原则（以 memory 为验收案例，侵入面以 git diff 验收）、关键约定（写入门面/唯一 mutex/catalog 所有权/in-flight guard/access 优先级/导出面/测试不伸私有）
 
 - [x] **统一配置变更信号**：kernel `invalidateAgent`（mcp 特化命名）泛化为 `onAgentConfigChanged(agentId, kind: "mcp" | "tools" | "profile")`；ProjectRuntime 暴露 `dispatchAgentConfigChanged` 广播（updateAgentMcp 发 kind="mcp"）。为 roadmap 的动态 tool 注入（kind="tools"）与运行时配置重载预铺统一语义——所有配置失效走同一信号，不再新增特化钩子
+
+- [x] **时间感知能力化**：kernel 新增 `streamDecorators` 贡献点（`StreamDecorator = (view) => (base: StreamFn) => StreamFn | undefined`，洋葱组合、后注册者最外层；SessionView/ToolHost 增 profile 字段）；time-perception 从 assembly 内联迁为 capability——贡献 stream decorator（替代 composeStreamFn 的 timePerception 参数）+ `time-perception: enabled` 提示 block（从 session-context 两行迁出）；composeStreamFn 保持 eager 解析（构造时一次）。为运行时动态 stream 改写（时间流速调整、请求观测等）预铺贡献面
