@@ -1,11 +1,11 @@
 import { EventEmitter } from "node:events";
-import { CronExpressionParser } from "cron-parser";
 import type { SessionPort } from "../kernel/ports.js";
 import type { ProjectStore } from "../store/project.js";
 import type { TriggerStore } from "../store/trigger.js";
 import type { TriggerEntry, TriggerLogEntry } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
-import { resolveTemplateVars } from "./template.js";
+import { TriggerScheduler, getNextCronDate, type TriggerRef } from "./scheduler.js";
+import { TriggerExecutor } from "./executor.js";
 
 export interface TriggerEventPayload {
   agentId: string;
@@ -18,32 +18,11 @@ export interface TriggerEventPayload {
   trigger?: TriggerEntry;
 }
 
-function getNextCronDate(cron: string): Date | null {
-  try {
-    const expression = CronExpressionParser.parse(cron);
-    return expression.next().toDate();
-  } catch {
-    return null;
-  }
-}
-
-interface TriggerStateItem {
-  cron: string;
-  nextFire: number;
-}
-
-interface TriggerRef {
-  agentId: string;
-  agentName: string;
-  entry: TriggerEntry;
-}
-
 export class TriggerManager extends EventEmitter {
-  private sessionRuntime: SessionPort;
-  private projectStore: ProjectStore;
-  private logger: Logger;
-  private inProgress: Set<string> = new Set();
-  private triggerState: Map<string, TriggerStateItem> = new Map();
+  private readonly projectStore: ProjectStore;
+  private readonly logger: Logger;
+  private readonly scheduler: TriggerScheduler;
+  private readonly executor: TriggerExecutor;
 
   constructor(deps: {
     sessionRuntime: SessionPort;
@@ -51,9 +30,23 @@ export class TriggerManager extends EventEmitter {
     logger?: Logger;
   }) {
     super();
-    this.sessionRuntime = deps.sessionRuntime;
     this.projectStore = deps.projectStore;
     this.logger = deps.logger ?? createSilentLogger();
+    this.executor = new TriggerExecutor({
+      session: deps.sessionRuntime,
+      getTriggerStore: (agentId) => this.getTriggerStore(agentId),
+      logger: this.logger,
+    });
+    this.executor.on("trigger_triggered", (payload) => this.emit("trigger_triggered", payload));
+    this.executor.on("trigger_completed", (payload) => this.emit("trigger_completed", payload));
+    this.executor.on("trigger_failed", (payload) => this.emit("trigger_failed", payload));
+    this.scheduler = new TriggerScheduler({
+      readAll: () => this.readAllTriggers(),
+      onDue: (ref) => {
+        void this.executor.fire(ref.entry, ref.agentId, ref.agentName, "");
+      },
+      isRunning: (triggerId) => this.executor.isRunning(triggerId),
+    });
   }
 
   private getTriggerStore(agentId: string): TriggerStore | null {
@@ -73,60 +66,21 @@ export class TriggerManager extends EventEmitter {
     return result;
   }
 
-  private gcTriggerState(refs: TriggerRef[]): void {
-    const diskIds = new Set(refs.map((r) => r.entry.id));
-    for (const id of this.triggerState.keys()) {
-      if (!diskIds.has(id)) this.triggerState.delete(id);
-    }
-  }
-
-  private ensureTriggerState(id: string, cron: string): TriggerStateItem {
-    let state = this.triggerState.get(id);
-    if (!state || state.cron !== cron) {
-      const nextDate = getNextCronDate(cron);
-      state = { cron, nextFire: nextDate ? nextDate.getTime() : 0 };
-      this.triggerState.set(id, state);
-    }
-    return state;
-  }
-
   onTimeTick(): void {
-    const now = Date.now();
-    const allTriggers = this.readAllTriggers();
-    this.gcTriggerState(allTriggers);
-
-    for (const { agentId, agentName, entry } of allTriggers) {
-      if (entry.type !== "time" || !entry.enabled || !entry.cron) continue;
-      if (this.inProgress.has(entry.id)) continue;
-
-      const state = this.ensureTriggerState(entry.id, entry.cron);
-      if (state.nextFire > 0 && state.nextFire <= now) {
-        const nextDate = getNextCronDate(entry.cron);
-        state.nextFire = nextDate ? nextDate.getTime() : 0;
-
-        this.inProgress.add(entry.id);
-        void this.fire(entry, agentId, agentName, "").finally(() => {
-          this.inProgress.delete(entry.id);
-        });
-      }
-    }
+    this.scheduler.onTimeTick();
   }
 
   onUserEvent(eventName: string, payload: string): number {
     if (eventName.startsWith("sp:")) return 0;
 
     let fired = 0;
-    const allTriggers = this.readAllTriggers();
-    for (const { agentId, agentName, entry } of allTriggers) {
+    for (const { agentId, agentName, entry } of this.readAllTriggers()) {
       if (entry.type !== "event" || !entry.enabled || !entry.eventName) continue;
-      if (this.inProgress.has(entry.id)) continue;
       if (entry.eventName !== eventName) continue;
+      if (this.executor.isRunning(entry.id)) continue;
 
-      this.inProgress.add(entry.id);
       fired++;
-      void this.fire(entry, agentId, agentName, payload, eventName).finally(() => {
-        this.inProgress.delete(entry.id);
-      });
+      void this.executor.fire(entry, agentId, agentName, payload, eventName);
     }
     return fired;
   }
@@ -145,18 +99,12 @@ export class TriggerManager extends EventEmitter {
   }
 
   update(agentId: string, triggerId: string, partial: Partial<TriggerEntry>): TriggerEntry | null {
-    const store = this.getTriggerStore(agentId);
-    if (!store) return null;
-    const updated = store.update(triggerId, partial);
+    const updated = this.getTriggerStore(agentId)?.update(triggerId, partial) ?? null;
     if (updated) {
       if (updated.type === "time" && updated.cron) {
-        const nextDate = getNextCronDate(updated.cron);
-        this.triggerState.set(triggerId, {
-          cron: updated.cron,
-          nextFire: nextDate ? nextDate.getTime() : 0,
-        });
+        this.scheduler.markFired(triggerId, updated.cron);
       } else {
-        this.triggerState.delete(triggerId);
+        this.scheduler.invalidate(triggerId);
       }
       this.emit("trigger_updated", { agentId, triggerId, trigger: updated });
     }
@@ -165,15 +113,14 @@ export class TriggerManager extends EventEmitter {
 
   delete(agentId: string, triggerId: string): void {
     this.getTriggerStore(agentId)?.delete(triggerId);
-    this.triggerState.delete(triggerId);
+    this.scheduler.invalidate(triggerId);
     this.emit("trigger_updated", { agentId, triggerId });
   }
 
   deleteAllForAgent(agentId: string): void {
     const store = this.getTriggerStore(agentId);
-    const entries = store?.list() ?? [];
-    for (const entry of entries) {
-      this.triggerState.delete(entry.id);
+    for (const entry of store?.list() ?? []) {
+      this.scheduler.invalidate(entry.id);
     }
     store?.deleteAll();
     this.logger.info({ agentId }, "agent triggers deleted");
@@ -182,8 +129,7 @@ export class TriggerManager extends EventEmitter {
   getNextTrigger(agentId: string, triggerId: string): Date | null {
     const entry = this.get(agentId, triggerId);
     if (!entry || !entry.enabled || entry.type !== "time" || !entry.cron) return null;
-    const nextDate = getNextCronDate(entry.cron);
-    return nextDate;
+    return getNextCronDate(entry.cron);
   }
 
   getRecentLogs(agentId: string, limit?: number): TriggerLogEntry[] {
@@ -191,120 +137,20 @@ export class TriggerManager extends EventEmitter {
   }
 
   stopAll(): void {
-    this.inProgress.clear();
+    this.executor.forgetAll();
     this.logger.info("trigger manager stopped");
   }
 
   runNow(agentId: string, triggerId: string): TriggerEntry | null {
     const entry = this.get(agentId, triggerId);
     if (!entry) return null;
-    if (this.inProgress.has(triggerId)) return entry;
+    if (this.executor.isRunning(triggerId)) return entry;
     if (entry.type === "time" && entry.cron) {
-      const nextDate = getNextCronDate(entry.cron);
-      this.triggerState.set(triggerId, {
-        cron: entry.cron,
-        nextFire: nextDate ? nextDate.getTime() : 0,
-      });
+      this.scheduler.markFired(triggerId, entry.cron);
     }
     const agentStore = this.projectStore.getAgent(agentId);
     const agentName = agentStore?.getProfile().name ?? "";
-    this.inProgress.add(triggerId);
-    void this.fire(entry, agentId, agentName, "").finally(() => {
-      this.inProgress.delete(triggerId);
-    });
+    void this.executor.fire(entry, agentId, agentName, "");
     return entry;
-  }
-
-  private async fire(
-    entry: TriggerEntry,
-    agentId: string,
-    agentName: string,
-    payload: string,
-    eventName?: string,
-  ): Promise<void> {
-    const now = Date.now();
-    const triggerName = entry.name || (entry.type === "time" ? entry.cron! : entry.eventName!);
-
-    const logEntry: TriggerLogEntry = {
-      triggerId: entry.id,
-      triggerName,
-      agentName,
-      eventName,
-      sessionId: "",
-      triggeredAt: now,
-      status: "running",
-    };
-
-    this.emit("trigger_triggered", { agentId, triggerId: entry.id, eventName, triggeredAt: now });
-
-    try {
-      let sessionId: string;
-
-      switch (entry.mode) {
-        case "new_session": {
-          sessionId = await this.sessionRuntime.createSession(agentId, "triggered");
-          break;
-        }
-        case "existing_session": {
-          if (!entry.targetSessionId) {
-            const err = "existing_session mode but no targetSessionId";
-            this.logger.error({ triggerId: entry.id }, err);
-            throw new Error(err);
-          }
-          sessionId = entry.targetSessionId;
-          await this.sessionRuntime.restoreSession(agentId, sessionId);
-          break;
-        }
-        case "reusable_session": {
-          const bound = entry.boundSessionId;
-          if (bound && this.sessionRuntime.sessionExists(agentId, bound)) {
-            sessionId = bound;
-            await this.sessionRuntime.restoreSession(agentId, sessionId);
-          } else {
-            sessionId = await this.sessionRuntime.createSession(agentId, "triggered");
-            this.update(agentId, entry.id, { boundSessionId: sessionId });
-          }
-          break;
-        }
-        default: {
-          const err = `unknown trigger mode: ${(entry as TriggerEntry).mode}`;
-          this.logger.error({ triggerId: entry.id }, err);
-          throw new Error(err);
-        }
-      }
-
-      logEntry.sessionId = sessionId;
-      this.getTriggerStore(agentId)?.appendLog(logEntry);
-
-      const resolvedMessage = resolveTemplateVars(entry.message, { agentName, payload });
-
-      await this.sessionRuntime.sendMessage(sessionId, resolvedMessage, (event) => {
-        if (event.type === "agent_end") {
-          this.getTriggerStore(agentId)?.appendLog({
-            ...logEntry,
-            completedAt: Date.now(),
-            status: "success",
-          });
-          this.emit("trigger_completed", {
-            agentId,
-            triggerId: entry.id,
-            sessionId,
-            status: "success",
-          });
-        }
-      });
-    } catch (err) {
-      this.getTriggerStore(agentId)?.appendLog({
-        ...logEntry,
-        completedAt: Date.now(),
-        status: "failed",
-        error: String(err),
-      });
-      this.emit("trigger_failed", {
-        agentId,
-        triggerId: entry.id,
-        error: String(err),
-      });
-    }
   }
 }
