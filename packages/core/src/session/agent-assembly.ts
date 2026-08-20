@@ -4,7 +4,7 @@ import type { Message } from "@earendil-works/pi-ai";
 import type { AgentProfile, SamplingParams } from "../types.js";
 
 import type { ApprovalGate, AskGate } from "../kernel/gates.js";
-import { readContextFiles, type ContextFile } from "../context/read-context-files.js";
+import { readContextFiles, type ContextFile } from "./read-context-files.js";
 
 
 import type { ToolHost } from "../kernel/ports.js";

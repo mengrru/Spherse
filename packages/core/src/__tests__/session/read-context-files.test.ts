@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { llmAccessPolicy } from "../../access/access-policy.js";
-import { readContextFiles } from "../../context/read-context-files.js";
+import { readContextFiles } from "../../session/read-context-files.js";
 import { createTempProject, cleanupDir, writeFile } from "../helpers.js";
 
 describe("readContextFiles", () => {

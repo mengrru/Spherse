@@ -4,7 +4,7 @@ import {
   formatPerceivedTime,
   buildTimePrefix,
   isActiveTimePerception,
-} from "../../context/time-perception.js";
+} from "../../capabilities/time-perception/time-perception.js";
 import type { TimePerceptionConfig } from "../../types.js";
 
 const EPOCH = Date.UTC(2026, 0, 1);

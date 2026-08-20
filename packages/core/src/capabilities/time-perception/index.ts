@@ -1,5 +1,5 @@
 import type { Capability, StreamDecorator } from "../../kernel/capability.js";
-import { isActiveTimePerception, wrapWithTimePerception } from "../../context/time-perception.js";
+import { isActiveTimePerception, wrapWithTimePerception } from "./time-perception.js";
 import type { ContextBlock } from "../../kernel/context-block.js";
 
 const streamDecorator: StreamDecorator = (view) => {
