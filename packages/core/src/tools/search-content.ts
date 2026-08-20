@@ -3,13 +3,11 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import type { AccessPolicy } from "../access/access-policy.js";
+import type { AccessPolicy, AccessPolicyProvider } from "../access/access-policy.js";
 import { shouldSkipDirEntry } from "../utils/fs-walk.js";
 import { resolveProjectPath, isProjectMetaPath } from "../utils/path-safety.js";
 import { isBinaryBuffer } from "../utils/binary-detect.js";
 import { PROJECT_META_DIR } from "../types.js";
-
-type AccessPolicyProvider = () => AccessPolicy;
 
 const SearchContentParams = Type.Object({
   query: Type.String({ description: "Search query (substring match)" }),

@@ -1,6 +1,6 @@
 import type { Message } from "@earendil-works/pi-ai";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
-import type { TimePerceptionConfig } from "../types.js";
+import type { TimePerceptionConfig } from "../../types.js";
 
 export function computePerceivedTime(
   realMs: number,

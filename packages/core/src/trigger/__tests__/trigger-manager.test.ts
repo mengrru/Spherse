@@ -170,7 +170,7 @@ describe("TriggerManager", () => {
     expect(triggerManager.list(otherAgentId)).toHaveLength(1);
   });
 
-  it("onUserEvent fires matching event triggers", () => {
+  it("onUserEvent fires matching event triggers", async () => {
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
     const createSessionSpy = vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fake-session");
     vi.spyOn(sessionRuntime, "restoreSession").mockResolvedValue("fake-session");
@@ -179,9 +179,10 @@ describe("TriggerManager", () => {
     triggerManager.create(agentId, entry);
 
     triggerManager.onUserEvent("user-login", "Alice");
+    await new Promise((r) => setTimeout(r, 0));
 
     expect(createSessionSpy).toHaveBeenCalledWith(agentId, "triggered");
-    expect(sendMessageSpy).toHaveBeenCalledWith("fake-session", "Hello Alice", expect.any(Function));
+    expect(sendMessageSpy).toHaveBeenCalledWith("fake-session", "Hello Alice", [], expect.any(Function));
 
     sendMessageSpy.mockRestore();
     createSessionSpy.mockRestore();
@@ -211,7 +212,7 @@ describe("TriggerManager", () => {
     sendMessageSpy.mockRestore();
   });
 
-  it("onUserEvent fires event trigger with empty payload when none provided", () => {
+  it("onUserEvent fires event trigger with empty payload when none provided", async () => {
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
     vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fake-session");
 
@@ -219,23 +220,81 @@ describe("TriggerManager", () => {
     triggerManager.create(agentId, entry);
 
     triggerManager.onUserEvent("test-event", "");
+    await new Promise((r) => setTimeout(r, 0));
 
-    expect(sendMessageSpy).toHaveBeenCalledWith("fake-session", "Payload: []", expect.any(Function));
+    expect(sendMessageSpy).toHaveBeenCalledWith("fake-session", "Payload: []", [], expect.any(Function));
     sendMessageSpy.mockRestore();
   });
 
-  it("onTimeTick fires time triggers with due cron", () => {
+  it("onTimeTick fires time triggers with due cron", async () => {
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
     vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fake-session");
 
-    const pastCron = new Date(Date.now() - 60000);
-    const cronStr = `${pastCron.getMinutes()} ${pastCron.getHours()} * * *`;
+    const future = new Date(Date.now() + 2 * 60 * 1000);
+    const cronStr = `${future.getMinutes()} ${future.getHours()} * * *`;
     const entry = makeTimeEntry({ cron: cronStr });
     triggerManager.create(agentId, entry);
 
-    triggerManager.onTimeTick();
-    expect(sendMessageSpy).toHaveBeenCalled();
-    sendMessageSpy.mockRestore();
+    try {
+      triggerManager.onTimeTick();
+      vi.setSystemTime(Date.now() + 5 * 60 * 1000);
+      triggerManager.onTimeTick();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(sendMessageSpy).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      sendMessageSpy.mockRestore();
+    }
+  });
+
+  it("onTimeTick fires the occurrence scheduled shortly after a cron change", async () => {
+    const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
+    vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fake-session");
+
+    const start = Date.now();
+    const farCron = "0 0 1 1 2099";
+    const near = new Date(start + 2 * 60 * 1000);
+    const nearCron = `${near.getMinutes()} ${near.getHours()} * * *`;
+    const entry = makeTimeEntry({ cron: farCron });
+    triggerManager.create(agentId, entry);
+
+    try {
+      triggerManager.onTimeTick();
+      vi.setSystemTime(start + 30_000);
+      triggerManager.update(agentId, entry.id, { cron: nearCron });
+      vi.setSystemTime(start + 5 * 60 * 1000);
+      triggerManager.onTimeTick();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(sendMessageSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      sendMessageSpy.mockRestore();
+    }
+  });
+
+  it("does not fire a cached occurrence that elapsed while the trigger was disabled", async () => {
+    const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
+    vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fake-session");
+
+    const start = Date.now();
+    const near = new Date(start + 2 * 60 * 1000);
+    const cronStr = `${near.getMinutes()} ${near.getHours()} * * *`;
+    const entry = makeTimeEntry({ cron: cronStr });
+    triggerManager.create(agentId, entry);
+
+    try {
+      triggerManager.onTimeTick();
+      vi.setSystemTime(start + 30_000);
+      triggerManager.update(agentId, entry.id, { enabled: false });
+      vi.setSystemTime(start + 3 * 60 * 1000);
+      triggerManager.update(agentId, entry.id, { enabled: true });
+      triggerManager.onTimeTick();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(sendMessageSpy).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      sendMessageSpy.mockRestore();
+    }
   });
 
   it("onTimeTick does not fire event type triggers", () => {
@@ -249,7 +308,7 @@ describe("TriggerManager", () => {
     sendMessageSpy.mockRestore();
   });
 
-  it("runNow manually fires a trigger", () => {
+  it("runNow manually fires a trigger", async () => {
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
     vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fake-session");
 
@@ -257,6 +316,7 @@ describe("TriggerManager", () => {
     triggerManager.create(agentId, entry);
 
     triggerManager.runNow(agentId, entry.id);
+    await new Promise((r) => setTimeout(r, 0));
     expect(sendMessageSpy).toHaveBeenCalled();
     sendMessageSpy.mockRestore();
   });
@@ -323,6 +383,25 @@ describe("TriggerManager", () => {
 
     createSessionSpy.mockRestore();
     sendMessageSpy.mockRestore();
+  });
+
+  it("reusable_session binding does not emit trigger_updated", async () => {
+    vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("new-sess");
+    vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
+
+    const entry = makeEventEntry({ mode: "reusable_session" });
+    triggerManager.create(agentId, entry);
+
+    const updated = vi.fn();
+    triggerManager.on("trigger_updated", updated);
+
+    triggerManager.onUserEvent("test-event", "data");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe("new-sess");
+    expect(updated).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
   });
 
   it("reusable_session reuses the bound session on subsequent fire", async () => {

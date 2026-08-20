@@ -1,8 +1,7 @@
-import { categorizePath, ruleForPath, type PathCategory } from "./path-category.js";
+import { categorizePath, ruleForPath, type PathCategory, type PathRule } from "./path-category.js";
 import { normalizeProjectRelativePath } from "./denied-paths.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 import { AccessDeniedError } from "../errors.js";
-import type { PathRule } from "../kernel/ports.js";
 
 export type Decision = { allowed: true } | { allowed: false; reason: string };
 
@@ -12,6 +11,8 @@ export interface AccessPolicy {
   canRead(relativePath: string): boolean;
   canWrite(relativePath: string): boolean;
 }
+
+export type AccessPolicyProvider = () => AccessPolicy;
 
 const LLM_READ: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "userFiles",

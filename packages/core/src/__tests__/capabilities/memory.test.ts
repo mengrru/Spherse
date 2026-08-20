@@ -2,14 +2,13 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { MemoryStore, filterEntries } from "../../capabilities/memory/store.js";
+import { MemoryStore, filterEntries, MEMORY_PATH_RULE } from "../../store/memory.js";
 import { memoryCapability } from "../../capabilities/memory/index.js";
 import type { ToolHost } from "../../kernel/ports.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
 import { ProjectStore } from "../../store/project.js";
 import { createSilentLogger } from "../../logger.js";
 import { llmAccessPolicy } from "../../access/access-policy.js";
-import { MEMORY_PATH_RULE } from "../../capabilities/memory/store.js";
 
 const TEST_AGENT_PROFILE = `---
 name: Mem Agent

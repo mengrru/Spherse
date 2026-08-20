@@ -13,7 +13,7 @@ spherse/
 │   │       ├── project-runtime.ts    # ProjectRuntime：轻量协调层（capability 生命周期遍历：onAgentDeleted/invalidateAgent/shutdown；triggerManager/timerService 为 derived getter）
 │   │       ├── kernel/               # 内核：零 I/O 纯组合子（capabilities 与 session 的公共契约层）
 │   │       │   ├── capability.ts     # Capability 接口（tools/contextBlocks/turnHooks/attachmentProcessors/pathRules/eventMiddlewares/init/onAgentDeleted/invalidateAgent/shutdown）+ TurnMiddlewareSource + CapabilityRegistry
-│   │       │   ├── ports.ts          # SessionPort / ToolHost / SessionView（窄视图）/ PathRule（自带 llm 裁决）/ StoreRegistry（含 forAgent 作用域）/ KernelServices
+│   │       │   ├── ports.ts          # SessionPort / ToolHost / SessionView（窄视图）/ StoreRegistry（含 forAgent 作用域）/ KernelServices（PathRule 定义在 access/path-category.ts，kernel 仅 type 引用）
 │   │       │   ├── gates.ts          # ApprovalGate / AskGate 端口（session control 请求的类型源）
 │   │       │   ├── event-pipeline.ts # EventMiddleware + createEventPipeline（横切组合律）
 │   │       │   ├── turn-hooks.ts     # TurnHooks（beforeTurn/afterTurn/onReload）+ composeTurnHooks
@@ -22,15 +22,16 @@ spherse/
 │   │       ├── capabilities/         # 能力模块（只依赖 kernel 类型；每个目录自足）
 │   │       │   ├── fs/               # read/write/edit/list/search/move/copy_file + generate_image
 │   │       │   ├── skill/            # load_skill 工具 + skill-catalog context block（三层 skill 合并）
-│   │       │   ├── changelog/        # append_changelog 工具 + render_card（render capability）
+│   │       │   ├── changelog/        # append_changelog 工具
+│   │       │   ├── render/           # render_card 工具（render capability）
 │   │       │   ├── agent-mgmt/       # manage_agent 工具（工具名校验用运行时 toolCatalog）
 │   │       │   ├── interaction/      # run_command / ask_user 工具（经 kernel gates）
 │   │       │   ├── trigger/          # TriggerManager + TimerService（只见 SessionPort，循环依赖消解）
 │   │       │   ├── mcp/              # McpConnectionManager + turnHooks（按配置版本 memo 的工具合并）+ mcp-context block
 │   │       │   ├── attachments/      # image processor 贡献 + contextProjector（convertToLlm 前剥 _attachments/空 image block）
 │   │       │   ├── compaction/       # maybeCompactLog 纯变换（transform.ts）+ capability
-│   │       │   ├── time-perception/ # streamDecorators 贡献（<time> 前缀注入）+ 提示 block
-│   │       │   ├── memory/           # per-agent JSONL MemoryStore（store.ts，含 MEMORY_PATH_RULE）+ memory_save/recall 工具 + <memory> block
+│   │       │   ├── time-perception/ # streamDecorators 贡献（<time> 前缀注入）+ 提示 block；感知时间数学在 time-perception.ts
+│   │       │   ├── memory/           # memory capability（memory_save/recall 工具接线 + <memory> block；MemoryStore 在 store/memory.ts）
 │   │       │   ├── shared/           # llmPolicyOf 等跨能力共享工具
 │   │       │   └── builtin.ts        # builtinToolCapabilities()：纯工具类 capability 集合
 │   │       ├── session/              # 会话运行时（kernel 抽象的编排实例化）
@@ -42,6 +43,7 @@ spherse/
 │   │       │   ├── approval-gate.ts / ask-gate.ts # bus 薄适配器
 │   │       │   ├── model-resolver.ts # resolveFor / resolveOrThrow（catalog 注入）
 │   │       │   ├── compactor.ts      # restore 构造器（logFromRows/logFromCompaction——sessions.db 格式兼容，tail 过 sanitize）
+│   │       │   ├── read-context-files.ts # profile 声明 context 文件读取（注入 systemPrompt 的 preloaded block；access policy 过滤）
 │   │       │   ├── event-middlewares.ts # log/persist（session 层不变量）
 │   │       │   ├── log-agent-event.ts # agent event → pino 日志映射
 │   │       │   └── status.ts / types.ts
@@ -49,16 +51,16 @@ spherse/
 │   │       │   ├── project.ts        # ProjectStore 聚合根（EventEmitter；agents Map；AGENTS.md/CHANGELOG.md）
 │   │       │   ├── agent-store.ts    # per-agent 聚合（profile/sessions/triggers/skills/mcp lazy getter）
 │   │       │   ├── session.ts        # SQLite session 持久化（sessions.db：messages/compactions 表）
-│   │       │   ├── trigger.ts / skill.ts / mcp-config.ts / agent-profile.ts / agent-slug.ts / project-config.ts
+│   │       │   ├── trigger.ts / skill.ts / mcp-config.ts / memory.ts / agent-profile.ts / agent-slug.ts / project-config.ts
 │   │       ├── tools/                # AgentTool 实现体（capability 的实现层，无注册表）
-│   │       │   ├── read/write/edit/list/search/move/copy-file.ts、run-command.ts、ask-user.ts、manage-agent.ts、manage-trigger.ts、emit-trigger-event.ts、load-skill.ts、render-card.ts、generate-image.ts、append-changelog.ts、with-approval.ts、json-check.ts
-│   │       ├── trigger/              # TriggerManager / TimerService / template / validation（capability 的实现层）
-│   │       ├── access/               # path-category（内置 PATH_PATTERNS + 注册规则优先）/ access-policy（llm/server 工厂，裁决优先级 deniedPaths > pathRules > 白名单）/ denied-paths
-│   │       ├── context/              # 共享纯函数：compaction（planCompaction/sanitizeToolCallPairs）/ token-estimate / time-perception / read-context-files
+│   │       │   ├── read/write/edit/list/search/move/copy-file.ts、run-command.ts、ask-user.ts、manage-agent.ts、manage-trigger.ts、emit-trigger-event.ts、load-skill.ts、render-card.ts、generate-image.ts、append-changelog.ts、memory-save.ts、memory-recall.ts、with-approval.ts、json-check.ts
+│   │       ├── trigger/              # TriggerManager（门面：CRUD+事件+委派）/ scheduler（时间调度状态）/ executor（fire 执行+日志）/ TimerService / template / validation
+│   │       ├── access/               # path-category（内置 PATH_PATTERNS + PathRule 类型 + 注册规则优先）/ access-policy（llm/server 工厂，裁决优先级 deniedPaths > pathRules > 白名单）/ denied-paths
+│   │       ├── context/              # context window 管理域（跨层共享纯函数）：compaction（planCompaction/sanitizeToolCallPairs）/ token-estimate
 │   │       ├── attachments/          # 附件域：AttachmentProcessor 端口 + image-processor + sanitizer（base64 卫生不变量）+ strip/sanitize
 │   │       ├── mcp/                  # mcp-client（连接与工具适配）/ mcp-connection-manager / config / types / json-schema-to-typebox
 │   │       ├── model-providers/      # ModelCatalog 类（per-runtime 实例，所有权在组合根）+ zhipu/openai images + index（仅 images 静态目录导出）
-│   │       ├── utils/                # file-write-mutex（全链路唯一实例）/ fs-walk / path-safety / binary-detect
+│   │       ├── utils/                # file-write-mutex（全链路唯一实例）/ fs-walk / path-safety / binary-detect / xml-escape
 │   │       ├── __tests__/            # Vitest 单元测试（kernel/capabilities/session/access/tools 分组）
 │   │       └── index.ts              # 公开导出（显式清单，按外部消费面收紧）
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容

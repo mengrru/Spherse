@@ -4,7 +4,8 @@ import type { ContextBlock } from "./context-block.js";
 import type { EventMiddleware } from "./event-pipeline.js";
 import type { TurnHooksFactory } from "./turn-hooks.js";
 import type { AttachmentProcessor } from "../attachments/index.js";
-import type { KernelServices, PathRule, SessionView, ToolHost } from "./ports.js";
+import type { KernelServices, SessionView, ToolHost } from "./ports.js";
+import type { PathRule } from "../access/path-category.js";
 
 export type { KernelServices } from "./ports.js";
 

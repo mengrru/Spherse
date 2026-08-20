@@ -3,11 +3,9 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import type { AccessPolicy } from "../access/access-policy.js";
+import type { AccessPolicy, AccessPolicyProvider } from "../access/access-policy.js";
 import { resolveProjectPath, isProjectMetaPath } from "../utils/path-safety.js";
 import { PROJECT_META_DIR } from "../types.js";
-
-type AccessPolicyProvider = () => AccessPolicy;
 
 const ListFilesParams = Type.Object({
   path: Type.String({ description: "Directory path relative to project root" }),

@@ -1,6 +1,11 @@
 import path from "node:path";
 import { PROJECT_META_DIR } from "../types.js";
-import type { PathRule } from "../kernel/ports.js";
+
+export interface PathRule {
+  readonly match: RegExp;
+  readonly category: string;
+  readonly llm: { readonly read: boolean; readonly write: boolean };
+}
 
 export type PathCategory =
   | "userFiles"

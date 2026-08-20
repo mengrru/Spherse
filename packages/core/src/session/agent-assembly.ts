@@ -4,12 +4,13 @@ import type { Message } from "@earendil-works/pi-ai";
 import type { AgentProfile, SamplingParams } from "../types.js";
 
 import type { ApprovalGate, AskGate } from "../kernel/gates.js";
-import { readContextFiles, type ContextFile } from "../context/read-context-files.js";
+import { readContextFiles, type ContextFile } from "./read-context-files.js";
 
 
 import type { ToolHost } from "../kernel/ports.js";
 import { serializeBlocks, type ContextBlock } from "../kernel/context-block.js";
 import { llmPolicyOf } from "../capabilities/shared/llm-policy.js";
+import { escapeXmlAttr } from "../utils/xml-escape.js";
 import type { RuntimeDeps } from "./runtime.js";
 
 export function composeStreamFn(
@@ -63,14 +64,6 @@ interface SessionMeta {
   sessionId: string;
 }
 
-function escapeAttr(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 export function buildProjectInstructions(content: string): ContextBlock | null {
   if (content.trim() === "") return null;
   return {
@@ -108,7 +101,7 @@ export function buildPreloadedContext(files: ContextFile[]): ContextBlock | null
     kind: "preloaded-context",
     render: () => {
       const rendered = files
-        .map((f) => `<context-file path="${escapeAttr(f.path)}">\n${f.content}\n</context-file>`)
+        .map((f) => `<context-file path="${escapeXmlAttr(f.path)}">\n${f.content}\n</context-file>`)
         .join("\n");
       return `<preloaded-context>\n${rendered}\n</preloaded-context>`;
     },
