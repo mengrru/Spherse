@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { categorizePath, ruleForPath } from "../../access/path-category.js";
+import { categorizePath, ruleForPath, type PathRule } from "../../access/path-category.js";
 import { llmAccessPolicy } from "../../access/access-policy.js";
-import type { PathRule } from "../../kernel/ports.js";
 
 const MEMORY_RULE: PathRule = {
   match: /^\.spherse\/agents\/[^/]+\/memory\.jsonl$/,

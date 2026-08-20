@@ -1,13 +1,6 @@
 import type { McpServerInfo } from "../../mcp/types.js";
 import type { ContextBlock } from "../../kernel/context-block.js";
-
-function escapeAttr(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+import { escapeXmlAttr } from "../../utils/xml-escape.js";
 
 export function mcpContextBlock(servers: McpServerInfo[]): ContextBlock | null {
   const meaningful = servers.filter(
@@ -37,16 +30,16 @@ function renderMcpServers(servers: McpServerInfo[]): string {
     const allResources = [
       ...s.resources.map(
         (r) =>
-          `<resource uri="${escapeAttr(r.uri)}" name="${escapeAttr(r.name)}"` +
-          (r.description ? ` description="${escapeAttr(r.description)}"` : "") +
-          (r.mimeType ? ` mimeType="${escapeAttr(r.mimeType)}"` : "") +
+          `<resource uri="${escapeXmlAttr(r.uri)}" name="${escapeXmlAttr(r.name)}"` +
+          (r.description ? ` description="${escapeXmlAttr(r.description)}"` : "") +
+          (r.mimeType ? ` mimeType="${escapeXmlAttr(r.mimeType)}"` : "") +
           "/>",
       ),
       ...s.resourceTemplates.map(
         (r) =>
-          `<resource-template uriTemplate="${escapeAttr(r.uriTemplate)}" name="${escapeAttr(r.name)}"` +
-          (r.description ? ` description="${escapeAttr(r.description)}"` : "") +
-          (r.mimeType ? ` mimeType="${escapeAttr(r.mimeType)}"` : "") +
+          `<resource-template uriTemplate="${escapeXmlAttr(r.uriTemplate)}" name="${escapeXmlAttr(r.name)}"` +
+          (r.description ? ` description="${escapeXmlAttr(r.description)}"` : "") +
+          (r.mimeType ? ` mimeType="${escapeXmlAttr(r.mimeType)}"` : "") +
           "/>",
       ),
     ];
@@ -59,22 +52,22 @@ function renderMcpServers(servers: McpServerInfo[]): string {
           const args = (p.arguments ?? [])
             .map(
               (a) =>
-                `<arg name="${escapeAttr(a.name)}"` +
+                `<arg name="${escapeXmlAttr(a.name)}"` +
                 (a.required ? ` required="true"` : "") +
-                (a.description ? ` description="${escapeAttr(a.description)}"` : "") +
+                (a.description ? ` description="${escapeXmlAttr(a.description)}"` : "") +
                 "/>",
             )
             .join("\n");
           const header =
-            `<prompt name="${escapeAttr(p.name)}"` +
-            (p.description ? ` description="${escapeAttr(p.description)}"` : "") +
+            `<prompt name="${escapeXmlAttr(p.name)}"` +
+            (p.description ? ` description="${escapeXmlAttr(p.description)}"` : "") +
             ">";
           return args ? `${header}\n${args}\n</prompt>` : `${header}</prompt>`;
         })
         .join("\n");
       parts.push(`<prompts>\n${prompts}\n</prompts>`);
     }
-    return `<server name="${escapeAttr(s.serverName)}"${capAttr}>\n${parts.join("\n")}\n</server>`;
+    return `<server name="${escapeXmlAttr(s.serverName)}"${capAttr}>\n${parts.join("\n")}\n</server>`;
   });
   return `<mcp-context>\n${rendered.join("\n")}\n</mcp-context>`;
 }

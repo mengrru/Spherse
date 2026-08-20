@@ -2,14 +2,7 @@ import type { Capability } from "../../kernel/capability.js";
 import type { ContextBlock } from "../../kernel/context-block.js";
 import { createLoadSkillTool } from "../../tools/load-skill.js";
 import type { SkillStore } from "../../store/skill.js";
-
-function escapeAttr(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+import { escapeXmlAttr } from "../../utils/xml-escape.js";
 
 export function skillCapability(): Capability {
   return {
@@ -36,7 +29,7 @@ export function skillCapability(): Capability {
       const skills = [...byName.values()];
       if (skills.length === 0) return [];
       const items = skills
-        .map((s) => `<skill-item name="${escapeAttr(s.name)}" description="${escapeAttr(s.description)}"/>`)
+        .map((s) => `<skill-item name="${escapeXmlAttr(s.name)}" description="${escapeXmlAttr(s.description)}"/>`)
         .join("\n");
       const block: ContextBlock = {
         kind: "skill-catalog",

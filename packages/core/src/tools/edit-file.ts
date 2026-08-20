@@ -2,12 +2,10 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import type { AccessPolicy } from "../access/access-policy.js";
+import type { AccessPolicyProvider } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 import { checkJson } from "./json-check.js";
-
-type AccessPolicyProvider = () => AccessPolicy;
 
 const EditFileParams = Type.Object({
   path: Type.String({ description: "Path relative to project root" }),

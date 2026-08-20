@@ -2,10 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import type { AccessPolicy } from "../access/access-policy.js";
+import type { AccessPolicyProvider } from "../access/access-policy.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
-
-type AccessPolicyProvider = () => AccessPolicy;
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "ico", "webp"]);
 

@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { PathRule } from "../../kernel/ports.js";
-
+import type { PathRule } from "../access/path-category.js";
 export interface MemoryEntry {
   id: string;
   agentId: string;
@@ -89,12 +88,4 @@ export class MemoryStore {
     if (this.cache) this.cache.push(entry);
     return entry;
   }
-
-  clearCache(): void {
-    this.cache = null;
-  }
-}
-
-export function memoryStoreOf(agentDir: string, agentId: string): MemoryStore {
-  return new MemoryStore(agentDir, agentId);
 }

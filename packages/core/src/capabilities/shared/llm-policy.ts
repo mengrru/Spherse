@@ -1,9 +1,7 @@
-import { llmAccessPolicy, type AccessPolicy } from "../../access/access-policy.js";
+import { llmAccessPolicy, type AccessPolicyProvider } from "../../access/access-policy.js";
 import type { ToolHost } from "../../kernel/ports.js";
 
-export type LlmPolicyProvider = () => AccessPolicy;
-
-export function llmPolicyOf(host: ToolHost): LlmPolicyProvider {
+export function llmPolicyOf(host: ToolHost): AccessPolicyProvider {
   return () =>
     llmAccessPolicy(
       host.projectStore.getRootPath(),
