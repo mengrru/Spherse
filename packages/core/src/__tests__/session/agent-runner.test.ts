@@ -241,6 +241,82 @@ describe("AgentRunner context engineering", () => {
     expect(agent.state.messages[0].content).toContain("hello world");
   });
 
+  it("restore synthesizes toolResult for interrupted tool call and persists it", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+
+    const userMsg = { role: "user", content: "run the tools", timestamp: Date.now() };
+    const assistantMsg = {
+      role: "assistant",
+      content: [
+        { type: "text", text: "calling tools" },
+        { type: "toolCall", id: "tc-1", name: "read_file", arguments: { path: "a.md" } },
+        { type: "toolCall", id: "tc-2", name: "read_file", arguments: { path: "b.md" } },
+      ],
+      stopReason: "toolUse",
+      timestamp: Date.now(),
+    };
+    const answeredResult = {
+      role: "toolResult",
+      toolCallId: "tc-1",
+      toolName: "read_file",
+      content: [{ type: "text", text: "content of a" }],
+      timestamp: Date.now(),
+    };
+    agentStore.sessions.appendMessage(sessionId, userMsg);
+    agentStore.sessions.appendMessage(sessionId, assistantMsg);
+    agentStore.sessions.appendMessage(sessionId, answeredResult);
+
+    const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
+    const messages = agentOf(runner).state.messages;
+
+    const synthesized = messages.find((m: any) => m.role === "toolResult" && m.toolCallId === "tc-2");
+    expect(synthesized).toBeDefined();
+    expect(synthesized.isError).toBe(true);
+    expect(synthesized.content[0].text).toContain("interrupted");
+
+    const persisted = agentStore.sessions.getSessionMessages(sessionId);
+    const persistedSynthetic = persisted.find((m: any) => m.role === "toolResult" && m.toolCallId === "tc-2");
+    expect(persistedSynthetic).toBeDefined();
+
+    const ids = liveIdsOf(runner);
+    expect(ids[ids.length - 1]).toBeGreaterThan(0);
+
+    const restored2 = await AgentRunner.initForRestore(deps, agentId, sessionId);
+    const messages2 = agentOf(restored2).state.messages;
+    const syntheticCount = messages2.filter((m: any) => m.role === "toolResult" && m.toolCallId === "tc-2").length;
+    expect(syntheticCount).toBe(1);
+  });
+
+  it("restore leaves fully answered tool calls untouched", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+
+    const userMsg = { role: "user", content: "run the tool", timestamp: Date.now() };
+    const assistantMsg = {
+      role: "assistant",
+      content: [
+        { type: "toolCall", id: "tc-1", name: "read_file", arguments: { path: "a.md" } },
+      ],
+      stopReason: "toolUse",
+      timestamp: Date.now(),
+    };
+    const answeredResult = {
+      role: "toolResult",
+      toolCallId: "tc-1",
+      toolName: "read_file",
+      content: [{ type: "text", text: "content of a" }],
+      timestamp: Date.now(),
+    };
+    agentStore.sessions.appendMessage(sessionId, userMsg);
+    agentStore.sessions.appendMessage(sessionId, assistantMsg);
+    agentStore.sessions.appendMessage(sessionId, answeredResult);
+
+    const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
+    expect(agentOf(runner).state.messages.length).toBe(3);
+    expect(agentStore.sessions.getSessionMessages(sessionId).length).toBe(3);
+  });
+
   it("restoreSession with compaction restores digest + tail", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
