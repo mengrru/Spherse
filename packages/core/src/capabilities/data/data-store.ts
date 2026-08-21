@@ -372,6 +372,7 @@ export function createDataStore(opts: CreateDataStoreOptions): DataStore {
 
     async mutate(file, name, args, opts): Promise<MutateResult> {
       const absPath = resolveDataFile(root, file);
+      const origin: DataOrigin = opts?.origin ?? "agent";
       const cached = recallIdempotent(absPath, opts?.idempotencyKey);
       if (cached !== undefined) return cached as MutateResult;
 
@@ -393,7 +394,7 @@ export function createDataStore(opts: CreateDataStoreOptions): DataStore {
           throw new ManifestStaleError(name, "mutation", Object.keys(manifest.mutations));
         }
         const result = applyMutation(loaded.doc, mutation, args, name, Object.keys(manifest.mutations));
-        const version = await persistLocked(absPath, loaded.doc, "agent", name);
+        const version = await persistLocked(absPath, loaded.doc, origin, name);
         const full = { version, result } satisfies MutateResult;
         rememberIdempotent(absPath, opts?.idempotencyKey, full);
         return full;

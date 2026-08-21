@@ -82,6 +82,52 @@ describe("data routes", () => {
     expect(JSON.parse(res.body).code).toBe("file_corrupted");
   });
 
+  it("mutate: runs manifest mutation with sdk origin", async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "mut.data.json"),
+      JSON.stringify({
+        $manifest: { version: 1, mutations: { addItem: { op: "append", path: "items", fields: { title: { type: "string", required: true } }, auto: { id: "uuid" } } } },
+        items: [],
+      }),
+    );
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/projects/p1/data/mutate",
+      payload: { file: "mut.data.json", name: "addItem", args: { title: "x" } },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.result.title).toBe("x");
+    expect(body.result.id).toMatch(/^[0-9a-f-]{36}$/);
+    const onDisk = JSON.parse(fs.readFileSync(path.join(tmpDir, "mut.data.json"), "utf8"));
+    expect(onDisk.items).toHaveLength(1);
+  });
+
+  it("mutate: unknown entry maps to 404 with validNames; validation error to 400", async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "mut2.data.json"),
+      JSON.stringify({
+        $manifest: { version: 1, mutations: { addItem: { op: "append", path: "items", fields: { title: { type: "string", required: true } } } } },
+        items: [],
+      }),
+    );
+    const unknown = await app.inject({
+      method: "POST",
+      url: "/api/projects/p1/data/mutate",
+      payload: { file: "mut2.data.json", name: "nope" },
+    });
+    expect(unknown.statusCode).toBe(404);
+    expect(JSON.parse(unknown.body).validNames).toEqual(["addItem"]);
+
+    const invalid = await app.inject({
+      method: "POST",
+      url: "/api/projects/p1/data/mutate",
+      payload: { file: "mut2.data.json", name: "addItem", args: {} },
+    });
+    expect(invalid.statusCode).toBe(400);
+    expect(JSON.parse(invalid.body).code).toBe("validation_failed");
+  });
+
   it("raw-set creates and updates; rejects $ keys with 400", async () => {
     const set = await app.inject({
       method: "POST",

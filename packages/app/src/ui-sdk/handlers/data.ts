@@ -71,6 +71,29 @@ registerAction("data.delete", async (params, ctx) => {
   }
 });
 
+registerAction("data.mutate", async (params, ctx) => {
+  const { file, name, args, idempotencyKey } = params as {
+    file: unknown;
+    name: unknown;
+    args?: unknown;
+    idempotencyKey?: unknown;
+  };
+  const validFile = validateFileParam(file);
+  if (!validFile || typeof name !== "string" || !name || !ctx.client) return;
+
+  try {
+    const r = await ctx.client.dataMutate({
+      file: validFile,
+      name,
+      ...(typeof args === "object" && args !== null && !Array.isArray(args) ? { args: args as Record<string, unknown> } : {}),
+      ...(typeof idempotencyKey === "string" && idempotencyKey ? { idempotencyKey } : {}),
+    });
+    respond(ctx, true, r.result);
+  } catch {
+    respond(ctx, false);
+  }
+});
+
 registerAction("data.keys", async (params, ctx) => {
   const { file } = params as { file: unknown };
   const validFile = validateFileParam(file);

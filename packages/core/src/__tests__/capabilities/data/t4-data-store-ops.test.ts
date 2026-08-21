@@ -175,6 +175,14 @@ describe("DataStore.mutate", () => {
     ]);
   });
 
+  it("mutate with origin 'sdk' emits sdk-origin events (same entry as page calls)", async () => {
+    events.length = 0;
+    const r = await store.mutate(FILE, "addTodo", { title: "from page" }, { origin: "sdk" });
+    expect(events).toEqual([{ file: FILE, version: r.version, origin: "sdk", summary: "addTodo" }]);
+    await store.mutate(FILE, "addTodo", { title: "from page again" });
+    expect(events[events.length - 1].origin).toBe("agent");
+  });
+
   it("append validation failures", async () => {
     await expect(store.mutate(FILE, "addTodo", {})).rejects.toThrow(DataValidationError);
     await expect(store.mutate(FILE, "addTodo", { title: "x", bogus: 1 })).rejects.toThrow(/unknown field/);

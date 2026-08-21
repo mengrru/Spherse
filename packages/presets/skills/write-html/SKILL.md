@@ -119,6 +119,7 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 要点速览（详情见 `use-ui-sdk`）：
 
 - `spherse.data.get` / `spherse.data.set` / `spherse.data.delete`：对 key-value 数据的读写删（均返回 Promise）
+- `spherse.data.mutate`：执行数据文件 `$manifest` 声明的业务 mutation 入口（结构性写入用，见下文 `$manifest` 一节）
 - 数据文件路径通过 `file` 参数显式指定，约定命名为 `{HTML文件名}.data.json` 并与 HTML 同级（如 `world/atlas.html` → `world/atlas.data.json`）；**字符串模式**下 HTML 不是文件，需自行指定一个项目内的 `.data.json` 路径
 - 数据文件**不能**放在 `.spherse/` 目录下
 - 两种渲染模式都可用（经 App 注入的 SDK，不依赖 `fetch`）
@@ -180,7 +181,9 @@ manifest 是你（生成页面时）向后续读该文件的 agent 传递业务�
 }
 ```
 
-要点：`queries` 声明 enum 过滤/排序/`identity` 游标分页；`mutations` 四种 op（`append`/`update`/`remove`/`set`），`match` 字段值由调用方传入（隐式必填），`fields` 做类型/枚举/默认值校验，`auto` 由 server 生成。页面代码照常用 `spherse.data.set("todos", arr)` 写数据即可——SDK 写入是原子的，无需页面侧防并发。
+要点：`queries` 声明 enum 过滤/排序/`identity` 游标分页；`mutations` 四种 op（`append`/`update`/`remove`/`set`），`match` 字段值由调用方传入（隐式必填），`fields` 做类型/枚举/默认值校验，`auto` 由 server 生成。
+
+**页面代码的写入粒度约定**：声明了 `$manifest` 的数据文件，页面 JS 对集合的**结构性增删改必须走 `spherse.data.mutate({ file, name, args })` 调用同名 mutation 入口**（与 agent 的 `mutate_data` 同一通道，锁内 item 级原子变更，并发互不覆盖）；`data.set` 仅用于单值/标量/低冲突数据，**不要**对数组集合整体 `data.set`——会覆盖 agent 并发写入的条目。
 
 ## 跳转到项目内其它文件：openFile
 

@@ -228,6 +228,22 @@ await spherse.data.set({ file: "world/game.data.json", key: "player", value: { n
 await spherse.data.delete({ file: "world/game.data.json", key: "score" });
 ```
 
+### `spherse.data.mutate(params)` → `Promise<any>`
+
+执行数据文件 `$manifest` 中声明的业务命名 mutation（与 agent 的 `mutate_data` 同一入口）。**结构性写入（新增/修改/删除数组条目等）优先用此接口**，不要用 `data.set` 传整个数组——避免与 agent 并发写同一集合时互相覆盖。响应 `data` 为该条目的写入结果。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| file | string | 是 | 数据文件路径 |
+| name | string | 是 | mutation 入口名（见文件 `$manifest`，或让生成页面的 agent 告知） |
+| args | object | 否 | 入口参数（必填字段见 manifest 声明；identity/match 字段按名传入） |
+| idempotencyKey | string | 否 | 幂等键：同一 key 重试返回首次结果，不重复执行 |
+
+```javascript
+await spherse.data.mutate({ file: "board.data.json", name: "addTodo", args: { title: "买牛奶" }, idempotencyKey: "add-milk-1" });
+await spherse.data.mutate({ file: "board.data.json", name: "setTodoStatus", args: { id: "abc", status: "done" } });
+```
+
 ### `spherse.data.keys(params)` → `Promise<string[]>`
 
 返回数据文件中所有顶层 key 列表。文件不存在时返回 `[]`。
@@ -252,6 +268,7 @@ const all = await spherse.data.entries({ file: "world/game.data.json" });
 - 顶层 JSON object，仅支持顶层 key 操作（不支持 `a.b.c` 嵌套路径；key 中的点不会被解释为路径）
 - value 支持任意 JSON 可序列化类型
 - `data.set` / `data.delete` 是**原子操作**：并发写不会互相覆盖，页面无需自己加锁或读-改-写防冲突
+- **写入粒度约定**：`data.set` 适合单值/标量/低冲突数据；**集合类（数组）的结构性增删改必须走 `data.mutate`**——`data.set` 传整个数组会覆盖 agent 并发写入的条目（丢失更新）
 - 数据文件损坏（非法 JSON）时 `data.*` 返回错误（`ok:false`），不会静默把文件重置为空
 - 顶层 `$` 前缀键为平台保留（如 `$manifest`）：`data.set` 拒绝写入、`data.keys` / `data.entries` 不返回它们
 

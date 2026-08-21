@@ -240,6 +240,7 @@ type DataChangeEvent = {
 | `POST /data/read` | `{ file, path?, offset?, limit?, ifVersion? }` | `path` 缺省 → outline；`path: "."` → 文档根（排除 `$` 键，SDK `data.entries` 用）；其余为 dot-path 局部读；带 `ifVersion` 未变化返回 `unchanged`。SDK `data.get`/`data.keys`/`data.entries` 的统一后端 |
 | `POST /data/raw-set` | `{ file, key, value, ifVersion? }` | SDK data.set 后端（拒绝 `$` 前缀 key） |
 | `POST /data/raw-delete` | `{ file, key, ifVersion? }` | SDK data.delete 后端 |
+| `POST /data/mutate` | `{ file, name, args?, idempotencyKey? }` | SDK `data.mutate` 后端——页面与 agent 共用 manifest mutation 入口做 item 级原子写入，消除「页面持旧副本整体 data.set 覆盖 agent 并发写入」的丢失更新窗口（origin=sdk） |
 
 query/mutate/outline 不设 HTTP route（无 renderer 消费方）；若未来出现远程 agent 或调试 UI 需要，再按需暴露。
 

@@ -3,6 +3,8 @@ import {
   DataFileCorruptedError,
   DataValidationError,
   ForbiddenKeyError,
+  ManifestStaleError,
+  UnknownEntryError,
   VersionConflictError,
   type DataStore,
 } from "@spherse/core";
@@ -19,6 +21,12 @@ function dataStoreOf(registry: ProjectRegistry, req: { params: { projectId: stri
 function sendDataError(reply: FastifyReply, err: unknown): FastifyReply {
   if (err instanceof VersionConflictError) {
     return reply.code(409).send({ error: "version conflict", code: "version_conflict", currentVersion: err.currentVersion });
+  }
+  if (err instanceof UnknownEntryError) {
+    return reply.code(404).send({ error: err.message, code: "unknown_entry", validNames: err.validNames });
+  }
+  if (err instanceof ManifestStaleError) {
+    return reply.code(409).send({ error: err.message, code: "manifest_stale", validNames: err.validNames });
   }
   if (err instanceof DataValidationError) {
     return reply.code(400).send({ error: err.message, code: "validation_failed", fields: err.fields });
@@ -48,6 +56,29 @@ export function registerDataRoutes(fastify: FastifyInstance, registry: ProjectRe
           ...(body.limit !== undefined ? { limit: body.limit } : {}),
           ...(body.ifVersion !== undefined ? { ifVersion: body.ifVersion } : {}),
         });
+        return reply.code(200).send(result);
+      } catch (err) {
+        return sendDataError(reply, err);
+      }
+    },
+  );
+
+  fastify.post<{ Params: { projectId: string } }>(
+    "/api/projects/:projectId/data/mutate",
+    { schema: { body: schemas.dataMutateRequest, response: { 200: schemas.dataMutateResponse } } },
+    async (req, reply) => {
+      const body = parseContract(schemas.dataMutateRequest, req.body);
+      const store = dataStoreOf(registry, req);
+      try {
+        const result = await store.mutate(
+          body.file,
+          body.name,
+          body.args ?? {},
+          {
+            origin: "sdk",
+            ...(body.idempotencyKey !== undefined ? { idempotencyKey: body.idempotencyKey } : {}),
+          },
+        );
         return reply.code(200).send(result);
       } catch (err) {
         return sendDataError(reply, err);

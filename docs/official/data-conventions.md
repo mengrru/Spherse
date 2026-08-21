@@ -187,7 +187,8 @@ Full skill instructions in Markdown...
 
 - 命名约定 `{页面名}.data.json`，与 HTML 同级；不能放在 `.spherse/` 下（HtmlCard 场景的 `.spherse/data/cards/` 例外）
 - 顶层 `$` 前缀键为平台保留（如 `$manifest`）：SDK 写入拒绝、`data.keys`/`data.entries` 不返回、dot-path 寻址不可达
-- 所有写入（SDK 经 server `/data/read|raw-set|raw-delete` 路由、agent 经 data capability）汇入 core `DataStore` 单例：tmp+rename 原子落盘、`FileWriteMutex` 锁内完成读-改-写、内容哈希 version + `ifVersion` 乐观锁、`idempotencyKey` 幂等、`origin`（sdk/agent）变更事件
+- 所有写入（SDK 经 server `/data/read|raw-set|raw-delete|mutate` 路由、agent 经 data capability）汇入 core `DataStore` 单例：tmp+rename 原子落盘、`FileWriteMutex` 锁内完成读-改-写、内容哈希 version + `ifVersion` 乐观锁、`idempotencyKey` 幂等、`origin`（sdk/agent）变更事件
+- **写入粒度约定**：集合的结构性增删改走 `data.mutate`（SDK）/`mutate_data`（agent）同一套 manifest 入口（锁内 item 级原子，并发互不覆盖）；`data.set` 仅适合单值/低冲突数据，对数组整体 set 会覆盖并发写入
 - agent 首次接触文件用 `read_data`（不带 path）获取 outline：结构大纲 + `$manifest` 入口签名（`name!`/`name?` 标注必填/可选）；无 manifest 的存量文件自动降级为 outline + dot-path 局部读（数组默认 20 条分页）+ `edit_file`/`write_file` 整文件改
 - `$manifest` 由页面生成时的 agent 同源产出（`write-html` skill 约束），声明业务命名的 `queries`（enum 过滤/sort/dir/identity 游标分页）与 `mutations`（append/update/remove/set + fields 类型校验 + auto 补全 uuid/nowIso + match 定位）；执行时锁内现场校验路径，失配报 `manifest_stale`/`unknown_entry`（附 valid names），不信任缓存健康度
 - 数据文件损坏（撕裂 JSON）报 `file_corrupted`，不自动修复

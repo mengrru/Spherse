@@ -36,9 +36,11 @@ const PAGE_HTML = [
   '<p>parallel result: <span id="parallel-result">--</span></p>',
   '<p>entries result: <span id="entries-result">--</span></p>',
   '<p>manifest write result: <span id="manifest-result">--</span></p>',
+  '<p>mutate result: <span id="mutate-result">--</span></p>',
   '<button id="btn-parallel">Parallel writes</button>',
   '<button id="btn-entries">Entries</button>',
   '<button id="btn-set-manifest">Set $manifest</button>',
+  '<button id="btn-mutate">Mutate addTodo x10</button>',
   "<script>",
   "const DATA_FILE = 'board.data.json';",
   "function spherseCall(action, params) {",
@@ -48,7 +50,7 @@ const PAGE_HTML = [
   "    const handler = (e) => {",
   "      if (e.data?.type === 'spherse:response' && e.data.requestId === requestId) {",
   "        cleanup();",
-  "        e.data.ok ? resolve(e.data.data) : reject(new Error('spherse data error'));",
+  "        if (e.data.ok) resolve(e.data.data); else reject(new Error('spherse rejected'));",
   "      }",
   "    };",
   "    function cleanup() { clearTimeout(timeout); window.removeEventListener('message', handler); }",
@@ -69,9 +71,15 @@ const PAGE_HTML = [
   "  document.getElementById('entries-result').textContent = JSON.stringify(Object.keys(entries));",
   "};",
   "document.getElementById('btn-set-manifest').onclick = async function () {",
-  "  try { await spherseCall('data.set', { file: DATA_FILE, key: '$manifest', value: {} }); }",
-  "  catch (e) { document.getElementById('manifest-result').textContent = 'rejected'; return; }",
-  "  document.getElementById('manifest-result').textContent = 'WROTE';",
+  "  const r = await spherseCall('data.set', { file: DATA_FILE, key: '$manifest', value: {} }).catch((e) => 'rejected');",
+  "  document.getElementById('manifest-result').textContent = r === 'rejected' ? 'rejected' : 'WROTE:' + JSON.stringify(r);",
+  "};",
+  "document.getElementById('btn-mutate').onclick = async function () {",
+  "  const results = await Promise.all(Array.from({ length: 10 }, (_, i) =>",
+  "    spherseCall('data.mutate', { file: DATA_FILE, name: 'addTodo', args: { title: 'page-' + i }, idempotencyKey: 'e2e-' + i }).catch(() => 'FAIL')));",
+  "  const fails = results.filter((r) => r === 'FAIL').length;",
+  "  const entries = await spherseCall('data.entries', { file: DATA_FILE });",
+  "  document.getElementById('mutate-result').textContent = 'fails=' + fails + ' todos=' + entries.todos.length;",
   "};",
   "</script></body></html>",
 ].join("\n");
@@ -101,6 +109,7 @@ async function launchAppWithProject(project: { root: string; projectId: string }
     env: {
       ...process.env,
       NODE_ENV: "test",
+      SPHERSE_E2E_RATE_LIMIT_OFF: "1",
       ELECTRON_ENABLE_LOGGING: "1",
       XDG_CONFIG_HOME: userDataDir,
     },
@@ -138,6 +147,26 @@ test("20 parallel SDK writes through server DataStore lose nothing; $manifest st
     expect(Object.keys(onDisk).filter((k) => k.startsWith("k"))).toHaveLength(20);
     expect(onDisk.$manifest).toBeDefined();
     expect(onDisk.$manifest.mutations.addTodo.op).toBe("append");
+  } finally {
+    await app.close();
+  }
+});
+
+test("data.mutate from page applies manifest mutations atomically (sdk origin)", async () => {
+  const project = await createProject();
+  const { app, page } = await launchAppWithProject(project);
+
+  try {
+    const frame = await openBoardPage(page, project.projectId);
+    await frame.locator("#btn-mutate").click();
+    await expect(frame.locator("#mutate-result")).toContainText("fails=0 todos=10", { timeout: 30_000 });
+
+    const onDisk = JSON.parse(await readFile(path.join(project.root, "board.data.json"), "utf8"));
+    expect(onDisk.todos).toHaveLength(10);
+    for (const t of onDisk.todos as { title: string; id: string }[]) {
+      expect(t.title).toMatch(/^page-\d+$/);
+      expect(t.id).toMatch(/^[0-9a-f-]{36}$/);
+    }
   } finally {
     await app.close();
   }

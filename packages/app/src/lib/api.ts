@@ -198,6 +198,21 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return parseJsonResponse<DataReadResponse>(res, schemas.dataReadResponse);
     },
 
+    async dataMutate(params: {
+      file: string;
+      name: string;
+      args?: Record<string, unknown>;
+      idempotencyKey?: string;
+    }): Promise<{ version: string; result: unknown }> {
+      const res = await authedFetch(`${apiBase}/data/mutate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      await assertOk(res);
+      return parseJsonResponse<{ version: string; result: unknown }>(res, schemas.dataMutateResponse);
+    },
+
     async dataRawSet(params: { file: string; key: string; value: unknown; ifVersion?: string }): Promise<{ version: string }> {
       const res = await authedFetch(`${apiBase}/data/raw-set`, {
         method: "POST",

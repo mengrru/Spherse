@@ -20,6 +20,18 @@ export const dataReadResponse = Type.Object({
   note: Type.Optional(Type.String()),
 });
 
+export const dataMutateRequest = Type.Object({
+  file: Type.String({ minLength: 1 }),
+  name: Type.String({ minLength: 1 }),
+  args: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
+  idempotencyKey: Type.Optional(Type.String({ minLength: 1 })),
+});
+
+export const dataMutateResponse = Type.Object({
+  version: Type.String(),
+  result: Type.Unknown(),
+});
+
 export const dataRawSetRequest = Type.Object({
   file: Type.String({ minLength: 1 }),
   key: Type.String({ minLength: 1 }),
@@ -39,6 +51,8 @@ export const dataWriteResponse = Type.Object({
 
 export const schemas = {
   dataReadRequest,
+  dataMutateRequest,
+  dataMutateResponse,
   dataReadResponse,
   dataRawSetRequest,
   dataRawDeleteRequest,
@@ -47,6 +61,8 @@ export const schemas = {
 
 export type DataReadRequestContract = Static<typeof dataReadRequest>;
 export type DataReadResponseContract = Static<typeof dataReadResponse>;
+export type DataMutateRequestContract = Static<typeof dataMutateRequest>;
+export type DataMutateResponseContract = Static<typeof dataMutateResponse>;
 export type DataRawSetRequestContract = Static<typeof dataRawSetRequest>;
 export type DataRawDeleteRequestContract = Static<typeof dataRawDeleteRequest>;
 export type DataWriteResponseContract = Static<typeof dataWriteResponse>;

@@ -25,6 +25,8 @@ export { createDataStore } from "./capabilities/data/index.js";
 export { FileWriteMutex } from "./utils/file-write-mutex.js";
 export {
   VersionConflictError,
+  ManifestStaleError,
+  UnknownEntryError,
   DataValidationError,
   DataFileCorruptedError,
   ForbiddenKeyError,
