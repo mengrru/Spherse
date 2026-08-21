@@ -18,6 +18,7 @@ import { useHostBridge } from "../context/host-bridge-context";
 import { useApiClient } from "../lib/use-connection";
 import { useConnection } from "../lib/use-connection";
 import { useProjectCatalog } from "../lib/project-queries";
+import { ContentQueryBridge } from "../features/content-browser/ContentQueryBridge";
 
 export function ProjectScope() {
   const { projectId } = useParams();
@@ -87,6 +88,7 @@ export function ProjectScope() {
         </FeatureGate>
         <UiSdkBridge />
         <TriggerEventBridge />
+        <ContentQueryBridge />
       </div>
     </ProjectProvider>
   );

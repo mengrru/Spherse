@@ -4,7 +4,6 @@ import { useNavigate } from "react-router";
 import { FloatingFrame } from "../../components/floating-frame";
 import { ContentView } from "../content-browser/ContentView";
 import { classifyFileKind } from "../content-browser/file-kind";
-import { useContentAutoRefresh } from "../content-browser/hooks/useContentAutoRefresh";
 import { useContentFile } from "../content-browser/hooks/useContentFile";
 import { useApiClient } from "../../lib/use-connection";
 import { useFloatingContentBrowserStore, type FloatingContentWindow } from "./store";
@@ -21,17 +20,15 @@ export function FloatingContentBrowserContainer({
   const { filePath, position, size } = floatWindow;
   const navigate = useNavigate();
   const client = useApiClient(projectId);
-  const { content, binary, loading, error, reload } = useContentFile(projectId, client, filePath);
+  const { content, binary, loading, error, dataUpdatedAt } = useContentFile(projectId, client, filePath);
   const [refreshKey, setRefreshKey] = useState(0);
   const closeFloat = useFloatingContentBrowserStore((s) => s.closeFloat);
   const setPosition = useFloatingContentBrowserStore((s) => s.setPosition);
   const setSize = useFloatingContentBrowserStore((s) => s.setSize);
 
-  useContentAutoRefresh({ projectId, filePath, enabled: true, onReload: () => { reload(); setRefreshKey((k) => k + 1); } });
-
   useEffect(() => {
     setRefreshKey((k) => k + 1);
-  }, [filePath]);
+  }, [dataUpdatedAt, filePath]);
 
   useEffect(() => {
     if (!loading && content === null && error) {

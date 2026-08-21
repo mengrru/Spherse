@@ -11,7 +11,6 @@ import { ContentView } from "./ContentView";
 import { Header } from "./Header";
 import { classifyFileKind } from "./file-kind";
 import { TextSelectionSession } from "../text-selection-session";
-import { useContentAutoRefresh } from "./hooks/useContentAutoRefresh";
 import { useContentEditor } from "./hooks/useContentEditor";
 import { useContentFile } from "./hooks/useContentFile";
 
@@ -40,7 +39,7 @@ export function ContentBrowser({
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
   const [refreshKey, setRefreshKey] = useState(0);
   const [findOpen, setFindOpen] = useState(false);
-  const { content, setContent, binary, loading, error, reload: reloadContent } = useContentFile(projectId, client, filePath);
+  const { content, setContent, binary, loading, error, dataUpdatedAt, reload: reloadContent } = useContentFile(projectId, client, filePath);
   const editor = useContentEditor({
     client,
     projectId,
@@ -56,9 +55,7 @@ export function ContentBrowser({
 
   useEffect(() => {
     setRefreshKey((k) => k + 1);
-  }, [filePath]);
-
-  useContentAutoRefresh({ projectId, filePath, enabled: !editor.isEditing, onReload: handleRefresh });
+  }, [dataUpdatedAt, filePath]);
 
   const { isMarkdown, isHtml, isImage } = classifyFileKind(filePath);
   const isEditable = !isImage && !binary && !loading && bridge.capabilities.content.editable;

@@ -27,6 +27,7 @@ export function useContentFile(projectId: string, client: ApiClient, filePath: s
     binary: query.data?.binary ?? false,
     loading: query.isPending,
     error: query.error instanceof Error ? query.error.message : null,
+    dataUpdatedAt: query.dataUpdatedAt,
     reload: () => {
       void query.refetch();
     },
