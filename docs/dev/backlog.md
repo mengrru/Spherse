@@ -10,6 +10,7 @@
 
 ## 代码质量
 
+- [x] **restore 时补齐被中断的 toolCall（孤儿 toolCall 自愈）**：工具执行中途崩溃/退出后，assistant 消息（含 toolCall）已落库而 toolResult 未落库，恢复后会话永久不可用——下次 prompt 被 provider 以 tool_use/tool_result 配对违规拒绝，且 `retryLastTurn` 的 `stopReason === "error"` 守卫不匹配（消息以 `toolUse` 正常结束）无法自救。修复：`initForRestore` 构造 initialLog 后经 `synthesizeInterruptedToolResults`（`session/compactor.ts` 纯函数，参考已废弃 event log 分支的 repairLog 思路）为尾部 assistant 消息中未应答的 toolCall 合成 `isError` toolResult 并持久化（幂等，二次 restore 不重复合成）。参见 `docs/dev/bugfix/2026-08-20-restore-orphaned-toolcall/design.md`
 - [ ] **E2E `app.close()` 间歇悬死（存量基建 flake）**：顺序启动多个 Electron E2E 实例时，`app.close()` 偶发 60s 悬死（无断言失败、无页面快照；逐步日志定位到 close 不返回）。干净 main 可复现（纯 HTML 项目、无 feature 代码参与，~每 5-8 次启动命中一次），疑点在 server shutdown 链路（`stopServer` → `registry.removeAll()` → capability `shutdown`/sqlite/fs-watch 关闭竞态）。放大因素：spec 数量越多、顺序启动次数越多，命中率越高。修复方向：给 shutdown 各环节加超时/审计哪个 await 卡住；临时缓解可在 CI 重试。
 - [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。
 
