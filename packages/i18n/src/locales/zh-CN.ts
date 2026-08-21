@@ -928,6 +928,11 @@ export const zhCN = {
   "pages.projectNotFound": "项目不存在",
 
   // --- Tool Labels ---
+  // 独立工具标签：数据访问（read_data/query_data/mutate_data 三个工具，对 *.data.json 活网页数据文件的选择性读写）
+  "tool.data_access": "数据文件读写",
+  // 独立工具 tooltip：数据文件读写的作用说明——按 $manifest 入口/outline 局部读写，避免整文件进上下文
+  "tool.data_access_hint":
+    "允许智能体按入口读写页面数据文件（*.data.json）：查看结构大纲、按业务入口查询与变更，与页面数据联动而无需读取整个文件",
   // 独立工具标签：追加日志
   "tool.append_log": "追加日志",
   // 独立工具 tooltip：追加日志的作用说明
