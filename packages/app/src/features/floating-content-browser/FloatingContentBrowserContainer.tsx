@@ -21,7 +21,7 @@ export function FloatingContentBrowserContainer({
   const { filePath, position, size } = floatWindow;
   const navigate = useNavigate();
   const client = useApiClient(projectId);
-  const { content, binary, loading, error, reload } = useContentFile(client, filePath);
+  const { content, binary, loading, error, reload } = useContentFile(projectId, client, filePath);
   const [refreshKey, setRefreshKey] = useState(0);
   const closeFloat = useFloatingContentBrowserStore((s) => s.closeFloat);
   const setPosition = useFloatingContentBrowserStore((s) => s.setPosition);

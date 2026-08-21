@@ -4,18 +4,21 @@ import { useI18n } from "@spherse/i18n/react";
 import { Chat } from "../features/chat";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useProjectCtx } from "../context/project-context";
+import { useApiClient } from "../lib/use-connection";
+import { useProjectCatalog, useProjectSession } from "../lib/project-queries";
 
 export function ChatPage() {
   const { sessionId = "" } = useParams();
   const { projectId } = useProjectCtx();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const client = useApiClient(projectId);
+  const { agents } = useProjectCatalog(projectId, client);
+  const sessionQuery = useProjectSession(projectId, client, sessionId);
   const projectData = useProjectDataStore((s) => s.projects[projectId]);
   const consumeInitialMessage = useProjectDataStore((s) => s.consumeInitialMessage);
 
-  const agents = projectData?.agents ?? [];
-  const sessions = projectData?.sessions ?? [];
-  const session = sessions.find((s) => s.id === sessionId) ?? null;
+  const session = sessionQuery.data ?? null;
   const agent = session ? agents.find((a) => a.id === session.agentId) ?? null : null;
   const initialMessage = session ? projectData?.initialMessageBySessionId[session.id] : undefined;
 
@@ -24,6 +27,12 @@ export function ChatPage() {
       consumeInitialMessage(projectId, session.id);
     }
   }, [consumeInitialMessage, initialMessage, projectId, session]);
+
+  useEffect(() => {
+    if (sessionQuery.isSuccess && sessionQuery.data === null) {
+      navigate(`/project/${projectId}`, { replace: true });
+    }
+  }, [navigate, projectId, sessionQuery.data, sessionQuery.isSuccess]);
 
   if (!session || !agent) {
     return (

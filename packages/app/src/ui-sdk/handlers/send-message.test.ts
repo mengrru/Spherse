@@ -32,6 +32,13 @@ vi.mock("../../stores/project-data-store", () => ({
   },
 }));
 
+vi.mock("../../lib/project-queries", () => ({
+  getCachedSession: (_projectId: string, sessionId: string) =>
+    projectSessions().find((session) => session.id === sessionId),
+  ensureProjectSession: (_projectId: string, _client: unknown, sessionId: string) =>
+    Promise.resolve(projectSessions().find((session) => session.id === sessionId) ?? null),
+}));
+
 vi.mock("../../stores/settings-store", () => ({
   useSettingsStore: { getState: () => ({ locale: "zh-CN" }) },
 }));

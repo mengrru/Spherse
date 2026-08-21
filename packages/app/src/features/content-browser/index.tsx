@@ -40,7 +40,7 @@ export function ContentBrowser({
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
   const [refreshKey, setRefreshKey] = useState(0);
   const [findOpen, setFindOpen] = useState(false);
-  const { content, setContent, binary, loading, error, reload: reloadContent } = useContentFile(client, filePath);
+  const { content, setContent, binary, loading, error, reload: reloadContent } = useContentFile(projectId, client, filePath);
   const editor = useContentEditor({
     client,
     projectId,

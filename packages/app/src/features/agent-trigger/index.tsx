@@ -14,7 +14,6 @@ import {
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
 import type { TriggerEntry, TriggerInfo } from "../../lib/types";
-import { useProjectDataStore } from "../../stores/project-data-store";
 import { useApiClient } from "../../lib/use-connection";
 import { useTriggerStore } from "./store";
 import { TriggerForm } from "./TriggerForm";
@@ -31,6 +30,7 @@ import { EMPTY_RUNNING_TRIGGER_IDS, EMPTY_TRIGGERS } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
 import { InfoIcon, PlusIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
+import { useProjectCatalog } from "../../lib/project-queries";
 
 interface TriggerDialogProps {
   open: boolean;
@@ -42,6 +42,7 @@ interface TriggerDialogProps {
 export function TriggerDialog({ open, onOpenChange, agentId, projectId }: TriggerDialogProps) {
   const { t } = useI18n();
   const client = useApiClient(projectId);
+  const { agents } = useProjectCatalog(projectId, client);
   const triggers = useTriggerStore(
     (s) => s.byProject[projectId]?.triggersByAgent?.[agentId] ?? EMPTY_TRIGGERS,
   );
@@ -51,13 +52,9 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
   const triggerEventVersion = useTriggerStore(
     (s) => s.byProject[projectId]?.triggerEventVersion ?? 0,
   );
-  const agentName = useProjectDataStore(
-    (s) => s.projects[projectId]?.agents?.find((a) => a.id === agentId)?.name ?? "",
-  );
-  const logFilePath = useProjectDataStore((s) => {
-    const agent = s.projects[projectId]?.agents?.find((a) => a.id === agentId);
-    return agent ? `.spherse/agents/${agent.slug}/triggers/logs.jsonl` : "";
-  });
+  const agent = agents.find((item) => item.id === agentId);
+  const agentName = agent?.name ?? "";
+  const logFilePath = agent ? `.spherse/agents/${agent.slug}/triggers/logs.jsonl` : "";
   const refreshTriggers = useTriggerStore((s) => s.refreshTriggers);
   const createTrigger = useTriggerStore((s) => s.createTrigger);
   const updateTrigger = useTriggerStore((s) => s.updateTrigger);

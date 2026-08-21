@@ -193,7 +193,7 @@ spherse/
 │   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（projectId/projectRoot）
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
-│   │       │   ├── project-data-store.ts # agents/sessions/初始消息/streaming/hasEnabledTriggersByAgent 等项目数据缓存
+│   │       │   ├── project-data-store.ts # 初始消息/streaming/hasEnabledTriggersByAgent 等前端运行时投影
 │   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗 open 状态等）
 │   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools 等持久化设置（与设置文件同步）
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）

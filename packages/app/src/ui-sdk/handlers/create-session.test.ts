@@ -12,6 +12,12 @@ vi.mock("../../stores/project-data-store", () => ({
   useProjectDataStore: { getState: () => mockGetState() },
 }));
 
+vi.mock("../../lib/project-queries", () => ({
+  getCachedAgents: (projectId: string) => mockGetState().projects[projectId]?.agents ?? [],
+  ensureProjectAgents: (_projectId: string, client: any) => client.listAgents(),
+  createProjectSession: mockCreateSession,
+}));
+
 vi.mock("../../features/floating-chat/store", () => ({
   useFloatingChatStore: { getState: () => ({ byProject: {}, setFloatingChat: mockSetFloatingChat }) },
 }));

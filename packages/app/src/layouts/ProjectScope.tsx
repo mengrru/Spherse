@@ -11,13 +11,13 @@ import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useAgentBusRefresh } from "../hooks/useAgentBusRefresh";
 import { useSidePanel } from "../hooks/use-side-panel";
 import { UiSdkBridge } from "../ui-sdk";
-import { useProjectDataStore } from "../stores/project-data-store";
 import { useAppStore } from "../stores/app-store";
 import { useProjectNavHistory } from "../lib/use-project-navigation";
 import { ProjectProvider } from "../context/project-context";
 import { useHostBridge } from "../context/host-bridge-context";
 import { useApiClient } from "../lib/use-connection";
 import { useConnection } from "../lib/use-connection";
+import { useProjectCatalog } from "../lib/project-queries";
 
 export function ProjectScope() {
   const { projectId } = useParams();
@@ -31,8 +31,6 @@ export function ProjectScope() {
   const setActiveProject = useAppStore((s) => s.setActiveProject);
   const setProjectLastRoute = useAppStore((s) => s.setProjectLastRoute);
   const { clickAwayProps } = useSidePanel();
-  const refreshAgents = useProjectDataStore((s) => s.refreshAgents);
-  const refreshSessions = useProjectDataStore((s) => s.refreshSessions);
   const tRef = useRef(t);
   useEffect(() => {
     tRef.current = t;
@@ -46,6 +44,7 @@ export function ProjectScope() {
   );
   useProjectNavHistory(projectId ?? "");
   useAgentBusRefresh(projectId, client);
+  useProjectCatalog(projectId ?? "", client);
 
   useEffect(() => {
     if (projectId) void setActiveProject(bridge, projectId);
@@ -58,15 +57,6 @@ export function ProjectScope() {
     const subRoute = fullPath.startsWith(prefix) ? fullPath.slice(prefix.length) || "/" : "/";
     void setProjectLastRoute(projectId, subRoute);
   }, [location.pathname, location.search, projectId, setProjectLastRoute]);
-
-  useEffect(() => {
-    if (!projectId || !client) return;
-    const cached = useProjectDataStore.getState().projects[projectId];
-    if (cached?.agents?.length) return;
-    void refreshAgents(projectId, client).then(() => {
-      void refreshSessions(projectId, client);
-    });
-  }, [client, projectId, refreshAgents, refreshSessions]);
 
   if (!projectId || !project) {
     return (

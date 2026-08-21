@@ -30,6 +30,13 @@ vi.mock("../../stores/project-data-store", () => ({
   },
 }));
 
+vi.mock("../../lib/project-queries", () => ({
+  getCachedSession: (_projectId: string, sessionId: string) =>
+    projectSessions().find((session) => session.id === sessionId),
+  ensureProjectSession: (_projectId: string, _client: unknown, sessionId: string) =>
+    Promise.resolve(projectSessions().find((session) => session.id === sessionId) ?? null),
+}));
+
 vi.mock("../../stores/settings-store", () => ({
   useSettingsStore: { getState: () => ({ locale: "zh-CN" }) },
 }));
@@ -42,6 +49,7 @@ function makeCtx(hostKind: "electron" | "web" = "electron", withRespond = false)
     projectId: "proj-1",
     navigate: mockNavigate,
     hostKind,
+    client: {},
     ...(withRespond
       ? { source: { postMessage: mockPostMessage } as any, requestId: "req-1" }
       : {}),

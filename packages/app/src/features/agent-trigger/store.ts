@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { ApiClient } from "../../lib/api";
 import type { TriggerInfo, TriggerServerEvent } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
+import { refreshProjectSessions } from "../../lib/project-queries";
 
 interface TriggerProjectData {
   triggersByAgent: Record<string, TriggerInfo[]>;
@@ -151,7 +152,7 @@ export const useTriggerStore = create<TriggerStore>((set, get) => ({
       })));
       void get().refreshTriggers(projectId, client, event.agentId);
       if (event.type === "trigger_completed") {
-        void useProjectDataStore.getState().refreshSessions(projectId, client);
+        void refreshProjectSessions(projectId);
       }
       return;
     }

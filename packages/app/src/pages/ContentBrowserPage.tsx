@@ -4,9 +4,9 @@ import { ContentBrowser } from "../features/content-browser";
 import { useProjectCtx } from "../context/project-context";
 import { useApiClient } from "../lib/use-connection";
 import { useProjectNavigation } from "../lib/use-project-navigation";
-import { useProjectDataStore } from "../stores/project-data-store";
 import { useFloatingSessionId } from "../features/floating-chat/use-floating-session-id";
 import type { ActiveSessionInfo } from "../lib/types";
+import { createProjectSession, useProjectCatalog } from "../lib/project-queries";
 
 export function ContentBrowserPage() {
   const { projectId } = useProjectCtx();
@@ -15,13 +15,10 @@ export function ContentBrowserPage() {
   const navigate = useNavigate();
   const { back } = useProjectNavigation();
   const { t } = useI18n();
-  const projectData = useProjectDataStore((s) => s.projects[projectId]);
-  const createSession = useProjectDataStore((s) => s.createSession);
+  const { agents, sessions } = useProjectCatalog(projectId, client);
   const floatingSessionId = useFloatingSessionId(projectId);
 
   const filePath = searchParams.get("path");
-  const agents = projectData?.agents ?? [];
-  const sessions = projectData?.sessions ?? [];
 
   const activeSessions: ActiveSessionInfo[] = [];
   if (floatingSessionId) {
@@ -52,7 +49,7 @@ export function ContentBrowserPage() {
     const parts = [t("text-selection.promptPrefix", { path: sourcePath, text: quotedText })];
     if (comment) parts.push(`\n\n${comment}`);
     const message = parts.join("");
-    const session = await createSession(projectId, client, agentId, message);
+    const session = await createProjectSession(projectId, client, agentId, message).catch(() => null);
     if (session) {
       navigate(`/project/${projectId}/chat/${session.id}`);
     }

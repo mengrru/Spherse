@@ -1,46 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "../../../lib/api";
+import { projectQueryKeys } from "../../../lib/query-client";
+import type { ContentResponse } from "../../../lib/types";
 
-export function useContentFile(client: ApiClient, filePath: string) {
-  const [content, setContent] = useState<string | null>(null);
-  const [binary, setBinary] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadNonce, setReloadNonce] = useState(0);
-  const loadedPath = useRef<string | null>(null);
-
-  useEffect(() => {
-    // 区分首次加载和刷新：首次加载显示 loading 状态；刷新时跳过 setLoading 以保留滚动位置
-    const isFirstLoad = loadedPath.current !== filePath;
-    if (isFirstLoad) {
-      loadedPath.current = filePath;
-      setLoading(true);
-    }
-    setError(null);
-    client
-      .getContent(filePath)
-      .then((data) => {
-        if (data) {
-          setContent(data.content);
-          setBinary(data.binary ?? false);
-        } else {
-          setError("File not found");
-        }
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => {
-        if (isFirstLoad) setLoading(false);
-      });
-  }, [filePath, client, reloadNonce]);
+export function useContentFile(projectId: string, client: ApiClient, filePath: string) {
+  const queryClient = useQueryClient();
+  const queryKey = projectQueryKeys.content(projectId, filePath);
+  const query = useQuery({
+    queryKey,
+    queryFn: async () => {
+      const data = await client.getContent(filePath);
+      if (!data) throw new Error("File not found");
+      return data;
+    },
+  });
 
   return {
-    content,
-    setContent,
-    binary,
-    loading,
-    setLoading,
-    error,
-    setError,
-    reload: () => setReloadNonce((n) => n + 1),
+    content: query.data?.content ?? null,
+    setContent: (content: string) => {
+      queryClient.setQueryData<ContentResponse>(queryKey, (current) => ({
+        path: current?.path ?? filePath,
+        content,
+        binary: current?.binary ?? false,
+      }));
+    },
+    binary: query.data?.binary ?? false,
+    loading: query.isPending,
+    error: query.error instanceof Error ? query.error.message : null,
+    reload: () => {
+      void query.refetch();
+    },
   };
 }

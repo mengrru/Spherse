@@ -4,7 +4,7 @@ import { useMatch, useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { collectPendingApprovals } from "./model/approval-notice";
 import { useStreamingStore } from "./runtime/streaming-store";
-import { useProjectDataStore } from "../../stores/project-data-store";
+import { getCachedAgents, getCachedSession } from "../../lib/project-queries";
 
 export function ApprovalNoticeBridge() {
   const navigate = useNavigate();
@@ -27,9 +27,10 @@ export function ApprovalNoticeBridge() {
         if (notifiedRef.current.has(item.requestId)) continue;
         if (item.sessionId === activeSessionId) continue;
         notifiedRef.current.add(item.requestId);
-        const project = useProjectDataStore.getState().projects[item.projectId];
-        const session = project?.sessions.find((s) => s.id === item.sessionId);
-        const agent = session ? project?.agents.find((a) => a.id === session.agentId) : undefined;
+        const session = getCachedSession(item.projectId, item.sessionId);
+        const agent = session
+          ? getCachedAgents(item.projectId).find((candidate) => candidate.id === session.agentId)
+          : undefined;
         const title =
           item.kind === "question"
             ? agent?.name
