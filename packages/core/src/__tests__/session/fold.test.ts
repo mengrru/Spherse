@@ -54,7 +54,7 @@ describe("deriveMessages", () => {
       user("q1", 0),
       assistant("a1", 1),
       user("q2", 2),
-      ev("compaction/applied", { anchorSeq: 1, digestContent: "[user]: q1" }, 3),
+      ev("compaction/applied", { anchorSeq: 1, digestContent: "[user]: q1", excludedSeqs: [] }, 3),
       assistant("a2", 4),
     ];
     const messages = deriveMessages(events);
@@ -63,6 +63,35 @@ describe("deriveMessages", () => {
     expect((messages[0] as { content: string }).content).toContain("[user]: q1");
     expect((messages[1] as { content: string }).content).toBe("q2");
     expect((messages[2] as { content: Array<{ text: string }> }).content[0].text).toBe("a2");
+  });
+
+  it("compaction restart excludes sanitized tail messages", () => {
+    const events = [
+      user("q1", 0),
+      assistant("a1", 1),
+      ev(
+        "assistant/message",
+        {
+          message: {
+            role: "assistant",
+            content: [{ type: "text", text: "failed" }],
+            stopReason: "error",
+            timestamp: 2,
+          } as never,
+        },
+        2,
+      ),
+      ev("compaction/applied", {
+        anchorSeq: 1,
+        digestContent: "digest",
+        excludedSeqs: [2],
+      }, 3),
+      assistant("kept", 4),
+    ];
+
+    const messages = deriveMessages(events);
+    expect(messages).toHaveLength(2);
+    expect((messages[1] as { content: Array<{ text: string }> }).content[0].text).toBe("kept");
   });
 
   it("turn/retried skips abandoned message events only", () => {
@@ -80,9 +109,9 @@ describe("deriveMessages", () => {
   it("last restart wins when multiple compactions exist", () => {
     const events = [
       user("q1", 0),
-      ev("compaction/applied", { anchorSeq: 0, digestContent: "digest-1" }, 1),
+      ev("compaction/applied", { anchorSeq: 0, digestContent: "digest-1", excludedSeqs: [] }, 1),
       user("q2", 2),
-      ev("compaction/applied", { anchorSeq: 2, digestContent: "digest-2" }, 3),
+      ev("compaction/applied", { anchorSeq: 2, digestContent: "digest-2", excludedSeqs: [] }, 3),
       assistant("a", 4),
     ];
     const messages = deriveMessages(events);
@@ -95,7 +124,7 @@ describe("deriveMessages", () => {
       user("q", 0),
       ev("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "x" }], timestamp: 1 } as never }, 1),
       ev("turn/retried", { abandonedSeqs: [1] }, 2),
-      ev("compaction/applied", { anchorSeq: 0, digestContent: "d" }, 3),
+      ev("compaction/applied", { anchorSeq: 0, digestContent: "d", excludedSeqs: [] }, 3),
       ev("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "y" }], timestamp: 4 } as never }, 4),
     ];
     const messages = deriveMessages(events);
@@ -112,7 +141,7 @@ describe("deriveMessages", () => {
     const events = [
       user("q1", 0),
       assistant("a1", 1),
-      ev("compaction/applied", { anchorSeq: 1, digestContent: "digest" }, 2),
+      ev("compaction/applied", { anchorSeq: 1, digestContent: "digest", excludedSeqs: [] }, 2),
       ev(
         "assistant/message",
         {
@@ -203,6 +232,7 @@ describe("repairLog", () => {
     expect(repairs.map((r) => r.type)).toEqual(["tool/result", "turn/end"]);
     const synthetic = repairs[0].data as { message: { toolCallId: string; isError: boolean } };
     expect(synthetic.message.toolCallId).toBe("tc-2");
+    expect((synthetic.message as { toolName: string }).toolName).toBe("read_file");
     expect(synthetic.message.isError).toBe(true);
     expect(repairs[0].seq).toBe(4);
     expect(repairs[1].seq).toBe(5);

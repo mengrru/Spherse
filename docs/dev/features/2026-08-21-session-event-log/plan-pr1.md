@@ -22,7 +22,7 @@
 ## 任务 3 fold + repair（纯函数）
 
 - 新建 `packages/core/src/session/fold.ts`：
-  - `deriveMessages(events, resolveParent?): AgentMessage[]`——重启点 last-wins（compaction/applied → digest + anchor 之后；turn/retried → 跳过 abandonedSeqs），消息事件投影；resolveParent 参数 PR1 传 undefined（分支是 PR2 的事），接口形状先留
+  - `deriveMessages(events, resolveParent?): AgentMessage[]`——重启点 last-wins（compaction/applied → digest + anchor 之后并跳过 excludedSeqs；turn/retried → 跳过 abandonedSeqs），消息事件投影；resolveParent 参数 PR1 传 undefined（分支是 PR2 的事），接口形状先留
   - `repairLog(events): SessionEvent[]`——open turn 检测 + 尾部未应答 toolCall 合成 `tool/result`(isError) + `turn/end {reason: "aborted"}`；无 turn 事件的日志返回空
 - `synthesizeInterruptedToolResults` 逻辑并入 `repairLog` 后从 `compactor.ts` 删除
 - 测试 `fold.test.ts`：性质测试（随机合法事件序列 fold == 活跃态镜像——用一个真 AgentRunner 驱动若干轮后对比 restore fold 结果）、三个重启点行为、增量缓存正确性；`repair.test.ts`：合成/不动/幂等三态
@@ -35,7 +35,7 @@
   - `retryLastTurn`：改为 `append turn/retried {abandonedSeqs}`（守卫条件不变：尾部 assistant `stopReason === "error"`）
   - `initForRestore`：readEvents → repair（合成事件经 append 持久化）→ fold → initialLog 赋值；**未迁移会话抛 `MigrationRequiredError`**（新错误类型，errors.ts）
   - `createSession`（经 SessionManager）：创建后即写 log（空 events）
-- compaction capability（`capabilities/compaction/transform.ts`）：`maybeCompactLog` 落点改为 `append compaction/applied {anchorSeq, digestContent}`；`planCompaction` 计划逻辑与 token 水位不动；compactor.ts（logFromRows/logFromCompaction）删除
+- compaction capability（`capabilities/compaction/transform.ts`）：`maybeCompactLog` 落点改为 `append compaction/applied {anchorSeq, digestContent, excludedSeqs}`，保留 `sanitizeToolCallPairs` 的 tail 净化语义；`planCompaction` 计划逻辑与 token 水位不动；compactor.ts（logFromRows/logFromCompaction）删除
 - kernel `message-log.ts`：随 MessageLog 退役删除（确认无其它消费者后）
 - 测试：agent-runner.test.ts 全面改写——restore 后连续两轮、abort 后 restore（repair 生效）、retry 后 restore（abandonedSeqs 生效）、compaction 后 restore（锚点生效）、重复 compaction 不过度包含（对齐原有用例语义）
 

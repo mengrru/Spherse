@@ -3,6 +3,7 @@ import Fastify, { type FastifyRequest } from "fastify";
 import { registerSessionRoutes } from "../routes/sessions.js";
 import type { ProjectRegistry } from "../registry.js";
 import type { ChatSessionHub } from "../chat-session-hub.js";
+import { NotFoundError } from "@spherse/core";
 
 describe("POST .../sessions/:id/migrate route", () => {
   let app: Fastify.FastifyInstance;
@@ -15,6 +16,10 @@ describe("POST .../sessions/:id/migrate route", () => {
       eventCount: 3,
     });
     app = Fastify();
+    app.setErrorHandler((err, _req, reply) => {
+      if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message });
+      return reply.code(500).send({ error: err.message });
+    });
     app.addHook("preHandler", async (req: FastifyRequest) => {
       req.projectCtx = {
         projectManager: { migrateSession },
@@ -49,5 +54,19 @@ describe("POST .../sessions/:id/migrate route", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ sessionId: "s1", migrated: false, eventCount: 3 });
+  });
+
+  it("returns 404 when the session does not exist", async () => {
+    migrateSession.mockImplementation(() => {
+      throw new NotFoundError("Session s1 not found");
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/projects/p1/agents/a1/sessions/s1/migrate",
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json()).toEqual({ error: "Session s1 not found" });
   });
 });

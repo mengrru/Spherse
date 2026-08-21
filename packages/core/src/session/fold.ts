@@ -9,7 +9,12 @@ export interface DerivedMessageEntry {
 }
 
 interface RestartState {
-  compaction?: { anchorSeq: number; digestContent: string; eventSeq: number };
+  compaction?: {
+    anchorSeq: number;
+    digestContent: string;
+    eventSeq: number;
+    excludedSeqs: Set<number>;
+  };
   abandonedSeqs: Set<number>;
 }
 
@@ -57,6 +62,7 @@ export function deriveMessageEntries(
   for (const event of events) {
     if (!MESSAGE_EVENT_TYPES.has(event.type)) continue;
     if (restart.compaction && event.seq <= restart.compaction.anchorSeq) continue;
+    if (restart.compaction?.excludedSeqs.has(event.seq)) continue;
     if (restart.abandonedSeqs.has(event.seq)) continue;
     entries.push({
       seq: event.seq,
@@ -74,6 +80,7 @@ function scanRestarts(events: readonly SessionEvent[]): RestartState {
         anchorSeq: event.data.anchorSeq,
         digestContent: event.data.digestContent,
         eventSeq: event.seq,
+        excludedSeqs: new Set(event.data.excludedSeqs ?? []),
       };
     } else if (event.type === "turn/retried") {
       for (const seq of event.data.abandonedSeqs) state.abandonedSeqs.add(seq);
@@ -99,15 +106,17 @@ export function repairLog(events: readonly SessionEvent[]): SessionEvent[] {
   if (openTurn === null) return [];
 
   const answered = new Set<string>();
-  let lastToolCallAssistant: { toolCallIds: string[] } | null = null;
+  let lastToolCallAssistant: {
+    toolCalls: Array<{ id: string; name: string }>;
+  } | null = null;
   for (const event of events.slice(openTurnStartIndex + 1)) {
     if (event.type === "tool/result") {
       answered.add(event.data.message.toolCallId);
     } else if (event.type === "assistant/message") {
-      const toolCallIds = event.data.message.content
+      const toolCalls = event.data.message.content
         .filter((block) => block.type === "toolCall")
-        .map((block) => (block as { id: string }).id);
-      if (toolCallIds.length > 0) lastToolCallAssistant = { toolCallIds };
+        .map((block) => ({ id: block.id, name: block.name }));
+      if (toolCalls.length > 0) lastToolCallAssistant = { toolCalls };
     }
   }
 
@@ -115,8 +124,8 @@ export function repairLog(events: readonly SessionEvent[]): SessionEvent[] {
   let nextSeq = events.length > 0 ? events[events.length - 1].seq + 1 : 0;
   const now = Date.now();
   if (lastToolCallAssistant) {
-    for (const toolCallId of lastToolCallAssistant.toolCallIds) {
-      if (answered.has(toolCallId)) continue;
+    for (const toolCall of lastToolCallAssistant.toolCalls) {
+      if (answered.has(toolCall.id)) continue;
       repairs.push({
         type: "tool/result",
         seq: nextSeq++,
@@ -124,8 +133,8 @@ export function repairLog(events: readonly SessionEvent[]): SessionEvent[] {
         data: {
           message: {
             role: "toolResult",
-            toolCallId,
-            toolName: "unknown",
+            toolCallId: toolCall.id,
+            toolName: toolCall.name,
             content: [{ type: "text", text: INTERRUPTED_TOOL_TEXT }],
             isError: true,
             timestamp: now,

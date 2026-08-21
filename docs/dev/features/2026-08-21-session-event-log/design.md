@@ -47,7 +47,11 @@ export interface SessionEventMap {
   "user/message":       { message: AgentMessage };
   "assistant/message":  { message: AssistantMessage };
   "tool/result":        { message: ToolResultMessage };
-  "compaction/applied": { anchorSeq: number; digestContent: string };
+  "compaction/applied": {
+    anchorSeq: number;
+    digestContent: string;
+    excludedSeqs: number[]; // sanitizeToolCallPairs 从保留 tail 排除的消息事件
+  };
   "turn/retried":       { abandonedSeqs: number[] };
   // PR2 新增：
   "branch/created":     { parentSessionId: string; forkSeq: number };  // 子 log 首事件
@@ -85,7 +89,7 @@ function deriveMessages(sessionId, events, resolveParent: (id: string) => readon
 
 1. **拼接**：若首事件是 `branch/created`，递归 fold 父前缀（父 `seq <= forkSeq` 的事件）作前缀；否则自身即全量。拼接产物称虚拟 log，seq 即下标
 2. **找最后一个重启点**（whole-value 事件，last-wins）：
-   - `compaction/applied` → 消息投影从 `[digest 消息, ...anchorSeq 之后的消息]` 开始
+   - `compaction/applied` → 消息投影从 `[digest 消息, ...anchorSeq 之后的消息]` 开始，并跳过 `excludedSeqs`
    - `turn/retried` → 跳过 `abandonedSeqs` 列出的消息事件
    - `message/recalled` → 跳过 `boundarySeq`（含）之前的所有消息事件（PR2）
 3. **投影**：`user/message` / `assistant/message` / `tool/result` → 消息数组
@@ -105,7 +109,7 @@ restore 时发现 open turn（有 `turn/start` 无 `turn/end`）：为**虚拟 l
 - **sendMessage**：`append user/message` + `append turn/start` → `agent.state.messages = deriveMessages()` → `prompt()`
 - **pi 事件翻译**（persist middleware 换落点）：`message_end`(assistant) → `assistant/message`；toolResult → `tool/result`；run 结束 → `turn/end {reason}`
 - **retryLastTurn**：pop + 删行 → `append turn/retried {abandonedSeqs: [失败 assistant 消息的 seq]}`；历史可回看重试前内容
-- **compaction**：`maybeCompactLog` 的落点从 `recordCompaction` + 内存 compactLog 改为 `append compaction/applied {anchorSeq, digestContent}`；计划逻辑（planCompaction）不动。锚点可能在父前缀（虚拟 seq 直接可用，PR2 场景）
+- **compaction**：`maybeCompactLog` 的落点从 `recordCompaction` + 内存 compactLog 改为 `append compaction/applied {anchorSeq, digestContent, excludedSeqs}`；计划逻辑（planCompaction）不动，`excludedSeqs` 固化 `sanitizeToolCallPairs` 对保留 tail 的净化结果。锚点可能在父前缀（虚拟 seq 直接可用，PR2 场景）
 - **initForRestore**：`logFromRows`/`logFromCompaction` 退役（compactor.ts 随之删除），改为 readEvents → repair → fold → 赋值
 - **legacy 拦截**：restore/发消息对未迁移会话抛 `MigrationRequiredError`；HTTP 读历史走 legacy 只读路径
 

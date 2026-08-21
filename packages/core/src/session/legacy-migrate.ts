@@ -1,5 +1,5 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import { ValidationError } from "../errors.js";
+import { NotFoundError } from "../errors.js";
 import type { SessionEvent } from "./events.js";
 import { EVENT_SCHEMA_VERSION } from "./events.js";
 import type { SessionStore } from "../store/session.js";
@@ -37,7 +37,11 @@ function planLegacyMigration(
         type: "compaction/applied",
         seq: seq++,
         time: latest.createdAt,
-        data: { anchorSeq, digestContent: latest.digestContent },
+        data: {
+          anchorSeq,
+          digestContent: latest.digestContent,
+          excludedSeqs: [],
+        },
       });
     }
   }
@@ -98,7 +102,7 @@ export function migrateLegacySession(
   sessionId: string,
 ): MigrationResult {
   const session = store.getSession(sessionId);
-  if (!session) throw new ValidationError(`Session "${sessionId}" not found`);
+  if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
   if (!store.sessionNeedsMigration(sessionId)) {
     return { sessionId, migrated: false, eventCount: store.readEvents(sessionId).length };
   }

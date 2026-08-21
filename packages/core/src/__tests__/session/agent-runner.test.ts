@@ -340,7 +340,11 @@ describe("AgentRunner context engineering", () => {
     const log = SessionEventLog.open(agentStore.sessions, sessionId);
     log.append("user/message", { message: { role: "user", content: "early q", timestamp: Date.now() } as never });
     log.append("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "early a" }], stopReason: "stop", timestamp: Date.now() } as never });
-    log.append("compaction/applied", { anchorSeq: 1, digestContent: "[user]: early q" });
+    log.append("compaction/applied", {
+      anchorSeq: 1,
+      digestContent: "[user]: early q",
+      excludedSeqs: [],
+    });
     log.append("user/message", { message: { role: "user", content: "tail question", timestamp: Date.now() } as never });
     log.append("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "tail answer" }], stopReason: "stop", timestamp: Date.now() } as never });
 

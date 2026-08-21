@@ -7,6 +7,7 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import { SessionStore } from "../../store/session.js";
 import { migrateLegacySession } from "../../session/legacy-migrate.js";
 import { deriveMessages, repairLog } from "../../session/fold.js";
+import { NotFoundError } from "../../errors.js";
 
 function userMsg(text: string, timestamp = 1000): AgentMessage {
   return { role: "user", content: text, timestamp } as AgentMessage;
@@ -157,7 +158,7 @@ describe("legacy-migrate", () => {
   });
 
   it("migrateLegacySession throws for unknown session", () => {
-    expect(() => migrateLegacySession(store, "missing")).toThrow(/not found/);
+    expect(() => migrateLegacySession(store, "missing")).toThrow(NotFoundError);
   });
 
   it("sessionNeedsMigration flips after migration", () => {

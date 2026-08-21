@@ -1,6 +1,6 @@
 import type { Agent } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
-import { planCompaction } from "../../context/compaction.js";
+import { planCompaction, sanitizeToolCallPairs } from "../../context/compaction.js";
 import { estimateTokens, readCurrentTokens } from "../../context/token-estimate.js";
 import type { TurnEventAppender } from "../../kernel/turn-hooks.js";
 import type { Logger } from "../../logger.js";
@@ -25,12 +25,20 @@ export async function maybeCompactLog(
   if (anchorSeq === undefined) return;
 
   try {
+    const sanitized = sanitizeToolCallPairs(plan.tail);
+    const keptIndices = new Set(sanitized.keptIndices);
+    const excludedSeqs = plan.tail.flatMap((_, index) => {
+      if (keptIndices.has(index)) return [];
+      const seq = projected[plan.anchorIndex + 1 + index]?.seq;
+      return seq === undefined ? [] : [seq];
+    });
     const postEstimate =
-      estimateTokens(agent.state.systemPrompt) + estimateTokens(plan.tail);
+      estimateTokens(agent.state.systemPrompt) + estimateTokens(sanitized.messages);
 
     eventLog.append("compaction/applied", {
       anchorSeq,
       digestContent: plan.digest,
+      excludedSeqs,
     });
 
     logger.info(

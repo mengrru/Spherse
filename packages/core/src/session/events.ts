@@ -9,7 +9,11 @@ export interface SessionEventMap {
   "user/message": { message: AgentMessage };
   "assistant/message": { message: AssistantMessage };
   "tool/result": { message: ToolResultMessage };
-  "compaction/applied": { anchorSeq: number; digestContent: string };
+  "compaction/applied": {
+    anchorSeq: number;
+    digestContent: string;
+    excludedSeqs: number[];
+  };
   "turn/retried": { abandonedSeqs: number[] };
 }
 

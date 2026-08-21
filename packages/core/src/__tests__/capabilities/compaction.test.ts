@@ -69,6 +69,42 @@ describe("compaction capability", () => {
     expect(deriveMessages(log.events).length).toBeLessThan(50);
   });
 
+  it("records excluded seqs for invalid messages in the retained tail", async () => {
+    const capability = compactionCapability({ projectStore, logger: createSilentLogger() });
+    const hooks = capability.turnHooks!(agentId, sessionId);
+    const fakeAgent = { state: { model: { contextWindow: 10 }, systemPrompt: "" } } as never;
+    const log = seededLog();
+    const failed = log.append("assistant/message", {
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "failed" }],
+        stopReason: "error",
+        timestamp: Date.now(),
+      } as never,
+    });
+    const orphan = log.append("tool/result", {
+      message: {
+        role: "toolResult",
+        toolCallId: "ghost",
+        toolName: "read_file",
+        content: [],
+        isError: true,
+        timestamp: Date.now(),
+      },
+    });
+
+    await hooks.afterTurn!(fakeAgent, log);
+
+    const event = log.events.find((entry) => entry.type === "compaction/applied");
+    expect(event?.type).toBe("compaction/applied");
+    if (event?.type !== "compaction/applied") throw new Error("missing compaction event");
+    expect(event.data.excludedSeqs).toEqual(expect.arrayContaining([failed.seq, orphan.seq]));
+    const visibleSeqs = deriveMessages(log.events).map((message) =>
+      (message as { content?: unknown }).content,
+    );
+    expect(visibleSeqs).not.toContain(failed.data.message.content);
+  });
+
   it("contributes to a composed hook chain like any other capability", async () => {
     const order: string[] = [];
     const other = { afterTurn: async () => order.push("other") };

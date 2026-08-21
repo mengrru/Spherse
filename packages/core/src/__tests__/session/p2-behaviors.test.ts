@@ -77,7 +77,12 @@ describe("restore sanitization (#10)", () => {
 
     const events: SessionEvent[] = [
       { type: "user/message", seq: 0, time: 0, data: { message: { role: "user", content: "old", timestamp: 0 } as never } },
-      { type: "compaction/applied", seq: 1, time: 1, data: { anchorSeq: 0, digestContent: "digest" } },
+      {
+        type: "compaction/applied",
+        seq: 1,
+        time: 1,
+        data: { anchorSeq: 0, digestContent: "digest", excludedSeqs: [] },
+      },
       { type: "tool/result", seq: 2, time: 2, data: { message: orphanToolResult } },
       { type: "assistant/message", seq: 3, time: 3, data: { message: failedAssistant } },
       { type: "user/message", seq: 4, time: 4, data: { message: goodUser } },
