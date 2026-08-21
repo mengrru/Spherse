@@ -10,6 +10,7 @@
 
 ## 代码质量
 
+- [x] **restore 时补齐被中断的 toolCall（孤儿 toolCall 自愈）**：工具执行中途崩溃/退出后，assistant 消息（含 toolCall）已落库而 toolResult 未落库，恢复后会话永久不可用——下次 prompt 被 provider 以 tool_use/tool_result 配对违规拒绝，且 `retryLastTurn` 的 `stopReason === "error"` 守卫不匹配（消息以 `toolUse` 正常结束）无法自救。修复：`initForRestore` 构造 initialLog 后经 `synthesizeInterruptedToolResults`（`session/compactor.ts` 纯函数，参考已废弃 event log 分支的 repairLog 思路）为尾部 assistant 消息中未应答的 toolCall 合成 `isError` toolResult 并持久化（幂等，二次 restore 不重复合成）。参见 `docs/dev/bugfix/2026-08-20-restore-orphaned-toolcall/design.md`
 - [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。
 
 - [x] **Chat 前端状态边界拆分**：将 `features/chat/runtime/streaming-store.ts` 中的 WebSocket、心跳、重连和连接期对账提取为 per-session `ChatSessionRuntime`；Zustand 仅保留可观察状态与公开 actions，transport runtime 由 registry 管理；将纯数据逻辑收纳到 `features/chat/model/`，由 reducer、历史投影和 tool/card 投影模块分别负责，并以 `connectionStatus` 替代 `wsConnecting` 布尔值。参见 `docs/dev/bugfix/2026-08-04-chat-ws-lifecycle/design.md`

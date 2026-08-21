@@ -20,7 +20,7 @@ import type { RuntimeDeps } from "./runtime.js";
 import { logEventMiddleware, persistEventMiddleware } from "./event-middlewares.js";
 import { createAttachmentSanitizer } from "../attachments/sanitizer.js";
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
-import { logFromCompaction, logFromRows } from "./compactor.js";
+import { logFromCompaction, logFromRows, synthesizeInterruptedToolResults } from "./compactor.js";
 import { readCurrentTokens } from "../context/token-estimate.js";
 import {
   buildAgent,
@@ -89,7 +89,7 @@ export class AgentRunner {
     if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
 
     const latest = agentStore.sessions.getLatestCompaction(sessionId);
-    const initialLog = latest
+    let initialLog = latest
       ? logFromCompaction(
           latest.anchorMessageId,
           latest.digestContent,
@@ -99,6 +99,11 @@ export class AgentRunner {
             .map((r) => ({ id: r.id, message: r.message })),
         )
       : logFromRows(agentStore.sessions.getSessionMessagesWithIds(sessionId));
+
+    for (const message of synthesizeInterruptedToolResults(initialLog)) {
+      const dbId = agentStore.sessions.appendMessage(sessionId, message);
+      initialLog = appendEntry(initialLog, message, dbId);
+    }
 
     return AgentRunner.init(deps, agentId, sessionId, { initialLog });
   }
