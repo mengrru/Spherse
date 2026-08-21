@@ -7,6 +7,9 @@ tools:
   - search_content
   - move_file
   - copy_file
+  - read_data
+  - query_data
+  - mutate_data
   - append_changelog
   - load_skill
   - render_card

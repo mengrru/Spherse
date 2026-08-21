@@ -119,9 +119,71 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 要点速览（详情见 `use-ui-sdk`）：
 
 - `spherse.data.get` / `spherse.data.set` / `spherse.data.delete`：对 key-value 数据的读写删（均返回 Promise）
+- `spherse.data.mutate`：执行数据文件 `$manifest` 声明的业务 mutation 入口（结构性写入用，见下文 `$manifest` 一节）
 - 数据文件路径通过 `file` 参数显式指定，约定命名为 `{HTML文件名}.data.json` 并与 HTML 同级（如 `world/atlas.html` → `world/atlas.data.json`）；**字符串模式**下 HTML 不是文件，需自行指定一个项目内的 `.data.json` 路径
 - 数据文件**不能**放在 `.spherse/` 目录下
 - 两种渲染模式都可用（经 App 注入的 SDK，不依赖 `fetch`）
+
+## 强制：会增长/需要 agent 互动的数据文件必须内嵌 `$manifest`
+
+判断：数据是**静态展示**（一次性内容，页面只 `fetch` 渲染）→ 无需 manifest；数据会**随使用增长**（清单、记录、游戏存档）或**需要 agent 与页面互动读写**（agent 查看用户操作、代用户增删条目）→ 数据文件根部**必须**内嵌 `$manifest` 字段。
+
+manifest 是你（生成页面时）向后续读该文件的 agent 传递业务语义的唯一通道：声明业务命名的查询/变更入口后，agent 用 `query_data` / `mutate_data` 工具按入口读写，一次调用直达数据，不必读整个大文件，写入形状也由 schema 保证不会写坏页面。
+
+生成时三件套**同源产出**：HTML（data action 调用代码）+ 业务数据 + `$manifest`。manifest 的 mutations **必须覆盖页面 SDK 代码实际会做的结构性变更**（页面会 append 条目就声明 append 入口），fields 的枚举值与页面渲染假设一致（页面按 `pending/done` 渲染就不要声明别的值）。
+
+规则：
+
+- 顶层 `$` 前缀键是平台保留，业务数据键不得以 `$` 开头
+- manifest 保持精简（≤2KB）：只放路径映射与字段 schema，不放示例数据
+- `identity` 声明数组条目的稳定键（通常 `id`），`auto` 声明由系统生成的字段（`uuid`/`nowIso`），不要让调用方传
+- dot-path 寻址（`todos`、`stats`），不支持数组下标
+
+模板（todos 看板，可直接改写）：
+
+```json
+{
+  "$manifest": {
+    "version": 1,
+    "desc": "任务看板数据",
+    "queries": {
+      "listTodos": {
+        "desc": "待办列表，默认按 createdAt 降序",
+        "path": "todos",
+        "identity": "id",
+        "params": {
+          "status": { "type": "enum", "values": ["pending", "done"], "desc": "按状态过滤" },
+          "sort": { "type": "field", "desc": "排序字段，默认 createdAt" },
+          "dir": { "type": "enum", "values": ["asc", "desc"], "default": "desc" }
+        },
+        "defaultLimit": 20
+      }
+    },
+    "mutations": {
+      "addTodo": {
+        "desc": "新增待办",
+        "op": "append",
+        "path": "todos",
+        "fields": {
+          "title": { "type": "string", "required": true },
+          "priority": { "type": "enum", "values": ["low", "medium", "high"], "default": "medium" }
+        },
+        "auto": { "id": "uuid", "createdAt": "nowIso" }
+      },
+      "setTodoStatus": {
+        "op": "update", "path": "todos", "match": "id",
+        "fields": { "status": { "type": "enum", "values": ["pending", "done"], "required": true } }
+      },
+      "removeTodo": { "op": "remove", "path": "todos", "match": "id" }
+    }
+  },
+  "todos": []
+}
+```
+
+要点：`queries` 声明 enum 过滤/排序/`identity` 游标分页；`mutations` 四种 op（`append`/`update`/`remove`/`set`），`match` 字段值由调用方传入（隐式必填），`fields` 做类型/枚举/默认值校验，`auto` 由 server 生成。
+
+**页面代码的写入粒度约定**：声明了 `$manifest` 的数据文件，页面 JS 对集合的**结构性增删改必须走 `spherse.data.mutate({ file, name, args })` 调用同名 mutation 入口**（与 agent 的 `mutate_data` 同一通道，锁内 item 级原子变更，并发互不覆盖）；`data.set` 仅用于单值/标量/低冲突数据，**不要**对数组集合整体 `data.set`——会覆盖 agent 并发写入的条目。
 
 ## 跳转到项目内其它文件：openFile
 
@@ -239,7 +301,7 @@ spherse.openExternalLink("https://example.com");
 | 信息量大 / 需长期维护的页面 | 数据与渲染分离：外置 `{页面名}.data.json`，HTML 用 `fetch()` 读取，分两个文件落盘 |
 | 文件模式下加载展示数据 | 外置同目录 `.json`，用 `fetch()` |
 | 字符串模式下加载展示数据 | 数据内联进 HTML，或用 ui-sdk `data.get` |
-| 持久化读写数据 | ui-sdk `data.get` / `data.set` / `data.delete` |
+| 持久化读写数据 | ui-sdk `data.get` / `data.set` / `data.delete`；结构性集合写入用 `data.mutate` |
 | 枚举数据文件 key / 批量读取 | ui-sdk `data.keys` / `data.entries` |
 | 列出目录内容 | ui-sdk `api.content.listDir` |
 | 获取文件大小/类型/修改时间 | ui-sdk `api.content.stat` |

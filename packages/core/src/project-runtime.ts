@@ -4,6 +4,7 @@ import type { TriggerManager } from "./trigger/trigger-manager.js";
 import type { TimerService } from "./trigger/timer-service.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
 import type { TriggerCapability } from "./capabilities/trigger/index.js";
+import type { DataStore } from "./capabilities/data/index.js";
 import type { AgentConfigChangeKind, Capability } from "./kernel/capability.js";
 import type { AgentProfile } from "./types.js";
 import { type Logger, createSilentLogger } from "./logger.js";
@@ -12,6 +13,7 @@ export class ProjectRuntime {
   readonly projectManager: ProjectManager;
   readonly sessionRuntime: SessionManager;
   readonly projectId: string;
+  readonly dataStore: DataStore | undefined;
   private logger: Logger;
   private _shutdownDone = false;
   private readonly capabilities: ReadonlyArray<Capability>;
@@ -22,10 +24,12 @@ export class ProjectRuntime {
     projectId: string;
     logger?: Logger;
     capabilities: ReadonlyArray<Capability>;
+    dataStore?: DataStore;
   }) {
     this.projectManager = deps.projectManager;
     this.sessionRuntime = deps.sessionRuntime;
     this.projectId = deps.projectId;
+    this.dataStore = deps.dataStore;
     this.logger = deps.logger ?? createSilentLogger();
     this.capabilities = deps.capabilities;
   }

@@ -6,6 +6,7 @@ export const RATE_LIMIT_WHITELIST: ReadonlySet<string> = new Set([
   "data.get",
   "data.keys",
   "data.entries",
+  "data.mutate",
 ]);
 
 export function isRateLimitWhitelisted(action: string): boolean {

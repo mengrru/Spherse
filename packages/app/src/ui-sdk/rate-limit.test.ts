@@ -17,6 +17,7 @@ describe("rate-limit", () => {
   it("includes data.get in the whitelist", () => {
     expect(RATE_LIMIT_WHITELIST.has("data.get")).toBe(true);
     expect(isRateLimitWhitelisted("data.get")).toBe(true);
+    expect(RATE_LIMIT_WHITELIST.has("data.mutate")).toBe(true);
   });
 
   it("includes data.keys in the whitelist", () => {

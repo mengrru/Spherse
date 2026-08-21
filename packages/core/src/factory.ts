@@ -7,6 +7,8 @@ import { ProjectManager } from "./project-manager.js";
 import { SessionManager } from "./session/session-manager.js";
 import { RunConfigHolder, createRuntimeDeps } from "./session/runtime.js";
 import { builtinToolCapabilities } from "./capabilities/builtin.js";
+import { createDataStore } from "./capabilities/data/index.js";
+import type { DataStore } from "./capabilities/data/index.js";
 import { createTriggerCapability } from "./capabilities/trigger/index.js";
 import { createMcpCapability } from "./capabilities/mcp/index.js";
 import { attachmentsCapability } from "./capabilities/attachments/index.js";
@@ -29,9 +31,9 @@ export interface AssembleOptions {
   capabilities?: Capability[] | ((builtin: Capability[]) => Capability[]);
 }
 
-export function defaultCapabilities(projectStore: ProjectStore, logger: Logger): Capability[] {
+export function defaultCapabilities(projectStore: ProjectStore, logger: Logger, dataStore?: DataStore): Capability[] {
   return [
-    ...builtinToolCapabilities(),
+    ...builtinToolCapabilities(dataStore),
     createTriggerCapability({ projectStore, logger }),
     createMcpCapability({ projectStore, logger }),
     attachmentsCapability(),
@@ -49,6 +51,7 @@ export async function assembleProject(
 
   const fileWriteMutex = new FileWriteMutex();
   const projectStore = new ProjectStore(projectRoot, logger, fileWriteMutex);
+  const dataStore = createDataStore({ projectRoot, fileWriteMutex, logger });
 
   let isNewProject = false;
   try {
@@ -68,8 +71,8 @@ export async function assembleProject(
   const stores = createStoreRegistry(logger);
   const capabilities =
     typeof options?.capabilities === "function"
-      ? options.capabilities(defaultCapabilities(projectStore, logger))
-      : (options?.capabilities ?? defaultCapabilities(projectStore, logger));
+      ? options.capabilities(defaultCapabilities(projectStore, logger, dataStore))
+      : (options?.capabilities ?? defaultCapabilities(projectStore, logger, dataStore));
 
   const runConfig = new RunConfigHolder({
     ...(options?.defaultModel !== undefined ? { defaultModel: options.defaultModel } : {}),
@@ -114,6 +117,7 @@ export async function assembleProject(
     projectId: projectStore.config.getProjectId(),
     logger,
     capabilities,
+    dataStore,
   });
 }
 

@@ -1,8 +1,5 @@
-import type { ApiClient } from "../../lib/api";
 import { registerAction } from "../registry";
 import { respond } from "../respond";
-
-const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
 function validateFileParam(file: unknown): string | null {
   if (typeof file !== "string" || !file) return null;
@@ -11,35 +8,28 @@ function validateFileParam(file: unknown): string | null {
   return file;
 }
 
-async function readDataJson(client: ApiClient, dataFilePath: string): Promise<Record<string, unknown>> {
-  const res = await client.getContent(dataFilePath);
-  if (!res) return {};
-  try {
-    const parsed = JSON.parse(res.content);
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
-    return parsed as Record<string, unknown>;
-  } catch {
-    return {};
-  }
+function validateKeyParam(key: unknown): string | null {
+  if (typeof key !== "string" || !key) return null;
+  return key;
 }
 
-async function writeDataJson(client: ApiClient, dataFilePath: string, data: Record<string, unknown>): Promise<void> {
-  const content = JSON.stringify(data, null, 2);
-  if (new TextEncoder().encode(content).length > MAX_FILE_SIZE) {
-    throw new Error("Data file exceeds 20MB limit");
-  }
-  await client.saveContent(dataFilePath, content);
+function isReservedKey(key: string): boolean {
+  return key.startsWith("$");
 }
 
 registerAction("data.get", async (params, ctx) => {
   const { file, key } = params as { file: unknown; key: unknown };
   const validFile = validateFileParam(file);
-  if (!validFile || !key || typeof key !== "string" || !ctx.client) return;
+  const validKey = validateKeyParam(key);
+  if (!validFile || !validKey || !ctx.client) return;
+  if (isReservedKey(validKey)) {
+    respond(ctx, false);
+    return;
+  }
 
   try {
-    const json = await readDataJson(ctx.client, validFile);
-    const value = key in json ? json[key] : null;
-    respond(ctx, true, value);
+    const r = await ctx.client.dataRead({ file: validFile, key: validKey });
+    respond(ctx, true, r.value === undefined ? null : r.value);
   } catch {
     respond(ctx, false);
   }
@@ -48,12 +38,15 @@ registerAction("data.get", async (params, ctx) => {
 registerAction("data.set", async (params, ctx) => {
   const { file, key, value } = params as { file: unknown; key: unknown; value: unknown };
   const validFile = validateFileParam(file);
-  if (!validFile || !key || typeof key !== "string" || value === undefined || !ctx.client) return;
+  const validKey = validateKeyParam(key);
+  if (!validFile || !validKey || value === undefined || !ctx.client) return;
+  if (isReservedKey(validKey)) {
+    respond(ctx, false);
+    return;
+  }
 
   try {
-    const json = await readDataJson(ctx.client, validFile);
-    json[key] = value;
-    await writeDataJson(ctx.client, validFile, json);
+    await ctx.client.dataRawSet({ file: validFile, key: validKey, value });
     respond(ctx, true, value);
   } catch {
     respond(ctx, false);
@@ -63,13 +56,39 @@ registerAction("data.set", async (params, ctx) => {
 registerAction("data.delete", async (params, ctx) => {
   const { file, key } = params as { file: unknown; key: unknown };
   const validFile = validateFileParam(file);
-  if (!validFile || !key || typeof key !== "string" || !ctx.client) return;
+  const validKey = validateKeyParam(key);
+  if (!validFile || !validKey || !ctx.client) return;
+  if (isReservedKey(validKey)) {
+    respond(ctx, false);
+    return;
+  }
 
   try {
-    const json = await readDataJson(ctx.client, validFile);
-    delete json[key];
-    await writeDataJson(ctx.client, validFile, json);
+    await ctx.client.dataRawDelete({ file: validFile, key: validKey });
     respond(ctx, true, true);
+  } catch {
+    respond(ctx, false);
+  }
+});
+
+registerAction("data.mutate", async (params, ctx) => {
+  const { file, name, args, idempotencyKey } = params as {
+    file: unknown;
+    name: unknown;
+    args?: unknown;
+    idempotencyKey?: unknown;
+  };
+  const validFile = validateFileParam(file);
+  if (!validFile || typeof name !== "string" || !name || !ctx.client) return;
+
+  try {
+    const r = await ctx.client.dataMutate({
+      file: validFile,
+      name,
+      ...(typeof args === "object" && args !== null && !Array.isArray(args) ? { args: args as Record<string, unknown> } : {}),
+      ...(typeof idempotencyKey === "string" && idempotencyKey ? { idempotencyKey } : {}),
+    });
+    respond(ctx, true, r.result);
   } catch {
     respond(ctx, false);
   }
@@ -81,8 +100,9 @@ registerAction("data.keys", async (params, ctx) => {
   if (!validFile || !ctx.client) return;
 
   try {
-    const json = await readDataJson(ctx.client, validFile);
-    respond(ctx, true, Object.keys(json));
+    const r = await ctx.client.dataRead({ file: validFile, path: "." });
+    const doc = (r.value ?? {}) as Record<string, unknown>;
+    respond(ctx, true, Object.keys(doc));
   } catch {
     respond(ctx, false);
   }
@@ -94,8 +114,8 @@ registerAction("data.entries", async (params, ctx) => {
   if (!validFile || !ctx.client) return;
 
   try {
-    const json = await readDataJson(ctx.client, validFile);
-    respond(ctx, true, json);
+    const r = await ctx.client.dataRead({ file: validFile, path: "." });
+    respond(ctx, true, (r.value ?? {}) as Record<string, unknown>);
   } catch {
     respond(ctx, false);
   }

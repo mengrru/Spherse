@@ -2,6 +2,7 @@ import * as common from "./common.js";
 import * as agents from "./agents.js";
 import * as sessions from "./sessions.js";
 import * as content from "./content.js";
+import * as data from "./data.js";
 import * as fileTree from "./file-tree.js";
 import * as settings from "./settings.js";
 import * as schedules from "./trigger.js";
@@ -16,6 +17,7 @@ export const schemas = {
   ...agents.schemas,
   ...sessions.schemas,
   ...content.schemas,
+  ...data.schemas,
   ...fileTree.schemas,
   ...settings.schemas,
   ...schedules.schemas,

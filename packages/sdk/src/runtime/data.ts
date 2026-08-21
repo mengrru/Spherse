@@ -12,4 +12,5 @@ export const data = {
   delete: (params: Params): Promise<unknown> => call("data.delete", params),
   keys: (params: Params): Promise<unknown> => call("data.keys", params),
   entries: (params: Params): Promise<unknown> => call("data.entries", params),
+  mutate: (params: Params): Promise<unknown> => call("data.mutate", params),
 };

@@ -7,6 +7,7 @@ import { registerAgentWriteRoutes } from "./agent-write.js";
 import { registerAgentMcpRoutes } from "./agent-mcp.js";
 import { registerSessionRoutes } from "./sessions.js";
 import { registerContentRoutes } from "./content.js";
+import { registerDataRoutes } from "./data.js";
 import { registerSettingsRoutes } from "./settings.js";
 import { registerPreviewRoutes } from "./preview.js";
 import { registerSkillRoutes } from "./skills.js";
@@ -47,6 +48,7 @@ export function registerAllRoutes(
   registerAgentMcpRoutes(fastify, registry);
   registerSessionRoutes(fastify, registry, options.hub);
   registerContentRoutes(fastify, registry);
+  registerDataRoutes(fastify, registry);
   registerSettingsRoutes(fastify, registry);
   registerPreviewRoutes(fastify, registry);
   registerSkillRoutes(fastify, registry);

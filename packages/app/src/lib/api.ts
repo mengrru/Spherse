@@ -23,6 +23,7 @@ import type {
   SessionMessagesPageResponse,
   SessionListPageResponse,
   SessionStatusResponse,
+  DataReadResponseContract as DataReadResponse,
 } from "@spherse/server/contracts";
 import { parseApiResponse, schemas } from "@spherse/server/contracts";
 import { Type } from "@sinclair/typebox";
@@ -178,6 +179,58 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       const res = await authedFetch(`${apiBase}/stat/${encodeURIComponent(filePath)}`);
       await assertOk(res);
       return parseJsonResponse<StatResponse>(res, schemas.statResponse);
+    },
+
+    async dataRead(params: {
+      file: string;
+      key?: string;
+      path?: string;
+      offset?: number;
+      limit?: number;
+      ifVersion?: string;
+    }): Promise<DataReadResponse> {
+      const res = await authedFetch(`${apiBase}/data/read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      await assertOk(res);
+      return parseJsonResponse<DataReadResponse>(res, schemas.dataReadResponse);
+    },
+
+    async dataMutate(params: {
+      file: string;
+      name: string;
+      args?: Record<string, unknown>;
+      idempotencyKey?: string;
+    }): Promise<{ version: string; result: unknown }> {
+      const res = await authedFetch(`${apiBase}/data/mutate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      await assertOk(res);
+      return parseJsonResponse<{ version: string; result: unknown }>(res, schemas.dataMutateResponse);
+    },
+
+    async dataRawSet(params: { file: string; key: string; value: unknown; ifVersion?: string }): Promise<{ version: string }> {
+      const res = await authedFetch(`${apiBase}/data/raw-set`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      await assertOk(res);
+      return parseJsonResponse<{ version: string }>(res, schemas.dataWriteResponse);
+    },
+
+    async dataRawDelete(params: { file: string; key: string; ifVersion?: string }): Promise<{ version: string }> {
+      const res = await authedFetch(`${apiBase}/data/raw-delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      await assertOk(res);
+      return parseJsonResponse<{ version: string }>(res, schemas.dataWriteResponse);
     },
 
     async getContent(filePath: string): Promise<ContentResponse | null> {

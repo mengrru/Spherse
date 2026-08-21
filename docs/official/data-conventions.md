@@ -181,6 +181,18 @@ Full skill instructions in Markdown...
 - **二进制文件处理**：`read_file` 和 `search_content` 通过 null-byte 启发式（前 8KB 采样）检测二进制文件。`read_file` 检测到二进制时拒绝读取并返回提示（图片文件引导使用 `render_card` 展示）；`search_content` 静默跳过二进制文件。server content 路由同样用 `isBinaryBuffer`（前 8KB 采样）嗅探，二进制文件返回 `binary:true` + 空 content（白名单文本格式 md/html/image 含 ico 走专属 viewer，其余二进制由前端 Content Browser 渲染占位卡 `UnsupportedFileCard`，桌面端经 `HostCapabilities.openFileExternal` 提供「用默认应用打开」按钮）
 - **`.spherse` 元数据目录**：`list_files` 和 `search_content` 默认不列出/搜索 `.spherse` 目录及其子路径（参数 `include_meta`，默认 false）；设置 `include_meta=true` 可进入。`spherseOther` category（`.spherse/**` 兜底）对 LLM 可读；`agentSessions`（`sessions.db*`，含 WAL/SHM sidecar）与 `agentMcp`（`mcp.json`，可能含 headers/env 敏感信息）始终不可读
 
+## 活网页数据文件（`*.data.json`）
+
+「活网页」的数据载体：HTML 页面（UI SDK `data.*` action 或 `fetch`）与 agent（`read_data`/`query_data`/`mutate_data` 工具）共同读写。
+
+- 命名约定 `{页面名}.data.json`，与 HTML 同级；不能放在 `.spherse/` 下（HtmlCard 场景的 `.spherse/data/cards/` 例外）
+- 顶层 `$` 前缀键为平台保留（如 `$manifest`）：SDK 写入拒绝、`data.keys`/`data.entries` 不返回、dot-path 寻址不可达
+- 所有写入（SDK 经 server `/data/read|raw-set|raw-delete|mutate` 路由、agent 经 data capability）汇入 core `DataStore` 单例：tmp+rename 原子落盘、`FileWriteMutex` 锁内完成读-改-写、内容哈希 version + `ifVersion` 乐观锁、`idempotencyKey` 幂等、`origin`（sdk/agent）变更事件
+- **写入粒度约定**：集合的结构性增删改走 `data.mutate`（SDK）/`mutate_data`（agent）同一套 manifest 入口（锁内 item 级原子，并发互不覆盖）；`data.set` 仅适合单值/低冲突数据，对数组整体 set 会覆盖并发写入
+- agent 首次接触文件用 `read_data`（不带 path）获取 outline：结构大纲 + `$manifest` 入口签名（`name!`/`name?` 标注必填/可选）；无 manifest 的存量文件自动降级为 outline + dot-path 局部读（数组默认 20 条分页）+ `edit_file`/`write_file` 整文件改
+- `$manifest` 由页面生成时的 agent 同源产出（`write-html` skill 约束），声明业务命名的 `queries`（enum 过滤/sort/dir/identity 游标分页）与 `mutations`（append/update/remove/set + fields 类型校验 + auto 补全 uuid/nowIso + match 定位）；执行时锁内现场校验路径，失配报 `manifest_stale`/`unknown_entry`（附 valid names），不信任缓存健康度
+- 数据文件损坏（撕裂 JSON）报 `file_corrupted`，不自动修复
+
 ## HTML Card
 
 `render_card` tool 支持以下数据来源：
