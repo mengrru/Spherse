@@ -31,7 +31,7 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 | 触发型（fire-and-forget） | `openSession` / `openFile` / `openExternalLink` / `floatSession` / `unfloatSession` / `floatContent` / `unfloatContent` / `emitAgentTriggerEvent` / `toast` | 单向触发，无返回值 |
 | 请求型（Promise） | `createSession(params)` → `Promise<{ sessionId }>` | 创建会话，返回新会话 ID |
 | 请求型（Promise） | `sendMessage(params)` → `Promise` | 等待发送结果 |
-| 请求型（Promise） | `data.get` / `data.set` / `data.delete` / `data.keys` / `data.entries` | key-value 持久化 |
+| 请求型（Promise） | `data.get` / `data.set` / `data.delete` / `data.keys` / `data.entries` / `data.mutate` | key-value 持久化 + manifest 结构性变更 |
 | 请求型（Promise） | `api.call(op, args)` 及 `api.*` 命名方法 | 只读查询项目信息（agents / sessions / content / fileTree） |
 | 事件型 | `events.on("file:update", filter, handler)` | 订阅指定项目文件的变化信号 |
 | 运行时 | `spherse.runtime`（同步读）/ `spherse.getRuntime()`（Promise） | 获取当前会话上下文（仅 HtmlCard 有值） |
@@ -267,7 +267,7 @@ const all = await spherse.data.entries({ file: "world/game.data.json" });
 - 文件名必须为 `{HTML文件名}.data.json`，放在 HTML 同级目录（`world/game.html` → `world/game.data.json`）
 - 顶层 JSON object，仅支持顶层 key 操作（不支持 `a.b.c` 嵌套路径；key 中的点不会被解释为路径）
 - value 支持任意 JSON 可序列化类型
-- `data.set` / `data.delete` 是**原子操作**：并发写不会互相覆盖，页面无需自己加锁或读-改-写防冲突
+- `data.set` / `data.delete` 是**key 级原子操作**：单次写入不撕裂文件、同 key 并发不互相覆盖，页面无需防写撕裂
 - **写入粒度约定**：`data.set` 适合单值/标量/低冲突数据；**集合类（数组）的结构性增删改必须走 `data.mutate`**——`data.set` 传整个数组会覆盖 agent 并发写入的条目（丢失更新）
 - 数据文件损坏（非法 JSON）时 `data.*` 返回错误（`ok:false`），不会静默把文件重置为空
 - 顶层 `$` 前缀键为平台保留（如 `$manifest`）：`data.set` 拒绝写入、`data.keys` / `data.entries` 不返回它们

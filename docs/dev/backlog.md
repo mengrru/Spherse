@@ -10,6 +10,7 @@
 
 ## 代码质量
 
+- [ ] **E2E `app.close()` 间歇悬死（存量基建 flake）**：顺序启动多个 Electron E2E 实例时，`app.close()` 偶发 60s 悬死（无断言失败、无页面快照；逐步日志定位到 close 不返回）。干净 main 可复现（纯 HTML 项目、无 feature 代码参与，~每 5-8 次启动命中一次），疑点在 server shutdown 链路（`stopServer` → `registry.removeAll()` → capability `shutdown`/sqlite/fs-watch 关闭竞态）。放大因素：spec 数量越多、顺序启动次数越多，命中率越高。修复方向：给 shutdown 各环节加超时/审计哪个 await 卡住；临时缓解可在 CI 重试。
 - [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。
 
 - [x] **Chat 前端状态边界拆分**：将 `features/chat/runtime/streaming-store.ts` 中的 WebSocket、心跳、重连和连接期对账提取为 per-session `ChatSessionRuntime`；Zustand 仅保留可观察状态与公开 actions，transport runtime 由 registry 管理；将纯数据逻辑收纳到 `features/chat/model/`，由 reducer、历史投影和 tool/card 投影模块分别负责，并以 `connectionStatus` 替代 `wsConnecting` 布尔值。参见 `docs/dev/bugfix/2026-08-04-chat-ws-lifecycle/design.md`

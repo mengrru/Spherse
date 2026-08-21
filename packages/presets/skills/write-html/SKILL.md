@@ -301,7 +301,7 @@ spherse.openExternalLink("https://example.com");
 | 信息量大 / 需长期维护的页面 | 数据与渲染分离：外置 `{页面名}.data.json`，HTML 用 `fetch()` 读取，分两个文件落盘 |
 | 文件模式下加载展示数据 | 外置同目录 `.json`，用 `fetch()` |
 | 字符串模式下加载展示数据 | 数据内联进 HTML，或用 ui-sdk `data.get` |
-| 持久化读写数据 | ui-sdk `data.get` / `data.set` / `data.delete` |
+| 持久化读写数据 | ui-sdk `data.get` / `data.set` / `data.delete`；结构性集合写入用 `data.mutate` |
 | 枚举数据文件 key / 批量读取 | ui-sdk `data.keys` / `data.entries` |
 | 列出目录内容 | ui-sdk `api.content.listDir` |
 | 获取文件大小/类型/修改时间 | ui-sdk `api.content.stat` |

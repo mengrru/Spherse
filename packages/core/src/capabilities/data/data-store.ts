@@ -263,6 +263,44 @@ export function createDataStore(opts: CreateDataStoreOptions): DataStore {
     throw new Error(`unsupported mutation op: ${mutation.op}`);
   }
 
+  async function mutateImpl(
+    absPath: string,
+    name: string,
+    args: Record<string, unknown>,
+    opts: { idempotencyKey?: string; origin?: DataOrigin } | undefined,
+  ): Promise<MutateResult> {
+    const origin: DataOrigin = opts?.origin ?? "agent";
+    const idemKey = opts?.idempotencyKey !== undefined ? `${name}\0${opts.idempotencyKey}` : undefined;
+    const cached = recallIdempotent(absPath, idemKey);
+    if (cached !== undefined) return cached as MutateResult;
+
+    const result = await mutex.run(absPath, async () => {
+      const inFlight = recallIdempotent(absPath, idemKey);
+      if (inFlight !== undefined) return inFlight as MutateResult;
+
+      const loaded = await loadDoc(absPath);
+      const manifest = readManifestFromDoc(loaded.doc);
+      if (!manifest) {
+        throw new UnknownEntryError(name, "mutation", Object.keys(manifestMutationsOf(loaded.doc.$manifest)));
+      }
+      const mutation = manifest.mutations[name];
+      if (!mutation) {
+        throw new UnknownEntryError(name, "mutation", Object.keys(manifest.mutations));
+      }
+      const health = checkManifestHealth(loaded.doc, manifest);
+      if (health.staleMutations.includes(name)) {
+        throw new ManifestStaleError(name, "mutation", Object.keys(manifest.mutations));
+      }
+      const result = applyMutation(loaded.doc, mutation, args, name, Object.keys(manifest.mutations));
+      const version = await persistLocked(absPath, loaded.doc, origin, name);
+      const full = { version, result } satisfies MutateResult;
+      rememberIdempotent(absPath, idemKey, full);
+      return full;
+    });
+    flushEvents();
+    return result;
+  }
+
   const store: DataStore = {
     async outline(file): Promise<OutlineResult> {
       const absPath = resolveDataFile(root, file);
@@ -372,35 +410,7 @@ export function createDataStore(opts: CreateDataStoreOptions): DataStore {
 
     async mutate(file, name, args, opts): Promise<MutateResult> {
       const absPath = resolveDataFile(root, file);
-      const origin: DataOrigin = opts?.origin ?? "agent";
-      const cached = recallIdempotent(absPath, opts?.idempotencyKey);
-      if (cached !== undefined) return cached as MutateResult;
-
-      const result = await mutex.run(absPath, async () => {
-        const inFlight = recallIdempotent(absPath, opts?.idempotencyKey);
-        if (inFlight !== undefined) return inFlight as MutateResult;
-
-        const loaded = await loadDoc(absPath);
-        const manifest = readManifestFromDoc(loaded.doc);
-        if (!manifest) {
-          throw new UnknownEntryError(name, "mutation", Object.keys(manifestMutationsOf(loaded.doc.$manifest)));
-        }
-        const mutation = manifest.mutations[name];
-        if (!mutation) {
-          throw new UnknownEntryError(name, "mutation", Object.keys(manifest.mutations));
-        }
-        const health = checkManifestHealth(loaded.doc, manifest);
-        if (health.staleMutations.includes(name)) {
-          throw new ManifestStaleError(name, "mutation", Object.keys(manifest.mutations));
-        }
-        const result = applyMutation(loaded.doc, mutation, args, name, Object.keys(manifest.mutations));
-        const version = await persistLocked(absPath, loaded.doc, origin, name);
-        const full = { version, result } satisfies MutateResult;
-        rememberIdempotent(absPath, opts?.idempotencyKey, full);
-        return full;
-      });
-      flushEvents();
-      return result;
+      return mutateImpl(absPath, name, args, opts);
     },
 
     async rawSet(file, key, value, opts) {

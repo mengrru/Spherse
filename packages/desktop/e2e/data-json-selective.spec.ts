@@ -109,7 +109,6 @@ async function launchAppWithProject(project: { root: string; projectId: string }
     env: {
       ...process.env,
       NODE_ENV: "test",
-      SPHERSE_E2E_RATE_LIMIT_OFF: "1",
       ELECTRON_ENABLE_LOGGING: "1",
       XDG_CONFIG_HOME: userDataDir,
     },
@@ -152,7 +151,7 @@ test("20 parallel SDK writes through server DataStore lose nothing; $manifest st
   }
 });
 
-test("data.mutate from page applies manifest mutations atomically (sdk origin)", async () => {
+test("data.mutate from page applies manifest mutations atomically", async () => {
   const project = await createProject();
   const { app, page } = await launchAppWithProject(project);
 

@@ -250,6 +250,32 @@ describe("DataStore.mutate", () => {
     expect(after.total).toBe(20);
   });
 
+  it("interleaved sdk-origin and agent-origin mutations all persist (granularity asymmetry case)", async () => {
+    const calls = [
+      ...Array.from({ length: 10 }, (_, i) => store.mutate(FILE, "addTodo", { title: `page-${i}` }, { origin: "sdk" })),
+      ...Array.from({ length: 10 }, (_, i) => store.mutate(FILE, "addTodo", { title: `agent-${i}` })),
+    ];
+    await Promise.all(calls);
+    const after = await store.read(FILE, { path: "todos", limit: 100 });
+    expect(after.total).toBe(20);
+    const titles = ((after.value as { title: string }[]).map((r) => r.title));
+    expect(titles.filter((t) => t.startsWith("page-"))).toHaveLength(10);
+    expect(titles.filter((t) => t.startsWith("agent-"))).toHaveLength(10);
+    const origins = events.map((e) => e.origin).sort();
+    expect(origins.filter((o) => o === "sdk")).toHaveLength(10);
+    expect(origins.filter((o) => o === "agent")).toHaveLength(10);
+  });
+
+  it("idempotency keys are scoped per mutation name (same key across entries does not cross-dedupe)", async () => {
+    await store.mutate(FILE, "addTodo", { title: "a" }, { idempotencyKey: "shared" });
+    const stats = await store.mutate(FILE, "resetStats", { hp: 1 }, { idempotencyKey: "shared" });
+    expect(stats.result).toEqual({ hp: 1 });
+    const retry = await store.mutate(FILE, "addTodo", { title: "a" }, { idempotencyKey: "shared" });
+    expect((retry.result as { title: string }).title).toBe("a");
+    const after = await store.read(FILE, { path: "todos" });
+    expect(after.total).toBe(1);
+  });
+
   it("unknown mutation lists valid names", async () => {
     await expect(store.mutate(FILE, "nope", {})).rejects.toThrow(UnknownEntryError);
   });

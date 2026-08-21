@@ -128,6 +128,45 @@ describe("data routes", () => {
     expect(JSON.parse(invalid.body).code).toBe("validation_failed");
   });
 
+  it("mutate: idempotencyKey dedupes retries at route level", async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "idem.data.json"),
+      JSON.stringify({
+        $manifest: { version: 1, mutations: { addItem: { op: "append", path: "items", fields: { title: { type: "string", required: true } } } } },
+        items: [],
+      }),
+    );
+    const payload = { file: "idem.data.json", name: "addItem", args: { title: "once" }, idempotencyKey: "k1" };
+    const first = await app.inject({ method: "POST", url: "/api/projects/p1/data/mutate", payload });
+    const second = await app.inject({ method: "POST", url: "/api/projects/p1/data/mutate", payload });
+    expect(first.statusCode).toBe(200);
+    expect(second.statusCode).toBe(200);
+    const r1 = JSON.parse(first.body).result as { title: string };
+    const r2 = JSON.parse(second.body).result as { title: string };
+    expect(r1).toEqual(r2);
+    const onDisk = JSON.parse(fs.readFileSync(path.join(tmpDir, "idem.data.json"), "utf8"));
+    expect(onDisk.items).toHaveLength(1);
+  });
+
+  it("mutate: manifest_stale maps to 409 with validNames", async () => {
+    fs.writeFileSync(
+      path.join(tmpDir, "stale.data.json"),
+      JSON.stringify({
+        $manifest: { version: 1, mutations: { addItem: { op: "append", path: "gone", fields: { title: { type: "string" } } } } },
+        items: [],
+      }),
+    );
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/projects/p1/data/mutate",
+      payload: { file: "stale.data.json", name: "addItem", args: { title: "x" } },
+    });
+    expect(res.statusCode).toBe(409);
+    const body = JSON.parse(res.body);
+    expect(body.code).toBe("manifest_stale");
+    expect(body.validNames).toEqual(["addItem"]);
+  });
+
   it("raw-set creates and updates; rejects $ keys with 400", async () => {
     const set = await app.inject({
       method: "POST",
