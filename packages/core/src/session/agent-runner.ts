@@ -1,26 +1,20 @@
 import type { Agent, AgentEvent, AgentTool } from "@earendil-works/pi-agent-core";
-import { prepareAttachmentUserMessage, type Attachment } from "../attachments/index.js";
+import { prepareAttachmentUserMessage, stripUserAttachments, type Attachment } from "../attachments/index.js";
 import type { SamplingParams } from "../types.js";
-import { NotFoundError, ValidationError } from "../errors.js";
+import { MigrationRequiredError, NotFoundError, ValidationError } from "../errors.js";
 import { createEventPipeline, type EventMiddleware } from "../kernel/event-pipeline.js";
-import {
-  appendEntry,
-  dropLast,
-  emptyLog,
-  messagesOf,
-  replaceMessage,
-  type MessageLog,
-} from "../kernel/message-log.js";
 import type { SessionControlEvent } from "./types.js";
 import { SessionControlBus } from "./control-bus.js";
 import { createApprovalGate } from "./approval-gate.js";
 import { createAskGate } from "./ask-gate.js";
 import type { SessionStatus } from "./status.js";
 import type { RuntimeDeps } from "./runtime.js";
-import { logEventMiddleware, persistEventMiddleware } from "./event-middlewares.js";
+import { logEventMiddleware } from "./event-middlewares.js";
 import { createAttachmentSanitizer } from "../attachments/sanitizer.js";
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
-import { logFromCompaction, logFromRows, synthesizeInterruptedToolResults } from "./compactor.js";
+import { deriveMessages, repairLog } from "./fold.js";
+import { SessionEventLog } from "./event-log.js";
+import type { SessionEvent } from "./events.js";
 import { readCurrentTokens } from "../context/token-estimate.js";
 import {
   buildAgent,
@@ -28,12 +22,12 @@ import {
   composeStreamFn,
   streamDecoratorsFor,
 } from "./agent-assembly.js";
-import type { SessionStore } from "../store/session.js";
 
 export type RunnerEventHandler = (event: AgentEvent | SessionControlEvent) => void;
 
 export class AgentRunner {
-  private log: MessageLog;
+  private eventLog: SessionEventLog | null = null;
+  private turnCounter = 0;
   private inFlight = false;
   private turnHooks: TurnHooks;
   private capabilityMiddlewares: ReadonlyArray<EventMiddleware<AgentEvent>> = [];
@@ -46,7 +40,6 @@ export class AgentRunner {
     private readonly deps: RuntimeDeps,
     private readonly controlBus: SessionControlBus,
   ) {
-    this.log = emptyLog();
     this.turnHooks = composeTurnHooks([]);
   }
 
@@ -54,7 +47,7 @@ export class AgentRunner {
     deps: RuntimeDeps,
     agentId: string,
     sessionId: string,
-    options?: { initialLog?: MessageLog },
+    options?: { eventLog?: SessionEventLog },
   ): Promise<AgentRunner> {
     const agentStore = deps.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
@@ -71,8 +64,10 @@ export class AgentRunner {
       deps.createTurnHooks ? [deps.createTurnHooks(agentId, sessionId)] : [],
     );
     runner.capabilityMiddlewares = deps.capabilities.flatMap((c) => c.eventMiddlewares ?? []);
-    if (options?.initialLog) {
-      runner.log = options.initialLog;
+    runner.eventLog =
+      options?.eventLog ?? SessionEventLog.open(agentStore.sessions, sessionId);
+    runner.turnCounter = countTurns(runner.eventLog.events);
+    if (runner.eventLog.events.length > 0) {
       runner.syncBufferFromLog();
     }
     return runner;
@@ -87,25 +82,18 @@ export class AgentRunner {
     if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
     const session = agentStore.sessions.getSession(sessionId);
     if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
-
-    const latest = agentStore.sessions.getLatestCompaction(sessionId);
-    let initialLog = latest
-      ? logFromCompaction(
-          latest.anchorMessageId,
-          latest.digestContent,
-          latest.createdAt,
-          agentStore.sessions
-            .getMessagesAfter(sessionId, latest.anchorMessageId)
-            .map((r) => ({ id: r.id, message: r.message })),
-        )
-      : logFromRows(agentStore.sessions.getSessionMessagesWithIds(sessionId));
-
-    for (const message of synthesizeInterruptedToolResults(initialLog)) {
-      const dbId = agentStore.sessions.appendMessage(sessionId, message);
-      initialLog = appendEntry(initialLog, message, dbId);
+    if (agentStore.sessions.sessionNeedsMigration(sessionId)) {
+      throw new MigrationRequiredError(
+        `Session "${sessionId}" uses the legacy message format and must be migrated first`,
+      );
     }
 
-    return AgentRunner.init(deps, agentId, sessionId, { initialLog });
+    const eventLog = SessionEventLog.open(agentStore.sessions, sessionId);
+    const repairs = repairLog(eventLog.events);
+    eventLog.appendBatch(
+      repairs.map((repair) => ({ type: repair.type, data: repair.data })),
+    );
+    return AgentRunner.init(deps, agentId, sessionId, { eventLog });
   }
 
   getAgentId(): string {
@@ -116,8 +104,8 @@ export class AgentRunner {
     return this.agent;
   }
 
-  get currentLog(): MessageLog {
-    return this.log;
+  get currentEvents(): readonly SessionEvent[] {
+    return this.eventLog?.events ?? [];
   }
 
   markReloadPending(): void {
@@ -135,26 +123,34 @@ export class AgentRunner {
       await this.applyReload();
     }
     this.ensureModel();
+    this.ensureWritable();
     await this.turnHooks.beforeTurn?.(this.agent);
     const sessionLogger = this.deps.logger.child({ sessionId: this.sessionId });
-    const agentStore = this.deps.projectStore.getAgent(this.agentId);
 
+    const sanitizer = createAttachmentSanitizer(attachments);
     const userMessage = await prepareAttachmentUserMessage(
       message,
       attachments,
       this.deps.projectRoot,
       this.deps.attachmentProcessors,
     );
+    const sanitizedUserMessage = sanitizer
+      ? (stripUserAttachments(userMessage as never, attachments) as typeof userMessage)
+      : userMessage;
 
-    this.syncBufferFromLog();
-    const sanitizer = createAttachmentSanitizer(attachments);
+    const turn = this.turnCounter;
+    this.eventLog!.appendBatch([
+      { type: "user/message", data: { message: sanitizedUserMessage as never } },
+      { type: "turn/start", data: { turn } },
+    ]);
+    this.turnCounter++;
 
     const dispatch = createEventPipeline(
       [
         logEventMiddleware(sessionLogger),
         ...this.capabilityMiddlewares,
         ...(sanitizer ? [sanitizer.middleware] : []),
-        this.persistMiddleware(agentStore),
+        this.persistMiddleware(turn),
       ],
       onEvent,
     );
@@ -170,9 +166,6 @@ export class AgentRunner {
       if (sanitizer) {
         const result = sanitizer.finalize(this.agent.state.messages);
         this.agent.state.messages = result.messages;
-        if (result.pair) {
-          this.log = replaceMessage(this.log, result.pair.full, result.pair.stripped);
-        }
       }
       unsubscribe();
       this.controlBus.swapEventSink(previousSink);
@@ -186,10 +179,13 @@ export class AgentRunner {
       this.pendingReload = false;
       await this.applyReload();
     }
-    const last = this.log.entries[this.log.entries.length - 1];
+    const lastEvent = [...this.eventLog!.events]
+      .reverse()
+      .find((event) => event.type === "assistant/message");
     const lastBuffered = this.agent.state.messages[this.agent.state.messages.length - 1];
     if (
-      !last ||
+      !lastEvent ||
+      lastEvent.type !== "assistant/message" ||
       !lastBuffered ||
       lastBuffered.role !== "assistant" ||
       (lastBuffered as { stopReason?: string }).stopReason !== "error"
@@ -200,11 +196,12 @@ export class AgentRunner {
     }
 
     this.ensureModel();
-    const agentStore = this.deps.projectStore.getAgent(this.agentId);
-    if (agentStore && last.dbId !== null) {
-      agentStore.sessions.deleteMessage(this.sessionId, last.dbId);
-    }
-    this.log = dropLast(this.log);
+    const retryTurn = this.turnCounter;
+    this.eventLog!.appendBatch([
+      { type: "turn/retried", data: { abandonedSeqs: [lastEvent.seq] } },
+      { type: "turn/start", data: { turn: retryTurn } },
+    ]);
+    this.turnCounter++;
     this.syncBufferFromLog();
 
     const sessionLogger = this.deps.logger.child({ sessionId: this.sessionId });
@@ -212,7 +209,7 @@ export class AgentRunner {
       [
         logEventMiddleware(sessionLogger),
         ...this.capabilityMiddlewares,
-        this.persistMiddleware(agentStore),
+        this.persistMiddleware(retryTurn),
       ],
       onEvent,
     );
@@ -239,6 +236,13 @@ export class AgentRunner {
     }
   }
 
+  private ensureWritable(): void {
+    if (!this.eventLog) {
+      throw new MigrationRequiredError(
+        `Session "${this.sessionId}" has no event log attached`,
+      );
+    }
+  }
   abort(): void {
     this.controlBus.rejectAll("session aborted");
     this.agent.abort();
@@ -333,27 +337,53 @@ export class AgentRunner {
   }
 
   private async applyAfterTurnHooks(): Promise<void> {
-    if (!this.turnHooks.afterTurn) return;
-    const before = this.log;
-    const after = await this.turnHooks.afterTurn(this.agent, before);
-    if (after !== before) {
-      this.log = after;
+    if (!this.turnHooks.afterTurn || !this.eventLog) return;
+    const eventsBefore = this.eventLog.events.length;
+    await this.turnHooks.afterTurn(this.agent, this.eventLog);
+    if (this.eventLog.events.length !== eventsBefore) {
       this.syncBufferFromLog();
     }
   }
 
-  private persistMiddleware(agentStore: { sessions: SessionStore } | undefined) {
-    return persistEventMiddleware((msg): number | undefined => {
-      const msgId = agentStore?.sessions.appendMessage(this.sessionId, msg);
-      if (msgId !== undefined) {
-        this.log = appendEntry(this.log, msg, msgId);
+  private persistMiddleware(turn: number): EventMiddleware<AgentEvent> {
+    return (event, next) => {
+      if (this.eventLog) {
+        if (event.type === "message_end") {
+          this.appendMessageEvent(event.message);
+        } else if (event.type === "agent_end") {
+          const lastMessage = [...event.messages]
+            .reverse()
+            .find((message) => message.role === "assistant") as
+            | { stopReason?: string }
+            | undefined;
+          this.eventLog.append("turn/end", {
+            turn,
+            reason:
+              lastMessage?.stopReason === "error"
+                ? "error"
+                : lastMessage?.stopReason === "aborted"
+                  ? "aborted"
+                  : "completed",
+          });
+        }
       }
-      return msgId;
-    });
+      next(event);
+    };
+  }
+
+  private appendMessageEvent(message: unknown): void {
+    const role = (message as { role?: string }).role;
+    if (role === "assistant") {
+      this.eventLog!.append("assistant/message", { message: message as never });
+    } else if (role === "toolResult") {
+      this.eventLog!.append("tool/result", { message: message as never });
+    }
   }
 
   private syncBufferFromLog(): void {
-    this.agent.state.messages = messagesOf(this.log);
+    if (this.eventLog) {
+      this.agent.state.messages = deriveMessages(this.eventLog.events);
+    }
   }
 
   private ensureModel(): void {
@@ -364,4 +394,12 @@ export class AgentRunner {
       this.deps.runConfig.current().defaultModel,
     );
   }
+}
+
+function countTurns(events: readonly SessionEvent[]): number {
+  let count = 0;
+  for (const event of events) {
+    if (event.type === "turn/start") count++;
+  }
+  return count;
 }

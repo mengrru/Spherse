@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createMcpCapability } from "../../capabilities/mcp/index.js";
-import { logFromCompaction } from "../../session/compactor.js";
+import { deriveMessages } from "../../session/fold.js";
+import type { SessionEvent } from "../../session/events.js";
 import { SessionControlBus } from "../../session/control-bus.js";
 import { ProjectRuntime } from "../../project-runtime.js";
 import type { ProjectStore } from "../../store/project.js";
@@ -59,44 +60,32 @@ describe("mcp config version memo (#9)", () => {
 });
 
 describe("restore sanitization (#10)", () => {
-  it("logFromCompaction drops orphan toolResults and failed assistant turns from the tail", () => {
+  it("compaction restart drops messages before the anchor (fold projection)", () => {
     const orphanToolResult = {
-      id: 101,
-      message: { role: "toolResult", toolCallId: "ghost", content: [], timestamp: 1 } as never,
-    };
+      role: "toolResult",
+      toolCallId: "ghost",
+      content: [],
+      timestamp: 1,
+    } as never;
     const failedAssistant = {
-      id: 102,
-      message: { role: "assistant", content: [], stopReason: "error", timestamp: 2 } as never,
-    };
-    const goodUser = {
-      id: 103,
-      message: { role: "user", content: "hi", timestamp: 3 } as never,
-    };
+      role: "assistant",
+      content: [],
+      stopReason: "error",
+      timestamp: 2,
+    } as never;
+    const goodUser = { role: "user", content: "hi", timestamp: 3 } as never;
 
-    const log = logFromCompaction(100, "digest", 0, [orphanToolResult, failedAssistant, goodUser]);
+    const events: SessionEvent[] = [
+      { type: "user/message", seq: 0, time: 0, data: { message: { role: "user", content: "old", timestamp: 0 } as never } },
+      { type: "compaction/applied", seq: 1, time: 1, data: { anchorSeq: 0, digestContent: "digest" } },
+      { type: "tool/result", seq: 2, time: 2, data: { message: orphanToolResult } },
+      { type: "assistant/message", seq: 3, time: 3, data: { message: failedAssistant } },
+      { type: "user/message", seq: 4, time: 4, data: { message: goodUser } },
+    ];
 
-    expect(log.entries).toHaveLength(2);
-    expect(log.entries.map((e) => e.dbId)).toEqual([100, 103]);
-    expect((log.entries[1].message as { content: string }).content).toBe("hi");
-  });
-
-  it("logFromCompaction keeps matched toolCall/toolResult pairs", () => {
-    const assistant = {
-      id: 201,
-      message: {
-        role: "assistant",
-        content: [{ type: "toolCall", id: "tc1", name: "read_file", arguments: {} }],
-        stopReason: "stop",
-        timestamp: 1,
-      } as never,
-    };
-    const toolResult = {
-      id: 202,
-      message: { role: "toolResult", toolCallId: "tc1", content: [], timestamp: 2 } as never,
-    };
-
-    const log = logFromCompaction(200, "digest", 0, [assistant, toolResult]);
-    expect(log.entries.map((e) => e.dbId)).toEqual([200, 201, 202]);
+    const messages = deriveMessages(events);
+    expect(messages.length).toBe(4);
+    expect((messages[messages.length - 1] as { content: string }).content).toBe("hi");
   });
 });
 

@@ -17,7 +17,6 @@ spherse/
 │   │       │   ├── gates.ts          # ApprovalGate / AskGate 端口（session control 请求的类型源）
 │   │       │   ├── event-pipeline.ts # EventMiddleware + createEventPipeline（横切组合律）
 │   │       │   ├── turn-hooks.ts     # TurnHooks（beforeTurn/afterTurn/onReload）+ composeTurnHooks
-│   │       │   ├── message-log.ts    # MessageLog：{ dbId, message } 单一事实源（append/compact 纯变换）
 │   │       │   └── context-block.ts  # 开放 ContextBlock { kind, render() } + serializeBlocks
 │   │       ├── capabilities/         # 能力模块（只依赖 kernel 类型；每个目录自足）
 │   │       │   ├── fs/               # read/write/edit/list/search/move/copy_file + generate_image
@@ -42,7 +41,9 @@ spherse/
 │   │       │   ├── control-bus.ts    # SessionControlBus（requestId + kind 判别；swapEventSink 栈恢复）
 │   │       │   ├── approval-gate.ts / ask-gate.ts # bus 薄适配器
 │   │       │   ├── model-resolver.ts # resolveFor / resolveOrThrow（catalog 注入）
-│   │       │   ├── compactor.ts      # restore 构造器（logFromRows/logFromCompaction——sessions.db 格式兼容，tail 过 sanitize）
+│   │       │   ├── events.ts / event-log.ts # SessionEvent 词汇表 + append-only SessionEventLog 门面
+│   │       │   ├── fold.ts           # events → AgentMessage 投影 + open-turn repair
+│   │       │   ├── legacy-migrate.ts # messages/compactions → events 按会话幂等迁移
 │   │       │   ├── read-context-files.ts # profile 声明 context 文件读取（注入 systemPrompt 的 preloaded block；access policy 过滤）
 │   │       │   ├── event-middlewares.ts # log/persist（session 层不变量）
 │   │       │   ├── log-agent-event.ts # agent event → pino 日志映射
@@ -50,7 +51,7 @@ spherse/
 │   │       ├── store/                # 存储层抽象（不持有运行时状态；磁盘真相）
 │   │       │   ├── project.ts        # ProjectStore 聚合根（EventEmitter；agents Map；AGENTS.md/CHANGELOG.md）
 │   │       │   ├── agent-store.ts    # per-agent 聚合（profile/sessions/triggers/skills/mcp lazy getter）
-│   │       │   ├── session.ts        # SQLite session 持久化（sessions.db：messages/compactions 表）
+│   │       │   ├── session.ts        # SQLite session 持久化（events 主写；messages/compactions legacy 只读）
 │   │       │   ├── trigger.ts / skill.ts / mcp-config.ts / memory.ts / agent-profile.ts / agent-slug.ts / project-config.ts
 │   │       ├── tools/                # AgentTool 实现体（capability 的实现层，无注册表）
 │   │       │   ├── read/write/edit/list/search/move/copy-file.ts、run-command.ts、ask-user.ts、manage-agent.ts、manage-trigger.ts、emit-trigger-event.ts、load-skill.ts、render-card.ts、generate-image.ts、append-changelog.ts、memory-save.ts、memory-recall.ts、with-approval.ts、json-check.ts

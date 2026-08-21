@@ -2,6 +2,8 @@ import Database from "better-sqlite3";
 import crypto from "node:crypto";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { SessionInfo } from "../types.js";
+import type { SessionEvent } from "../session/events.js";
+import { EVENT_SCHEMA_VERSION } from "../session/events.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 
 interface PragmaColumnInfo {
@@ -37,8 +39,13 @@ interface CompactionRow {
   created_at: number;
 }
 
-interface LastIdRow {
-  lastId: number | null;
+interface EventRow {
+  session_id: string;
+  seq: number;
+  type: string;
+  data: string;
+  time: number;
+  schema_version: number;
 }
 
 interface MaxIdRow {
@@ -93,16 +100,24 @@ CREATE TABLE IF NOT EXISTS compactions (
   token_estimate INTEGER NOT NULL,
   created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS events (
+  session_id TEXT NOT NULL REFERENCES sessions(id),
+  seq INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  data TEXT NOT NULL,
+  time INTEGER NOT NULL,
+  schema_version INTEGER NOT NULL DEFAULT 1,
+  PRIMARY KEY (session_id, seq)
+);
 `;
 
 export class SessionStore {
-  private dbPath: string;
   private agentId: string;
   private db: Database.Database;
   private logger: Logger;
 
   constructor(dbPath: string, agentId: string, logger?: Logger) {
-    this.dbPath = dbPath;
     this.agentId = agentId;
     this.logger = logger ?? createSilentLogger();
     this.db = new Database(dbPath);
@@ -116,6 +131,15 @@ export class SessionStore {
     const cols = this.db.prepare<[], PragmaColumnInfo>("PRAGMA table_info(sessions)").all();
     if (!cols.some((c) => c.name === "source")) {
       this.db.exec("ALTER TABLE sessions ADD COLUMN source TEXT DEFAULT 'manual'");
+    }
+    if (!cols.some((c) => c.name === "parent_session_id")) {
+      this.db.exec("ALTER TABLE sessions ADD COLUMN parent_session_id TEXT");
+    }
+    if (!cols.some((c) => c.name === "fork_seq")) {
+      this.db.exec("ALTER TABLE sessions ADD COLUMN fork_seq INTEGER");
+    }
+    if (!cols.some((c) => c.name === "migrated_at")) {
+      this.db.exec("ALTER TABLE sessions ADD COLUMN migrated_at INTEGER");
     }
     const msgCols = this.db.prepare<[], PragmaColumnInfo>("PRAGMA table_info(messages)").all();
     if (!msgCols.some((c) => c.name === "prev_message_id")) {
@@ -186,52 +210,126 @@ export class SessionStore {
       .run(sessionId);
   }
 
-  appendMessage(sessionId: string, message: AgentMessage, prevMessageId?: number | null): number {
-    if (!isAgentMessage(message)) {
-      throw new Error(
-        `appendMessage rejected invalid AgentMessage (role=${JSON.stringify((message as { role?: unknown }).role)})`,
-      );
-    }
-    const now = Date.now();
-    const insertMessage = this.db
-      .prepare<[string, string, string, number, number | null, number]>(
-        "INSERT INTO messages (session_id, role, content, timestamp, prev_message_id, message_content_schema_version) VALUES (?, ?, ?, ?, ?, ?)",
-      );
+  appendEvents(sessionId: string, events: ReadonlyArray<SessionEvent>, schemaVersion: number): void {
+    if (events.length === 0) return;
+    const insert = this.db.prepare<[string, number, string, string, number, number]>(
+      "INSERT INTO events (session_id, seq, type, data, time, schema_version) VALUES (?, ?, ?, ?, ?, ?)",
+    );
+    const selectMax = this.db.prepare<[string], { maxSeq: number | null }>(
+      "SELECT MAX(seq) AS maxSeq FROM events WHERE session_id = ?",
+    );
     const updateSession = this.db
       .prepare<[number, string]>("UPDATE sessions SET updated_at = ? WHERE id = ?");
-    const selectLastId = this.db
-      .prepare<[string], LastIdRow>("SELECT MAX(id) AS lastId FROM messages WHERE session_id = ?");
-    const info = this.db.transaction(() => {
-      const resolvedPrev: number | null =
-        prevMessageId === undefined
-          ? (selectLastId.get(sessionId)?.lastId ?? null)
-          : prevMessageId;
-      const result = insertMessage.run(
-        sessionId,
-        message.role,
-        JSON.stringify(message),
-        typeof message.timestamp === "number" ? message.timestamp : now,
-        resolvedPrev,
-        CURRENT_MESSAGE_CONTENT_VERSION,
-      );
+    const now = Date.now();
+    this.db.transaction(() => {
+      const expectedFirstSeq = (selectMax.get(sessionId)?.maxSeq ?? -1) + 1;
+      if (events[0].seq !== expectedFirstSeq) {
+        throw new Error(
+          `Event seq must continue at ${expectedFirstSeq} for session ${sessionId}`,
+        );
+      }
+      for (const [index, event] of events.entries()) {
+        if (event.seq !== expectedFirstSeq + index) {
+          throw new Error(`Event batch contains a seq gap for session ${sessionId}`);
+        }
+        insert.run(sessionId, event.seq, event.type, JSON.stringify(event.data), event.time, schemaVersion);
+      }
       updateSession.run(now, sessionId);
-      return result;
     })();
-    this.logger.debug({ sessionId }, "message persisted");
-    return Number(info.lastInsertRowid);
+    this.logger.debug({ sessionId, count: events.length }, "events appended");
   }
 
-  deleteMessage(sessionId: string, messageId: number): void {
+  readEvents(sessionId: string): SessionEvent[] {
+    const rows = this.db
+      .prepare<[string], EventRow>(
+        "SELECT * FROM events WHERE session_id = ? ORDER BY seq ASC",
+      )
+      .all(sessionId);
+    return rows.map((row) => {
+      assertSupportedEventVersion(row);
+      return {
+        type: row.type as SessionEvent["type"],
+        seq: row.seq,
+        time: row.time,
+        data: JSON.parse(row.data),
+      } as SessionEvent;
+    });
+  }
+
+  maxSeq(sessionId: string): number | null {
+    const row = this.db
+      .prepare<[string], { maxSeq: number | null }>(
+        "SELECT MAX(seq) AS maxSeq FROM events WHERE session_id = ?",
+      )
+      .get(sessionId);
+    return row?.maxSeq ?? null;
+  }
+
+  migrateEvents(
+    sessionId: string,
+    events: ReadonlyArray<SessionEvent>,
+    schemaVersion: number,
+  ): void {
+    if (events.some((event, index) => event.seq !== index)) {
+      throw new Error(`Migration event batch contains a seq gap for session ${sessionId}`);
+    }
+    const insert = this.db.prepare<[string, number, string, string, number, number]>(
+      "INSERT INTO events (session_id, seq, type, data, time, schema_version) VALUES (?, ?, ?, ?, ?, ?)",
+    );
+    const mark = this.db.prepare<[number, number, string]>(
+      "UPDATE sessions SET migrated_at = ?, updated_at = ? WHERE id = ?",
+    );
     const now = Date.now();
-    const deleteStmt = this.db
-      .prepare<[number]>("DELETE FROM messages WHERE id = ?");
-    const updateSession = this.db
-      .prepare<[number, string]>("UPDATE sessions SET updated_at = ? WHERE id = ?");
     this.db.transaction(() => {
-      deleteStmt.run(messageId);
-      updateSession.run(now, sessionId);
+      const existing = this.db
+        .prepare<[string], { count: number }>(
+          "SELECT COUNT(*) AS count FROM events WHERE session_id = ?",
+        )
+        .get(sessionId);
+      if ((existing?.count ?? 0) > 0) {
+        throw new Error(`Session ${sessionId} already contains events`);
+      }
+      for (const event of events) {
+        insert.run(
+          sessionId,
+          event.seq,
+          event.type,
+          JSON.stringify(event.data),
+          event.time,
+          schemaVersion,
+        );
+      }
+      mark.run(now, now, sessionId);
     })();
-    this.logger.debug({ sessionId, messageId }, "message deleted");
+  }
+
+  isMigrated(sessionId: string): boolean {
+    const row = this.db
+      .prepare<[string], { migrated_at: number | null }>(
+        "SELECT migrated_at FROM sessions WHERE id = ?",
+      )
+      .get(sessionId);
+    return row?.migrated_at != null;
+  }
+
+  sessionNeedsMigration(sessionId: string): boolean {
+    const row = this.db
+      .prepare<[string], { migrated_at: number | null; eventCount: number }>(
+        `SELECT s.migrated_at, (SELECT COUNT(*) FROM events e WHERE e.session_id = s.id) AS eventCount
+         FROM sessions s WHERE s.id = ?`,
+      )
+      .get(sessionId);
+    if (!row) return false;
+    return row.migrated_at == null && row.eventCount === 0 && this.hasLegacyMessages(sessionId);
+  }
+
+  private hasLegacyMessages(sessionId: string): boolean {
+    const row = this.db
+      .prepare<[string], { count: number }>(
+        "SELECT COUNT(*) AS count FROM messages WHERE session_id = ?",
+      )
+      .get(sessionId);
+    return (row?.count ?? 0) > 0;
   }
 
   getSessionMessages(sessionId: string): AgentMessage[] {
@@ -254,19 +352,6 @@ export class SessionStore {
       )
       .all(sessionId, anchorId);
     return rows.map((row) => SessionStore.rowToMessageEntry(row));
-  }
-
-  recordCompaction(
-    sessionId: string,
-    record: { anchorMessageId: number; digestContent: string; tokenEstimate: number },
-  ): void {
-    const now = Date.now();
-    this.db
-      .prepare<[string, number, string, number, number]>(
-        "INSERT INTO compactions (session_id, anchor_message_id, digest_content, token_estimate, created_at) VALUES (?, ?, ?, ?, ?)",
-      )
-      .run(sessionId, record.anchorMessageId, record.digestContent, record.tokenEstimate, now);
-    this.logger.debug({ sessionId, anchorMessageId: record.anchorMessageId }, "compaction recorded");
   }
 
   getLatestCompaction(
@@ -391,6 +476,14 @@ export class SessionStore {
       );
     }
     return adapted;
+  }
+}
+
+function assertSupportedEventVersion(row: EventRow): void {
+  if (row.schema_version > EVENT_SCHEMA_VERSION) {
+    throw new Error(
+      `Cannot read event with schema_version=${row.schema_version}; current code supports up to ${EVENT_SCHEMA_VERSION}. Please upgrade the app.`,
+    );
   }
 }
 

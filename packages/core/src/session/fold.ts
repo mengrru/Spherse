@@ -1,0 +1,144 @@
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import type { ToolResultMessage } from "@earendil-works/pi-ai";
+import { wrapDigestContent } from "../context/compaction.js";
+import { MESSAGE_EVENT_TYPES, type SessionEvent } from "./events.js";
+
+export interface DerivedMessageEntry {
+  seq: number;
+  message: AgentMessage;
+}
+
+interface RestartState {
+  compaction?: { anchorSeq: number; digestContent: string; eventSeq: number };
+  abandonedSeqs: Set<number>;
+}
+
+export function deriveMessages(events: readonly SessionEvent[]): AgentMessage[] {
+  return deriveMessageEntries(events).map((entry) => entry.message);
+}
+
+export function deriveHistoryEntries(
+  events: readonly SessionEvent[],
+): DerivedMessageEntry[] {
+  const abandonedSeqs = new Set<number>();
+  for (const event of events) {
+    if (event.type === "turn/retried") {
+      for (const seq of event.data.abandonedSeqs) abandonedSeqs.add(seq);
+    }
+  }
+  const entries: DerivedMessageEntry[] = [];
+  for (const event of events) {
+    if (!MESSAGE_EVENT_TYPES.has(event.type) || abandonedSeqs.has(event.seq)) continue;
+    entries.push({
+      seq: event.seq,
+      message: (event.data as { message: AgentMessage }).message,
+    });
+  }
+  return entries;
+}
+
+export function deriveMessageEntries(
+  events: readonly SessionEvent[],
+): DerivedMessageEntry[] {
+  const restart = scanRestarts(events);
+  const entries: DerivedMessageEntry[] = [];
+
+  if (restart.compaction) {
+    entries.push({
+      seq: restart.compaction.eventSeq,
+      message: {
+        role: "user",
+        content: wrapDigestContent(restart.compaction.digestContent),
+        timestamp: 0,
+      } as unknown as AgentMessage,
+    });
+  }
+
+  for (const event of events) {
+    if (!MESSAGE_EVENT_TYPES.has(event.type)) continue;
+    if (restart.compaction && event.seq <= restart.compaction.anchorSeq) continue;
+    if (restart.abandonedSeqs.has(event.seq)) continue;
+    entries.push({
+      seq: event.seq,
+      message: (event.data as { message: AgentMessage }).message,
+    });
+  }
+  return entries;
+}
+
+function scanRestarts(events: readonly SessionEvent[]): RestartState {
+  const state: RestartState = { abandonedSeqs: new Set() };
+  for (const event of events) {
+    if (event.type === "compaction/applied") {
+      state.compaction = {
+        anchorSeq: event.data.anchorSeq,
+        digestContent: event.data.digestContent,
+        eventSeq: event.seq,
+      };
+    } else if (event.type === "turn/retried") {
+      for (const seq of event.data.abandonedSeqs) state.abandonedSeqs.add(seq);
+    }
+  }
+  return state;
+}
+
+const INTERRUPTED_TOOL_TEXT = "The tool call was interrupted and did not execute.";
+
+export function repairLog(events: readonly SessionEvent[]): SessionEvent[] {
+  let openTurn: number | null = null;
+  let openTurnStartIndex = -1;
+  for (const [index, event] of events.entries()) {
+    if (event.type === "turn/start") {
+      openTurn = event.data.turn;
+      openTurnStartIndex = index;
+    } else if (event.type === "turn/end") {
+      openTurn = null;
+      openTurnStartIndex = -1;
+    }
+  }
+  if (openTurn === null) return [];
+
+  const answered = new Set<string>();
+  let lastToolCallAssistant: { toolCallIds: string[] } | null = null;
+  for (const event of events.slice(openTurnStartIndex + 1)) {
+    if (event.type === "tool/result") {
+      answered.add(event.data.message.toolCallId);
+    } else if (event.type === "assistant/message") {
+      const toolCallIds = event.data.message.content
+        .filter((block) => block.type === "toolCall")
+        .map((block) => (block as { id: string }).id);
+      if (toolCallIds.length > 0) lastToolCallAssistant = { toolCallIds };
+    }
+  }
+
+  const repairs: SessionEvent[] = [];
+  let nextSeq = events.length > 0 ? events[events.length - 1].seq + 1 : 0;
+  const now = Date.now();
+  if (lastToolCallAssistant) {
+    for (const toolCallId of lastToolCallAssistant.toolCallIds) {
+      if (answered.has(toolCallId)) continue;
+      repairs.push({
+        type: "tool/result",
+        seq: nextSeq++,
+        time: now,
+        data: {
+          message: {
+            role: "toolResult",
+            toolCallId,
+            toolName: "unknown",
+            content: [{ type: "text", text: INTERRUPTED_TOOL_TEXT }],
+            isError: true,
+            timestamp: now,
+          } as unknown as ToolResultMessage,
+        },
+      });
+    }
+  }
+  repairs.push({
+    type: "turn/end",
+    seq: nextSeq++,
+    time: now,
+    data: { turn: openTurn, reason: "aborted" },
+  });
+  return repairs;
+}

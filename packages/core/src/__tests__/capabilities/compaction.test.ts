@@ -4,10 +4,10 @@ import path from "node:path";
 import os from "node:os";
 import { compactionCapability } from "../../capabilities/compaction/index.js";
 import { composeTurnHooks } from "../../kernel/turn-hooks.js";
-import { createLog } from "../../kernel/message-log.js";
+import { SessionEventLog } from "../../session/event-log.js";
+import { deriveMessages } from "../../session/fold.js";
 import { ProjectStore } from "../../store/project.js";
 import { createSilentLogger } from "../../logger.js";
-import type { Message } from "@earendil-works/pi-ai";
 
 const TEST_AGENT_PROFILE = `---
 name: Compaction Agent
@@ -15,14 +15,6 @@ tools: []
 ---
 
 Agent for compaction tests.`;
-
-function msg(role: string, text: string): Message {
-  return {
-    role,
-    content: role === "assistant" ? [{ type: "text", text }] : text,
-    timestamp: Date.now(),
-  } as Message;
-}
 
 describe("compaction capability", () => {
   let tmpDir: string;
@@ -45,35 +37,41 @@ describe("compaction capability", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  function seededLog() {
-    const entries = [];
+  function seededLog(): SessionEventLog {
+    const log = SessionEventLog.open(agent.sessions, sessionId);
     for (let i = 0; i < 25; i++) {
-      const u = msg("user", `turn ${i} with some text`);
-      const a = msg("assistant", `reply ${i} with some text`);
-      entries.push(
-        { dbId: agent.sessions.appendMessage(sessionId, u), message: u },
-        { dbId: agent.sessions.appendMessage(sessionId, a), message: a },
-      );
+      log.append("user/message", {
+        message: { role: "user", content: `turn ${i} with some text`, timestamp: Date.now() },
+      });
+      log.append("assistant/message", {
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: `reply ${i} with some text` }],
+          stopReason: "stop",
+          timestamp: Date.now(),
+        },
+      });
     }
-    return createLog(entries);
+    return log;
   }
 
-  it("afterTurn compacts and records when the threshold is exceeded", async () => {
+  it("afterTurn appends compaction/applied when the threshold is exceeded", async () => {
     const capability = compactionCapability({ projectStore, logger: createSilentLogger() });
     const hooks = capability.turnHooks!(agentId, sessionId);
     const fakeAgent = { state: { model: { contextWindow: 10 }, systemPrompt: "" } } as never;
 
-    const next = await hooks.afterTurn!(fakeAgent, seededLog());
+    const log = seededLog();
+    await hooks.afterTurn!(fakeAgent, log);
 
-    expect(next.entries.length).toBeLessThan(50);
-    const latest = agent.sessions.getLatestCompaction(sessionId);
-    expect(latest).not.toBeNull();
-    expect(next.entries[0].dbId).toBe(latest!.anchorMessageId);
+    const compactionEvents = log.events.filter((e) => e.type === "compaction/applied");
+    expect(compactionEvents).toHaveLength(1);
+    expect(compactionEvents[0].data.anchorSeq).toBeGreaterThan(0);
+    expect(deriveMessages(log.events).length).toBeLessThan(50);
   });
 
   it("contributes to a composed hook chain like any other capability", async () => {
     const order: string[] = [];
-    const other = { afterTurn: async () => (order.push("other"), createLog([])) };
+    const other = { afterTurn: async () => order.push("other") };
     const compaction = compactionCapability({ projectStore, logger: createSilentLogger() });
 
     const composed = composeTurnHooks([compaction.turnHooks!(agentId, sessionId), other as never]);
@@ -83,15 +81,14 @@ describe("compaction capability", () => {
     expect(order).toEqual(["other"]);
   });
 
-  it("pluggability: no compaction capability means maybeCompactLog is never invoked", async () => {
-    const before = agent.sessions.getSessionMessagesWithIds(sessionId).length;
+  it("pluggability: no compaction capability means no compaction event", async () => {
     const hooks = composeTurnHooks([]);
     const fakeAgent = { state: { model: { contextWindow: 10 }, systemPrompt: "" } } as never;
 
-    const next = await hooks.afterTurn!(fakeAgent, seededLog());
+    const log = seededLog();
+    await hooks.afterTurn!(fakeAgent, log);
 
-    expect(next.entries).toHaveLength(50);
-    expect(agent.sessions.getLatestCompaction(sessionId)).toBeNull();
-    expect(agent.sessions.getSessionMessagesWithIds(sessionId).length).toBe(before + 50);
+    expect(log.events).toHaveLength(50);
+    expect(log.events.filter((e) => e.type === "compaction/applied")).toHaveLength(0);
   });
 });

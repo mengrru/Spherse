@@ -7,6 +7,8 @@ import { resolveProjectPath } from "./utils/path-safety.js";
 import { serverAccessPolicy } from "./access/access-policy.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { ConflictError, NotFoundError, ValidationError } from "./errors.js";
+import { deriveHistoryEntries } from "./session/fold.js";
+import { migrateLegacySession } from "./session/legacy-migrate.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -103,29 +105,46 @@ export class ProjectManager {
     return agentStore.mcp.saveConfig(config);
   }
 
-  getSession(agentId: string, sessionId: string): SessionInfo | null {
+  getSession(agentId: string, sessionId: string): (SessionInfo & { needsMigration: boolean }) | null {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return null;
-    return agentStore.sessions.getSession(sessionId);
+    const session = agentStore.sessions.getSession(sessionId);
+    return session
+      ? { ...session, needsMigration: agentStore.sessions.sessionNeedsMigration(sessionId) }
+      : null;
   }
 
-  listSessions(agentId: string): SessionInfo[] {
+  listSessions(agentId: string): Array<SessionInfo & { needsMigration: boolean }> {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return [];
-    return agentStore.sessions.listSessions();
+    return agentStore.sessions.listSessions().map((session) => ({
+      ...session,
+      needsMigration: agentStore.sessions.sessionNeedsMigration(session.id),
+    }));
   }
 
   listSessionsPage(
     agentId: string,
     limit: number,
     offset: number,
-  ): { items: SessionInfo[]; hasMore: boolean } {
+  ): { items: Array<SessionInfo & { needsMigration: boolean }>; hasMore: boolean } {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return { items: [], hasMore: false };
-    return agentStore.sessions.listSessionsPage(limit, offset);
+    const result = agentStore.sessions.listSessionsPage(limit, offset);
+    return {
+      ...result,
+      items: result.items.map((session) => ({
+        ...session,
+        needsMigration: agentStore.sessions.sessionNeedsMigration(session.id),
+      })),
+    };
   }
 
-  renameSession(agentId: string, sessionId: string, title: string): SessionInfo {
+  renameSession(
+    agentId: string,
+    sessionId: string,
+    title: string,
+  ): SessionInfo & { needsMigration: boolean } {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) throw new ValidationError("title is required");
     if (trimmedTitle.length > 80) {
@@ -139,13 +158,21 @@ export class ProjectManager {
     if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
 
     agentStore.sessions.updateSessionTitle(sessionId, trimmedTitle);
-    return { ...session, title: trimmedTitle };
+    return {
+      ...session,
+      title: trimmedTitle,
+      needsMigration: agentStore.sessions.sessionNeedsMigration(sessionId),
+    };
   }
 
   getSessionHistory(agentId: string, sessionId: string): unknown[] {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return [];
-    return agentStore.sessions.getSessionMessages(sessionId);
+    const sessions = agentStore.sessions;
+    if (sessions.sessionNeedsMigration(sessionId)) {
+      return sessions.getSessionMessages(sessionId);
+    }
+    return deriveHistoryEntries(sessions.readEvents(sessionId)).map((entry) => entry.message);
   }
 
   getRecentSessionHistory(
@@ -156,12 +183,50 @@ export class ProjectManager {
   ): { entries: Array<{ id: number; message: unknown }>; hasMore: boolean; oldestId: number | null } {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return { entries: [], hasMore: false, oldestId: null };
-    const result = agentStore.sessions.getRecentTurns(sessionId, turns, beforeId);
+    const sessions = agentStore.sessions;
+    if (sessions.sessionNeedsMigration(sessionId)) {
+      const result = sessions.getRecentTurns(sessionId, turns, beforeId);
+      return {
+        entries: result.entries,
+        hasMore: result.hasMore,
+        oldestId: result.oldestId,
+      };
+    }
+    const projected = deriveHistoryEntries(sessions.readEvents(sessionId));
+    const before = beforeId ?? Number.POSITIVE_INFINITY;
+    const eligible = projected.filter((entry) => entry.seq < before);
+    const selected: typeof eligible = [];
+    let turnCount = 0;
+    for (let i = eligible.length - 1; i >= 0; i--) {
+      const entry = eligible[i];
+      if (entry.message.role === "user") {
+        turnCount++;
+        if (turnCount > turns) break;
+      }
+      selected.push(entry);
+    }
+    selected.reverse();
     return {
-      entries: result.entries,
-      hasMore: result.hasMore,
-      oldestId: result.oldestId,
+      entries: selected.map((entry) => ({ id: entry.seq, message: entry.message })),
+      hasMore: selected.length < eligible.length,
+      oldestId: selected[0]?.seq ?? null,
     };
+  }
+
+  sessionNeedsMigration(agentId: string, sessionId: string): boolean {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) return false;
+    return agentStore.sessions.sessionNeedsMigration(sessionId);
+  }
+
+  migrateSession(agentId: string, sessionId: string): {
+    sessionId: string;
+    migrated: boolean;
+    eventCount: number;
+  } {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    return migrateLegacySession(agentStore.sessions, sessionId);
   }
 
   deleteSession(agentId: string, sessionId: string): void {

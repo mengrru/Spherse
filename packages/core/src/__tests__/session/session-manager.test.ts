@@ -431,10 +431,25 @@ describe("SessionManager getSessionStatus", () => {
   it("computes status from persisted history for a non-live session", async () => {
     const sessionId = await runtime.sessionRuntime.createSession(agentId);
     const agentStore = runtime.projectManager.projectStore.agents.get(agentId) as any;
-    agentStore.sessions.appendMessage(sessionId, {
-      role: "assistant",
-      usage: { totalTokens: 999 },
-    });
+    agentStore.sessions.appendEvents(
+      sessionId,
+      [
+        {
+          type: "assistant/message",
+          seq: 0,
+          time: Date.now(),
+          data: {
+            message: {
+              role: "assistant",
+              content: [{ type: "text", text: "hi" }],
+              usage: { totalTokens: 999 },
+              timestamp: Date.now(),
+            },
+          },
+        },
+      ],
+      1,
+    );
     runtime.sessionRuntime.destroySession(sessionId);
     expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(false);
 

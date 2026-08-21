@@ -11,7 +11,14 @@ export type {
   ProviderModelItem,
   CustomProviderDef,
 } from "./types.js";
-export { NotFoundError, ValidationError, AccessDeniedError, ConflictError, ModelNotConfiguredError } from "./errors.js";
+export {
+  NotFoundError,
+  ValidationError,
+  AccessDeniedError,
+  ConflictError,
+  ModelNotConfiguredError,
+  MigrationRequiredError,
+} from "./errors.js";
 export type { ProjectRuntime } from "./project-runtime.js";
 export type { ProjectManager } from "./project-manager.js";
 export type { SessionManager } from "./session/session-manager.js";

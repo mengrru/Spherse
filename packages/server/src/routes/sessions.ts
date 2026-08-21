@@ -109,6 +109,24 @@ export function registerSessionRoutes(
     },
   );
 
+  fastify.post<{
+    Params: { projectId: string; agentId: string; id: string };
+  }>(
+    "/api/projects/:projectId/agents/:agentId/sessions/:id/migrate",
+    {
+      schema: {
+        response: { 200: schemas.sessionMigrationResponse },
+      },
+    },
+    async (req) => {
+      const result = req.projectCtx!.projectManager.migrateSession(
+        req.params.agentId,
+        req.params.id,
+      );
+      return parseContract(schemas.sessionMigrationResponse, result);
+    },
+  );
+
   fastify.get<{ Params: { projectId: string; agentId: string; id: string } }>(
     "/api/projects/:projectId/agents/:agentId/sessions/:id/status",
     {

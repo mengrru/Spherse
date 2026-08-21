@@ -1,76 +1,48 @@
-import type { Agent, AgentMessage } from "@earendil-works/pi-agent-core";
+import type { Agent } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
-import { compactLog, type MessageLog } from "../../kernel/message-log.js";
-import {
-  planCompaction,
-  sanitizeToolCallPairs,
-  wrapDigestContent,
-} from "../../context/compaction.js";
-import { estimateTokens } from "../../context/token-estimate.js";
-import { readCurrentTokens } from "../../context/token-estimate.js";
-import type { SessionStore } from "../../store/session.js";
+import { planCompaction } from "../../context/compaction.js";
+import { estimateTokens, readCurrentTokens } from "../../context/token-estimate.js";
+import type { TurnEventAppender } from "../../kernel/turn-hooks.js";
 import type { Logger } from "../../logger.js";
+import { deriveMessageEntries } from "../../session/fold.js";
 
 export async function maybeCompactLog(
-  log: MessageLog,
+  eventLog: TurnEventAppender,
   agent: Agent,
-  sessionStore: SessionStore,
-  sessionId: string,
   logger: Logger,
-): Promise<MessageLog> {
-  const currentTokens = readCurrentTokens(
-    [...log.entries.map((e) => e.message)],
-    agent.state.systemPrompt,
-  );
-  const contextWindow = (agent.state.model as { contextWindow?: number } | undefined)?.contextWindow ?? 32768;
+): Promise<void> {
+  const projected = deriveMessageEntries(eventLog.events as never);
+  const messages = projected.map((entry) => entry.message as Message);
 
-  const plan = planCompaction(
-    log.entries.map((e) => e.message) as Message[],
-    { currentTokens, contextWindow },
-  );
+  const currentTokens = readCurrentTokens(messages, agent.state.systemPrompt);
+  const contextWindow =
+    (agent.state.model as { contextWindow?: number } | undefined)?.contextWindow ?? 32768;
 
-  if (!plan.shouldCompact || !plan.digest) return log;
+  const plan = planCompaction(messages, { currentTokens, contextWindow });
+  if (!plan.shouldCompact || !plan.digest) return;
 
-  const anchorEntry = log.entries[plan.anchorIndex];
-  if (!anchorEntry || anchorEntry.dbId === null) return log;
+  const anchorSeq = projected[plan.anchorIndex]?.seq;
+  if (anchorSeq === undefined) return;
 
   try {
-    const { messages: sanitizedTail, keptIndices } = sanitizeToolCallPairs(plan.tail);
-
-    const digestMessage: AgentMessage = {
-      role: "user",
-      content: wrapDigestContent(plan.digest),
-      timestamp: Date.now(),
-    } as unknown as AgentMessage;
-    const next = compactLog(log, {
-      anchorIndex: plan.anchorIndex,
-      digestMessage,
-      tail: keptIndices.map((index, i) => ({ index, message: sanitizedTail[i] })),
-    });
-
     const postEstimate =
-      estimateTokens(agent.state.systemPrompt) +
-      estimateTokens(next.entries.map((e) => e.message) as Message[]);
+      estimateTokens(agent.state.systemPrompt) + estimateTokens(plan.tail);
 
-    sessionStore.recordCompaction(sessionId, {
-      anchorMessageId: anchorEntry.dbId,
+    eventLog.append("compaction/applied", {
+      anchorSeq,
       digestContent: plan.digest,
-      tokenEstimate: postEstimate,
     });
 
     logger.info(
       {
-        sessionId,
-        anchorMessageId: anchorEntry.dbId,
+        anchorSeq,
         compactedMessages: plan.anchorIndex + 1,
         tokensBefore: currentTokens,
         tokensAfter: postEstimate,
       },
       "compaction applied",
     );
-    return next;
   } catch (err) {
-    logger.error({ err, sessionId }, "compaction failed, keeping live buffer");
-    return log;
+    logger.error({ err }, "compaction failed, keeping live buffer");
   }
 }

@@ -123,7 +123,11 @@ Agent system prompt content...
 
 ## Session 数据
 
-每个 agent 拥有独立的 SQLite 数据库文件，位于 `.spherse/agents/{agent-slug}/sessions.db`。表结构为 `sessions(id TEXT PK, agent_id TEXT, title TEXT, created_at INT, updated_at INT, status TEXT DEFAULT 'active', source TEXT DEFAULT 'manual')`。每个 session 的状态为 `active` 或 `archived`。
+每个 agent 拥有独立的 SQLite 数据库文件，位于 `.spherse/agents/{agent-slug}/sessions.db`。`sessions` 表保存列表元数据：`id`、`agent_id`、`title`、`created_at`、`updated_at`、`status`、`source`，以及为会话分支预留的 `parent_session_id` / `fork_seq` 与 legacy 迁移标记 `migrated_at`。每个 session 的状态为 `active` 或 `archived`。
+
+新会话历史写入 append-only `events` 表，主键为 `(session_id, seq)`；事件信封包含 `type`、会话内连续 `seq`、`time`、JSON `data` 与 `schema_version`。当前事件词汇表为 `turn/start`、`turn/end`、`user/message`、`assistant/message`、`tool/result`、`compaction/applied`、`turn/retried`。运行时消息由事件 fold 投影，内存消息数组只是可重建缓存：compaction 和 retry 均追加重启点事件，不修改或删除历史事件；崩溃恢复发现未闭合 turn 时会持久化合成错误 toolResult 与 aborted turn/end，保证二次恢复幂等。
+
+升级前的 `messages` / `compactions` 表保留只读，用于历史展示与按会话迁移，不再作为新写入路径。含 legacy messages 且尚无 events 的会话标记为 `needsMigration`：历史仍可读取，但 restore/继续对话返回 `migration_required`；调用会话 migrate API 后，在单个 SQLite 事务中把旧历史转换为 events 并写入 `migrated_at`，旧表数据原样保留，迁移幂等。
 
 `sessions.title` 是可选的用户可编辑展示标题。用户重命名 session 时只更新 `title`，不更新 `updated_at`，因此不会改变 session 列表按最近对话活动排序的行为。
 
