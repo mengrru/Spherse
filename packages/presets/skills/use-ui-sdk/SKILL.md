@@ -249,8 +249,15 @@ const all = await spherse.data.entries({ file: "world/game.data.json" });
 ### 数据文件命名规范
 
 - 文件名必须为 `{HTML文件名}.data.json`，放在 HTML 同级目录（`world/game.html` → `world/game.data.json`）
-- 顶层 JSON object，仅支持顶层 key 操作（不支持 `a.b.c` 嵌套路径）
+- 顶层 JSON object，仅支持顶层 key 操作（不支持 `a.b.c` 嵌套路径；key 中的点不会被解释为路径）
 - value 支持任意 JSON 可序列化类型
+- `data.set` / `data.delete` 是**原子操作**：并发写不会互相覆盖，页面无需自己加锁或读-改-写防冲突
+- 数据文件损坏（非法 JSON）时 `data.*` 返回错误（`ok:false`），不会静默把文件重置为空
+- 顶层 `$` 前缀键为平台保留（如 `$manifest`）：`data.set` 拒绝写入、`data.keys` / `data.entries` 不返回它们
+
+### 为数据文件声明 `$manifest`（结构性数据推荐）
+
+数据会随使用增长、且希望 agent 后续能直接按业务语义读写（而不是整文件读改写）时，生成页面时应在数据文件根部内嵌 `$manifest`，声明业务命名的查询/变更入口。agent 将通过 `query_data` / `mutate_data` 工具按这些入口精准读写，schema 校验也保证不会写坏页面渲染假设。写法与完整模板见 `write-html` skill 的「内嵌 `$manifest`」一节。
 
 ## 事件订阅 — 文件变化
 

@@ -20,6 +20,15 @@ export type { TriggerManager } from "./trigger/trigger-manager.js";
 export type { TriggerEventPayload } from "./trigger/trigger-manager.js";
 export type { TimerService } from "./trigger/timer-service.js";
 export { createProject } from "./factory.js";
+export type { DataStore, DataChangeEvent, OutlineResult, ReadResult, QueryResult, MutateResult, WriteResult } from "./capabilities/data/index.js";
+export { createDataStore } from "./capabilities/data/index.js";
+export { FileWriteMutex } from "./utils/file-write-mutex.js";
+export {
+  VersionConflictError,
+  DataValidationError,
+  DataFileCorruptedError,
+  ForbiddenKeyError,
+} from "./capabilities/data/index.js";
 export { resolveProjectPath, isProjectMetaPath, assertInsideProject, isPathInside } from "./utils/path-safety.js";
 export { categorizePath } from "./access/path-category.js";
 export type { PathCategory } from "./access/path-category.js";

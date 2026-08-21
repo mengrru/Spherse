@@ -66,7 +66,7 @@ export async function createMultiProjectServer(
 
   fastify.setErrorHandler((err, req, reply) => {
     if (err instanceof HttpError) {
-      return reply.code(err.statusCode).send({ error: err.message });
+      return reply.code(err.statusCode).send(err.body ?? { error: err.message });
     }
     if (err instanceof NotFoundError) {
       return reply.code(404).send({ error: err.message });

@@ -123,6 +123,65 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 - 数据文件**不能**放在 `.spherse/` 目录下
 - 两种渲染模式都可用（经 App 注入的 SDK，不依赖 `fetch`）
 
+## 强制：会增长/需要 agent 互动的数据文件必须内嵌 `$manifest`
+
+判断：数据是**静态展示**（一次性内容，页面只 `fetch` 渲染）→ 无需 manifest；数据会**随使用增长**（清单、记录、游戏存档）或**需要 agent 与页面互动读写**（agent 查看用户操作、代用户增删条目）→ 数据文件根部**必须**内嵌 `$manifest` 字段。
+
+manifest 是你（生成页面时）向后续读该文件的 agent 传递业务语义的唯一通道：声明业务命名的查询/变更入口后，agent 用 `query_data` / `mutate_data` 工具按入口读写，一次调用直达数据，不必读整个大文件，写入形状也由 schema 保证不会写坏页面。
+
+生成时三件套**同源产出**：HTML（data action 调用代码）+ 业务数据 + `$manifest`。manifest 的 mutations **必须覆盖页面 SDK 代码实际会做的结构性变更**（页面会 append 条目就声明 append 入口），fields 的枚举值与页面渲染假设一致（页面按 `pending/done` 渲染就不要声明别的值）。
+
+规则：
+
+- 顶层 `$` 前缀键是平台保留，业务数据键不得以 `$` 开头
+- manifest 保持精简（≤2KB）：只放路径映射与字段 schema，不放示例数据
+- `identity` 声明数组条目的稳定键（通常 `id`），`auto` 声明由系统生成的字段（`uuid`/`nowIso`），不要让调用方传
+- dot-path 寻址（`todos`、`stats`），不支持数组下标
+
+模板（todos 看板，可直接改写）：
+
+```json
+{
+  "$manifest": {
+    "version": 1,
+    "desc": "任务看板数据",
+    "queries": {
+      "listTodos": {
+        "desc": "待办列表，默认按 createdAt 降序",
+        "path": "todos",
+        "identity": "id",
+        "params": {
+          "status": { "type": "enum", "values": ["pending", "done"], "desc": "按状态过滤" },
+          "sort": { "type": "field", "desc": "排序字段，默认 createdAt" },
+          "dir": { "type": "enum", "values": ["asc", "desc"], "default": "desc" }
+        },
+        "defaultLimit": 20
+      }
+    },
+    "mutations": {
+      "addTodo": {
+        "desc": "新增待办",
+        "op": "append",
+        "path": "todos",
+        "fields": {
+          "title": { "type": "string", "required": true },
+          "priority": { "type": "enum", "values": ["low", "medium", "high"], "default": "medium" }
+        },
+        "auto": { "id": "uuid", "createdAt": "nowIso" }
+      },
+      "setTodoStatus": {
+        "op": "update", "path": "todos", "match": "id",
+        "fields": { "status": { "type": "enum", "values": ["pending", "done"], "required": true } }
+      },
+      "removeTodo": { "op": "remove", "path": "todos", "match": "id" }
+    }
+  },
+  "todos": []
+}
+```
+
+要点：`queries` 声明 enum 过滤/排序/`identity` 游标分页；`mutations` 四种 op（`append`/`update`/`remove`/`set`），`match` 字段值由调用方传入（隐式必填），`fields` 做类型/枚举/默认值校验，`auto` 由 server 生成。页面代码照常用 `spherse.data.set("todos", arr)` 写数据即可——SDK 写入是原子的，无需页面侧防并发。
+
 ## 跳转到项目内其它文件：openFile
 
 页面中点击跳转/打开项目内的其它文件时，使用 `spherse.openFile`（在 Content Browser 中打开）。不要用 `<a href="...">` 直接链接（iframe 内的链接不会触发 App 导航）。
