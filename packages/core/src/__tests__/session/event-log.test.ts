@@ -25,10 +25,10 @@ describe("SessionEventLog", () => {
 
   it("appends events with contiguous seq starting at 0", () => {
     const log = SessionEventLog.open(store, sessionId);
-    const first = log.append("turn/start", { turn: 0 });
+    const first = log.append("turn/start", {});
     expect(first.seq).toBe(0);
     expect(first.type).toBe("turn/start");
-    const second = log.append("turn/end", { turn: 0, reason: "completed" });
+    const second = log.append("turn/end", { reason: "completed" });
     expect(second.seq).toBe(1);
 
     const persisted = store.readEvents(sessionId);
@@ -45,7 +45,7 @@ describe("SessionEventLog", () => {
         type: "user/message",
         data: { message: { role: "user", content: "hello", timestamp: 1 } },
       },
-      { type: "turn/start", data: { turn: 0 } },
+      { type: "turn/start", data: {} },
     ]);
 
     expect(events.map((event) => event.seq)).toEqual([0, 1]);
@@ -64,8 +64,8 @@ describe("SessionEventLog", () => {
     log.subscribe(badListener);
     log.subscribe((e) => heard.push(e.type));
 
-    log.append("turn/start", { turn: 0 });
-    log.append("turn/end", { turn: 0, reason: "aborted" });
+    log.append("turn/start", {});
+    log.append("turn/end", { reason: "aborted" });
 
     expect(badListener).toHaveBeenCalledTimes(2);
     expect(heard).toEqual(["turn/start", "turn/end"]);
@@ -75,20 +75,20 @@ describe("SessionEventLog", () => {
     const log = SessionEventLog.open(store, sessionId);
     const heard: string[] = [];
     const dispose = log.subscribe((e) => heard.push(e.type));
-    log.append("turn/start", { turn: 0 });
+    log.append("turn/start", {});
     dispose();
-    log.append("turn/end", { turn: 0, reason: "completed" });
+    log.append("turn/end", { reason: "completed" });
     expect(heard).toEqual(["turn/start"]);
   });
 
   it("open reloads persisted events and continues seq", () => {
     const log1 = SessionEventLog.open(store, sessionId);
-    log1.append("turn/start", { turn: 0 });
-    log1.append("turn/end", { turn: 0, reason: "completed" });
+    log1.append("turn/start", {});
+    log1.append("turn/end", { reason: "completed" });
 
     const log2 = SessionEventLog.open(store, sessionId);
     expect(log2.events.length).toBe(2);
-    const next = log2.append("turn/start", { turn: 1 });
+    const next = log2.append("turn/start", {});
     expect(next.seq).toBe(2);
 
     const persisted = store.readEvents(sessionId);
@@ -99,16 +99,16 @@ describe("SessionEventLog", () => {
   it("rolls back memory when a stale concurrent log loses the seq race", () => {
     const first = SessionEventLog.open(store, sessionId);
     const stale = SessionEventLog.open(store, sessionId);
-    first.append("turn/start", { turn: 0 });
+    first.append("turn/start", {});
 
-    expect(() => stale.append("turn/start", { turn: 0 })).toThrow(/must continue/);
+    expect(() => stale.append("turn/start", {})).toThrow(/must continue/);
     expect(stale.events).toEqual([]);
     expect(store.readEvents(sessionId)).toHaveLength(1);
   });
 
   it("open rejects corrupt non-contiguous event sequences", () => {
     const log = SessionEventLog.open(store, sessionId);
-    log.append("turn/start", { turn: 0 });
+    log.append("turn/start", {});
     store.close();
 
     const raw = new Database(path.join(tmpDir, "sessions.db"));
@@ -123,7 +123,7 @@ describe("SessionEventLog", () => {
 
   it("persists with the current schema version", () => {
     const log = SessionEventLog.open(store, sessionId);
-    log.append("turn/start", { turn: 0 });
+    log.append("turn/start", {});
     const raw = new Database(path.join(tmpDir, "sessions.db"));
     const row = raw
       .prepare(`SELECT schema_version FROM events WHERE session_id = ?`)

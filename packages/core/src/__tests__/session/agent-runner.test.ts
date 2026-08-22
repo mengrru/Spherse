@@ -239,10 +239,10 @@ describe("AgentRunner context engineering", () => {
     const sessionId = agentStore.sessions.createSession();
 
     const log = SessionEventLog.open(agentStore.sessions, sessionId);
-    log.append("turn/start", { turn: 0 });
+    log.append("turn/start", {});
     log.append("user/message", { message: { role: "user", content: "hello world", timestamp: Date.now() } as never });
     log.append("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "hi" }], stopReason: "stop", timestamp: Date.now() } as never });
-    log.append("turn/end", { turn: 0, reason: "completed" });
+    log.append("turn/end", { reason: "completed" });
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const agent = agentOf(runner);
@@ -256,7 +256,7 @@ describe("AgentRunner context engineering", () => {
     const sessionId = agentStore.sessions.createSession();
 
     const log = SessionEventLog.open(agentStore.sessions, sessionId);
-    log.append("turn/start", { turn: 0 });
+    log.append("turn/start", {});
     log.append("user/message", { message: { role: "user", content: "run the tools", timestamp: Date.now() } as never });
     log.append("assistant/message", {
       message: {
@@ -305,7 +305,7 @@ describe("AgentRunner context engineering", () => {
     const sessionId = agentStore.sessions.createSession();
 
     const log = SessionEventLog.open(agentStore.sessions, sessionId);
-    log.append("turn/start", { turn: 0 });
+    log.append("turn/start", {});
     log.append("user/message", { message: { role: "user", content: "run the tool", timestamp: Date.now() } as never });
     log.append("assistant/message", {
       message: {
@@ -326,7 +326,7 @@ describe("AgentRunner context engineering", () => {
         timestamp: Date.now(),
       } as never,
     });
-    log.append("turn/end", { turn: 0, reason: "completed" });
+    log.append("turn/end", { reason: "completed" });
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     expect(agentOf(runner).state.messages.length).toBe(3);

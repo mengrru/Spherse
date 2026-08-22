@@ -92,18 +92,18 @@ function scanRestarts(events: readonly SessionEvent[]): RestartState {
 const INTERRUPTED_TOOL_TEXT = "The tool call was interrupted and did not execute.";
 
 export function repairLog(events: readonly SessionEvent[]): SessionEvent[] {
-  let openTurn: number | null = null;
+  let hasOpenTurn = false;
   let openTurnStartIndex = -1;
   for (const [index, event] of events.entries()) {
     if (event.type === "turn/start") {
-      openTurn = event.data.turn;
+      hasOpenTurn = true;
       openTurnStartIndex = index;
     } else if (event.type === "turn/end") {
-      openTurn = null;
+      hasOpenTurn = false;
       openTurnStartIndex = -1;
     }
   }
-  if (openTurn === null) return [];
+  if (!hasOpenTurn) return [];
 
   const answered = new Set<string>();
   let lastToolCallAssistant: {
@@ -147,7 +147,7 @@ export function repairLog(events: readonly SessionEvent[]): SessionEvent[] {
     type: "turn/end",
     seq: nextSeq++,
     time: now,
-    data: { turn: openTurn, reason: "aborted" },
+    data: { reason: "aborted" },
   });
   return repairs;
 }

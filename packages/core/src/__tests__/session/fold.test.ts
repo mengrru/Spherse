@@ -33,13 +33,13 @@ const toolResult = (toolCallId: string, seq: number) =>
 describe("deriveMessages", () => {
   it("projects message events in order and skips non-message events", () => {
     const events = [
-      ev("turn/start", { turn: 0 }, 0),
+      ev("turn/start", {}, 0),
       user("hello", 1),
       assistant("hi", 2),
-      ev("turn/end", { turn: 0, reason: "completed" }, 3),
-      ev("turn/start", { turn: 1 }, 4),
+      ev("turn/end", { reason: "completed" }, 3),
+      ev("turn/start", {}, 4),
       user("again", 5),
-      ev("turn/end", { turn: 1, reason: "completed" }, 6),
+      ev("turn/end", { reason: "completed" }, 6),
     ];
     const messages = deriveMessages(events);
     expect(messages.map((m) => (m as { content: unknown }).content)).toEqual([
@@ -134,7 +134,7 @@ describe("deriveMessages", () => {
 
   it("empty and non-message-only logs project to empty", () => {
     expect(deriveMessages([])).toEqual([]);
-    expect(deriveMessages([ev("turn/start", { turn: 0 }, 0), ev("turn/end", { turn: 0, reason: "completed" }, 1)])).toEqual([]);
+    expect(deriveMessages([ev("turn/start", {}, 0), ev("turn/end", { reason: "completed" }, 1)])).toEqual([]);
   });
 
   it("history projection preserves compacted history but hides retried messages", () => {
@@ -223,7 +223,7 @@ describe("repairLog", () => {
 
   it("synthesizes results for unanswered tool calls in open turn", () => {
     const events = [
-      ev("turn/start", { turn: 0 }, 0),
+      ev("turn/start", {}, 0),
       user("go", 1),
       toolCallAssistant(["tc-1", "tc-2"], 2),
       toolResult("tc-1", 3),
@@ -240,11 +240,11 @@ describe("repairLog", () => {
 
   it("returns nothing for closed turns", () => {
     const events = [
-      ev("turn/start", { turn: 0 }, 0),
+      ev("turn/start", {}, 0),
       user("go", 1),
       toolCallAssistant(["tc-1"], 2),
       toolResult("tc-1", 3),
-      ev("turn/end", { turn: 0, reason: "completed" }, 4),
+      ev("turn/end", { reason: "completed" }, 4),
     ];
     expect(repairLog(events)).toEqual([]);
   });
@@ -255,7 +255,7 @@ describe("repairLog", () => {
   });
 
   it("still closes turn when open turn has no tool calls", () => {
-    const events = [ev("turn/start", { turn: 0 }, 0), user("q", 1), assistant("a", 2)];
+    const events = [ev("turn/start", {}, 0), user("q", 1), assistant("a", 2)];
     const repairs = repairLog(events);
     expect(repairs.map((r) => r.type)).toEqual(["turn/end"]);
     expect((repairs[0].data as { reason: string }).reason).toBe("aborted");
@@ -263,14 +263,14 @@ describe("repairLog", () => {
 
   it("does not repair tool calls from an earlier closed turn", () => {
     const events = [
-      ev("turn/start", { turn: 0 }, 0),
+      ev("turn/start", {}, 0),
       toolCallAssistant(["old-call"], 1),
-      ev("turn/end", { turn: 0, reason: "aborted" }, 2),
-      ev("turn/start", { turn: 1 }, 3),
+      ev("turn/end", { reason: "aborted" }, 2),
+      ev("turn/start", {}, 3),
     ];
 
     const repairs = repairLog(events);
     expect(repairs.map((event) => event.type)).toEqual(["turn/end"]);
-    expect((repairs[0].data as { turn: number }).turn).toBe(1);
+    expect(repairs[0].data).toEqual({ reason: "aborted" });
   });
 });

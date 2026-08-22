@@ -4,8 +4,8 @@ import type { AssistantMessage, ToolResultMessage } from "@earendil-works/pi-ai"
 export type TurnEndReason = "completed" | "aborted" | "error";
 
 export interface SessionEventMap {
-  "turn/start": { turn: number };
-  "turn/end": { turn: number; reason: TurnEndReason };
+  "turn/start": Record<string, never>;
+  "turn/end": { reason: TurnEndReason };
   "user/message": { message: AgentMessage };
   "assistant/message": { message: AssistantMessage };
   "tool/result": { message: ToolResultMessage };

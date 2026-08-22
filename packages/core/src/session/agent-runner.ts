@@ -27,7 +27,6 @@ export type RunnerEventHandler = (event: AgentEvent | SessionControlEvent) => vo
 
 export class AgentRunner {
   private eventLog: SessionEventLog | null = null;
-  private turnCounter = 0;
   private inFlight = false;
   private turnHooks: TurnHooks;
   private capabilityMiddlewares: ReadonlyArray<EventMiddleware<AgentEvent>> = [];
@@ -66,7 +65,6 @@ export class AgentRunner {
     runner.capabilityMiddlewares = deps.capabilities.flatMap((c) => c.eventMiddlewares ?? []);
     runner.eventLog =
       options?.eventLog ?? SessionEventLog.open(agentStore.sessions, sessionId);
-    runner.turnCounter = countTurns(runner.eventLog.events);
     if (runner.eventLog.events.length > 0) {
       runner.syncBufferFromLog();
     }
@@ -138,19 +136,17 @@ export class AgentRunner {
       ? (stripUserAttachments(userMessage as never, attachments) as typeof userMessage)
       : userMessage;
 
-    const turn = this.turnCounter;
     this.eventLog!.appendBatch([
       { type: "user/message", data: { message: sanitizedUserMessage as never } },
-      { type: "turn/start", data: { turn } },
+      { type: "turn/start", data: {} },
     ]);
-    this.turnCounter++;
 
     const dispatch = createEventPipeline(
       [
         logEventMiddleware(sessionLogger),
         ...this.capabilityMiddlewares,
         ...(sanitizer ? [sanitizer.middleware] : []),
-        this.persistMiddleware(turn),
+        this.persistMiddleware(),
       ],
       onEvent,
     );
@@ -196,12 +192,10 @@ export class AgentRunner {
     }
 
     this.ensureModel();
-    const retryTurn = this.turnCounter;
     this.eventLog!.appendBatch([
       { type: "turn/retried", data: { abandonedSeqs: [lastEvent.seq] } },
-      { type: "turn/start", data: { turn: retryTurn } },
+      { type: "turn/start", data: {} },
     ]);
-    this.turnCounter++;
     this.syncBufferFromLog();
 
     const sessionLogger = this.deps.logger.child({ sessionId: this.sessionId });
@@ -209,7 +203,7 @@ export class AgentRunner {
       [
         logEventMiddleware(sessionLogger),
         ...this.capabilityMiddlewares,
-        this.persistMiddleware(retryTurn),
+        this.persistMiddleware(),
       ],
       onEvent,
     );
@@ -345,7 +339,7 @@ export class AgentRunner {
     }
   }
 
-  private persistMiddleware(turn: number): EventMiddleware<AgentEvent> {
+  private persistMiddleware(): EventMiddleware<AgentEvent> {
     return (event, next) => {
       if (this.eventLog) {
         if (event.type === "message_end") {
@@ -357,7 +351,6 @@ export class AgentRunner {
             | { stopReason?: string }
             | undefined;
           this.eventLog.append("turn/end", {
-            turn,
             reason:
               lastMessage?.stopReason === "error"
                 ? "error"
@@ -394,12 +387,4 @@ export class AgentRunner {
       this.deps.runConfig.current().defaultModel,
     );
   }
-}
-
-function countTurns(events: readonly SessionEvent[]): number {
-  let count = 0;
-  for (const event of events) {
-    if (event.type === "turn/start") count++;
-  }
-  return count;
 }

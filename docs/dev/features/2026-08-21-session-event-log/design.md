@@ -42,8 +42,8 @@ export interface SessionEvent<T extends SessionEventType = SessionEventType> {
 }
 
 export interface SessionEventMap {
-  "turn/start":         { turn: number };
-  "turn/end":           { turn: number; reason: "completed" | "aborted" | "error" };
+  "turn/start":         {};
+  "turn/end":           { reason: "completed" | "aborted" | "error" };
   "user/message":       { message: AgentMessage };
   "assistant/message":  { message: AssistantMessage };
   "tool/result":        { message: ToolResultMessage };

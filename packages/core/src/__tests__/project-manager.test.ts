@@ -112,7 +112,7 @@ describe("ProjectManager event-backed session reads", () => {
             time: 1,
             data: { message: { role: "user", content: "q", timestamp: 1 } as never },
           },
-          { type: "turn/start", seq: 1, time: 1, data: { turn: 0 } },
+          { type: "turn/start", seq: 1, time: 1, data: {} },
           {
             type: "assistant/message",
             seq: 2,
@@ -125,7 +125,7 @@ describe("ProjectManager event-backed session reads", () => {
               } as never,
             },
           },
-          { type: "turn/end", seq: 3, time: 2, data: { turn: 0, reason: "completed" } },
+          { type: "turn/end", seq: 3, time: 2, data: { reason: "completed" } },
         ],
         EVENT_SCHEMA_VERSION,
       );

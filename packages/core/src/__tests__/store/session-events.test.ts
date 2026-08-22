@@ -54,9 +54,9 @@ describe("SessionStore events", () => {
     it("round-trips events in seq order", () => {
       const id = store.createSession();
       const log = SessionEventLog.open(store, id);
-      log.append("turn/start", { turn: 0 });
+      log.append("turn/start", {});
       log.append("user/message", { message: legacyUserMsg("hello") });
-      log.append("turn/end", { turn: 0, reason: "completed" });
+      log.append("turn/end", { reason: "completed" });
 
       const persisted = store.readEvents(id);
       expect(persisted.map((e) => [e.type, e.seq])).toEqual([
@@ -74,7 +74,7 @@ describe("SessionStore events", () => {
         type: "turn/start",
         seq: 0,
         time: 1,
-        data: { turn: 0 },
+        data: {},
       };
       store.appendEvents(id, [event], 1);
       expect(() => store.appendEvents(id, [event], 1)).toThrow(/must continue/);
@@ -86,8 +86,8 @@ describe("SessionStore events", () => {
         store.appendEvents(
           id,
           [
-            { type: "turn/start", seq: 0, time: 1, data: { turn: 0 } },
-            { type: "turn/end", seq: 2, time: 2, data: { turn: 0, reason: "completed" } },
+            { type: "turn/start", seq: 0, time: 1, data: {} },
+            { type: "turn/end", seq: 2, time: 2, data: { reason: "completed" } },
           ],
           1,
         ),
@@ -100,7 +100,7 @@ describe("SessionStore events", () => {
       const before = store.getSession(id)!.updatedAt;
       store.appendEvents(
         id,
-        [{ type: "turn/start", seq: 0, time: Date.now(), data: { turn: 0 } }],
+        [{ type: "turn/start", seq: 0, time: Date.now(), data: {} }],
         1,
       );
       expect(store.getSession(id)!.updatedAt).toBeGreaterThanOrEqual(before);
@@ -115,7 +115,7 @@ describe("SessionStore events", () => {
       const id = store.createSession();
       store.appendEvents(
         id,
-        [{ type: "turn/start", seq: 0, time: 1, data: { turn: 0 } }],
+        [{ type: "turn/start", seq: 0, time: 1, data: {} }],
         999,
       );
       expect(() => store.readEvents(id)).toThrow(/schema_version=999.*up to 1.*upgrade/i);
@@ -137,7 +137,7 @@ describe("SessionStore events", () => {
     it("session with events does not need migration", () => {
       const id = store.createSession();
       const log = SessionEventLog.open(store, id);
-      log.append("turn/start", { turn: 0 });
+      log.append("turn/start", {});
       expect(store.sessionNeedsMigration(id)).toBe(false);
     });
 
