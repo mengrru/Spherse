@@ -17,14 +17,16 @@ export function ContentQueryBridge() {
       const changedPaths = [...changedPathsRef.current];
       changedPathsRef.current.clear();
       if (changedPaths.length === 0) {
-        invalidateProjectFileQueries(projectId);
+        void invalidateProjectFileQueries(projectId);
       } else {
-        for (const path of changedPaths) invalidateProjectFileQueries(projectId, path);
+        for (const path of changedPaths) void invalidateProjectFileQueries(projectId, path);
       }
     }, 300);
   });
 
-  useReconnectedSync(() => invalidateProjectFileQueries(projectId));
+  useReconnectedSync(() => {
+    void invalidateProjectFileQueries(projectId);
+  });
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current);

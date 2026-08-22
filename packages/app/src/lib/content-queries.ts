@@ -24,17 +24,21 @@ export function useProjectFileTree(projectId: string, client: ApiClient) {
   });
 }
 
-export function invalidateProjectFileQueries(projectId: string, changedPath?: string): void {
+export async function invalidateProjectFileQueries(projectId: string, changedPath?: string): Promise<void> {
+  const invalidations: Promise<void>[] = [];
   if (changedPath) {
     const normalizedPath = changedPath.replace(/\\/g, "/");
-    void queryClient.invalidateQueries({
+    invalidations.push(queryClient.invalidateQueries({
       queryKey: projectQueryKeys.content(projectId, normalizedPath),
-    });
+    }));
   } else {
-    void queryClient.invalidateQueries({
+    invalidations.push(queryClient.invalidateQueries({
       queryKey: ["projects", projectId, "content"],
-    });
+    }));
   }
-  void queryClient.invalidateQueries({ queryKey: projectQueryKeys.directories(projectId) });
-  void queryClient.invalidateQueries({ queryKey: projectQueryKeys.fileTree(projectId) });
+  invalidations.push(
+    queryClient.invalidateQueries({ queryKey: projectQueryKeys.directories(projectId) }),
+    queryClient.invalidateQueries({ queryKey: projectQueryKeys.fileTree(projectId) }),
+  );
+  await Promise.all(invalidations);
 }

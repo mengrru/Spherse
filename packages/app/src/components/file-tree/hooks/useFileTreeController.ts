@@ -10,6 +10,7 @@ import {
   buildNodes,
   updateNode,
   mergeExpandedState,
+  mergeRefreshedTree,
 } from "../tree-model";
 import { fetchProjectDirectory, invalidateProjectFileQueries, useProjectDirectory } from "../../../lib/content-queries";
 
@@ -81,12 +82,19 @@ export function useFileTreeController(
     return refreshExpanded(merged);
   }, [refreshExpanded, rootPath]);
 
+  const refreshTree = useCallback(async (changedPath: string) => {
+    await invalidateProjectFileQueries(projectId, changedPath);
+    const entries = await fetchProjectDirectory(projectId, client, rootPath);
+    const refreshed = await buildRefreshedRoot(entries);
+    setRootNodes((current) => mergeRefreshedTree(refreshed, current));
+  }, [buildRefreshedRoot, client, projectId, rootPath]);
+
   useEffect(() => {
     if (!rootQuery.data) return;
     let cancelled = false;
     void buildRefreshedRoot(rootQuery.data).then((refreshed) => {
       if (cancelled) return;
-      setRootNodes((current) => mergeExpandedState(refreshed, current));
+      setRootNodes((current) => mergeRefreshedTree(refreshed, current));
     });
     return () => {
       cancelled = true;
@@ -140,12 +148,12 @@ export function useFileTreeController(
           await client.touchFile(targetPath);
         }
         setCreating(null);
-        invalidateProjectFileQueries(projectId, targetPath);
+        await refreshTree(targetPath);
       } catch (err) {
         toast.error(t("file-tree.createFailed", { message: (err as Error).message }));
       }
     },
-    [client, projectId, t],
+    [client, refreshTree, t],
   );
 
   const cancelCreate = useCallback(() => setCreating(null), []);
@@ -156,16 +164,16 @@ export function useFileTreeController(
     if (!deleteTarget) return;
     const node = deleteTarget;
     setDeleteTarget(null);
-    client
+    void client
       .deleteContent(node.path)
-      .then(() => {
+      .then(async () => {
         onDeleted?.(node.path);
-        invalidateProjectFileQueries(projectId, node.path);
+        await refreshTree(node.path);
       })
       .catch((err: unknown) => {
         toast.error(t("file-tree.deleteFailed", { message: (err as Error).message }));
       });
-  }, [deleteTarget, client, onDeleted, projectId, t]);
+  }, [deleteTarget, client, onDeleted, refreshTree, t]);
 
   const cancelDelete = useCallback(() => setDeleteTarget(null), []);
 
