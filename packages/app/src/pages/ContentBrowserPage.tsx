@@ -6,7 +6,7 @@ import { useApiClient } from "../lib/use-connection";
 import { useProjectNavigation } from "../lib/use-project-navigation";
 import { useFloatingSessionId } from "../features/floating-chat/use-floating-session-id";
 import type { ActiveSessionInfo } from "../lib/types";
-import { createProjectSession, useProjectCatalog } from "../lib/project-queries";
+import { createProjectSession, useProjectCatalog } from "../queries/project";
 
 export function ContentBrowserPage() {
   const { projectId } = useProjectCtx();

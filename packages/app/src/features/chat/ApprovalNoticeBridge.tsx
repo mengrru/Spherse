@@ -4,7 +4,7 @@ import { useMatch, useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { collectPendingApprovals } from "./model/approval-notice";
 import { useStreamingStore } from "./runtime/streaming-store";
-import { getCachedAgents, getCachedSession } from "../../lib/project-queries";
+import { getCachedAgents, getCachedSession } from "../../queries/project";
 
 export function ApprovalNoticeBridge() {
   const navigate = useNavigate();

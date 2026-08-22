@@ -1,18 +1,3 @@
-import { QueryClient } from "@tanstack/react-query";
-
-function createQueryClient(): QueryClient {
-  return new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 1,
-        staleTime: Number.POSITIVE_INFINITY,
-      },
-    },
-  });
-}
-
-export const queryClient = createQueryClient();
-
 export const projectQueryKeys = {
   all: (projectId: string) => ["projects", projectId] as const,
   agents: (projectId: string) => ["projects", projectId, "agents"] as const,

@@ -31,7 +31,7 @@ import {
   type McpServerDraft,
 } from "./mcp-form-helpers";
 import { McpServerForm } from "./McpServerForm";
-import { useProjectCatalog } from "../../lib/project-queries";
+import { useProjectCatalog } from "../../queries/project";
 
 interface McpDialogProps {
   open: boolean;

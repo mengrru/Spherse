@@ -191,6 +191,7 @@ spherse/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
 │   │       ├── context/
 │   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（projectId/projectRoot）
+│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory、project/content 服务端状态
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 初始消息/streaming/hasEnabledTriggersByAgent 等前端运行时投影

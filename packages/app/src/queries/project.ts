@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { ApiError, type ApiClient } from "./api";
-import { projectQueryKeys, queryClient } from "./query-client";
-import type { AgentProfile, SessionInfo } from "./types";
+import { ApiError, type ApiClient } from "../lib/api";
+import { queryClient } from "./client";
+import { projectQueryKeys } from "./keys";
+import type { AgentProfile, SessionInfo } from "../lib/types";
 import { useProjectDataStore } from "../stores/project-data-store";
 
 const SESSION_PAGE_SIZE = 10;

@@ -6,7 +6,7 @@ import { useStreamingStore } from "../../features/chat/runtime/streaming-store";
 import { useSettingsStore } from "../../stores/settings-store";
 import { ApiError } from "../../lib/api";
 import { openChat } from "./open-chat";
-import { ensureProjectSession } from "../../lib/project-queries";
+import { ensureProjectSession } from "../../queries/project";
 
 registerAction("sendMessage", async (params, ctx) => {
   const { sessionId, message, open, float } = params as {

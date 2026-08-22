@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApiError, type ApiClient } from "./api";
+import { ApiError, type ApiClient } from "../lib/api";
 import {
   clearProjectQueries,
   createProjectSession,
@@ -9,9 +9,10 @@ import {
   loadMoreProjectSessions,
   renameProjectSession,
   ensureProjectSession,
-} from "./project-queries";
-import { projectQueryKeys, queryClient } from "./query-client";
-import type { SessionInfo } from "./types";
+} from "./project";
+import { queryClient } from "./client";
+import { projectQueryKeys } from "./keys";
+import type { SessionInfo } from "../lib/types";
 
 function session(id: string): SessionInfo {
   return {

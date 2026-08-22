@@ -2,7 +2,7 @@ import { registerAction } from "../registry";
 import { respond } from "../respond";
 import { openChat } from "./open-chat";
 import type { ApiClient } from "../../lib/api";
-import { createProjectSession, ensureProjectAgents } from "../../lib/project-queries";
+import { createProjectSession, ensureProjectAgents } from "../../queries/project";
 
 async function resolveAgentId(
   projectId: string,

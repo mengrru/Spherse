@@ -12,7 +12,7 @@ import {
   mergeExpandedState,
   mergeRefreshedTree,
 } from "../tree-model";
-import { fetchProjectDirectory, invalidateProjectFileQueries, useProjectDirectory } from "../../../lib/content-queries";
+import { fetchProjectDirectory, invalidateProjectFileQueries, useProjectDirectory } from "../../../queries/content";
 
 export interface FileTreeController {
   rootNodes: TreeNode[];

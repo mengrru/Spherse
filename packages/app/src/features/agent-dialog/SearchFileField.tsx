@@ -3,7 +3,7 @@ import { Input } from "../../components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
-import { useProjectFileTree } from "../../lib/content-queries";
+import { useProjectFileTree } from "../../queries/content";
 
 const FILE_TREE_EXCLUDE = new Set(["AGENTS.md", "CHANGELOG.md", "changelog.md"]);
 

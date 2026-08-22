@@ -22,7 +22,7 @@ vi.mock("../../features/floating-chat", () => ({
   getDefaultFloatingState: (sessionId: string) => ({ sessionId } as any),
 }));
 
-vi.mock("../../lib/project-queries", () => ({
+vi.mock("../../queries/project", () => ({
   ensureProjectSession: (_projectId: string, _client: unknown, sessionId: string) =>
     Promise.resolve(projectSessions().find((session) => session.id === sessionId) ?? null),
 }));

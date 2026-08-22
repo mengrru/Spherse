@@ -4,7 +4,7 @@ import { useProjectCtx } from "../../context/project-context";
 import { useFloatingChatStore } from "./store";
 import { FloatingChatContainer } from "./FloatingChatContainer";
 import { useApiClient } from "../../lib/use-connection";
-import { useProjectCatalog, useProjectSession } from "../../lib/project-queries";
+import { useProjectCatalog, useProjectSession } from "../../queries/project";
 
 export function FloatingChatManager() {
   const { projectId } = useProjectCtx();

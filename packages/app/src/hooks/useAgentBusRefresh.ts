@@ -1,7 +1,7 @@
 import { useBusSubscription } from "./useBusSubscription";
 import { useReconnectedSync } from "./useReconnectedSync";
 import type { ApiClient } from "../lib/api";
-import { refreshProjectAgents, refreshProjectSessions } from "../lib/project-queries";
+import { refreshProjectAgents, refreshProjectSessions } from "../queries/project";
 
 /**
  * Keeps the cached agent list in sync when agents are created/updated/deleted outside the UI

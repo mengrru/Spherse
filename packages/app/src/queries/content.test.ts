@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ApiClient } from "./api";
+import type { ApiClient } from "../lib/api";
 import {
   fetchProjectDirectory,
   invalidateProjectFileQueries,
-} from "./content-queries";
-import { projectQueryKeys, queryClient } from "./query-client";
+} from "./content";
+import { queryClient } from "./client";
+import { projectQueryKeys } from "./keys";
 
 describe("content queries", () => {
   beforeEach(() => {

@@ -10,7 +10,7 @@ import { useStreamingStore } from "../chat/runtime/streaming-store";
 import { useTriggerStore } from "./store";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import type { TriggerServerEvent } from "../../lib/types";
-import { useProjectCatalog } from "../../lib/project-queries";
+import { useProjectCatalog } from "../../queries/project";
 
 export function TriggerEventBridge() {
   const { projectId } = useProjectCtx();

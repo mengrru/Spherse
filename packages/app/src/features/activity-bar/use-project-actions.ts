@@ -8,7 +8,7 @@ import { useTriggerStore } from "../agent-trigger/store";
 import { useFloatingChatStore } from "../floating-chat/store";
 import { useFloatingContentBrowserStore } from "../floating-content-browser/store";
 import { useBrowserStore } from "../browser/store";
-import { clearProjectQueries } from "../../lib/project-queries";
+import { clearProjectQueries } from "../../queries/project";
 
 export function buildProjectRoute(projectId: string, lastRoute?: string): string {
   const suffix = lastRoute?.startsWith("/") ? lastRoute : "";

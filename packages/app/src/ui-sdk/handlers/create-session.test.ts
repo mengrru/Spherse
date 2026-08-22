@@ -7,7 +7,7 @@ const mockGetState = vi.fn(() => ({
   projects: {} as Record<string, { agents: Array<{ id: string; slug: string }> }>,
 }));
 
-vi.mock("../../lib/project-queries", () => ({
+vi.mock("../../queries/project", () => ({
   ensureProjectAgents: (projectId: string, client: any) => {
     const cached = mockGetState().projects[projectId]?.agents;
     return cached ? Promise.resolve(cached) : client.listAgents();

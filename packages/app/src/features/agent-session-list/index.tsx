@@ -40,7 +40,7 @@ import {
   renameProjectSession,
   updateProjectAgent,
   useProjectCatalog,
-} from "../../lib/project-queries";
+} from "../../queries/project";
 
 export function AgentSessionList() {
   const { t } = useI18n();

@@ -5,7 +5,7 @@ import { Chat } from "../features/chat";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useProjectCtx } from "../context/project-context";
 import { useApiClient } from "../lib/use-connection";
-import { useProjectCatalog, useProjectSession } from "../lib/project-queries";
+import { useProjectCatalog, useProjectSession } from "../queries/project";
 
 export function ChatPage() {
   const { sessionId = "" } = useParams();

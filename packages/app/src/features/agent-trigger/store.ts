@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { ApiClient } from "../../lib/api";
 import type { TriggerInfo, TriggerServerEvent } from "../../lib/types";
 import { useProjectDataStore } from "../../stores/project-data-store";
-import { refreshProjectSessions } from "../../lib/project-queries";
+import { refreshProjectSessions } from "../../queries/project";
 
 interface TriggerProjectData {
   triggersByAgent: Record<string, TriggerInfo[]>;

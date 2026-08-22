@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { useReconnectedSync } from "../../hooks/useReconnectedSync";
-import { invalidateProjectFileQueries } from "../../lib/content-queries";
+import { invalidateProjectFileQueries } from "../../queries/content";
 import { useProjectCtx } from "../../context/project-context";
 
 export function ContentQueryBridge() {

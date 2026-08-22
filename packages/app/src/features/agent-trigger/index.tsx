@@ -30,7 +30,7 @@ import { EMPTY_RUNNING_TRIGGER_IDS, EMPTY_TRIGGERS } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
 import { InfoIcon, PlusIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { useProjectCatalog } from "../../lib/project-queries";
+import { useProjectCatalog } from "../../queries/project";
 
 interface TriggerDialogProps {
   open: boolean;

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import type { ApiClient } from "./api";
-import { projectQueryKeys, queryClient } from "./query-client";
+import type { ApiClient } from "../lib/api";
+import { queryClient } from "./client";
+import { projectQueryKeys } from "./keys";
 
 function directoryQueryOptions(projectId: string, client: ApiClient, dirPath: string) {
   return {

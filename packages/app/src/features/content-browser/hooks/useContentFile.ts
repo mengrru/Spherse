@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiClient } from "../../../lib/api";
-import { projectQueryKeys } from "../../../lib/query-client";
+import { projectQueryKeys } from "../../../queries/keys";
 import type { ContentResponse } from "../../../lib/types";
 
 export function useContentFile(projectId: string, client: ApiClient, filePath: string) {
