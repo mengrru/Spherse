@@ -2,10 +2,10 @@
 
 - 日期：2026-08-21
 - 分支：`feat/session-event-log`
-- 状态：设计已确认（两个 PR 的实施计划见同目录 plan-pr1.md / plan-pr2.md）
+- 状态：PR1 已在 `feat/session-event-log` 实现；PR2 设计待实施（计划见同目录 plan-pr1.md / plan-pr2.md）
 - 前置：`docs/dev/features/2026-08-19-core-kernel-refactor/`（微内核已合入）、`docs/dev/bugfix/2026-08-20-restore-orphaned-toolcall/`（repair 雏形已合入）
 - 参考：已废弃分支 `feat/core-event-log-refactor`（其 P1 实现为本文的参考实现；P2 dispatcher 被微内核 EventPipeline/TurnHooks 取代，不再相关；P3 类型收归另行立项）
-- 数据兼容：新会话走 events 表（破坏性变更）；旧 `messages`/`compactions` 表退役为只读，legacy 会话经前端手动一键迁移解锁全量功能
+- 数据兼容：新会话走 events 表；旧 `messages`/`compactions` 表退役为只读，legacy 会话在首次可写 restore 时由 core 自动、幂等迁移
 
 ## 背景与动机
 
@@ -28,15 +28,15 @@
 | 1 | 分支建模 | **方案 A**：branch = 对父 log 前缀的引用（`parent_session_id` + `fork_seq`），fork 零拷贝 |
 | 2 | 撤回 UI | 彻底隐藏；事件层留折叠占位余地（见 §撤回） |
 | 3 | fork 粒度 | turn 边界（forkSeq 必须指向 `turn/end` 或干净收尾的 log 末尾） |
-| 4 | PR 切分 | PR1 存储替换（行为不变）；PR2 分支+撤回+迁移 UI |
-| 5 | legacy 迁移 | 前端手动按钮一键迁移；**未迁移会话只读**（可看历史、不可发消息），迁移后立即解锁全量功能 |
+| 4 | PR 切分 | PR1 存储替换 + 自动迁移；PR2 分支 + 撤回 |
+| 5 | legacy 迁移 | `SessionManager.restoreSession` 在所有可写恢复入口自动迁移；客户端不感知迁移状态 |
 
 ## §1 事件信封与词汇表
 
 ```ts
 export interface SessionEvent<T extends SessionEventType = SessionEventType> {
   type: T;
-  seq: number;   // 虚拟拼接 log 内从 0 连续递增，seq = 数组下标（不变式）
+  seq: number;   // 当前物理 session log 内从 0 连续递增，seq = 数组下标
   time: number;  // Unix epoch ms
   data: SessionEventMap[T];
 }
@@ -65,6 +65,7 @@ export interface SessionEventMap {
 - **`tool/call` 不单独成事件**：toolCall 块内嵌在 `assistant/message`，单独存冗余；`tool/result` 独立因其时间上晚于 assistant 消息
 - **turn/retried 带 `abandonedSeqs`**：显式记录被放弃的消息事件 seq，fold 精确跳过（比旧分支首版 `boundarySeq` 更准——retry 只放弃尾部失败的 assistant 消息，不是整个 turn 前缀）
 - 词汇表由 `SessionEventMap` 单点定义；后续圆桌等消费者在此显式扩展字段与版本适配，不使用隐式 declaration merging
+- PR2 分支拼接后另行生成虚拟 seq：父前缀保留原 seq，子本地 seq `n` 映射为 `forkSeq + 1 + n`；数据库中的子日志仍从 seq 0 开始
 
 ## §2 存储
 
@@ -74,48 +75,46 @@ export interface SessionEventMap {
   └── events     （新增：session_id + seq 联合主键，type TEXT，data JSON，time INTEGER）
 ```
 
-- **写路径只有 events 表**：messages/compactions 表写方法全部删除（无双写过渡期——只读拦截语义保证了这一点）
-- better-sqlite3 同步写：`append()` 返回即已耐久（WAL）。写入序：校验不变式（seq 连续）→ 内存 push → 同步 INSERT → 通知订阅者（通知失败只 warn）
+- **写路径只有 events 表**：messages/compactions 表写方法全部删除，无双写过渡期；旧表只由迁移前历史读取与迁移原语访问
+- better-sqlite3 同步写：`append()` 返回即已耐久（WAL）。写入序：内存追加 → 同步事务校验并 INSERT → 失败时回滚内存 → 整批提交后逐事件通知订阅者；listener 异常静默隔离，不影响已提交事实
 - 读取方法：`readEvents(sessionId)`、`appendEvents(sessionId, events)`（迁移用单事务批量）、`maxSeq(sessionId)`
-- sessions 表新列：`parent_session_id TEXT NULL`、`fork_seq INTEGER NULL`、`migrated_at INTEGER NULL`（null 且 events 为空 = legacy 会话）
+- sessions 表新列：`parent_session_id TEXT NULL`、`fork_seq INTEGER NULL`、`migrated_at INTEGER NULL`；legacy 判定还要求 events 为空且旧 messages 存在，空白新会话不需要迁移
 
 ## §3 fold——恢复即投影
 
-```ts
-function deriveMessages(sessionId, events, resolveParent: (id: string) => readonly SessionEvent[]): AgentMessage[]
-```
+PR1 已实现 `deriveMessages(events): AgentMessage[]`。PR2 将增加父日志解析与虚拟 seq 映射，再把拼接结果交给同一投影规则。
 
 规则（自上而下扫描一遍 + 尾部投影）：
 
-1. **拼接**：若首事件是 `branch/created`，递归 fold 父前缀（父 `seq <= forkSeq` 的事件）作前缀；否则自身即全量。拼接产物称虚拟 log，seq 即下标
+1. **拼接（PR2）**：若子日志首事件是 `branch/created`，递归取父 `seq <= forkSeq` 的前缀，再将子本地 seq 映射到父前缀之后；否则自身即全量
 2. **找最后一个重启点**（whole-value 事件，last-wins）：
    - `compaction/applied` → 消息投影从 `[digest 消息, ...anchorSeq 之后的消息]` 开始，并跳过 `excludedSeqs`
    - `turn/retried` → 跳过 `abandonedSeqs` 列出的消息事件
-   - `message/recalled` → 跳过 `boundarySeq`（含）之前的所有消息事件（PR2）
+   - `message/recalled` → 对最后一次 recall，保留 `boundarySeq` 之前的消息，隐藏 `[boundarySeq, recallEventSeq)` 内的旧消息，并继续投影 recall 事件之后的新消息（PR2）
 3. **投影**：`user/message` / `assistant/message` / `tool/result` → 消息数组
-4. **增量缓存**：水位（已扫描 seq）+ 重启点失效（新重启点出现时重算）
+4. **性能**：PR1 每次 fold 扫描当前内存事件数组，尚未实现增量缓存或持久化 checkpoint；长会话优化另行立项
 
 digest 消息构造：`{ role: "user", content: wrapDigestContent(digestContent) }`——与现 compactor 行为一致。
 
 ## §4 repair——崩溃自愈（演进自已合入的 synthesizeInterruptedToolResults）
 
-restore 时发现 open turn（有 `turn/start` 无 `turn/end`）：为**虚拟 log 尾部**最后一个含 toolCall 的 assistant 消息中未应答的 toolCall 追加合成事件——`tool/result {message: "工具被中断，未执行", isError: true}` + `turn/end {reason: "aborted"}`（持久化，幂等：二次 restore 无 open turn 自然不触发）。无 turn 事件的日志（迁移产物）不触发 repair。
+restore 时发现 open turn（有 `turn/start` 无后续 `turn/end`）：为日志尾部最后一个含 toolCall 的 assistant 消息中未应答的 toolCall 追加合成事件——`tool/result {message: "工具被中断，未执行", isError: true}` + `turn/end {reason: "aborted"}`（持久化，幂等：二次 restore 无 open turn 自然不触发）。无 turn 事件的日志（迁移产物）不触发 repair。
 
 分支边界安全：forkSeq 锁定 turn 边界 ⇒ 父前缀必然干净收尾，repair 扫描不会跨父前缀产生误合成。
 
 ## §5 会话生命周期改造（AgentRunner）
 
-- **MessageLog 退役**：`AgentRunner` 改持 `SessionEventLog`（内存 events 数组 + SQLite 同步写的门面，`deriveMessages()` 带增量缓存）。`agent.state.messages` = fold 结果，单向同步 log → agent（与现状一致）
-- **sendMessage**：`append user/message` + `append turn/start` → `agent.state.messages = deriveMessages()` → `prompt()`
+- **MessageLog 退役**：`AgentRunner` 改持 `SessionEventLog`（内存 events 数组 + SQLite 同步写门面）。fold 是 durable state 的重建来源；restore、retry 和 compaction 等重启点后显式同步到 `agent.state.messages`，正常活跃 turn 由 pi 维护内存状态
+- **sendMessage**：原子追加 `user/message` + `turn/start`，随后把已准备的 user message 交给 `prompt()`；不在每次追加后重新 fold
 - **pi 事件翻译**（persist middleware 换落点）：`message_end`(assistant) → `assistant/message`；toolResult → `tool/result`；run 结束 → `turn/end {reason}`
-- **retryLastTurn**：pop + 删行 → `append turn/retried {abandonedSeqs: [失败 assistant 消息的 seq]}`；历史可回看重试前内容
+- **retryLastTurn**：从 pop + 删行改为 `append turn/retried {abandonedSeqs: [失败 assistant 消息的 seq]}`；历史可回看重试前内容
 - **compaction**：`maybeCompactLog` 的落点从 `recordCompaction` + 内存 compactLog 改为 `append compaction/applied {anchorSeq, digestContent, excludedSeqs}`；计划逻辑（planCompaction）不动，`excludedSeqs` 固化 `sanitizeToolCallPairs` 对保留 tail 的净化结果。锚点可能在父前缀（虚拟 seq 直接可用，PR2 场景）
 - **initForRestore**：`logFromRows`/`logFromCompaction` 退役（compactor.ts 随之删除），改为 readEvents → repair → fold → 赋值
-- **legacy 拦截**：restore/发消息对未迁移会话抛 `MigrationRequiredError`；HTTP 读历史走 legacy 只读路径
+- **legacy 边界**：生产路径由 `SessionManager.restoreSession` 先自动迁移；`AgentRunner.initForRestore` 的 `MigrationRequiredError` 仅是 core 内部不变量守卫。迁移前 HTTP 历史读取仍可走 legacy 只读路径
 
 ## §6 分支（PR2）
 
-- **创建**：`forkSession(agentId, sessionId, forkSeq)`——校验 forkSeq 是 turn 边界 → 子 session 行（`parent_session_id` + `fork_seq`）→ 子 log 首事件 `branch/created`（seq = forkSeq + 1）→ 子会话立即可聊
+- **创建**：`forkSession(agentId, sessionId, forkSeq)`——校验 forkSeq 是 turn 边界 → 子 session 行（`parent_session_id` + `fork_seq`）→ 子物理 log 以本地 `seq = 0` 写入首事件 `branch/created`；fold 时映射到虚拟 `seq = forkSeq + 1` → 子会话立即可聊
 - **父后续增长不影响子**：子 fold 只读父 `≤ forkSeq` 前缀；父自己的 compaction/retry 事件 seq > forkSeq，子不可见
 - **子的 compaction 锚进父前缀**：anchorSeq 用虚拟 seq，digest 落子 log，无需特判
 - **嵌套分支**：fold 递归拼接，不做展平优化；深度有实际边界（用户操作产生）
@@ -124,13 +123,13 @@ restore 时发现 open turn（有 `turn/start` 无 `turn/end`）：为**虚拟 l
 
 ## §7 撤回（PR2）
 
-- **动作**：`recallMessages(sessionId, boundarySeq)`——boundarySeq 之后的最近一个 turn 边界处生效 → `append message/recalled {boundarySeq}`
-- **fold**：该 seq（含）之前的消息不投影给模型；UI 投影层同样跳过（**彻底隐藏**）
+- **动作**：`recallMessages(sessionId, boundarySeq)`——`boundarySeq` 表示第一条被撤回的 user message，校验其所属 turn 边界后追加 `message/recalled {boundarySeq}`
+- **fold**：保留该 seq 之前的消息，隐藏从该 user message 到本次 `message/recalled` 事件之间的旧消息；recall 之后新追加的消息正常投影，因此会话可继续
 - **折叠占位余地**：事件数据已含完整信息（撤回点 + 被撤消息仍在 log 中），未来改占位渲染只需 UI 投影层读取 `message/recalled` 事件渲染「已撤回 N 条」标记，无需 schema 变更或数据迁移
-- **撤回后可继续对话**：撤回 = 重启点，模型上下文从撤回点重放，用户可改写消息重发
+- **撤回后可继续对话**：撤回 = 重启点，模型上下文从保留前缀继续，用户可改写消息重发；新事件位于 recall 事件之后，不受旧区间隐藏规则影响
 - **UI**：user 消息气泡「撤回到这里」→ 确认（提示不可恢复模型上下文）→ 该消息及之后的消息隐藏、composer 聚焦
 
-## §8 legacy 迁移（PR1 内核 + PR2 UI）
+## §8 legacy 自动迁移（PR1）
 
 ```ts
 migrateLegacySession(agentStore, sessionId): MigrationResult
@@ -155,7 +154,7 @@ migrateLegacySession(agentStore, sessionId): MigrationResult
 - **迁移**：旧消息序列 → 事件序列、幂等、迁移后 fold == 旧全量重放（含 compaction 锚点）
 - **分支**：fork 后父子独立演化互不影响、子 compaction 锚父前缀、嵌套 fork、删父后子可读
 - **撤回**：撤回后 fold、继续对话、二次撤回 last-wins
-- **契约测试**：server/desktop 对 `restoreSession`/PM 门面在迁移后行为（AGENTS.md 契约测试规矩）
+- **契约测试**：当前由 core 真实 runtime 测试钉住 restore 自动迁移；server/desktop 真实边界测试仍待补充
 - **E2E**：chat 基本流程、断线恢复、retry、旧会话自动迁移、分支创建后双会话独立对话、撤回后继续对话（PR2 收尾跑 `verify:e2e`）
 
 ## 明确不做（本次）
@@ -172,6 +171,6 @@ migrateLegacySession(agentStore, sessionId): MigrationResult
 |---|---|
 | pi `agent.state.messages` accessor 赋值语义与 fold 同步边界 | 单向同步不变式已有（现 syncBufferFromLog），性质测试锁住「restore 后连续两轮对话」 |
 | compaction digest 内嵌 pi 类型 | P1 原样内嵌（现状即如此）；类型收归立项时统一处理 |
-| 事件 schema 演进 | events.data 是 JSON 列，事件级 `schemaVersion` 字段预留（v1 起步，读侧按版本适配） |
+| 事件 schema 演进 | events.data 是 JSON 列，每条持久化记录带 `schema_version` 列（v1 起步，读侧拒绝未来版本） |
 | E2E 快照对消息顺序敏感 | repair 合成事件改变崩溃场景期望输出，同步更新 fixture |
 | 旧会话用户无感升级 | restore 边界自动执行幂等迁移；旧数据永不删除（最坏情况回退读路径） |
