@@ -97,7 +97,6 @@ describe("planCompaction", () => {
     });
     expect(plan.shouldCompact).toBe(false);
     expect(plan.anchorIndex).toBe(-1);
-    expect(plan.digest).toBeNull();
     expect(plan.tail).toBe(messages);
   });
 
@@ -259,24 +258,6 @@ describe("planCompaction", () => {
     expect(plan.shouldCompact).toBe(false);
   });
 
-  it("produces a non-null digest string when compacting", () => {
-    const messages: Message[] = [];
-    for (let i = 1; i <= 10; i++) {
-      messages.push(userMsg(`turn ${i}`));
-      messages.push(assistantMsg({ text: `reply ${i}` }));
-    }
-    const plan = planCompaction(messages, {
-      currentTokens: 100000,
-      contextWindow: 32768,
-      keepRecentPrompts: 3,
-      maxTurns: 100,
-    });
-    expect(plan.digest).not.toBeNull();
-    expect(typeof plan.digest).toBe("string");
-    expect(plan.digest).toContain("[user]:");
-    expect(plan.digest).toContain("[assistant]:");
-  });
-
   it("tail preserves message references", () => {
     const messages: Message[] = [];
     for (let i = 1; i <= 10; i++) {
@@ -341,7 +322,8 @@ describe("generateDigest", () => {
     ];
     const text = generateDigest(messages);
     expect(text).toContain("[assistant]: checking");
-    expect(text).toContain("read_file: foo.md");
+    expect(text).toContain("[called read_file]");
+    expect(text).not.toContain("foo.md");
   });
 
   it("handles assistant with only toolCall and no text", () => {
@@ -352,39 +334,20 @@ describe("generateDigest", () => {
     ];
     const text = generateDigest(messages);
     expect(text).toContain("[assistant]:");
-    expect(text).toContain("write_file: out.txt");
+    expect(text).toContain("[called write_file]");
   });
 
-  it("summarizes move_file with source → destination", () => {
+  it("lists multiple tool calls by name", () => {
     const messages: Message[] = [
       assistantMsg({
         toolCalls: [
-          {
-            id: "t1",
-            name: "move_file",
-            arguments: { source: "a.md", destination: "b/a.md" },
-          },
+          { id: "t1", name: "read_file", arguments: { path: "a.md" } },
+          { id: "t2", name: "search_content", arguments: { pattern: "magic" } },
         ],
       }),
     ];
     const text = generateDigest(messages);
-    expect(text).toContain("[called move_file: a.md → b/a.md]");
-  });
-
-  it("summarizes copy_file with source → destination", () => {
-    const messages: Message[] = [
-      assistantMsg({
-        toolCalls: [
-          {
-            id: "t1",
-            name: "copy_file",
-            arguments: { source: "x.md", destination: "y/x.md" },
-          },
-        ],
-      }),
-    ];
-    const text = generateDigest(messages);
-    expect(text).toContain("copy_file: x.md → y/x.md");
+    expect(text).toContain("[called read_file] [called search_content]");
   });
 
   it("truncates each message to 500 chars with marker", () => {
