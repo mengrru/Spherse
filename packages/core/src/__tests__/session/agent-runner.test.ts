@@ -73,7 +73,10 @@ async function compactLive(
   agentId: string,
   sessionId: string,
 ): Promise<void> {
-  const hook = (compactionCapability({ projectStore: deps.projectStore }).turnHooks ?? (() => ({})))(agentId, sessionId);
+  const hook = (compactionCapability({
+    getChatStreamFn: (sampling) => deps.modelCatalog.getChatStreamFn(sampling),
+    logger: createSilentLogger(),
+  }).turnHooks ?? (() => ({})))(agentId, sessionId);
   const log = (runner as any).eventLog as SessionEventLog;
   const before = log.events.length;
   await hook.afterTurn!(agentOf(runner), log);

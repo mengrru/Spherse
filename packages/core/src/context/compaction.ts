@@ -115,7 +115,7 @@ export function planCompaction(
 ): CompactionPlan {
   const thresholdRatio = options.thresholdRatio ?? 0.75;
   const keepRecentPrompts = options.keepRecentPrompts ?? 20;
-  const maxTurns = options.maxTurns ?? 50;
+  const maxTurns = options.maxTurns ?? 40;
 
   const shouldCompact =
     options.currentTokens > options.contextWindow * thresholdRatio;
@@ -183,6 +183,17 @@ function findTurnSplit(
 export interface SanitizeResult {
   messages: Message[];
   keptIndices: number[];
+}
+
+const DIGEST_TAG_OPEN = "<compaction-digest";
+const DIGEST_TAG_CLOSE = "</compaction-digest";
+
+export function sanitizeDigestContent(digest: string): string {
+  return digest.replaceAll(DIGEST_TAG_CLOSE, "</compaction-digest'").replaceAll(DIGEST_TAG_OPEN, "<compaction-digest'");
+}
+
+export function isDegenerateDigest(digest: string): boolean {
+  return digest.trim().length < 50;
 }
 
 export function sanitizeToolCallPairs(messages: Message[]): SanitizeResult {

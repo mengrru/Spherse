@@ -31,13 +31,20 @@ export interface AssembleOptions {
   capabilities?: Capability[] | ((builtin: Capability[]) => Capability[]);
 }
 
-export function defaultCapabilities(projectStore: ProjectStore, logger: Logger, dataStore?: DataStore): Capability[] {
+export function defaultCapabilities(
+  projectStore: ProjectStore,
+  logger: Logger,
+  dataStore?: DataStore,
+  modelCatalog?: ModelCatalog,
+): Capability[] {
   return [
     ...builtinToolCapabilities(dataStore),
     createTriggerCapability({ projectStore, logger }),
     createMcpCapability({ projectStore, logger }),
     attachmentsCapability(),
-    compactionCapability({ projectStore, logger }),
+    ...(modelCatalog
+      ? [compactionCapability({ getChatStreamFn: (s) => modelCatalog.getChatStreamFn(s), logger })]
+      : []),
     timePerceptionCapability(),
     memoryCapability(),
   ];
@@ -69,10 +76,12 @@ export async function assembleProject(
 
   const projectManager = new ProjectManager(projectStore, logger, fileWriteMutex);
   const stores = createStoreRegistry(logger);
+  const modelCatalog = options?.modelCatalog ?? new ModelCatalog();
   const capabilities =
     typeof options?.capabilities === "function"
-      ? options.capabilities(defaultCapabilities(projectStore, logger, dataStore))
-      : (options?.capabilities ?? defaultCapabilities(projectStore, logger, dataStore));
+      ? options.capabilities(defaultCapabilities(projectStore, logger, dataStore, modelCatalog))
+      : (options?.capabilities ??
+        defaultCapabilities(projectStore, logger, dataStore, modelCatalog));
 
   const runConfig = new RunConfigHolder({
     ...(options?.defaultModel !== undefined ? { defaultModel: options.defaultModel } : {}),
