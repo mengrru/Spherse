@@ -69,7 +69,10 @@ options:      { sessionId }                   // OpenAI prompt_cache_key 亲和�
 
 ### 硬性约束（实现注意）
 
-- **输入源必须是 `agent.state.messages` + `convertToLlm()`**（LLM 实际看到的），不能用 eventLog fold——fold 视图中附件已被替换为持久化占位文本，前缀立即失配。fold 投影仅继续用于 §1 的 token 计数（近似相等）
+- **输入源必须是 eventLog fold 视图 + `agent.convertToLlm()`**，不可用 `agent.state.messages` 原文——两条理由：
+  1. **附件时序**：`sanitizer.finalize()`（把带附件的 user 消息替换为占位符文本）在 runner 的 `finally` 块中执行，**晚于 `applyAfterTurnHooks()`**——afterTurn 时刻 `state.messages` 仍带 base64 图片；而 fold 视图落盘的已是占位符版本。摘要若发 base64，既贵又与后续轮次前缀失配
+  2. **占位符是稳态**：用户日常使用中，附件轮的下一轮起（live 的 finalize 后 / restore 的 fold）LLM 看到的就是占位符——这个损耗早已发生且必然发生，摘要复刻占位符版本才能与"下一轮真实请求"逐字节一致；反之再变换回 base64 既重复付费又破坏缓存
+  3. `convertToLlm`（含 attachment projector：剥 `_attachments` 元数据字段与无 data 的 image block）作用于 fold 视图消息，输出即下一轮请求的精确前缀
 - **不可截断**：不在 anchorIndex 处截、不替换 toolResult 内容、不重排——任何字节差异即失配
 - **不可在摘要上下文中暴露 tools 执行能力**：tools 仅为前缀匹配随请求发送，摘要指令明确"不要调用工具，直接输出摘要"；streamFn 层面无 agent loop，不会真正执行
 - 摘要指令要求：重点总结较早的对话（近期消息将以原文保留在上下文中）；整合首条已有的 `<compaction-digest>`（增量压缩时它是旧信息的唯一真相源）；保留用户目标/偏好、关键决定及理由、文件路径与产物位置、未完成事项；输出 Markdown ≤ 800 tokens
@@ -82,7 +85,9 @@ const streamFn = modelCatalog.getChatStreamFn({ temperature: 0.2 });
 const context: Context = {
   systemPrompt: agent.state.systemPrompt,
   tools: agent.state.tools,
-  messages: [...agent.convertToLlm(agent.state.messages), instructionMessage],
+  messages: [...agent.convertToLlm(foldMessages), instructionMessage],
+  // foldMessages = deriveMessages(eventLog.events)——附件已是占位符文本（稳态），
+  // 经 convertToLlm（含 attachment projector）后与下一轮真实请求逐字节一致
 };
 // streamFn(model, context, { sessionId })——sessionId 透传以命中 OpenAI prompt_cache_key 亲和
 // 消费 AssistantMessageEventStream 至 done；stopReason !== "completed" 视为失败
