@@ -19,7 +19,7 @@
 | 1 | 同步执行 | 摘要调用在 afterTurn hook 内同步完成，期间 session 保持 busy（压缩罕见，不值得异步复杂度） |
 | 2 | 同款模型 | 使用 `agent.state.model`（agent profile 覆盖或全局默认），不引入独立 utility model 配置 |
 | 3 | maxTurns | 50 → 40（keepRecentPrompts=20 不变） |
-| 4 | 摘要输入 | 不发原始 `Message[]`，渲染为**纯文本 transcript**：工具输出替换为「截断预览 + 占位符」（前 ~300 字符），天然规避 toolCall/toolResult 配对约束 |
+| 4 | 摘要输入 | **精确复刻 agent 真实请求前缀**（同 systemPrompt + tools + `convertToLlm(agent.state.messages)` + 末尾追加摘要指令），命中 provider prompt cache（Anthropic ~0.1×、OpenAI 系 ~0.5×），不渲染 transcript、不做任何截断（截断即前缀失配） |
 | 5 | 失败回退 | LLM 失败 → 跳过本轮压缩（warn，下一轮 afterTurn 自然重试）；tokens > 90% window 时仍失败 → 回退机械 digest，防 window 溢出 |
 | 6 | 可观测 | `compaction/applied` 事件新增可选字段 `digestSource: "llm" | "mechanical"` |
 
@@ -28,7 +28,8 @@
 ```
 afterTurn(agent, eventLog)
   ├─ deriveMessageEntries → messages
-  ├─ readCurrentTokens → currentTokens（systemPrompt + 全部消息）
+  ├─ readCurrentTokens → currentTokens（systemPrompt + 折叠视图全部消息：
+  │   digest 合成消息 + 上次压缩后保留的消息；物理事件不重读，即下一轮请求的真实体量）
   ├─ planCompaction(messages, { currentTokens, contextWindow,
   │                             keepRecentPrompts: 20, maxTurns: 40 })
   │    └─ shouldCompact / anchorIndex / tail（split 严格落在 user message 边界）
@@ -44,49 +45,54 @@ afterTurn(agent, eventLog)
 
 fold（`session/fold.ts`）对 `digestSource` 不敏感——`wrapDigestContent(digestContent)` 照旧合成 `<compaction-digest>` user message。
 
-## §2 Transcript 渲染（新模块 `context/compaction-transcript.ts`）
+## §2 摘要输入：请求前缀复刻（命中 prompt cache）
 
-摘要输入不使用原始 `Message[]`（那样等于把整个 context window 再发一遍，且要维护配对合法性），渲染规则：
+摘要调用**复刻 agent 最后一轮的真实请求前缀，并追加摘要指令**，以命中 provider 侧 prompt cache：
 
 ```
-[previous summary]:
-<上一次 digestContent，若有——增量压缩时作为开头段>
-
-[user]: <原文，截断 MAX_MESSAGE_CHARS=500>
-[assistant]: <回复文本>
-[tool read_file(path.md) → 返回]:
-  <输出前 300 字符>…（工具输出已截断，此处曾有一次文件读取）
-[assistant]: <继续回复，引用了读取结果>
+systemPrompt: agent.state.systemPrompt        // 与 agent 请求逐字节一致
+tools:        agent.state.tools               // 同上（前缀从 position 0 起算，含 tools）
+messages:     agent.convertToLlm(agent.state.messages)  // LLM 实际看到的消息
+              + [{ role: "user", content: 摘要指令 }]   // 唯一新增部分
+options:      { sessionId }                   // OpenAI prompt_cache_key 亲和路由
 ```
 
-- **user / assistant 文本**：沿用现有 `extractUserText` + 500 字符截断
-- **toolCall**：`toolName(argSummary)`，argSummary 复用 `extractToolArg`（≤2 个短字符串值）
-- **toolResult**：`[tool {name}({args}) → 返回]:\n  {前 300 字符}…（工具输出已截断）`；占位符保住"这里发生过什么类型的操作"，预览保住"数据大致是什么"——assistant 后续消息通常只引用结论不重复数据，300 字符预览足够 summarizer 判断语义
-- **stopReason 为 error/aborted 的 assistant 消息**：整条跳过（与 sanitize 语义一致）
-- transcript 总量按 tokens 预算裁剪：若预估超过 `contextWindow × 0.5`（摘要输入不应自身撑爆），**从最旧的消息开始丢弃**（保留 `[...更早的 {n} 条消息已省略...]` 标记行），previous summary 段始终保留——增量语义下旧信息的真相源是 digest 不是原始消息
+### 为什么能命中（pi-ai 已铺好机制）
+
+- **Anthropic**：pi-ai `anthropic-messages` 自动在 system + tools + 最后一条 user 消息打 `cache_control: ephemeral` 断点；lookup 取最长前缀匹配——摘要请求的前缀（system+tools+完整历史）恰是 agent 上一轮请求的已缓存前缀，历史部分按 ~0.1× 计价，仅指令部分全价
+- **OpenAI 系**：pi-ai 将 `options.sessionId` 转 `prompt_cache_key`（缓存分片亲和）；自动前缀缓存 ≥1024 tokens 命中 ~0.5×
+- **Gemini**：隐式前缀缓存（≥4096 tokens 自动）
+
+### 与 transcript 方案的成本对比
+
+设 C = 全上下文 input 价格：transcript（截断工具输出至 ~30% tokens 全价）≈ 0.3C 恒定；前缀复刻命中时 0.1–0.5C、未命中 1.0C（无缓存的自定义 OpenAI-compatible provider）。压缩罕见（~40 turn 一次），期望成本与质量（零信息损失）均优，且代码更简。机械 digest（`generateDigest`）保留作为 §7 的溢出兜底，transcript 渲染方案废弃。
+
+### 硬性约束（实现注意）
+
+- **输入源必须是 `agent.state.messages` + `convertToLlm()`**（LLM 实际看到的），不能用 eventLog fold——fold 视图中附件已被替换为持久化占位文本，前缀立即失配。fold 投影仅继续用于 §1 的 token 计数（近似相等）
+- **不可截断**：不在 anchorIndex 处截、不替换 toolResult 内容、不重排——任何字节差异即失配
+- **不可在摘要上下文中暴露 tools 执行能力**：tools 仅为前缀匹配随请求发送，摘要指令明确"不要调用工具，直接输出摘要"；streamFn 层面无 agent loop，不会真正执行
+- 摘要指令要求：重点总结较早的对话（近期消息将以原文保留在上下文中）；整合首条已有的 `<compaction-digest>`（增量压缩时它是旧信息的唯一真相源）；保留用户目标/偏好、关键决定及理由、文件路径与产物位置、未完成事项；输出 Markdown ≤ 800 tokens
+- system prompt 热重载与摘要调用不竞争：afterTurn 在 `prompt()` 返回后、下一次 `applyReload` 之前同步执行，systemPrompt 与刚结束的轮次必然一致
 
 ## §3 Summary 调用
 
 ```ts
-const streamFn = modelCatalog.getChatStreamFn();   // 裸 streamFn：无 decorators、无 tools
+const streamFn = modelCatalog.getChatStreamFn({ temperature: 0.2 });
 const context: Context = {
-  systemPrompt: SUMMARY_SYSTEM_PROMPT,
-  messages: [{ role: "user", content: transcript }],
+  systemPrompt: agent.state.systemPrompt,
+  tools: agent.state.tools,
+  messages: [...agent.convertToLlm(agent.state.messages), instructionMessage],
 };
+// streamFn(model, context, { sessionId })——sessionId 透传以命中 OpenAI prompt_cache_key 亲和
 // 消费 AssistantMessageEventStream 至 done；stopReason !== "completed" 视为失败
 ```
 
 - **裸调用理由**：agent 实例的 streamFn 带 capability decorators（usage 记录等副作用），摘要调用不应计入会话的模型用量统计链路（usage 仍会产生于 provider 层，但不动 agent state）
-- **模型**：`agent.state.model`；model 未配置（agent 等待模型配置状态）→ 视同失败走回退分支
+- **模型**：`agent.state.model`（与历史轮次同款——prompt cache 命中的前提之一）；model 未配置 → 视同失败走回退分支
 - **超时**：60s 硬超时（AbortSignal）。超时/网络错误/provider 报错统一 `logger.warn` 后按 §1 分支处理
-- **输出约束**：SUMMARY_SYSTEM_PROMPT 要求输出 Markdown，必须保留——
-  1. 用户的目标、偏好与明确指令
-  2. 关键决定及其理由（做了什么选择、放弃了什么）
-  3. 涉及的文件路径、数据文件与产物位置（`*.data.json`、生成的 HTML、图片）
-  4. 未完成事项与用户期待
-  5. 丢弃：寒暄、工具原始输出细节、与后续工作无关的探索过程
-- 输出长度指导：≤ 800 tokens
-- **温度**：低（如 temperature 0.2），经 `getChatStreamFn({ temperature: 0.2 })` 传入，不影响 agent 自身采样配置
+- **输出约束**：见 §2 摘要指令；≤ 800 tokens
+- **温度**：temperature 0.2，经 `getChatStreamFn({ temperature: 0.2 })` 传入，不影响 agent 自身采样配置
 
 ## §4 依赖注入
 
@@ -142,7 +148,7 @@ live tail 的完整性由三重机制保证，本次补齐显式测试：
 
 ## §8 验证计划
 
-- 单元：transcript 渲染（截断、占位符、previous digest 段、token 预算裁剪）、planCompaction maxTurns=40、summary prompt 组装
+- 单元：planCompaction maxTurns=40、摘要指令组装（增量 digest 整合要求）、前缀复刻的消息组装（`convertToLlm` 输出 + 追加指令、不截断不变换）
 - 集成（mock streamFn）：成功路径 append `digestSource:"llm"`；失败路径不 append；90% 兜底路径 append `"mechanical"`；fold 输出与现状完全一致
 - 既有测试回归：`context/compaction.test.ts`、`capabilities/compaction`、`session/fold.test.ts`
 - 手动：长会话跑真模型观察摘要质量与 token 曲线
