@@ -84,7 +84,7 @@ options:      { sessionId, signal }           // sessionId → OpenAI prompt_cac
 ## §3 Summary 调用
 
 ```ts
-const streamFn = modelCatalog.getChatStreamFn({ temperature: 0.2 });
+const streamFn = agent.streamFunction;
 const context: Context = {
   systemPrompt: agent.state.systemPrompt,
   tools: agent.state.tools,
@@ -92,29 +92,27 @@ const context: Context = {
   // foldMessages = deriveMessages(eventLog.events)——附件已是占位符文本（稳态），
   // 经 convertToLlm（含 attachment projector）后与下一轮真实请求逐字节一致
 };
-// streamFn(model, context, { sessionId })——sessionId 透传以命中 OpenAI prompt_cache_key 亲和
+// streamFn(model, context, { sessionId, signal })——sessionId 透传以命中 OpenAI prompt_cache_key 亲和
 // 消费 AssistantMessageEventStream 至 done；stopReason 为 "error"/"aborted" 视为失败
 // （pi-ai 成功值为 "stop"，非 "completed"）
 ```
 
-- **裸调用理由**：agent 实例的 streamFn 带 capability decorators（usage 记录等副作用），摘要调用不应计入会话的模型用量统计链路（usage 仍会产生于 provider 层，但不动 agent state）。**已知限制**：时间感知 decorator 会为 user 消息注入时间前缀（按消息 timestamp 确定性派生），摘要裸调用无法复刻该变换——启用了 timePerception 的 agent 摘要请求必然 cache miss（仅多付成本，不影响正确性）；修复需向 compaction capability 暴露 profile 装配链，耦合大于收益，暂不处理（见 backlog）
+- **直接复用 agent 实例的 `streamFunction`**：decorator 链（time-perception 的时间前缀注入等）在 agent 真实请求中生效，摘要复用同一实例即天然复刻全部出站变换，前缀逐字节一致（含时间感知 agent）；composeStreamFn 包装层的 `maxRetries: 1` 也随之一致。代价是采样参数继承 agent 配置（无法单独设低温）——可接受，同 agent 同行为。能力不需要 modelCatalog 依赖
 - **模型**：`agent.state.model`（与历史轮次同款——prompt cache 命中的前提之一）；model 未配置 → 视同失败走回退分支
 - **超时**：60s，`options.signal`（AbortSignal）实现——已验证 pi-ai `ProviderRequestOptions.signal` 存在（备选 `timeoutMs`）。超时/网络错误/provider 报错统一 `logger.warn` 后按 §1 分支处理
 - **sessionId 来源**：TurnHooksFactory 签名为 `(agentId, sessionId) => hooks`（`runtime.ts` 装配时逐 capability 传入），compaction capability 当前忽略这两个参数，本次接住 sessionId 透传给 streamFn options
 - **输出约束**：见 §2 摘要指令；≤ 3000 tokens
-- **温度**：temperature 0.2，经 `getChatStreamFn({ temperature: 0.2 })` 传入，不影响 agent 自身采样配置
+- **温度**：继承 agent 采样配置（streamFunction 已焙入）——不再单独设低温
 
 ## §4 依赖注入
 
 ```ts
 compactionCapability(deps: {
-  projectStore: ProjectStore;
-  modelCatalog: Pick<ModelCatalog, "getChatStreamFn">;   // 新增
   logger?: Logger;
 })
 ```
 
-`factory.ts` 装配点传入已有的 `modelCatalog` 实例，一行改动。
+摘要调用经 `agent.streamFunction` 复用 agent 实例已有的装配，能力不再需要 modelCatalog 依赖。
 
 ## §5 事件 schema 向后兼容扩展
 

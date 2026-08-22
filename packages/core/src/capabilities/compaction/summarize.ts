@@ -1,4 +1,4 @@
-import type { Agent, StreamFn } from "@earendil-works/pi-agent-core";
+import type { Agent } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
 import { isDegenerateDigest, sanitizeDigestContent } from "../../context/compaction.js";
 import type { Logger } from "../../logger.js";
@@ -18,7 +18,6 @@ export const SUMMARY_INSTRUCTION = `Summarize this conversation to compact the c
 - Write the summary in the dominant language of the user's messages.`;
 
 export interface SummarizeDeps {
-  getChatStreamFn: (sampling?: { temperature?: number }) => StreamFn;
   logger: Logger;
 }
 
@@ -33,9 +32,9 @@ export async function summarizeForCompaction(
   deps: SummarizeDeps,
 ): Promise<SummarizeResult | null> {
   const model = agent.state.model;
-  if (!model) return null;
+  const streamFn = agent.streamFunction;
+  if (!model || !streamFn) return null;
 
-  const streamFn = deps.getChatStreamFn({ temperature: 0.2 });
   const llmMessages = await agent.convertToLlm(foldMessages as never);
   const context = {
     systemPrompt: agent.state.systemPrompt,
@@ -74,4 +73,3 @@ export async function summarizeForCompaction(
     clearTimeout(timer);
   }
 }
-

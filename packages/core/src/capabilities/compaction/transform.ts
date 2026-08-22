@@ -9,7 +9,6 @@ import { summarizeForCompaction, type SummarizeDeps } from "./summarize.js";
 const HARD_LIMIT_RATIO = 0.9;
 
 export type MaybeCompactDeps = SummarizeDeps;
-
 export async function maybeCompactLog(
   eventLog: TurnEventAppender,
   agent: Agent,
