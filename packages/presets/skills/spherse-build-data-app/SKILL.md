@@ -21,7 +21,7 @@ description: 设计和构建由 HTML 页面与 Agent 共同读写的 Spherse 数
 - 把 `$manifest` 当作页面与 Agent 共享的业务接口，不只是数据结构说明。
 - Agent 首次接触文件时用 `read_data` 获取 outline，后续优先使用 `query_data` 和 `mutate_data`。
 - 页面和 Agent 对同一种业务写入必须调用同名 mutation，不能各自实现一套读改写逻辑。
-- 集合条目必须有稳定 identity，通常是由 `auto` 生成的 UUID。
+- 集合条目必须有稳定且唯一的 identity，通常是由 `auto` 生成的 UUID。
 - manifest 保持精简（建议不超过 2KB），只保存路径映射、入口描述和 schema，不放示例数据。
 - manifest 的 `path` 使用对象字段 dot-path（如 `forum.threads`），不支持数组下标。
 - 创建参与互动的 Agent 时，根据职责显式启用所需的 data tools，并遵循最小权限原则。
@@ -45,6 +45,8 @@ description: 设计和构建由 HTML 页面与 Agent 共同读写的 Spherse 数
 - `identity` 字段精确定位单条记录
 - `sort` + `dir` 排序
 - `defaultLimit`、`limit` 和 `after` 分页
+
+需要分页或按 ID 定位的 query 必须声明唯一 `identity`。翻页时把上次结果的 `nextAfter` 传给下一次调用；不要修改已有条目的 identity。
 
 不要为了“以后可能需要”暴露大量入口。只声明页面或 Agent 确实会使用的查询。
 
@@ -79,6 +81,7 @@ mutation 名称描述业务动作，`fields` 只开放允许调用方写入的�
 
 - 页面能否读取渲染所需数据
 - 页面 mutation 的返回值能否直接更新局部 UI
+- Agent 或其他页面写入后，页面能否通过 `file:update` 重新读取最新数据
 - Agent 能否从 outline 发现正确入口
 - Agent 是否能用一页 query 结果完成常见任务
 - 页面与 Agent 同时写入时是否都走同一 mutation
@@ -127,7 +130,7 @@ mutate_data({
 })
 ```
 
-mutation tool 返回 `{ version, result }`，其中 `result` 是新增、更新或删除后的业务对象。对可能重试的新增操作提供稳定 `idempotencyKey`，避免重复追加。
+mutation tool 返回 `{ version, result }`，其中 `result` 是新增、更新或删除后的业务对象。对可能重试的新增操作提供稳定 `idempotencyKey`，用于当前运行期间的重试防重。
 
 如果 Agent 需要等待用户操作后重新检查状态，可用先前的 `version` 调 `read_data.ifVersion`；未变化时只返回 `unchanged`，减少重复数据进入上下文。
 
@@ -153,6 +156,24 @@ renderReply(reply); // reply 包含 auto 生成的 id 和 createdAt
 UI SDK 的 `data.mutate` 直接返回业务对象：`append` 返回新增条目，`update` 返回更新后的条目，`remove` 返回被删除的条目，`set` 返回更新后的目标对象。
 
 不要用 `data.get` 读出整个数组、在页面中修改后再用 `data.set` 写回。该模式会覆盖页面读取之后由其他 Agent 或页面写入的变更。
+
+页面不能只处理自己的 mutation 返回值，还要订阅数据文件变化，使 Agent 或其他页面的写入及时反映到 UI：
+
+```javascript
+async function render() {
+  const data = await spherse.data.entries({ file: "forum.data.json" });
+  renderForum(data);
+}
+
+const unsubscribe = spherse.events.on(
+  "file:update",
+  { path: "forum.data.json" },
+  render,
+);
+
+render();
+window.addEventListener("pagehide", unsubscribe, { once: true });
+```
 
 ## 虚拟论坛示例
 
@@ -245,15 +266,16 @@ UI SDK 的 `data.mutate` 直接返回业务对象：`append` 返回新增条目�
 
 ## 建模检查清单
 
-- 文件名以 `.data.json` 结尾，业务数据位于顶层 object，业务键不以 `$` 开头。
+- 文件名以 `.data.json` 结尾，业务数据位于顶层 object，业务键不以 `$` 开头；一个数据文件可以由多个页面共享。
 - manifest 保持精简，`path` 不使用数组下标。
-- 每个增长型集合都有稳定 identity；新增入口通过 `auto.uuid` 生成它。
+- 每个增长型集合都有稳定且唯一的 identity；新增入口通过 `auto.uuid` 生成它。
 - 时间字段统一通过 `auto.nowIso` 生成，不让不同调用方自行格式化。
 - query 覆盖 Agent 高频问题，并设置合理的 `defaultLimit`。
 - 需要稳定分页的 query 声明 `identity`。
 - mutation 使用业务名称，`fields` 只允许预期字段，状态类字段使用 enum。
 - 页面和 Agent 的相同写入动作共用同名 mutation。
 - 页面不通过 `data.set` 整体回写增长型集合。
+- 动态页面订阅数据文件的 `file:update`，收到事件后重新读取并渲染。
 - Agent 首次读取 outline，后续优先 query/mutate，不反复读取整个文件。
 - manifest 与 HTML、初始数据、Agent 指令中的字段和入口名称一致。
 

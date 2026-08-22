@@ -120,7 +120,7 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 
 - `spherse.data.get` / `spherse.data.set` / `spherse.data.delete`：对 key-value 数据的读写删（均返回 Promise）
 - `spherse.data.mutate`：执行数据文件 `$manifest` 声明的业务 mutation 入口（结构性写入用，见下文 `$manifest` 一节）
-- 数据文件路径通过 `file` 参数显式指定，约定命名为 `{HTML文件名}.data.json` 并与 HTML 同级（如 `world/atlas.html` → `world/atlas.data.json`）；**字符串模式**下 HTML 不是文件，需自行指定一个项目内的 `.data.json` 路径
+- 数据文件路径通过 `file` 参数显式指定；推荐命名为 `{HTML文件名}.data.json` 并与 HTML 同级（如 `world/atlas.html` → `world/atlas.data.json`），多个页面也可共用一个显式指定的数据文件；**字符串模式**下 HTML 不是文件，需自行指定一个项目内的 `.data.json` 路径
 - 数据文件**不能**放在 `.spherse/` 目录下
 - 两种渲染模式都可用（经 App 注入的 SDK，不依赖 `fetch`）
 
@@ -133,6 +133,7 @@ HTML 落地时遵守：
 - 同源生成 HTML、业务数据和 `$manifest`，字段名与 enum 必须和页面渲染逻辑一致。
 - 页面会执行的每种结构性写入都必须有对应 mutation，并通过 `spherse.data.mutate({ file, name, args })` 调用。
 - `data.set` 仅用于单值、标量或低冲突数据，不得整体回写增长型数组。
+- 页面订阅数据文件的 `file:update`，在 Agent 或其他页面写入后重新读取并渲染。
 - 业务数据键不得以平台保留的 `$` 开头。
 
 ## 跳转到项目内其它文件：openFile
