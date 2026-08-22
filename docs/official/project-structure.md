@@ -168,6 +168,7 @@ spherse/
 │       │       └── lib/
 │       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
 │   ├── app/                          # @spherse/app — 共享 React renderer（前端源码，被 desktop/web 消费）
+│   │   ├── README.md                 # renderer 架构、状态边界、编码规范与验证清单
 │   │   ├── index.html                # renderer 入口 HTML（vite 入口）
 │   │   ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
 │   │   ├── components.json           # shadcn/ui 配置（Base UI base + Tailwind v4 + alias）
