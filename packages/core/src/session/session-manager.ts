@@ -8,6 +8,7 @@ import { computeSessionStatus, type SessionStatus } from "./status.js";
 import type { TurnContextSnapshot } from "./types.js";
 import type { Attachment } from "../attachments/index.js";
 import { RunConfigHolder, type RuntimeDeps } from "./runtime.js";
+import { migrateLegacySession } from "./legacy-migrate.js";
 
 export class SessionManager {
   private readonly sessions = new Map<string, AgentRunner>();
@@ -50,10 +51,17 @@ export class SessionManager {
 
   async restoreSession(agentId: string, sessionId: string): Promise<string> {
     if (this.sessions.has(sessionId)) return sessionId;
+    this.ensureMigrated(agentId, sessionId);
     const session = await AgentRunner.initForRestore(this.deps, agentId, sessionId);
     this.sessions.set(sessionId, session);
     this.deps.logger.info({ sessionId }, "session restored");
     return sessionId;
+  }
+
+  private ensureMigrated(agentId: string, sessionId: string): void {
+    const agentStore = this.deps.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    migrateLegacySession(agentStore.sessions, sessionId);
   }
 
   async sendMessage(

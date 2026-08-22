@@ -11,7 +11,7 @@
 ## 代码质量
 
 - [ ] **E2E `app.close()` 间歇悬死（存量基建 flake）**：顺序启动多个 Electron E2E 实例时，`app.close()` 偶发 60s 悬死（无断言失败、无页面快照；逐步日志定位到 close 不返回）。干净 main 可复现，疑点在 server shutdown 链路（`stopServer` → `registry.removeAll()` → capability `shutdown`/sqlite/fs-watch 关闭竞态）。修复方向：给 shutdown 各环节加超时并审计具体卡住的 await；临时缓解可在 CI 重试。
-- [x] **Session Event Log（PR1：存储替换）**：新会话以 append-only events 表为唯一写路径，fold 重建模型消息，retry/compaction 变为非破坏性重启点事件，restore 对 open turn 持久化 repair；messages/compactions 保留 legacy 只读，core + server 提供单事务幂等迁移原语与 `needsMigration` 契约（前端迁移 CTA 随 PR2 分支/撤回 feature 落地）。MessageLog/compactor/messages 写路径退役。参见 `docs/dev/features/2026-08-21-session-event-log/`
+- [x] **Session Event Log（PR1：存储替换）**：新会话以 append-only events 表为唯一写路径，fold 重建模型消息，retry/compaction 变为非破坏性重启点事件，restore 对 open turn 持久化 repair；messages/compactions 保留 legacy 只读，首次可写 restore 在 core 内部单事务幂等迁移。MessageLog/compactor/messages 写路径退役。参见 `docs/dev/features/2026-08-21-session-event-log/`
 - [x] **restore 时补齐被中断的 toolCall（孤儿 toolCall 自愈）**：原 snapshot 修复已随 Session Event Log PR1 收敛到 `fold.ts` 的 `repairLog`：open turn 恢复时为未应答 toolCall 合成错误 toolResult + aborted turn/end 并持久化，二次 restore 幂等。参见 `docs/dev/bugfix/2026-08-20-restore-orphaned-toolcall/design.md`
 - [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。
 

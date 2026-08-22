@@ -17,7 +17,6 @@ export {
   AccessDeniedError,
   ConflictError,
   ModelNotConfiguredError,
-  MigrationRequiredError,
 } from "./errors.js";
 export type { ProjectRuntime } from "./project-runtime.js";
 export type { ProjectManager } from "./project-manager.js";

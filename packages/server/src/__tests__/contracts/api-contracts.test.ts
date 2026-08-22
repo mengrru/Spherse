@@ -148,7 +148,6 @@ describe("api contracts", () => {
       createdAt: 1,
       updatedAt: 2,
       status: "active",
-      needsMigration: false,
     };
     expect(parseApiResponse(schemas.sessionListPageResponse, { items: [item], hasMore: true })).toEqual({
       items: [item],
@@ -157,18 +156,6 @@ describe("api contracts", () => {
     expect(() => parseApiResponse(schemas.sessionListPageResponse, { items: [] })).toThrow(/Invalid payload/);
     expect(() =>
       parseApiResponse(schemas.sessionListPageResponse, { items: [], hasMore: "no" }),
-    ).toThrow(/Invalid payload/);
-  });
-
-  it("validates session migration response", () => {
-    const result = { sessionId: "s1", migrated: true, eventCount: 4 };
-    expect(parseApiResponse(schemas.sessionMigrationResponse, result)).toEqual(result);
-    expect(() =>
-      parseApiResponse(schemas.sessionMigrationResponse, {
-        sessionId: "s1",
-        migrated: "yes",
-        eventCount: 4,
-      }),
     ).toThrow(/Invalid payload/);
   });
 

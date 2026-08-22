@@ -31,24 +31,6 @@ describe("createApiClient", () => {
     );
   });
 
-  it("migrates a legacy session through the shared contract", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({ sessionId: "session-1", migrated: true, eventCount: 4 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
-
-    await expect(
-      createApiClient("http://localhost:1234", "project-1").migrateSession(
-        "agent-1",
-        "session-1",
-      ),
-    ).resolves.toEqual({ sessionId: "session-1", migrated: true, eventCount: 4 });
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:1234/api/projects/project-1/agents/agent-1/sessions/session-1/migrate",
-      expect.objectContaining({ method: "POST" }),
-    );
-  });
-
   describe("access token", () => {
     it("injects Authorization Bearer header on requests when token provided", async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));

@@ -17,7 +17,6 @@ function createProjectManagerWithSessions(initial: Record<string, SessionInfo>) 
       const session = sessions.get(id);
       if (session) sessions.set(id, { ...session, title });
     }),
-    sessionNeedsMigration: vi.fn(() => false),
   };
 
   const agentStore = {
@@ -48,7 +47,7 @@ describe("ProjectManager.renameSession", () => {
     const updated = manager.renameSession("agent-1", "session-1", "  New Title  ");
 
     expect(sessionStore.updateSessionTitle).toHaveBeenCalledWith("session-1", "New Title");
-    expect(updated).toEqual({ ...session, title: "New Title", needsMigration: false });
+    expect(updated).toEqual({ ...session, title: "New Title" });
     expect(updated.updatedAt).toBe(2);
   });
 
@@ -92,7 +91,7 @@ describe("ProjectManager.renameSession", () => {
 });
 
 describe("ProjectManager event-backed session reads", () => {
-  it("lists needsMigration and pages only folded message entries", async () => {
+  it("pages only folded message entries", async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-events-"));
     const projectStore = new ProjectStore(root, createSilentLogger());
     await projectStore.create("Test");
@@ -130,7 +129,6 @@ describe("ProjectManager event-backed session reads", () => {
         EVENT_SCHEMA_VERSION,
       );
 
-      expect(manager.listSessions(agentStore.getProfile().id)[0].needsMigration).toBe(false);
       expect(manager.getRecentSessionHistory(agentStore.getProfile().id, sessionId, 10)).toEqual({
         entries: [
           { id: 0, message: expect.objectContaining({ role: "user", content: "q" }) },

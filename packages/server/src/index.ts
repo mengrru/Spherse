@@ -9,7 +9,6 @@ import {
   ValidationError,
   AccessDeniedError,
   ConflictError,
-  MigrationRequiredError,
 } from "@spherse/core";
 import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
@@ -85,9 +84,6 @@ export async function createMultiProjectServer(
     }
     if (err instanceof ConflictError) {
       return reply.code(409).send({ error: err.message });
-    }
-    if (err instanceof MigrationRequiredError) {
-      return reply.code(409).send({ error: err.message, code: "migration_required" });
     }
     if (err instanceof Error && "validation" in err && err.validation) {
       return reply.code(400).send({ error: err.message });

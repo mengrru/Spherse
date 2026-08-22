@@ -8,7 +8,6 @@ const sessionInfo = Type.Object({
   updatedAt: Type.Number(),
   status: Type.Union([Type.Literal("active"), Type.Literal("archived")]),
   source: Type.Optional(Type.Union([Type.Literal("manual"), Type.Literal("triggered")])),
-  needsMigration: Type.Boolean(),
 });
 
 export const schemas = {
@@ -23,11 +22,6 @@ export const schemas = {
   sessionRenameRequest: Type.Object({ title: Type.String() }),
   sendMessageRequest: Type.Object({ content: Type.String({ minLength: 1 }) }),
   sendMessageOkResponse: Type.Object({ ok: Type.Boolean() }),
-  sessionMigrationResponse: Type.Object({
-    sessionId: Type.String(),
-    migrated: Type.Boolean(),
-    eventCount: Type.Number(),
-  }),
   /**
    * Session message history. Carries pi-agent-core AgentMessage objects as
    * opaque JSON: server persists and forwards them without interpreting the
@@ -58,7 +52,6 @@ export type SessionCreateRequest = Static<typeof schemas.sessionCreateRequest>;
 export type SessionRenameRequest = Static<typeof schemas.sessionRenameRequest>;
 export type SendMessageRequest = Static<typeof schemas.sendMessageRequest>;
 export type SendMessageOkResponse = Static<typeof schemas.sendMessageOkResponse>;
-export type SessionMigrationResponse = Static<typeof schemas.sessionMigrationResponse>;
 export type SessionMessagesResponse = Static<typeof schemas.sessionMessagesResponse>;
 export type SessionMessagesPageResponse = Static<typeof schemas.sessionMessagesPageResponse>;
 export type SessionStatusResponse = Static<typeof schemas.sessionStatus>;

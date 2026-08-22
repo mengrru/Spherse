@@ -42,13 +42,13 @@
 ## 任务 5 迁移原语 + PM 门面
 
 - 新建 `packages/core/src/session/legacy-migrate.ts`：`migrateLegacySession(agentStore, sessionId)`——先跑旧路径修复（孤儿 toolCall 合成，复用 repair 的消息级逻辑）→ messages 行转消息事件 + 最新 compaction → compaction/applied → 单事务 appendEvents + `migrated_at` → 幂等 no-op
-- `project-manager.ts`：`migrateSession(agentId, sessionId)`、`sessionNeedsMigration(agentId, sessionId)`；`getSessionHistory`/`getRecentSessionHistory` 对 events 会话改走事件投影（seq 窗口），legacy 会话走旧读路径
+- `session-manager.ts`：`restoreSession` 在构造可写 Runner 前统一执行幂等 legacy 迁移；`getSessionHistory`/`getRecentSessionHistory` 对 events 会话改走事件投影（seq 窗口），迁移前 legacy 会话走旧读路径
 - 测试 `legacy-migrate.test.ts`：转换正确性、幂等、迁移后 fold == 旧全量重放、含 compaction 锚点、含孤儿 toolCall 的旧会话迁移后配对完整
 
 ## 任务 6 server 对齐
 
-- contracts：session 列表/详情响应加 `needsMigration: boolean`；`POST /api/projects/:pid/agents/:aid/sessions/:sid/migrate` endpoint（PR1 即暴露，ApiClient 方法同步就位；UI 按钮在 PR2）
-- `MigrationRequiredError` 映射 HTTP 状态（409）与错误码（`migration_required`）；sendMessage/restore 路由透传
+- contracts：迁移保持 core 内部实现，不新增 server endpoint、session 状态字段或 ApiClient 方法
+- `MigrationRequiredError` 仅作为 core 内部防御错误，不导出或映射到 HTTP/WS 契约；生产 restore 路径会先自动迁移
 - 测试：contract 测试 + routes 单测（migrate endpoint、只读拦截 409、legacy 历史读）
 
 ## 任务 7 E2E 与文档

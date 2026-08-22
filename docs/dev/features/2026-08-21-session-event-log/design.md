@@ -140,14 +140,13 @@ migrateLegacySession(agentStore, sessionId): MigrationResult
 - 旧 messages 行按原序 → `user/message` / `assistant/message` / `tool/result`；最新 compaction 锚点 → `compaction/applied`（digest 取旧 digestContent）
 - **不合成 turn 事件**：迁移产物无 turn 事件是合法状态（fold 只投影消息；repair 只在有 open turn 时触发）
 - 单事务：全部事件 + `migrated_at` 时间戳一次提交；旧表数据原样保留；幂等（已迁移直接 no-op）
-- **`ProjectManager` 暴露**：`migrateSession(agentId, sessionId)`、`sessionNeedsMigration(agentId, sessionId)`
-- **链路**：session 列表 `needsMigration` 标记（server contract 新字段）→ 旧会话历史正常渲染、composer 位置为迁移 CTA → `POST .../sessions/:sessionId/migrate` → 立即可聊；旧会话点「分支」= 迁移 + fork 一步完成
+- **内部边界**：`SessionManager.restoreSession` 在所有可写恢复入口统一执行幂等迁移，因此打开聊天、静默发送和 trigger 复用旧会话都会惰性升级后继续运行；迁移不暴露客户端 API 或状态字段
 
 ## §9 server / app 影响
 
-- **server contracts**：session 列表响应加 `needsMigration: boolean`（PR1）；新增 `POST /sessions/:id/migrate`、`POST /sessions/:id/branch`、`POST /sessions/:id/recall`（PR2）。WS 直播流协议不改（事件翻译在 AgentRunner 内，WS payload 仍是 pi 事件透传）
+- **server contracts**：迁移不新增 HTTP/WS contract；PR2 新增 `POST /sessions/:id/branch`、`POST /sessions/:id/recall`。WS 直播流协议不改（事件翻译在 AgentRunner 内，WS payload 仍是 pi 事件透传）
 - **`getRecentTurns` 分页**：events 会话按 seq 窗口投影 turn；legacy 会话保留旧 messages 游标路径（只读不冲突）。HTTP 响应 shape 不变（`entries`/`hasMore`/`oldestId`——oldestId 语义变为 seq）
-- **app**：撤回/分支按钮、迁移 CTA、lineage 标记；streaming-store 的历史拉取不变（shape 兼容）
+- **app**：撤回/分支按钮、lineage 标记；旧会话打开时由服务端 restore 自动迁移，streaming-store 的历史拉取不变（shape 兼容）
 
 ## §10 测试策略
 
@@ -157,7 +156,7 @@ migrateLegacySession(agentStore, sessionId): MigrationResult
 - **分支**：fork 后父子独立演化互不影响、子 compaction 锚父前缀、嵌套 fork、删父后子可读
 - **撤回**：撤回后 fold、继续对话、二次撤回 last-wins
 - **契约测试**：server/desktop 对 `restoreSession`/PM 门面在迁移后行为（AGENTS.md 契约测试规矩）
-- **E2E**：chat 基本流程、断线恢复、retry、迁移 CTA 流、分支创建后双会话独立对话、撤回后继续对话（PR2 收尾跑 `verify:e2e`）
+- **E2E**：chat 基本流程、断线恢复、retry、旧会话自动迁移、分支创建后双会话独立对话、撤回后继续对话（PR2 收尾跑 `verify:e2e`）
 
 ## 明确不做（本次）
 
@@ -175,4 +174,4 @@ migrateLegacySession(agentStore, sessionId): MigrationResult
 | compaction digest 内嵌 pi 类型 | P1 原样内嵌（现状即如此）；类型收归立项时统一处理 |
 | 事件 schema 演进 | events.data 是 JSON 列，事件级 `schemaVersion` 字段预留（v1 起步，读侧按版本适配） |
 | E2E 快照对消息顺序敏感 | repair 合成事件改变崩溃场景期望输出，同步更新 fixture |
-| 旧会话用户无感升级 | needsMigration 标记 + CTA 引导；迁移幂等可重试；旧数据永不删除（最坏情况回退读路径） |
+| 旧会话用户无感升级 | restore 边界自动执行幂等迁移；旧数据永不删除（最坏情况回退读路径） |

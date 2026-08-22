@@ -8,7 +8,6 @@ import { serverAccessPolicy } from "./access/access-policy.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { ConflictError, NotFoundError, ValidationError } from "./errors.js";
 import { deriveHistoryEntries } from "./session/fold.js";
-import { migrateLegacySession } from "./session/legacy-migrate.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -105,46 +104,34 @@ export class ProjectManager {
     return agentStore.mcp.saveConfig(config);
   }
 
-  getSession(agentId: string, sessionId: string): (SessionInfo & { needsMigration: boolean }) | null {
+  getSession(agentId: string, sessionId: string): SessionInfo | null {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return null;
     const session = agentStore.sessions.getSession(sessionId);
-    return session
-      ? { ...session, needsMigration: agentStore.sessions.sessionNeedsMigration(sessionId) }
-      : null;
+    return session;
   }
 
-  listSessions(agentId: string): Array<SessionInfo & { needsMigration: boolean }> {
+  listSessions(agentId: string): SessionInfo[] {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return [];
-    return agentStore.sessions.listSessions().map((session) => ({
-      ...session,
-      needsMigration: agentStore.sessions.sessionNeedsMigration(session.id),
-    }));
+    return agentStore.sessions.listSessions();
   }
 
   listSessionsPage(
     agentId: string,
     limit: number,
     offset: number,
-  ): { items: Array<SessionInfo & { needsMigration: boolean }>; hasMore: boolean } {
+  ): { items: SessionInfo[]; hasMore: boolean } {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return { items: [], hasMore: false };
-    const result = agentStore.sessions.listSessionsPage(limit, offset);
-    return {
-      ...result,
-      items: result.items.map((session) => ({
-        ...session,
-        needsMigration: agentStore.sessions.sessionNeedsMigration(session.id),
-      })),
-    };
+    return agentStore.sessions.listSessionsPage(limit, offset);
   }
 
   renameSession(
     agentId: string,
     sessionId: string,
     title: string,
-  ): SessionInfo & { needsMigration: boolean } {
+  ): SessionInfo {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) throw new ValidationError("title is required");
     if (trimmedTitle.length > 80) {
@@ -161,7 +148,6 @@ export class ProjectManager {
     return {
       ...session,
       title: trimmedTitle,
-      needsMigration: agentStore.sessions.sessionNeedsMigration(sessionId),
     };
   }
 
@@ -211,22 +197,6 @@ export class ProjectManager {
       hasMore: selected.length < eligible.length,
       oldestId: selected[0]?.seq ?? null,
     };
-  }
-
-  sessionNeedsMigration(agentId: string, sessionId: string): boolean {
-    const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) return false;
-    return agentStore.sessions.sessionNeedsMigration(sessionId);
-  }
-
-  migrateSession(agentId: string, sessionId: string): {
-    sessionId: string;
-    migrated: boolean;
-    eventCount: number;
-  } {
-    const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
-    return migrateLegacySession(agentStore.sessions, sessionId);
   }
 
   deleteSession(agentId: string, sessionId: string): void {

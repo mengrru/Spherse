@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { MigrationRequiredError, NotFoundError } from "@spherse/core";
+import { NotFoundError } from "@spherse/core";
 import {
   CHAT_CLOSE_CODES,
   parseChatClientMessage,
@@ -45,7 +45,7 @@ export function handleChatWebSocket(
       const ready = attachment.ready
         .catch((err) => {
           const message = err instanceof Error ? err.message : "request failed";
-          const code = err instanceof NotFoundError || err instanceof MigrationRequiredError
+          const code = err instanceof NotFoundError
             ? CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE
             : 1000;
           send({ type: "error", message });

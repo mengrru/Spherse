@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  MigrationRequiredError,
-  NotFoundError,
-  ModelNotConfiguredError,
-} from "@spherse/core";
+import { NotFoundError, ModelNotConfiguredError } from "@spherse/core";
 
 import { handleChatWebSocket } from "../ws-chat.js";
 import { ChatSessionHub } from "../chat-session-hub.js";
@@ -194,22 +190,6 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     expect(errSocket.close).toHaveBeenCalledWith(
       CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE,
       "Session s1 not found",
-    );
-  });
-
-  it("closes with SESSION_UNRECOVERABLE when restoreSession requires migration", async () => {
-    routeHandler = null;
-    const mock = createMockRegistry();
-    mock.sessionRuntime.restoreSession = vi
-      .fn()
-      .mockRejectedValue(new MigrationRequiredError("migration required"));
-    handleChatWebSocket(mockFastify as never, mock.registry as never, new ChatSessionHub(hubLogger));
-    const errSocket = createMockSocket();
-    routeHandler!(errSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(errSocket.close).toHaveBeenCalledWith(
-      CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE,
-      "migration required",
     );
   });
 

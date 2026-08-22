@@ -108,18 +108,6 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return parseJsonResponse<{ sessionId: string }>(res, schemas.sessionCreateResponse);
     },
 
-    async migrateSession(
-      agentId: string,
-      id: string,
-    ): Promise<{ sessionId: string; migrated: boolean; eventCount: number }> {
-      const res = await authedFetch(
-        `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/migrate`,
-        { method: "POST" },
-      );
-      await assertOk(res);
-      return parseJsonResponse(res, schemas.sessionMigrationResponse);
-    },
-
     async sendMessage(agentId: string, id: string, content: string): Promise<{ ok: boolean }> {
       const res = await authedFetch(
         `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages`,
