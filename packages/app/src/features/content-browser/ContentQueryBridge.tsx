@@ -28,7 +28,9 @@ export function ContentQueryBridge() {
 
   useEffect(() => () => {
     if (timerRef.current) clearTimeout(timerRef.current);
-  }, []);
+    timerRef.current = null;
+    changedPathsRef.current.clear();
+  }, [projectId]);
 
   return null;
 }

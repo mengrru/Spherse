@@ -75,23 +75,23 @@ export function useFileTreeController(
     [loadChildren],
   );
 
-  const applyRootEntries = useCallback(async (entries: Awaited<ReturnType<ApiClient["listContent"]>>) => {
+  const buildRefreshedRoot = useCallback(async (entries: Awaited<ReturnType<ApiClient["listContent"]>>) => {
     const root = buildNodes(entries, rootPath);
     const merged = mergeExpandedState(root, nodesRef.current);
-    const refreshed = await refreshExpanded(merged);
-    setRootNodes(refreshed);
+    return refreshExpanded(merged);
   }, [refreshExpanded, rootPath]);
 
   useEffect(() => {
     if (!rootQuery.data) return;
     let cancelled = false;
-    void applyRootEntries(rootQuery.data).then(() => {
+    void buildRefreshedRoot(rootQuery.data).then((refreshed) => {
       if (cancelled) return;
+      setRootNodes((current) => mergeExpandedState(refreshed, current));
     });
     return () => {
       cancelled = true;
     };
-  }, [applyRootEntries, rootQuery.data, rootQuery.dataUpdatedAt]);
+  }, [buildRefreshedRoot, rootQuery.data, rootQuery.dataUpdatedAt]);
 
   const toggleNode = useCallback(
     async (node: TreeNode) => {

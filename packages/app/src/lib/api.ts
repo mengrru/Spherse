@@ -56,7 +56,7 @@ export class ApiError extends Error {
 async function assertOk(res: Response): Promise<void> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "request failed" }));
-    throw new Error(err.error ?? "request failed");
+    throw new ApiError(err.error ?? "request failed", res.status);
   }
 }
 
