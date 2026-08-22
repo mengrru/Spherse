@@ -1,6 +1,6 @@
 import type { Agent } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
-import { generateDigest, planCompaction, sanitizeToolCallPairs } from "../../context/compaction.js";
+import { generateDigest, planCompaction, sanitizeDigestContent, sanitizeToolCallPairs } from "../../context/compaction.js";
 import { estimateTokens, readCurrentTokens } from "../../context/token-estimate.js";
 import type { TurnEventAppender } from "../../kernel/turn-hooks.js";
 import { deriveMessageEntries } from "../../session/fold.js";
@@ -46,7 +46,7 @@ export async function maybeCompactLog(
       digestContent = summary.digest;
       digestSource = "llm";
     } else if (currentTokens > contextWindow * HARD_LIMIT_RATIO) {
-      digestContent = generateDigest(messages.slice(0, plan.anchorIndex + 1));
+      digestContent = sanitizeDigestContent(generateDigest(messages.slice(0, plan.anchorIndex + 1)));
       digestSource = "mechanical";
     } else {
       logger.warn({ sessionId }, "llm summary unavailable, skipping compaction this turn");

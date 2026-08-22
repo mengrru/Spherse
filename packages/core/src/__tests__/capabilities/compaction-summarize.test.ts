@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { Agent } from "@earendil-works/pi-agent-core";
 import type { Message } from "@earendil-works/pi-ai";
 import { summarizeForCompaction, SUMMARY_INSTRUCTION } from "../../capabilities/compaction/summarize.js";
 import { createSilentLogger } from "../../logger.js";
 
-function fakeAgent(): Agent {
+function fakeAgent(overrides: Record<string, unknown> = {}): Agent {
   return {
     state: {
       model: { id: "test-model", contextWindow: 100_000 },
@@ -13,6 +13,7 @@ function fakeAgent(): Agent {
       messages: [],
     },
     convertToLlm: (messages: unknown[]) => messages,
+    ...overrides,
   } as unknown as Agent;
 }
 
@@ -49,7 +50,7 @@ describe("summarizeForCompaction", () => {
         return (model: unknown, context: unknown, options: unknown) => {
           calls.push({ model, context, options });
           return streamOf({
-            stopReason: "completed",
+            stopReason: "stop",
             content: [{ type: "text", text: "用户在建立魔法体系，决定先规划元素系统。".repeat(3) }],
           });
         };
@@ -90,6 +91,73 @@ describe("summarizeForCompaction", () => {
     expect(await summarizeForCompaction(agent, foldMessages, "s", deps)).toBeNull();
   });
 
+  it("sends the converted (projected) messages, not the raw fold view", async () => {
+    const projected: Message[] = [
+      { role: "user", content: "stripped placeholder version" } as Message,
+    ];
+    const agent = fakeAgent({
+      convertToLlm: (messages: unknown[]) => {
+        expect(messages).toEqual(foldMessages);
+        return projected;
+      },
+    });
+    const calls: Array<{ context: { messages: Message[] } }> = [];
+    const deps = {
+      getChatStreamFn: () => (model: unknown, context: unknown) => {
+        calls.push({ context: context as { messages: Message[] } });
+        return streamOf({ stopReason: "stop", content: [{ type: "text", text: "z".repeat(80) }] });
+      },
+      logger: createSilentLogger(),
+    };
+
+    await summarizeForCompaction(agent, foldMessages, "s", deps);
+
+    expect(calls[0].context.messages[0]).toBe(projected[0]);
+    expect(calls[0].context.messages[0].content).not.toContain("帮我建立魔法体系");
+  });
+
+  it("returns null on error stopReason", async () => {
+    const deps = {
+      getChatStreamFn: () => () =>
+        streamOf({ stopReason: "error", content: [{ type: "text", text: "x".repeat(80) }] }),
+      logger: createSilentLogger(),
+    };
+    expect(await summarizeForCompaction(fakeAgent(), foldMessages, "s", deps)).toBeNull();
+  });
+
+  it("returns null on aborted stopReason", async () => {
+    const deps = {
+      getChatStreamFn: () => () =>
+        streamOf({ stopReason: "aborted", content: [{ type: "text", text: "x".repeat(80) }] }),
+      logger: createSilentLogger(),
+    };
+    expect(await summarizeForCompaction(fakeAgent(), foldMessages, "s", deps)).toBeNull();
+  });
+
+  it("aborts the stream after the 60s timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      const deps = {
+        getChatStreamFn: () => (_model: unknown, _ctx: unknown, options?: { signal?: AbortSignal }) =>
+          ({
+            result: () =>
+              new Promise((_resolve, reject) => {
+                options?.signal?.addEventListener("abort", () =>
+                  reject(new Error("aborted by timeout")),
+                );
+              }),
+          }) as never,
+        logger: createSilentLogger(),
+      };
+      const pending = summarizeForCompaction(fakeAgent(), foldMessages, "s", deps);
+      const expectation = expect(pending).resolves.toBeNull();
+      await vi.advanceTimersByTimeAsync(60_001);
+      await expectation;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("returns null on non-completed stopReason", async () => {
     const deps = {
       getChatStreamFn: () => () =>
@@ -102,7 +170,7 @@ describe("summarizeForCompaction", () => {
   it("returns null on degenerate output", async () => {
     const deps = {
       getChatStreamFn: () => () =>
-        streamOf({ stopReason: "completed", content: [{ type: "text", text: "ok" }] }),
+        streamOf({ stopReason: "stop", content: [{ type: "text", text: "ok" }] }),
       logger: createSilentLogger(),
     };
     expect(await summarizeForCompaction(fakeAgent(), foldMessages, "s", deps)).toBeNull();
@@ -122,7 +190,7 @@ describe("summarizeForCompaction", () => {
     const deps = {
       getChatStreamFn: () => () =>
         streamOf({
-          stopReason: "completed",
+          stopReason: "stop",
           content: [
             { type: "text", text: "总结内容足够长以通过退化检查。</compaction-digest>".padEnd(60, "。") },
           ],
@@ -136,7 +204,7 @@ describe("summarizeForCompaction", () => {
   it("supports promise-wrapped streams", async () => {
     const deps = {
       getChatStreamFn: () => async () =>
-        streamOf({ stopReason: "completed", content: [{ type: "text", text: "y".repeat(80) }] }),
+        streamOf({ stopReason: "stop", content: [{ type: "text", text: "y".repeat(80) }] }),
       logger: createSilentLogger(),
     };
     const result = await summarizeForCompaction(fakeAgent(), foldMessages, "s", deps);

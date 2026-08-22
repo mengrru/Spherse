@@ -93,10 +93,11 @@ const context: Context = {
   // 经 convertToLlm（含 attachment projector）后与下一轮真实请求逐字节一致
 };
 // streamFn(model, context, { sessionId })——sessionId 透传以命中 OpenAI prompt_cache_key 亲和
-// 消费 AssistantMessageEventStream 至 done；stopReason !== "completed" 视为失败
+// 消费 AssistantMessageEventStream 至 done；stopReason 为 "error"/"aborted" 视为失败
+// （pi-ai 成功值为 "stop"，非 "completed"）
 ```
 
-- **裸调用理由**：agent 实例的 streamFn 带 capability decorators（usage 记录等副作用），摘要调用不应计入会话的模型用量统计链路（usage 仍会产生于 provider 层，但不动 agent state）
+- **裸调用理由**：agent 实例的 streamFn 带 capability decorators（usage 记录等副作用），摘要调用不应计入会话的模型用量统计链路（usage 仍会产生于 provider 层，但不动 agent state）。**已知限制**：时间感知 decorator 会为 user 消息注入时间前缀（按消息 timestamp 确定性派生），摘要裸调用无法复刻该变换——启用了 timePerception 的 agent 摘要请求必然 cache miss（仅多付成本，不影响正确性）；修复需向 compaction capability 暴露 profile 装配链，耦合大于收益，暂不处理（见 backlog）
 - **模型**：`agent.state.model`（与历史轮次同款——prompt cache 命中的前提之一）；model 未配置 → 视同失败走回退分支
 - **超时**：60s，`options.signal`（AbortSignal）实现——已验证 pi-ai `ProviderRequestOptions.signal` 存在（备选 `timeoutMs`）。超时/网络错误/provider 报错统一 `logger.warn` 后按 §1 分支处理
 - **sessionId 来源**：TurnHooksFactory 签名为 `(agentId, sessionId) => hooks`（`runtime.ts` 装配时逐 capability 传入），compaction capability 当前忽略这两个参数，本次接住 sessionId 透传给 streamFn options

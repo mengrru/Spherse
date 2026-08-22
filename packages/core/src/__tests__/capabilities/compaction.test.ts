@@ -51,7 +51,7 @@ function makeDeps(result: {
   const finalMessage = {
     role: "assistant",
     content: [{ type: "text", text: result.text ?? "x".repeat(200) }],
-    stopReason: result.stopReason ?? "completed",
+    stopReason: result.stopReason ?? "stop",
   };
   const deps: MaybeCompactDeps = {
     getChatStreamFn: () => (model, context, options) => {

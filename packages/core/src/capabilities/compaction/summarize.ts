@@ -36,10 +36,11 @@ export async function summarizeForCompaction(
   if (!model) return null;
 
   const streamFn = deps.getChatStreamFn({ temperature: 0.2 });
+  const llmMessages = await agent.convertToLlm(foldMessages as never);
   const context = {
     systemPrompt: agent.state.systemPrompt,
     tools: agent.state.tools,
-    messages: [...foldMessages, { role: "user", content: SUMMARY_INSTRUCTION } as Message],
+    messages: [...llmMessages, { role: "user", content: SUMMARY_INSTRUCTION } as Message],
   };
 
   const controller = new AbortController();
@@ -54,7 +55,9 @@ export async function summarizeForCompaction(
       stopReason?: string;
       content?: Array<{ type: string; text?: string }>;
     };
-    if (finalMessage.stopReason !== "completed") return null;
+    if (finalMessage.stopReason === "error" || finalMessage.stopReason === "aborted") {
+      return null;
+    }
 
     const text = (finalMessage.content ?? [])
       .filter((block) => block.type === "text" && typeof block.text === "string")
