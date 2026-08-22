@@ -74,6 +74,8 @@ spherse/
 │   │   │   ├── manifest.json         # 示例清单（[{ id, displayName, dirName }]）
 │   │   │   └── harry-potter/         # Harry Potter 示例项目（完整项目树，含 .spherse/project.yaml、agents、文档）
 │   │   ├── skills/                   # 内置 skill 源（app 内置只读，通过 SkillStore 内存合并；新项目不再注入到 .spherse/skills/）
+│   │   │   ├── spherse-guide/        # Spherse 功能介绍、快速上手、目标导向使用引导与常见问题
+│   │   │   │   └── SKILL.md
 │   │   │   ├── spherse-create-ui-theme/ # 自定义 UI 主题创建指南
 │   │   │   │   └── SKILL.md
 │   │   │   ├── spherse-create-agent-chat-theme/ # Agent 聊天窗口主题创建指南

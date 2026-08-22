@@ -1,5 +1,6 @@
 {
   "presetSkills": [
+    { "dir": "spherse-guide" },
     { "dir": "spherse-create-ui-theme" },
     { "dir": "spherse-create-agent-chat-theme" },
     { "dir": "spherse-use-ui-sdk" },

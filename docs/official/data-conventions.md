@@ -236,6 +236,7 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
 ```json
 {
   "presetSkills": [
+    { "dir": "spherse-guide" },
     { "dir": "spherse-create-ui-theme" },
     { "dir": "spherse-create-agent-chat-theme" },
     { "dir": "spherse-use-ui-sdk" },
