@@ -1,5 +1,5 @@
 ---
-name: create-agent-chat-theme
+name: spherse-create-agent-chat-theme
 description: Use when creating or editing an agent-level Spherse chat window theme.css for custom chat backgrounds, headers, message bubbles, avatars, composer inputs, markdown blocks, or placeholder text.
 ---
 
@@ -54,7 +54,7 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 | 行内代码 | `[data-md-code-inline]` |
 | 引用块 | `[data-md-quote]` |
 
-> **滚动条**：在 `[data-chat-root] { ... }` 内覆盖 `--sp-scrollbar-*` 变量（`--sp-scrollbar-thumb` / `--sp-scrollbar-thumb-hover` / `--sp-scrollbar-size` / `--sp-scrollbar-track`）即可只改变聊天窗口的滚动条外观；变量与默认值详见 `create-ui-theme` skill 的「滚动条」一节。agent theme 的 `<link>` 在 DOM 中比 project theme 更靠后，相同特异性下自然覆盖项目级滚动条设置。
+> **滚动条**：在 `[data-chat-root] { ... }` 内覆盖 `--sp-scrollbar-*` 变量（`--sp-scrollbar-thumb` / `--sp-scrollbar-thumb-hover` / `--sp-scrollbar-size` / `--sp-scrollbar-track`）即可只改变聊天窗口的滚动条外观；变量与默认值详见 `spherse-create-ui-theme` skill 的「滚动条」一节。agent theme 的 `<link>` 在 DOM 中比 project theme 更靠后，相同特异性下自然覆盖项目级滚动条设置。
 
 ## 完整选择器参考
 
@@ -78,7 +78,7 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 
 > 以上钩子均在聊天窗口 DOM 内，可嵌套在 `[data-chat-root] { ... }` 中定制。
 >
-> 其它可主题化区域（项目面板 `data-project-panel`、内容浏览器 `data-content-browser`、文档视图容器 `data-content-doc`）在聊天窗口 DOM 之外，**不受 agent theme 影响**，请在项目级 `.spherse/theme.css` 中定制，详见 `create-ui-theme` skill。
+> 其它可主题化区域（项目面板 `data-project-panel`、内容浏览器 `data-content-browser`、文档视图容器 `data-content-doc`）在聊天窗口 DOM 之外，**不受 agent theme 影响**，请在项目级 `.spherse/theme.css` 中定制，详见 `spherse-create-ui-theme` skill。
 
 ## 引用图片与字体
 

@@ -1,5 +1,5 @@
 ---
-name: use-ui-sdk
+name: spherse-use-ui-sdk
 description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话并获取会话 ID、静默后台发送消息、打开已有会话、打开文件、向会话发消息、读写数据、枚举数据、目录列表、文件元信息、订阅文件变化、只读查询项目信息、弹 toast 提示）
 ---
 
@@ -192,7 +192,9 @@ try {
 
 ## 请求型 Action — key-value 数据
 
-`data.*` 系列在 HTML 同级的 `.data.json` 文件中读写 key-value。
+`data.*` 系列在项目内的 `.data.json` 文件中读写 key-value。通常将数据文件放在 HTML 同级并按页面命名；多个页面共用一份业务数据时也可以显式指定同一个文件。
+
+需要设计页面与 Agent 共同读写的数据型应用时，加载 `spherse-build-data-app` skill；本节作为页面侧 API 参数与返回值参考。
 
 ### `spherse.data.get(params)` → `Promise<any>`
 
@@ -228,19 +230,20 @@ await spherse.data.set({ file: "world/game.data.json", key: "player", value: { n
 await spherse.data.delete({ file: "world/game.data.json", key: "score" });
 ```
 
-### `spherse.data.mutate(params)` → `Promise<any>`
+### `spherse.data.mutate(params)` → `Promise<object>`
 
-执行数据文件 `$manifest` 中声明的业务命名 mutation（与 agent 的 `mutate_data` 同一入口）。**结构性写入（新增/修改/删除数组条目等）优先用此接口**，不要用 `data.set` 传整个数组——避免与 agent 并发写同一集合时互相覆盖。响应 `data` 为该条目的写入结果。
+执行数据文件 `$manifest` 中声明的业务命名 mutation（与 agent 的 `mutate_data` 同一入口）。**结构性写入（新增/修改/删除数组条目等）优先用此接口**，不要用 `data.set` 传整个数组——避免与 agent 并发写同一集合时互相覆盖。`append` 返回新增条目（包含 `auto` 生成的 `id`、时间等字段），`update` 返回更新后的条目，`remove` 返回被删除的条目，`set` 返回更新后的目标对象。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | file | string | 是 | 数据文件路径 |
 | name | string | 是 | mutation 入口名（见文件 `$manifest`，或让生成页面的 agent 告知） |
 | args | object | 否 | 入口参数（必填字段见 manifest 声明；identity/match 字段按名传入） |
-| idempotencyKey | string | 否 | 幂等键：同一 key 重试返回首次结果，不重复执行 |
+| idempotencyKey | string | 否 | 幂等键：当前运行期间同一 key 重试返回首次结果 |
 
 ```javascript
-await spherse.data.mutate({ file: "board.data.json", name: "addTodo", args: { title: "买牛奶" }, idempotencyKey: "add-milk-1" });
+const todo = await spherse.data.mutate({ file: "board.data.json", name: "addTodo", args: { title: "买牛奶" }, idempotencyKey: "add-milk-1" });
+console.log(todo.id); // manifest 中 auto.id 生成的 UUID
 await spherse.data.mutate({ file: "board.data.json", name: "setTodoStatus", args: { id: "abc", status: "done" } });
 ```
 
@@ -264,17 +267,17 @@ const all = await spherse.data.entries({ file: "world/game.data.json" });
 
 ### 数据文件命名规范
 
-- 文件名必须为 `{HTML文件名}.data.json`，放在 HTML 同级目录（`world/game.html` → `world/game.data.json`）
+- 文件名必须以 `.data.json` 结尾；推荐与 HTML 同级并按页面命名（`world/game.html` → `world/game.data.json`），共享业务数据也可由多个页面指定同一文件
 - 顶层 JSON object，仅支持顶层 key 操作（不支持 `a.b.c` 嵌套路径；key 中的点不会被解释为路径）
 - value 支持任意 JSON 可序列化类型
-- `data.set` / `data.delete` 是**key 级原子操作**：单次写入不撕裂文件、同 key 并发不互相覆盖，页面无需防写撕裂
+- `data.set` / `data.delete` 是**key 级原子操作**：单次写入不会产生半截 JSON；同 key 多次写入按执行顺序生效，最终值以后一次为准
 - **写入粒度约定**：`data.set` 适合单值/标量/低冲突数据；**集合类（数组）的结构性增删改必须走 `data.mutate`**——`data.set` 传整个数组会覆盖 agent 并发写入的条目（丢失更新）
 - 数据文件损坏（非法 JSON）时 `data.*` 返回错误（`ok:false`），不会静默把文件重置为空
 - 顶层 `$` 前缀键为平台保留（如 `$manifest`）：`data.set` 拒绝写入、`data.keys` / `data.entries` 不返回它们
 
 ### 为数据文件声明 `$manifest`（结构性数据推荐）
 
-数据会随使用增长、且希望 agent 后续能直接按业务语义读写（而不是整文件读改写）时，生成页面时应在数据文件根部内嵌 `$manifest`，声明业务命名的查询/变更入口。agent 将通过 `query_data` / `mutate_data` 工具按这些入口精准读写，schema 校验也保证不会写坏页面渲染假设。写法与完整模板见 `write-html` skill 的「内嵌 `$manifest`」一节。
+数据会随使用增长、且希望 agent 后续能直接按业务语义读写（而不是整文件读改写）时，生成页面时应在数据文件根部内嵌 `$manifest`，声明业务命名的查询/变更入口。agent 将通过 `query_data` / `mutate_data` 工具按这些入口精准读写，schema 校验也保证不会写坏页面渲染假设。数据建模方法见 `spherse-build-data-app` skill，HTML 落地约束见 `spherse-write-html` skill。
 
 ## 事件订阅 — 文件变化
 
@@ -435,7 +438,7 @@ document.getElementById("agent-select").innerHTML = html;
 
 - **SDK 自动注入**：App 向每个 HTML 注入 `<script src="__spherse-sdk.js">`（同源加载，保留 iframe 真实 origin）。**不要**自己加载或复制 SDK 源码
 - **媒体播放**：Preview Server 支持 mp3/mp4/wav/webm/ogg/flac/mov 等音视频格式（含 Range 请求，可拖动进度条）。HTML 中直接用相对路径的 `<audio src="music.mp3">` 或 `<video src="clip.mp4">` 即可播放
-- **频率限制**：每分钟最多触发 30 次操作，超出会被静默丢弃。`data.get`、`data.keys` 与 `data.entries` 不受限（便于交互式页面频繁读取状态），交互式页面避免高频轮询
+- **频率限制**：每分钟最多触发 30 次操作，超出会被静默丢弃。`data.get`、`data.keys`、`data.entries` 与 `data.mutate` 不受限，交互式页面仍应优先通过事件刷新而非高频轮询
 - **事件订阅限制**：每个 HTML 最多同时订阅 100 个事件；订阅控制消息不计入 action 频率限制
 - **无 script-src 加载失败时**：若 HTML 自身设了限制性 CSP（如 `meta http-equiv="Content-Security-Policy"` 禁止同源 script），SDK 可能无法加载。应放宽 CSP 允许同源 script 加载，不要绕开 SDK 自行拼装 `postMessage`
 - **参数校验**：缺少必填参数或类型不匹配时操作会被静默忽略

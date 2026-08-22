@@ -1,5 +1,5 @@
 ---
-name: create-skill
+name: spherse-create-skill
 description: 当用户想要创建自定义 skill 时使用，涵盖 skill 的两个层级（project-level 与 agent-level）、标准目录结构与 SKILL.md 格式规范
 ---
 

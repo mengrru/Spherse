@@ -98,7 +98,7 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
 - **`docs/official/` 维护**：完成 feature 后，检查 `docs/official/` 下是否有需要同步更新的文档（如新增文件/目录、新增工具、架构变更等），保持文档与代码一致
 - **Backlog 维护**：每完成一个 feature 后，更新 `docs/dev/backlog.md` 中对应条目的状态（`[ ]` → `[x]`），并补充新增的 backlog 条目
 - **预置内容维护**：修改 `packages/presets/templates/` 下模板后，应通过 `npm run build --workspace=packages/presets` 或 root `npm run build` 触发同步脚本，确保生成内容可用
-- **用户主题 Skill 维护**：修改 design system、全局主题机制、聊天窗口 DOM 结构、聊天布局、CSS token 或可主题化选择器时，必须检查 `packages/presets/skills/create-ui-theme/` 和 `packages/presets/skills/create-agent-chat-theme/` 是否需要同步更新
+- **用户主题 Skill 维护**：修改 design system、全局主题机制、聊天窗口 DOM 结构、聊天布局、CSS token 或可主题化选择器时，必须检查 `packages/presets/skills/spherse-create-ui-theme/` 和 `packages/presets/skills/spherse-create-agent-chat-theme/` 是否需要同步更新
 - **E2E 验证选择**：feature 实现完成后，应根据当前变更影响面选择可能受影响的 E2E 覆盖场景运行测试；不要求每次都跑全量 E2E。可通过 `npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts` 跑单个 spec，或用 `-g` 按 case 名过滤。改动涉及 Electron 启动、项目恢复、路由、store、server API、文件树、content browser、chat/session、文本选择发起会话、native dependency 或 E2E helper 时，优先运行对应 E2E；合并/发布前再跑 `npm run verify:e2e`
 - **手动 commit**：完成代码后不要自动 commit，等待用户明确要求时再提交
 - **commit 前检查**：用户提示 commit 后，先确认 `docs/dev/backlog.md` 和 `docs/official/` 已根据本次变更得到应有的更新，再执行 commit
