@@ -21,6 +21,8 @@ const stubCatalog = {
 
 import { createProject } from "../../factory.js";
 import { AgentRunner } from "../../session/agent-runner.js";
+import { SessionEventLog } from "../../session/event-log.js";
+import { deriveMessages } from "../../session/fold.js";
 import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
 import { createModelResolver } from "../../session/model-resolver.js";
 import { createImageAttachmentProcessor } from "../../attachments/image-processor.js";
@@ -92,18 +94,25 @@ describe("AgentRunner attachment handling", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  async function createRunner(): Promise<{ runner: AgentRunner; sessionId: string }> {
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
+    const sessionId = agentStore.sessions.createSession();
+    const eventLog = SessionEventLog.open(agentStore.sessions, sessionId);
+    const runner = await AgentRunner.init(deps, agentId, sessionId, { eventLog });
+    return { runner, sessionId };
+  }
+
   async function driveSend(
     runner: AgentRunner,
     message: string,
     attachment: any,
   ): Promise<{
     promptArg: any;
-    persisted: any[];
     events: any[];
     agent: any;
+    sessionId: string;
   }> {
     const agent = agentOf(runner);
-    const persisted: any[] = [];
     const events: any[] = [];
 
     let capturedListener: ((event: any) => void | Promise<void>) | undefined;
@@ -134,36 +143,25 @@ describe("AgentRunner attachment handling", () => {
 
     vi.spyOn(agent, "prompt").mockImplementation(async (input: any) => {
       promptArg.current = input;
-      const msg =
-        typeof input === "string"
-          ? { role: "user", content: input, timestamp: Date.now() }
-          : Array.isArray(input)
-            ? input[0]
-            : input;
-      agent.state.messages.push(msg);
-      await capturedListener?.({ type: "message_start", message: msg });
-      await capturedListener?.({ type: "message_end", message: msg });
+      agent.state.messages.push(input);
+      await capturedListener?.({ type: "message_start", message: input });
+      await capturedListener?.({ type: "message_end", message: input });
       agent.state.messages.push(assistantMsg);
       await capturedListener?.({ type: "message_start", message: assistantMsg });
       await capturedListener?.({ type: "message_end", message: assistantMsg });
-      await capturedListener?.({ type: "agent_end", messages: [msg, assistantMsg] });
-    });
-
-    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
-    vi.spyOn(agentStore.sessions, "appendMessage").mockImplementation((_sid: string, msg: any) => {
-      persisted.push(msg);
-      return persisted.length;
+      await capturedListener?.({
+        type: "agent_end",
+        messages: [...agent.state.messages],
+      });
     });
 
     await runner.sendMessage(message, [attachment], (e) => events.push(e));
 
-    return { promptArg: promptArg.current, persisted, events, agent };
+    return { promptArg: promptArg.current, events, agent, sessionId: (runner as any).sessionId };
   }
 
   it("sends a real ImageContent to the LLM for the current turn", async () => {
-    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
-    const sessionId = agentStore.sessions.createSession();
-    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const { runner } = await createRunner();
 
     const attachment = {
       type: "image",
@@ -183,28 +181,27 @@ describe("AgentRunner attachment handling", () => {
   });
 
   it("persists the stripped user message (no base64, text-only content, with _attachments)", async () => {
-    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
-    const sessionId = agentStore.sessions.createSession();
-    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const { runner } = await createRunner();
 
     const attachment = {
       type: "image",
       path: ".spherse/attachments/photo.png",
       mimeType: "image/png",
     };
-    const { persisted } = await driveSend(runner, "describe this", attachment);
+    const { agent, sessionId } = await driveSend(runner, "describe this", attachment);
 
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
+    const persisted = deriveMessages(agentStore.sessions.readEvents(sessionId));
     const persistedUser = persisted.find((m: any) => m.role === "user");
     expect(persistedUser).toBeDefined();
     expect(persistedUser._attachments).toEqual([attachment]);
     expect(persistedUser.content).toEqual([{ type: "text", text: "describe this" }]);
     expect(JSON.stringify(persistedUser)).not.toContain(PNG_BYTES.toString("base64"));
+    void agent;
   });
 
   it("forwards the stripped user message_end onEvent", async () => {
-    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
-    const sessionId = agentStore.sessions.createSession();
-    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const { runner } = await createRunner();
 
     const attachment = {
       type: "image",
@@ -222,10 +219,8 @@ describe("AgentRunner attachment handling", () => {
     expect(JSON.stringify(userMsgEnd.message)).not.toContain(PNG_BYTES.toString("base64"));
   });
 
-  it("rewrites the in-memory user message to the stripped version after the run", async () => {
-    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
-    const sessionId = agentStore.sessions.createSession();
-    const runner = await AgentRunner.init(deps, agentId, sessionId);
+  it("in-memory user message stays the stripped version after the run", async () => {
+    const { runner } = await createRunner();
 
     const attachment = {
       type: "image",
@@ -244,9 +239,7 @@ describe("AgentRunner attachment handling", () => {
   });
 
   it("convertToLlm strips _attachments, drops empty-data image blocks, keeps real image blocks", async () => {
-    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
-    const sessionId = agentStore.sessions.createSession();
-    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const { runner } = await createRunner();
     const agent = agentOf(runner);
 
     const attachment = {
@@ -293,39 +286,33 @@ describe("AgentRunner attachment handling", () => {
   });
 
   it("throws on unsupported attachment type", async () => {
-    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
-    const sessionId = agentStore.sessions.createSession();
-    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const { runner } = await createRunner();
 
     await expect(
       runner.sendMessage("hi", [{ type: "pdf", path: "x", mimeType: "application/pdf" }], () => {}),
     ).rejects.toThrow(/Unsupported attachment type: pdf/);
   });
 
-  it("never transmits base64 over onEvent (message_start, message_end, agent_end all stripped)", async () => {
-    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
-    const sessionId = agentStore.sessions.createSession();
-    const runner = await AgentRunner.init(deps, agentId, sessionId);
+  it("never transmits base64 over onEvent or the event log", async () => {
+    const { runner } = await createRunner();
 
     const attachment = {
       type: "image",
       path: ".spherse/attachments/photo.png",
       mimeType: "image/png",
     };
-    const { events } = await driveSend(runner, "describe this", attachment);
+    const { events, sessionId } = await driveSend(runner, "describe this", attachment);
 
     expect(events.length).toBeGreaterThan(0);
     for (const event of events) {
       expect(JSON.stringify(event)).not.toContain(PNG_BYTES.toString("base64"));
     }
 
-    const userStart = events.find(
-      (e: any) => e.type === "message_start" && e.message?.role === "user",
-    );
-    const agentEnd = events.find((e: any) => e.type === "agent_end");
-    expect(userStart).toBeDefined();
-    expect(agentEnd).toBeDefined();
-    expect(userStart.message._attachments).toEqual([attachment]);
-    expect(agentEnd.messages.find((m: any) => m.role === "user")._attachments).toEqual([attachment]);
+    const agentStore = (deps.projectStore as any).getAgent(agentId) as any;
+    const rawEvents = agentStore.sessions.readEvents(sessionId);
+    expect(JSON.stringify(rawEvents)).not.toContain(PNG_BYTES.toString("base64"));
+
+    const assistantEnd = events.find((e: any) => e.type === "agent_end");
+    expect(assistantEnd).toBeDefined();
   });
 });

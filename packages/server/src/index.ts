@@ -4,7 +4,12 @@ import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import multipart from "@fastify/multipart";
 import type { Logger, SamplingParams, ModelCatalog } from "@spherse/core";
-import { NotFoundError, ValidationError, AccessDeniedError, ConflictError } from "@spherse/core";
+import {
+  NotFoundError,
+  ValidationError,
+  AccessDeniedError,
+  ConflictError,
+} from "@spherse/core";
 import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";

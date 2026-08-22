@@ -10,11 +10,9 @@ export function compactionCapability(deps: {
 }): Capability {
   const logger = deps.logger ?? createSilentLogger();
 
-  const turnHooks: TurnHooksFactory = (agentId, sessionId) => ({
-    async afterTurn(agent, log) {
-      const agentStore = deps.projectStore.getAgent(agentId);
-      if (!agentStore) return log;
-      return maybeCompactLog(log, agent, agentStore.sessions, sessionId, logger);
+  const turnHooks: TurnHooksFactory = () => ({
+    async afterTurn(agent, eventLog) {
+      await maybeCompactLog(eventLog, agent, logger);
     },
   });
 

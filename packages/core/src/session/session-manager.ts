@@ -2,10 +2,13 @@ import type { AgentChangePayload } from "../store/project.js";
 import type { Logger } from "../logger.js";
 import { NotFoundError } from "../errors.js";
 import { AgentRunner, type RunnerEventHandler } from "./agent-runner.js";
+import { SessionEventLog } from "./event-log.js";
+import { deriveMessages } from "./fold.js";
 import { computeSessionStatus, type SessionStatus } from "./status.js";
 import type { TurnContextSnapshot } from "./types.js";
 import type { Attachment } from "../attachments/index.js";
 import { RunConfigHolder, type RuntimeDeps } from "./runtime.js";
+import { migrateLegacySession } from "./legacy-migrate.js";
 
 export class SessionManager {
   private readonly sessions = new Map<string, AgentRunner>();
@@ -39,7 +42,8 @@ export class SessionManager {
     const agentStore = this.deps.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent profile "${agentId}" not found`);
     const sessionId = agentStore.sessions.createSession(title, source);
-    const session = await AgentRunner.init(this.deps, agentId, sessionId);
+    const eventLog = SessionEventLog.open(agentStore.sessions, sessionId);
+    const session = await AgentRunner.init(this.deps, agentId, sessionId, { eventLog });
     this.sessions.set(sessionId, session);
     this.deps.logger.info({ sessionId, agentId }, "session created");
     return sessionId;
@@ -47,10 +51,17 @@ export class SessionManager {
 
   async restoreSession(agentId: string, sessionId: string): Promise<string> {
     if (this.sessions.has(sessionId)) return sessionId;
+    this.ensureMigrated(agentId, sessionId);
     const session = await AgentRunner.initForRestore(this.deps, agentId, sessionId);
     this.sessions.set(sessionId, session);
     this.deps.logger.info({ sessionId }, "session restored");
     return sessionId;
+  }
+
+  private ensureMigrated(agentId: string, sessionId: string): void {
+    const agentStore = this.deps.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    migrateLegacySession(agentStore.sessions, sessionId);
   }
 
   async sendMessage(
@@ -95,7 +106,9 @@ export class SessionManager {
     if (!agentStore.sessions.getSession(sessionId)) {
       throw new NotFoundError(`Session "${sessionId}" not found`);
     }
-    const messages = agentStore.sessions.getSessionMessages(sessionId);
+    const messages = agentStore.sessions.sessionNeedsMigration(sessionId)
+      ? agentStore.sessions.getSessionMessages(sessionId)
+      : deriveMessages(agentStore.sessions.readEvents(sessionId));
     return computeSessionStatus(
       messages,
       agentStore.getProfile(),

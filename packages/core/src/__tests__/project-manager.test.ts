@@ -2,8 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { createSilentLogger } from "../logger.js";
 import { ProjectManager } from "../project-manager.js";
 import type { SessionInfo } from "../types.js";
-import type { ProjectStore } from "../store/project.js";
+import { ProjectStore } from "../store/project.js";
 import type { AgentStore } from "../store/agent-store.js";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { EVENT_SCHEMA_VERSION } from "../session/events.js";
 
 function createProjectManagerWithSessions(initial: Record<string, SessionInfo>) {
   const sessions = new Map(Object.entries(initial));
@@ -83,5 +87,59 @@ describe("ProjectManager.renameSession", () => {
     expect(() => manager.renameSession("agent-1", "missing", "New Title")).toThrow(
       'Session "missing" not found',
     );
+  });
+});
+
+describe("ProjectManager event-backed session reads", () => {
+  it("pages only folded message entries", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-events-"));
+    const projectStore = new ProjectStore(root, createSilentLogger());
+    await projectStore.create("Test");
+    const agentStore = await projectStore.createAgent(
+      "test-agent",
+      "---\nname: Test\ntools: []\n---\n\nTest.",
+    );
+    const manager = new ProjectManager(projectStore, createSilentLogger());
+    try {
+      const sessionId = agentStore.sessions.createSession();
+      agentStore.sessions.appendEvents(
+        sessionId,
+        [
+          {
+            type: "user/message",
+            seq: 0,
+            time: 1,
+            data: { message: { role: "user", content: "q", timestamp: 1 } as never },
+          },
+          { type: "turn/start", seq: 1, time: 1, data: {} },
+          {
+            type: "assistant/message",
+            seq: 2,
+            time: 2,
+            data: {
+              message: {
+                role: "assistant",
+                content: [{ type: "text", text: "a" }],
+                timestamp: 2,
+              } as never,
+            },
+          },
+          { type: "turn/end", seq: 3, time: 2, data: { reason: "completed" } },
+        ],
+        EVENT_SCHEMA_VERSION,
+      );
+
+      expect(manager.getRecentSessionHistory(agentStore.getProfile().id, sessionId, 10)).toEqual({
+        entries: [
+          { id: 0, message: expect.objectContaining({ role: "user", content: "q" }) },
+          { id: 2, message: expect.objectContaining({ role: "assistant" }) },
+        ],
+        hasMore: false,
+        oldestId: 0,
+      });
+    } finally {
+      projectStore.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

@@ -32,3 +32,10 @@ export class ModelNotConfiguredError extends Error {
     this.name = "ModelNotConfiguredError";
   }
 }
+
+export class MigrationRequiredError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MigrationRequiredError";
+  }
+}

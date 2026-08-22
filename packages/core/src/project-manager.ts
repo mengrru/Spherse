@@ -7,6 +7,7 @@ import { resolveProjectPath } from "./utils/path-safety.js";
 import { serverAccessPolicy } from "./access/access-policy.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { ConflictError, NotFoundError, ValidationError } from "./errors.js";
+import { deriveHistoryEntries } from "./session/fold.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -106,7 +107,8 @@ export class ProjectManager {
   getSession(agentId: string, sessionId: string): SessionInfo | null {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return null;
-    return agentStore.sessions.getSession(sessionId);
+    const session = agentStore.sessions.getSession(sessionId);
+    return session;
   }
 
   listSessions(agentId: string): SessionInfo[] {
@@ -125,7 +127,11 @@ export class ProjectManager {
     return agentStore.sessions.listSessionsPage(limit, offset);
   }
 
-  renameSession(agentId: string, sessionId: string, title: string): SessionInfo {
+  renameSession(
+    agentId: string,
+    sessionId: string,
+    title: string,
+  ): SessionInfo {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) throw new ValidationError("title is required");
     if (trimmedTitle.length > 80) {
@@ -139,13 +145,20 @@ export class ProjectManager {
     if (!session) throw new NotFoundError(`Session "${sessionId}" not found`);
 
     agentStore.sessions.updateSessionTitle(sessionId, trimmedTitle);
-    return { ...session, title: trimmedTitle };
+    return {
+      ...session,
+      title: trimmedTitle,
+    };
   }
 
   getSessionHistory(agentId: string, sessionId: string): unknown[] {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return [];
-    return agentStore.sessions.getSessionMessages(sessionId);
+    const sessions = agentStore.sessions;
+    if (sessions.sessionNeedsMigration(sessionId)) {
+      return sessions.getSessionMessages(sessionId);
+    }
+    return deriveHistoryEntries(sessions.readEvents(sessionId)).map((entry) => entry.message);
   }
 
   getRecentSessionHistory(
@@ -156,11 +169,33 @@ export class ProjectManager {
   ): { entries: Array<{ id: number; message: unknown }>; hasMore: boolean; oldestId: number | null } {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return { entries: [], hasMore: false, oldestId: null };
-    const result = agentStore.sessions.getRecentTurns(sessionId, turns, beforeId);
+    const sessions = agentStore.sessions;
+    if (sessions.sessionNeedsMigration(sessionId)) {
+      const result = sessions.getRecentTurns(sessionId, turns, beforeId);
+      return {
+        entries: result.entries,
+        hasMore: result.hasMore,
+        oldestId: result.oldestId,
+      };
+    }
+    const projected = deriveHistoryEntries(sessions.readEvents(sessionId));
+    const before = beforeId ?? Number.POSITIVE_INFINITY;
+    const eligible = projected.filter((entry) => entry.seq < before);
+    const selected: typeof eligible = [];
+    let turnCount = 0;
+    for (let i = eligible.length - 1; i >= 0; i--) {
+      const entry = eligible[i];
+      if (entry.message.role === "user") {
+        turnCount++;
+        if (turnCount > turns) break;
+      }
+      selected.push(entry);
+    }
+    selected.reverse();
     return {
-      entries: result.entries,
-      hasMore: result.hasMore,
-      oldestId: result.oldestId,
+      entries: selected.map((entry) => ({ id: entry.seq, message: entry.message })),
+      hasMore: selected.length < eligible.length,
+      oldestId: selected[0]?.seq ?? null,
     };
   }
 

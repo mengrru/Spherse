@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
+import Database from "better-sqlite3";
 import { createSilentLogger } from "../../logger.js";
 import { ModelNotConfiguredError } from "../../errors.js";
 
@@ -368,6 +369,41 @@ describe("SessionManager lifecycle", () => {
     expect(runtime.sessionRuntime.sessions.size).toBe(before);
   });
 
+  it("automatically migrates legacy history before restoring a writable session", async () => {
+    const projectStore = runtime.projectManager.projectStore;
+    const agentStore = projectStore.agents.get(agentId) as {
+      getAgentDir(): string;
+      sessions: {
+        createSession(): string;
+        sessionNeedsMigration(sessionId: string): boolean;
+        readEvents(sessionId: string): Array<{ type: string }>;
+      };
+    };
+    const sessionId = agentStore.sessions.createSession();
+    const db = new Database(path.join(agentStore.getAgentDir(), "sessions.db"));
+    db.prepare(
+      "INSERT INTO messages (session_id, role, content, timestamp, prev_message_id, message_content_schema_version) VALUES (?, ?, ?, ?, NULL, 1)",
+    ).run(
+      sessionId,
+      "user",
+      JSON.stringify({ role: "user", content: "legacy question", timestamp: 1 }),
+      1,
+    );
+    db.close();
+
+    expect(agentStore.sessions.sessionNeedsMigration(sessionId)).toBe(true);
+
+    await runtime.sessionRuntime.restoreSession(agentId, sessionId);
+
+    expect(agentStore.sessions.sessionNeedsMigration(sessionId)).toBe(false);
+    expect(agentStore.sessions.readEvents(sessionId).map((event) => event.type)).toEqual([
+      "user/message",
+    ]);
+    expect(activeAgent(runtime, sessionId).state.messages).toEqual([
+      expect.objectContaining({ role: "user", content: "legacy question" }),
+    ]);
+  });
+
   it("evictAgent removes all sessions for that agent", async () => {
     const sidA = await runtime.sessionRuntime.createSession(agentId);
     const sidB = await runtime.sessionRuntime.createSession(agentId);
@@ -431,10 +467,25 @@ describe("SessionManager getSessionStatus", () => {
   it("computes status from persisted history for a non-live session", async () => {
     const sessionId = await runtime.sessionRuntime.createSession(agentId);
     const agentStore = runtime.projectManager.projectStore.agents.get(agentId) as any;
-    agentStore.sessions.appendMessage(sessionId, {
-      role: "assistant",
-      usage: { totalTokens: 999 },
-    });
+    agentStore.sessions.appendEvents(
+      sessionId,
+      [
+        {
+          type: "assistant/message",
+          seq: 0,
+          time: Date.now(),
+          data: {
+            message: {
+              role: "assistant",
+              content: [{ type: "text", text: "hi" }],
+              usage: { totalTokens: 999 },
+              timestamp: Date.now(),
+            },
+          },
+        },
+      ],
+      1,
+    );
     runtime.sessionRuntime.destroySession(sessionId);
     expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(false);
 

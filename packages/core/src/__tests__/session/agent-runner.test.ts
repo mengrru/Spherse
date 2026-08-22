@@ -21,11 +21,12 @@ const stubCatalog = {
 
 import { createProject } from "../../factory.js";
 import { AgentRunner } from "../../session/agent-runner.js";
+import { SessionEventLog } from "../../session/event-log.js";
+import { deriveMessages } from "../../session/fold.js";
 import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
 import { createModelResolver } from "../../session/model-resolver.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
-import { createLog } from "../../kernel/message-log.js";
 import { compactionCapability } from "../../capabilities/compaction/index.js";
 
 const TEST_AGENT_PROFILE = `---
@@ -54,13 +55,16 @@ function agentOf(runner: AgentRunner): any {
   return runner.agentRef;
 }
 
-function liveIdsOf(runner: AgentRunner): number[] {
-  return runner.currentLog.entries.map((e: any) => e.dbId);
+function eventsOf(runner: AgentRunner): any[] {
+  return (runner as any).eventLog.events;
 }
 
-function seedLiveLog(runner: AgentRunner, msgs: any[], ids: number[]): void {
-  (runner as any).log = createLog(msgs.map((m, i) => ({ dbId: ids[i], message: m })));
-  agentOf(runner).state.messages = msgs;
+function seedEvents(runner: AgentRunner, events: Array<{ type: string; data: unknown }>): void {
+  const log = (runner as any).eventLog as SessionEventLog;
+  for (const e of events) {
+    log.append(e.type as never, e.data as never);
+  }
+  agentOf(runner).state.messages = deriveMessages(log.events);
 }
 
 async function compactLive(
@@ -70,9 +74,12 @@ async function compactLive(
   sessionId: string,
 ): Promise<void> {
   const hook = (compactionCapability({ projectStore: deps.projectStore }).turnHooks ?? (() => ({})))(agentId, sessionId);
-  const next = await hook.afterTurn!(agentOf(runner), (runner as any).log);
-  (runner as any).log = next;
-  agentOf(runner).state.messages = next.entries.map((e: any) => e.message);
+  const log = (runner as any).eventLog as SessionEventLog;
+  const before = log.events.length;
+  await hook.afterTurn!(agentOf(runner), log);
+  if (log.events.length !== before) {
+    agentOf(runner).state.messages = deriveMessages(log.events);
+  }
 }
 
 describe("AgentRunner context engineering", () => {
@@ -224,19 +231,22 @@ describe("AgentRunner context engineering", () => {
     const sessionId = agentStore.sessions.createSession();
     const runner = await AgentRunner.init(deps, agentId, sessionId);
 
-    expect(liveIdsOf(runner)).toEqual([]);
+    expect(eventsOf(runner)).toEqual([]);
   });
 
-  it("restoreSession without compaction restores all messages", async () => {
+  it("restoreSession without restarts restores all message events", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
 
-    const msg = { role: "user", content: "hello world", timestamp: Date.now() };
-    agentStore.sessions.appendMessage(sessionId, msg);
+    const log = SessionEventLog.open(agentStore.sessions, sessionId);
+    log.append("turn/start", {});
+    log.append("user/message", { message: { role: "user", content: "hello world", timestamp: Date.now() } as never });
+    log.append("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "hi" }], stopReason: "stop", timestamp: Date.now() } as never });
+    log.append("turn/end", { reason: "completed" });
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const agent = agentOf(runner);
-    expect(agent.state.messages.length).toBe(1);
+    expect(agent.state.messages.length).toBe(2);
     expect(agent.state.messages[0].role).toBe("user");
     expect(agent.state.messages[0].content).toContain("hello world");
   });
@@ -245,27 +255,30 @@ describe("AgentRunner context engineering", () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
 
-    const userMsg = { role: "user", content: "run the tools", timestamp: Date.now() };
-    const assistantMsg = {
-      role: "assistant",
-      content: [
-        { type: "text", text: "calling tools" },
-        { type: "toolCall", id: "tc-1", name: "read_file", arguments: { path: "a.md" } },
-        { type: "toolCall", id: "tc-2", name: "read_file", arguments: { path: "b.md" } },
-      ],
-      stopReason: "toolUse",
-      timestamp: Date.now(),
-    };
-    const answeredResult = {
-      role: "toolResult",
-      toolCallId: "tc-1",
-      toolName: "read_file",
-      content: [{ type: "text", text: "content of a" }],
-      timestamp: Date.now(),
-    };
-    agentStore.sessions.appendMessage(sessionId, userMsg);
-    agentStore.sessions.appendMessage(sessionId, assistantMsg);
-    agentStore.sessions.appendMessage(sessionId, answeredResult);
+    const log = SessionEventLog.open(agentStore.sessions, sessionId);
+    log.append("turn/start", {});
+    log.append("user/message", { message: { role: "user", content: "run the tools", timestamp: Date.now() } as never });
+    log.append("assistant/message", {
+      message: {
+        role: "assistant",
+        content: [
+          { type: "text", text: "calling tools" },
+          { type: "toolCall", id: "tc-1", name: "read_file", arguments: { path: "a.md" } },
+          { type: "toolCall", id: "tc-2", name: "read_file", arguments: { path: "b.md" } },
+        ],
+        stopReason: "toolUse",
+        timestamp: Date.now(),
+      } as never,
+    });
+    log.append("tool/result", {
+      message: {
+        role: "toolResult",
+        toolCallId: "tc-1",
+        toolName: "read_file",
+        content: [{ type: "text", text: "content of a" }],
+        timestamp: Date.now(),
+      } as never,
+    });
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const messages = agentOf(runner).state.messages;
@@ -275,12 +288,11 @@ describe("AgentRunner context engineering", () => {
     expect(synthesized.isError).toBe(true);
     expect(synthesized.content[0].text).toContain("interrupted");
 
-    const persisted = agentStore.sessions.getSessionMessages(sessionId);
-    const persistedSynthetic = persisted.find((m: any) => m.role === "toolResult" && m.toolCallId === "tc-2");
-    expect(persistedSynthetic).toBeDefined();
-
-    const ids = liveIdsOf(runner);
-    expect(ids[ids.length - 1]).toBeGreaterThan(0);
+    const persisted = agentStore.sessions.readEvents(sessionId);
+    const persistedSynthetic = persisted.filter(
+      (e: any) => e.type === "tool/result" && e.data.message.toolCallId === "tc-2",
+    );
+    expect(persistedSynthetic).toHaveLength(1);
 
     const restored2 = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const messages2 = agentOf(restored2).state.messages;
@@ -292,135 +304,119 @@ describe("AgentRunner context engineering", () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
 
-    const userMsg = { role: "user", content: "run the tool", timestamp: Date.now() };
-    const assistantMsg = {
-      role: "assistant",
-      content: [
-        { type: "toolCall", id: "tc-1", name: "read_file", arguments: { path: "a.md" } },
-      ],
-      stopReason: "toolUse",
-      timestamp: Date.now(),
-    };
-    const answeredResult = {
-      role: "toolResult",
-      toolCallId: "tc-1",
-      toolName: "read_file",
-      content: [{ type: "text", text: "content of a" }],
-      timestamp: Date.now(),
-    };
-    agentStore.sessions.appendMessage(sessionId, userMsg);
-    agentStore.sessions.appendMessage(sessionId, assistantMsg);
-    agentStore.sessions.appendMessage(sessionId, answeredResult);
+    const log = SessionEventLog.open(agentStore.sessions, sessionId);
+    log.append("turn/start", {});
+    log.append("user/message", { message: { role: "user", content: "run the tool", timestamp: Date.now() } as never });
+    log.append("assistant/message", {
+      message: {
+        role: "assistant",
+        content: [
+          { type: "toolCall", id: "tc-1", name: "read_file", arguments: { path: "a.md" } },
+        ],
+        stopReason: "toolUse",
+        timestamp: Date.now(),
+      } as never,
+    });
+    log.append("tool/result", {
+      message: {
+        role: "toolResult",
+        toolCallId: "tc-1",
+        toolName: "read_file",
+        content: [{ type: "text", text: "content of a" }],
+        timestamp: Date.now(),
+      } as never,
+    });
+    log.append("turn/end", { reason: "completed" });
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     expect(agentOf(runner).state.messages.length).toBe(3);
-    expect(agentStore.sessions.getSessionMessages(sessionId).length).toBe(3);
+    expect(agentStore.sessions.readEvents(sessionId).length).toBe(5);
   });
 
-  it("restoreSession with compaction restores digest + tail", async () => {
+  it("restoreSession with compaction restart restores digest + tail", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
 
-    const digestPlain = "[user]: earlier question\n[assistant]: earlier answer";
-    const anchorMsg = { role: "user", content: "anchor placeholder", timestamp: Date.now() };
-    const tailMsg1 = { role: "user", content: "tail question", timestamp: Date.now() };
-    const tailMsg2 = { role: "assistant", content: [{ type: "text", text: "tail answer" }], timestamp: Date.now() };
-
-    agentStore.sessions.appendMessage(sessionId, anchorMsg);
-    const anchorId = agentStore.sessions.appendMessage(sessionId, anchorMsg);
-    const tailId1 = agentStore.sessions.appendMessage(sessionId, tailMsg1);
-    const tailId2 = agentStore.sessions.appendMessage(sessionId, tailMsg2);
-
-    agentStore.sessions.recordCompaction(sessionId, {
-      anchorMessageId: anchorId,
-      digestContent: digestPlain,
-      tokenEstimate: 100,
+    const log = SessionEventLog.open(agentStore.sessions, sessionId);
+    log.append("user/message", { message: { role: "user", content: "early q", timestamp: Date.now() } as never });
+    log.append("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "early a" }], stopReason: "stop", timestamp: Date.now() } as never });
+    log.append("compaction/applied", {
+      anchorSeq: 1,
+      digestContent: "[user]: early q",
+      excludedSeqs: [],
     });
+    log.append("user/message", { message: { role: "user", content: "tail question", timestamp: Date.now() } as never });
+    log.append("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "tail answer" }], stopReason: "stop", timestamp: Date.now() } as never });
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const agent = agentOf(runner);
     expect(agent.state.messages.length).toBe(3);
     expect(agent.state.messages[0].role).toBe("user");
     expect(agent.state.messages[0].content).toContain("<compaction-digest");
-    expect(agent.state.messages[0].content).toContain("[user]: earlier question");
-    expect(agent.state.messages[0].content).toContain("[assistant]: earlier answer");
+    expect(agent.state.messages[0].content).toContain("early q");
     expect(agent.state.messages[1].role).toBe("user");
     expect(agent.state.messages[1].content).toContain("tail question");
     expect(agent.state.messages[2].role).toBe("assistant");
-
-    const ids = liveIdsOf(runner);
-    expect(ids[0]).toBe(anchorId);
-    expect(ids).toContain(tailId1);
-    expect(ids).toContain(tailId2);
   });
 
-  it("maybeCompact records real anchorMessageId as digest placeholder", async () => {
+  it("maybeCompact appends compaction/applied with real anchorSeq", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
     const runner = await AgentRunner.init(deps, agentId, sessionId);
     const agent = agentOf(runner);
 
-    const msgs: any[] = [];
-    const ids: number[] = [];
+    const seeded: Array<{ type: string; data: unknown }> = [];
     for (let i = 0; i < 25; i++) {
-      const u = { role: "user", content: `turn ${i} with some text`, timestamp: Date.now() + i };
-      msgs.push(u);
-      ids.push(agentStore.sessions.appendMessage(sessionId, u));
-      const a = {
-        role: "assistant",
-        content: [{ type: "text", text: `reply ${i} with some text` }],
-        timestamp: Date.now() + i,
-      };
-      msgs.push(a);
-      ids.push(agentStore.sessions.appendMessage(sessionId, a));
+      seeded.push({
+        type: "user/message",
+        data: { message: { role: "user", content: `turn ${i} with some text`, timestamp: Date.now() + i } },
+      });
+      seeded.push({
+        type: "assistant/message",
+        data: { message: { role: "assistant", content: [{ type: "text", text: `reply ${i} with some text` }], stopReason: "stop", timestamp: Date.now() + i } },
+      });
     }
-    seedLiveLog(runner, msgs, ids);
+    seedEvents(runner, seeded);
     agent.state.model.contextWindow = 10;
 
     await compactLive(runner, deps, agentId, sessionId);
 
-    const latest = agentStore.sessions.getLatestCompaction(sessionId);
-    expect(latest).not.toBeNull();
-    const newIds = liveIdsOf(runner);
-    expect(newIds[0]).toBe(latest!.anchorMessageId);
-    expect(newIds[0]).toBeGreaterThan(0);
-    expect(newIds.length).toBe(agent.state.messages.length);
+    const compactionEvents = eventsOf(runner).filter((e: any) => e.type === "compaction/applied");
+    expect(compactionEvents).toHaveLength(1);
+    expect(compactionEvents[0].data.anchorSeq).toBeGreaterThan(0);
+    expect(agent.state.messages.length).toBeLessThan(50);
   });
 
-  it("repeated compaction does not over-include messages on restore", async () => {
+  it("repeated compaction is idempotent and does not over-include messages on restore", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
     const runner = await AgentRunner.init(deps, agentId, sessionId);
     const agent = agentOf(runner);
 
-    const msgs: any[] = [];
-    const ids: number[] = [];
+    const seeded: Array<{ type: string; data: unknown }> = [];
     for (let i = 0; i < 25; i++) {
-      const u = { role: "user", content: `turn ${i} text`, timestamp: Date.now() + i };
-      msgs.push(u);
-      ids.push(agentStore.sessions.appendMessage(sessionId, u));
-      const a = {
-        role: "assistant",
-        content: [{ type: "text", text: `reply ${i} text` }],
-        timestamp: Date.now() + i,
-      };
-      msgs.push(a);
-      ids.push(agentStore.sessions.appendMessage(sessionId, a));
+      seeded.push({
+        type: "user/message",
+        data: { message: { role: "user", content: `turn ${i} text`, timestamp: Date.now() + i } },
+      });
+      seeded.push({
+        type: "assistant/message",
+        data: { message: { role: "assistant", content: [{ type: "text", text: `reply ${i} text` }], stopReason: "stop", timestamp: Date.now() + i } },
+      });
     }
-    seedLiveLog(runner, msgs, ids);
+    seedEvents(runner, seeded);
     agent.state.model.contextWindow = 10;
 
     await compactLive(runner, deps, agentId, sessionId);
     await compactLive(runner, deps, agentId, sessionId);
 
-    const totalPersisted = agentStore.sessions.getSessionMessages(sessionId).length;
-    expect(totalPersisted).toBe(50);
+    const totalEvents = agentStore.sessions.readEvents(sessionId).length;
+    expect(totalEvents).toBe(51);
+    expect(eventsOf(runner).filter((event) => event.type === "compaction/applied")).toHaveLength(1);
 
     const restored = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const restoredAgent = agentOf(restored);
-    expect(restoredAgent.state.messages.length).toBeLessThan(totalPersisted);
-  const restoredIds = liveIdsOf(restored);
-  expect(restoredIds[0]).toBeGreaterThan(0);
+    expect(restoredAgent.state.messages.length).toBeLessThan(50);
   });
 
   it("applyReload rebuilds system prompt and tools from fresh profile", async () => {
@@ -450,10 +446,10 @@ describe("AgentRunner context engineering", () => {
     deps.createTurnHooks = () => ({ onReload });
     runner.markReloadPending();
 
-    const last = { role: "assistant", content: [{ type: "text", text: "" }], stopReason: "error", timestamp: 2 };
-    const user = { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 };
-    agentOf(runner).state.messages = [user, last];
-    seedLiveLog(runner, [user, last], [1, 2]);
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "" }], stopReason: "error", timestamp: 2 } } },
+    ]);
     agentOf(runner).continue = vi.fn().mockResolvedValue(undefined);
 
     await runner.retryLastTurn(() => {});
@@ -514,47 +510,41 @@ describe("AgentRunner context engineering", () => {
     expect(onReload).toHaveBeenCalledTimes(1);
   });
 
-  it("retryLastTurn pops the failed assistant turn from agent state, DB, and message log", async () => {
+  it("retryLastTurn abandons the failed assistant message event (non-destructive)", async () => {
     runConfig.update({ defaultModel: "provider/model" });
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
     const runner = await AgentRunner.init(deps, agentId, sessionId);
     const agent = agentOf(runner);
 
-    const userMsg = { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 };
-    const failedAssistant = {
-      role: "assistant",
-      content: [{ type: "text", text: "" }],
-      stopReason: "error",
-      errorMessage: "boom",
-      timestamp: 2,
-    };
-    const userId = agentStore.sessions.appendMessage(sessionId, userMsg);
-    const failedId = agentStore.sessions.appendMessage(sessionId, failedAssistant);
-    seedLiveLog(runner, [userMsg, failedAssistant], [userId, failedId]);
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "" }], stopReason: "error", errorMessage: "boom", timestamp: 2 } } },
+    ]);
 
     agent.continue = vi.fn().mockResolvedValue(undefined);
 
     await runner.retryLastTurn(() => {});
 
     expect(agent.continue).toHaveBeenCalledTimes(1);
-    expect(agent.state.messages).toEqual([userMsg]);
-    expect(liveIdsOf(runner)).toEqual([userId]);
-    const remaining = agentStore.sessions.getSessionMessagesWithIds(sessionId).map((r) => r.id);
-    expect(remaining).toContain(userId);
-    expect(remaining).not.toContain(failedId);
+    expect(agent.state.messages.length).toBe(1);
+    expect(agent.state.messages[0].role).toBe("user");
+
+    const retriedEvents = eventsOf(runner).filter((e: any) => e.type === "turn/retried");
+    expect(retriedEvents).toHaveLength(1);
+    expect(retriedEvents[0].data.abandonedSeqs).toHaveLength(1);
+    expect(agentStore.sessions.readEvents(sessionId)).toHaveLength(4);
   });
 
-  it("retryLastTurn rejects when the last message is not a failed assistant turn", async () => {
+  it("retryLastTurn rejects when the last event is not a failed assistant message", async () => {
     runConfig.update({ defaultModel: "provider/model" });
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
     const runner = await AgentRunner.init(deps, agentId, sessionId);
-    const agent = agentOf(runner);
-    agent.state.messages = [
-      { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 },
-      { role: "assistant", content: [{ type: "text", text: "ok" }], stopReason: "stop", timestamp: 2 },
-    ];
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "ok" }], stopReason: "stop", timestamp: 2 } } },
+    ]);
 
     await expect(runner.retryLastTurn(() => {})).rejects.toThrow(/no failed assistant turn/);
   });

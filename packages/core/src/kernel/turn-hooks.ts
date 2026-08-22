@@ -1,9 +1,14 @@
 import type { Agent } from "@earendil-works/pi-agent-core";
-import type { MessageLog } from "./message-log.js";
+import type { SessionEventType, SessionEventMap } from "../session/events.js";
+
+export interface TurnEventAppender {
+  readonly events: readonly { type: string; seq: number; data: unknown }[];
+  append<T extends SessionEventType>(type: T, data: SessionEventMap[T]): unknown;
+}
 
 export interface TurnHooks {
   beforeTurn?(agent: Agent): Promise<void>;
-  afterTurn?(agent: Agent, log: MessageLog): Promise<MessageLog>;
+  afterTurn?(agent: Agent, eventLog: TurnEventAppender): Promise<void>;
   onReload?(): void;
 }
 
@@ -14,12 +19,10 @@ export function composeTurnHooks(hooks: ReadonlyArray<TurnHooks>): TurnHooks {
     async beforeTurn(agent) {
       for (const hook of hooks) await hook.beforeTurn?.(agent);
     },
-    async afterTurn(agent, log) {
-      let current = log;
+    async afterTurn(agent, eventLog) {
       for (const hook of hooks) {
-        if (hook.afterTurn) current = await hook.afterTurn(agent, current);
+        if (hook.afterTurn) await hook.afterTurn(agent, eventLog);
       }
-      return current;
     },
     onReload() {
       for (const hook of hooks) hook.onReload?.();

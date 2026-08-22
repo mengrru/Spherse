@@ -75,6 +75,17 @@ describe("SessionStore", () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
+  const insertMessage = (sessionId: string, message: AgentMessage): number => {
+    const db = new Database(dbPath);
+    const result = db
+      .prepare(
+        "INSERT INTO messages (session_id, role, content, timestamp, prev_message_id, message_content_schema_version) VALUES (?, ?, ?, ?, NULL, 1)",
+      )
+      .run(sessionId, message.role, JSON.stringify(message), Date.now());
+    db.close();
+    return Number(result.lastInsertRowid);
+  };
+
   it("creates and retrieves a session", () => {
     const id = store.createSession("Test Session");
     const session = store.getSession(id);
@@ -111,39 +122,14 @@ describe("SessionStore", () => {
     expect(active).toHaveLength(0);
   });
 
-  it("appends and retrieves messages", () => {
+  it("reads legacy messages", () => {
     const id = store.createSession();
-    store.appendMessage(id, userMsg("hello", 1000));
-    store.appendMessage(id, asstMsg("world", 2000));
+    insertMessage(id, userMsg("hello", 1000));
+    insertMessage(id, asstMsg("world", 2000));
     const messages = store.getSessionMessages(id);
     expect(messages).toHaveLength(2);
     expect(textOf(messages[0])).toBe("hello");
     expect(textOf(messages[1])).toBe("world");
-  });
-
-  it("deleteMessage removes a single row and bumps updated_at", () => {
-    const id = store.createSession();
-    store.appendMessage(id, userMsg("hello", 1000));
-    const asstId = store.appendMessage(id, asstMsg("world", 2000));
-    store.appendMessage(id, userMsg("again", 3000));
-    expect(store.getSessionMessages(id)).toHaveLength(3);
-
-    const before = store.getSession(id)!.updatedAt;
-    store.deleteMessage(id, asstId);
-
-    const messages = store.getSessionMessages(id);
-    expect(messages).toHaveLength(2);
-    expect(textOf(messages[0])).toBe("hello");
-    expect(textOf(messages[1])).toBe("again");
-    expect(store.getSession(id)!.updatedAt).toBeGreaterThanOrEqual(before);
-  });
-
-  it("updates session updated_at on message append", () => {
-    const id = store.createSession();
-    const before = store.getSession(id)!.updatedAt;
-    store.appendMessage(id, userMsg("hi", Date.now()));
-    const after = store.getSession(id)!.updatedAt;
-    expect(after).toBeGreaterThanOrEqual(before);
   });
 
   it("updates session title", () => {
@@ -245,19 +231,19 @@ describe("SessionStore", () => {
     });
   });
 
-  describe("getRecentTurns", () => {
+  describe("getRecentTurns (legacy read path)", () => {
     const insertTurn = (sessionId: string, userText: string, assistantCount = 1): void => {
-      store.appendMessage(sessionId, userMsg(userText));
+      insertMessage(sessionId, userMsg(userText));
       for (let i = 0; i < assistantCount; i++) {
-        store.appendMessage(sessionId, asstMsg(`${userText}-reply-${i}`));
+        insertMessage(sessionId, asstMsg(`${userText}-reply-${i}`));
       }
     };
 
     const insertMultiMessageTurn = (sessionId: string, userText: string): void => {
-      store.appendMessage(sessionId, userMsg(userText));
-      store.appendMessage(sessionId, asstMsg(`${userText}-reply-0`));
-      store.appendMessage(sessionId, asstMsg(`${userText}-reply-1`));
-      store.appendMessage(sessionId, toolResultMsg(`${userText}-tool`));
+      insertMessage(sessionId, userMsg(userText));
+      insertMessage(sessionId, asstMsg(`${userText}-reply-0`));
+      insertMessage(sessionId, asstMsg(`${userText}-reply-1`));
+      insertMessage(sessionId, toolResultMsg(`${userText}-tool`));
     };
 
     const getMessageIds = (sessionId: string): number[] => {
@@ -366,105 +352,13 @@ describe("SessionStore", () => {
     });
   });
 
-  describe("prev_message_id support", () => {
-    const getPrevMessageId = (messageId: number): number | null => {
-      const db = new Database(dbPath, { readonly: true });
-      const row = db
-        .prepare("SELECT prev_message_id FROM messages WHERE id = ?")
-        .get(messageId) as { prev_message_id: number | null } | undefined;
-      db.close();
-      return row ? row.prev_message_id : null;
-    };
-
-    it("appendMessage returns a numeric row id", () => {
+  describe("legacy reads with raw inserts", () => {
+    it("getMessagesAfter returns rows after anchor", () => {
       const id = store.createSession();
-      const rowId = store.appendMessage(id, userMsg("hello"));
-      expect(typeof rowId).toBe("number");
-      expect(rowId).toBeGreaterThan(0);
-    });
-
-    it("appendMessage with prevMessageId stores it correctly", () => {
-      const id = store.createSession();
-      const firstId = store.appendMessage(id, userMsg("first"));
-      const secondId = store.appendMessage(id, asstMsg("second"), firstId);
-      expect(getPrevMessageId(secondId)).toBe(firstId);
-    });
-
-    it("appendMessage without prevMessageId stores NULL for the first message", () => {
-      const id = store.createSession();
-      const rowId = store.appendMessage(id, userMsg("hello"));
-      expect(getPrevMessageId(rowId)).toBeNull();
-    });
-
-    it("appendMessage auto-chains prev_message_id to the last message when not provided", () => {
-      const id = store.createSession();
-      const firstId = store.appendMessage(id, userMsg("first"));
-      const secondId = store.appendMessage(id, asstMsg("second"));
-      const thirdId = store.appendMessage(id, userMsg("third"));
-      expect(getPrevMessageId(secondId)).toBe(firstId);
-      expect(getPrevMessageId(thirdId)).toBe(secondId);
-    });
-
-    it("appendMessage auto-chain is scoped per session", () => {
-      const a = store.createSession();
-      const b = store.createSession();
-      const a1 = store.appendMessage(a, userMsg("a1"));
-      const b1 = store.appendMessage(b, userMsg("b1"));
-      const a2 = store.appendMessage(a, userMsg("a2"));
-      expect(getPrevMessageId(b1)).toBeNull();
-      expect(getPrevMessageId(a2)).toBe(a1);
-    });
-  });
-
-  describe("compactions", () => {
-    it("recordCompaction + getLatestCompaction returns the recorded record with correct fields", () => {
-      const id = store.createSession();
-      store.recordCompaction(id, {
-        anchorMessageId: 42,
-        digestContent: "digest-payload",
-        tokenEstimate: 1024,
-      });
-      const latest = store.getLatestCompaction(id);
-      expect(latest).not.toBeNull();
-      expect(latest!.anchorMessageId).toBe(42);
-      expect(latest!.digestContent).toBe("digest-payload");
-      expect(latest!.tokenEstimate).toBe(1024);
-      expect(typeof latest!.id).toBe("number");
-      expect(typeof latest!.createdAt).toBe("number");
-    });
-
-    it("getLatestCompaction returns null for session with no compactions", () => {
-      const id = store.createSession();
-      expect(store.getLatestCompaction(id)).toBeNull();
-    });
-
-    it("getLatestCompaction returns the most recent when multiple compactions exist", () => {
-      const id = store.createSession();
-      store.recordCompaction(id, {
-        anchorMessageId: 1,
-        digestContent: "first",
-        tokenEstimate: 10,
-      });
-      store.recordCompaction(id, {
-        anchorMessageId: 5,
-        digestContent: "second",
-        tokenEstimate: 20,
-      });
-      const latest = store.getLatestCompaction(id);
-      expect(latest).not.toBeNull();
-      expect(latest!.digestContent).toBe("second");
-      expect(latest!.anchorMessageId).toBe(5);
-      expect(latest!.tokenEstimate).toBe(20);
-    });
-  });
-
-  describe("getMessagesAfter", () => {
-    it("Returns messages with id > anchorId in ascending order", () => {
-      const id = store.createSession();
-      store.appendMessage(id, userMsg("one"));
-      const anchor = store.appendMessage(id, asstMsg("two"));
-      const m3 = store.appendMessage(id, userMsg("three"));
-      const m4 = store.appendMessage(id, asstMsg("four"));
+      insertMessage(id, userMsg("one"));
+      const anchor = insertMessage(id, asstMsg("two"));
+      const m3 = insertMessage(id, userMsg("three"));
+      const m4 = insertMessage(id, asstMsg("four"));
 
       const result = store.getMessagesAfter(id, anchor);
       expect(result).toHaveLength(2);
@@ -474,35 +368,10 @@ describe("SessionStore", () => {
       expect(textOf(result[1].message)).toBe("four");
     });
 
-    it("Returns empty array when no messages after anchorId", () => {
+    it("getSessionMessagesWithIds returns id + message pairs", () => {
       const id = store.createSession();
-      store.appendMessage(id, userMsg("one"));
-      const anchor = store.appendMessage(id, asstMsg("two"));
-
-      const result = store.getMessagesAfter(id, anchor);
-      expect(result).toEqual([]);
-    });
-
-    it("Returns objects with both id and message fields", () => {
-      const id = store.createSession();
-      store.appendMessage(id, userMsg("one"));
-      const anchor = store.appendMessage(id, asstMsg("two"));
-      store.appendMessage(id, userMsg("three"));
-
-      const result = store.getMessagesAfter(id, anchor);
-      expect(result).toHaveLength(1);
-      expect(result[0]).toEqual({
-        id: expect.any(Number),
-        message: expect.objectContaining({ role: "user", content: "three" }),
-      });
-    });
-  });
-
-  describe("getSessionMessagesWithIds", () => {
-    it("Returns objects with both id and message fields", () => {
-      const id = store.createSession();
-      store.appendMessage(id, userMsg("one"));
-      store.appendMessage(id, asstMsg("two"));
+      insertMessage(id, userMsg("one"));
+      insertMessage(id, asstMsg("two"));
 
       const result = store.getSessionMessagesWithIds(id);
       expect(result).toHaveLength(2);
@@ -514,20 +383,6 @@ describe("SessionStore", () => {
         id: expect.any(Number),
         message: expect.objectContaining({ role: "assistant" }),
       });
-    });
-
-    it("Returns same messages as getSessionMessages", () => {
-      const id = store.createSession();
-      const u = userMsg("one", 1000);
-      const a = asstMsg("two", 2000);
-      const u2 = userMsg("three", 3000);
-      store.appendMessage(id, u);
-      store.appendMessage(id, a);
-      store.appendMessage(id, u2);
-
-      const plain = store.getSessionMessages(id);
-      const withIds = store.getSessionMessagesWithIds(id).map((r) => r.message);
-      expect(withIds).toEqual(plain);
     });
   });
 
@@ -548,8 +403,8 @@ describe("SessionStore", () => {
 
     it("throws when getMessagesAfter encounters a payload without a known role", () => {
       const id = store.createSession();
-      store.appendMessage(id, userMsg("ok"));
-      const anchor = store.appendMessage(id, asstMsg("anchor"));
+      insertMessage(id, userMsg("ok"));
+      const anchor = insertMessage(id, asstMsg("anchor"));
       insertRawMessage(id, JSON.stringify({ foo: "bar" }));
       expect(() => store.getMessagesAfter(id, anchor)).toThrow(/Corrupt message/);
     });
@@ -559,26 +414,9 @@ describe("SessionStore", () => {
       insertRawMessage(id, JSON.stringify({ role: "weird", content: "x" }));
       expect(() => store.getRecentTurns(id, 5)).toThrow(/Corrupt message/);
     });
-
-    it("appendMessage rejects an invalid AgentMessage at write time", () => {
-      const id = store.createSession();
-      expect(() =>
-        store.appendMessage(id, { role: "totally-fake" } as unknown as AgentMessage),
-      ).toThrow(/appendMessage rejected invalid AgentMessage/);
-      expect(store.getSessionMessages(id)).toHaveLength(0);
-    });
   });
 
   describe("message_content_schema_version", () => {
-    const getSchemaVersion = (messageId: number): number => {
-      const db = new Database(dbPath, { readonly: true });
-      const row = db
-        .prepare("SELECT message_content_schema_version FROM messages WHERE id = ?")
-        .get(messageId) as { message_content_schema_version: number };
-      db.close();
-      return row.message_content_schema_version;
-    };
-
     const insertRawMessage = (sessionId: string, content: string, version: number): number => {
       const db = new Database(dbPath);
       const result = db
@@ -590,15 +428,9 @@ describe("SessionStore", () => {
       return Number(result.lastInsertRowid);
     };
 
-    it("appendMessage writes the current schema version", () => {
-      const id = store.createSession();
-      const rowId = store.appendMessage(id, userMsg("v1"));
-      expect(getSchemaVersion(rowId)).toBe(1);
-    });
-
     it("reads v1 messages transparently", () => {
       const id = store.createSession();
-      store.appendMessage(id, userMsg("hello", 1));
+      insertMessage(id, userMsg("hello", 1));
       const result = store.getSessionMessagesWithIds(id);
       expect(result[0].message).toMatchObject({ role: "user", content: "hello" });
     });
@@ -682,12 +514,6 @@ describe("SessionStore", () => {
           .prepare("SELECT message_content_schema_version FROM messages WHERE id = ?")
           .get(legacyRowId.id) as { message_content_schema_version: number };
         expect(versionRow.message_content_schema_version).toBe(1);
-
-        const newRowId = migrated.appendMessage(legacySessionId, userMsg("after-migration"));
-        const newRow = new Database(legacyDbPath, { readonly: true })
-          .prepare("SELECT message_content_schema_version FROM messages WHERE id = ?")
-          .get(newRowId) as { message_content_schema_version: number };
-        expect(newRow.message_content_schema_version).toBe(1);
       } finally {
         migrated.close();
       }
