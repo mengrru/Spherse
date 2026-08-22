@@ -12,7 +12,7 @@ export function UpcomingFeatures({ t }: UpcomingFeaturesProps) {
         <h2 className="mb-8 text-center text-sm font-medium uppercase tracking-wider text-muted-foreground">
           {t("upcoming.label")}
         </h2>
-        <div className="mx-auto grid max-w-md gap-4 sm:grid-cols-1">
+        <div className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
           {upcomingFeatures.map((feature) => {
             const Icon = feature.icon;
             return (

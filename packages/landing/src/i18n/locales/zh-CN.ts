@@ -56,6 +56,10 @@ export const zhCN = {
 
   "upcoming.memory.title": "Agent 跨 Session 记忆",
   "upcoming.memory.desc": "Agent 将能跨会话保持长期记忆",
+  // 首页「即将到来」区第二张卡片：多 Agent 圆桌讨论
+  "upcoming.roundtable.title": "Agent 圆桌",
+  // 圆桌卡片描述：多个 Agent 围绕同一话题展开讨论
+  "upcoming.roundtable.desc": "多个 Agent 将能围绕同一话题展开圆桌讨论，自主协作得出结论",
   "upcoming.label": "即将到来",
 
   "home.moreCases": "探索更多可能",
