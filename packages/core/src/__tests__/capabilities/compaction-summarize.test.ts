@@ -30,6 +30,16 @@ function streamOf(finalMessage: unknown) {
   return { result: async () => finalMessage };
 }
 
+describe("SUMMARY_INSTRUCTION", () => {
+  it("adapts preservation priorities to the conversation nature", () => {
+    expect(SUMMARY_INSTRUCTION).toContain("task-oriented");
+    expect(SUMMARY_INSTRUCTION).toContain("emotional companionship");
+    expect(SUMMARY_INSTRUCTION).toContain("relationship trajectory");
+    expect(SUMMARY_INSTRUCTION).toContain("unresolved emotional threads");
+    expect(SUMMARY_INSTRUCTION).toContain('Do NOT strip these as "irrelevant exploration"');
+  });
+});
+
 describe("summarizeForCompaction", () => {
   it("replicates the agent request prefix and appends the instruction", async () => {
     const calls: Array<{ model: unknown; context: unknown; options?: unknown }> = [];

@@ -74,7 +74,7 @@ options:      { sessionId, signal }           // sessionId → OpenAI prompt_cac
   3. `convertToLlm`（含 attachment projector：剥 `_attachments` 元数据字段与无 data 的 image block）作用于 fold 视图消息，输出即下一轮请求的精确前缀
 - **不可截断**：不在 anchorIndex 处截、不替换 toolResult 内容、不重排——任何字节差异即失配
 - **不可在摘要上下文中暴露 tools 执行能力**：tools 仅为前缀匹配随请求发送，摘要指令明确"不要调用工具，直接输出摘要"；streamFn 层面无 agent loop，不会真正执行
-- 摘要指令要求：重点总结较早的对话（近期消息将以原文保留在上下文中）；整合首条已有的 `<compaction-digest>`（增量压缩时它是旧信息的唯一真相源）；保留用户目标/偏好、关键决定及理由、文件路径与产物位置、未完成事项；输出 Markdown ≤ 800 tokens
+- 摘要指令要求：重点总结较早的对话（近期消息将以原文保留在上下文中）；整合首条已有的 `<compaction-digest>`（增量压缩时它是旧信息的唯一真相源）；**先判别会话性质再按对应优先级保留**——任务型保留用户目标/偏好、关键决定及理由、文件路径与产物位置、未完成事项；情感陪伴/角色扮演型保留关系进展、情绪主线与反复出现的话题、用户分享的个人事实、玩笑/昵称/承诺、未闭合的情感线索（且明确不得当作"无关探索"丢弃）；输出 Markdown ≤ 800 tokens
 - **输出侧防御**（LLM 输出不可信）：
   - **digest 包裹结构完整性**：fold 将 `digestContent` 包进 `<compaction-digest>…</compaction-digest>`——LLM 输出若含 `<compaction-digest` / `</compaction-digest>` 字样会撕裂包裹结构（与 backlog「system-prompt XML 包裹对闭合标签不健壮」同类问题）。存盘前把输出中出现的 `<compaction-digest` 替换为 `<compaction-digest'`（或等效转义）
   - **退化输出视为失败**：`stopReason === "completed"` 但输出为空或过短（< 50 字符）→ 按失败走 §7 回退分支，不 append 空摘要
