@@ -76,10 +76,11 @@ const PAGE_HTML = [
   "};",
   "document.getElementById('btn-mutate').onclick = async function () {",
   "  const results = await Promise.all(Array.from({ length: 10 }, (_, i) =>",
-  "    spherseCall('data.mutate', { file: DATA_FILE, name: 'addTodo', args: { title: 'page-' + i }, idempotencyKey: 'e2e-' + i }).catch(() => 'FAIL')));",
+  "    window.spherse.data.mutate({ file: DATA_FILE, name: 'addTodo', args: { title: 'page-' + i }, idempotencyKey: 'e2e-' + i }).catch(() => 'FAIL')));",
   "  const fails = results.filter((r) => r === 'FAIL').length;",
+  "  const ids = results.filter((r) => r !== 'FAIL' && /^[0-9a-f-]{36}$/.test(r.id)).length;",
   "  const entries = await spherseCall('data.entries', { file: DATA_FILE });",
-  "  document.getElementById('mutate-result').textContent = 'fails=' + fails + ' todos=' + entries.todos.length;",
+  "  document.getElementById('mutate-result').textContent = 'fails=' + fails + ' ids=' + ids + ' todos=' + entries.todos.length;",
   "};",
   "</script></body></html>",
 ].join("\n");
@@ -158,7 +159,7 @@ test("data.mutate from page applies manifest mutations atomically", async () => 
   try {
     const frame = await openBoardPage(page, project.projectId);
     await frame.locator("#btn-mutate").click();
-    await expect(frame.locator("#mutate-result")).toContainText("fails=0 todos=10", { timeout: 30_000 });
+    await expect(frame.locator("#mutate-result")).toContainText("fails=0 ids=10 todos=10", { timeout: 30_000 });
 
     const onDisk = JSON.parse(await readFile(path.join(project.root, "board.data.json"), "utf8"));
     expect(onDisk.todos).toHaveLength(10);

@@ -1,5 +1,5 @@
 ---
-name: write-html
+name: spherse-write-html
 description: 在 Spherse 中产出任何 HTML 之前必须先阅读本 skill。当用户要求创建或修改 HTML 页面、生成网页、制作可视化展示（欢迎页、导览主页、内容卡片、预览页等任意 HTML 交付物）时，务必在写出 HTML 代码前先读本 skill，了解 charset、数据与渲染分离的决策、数据加载模式与 App 能力调用（含交互式卡片回传会话）的约定；切勿未经阅读直接输出 HTML
 ---
 
@@ -110,13 +110,13 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 
 > - **字符串模式**下 `fetch` 相对路径会解析到 `about:srcdoc` 而失败。此时把数据直接内联进 HTML（如 `<script>` 中的 JS 对象），或改用 ui-sdk 的 data action（见下文）。
 > - preview 路由支持 `json`、`css`、`js`、图片、字体等常见静态资源类型，同目录的 CSS / JS / 图片同样可用相对路径引用。
-> - 需要在 JSON 被外部工具或 agent 修改后自动刷新页面时，用 `spherse.events.on("file:update", { path: "./atlas.data.json" }, handler)` 订阅。`./` / `../` 路径与 `fetch` 一样基于当前 HTML 的 base 解析；也可以传项目根目录相对路径。完整说明见 `use-ui-sdk` skill。
+> - 需要在 JSON 被外部工具或 agent 修改后自动刷新页面时，用 `spherse.events.on("file:update", { path: "./atlas.data.json" }, handler)` 订阅。`./` / `../` 路径与 `fetch` 一样基于当前 HTML 的 base 解析；也可以传项目根目录相对路径。完整说明见 `spherse-use-ui-sdk` skill。
 
 ## 持久化读写：使用 ui-sdk data action
 
-页面需要**写入/持久化**数据（如表单、进度、勾选状态）时，使用注入的 `window.spherse.data.*` key-value 接口。请读取 `use-ui-sdk` skill 获取完整 API。
+页面需要**写入/持久化**数据（如表单、进度、勾选状态）时，使用注入的 `window.spherse.data.*` key-value 接口。请读取 `spherse-use-ui-sdk` skill 获取完整 API。
 
-要点速览（详情见 `use-ui-sdk`）：
+要点速览（详情见 `spherse-use-ui-sdk`）：
 
 - `spherse.data.get` / `spherse.data.set` / `spherse.data.delete`：对 key-value 数据的读写删（均返回 Promise）
 - `spherse.data.mutate`：执行数据文件 `$manifest` 声明的业务 mutation 入口（结构性写入用，见下文 `$manifest` 一节）
@@ -126,64 +126,14 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 
 ## 强制：会增长/需要 agent 互动的数据文件必须内嵌 `$manifest`
 
-判断：数据是**静态展示**（一次性内容，页面只 `fetch` 渲染）→ 无需 manifest；数据会**随使用增长**（清单、记录、游戏存档）或**需要 agent 与页面互动读写**（agent 查看用户操作、代用户增删条目）→ 数据文件根部**必须**内嵌 `$manifest` 字段。
+判断：数据是**静态展示**（一次性内容，页面只 `fetch` 渲染）→ 无需 manifest；数据会**随使用增长**（清单、记录、游戏存档）或**需要 agent 与页面互动读写** → 先加载 `spherse-build-data-app` skill 设计数据模型、命名 query/mutation 与协作流程，再生成 HTML。
 
-manifest 是你（生成页面时）向后续读该文件的 agent 传递业务语义的唯一通道：声明业务命名的查询/变更入口后，agent 用 `query_data` / `mutate_data` 工具按入口读写，一次调用直达数据，不必读整个大文件，写入形状也由 schema 保证不会写坏页面。
+HTML 落地时遵守：
 
-生成时三件套**同源产出**：HTML（data action 调用代码）+ 业务数据 + `$manifest`。manifest 的 mutations **必须覆盖页面 SDK 代码实际会做的结构性变更**（页面会 append 条目就声明 append 入口），fields 的枚举值与页面渲染假设一致（页面按 `pending/done` 渲染就不要声明别的值）。
-
-规则：
-
-- 顶层 `$` 前缀键是平台保留，业务数据键不得以 `$` 开头
-- manifest 保持精简（≤2KB）：只放路径映射与字段 schema，不放示例数据
-- `identity` 声明数组条目的稳定键（通常 `id`），`auto` 声明由系统生成的字段（`uuid`/`nowIso`），不要让调用方传
-- dot-path 寻址（`todos`、`stats`），不支持数组下标
-
-模板（todos 看板，可直接改写）：
-
-```json
-{
-  "$manifest": {
-    "version": 1,
-    "desc": "任务看板数据",
-    "queries": {
-      "listTodos": {
-        "desc": "待办列表，默认按 createdAt 降序",
-        "path": "todos",
-        "identity": "id",
-        "params": {
-          "status": { "type": "enum", "values": ["pending", "done"], "desc": "按状态过滤" },
-          "sort": { "type": "field", "desc": "排序字段，默认 createdAt" },
-          "dir": { "type": "enum", "values": ["asc", "desc"], "default": "desc" }
-        },
-        "defaultLimit": 20
-      }
-    },
-    "mutations": {
-      "addTodo": {
-        "desc": "新增待办",
-        "op": "append",
-        "path": "todos",
-        "fields": {
-          "title": { "type": "string", "required": true },
-          "priority": { "type": "enum", "values": ["low", "medium", "high"], "default": "medium" }
-        },
-        "auto": { "id": "uuid", "createdAt": "nowIso" }
-      },
-      "setTodoStatus": {
-        "op": "update", "path": "todos", "match": "id",
-        "fields": { "status": { "type": "enum", "values": ["pending", "done"], "required": true } }
-      },
-      "removeTodo": { "op": "remove", "path": "todos", "match": "id" }
-    }
-  },
-  "todos": []
-}
-```
-
-要点：`queries` 声明 enum 过滤/排序/`identity` 游标分页；`mutations` 四种 op（`append`/`update`/`remove`/`set`），`match` 字段值由调用方传入（隐式必填），`fields` 做类型/枚举/默认值校验，`auto` 由 server 生成。
-
-**页面代码的写入粒度约定**：声明了 `$manifest` 的数据文件，页面 JS 对集合的**结构性增删改必须走 `spherse.data.mutate({ file, name, args })` 调用同名 mutation 入口**（与 agent 的 `mutate_data` 同一通道，锁内 item 级原子变更，并发互不覆盖）；`data.set` 仅用于单值/标量/低冲突数据，**不要**对数组集合整体 `data.set`——会覆盖 agent 并发写入的条目。
+- 同源生成 HTML、业务数据和 `$manifest`，字段名与 enum 必须和页面渲染逻辑一致。
+- 页面会执行的每种结构性写入都必须有对应 mutation，并通过 `spherse.data.mutate({ file, name, args })` 调用。
+- `data.set` 仅用于单值、标量或低冲突数据，不得整体回写增长型数组。
+- 业务数据键不得以平台保留的 `$` 开头。
 
 ## 跳转到项目内其它文件：openFile
 
@@ -195,7 +145,7 @@ spherse.openFile("world/characters/主角设定.md");
 spherse.openFile({ path: "world/characters/主角设定.md", float: true });
 ```
 
-> `path` 为项目内相对路径。`spherse` 全局对象由 App 自动注入，无需自己引入脚本。完整 API 见 `use-ui-sdk` skill。
+> `path` 为项目内相对路径。`spherse` 全局对象由 App 自动注入，无需自己引入脚本。完整 API 见 `spherse-use-ui-sdk` skill。
 
 ## 打开外部链接：openExternalLink
 
@@ -205,7 +155,7 @@ spherse.openFile({ path: "world/characters/主角设定.md", float: true });
 spherse.openExternalLink("https://example.com");
 ```
 
-> 仅 http/https/mailto/tel 协议生效，其它协议会被静默忽略。指向项目内文件请用 `spherse.openFile`。完整 API 见 `use-ui-sdk` skill。
+> 仅 http/https/mailto/tel 协议生效，其它协议会被静默忽略。指向项目内文件请用 `spherse.openFile`。完整 API 见 `spherse-use-ui-sdk` skill。
 
 ## 交互式 HtmlCard：将用户选择回传当前会话
 
@@ -218,7 +168,7 @@ spherse.openExternalLink("https://example.com");
 3. 用户点击提交时，读取 `sessionId`，组装消息文本，通过 `spherse.sendMessage` 发送。
 4. `spherse.sendMessage` 是请求型，会话忙碌时会 reject（`session_busy`），消息**不会发出**，应提示用户稍后重试。
 
-> `spherse.sendMessage` / `spherse.getRuntime` 的完整签名见 `use-ui-sdk` skill。
+> `spherse.sendMessage` / `spherse.getRuntime` 的完整签名见 `spherse-use-ui-sdk` skill。
 
 示例：选项卡片，用户勾选后提交，结果回传当前会话。
 
@@ -274,7 +224,7 @@ spherse.openExternalLink("https://example.com");
 
 ## 其它 App 能力调用
 
-需要触发 App 内其它能力时，阅读 `use-ui-sdk` skill，通过 `window.spherse.*` 调用。可用方法包括：
+需要触发 App 内其它能力时，阅读 `spherse-use-ui-sdk` skill，通过 `window.spherse.*` 调用。可用方法包括：
 
 - `spherse.createSession(params)` → `Promise<{ sessionId }>` — 创建新会话并导航到聊天页；`open: false` 时只创建不跳转，resolve 返回新会话 ID；可选 `name` 参数为会话命名（显示在会话列表）
 - `spherse.openSession(sessionId)` — 打开已有会话并导航，**不发消息**（只跳转用这个）
@@ -290,7 +240,7 @@ spherse.openExternalLink("https://example.com");
 
 `spherse` 全局对象由 App 自动注入到每个 HTML，无需自己写 `<script>` 加载或内联 wrapper。
 
-> **向当前会话发消息**：当 HTML 作为聊天 HtmlCard 渲染时，`spherse.runtime`（或 `await spherse.getRuntime()`）携带当前会话上下文（`sessionId`/`agentId`/`projectId`）。详见 `use-ui-sdk` skill 的「运行时上下文」一节。
+> **向当前会话发消息**：当 HTML 作为聊天 HtmlCard 渲染时，`spherse.runtime`（或 `await spherse.getRuntime()`）携带当前会话上下文（`sessionId`/`agentId`/`projectId`）。详见 `spherse-use-ui-sdk` skill 的「运行时上下文」一节。
 
 ## 速查：场景 → 方案
 

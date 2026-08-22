@@ -1,5 +1,5 @@
 ---
-name: use-ui-sdk
+name: spherse-use-ui-sdk
 description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK 调用 App 能力（创建会话并获取会话 ID、静默后台发送消息、打开已有会话、打开文件、向会话发消息、读写数据、枚举数据、目录列表、文件元信息、订阅文件变化、只读查询项目信息、弹 toast 提示）
 ---
 
@@ -194,6 +194,8 @@ try {
 
 `data.*` 系列在 HTML 同级的 `.data.json` 文件中读写 key-value。
 
+需要设计页面与 Agent 共同读写的数据型应用时，加载 `spherse-build-data-app` skill；本节作为页面侧 API 参数与返回值参考。
+
 ### `spherse.data.get(params)` → `Promise<any>`
 
 | 参数 | 类型 | 必填 | 说明 |
@@ -228,9 +230,9 @@ await spherse.data.set({ file: "world/game.data.json", key: "player", value: { n
 await spherse.data.delete({ file: "world/game.data.json", key: "score" });
 ```
 
-### `spherse.data.mutate(params)` → `Promise<any>`
+### `spherse.data.mutate(params)` → `Promise<object>`
 
-执行数据文件 `$manifest` 中声明的业务命名 mutation（与 agent 的 `mutate_data` 同一入口）。**结构性写入（新增/修改/删除数组条目等）优先用此接口**，不要用 `data.set` 传整个数组——避免与 agent 并发写同一集合时互相覆盖。响应 `data` 为该条目的写入结果。
+执行数据文件 `$manifest` 中声明的业务命名 mutation（与 agent 的 `mutate_data` 同一入口）。**结构性写入（新增/修改/删除数组条目等）优先用此接口**，不要用 `data.set` 传整个数组——避免与 agent 并发写同一集合时互相覆盖。`append` 返回新增条目（包含 `auto` 生成的 `id`、时间等字段），`update` 返回更新后的条目，`remove` 返回被删除的条目，`set` 返回更新后的目标对象。
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
@@ -240,7 +242,8 @@ await spherse.data.delete({ file: "world/game.data.json", key: "score" });
 | idempotencyKey | string | 否 | 幂等键：同一 key 重试返回首次结果，不重复执行 |
 
 ```javascript
-await spherse.data.mutate({ file: "board.data.json", name: "addTodo", args: { title: "买牛奶" }, idempotencyKey: "add-milk-1" });
+const todo = await spherse.data.mutate({ file: "board.data.json", name: "addTodo", args: { title: "买牛奶" }, idempotencyKey: "add-milk-1" });
+console.log(todo.id); // manifest 中 auto.id 生成的 UUID
 await spherse.data.mutate({ file: "board.data.json", name: "setTodoStatus", args: { id: "abc", status: "done" } });
 ```
 
@@ -274,7 +277,7 @@ const all = await spherse.data.entries({ file: "world/game.data.json" });
 
 ### 为数据文件声明 `$manifest`（结构性数据推荐）
 
-数据会随使用增长、且希望 agent 后续能直接按业务语义读写（而不是整文件读改写）时，生成页面时应在数据文件根部内嵌 `$manifest`，声明业务命名的查询/变更入口。agent 将通过 `query_data` / `mutate_data` 工具按这些入口精准读写，schema 校验也保证不会写坏页面渲染假设。写法与完整模板见 `write-html` skill 的「内嵌 `$manifest`」一节。
+数据会随使用增长、且希望 agent 后续能直接按业务语义读写（而不是整文件读改写）时，生成页面时应在数据文件根部内嵌 `$manifest`，声明业务命名的查询/变更入口。agent 将通过 `query_data` / `mutate_data` 工具按这些入口精准读写，schema 校验也保证不会写坏页面渲染假设。数据建模方法见 `spherse-build-data-app` skill，HTML 落地约束见 `spherse-write-html` skill。
 
 ## 事件订阅 — 文件变化
 

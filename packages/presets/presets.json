@@ -1,10 +1,11 @@
 {
   "presetSkills": [
-    { "dir": "create-ui-theme" },
-    { "dir": "create-agent-chat-theme" },
-    { "dir": "use-ui-sdk" },
-    { "dir": "write-html" },
-    { "dir": "create-skill" }
+    { "dir": "spherse-create-ui-theme" },
+    { "dir": "spherse-create-agent-chat-theme" },
+    { "dir": "spherse-use-ui-sdk" },
+    { "dir": "spherse-build-data-app" },
+    { "dir": "spherse-write-html" },
+    { "dir": "spherse-create-skill" }
   ],
   "presetAgents": [],
   "presetPromptTemplates": [

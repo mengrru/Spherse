@@ -74,15 +74,17 @@ spherse/
 │   │   │   ├── manifest.json         # 示例清单（[{ id, displayName, dirName }]）
 │   │   │   └── harry-potter/         # Harry Potter 示例项目（完整项目树，含 .spherse/project.yaml、agents、文档）
 │   │   ├── skills/                   # 内置 skill 源（app 内置只读，通过 SkillStore 内存合并；新项目不再注入到 .spherse/skills/）
-│   │   │   ├── create-ui-theme/      # 自定义 UI 主题创建指南
+│   │   │   ├── spherse-create-ui-theme/ # 自定义 UI 主题创建指南
 │   │   │   │   └── SKILL.md
-│   │   │   ├── create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
+│   │   │   ├── spherse-create-agent-chat-theme/ # Agent 聊天窗口主题创建指南
 │   │   │   │   └── SKILL.md
-│   │   │   ├── use-ui-sdk/             # window.spherse 注入 SDK 使用指南（action、data CRUD、api 只读 bridge、文件变化事件、运行时上下文）
+│   │   │   ├── spherse-use-ui-sdk/    # window.spherse 注入 SDK 使用指南（action、data CRUD、api 只读 bridge、文件变化事件、运行时上下文）
 │   │   │   │   └── SKILL.md
-│   │   │   ├── write-html/             # HTML 页面数据读写与 App 能力调用指南（charset、数据外置、window.spherse 调用）
+│   │   │   ├── spherse-build-data-app/ # HTML 页面与 Agent 协作的数据型应用建模指南（manifest query/mutation、上下文与写入准确性）
 │   │   │   │   └── SKILL.md
-│   │   │   └── create-skill/           # 自定义 skill 创建指南（两层 skill 体系与 SKILL.md 格式）
+│   │   │   ├── spherse-write-html/    # HTML 页面数据读写与 App 能力调用指南（charset、数据外置、window.spherse 调用）
+│   │   │   │   └── SKILL.md
+│   │   │   └── spherse-create-skill/ # 自定义 skill 创建指南（两层 skill 体系与 SKILL.md 格式）
 │   │   │       └── SKILL.md
 │   │   ├── scripts/
 │   │   │   └── sync-templates.mjs    # 模板与预置内容同步脚本（.md → .ts 常量 + presets.json → 预置常量 + skills/ → skill 源码常量）
