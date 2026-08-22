@@ -3,6 +3,7 @@ import { Input } from "../../components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
+import { useProjectFileTree } from "../../queries/content";
 
 const FILE_TREE_EXCLUDE = new Set(["AGENTS.md", "CHANGELOG.md", "changelog.md"]);
 
@@ -24,16 +25,13 @@ export function SearchFileField({ exclude = [], onSelect, placeholder }: SearchF
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const [input, setInput] = useState("");
-  const [fileTree, setFileTree] = useState<string[]>([]);
+  const fileTreeQuery = useProjectFileTree(projectId, client);
+  const fileTree = (fileTreeQuery.data ?? []).filter(
+    (file) => !FILE_TREE_EXCLUDE.has(file.split("/").pop() ?? ""),
+  );
   const [suggestions, setSuggestions] = useState<FileSuggestion[]>([]);
   const [open, setOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    client.getFileTree().then((tree) => {
-      setFileTree(tree.filter((f) => !FILE_TREE_EXCLUDE.has(f.split("/").pop() ?? "")));
-    }).catch(() => {});
-  }, [client]);
 
   useEffect(() => {
     return () => {

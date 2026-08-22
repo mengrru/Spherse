@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { SidePanel } from "../features/side-panel";
@@ -11,13 +11,13 @@ import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useAgentBusRefresh } from "../hooks/useAgentBusRefresh";
 import { useSidePanel } from "../hooks/use-side-panel";
 import { UiSdkBridge } from "../ui-sdk";
-import { useProjectDataStore } from "../stores/project-data-store";
 import { useAppStore } from "../stores/app-store";
 import { useProjectNavHistory } from "../lib/use-project-navigation";
 import { ProjectProvider } from "../context/project-context";
 import { useHostBridge } from "../context/host-bridge-context";
 import { useApiClient } from "../lib/use-connection";
 import { useConnection } from "../lib/use-connection";
+import { ContentQueryBridge } from "../features/content-browser/ContentQueryBridge";
 
 export function ProjectScope() {
   const { projectId } = useParams();
@@ -31,13 +31,6 @@ export function ProjectScope() {
   const setActiveProject = useAppStore((s) => s.setActiveProject);
   const setProjectLastRoute = useAppStore((s) => s.setProjectLastRoute);
   const { clickAwayProps } = useSidePanel();
-  const refreshAgents = useProjectDataStore((s) => s.refreshAgents);
-  const refreshSessions = useProjectDataStore((s) => s.refreshSessions);
-  const tRef = useRef(t);
-  useEffect(() => {
-    tRef.current = t;
-  }, [t]);
-
   useCustomTheme(
     project?.path,
     connection.baseUrl,
@@ -46,7 +39,6 @@ export function ProjectScope() {
   );
   useProjectNavHistory(projectId ?? "");
   useAgentBusRefresh(projectId, client);
-
   useEffect(() => {
     if (projectId) void setActiveProject(bridge, projectId);
   }, [projectId, setActiveProject, bridge]);
@@ -58,15 +50,6 @@ export function ProjectScope() {
     const subRoute = fullPath.startsWith(prefix) ? fullPath.slice(prefix.length) || "/" : "/";
     void setProjectLastRoute(projectId, subRoute);
   }, [location.pathname, location.search, projectId, setProjectLastRoute]);
-
-  useEffect(() => {
-    if (!projectId || !client) return;
-    const cached = useProjectDataStore.getState().projects[projectId];
-    if (cached?.agents?.length) return;
-    void refreshAgents(projectId, client).then(() => {
-      void refreshSessions(projectId, client);
-    });
-  }, [client, projectId, refreshAgents, refreshSessions]);
 
   if (!projectId || !project) {
     return (
@@ -97,6 +80,7 @@ export function ProjectScope() {
         </FeatureGate>
         <UiSdkBridge />
         <TriggerEventBridge />
+        <ContentQueryBridge />
       </div>
     </ProjectProvider>
   );

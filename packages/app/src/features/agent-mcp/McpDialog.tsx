@@ -4,7 +4,6 @@ import { useI18n } from "@spherse/i18n/react";
 import { PlusIcon, Trash2Icon, PencilIcon, AlertTriangleIcon } from "lucide-react";
 import type { AgentMcpConfig, McpServerConfig } from "../../lib/types";
 import { useApiClient } from "../../lib/use-connection";
-import { useProjectDataStore } from "../../stores/project-data-store";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +31,7 @@ import {
   type McpServerDraft,
 } from "./mcp-form-helpers";
 import { McpServerForm } from "./McpServerForm";
+import { useProjectCatalog } from "../../queries/project";
 
 interface McpDialogProps {
   open: boolean;
@@ -43,9 +43,8 @@ interface McpDialogProps {
 export function McpDialog({ open, onOpenChange, agentId, projectId }: McpDialogProps) {
   const { t } = useI18n();
   const client = useApiClient(projectId);
-  const agentName = useProjectDataStore(
-    (s) => s.projects[projectId]?.agents?.find((a) => a.id === agentId)?.name ?? "",
-  );
+  const { agents } = useProjectCatalog(projectId, client);
+  const agentName = agents.find((agent) => agent.id === agentId)?.name ?? "";
   const [servers, setServers] = useState<McpServerConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);

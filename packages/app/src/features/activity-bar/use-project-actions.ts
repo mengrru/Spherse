@@ -8,6 +8,7 @@ import { useTriggerStore } from "../agent-trigger/store";
 import { useFloatingChatStore } from "../floating-chat/store";
 import { useFloatingContentBrowserStore } from "../floating-content-browser/store";
 import { useBrowserStore } from "../browser/store";
+import { clearProjectQueries } from "../../queries/project";
 
 export function buildProjectRoute(projectId: string, lastRoute?: string): string {
   const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
@@ -45,6 +46,7 @@ export function useProjectActions() {
   const handleCloseProject = async (projectId: string) => {
     const nextProjectId = await closeProject(bridge, projectId);
     clearProjectData(projectId);
+    clearProjectQueries(projectId);
     clearAgentSessionListUi(projectId);
     clearTriggerData(projectId);
     clearFloatingChat(projectId);

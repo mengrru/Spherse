@@ -10,8 +10,9 @@ import {
   buildNodes,
   updateNode,
   mergeExpandedState,
+  mergeRefreshedTree,
 } from "../tree-model";
-import { useFsWatchRefresh } from "./useFsWatchRefresh";
+import { fetchProjectDirectory, invalidateProjectFileQueries, useProjectDirectory } from "../../../queries/content";
 
 export interface FileTreeController {
   rootNodes: TreeNode[];
@@ -36,7 +37,7 @@ export function useFileTreeController(
 ): FileTreeController {
   const { t } = useI18n();
   const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const rootQuery = useProjectDirectory(projectId, client, rootPath);
   const [creating, setCreating] = useState<CreatingState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
   const nodesRef = useRef<TreeNode[]>([]);
@@ -48,12 +49,12 @@ export function useFileTreeController(
   const loadChildren = useCallback(
     async (parentPath: string) => {
       try {
-        return await client.listContent(parentPath);
+        return await fetchProjectDirectory(projectId, client, parentPath);
       } catch {
         return [];
       }
     },
-    [client],
+    [client, projectId],
   );
 
   const refreshExpanded = useCallback(
@@ -75,20 +76,30 @@ export function useFileTreeController(
     [loadChildren],
   );
 
-  const refreshRoot = useCallback(async () => {
-    const entries = await loadChildren(rootPath);
+  const buildRefreshedRoot = useCallback(async (entries: Awaited<ReturnType<ApiClient["listContent"]>>) => {
     const root = buildNodes(entries, rootPath);
     const merged = mergeExpandedState(root, nodesRef.current);
-    const refreshed = await refreshExpanded(merged);
-    setRootNodes(refreshed);
-  }, [loadChildren, refreshExpanded, rootPath]);
+    return refreshExpanded(merged);
+  }, [refreshExpanded, rootPath]);
+
+  const refreshTree = useCallback(async (changedPath: string) => {
+    await invalidateProjectFileQueries(projectId, changedPath);
+    const entries = await fetchProjectDirectory(projectId, client, rootPath);
+    const refreshed = await buildRefreshedRoot(entries);
+    setRootNodes((current) => mergeRefreshedTree(refreshed, current));
+  }, [buildRefreshedRoot, client, projectId, rootPath]);
 
   useEffect(() => {
-    loadChildren(rootPath).then((entries) => {
-      setRootNodes(buildNodes(entries, rootPath));
-      setLoading(false);
+    if (!rootQuery.data) return;
+    let cancelled = false;
+    void buildRefreshedRoot(rootQuery.data).then((refreshed) => {
+      if (cancelled) return;
+      setRootNodes((current) => mergeRefreshedTree(refreshed, current));
     });
-  }, [loadChildren, rootPath]);
+    return () => {
+      cancelled = true;
+    };
+  }, [buildRefreshedRoot, rootQuery.data, rootQuery.dataUpdatedAt]);
 
   const toggleNode = useCallback(
     async (node: TreeNode) => {
@@ -137,12 +148,12 @@ export function useFileTreeController(
           await client.touchFile(targetPath);
         }
         setCreating(null);
-        refreshRoot();
+        await refreshTree(targetPath);
       } catch (err) {
         toast.error(t("file-tree.createFailed", { message: (err as Error).message }));
       }
     },
-    [client, refreshRoot, t],
+    [client, refreshTree, t],
   );
 
   const cancelCreate = useCallback(() => setCreating(null), []);
@@ -153,24 +164,22 @@ export function useFileTreeController(
     if (!deleteTarget) return;
     const node = deleteTarget;
     setDeleteTarget(null);
-    client
+    void client
       .deleteContent(node.path)
-      .then(() => {
+      .then(async () => {
         onDeleted?.(node.path);
-        refreshRoot();
+        await refreshTree(node.path);
       })
       .catch((err: unknown) => {
         toast.error(t("file-tree.deleteFailed", { message: (err as Error).message }));
       });
-  }, [deleteTarget, client, onDeleted, refreshRoot, t]);
+  }, [deleteTarget, client, onDeleted, refreshTree, t]);
 
   const cancelDelete = useCallback(() => setDeleteTarget(null), []);
 
-  useFsWatchRefresh(projectId, refreshRoot);
-
   return {
     rootNodes,
-    loading,
+    loading: rootQuery.isPending,
     creating,
     deleteTarget,
     toggleNode,

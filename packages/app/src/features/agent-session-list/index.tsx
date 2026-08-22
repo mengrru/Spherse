@@ -14,7 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import type { AgentProfile, SessionInfo } from "../../lib/types";
-import { useProjectDataStore } from "../../stores/project-data-store";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useFloatingSessionId } from "../floating-chat/use-floating-session-id";
@@ -32,10 +31,16 @@ import { useI18n } from "@spherse/i18n/react";
 import { dispatchAction } from "../../ui-sdk";
 import { useFeature } from "../../lib/use-feature";
 import { useHostBridge } from "../../context/host-bridge-context";
-
-const EMPTY_AGENTS: AgentProfile[] = [];
-const EMPTY_SESSIONS: SessionInfo[] = [];
-const EMPTY_SESSION_PAGING: Record<string, { hasMore: boolean; offset: number }> = {};
+import {
+  createProjectAgent,
+  createProjectSession,
+  deleteProjectAgent,
+  deleteProjectSession,
+  loadMoreProjectSessions,
+  renameProjectSession,
+  updateProjectAgent,
+  useProjectCatalog,
+} from "../../queries/project";
 
 export function AgentSessionList() {
   const { t } = useI18n();
@@ -45,20 +50,10 @@ export function AgentSessionList() {
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const agentDialogEnabled = useFeature("agent-dialog");
-  const projectData = useProjectDataStore((state) => state.projects[projectId]);
-  const createSession = useProjectDataStore((state) => state.createSession);
-  const deleteSession = useProjectDataStore((state) => state.deleteSession);
-  const renameSession = useProjectDataStore((state) => state.renameSession);
-  const createAgent = useProjectDataStore((state) => state.createAgent);
-  const updateAgent = useProjectDataStore((state) => state.updateAgent);
-  const deleteAgent = useProjectDataStore((state) => state.deleteAgent);
-  const loadMoreSessions = useProjectDataStore((state) => state.loadMoreSessions);
+  const { agents, sessions, sessionPaging } = useProjectCatalog(projectId, client);
   const floatingSessionId = useFloatingSessionId(projectId);
   const [dialog, setDialog] = useState<DialogState>({ kind: "none" });
 
-  const agents = projectData?.agents ?? EMPTY_AGENTS;
-  const sessions = projectData?.sessions ?? EMPTY_SESSIONS;
-  const sessionPaging = projectData?.sessionPaging ?? EMPTY_SESSION_PAGING;
   const activeAgentId = useMemo(
     () => (activeSessionId ? sessions.find((s) => s.id === activeSessionId)?.agentId ?? null : null),
     [activeSessionId, sessions],
@@ -71,24 +66,24 @@ export function AgentSessionList() {
   };
 
   const handleNewSession = async (agent: AgentProfile) => {
-    const session = await createSession(projectId, client, agent.id);
+    const session = await createProjectSession(projectId, client, agent.id).catch(() => null);
     if (session) {
       navigate(`/project/${projectId}/chat/${session.id}`);
     }
   };
 
   const handleRenameSession = async (session: SessionInfo, title: string) => {
-    const ok = await renameSession(projectId, client, session.id, title);
-    if (!ok) {
-      const message = useProjectDataStore.getState().projects[projectId]?.error || t("agent-session-list.renameFailed");
+    const ok = await renameProjectSession(projectId, client, session, title).then(() => true).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : t("agent-session-list.renameFailed");
       toast.error(t("agent-session-list.renameFailed", { message }));
-    }
+      return false;
+    });
     return ok;
   };
 
   const performDeleteSession = async (session: SessionInfo) => {
     setDialog({ kind: "none" });
-    await deleteSession(projectId, client, session.id);
+    await deleteProjectSession(projectId, client, session).catch(() => undefined);
     if (activeSessionId === session.id) {
       navigate(`/project/${projectId}`);
     }
@@ -96,9 +91,9 @@ export function AgentSessionList() {
 
   const performDeleteAgent = async (agent: AgentProfile) => {
     setDialog({ kind: "none" });
-    await deleteAgent(projectId, client, agent.id);
+    await deleteProjectAgent(projectId, client, agent.id).catch(() => undefined);
     if (activeSessionId) {
-      const deletedSessionBelongsToAgent = projectData?.sessions.some(
+      const deletedSessionBelongsToAgent = sessions.some(
         (s) => s.id === activeSessionId && s.agentId === agent.id,
       );
       if (deletedSessionBelongsToAgent) {
@@ -108,13 +103,13 @@ export function AgentSessionList() {
   };
 
   const handleCreateAgent = async (slugBase: string, content: string, themeContent: string) => {
-    const ok = await createAgent(projectId, client, slugBase, content, themeContent);
+    const ok = await createProjectAgent(projectId, client, slugBase, content, themeContent).then(() => true).catch(() => false);
     if (ok) setDialog({ kind: "none" });
   };
 
   const handleEditSubmit = async (_slug: string, content: string, themeContent: string) => {
     if (dialog.kind !== "edit-agent") return;
-    const ok = await updateAgent(projectId, client, dialog.id, content, themeContent);
+    const ok = await updateProjectAgent(projectId, client, dialog.id, content, themeContent).then(() => true).catch(() => false);
     if (ok) setDialog({ kind: "none" });
   };
 
@@ -185,7 +180,7 @@ export function AgentSessionList() {
               collapsedAgentIds={effectiveCollapsedAgentIds}
               activeSessionId={activeSessionId}
               floatingSessionId={floatingSessionId}
-              onLoadMore={(agentId) => loadMoreSessions(projectId, client, agentId)}
+              onLoadMore={(agentId) => loadMoreProjectSessions(projectId, client, agentId)}
             />
           </AgentSessionActionsProvider>
         </SidebarGroupContent>

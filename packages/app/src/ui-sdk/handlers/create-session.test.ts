@@ -5,11 +5,14 @@ const mockSetFloatingChat = vi.fn();
 const mockPostMessage = vi.fn();
 const mockGetState = vi.fn(() => ({
   projects: {} as Record<string, { agents: Array<{ id: string; slug: string }> }>,
-  createSession: mockCreateSession,
 }));
 
-vi.mock("../../stores/project-data-store", () => ({
-  useProjectDataStore: { getState: () => mockGetState() },
+vi.mock("../../queries/project", () => ({
+  ensureProjectAgents: (projectId: string, client: any) => {
+    const cached = mockGetState().projects[projectId]?.agents;
+    return cached ? Promise.resolve(cached) : client.listAgents();
+  },
+  createProjectSession: mockCreateSession,
 }));
 
 vi.mock("../../features/floating-chat/store", () => ({
@@ -52,7 +55,6 @@ describe("createSession action", () => {
     mockGetState.mockReset();
     mockGetState.mockReturnValue({
       projects: {},
-      createSession: mockCreateSession,
     });
     mockCreateSession.mockResolvedValue({ id: "session-1" });
   });

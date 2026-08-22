@@ -2,10 +2,35 @@ import { describe, expect, it } from "vitest";
 import {
   buildNodes,
   mergeExpandedState,
+  mergeRefreshedTree,
   updateNode,
   type TreeNode,
 } from "./tree-model";
 import type { FileEntry } from "../../lib/types";
+
+describe("mergeRefreshedTree", () => {
+  it("keeps current expansion while accepting refreshed children", () => {
+    const current = buildNodes([{ name: "docs", type: "directory" }], "");
+    current[0] = {
+      ...current[0],
+      expanded: true,
+      loaded: true,
+      children: buildNodes([{ name: "old.md", type: "file" }], "docs"),
+    };
+    const refreshed = buildNodes([{ name: "docs", type: "directory" }], "");
+    refreshed[0] = {
+      ...refreshed[0],
+      expanded: true,
+      loaded: true,
+      children: buildNodes([{ name: "new.md", type: "file" }], "docs"),
+    };
+
+    const merged = mergeRefreshedTree(refreshed, current);
+
+    expect(merged[0].expanded).toBe(true);
+    expect(merged[0].children.map((node) => node.name)).toEqual(["new.md"]);
+  });
+});
 
 describe("buildNodes", () => {
   it("filters dotfiles and dotdirs", () => {

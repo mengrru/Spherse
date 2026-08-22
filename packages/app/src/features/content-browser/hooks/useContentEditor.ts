@@ -19,13 +19,14 @@ export function useContentEditor({
 }: UseContentEditorOptions) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState("");
+  const [editBaseline, setEditBaseline] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const pendingLeaveRef = useRef<(() => void) | null>(null);
-  const isDirty = isEditing && editedContent !== (content ?? "");
+  const isDirty = isEditing && editedContent !== editBaseline;
 
   useEffect(() => {
     setIsEditing(false);
@@ -38,6 +39,7 @@ export function useContentEditor({
 
   const enterEdit = () => {
     setEditedContent(content ?? "");
+    setEditBaseline(content ?? "");
     setSaveError(null);
     setConflict(false);
     setIsEditing(true);
@@ -84,6 +86,7 @@ export function useContentEditor({
     try {
       await client.saveContent(filePath, editedContent);
       setContent(editedContent);
+      setEditBaseline(editedContent);
       setIsEditing(false);
       setConflict(false);
     } catch (err) {
@@ -98,6 +101,7 @@ export function useContentEditor({
     if (data) {
       setContent(data.content);
       setEditedContent(data.content);
+      setEditBaseline(data.content);
     }
     setConflict(false);
   };

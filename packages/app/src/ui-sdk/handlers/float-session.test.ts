@@ -22,12 +22,9 @@ vi.mock("../../features/floating-chat", () => ({
   getDefaultFloatingState: (sessionId: string) => ({ sessionId } as any),
 }));
 
-vi.mock("../../stores/project-data-store", () => ({
-  useProjectDataStore: {
-    getState: () => ({
-      projects: { "proj-1": { sessions: projectSessions() } },
-    }),
-  },
+vi.mock("../../queries/project", () => ({
+  ensureProjectSession: (_projectId: string, _client: unknown, sessionId: string) =>
+    Promise.resolve(projectSessions().find((session) => session.id === sessionId) ?? null),
 }));
 
 vi.mock("../../stores/settings-store", () => ({
@@ -42,6 +39,7 @@ function makeCtx(hostKind: "electron" | "web" = "electron", withRespond = false)
     projectId: "proj-1",
     navigate: mockNavigate,
     hostKind,
+    client: {},
     ...(withRespond
       ? { source: { postMessage: mockPostMessage } as any, requestId: "req-1" }
       : {}),

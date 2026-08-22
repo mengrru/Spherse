@@ -1,8 +1,8 @@
 import { registerAction } from "../registry";
 import { respond } from "../respond";
-import { useProjectDataStore } from "../../stores/project-data-store";
 import { openChat } from "./open-chat";
 import type { ApiClient } from "../../lib/api";
+import { createProjectSession, ensureProjectAgents } from "../../queries/project";
 
 async function resolveAgentId(
   projectId: string,
@@ -13,12 +13,8 @@ async function resolveAgentId(
   if (typeof agentId === "string" && agentId) return agentId;
   if (typeof agentSlug !== "string" || !agentSlug) return null;
 
-  const cached = useProjectDataStore.getState().projects[projectId]?.agents ?? [];
-  const fromCache = cached.find((a) => a.slug === agentSlug);
-  if (fromCache) return fromCache.id;
-
   try {
-    const agents = await client.listAgents();
+    const agents = await ensureProjectAgents(projectId, client);
     return agents.find((a) => a.slug === agentSlug)?.id ?? null;
   } catch {
     return null;
@@ -46,9 +42,13 @@ registerAction("createSession", async (params, ctx) => {
     return;
   }
 
-  const session = await useProjectDataStore
-    .getState()
-    .createSession(ctx.projectId, ctx.client, resolvedAgentId, message, title);
+  const session = await createProjectSession(
+    ctx.projectId,
+    ctx.client,
+    resolvedAgentId,
+    message,
+    title,
+  ).catch(() => null);
   if (!session) {
     respond(ctx, false, { error: "create_failed" });
     return;

@@ -10,6 +10,7 @@ import { useStreamingStore } from "../chat/runtime/streaming-store";
 import { useTriggerStore } from "./store";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import type { TriggerServerEvent } from "../../lib/types";
+import { useProjectCatalog } from "../../queries/project";
 
 export function TriggerEventBridge() {
   const { projectId } = useProjectCtx();
@@ -17,7 +18,7 @@ export function TriggerEventBridge() {
   const navigate = useNavigate();
   const { t } = useI18n();
   const triggerConfigEnabled = useFeature("agent-trigger");
-  const agents = useProjectDataStore((s) => (projectId ? s.projects[projectId]?.agents ?? [] : []));
+  const { agents } = useProjectCatalog(projectId, client);
   const handleTriggerEvent = useTriggerStore((s) => s.handleTriggerEvent);
   const tRef = useRef(t);
   useEffect(() => {

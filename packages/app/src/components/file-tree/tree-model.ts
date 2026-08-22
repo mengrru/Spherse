@@ -62,3 +62,21 @@ export function mergeExpandedState(
     };
   });
 }
+
+export function mergeRefreshedTree(
+  refreshedNodes: TreeNode[],
+  currentNodes: TreeNode[],
+): TreeNode[] {
+  return refreshedNodes.map((node) => {
+    const current = currentNodes.find((item) => item.path === node.path);
+    if (!current) return node;
+    return {
+      ...node,
+      expanded: current.expanded,
+      loaded: current.loaded,
+      children: node.loaded
+        ? mergeRefreshedTree(node.children, current.children)
+        : current.children,
+    };
+  });
+}

@@ -22,12 +22,9 @@ vi.mock("../../features/floating-chat", () => ({
   getDefaultFloatingState: (sessionId: string) => ({ sessionId } as any),
 }));
 
-vi.mock("../../stores/project-data-store", () => ({
-  useProjectDataStore: {
-    getState: () => ({
-      projects: { "proj-1": { sessions: projectSessions() } },
-    }),
-  },
+vi.mock("../../queries/project", () => ({
+  ensureProjectSession: (_projectId: string, _client: unknown, sessionId: string) =>
+    Promise.resolve(projectSessions().find((session) => session.id === sessionId) ?? null),
 }));
 
 vi.mock("../../stores/settings-store", () => ({
@@ -42,6 +39,7 @@ function makeCtx(hostKind: "electron" | "web" = "electron", withRespond = false)
     projectId: "proj-1",
     navigate: mockNavigate,
     hostKind,
+    client: {},
     ...(withRespond
       ? { source: { postMessage: mockPostMessage } as any, requestId: "req-1" }
       : {}),
@@ -96,8 +94,6 @@ describe("openSession action", () => {
   });
 
   it("does not send any message (open-only)", async () => {
-    // openSession 不应触发 streaming-store 的 sendMessage；这里用 navigate 作为代理断言，
-    // 并确保没有调用 project-data-store 的 setInitialMessage（未 mock 即不可用）。
     await dispatchAction("openSession", { sessionId: "s1" }, makeCtx("electron"));
     expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
