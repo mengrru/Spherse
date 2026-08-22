@@ -9,7 +9,7 @@ const EMPTY_AGENTS: AgentProfile[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
 const EMPTY_SESSION_PAGING: Record<string, SessionPaging> = {};
 
-export interface SessionPaging {
+interface SessionPaging {
   hasMore: boolean;
   offset: number;
   loadingMore: boolean;
@@ -138,7 +138,7 @@ export function getCachedAgents(projectId: string): AgentProfile[] {
   return queryClient.getQueryData(projectQueryKeys.agents(projectId)) ?? EMPTY_AGENTS;
 }
 
-export function getCachedSessions(projectId: string): SessionInfo[] {
+function getCachedSessions(projectId: string): SessionInfo[] {
   return queryClient.getQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId))?.sessions ?? EMPTY_SESSIONS;
 }
 

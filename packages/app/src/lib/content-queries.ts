@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { ApiClient } from "./api";
 import { projectQueryKeys, queryClient } from "./query-client";
 
-export function directoryQueryOptions(projectId: string, client: ApiClient, dirPath: string) {
+function directoryQueryOptions(projectId: string, client: ApiClient, dirPath: string) {
   return {
     queryKey: projectQueryKeys.directory(projectId, dirPath),
     queryFn: () => client.listContent(dirPath),

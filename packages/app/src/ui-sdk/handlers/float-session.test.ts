@@ -22,14 +22,6 @@ vi.mock("../../features/floating-chat", () => ({
   getDefaultFloatingState: (sessionId: string) => ({ sessionId } as any),
 }));
 
-vi.mock("../../stores/project-data-store", () => ({
-  useProjectDataStore: {
-    getState: () => ({
-      projects: { "proj-1": { sessions: projectSessions() } },
-    }),
-  },
-}));
-
 vi.mock("../../lib/project-queries", () => ({
   getCachedSession: (_projectId: string, sessionId: string) =>
     projectSessions().find((session) => session.id === sessionId),

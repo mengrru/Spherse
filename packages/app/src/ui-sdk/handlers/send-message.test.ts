@@ -24,14 +24,6 @@ vi.mock("../../features/chat/runtime/streaming-store", () => ({
   },
 }));
 
-vi.mock("../../stores/project-data-store", () => ({
-  useProjectDataStore: {
-    getState: () => ({
-      projects: { "proj-1": { sessions: projectSessions() } },
-    }),
-  },
-}));
-
 vi.mock("../../lib/project-queries", () => ({
   getCachedSession: (_projectId: string, sessionId: string) =>
     projectSessions().find((session) => session.id === sessionId),

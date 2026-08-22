@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { SidePanel } from "../features/side-panel";
@@ -17,7 +17,6 @@ import { ProjectProvider } from "../context/project-context";
 import { useHostBridge } from "../context/host-bridge-context";
 import { useApiClient } from "../lib/use-connection";
 import { useConnection } from "../lib/use-connection";
-import { useProjectCatalog } from "../lib/project-queries";
 import { ContentQueryBridge } from "../features/content-browser/ContentQueryBridge";
 
 export function ProjectScope() {
@@ -32,11 +31,6 @@ export function ProjectScope() {
   const setActiveProject = useAppStore((s) => s.setActiveProject);
   const setProjectLastRoute = useAppStore((s) => s.setProjectLastRoute);
   const { clickAwayProps } = useSidePanel();
-  const tRef = useRef(t);
-  useEffect(() => {
-    tRef.current = t;
-  }, [t]);
-
   useCustomTheme(
     project?.path,
     connection.baseUrl,
@@ -45,8 +39,6 @@ export function ProjectScope() {
   );
   useProjectNavHistory(projectId ?? "");
   useAgentBusRefresh(projectId, client);
-  useProjectCatalog(projectId ?? "", client);
-
   useEffect(() => {
     if (projectId) void setActiveProject(bridge, projectId);
   }, [projectId, setActiveProject, bridge]);
