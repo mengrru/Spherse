@@ -108,6 +108,7 @@
 - [x] **触发器系统（scheduler → trigger 全量重构）**：将 scheduler 全面重构为 trigger（触发器）系统，支持时间触发（cron）和事件触发（自定义事件名）；引入 TimerService（10 分钟轮询回调）和 TriggerManager（磁盘为唯一真相源，每次事件读盘扫描，不在内存维护注册表）；payload 为纯字符串通过 `{{payload}}` 注入 message；前端通过 `/ws/bus` 的 `emit-trigger-event` 消息触发事件（含 UI SDK `emitAgentTriggerEvent` action）。参见 `docs/dev/features/2026-07-11-trigger-system/design.md`
 - [x] **LLM tool 触发 trigger event**：新增 `emit_trigger_event` LLM tool，允许 agent 在对话中触发其它 agent 的事件触发器；in-core 直接调用 `TriggerManager.onUserEvent`（不经 ws-bus / server contract），与 UI SDK 路径等价；`TriggerManager` 经 `SessionContext`（mutable 字段）+ `ToolContext` 注入到 tool，`sp:` 前缀保留、payload 纯字符串、agent profile `tools` 显式启用
 - [x] **Agent 时间感知能力**：为 Agent 提供自定义时区和时间流速的时间感知。纯函数推导（`perceivedMs = startMs + (realMs - epochMs) × flowRate`），在 streamFn 边界对每条消息注入计算后的感知时间前缀（运行时计算，不持久化、不存储），system prompt 仅标记时间感知是否启用。配置存储在 agent profile YAML 中（per-agent），同一 agent 的所有 session 共享同一时间线。参见 `docs/dev/features/2026-08-04-agent-time-perception/design.md`
+- [ ] **Agent 圆桌**：多个 Agent 围绕同一话题展开圆桌讨论，自主协作得出结论（如 moderator 编排、按轮次发言、汇总共识）。landing page「即将到来」区已提前露出卡片；run-state 下沉 core（见下方条目）以其为条件触发之一
 - [ ] **支持文件版本控制**：集成 git 进行文件版本管理，增加 git tool 供 LLM 调用
 - [x] **划取文本发起会话**：通过在文件内容上划取文本直接向指定 agent 发起会话
 - [x] **UI SDK**：iframe 与 App 内统一 action 通信框架，支持 postMessage 触发和 App 内 dispatchAction 调用。参见 `docs/dev/features/2026-06-11-ui-sdk/design.md`

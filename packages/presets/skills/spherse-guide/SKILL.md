@@ -1,20 +1,11 @@
 ---
 name: spherse-guide
-description: 当用户询问 Spherse 是什么、能做什么、如何开始或如何使用项目、Agent、会话、工具、Skill、MCP、触发器、HTML Workspace、数据应用、主题、图片、移动端与设置时使用；按用户目标提供准确的产品介绍和操作引导
+description: 当用户询问 Spherse 是什么、能做什么、如何开始或如何使用项目、Agent、会话、工具、Skill、MCP、触发器、HTML Workspace、数据应用、主题、图片、移动端与设置时使用；提供准确的产品能力介绍
 ---
 
 # Spherse 使用指南
 
 Spherse 是一个本地运行、开箱即用的个人 Agent 运行时。一个普通文件夹就是一个项目，多个拥有独立提示词、工具、Skill、MCP、自动化和会话的 Agent 围绕同一份用户文件协作。Agent 还可以生成 HTML 页面，并通过 UI SDK 把文件、会话和数据能力组合成可交互的 Workspace。
-
-## 如何引导用户
-
-- 先确认用户想完成什么，再介绍最相关的入口；不要一开始罗列所有功能。
-- 给出可以立即执行的步骤，通常控制在 3–6 步。
-- 明确区分“用户需要在桌面 UI 中配置”和“当前 Agent 可用工具直接完成”的动作。
-- 只介绍当前已经实现的能力，不承诺规划中的功能。
-- 涉及删除、命令执行、MCP、本地网络暴露或访问令牌时，主动说明风险与影响。
-- 用户要构建具体 Workspace 时，应帮助其落地文件、Agent 和配置，而不只提供抽象建议。
 
 ## 核心概念
 
@@ -87,18 +78,9 @@ Content Browser 支持：
 
 ### 项目欢迎页
 
-项目根路由可以展示一个自定义 HTML 页面或图片，适合作为项目首页、导航入口、仪表盘或世界观导览。
+项目根路由可以展示一个自定义 HTML 页面或图片（`html`、`png`、`webp`、`svg` 等常见格式），适合作为项目首页、导航入口、仪表盘或世界观导览。
 
-配置步骤：
-
-1. 先在项目中创建 HTML 或图片文件，例如 `index.html`、`dashboard/home.html` 或 `assets/cover.webp`。
-2. 在左侧活动栏右键当前项目头像。
-3. 选择“设置 → 欢迎页”。
-4. 填写项目根目录相对路径并保存；清空配置可恢复默认状态。
-
-欢迎页支持 `html`、`htm`、`png`、`jpg`、`jpeg`、`gif`、`webp`、`svg`。路径必须位于项目内，使用 `/` 分隔，不能指向 `.spherse`。保存时文件可以尚未创建，但文件缺失、无权访问或加载失败时会回退到默认空状态。
-
-如果没有显式配置，Spherse 会自动尝试项目根目录的 `index.html`；存在时将它作为欢迎页。当前欢迎页文件被修改后会自动刷新。
+配置方式：左侧活动栏右键当前项目头像 →「设置 → 欢迎页」→ 填写项目内相对路径。清空配置可恢复默认；未显式配置时自动尝试项目根目录的 `index.html`。欢迎页文件被修改后会自动刷新；文件缺失或加载失败时回退到默认空状态。
 
 ### 工具与审批
 
@@ -111,6 +93,7 @@ Content Browser 支持：
 | 结构化数据 | `read_data`、`query_data`、`mutate_data` |
 | 交互与展示 | `ask_user`、`render_card`、`generate_image` |
 | 项目协作 | `append_changelog`、`load_skill`、`emit_trigger_event` |
+| 记忆 | `memory_save`、`memory_recall` |
 | 高级操作 | `run_command`、`manage_agent`、`manage_trigger` |
 
 `run_command` 以及 `manage_agent` / `manage_trigger` 的写操作通常需要用户审批。`run_command` 以当前系统用户权限执行，没有 OS 级沙箱，文件访问限制也不约束其子进程；只应批准可信命令。YOLO 模式会跳过逐次审批，应谨慎启用。
@@ -163,6 +146,14 @@ MCP Server 可能执行本地程序或接收敏感 headers/env，只配置可信
 
 自动化依赖桌面端运行时，桌面应用关闭后不会独立执行。用户自定义事件名不能使用平台保留的 `sp:` 前缀。
 
+### 记忆
+
+每个 Agent 拥有跨会话的持久记忆，适合保存用户偏好、约定和长期上下文：
+
+- Agent 用 `memory_save` 追加、`memory_recall` 检索记忆
+- 最近的记忆会自动注入后续会话，无需每次重读
+- 记忆是 Agent 私有的，保存在该 Agent 自己的目录下
+
 ### HTML Workspace 与 UI SDK
 
 HTML 可作为项目欢迎页、Content Browser 页面或聊天 HtmlCard。Spherse 会自动注入 `window.spherse`，页面不需要加载 SDK 脚本，也不应手写 `postMessage` wrapper。
@@ -212,27 +203,15 @@ HTML 可以：
 
 ### 移动端 Web
 
-桌面端“设置 → 移动端”可以启用远程访问：
+桌面端「设置 → 移动端」可启用远程访问：Quick 模式通过 Cloudflare Quick Tunnel 提供地址和二维码，Manual 模式自行配置反向代理和公开域名。手机端可远程聊天、浏览 Agent、会话、文件和 HTML。
 
-- Quick 模式通过 Cloudflare Quick Tunnel 提供地址和二维码
-- Manual 模式由用户自行配置反向代理和公开域名
-
-手机端可远程聊天、浏览 Agent、会话、文件和 HTML。它不是独立运行时，桌面应用和项目服务必须保持运行。
-
-Web 端主要是聊天与只读浏览，不提供桌面端的项目创建、Agent/MCP/触发器管理、文件编辑、浮窗、DevTools 等管理能力。URL、token 和二维码都是访问凭据，不应公开分享；重新生成 token 会使旧连接失效。
+Web 端不是独立运行时（桌面应用必须保持运行），且主要是聊天与只读浏览，不提供项目创建、Agent/MCP/触发器管理、文件编辑等管理能力。URL、token 和二维码都是访问凭据，不应公开分享。
 
 ### 设置与调试
 
-全局设置包括：
+全局设置包括文本模型与 Provider API Key（含自定义 OpenAI-compatible Provider）、temperature/top-p、图片模型、语言外观、移动端访问和版本更新。
 
-- 文本模型、Provider API Key、自定义 OpenAI-compatible Provider
-- temperature 和 top-p
-- 图片模型与 API Key
-- 语言和外观
-- 移动端访问
-- 帮助、版本与更新
-
-Debug Tools 可在开发模式直接使用，生产版可从设置开启，包括 DevTools、renderer reload、应用数据查看、流式日志、Turn Context 下载和重置应用数据。调试导出可能包含 system prompt、会话和项目内容，应视为敏感数据。
+Debug Tools（开发模式直接可用，生产版从设置开启）提供 DevTools、renderer reload、流式日志、Turn Context 下载等。调试导出可能包含 system prompt、会话和项目内容，应视为敏感数据。
 
 ## 按目标推荐路径
 
@@ -241,6 +220,7 @@ Debug Tools 可在开发模式直接使用，生产版可从设置开启，包�
 | 让 Agent 阅读和维护现有资料 | 打开资料目录 → 创建 Agent → 配置 Prompt、文件工具和上下文文件 → 新建会话 |
 | 建立不同职责的协作团队 | 创建多个 Agent → 分别配置职责、工具和 Skill → 让它们围绕同一项目文件工作 |
 | 固化重复工作方法 | 创建 project 或 agent-level Skill → 为相关 Agent 启用 `load_skill` |
+| 让 Agent 记住用户偏好或长期约定 | 为 Agent 启用 `memory_save` / `memory_recall` → 让它在会话中保存与检索记忆 |
 | 接入外部系统或工具 | 从 Agent 右键菜单配置可信 MCP Server |
 | 定时执行或响应页面事件 | 创建时间/事件触发器 → 选择会话策略 → 查看运行日志 |
 | 创建项目首页或交互卡片 | 加载 `spherse-write-html` 和 `spherse-use-ui-sdk` |

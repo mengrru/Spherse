@@ -40,6 +40,8 @@ export const en: Record<keyof typeof zhCN, string> = {
 
   "upcoming.memory.title": "Cross-Session Memory",
   "upcoming.memory.desc": "Agents will maintain long-term memory across sessions",
+  "upcoming.roundtable.title": "Agent Roundtable",
+  "upcoming.roundtable.desc": "Multiple agents will discuss the same topic at a roundtable and collaborate toward a conclusion",
   "upcoming.label": "Coming Soon",
 
   "home.moreCases": "Explore more possibilities",

@@ -38,6 +38,8 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
 
   "upcoming.memory.title": "Agent 跨 Session 記憶",
   "upcoming.memory.desc": "Agent 將能跨會話保持長期記憶",
+  "upcoming.roundtable.title": "Agent 圓桌",
+  "upcoming.roundtable.desc": "多個 Agent 將能圍繞同一話題展開圓桌討論，自主協作得出結論",
   "upcoming.label": "即將到來",
 
   "home.moreCases": "探索更多可能",
