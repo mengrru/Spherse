@@ -149,7 +149,7 @@ Agent system prompt content...
 | `<skill-content name="…">` | load_skill 工具返回的技能全文 |
 | `<compaction-digest covers="…">` | 压缩历史摘要（合成消息） |
 
-agent profile 的 `context` 字段指定的文件通过 `<preloaded-context>` / `<context-file>` 注入 system prompt；`<skill-catalog>` 仅列出技能的 name + description，agent 需要完整指令时调用 `load_skill` 工具获取被 `<skill-content>` 包裹的全文。会话历史超过上下文窗口阈值时触发 compaction，将早期消息压缩为 `<compaction-digest>` 包裹的扁平化文本摘要，作为合成 user 消息保留（详见 `docs/dev/features/2026-07-02-context-engineering/design.md`）。
+agent profile 的 `context` 字段指定的文件通过 `<preloaded-context>` / `<context-file>` 注入 system prompt；`<skill-catalog>` 仅列出技能的 name + description，agent 需要完整指令时调用 `load_skill` 工具获取被 `<skill-content>` 包裹的全文。会话历史超过上下文窗口阈值时触发 compaction：以精确复刻 agent 请求前缀（systemPrompt + tools + fold 视图消息 + 追加摘要指令，命中 provider prompt cache）的方式调用同款模型生成 LLM 摘要（失败且 tokens ≤ 90% window 时跳过本轮，> 90% 时回退机械拼接摘要），摘要存入 `compaction/applied` 事件的 `digestContent`（含 `digestSource: "llm" | "mechanical"` 标记，输出中的 digest 标签会被转义防注入），fold 时合成为 `<compaction-digest>` 包裹的 user 消息保留（详见 `docs/dev/features/2026-08-23-llm-compaction/design.md`）。
 
 ## Skill 定义格式
 

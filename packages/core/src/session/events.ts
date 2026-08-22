@@ -13,6 +13,7 @@ export interface SessionEventMap {
     anchorSeq: number;
     digestContent: string;
     excludedSeqs: number[];
+    digestSource?: "llm" | "mechanical";
   };
   "turn/retried": { abandonedSeqs: number[] };
 }

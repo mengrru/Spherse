@@ -31,13 +31,17 @@ export interface AssembleOptions {
   capabilities?: Capability[] | ((builtin: Capability[]) => Capability[]);
 }
 
-export function defaultCapabilities(projectStore: ProjectStore, logger: Logger, dataStore?: DataStore): Capability[] {
+export function defaultCapabilities(
+  projectStore: ProjectStore,
+  logger: Logger,
+  dataStore?: DataStore,
+): Capability[] {
   return [
     ...builtinToolCapabilities(dataStore),
     createTriggerCapability({ projectStore, logger }),
     createMcpCapability({ projectStore, logger }),
     attachmentsCapability(),
-    compactionCapability({ projectStore, logger }),
+    compactionCapability({ logger }),
     timePerceptionCapability(),
     memoryCapability(),
   ];

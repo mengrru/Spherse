@@ -20,7 +20,6 @@ export interface CompactionOptions {
 export interface CompactionPlan {
   shouldCompact: boolean;
   anchorIndex: number;
-  digest: string | null;
   tail: Message[];
 }
 
@@ -37,22 +36,6 @@ function truncate(text: string): string {
   return text.slice(0, MAX_MESSAGE_CHARS) + TRUNCATE_MARKER;
 }
 
-const MAX_ARG_VALUE_CHARS = 120;
-
-function extractToolArg(
-  _toolName: string,
-  args: Record<string, unknown>,
-): string {
-  const summaryValues: string[] = [];
-  for (const value of Object.values(args)) {
-    if (summaryValues.length >= 2) break;
-    if (typeof value === "string" && value.length > 0 && value.length <= MAX_ARG_VALUE_CHARS) {
-      summaryValues.push(value);
-    }
-  }
-  return summaryValues.join(" → ");
-}
-
 export function generateDigest(messages: Message[]): string {
   const lines: string[] = [];
 
@@ -62,18 +45,16 @@ export function generateDigest(messages: Message[]): string {
       lines.push(`[user]: ${truncate(text)}`);
     } else if (message.role === "assistant") {
       const textParts: string[] = [];
-      const toolCallParts: string[] = [];
+      const toolNames: string[] = [];
       for (const block of message.content) {
         if (block.type === "text" && typeof block.text === "string") {
           textParts.push(block.text);
         } else if (block.type === "toolCall") {
-          const toolCall = block as ToolCall;
-          const argSummary = extractToolArg(toolCall.name, toolCall.arguments);
-          toolCallParts.push(argSummary ? `${toolCall.name}: ${argSummary}` : toolCall.name);
+          toolNames.push((block as ToolCall).name);
         }
       }
       const textPart = textParts.join("");
-      const toolPart = toolCallParts.map((t) => `[called ${t}]`).join(" ");
+      const toolPart = toolNames.map((name) => `[called ${name}]`).join(" ");
       const body = `${textPart}${toolPart ? ` ${toolPart}` : ""}`.trim();
       lines.push(`[assistant]: ${truncate(body)}`);
     }
@@ -115,12 +96,12 @@ export function planCompaction(
 ): CompactionPlan {
   const thresholdRatio = options.thresholdRatio ?? 0.75;
   const keepRecentPrompts = options.keepRecentPrompts ?? 20;
-  const maxTurns = options.maxTurns ?? 50;
+  const maxTurns = options.maxTurns ?? 40;
 
   const shouldCompact =
     options.currentTokens > options.contextWindow * thresholdRatio;
   if (!shouldCompact) {
-    return { shouldCompact: false, anchorIndex: -1, digest: null, tail: messages };
+    return { shouldCompact: false, anchorIndex: -1, tail: messages };
   }
 
   let promptCount = 0;
@@ -130,7 +111,7 @@ export function planCompaction(
     if (message.role === "assistant") turnCount++;
   }
   if (promptCount <= keepRecentPrompts && turnCount <= maxTurns) {
-    return { shouldCompact: false, anchorIndex: -1, digest: null, tail: messages };
+    return { shouldCompact: false, anchorIndex: -1, tail: messages };
   }
 
   const promptSplit = findPromptSplit(messages, keepRecentPrompts);
@@ -138,13 +119,12 @@ export function planCompaction(
 
   const firstKeptUserIndex = Math.max(promptSplit, turnSplit);
   if (firstKeptUserIndex <= 0) {
-    return { shouldCompact: false, anchorIndex: -1, digest: null, tail: messages };
+    return { shouldCompact: false, anchorIndex: -1, tail: messages };
   }
 
   const anchorIndex = firstKeptUserIndex - 1;
-  const digest = generateDigest(messages.slice(0, anchorIndex + 1));
   const tail = messages.slice(anchorIndex + 1);
-  return { shouldCompact: true, anchorIndex, digest, tail };
+  return { shouldCompact: true, anchorIndex, tail };
 }
 
 function findPromptSplit(
@@ -183,6 +163,17 @@ function findTurnSplit(
 export interface SanitizeResult {
   messages: Message[];
   keptIndices: number[];
+}
+
+const DIGEST_TAG_OPEN = "<compaction-digest";
+const DIGEST_TAG_CLOSE = "</compaction-digest";
+
+export function sanitizeDigestContent(digest: string): string {
+  return digest.replaceAll(DIGEST_TAG_CLOSE, "</compaction-digest'").replaceAll(DIGEST_TAG_OPEN, "<compaction-digest'");
+}
+
+export function isDegenerateDigest(digest: string): boolean {
+  return digest.trim().length < 50;
 }
 
 export function sanitizeToolCallPairs(messages: Message[]): SanitizeResult {
