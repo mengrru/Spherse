@@ -125,9 +125,10 @@ export function useProjectSession(
 
 export async function ensureProjectSession(
   projectId: string,
-  client: ApiClient,
+  client: ApiClient | null,
   sessionId: string,
 ): Promise<SessionInfo | null> {
+  if (!client) return getCachedSession(projectId, sessionId) ?? null;
   return queryClient.ensureQueryData({
     queryKey: projectQueryKeys.session(projectId, sessionId),
     queryFn: () => findProjectSession(projectId, client, sessionId),

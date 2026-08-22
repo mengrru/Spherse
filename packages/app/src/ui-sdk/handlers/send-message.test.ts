@@ -25,8 +25,6 @@ vi.mock("../../features/chat/runtime/streaming-store", () => ({
 }));
 
 vi.mock("../../lib/project-queries", () => ({
-  getCachedSession: (_projectId: string, sessionId: string) =>
-    projectSessions().find((session) => session.id === sessionId),
   ensureProjectSession: (_projectId: string, _client: unknown, sessionId: string) =>
     Promise.resolve(projectSessions().find((session) => session.id === sessionId) ?? null),
 }));

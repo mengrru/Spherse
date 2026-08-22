@@ -8,8 +8,10 @@ const mockGetState = vi.fn(() => ({
 }));
 
 vi.mock("../../lib/project-queries", () => ({
-  getCachedAgents: (projectId: string) => mockGetState().projects[projectId]?.agents ?? [],
-  ensureProjectAgents: (_projectId: string, client: any) => client.listAgents(),
+  ensureProjectAgents: (projectId: string, client: any) => {
+    const cached = mockGetState().projects[projectId]?.agents;
+    return cached ? Promise.resolve(cached) : client.listAgents();
+  },
   createProjectSession: mockCreateSession,
 }));
 

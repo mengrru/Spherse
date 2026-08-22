@@ -2,7 +2,7 @@ import { registerAction } from "../registry";
 import { respond } from "../respond";
 import { openChat } from "./open-chat";
 import type { ApiClient } from "../../lib/api";
-import { createProjectSession, ensureProjectAgents, getCachedAgents } from "../../lib/project-queries";
+import { createProjectSession, ensureProjectAgents } from "../../lib/project-queries";
 
 async function resolveAgentId(
   projectId: string,
@@ -12,10 +12,6 @@ async function resolveAgentId(
 ): Promise<string | null> {
   if (typeof agentId === "string" && agentId) return agentId;
   if (typeof agentSlug !== "string" || !agentSlug) return null;
-
-  const cached = getCachedAgents(projectId);
-  const fromCache = cached.find((a) => a.slug === agentSlug);
-  if (fromCache) return fromCache.id;
 
   try {
     const agents = await ensureProjectAgents(projectId, client);

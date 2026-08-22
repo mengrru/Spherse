@@ -6,7 +6,7 @@ import { useStreamingStore } from "../../features/chat/runtime/streaming-store";
 import { useSettingsStore } from "../../stores/settings-store";
 import { ApiError } from "../../lib/api";
 import { openChat } from "./open-chat";
-import { ensureProjectSession, getCachedSession } from "../../lib/project-queries";
+import { ensureProjectSession } from "../../lib/project-queries";
 
 registerAction("sendMessage", async (params, ctx) => {
   const { sessionId, message, open, float } = params as {
@@ -18,9 +18,7 @@ registerAction("sendMessage", async (params, ctx) => {
   if (!sessionId || typeof sessionId !== "string") return;
   if (!message || typeof message !== "string") return;
 
-  const session = getCachedSession(ctx.projectId, sessionId) ?? (ctx.client
-    ? await ensureProjectSession(ctx.projectId, ctx.client, sessionId).catch(() => null)
-    : null);
+  const session = await ensureProjectSession(ctx.projectId, ctx.client, sessionId).catch(() => null);
   if (!session) {
     const locale = normalizeLocale(useSettingsStore.getState().locale);
     toast.error(translate(locale, "ui-sdk.sessionNotFound"));
