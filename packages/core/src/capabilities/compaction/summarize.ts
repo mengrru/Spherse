@@ -14,7 +14,7 @@ export const SUMMARY_INSTRUCTION = `Summarize this conversation to compact the c
   - Emotional companionship / roleplay: preserve the relationship trajectory and how it evolved; the user's emotional context and recurring themes; key personal facts the user shared; shared jokes, nicknames and promises; unresolved emotional threads (things the user said they would follow up on). Do NOT strip these as "irrelevant exploration" — in this mode they are the substance of the conversation.
 - Drop: greetings, raw tool output details, and exploration irrelevant to the conversation's purpose.
 - Do not call any tool. Output the summary directly.
-- Output structured Markdown, at most 800 tokens.
+- Output structured Markdown, at most 3000 tokens.
 - Write the summary in the dominant language of the user's messages.`;
 
 export interface SummarizeDeps {
