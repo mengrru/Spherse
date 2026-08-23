@@ -26,6 +26,8 @@ import { deriveMessages } from "../../session/fold.js";
 import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
 import { createModelResolver } from "../../session/model-resolver.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
+import { attachmentsCapability } from "../../capabilities/attachments/index.js";
+import { timePerceptionCapability } from "../../capabilities/time-perception/index.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
 import { compactionCapability } from "../../capabilities/compaction/index.js";
 
@@ -357,6 +359,152 @@ describe("AgentRunner context engineering", () => {
     expect(agent.state.messages[1].role).toBe("user");
     expect(agent.state.messages[1].content).toContain("tail question");
     expect(agent.state.messages[2].role).toBe("assistant");
+  });
+
+  it("getTurnContext returns the LLM-projected context including time prefix and stripped attachments", async () => {
+    const projectStore = runtime.projectManager.projectStore as any;
+    const tpAgent = await projectStore.createAgent(
+      "tp-agent",
+      `---
+name: TP Agent
+tools:
+  - read_file
+timePerception:
+  enabled: true
+  epochMs: 0
+  startMs: 0
+  flowRate: 60
+  timeZone: UTC
+---
+
+Agent with time perception.`,
+    );
+    const tpAgentId = tpAgent.getProfile().id;
+
+    const tpDeps = {
+      ...deps,
+      capabilities: [
+        ...builtinToolCapabilities(),
+        attachmentsCapability(),
+        timePerceptionCapability(),
+      ],
+    };
+
+    const agentStore = getAgentStore(runtime, tpAgentId);
+    const sessionId = agentStore.sessions.createSession();
+    const log = SessionEventLog.open(agentStore.sessions, sessionId);
+    log.append("user/message", {
+      message: {
+        role: "user",
+        content: [
+          { type: "text", text: "see this" },
+          { type: "image", mediaType: "image/png" },
+        ],
+        _attachments: [{ path: "a.png", kind: "image" }],
+        timestamp: 60_000,
+      } as never,
+    });
+
+    const runner = await AgentRunner.initForRestore(tpDeps, tpAgentId, sessionId);
+    const agent = agentOf(runner);
+    agent.state.messages = [
+      ...deriveMessages(log.events),
+      { role: "notification", content: "ui-only", timestamp: 1 },
+    ];
+
+    const snapshot = runner.getTurnContext();
+    const roles = snapshot.messages.map((m: any) => m.role);
+    expect(roles).not.toContain("notification");
+
+    const user = snapshot.messages.find((m: any) => m.role === "user") as any;
+    expect(user._attachments).toBeUndefined();
+    expect(user.content.some((block: any) => block.type === "image")).toBe(false);
+    expect(user.content[0].text).toContain("<time>");
+    expect(user.content[0].text).toContain("see this");
+  });
+
+  it("getTurnContext works with builtin capabilities only", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
+
+    const snapshot = runner.getTurnContext();
+    expect(snapshot.sessionId).toBe(sessionId);
+    expect(Array.isArray(snapshot.messages)).toBe(true);
+  });
+
+  it("getTurnContext messages deep-equal what the LLM receives on a real turn (wire parity)", async () => {
+    const projectStore = runtime.projectManager.projectStore as any;
+    const tpAgent = await projectStore.createAgent(
+      "tp-agent-e2e",
+      `---
+name: TP Agent E2E
+tools:
+  - read_file
+timePerception:
+  enabled: true
+  epochMs: 0
+  startMs: 0
+  flowRate: 60
+  timeZone: UTC
+---
+
+Agent with time perception.`,
+    );
+    const tpAgentId = tpAgent.getProfile().id;
+
+    const wireContexts: any[] = [];
+    const finalAssistant = {
+      role: "assistant",
+      content: [{ type: "text", text: "ok" }],
+      stopReason: "stop",
+      usage: {
+        input: 1,
+        output: 1,
+        cacheRead: 0,
+        cacheWrite: 0,
+        totalTokens: 2,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      },
+      timestamp: Date.now(),
+    };
+    getChatStreamFnMock.mockImplementation(
+      () =>
+        (async (_model: unknown, context: { messages: unknown[] }) => {
+          wireContexts.push(structuredClone({ messages: context.messages }));
+          return {
+            async *[Symbol.asyncIterator]() {},
+            result: async () => finalAssistant,
+          };
+        }) as never,
+    );
+
+    const agentStore = getAgentStore(runtime, tpAgentId);
+    const sessionId = agentStore.sessions.createSession();
+    const tpDeps = {
+      ...deps,
+      runConfig: new RunConfigHolder({ defaultModel: "openai/gpt-4o" }),
+      capabilities: [
+        ...builtinToolCapabilities(),
+        attachmentsCapability(),
+        timePerceptionCapability(),
+      ],
+      attachmentProcessors: [],
+    };
+    const runner = await AgentRunner.init(tpDeps, tpAgentId, sessionId);
+
+    try {
+      await runner.sendMessage("hello wire", [], () => {});
+
+      expect(wireContexts).toHaveLength(1);
+      const snapshot = runner.getTurnContext();
+      expect(snapshot.messages).toEqual([...wireContexts[0].messages, finalAssistant]);
+      const wireUser = wireContexts[0].messages.find((m: any) => m.role === "user");
+      expect(wireUser.content[0].text).toContain("<time>");
+      expect(wireUser.content[0].text).toContain("hello wire");
+    } finally {
+      getChatStreamFnMock.mockImplementation(() => vi.fn() as never);
+    }
   });
 
   it("maybeCompact appends compaction/applied with real anchorSeq", async () => {

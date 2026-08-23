@@ -17,6 +17,10 @@ export type ContextProjector = (
   view: SessionView,
 ) => ((messages: readonly AgentMessage[]) => AgentMessage[]) | undefined;
 
+export type PreviewTransform = (
+  view: SessionView,
+) => ((messages: readonly AgentMessage[]) => AgentMessage[]) | undefined;
+
 export interface TurnMiddlewareSource {
   eventMiddlewares?: ReadonlyArray<EventMiddleware<AgentEvent>>;
 }
@@ -29,6 +33,7 @@ export interface Capability extends TurnMiddlewareSource {
   turnHooks?: TurnHooksFactory;
   streamDecorators?: ReadonlyArray<StreamDecorator>;
   contextProjectors?: ReadonlyArray<ContextProjector>;
+  previewTransforms?: ReadonlyArray<PreviewTransform>;
   attachmentProcessors?: ReadonlyArray<AttachmentProcessor>;
   readonly pathRules?: ReadonlyArray<PathRule>;
   onAgentDeleted?(agentId: string): Promise<void> | void;

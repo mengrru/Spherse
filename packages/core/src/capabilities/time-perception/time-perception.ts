@@ -1,4 +1,3 @@
-import type { Message } from "@earendil-works/pi-ai";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type { TimePerceptionConfig } from "../../types.js";
 
@@ -50,15 +49,21 @@ export function wrapWithTimePerception(
   };
 }
 
-function injectTimePrefix(
-  messages: Message[],
+interface TimestampedMessage {
+  role: string;
+  timestamp?: number;
+  content?: unknown;
+}
+
+export function injectTimePrefix<T extends TimestampedMessage>(
+  messages: readonly T[],
   config: TimePerceptionConfig,
-): Message[] {
+): T[] {
   return messages.map((msg) => {
     if (msg.role !== "user") return msg;
     if (typeof msg.timestamp !== "number") return msg;
     const prefix = buildTimePrefix(msg.timestamp, config);
-    return { ...msg, content: prependToContent(msg.content, prefix) } as Message;
+    return { ...msg, content: prependToContent(msg.content, prefix) } as T;
   });
 }
 
