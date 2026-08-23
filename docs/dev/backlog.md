@@ -219,3 +219,5 @@
 
 - [x] **附件上下文投影能力化（session 域自查）**：kernel 新增 `contextProjectors` 贡献点（`ContextProjector = (view) => (messages) => messages | undefined`，管线序组合——convertToLlm 前清洗 AgentMessage，与 streamDecorators 构成"消息出入站变换"词汇对称）；convertToLlm 内联的附件清洗（剥 `_attachments`/空 image block）迁为 attachments capability 的 projector——附件域知识离开 assembly。为会话分支/消息撤回（历史投影）预铺。自查结论：yolo 审批旁路记条件触发（等第二个策略需求）；thinkingLevel 硬编码进 profile 配置（与 capability 无关）；身份 blocks/preloaded-context 维持 assembly 本体定位
 - [ ] **yolo 审批策略泛化（条件触发：第二个审批策略需求出现时）**：`profile.yolo ? undefined : approvalGate` 泛化为 `approvalPolicy` 贡献点（白名单命令免审批/分级审批等）
+
+- [x] **自定义供应商可配置上下文/最大输出长度**：`CustomProviderDef` 新增可选 `contextWindow`/`maxTokens`（供应商级，应用于该供应商全部模型；留空回退默认 131072/131072（128k，输出上限由 pi-ai 按剩余上下文收紧），旧配置零迁移），`buildCustomProvider` 与 `getSupportedProviders` custom 段消费之（默认值收敛为 `CUSTOM_PROVIDER_DEFAULTS` 常量、core barrel 导出供 UI placeholder 复用）；`CustomProviderDialog` 增加两个可选数字输入（正整数校验、留空即默认、placeholder 经 i18n 插值显示默认值），i18n 三语言新增文案；下游（pi-ai clamping、compaction、会话状态）本就按 model 级值消费，无需改动

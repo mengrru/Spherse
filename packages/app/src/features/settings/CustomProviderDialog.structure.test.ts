@@ -36,7 +36,7 @@ describe("CustomProviderDialog structure", () => {
     expect(source).toContain("}, [open, initial]);");
   });
 
-  it("renders all four fields with their i18n labels/placeholders", () => {
+  it("renders all fields with their i18n labels/placeholders", () => {
     expect(source).toContain('t("settings.provider.dialog.name")');
     expect(source).toContain('t("settings.provider.dialog.namePlaceholder")');
     expect(source).toContain('t("settings.provider.dialog.baseUrl")');
@@ -46,6 +46,11 @@ describe("CustomProviderDialog structure", () => {
     expect(source).toContain('t("settings.provider.dialog.modelsHint")');
     expect(source).toContain('t("settings.provider.dialog.keyless")');
     expect(source).toContain('t("settings.provider.dialog.keylessDesc")');
+    expect(source).toContain('t("settings.provider.dialog.contextWindow")');
+    expect(source).toContain('t("settings.provider.dialog.contextWindowPlaceholder",');
+    expect(source).toContain('t("settings.provider.dialog.maxTokens")');
+    expect(source).toContain('t("settings.provider.dialog.maxTokensPlaceholder",');
+    expect(source).toContain('t("settings.provider.dialog.limitsHint")');
   });
 
   it("switches title between add/edit based on initial", () => {
@@ -77,14 +82,26 @@ describe("CustomProviderDialog structure", () => {
     expect(source).toContain('protocol === "https:"');
   });
 
-  it("computes all four error messages from derived state", () => {
+  it("computes all error messages from derived state", () => {
     expect(source).toContain('t("settings.provider.dialog.errNameRequired")');
     expect(source).toContain('t("settings.provider.dialog.errBaseUrlRequired")');
     expect(source).toContain('t("settings.provider.dialog.errBaseUrlInvalid")');
     expect(source).toContain('t("settings.provider.dialog.errModelsRequired")');
+    expect(source).toContain('t("settings.provider.dialog.errLimitInvalid")');
     expect(source).toContain("hasErrors");
     expect(source).toContain("aria-invalid");
     expect(source).toContain("FieldError");
+  });
+
+  it("validates optional contextWindow/maxTokens as positive integers, empty means default", () => {
+    expect(source).toContain("parsePositiveInt");
+    expect(source).toContain('/^\\d+$/');
+    expect(source).toContain("Number.isNaN(contextWindow)");
+    expect(source).toContain("Number.isNaN(maxTokens)");
+    expect(source).toMatch(/initial\?\.contextWindow != null/);
+    expect(source).toMatch(/initial\?\.maxTokens != null/);
+    expect(source).toContain("{ contextWindow }");
+    expect(source).toContain("{ maxTokens }");
   });
 
   it("disables Save while validation fails and renders Cancel outline", () => {
