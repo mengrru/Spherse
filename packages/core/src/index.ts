@@ -44,7 +44,7 @@ export { serverAccessPolicy } from "./access/access-policy.js";
 export type { AccessPolicy, Decision } from "./access/access-policy.js";
 export { shouldSkipDirEntry } from "./utils/fs-walk.js";
 export { isBinaryBuffer, BINARY_SAMPLE_SIZE } from "./utils/binary-detect.js";
-export { ModelCatalog, getImageSupportedProviders } from "./model-providers/index.js";
+export { ModelCatalog, getImageSupportedProviders, CUSTOM_PROVIDER_DEFAULTS } from "./model-providers/index.js";
 export type { Logger } from "./logger.js";
 export type { AgentEvent, AgentMessage } from "@earendil-works/pi-agent-core";
 export type {

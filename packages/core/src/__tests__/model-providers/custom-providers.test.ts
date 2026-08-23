@@ -30,8 +30,8 @@ describe("syncCustomProviders add", () => {
       provider: "custom-foo",
       api: "openai-completions",
       reasoning: false,
-      contextWindow: 32768,
-      maxTokens: 4096,
+      contextWindow: 131072,
+      maxTokens: 131072,
     });
   });
 
@@ -58,6 +58,83 @@ describe("syncCustomProviders add", () => {
     expect(model.baseUrl).toBe("https://foo.example.com/v1");
     expect(model.api).toBe("openai-completions");
     expect(model.provider).toBe("custom-foo");
+  });
+});
+
+describe("syncCustomProviders custom limits", () => {
+  it("applies provider-level contextWindow and maxTokens to registered models", () => {
+    catalog.syncCustomProviders(
+      [
+        {
+          id: "custom-lim",
+          name: "Lim",
+          baseUrl: "https://lim.example.com/v1",
+          models: ["model-a", "model-b"],
+          keyless: false,
+          contextWindow: 200000,
+          maxTokens: 32000,
+        },
+      ],
+      {},
+    );
+
+    const supported = catalog.getSupportedProviders();
+    expect(supported["custom-lim"].models).toHaveLength(2);
+    for (const model of supported["custom-lim"].models) {
+      expect(model.contextWindow).toBe(200000);
+      expect(model.maxTokens).toBe(32000);
+    }
+
+    const model = catalog.resolveModelById("custom-lim/model-a");
+    expect(model.contextWindow).toBe(200000);
+    expect(model.maxTokens).toBe(32000);
+  });
+
+  it("falls back to default limits when the def omits them", () => {
+    catalog.syncCustomProviders(
+      [{ id: "custom-def", name: "Def", baseUrl: "https://def.example.com/v1", models: ["m1"], keyless: false }],
+      {},
+    );
+
+    const model = catalog.resolveModelById("custom-def/m1");
+    expect(model.contextWindow).toBe(131072);
+    expect(model.maxTokens).toBe(131072);
+  });
+
+  it("reflects updated limits after re-syncing the same id", () => {
+    catalog.syncCustomProviders(
+      [
+        {
+          id: "custom-upd",
+          name: "Upd",
+          baseUrl: "https://upd.example.com/v1",
+          models: ["m1"],
+          keyless: false,
+          contextWindow: 131072,
+          maxTokens: 8192,
+        },
+      ],
+      {},
+    );
+
+    catalog.syncCustomProviders(
+      [
+        {
+          id: "custom-upd",
+          name: "Upd",
+          baseUrl: "https://upd.example.com/v1",
+          models: ["m1"],
+          keyless: false,
+          contextWindow: 262144,
+          maxTokens: 16384,
+        },
+      ],
+      {},
+    );
+
+    const model = catalog.resolveModelById("custom-upd/m1");
+    expect(model.contextWindow).toBe(262144);
+    expect(model.maxTokens).toBe(16384);
   });
 });
 

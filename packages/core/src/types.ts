@@ -156,4 +156,6 @@ export interface CustomProviderDef {
   baseUrl: string;
   models: string[];
   keyless: boolean;
+  contextWindow?: number;
+  maxTokens?: number;
 }

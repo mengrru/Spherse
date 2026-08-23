@@ -104,6 +104,18 @@ export const zhCN = {
   "settings.provider.dialog.keyless": "无需 API Key",
   // keyless 开关描述，说明适用于本地部署无鉴权的服务
   "settings.provider.dialog.keylessDesc": "适用于本地部署（Ollama、LM Studio 等）无鉴权的服务",
+  // 自定义供应商对话框「上下文长度」字段标签（供应商级，应用于该供应商全部模型）
+  "settings.provider.dialog.contextWindow": "上下文长度",
+  // 上下文长度输入框 placeholder，{value} 为默认值（tokens 数，留空使用默认）
+  "settings.provider.dialog.contextWindowPlaceholder": "默认 {value}",
+  // 自定义供应商对话框「最大输出长度」字段标签（供应商级，应用于该供应商全部模型）
+  "settings.provider.dialog.maxTokens": "最大输出长度",
+  // 最大输出长度输入框 placeholder，{value} 为默认值（tokens 数，留空使用默认）
+  "settings.provider.dialog.maxTokensPlaceholder": "默认 {value}",
+  // 上下文长度 / 最大输出长度两个字段下方的辅助说明
+  "settings.provider.dialog.limitsHint": "单位为 token，留空使用默认值；应用于该供应商的全部模型",
+  // 校验错误：上下文长度或最大输出长度填写后不是正整数
+  "settings.provider.dialog.errLimitInvalid": "请输入正整数",
   // 自定义供应商对话框保存按钮
   "settings.provider.dialog.save": "保存",
   // 自定义供应商对话框取消按钮

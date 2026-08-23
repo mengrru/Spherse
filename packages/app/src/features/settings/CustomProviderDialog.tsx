@@ -19,6 +19,7 @@ import {
 import { Input } from "../../components/ui/input";
 import { Switch } from "../../components/ui/switch";
 import { Textarea } from "../../components/ui/textarea";
+import { customProviderDefaults } from "./custom-provider-defaults";
 
 interface CustomProviderDialogProps {
   open: boolean;
@@ -44,6 +45,13 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
+function parsePositiveInt(value: string): number | undefined {
+  if (value.trim().length === 0) return undefined;
+  if (!/^\d+$/.test(value.trim())) return NaN;
+  const parsed = Number(value.trim());
+  return parsed > 0 ? parsed : NaN;
+}
+
 export function CustomProviderDialog({
   open,
   onClose,
@@ -56,6 +64,8 @@ export function CustomProviderDialog({
   const [baseUrl, setBaseUrl] = useState("");
   const [modelsText, setModelsText] = useState("");
   const [keyless, setKeyless] = useState(false);
+  const [contextWindowText, setContextWindowText] = useState("");
+  const [maxTokensText, setMaxTokensText] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -63,11 +73,15 @@ export function CustomProviderDialog({
     setBaseUrl(initial?.baseUrl ?? "");
     setModelsText(initial?.models?.join("\n") ?? "");
     setKeyless(initial?.keyless ?? false);
+    setContextWindowText(initial?.contextWindow != null ? String(initial.contextWindow) : "");
+    setMaxTokensText(initial?.maxTokens != null ? String(initial.maxTokens) : "");
   }, [open, initial]);
 
   const parsedModels = parseModelIds(modelsText);
   const trimmedName = name.trim();
   const trimmedBaseUrl = baseUrl.trim();
+  const contextWindow = parsePositiveInt(contextWindowText);
+  const maxTokens = parsePositiveInt(maxTokensText);
 
   const nameError =
     trimmedName.length === 0
@@ -83,8 +97,18 @@ export function CustomProviderDialog({
     parsedModels.length === 0
       ? t("settings.provider.dialog.errModelsRequired")
       : "";
+  const contextWindowError =
+    contextWindowText.trim().length === 0 || !Number.isNaN(contextWindow)
+      ? ""
+      : t("settings.provider.dialog.errLimitInvalid");
+  const maxTokensError =
+    maxTokensText.trim().length === 0 || !Number.isNaN(maxTokens)
+      ? ""
+      : t("settings.provider.dialog.errLimitInvalid");
 
-  const hasErrors = Boolean(nameError || baseUrlError || modelsError);
+  const hasErrors = Boolean(
+    nameError || baseUrlError || modelsError || contextWindowError || maxTokensError,
+  );
 
   const handleSubmit = () => {
     if (hasErrors) return;
@@ -94,6 +118,10 @@ export function CustomProviderDialog({
       baseUrl: trimmedBaseUrl,
       models: parsedModels,
       keyless,
+      ...(contextWindow !== undefined && !Number.isNaN(contextWindow)
+        ? { contextWindow }
+        : {}),
+      ...(maxTokens !== undefined && !Number.isNaN(maxTokens) ? { maxTokens } : {}),
     });
     onClose();
   };
@@ -156,6 +184,47 @@ export function CustomProviderDialog({
             </FieldDescription>
             {modelsError ? <FieldError>{modelsError}</FieldError> : null}
           </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field>
+              <FieldLabel htmlFor="custom-provider-context-window">
+                {t("settings.provider.dialog.contextWindow")}
+              </FieldLabel>
+              <Input
+                id="custom-provider-context-window"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={contextWindowText}
+                onChange={(event) => setContextWindowText(event.target.value)}
+                placeholder={t("settings.provider.dialog.contextWindowPlaceholder", {
+                  value: customProviderDefaults.contextWindow,
+                })}
+                aria-invalid={Boolean(contextWindowError)}
+              />
+              {contextWindowError ? <FieldError>{contextWindowError}</FieldError> : null}
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="custom-provider-max-tokens">
+                {t("settings.provider.dialog.maxTokens")}
+              </FieldLabel>
+              <Input
+                id="custom-provider-max-tokens"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={maxTokensText}
+                onChange={(event) => setMaxTokensText(event.target.value)}
+                placeholder={t("settings.provider.dialog.maxTokensPlaceholder", {
+                  value: customProviderDefaults.maxTokens,
+                })}
+                aria-invalid={Boolean(maxTokensError)}
+              />
+              {maxTokensError ? <FieldError>{maxTokensError}</FieldError> : null}
+            </Field>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("settings.provider.dialog.limitsHint")}
+          </p>
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium leading-none">

@@ -95,6 +95,11 @@ const IMAGE_PROVIDER_ENV_KEYS: Record<string, string[]> = {
 
 const KEYLESS_PLACEHOLDER = "sk-no-key";
 
+export const CUSTOM_PROVIDER_DEFAULTS = {
+  contextWindow: 131072,
+  maxTokens: 131072,
+} as const;
+
 function customAuth(apiKey: string | undefined, keyless: boolean): ApiKeyAuth {
   return {
     name: "API Key",
@@ -135,8 +140,8 @@ function buildCustomProvider(def: CustomProviderDef, apiKey: string | undefined)
     reasoning: false,
     input,
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-    contextWindow: 32768,
-    maxTokens: 4096,
+    contextWindow: def.contextWindow ?? CUSTOM_PROVIDER_DEFAULTS.contextWindow,
+    maxTokens: def.maxTokens ?? CUSTOM_PROVIDER_DEFAULTS.maxTokens,
   }));
   return createProvider({
     id: def.id,
@@ -255,8 +260,8 @@ export class ModelCatalog {
           api: "openai-completions",
           reasoning: false,
           input: ["text"],
-          contextWindow: 32768,
-          maxTokens: 4096,
+          contextWindow: def.contextWindow ?? CUSTOM_PROVIDER_DEFAULTS.contextWindow,
+          maxTokens: def.maxTokens ?? CUSTOM_PROVIDER_DEFAULTS.maxTokens,
         })),
         custom: true,
         keyless: def.keyless,
