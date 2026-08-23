@@ -134,6 +134,12 @@ describe("parseAgentEvent", () => {
       parseAgentEvent({ type: "error", message: "x", code: ErrorEventCode.ModelNotConfigured }),
     ).toEqual({ type: "error", message: "x", code: ErrorEventCode.ModelNotConfigured });
   });
+  it("passes through turn_withdrawn unchanged", () => {
+    expect(parseAgentEvent({ type: "turn_withdrawn", seq: 3 })).toEqual({
+      type: "turn_withdrawn",
+      seq: 3,
+    });
+  });
   it("passes through tool_execution_* unchanged", () => {
     expect(
       parseAgentEvent({

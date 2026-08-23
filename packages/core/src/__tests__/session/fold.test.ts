@@ -106,6 +106,82 @@ describe("deriveMessages", () => {
     expect((messages[1] as { content: Array<{ text: string }> }).content[0].text).toBe("good");
   });
 
+  it("turn/withdrawn abandons the anchored range through the withdraw event", () => {
+    const events = [
+      user("q1", 0),
+      assistant("a1", 1),
+      user("q2", 2),
+      assistant("a2", 3),
+      ev("turn/withdrawn", { seq: 2 }, 4),
+    ];
+    const messages = deriveMessages(events);
+    expect(messages.map((m) => (m as { content: unknown }).content)).toEqual([
+      "q1",
+      [{ type: "text", text: "a1" }],
+    ]);
+  });
+
+  it("turn/withdrawn of the only turn projects to empty", () => {
+    const events = [
+      user("q1", 0),
+      assistant("a1", 1),
+      ev("turn/withdrawn", { seq: 0 }, 2),
+    ];
+    expect(deriveMessages(events)).toEqual([]);
+    expect(deriveHistoryEntries(events)).toEqual([]);
+  });
+
+  it("turn/withdrawn combines with turn/retried abandoned seqs", () => {
+    const events = [
+      user("q1", 0),
+      ev("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "bad" }], stopReason: "error", timestamp: 1 } as never }, 1),
+      ev("turn/retried", { abandonedSeqs: [1] }, 2),
+      ev("assistant/message", { message: { role: "assistant", content: [{ type: "text", text: "good" }], timestamp: 3 } as never }, 3),
+      ev("turn/withdrawn", { seq: 0 }, 4),
+    ];
+    expect(deriveMessages(events)).toEqual([]);
+  });
+
+  it("history projection hides withdrawn range", () => {
+    const events = [
+      user("q1", 0),
+      assistant("a1", 1),
+      user("q2", 2),
+      assistant("a2", 3),
+      ev("turn/withdrawn", { seq: 2 }, 4),
+    ];
+    const history = deriveHistoryEntries(events);
+    expect(history.map((entry) => entry.seq)).toEqual([0, 1]);
+  });
+
+  it("turn/withdrawn after compaction keeps the digest when the digest only covers earlier turns", () => {
+    const events = [
+      user("q1", 0),
+      assistant("a1", 1),
+      ev("compaction/applied", { anchorSeq: 1, digestContent: "digest of q1/a1", excludedSeqs: [] }, 2),
+      user("q2", 3),
+      assistant("a2", 4),
+      ev("turn/withdrawn", { seq: 3 }, 5),
+    ];
+    const messages = deriveMessages(events);
+    expect(messages.length).toBe(1);
+    expect((messages[0] as { content: string }).content).toContain("digest of q1/a1");
+  });
+
+  it("fold retains the digest when a withdraw anchors inside the compacted range (runner rejects this case)", () => {
+    const events = [
+      user("q1", 0),
+      assistant("a1", 1),
+      user("q2", 2),
+      assistant("a2", 3),
+      ev("compaction/applied", { anchorSeq: 3, digestContent: "digest covering q2", excludedSeqs: [] }, 4),
+      ev("turn/withdrawn", { seq: 2 }, 5),
+    ];
+    const messages = deriveMessages(events);
+    expect(messages.length).toBe(1);
+    expect((messages[0] as { content: string }).content).toContain("digest covering q2");
+  });
+
   it("last restart wins when multiple compactions exist", () => {
     const events = [
       user("q1", 0),

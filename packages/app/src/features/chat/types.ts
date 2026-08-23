@@ -98,6 +98,7 @@ export interface ChatMessage {
   _error?: string;
   _errorCode?: ErrorEventCode;
   _turnError?: boolean;
+  _withdrawError?: boolean;
   _sendFailed?: boolean;
   _runChanges?: FileChangeCard[];
   _attachments?: ChatAttachment[];

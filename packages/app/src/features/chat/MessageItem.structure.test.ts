@@ -50,6 +50,15 @@ describe("MessageItem structure", () => {
     expect(source).toContain("_attachments");
     expect(source).toContain("MessageAttachments");
   });
+
+  it("renders a withdraw action for user messages when onWithdraw is provided", () => {
+    const source = readFileSync(join(currentDir, "MessageItem.tsx"), "utf8");
+
+    expect(source).toContain("onWithdraw");
+    expect(source).toContain('data-chat-withdraw');
+    expect(source).toContain('title={t("chat.withdrawTooltip")}');
+    expect(source).toContain("isUser && onWithdraw");
+  });
 });
 
 describe("MessageAttachments structure", () => {

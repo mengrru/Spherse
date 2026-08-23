@@ -16,6 +16,7 @@ export interface SessionEventMap {
     digestSource?: "llm" | "mechanical";
   };
   "turn/retried": { abandonedSeqs: number[] };
+  "turn/withdrawn": { seq: number };
 }
 
 export type SessionEventType = keyof SessionEventMap;

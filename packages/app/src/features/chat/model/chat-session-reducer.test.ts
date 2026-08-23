@@ -35,6 +35,48 @@ describe("chat session reducer", () => {
     expect(next).toBe(current);
   });
 
+  it("turn_withdrawn drops the last user turn including trailing transient messages", () => {
+    const current = session({
+      messages: [
+        { role: "user", content: "q1" },
+        { role: "assistant", content: "a1" },
+        { role: "user", content: "q2", _optimistic: true },
+        { role: "assistant", content: "a2" },
+      ],
+    });
+
+    const next = reduceSessionEvents(current, [{ type: "turn_withdrawn", seq: 2 }], 200);
+
+    expect(next.messages).toEqual([
+      { role: "user", content: "q1" },
+      { role: "assistant", content: "a1" },
+    ]);
+    expect(next.streaming).toBe(false);
+  });
+
+  it("turn_withdrawn drops a trailing error bubble attached to the withdrawn turn", () => {
+    const current = session({
+      messages: [
+        { role: "user", content: "q1" },
+        { role: "assistant", content: "", _error: "boom", _turnError: true },
+      ],
+    });
+
+    const next = reduceSessionEvents(current, [{ type: "turn_withdrawn", seq: 0 }], 200);
+
+    expect(next.messages).toEqual([]);
+  });
+
+  it("turn_withdrawn is a no-op when there is no user message", () => {
+    const current = session({
+      messages: [{ role: "assistant", content: "hello" }],
+    });
+
+    const next = reduceSessionEvents(current, [{ type: "turn_withdrawn", seq: 0 }], 200);
+
+    expect(next.messages).toEqual([{ role: "assistant", content: "hello" }]);
+  });
+
   it("attaches stream errors to the current streaming assistant message via _error", () => {
     const messages = appendErrorMessage([
       { role: "user", content: "start" },

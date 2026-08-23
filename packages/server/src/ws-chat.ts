@@ -86,6 +86,15 @@ export function handleChatWebSocket(
             const message = err instanceof Error ? err.message : "retry error";
             send({ type: "error", message, code: classifyRunError(err) });
           }
+        } else if (msg.type === "withdraw") {
+          try {
+            await attachment.withdrawLastTurn();
+          } catch (err) {
+            if (closed) return;
+            fastify.log.error({ err, sessionId }, "chat ws withdraw error");
+            const message = err instanceof Error ? err.message : "withdraw error";
+            send({ type: "error", message, code: classifyRunError(err) });
+          }
         } else if (msg.type === "abort") {
           if (!(await ready) || closed) return;
           attachment.abort();

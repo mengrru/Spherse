@@ -25,12 +25,7 @@ export function deriveMessages(events: readonly SessionEvent[]): AgentMessage[] 
 export function deriveHistoryEntries(
   events: readonly SessionEvent[],
 ): DerivedMessageEntry[] {
-  const abandonedSeqs = new Set<number>();
-  for (const event of events) {
-    if (event.type === "turn/retried") {
-      for (const seq of event.data.abandonedSeqs) abandonedSeqs.add(seq);
-    }
-  }
+  const abandonedSeqs = collectAbandonedSeqs(events);
   const entries: DerivedMessageEntry[] = [];
   for (const event of events) {
     if (!MESSAGE_EVENT_TYPES.has(event.type) || abandonedSeqs.has(event.seq)) continue;
@@ -73,7 +68,7 @@ export function deriveMessageEntries(
 }
 
 function scanRestarts(events: readonly SessionEvent[]): RestartState {
-  const state: RestartState = { abandonedSeqs: new Set() };
+  const state: RestartState = { abandonedSeqs: collectAbandonedSeqs(events) };
   for (const event of events) {
     if (event.type === "compaction/applied") {
       state.compaction = {
@@ -82,11 +77,21 @@ function scanRestarts(events: readonly SessionEvent[]): RestartState {
         eventSeq: event.seq,
         excludedSeqs: new Set(event.data.excludedSeqs ?? []),
       };
-    } else if (event.type === "turn/retried") {
-      for (const seq of event.data.abandonedSeqs) state.abandonedSeqs.add(seq);
     }
   }
   return state;
+}
+
+export function collectAbandonedSeqs(events: readonly SessionEvent[]): Set<number> {
+  const abandoned = new Set<number>();
+  for (const event of events) {
+    if (event.type === "turn/retried") {
+      for (const seq of event.data.abandonedSeqs) abandoned.add(seq);
+    } else if (event.type === "turn/withdrawn") {
+      for (let seq = event.data.seq; seq < event.seq; seq++) abandoned.add(seq);
+    }
+  }
+  return abandoned;
 }
 
 const INTERRUPTED_TOOL_TEXT = "The tool call was interrupted and did not execute.";

@@ -329,6 +329,12 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     return true;
   }
 
+  withdraw(): boolean {
+    if (!this.isOpen()) return false;
+    this.ws?.send(JSON.stringify({ type: "withdraw" }));
+    return true;
+  }
+
   respondApproval(requestId: string, approved: boolean): boolean {
     if (!this.isOpen()) return false;
     this.ws?.send(JSON.stringify({

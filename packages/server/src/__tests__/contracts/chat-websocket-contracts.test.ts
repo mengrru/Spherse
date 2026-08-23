@@ -191,4 +191,24 @@ describe("chat websocket control contract", () => {
       }),
     ).toThrow(/Invalid payload/);
   });
+
+  it("accepts withdraw client message", () => {
+    expect(parseChatClientMessage({ type: "withdraw" })).toEqual({
+      type: "withdraw",
+    });
+  });
+
+  it("accepts turn_withdrawn server event", () => {
+    const event = { type: "turn_withdrawn", seq: 3 };
+    expect(parseChatServerEvent(event)).toEqual(event);
+  });
+
+  it("rejects turn_withdrawn without seq", () => {
+    expect(() => parseChatServerEvent({ type: "turn_withdrawn" })).toThrow(
+      /Invalid payload/,
+    );
+    expect(() =>
+      parseChatServerEvent({ type: "turn_withdrawn", seq: "3" }),
+    ).toThrow(/Invalid payload/);
+  });
 });

@@ -27,6 +27,7 @@ export interface ChatSessionAttachment {
   ready: Promise<boolean>;
   sendMessage(content: string, attachments?: Attachment[]): Promise<void>;
   retryLastTurn(): Promise<void>;
+  withdrawLastTurn(): Promise<void>;
   abort(): void;
   resolveControlRequest(
     requestId: string,
@@ -89,6 +90,14 @@ export class ChatSessionHub {
         await this.startRun(channel, (onEvent) =>
           channel.runtime.retryLastTurn(channel.sessionId, onEvent),
         );
+      },
+      withdrawLastTurn: async () => {
+        if (!(await ready) || !active) return;
+        if (channel.running) {
+          throw new ConflictError(`Session "${channel.sessionId}" is already running`);
+        }
+        const seq = await channel.runtime.withdrawLastTurn(channel.sessionId);
+        this.publish(channel, { type: "turn_withdrawn", seq });
       },
       abort: () => {
         if (active) channel.runtime.abortSession(channel.sessionId);

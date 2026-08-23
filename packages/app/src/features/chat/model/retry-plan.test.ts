@@ -4,6 +4,15 @@ import { planRetry, shouldAutoRetry, MAX_AUTO_RETRY } from "./retry-plan";
 import type { ChatMessage } from "../types";
 
 describe("planRetry", () => {
+  it("plans none for a withdraw-originated error bubble", () => {
+    const messages: ChatMessage[] = [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "", _error: "no user message to withdraw", _withdrawError: true },
+    ];
+    expect(planRetry(messages, 0, false)).toEqual({ kind: "none" });
+    expect(shouldAutoRetry(messages, 0)).toBe(false);
+  });
+
   it("plans retry-last for a failed assistant turn committed by the server (message_end error)", () => {
     const messages: ChatMessage[] = [
       { role: "user", content: "hi" },

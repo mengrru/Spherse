@@ -124,6 +124,96 @@ describe("streaming-store resilience", () => {
     expect(socket.closeSpy).toHaveBeenCalled();
   });
 
+  it("withdrawLastTurn sends withdraw and turn_withdrawn drops the last user turn", async () => {
+    const socket = await attachAndConnect("w1");
+    useStreamingStore.getState().sendMessage("w1", "q2");
+    socket.onmessage?.({
+      data: JSON.stringify({
+        type: "message_end",
+        message: { role: "assistant", content: [{ type: "text", text: "a2" }] },
+      }),
+    } as MessageEvent);
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "agent_end", messages: [] }),
+    } as MessageEvent);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useStreamingStore.getState().sessions.w1.streaming).toBe(false);
+
+    useStreamingStore.getState().withdrawLastTurn("w1");
+    expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({ type: "withdraw" });
+
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "turn_withdrawn", seq: 1 }),
+    } as MessageEvent);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const messages = useStreamingStore.getState().sessions.w1.messages;
+    expect(messages).toEqual([]);
+  });
+
+  it("withdrawLastTurn is a no-op while streaming", async () => {
+    const socket = await attachAndConnect("w2");
+    useStreamingStore.getState().sendMessage("w2", "hi");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useStreamingStore.getState().sessions.w2.streaming).toBe(true);
+
+    useStreamingStore.getState().withdrawLastTurn("w2");
+
+    expect(socket.sent.map((s) => JSON.parse(s))).not.toContainEqual({ type: "withdraw" });
+  });
+
+  it("withdrawLastTurn is a no-op when the last user message failed to send", async () => {
+    const socket = await attachAndConnect("w3");
+    const store = useStreamingStore.getState();
+    store.sendMessage("w3", "q1");
+    socket.onmessage?.({
+      data: JSON.stringify({
+        type: "message_end",
+        message: { role: "assistant", content: [{ type: "text", text: "a1" }] },
+      }),
+    } as MessageEvent);
+    socket.onmessage?.({ data: JSON.stringify({ type: "agent_end", messages: [] }) } as MessageEvent);
+    await vi.advanceTimersByTimeAsync(0);
+
+    socket.readyState = 3;
+    store.sendMessage("w3", "never sent");
+    await vi.advanceTimersByTimeAsync(0);
+    const failed = useStreamingStore.getState().sessions.w3.messages.at(-1);
+    expect(failed?._sendFailed).toBe(true);
+    socket.readyState = OPEN;
+
+    store.withdrawLastTurn("w3");
+
+    expect(socket.sent.map((s) => JSON.parse(s))).not.toContainEqual({ type: "withdraw" });
+  });
+
+  it("marks a withdraw failure error bubble as non-retryable", async () => {
+    const socket = await attachAndConnect("w4");
+    useStreamingStore.getState().sendMessage("w4", "q1");
+    socket.onmessage?.({
+      data: JSON.stringify({
+        type: "message_end",
+        message: { role: "assistant", content: [{ type: "text", text: "a1" }] },
+      }),
+    } as MessageEvent);
+    socket.onmessage?.({ data: JSON.stringify({ type: "agent_end", messages: [] }) } as MessageEvent);
+    await vi.advanceTimersByTimeAsync(0);
+
+    useStreamingStore.getState().withdrawLastTurn("w4");
+    socket.onmessage?.({
+      data: JSON.stringify({
+        type: "error",
+        message: "Session \"w4\" has no user message to withdraw",
+        code: "PERMANENT",
+      }),
+    } as MessageEvent);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const last = useStreamingStore.getState().sessions.w4.messages.at(-1);
+    expect(last?._error).toContain("no user message to withdraw");
+    expect(last?._withdrawError).toBe(true);
+  });
+
   it("does not treat a delayed heartbeat tick after renderer suspension as a timeout", async () => {
     const socket = await attachAndConnect();
     await vi.advanceTimersByTimeAsync(30_000);

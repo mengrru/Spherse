@@ -125,7 +125,7 @@ Agent system prompt content...
 
 每个 agent 拥有独立的 SQLite 数据库文件，位于 `.spherse/agents/{agent-slug}/sessions.db`。`sessions` 表保存列表元数据：`id`、`agent_id`、`title`、`created_at`、`updated_at`、`status`、`source`，以及为会话分支预留的 `parent_session_id` / `fork_seq` 与 legacy 迁移标记 `migrated_at`。每个 session 的状态为 `active` 或 `archived`。
 
-新会话历史写入 append-only `events` 表，主键为 `(session_id, seq)`；事件信封包含 `type`、会话内连续 `seq`、`time`、JSON `data` 与 `schema_version`。当前事件词汇表为 `turn/start`、`turn/end`、`user/message`、`assistant/message`、`tool/result`、`compaction/applied`、`turn/retried`。运行时消息由事件 fold 投影，内存消息数组只是可重建缓存：compaction 和 retry 均追加重启点事件，不修改或删除历史事件；崩溃恢复发现未闭合 turn 时会持久化合成错误 toolResult 与 aborted turn/end，保证二次恢复幂等。
+新会话历史写入 append-only `events` 表，主键为 `(session_id, seq)`；事件信封包含 `type`、会话内连续 `seq`、`time`、JSON `data` 与 `schema_version`。当前事件词汇表为 `turn/start`、`turn/end`、`user/message`、`assistant/message`、`tool/result`、`compaction/applied`、`turn/retried`、`turn/withdrawn`。运行时消息由事件 fold 投影，内存消息数组只是可重建缓存：compaction 和 retry 均追加重启点事件，不修改或删除历史事件；`turn/withdrawn { seq }` 锚定被撤回的 user message 事件 seq，废弃区间 `[seq, 本事件 seq)` 由 fold 从日志推导（`collectAbandonedSeqs` 统一收集 retried 列表与 withdrawn 区间），消息撤回（撤回最后一轮）由此实现；末轮已被 compaction digest 覆盖时 `AgentRunner.withdrawLastTurn` 拒绝撤回（digest 无法非破坏性剔除单轮内容）；旧版本二进制读取含 `turn/withdrawn` 的日志时会因未知事件类型跳过该事件、重新显示被撤回的消息（additive 事件不升 schema version，正向兼容优先）。崩溃恢复发现未闭合 turn 时会持久化合成错误 toolResult 与 aborted turn/end，保证二次恢复幂等。
 
 升级前的 `messages` / `compactions` 表保留只读，用于迁移前的历史展示，不再作为新写入路径。首次 restore（包括打开聊天、静默发送和 trigger 复用）会在单个 SQLite 事务中把旧历史惰性转换为 events 并写入 `migrated_at`，然后继续恢复可写会话。旧表数据原样保留，迁移幂等且完全属于 core 内部实现，不暴露客户端迁移 API 或状态字段。
 

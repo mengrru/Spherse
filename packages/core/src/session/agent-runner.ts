@@ -12,7 +12,7 @@ import type { RuntimeDeps } from "./runtime.js";
 import { logEventMiddleware } from "./event-middlewares.js";
 import { createAttachmentSanitizer } from "../attachments/sanitizer.js";
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
-import { deriveMessages, repairLog } from "./fold.js";
+import { collectAbandonedSeqs, deriveMessages, repairLog } from "./fold.js";
 import { SessionEventLog } from "./event-log.js";
 import type { SessionEvent } from "./events.js";
 import { readCurrentTokens } from "../context/token-estimate.js";
@@ -220,6 +220,30 @@ export class AgentRunner {
       this.controlBus.swapEventSink(previousSink);
       this.inFlight = false;
     }
+  }
+
+  async withdrawLastTurn(): Promise<number> {
+    this.ensureNotBusy();
+    const events = this.eventLog!.events;
+    const lastUserEvent = [...events]
+      .reverse()
+      .find((event) => event.type === "user/message");
+    if (!lastUserEvent || collectAbandonedSeqs(events).has(lastUserEvent.seq)) {
+      throw new ValidationError(
+        `Session "${this.sessionId}" has no user message to withdraw`,
+      );
+    }
+    const lastCompaction = [...events]
+      .reverse()
+      .find((event) => event.type === "compaction/applied");
+    if (lastCompaction && lastUserEvent.seq <= lastCompaction.data.anchorSeq) {
+      throw new ValidationError(
+        `Session "${this.sessionId}" last turn is already compacted into a digest and cannot be withdrawn`,
+      );
+    }
+    this.eventLog!.append("turn/withdrawn", { seq: lastUserEvent.seq });
+    this.syncBufferFromLog();
+    return lastUserEvent.seq;
   }
 
   private ensureNotBusy(): void {

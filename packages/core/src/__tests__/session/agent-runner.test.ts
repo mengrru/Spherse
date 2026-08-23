@@ -548,6 +548,123 @@ describe("AgentRunner context engineering", () => {
 
     await expect(runner.retryLastTurn(() => {})).rejects.toThrow(/no failed assistant turn/);
   });
+
+  it("withdrawLastTurn abandons the last user turn and syncs the agent buffer", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const agent = agentOf(runner);
+
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q1" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a1" }], stopReason: "stop", timestamp: 2 } } },
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q2" }], timestamp: 3 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a2" }], stopReason: "stop", timestamp: 4 } } },
+    ]);
+
+    const anchor = await runner.withdrawLastTurn();
+
+    expect(anchor).toBe(2);
+    const withdrawnEvents = eventsOf(runner).filter((e: any) => e.type === "turn/withdrawn");
+    expect(withdrawnEvents).toHaveLength(1);
+    expect(withdrawnEvents[0].data).toEqual({ seq: 2 });
+    expect(agent.state.messages.length).toBe(2);
+    expect((agent.state.messages[0] as any).content[0].text).toBe("q1");
+    expect((agent.state.messages[1] as any).content[0].text).toBe("a1");
+    expect(agentStore.sessions.readEvents(sessionId)).toHaveLength(5);
+  });
+
+  it("withdrawLastTurn restores to an empty buffer when it withdraws the only turn", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const agent = agentOf(runner);
+
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q1" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a1" }], stopReason: "stop", timestamp: 2 } } },
+    ]);
+
+    const anchor = await runner.withdrawLastTurn();
+
+    expect(anchor).toBe(0);
+    expect(agent.state.messages).toEqual([]);
+    expect(deriveMessages(agentStore.sessions.readEvents(sessionId))).toEqual([]);
+  });
+
+  it("withdrawLastTurn rejects when the log has no user message", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+
+    await expect(runner.withdrawLastTurn()).rejects.toThrow(/no user message to withdraw/);
+  });
+
+  it("withdrawLastTurn rejects when the last user message is already withdrawn", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q1" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a1" }], stopReason: "stop", timestamp: 2 } } },
+    ]);
+    await runner.withdrawLastTurn();
+
+    await expect(runner.withdrawLastTurn()).rejects.toThrow(/no user message to withdraw/);
+  });
+
+  it("withdrawLastTurn rejects while a turn is in flight", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q1" }], timestamp: 1 } } },
+    ]);
+    (runner as any).inFlight = true;
+
+    await expect(runner.withdrawLastTurn()).rejects.toThrow(/turn in progress/);
+  });
+
+  it("withdrawLastTurn rejects when the last turn is already covered by a compaction digest", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q1" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a1" }], stopReason: "stop", timestamp: 2 } } },
+      { type: "compaction/applied", data: { anchorSeq: 1, digestContent: "digest of q1/a1", excludedSeqs: [] } },
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q2" }], timestamp: 3 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a2" }], stopReason: "stop", timestamp: 4 } } },
+      { type: "compaction/applied", data: { anchorSeq: 4, digestContent: "digest covering q2", excludedSeqs: [] } },
+    ]);
+
+    await expect(runner.withdrawLastTurn()).rejects.toThrow(/already compacted/);
+    expect(eventsOf(runner).filter((e: any) => e.type === "turn/withdrawn")).toHaveLength(0);
+  });
+
+  it("withdrawLastTurn succeeds when compaction only covers earlier turns", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q1" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a1" }], stopReason: "stop", timestamp: 2 } } },
+      { type: "compaction/applied", data: { anchorSeq: 1, digestContent: "digest of q1/a1", excludedSeqs: [] } },
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q2" }], timestamp: 3 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a2" }], stopReason: "stop", timestamp: 4 } } },
+    ]);
+
+    const anchor = await runner.withdrawLastTurn();
+
+    expect(anchor).toBe(3);
+    const messages = agentOf(runner).state.messages;
+    expect(messages.length).toBe(1);
+    expect((messages[0] as any).content).toContain("digest of q1/a1");
+  });
 });
 
 describe("AgentRunner yolo mode", () => {

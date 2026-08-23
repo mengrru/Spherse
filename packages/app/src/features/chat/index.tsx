@@ -37,6 +37,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     reconnectFailed,
     sendMessage,
     retry,
+    withdrawLastTurn,
     abort,
     reconnect,
     retryHistory,
@@ -97,6 +98,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           onRespondApproval={handleRespondApproval}
           onRespondQuestion={handleRespondQuestion}
           onRetry={retry}
+          onWithdraw={withdrawLastTurn}
           hasMore={hasMore}
           loadingMore={loadingMore}
           onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}

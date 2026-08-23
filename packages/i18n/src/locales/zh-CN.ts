@@ -634,6 +634,8 @@ export const zhCN = {
   "chat.htmlCard.collapse": "折叠",
   // 复制按钮悬停提示
   "chat.copyTooltip": "复制",
+  // 最新一条用户消息气泡旁的「撤回」按钮悬停提示，点击撤回该消息及本轮回复
+  "chat.withdrawTooltip": "撤回",
   // markdown 代码块右上角「复制代码」按钮的悬停提示
   "markdown.copyCode": "复制代码",
   // Chat 关闭按钮悬停提示

@@ -22,6 +22,7 @@ function createRuntime() {
         });
       },
     ),
+    withdrawLastTurn: vi.fn().mockResolvedValue(4),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
@@ -151,6 +152,39 @@ describe("ChatSessionHub", () => {
 
     mock.finish();
     await firstRun;
+    attachment.close();
+  });
+
+  it("withdrawLastTurn publishes turn_withdrawn with the anchor seq", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await attachment.ready;
+    events.length = 0;
+
+    await attachment.withdrawLastTurn();
+
+    expect(mock.runtime.withdrawLastTurn).toHaveBeenCalledWith("s1");
+    expect(events).toEqual([{ type: "turn_withdrawn", seq: 4 }]);
+    attachment.close();
+  });
+
+  it("rejects withdrawLastTurn with ConflictError when a run is already active", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    await attachment.ready;
+
+    const run = attachment.sendMessage("hi");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+
+    await expect(attachment.withdrawLastTurn()).rejects.toThrow(/already running/);
+
+    mock.finish();
+    await run;
     attachment.close();
   });
 

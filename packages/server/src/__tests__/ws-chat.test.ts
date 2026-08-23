@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NotFoundError, ModelNotConfiguredError } from "@spherse/core";
+import { NotFoundError, ModelNotConfiguredError, ValidationError } from "@spherse/core";
 
 import { handleChatWebSocket } from "../ws-chat.js";
 import { ChatSessionHub } from "../chat-session-hub.js";
@@ -53,6 +53,7 @@ function createMockRegistry() {
   const sessionRuntime = {
     restoreSession: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn().mockResolvedValue(undefined),
+    withdrawLastTurn: vi.fn().mockResolvedValue(2),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
@@ -92,6 +93,27 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
   it("replies with pong on ping", () => {
     socket.simulateMessage(Buffer.from(JSON.stringify({ type: "ping" })));
     expect(sentObjects(socket)).toContainEqual({ type: "pong" });
+  });
+
+  it("routes withdraw to withdrawLastTurn and broadcasts turn_withdrawn", async () => {
+    socket.simulateMessage(Buffer.from(JSON.stringify({ type: "withdraw" })));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sessionRuntime.withdrawLastTurn).toHaveBeenCalledWith("s1");
+    expect(sentObjects(socket)).toContainEqual({ type: "turn_withdrawn", seq: 2 });
+  });
+
+  it("sends error event when withdrawLastTurn rejects", async () => {
+    sessionRuntime.withdrawLastTurn.mockRejectedValue(
+      new ValidationError("Session \"s1\" has no user message to withdraw"),
+    );
+    socket.simulateMessage(Buffer.from(JSON.stringify({ type: "withdraw" })));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sentObjects(socket)).toContainEqual({
+      type: "error",
+      message: 'Session "s1" has no user message to withdraw',
+      code: "PERMANENT",
+    });
+    expect(socket.close).not.toHaveBeenCalled();
   });
 
   it("routes question resolve_control_request with answer and timedOut false", async () => {

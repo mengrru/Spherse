@@ -1,7 +1,10 @@
 import { useCallback } from "react";
+import { useI18n } from "@spherse/i18n/react";
+import { Undo2Icon } from "lucide-react";
 import type { AgentProfile } from "../../lib/types";
 import type { ChatMessage } from "./types";
 import { MarkdownContent } from "../../components/MarkdownContent";
+import { Button } from "../../components/ui/button";
 import { HtmlCardRenderer } from "./HtmlCard";
 import { ImageCardRenderer } from "./ImageCard";
 import { CommandCardRenderer } from "./CommandCard";
@@ -26,11 +29,13 @@ interface MessageItemProps {
   onRespondApproval?: (requestId: string, approved: boolean) => void;
   onRespondQuestion?: (requestId: string, answer: string) => boolean | void;
   onRetry?: () => void;
+  onWithdraw?: () => void;
 }
 
-export function MessageItem({ message, agent, showTime, supersededToolCallIds, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry }: MessageItemProps) {
+export function MessageItem({ message, agent, showTime, supersededToolCallIds, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry, onWithdraw }: MessageItemProps) {
   const isUser = message.role === "user";
   const openLink = useOpenExternalLink();
+  const { t } = useI18n();
 
   const handleLinkClick = useCallback(
     async (href: string, event: React.MouseEvent<HTMLAnchorElement>) => {
@@ -83,7 +88,7 @@ export function MessageItem({ message, agent, showTime, supersededToolCallIds, o
         {message._toolCalls && message._toolCalls.length > 0 && (
           <ToolCallSection toolCalls={message._toolCalls} onNavigateToPath={onNavigateToPath} />
         )}
-        {message._error && <ErrorMessageSection error={message._error} errorCode={message._errorCode} onRetry={onRetry} />}
+        {message._error && <ErrorMessageSection error={message._error} errorCode={message._errorCode} onRetry={message._withdrawError ? undefined : onRetry} />}
         {message._toolCalls
           ?.filter((toolCall) => toolCall._card)
           .map((toolCall) => {
@@ -122,6 +127,18 @@ export function MessageItem({ message, agent, showTime, supersededToolCallIds, o
         {isUser && message._sendFailed && <SendFailedBar onRetry={onRetry} />}
         {!message._streaming && (
           <div className={`flex items-center gap-1 pb-1 opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 ${isUser ? "md:flex-row-reverse" : ""}`}>
+            {isUser && onWithdraw && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
+                onClick={onWithdraw}
+                title={t("chat.withdrawTooltip")}
+                data-chat-withdraw
+              >
+                <Undo2Icon />
+              </Button>
+            )}
             <CopyButton text={message.content} />
             {showTime && message.timestamp && (
               <time className="text-[11px] text-muted-foreground whitespace-nowrap">
