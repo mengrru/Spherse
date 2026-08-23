@@ -48,6 +48,7 @@ test("withdraw button removes the last user turn after server confirms", async (
     await expect(withdrawButton).toBeVisible();
 
     await withdrawButton.click();
+    await page.locator("[data-chat-withdraw-confirm]").click();
 
     await expect(page.locator("text=first question")).toHaveCount(0, { timeout: 5000 });
     await expect(page.locator("text=Answer")).toHaveCount(0);
@@ -95,6 +96,7 @@ test("withdraw failure shows error without retry affordance", async () => {
     await page.waitForSelector("text=Answer", { timeout: 5000 });
 
     await page.locator("[data-chat-message][data-role='user'] [data-chat-withdraw]").click();
+    await page.locator("[data-chat-withdraw-confirm]").click();
 
     await page.waitForSelector("[data-chat-error]", { timeout: 5000 });
     await expect(page.locator("[data-chat-retry]")).toHaveCount(0);
