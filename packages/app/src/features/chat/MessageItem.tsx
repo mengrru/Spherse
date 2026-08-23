@@ -72,7 +72,7 @@ export function MessageItem({ message, agent, showTime, supersededToolCallIds, o
             <ThinkingIndicator />
           ) : (
             <>
-              <MarkdownContent variant="chat" breaks={isUser} linkClassName="text-inherit" onLinkClick={handleLinkClick}>{message.content}</MarkdownContent>
+              <MarkdownContent variant="chat" plain={isUser} linkClassName="text-inherit" onLinkClick={handleLinkClick}>{message.content}</MarkdownContent>
               {message._streaming && message.content && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
             </>
           )}
