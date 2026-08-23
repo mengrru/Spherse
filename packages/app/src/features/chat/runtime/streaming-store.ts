@@ -14,7 +14,8 @@ import {
   type StreamingSessionData,
 } from "../model/chat-session-reducer";
 import { planRetry, shouldAutoRetry } from "../model/retry-plan";
-import type { SendableImage } from "../types";
+import { lastWithdrawableUserIndex } from "../model/withdrawable";
+import type { SendableImage, ChatMessage } from "../types";
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 30 * 1000;
@@ -33,6 +34,7 @@ interface StreamingSession extends StreamingSessionData {
   reconnectFailed: boolean;
   retryCount: number;
   autoRetrying: boolean;
+  pendingWithdraw: boolean;
 }
 
 interface StreamingStoreState {
@@ -46,6 +48,7 @@ interface StreamingStoreActions {
   touch: (sessionId: string) => void;
   sendMessage: (sessionId: string, text: string, image?: SendableImage, opts?: { isRetry?: boolean }) => boolean;
   retry: (sessionId: string) => void;
+  withdrawLastTurn: (sessionId: string) => void;
   abort: (sessionId: string) => void;
   reconnect: (sessionId: string) => void;
   resumeProbeAll: () => void;
@@ -122,6 +125,30 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     get().sendMessage(sessionId, plan.content, plan.attachment, { isRetry: true });
   }
 
+  function settlePendingWithdraw(
+    session: StreamingSession,
+    events: AgentEvent[],
+  ): StreamingSession {
+    if (!session.pendingWithdraw) return session;
+    const failed = events.some((event) => event.type === "error");
+    if (!failed && !events.some((event) => event.type === "turn_withdrawn")) return session;
+    const messages = failed ? flagWithdrawError(session.messages) : session.messages;
+    return { ...session, messages, pendingWithdraw: false };
+  }
+
+  function flagWithdrawError(messages: ChatMessage[]): ChatMessage[] {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message.role !== "assistant") break;
+      if (message._error) {
+        const next = [...messages];
+        next[i] = { ...message, _withdrawError: true };
+        return next;
+      }
+    }
+    return messages;
+  }
+
   function flushQueuedEvents() {
     flushRaf = undefined;
     if (eventQueue.size === 0) return;
@@ -138,11 +165,13 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         const session = next[sessionId];
         if (!session) continue;
         const reduced = reduceSessionEvents(session, events, now);
-        if (reduced === session) continue;
-        if (reduced.streaming !== session.streaming) {
-          streamingChanges.push({ projectId: session.projectId, sessionId, streaming: reduced.streaming });
+        const merged = reduced === session ? session : { ...session, ...reduced };
+        const settled = settlePendingWithdraw(merged, events);
+        if (settled === session) continue;
+        if (settled.streaming !== session.streaming) {
+          streamingChanges.push({ projectId: session.projectId, sessionId, streaming: settled.streaming });
         }
-        next[sessionId] = { ...session, ...reduced };
+        next[sessionId] = settled;
         changed = true;
       }
 
@@ -226,6 +255,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         reconnectFailed: false,
         retryCount: 0,
         autoRetrying: false,
+        pendingWithdraw: false,
       };
       return {
         sessions: {
@@ -244,10 +274,11 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         updateSession: (updater) => updateSession(sessionId, updater),
         enqueueEvent: (event) => enqueueEvent(sessionId, event),
         applyEvents: (events) => {
-          updateSession(sessionId, (session) => ({
-            ...session,
-            ...reduceSessionEvents(session, events, Date.now()),
-          }));
+          updateSession(sessionId, (session) => {
+            const reduced = reduceSessionEvents(session, events, Date.now());
+            const merged = reduced === session ? session : { ...session, ...reduced };
+            return settlePendingWithdraw(merged, events);
+          });
           const session = get().sessions[sessionId];
           if (session) {
             useProjectDataStore.getState().setStreaming(
@@ -389,6 +420,16 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
     retry(sessionId) {
       executeRetry(sessionId, false);
+    },
+
+    withdrawLastTurn(sessionId) {
+      const session = get().sessions[sessionId];
+      if (!session || session.streaming) return;
+      if (lastWithdrawableUserIndex(session.messages) < 0) return;
+      const runtime = runtimes.get(sessionId);
+      if (!runtime?.isOpen()) return;
+      updateSession(sessionId, (current) => ({ ...current, pendingWithdraw: true }));
+      runtime.withdraw();
     },
 
     abort(sessionId) {

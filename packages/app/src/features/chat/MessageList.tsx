@@ -8,6 +8,7 @@ import { ChevronDownIcon } from "lucide-react";
 import { MessageItem } from "./MessageItem";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 import { computeSupersededToolCallIds } from "./model/html-card-dedup";
+import { lastWithdrawableUserIndex } from "./model/withdrawable";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -21,12 +22,13 @@ interface MessageListProps {
   onRespondApproval?: (requestId: string, approved: boolean) => void;
   onRespondQuestion?: (requestId: string, answer: string) => boolean | void;
   onRetry?: () => void;
+  onWithdraw?: () => void;
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry, hasMore, loadingMore, onLoadMore }: MessageListProps) {
+export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry, onWithdraw, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
 
   // 相同 file_path 的 html card 只展开最近一张；较早的同路径卡片折叠（不挂载 iframe）。
@@ -52,6 +54,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
   }
 
   const lastMessage = messages[messages.length - 1];
+  const withdrawableIndex = streaming ? -1 : lastWithdrawableUserIndex(messages);
 
   const reversed = messages
     .map((message, index) => ({ message, index }))
@@ -80,6 +83,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
               onRespondApproval={onRespondApproval}
               onRespondQuestion={onRespondQuestion}
               onRetry={isLast ? onRetry : undefined}
+              onWithdraw={index === withdrawableIndex ? onWithdraw : undefined}
             />
           );
         })}

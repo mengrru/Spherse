@@ -11,6 +11,7 @@ export type RetryPlan =
 export function shouldAutoRetry(messages: ChatMessage[], retryCount: number): boolean {
   const last = messages[messages.length - 1];
   if (!last || last.role !== "assistant" || !last._error) return false;
+  if (last._withdrawError) return false;
   if (last._errorCode !== ErrorEventCode.Transient) return false;
   return retryCount < MAX_AUTO_RETRY;
 }
@@ -19,6 +20,9 @@ export function planRetry(messages: ChatMessage[], retryCount: number, isAuto: b
   const last = messages[messages.length - 1];
 
   if (last?.role === "assistant" && last._error) {
+    if (last._withdrawError) {
+      return { kind: "none" };
+    }
     if (isAuto && (last._errorCode !== ErrorEventCode.Transient || retryCount >= MAX_AUTO_RETRY)) {
       return { kind: "none" };
     }

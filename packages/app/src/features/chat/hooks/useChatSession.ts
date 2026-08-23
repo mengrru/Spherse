@@ -61,6 +61,7 @@ export function useChatSession({
     autoRetrying,
     sendMessage: (text: string, image?: AttachedImage) => useStreamingStore.getState().sendMessage(sessionId, text, image),
     retry: () => useStreamingStore.getState().retry(sessionId),
+    withdrawLastTurn: () => useStreamingStore.getState().withdrawLastTurn(sessionId),
     abort: () => useStreamingStore.getState().abort(sessionId),
     reconnect: () => useStreamingStore.getState().reconnect(sessionId),
     retryHistory: () => useStreamingStore.getState().retryHistory(client, agentId, sessionId),

@@ -100,6 +100,7 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
     case "agent_start":
     case "run_status":
     case "turn_start":
+    case "turn_withdrawn":
     case "pong":
     case "error":
       return event;

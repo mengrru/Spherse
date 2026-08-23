@@ -416,6 +416,47 @@ describe("SessionManager lifecycle", () => {
     expect(runtime.sessionRuntime.hasActiveSession(sidB)).toBe(false);
   });
 
+  it("withdrawLastTurn delegates to the active session runner", async () => {
+    const agentStore = runtime.projectManager.projectStore.agents.get(agentId) as any;
+    const sessionId = agentStore.sessions.createSession();
+    agentStore.sessions.appendEvents(
+      sessionId,
+      [
+        {
+          type: "user/message",
+          seq: 0,
+          time: 1,
+          data: { message: { role: "user", content: "q1", timestamp: 1 } },
+        },
+        {
+          type: "assistant/message",
+          seq: 1,
+          time: 2,
+          data: {
+            message: { role: "assistant", content: [{ type: "text", text: "a1" }], timestamp: 2 },
+          },
+        },
+      ],
+      1,
+    );
+    await runtime.sessionRuntime.restoreSession(agentId, sessionId);
+
+    const anchor = await runtime.sessionRuntime.withdrawLastTurn(sessionId);
+
+    expect(anchor).toBe(0);
+    expect(agentStore.sessions.readEvents(sessionId).at(-1)).toMatchObject({
+      type: "turn/withdrawn",
+      data: { seq: 0 },
+    });
+    expect(activeAgent(runtime, sessionId).state.messages).toEqual([]);
+  });
+
+  it("withdrawLastTurn throws NotFoundError for an inactive session", async () => {
+    await expect(runtime.sessionRuntime.withdrawLastTurn("missing")).rejects.toThrow(
+      /No active session/,
+    );
+  });
+
   it("closeAll removes every session", async () => {
     const sidA = await runtime.sessionRuntime.createSession(agentId);
     const sidB = await runtime.sessionRuntime.createSession(agentId);

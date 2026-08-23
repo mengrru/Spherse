@@ -71,6 +71,13 @@ function applyEventToStreaming(event: AgentEvent): boolean | null {
 }
 
 function applyEventToMessages(prev: ChatMessage[], event: AgentEvent, now: number): ChatMessage[] {
+  if (event.type === "turn_withdrawn") {
+    for (let i = prev.length - 1; i >= 0; i--) {
+      if (prev[i].role === "user") return prev.slice(0, i);
+    }
+    return prev;
+  }
+
   if (event.type === "message_start" && isAssistantMessage(event.message)) {
     const last = prev[prev.length - 1];
     if (last?.role === "assistant" && last._streaming) return prev;

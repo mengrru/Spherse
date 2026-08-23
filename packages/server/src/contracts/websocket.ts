@@ -118,6 +118,10 @@ const chatServerEvent = Type.Union([
     timedOut: Type.Boolean(),
   }),
   Type.Object({
+    type: Type.Literal("turn_withdrawn"),
+    seq: Type.Integer(),
+  }),
+  Type.Object({
     type: Type.Literal("error"),
     message: Type.String(),
     code: Type.Optional(Type.Enum(ErrorEventCode)),
@@ -143,6 +147,7 @@ export const schemas = {
     Type.Object({ type: Type.Literal("abort") }),
     Type.Object({ type: Type.Literal("ping") }),
     Type.Object({ type: Type.Literal("retry") }),
+    Type.Object({ type: Type.Literal("withdraw") }),
     Type.Object({
       type: Type.Literal("resolve_control_request"),
       requestId: Type.String(),
