@@ -29,7 +29,7 @@ spherse/
 │   │       │   ├── mcp/              # McpConnectionManager + turnHooks（按配置版本 memo 的工具合并）+ mcp-context block
 │   │       │   ├── attachments/      # image processor 贡献 + contextProjector（convertToLlm 前剥 _attachments/空 image block）
 │   │       │   ├── compaction/       # maybeCompactLog 纯变换（transform.ts）+ capability
-│   │       │   ├── time-perception/ # streamDecorators 贡献（<time> 前缀注入）+ 提示 block；感知时间数学在 time-perception.ts
+│   │       │   ├── time-perception/ # streamDecorators 贡献（<time> 前缀注入）+ previewTransforms（debug snapshot 重放）+ 提示 block；感知时间数学在 time-perception.ts
 │   │       │   ├── memory/           # memory capability（memory_save/recall 工具接线 + <memory> block；MemoryStore 在 store/memory.ts）
 │   │       │   ├── shared/           # llmPolicyOf 等跨能力共享工具
 │   │       │   └── builtin.ts        # builtinToolCapabilities()：纯工具类 capability 集合

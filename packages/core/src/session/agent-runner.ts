@@ -1,4 +1,4 @@
-import type { Agent, AgentEvent, AgentTool } from "@earendil-works/pi-agent-core";
+import type { Agent, AgentEvent, AgentMessage, AgentTool } from "@earendil-works/pi-agent-core";
 import { prepareAttachmentUserMessage, stripUserAttachments, type Attachment } from "../attachments/index.js";
 import type { SamplingParams } from "../types.js";
 import { MigrationRequiredError, NotFoundError, ValidationError } from "../errors.js";
@@ -20,6 +20,7 @@ import {
   buildAgent,
   buildPromptAndTools,
   composeStreamFn,
+  previewTransformsFor,
   streamDecoratorsFor,
 } from "./agent-assembly.js";
 
@@ -271,11 +272,41 @@ export class AgentRunner {
   }
 
   getTurnContext() {
+    // Same projection closure the agent loop consumes on the wire path
+    // (contextProjectors + role filter), so the snapshot cannot drift from it.
+    const raw = structuredClone(this.agent.state.messages);
+    const converted = this.agent.convertToLlm(raw);
+    let llmMessages: AgentMessage[];
+    if (Array.isArray(converted)) {
+      llmMessages = converted as AgentMessage[];
+    } else {
+      // buildAgent always wires a sync convertToLlm; if that ever changes,
+      // degrade loudly instead of silently exporting the unprojected buffer.
+      this.deps.logger.warn(
+        { sessionId: this.sessionId },
+        "convertToLlm returned a promise; turn context falls back to raw buffer",
+      );
+      llmMessages = raw;
+    }
+    // Replay stream-level message rewrites (e.g. time-perception prefixes)
+    // in wire order — previewTransformsFor already reverses registration
+    // order to match decorator onion composition.
+    const profile = this.deps.projectStore.getAgent(this.agentId)?.getProfile();
+    if (!profile) {
+      this.deps.logger.warn(
+        { sessionId: this.sessionId, agentId: this.agentId },
+        "agent profile missing; turn context skips preview transforms",
+      );
+    } else {
+      for (const transform of previewTransformsFor(this.deps.capabilities, this.viewOf(profile))) {
+        llmMessages = transform(llmMessages);
+      }
+    }
     return {
       sessionId: this.sessionId,
       capturedAt: new Date().toISOString(),
       systemPrompt: this.agent.state.systemPrompt,
-      messages: structuredClone(this.agent.state.messages),
+      messages: llmMessages,
       tools: this.agent.state.tools.map((tool: AgentTool) => ({
         name: tool.name,
         description: tool.description ?? "",

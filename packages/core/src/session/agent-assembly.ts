@@ -7,7 +7,8 @@ import type { ApprovalGate, AskGate } from "../kernel/gates.js";
 import { readContextFiles, type ContextFile } from "./read-context-files.js";
 
 
-import type { ToolHost } from "../kernel/ports.js";
+import type { Capability } from "../kernel/capability.js";
+import type { SessionView, ToolHost } from "../kernel/ports.js";
 import { serializeBlocks, type ContextBlock } from "../kernel/context-block.js";
 import { llmPolicyOf } from "../capabilities/shared/llm-policy.js";
 import { escapeXmlAttr } from "../utils/xml-escape.js";
@@ -27,34 +28,44 @@ export function composeStreamFn(
   return fn;
 }
 
-export function contextProjectorsFor(
-  capabilities: ReadonlyArray<import("../kernel/capability.js").Capability>,
-  view: import("../kernel/ports.js").SessionView,
-): Array<(messages: readonly import("@earendil-works/pi-agent-core").AgentMessage[]) => import("@earendil-works/pi-agent-core").AgentMessage[]> {
-  const projectors: Array<
-    (messages: readonly import("@earendil-works/pi-agent-core").AgentMessage[]) => import("@earendil-works/pi-agent-core").AgentMessage[]
-  > = [];
+function resolveSources<T>(
+  capabilities: ReadonlyArray<Capability>,
+  select: (capability: Capability) => ReadonlyArray<(view: SessionView) => T | undefined> | undefined,
+  view: SessionView,
+): T[] {
+  const resolved: T[] = [];
   for (const capability of capabilities) {
-    for (const source of capability.contextProjectors ?? []) {
-      const project = source(view);
-      if (project) projectors.push(project);
+    for (const source of select(capability) ?? []) {
+      const item = source(view);
+      if (item) resolved.push(item);
     }
   }
-  return projectors;
+  return resolved;
+}
+
+export function contextProjectorsFor(
+  capabilities: ReadonlyArray<Capability>,
+  view: SessionView,
+): Array<(messages: readonly AgentMessage[]) => AgentMessage[]> {
+  return resolveSources(capabilities, (capability) => capability.contextProjectors, view);
+}
+
+export function previewTransformsFor(
+  capabilities: ReadonlyArray<Capability>,
+  view: SessionView,
+): Array<(messages: readonly AgentMessage[]) => AgentMessage[]> {
+  // Mirror the wire onion order: composeStreamFn wraps later-registered
+  // decorators outermost, so their message rewrites apply FIRST on the wire.
+  // Reversing registration order makes forward iteration here replay the
+  // same pipeline the LLM request actually goes through.
+  return resolveSources(capabilities, (capability) => capability.previewTransforms, view).reverse();
 }
 
 export function streamDecoratorsFor(
-  capabilities: ReadonlyArray<import("../kernel/capability.js").Capability>,
-  view: import("../kernel/ports.js").SessionView,
+  capabilities: ReadonlyArray<Capability>,
+  view: SessionView,
 ): Array<(base: StreamFn) => StreamFn> {
-  const decorators: Array<(base: StreamFn) => StreamFn> = [];
-  for (const capability of capabilities) {
-    for (const source of capability.streamDecorators ?? []) {
-      const decorate = source(view);
-      if (decorate) decorators.push(decorate);
-    }
-  }
-  return decorators;
+  return resolveSources(capabilities, (capability) => capability.streamDecorators, view);
 }
 
 interface SessionMeta {
