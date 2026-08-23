@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import rehypeSlug from "rehype-slug";
 import { cn } from "@/lib/utils";
 import { CodeBlock } from "./CodeBlock";
@@ -8,11 +9,13 @@ import { CodeBlock } from "./CodeBlock";
 interface MarkdownContentProps {
   children: string;
   variant?: "chat" | "document";
-  breaks?: boolean;
+  plain?: boolean;
   resolveImageSrc?: (src: string) => string;
   linkClassName?: string;
   onLinkClick?: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void;
 }
+
+const PLAIN_ALLOWED_ELEMENTS = ["p", "br", "blockquote", "pre", "code", "a"];
 
 function imgClassName(variant: "chat" | "document"): string {
   return variant === "chat"
@@ -120,7 +123,7 @@ const CHAT_COMPONENTS: Components = {
   ),
 };
 
-export function MarkdownContent({ children, variant = "document", breaks, resolveImageSrc, linkClassName, onLinkClick }: MarkdownContentProps) {
+export function MarkdownContent({ children, variant = "document", plain, resolveImageSrc, linkClassName, onLinkClick }: MarkdownContentProps) {
   const components = useMemo<Components>(() => {
     const base = variant === "chat" ? CHAT_COMPONENTS : DOCUMENT_COMPONENTS;
     const overrides: Partial<Components> = {};
@@ -154,7 +157,13 @@ export function MarkdownContent({ children, variant = "document", breaks, resolv
 
   return (
     <div className={variant === "chat" ? "text-sm leading-6" : "text-sm leading-7"}>
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSlug]} breaks={breaks} components={components}>
+      <Markdown
+        remarkPlugins={plain ? [remarkGfm, remarkBreaks] : [remarkGfm]}
+        rehypePlugins={[rehypeSlug]}
+        allowedElements={plain ? PLAIN_ALLOWED_ELEMENTS : undefined}
+        unwrapDisallowed={plain}
+        components={components}
+      >
         {children}
       </Markdown>
     </div>
