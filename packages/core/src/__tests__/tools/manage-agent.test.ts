@@ -294,12 +294,78 @@ describe("createManageAgentTool", () => {
     expect((await readFrontmatter(profile.id)).timePerception).toBeUndefined();
   });
 
+  it("materializes missing timePerception fields when enabling a partial config", async () => {
+    const before = Date.now();
+    const profile = await seedProfileContent(
+      `---\nname: Time Keeper\ntimePerception:\n  enabled: false\n---\n\nYou keep time.`,
+    );
+    const result = await makeTool().execute(
+      "tc",
+      { action: "update", agent_id: profile.id, time_perception: { enabled: true } },
+      undefined as any,
+    );
+    expect(result.details.error).toBeUndefined();
+    expect(await readFrontmatter(profile.id)).toMatchObject({
+      timePerception: {
+        enabled: true,
+        epochMs: expect.any(Number),
+        startMs: expect.any(Number),
+        flowRate: 1,
+      },
+    });
+    const tp = (await readFrontmatter(profile.id)).timePerception as Record<string, number>;
+    expect(tp.epochMs).toBeGreaterThanOrEqual(before);
+    expect(tp.startMs).toBe(tp.epochMs);
+  });
+
+  it("falls back to existing epochMs for startMs when enabling a partial config", async () => {
+    const profile = await seedProfileContent(
+      `---\nname: Time Keeper\ntimePerception:\n  enabled: false\n  epochMs: 1704067200000\n  flowRate: 30\n---\n\nYou keep time.`,
+    );
+    const result = await makeTool().execute(
+      "tc",
+      { action: "update", agent_id: profile.id, time_perception: { enabled: true } },
+      undefined as any,
+    );
+    expect(result.details.error).toBeUndefined();
+    expect(await readFrontmatter(profile.id)).toMatchObject({
+      timePerception: {
+        enabled: true,
+        epochMs: 1704067200000,
+        startMs: 1704067200000,
+        flowRate: 30,
+      },
+    });
+  });
+
+  it("ignores a non-object timePerception value when enabling", async () => {
+    const profile = await seedProfileContent(
+      `---\nname: Time Keeper\ntimePerception:\n  - junk\n---\n\nYou keep time.`,
+    );
+    const result = await makeTool().execute(
+      "tc",
+      { action: "update", agent_id: profile.id, time_perception: { enabled: true } },
+      undefined as any,
+    );
+    expect(result.details.error).toBeUndefined();
+    expect(await readFrontmatter(profile.id)).toMatchObject({
+      timePerception: { enabled: true, flowRate: 1 },
+    });
+  });
+
   it("surfaces timePerception state in list and get output", async () => {
-    await seedProfileContent(PROFILE_WITH_TP_OFF);
+    const profile = await seedProfileContent(PROFILE_WITH_TP_OFF);
     const listed = await makeTool().execute("tc", { action: "list" }, undefined as any);
     expect(listed.content[0].text).toContain("timePerception");
     expect(listed.content[0].text).toContain("2024-01-01T00:00:00.000Z");
     expect(listed.content[0].text).toContain("Asia/Shanghai");
+    const got = await makeTool().execute(
+      "tc",
+      { action: "get", agent_id: profile.id },
+      undefined as any,
+    );
+    expect(got.content[0].text).toContain("timePerception");
+    expect(got.content[0].text).toContain("2024-01-01T00:00:00.000Z");
   });
 
   it("keeps timePerception untouched on update when the param is omitted", async () => {

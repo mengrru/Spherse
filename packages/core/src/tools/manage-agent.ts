@@ -145,10 +145,22 @@ function applyTimePerception(
     return;
   }
   const existing = frontmatter.timePerception;
-  frontmatter.timePerception =
-    existing && typeof existing === "object"
-      ? { ...(existing as Record<string, unknown>), enabled: true }
-      : { enabled: true, epochMs: now, startMs: now, flowRate: 1 };
+  const base =
+    existing && typeof existing === "object" && !Array.isArray(existing)
+      ? (existing as Record<string, unknown>)
+      : {};
+  const num = (v: unknown) => (typeof v === "number" ? v : undefined);
+  const epochMs = num(base.epochMs) ?? now;
+  const startMs = num(base.startMs) ?? epochMs;
+  const flowRate = num(base.flowRate) ?? 1;
+  const timeZone = typeof base.timeZone === "string" ? base.timeZone : undefined;
+  frontmatter.timePerception = {
+    epochMs,
+    startMs,
+    flowRate,
+    ...(timeZone ? { timeZone } : {}),
+    enabled: true,
+  };
 }
 
 export type KnownToolsRef = { names: readonly string[] };
