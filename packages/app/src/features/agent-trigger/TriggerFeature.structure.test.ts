@@ -52,6 +52,16 @@ describe("agent trigger feature structure", () => {
     expect(listSource).not.toContain("onCreate");
   });
 
+  it("shows all three session modes in the expanded trigger profile", () => {
+    const source = readFileSync(join(currentDir, "TriggerList.tsx"), "utf8");
+
+    expect(source).toContain('"agent-trigger.modeNewSession"');
+    expect(source).toContain('"agent-trigger.modeExistingSession"');
+    expect(source).toContain('"agent-trigger.modeReusableSession"');
+    expect(source).toContain("SESSION_MODE_LABEL_KEYS");
+    expect(source).toContain("boundSessionId");
+  });
+
   it("shows trigger logs by reversing the API order", () => {
     const source = readFileSync(join(currentDir, "TriggerLogs.tsx"), "utf8");
 

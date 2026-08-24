@@ -84,7 +84,7 @@ function ComboboxInput({
     <ComboboxPrimitive.Input
       data-slot="combobox-input"
       className={cn(
-        "h-7 w-full bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground",
+        "h-7 w-full shrink-0 bg-transparent px-2 text-xs outline-none placeholder:text-muted-foreground",
         className,
       )}
       {...props}
