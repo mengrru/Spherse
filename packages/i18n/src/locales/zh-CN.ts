@@ -328,8 +328,8 @@ export const zhCN = {
   "agent-dialog.promptLabel": "提示词",
   // Agent 提示词字段 tooltip：说明提示词的作用（智能体的设定，智能体始终记住）
   "agent-dialog.promptHint": "你的智能体的设定。智能体会一直记住这些内容。",
-  // Agent 提示词输入框占位提示，引导用户描述智能体的设定
-  "agent-dialog.promptPlaceholder": "描述这个智能体的性格、语气与专长，例如「你是一位经验丰富的奇幻世界观顾问」",
+  // Agent 提示词输入框占位提示，引导用户描述智能体的设定（举例保持通用，并说明可留空）
+  "agent-dialog.promptPlaceholder": "描述这个智能体的性格、语气与专长，例如「你是一位专业的翻译，认真对待每一次翻译」。也可以留空",
   // Agent 权限字段标签（读取/写入等权限分组的总标签）
   "agent-dialog.toolsLabel": "权限",
   // Agent 权限字段 tooltip：说明权限表示智能体可使用的工具
@@ -378,6 +378,8 @@ export const zhCN = {
   "agent-dialog.themePlaceholder": "与智能体对话来生成主题，或将主题 CSS 粘贴到这里",
   // 时间感知配置区块标签
   "agent-dialog.timePerceptionLabel": "时间感知",
+  // 时间感知总开关行 tooltip：说明开启后 Agent 能感受到时间流逝
+  "agent-dialog.timePerceptionHint": "开启后，Agent 可以感受到时间的流逝。",
   // 锚定真实时刻字段标签
   "agent-dialog.epochLabel": "锚定时刻",
   // 锚定时刻 tooltip：真实世界的参照时刻，从这一刻起计算感知时间

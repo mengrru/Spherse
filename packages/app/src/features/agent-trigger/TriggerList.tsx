@@ -1,9 +1,15 @@
 import { Button } from "../../components/ui/button";
 import { Switch } from "../../components/ui/switch";
 import { ChevronDownIcon, LoaderCircleIcon, PencilIcon, PlayIcon, Trash2Icon } from "lucide-react";
-import type { TriggerEntry, TriggerInfo } from "../../lib/types";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
+import type { TriggerEntry, TriggerInfo } from "../../lib/types";
+
+const SESSION_MODE_LABEL_KEYS = {
+  new_session: "agent-trigger.modeNewSession",
+  existing_session: "agent-trigger.modeExistingSession",
+  reusable_session: "agent-trigger.modeReusableSession",
+} as const;
 
 interface TriggerListProps {
   triggers: TriggerInfo[];
@@ -81,7 +87,11 @@ export function TriggerList({
                 {entry.type === "time" && <p>cron: {entry.cron}</p>}
                 {entry.type === "event" && <p>{t("agent-trigger.eventName")}: {entry.eventName}</p>}
                 <p>{t("agent-trigger.message")}: {entry.message}</p>
-                <p>{t("agent-trigger.mode")}: {t(entry.mode === "new_session" ? "agent-trigger.modeNewSession" : "agent-trigger.modeExistingSession")}{entry.mode === "existing_session" && entry.targetSessionId ? ` (${entry.targetSessionId})` : ""}</p>
+                <p>
+                  {t("agent-trigger.mode")}: {t(SESSION_MODE_LABEL_KEYS[entry.mode])}
+                  {entry.mode === "existing_session" && entry.targetSessionId ? ` (${entry.targetSessionId})` : ""}
+                  {entry.mode === "reusable_session" && entry.boundSessionId ? ` (${entry.boundSessionId})` : ""}
+                </p>
                 {entry.notify && entry.notificationMessage && <p>{t("agent-trigger.notify")}: {entry.notificationMessage}</p>}
               </div>
             )}

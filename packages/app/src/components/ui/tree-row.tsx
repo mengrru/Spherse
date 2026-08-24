@@ -13,7 +13,7 @@ function TreeRow({ depth, selected, className, style, ...props }: TreeRowProps) 
       variant="ghost"
       size="default"
       className={cn(
-        "w-full justify-start gap-2",
+        "h-[30px] w-full justify-start gap-2",
         selected
           ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",

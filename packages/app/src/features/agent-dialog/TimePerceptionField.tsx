@@ -1,6 +1,5 @@
 import { useI18n } from "@spherse/i18n/react";
 import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
 import { Switch } from "../../components/ui/switch";
 import {
   Select,
@@ -108,7 +107,9 @@ export function TimePerceptionField({ value, onChange }: TimePerceptionFieldProp
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
-        <Label>{t("agent-dialog.timePerceptionLabel")}</Label>
+        <HintLabel hint={t("agent-dialog.timePerceptionHint")}>
+          {t("agent-dialog.timePerceptionLabel")}
+        </HintLabel>
         <Switch
           checked={enabled}
           onCheckedChange={(v) => {
