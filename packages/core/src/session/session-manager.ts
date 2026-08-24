@@ -134,7 +134,7 @@ export class SessionManager {
   sessionExists(agentId: string, sessionId: string): boolean {
     if (this.sessions.has(sessionId)) return true;
     const agentStore = this.deps.projectStore.getAgent(agentId);
-    return !!agentStore?.sessions.getSession(sessionId);
+    return agentStore?.sessions.getSession(sessionId)?.status === "active";
   }
 
   evictAgent(agentId: string): void {
