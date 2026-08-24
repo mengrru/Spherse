@@ -65,7 +65,7 @@ const ManageTriggerParams = Type.Object({
   message: Type.Optional(
     Type.String({
       description:
-        "Message sent to the agent when the trigger fires. Supports `{{agentName}}` and `{{payload}}` template variables. Required for `create`.",
+        "Message sent to the agent when the trigger fires. Supports template variables: `{{agent_name}}` (alias `{{agentName}}`), `{{payload}}` (event triggers), `{{date}}`, `{{time}}`, `{{datetime}}`, `{{weekday}}`. Required for `create`.",
     }),
   ),
   notify: Type.Optional(

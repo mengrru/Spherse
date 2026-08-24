@@ -115,7 +115,7 @@ Agent system prompt content...
   boundSessionId: sess-abc123
 ```
 
-`type` 区分两种触发方式：`time`（cron 定时触发，需配 `cron` 字段）和 `event`（用户事件触发，需配 `eventName` 字段）。`mode` 支持三种会话策略：`reusable_session`（新建 trigger 的默认值）首次触发时新建一个会话并绑定，之后每次触发复用该会话，绑定 ID 记录在 `boundSessionId` 字段（仅由运行时写入）；`new_session` 每次触发都新建会话执行；`existing_session` 在用户指定的已有会话中执行，需配合 `targetSessionId` 字段填写目标会话 ID。`reusable_session` 模式下若绑定会话已被删除（归档），下次触发会自动新建并重新绑定（运行时按 `status: active` 判定会话可用，删除会话不主动清理绑定）；用户可通过 `POST .../triggers/:triggerId/reset-binding` 主动解除绑定。`notify` 为 `true` 时，renderer 会在任务完成后显示通知；`notificationMessage` 为可选自定义通知内容。event 类型触发时，`payload`（字符串）通过 `{{payload}}` 模板变量注入 `message`；`sp:` 前缀为内部事件保留（如 `sp:time-tick`）。
+`type` 区分两种触发方式：`time`（cron 定时触发，需配 `cron` 字段）和 `event`（用户事件触发，需配 `eventName` 字段）。`mode` 支持三种会话策略：`reusable_session`（新建 trigger 的默认值）首次触发时新建一个会话并绑定，之后每次触发复用该会话，绑定 ID 记录在 `boundSessionId` 字段（仅由运行时写入）；`new_session` 每次触发都新建会话执行；`existing_session` 在用户指定的已有会话中执行，需配合 `targetSessionId` 字段填写目标会话 ID。`reusable_session` 模式下若绑定会话已被删除（归档），下次触发会自动新建并重新绑定（运行时按 `status: active` 判定会话可用，删除会话不主动清理绑定）；用户可通过 `POST .../triggers/:triggerId/reset-binding` 主动解除绑定。`notify` 为 `true` 时，renderer 会在任务完成后显示通知；`notificationMessage` 为可选自定义通知内容。`message` 支持模板变量：`{{agent_name}}`（别名 `{{agentName}}`，注入 agent 名称）、`{{payload}}`（仅 event 类型，注入事件附带的字符串 payload）、`{{date}}`/`{{time}}`/`{{datetime}}`/`{{weekday}}`（按本地时区注入当前日期时间）；`sp:` 前缀为内部事件保留（如 `sp:time-tick`）。
 
 执行日志追加写入同目录下的 `logs.jsonl`，每行一个 JSON 对象。日志包含 `id`、`agentId`、`triggerId`、`status`、`triggeredAt`、`completedAt`、`error`、`sessionId`、`agentName`、`triggerName`、`eventName` 等字段，用于运行日志 UI 展示与问题排查。日志文件超过 2MB 时保留最近 5000 行。
 
