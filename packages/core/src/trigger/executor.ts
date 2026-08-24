@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import type { SessionPort } from "../kernel/ports.js";
+import type { SessionEventPayload, SessionPort } from "../kernel/ports.js";
 import type { TriggerStore } from "../store/trigger.js";
 import type { TriggerEntry, TriggerLogEntry } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
@@ -9,6 +9,25 @@ export interface TriggerExecutorDeps {
   session: SessionPort;
   getTriggerStore(agentId: string): TriggerStore | null;
   logger?: Logger;
+}
+
+function readTurnError(event: SessionEventPayload): string | undefined {
+  const messages = event.messages;
+  if (!Array.isArray(messages)) return undefined;
+  const lastAssistant = [...messages]
+    .reverse()
+    .find((message) => (message as { role?: string })?.role === "assistant") as
+    | { stopReason?: string; errorMessage?: string }
+    | undefined;
+  if (lastAssistant?.stopReason === "error") {
+    return lastAssistant.errorMessage
+      ? `turn ended with error: ${lastAssistant.errorMessage}`
+      : 'turn ended with stopReason "error"';
+  }
+  if (lastAssistant?.stopReason === "aborted") {
+    return "turn aborted";
+  }
+  return undefined;
 }
 
 export class TriggerExecutor extends EventEmitter {
@@ -51,9 +70,9 @@ export class TriggerExecutor extends EventEmitter {
       status: "running",
     };
 
-    this.emit("trigger_triggered", { agentId, triggerId: entry.id, eventName, triggeredAt: now });
-
     try {
+      this.emit("trigger_triggered", { agentId, triggerId: entry.id, eventName, triggeredAt: now });
+
       let sessionId: string;
 
       switch (entry.mode) {
@@ -64,6 +83,11 @@ export class TriggerExecutor extends EventEmitter {
         case "existing_session": {
           if (!entry.targetSessionId) {
             const err = "existing_session mode but no targetSessionId";
+            this.logger.error({ triggerId: entry.id }, err);
+            throw new Error(err);
+          }
+          if (!this.deps.session.sessionExists(agentId, entry.targetSessionId)) {
+            const err = `existing_session target "${entry.targetSessionId}" is not an active session`;
             this.logger.error({ triggerId: entry.id }, err);
             throw new Error(err);
           }
@@ -94,21 +118,32 @@ export class TriggerExecutor extends EventEmitter {
 
       const resolvedMessage = resolveTemplateVars(entry.message, { agentName, payload });
 
+      let agentEnded = false;
+      let turnError: string | undefined;
+
       await this.deps.session.sendMessage(sessionId, resolvedMessage, (event) => {
-        if (event.type === "agent_end") {
-          this.deps.getTriggerStore(agentId)?.appendLog({
-            ...logEntry,
-            completedAt: Date.now(),
-            status: "success",
-          });
-          this.emit("trigger_completed", {
-            agentId,
-            triggerId: entry.id,
-            sessionId,
-            status: "success",
-          });
-        }
+        if (event.type !== "agent_end") return;
+        agentEnded = true;
+        turnError = readTurnError(event);
       });
+
+      if (turnError !== undefined) {
+        throw new Error(turnError);
+      }
+
+      if (agentEnded) {
+        this.deps.getTriggerStore(agentId)?.appendLog({
+          ...logEntry,
+          completedAt: Date.now(),
+          status: "success",
+        });
+        this.emit("trigger_completed", {
+          agentId,
+          triggerId: entry.id,
+          sessionId,
+          status: "success",
+        });
+      }
     } catch (err) {
       this.deps.getTriggerStore(agentId)?.appendLog({
         ...logEntry,

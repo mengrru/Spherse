@@ -26,6 +26,7 @@ tools:
 Second agent for testing.`;
 
 describe("TriggerManager", () => {
+  let runtime: Awaited<ReturnType<typeof createProject>>;
   let triggerManager: TriggerManager;
   let tmpDir: string;
   let agentId: string;
@@ -36,7 +37,7 @@ describe("TriggerManager", () => {
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-trigger-mgr-"));
 
-    const runtime = await createProject(tmpDir, {
+    runtime = await createProject(tmpDir, {
       projectName: "Test",
       logger: createSilentLogger(),
     });
@@ -350,21 +351,41 @@ describe("TriggerManager", () => {
   });
 
   it("existing_session restores the configured target session", async () => {
-    const restoreSessionSpy = vi.spyOn(sessionRuntime, "restoreSession").mockResolvedValue("target-sess");
+    const targetId = await sessionRuntime.createSession(agentId);
+    const restoreSessionSpy = vi.spyOn(sessionRuntime, "restoreSession").mockResolvedValue(targetId);
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
     const createSessionSpy = vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("nope");
 
-    const entry = makeEventEntry({ mode: "existing_session", targetSessionId: "target-sess" });
+    const entry = makeEventEntry({ mode: "existing_session", targetSessionId: targetId });
     triggerManager.create(agentId, entry);
 
     triggerManager.onUserEvent("test-event", "data");
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(restoreSessionSpy).toHaveBeenCalledWith(agentId, "target-sess");
+    expect(restoreSessionSpy).toHaveBeenCalledWith(agentId, targetId);
     expect(createSessionSpy).not.toHaveBeenCalled();
 
     restoreSessionSpy.mockRestore();
     createSessionSpy.mockRestore();
+    sendMessageSpy.mockRestore();
+  });
+
+  it("existing_session fails when the target session is not active", async () => {
+    const targetId = await sessionRuntime.createSession(agentId);
+    runtime.deleteSession(agentId, targetId);
+
+    const entry = makeEventEntry({ mode: "existing_session", targetSessionId: targetId });
+    triggerManager.create(agentId, entry);
+
+    const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
+
+    triggerManager.onUserEvent("test-event", "data");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(sendMessageSpy).not.toHaveBeenCalled();
+    const logs = triggerManager.getRecentLogs(agentId, 1);
+    expect(logs[0]).toMatchObject({ status: "failed", triggerId: entry.id });
+
     sendMessageSpy.mockRestore();
   });
 
@@ -471,5 +492,28 @@ describe("TriggerManager", () => {
 
     createSessionSpy.mockRestore();
     vi.restoreAllMocks();
+  });
+
+  it("reusable_session rebinds lazily after the bound session is deleted", async () => {
+    const sessionId = await sessionRuntime.createSession(agentId);
+    const entry = makeEventEntry({ mode: "reusable_session", boundSessionId: sessionId });
+    triggerManager.create(agentId, entry);
+
+    runtime.deleteSession(agentId, sessionId);
+
+    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe(sessionId);
+    expect(sessionRuntime.sessionExists(agentId, sessionId)).toBe(false);
+
+    const createSessionSpy = vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fresh-sess");
+    const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
+
+    triggerManager.onUserEvent("test-event", "data");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(createSessionSpy).toHaveBeenCalledWith(agentId, "triggered");
+    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe("fresh-sess");
+
+    createSessionSpy.mockRestore();
+    sendMessageSpy.mockRestore();
   });
 });

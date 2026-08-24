@@ -369,6 +369,16 @@ describe("SessionManager lifecycle", () => {
     expect(runtime.sessionRuntime.sessions.size).toBe(before);
   });
 
+  it("sessionExists ignores archived sessions after the runner is gone", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    expect(runtime.sessionRuntime.sessionExists(agentId, sessionId)).toBe(true);
+
+    runtime.sessionRuntime.destroySession(sessionId);
+    runtime.projectManager.deleteSession(agentId, sessionId);
+
+    expect(runtime.sessionRuntime.sessionExists(agentId, sessionId)).toBe(false);
+  });
+
   it("automatically migrates legacy history before restoring a writable session", async () => {
     const projectStore = runtime.projectManager.projectStore;
     const agentStore = projectStore.agents.get(agentId) as {
