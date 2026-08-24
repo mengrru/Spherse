@@ -7,6 +7,7 @@ const skillDefinition = Type.Object({
   filePath: Type.String(),
   source: Type.Union([Type.Literal("builtin"), Type.Literal("project")]),
   files: Type.Array(Type.String()),
+  version: Type.Optional(Type.String()),
 });
 
 export const schemas = {

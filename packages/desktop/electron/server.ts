@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { app } from "electron";
 import { createMultiProjectServer } from "@spherse/server";
 import type { ProjectRegistry } from "@spherse/server";
 import type { SamplingParams } from "@spherse/core";
@@ -24,6 +25,7 @@ export async function ensureServer(): Promise<void> {
     sampling: settings?.models?.text?.sampling,
     auth: activeAccessToken ? { accessToken: activeAccessToken } : undefined,
     modelCatalog: getAppModelCatalog(),
+    appVersion: app.getVersion(),
   });
   serverHandle = { fastify: result.fastify, registry: result.registry };
   for (const { root, lastOpened } of registeredProjects) {

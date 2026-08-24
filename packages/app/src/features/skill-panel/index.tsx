@@ -20,6 +20,7 @@ import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { CreateSkillDialog } from "./CreateSkillDialog";
+import { MarketplaceDialog } from "./MarketplaceDialog";
 
 export function SkillPanel() {
   const { projectId } = useProjectCtx();
@@ -30,6 +31,7 @@ export function SkillPanel() {
   const { t } = useI18n();
   const contentPath = searchParams.get("path") ?? undefined;
   const [createOpen, setCreateOpen] = useState(false);
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
 
   const handleSelectFile = (filePath: string) => {
     if (!projectId) return;
@@ -68,28 +70,29 @@ export function SkillPanel() {
           <SidebarGroupLabel className="h-7 px-0 text-[11px] font-semibold tracking-wide uppercase">
             {t("project-panel.skills")}
           </SidebarGroupLabel>
-          {(canInstall || canCreate) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<SidebarGroupAction className="top-1 right-0" />}
-              >
-                <MoreHorizontalIcon />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" side="bottom">
-                {canCreate && (
-                  <DropdownMenuItem onClick={() => setCreateOpen(true)}>
-                    {t("skill-panel.create")}
-                  </DropdownMenuItem>
-                )}
-                {canInstall && (
-                  <DropdownMenuItem onClick={handleInstallClick}>
-                    {t("skill-panel.install")}
-                    <span className="ms-auto text-[0.625rem] text-muted-foreground">{t("skill-panel.install.hint")}</span>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<SidebarGroupAction className="top-1 right-0" />}
+            >
+              <MoreHorizontalIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="bottom">
+              <DropdownMenuItem onClick={() => setMarketplaceOpen(true)}>
+                {t("skill-panel.marketplace")}
+              </DropdownMenuItem>
+              {canCreate && (
+                <DropdownMenuItem onClick={() => setCreateOpen(true)}>
+                  {t("skill-panel.create")}
+                </DropdownMenuItem>
+              )}
+              {canInstall && (
+                <DropdownMenuItem onClick={handleInstallClick}>
+                  {t("skill-panel.install")}
+                  <span className="ms-auto text-[0.625rem] text-muted-foreground">{t("skill-panel.install.hint")}</span>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <SidebarGroupContent>
             <FileTree
               rootPath=".spherse/skills"
@@ -105,6 +108,11 @@ export function SkillPanel() {
       <CreateSkillDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
+        client={client}
+      />
+      <MarketplaceDialog
+        open={marketplaceOpen}
+        onOpenChange={setMarketplaceOpen}
         client={client}
       />
     </>

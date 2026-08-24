@@ -864,6 +864,39 @@ export const zhCN = {
   // 安装技能时名称已存在的提示（安装时无法在客户端获知技能名，故不展示名称）
   "skill-panel.install.exists": "该技能已存在",
 
+  // 技能面板右上角三点菜单的「技能市场」项（打开市场浮层）
+  "skill-panel.marketplace": "技能市场",
+  // 技能市场弹窗的标题
+  "skill-panel.marketplace.title": "技能市场",
+  // 技能市场弹窗加载清单时的提示
+  "skill-panel.marketplace.loading": "正在加载市场技能…",
+  // 技能市场清单加载失败时的提示
+  "skill-panel.marketplace.loadFailed": "市场技能加载失败",
+  // 技能市场加载失败后的「重试」按钮
+  "skill-panel.marketplace.retry": "重试",
+  // 技能市场没有任何技能时的空状态提示
+  "skill-panel.marketplace.empty": "市场中暂无技能",
+  // 市场技能卡片上的「安装」按钮（该技能尚未安装在当前项目）
+  "skill-panel.marketplace.install": "安装",
+  // 市场技能卡片上的「更新」按钮（本地版本落后于市场版本）
+  "skill-panel.marketplace.update": "更新",
+  // 市场技能卡片上该技能已安装且为最新版本的标签
+  "skill-panel.marketplace.installed": "已安装",
+  // 技能安装成功提示，{name} 为技能名
+  "skill-panel.marketplace.installSuccess": "技能「{name}」安装成功",
+  // 技能更新成功提示，{name} 为技能名，{version} 为更新后的版本号
+  "skill-panel.marketplace.updateSuccess": "技能「{name}」已更新到 {version}",
+  // 技能安装失败提示，{name} 为技能名，{message} 为错误信息
+  "skill-panel.marketplace.installFailed": "技能「{name}」安装失败：{message}",
+  // 技能更新失败提示，{name} 为技能名，{message} 为错误信息
+  "skill-panel.marketplace.updateFailed": "技能「{name}」更新失败：{message}",
+  // 安装时市场清单已发生变化（版本对不上）的提示，界面会自动刷新清单
+  "skill-panel.marketplace.manifestChanged": "市场清单已更新，请重试",
+  // 市场技能卡片上的发布时间，{date} 为格式化后的日期
+  "skill-panel.marketplace.updatedAt": "更新于 {date}",
+  // 技能市场弹窗底部说明文案（技能来源与安装位置）
+  "skill-panel.marketplace.note": "技能来自官方市场，安装到当前项目",
+
   // --- Text Selection Session ---
   // 文本选择会话的角色下拉框占位提示
   "text-selection.agentPlaceholder": "选择智能体",

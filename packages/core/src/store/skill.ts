@@ -41,6 +41,12 @@ async function moveDirAtomic(src: string, dest: string): Promise<void> {
   }
 }
 
+function parseSkillVersion(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : undefined;
+}
+
 export class SkillStore {
   private skillDir: string;
   private builtinSources?: readonly PresetSkillSource[];
@@ -100,7 +106,7 @@ export class SkillStore {
     return created;
   }
 
-  async installSkill(zipPath: string): Promise<SkillDefinition> {
+  async installSkill(zipPath: string, options?: { overwrite?: boolean }): Promise<SkillDefinition> {
     const zip = new AdmZip(zipPath);
     const entries = zip.getEntries();
     if (entries.length === 0) {
@@ -160,10 +166,32 @@ export class SkillStore {
 
       await fs.mkdir(this.skillDir, { recursive: true });
       await this.fileWriteMutex.run(targetDir, async () => {
-        if (await pathExists(targetDir)) {
+        const exists = await pathExists(targetDir);
+        if (exists && !options?.overwrite) {
           throw new ConflictError(`Skill "${skillFolder}" already exists`);
         }
-        await moveDirAtomic(extractedSkillDir, targetDir);
+        if (exists) {
+          const backupDir = path.join(os.tmpdir(), `skill-backup-${nanoid()}`);
+          await moveDirAtomic(targetDir, backupDir);
+          try {
+            await moveDirAtomic(extractedSkillDir, targetDir);
+          } catch (err) {
+            const originalError =
+              err instanceof Error ? err : new Error(`skill install failed: ${String(err)}`);
+            try {
+              await moveDirAtomic(backupDir, targetDir);
+            } catch (rollbackErr: unknown) {
+              throw new Error(
+                `skill "${skillFolder}" install failed and rollback also failed; the previous version is preserved at ${backupDir} (${rollbackErr instanceof Error ? rollbackErr.message : String(rollbackErr)})`,
+                { cause: originalError },
+              );
+            }
+            throw originalError;
+          }
+          await fs.rm(backupDir, { recursive: true, force: true }).catch(() => {});
+        } else {
+          await moveDirAtomic(extractedSkillDir, targetDir);
+        }
       });
     } finally {
       await fs.rm(extractRoot, { recursive: true, force: true });
@@ -215,6 +243,7 @@ export class SkillStore {
         filePath: skillMdPath,
         source: "project",
         files,
+        version: parseSkillVersion(data.version),
       };
     } catch {
       return null;
@@ -257,6 +286,7 @@ export class SkillStore {
         filePath: `builtin://${source.dir}/SKILL.md`,
         source: "builtin",
         files: [],
+        version: parseSkillVersion(data.version),
       });
     }
     return skills;

@@ -415,4 +415,125 @@ describe("SkillStore installSkill", () => {
       expect(pathExists(skillDir, folder)).toBe(false);
     },
   );
+
+  it("parses version frontmatter when present", async () => {
+    await writeFile(
+      skillDir,
+      "versioned/SKILL.md",
+      "---\nname: versioned\ndescription: Versioned\nversion: 1.2.0\n---\nBody.",
+    );
+    const skill = await store.get("versioned");
+    expect(skill).not.toBeNull();
+    expect(skill!.version).toBe("1.2.0");
+  });
+
+  it("omits version when frontmatter has none or a blank value", async () => {
+    await writeFile(
+      skillDir,
+      "plain/SKILL.md",
+      "---\nname: plain\ndescription: Plain\n---\nBody.",
+    );
+    await writeFile(
+      skillDir,
+      "blank/SKILL.md",
+      "---\nname: blank\ndescription: Blank\nversion: '  '\n---\nBody.",
+    );
+    expect((await store.get("plain"))!.version).toBeUndefined();
+    expect((await store.get("blank"))!.version).toBeUndefined();
+  });
+});
+
+describe("SkillStore installSkill overwrite", () => {
+  let skillDir: string;
+  let store: SkillStore;
+
+  beforeEach(async () => {
+    skillDir = await createTempProject();
+    store = new SkillStore(skillDir);
+  });
+
+  afterEach(async () => {
+    await cleanupDir(skillDir);
+  });
+
+  it("replaces an existing skill when overwrite is true", async () => {
+    await store.createSkill("myskill", "Old", "Old body");
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      {
+        entryName: "myskill/SKILL.md",
+        content: "---\nname: myskill\ndescription: New\nversion: 2.0.0\n---\nNew body.",
+      },
+    ]);
+
+    const skill = await store.installSkill(zipPath, { overwrite: true });
+
+    expect(skill.description).toBe("New");
+    expect(skill.version).toBe("2.0.0");
+    const refreshed = await store.get("myskill");
+    expect(refreshed!.description).toBe("New");
+    expect(refreshed!.instructions).toBe("New body.");
+  });
+
+  it("removes stale files from the previous version on overwrite", async () => {
+    await writeFile(
+      skillDir,
+      "myskill/SKILL.md",
+      "---\nname: myskill\ndescription: Old\n---\nOld body.",
+    );
+    await writeFile(skillDir, "myskill/references/old.md", "# old");
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: skillMd("myskill") },
+      { entryName: "myskill/references/new.md", content: "# new" },
+    ]);
+
+    await store.installSkill(zipPath, { overwrite: true });
+
+    expect(pathExists(skillDir, "myskill/references/new.md")).toBe(true);
+    expect(pathExists(skillDir, "myskill/references/old.md")).toBe(false);
+    const refreshed = await store.get("myskill");
+    expect(refreshed!.files).toEqual(["references/new.md"]);
+  });
+
+  it("still throws ConflictError when overwrite is not requested", async () => {
+    await store.createSkill("myskill", "Existing", "body");
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: skillMd("myskill") },
+    ]);
+
+    await expect(store.installSkill(zipPath)).rejects.toBeInstanceOf(ConflictError);
+  });
+
+  it("leaves the existing skill untouched when the replacement zip is invalid", async () => {
+    await writeFile(
+      skillDir,
+      "myskill/SKILL.md",
+      "---\nname: myskill\ndescription: Old\n---\nOld body.",
+    );
+    const zipPath = buildZip([
+      { entryName: "myskill/" },
+      { entryName: "myskill/SKILL.md", content: "---\ndescription: no name\n---\nbody" },
+    ]);
+
+    await expect(store.installSkill(zipPath, { overwrite: true })).rejects.toBeInstanceOf(
+      ValidationError,
+    );
+    const refreshed = await store.get("myskill");
+    expect(refreshed!.description).toBe("Old");
+    expect(refreshed!.instructions).toBe("Old body.");
+  });
+
+  it("treats overwrite of a missing skill as a fresh install", async () => {
+    const zipPath = buildZip([
+      { entryName: "fresh/" },
+      { entryName: "fresh/SKILL.md", content: skillMd("fresh") },
+    ]);
+
+    const skill = await store.installSkill(zipPath, { overwrite: true });
+
+    expect(skill.name).toBe("fresh");
+    expect(pathExists(skillDir, "fresh/SKILL.md")).toBe(true);
+  });
 });
