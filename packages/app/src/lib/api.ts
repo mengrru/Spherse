@@ -24,6 +24,7 @@ import type {
   SessionListPageResponse,
   SessionStatusResponse,
   DataReadResponseContract as DataReadResponse,
+  MarketplaceManifestResponse,
 } from "@spherse/server/contracts";
 import { parseApiResponse, schemas } from "@spherse/server/contracts";
 import { Type } from "@sinclair/typebox";
@@ -302,6 +303,28 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ zipPath }),
+      });
+      await assertOk(res);
+      return parseJsonResponse<SkillDefinition>(res, schemas.skillDefinition);
+    },
+
+    async listSkills(): Promise<SkillDefinition[]> {
+      const res = await authedFetch(`${apiBase}/skills`);
+      await assertOk(res);
+      return parseJsonResponse<SkillDefinition[]>(res, schemas.skillListResponse);
+    },
+
+    async listMarketplaceSkills(): Promise<MarketplaceManifestResponse> {
+      const res = await authedFetch(`${apiBase}/marketplace/skills`);
+      await assertOk(res);
+      return parseJsonResponse<MarketplaceManifestResponse>(res, schemas.marketplaceManifestResponse);
+    },
+
+    async installMarketplaceSkill(name: string, version: string): Promise<SkillDefinition> {
+      const res = await authedFetch(`${apiBase}/skills/marketplace-install`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, version }),
       });
       await assertOk(res);
       return parseJsonResponse<SkillDefinition>(res, schemas.skillDefinition);

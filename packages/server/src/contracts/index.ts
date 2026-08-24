@@ -7,6 +7,7 @@ import * as fileTree from "./file-tree.js";
 import * as settings from "./settings.js";
 import * as schedules from "./trigger.js";
 import * as skills from "./skills.js";
+import * as marketplace from "./marketplace.js";
 import * as debug from "./debug.js";
 import * as bus from "./bus.js";
 import * as websocket from "./websocket.js";
@@ -22,6 +23,7 @@ export const schemas = {
   ...settings.schemas,
   ...schedules.schemas,
   ...skills.schemas,
+  ...marketplace.schemas,
   ...debug.schemas,
   ...bus.schemas,
   ...websocket.schemas,
@@ -88,6 +90,11 @@ export type {
 } from "./trigger.js";
 
 export type { SkillDefinitionContract, SkillListResponse, SkillCreateRequest, SkillInstallRequest } from "./skills.js";
+export type {
+  MarketplaceSkillEntry,
+  MarketplaceManifestResponse,
+  SkillMarketplaceInstallRequest,
+} from "./marketplace.js";
 export type { TurnContextSnapshotContract } from "./debug.js";
 export type {
   ProjectListEntry,

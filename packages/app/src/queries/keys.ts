@@ -10,4 +10,7 @@ export const projectQueryKeys = {
   directory: (projectId: string, dirPath: string) =>
     ["projects", projectId, "directories", dirPath] as const,
   fileTree: (projectId: string) => ["projects", projectId, "file-tree"] as const,
+  skills: (projectId: string) => ["projects", projectId, "skills"] as const,
+  marketplaceSkills: (projectId: string) =>
+    ["projects", projectId, "marketplace", "skills"] as const,
 };

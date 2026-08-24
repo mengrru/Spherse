@@ -141,6 +141,7 @@ spherse/
     │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry
     │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove
+    │   │       ├── marketplace.ts        # 技能市场 service：OSS manifest 代理（30s 内存缓存，env SPHERSE_MARKETPLACE_MANIFEST_URL 可覆盖 URL）+ zip 下载（同源 SSRF 校验、50MB 上限）
     │   │       ├── contracts/            # HTTP/WebSocket runtime schema 与解析 helper（@spherse/server/contracts）
     │   │       │   ├── index.ts          # 聚合 schemas 与类型 re-export，对外稳定入口
     │   │       │   ├── common.ts         # okResponse/errorResponse、parseContract/parseApiResponse
@@ -150,7 +151,8 @@ spherse/
     │   │       │   ├── file-tree.ts      # FileTreeResponse
     │   │       │   ├── settings.ts       # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
     │   │       │   ├── trigger.ts        # TriggerEntry、TriggerCreate/Update 请求、List/Log Response
-    │   │       │   ├── skills.ts         # SkillDefinition、SkillList/Create/Install Request 响应与请求 schema
+    │   │       │   ├── skills.ts         # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
+    │   │       │   ├── marketplace.ts    # MarketplaceSkillEntry、MarketplaceManifestResponse、SkillMarketplaceInstallRequest（{name, version}）
     │   │       │   ├── debug.ts          # TurnContextSnapshot
     │   │       │   └── websocket.ts      # ChatClientMessage/ChatServerEvent/TriggerServerEvent + parser
 │   │       ├── routes/               # REST 路由，按业务域拆分
@@ -163,6 +165,7 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
+    │   │       │   ├── marketplace.ts    # 技能市场路由（GET /marketplace/skills 代理 manifest；POST /skills/marketplace-install 按 {name, version} 下载 zip 并覆盖安装）
 │   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
@@ -184,6 +187,7 @@ spherse/
 │   │       ├── styles.css            # Tailwind CSS v4 + shadcn 语义 token（单一 token 体系）
 │   │       ├── lib/
 │   │       │   ├── api.ts            # HTTP/WS 客户端封装
+│   │       │   ├── semver.ts         # semver 解析与比较（parseSemver/isValidSemver/compareSemver，市场技能版本比较用）
 │   │       │   ├── agent-markdown.ts # Agent 定义 Markdown 生成/解析辅助
 │   │       │   ├── events.ts         # renderer 内部自定义事件名常量
 │   │       │   ├── project-key.ts    # project path → URL projectKey 生成
@@ -197,7 +201,7 @@ spherse/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
 │   │       ├── context/
 │   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（projectId/projectRoot）
-│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory、project/content 服务端状态
+│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory、project/content/skills 服务端状态
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 初始消息/streaming/hasEnabledTriggersByAgent 等前端运行时投影
@@ -249,7 +253,7 @@ spherse/
 │   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
-│   │       │   ├── skill-panel/          # Skills section（三点菜单：创建/安装技能 + CreateSkillDialog），复用 base components/file-tree（rootPath=".spherse/skills"）
+│   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
 │   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer）与 UpdateChecker 组件、设置 store、类型与测试
 │   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
 │   │       │   ├── project-settings/     # 项目设置弹窗集合

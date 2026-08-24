@@ -230,6 +230,55 @@ describe("api contracts", () => {
     expect(() => parseApiResponse(schemas.skillInstallRequest, {})).toThrow(/Invalid payload/);
   });
 
+  it("validates marketplace manifest response and install request", () => {
+    const entry = {
+      name: "demo",
+      description: "Demo skill",
+      version: "1.0.0",
+      zipUrl: "https://marketplace.test/spherse/skills/demo/1.0.0/demo-1.0.0.zip",
+      size: 1024,
+      updatedAt: "2026-08-24T00:00:00Z",
+    };
+    const manifest = { schemaVersion: 1, generatedAt: "2026-08-24T00:00:00Z", skills: [entry] };
+    expect(parseApiResponse(schemas.marketplaceManifestResponse, manifest)).toEqual(manifest);
+    expect(parseApiResponse(schemas.marketplaceManifestResponse, { ...manifest, skills: [] })).toEqual({
+      ...manifest,
+      skills: [],
+    });
+    expect(() =>
+      parseApiResponse(schemas.marketplaceManifestResponse, { schemaVersion: 1, generatedAt: "x", skills: [{}] }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.marketplaceManifestResponse, { schemaVersion: 1, generatedAt: "x" }),
+    ).toThrow(/Invalid payload/);
+    expect(
+      parseApiResponse(schemas.skillMarketplaceInstallRequest, { name: "demo", version: "1.0.0" }),
+    ).toEqual({ name: "demo", version: "1.0.0" });
+    expect(() => parseApiResponse(schemas.skillMarketplaceInstallRequest, { name: "demo" })).toThrow(
+      /Invalid payload/,
+    );
+    expect(() => parseApiResponse(schemas.skillMarketplaceInstallRequest, { name: "demo", version: 1 })).toThrow(
+      /Invalid payload/,
+    );
+  });
+
+  it("accepts optional version on skill definitions", () => {
+    const skill = {
+      name: "n",
+      description: "d",
+      instructions: "i",
+      filePath: "n.md",
+      source: "project",
+      files: [],
+      version: "1.2.0",
+    };
+    expect(parseApiResponse(schemas.skillDefinition, skill)).toEqual(skill);
+    expect(parseApiResponse(schemas.skillDefinition, { ...skill, version: undefined })).toMatchObject({
+      name: "n",
+    });
+    expect(() => parseApiResponse(schemas.skillDefinition, { ...skill, version: 1 })).toThrow(/Invalid payload/);
+  });
+
   it("validates provider catalog and settings responses", () => {
     const catalog = {
       openai: {

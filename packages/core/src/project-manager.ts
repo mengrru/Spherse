@@ -217,8 +217,8 @@ export class ProjectManager {
     return this.projectStore.skill.createSkill(name, description, instructions);
   }
 
-  async installSkill(zipPath: string): Promise<SkillDefinition> {
-    return this.projectStore.skill.installSkill(zipPath);
+  async installSkill(zipPath: string, options?: { overwrite?: boolean }): Promise<SkillDefinition> {
+    return this.projectStore.skill.installSkill(zipPath, options);
   }
 
   getAiAccessSettings(): { deniedPaths: string[] } {

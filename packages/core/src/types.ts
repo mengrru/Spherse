@@ -43,6 +43,7 @@ export interface SkillDefinition {
   filePath: string;
   source: "builtin" | "project";
   files: string[];
+  version?: string;
 }
 
 export type TriggerType = "time" | "event";
