@@ -36,6 +36,10 @@ describe("resolveTemplateVars", () => {
     expect(resolveTemplateVars("hi {{agent_name}}", { agentName: "Lia", payload: "" })).toBe("hi Lia");
   });
 
+  it("resolves {{agentName}} camelCase alias with the provided agent name", () => {
+    expect(resolveTemplateVars("hi {{agentName}}", { agentName: "Lia", payload: "" })).toBe("hi Lia");
+  });
+
   it("resolves {{payload}} with the provided string payload", () => {
     expect(resolveTemplateVars("got: {{payload}}", { agentName: "", payload: "hello world" })).toBe("got: hello world");
   });

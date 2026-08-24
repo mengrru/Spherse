@@ -28,7 +28,7 @@ export interface TemplateContext {
 
 export function resolveTemplateVars(message: string, ctx: TemplateContext): string {
   return message.replace(/{{(\w+)}}/g, (_match, key: string) => {
-    if (key === "agent_name") return ctx.agentName;
+    if (key === "agent_name" || key === "agentName") return ctx.agentName;
     if (key === "payload") return ctx.payload;
     const fn = TIME_VARS[key];
     return fn ? fn() : `{{${key}}}`;
