@@ -74,7 +74,7 @@ Agent 的 MCP 连接器配置存放于同目录的 `mcp.json`（可选文件）�
 - `tools`：允许使用的 tool 名称列表；缺省时不分配任何工具（空列表）
 - `context`：项目根目录内相对路径列表，SessionRuntime 构建 system prompt 时预读取并注入
 - `output`：预留的输出路径、命名和 frontmatter 配置
-- `timePerception`：时间感知配置（per-agent），启用后 Agent 在对话中看到的时间线可与真实世界不同步。含 `enabled`（布尔）、`epochMs`（锚定真实时刻）、`startMs`（感知时间起点）、`flowRate`（感知/真实时间比率，1 = 正常速度）、`timeZone`（可选 IANA 时区名）。感知时间由纯函数 `perceivedMs = startMs + (realMs - epochMs) × flowRate` 从每条消息的真实时间戳推导，通过模块级函数 `composeStreamFn` 在 streamFn 边界对每条 user 消息注入 `<time>感知时间</time>` XML 标签（不持久化），system prompt 的 `<session-context>` 标记是否启用并指示 Agent 不要在回复中输出 `<time>` 标签。
+- `timePerception`：时间感知配置（per-agent），启用后 Agent 在对话中看到的时间线可与真实世界不同步。含 `enabled`（布尔）、`epochMs`（锚定真实时刻）、`startMs`（感知时间起点）、`flowRate`（感知/真实时间比率，1 = 正常速度）、`timeZone`（可选 IANA 时区名）。感知时间由纯函数 `perceivedMs = startMs + (realMs - epochMs) × flowRate` 从每条消息的真实时间戳推导，通过模块级函数 `composeStreamFn` 在 streamFn 边界对每条 user 消息注入 `<time>感知时间</time>` XML 标签（不持久化），system prompt 的 `<session-context>` 标记是否启用并指示 Agent 不要在回复中输出 `<time>` 标签。`manage_agent` 工具只能读写该配置的开关（`time_perception.enabled`）：开启时若无既有配置则固化 `epochMs = startMs = 写入时刻, flowRate = 1` 的默认配置（避免解析时默认导致锚点漂移），若已有配置则保留锚点/起点/流速/时区仅翻转 `enabled`；关闭时整个删除该 key（与 Agent Dialog 行为一致）。锚点、起点、流速、时区的详细配置仅由用户在 Agent Dialog 中操作。
 
 示例：
 
