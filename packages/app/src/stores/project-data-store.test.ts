@@ -17,17 +17,13 @@ describe("useProjectDataStore", () => {
     expect(useProjectDataStore.getState().projects["project-1"]?.initialMessageBySessionId).toEqual({});
   });
 
-  it("tracks streaming and trigger projections per project", () => {
+  it("tracks streaming sessions per project", () => {
     const store = useProjectDataStore.getState();
     store.setStreaming("project-1", "session-1", true);
-    store.setHasEnabledTriggers("project-1", "agent-1", true);
 
     expect(useProjectDataStore.getState().projects["project-1"]?.streamingSessionIds).toEqual(
       new Set(["session-1"]),
     );
-    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledTriggersByAgent).toEqual({
-      "agent-1": true,
-    });
   });
 
   it("clears all runtime state for a project", () => {

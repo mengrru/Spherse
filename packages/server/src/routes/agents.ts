@@ -7,7 +7,15 @@ export function registerAgentRoutes(fastify: FastifyInstance, _registry: Project
   fastify.get("/api/projects/:projectId/agents", {
     schema: { response: { 200: schemas.agentListResponse } },
     async handler(req) {
-      return req.projectCtx!.projectManager.listAgents();
+      const agents = await req.projectCtx!.projectManager.listAgents();
+      // 列表只下发摘要；完整配置由单条端点 / raw 内容按需加载
+      return agents.map(({ id, name, alias, slug, createdAt }) => ({
+        id,
+        name,
+        ...(alias !== undefined ? { alias } : {}),
+        slug,
+        ...(createdAt !== undefined ? { createdAt } : {}),
+      }));
     },
   });
 

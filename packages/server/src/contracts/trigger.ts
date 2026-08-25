@@ -42,6 +42,12 @@ export const schemas = {
   triggerEntry,
   triggerInfoEntry,
   triggerListResponse: Type.Array(triggerInfoEntry),
+  projectTriggerListResponse: Type.Object({
+    ok: Type.Boolean(),
+    triggers: Type.Array(
+      Type.Composite([triggerInfoEntry, Type.Object({ agentId: Type.String() })]),
+    ),
+  }),
   triggerCreateRequest: Type.Object(
     {
       name: Type.Optional(Type.String()),
@@ -88,6 +94,7 @@ export const schemas = {
 export type TriggerEntryContract = Static<typeof triggerEntry>;
 export type TriggerInfoEntryContract = Static<typeof triggerInfoEntry>;
 export type TriggerListResponse = Static<typeof schemas.triggerListResponse>;
+export type ProjectTriggerListResponse = Static<typeof schemas.projectTriggerListResponse>;
 export type TriggerCreateRequest = Static<typeof schemas.triggerCreateRequest>;
 export type TriggerUpdateRequest = Static<typeof schemas.triggerUpdateRequest>;
 export type TriggerLogEntryContract = Static<typeof triggerLogEntry>;

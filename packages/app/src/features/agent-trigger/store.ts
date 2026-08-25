@@ -1,30 +1,27 @@
 import { create } from "zustand";
 import type { ApiClient } from "../../lib/api";
-import type { TriggerInfo, TriggerServerEvent } from "../../lib/types";
-import { useProjectDataStore } from "../../stores/project-data-store";
+import type { TriggerServerEvent } from "../../lib/types";
 import { refreshProjectSessions } from "../../queries/project";
+import { queryClient } from "../../queries/client";
+import { projectQueryKeys } from "../../queries/keys";
+import { selectAgentTriggers } from "../../queries/triggers";
 
 interface TriggerProjectData {
-  triggersByAgent: Record<string, TriggerInfo[]>;
   runningTriggerIdsByAgent: Record<string, string[]>;
   triggerEventVersion: number;
 }
 
 interface TriggerStore {
   byProject: Record<string, TriggerProjectData>;
-  refreshTriggers: (projectId: string, client: ApiClient, agentId: string) => Promise<void>;
-  createTrigger: (projectId: string, client: ApiClient, agentId: string, data: Parameters<ApiClient["createTrigger"]>[1]) => Promise<void>;
-  updateTrigger: (projectId: string, client: ApiClient, agentId: string, triggerId: string, data: Parameters<ApiClient["updateTrigger"]>[2]) => Promise<void>;
-  deleteTrigger: (projectId: string, client: ApiClient, agentId: string, triggerId: string) => Promise<void>;
+  handleTriggerEvent: (projectId: string, event: TriggerServerEvent) => void;
   runTrigger: (projectId: string, client: ApiClient, agentId: string, triggerId: string) => Promise<void>;
-  resetTriggerBinding: (projectId: string, client: ApiClient, agentId: string, triggerId: string) => Promise<void>;
-  handleTriggerEvent: (projectId: string, client: ApiClient, event: TriggerServerEvent) => void;
+  markTriggerRunning: (projectId: string, agentId: string, triggerId: string, running: boolean) => void;
+  clearRunningTriggers: (projectId: string) => void;
   clearProject: (projectId: string) => void;
 }
 
 function createTriggerProjectData(): TriggerProjectData {
   return {
-    triggersByAgent: {},
     runningTriggerIdsByAgent: {},
     triggerEventVersion: 0,
   };
@@ -72,71 +69,31 @@ function removeRunningTrigger(data: TriggerProjectData, agentId: string, trigger
 export const useTriggerStore = create<TriggerStore>((set, get) => ({
   byProject: {},
 
-  async refreshTriggers(projectId, client, agentId) {
-    try {
-      const triggers = await client.listTriggers(agentId);
-      set((state) => updateTriggerProject(state, projectId, (data) => ({
-        ...data,
-        triggersByAgent: { ...data.triggersByAgent, [agentId]: triggers },
-      })));
-      useProjectDataStore.getState().setHasEnabledTriggers(
-        projectId,
-        agentId,
-        triggers.some((t) => t.enabled),
-      );
-    } catch {
-      // silent — trigger refresh failures are non-critical
-    }
-  },
-
-  async createTrigger(projectId, client, agentId, data) {
-    try {
-      await client.createTrigger(agentId, data);
-      await get().refreshTriggers(projectId, client, agentId);
-    } catch {
-      // silent
-    }
-  },
-
-  async updateTrigger(projectId, client, agentId, triggerId, data) {
-    try {
-      await client.updateTrigger(agentId, triggerId, data);
-      await get().refreshTriggers(projectId, client, agentId);
-    } catch {
-      // silent
-    }
-  },
-
-  async deleteTrigger(projectId, client, agentId, triggerId) {
-    try {
-      await client.deleteTrigger(agentId, triggerId);
-      await get().refreshTriggers(projectId, client, agentId);
-    } catch {
-      // silent
-    }
+  markTriggerRunning(projectId, agentId, triggerId, running) {
+    set((state) => updateTriggerProject(state, projectId, (data) =>
+      running
+        ? addRunningTrigger(data, agentId, triggerId)
+        : removeRunningTrigger(data, agentId, triggerId)));
   },
 
   async runTrigger(projectId, client, agentId, triggerId) {
-    set((state) => updateTriggerProject(state, projectId, (data) =>
-      addRunningTrigger(data, agentId, triggerId)));
+    get().markTriggerRunning(projectId, agentId, triggerId, true);
     try {
       await client.runTrigger(agentId, triggerId);
-    } catch {
-      set((state) => updateTriggerProject(state, projectId, (data) =>
-        removeRunningTrigger(data, agentId, triggerId)));
+    } catch (error) {
+      get().markTriggerRunning(projectId, agentId, triggerId, false);
+      throw error;
     }
   },
 
-  async resetTriggerBinding(projectId, client, agentId, triggerId) {
-    try {
-      await client.resetTriggerBinding(agentId, triggerId);
-      await get().refreshTriggers(projectId, client, agentId);
-    } catch {
-      // silent
-    }
+  clearRunningTriggers(projectId) {
+    set((state) => updateTriggerProject(state, projectId, (data) => ({
+      ...data,
+      runningTriggerIdsByAgent: {},
+    })));
   },
 
-  handleTriggerEvent(projectId, client, event) {
+  handleTriggerEvent(projectId, event) {
     if (event.type === "trigger_triggered") {
       set((state) => updateTriggerProject(state, projectId, (data) => ({
         ...addRunningTrigger(data, event.agentId, event.triggerId),
@@ -150,7 +107,6 @@ export const useTriggerStore = create<TriggerStore>((set, get) => ({
         ...removeRunningTrigger(data, event.agentId, event.triggerId),
         triggerEventVersion: data.triggerEventVersion + 1,
       })));
-      void get().refreshTriggers(projectId, client, event.agentId);
       if (event.type === "trigger_completed") {
         void refreshProjectSessions(projectId);
       }
@@ -162,7 +118,6 @@ export const useTriggerStore = create<TriggerStore>((set, get) => ({
         ...data,
         triggerEventVersion: data.triggerEventVersion + 1,
       })));
-      void get().refreshTriggers(projectId, client, event.agentId);
     }
   },
 
@@ -173,3 +128,10 @@ export const useTriggerStore = create<TriggerStore>((set, get) => ({
     });
   },
 }));
+
+export function getCachedTriggersForAgent(projectId: string, agentId: string) {
+  const data = queryClient.getQueryData<{ triggers: Parameters<typeof selectAgentTriggers>[0] }>(
+    projectQueryKeys.triggers(projectId),
+  );
+  return selectAgentTriggers(data?.triggers, agentId);
+}

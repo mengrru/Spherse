@@ -13,16 +13,16 @@ import {
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
 import { SessionStatusDialog } from "./SessionStatusDialog";
-import type { AgentProfile, SessionInfo } from "../../lib/types";
+import type { AgentSummary, SessionInfo } from "../../lib/types";
 
 export type DialogState =
   | { kind: "none" }
   | { kind: "create-agent" }
   | { kind: "edit-agent"; id: string }
-  | { kind: "delete-agent"; agent: AgentProfile }
+  | { kind: "delete-agent"; agent: AgentSummary }
   | { kind: "delete-session"; session: SessionInfo }
-  | { kind: "trigger"; agent: AgentProfile }
-  | { kind: "mcp"; agent: AgentProfile }
+  | { kind: "trigger"; agent: AgentSummary }
+  | { kind: "mcp"; agent: AgentSummary }
   | { kind: "session-status"; session: SessionInfo };
 
 interface AgentSessionDialogsProps {
@@ -31,7 +31,7 @@ interface AgentSessionDialogsProps {
   onClose: () => void;
   onCreateAgent: (slug: string, content: string, themeContent: string) => Promise<void>;
   onEditAgent: (slug: string, content: string, themeContent: string) => Promise<void>;
-  onDeleteAgent: (agent: AgentProfile) => Promise<void>;
+  onDeleteAgent: (agent: AgentSummary) => Promise<void>;
   onDeleteSession: (session: SessionInfo) => Promise<void>;
 }
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
-import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
+import type { AgentSummary, ActiveSessionInfo } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
@@ -18,7 +18,7 @@ export interface ContentBrowserProps {
   filePath: string;
   onBack: () => void;
   onClose: () => void;
-  agents: AgentProfile[];
+  agents: AgentSummary[];
   activeSessions?: ActiveSessionInfo[];
   onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;
 }

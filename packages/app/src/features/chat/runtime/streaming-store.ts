@@ -491,7 +491,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       const session = get().sessions[sessionId];
       if (!session || session.loadingMore || !session.hasMore || session.oldestLoadedId === null) return;
       updateSession(sessionId, (s) => ({ ...s, loadingMore: true }));
-      client.getSessionMessagesPage(agentId, sessionId, { turns: 10, before: session.oldestLoadedId })
+      client.getSessionMessagesPage(agentId, sessionId, { limit: 20, before: session.oldestLoadedId })
         .then((result) => {
           const historyMessages = parseHistoryMessages(result.entries);
           updateSession(sessionId, (s) => {
@@ -514,7 +514,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     refreshHistory(client, agentId, sessionId) {
       const session = get().sessions[sessionId];
       if (!session || session.streaming) return;
-      client.getSessionMessagesPage(agentId, sessionId, { turns: 10 })
+      client.getSessionMessagesPage(agentId, sessionId, { limit: 20 })
         .then((result) => {
           const historyMessages = parseHistoryMessages(result.entries);
           updateSession(sessionId, (s) => {

@@ -17,6 +17,14 @@ export const schemas = {
     items: Type.Array(sessionInfo),
     hasMore: Type.Boolean(),
   }),
+  projectSessionListResponse: Type.Object({
+    ok: Type.Boolean(),
+    sessions: Type.Array(sessionInfo),
+    byAgent: Type.Record(
+      Type.String(),
+      Type.Object({ hasMore: Type.Boolean(), loaded: Type.Integer() }),
+    ),
+  }),
   sessionCreateResponse: Type.Object({ sessionId: Type.String() }),
   sessionCreateRequest: Type.Object({ title: Type.Optional(Type.String({ minLength: 1 })) }),
   sessionRenameRequest: Type.Object({ title: Type.String() }),
@@ -47,6 +55,7 @@ export const schemas = {
 export type SessionInfoContract = Static<typeof sessionInfo>;
 export type SessionListResponse = Static<typeof schemas.sessionListResponse>;
 export type SessionListPageResponse = Static<typeof schemas.sessionListPageResponse>;
+export type ProjectSessionListResponse = Static<typeof schemas.projectSessionListResponse>;
 export type SessionCreateResponse = Static<typeof schemas.sessionCreateResponse>;
 export type SessionCreateRequest = Static<typeof schemas.sessionCreateRequest>;
 export type SessionRenameRequest = Static<typeof schemas.sessionRenameRequest>;

@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
@@ -21,12 +20,19 @@ import { TriggerList } from "./TriggerList";
 import { TriggerLogs } from "./TriggerLogs";
 import { useTriggerLogs } from "./hooks/use-trigger-logs";
 import {
+  createAgentTrigger,
+  deleteAgentTrigger,
+  resetAgentTriggerBinding,
+  updateAgentTrigger,
+  useAgentTriggers,
+} from "../../queries/triggers";
+import {
   draftToTriggerData,
   emptyTriggerDraft,
   entryToDraft,
   type TriggerDraft,
 } from "./trigger-form-helpers";
-import { EMPTY_RUNNING_TRIGGER_IDS, EMPTY_TRIGGERS } from "./constants";
+import { EMPTY_RUNNING_TRIGGER_IDS } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
 import { InfoIcon, PlusIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
@@ -43,24 +49,17 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
   const { t } = useI18n();
   const client = useApiClient(projectId);
   const { agents } = useProjectCatalog(projectId, client);
-  const triggers = useTriggerStore(
-    (s) => s.byProject[projectId]?.triggersByAgent?.[agentId] ?? EMPTY_TRIGGERS,
-  );
+  const { triggers, isPending } = useAgentTriggers(projectId, client, agentId);
   const runningTriggerIds = useTriggerStore(
     (s) => s.byProject[projectId]?.runningTriggerIdsByAgent?.[agentId] ?? EMPTY_RUNNING_TRIGGER_IDS,
   );
   const triggerEventVersion = useTriggerStore(
     (s) => s.byProject[projectId]?.triggerEventVersion ?? 0,
   );
+  const runTrigger = useTriggerStore((s) => s.runTrigger);
   const agent = agents.find((item) => item.id === agentId);
   const agentName = agent?.name ?? "";
   const logFilePath = agent ? `.spherse/agents/${agent.slug}/triggers/logs.jsonl` : "";
-  const refreshTriggers = useTriggerStore((s) => s.refreshTriggers);
-  const createTrigger = useTriggerStore((s) => s.createTrigger);
-  const updateTrigger = useTriggerStore((s) => s.updateTrigger);
-  const deleteTrigger = useTriggerStore((s) => s.deleteTrigger);
-  const runTrigger = useTriggerStore((s) => s.runTrigger);
-  const resetTriggerBinding = useTriggerStore((s) => s.resetTriggerBinding);
 
   const [activeTab, setActiveTab] = useState("config");
   const [draft, setDraft] = useState<TriggerDraft | null>(null);
@@ -74,10 +73,6 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
     triggerNameMap[trigger.id] =
       trigger.name || (trigger.type === "time" ? trigger.cron! : trigger.eventName!);
   }
-
-  useEffect(() => {
-    if (open) refreshTriggers(projectId, client, agentId);
-  }, [open, projectId, client, agentId, refreshTriggers]);
 
   function patchDraft(patch: Partial<TriggerDraft>) {
     setDraft((prev) => (prev ? { ...prev, ...patch } : prev));
@@ -107,9 +102,9 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
       return;
     }
     if (editingId === null) {
-      await createTrigger(projectId, client, agentId, data);
+      await createAgentTrigger(projectId, client, agentId, data);
     } else {
-      await updateTrigger(projectId, client, agentId, editingId, data);
+      await updateAgentTrigger(projectId, client, agentId, editingId, data);
     }
     clearDraft();
   }
@@ -120,18 +115,18 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
 
   async function handleResetBinding() {
     if (!draft || editingId === null) return;
-    await resetTriggerBinding(projectId, client, agentId, editingId);
+    await resetAgentTriggerBinding(projectId, client, agentId, editingId);
     patchDraft({ boundSessionId: undefined });
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await deleteTrigger(projectId, client, agentId, deleteTarget.id);
+    await deleteAgentTrigger(projectId, client, agentId, deleteTarget.id);
     setDeleteTarget(null);
   }
 
   async function handleToggle(entry: TriggerInfo) {
-    await updateTrigger(projectId, client, agentId, entry.id, { enabled: !entry.enabled });
+    await updateAgentTrigger(projectId, client, agentId, entry.id, { enabled: !entry.enabled });
   }
 
   return (
@@ -186,7 +181,7 @@ export function TriggerDialog({ open, onOpenChange, agentId, projectId }: Trigge
                 </div>
               )}
 
-              {triggers.length === 0 && !draft ? (
+              {triggers.length === 0 && !draft && !isPending ? (
                 <p className="py-6 text-center text-sm text-muted-foreground">
                   {t("agent-trigger.noTriggers")}
                 </p>

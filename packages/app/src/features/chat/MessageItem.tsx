@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { AgentProfile } from "../../lib/types";
+import type { AgentSummary } from "../../lib/types";
 import type { ChatMessage } from "./types";
 import { MarkdownContent } from "../../components/MarkdownContent";
 import { HtmlCardRenderer } from "./HtmlCard";
@@ -20,7 +20,7 @@ import { formatMessageTime } from "./lib/format-time";
 
 interface MessageItemProps {
   message: ChatMessage;
-  agent: AgentProfile;
+  agent: AgentSummary;
   showTime?: boolean;
   supersededToolCallIds?: Set<string>;
   onNavigateToPath?: (path: string) => void;

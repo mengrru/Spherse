@@ -105,7 +105,7 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
             const result = await params.client.getSessionMessagesPage(
               params.agentId,
               this.sessionId,
-              { turns: 10 },
+              { limit: 20 },
             );
             if (this.ws !== ws || !this.callbacks.getSession()) return;
             const historyMessages = parseHistoryMessages(result.entries);

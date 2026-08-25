@@ -3,7 +3,6 @@ import { create } from "zustand";
 interface ProjectData {
   initialMessageBySessionId: Record<string, string>;
   streamingSessionIds: Set<string>;
-  hasEnabledTriggersByAgent: Record<string, boolean>;
 }
 
 interface ProjectDataStore {
@@ -12,7 +11,6 @@ interface ProjectDataStore {
   clearInitialMessage: (projectId: string, sessionId: string) => void;
   consumeInitialMessage: (projectId: string, sessionId: string) => string | undefined;
   setStreaming: (projectId: string, sessionId: string, streaming: boolean) => void;
-  setHasEnabledTriggers: (projectId: string, agentId: string, has: boolean) => void;
   clearProjectData: (projectId: string) => void;
 }
 
@@ -20,7 +18,6 @@ function createProjectData(): ProjectData {
   return {
     initialMessageBySessionId: {},
     streamingSessionIds: new Set(),
-    hasEnabledTriggersByAgent: {},
   };
 }
 
@@ -67,13 +64,6 @@ export const useProjectDataStore = create<ProjectDataStore>((set, get) => ({
       else streamingSessionIds.delete(sessionId);
       return { ...project, streamingSessionIds };
     }));
-  },
-
-  setHasEnabledTriggers(projectId, agentId, has) {
-    set((state) => updateProjectData(state, projectId, (project) => ({
-      ...project,
-      hasEnabledTriggersByAgent: { ...project.hasEnabledTriggersByAgent, [agentId]: has },
-    })));
   },
 
   clearProjectData(projectId) {

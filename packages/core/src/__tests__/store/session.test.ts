@@ -231,19 +231,12 @@ describe("SessionStore", () => {
     });
   });
 
-  describe("getRecentTurns (legacy read path)", () => {
+  describe("getRecentMessages (legacy read path)", () => {
     const insertTurn = (sessionId: string, userText: string, assistantCount = 1): void => {
       insertMessage(sessionId, userMsg(userText));
       for (let i = 0; i < assistantCount; i++) {
         insertMessage(sessionId, asstMsg(`${userText}-reply-${i}`));
       }
-    };
-
-    const insertMultiMessageTurn = (sessionId: string, userText: string): void => {
-      insertMessage(sessionId, userMsg(userText));
-      insertMessage(sessionId, asstMsg(`${userText}-reply-0`));
-      insertMessage(sessionId, asstMsg(`${userText}-reply-1`));
-      insertMessage(sessionId, toolResultMsg(`${userText}-tool`));
     };
 
     const getMessageIds = (sessionId: string): number[] => {
@@ -255,30 +248,29 @@ describe("SessionStore", () => {
       return rows.map((r) => r.id);
     };
 
-    it("slices the last N turns in ASC order", () => {
+    it("slices the last N messages in ASC order", () => {
       const id = store.createSession();
       insertTurn(id, "t1");
       insertTurn(id, "t2");
       insertTurn(id, "t3");
 
       const ids = getMessageIds(id);
-      const result = store.getRecentTurns(id, 2);
-      expect(result.messages).toHaveLength(4);
-      expect(textOf(result.messages[0])).toBe("t2");
-      expect(textOf(result.messages[1])).toBe("t2-reply-0");
-      expect(textOf(result.messages[2])).toBe("t3");
-      expect(textOf(result.messages[3])).toBe("t3-reply-0");
+      const result = store.getRecentMessages(id, 3);
+      expect(result.messages).toHaveLength(3);
+      expect(textOf(result.messages[0])).toBe("t2-reply-0");
+      expect(textOf(result.messages[1])).toBe("t3");
+      expect(textOf(result.messages[2])).toBe("t3-reply-0");
       expect(result.hasMore).toBe(true);
-      expect(result.oldestId).toBe(ids[2]);
+      expect(result.oldestId).toBe(ids[3]);
     });
 
-    it("returns all turns when requesting more than exist", () => {
+    it("returns all messages when requesting more than exist", () => {
       const id = store.createSession();
       insertTurn(id, "t1");
       insertTurn(id, "t2");
       insertTurn(id, "t3");
 
-      const result = store.getRecentTurns(id, 10);
+      const result = store.getRecentMessages(id, 10);
       expect(result.messages).toHaveLength(6);
       expect(textOf(result.messages[0])).toBe("t1");
       expect(textOf(result.messages[5])).toBe("t3-reply-0");
@@ -287,7 +279,7 @@ describe("SessionStore", () => {
 
     it("returns empty for a session with no messages", () => {
       const id = store.createSession();
-      const result = store.getRecentTurns(id, 5);
+      const result = store.getRecentMessages(id, 5);
       expect(result.messages).toEqual([]);
       expect(result.hasMore).toBe(false);
       expect(result.oldestId).toBeNull();
@@ -298,7 +290,7 @@ describe("SessionStore", () => {
       insertTurn(id, "t1");
       insertTurn(id, "t2");
 
-      const result = store.getRecentTurns(id, 5, 0);
+      const result = store.getRecentMessages(id, 5, 0);
       expect(result.messages).toEqual([]);
       expect(result.hasMore).toBe(false);
       expect(result.oldestId).toBeNull();
@@ -313,42 +305,56 @@ describe("SessionStore", () => {
       insertTurn(id, "t5");
 
       const ids = getMessageIds(id);
-      const turn4FirstId = ids[6];
-
-      const result = store.getRecentTurns(id, 2, turn4FirstId);
-      expect(result.messages).toHaveLength(4);
+      const result = store.getRecentMessages(id, 2, ids[4]);
+      expect(result.messages).toHaveLength(2);
       expect(textOf(result.messages[0])).toBe("t2");
       expect(textOf(result.messages[1])).toBe("t2-reply-0");
-      expect(textOf(result.messages[2])).toBe("t3");
-      expect(textOf(result.messages[3])).toBe("t3-reply-0");
       expect(result.hasMore).toBe(true);
       expect(result.oldestId).toBe(ids[2]);
     });
 
-    it("reports hasMore false when all turns are consumed", () => {
+    it("reports hasMore false when all messages are consumed", () => {
       const id = store.createSession();
       insertTurn(id, "t1");
       insertTurn(id, "t2");
       insertTurn(id, "t3");
 
-      const result = store.getRecentTurns(id, 3);
+      const result = store.getRecentMessages(id, 6);
       expect(result.messages).toHaveLength(6);
       expect(result.hasMore).toBe(false);
     });
 
-    it("treats a multi-message turn as a single turn", () => {
+    it("extends the page head past orphan toolResults so pairing stays self-contained", () => {
       const id = store.createSession();
-      insertTurn(id, "t1");
-      insertMultiMessageTurn(id, "t2");
+      insertMessage(id, userMsg("t1"));
+      insertMessage(id, asstMsg("a1"));
+      insertMessage(id, toolResultMsg("r1"));
+      insertMessage(id, toolResultMsg("r2"));
 
-      const result = store.getRecentTurns(id, 1);
-      expect(result.messages).toHaveLength(4);
-      expect(result.messages[0].role).toBe("user");
-      expect(textOf(result.messages[0])).toBe("t2");
-      expect(result.messages[1].role).toBe("assistant");
-      expect(result.messages[2].role).toBe("assistant");
-      expect(result.messages[3].role).toBe("toolResult");
+      const ids = getMessageIds(id);
+      const result = store.getRecentMessages(id, 2);
+      expect(result.messages.map((m) => m.role)).toEqual([
+        "assistant",
+        "toolResult",
+        "toolResult",
+      ]);
       expect(result.hasMore).toBe(true);
+      expect(result.oldestId).toBe(ids[1]);
+    });
+
+    it("stops extending and reports hasMore false when extension exhausts older messages", () => {
+      const id = store.createSession();
+      insertMessage(id, asstMsg("a1"));
+      insertMessage(id, toolResultMsg("r1"));
+      insertMessage(id, toolResultMsg("r2"));
+
+      const result = store.getRecentMessages(id, 2);
+      expect(result.messages.map((m) => m.role)).toEqual([
+        "assistant",
+        "toolResult",
+        "toolResult",
+      ]);
+      expect(result.hasMore).toBe(false);
     });
   });
 
@@ -409,10 +415,10 @@ describe("SessionStore", () => {
       expect(() => store.getMessagesAfter(id, anchor)).toThrow(/Corrupt message/);
     });
 
-    it("throws when getRecentTurns encounters a payload without a known role", () => {
+    it("throws when getRecentMessages encounters a payload without a known role", () => {
       const id = store.createSession();
       insertRawMessage(id, JSON.stringify({ role: "weird", content: "x" }));
-      expect(() => store.getRecentTurns(id, 5)).toThrow(/Corrupt message/);
+      expect(() => store.getRecentMessages(id, 5)).toThrow(/Corrupt message/);
     });
   });
 

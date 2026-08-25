@@ -121,6 +121,12 @@ describe("api contracts", () => {
     });
     expect(() => parseApiResponse(schemas.agentProfile, { id: "a1" })).toThrow(/Invalid payload/);
 
+    const summary = { id: "a1", name: "Agent", slug: "agent", createdAt: 1 };
+    expect(parseApiResponse(schemas.agentListResponse, [summary])).toEqual([summary]);
+    expect(() =>
+      parseApiResponse(schemas.agentListResponse, [{ ...summary, systemPrompt: "p" }]),
+    ).toThrow(/Invalid payload/);
+
     expect(parseApiResponse(schemas.agentCreateRequest, { slugBase: "s", content: "c" })).toEqual({ slugBase: "s", content: "c" });
     expect(() => parseApiResponse(schemas.agentCreateRequest, { content: "c" })).toThrow(/Invalid payload/);
     expect(parseApiResponse(schemas.agentCreateResponse, { ok: true, id: "a1" })).toEqual({ ok: true, id: "a1" });
@@ -193,9 +199,12 @@ describe("api contracts", () => {
     ).toThrow(/Invalid payload/);
   });
 
-  it("validates skill list response", () => {
-    const skill = { name: "n", description: "d", instructions: "i", filePath: "n.md", source: "builtin", files: [] };
-    expect(parseApiResponse(schemas.skillListResponse, [skill])).toEqual([skill]);
+  it("validates skill list response and rejects instructions on summaries", () => {
+    const summary = { name: "n", description: "d", filePath: "n.md", source: "builtin", files: [] };
+    expect(parseApiResponse(schemas.skillListResponse, [summary])).toEqual([summary]);
+    expect(() =>
+      parseApiResponse(schemas.skillListResponse, [{ ...summary, instructions: "i" }]),
+    ).toThrow(/Invalid payload/);
     expect(() => parseApiResponse(schemas.skillDefinition, { name: "n" })).toThrow(/Invalid payload/);
     expect(() =>
       parseApiResponse(schemas.skillDefinition, { name: "n", description: "d", instructions: "i", filePath: "n.md" }),

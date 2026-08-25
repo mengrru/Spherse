@@ -1,96 +1,95 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../../lib/api";
-import type { TriggerInfo } from "../../lib/types";
-import { useTriggerStore } from "./store";
-import { useProjectDataStore } from "../../stores/project-data-store";
+import { getCachedTriggersForAgent, useTriggerStore } from "./store";
+import { queryClient } from "../../queries/client";
+import { projectQueryKeys } from "../../queries/keys";
 
-function makeTrigger(overrides: Partial<TriggerInfo>): TriggerInfo {
-  return {
-    id: "trig-1",
-    enabled: false,
-    type: "time",
-    cron: "0 9 * * *",
-    mode: "new_session",
-    message: "hi",
-    notify: false,
-    createdAt: 1,
-    updatedAt: 1,
-    nextTriggerAt: null,
-    ...overrides,
-  } as TriggerInfo;
-}
-
-function createClient(listTriggersReturn: TriggerInfo[]): ApiClient {
-  return {
-    listTriggers: vi.fn().mockResolvedValue(listTriggersReturn),
-    createTrigger: vi.fn().mockResolvedValue(undefined),
-    updateTrigger: vi.fn().mockResolvedValue(undefined),
-    deleteTrigger: vi.fn().mockResolvedValue(undefined),
-    runTrigger: vi.fn().mockResolvedValue(undefined),
-  } as unknown as ApiClient;
+function event(type: string, extra: Record<string, unknown>) {
+  return { type, agentId: "agent-1", triggerId: "trig-1", ...extra } as never;
 }
 
 describe("useTriggerStore", () => {
   beforeEach(() => {
     useTriggerStore.setState({ byProject: {} });
-    useProjectDataStore.setState({ projects: {} });
+    queryClient.clear();
   });
 
-  it("writes hasEnabledTriggers=true to project-data-store when refreshTriggers finds an enabled trigger", async () => {
-    const client = createClient([makeTrigger({ enabled: true })]);
+  it("marks a trigger running on trigger_triggered and bumps the event version", () => {
+    useTriggerStore.getState().handleTriggerEvent("project-1", event("trigger_triggered", { triggeredAt: 1 }));
 
-    await useTriggerStore.getState().refreshTriggers("project-1", client, "agent-1");
-
-    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledTriggersByAgent?.["agent-1"]).toBe(true);
+    const data = useTriggerStore.getState().byProject["project-1"];
+    expect(data?.runningTriggerIdsByAgent["agent-1"]).toEqual(["trig-1"]);
+    expect(data?.triggerEventVersion).toBe(1);
   });
 
-  it("writes hasEnabledTriggers=false when all triggers are disabled", async () => {
-    const client = createClient([makeTrigger({ enabled: false }), makeTrigger({ id: "trig-2", enabled: false })]);
+  it("removes the running mark on trigger_completed and refreshes sessions", () => {
+    useTriggerStore.getState().handleTriggerEvent("project-1", event("trigger_triggered", { triggeredAt: 1 }));
+    useTriggerStore.getState().handleTriggerEvent("project-1", event("trigger_completed", { sessionId: "s1", status: "success" }));
 
-    await useTriggerStore.getState().refreshTriggers("project-1", client, "agent-1");
-
-    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledTriggersByAgent?.["agent-1"]).toBe(false);
+    const data = useTriggerStore.getState().byProject["project-1"];
+    expect(data?.runningTriggerIdsByAgent["agent-1"]).toEqual([]);
+    expect(data?.triggerEventVersion).toBe(2);
   });
 
-  it("writes hasEnabledTriggers=false when there are no triggers", async () => {
-    const client = createClient([]);
+  it("removes the running mark on trigger_failed without refreshing sessions", () => {
+    useTriggerStore.getState().handleTriggerEvent("project-1", event("trigger_triggered", { triggeredAt: 1 }));
+    useTriggerStore.getState().handleTriggerEvent("project-1", event("trigger_failed", { error: "boom" }));
 
-    await useTriggerStore.getState().refreshTriggers("project-1", client, "agent-1");
-
-    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledTriggersByAgent?.["agent-1"]).toBe(false);
+    expect(useTriggerStore.getState().byProject["project-1"]?.runningTriggerIdsByAgent["agent-1"]).toEqual([]);
   });
 
-  it("does not write to project-data-store when listTriggers rejects", async () => {
-    const client = createClient([]);
-    (client.listTriggers as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("network"));
+  it("only bumps the event version on trigger_updated", () => {
+    useTriggerStore.getState().handleTriggerEvent("project-1", event("trigger_updated", {}));
 
-    await useTriggerStore.getState().refreshTriggers("project-1", client, "agent-1");
-
-    const project = useProjectDataStore.getState().projects["project-1"];
-    expect(project?.hasEnabledTriggersByAgent?.["agent-1"]).toBeUndefined();
+    const data = useTriggerStore.getState().byProject["project-1"];
+    expect(data?.runningTriggerIdsByAgent).toEqual({});
+    expect(data?.triggerEventVersion).toBe(1);
   });
 
-  it("propagates hasEnabled through createTrigger (CRUD chokepoint)", async () => {
-    const client = createClient([makeTrigger({ enabled: true })]);
+  it("clears project data on clearProject", () => {
+    useTriggerStore.getState().handleTriggerEvent("project-1", event("trigger_triggered", { triggeredAt: 1 }));
 
-    await useTriggerStore.getState().createTrigger("project-1", client, "agent-1", {} as never);
+    useTriggerStore.getState().clearProject("project-1");
 
-    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledTriggersByAgent?.["agent-1"]).toBe(true);
+    expect(useTriggerStore.getState().byProject["project-1"]).toBeUndefined();
   });
 
-  it("propagates hasEnabled through updateTrigger (CRUD chokepoint)", async () => {
-    const client = createClient([makeTrigger({ enabled: false })]);
+  it("runTrigger optimistically marks running and keeps the mark while the API call is in flight", async () => {
+    let resolveRun!: () => void;
+    const client = {
+      runTrigger: vi.fn().mockReturnValue(new Promise<void>((resolve) => { resolveRun = resolve; })),
+    } as unknown as ApiClient;
 
-    await useTriggerStore.getState().updateTrigger("project-1", client, "agent-1", "trig-1", {} as never);
+    const pending = useTriggerStore.getState().runTrigger("project-1", client, "agent-1", "trig-1");
 
-    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledTriggersByAgent?.["agent-1"]).toBe(false);
+    expect(useTriggerStore.getState().byProject["project-1"]?.runningTriggerIdsByAgent["agent-1"]).toEqual(["trig-1"]);
+    resolveRun();
+    await pending;
+    expect(useTriggerStore.getState().byProject["project-1"]?.runningTriggerIdsByAgent["agent-1"]).toEqual(["trig-1"]);
   });
 
-  it("propagates hasEnabled through deleteTrigger (CRUD chokepoint)", async () => {
-    const client = createClient([]);
+  it("runTrigger rolls back the running mark when the API call fails", async () => {
+    const client = {
+      runTrigger: vi.fn().mockRejectedValue(new Error("boom")),
+    } as unknown as ApiClient;
 
-    await useTriggerStore.getState().deleteTrigger("project-1", client, "agent-1", "trig-1");
+    await expect(
+      useTriggerStore.getState().runTrigger("project-1", client, "agent-1", "trig-1"),
+    ).rejects.toThrow("boom");
 
-    expect(useProjectDataStore.getState().projects["project-1"]?.hasEnabledTriggersByAgent?.["agent-1"]).toBe(false);
+    expect(useTriggerStore.getState().byProject["project-1"]?.runningTriggerIdsByAgent["agent-1"]).toEqual([]);
+  });
+
+  it("getCachedTriggersForAgent selects from the query cache", () => {
+    queryClient.setQueryData(projectQueryKeys.triggers("project-1"), {
+      triggers: [
+        { agentId: "agent-1", id: "t1", enabled: true },
+        { agentId: "agent-2", id: "t2", enabled: true },
+      ],
+    });
+
+    const selected = getCachedTriggersForAgent("project-1", "agent-1");
+
+    expect(selected?.map((item) => item.id)).toEqual(["t1"]);
   });
 });
