@@ -1,7 +1,3 @@
-import type { TriggerInfo } from "../../lib/types";
-
-export const EMPTY_TRIGGERS: TriggerInfo[] = [];
-
 export const EMPTY_RUNNING_TRIGGER_IDS: string[] = [];
 
 export const LOG_LIMIT = 100;

@@ -15,7 +15,8 @@ import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
 import { useProjectCtx } from "../../context/project-context";
-import { useProjectDataStore } from "../../stores/project-data-store";
+import { useApiClient } from "../../lib/use-connection";
+import { useAgentHasEnabledTrigger } from "../../queries/triggers";
 import { useFeature } from "../../lib/use-feature";
 import { useAgentSessionActions } from "./actions-context";
 
@@ -28,12 +29,11 @@ export function AgentRow({ agent, active }: AgentRowProps) {
   const { t } = useI18n();
   const actions = useAgentSessionActions();
   const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
   const agentDialogEnabled = useFeature("agent-dialog");
   const triggerEnabled = useFeature("agent-trigger");
   const mcpEnabled = useFeature("agent-mcp");
-  const hasEnabled = useProjectDataStore(
-    (s) => s.projects[projectId]?.hasEnabledTriggersByAgent?.[agent.id] ?? false,
-  );
+  const hasEnabled = useAgentHasEnabledTrigger(projectId, client, agent.id);
   return (
     <div className="group/agent-row relative" data-agent-id={agent.id}>
       <ContextMenu>

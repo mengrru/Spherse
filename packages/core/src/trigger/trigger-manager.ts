@@ -89,6 +89,18 @@ export class TriggerManager extends EventEmitter {
     return this.getTriggerStore(agentId)?.list() ?? [];
   }
 
+  listProject(): { agentId: string; entry: TriggerEntry; nextTriggerAt: Date | null }[] {
+    const result: { agentId: string; entry: TriggerEntry; nextTriggerAt: Date | null }[] = [];
+    for (const { agentId, entry } of this.readAllTriggers()) {
+      const next =
+        entry.enabled && entry.type === "time" && entry.cron
+          ? getNextCronDate(entry.cron)
+          : null;
+      result.push({ agentId, entry, nextTriggerAt: next });
+    }
+    return result;
+  }
+
   get(agentId: string, triggerId: string): TriggerEntry | null {
     return this.getTriggerStore(agentId)?.get(triggerId) ?? null;
   }

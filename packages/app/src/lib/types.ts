@@ -8,6 +8,7 @@ export type {
   TriggerEntryContract as TriggerEntry,
   TriggerInfoEntryContract as TriggerInfo,
   TriggerLogEntryContract as TriggerLogEntry,
+  ProjectTriggerListResponse,
   TriggerServerEvent,
   SkillDefinitionContract as SkillDefinition,
   AgentUpdateResponse,

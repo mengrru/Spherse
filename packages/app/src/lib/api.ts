@@ -6,6 +6,7 @@ import type {
   StatResponse,
   TriggerEntry,
   TriggerInfo,
+  ProjectTriggerListResponse,
   TriggerLogEntry,
   SkillDefinition,
   AgentCreateResponse,
@@ -534,6 +535,12 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers`);
       await assertOk(res);
       return parseJsonResponse<TriggerInfo[]>(res, schemas.triggerListResponse);
+    },
+
+    async listProjectTriggers(): Promise<ProjectTriggerListResponse> {
+      const res = await authedFetch(`${apiBase}/triggers`);
+      await assertOk(res);
+      return parseJsonResponse<ProjectTriggerListResponse>(res, schemas.projectTriggerListResponse);
     },
 
     async createTrigger(agentId: string, data: {
