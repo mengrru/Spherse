@@ -49,13 +49,14 @@ describe("build-and-release.yml: deploy-web job", () => {
     expect(permissions?.contents).toBe("read");
   });
 
-  it("用 gh CLI 触发 deploy-pages.yml，且 ref 指向发版 tag", () => {
+  it("用 gh CLI 触发 deploy-pages.yml，ref 指向发版 tag 且 include_web=true", () => {
     const step = deployWeb.steps.find((s: any) => String(s.run ?? "").includes("gh workflow run"));
     expect(step).toBeDefined();
 
     const run: string = step.run.replace(/\\\n/g, " ").replace(/\n/g, " ");
     expect(run).toContain("deploy-pages.yml");
     expect(run).toContain('--ref "${GITHUB_REF_NAME}"');
+    expect(run).toContain("-f include_web=true");
 
     expect(step.env?.GH_TOKEN).toBe("${{ secrets.GITHUB_TOKEN }}");
   });
@@ -67,5 +68,36 @@ describe("deploy-pages.yml: dispatch 目标可达", () => {
     const triggers = pages.on ?? pages["on"] ?? pages.true;
     expect(triggers).toBeDefined();
     expect(triggers.workflow_dispatch).toBeDefined();
+  });
+});
+
+describe("deploy-pages.yml: web 仅随发版部署", () => {
+  const triggers = pages.on ?? pages["on"] ?? pages.true;
+
+  it("main push 路径触发不含 packages/web（web 变更不触发 Pages 部署）", () => {
+    const paths: string[] = triggers.push.branches && Array.isArray(triggers.push.paths)
+      ? triggers.push.paths
+      : [];
+    expect(paths).not.toContain("packages/web/**");
+  });
+
+  it("include_web input 默认 false（手动 dispatch 默认只部署 landing）", () => {
+    const input = triggers.workflow_dispatch?.inputs?.include_web;
+    expect(input?.type).toBe("boolean");
+    expect(String(input?.default)).toBe("false");
+  });
+
+  it("web 构建/版本同步步骤以 include_web 为条件", () => {
+    const conditionalSteps = pages.jobs.deploy.steps.filter((s: any) =>
+      s.if?.includes("inputs.include_web"),
+    );
+    expect(conditionalSteps.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("landing-only 部署保留已部署文件（keep_files: true），发版部署全量替换", () => {
+    const deploy = pages.jobs.deploy.steps.find((s: any) => s.uses?.startsWith("peaceiris/actions-gh-pages"));
+    const keep = String(deploy.with?.keep_files).trim();
+    // push（无 input 上下文）→ true；dispatch include_web=true → false
+    expect(keep).toBe("${{ github.event_name != 'workflow_dispatch' || !inputs.include_web }}");
   });
 });

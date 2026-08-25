@@ -1194,6 +1194,20 @@ export const zhCN = {
   "mobile-connect.connectFailed": "连接失败：{error}",
   // 移动端扫到的 QR 不是合法的 spherse://connect 链接时的提示
   "mobile-connect.invalidQr": "无效的二维码，请扫描 Spherse 桌面端生成的二维码",
+  // web 端检测到桌面端版本与 web 端主/次版本不一致时的硬拦截全屏页标题
+  "web-version.incompatibleTitle": "桌面端版本不兼容",
+  // 硬拦截全屏页正文，{appVersion} 为桌面端版本号，{webVersion} 为 web 端版本号；网页可能因缓存过旧，桌面端也可能待升级，故同时给出两个动作
+  "web-version.incompatibleBody": "桌面端版本为 {appVersion}，与当前网页版（{webVersion}）不兼容。请先刷新页面；若仍提示此页，请将桌面端升级到与网页版一致。",
+  // 硬拦截全屏页「重新连接」按钮（清除已存连接并回到连接页）
+  "web-version.reconnect": "重新连接",
+  // 硬拦截全屏页「刷新页面」主按钮（网页缓存可能过旧，刷新拉取新版本，不清除连接）
+  "web-version.reload": "刷新页面",
+  // 硬拦截全屏页「临时收起」按钮——用户暂不升级时先继续使用（仅本次会话有效，刷新后重新检测；以虚化样式呈现不作引导）
+  "web-version.dismiss": "暂不升级，继续使用",
+  // 桌面端与 web 端仅 patch 版本不同时的软提示 toast，{appVersion}/{webVersion} 为两端版本号
+  "web-version.patchWarning": "桌面端版本（{appVersion}）与网页版（{webVersion}）略有差异，如遇异常请升级桌面端",
+  // web 端无法获取桌面端版本（旧版桌面端）时的软提示 toast
+  "web-version.unknownWarning": "无法确认桌面端版本，如遇异常请升级桌面端",
 
   // --- 文本框右键菜单（input/textarea 的原生 context-menu）---
   // 文本框右键菜单「撤销」
