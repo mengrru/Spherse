@@ -15,6 +15,7 @@ import type {
   ThemeSettingsResponse,
   AgentMcpConfig,
   McpServerConfig,
+  ProjectSessionListResponse,
 } from "./types";
 import type {
   ProviderCatalogContract,
@@ -146,6 +147,16 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       const res = await authedFetch(url);
       await assertOk(res);
       return parseJsonResponse<SessionListPageResponse>(res, schemas.sessionListPageResponse);
+    },
+
+    async listProjectSessions(opts?: { perPage?: number }): Promise<ProjectSessionListResponse> {
+      const params = new URLSearchParams();
+      if (opts?.perPage !== undefined) params.set("perPage", String(opts.perPage));
+      const query = params.toString();
+      const url = `${apiBase}/sessions${query ? `?${query}` : ""}`;
+      const res = await authedFetch(url);
+      await assertOk(res);
+      return parseJsonResponse<ProjectSessionListResponse>(res, schemas.projectSessionListResponse);
     },
 
     async getSessionMessages(agentId: string, id: string): Promise<SessionMessagesResponse> {

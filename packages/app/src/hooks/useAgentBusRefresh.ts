@@ -20,8 +20,8 @@ export function useAgentBusRefresh(projectId: string | undefined, client: ApiCli
 
   // Connection-recovered compensation: agent/session changes that were
   // broadcast while disconnected are not replayed, so re-read the lists.
-  // Sessions use "upsert" so a reconnect does not truncate a list the user
-  // has paginated deeper into.
+  // Accepted tradeoff: a refetch collapses per-agent "load more" depth back
+  // to perPage; deeper pagination is treated as volatile browsing state.
   useReconnectedSync(() => {
     if (!projectId || !client) return;
     void refreshProjectAgents(projectId).then(() => {

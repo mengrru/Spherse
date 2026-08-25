@@ -34,40 +34,23 @@ function isCurrentProjectGeneration(projectId: string, generation: number): bool
 export async function fetchProjectSessionCatalog(
   projectId: string,
   client: ApiClient,
-  agents: AgentProfile[],
 ): Promise<SessionCatalog> {
-  const requestedOffsets = Object.fromEntries(agents.map((agent) => [
-    agent.id,
-    queryClient.getQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId))?.paging[agent.id]?.offset ?? 0,
-  ]));
-  const pages = await Promise.all(
-    agents.map(async (agent) => {
-      const limit = Math.max(SESSION_PAGE_SIZE, requestedOffsets[agent.id]);
-      return {
-        agentId: agent.id,
-        page: await client.listSessionsPage(agent.id, { limit, offset: 0 }),
-      };
-    }),
-  );
-  const fetched = pages.flatMap(({ page }) => page.items);
-  const freshPaging: Record<string, SessionPaging> = Object.fromEntries(
-    pages.map(({ agentId, page }) => [
-      agentId,
-      { hasMore: page.hasMore, offset: page.items.length, loadingMore: false },
-    ]),
-  );
-  const current = queryClient.getQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId));
-  if (current && agents.some((agent) => current.paging[agent.id]?.offset > requestedOffsets[agent.id])) {
-    return fetchProjectSessionCatalog(projectId, client, agents);
-  }
+  const cached = queryClient.getQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId));
+  const result = await client.listProjectSessions({ perPage: SESSION_PAGE_SIZE });
   const initialMessages = useProjectDataStore.getState().projects[projectId]?.initialMessageBySessionId ?? {};
-  const fetchedIds = new Set(fetched.map((session) => session.id));
-  const optimistic = current?.sessions.filter(
+  const fetchedIds = new Set(result.sessions.map((session) => session.id));
+  const optimistic = cached?.sessions.filter(
     (session) => initialMessages[session.id] && !fetchedIds.has(session.id),
   ) ?? [];
+  const paging: Record<string, SessionPaging> = Object.fromEntries(
+    Object.entries(result.byAgent).map(([agentId, cursor]) => [
+      agentId,
+      { hasMore: cursor.hasMore, offset: cursor.loaded, loadingMore: false },
+    ]),
+  );
   return {
-    sessions: [...optimistic, ...fetched],
-    paging: freshPaging,
+    sessions: [...optimistic, ...result.sessions],
+    paging,
   };
 }
 
@@ -80,8 +63,8 @@ export function useProjectCatalog(projectId: string, client: ApiClient | null) {
   const agents = agentsQuery.data ?? EMPTY_AGENTS;
   const sessionsQuery = useQuery({
     queryKey: projectQueryKeys.sessions(projectId),
-    queryFn: () => fetchProjectSessionCatalog(projectId, client!, getCachedAgents(projectId)),
-    enabled: Boolean(client && agentsQuery.isSuccess),
+    queryFn: () => fetchProjectSessionCatalog(projectId, client!),
+    enabled: Boolean(projectId && client),
   });
 
   return {
@@ -107,9 +90,17 @@ async function findProjectSession(
       throw error;
     }
   }
+  const catalog = await client.listProjectSessions({ perPage: 100 });
+  const direct = catalog.sessions.find((session) => session.id === sessionId);
+  if (direct) return direct;
   const agents = await ensureProjectAgents(projectId, client);
-  const sessionLists = await Promise.all(agents.map((agent) => client.listSessions(agent.id)));
-  return sessionLists.flat().find((session) => session.id === sessionId) ?? null;
+  const probes = await Promise.allSettled(
+    agents.map((agent) => client.getSession(agent.id, sessionId)),
+  );
+  for (const probe of probes) {
+    if (probe.status === "fulfilled") return probe.value;
+  }
+  return null;
 }
 
 export function useProjectSession(

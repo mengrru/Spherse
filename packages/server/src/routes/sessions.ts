@@ -9,6 +9,21 @@ export function registerSessionRoutes(
   _registry: ProjectRegistry,
   hub: ChatSessionHub,
 ): void {
+  fastify.get<{ Params: { projectId: string }; Querystring: { perPage?: string } }>(
+    "/api/projects/:projectId/sessions",
+    {
+      schema: { response: { 200: schemas.projectSessionListResponse } },
+    },
+    async (req) => {
+      const requested = parseInt(req.query.perPage ?? "", 10);
+      const perPage = Number.isNaN(requested)
+        ? 10
+        : Math.min(100, Math.max(1, requested));
+      const result = req.projectCtx!.projectManager.listProjectSessions(perPage);
+      return parseContract(schemas.projectSessionListResponse, { ok: true, ...result });
+    },
+  );
+
   fastify.get<{
     Params: { projectId: string; agentId: string };
     Querystring: { limit?: string; offset?: string };

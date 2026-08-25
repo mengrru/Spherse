@@ -1,6 +1,7 @@
 export type {
   AgentProfileContract as AgentProfile,
   SessionInfoContract as SessionInfo,
+  ProjectSessionListResponse,
   FileEntryContract as FileEntry,
   ContentResponseContract as ContentResponse,
   StatResponseContract as StatResponse,

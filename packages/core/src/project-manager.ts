@@ -127,6 +127,23 @@ export class ProjectManager {
     return agentStore.sessions.listSessionsPage(limit, offset);
   }
 
+  listProjectSessions(perPage: number): {
+    sessions: SessionInfo[];
+    byAgent: Record<string, { hasMore: boolean; loaded: number }>;
+  } {
+    const effectivePerPage = Math.max(1, perPage);
+    const sessions: SessionInfo[] = [];
+    const byAgent: Record<string, { hasMore: boolean; loaded: number }> = {};
+    for (const [agentId, agentStore] of this.projectStore.agents) {
+      const page = agentStore.sessions.listSessionsPage(effectivePerPage, 0);
+      if (page.items.length === 0 && !page.hasMore) continue;
+      sessions.push(...page.items);
+      byAgent[agentId] = { hasMore: page.hasMore, loaded: page.items.length };
+    }
+    sessions.sort((a, b) => b.updatedAt - a.updatedAt || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+    return { sessions, byAgent };
+  }
+
   renameSession(
     agentId: string,
     sessionId: string,
