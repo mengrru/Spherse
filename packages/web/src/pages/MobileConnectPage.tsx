@@ -35,16 +35,19 @@ export function MobileConnectPage() {
     try {
       persistConnection(conn);
       const firstProjectId = await restoreProjects(bridge);
-      const compatibility = await runWebVersionGuard();
+      const finishConnect = () => {
+        toast.success(t("mobile-connect.connected"));
+        if (targetPath) {
+          navigate(targetPath, { replace: true });
+        } else if (firstProjectId) {
+          navigate(`/project/${firstProjectId}`, { replace: true });
+        } else {
+          navigate("/", { replace: true });
+        }
+      };
+      const compatibility = await runWebVersionGuard(finishConnect);
       if (compatibility === "incompatible") return;
-      toast.success(t("mobile-connect.connected"));
-      if (targetPath) {
-        navigate(targetPath, { replace: true });
-      } else if (firstProjectId) {
-        navigate(`/project/${firstProjectId}`, { replace: true });
-      } else {
-        navigate("/", { replace: true });
-      }
+      finishConnect();
     } catch (err) {
       toast.error(t("mobile-connect.connectFailed", { error: (err as Error).message }));
     } finally {

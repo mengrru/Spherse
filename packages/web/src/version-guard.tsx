@@ -1,4 +1,4 @@
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
 import { toast } from "sonner";
 import {
   compareAppVersion,
@@ -16,17 +16,38 @@ function currentLocale() {
 }
 
 let overlayHost: HTMLDivElement | null = null;
+let overlayRoot: Root | null = null;
+let overlayDismissed = false;
+let pendingOnDismiss: (() => void) | null = null;
 let lastNotified: AppVersionCompatibility | null = null;
 
-function mountVersionBlock(appVersion: string): void {
-  if (overlayHost) return;
+// 「暂不升级，继续使用」：仅本次会话生效，刷新页面后重新检测
+function dismissVersionBlock(): void {
+  overlayDismissed = true;
+  overlayRoot?.unmount();
+  overlayHost?.remove();
+  overlayHost = null;
+  overlayRoot = null;
+  const callback = pendingOnDismiss;
+  pendingOnDismiss = null;
+  callback?.();
+}
+
+function mountVersionBlock(appVersion: string, onDismiss?: () => void): void {
+  if (overlayHost || overlayDismissed) return;
+  pendingOnDismiss = onDismiss ?? null;
   overlayHost = document.createElement("div");
   overlayHost.dataset.spherseVersionBlock = "";
   document.body.appendChild(overlayHost);
-  createRoot(overlayHost).render(<VersionBlockOverlay appVersion={appVersion} />);
+  overlayRoot = createRoot(overlayHost);
+  overlayRoot.render(
+    <VersionBlockOverlay appVersion={appVersion} onDismiss={dismissVersionBlock} />,
+  );
 }
 
-export async function runWebVersionGuard(): Promise<AppVersionCompatibility> {
+export async function runWebVersionGuard(
+  onDismiss?: () => void,
+): Promise<AppVersionCompatibility> {
   const conn = readWebConnection();
   if (!conn?.baseUrl) return "ok";
   try {
@@ -43,7 +64,7 @@ export async function runWebVersionGuard(): Promise<AppVersionCompatibility> {
     const appVersion = body.appVersion ?? null;
     const result = compareAppVersion(appVersion, __SPHERSE_WEB_VERSION__);
     if (result === "incompatible") {
-      mountVersionBlock(appVersion ?? "");
+      mountVersionBlock(appVersion ?? "", onDismiss);
       return result;
     }
     if (result === lastNotified) return result;

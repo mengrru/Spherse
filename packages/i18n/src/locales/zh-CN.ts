@@ -1202,6 +1202,8 @@ export const zhCN = {
   "web-version.reconnect": "重新连接",
   // 硬拦截全屏页「刷新页面」主按钮（网页缓存可能过旧，刷新拉取新版本，不清除连接）
   "web-version.reload": "刷新页面",
+  // 硬拦截全屏页「临时收起」按钮——用户暂不升级时先继续使用（仅本次会话有效，刷新后重新检测；以虚化样式呈现不作引导）
+  "web-version.dismiss": "暂不升级，继续使用",
   // 桌面端与 web 端仅 patch 版本不同时的软提示 toast，{appVersion}/{webVersion} 为两端版本号
   "web-version.patchWarning": "桌面端版本（{appVersion}）与网页版（{webVersion}）略有差异，如遇异常请升级桌面端",
   // web 端无法获取桌面端版本（旧版桌面端）时的软提示 toast
