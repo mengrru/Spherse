@@ -240,4 +240,5 @@ jobs:
         run: |
           gh workflow run deploy-pages.yml \
             --repo "${GITHUB_REPOSITORY}" \
-            --ref "${GITHUB_REF_NAME}"
+            --ref "${GITHUB_REF_NAME}" \
+            -f include_web=true
