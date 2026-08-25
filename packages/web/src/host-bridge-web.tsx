@@ -20,7 +20,7 @@ const WEB_CAPABILITIES: HostCapabilities = {
 };
 
 const SETTINGS_STORAGE_KEY = "spherse:settings";
-const CONNECTION_STORAGE_KEY = "spherse:connection";
+export const WEB_CONNECTION_STORAGE_KEY = "spherse:connection";
 const LAST_ACTIVE_PROJECT_KEY = "spherse:last-active-project";
 
 const PLACEHOLDER_LAST_OPENED = new Date(0).toISOString();
@@ -43,9 +43,9 @@ async function persistSettings(settings: HostSettings): Promise<{ success: boole
   }
 }
 
-function readConnection(): { baseUrl?: string; token?: string } | null {
+export function readWebConnection(): { baseUrl?: string; token?: string } | null {
   try {
-    const raw = localStorage.getItem(CONNECTION_STORAGE_KEY);
+    const raw = localStorage.getItem(WEB_CONNECTION_STORAGE_KEY);
     return raw ? (JSON.parse(raw) as { baseUrl?: string; token?: string }) : null;
   } catch {
     return null;
@@ -166,11 +166,11 @@ export function createWebHostBridge(): HostBridge {
     kind: "web",
     capabilities: WEB_CAPABILITIES,
     getServerBaseUrl: async () => {
-      const conn = readConnection();
-      return conn?.baseUrl.replace(/\/+$/, "") ?? "";
+      const conn = readWebConnection();
+      return conn?.baseUrl?.replace(/\/+$/, "") ?? "";
     },
     getServerAccessToken: async () => {
-      const conn = readConnection();
+      const conn = readWebConnection();
       return conn?.token ?? null;
     },
     getSettings: loadSettings,

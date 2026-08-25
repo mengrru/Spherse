@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { schemas } from "@spherse/server/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
+import { getAppVersion } from "../server-info.js";
 
 const SERVER_VERSION = "0.1.0";
 const API_VERSION = "1";
@@ -22,6 +23,7 @@ export function registerConnectionRoutes(
         serverVersion: SERVER_VERSION,
         authRequired: options.authRequired,
         apiVersion: API_VERSION,
+        appVersion: getAppVersion() ?? null,
       };
     },
   });
