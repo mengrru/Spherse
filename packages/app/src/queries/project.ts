@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { ApiError, type ApiClient } from "../lib/api";
 import { queryClient } from "./client";
 import { projectQueryKeys } from "./keys";
-import type { AgentProfile, SessionInfo } from "../lib/types";
+import type { AgentSummary, SessionInfo } from "../lib/types";
 import { useProjectDataStore } from "../stores/project-data-store";
 
 const SESSION_PAGE_SIZE = 10;
-const EMPTY_AGENTS: AgentProfile[] = [];
+const EMPTY_AGENTS: AgentSummary[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
 const EMPTY_SESSION_PAGING: Record<string, SessionPaging> = {};
 
@@ -127,7 +127,7 @@ export async function ensureProjectSession(
   });
 }
 
-export function getCachedAgents(projectId: string): AgentProfile[] {
+export function getCachedAgents(projectId: string): AgentSummary[] {
   return queryClient.getQueryData(projectQueryKeys.agents(projectId)) ?? EMPTY_AGENTS;
 }
 
@@ -140,7 +140,7 @@ export function getCachedSession(projectId: string, sessionId: string): SessionI
     ?? getCachedSessions(projectId).find((session) => session.id === sessionId);
 }
 
-export async function ensureProjectAgents(projectId: string, client: ApiClient): Promise<AgentProfile[]> {
+export async function ensureProjectAgents(projectId: string, client: ApiClient): Promise<AgentSummary[]> {
   return queryClient.ensureQueryData({
     queryKey: projectQueryKeys.agents(projectId),
     queryFn: () => client.listAgents(),

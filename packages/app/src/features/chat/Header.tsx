@@ -1,10 +1,10 @@
-import type { AgentProfile } from "../../lib/types";
+import type { AgentSummary } from "../../lib/types";
 import { Button } from "../../components/ui/button";
 import { XIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 
 interface HeaderProps {
-  agent: AgentProfile;
+  agent: AgentSummary;
   onClose?: () => void;
 }
 

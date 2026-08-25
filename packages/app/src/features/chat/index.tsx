@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { AgentProfile } from "../../lib/types";
+import type { AgentSummary } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient, useConnection } from "../../lib/use-connection";
 import { toast } from "sonner";
@@ -16,7 +16,7 @@ import { useStreamingStore } from "./runtime/streaming-store";
 
 export interface ChatProps {
   sessionId: string;
-  agent: AgentProfile;
+  agent: AgentSummary;
   onNavigateToPath?: (path: string) => void;
   initialMessage?: string;
   onClose?: () => void;

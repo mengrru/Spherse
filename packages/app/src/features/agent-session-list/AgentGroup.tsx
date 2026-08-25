@@ -1,4 +1,4 @@
-import type { AgentProfile, SessionInfo } from "../../lib/types";
+import type { AgentSummary, SessionInfo } from "../../lib/types";
 import {
   Collapsible,
   CollapsibleContent,
@@ -10,7 +10,7 @@ import { SessionRow } from "./SessionRow";
 import { useAgentSessionActions } from "./actions-context";
 
 interface AgentGroupProps {
-  agent: AgentProfile;
+  agent: AgentSummary;
   sessions: SessionInfo[];
   collapsed: boolean;
   activeSessionId: string | null;

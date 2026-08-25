@@ -1,4 +1,4 @@
-import type { AgentProfile } from "../../lib/types";
+import type { AgentSummary } from "../../lib/types";
 import { CollapsibleTrigger } from "../../components/ui/collapsible";
 import { TreeRow } from "../../components/ui/tree-row";
 import {
@@ -21,7 +21,7 @@ import { useFeature } from "../../lib/use-feature";
 import { useAgentSessionActions } from "./actions-context";
 
 interface AgentRowProps {
-  agent: AgentProfile;
+  agent: AgentSummary;
   active?: boolean;
 }
 

@@ -1,14 +1,14 @@
 import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
-import type { AgentProfile, SessionInfo } from "../../lib/types";
+import type { AgentSummary, SessionInfo } from "../../lib/types";
 
 export interface AgentSessionActions {
   toggleAgentCollapsed: (agentId: string) => void;
-  newSession: (agent: AgentProfile) => void;
-  triggerAgent: (agent: AgentProfile) => void;
-  mcpAgent: (agent: AgentProfile) => void;
-  editAgent: (agent: AgentProfile) => void;
-  deleteAgent: (agent: AgentProfile) => void;
+  newSession: (agent: AgentSummary) => void;
+  triggerAgent: (agent: AgentSummary) => void;
+  mcpAgent: (agent: AgentSummary) => void;
+  editAgent: (agent: AgentSummary) => void;
+  deleteAgent: (agent: AgentSummary) => void;
   selectSession: (session: SessionInfo) => void;
   deleteSession: (session: SessionInfo) => void;
   renameSession: (session: SessionInfo, title: string) => Promise<boolean>;

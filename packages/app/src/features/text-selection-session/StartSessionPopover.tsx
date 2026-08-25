@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
-import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
+import type { AgentSummary, ActiveSessionInfo } from "../../lib/types";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
 import { useDismissable } from "../../hooks/useDismissable";
@@ -12,7 +12,7 @@ import { useHostBridge } from "../../context/host-bridge-context";
 interface StartSessionPopoverProps {
   selectedText: string;
   sourcePath: string;
-  agents: AgentProfile[];
+  agents: AgentSummary[];
   position: { x: number; y: number };
   projectId: string;
   activeSessions?: ActiveSessionInfo[];
