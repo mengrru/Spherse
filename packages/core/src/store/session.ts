@@ -378,9 +378,9 @@ export class SessionStore {
     };
   }
 
-  getRecentTurns(
+  getRecentMessages(
     sessionId: string,
-    turns: number,
+    limit: number,
     beforeId?: number,
   ): {
     messages: AgentMessage[];
@@ -388,6 +388,7 @@ export class SessionStore {
     hasMore: boolean;
     oldestId: number | null;
   } {
+    const effectiveLimit = Math.max(1, limit);
     let cursor: number;
     if (beforeId !== undefined) {
       cursor = beforeId;
@@ -402,39 +403,49 @@ export class SessionStore {
     }
 
     const rows = this.db
-      .prepare<[string, number], MessageRow>(
-        "SELECT * FROM messages WHERE session_id = ? AND id < ? ORDER BY id DESC",
+      .prepare<[string, number, number], MessageRow>(
+        "SELECT * FROM messages WHERE session_id = ? AND id < ? ORDER BY id DESC LIMIT ?",
       )
-      .all(sessionId, cursor);
+      .all(sessionId, cursor, effectiveLimit);
 
     if (rows.length === 0) {
       return { messages: [], entries: [], hasMore: false, oldestId: null };
     }
 
-    const collected: MessageWithId[] = [];
-    let turnCount = 0;
-    for (const row of rows) {
-      const msg = SessionStore.parseMessage(
-        row.content,
-        row.id,
-        row.message_content_schema_version,
+    const collected: MessageWithId[] = rows.map((row) => ({
+      id: row.id,
+      message: SessionStore.parseMessage(row.content, row.id, row.message_content_schema_version),
+    }));
+
+    // role 埋在 content JSON 内，SQL 无法过滤：页首为孤儿 toolResult 时逐行向旧方向扩展，
+    // 保证单页内 toolCall/toolResult 配对自洽（页可略超 limit）
+    const olderRow = this.db
+      .prepare<[string, number], MessageRow>(
+        "SELECT * FROM messages WHERE session_id = ? AND id < ? ORDER BY id DESC LIMIT 1",
       );
-      collected.push({ id: row.id, message: msg });
-      if (msg.role === "user") {
-        turnCount++;
-        if (turnCount >= turns) {
-          break;
-        }
-      }
+    for (;;) {
+      const oldest = collected[collected.length - 1];
+      if (oldest.message.role !== "toolResult") break;
+      const row = olderRow.get(sessionId, oldest.id);
+      if (!row) break;
+      collected.push({
+        id: row.id,
+        message: SessionStore.parseMessage(row.content, row.id, row.message_content_schema_version),
+      });
     }
 
-    const hasMore = collected.length < rows.length;
-    const oldestId = collected.length > 0 ? collected[collected.length - 1].id : null;
+    const hasMoreRow = this.db
+      .prepare<[string, number], { one: number }>(
+        "SELECT 1 AS one FROM messages WHERE session_id = ? AND id < ? LIMIT 1",
+      )
+      .get(sessionId, collected[collected.length - 1].id);
+
+    const oldestId = collected[collected.length - 1].id;
     const entries = collected.reverse();
     return {
       messages: entries.map((entry) => entry.message),
       entries,
-      hasMore,
+      hasMore: hasMoreRow !== undefined,
       oldestId,
     };
   }

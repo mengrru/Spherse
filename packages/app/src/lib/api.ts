@@ -168,9 +168,9 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return parseJsonResponse<SessionMessagesResponse>(res, schemas.sessionMessagesResponse);
     },
 
-    async getSessionMessagesPage(agentId: string, id: string, opts?: { turns?: number; before?: number }): Promise<SessionMessagesPageResponse> {
+    async getSessionMessagesPage(agentId: string, id: string, opts?: { limit?: number; before?: number }): Promise<SessionMessagesPageResponse> {
       const params = new URLSearchParams();
-      if (opts?.turns !== undefined) params.set("turns", String(opts.turns));
+      if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
       if (opts?.before !== undefined) params.set("before", String(opts.before));
       const query = params.toString();
       const url = `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages${query ? `?${query}` : ""}`;

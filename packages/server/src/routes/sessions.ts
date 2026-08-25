@@ -79,19 +79,20 @@ export function registerSessionRoutes(
 
   fastify.get<{
     Params: { projectId: string; agentId: string; id: string };
-    Querystring: { turns?: string; before?: string };
+    Querystring: { limit?: string; before?: string };
   }>(
     "/api/projects/:projectId/agents/:agentId/sessions/:id/messages",
     async (req) => {
-      const { turns, before } = req.query;
-      if (turns !== undefined) {
-        const turnsNum = parseInt(turns, 10) || 10;
+      const { limit, before } = req.query;
+      if (limit !== undefined) {
+        const parsed = parseInt(limit, 10) || 20;
+        const limitNum = Math.min(Math.max(parsed, 1), 200);
         const parsedBefore = before !== undefined ? parseInt(before, 10) : undefined;
         const beforeNum = parsedBefore !== undefined && !Number.isNaN(parsedBefore) ? parsedBefore : undefined;
         const result = req.projectCtx!.projectManager.getRecentSessionHistory(
           req.params.agentId,
           req.params.id,
-          turnsNum,
+          limitNum,
           beforeNum,
         );
         return parseContract(schemas.sessionMessagesPageResponse, result);
