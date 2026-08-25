@@ -35,6 +35,7 @@ export type { OkResponse, ErrorResponse } from "./common.js";
 
 export type {
   AgentProfileContract,
+  AgentSummaryContract,
   AgentListResponse,
   AgentRawResponse,
   AgentCreateRequest,
@@ -89,7 +90,7 @@ export type {
   TriggerLogListResponse,
 } from "./trigger.js";
 
-export type { SkillDefinitionContract, SkillListResponse, SkillCreateRequest, SkillInstallRequest } from "./skills.js";
+export type { SkillDefinitionContract, SkillSummaryContract, SkillListResponse, SkillCreateRequest, SkillInstallRequest } from "./skills.js";
 export type {
   MarketplaceSkillEntry,
   MarketplaceManifestResponse,

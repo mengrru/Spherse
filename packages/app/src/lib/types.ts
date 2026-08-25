@@ -1,5 +1,6 @@
 export type {
   AgentProfileContract as AgentProfile,
+  AgentSummaryContract as AgentSummary,
   SessionInfoContract as SessionInfo,
   ProjectSessionListResponse,
   FileEntryContract as FileEntry,
@@ -11,6 +12,7 @@ export type {
   ProjectTriggerListResponse,
   TriggerServerEvent,
   SkillDefinitionContract as SkillDefinition,
+  SkillSummaryContract as SkillSummary,
   AgentUpdateResponse,
   AgentCreateResponse,
   AiAccessSettingsResponse,

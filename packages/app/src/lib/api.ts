@@ -1,5 +1,6 @@
 import type {
   AgentProfile,
+  AgentSummary,
   SessionInfo,
   ContentResponse,
   FileEntry,
@@ -9,6 +10,7 @@ import type {
   ProjectTriggerListResponse,
   TriggerLogEntry,
   SkillDefinition,
+  SkillSummary,
   AgentCreateResponse,
   AgentUpdateResponse,
   AiAccessSettingsResponse,
@@ -88,10 +90,10 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
   return {
     baseUrl,
     accessToken: accessToken ?? null,
-    async listAgents(): Promise<AgentProfile[]> {
+    async listAgents(): Promise<AgentSummary[]> {
       const res = await authedFetch(`${apiBase}/agents`);
       await assertOk(res);
-      return parseJsonResponse<AgentProfile[]>(res, schemas.agentListResponse);
+      return parseJsonResponse<AgentSummary[]>(res, schemas.agentListResponse);
     },
 
     async getAgent(id: string): Promise<AgentProfile> {
@@ -320,10 +322,10 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return parseJsonResponse<SkillDefinition>(res, schemas.skillDefinition);
     },
 
-    async listSkills(): Promise<SkillDefinition[]> {
+    async listSkills(): Promise<SkillSummary[]> {
       const res = await authedFetch(`${apiBase}/skills`);
       await assertOk(res);
-      return parseJsonResponse<SkillDefinition[]>(res, schemas.skillListResponse);
+      return parseJsonResponse<SkillSummary[]>(res, schemas.skillListResponse);
     },
 
     async listMarketplaceSkills(): Promise<MarketplaceManifestResponse> {
