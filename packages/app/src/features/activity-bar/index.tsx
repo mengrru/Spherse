@@ -143,9 +143,10 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
             onOpenChange={(open) => { if (!open) setSettingsProjectId(null); }}
           />
         )}
-        {themeSettingsProject && themeClient && (
+        {themeSettingsProject && themeClient && themeSettingsProjectId && (
           <ThemeSettingsDialog
             key={themeSettingsProjectId}
+            projectId={themeSettingsProjectId}
             client={themeClient}
             open={true}
             onOpenChange={(open) => { if (!open) setThemeSettingsProjectId(null); }}

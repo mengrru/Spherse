@@ -27,11 +27,11 @@ describe("welcome page query", () => {
     vi.unstubAllGlobals();
   });
 
-  it("keys the query to the project welcome-page domain", () => {
+  it("keys the query to the project welcome-page domain and survives gc between mounts", () => {
     const client = fakeClient({ path: null });
-    expect(welcomePageQueryOptions("p1", client).queryKey).toEqual(
-      projectQueryKeys.welcomePage("p1"),
-    );
+    const options = welcomePageQueryOptions("p1", client);
+    expect(options.queryKey).toEqual(projectQueryKeys.welcomePage("p1"));
+    expect(options.gcTime).toBe(Number.POSITIVE_INFINITY);
   });
 
   it("resolves the configured path when its file exists", async () => {

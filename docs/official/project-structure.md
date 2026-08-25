@@ -200,7 +200,7 @@ spherse/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
 │   │       ├── context/
 │   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（projectId/projectRoot）
-│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory、project/content/skills/welcome-page 服务端状态
+│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory、project/content/skills/welcome-page/theme-settings 服务端状态
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 初始消息/streaming/hasEnabledTriggersByAgent 等前端运行时投影
@@ -257,7 +257,7 @@ spherse/
 │   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）
 │   │       │   ├── project-settings/     # 项目设置弹窗集合
 │   │       │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
-│   │       │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗
+│   │       │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗 + ThemeQueryBridge（fs-watch/reconnect → theme-settings 查询失效，ProjectScope 挂载）
 │   │       │   └── text-selection-session/ # 划选文本后发起会话
 │   │       ├── pages/
 │   │       │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat

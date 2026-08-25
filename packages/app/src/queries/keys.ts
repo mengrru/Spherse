@@ -14,4 +14,5 @@ export const projectQueryKeys = {
   marketplaceSkills: (projectId: string) =>
     ["projects", projectId, "marketplace", "skills"] as const,
   welcomePage: (projectId: string) => ["projects", projectId, "welcome-page"] as const,
+  themeSettings: (projectId: string) => ["projects", projectId, "theme-settings"] as const,
 };
