@@ -6,8 +6,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import AdmZip from "adm-zip";
 import { createProject, type ProjectRuntime, type Logger } from "@spherse/core";
 import { registerMarketplaceRoutes } from "../routes/marketplace.js";
-import { createMarketplaceService } from "../marketplace.js";
-import { setAppVersion } from "../server-info.js";
+import { createMarketplaceService, setMarketplaceAppVersion } from "../marketplace.js";
 import type { ProjectRegistry } from "../registry.js";
 
 const silentLogger: Logger = {
@@ -57,7 +56,7 @@ function zipUrlFor(name: string, version: string): string {
 }
 
 afterEach(() => {
-  setAppVersion(undefined);
+  setMarketplaceAppVersion(undefined);
 });
 
 describe("marketplace routes: manifest proxy with stub fetch", () => {
@@ -100,7 +99,7 @@ describe("marketplace routes: manifest proxy with stub fetch", () => {
   });
 
   it("sends the marketplace user agent on manifest and zip requests", async () => {
-    setAppVersion("1.2.3");
+    setMarketplaceAppVersion("1.2.3");
     const seen: Array<{ url: string; userAgent: string }> = [];
     const manifest = makeManifest([
       { name: "demo", description: "Demo skill", version: "1.0.0", zipUrl: zipUrlFor("demo", "1.0.0"), size: 100, updatedAt: "2026-08-24T00:00:00Z" },

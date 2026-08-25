@@ -15,7 +15,7 @@ import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
 import { registerAuthHook, type AuthOptions } from "./auth.js";
 import { registerAllRoutes } from "./routes/index.js";
-import { setAppVersion } from "./server-info.js";
+import { setMarketplaceAppVersion } from "./marketplace.js";
 import { ChatSessionHub } from "./chat-session-hub.js";
 import { handleChatWebSocket } from "./ws-chat.js";
 import { handleBusWebSocket } from "./ws-bus.js";
@@ -44,7 +44,7 @@ export async function createMultiProjectServer(
 ): Promise<MultiProjectServer> {
   const prettyStream = createPrettyStream();
   const logger = createServerLogger(prettyStream);
-  setAppVersion(options?.appVersion);
+  setMarketplaceAppVersion(options?.appVersion);
 
   const fastify = Fastify({
     logger: {

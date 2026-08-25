@@ -17,7 +17,6 @@ const connectionInfoResponse = Type.Object({
   serverVersion: Type.String(),
   authRequired: Type.Boolean(),
   apiVersion: Type.String(),
-  appVersion: Type.Union([Type.String(), Type.Null()]),
 });
 
 export const schemas = {

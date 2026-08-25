@@ -9,7 +9,6 @@ import type {
   MarketplaceManifestResponse,
   MarketplaceSkillEntry,
 } from "./contracts/index.js";
-import { getAppVersion } from "./server-info.js";
 import { HttpError } from "./errors.js";
 
 export const MARKETPLACE_MANIFEST_URL =
@@ -22,8 +21,14 @@ const ZIP_DOWNLOAD_TIMEOUT_MS = 60_000;
 const MAX_SKILL_ZIP_BYTES = 50 * 1024 * 1024;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 
+let marketplaceAppVersion: string | undefined;
+
+export function setMarketplaceAppVersion(version: string | undefined): void {
+  marketplaceAppVersion = version;
+}
+
 export function marketplaceUserAgent(): string {
-  const version = getAppVersion()?.trim() || "dev";
+  const version = marketplaceAppVersion?.trim() || "dev";
   return `spherse-marketplace/${version} (${os.platform()} ${os.release()})`;
 }
 

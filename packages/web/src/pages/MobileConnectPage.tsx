@@ -7,8 +7,8 @@ import { Input } from "@spherse/app/src/components/ui/input";
 import { Field, FieldLabel } from "@spherse/app/src/components/ui/field";
 import { useHostBridge } from "@spherse/app/src/context/host-bridge-context";
 import { useAppStore } from "@spherse/app/src/stores/app-store";
-import { runWebVersionGuard } from "../version-guard";
-import { WEB_CONNECTION_STORAGE_KEY } from "../host-bridge-web";
+
+const CONNECTION_STORAGE_KEY = "spherse:connection";
 
 interface ParsedConnection {
   baseUrl: string;
@@ -17,7 +17,7 @@ interface ParsedConnection {
 
 function persistConnection(conn: ParsedConnection): void {
   localStorage.setItem(
-    WEB_CONNECTION_STORAGE_KEY,
+    CONNECTION_STORAGE_KEY,
     JSON.stringify({ baseUrl: conn.baseUrl.replace(/\/+$/, ""), token: conn.token }),
   );
 }
@@ -35,8 +35,6 @@ export function MobileConnectPage() {
     try {
       persistConnection(conn);
       const firstProjectId = await restoreProjects(bridge);
-      const compatibility = await runWebVersionGuard();
-      if (compatibility === "incompatible") return;
       toast.success(t("mobile-connect.connected"));
       if (targetPath) {
         navigate(targetPath, { replace: true });

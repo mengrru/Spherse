@@ -1,7 +1,6 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
 import { registerConnectionRoutes } from "../routes/connection.js";
-import { setAppVersion } from "../server-info.js";
 import type { ProjectRegistry, ProjectInfo } from "../registry.js";
 
 function buildRegistry(
@@ -41,29 +40,6 @@ describe("connection routes", () => {
       expect(body).toMatchObject({ authRequired: true });
       expect(typeof body.serverVersion).toBe("string");
       expect(typeof body.apiVersion).toBe("string");
-    });
-
-    it("returns null appVersion when not provided by the host", async () => {
-      const res = await app.inject({ method: "GET", url: "/api/connection/info" });
-      expect(JSON.parse(res.body).appVersion).toBeNull();
-    });
-  });
-
-  describe("GET /api/connection/info with app version", () => {
-    afterEach(() => {
-      setAppVersion(undefined);
-    });
-
-    it("exposes the host app version", async () => {
-      setAppVersion("1.2.3");
-      const app = buildApp(buildRegistry([]), false);
-      await app.ready();
-      try {
-        const res = await app.inject({ method: "GET", url: "/api/connection/info" });
-        expect(JSON.parse(res.body).appVersion).toBe("1.2.3");
-      } finally {
-        await app.close();
-      }
     });
   });
 

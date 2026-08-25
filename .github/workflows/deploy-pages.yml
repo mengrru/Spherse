@@ -18,25 +18,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          fetch-tags: true
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - run: npm ci
-
-      - name: Sync web version from latest tag
-        shell: bash
-        run: |
-          LATEST_TAG=$(git describe --abbrev=0 --tags --match 'v*' 2>/dev/null || true)
-          if [ -n "$LATEST_TAG" ]; then
-            npm version "${LATEST_TAG#v}" --no-git-tag-version --allow-same-version --workspace=packages/web
-          else
-            echo "No tag found; keeping packages/web package.json version"
-          fi
 
       - name: Build landing
         env:
