@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
-import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../lib/events";
+import { invalidateWelcomePage, useWelcomePage } from "../../queries/welcome-page";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { useReconnectedSync } from "../../hooks/useReconnectedSync";
 
@@ -25,9 +25,11 @@ export function WelcomePage({
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
-  const [path, setPath] = useState<string | null | undefined>(undefined);
+  const { data, isError } = useWelcomePage(projectId, client);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+
+  const path = isError ? null : data?.path;
 
   const pathRef = useRef(path);
   useEffect(() => {
@@ -35,32 +37,6 @@ export function WelcomePage({
   }, [path]);
 
   const reloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const loadWelcomePage = useCallback(async () => {
-    setLoadError(false);
-    try {
-      const settings = await client.getWelcomePageSettings();
-      if (!settings.path) {
-        const fallbackRes = await fetch(client.getPreviewUrl("index.html"));
-        setPath(fallbackRes.ok ? "index.html" : null);
-        return;
-      }
-
-      const res = await fetch(client.getPreviewUrl(settings.path));
-      setPath(res.ok ? settings.path : null);
-    } catch {
-      setPath(null);
-    }
-  }, [client]);
-
-  useEffect(() => {
-    void loadWelcomePage();
-    window.addEventListener(WELCOME_PAGE_SETTINGS_CHANGED_EVENT, loadWelcomePage);
-
-    return () => {
-      window.removeEventListener(WELCOME_PAGE_SETTINGS_CHANGED_EVENT, loadWelcomePage);
-    };
-  }, [loadWelcomePage]);
 
   useBusSubscription(projectId, "fs-watch", (_type, payload) => {
     const current = pathRef.current;
@@ -75,12 +51,11 @@ export function WelcomePage({
   });
 
   // Connection-recovered compensation: fs-watch events missed while the bus
-  // was down are not replayed, so re-resolve the settings/path and reload.
-  // Re-running loadWelcomePage (instead of bumping reloadKey) avoids an
-  // unnecessary iframe remount when the path is unchanged, and picks up
-  // settings changes that happened while disconnected.
+  // was down are not replayed, so invalidate the cached resolution and let
+  // the query refetch (picking up settings changes and file removals that
+  // happened while disconnected).
   useReconnectedSync(() => {
-    void loadWelcomePage();
+    void invalidateWelcomePage(projectId);
   });
 
   useEffect(() => {

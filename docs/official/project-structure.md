@@ -189,7 +189,6 @@ spherse/
 │   │       │   ├── api.ts            # HTTP/WS 客户端封装
 │   │       │   ├── semver.ts         # semver 解析与比较（parseSemver/isValidSemver/compareSemver，市场技能版本比较用）
 │   │       │   ├── agent-markdown.ts # Agent 定义 Markdown 生成/解析辅助
-│   │       │   ├── events.ts         # renderer 内部自定义事件名常量
 │   │       │   ├── project-key.ts    # project path → URL projectKey 生成
 │   │       │   ├── tool-registry.ts  # 前端权限分组元数据（TOOL_GROUPS：读取文件/写入文件/独立工具）
 │   │       │   ├── types.ts          # 前端类型
@@ -201,7 +200,7 @@ spherse/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
 │   │       ├── context/
 │   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（projectId/projectRoot）
-│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory、project/content/skills 服务端状态
+│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory、project/content/skills/welcome-page 服务端状态
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 初始消息/streaming/hasEnabledTriggersByAgent 等前端运行时投影

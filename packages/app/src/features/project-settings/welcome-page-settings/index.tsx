@@ -12,7 +12,7 @@ import {
 } from "../../../components/ui/dialog";
 import { Input } from "../../../components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "../../../components/ui/field";
-import { WELCOME_PAGE_SETTINGS_CHANGED_EVENT } from "../../../lib/events";
+import { updateWelcomePageSettings } from "../../../queries/welcome-page";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
 
@@ -28,10 +28,12 @@ function normalizeWelcomePagePath(input: string): string | null {
 }
 
 export function WelcomePageSettingsDialog({
+  projectId,
   client,
   open,
   onOpenChange,
 }: {
+  projectId: string;
   client: ApiClient;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -71,9 +73,8 @@ export function WelcomePageSettingsDialog({
 
     setSaving(true);
     try {
-      const result = await client.updateWelcomePageSettings(valueToSave);
+      const result = await updateWelcomePageSettings(projectId, client, valueToSave);
       setSavedPath(result.path);
-      window.dispatchEvent(new Event(WELCOME_PAGE_SETTINGS_CHANGED_EVENT));
       toast.success(t("welcome-page-settings.saved"));
       onOpenChange(false);
     } catch (err) {
@@ -86,10 +87,9 @@ export function WelcomePageSettingsDialog({
   const handleClear = async () => {
     setSaving(true);
     try {
-      const result = await client.updateWelcomePageSettings(null);
+      const result = await updateWelcomePageSettings(projectId, client, null);
       setSavedPath(result.path);
       setPath("");
-      window.dispatchEvent(new Event(WELCOME_PAGE_SETTINGS_CHANGED_EVENT));
       toast.success(t("welcome-page-settings.saved"));
       onOpenChange(false);
     } catch (err) {

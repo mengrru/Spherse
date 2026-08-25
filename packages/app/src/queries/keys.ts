@@ -13,4 +13,5 @@ export const projectQueryKeys = {
   skills: (projectId: string) => ["projects", projectId, "skills"] as const,
   marketplaceSkills: (projectId: string) =>
     ["projects", projectId, "marketplace", "skills"] as const,
+  welcomePage: (projectId: string) => ["projects", projectId, "welcome-page"] as const,
 };
