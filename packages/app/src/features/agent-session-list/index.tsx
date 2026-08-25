@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
-import type { AgentProfile, SessionInfo } from "../../lib/types";
+import type { AgentSummary, SessionInfo } from "../../lib/types";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useFloatingSessionId } from "../floating-chat/use-floating-session-id";
@@ -65,7 +65,7 @@ export function AgentSessionList() {
     navigate(`/project/${projectId}/chat/${session.id}`);
   };
 
-  const handleNewSession = async (agent: AgentProfile) => {
+  const handleNewSession = async (agent: AgentSummary) => {
     const session = await createProjectSession(projectId, client, agent.id).catch(() => null);
     if (session) {
       navigate(`/project/${projectId}/chat/${session.id}`);
@@ -89,7 +89,7 @@ export function AgentSessionList() {
     }
   };
 
-  const performDeleteAgent = async (agent: AgentProfile) => {
+  const performDeleteAgent = async (agent: AgentSummary) => {
     setDialog({ kind: "none" });
     await deleteProjectAgent(projectId, client, agent.id).catch(() => undefined);
     if (activeSessionId) {

@@ -10,7 +10,9 @@ export function registerSkillRoutes(fastify: FastifyInstance, _registry: Project
     {
       schema: { response: { 200: schemas.skillListResponse } },
       async handler(req) {
-        return req.projectCtx!.projectManager.listSkills();
+        const skills = await req.projectCtx!.projectManager.listSkills();
+        // 列表只下发摘要；instructions 全文仅 load_skill 工具与单条端点需要
+        return skills.map(({ instructions: _instructions, ...summary }) => summary);
       },
     },
   );

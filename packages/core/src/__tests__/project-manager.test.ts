@@ -91,7 +91,7 @@ describe("ProjectManager.renameSession", () => {
 });
 
 describe("ProjectManager event-backed session reads", () => {
-  it("pages only folded message entries", async () => {
+  const setup = async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-events-"));
     const projectStore = new ProjectStore(root, createSilentLogger());
     await projectStore.create("Test");
@@ -100,6 +100,11 @@ describe("ProjectManager event-backed session reads", () => {
       "---\nname: Test\ntools: []\n---\n\nTest.",
     );
     const manager = new ProjectManager(projectStore, createSilentLogger());
+    return { root, projectStore, agentStore, manager };
+  };
+
+  it("pages only folded message entries", async () => {
+    const { root, projectStore, agentStore, manager } = await setup();
     try {
       const sessionId = agentStore.sessions.createSession();
       agentStore.sessions.appendEvents(
@@ -137,6 +142,77 @@ describe("ProjectManager event-backed session reads", () => {
         hasMore: false,
         oldestId: 0,
       });
+    } finally {
+      projectStore.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("slices by message count, honors the before cursor exclusively, and reports hasMore", async () => {
+    const { root, projectStore, agentStore, manager } = await setup();
+    try {
+      const sessionId = agentStore.sessions.createSession();
+      agentStore.sessions.appendEvents(
+        sessionId,
+        [
+          { type: "user/message", seq: 0, time: 1, data: { message: { role: "user", content: "u0", timestamp: 1 } as never } },
+          { type: "user/message", seq: 1, time: 1, data: { message: { role: "user", content: "u1", timestamp: 1 } as never } },
+          { type: "assistant/message", seq: 2, time: 2, data: { message: { role: "assistant", content: [{ type: "text", text: "a2" }], timestamp: 2 } as never } },
+          { type: "user/message", seq: 3, time: 3, data: { message: { role: "user", content: "u3", timestamp: 3 } as never } },
+          { type: "assistant/message", seq: 4, time: 4, data: { message: { role: "assistant", content: [{ type: "text", text: "a4" }], timestamp: 4 } as never } },
+        ],
+        EVENT_SCHEMA_VERSION,
+      );
+      const agentId = agentStore.getProfile().id;
+
+      const firstPage = manager.getRecentSessionHistory(agentId, sessionId, 2);
+      expect(firstPage.entries.map((e) => e.id)).toEqual([3, 4]);
+      expect(firstPage.hasMore).toBe(true);
+      expect(firstPage.oldestId).toBe(3);
+
+      const nextPage = manager.getRecentSessionHistory(agentId, sessionId, 2, firstPage.oldestId!);
+      expect(nextPage.entries.map((e) => e.id)).toEqual([1, 2]);
+      expect(nextPage.hasMore).toBe(true);
+      expect(nextPage.oldestId).toBe(1);
+
+      const thirdPage = manager.getRecentSessionHistory(agentId, sessionId, 2, nextPage.oldestId!);
+      expect(thirdPage.entries.map((e) => e.id)).toEqual([0]);
+      expect(thirdPage.hasMore).toBe(false);
+      expect(thirdPage.oldestId).toBe(0);
+
+      const lastPage = manager.getRecentSessionHistory(agentId, sessionId, 2, thirdPage.oldestId!);
+      expect(lastPage.entries).toEqual([]);
+      expect(lastPage.hasMore).toBe(false);
+      expect(lastPage.oldestId).toBeNull();
+    } finally {
+      projectStore.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("extends the page head past orphan toolResults on the event path", async () => {
+    const { root, projectStore, agentStore, manager } = await setup();
+    try {
+      const sessionId = agentStore.sessions.createSession();
+      agentStore.sessions.appendEvents(
+        sessionId,
+        [
+          { type: "user/message", seq: 0, time: 1, data: { message: { role: "user", content: "u0", timestamp: 1 } as never } },
+          { type: "assistant/message", seq: 1, time: 2, data: { message: { role: "assistant", content: [{ type: "toolCall", id: "tc1", name: "t" }], timestamp: 2 } as never } },
+          { type: "tool/result", seq: 2, time: 3, data: { message: { role: "toolResult", toolCallId: "tc1", toolName: "t", content: [{ type: "text", text: "r1" }], isError: false, timestamp: 3 } as never } },
+          { type: "tool/result", seq: 3, time: 3, data: { message: { role: "toolResult", toolCallId: "tc2", toolName: "t", content: [{ type: "text", text: "r2" }], isError: false, timestamp: 3 } as never } },
+        ],
+        EVENT_SCHEMA_VERSION,
+      );
+
+      const result = manager.getRecentSessionHistory(agentStore.getProfile().id, sessionId, 2);
+      expect(result.entries.map((e) => e.message.role)).toEqual([
+        "assistant",
+        "toolResult",
+        "toolResult",
+      ]);
+      expect(result.hasMore).toBe(true);
+      expect(result.oldestId).toBe(1);
     } finally {
       projectStore.close();
       fs.rmSync(root, { recursive: true, force: true });

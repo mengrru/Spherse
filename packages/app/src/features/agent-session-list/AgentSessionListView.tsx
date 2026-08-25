@@ -1,4 +1,4 @@
-import type { AgentProfile, SessionInfo } from "../../lib/types";
+import type { AgentSummary, SessionInfo } from "../../lib/types";
 import { AgentGroup } from "./AgentGroup";
 import { EmptyAgents } from "./EmptyAgents";
 import { useGroupedSessions } from "./hooks/useGroupedSessions";
@@ -10,7 +10,7 @@ interface SessionPaging {
 }
 
 export interface AgentSessionListViewProps {
-  agents: AgentProfile[];
+  agents: AgentSummary[];
   sessions: SessionInfo[];
   sessionPaging: Record<string, SessionPaging>;
   collapsedAgentIds: Set<string>;

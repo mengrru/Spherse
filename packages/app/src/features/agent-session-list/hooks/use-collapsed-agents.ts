@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
-import type { AgentProfile } from "../../../lib/types";
+import type { AgentSummary } from "../../../lib/types";
 import { useAgentSessionListUiStore } from "../store";
 import { computeInitialCollapsedAgentIds, expandActiveAgent } from "./use-collapsed-agents-helpers";
 
 const EMPTY_COLLAPSED_AGENT_IDS = new Set<string>();
 
-export function useCollapsedAgents(projectId: string, agents: AgentProfile[], activeAgentId: string | null) {
+export function useCollapsedAgents(projectId: string, agents: AgentSummary[], activeAgentId: string | null) {
   const toggleAgentCollapsed = useAgentSessionListUiStore((state) => state.toggleAgentCollapsed);
   const setCollapsedAgentIds = useAgentSessionListUiStore((state) => state.setCollapsedAgentIds);
   const collapsedAgentIds = useAgentSessionListUiStore((s) => s.collapsedAgentIdsByProject[projectId]);

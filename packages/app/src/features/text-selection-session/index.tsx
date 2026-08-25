@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
-import type { AgentProfile, ActiveSessionInfo } from "../../lib/types";
+import type { AgentSummary, ActiveSessionInfo } from "../../lib/types";
 import { SelectionHighlightOverlay } from "./SelectionHighlightOverlay";
 import { TextSelectionToolbar } from "./TextSelectionToolbar";
 import { StartSessionPopover } from "./StartSessionPopover";
@@ -9,7 +9,7 @@ export interface TextSelectionSessionProps {
   children: (contentRef: RefObject<HTMLDivElement | null>) => ReactNode;
   disabled: boolean;
   sourcePath: string;
-  agents: AgentProfile[];
+  agents: AgentSummary[];
   projectId: string;
   activeSessions?: ActiveSessionInfo[];
   onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;

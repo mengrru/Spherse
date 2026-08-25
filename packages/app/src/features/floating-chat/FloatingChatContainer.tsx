@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
-import type { AgentProfile } from "../../lib/types";
+import type { AgentSummary } from "../../lib/types";
 import { FloatingFrame } from "../../components/floating-frame";
 import { Chat } from "../chat";
 import { useFloatingChatStore, type FloatingChatState } from "./store";
@@ -8,7 +8,7 @@ import { useFloatingChatStore, type FloatingChatState } from "./store";
 interface FloatingChatContainerProps {
   projectId: string;
   floatingChat: FloatingChatState;
-  agent: AgentProfile;
+  agent: AgentSummary;
 }
 
 export function FloatingChatContainer({

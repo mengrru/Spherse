@@ -43,6 +43,63 @@ describe("project queries", () => {
     expect(getCachedSession("project-1", "session-1")?.title).toBe("Renamed");
   });
 
+  it("fetches the catalog with a single project-level call and maps byAgent into paging", async () => {
+    const client = {
+      listProjectSessions: vi.fn().mockResolvedValue({
+        ok: true,
+        sessions: [session("session-1"), session("session-2")],
+        byAgent: {
+          "agent-1": { hasMore: true, loaded: 2 },
+          "agent-2": { hasMore: false, loaded: 0 },
+        },
+      }),
+    } as unknown as ApiClient;
+
+    const catalog = await fetchProjectSessionCatalog("project-1", client);
+
+    expect(client.listProjectSessions).toHaveBeenCalledTimes(1);
+    expect(client.listProjectSessions).toHaveBeenCalledWith({ perPage: 10 });
+    expect(catalog.sessions.map((item) => item.id)).toEqual(["session-1", "session-2"]);
+    expect(catalog.paging["agent-1"]).toEqual({ hasMore: true, offset: 2, loadingMore: false });
+  });
+
+  it("omits agents without sessions from the paging map", async () => {
+    const client = {
+      listProjectSessions: vi.fn().mockResolvedValue({
+        ok: true,
+        sessions: [session("session-1")],
+        byAgent: { "agent-1": { hasMore: false, loaded: 1 } },
+      }),
+    } as unknown as ApiClient;
+
+    const catalog = await fetchProjectSessionCatalog("project-1", client);
+
+    expect(catalog.paging).toEqual({ "agent-1": { hasMore: false, offset: 1, loadingMore: false } });
+  });
+
+  it("preserves optimistic sessions that carry an unsent initial message", async () => {
+    queryClient.setQueryData(projectQueryKeys.sessions("project-1"), {
+      sessions: [session("session-optimistic")],
+      paging: {},
+    });
+    const { useProjectDataStore } = await import("../stores/project-data-store");
+    useProjectDataStore.getState().setInitialMessage("project-1", "session-optimistic", "hello");
+    const client = {
+      listProjectSessions: vi.fn().mockResolvedValue({
+        ok: true,
+        sessions: [session("session-1")],
+        byAgent: { "agent-1": { hasMore: false, loaded: 1 } },
+      }),
+    } as unknown as ApiClient;
+
+    const catalog = await fetchProjectSessionCatalog("project-1", client);
+
+    const ids = catalog.sessions.map((item) => item.id);
+    expect(ids).toContain("session-optimistic");
+    expect(ids).toContain("session-1");
+    useProjectDataStore.getState().clearInitialMessage("project-1", "session-optimistic");
+  });
+
   it("loads and deduplicates another session page", async () => {
     queryClient.setQueryData(projectQueryKeys.sessions("project-1"), {
       sessions: [session("session-1")],
@@ -59,30 +116,6 @@ describe("project queries", () => {
 
     expect(getCachedSession("project-1", "session-2")?.id).toBe("session-2");
     expect(client.listSessionsPage).toHaveBeenCalledWith("agent-1", { limit: 10, offset: 1 });
-  });
-
-  it("refreshes the loaded prefix so deleted sessions do not survive or shift the next offset", async () => {
-    queryClient.setQueryData(projectQueryKeys.sessions("project-1"), {
-      sessions: [session("session-1"), session("session-2"), session("session-3")],
-      paging: { "agent-1": { hasMore: true, offset: 3, loadingMore: false } },
-    });
-    const client = {
-      listSessionsPage: vi.fn().mockResolvedValue({
-        items: [session("session-2"), session("session-3"), session("session-4")],
-        hasMore: true,
-      }),
-    } as unknown as ApiClient;
-
-    const catalog = await fetchProjectSessionCatalog(
-      "project-1",
-      client,
-      [{ id: "agent-1" } as never],
-    );
-    queryClient.setQueryData(projectQueryKeys.sessions("project-1"), catalog);
-
-    expect(catalog.sessions.map((item) => item.id)).toEqual(["session-2", "session-3", "session-4"]);
-    expect(client.listSessionsPage).toHaveBeenCalledWith("agent-1", { limit: 10, offset: 0 });
-    expect(catalog.paging["agent-1"].offset).toBe(3);
   });
 
   it("deletes a provided session without relying on a paginated lookup", async () => {
@@ -139,5 +172,59 @@ describe("project queries", () => {
     } as unknown as ApiClient;
 
     await expect(ensureProjectSession("project-1", client, target.id)).rejects.toThrow("unavailable");
+  });
+
+  it("finds an uncached session via a single project-level lookup", async () => {
+    const target = { ...session("session-deep"), agentId: "agent-9" };
+    const client = {
+      listProjectSessions: vi.fn().mockResolvedValue({
+        ok: true,
+        sessions: [target],
+        byAgent: { "agent-9": { hasMore: false, loaded: 1 } },
+      }),
+      getSession: vi.fn().mockResolvedValue(target),
+    } as unknown as ApiClient;
+
+    const found = await ensureProjectSession("project-1", client, "session-deep");
+
+    expect(found?.id).toBe("session-deep");
+    expect(client.listProjectSessions).toHaveBeenCalledWith({ perPage: 100 });
+  });
+
+  it("returns null when the project-level lookup cannot find the session", async () => {
+    const client = {
+      listProjectSessions: vi.fn().mockResolvedValue({
+        ok: true,
+        sessions: [],
+        byAgent: {},
+      }),
+      listAgents: vi.fn().mockResolvedValue([]),
+    } as unknown as ApiClient;
+
+    const found = await ensureProjectSession("project-1", client, "session-missing");
+
+    expect(found).toBeNull();
+  });
+
+  it("falls back to per-agent probes when the session lives beyond the first 100", async () => {
+    const target = { ...session("session-deep"), agentId: "agent-9" };
+    const client = {
+      listProjectSessions: vi.fn().mockResolvedValue({
+        ok: true,
+        sessions: [],
+        byAgent: {},
+      }),
+      listAgents: vi.fn().mockResolvedValue([{ id: "agent-1" }, { id: "agent-9" }]),
+      getSession: vi.fn((agentId: string) =>
+        agentId === "agent-9"
+          ? Promise.resolve(target)
+          : Promise.reject(new ApiError("not found", 404)),
+      ),
+    } as unknown as ApiClient;
+
+    const found = await ensureProjectSession("project-1", client, "session-deep");
+
+    expect(found?.id).toBe("session-deep");
+    expect(client.getSession).toHaveBeenCalledTimes(2);
   });
 });

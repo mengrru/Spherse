@@ -11,6 +11,22 @@ function isValidTriggerMode(mode: string, targetSessionId: string | undefined): 
 }
 
 export function registerTriggerRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
+  fastify.get<{ Params: { projectId: string } }>(
+    "/api/projects/:projectId/triggers",
+    {
+      schema: { response: { 200: schemas.projectTriggerListResponse } },
+      async handler(req) {
+        const items = req.projectCtx!.triggerManager.listProject();
+        const triggers = items.map(({ agentId, entry, nextTriggerAt }) => ({
+          agentId,
+          ...entry,
+          nextTriggerAt: nextTriggerAt?.getTime() ?? null,
+        }));
+        return { ok: true, triggers };
+      },
+    },
+  );
+
   fastify.get<{ Params: { projectId: string; agentId: string } }>(
     "/api/projects/:projectId/agents/:agentId/triggers",
     {

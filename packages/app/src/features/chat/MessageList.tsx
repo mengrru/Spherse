@@ -1,7 +1,7 @@
 import type { RefObject } from "react";
 import { useMemo } from "react";
 import { useI18n } from "@spherse/i18n/react";
-import type { AgentProfile } from "../../lib/types";
+import type { AgentSummary } from "../../lib/types";
 import type { ChatMessage } from "./types";
 import { Button } from "../../components/ui/button";
 import { ChevronDownIcon } from "lucide-react";
@@ -12,7 +12,7 @@ import { lastWithdrawableUserIndex } from "./model/withdrawable";
 
 interface MessageListProps {
   messages: ChatMessage[];
-  agent: AgentProfile;
+  agent: AgentSummary;
   streaming: boolean;
   loading?: boolean;
   containerRef: RefObject<HTMLDivElement | null>;

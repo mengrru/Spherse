@@ -60,9 +60,21 @@ const mcpServerConfig = Type.Union([
   }),
 ]);
 
+const agentSummary = Type.Object(
+  {
+    id: Type.String(),
+    name: Type.String(),
+    alias: Type.Optional(Type.String()),
+    slug: Type.String(),
+    createdAt: Type.Optional(Type.Number()),
+  },
+  { additionalProperties: false },
+);
+
 export const schemas = {
   agentProfile,
-  agentListResponse: Type.Array(agentProfile),
+  agentSummary,
+  agentListResponse: Type.Array(agentSummary),
   agentRawResponse: Type.Object({ content: Type.String() }),
   agentCreateRequest: Type.Object({
     slugBase: Type.String(),
@@ -85,6 +97,7 @@ export const schemas = {
 } as const;
 
 export type AgentProfileContract = Static<typeof agentProfile>;
+export type AgentSummaryContract = Static<typeof agentSummary>;
 export type AgentListResponse = Static<typeof schemas.agentListResponse>;
 export type AgentRawResponse = Static<typeof schemas.agentRawResponse>;
 export type AgentCreateRequest = Static<typeof schemas.agentCreateRequest>;

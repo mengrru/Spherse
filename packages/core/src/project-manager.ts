@@ -127,6 +127,23 @@ export class ProjectManager {
     return agentStore.sessions.listSessionsPage(limit, offset);
   }
 
+  listProjectSessions(perPage: number): {
+    sessions: SessionInfo[];
+    byAgent: Record<string, { hasMore: boolean; loaded: number }>;
+  } {
+    const effectivePerPage = Math.max(1, perPage);
+    const sessions: SessionInfo[] = [];
+    const byAgent: Record<string, { hasMore: boolean; loaded: number }> = {};
+    for (const [agentId, agentStore] of this.projectStore.agents) {
+      const page = agentStore.sessions.listSessionsPage(effectivePerPage, 0);
+      if (page.items.length === 0 && !page.hasMore) continue;
+      sessions.push(...page.items);
+      byAgent[agentId] = { hasMore: page.hasMore, loaded: page.items.length };
+    }
+    sessions.sort((a, b) => b.updatedAt - a.updatedAt || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+    return { sessions, byAgent };
+  }
+
   renameSession(
     agentId: string,
     sessionId: string,
@@ -164,14 +181,14 @@ export class ProjectManager {
   getRecentSessionHistory(
     agentId: string,
     sessionId: string,
-    turns: number,
+    limit: number,
     beforeId?: number,
   ): { entries: Array<{ id: number; message: unknown }>; hasMore: boolean; oldestId: number | null } {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return { entries: [], hasMore: false, oldestId: null };
     const sessions = agentStore.sessions;
     if (sessions.sessionNeedsMigration(sessionId)) {
-      const result = sessions.getRecentTurns(sessionId, turns, beforeId);
+      const result = sessions.getRecentMessages(sessionId, limit, beforeId);
       return {
         entries: result.entries,
         hasMore: result.hasMore,
@@ -181,17 +198,12 @@ export class ProjectManager {
     const projected = deriveHistoryEntries(sessions.readEvents(sessionId));
     const before = beforeId ?? Number.POSITIVE_INFINITY;
     const eligible = projected.filter((entry) => entry.seq < before);
-    const selected: typeof eligible = [];
-    let turnCount = 0;
-    for (let i = eligible.length - 1; i >= 0; i--) {
-      const entry = eligible[i];
-      if (entry.message.role === "user") {
-        turnCount++;
-        if (turnCount > turns) break;
-      }
-      selected.push(entry);
+    // 页首若为孤儿 toolResult，向后扩展到其 toolCall 的 assistant 消息，保证单页配对自洽
+    let start = Math.max(0, eligible.length - limit);
+    while (start > 0 && eligible[start].message.role === "toolResult") {
+      start--;
     }
-    selected.reverse();
+    const selected = eligible.slice(start);
     return {
       entries: selected.map((entry) => ({ id: entry.seq, message: entry.message })),
       hasMore: selected.length < eligible.length,

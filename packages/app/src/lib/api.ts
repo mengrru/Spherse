@@ -1,13 +1,16 @@
 import type {
   AgentProfile,
+  AgentSummary,
   SessionInfo,
   ContentResponse,
   FileEntry,
   StatResponse,
   TriggerEntry,
   TriggerInfo,
+  ProjectTriggerListResponse,
   TriggerLogEntry,
   SkillDefinition,
+  SkillSummary,
   AgentCreateResponse,
   AgentUpdateResponse,
   AiAccessSettingsResponse,
@@ -15,6 +18,7 @@ import type {
   ThemeSettingsResponse,
   AgentMcpConfig,
   McpServerConfig,
+  ProjectSessionListResponse,
 } from "./types";
 import type {
   ProviderCatalogContract,
@@ -86,10 +90,10 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
   return {
     baseUrl,
     accessToken: accessToken ?? null,
-    async listAgents(): Promise<AgentProfile[]> {
+    async listAgents(): Promise<AgentSummary[]> {
       const res = await authedFetch(`${apiBase}/agents`);
       await assertOk(res);
-      return parseJsonResponse<AgentProfile[]>(res, schemas.agentListResponse);
+      return parseJsonResponse<AgentSummary[]>(res, schemas.agentListResponse);
     },
 
     async getAgent(id: string): Promise<AgentProfile> {
@@ -148,15 +152,25 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return parseJsonResponse<SessionListPageResponse>(res, schemas.sessionListPageResponse);
     },
 
+    async listProjectSessions(opts?: { perPage?: number }): Promise<ProjectSessionListResponse> {
+      const params = new URLSearchParams();
+      if (opts?.perPage !== undefined) params.set("perPage", String(opts.perPage));
+      const query = params.toString();
+      const url = `${apiBase}/sessions${query ? `?${query}` : ""}`;
+      const res = await authedFetch(url);
+      await assertOk(res);
+      return parseJsonResponse<ProjectSessionListResponse>(res, schemas.projectSessionListResponse);
+    },
+
     async getSessionMessages(agentId: string, id: string): Promise<SessionMessagesResponse> {
       const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages`);
       await assertOk(res);
       return parseJsonResponse<SessionMessagesResponse>(res, schemas.sessionMessagesResponse);
     },
 
-    async getSessionMessagesPage(agentId: string, id: string, opts?: { turns?: number; before?: number }): Promise<SessionMessagesPageResponse> {
+    async getSessionMessagesPage(agentId: string, id: string, opts?: { limit?: number; before?: number }): Promise<SessionMessagesPageResponse> {
       const params = new URLSearchParams();
-      if (opts?.turns !== undefined) params.set("turns", String(opts.turns));
+      if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
       if (opts?.before !== undefined) params.set("before", String(opts.before));
       const query = params.toString();
       const url = `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages${query ? `?${query}` : ""}`;
@@ -308,10 +322,10 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return parseJsonResponse<SkillDefinition>(res, schemas.skillDefinition);
     },
 
-    async listSkills(): Promise<SkillDefinition[]> {
+    async listSkills(): Promise<SkillSummary[]> {
       const res = await authedFetch(`${apiBase}/skills`);
       await assertOk(res);
-      return parseJsonResponse<SkillDefinition[]>(res, schemas.skillListResponse);
+      return parseJsonResponse<SkillSummary[]>(res, schemas.skillListResponse);
     },
 
     async listMarketplaceSkills(): Promise<MarketplaceManifestResponse> {
@@ -523,6 +537,12 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/triggers`);
       await assertOk(res);
       return parseJsonResponse<TriggerInfo[]>(res, schemas.triggerListResponse);
+    },
+
+    async listProjectTriggers(): Promise<ProjectTriggerListResponse> {
+      const res = await authedFetch(`${apiBase}/triggers`);
+      await assertOk(res);
+      return parseJsonResponse<ProjectTriggerListResponse>(res, schemas.projectTriggerListResponse);
     },
 
     async createTrigger(agentId: string, data: {
