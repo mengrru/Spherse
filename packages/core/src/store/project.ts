@@ -59,6 +59,7 @@ export class ProjectStore extends EventEmitter {
       path.join(this.spherseDir, "skills"),
       PRESET_SKILL_SOURCES,
       this.fileWriteMutex,
+      [path.join(this.rootPath, ".agents", "skills")],
     );
 
     await this.loadAgents();
@@ -80,6 +81,7 @@ export class ProjectStore extends EventEmitter {
       path.join(this.spherseDir, "skills"),
       PRESET_SKILL_SOURCES,
       this.fileWriteMutex,
+      [path.join(this.rootPath, ".agents", "skills")],
     );
 
     const indexPath = path.join(this.rootPath, "AGENTS.md");

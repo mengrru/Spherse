@@ -105,11 +105,11 @@ Skill 是 Agent 按需加载的工作说明或领域知识。system prompt 只�
 Skill 分三层：
 
 ```text
-agent-level > project > builtin
+agent-level > .spherse/skills > .agents/skills > builtin
 ```
 
 - builtin：随 Spherse 发布，升级应用时更新
-- project：`.spherse/skills/{name}/SKILL.md`
+- project：主目录 `.spherse/skills/{name}/SKILL.md`，兼容载入 `.agents/skills/{name}/SKILL.md`
 - agent-level：`.spherse/agents/{agent-slug}/skills/{name}/SKILL.md`
 
 桌面端 Skills 区域可以浏览、创建和编辑项目 Skill，也可以从 ZIP 安装。创建自定义 Skill 时加载 `spherse-create-skill`。
