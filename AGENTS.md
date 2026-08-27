@@ -7,7 +7,7 @@
 
 ## 文档地图
 
-本文是 agent 与新成员的入口：只维护导航、命令和红线，细节一律单一权威来源 + 链接。完整目录索引见 [`docs/official/project-structure.md`](docs/official/project-structure.md)。
+本文是 agent 与新成员的入口：只维护导航、命令和红线，细节一律单一权威来源 + 链接。目录索引见 [`docs/official/project-structure.md`](docs/official/project-structure.md)。
 
 ### Package 一览
 
@@ -120,9 +120,9 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
 1. **需求分析**：需求下发后先对照代码现状分析可行性与影响面，与用户讨论澄清歧义，商定方案；不明确不动手
 2. **design doc**：方案商定后写成 design doc，放 `docs/dev/{features,infra}/{yyyy-MM-dd-name}/`（结构参考同类目录的近期文档；放置规则见 **doc-sync** skill）；写完开 sub agent review，反馈按 critical / important / medium / minor 分级处理
 3. **实现**：复杂需求按 design doc 拆分任务并落盘 `plan.md`，逐项实现勾选；相对简单的任务直接实现。测试不强制 TDD、按场景选：不变量密集的纯逻辑（fold、access policy、错误分类等）先写测试再实现，UI / 集成路径实现后补
-4. **commit + 代码 review**：实现完毕先 commit，再开 sub agent review 对照 design doc 与代码现状审查实现
+4. **commit + 代码 review**：实现完毕先 commit，再加载 **code-review** skill 派 sub agent 对照 design doc 与代码现状审查实现
 5. **反馈处理**：重点关注 critical / important 评论，逐条判断是否成立、是否值得修，有选择性地修（追加 commit）；不成立或暂不修的记录理由，留给步骤 6 回复
-6. **收尾提 PR**：加载 **doc-sync** skill 自查文档同步并更新，然后提 PR；在 PR 中逐条回复 review 反馈——同样分等级，标明哪些已修、哪些未修及原因
+6. **收尾提 PR**：加载 **doc-sync** skill 自查文档同步并更新，然后提 PR；在 PR 评论区贴上 review report（分等级，标明哪些已修、哪些未修及原因）
 
 ## 规范演进
 
