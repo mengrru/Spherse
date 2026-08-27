@@ -35,7 +35,7 @@ Every code change has a documentation surface. This skill walks the full checkli
 | User-visible strings | the **i18n** skill (add keys + translations) |
 | Design system, theme mechanism, chat DOM/layout/CSS tokens, themeable selectors | `packages/presets/skills/spherse-create-ui-theme/` and `packages/presets/skills/spherse-create-agent-chat-theme/` |
 | Presets templates or skill sources edited under `packages/presets/` | trigger the sync build so generated constants are usable: `npm run build --workspace=packages/presets` (see `packages/presets/README.md`) |
-| A backlog item completed | tick it in `docs/dev/backlog.md`; append newly-discovered follow-ups as new items |
+| A backlog item completed | **delete** its entry in `docs/dev/backlog.md` (no tick-and-keep); append newly-discovered follow-ups as new items following the entry norms in that file's header |
 | User gave a design/code convention correction that was agreed and executed during this session | distill it via first-principles analysis and persist it to the correct layer (root `AGENTS.md` rules / package README / official domain file / skill) — merge into an existing entry when possible; one-off factual fixes do not qualify (see AGENTS.md「规范演进」) |
 | New tooling, commands, or verification steps | the relevant section of `AGENTS.md` (keep it lean — links, not detail) |
 

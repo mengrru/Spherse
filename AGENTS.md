@@ -42,7 +42,7 @@
 | 用户可见文案 | 加载 **i18n** skill |
 | design system、主题机制、聊天 DOM/布局/CSS token | 检查 `packages/presets/skills/` 下两个 theme skill |
 | feature spec/plan、infra design、bugfix 分析、调研 | `docs/dev/{features,infra,bugfix,investigation}/{yyyy-MM-dd-name}/` |
-| 完成 backlog 条目 | `docs/dev/backlog.md` 勾选，并补充新增条目 |
+| 完成 backlog 条目 | `docs/dev/backlog.md` 删除该条，并补充新增条目 |
 
 完成 feature/infra/bugfix 后、或用户要求 commit 前，加载 **doc-sync** skill 按上表逐项检查同步。
 
