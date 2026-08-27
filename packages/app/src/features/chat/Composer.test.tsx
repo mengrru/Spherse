@@ -78,10 +78,12 @@ function type(value: string): void {
   });
 }
 
-function pressEnter(): void {
+function pressEnter(): KeyboardEvent {
+  const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
   act(() => {
-    textarea().dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    textarea().dispatchEvent(event);
   });
+  return event;
 }
 
 describe("Composer input availability", () => {
@@ -164,8 +166,9 @@ describe("Composer enter key behavior", () => {
     mockPointerCoarse(false);
     const { onSend } = renderComposer({ streaming: false });
     type("hello world");
-    pressEnter();
+    const event = pressEnter();
     expect(onSend).toHaveBeenCalledWith("hello world", undefined);
+    expect(event.defaultPrevented).toBe(true);
     expect(textarea().getAttribute("enterkeyhint")).toBe("send");
   });
 
@@ -173,8 +176,9 @@ describe("Composer enter key behavior", () => {
     mockPointerCoarse(true);
     const { onSend } = renderComposer({ streaming: false });
     type("第一行");
-    pressEnter();
+    const event = pressEnter();
     expect(onSend).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
     expect(textarea().value).toBe("第一行");
     expect(textarea().getAttribute("enterkeyhint")).toBe("enter");
   });

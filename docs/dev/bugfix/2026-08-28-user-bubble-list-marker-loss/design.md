@@ -47,6 +47,12 @@
 
 插件顺序：`[remarkGfm, remarkPlainStructure, remarkBreaks]`（GFM 先解析出 table/taskList，插件改写后再由 remark-breaks 处理软换行）。
 
+已知取舍：
+
+- list item 内的 code 块降级为纯文本行（顶层 code 块仍走 `pre`/`code` 渲染）；多行 code 的内部行首缩进会被行内空白规范化吃掉
+- list item 直接子 table 的行不缩进（tableLine 无 indent 语义）
+- 空 list item（`-` 单独成行）保留仅含 marker 的行
+
 `allowedElements` 白名单与 `unwrapDisallowed` 保持不变——emphasis/heading 等装饰性降级行为不变。
 
 ## 4. 测试

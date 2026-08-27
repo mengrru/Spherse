@@ -98,6 +98,19 @@ describe("MarkdownContent plain mode", () => {
     expect(host.textContent).toContain("\u00a0\u00a0- inner");
   });
 
+  it("keeps list content inside a blockquote within a list item in plain mode", () => {
+    render("1. a\n   > - x\n   > - y", true);
+    expect(host.textContent).toContain("1. a");
+    expect(host.textContent).toContain("- x");
+    expect(host.textContent).toContain("- y");
+  });
+
+  it("keeps an empty list item marker in plain mode", () => {
+    render("-\n- b", true);
+    expect(html()).toContain("<br");
+    expect(host.textContent).toContain("- b");
+  });
+
   it("renders table rows as separated lines in plain mode", () => {
     render("| a | b |\n| --- | --- |\n| 1 | 2 |", true);
     const rendered = html();

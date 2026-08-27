@@ -21,6 +21,10 @@ function blockLines(node: Nodes, indent: string): Line[] {
       return [[text(indent + "---")]];
     case "blockquote":
       return node.children.flatMap((child) => blockLines(child, indent));
+    case "list":
+      return listLines(node, indent);
+    case "table":
+      return tableLines(node);
     default:
       return [];
   }
@@ -32,6 +36,9 @@ function listLines(list: List, indent: string): Line[] {
   for (const item of list.children) {
     const checkbox = item.checked === true ? "[x] " : item.checked === false ? "[ ] " : "";
     const marker = `${indent}${list.ordered ? `${number}. ` : "- "}${checkbox}`;
+    if (item.children.length === 0) {
+      lines.push([text(marker)]);
+    }
     let firstLineOfItem = true;
     for (const block of item.children) {
       let groups: Line[];

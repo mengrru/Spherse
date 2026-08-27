@@ -19,7 +19,7 @@
 - 触摸设备上不再拦截 Enter：回车走 textarea 默认行为插入 `\n`，发送一律走发送按钮；桌面（fine pointer，Electron/桌面浏览器）维持 Enter 发送不变
 - `enterKeyHint` 按设备返回 `"enter"`（触摸，键帽显示换行）/ `"send"`（桌面，物理键盘忽略此属性）
 
-选择 `pointer: coarse` 而非视口宽度（`useIsMobile`）：Enter 行为应随「输入形态（虚拟键盘 vs 物理键盘）」而非窗口尺寸切换，桌面端窄窗口不应改变回车语义。已知取舍：iPad 外接键盘时主指针仍为触摸，回车为换行（与 WhatsApp 等一致，发送按钮始终可用）。
+选择 `pointer: coarse` 而非视口宽度（`useIsMobile`）：Enter 行为应随「输入形态（虚拟键盘 vs 物理键盘）」而非窗口尺寸切换，桌面端窄窗口不应改变回车语义。已知取舍：iPad 外接键盘时主指针仍为触摸，回车为换行（与 WhatsApp 等一致，发送按钮始终可用）；hook 首帧返回 false（effect 后校正），coarse 设备上 `enterKeyHint` 可能短暂为 "send"，首帧内不可能触发 Enter，不构成实际风险。
 
 ## 4. 测试
 
