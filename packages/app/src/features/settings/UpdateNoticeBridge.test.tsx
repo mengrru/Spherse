@@ -8,6 +8,16 @@ import type { HostBridge, UpdateEvent } from "../../lib/host-bridge";
 
 type UpdateEventListener = (event: UpdateEvent) => void;
 
+type ToastSuccessCall = [
+  string,
+  { duration?: number; action?: { label: string; onClick: () => void } },
+];
+
+function lastToastCall(mock: { mock: { calls: unknown[][] } }): ToastSuccessCall {
+  const calls = mock.mock.calls as unknown as ToastSuccessCall[];
+  return calls[calls.length - 1];
+}
+
 let host: HTMLDivElement;
 let root: Root | null = null;
 let listeners: UpdateEventListener[] = [];
@@ -86,7 +96,7 @@ describe("UpdateNoticeBridge", () => {
     });
 
     expect(toastMock).toHaveBeenCalledTimes(1);
-    const [title, options] = toastMock.mock.calls[0];
+    const [title, options] = lastToastCall(toastMock);
     expect(title).toContain("0.2.0");
     expect(options?.duration).toBeGreaterThan(0);
     expect(options?.action?.label).toEqual("去更新");
@@ -103,7 +113,7 @@ describe("UpdateNoticeBridge", () => {
     emit({ type: "update-available", version: "0.2.0", releaseNotes: "", silent: true });
 
     expect(toastMock).toHaveBeenCalledTimes(1);
-    toastMock.mock.calls[0][1]?.action?.onClick();
+    lastToastCall(toastMock)[1]?.action?.onClick();
     expect(openExternal).toHaveBeenCalledWith("https://spherse.mengru.work/");
   });
 

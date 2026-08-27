@@ -63,7 +63,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | useAgentBusRefresh（hook） | agent | agent_updated 刷 agents；created / deleted 加刷 sessions |
 | UiSdkBridge（event 桥） | fs-watch | 变更事件 debounce 后定向转发给订阅的 iframe（见 [ui-sdk.md](ui-sdk.md)） |
 
-- 纯失效桥挂 ProjectScope；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge）挂 App 级、订阅 streaming-store
+- 纯失效桥挂 ProjectScope；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 streaming-store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
 - **重连补偿**：bus 重连置 `resumedAt`，各桥经 `useReconnectedSync` 批量失效缓存——错过的事件不重放，靠失效重拉对齐
 - App 级补偿：重连后 refreshProjects；路由指向已消失项目时重定向
 

@@ -29,6 +29,12 @@
 - 之后每小时 tick 一次，同时满足才执行：距上次检查 ≥ 24h，且 `powerMonitor.getSystemIdleTime() < 5min`（用户活动期间）；不满足则等下一个 tick。
 - 每次执行（无论结果）推进 `lastCheckAt`，即自动检测至多每天一次；新版 toast 每次检测至多一条。
 
+## 已知取舍（review 后确认）
+
+- 手动检查不推进调度器 `lastCheckAt`：自动检测的 24h 节流只统计自动检查；用户 dismiss 新版 Dialog 后，次日的自动检测仍会 toast 同一版本，作为每日重提醒语义接受。
+- 启动首查的 5s 固定延时继承自旧实现：若 renderer 初始化（restoreProjects）超过 5s 未就绪，`update-available` 事件可能无人监听而丢失，且需等下一个 24h tick；常规加载远快于 5s，接受该窗口。
+- 手动检查发现新版且用户 dismiss 后，主进程状态保持 `available`，重开 settings 会重新弹出确认 Dialog：作为「有新版待处理」的持续提示，沿用改动前既有语义。
+
 ## 验证
 
 - desktop `updater.test.ts`：silent 不改写状态、事件带 silent 标志、调度器（fake timers + powerMonitor mock）启动/24h 节流/空闲跳过。
