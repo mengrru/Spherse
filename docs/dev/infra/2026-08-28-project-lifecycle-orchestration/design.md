@@ -88,7 +88,7 @@ export async function closeProjectCascade(
 - 迟到写入的保护机制按层区分：session mutations 由 generation 拦截（`queries/project/sessions.ts`）；agent mutations 无 generation，靠 invalidate-no-op 兜底；bridge 事件（如 trigger）由 unmount 截断。`clearProjectQueries` 与 navigate 之间 TriggerEventBridge 仍挂载的极小窗口内，trigger 事件可为已清项目重建 byProject 条目并残留到下次打开——可接受，随 followup P1 镜像移除整体消除
 - `app-store.refreshProjects`（外部关闭/多窗口导致项目从快照消失）不走 cascade，该路径下 streaming runtime 仍可能泄漏：受「全局 store 不得依赖 feature-local store」红线约束，修复需 streaming runtime 生命周期整体重构（与 followup P1 镜像移除合并考虑），本设计记为已知缺口
 - Composer 草稿 localStorage key `spherse:draft:{sessionId}` 为 per-session key，无法由 projectId 枚举清理，项目关闭后残留——已知缺口，无正确性影响
-- cascade 内错误直接抛出与 `app-store.closeProject` 现行为一致；host 关闭成功后的本地清理均为同步纯内存操作，无中间失败态
+- cascade 内错误直接抛出与 `app-store.closeProject` 现行为一致；`closeProject` 中的 `setLastActiveProject` 为 hint 性持久化，失败时仅 warn 不中断（否则该 host await 点失败会使本地清理全跳过、泄漏以新路径复发），「host 关闭成功后的本地清理均为同步纯内存操作，无中间失败态」由此成立
 
 ## 影响文件
 
@@ -107,9 +107,9 @@ export async function closeProjectCascade(
 
 ## 测试计划
 
-- 单测：streaming-store `disconnectProject`（断开目标项目全部 runtime、不影响其他项目、空闲定时器回收）；structure tests（清理面扫描、bridge 组件纯挂载）
+- 单测：streaming-store `disconnectProject`（断开目标项目全部 runtime、不影响其他项目、streaming 中的 session 也被断开且不再重连）；structure tests（清理面扫描、bridge 组件纯挂载）；cascade 行为测试（成功清理全表面、host close 失败时本地状态不动）；app-store `closeProject`（setLastActiveProject 失败仍完成本地删除）
 - 既有测试回归：`npm test --workspace=packages/app`
-- E2E：项目关闭路径相关 spec（`npm run test:e2e --workspace=packages/desktop -- -g "project"`），重点验证关闭含正在 streaming 会话的项目后无残留连接、再打开同名项目状态干净
+- E2E：当前无直接覆盖项目关闭的 spec；按变更影响面运行 `app-launch`（layout 挂载/项目恢复）、`chat-streaming-resilience`（streaming store）、`floating-chat`（经 ProjectRuntimeBridges 挂载）。项目关闭路径的 E2E 缺口记录到 backlog
 
 ## 验收标准（对齐 followup doc）
 

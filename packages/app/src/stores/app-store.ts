@@ -219,7 +219,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
     });
 
     if (nextActiveId) {
-      await bridge.project?.setLastActiveProject(nextActiveId);
+      try {
+        await bridge.project?.setLastActiveProject(nextActiveId);
+      } catch (err) {
+        console.warn("[app-store] failed to persist last active project:", err);
+      }
     }
 
     return nextActiveId;

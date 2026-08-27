@@ -26,6 +26,7 @@ describe("ProjectScope structure", () => {
     expect(source).not.toContain("ThemeQueryBridge");
     expect(source).not.toContain("WelcomePageQueryBridge");
     expect(source).not.toContain("FloatingChatManager");
+    expect(source).not.toContain("FloatingContentBrowserManager");
     expect(source).not.toContain("BrowserManager");
   });
 });
