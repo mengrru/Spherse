@@ -581,6 +581,23 @@ describe("streaming-store resilience", () => {
     expect(socket.sent.map((s) => JSON.parse(s)).some((p) => p.type === "retry")).toBe(false);
   });
 
+  it("manual retry sends a retry message and marks the failed turn retrying", async () => {
+    const socket = await attachAndConnect("rt2");
+    useStreamingStore.getState().sendMessage("rt2", "hi");
+    emit(socket, transientFailureEvents);
+    await vi.advanceTimersByTimeAsync(0);
+
+    useStreamingStore.getState().retry("rt2");
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({ type: "retry" });
+    const session = useStreamingStore.getState().sessions.rt2;
+    expect(session.streaming).toBe(true);
+    const last = session.messages[session.messages.length - 1];
+    expect(last._error).toBeUndefined();
+    expect(last._streaming).toBe(true);
+  });
+
   it("manual retry resends the message for a Source 1 error event", async () => {
     const socket = await attachAndConnect("rt3");
     useStreamingStore.getState().sendMessage("rt3", "hi");
