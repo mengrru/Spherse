@@ -117,6 +117,7 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
 
 ## 一般开发流程
 
+0. **准备分支**：从最新 `origin/dev` checkout 一个随机名分支并 attach 到当前 worktree（`git fetch origin dev && git worktree attach` 或等价方式）；工作区不干净时停止并告知用户
 1. **需求分析**：需求下发后先对照代码现状分析可行性与影响面，与用户讨论澄清歧义，商定方案；不明确不动手
 2. **design doc**：方案商定后写成 design doc，放 `docs/dev/{features,infra}/{yyyy-MM-dd-name}/`（结构参考同类目录的近期文档；放置规则见 **doc-sync** skill）；写完开 sub agent review，反馈按 critical / important / medium / minor 分级处理
 3. **实现**：复杂需求按 design doc 拆分任务并落盘 `plan.md`，逐项实现勾选；相对简单的任务直接实现。测试不强制 TDD、按场景选：不变量密集的纯逻辑（fold、access policy、错误分类等）先写测试再实现，UI / 集成路径实现后补
