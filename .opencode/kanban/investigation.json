@@ -7,7 +7,7 @@
     },
     {
       "name": "information-gathering",
-      "prompt": "收集相关信息、读取相关code（尤其是需求中提到的），了解现状。产出一个调研文档，放到docs/investigation的子目录下。需求：{{task.content}}",
+      "prompt": "收集相关信息、读取相关code（尤其是需求中提到的），了解现状。产出一个调研文档，放到docs/dev/investigation的子目录下。需求：{{task.content}}",
       "completion": "调研文档生成完毕（完成后直接转移至 brainstorming 阶段不需要询问）",
       "next": "brainstorming"
     },

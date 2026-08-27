@@ -101,7 +101,7 @@
 - **前端消费**：renderer 通过 `@spherse/i18n/react` 的 `I18nProvider` + `useI18n()` 获取翻译
 - **后端消费**：Electron/server/core 通过 `translate(locale, key, params)` 纯函数获取翻译
 - **校验**：`npm run check:i18n` 检查 locale key 一致性和插值变量一致性
-- **开发者 skill**：`.opencode/skills/i18n/SKILL.md` 指导 coding agent 迁移用户可见字符串
+- **开发者 skill**：`.agents/skills/i18n/SKILL.md` 指导 coding agent 迁移用户可见字符串
 
 ## 前端样式
 

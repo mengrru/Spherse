@@ -353,11 +353,16 @@ spherse/
 │       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
 │       ├── infra/                    # {yyyy-MM-dd-name}/ 下放基础设施 design + plan
 │       ├── bugfix/                   # bugfix 分析与修复思路
+│       ├── investigation/            # 调研文档（{yyyy-MM-dd-name}/ 或单文件）
 │       └── backlog.md                # 待办事项
+├── .agents/
+│   └── skills/                      # 工具无关的 coding-agent skill 定义（opencode 等自动发现）
+│       ├── doc-sync/SKILL.md        # 文档同步检查（feature 完成 / commit 前触发）
+│       ├── i18n/SKILL.md            # i18n 字符串迁移指导
+│       └── ...                      # release-new-version、squash-merge-to-dev、sync-dev-to-main
 ├── .opencode/
-│   └── skills/                      # opencode coding-agent skill 定义
-│       └── i18n/
-│           └── SKILL.md             # i18n 字符串迁移指导
+│   ├── commands/                    # opencode 自定义命令
+│   └── kanban/                      # opencode kanban 工作流配置
 ├── .github/
 │   └── workflows/
 │       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + 末尾 dispatch deploy-pages 联动 web 部署
@@ -365,6 +370,8 @@ spherse/
 │       └── deploy-pages.yml          # main 分支 landing/web/i18n 变更或发版流水线 workflow_dispatch 触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
+├── AGENTS.md                         # agent/新成员入口：文档地图 + 命令 + 红线（细节单一权威来源 + 链接）
+├── opencode.json                     # opencode 配置
 ├── eslint.config.js                  # ESLint 9 flat config（全仓库 lint 规则）
 ├── package.json                      # npm workspace root
 └── tsconfig.base.json                # 共享 TypeScript 配置
