@@ -41,7 +41,13 @@ export interface UpdateState {
 }
 
 export type UpdateEvent =
-  | { type: "update-available"; version: string; releaseNotes: string; downloadUrl?: string }
+  | {
+      type: "update-available";
+      version: string;
+      releaseNotes: string;
+      downloadUrl?: string;
+      silent: boolean;
+    }
   | { type: "update-not-available" }
   | { type: "download-progress"; percent: number }
   | { type: "update-downloaded" }

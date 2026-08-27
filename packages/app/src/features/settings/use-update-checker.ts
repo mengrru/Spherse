@@ -15,6 +15,14 @@ export type Action =
 
 export const initialState: UpdateState = { status: "idle" };
 
+export function restoreMountedState(state: UpdateState): UpdateState {
+  return state.status === "available" ||
+    state.status === "downloading" ||
+    state.status === "downloaded"
+    ? state
+    : initialState;
+}
+
 export function reducer(state: UpdateState, action: Action): UpdateState {
   switch (action.type) {
     case "CHECK":
@@ -59,12 +67,13 @@ export function useUpdateChecker() {
 
     void (async () => {
       const current = await updater.getUpdateState();
-      dispatch({ type: "SET_STATE", state: current });
+      dispatch({ type: "SET_STATE", state: restoreMountedState(current) });
     })();
 
     const unsubscribe = updater.onUpdateEvent((event) => {
       switch (event.type) {
         case "update-available":
+          if (event.silent) break;
           dispatch({
             type: "UPDATE_AVAILABLE",
             version: event.version,

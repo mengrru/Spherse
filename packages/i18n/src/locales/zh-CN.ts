@@ -256,6 +256,8 @@ export const zhCN = {
   "settings.update.restartLater": "稍后重启",
   // macOS 通知模式 → 打开 GitHub Releases 下载页的按钮
   "settings.update.gotoDownload": "前往下载",
+  // 自动检测发现新版本 → 右下角 toast 的「去更新」按钮，打开平台对应下载链接
+  "settings.update.goUpdate": "去更新",
 
   // --- Common ---
   // 通用取消按钮

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { BrowserWindow } from "electron";
 
-const { appMock, events, autoUpdaterMock } = vi.hoisted(() => {
+const { appMock, events, autoUpdaterMock, powerMonitorMock } = vi.hoisted(() => {
   const appMock = {
     isPackaged: false,
     getVersion: () => "0.1.0",
@@ -11,11 +12,15 @@ const { appMock, events, autoUpdaterMock } = vi.hoisted(() => {
     on: vi.fn(),
     checkForUpdates: vi.fn(),
   };
-  return { appMock, events, autoUpdaterMock };
+  const powerMonitorMock = {
+    getSystemIdleTime: vi.fn<() => number>(() => 0),
+  };
+  return { appMock, events, autoUpdaterMock, powerMonitorMock };
 });
 
 vi.mock("electron", () => ({
   app: appMock,
+  powerMonitor: powerMonitorMock,
 }));
 vi.mock("electron-updater", () => ({
   default: {
@@ -37,8 +42,10 @@ import {
   compareVersions,
   createUpdater,
   resolveDownloadUrlFromManifest,
+  startAutoUpdateChecks,
   updater,
   type OssUpdateManifest,
+  type Updater,
 } from "./updater.js";
 
 const MANIFEST_URL =
@@ -63,6 +70,7 @@ beforeEach(() => {
   appMock.isPackaged = true;
   appMock.getVersion = () => "0.1.0";
   autoUpdaterMock.checkForUpdates.mockReset();
+  powerMonitorMock.getSystemIdleTime.mockReturnValue(0);
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockReset();
 });
@@ -77,6 +85,21 @@ function mockManifestResponse(body: unknown, ok = true, status = 200): void {
     status,
     json: () => Promise.resolve(body),
   });
+}
+
+function createTestUpdater(): {
+  u: Updater;
+  localEvents: Array<Record<string, unknown>>;
+} {
+  const localEvents: Array<Record<string, unknown>> = [];
+  const fakeWindow = {
+    webContents: {
+      send: (_type: string, event: Record<string, unknown>) => {
+        localEvents.push(event);
+      },
+    },
+  } as unknown as BrowserWindow;
+  return { u: createUpdater(() => fakeWindow), localEvents };
 }
 
 /** 临时切换 process.platform/arch（测试后还原，避免跨用例污染） */
@@ -208,18 +231,20 @@ describe("resolveDownloadUrlFromManifest", () => {
 describe("updater.checkForUpdates (OSS manifest source)", () => {
   it("dev mode short-circuits to upToDate without fetching", async () => {
     appMock.isPackaged = false;
-    await updater.checkForUpdates({ silent: false });
+    const { u, localEvents } = createTestUpdater();
+    await u.checkForUpdates({ silent: false });
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(events).toEqual([{ type: "update-not-available" }]);
-    expect(updater.getState()).toEqual({ status: "upToDate" });
+    expect(localEvents).toEqual([{ type: "update-not-available" }]);
+    expect(u.getState()).toEqual({ status: "upToDate" });
   });
 
-  it("dev mode silent check emits nothing (startup silent check in dev)", async () => {
+  it("dev mode silent check emits nothing and leaves state untouched", async () => {
     appMock.isPackaged = false;
-    await updater.checkForUpdates({ silent: true });
+    const { u, localEvents } = createTestUpdater();
+    await u.checkForUpdates({ silent: true });
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(events).toEqual([]);
-    expect(updater.getState()).toEqual({ status: "upToDate" });
+    expect(localEvents).toEqual([]);
+    expect(u.getState()).toEqual({ status: "idle" });
   });
 
   it("darwin: newer manifest version emits update-available with OSS downloadUrl", async () => {
@@ -234,6 +259,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
         version: "0.2.0",
         releaseNotes: "",
         downloadUrl: manifest.mac?.arm64,
+        silent: false,
       },
     ]);
     expect(updater.getState()).toEqual({
@@ -255,6 +281,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
         version: "0.2.0",
         releaseNotes: "",
         downloadUrl: manifest.win?.x64,
+        silent: false,
       },
     ]);
   });
@@ -297,29 +324,48 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
   });
 
   it("silent check still notifies on available but swallows not-available / error", async () => {
-    // available 即使 silent 也通知（启动静默检查的目的就是发现新版弹窗），
-    // silent 只吞掉 not-available / error 噪音（与原 mac fallback 语义一致）
+    // available 即使 silent 也通知（自动检测的目的就是发现新版 toast），
+    // silent 只吞掉 not-available / error 噪音
+    const { u, localEvents } = createTestUpdater();
     mockManifestResponse(manifest);
     await withProcess("darwin", "arm64", () =>
-      updater.checkForUpdates({ silent: true }),
+      u.checkForUpdates({ silent: true }),
     );
-    expect(events).toEqual([
+    expect(localEvents).toEqual([
       {
         type: "update-available",
         version: "0.2.0",
         releaseNotes: "",
         downloadUrl: manifest.mac?.arm64,
+        silent: true,
       },
     ]);
+    expect(u.getState()).toEqual({ status: "idle" });
 
-    events.length = 0;
+    localEvents.length = 0;
     mockManifestResponse({ ...manifest, version: "0.1.0" });
-    await updater.checkForUpdates({ silent: true });
-    expect(events).toEqual([]);
+    await u.checkForUpdates({ silent: true });
+    expect(localEvents).toEqual([]);
+    expect(u.getState()).toEqual({ status: "idle" });
 
     mockManifestResponse(null, false, 500);
-    await updater.checkForUpdates({ silent: true });
-    expect(events).toEqual([]);
+    await u.checkForUpdates({ silent: true });
+    expect(localEvents).toEqual([]);
+    expect(u.getState()).toEqual({ status: "idle" });
+  });
+
+  it("silent check never overwrites an in-flight interactive state", async () => {
+    const { u, localEvents } = createTestUpdater();
+    mockManifestResponse(manifest);
+    await withProcess("darwin", "arm64", () =>
+      u.checkForUpdates({ silent: false }),
+    );
+    expect(u.getState().status).toBe("available");
+
+    mockManifestResponse({ ...manifest, version: "0.1.0" });
+    await u.checkForUpdates({ silent: true });
+    expect(localEvents).toHaveLength(1);
+    expect(u.getState().status).toBe("available");
   });
 
   it("never calls electron-updater's GitHub feed (regression guard)", async () => {
@@ -337,5 +383,55 @@ describe("createUpdater", () => {
     expect(typeof u.installUpdate).toBe("function");
     expect(typeof u.cancelUpdate).toBe("function");
     expect(typeof u.getState).toBe("function");
+  });
+});
+
+describe("startAutoUpdateChecks", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("checks once shortly after startup, then at most once per 24h", async () => {
+    mockManifestResponse(manifest);
+    startAutoUpdateChecks();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    mockManifestResponse(manifest);
+    await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips the check while the user is idle and retries on a later tick", async () => {
+    mockManifestResponse(manifest);
+    startAutoUpdateChecks();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    powerMonitorMock.getSystemIdleTime.mockReturnValue(600);
+    mockManifestResponse(manifest);
+    await vi.advanceTimersByTimeAsync(25 * 60 * 60 * 1000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    powerMonitorMock.getSystemIdleTime.mockReturnValue(0);
+    await vi.advanceTimersByTimeAsync(60 * 60 * 1000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not schedule a startup toast for up-to-date results (no events)", async () => {
+    mockManifestResponse({ ...manifest, version: "0.1.0" });
+    startAutoUpdateChecks();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(events).toEqual([]);
   });
 });

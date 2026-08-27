@@ -129,6 +129,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.update.restartNow": "立即重啟",
   "settings.update.restartLater": "稍後重啟",
   "settings.update.gotoDownload": "前往下載",
+  "settings.update.goUpdate": "前往更新",
   "common.cancel": "取消",
   "common.delete": "刪除",
   "common.save": "儲存",
