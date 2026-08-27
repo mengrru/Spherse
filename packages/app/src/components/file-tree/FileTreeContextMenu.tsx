@@ -7,7 +7,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
-import type { CreateAction, TreeNode } from "./tree-model";
+import type { CreateAction, TreeItem } from "./tree-model";
 
 export function FileTreeContextMenu({
   node,
@@ -17,7 +17,7 @@ export function FileTreeContextMenu({
   onFloatFile,
   floatedFilePaths,
 }: {
-  node: TreeNode;
+  node: TreeItem;
   children: React.ReactNode;
   onCreate: (action: CreateAction) => void;
   onDelete: () => void;

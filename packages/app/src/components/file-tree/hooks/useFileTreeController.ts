@@ -1,146 +1,77 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../../lib/api";
 import {
-  type TreeNode,
+  type TreeItem,
   type CreatingState,
+  type DeleteTarget,
   type CreateAction,
   INVALID_NAME_RE,
-  buildNodes,
-  updateNode,
-  mergeExpandedState,
-  mergeRefreshedTree,
+  parentDirPath,
+  childPath,
 } from "../tree-model";
-import { fetchProjectDirectory, invalidateProjectFileQueries, useProjectDirectory } from "../../../queries/content";
+import { invalidateProjectFileQueries } from "../../../queries/content";
 
 export interface FileTreeController {
-  rootNodes: TreeNode[];
-  loading: boolean;
+  expandedPaths: ReadonlySet<string>;
   creating: CreatingState | null;
-  deleteTarget: TreeNode | null;
-  toggleNode: (node: TreeNode) => void;
-  requestCreate: (node: TreeNode, action: CreateAction) => void;
+  deleteTarget: DeleteTarget | null;
+  toggleDir: (path: string) => void;
+  requestCreate: (item: TreeItem, action: CreateAction) => void;
   submitCreate: (parentPath: string, action: CreateAction, name: string) => void;
   cancelCreate: () => void;
-  requestDelete: (node: TreeNode) => void;
+  requestDelete: (item: TreeItem) => void;
   confirmDelete: () => void;
   cancelDelete: () => void;
 }
 
 export function useFileTreeController(
   client: ApiClient,
-  onSelectFile: (filePath: string) => void,
   onDeleted: ((path: string) => void) | undefined,
   projectId: string,
-  rootPath: string,
 ): FileTreeController {
   const { t } = useI18n();
-  const [rootNodes, setRootNodes] = useState<TreeNode[]>([]);
-  const rootQuery = useProjectDirectory(projectId, client, rootPath);
+  const [expandedPaths, setExpandedPaths] = useState<ReadonlySet<string>>(() => new Set());
   const [creating, setCreating] = useState<CreatingState | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<TreeNode | null>(null);
-  const nodesRef = useRef<TreeNode[]>([]);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  useEffect(() => {
-    nodesRef.current = rootNodes;
-  }, [rootNodes]);
-
-  const loadChildren = useCallback(
-    async (parentPath: string) => {
-      try {
-        return await fetchProjectDirectory(projectId, client, parentPath);
-      } catch {
-        return [];
+  const toggleDir = useCallback((path: string) => {
+    setExpandedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
       }
-    },
-    [client, projectId],
-  );
-
-  const refreshExpanded = useCallback(
-    async (nodes: TreeNode[]): Promise<TreeNode[]> => {
-      const result: TreeNode[] = [];
-      for (const node of nodes) {
-        if (node.type === "directory" && node.expanded && node.loaded) {
-          const entries = await loadChildren(node.path);
-          const children = buildNodes(entries, node.path);
-          const merged = mergeExpandedState(children, node.children);
-          const recursed = await refreshExpanded(merged);
-          result.push({ ...node, children: recursed });
-        } else {
-          result.push(node);
-        }
-      }
-      return result;
-    },
-    [loadChildren],
-  );
-
-  const buildRefreshedRoot = useCallback(async (entries: Awaited<ReturnType<ApiClient["listContent"]>>) => {
-    const root = buildNodes(entries, rootPath);
-    const merged = mergeExpandedState(root, nodesRef.current);
-    return refreshExpanded(merged);
-  }, [refreshExpanded, rootPath]);
-
-  const refreshTree = useCallback(async (changedPath: string) => {
-    await invalidateProjectFileQueries(projectId, changedPath);
-    const entries = await fetchProjectDirectory(projectId, client, rootPath);
-    const refreshed = await buildRefreshedRoot(entries);
-    setRootNodes((current) => mergeRefreshedTree(refreshed, current));
-  }, [buildRefreshedRoot, client, projectId, rootPath]);
-
-  useEffect(() => {
-    if (!rootQuery.data) return;
-    let cancelled = false;
-    void buildRefreshedRoot(rootQuery.data).then((refreshed) => {
-      if (cancelled) return;
-      setRootNodes((current) => mergeRefreshedTree(refreshed, current));
+      return next;
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [buildRefreshedRoot, rootQuery.data, rootQuery.dataUpdatedAt]);
+  }, []);
 
-  const toggleNode = useCallback(
-    async (node: TreeNode) => {
-      if (node.type === "file") {
-        onSelectFile(node.path);
-        return;
-      }
-
-      const children = node.expanded
-        ? node.children
-        : buildNodes(await loadChildren(node.path), node.path);
-      setRootNodes((prev) =>
-        updateNode(prev, node.path, (current) => ({
-          ...current,
-          children,
-          loaded: true,
-          expanded: !current.expanded,
-        })),
-      );
-    },
-    [onSelectFile, loadChildren],
-  );
+  const expandDir = useCallback((path: string) => {
+    setExpandedPaths((prev) => {
+      if (prev.has(path)) return prev;
+      const next = new Set(prev);
+      next.add(path);
+      return next;
+    });
+  }, []);
 
   const requestCreate = useCallback(
-    (node: TreeNode, action: CreateAction) => {
-      const dirPath =
-        node.type === "directory"
-          ? node.path
-          : node.path.split("/").slice(0, -1).join("/");
-      if (node.type === "directory" && !node.expanded) {
-        toggleNode(node);
+    (item: TreeItem, action: CreateAction) => {
+      const parentPath = item.type === "directory" ? item.path : parentDirPath(item.path);
+      if (item.type === "directory") {
+        expandDir(item.path);
       }
-      setCreating({ parentPath: dirPath, action });
+      setCreating({ parentPath, action });
     },
-    [toggleNode],
+    [expandDir],
   );
 
   const submitCreate = useCallback(
     async (parentPath: string, action: CreateAction, name: string) => {
       if (!name || INVALID_NAME_RE.test(name)) return;
-      const targetPath = parentPath ? `${parentPath}/${name}` : name;
+      const targetPath = childPath(parentPath, name);
       try {
         if (action === "new-folder") {
           await client.mkdir(targetPath);
@@ -148,41 +79,55 @@ export function useFileTreeController(
           await client.touchFile(targetPath);
         }
         setCreating(null);
-        await refreshTree(targetPath);
+        await invalidateProjectFileQueries(projectId, targetPath);
       } catch (err) {
         toast.error(t("file-tree.createFailed", { message: (err as Error).message }));
       }
     },
-    [client, refreshTree, t],
+    [client, projectId, t],
   );
 
   const cancelCreate = useCallback(() => setCreating(null), []);
 
-  const requestDelete = useCallback((node: TreeNode) => setDeleteTarget(node), []);
+  const requestDelete = useCallback(
+    (item: TreeItem) => setDeleteTarget({ name: item.name, path: item.path, type: item.type }),
+    [],
+  );
 
   const confirmDelete = useCallback(() => {
     if (!deleteTarget) return;
-    const node = deleteTarget;
+    const target = deleteTarget;
     setDeleteTarget(null);
+    setExpandedPaths((prev) => {
+      const next = new Set<string>();
+      let changed = false;
+      for (const path of prev) {
+        if (path === target.path || path.startsWith(`${target.path}/`)) {
+          changed = true;
+          continue;
+        }
+        next.add(path);
+      }
+      return changed ? next : prev;
+    });
     void client
-      .deleteContent(node.path)
+      .deleteContent(target.path)
       .then(async () => {
-        onDeleted?.(node.path);
-        await refreshTree(node.path);
+        onDeleted?.(target.path);
+        await invalidateProjectFileQueries(projectId, target.path);
       })
       .catch((err: unknown) => {
         toast.error(t("file-tree.deleteFailed", { message: (err as Error).message }));
       });
-  }, [deleteTarget, client, onDeleted, refreshTree, t]);
+  }, [deleteTarget, client, onDeleted, projectId, t]);
 
   const cancelDelete = useCallback(() => setDeleteTarget(null), []);
 
   return {
-    rootNodes,
-    loading: rootQuery.isPending,
+    expandedPaths,
     creating,
     deleteTarget,
-    toggleNode,
+    toggleDir,
     requestCreate,
     submitCreate,
     cancelCreate,

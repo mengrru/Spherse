@@ -8,14 +8,14 @@ import {
   AlertDialogFooter,
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
-import type { TreeNode } from "./tree-model";
+import type { DeleteTarget } from "./tree-model";
 
 export function DeleteConfirmDialog({
   target,
   onConfirm,
   onCancel,
 }: {
-  target: TreeNode | null;
+  target: DeleteTarget | null;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
