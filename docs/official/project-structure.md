@@ -258,7 +258,7 @@ spherse/
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
-│   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer）与 UpdateChecker 组件、设置 store、类型与测试
+│   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、设置 store、类型与测试
 │   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）+ WelcomePageQueryBridge（project.yaml fs-watch/reconnect → welcome-page 查询失效，ProjectScope 挂载）
 │   │       │   ├── project-settings/     # 项目设置弹窗集合
 │   │       │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
@@ -286,7 +286,7 @@ spherse/
 │   │   │   ├── main.ts               # Electron 主进程：启动时 fixPath（打包版 PATH 修复）→ restoreEnvFromSettings → 组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
 │   │   │   ├── fix-path.ts           # 打包版 PATH 修复：仅 packaged + darwin/linux，spawn 用户登录 shell（$SHELL -lic 'echo $PATH'，TERM=dumb，3s 超时）拉取登录 shell 的 PATH，剥离 ANSI/控制字节后按去重保序前置合并进 process.env.PATH（dev/test/win32 no-op，失败保留原 PATH 不阻断启动）；修复 GUI 进程不继承 shell PATH 导致 stdio MCP server（uvx/npx/python）找不到可执行文件
 │   │   │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
-│   │   │   ├── updater.ts            # electron-updater 封装：autoDownload/autoInstall 关闭、Windows 完整流程、macOS 通知模式（GitHub Releases API）、CancellationToken 取消、compareVersions、silent 抑制
+│   │   │   ├── updater.ts            # 更新检测：OSS latest.json 清单 + compareVersions + 平台 downloadUrl 解析（electron-updater 仅保留 Windows in-app 下载 API，feed 已废弃）、silent 检测不改写交互状态、startAutoUpdateChecks 调度（启动 5s + 每小时 tick，≥24h 且用户活动时静默检测）
 │   │   │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）
 │   │   │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │   │   │   │   ├── index.ts          # registerAllIpc 聚合

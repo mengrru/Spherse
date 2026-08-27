@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { reducer, initialState } from "./use-update-checker";
+import {
+  reducer,
+  initialState,
+  restoreMountedState,
+} from "./use-update-checker";
 
 const currentDir = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(currentDir, "use-update-checker.ts"), "utf8");
@@ -84,6 +88,35 @@ describe("update checker reducer", () => {
   });
 });
 
+describe("restoreMountedState", () => {
+  it("resets upToDate back to idle so the check button is clickable again on remount", () => {
+    expect(restoreMountedState({ status: "upToDate" })).toEqual({ status: "idle" });
+  });
+
+  it("resets terminal error and stale checking states to idle", () => {
+    expect(
+      restoreMountedState({ status: "error", errorMessage: "boom", errorPhase: "check" }),
+    ).toEqual({ status: "idle" });
+    expect(restoreMountedState({ status: "checking" })).toEqual({ status: "idle" });
+    expect(restoreMountedState({ status: "idle" })).toEqual({ status: "idle" });
+  });
+
+  it("keeps in-flight or pending-flow states across remount", () => {
+    const available = {
+      status: "available" as const,
+      version: "1.2.0",
+      releaseNotes: "",
+      downloadUrl: "https://example.com/release",
+    };
+    expect(restoreMountedState(available)).toEqual(available);
+    expect(restoreMountedState({ status: "downloading", percent: 40 })).toEqual({
+      status: "downloading",
+      percent: 40,
+    });
+    expect(restoreMountedState({ status: "downloaded" })).toEqual({ status: "downloaded" });
+  });
+});
+
 describe("useUpdateChecker host bridge wiring", () => {
   it("does not reference window.electronAPI directly", () => {
     expect(source).not.toContain("window.electronAPI");
@@ -96,5 +129,13 @@ describe("useUpdateChecker host bridge wiring", () => {
 
   it("no-ops the subscribe effect when updater is unavailable", () => {
     expect(source).toContain("if (!updater) return");
+  });
+
+  it("ignores silent update-available events (routed to UpdateNoticeBridge instead)", () => {
+    expect(source).toContain("if (event.silent) break");
+  });
+
+  it("normalizes the restored host state through restoreMountedState", () => {
+    expect(source).toContain("restoreMountedState(current)");
   });
 });

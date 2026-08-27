@@ -4,7 +4,7 @@ import { restoreEnvFromSettings } from "./settings.js";
 import { fixPath } from "./fix-path.js";
 import { ensureServer, stopServer, getServerPort } from "./server.js";
 import { registerAllIpc } from "./ipc/index.js";
-import { checkForUpdatesSilently } from "./updater.js";
+import { startAutoUpdateChecks } from "./updater.js";
 import { setupContextMenu } from "./ipc/context-menu.js";
 import { getTunnelManager } from "./tunnel/manager.js";
 import { getMobileAccess, setMobileAccess, generateAccessToken } from "./settings.js";
@@ -20,9 +20,7 @@ app.whenReady().then(async () => {
   createWindow();
   setupContextMenu(getMainWindow()!);
   registerAllIpc(getMainWindow);
-  setTimeout(() => {
-    void checkForUpdatesSilently();
-  }, 5000);
+  startAutoUpdateChecks();
 
   if (mobile.enabled && (mobile.mode ?? "quick") === "quick") {
     try {

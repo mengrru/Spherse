@@ -1,4 +1,4 @@
-import { app } from "electron";
+import { app, powerMonitor } from "electron";
 import type { BrowserWindow } from "electron";
 import electronUpdater from "electron-updater";
 const { autoUpdater, CancellationToken } = electronUpdater;
@@ -76,7 +76,6 @@ export function compareVersions(a: string, b: string): number {
 
 export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
   let currentState: UpdateState = { status: "idle" };
-  let silent = false;
   let activeCancellationToken: CancellationTokenType | null = null;
 
   function sendEvent(event: UpdateEvent): void {
@@ -91,20 +90,16 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
       version: info.version,
       releaseNotes,
     };
-    silent = false;
     sendEvent({
       type: "update-available",
       version: info.version,
       releaseNotes,
+      silent: false,
     });
   });
 
   autoUpdater.on("update-not-available", () => {
     currentState = { status: "upToDate" };
-    if (silent) {
-      silent = false;
-      return;
-    }
     sendEvent({ type: "update-not-available" });
   });
 
@@ -127,15 +122,11 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
     const errorMessage =
       err instanceof Error ? err.message : String(err ?? "");
     currentState = { status: "error", errorMessage };
-    if (silent) {
-      silent = false;
-      return;
-    }
     sendEvent({ type: "update-error", message: errorMessage });
   });
 
-  async function checkForUpdatesViaOss(): Promise<void> {
-    currentState = { status: "checking" };
+  async function checkForUpdatesViaOss(silent: boolean): Promise<void> {
+    if (!silent) currentState = { status: "checking" };
     try {
       const res = await fetch(OSS_UPDATE_MANIFEST_URL);
       if (!res.ok) {
@@ -150,35 +141,31 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
         );
         // OSS 清单无 release notes，留空由 UI 自动隐藏
         const releaseNotes = "";
-        currentState = {
-          status: "available",
-          version,
-          releaseNotes,
-          downloadUrl,
-        };
-        silent = false;
+        if (!silent) {
+          currentState = {
+            status: "available",
+            version,
+            releaseNotes,
+            downloadUrl,
+          };
+        }
         sendEvent({
           type: "update-available",
           version,
           releaseNotes,
           downloadUrl,
+          silent,
         });
       } else {
+        if (silent) return;
         currentState = { status: "upToDate" };
-        if (silent) {
-          silent = false;
-          return;
-        }
         sendEvent({ type: "update-not-available" });
       }
     } catch (err: unknown) {
+      if (silent) return;
       const errorMessage =
         err instanceof Error ? err.message : String(err ?? "");
       currentState = { status: "error", errorMessage };
-      if (silent) {
-        silent = false;
-        return;
-      }
       sendEvent({ type: "update-error", message: errorMessage });
     }
   }
@@ -186,16 +173,15 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
   return {
     async checkForUpdates(opts: { silent: boolean }): Promise<void> {
       if (!app.isPackaged) {
-        currentState = { status: "upToDate" };
         if (opts.silent) return;
+        currentState = { status: "upToDate" };
         sendEvent({ type: "update-not-available" });
         return;
       }
-      silent = opts.silent;
       // mac/win 统一走 OSS 清单检测 + 引导浏览器下载（前往下载）。
       // electron-updater 的 GitHub feed 自 ba8c049 起无 latest.yml，不再使用；
       // 其 in-app 下载 API 保留给未来恢复 feed（backlog #149）。
-      await checkForUpdatesViaOss();
+      await checkForUpdatesViaOss(opts.silent);
     },
 
     async downloadUpdate(): Promise<void> {
@@ -226,6 +212,23 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
 
 export const updater = createUpdater(() => getMainWindow());
 
-export function checkForUpdatesSilently(): Promise<void> {
-  return updater.checkForUpdates({ silent: true });
+const AUTO_CHECK_STARTUP_DELAY_MS = 5_000;
+const AUTO_CHECK_TICK_MS = 60 * 60 * 1000;
+const AUTO_CHECK_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const AUTO_CHECK_USER_ACTIVE_IDLE_SEC = 300;
+
+export function startAutoUpdateChecks(): void {
+  let lastCheckAt = 0;
+  const runCheck = (): void => {
+    lastCheckAt = Date.now();
+    void updater.checkForUpdates({ silent: true });
+  };
+  setTimeout(runCheck, AUTO_CHECK_STARTUP_DELAY_MS);
+  setInterval(() => {
+    if (Date.now() - lastCheckAt < AUTO_CHECK_MIN_INTERVAL_MS) return;
+    if (powerMonitor.getSystemIdleTime() > AUTO_CHECK_USER_ACTIVE_IDLE_SEC) {
+      return;
+    }
+    runCheck();
+  }, AUTO_CHECK_TICK_MS);
 }

@@ -129,6 +129,7 @@ export const en: Record<TranslationKey, string> = {
   "settings.update.restartNow": "Restart now",
   "settings.update.restartLater": "Restart later",
   "settings.update.gotoDownload": "Go to download",
+  "settings.update.goUpdate": "Get the update",
   "common.cancel": "Cancel",
   "common.delete": "Delete",
   "common.save": "Save",
