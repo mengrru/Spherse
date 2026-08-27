@@ -12,13 +12,13 @@ const SESSION_PAGE_SIZE = 10;
 const EMPTY_SESSIONS: SessionInfo[] = [];
 const EMPTY_SESSION_PAGING: Record<string, SessionPaging> = {};
 
-export interface SessionPaging {
+interface SessionPaging {
   hasMore: boolean;
   offset: number;
   loadingMore: boolean;
 }
 
-export interface SessionCatalog {
+interface SessionCatalog {
   sessions: SessionInfo[];
   paging: Record<string, SessionPaging>;
 }

@@ -118,6 +118,24 @@ describe("project queries", () => {
     expect(client.listSessionsPage).toHaveBeenCalledWith("agent-1", { limit: 10, offset: 1 });
   });
 
+  it("resets loadingMore and keeps paging intact when loading another page fails", async () => {
+    queryClient.setQueryData(projectQueryKeys.sessions("project-1"), {
+      sessions: [session("session-1")],
+      paging: { "agent-1": { hasMore: true, offset: 1, loadingMore: false } },
+    });
+    const client = {
+      listSessionsPage: vi.fn().mockRejectedValue(new Error("network down")),
+    } as unknown as ApiClient;
+
+    await loadMoreProjectSessions("project-1", client, "agent-1");
+
+    expect(
+      queryClient.getQueryData<{ paging: Record<string, { hasMore: boolean; offset: number; loadingMore: boolean }> }>(
+        projectQueryKeys.sessions("project-1"),
+      )?.paging["agent-1"],
+    ).toEqual({ hasMore: true, offset: 1, loadingMore: false });
+  });
+
   it("deletes a provided session without relying on a paginated lookup", async () => {
     const target = session("session-20");
     const client = { deleteSession: vi.fn().mockResolvedValue({ ok: true }) } as unknown as ApiClient;
