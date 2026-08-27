@@ -9,6 +9,7 @@ import { compressImage } from "./utils/compress-image";
 import { AttachmentBar, type AttachStatus } from "./AttachmentBar";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
+import { useIsCoarsePointer } from "../../hooks/use-coarse-pointer";
 
 const LINE_HEIGHT = 20;
 const PADDING_Y = 16;
@@ -28,6 +29,7 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
+  const isTouchKeyboard = useIsCoarsePointer();
   const draftKey = `spherse:draft:${sessionId}`;
   const [input, setInput] = useState(() => localStorage.getItem(draftKey) ?? "");
   const [manualExpanded, setManualExpanded] = useState(false);
@@ -155,8 +157,10 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
             composingRef.current = false;
           }}
           placeholder={t("chat.composerPlaceholder")}
+          enterKeyHint={isTouchKeyboard ? "enter" : "send"}
           onKeyDown={(event) => {
             if (
+              !isTouchKeyboard &&
               event.key === "Enter" &&
               !event.shiftKey &&
               !event.nativeEvent.isComposing &&

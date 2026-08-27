@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { AgentSummary } from "../../lib/types";
 import type { ChatMessage } from "./types";
-import { MarkdownContent } from "../../components/MarkdownContent";
+import { MarkdownContent } from "../../components/markdown-content/MarkdownContent";
 import { HtmlCardRenderer } from "./HtmlCard";
 import { ImageCardRenderer } from "./ImageCard";
 import { CommandCardRenderer } from "./CommandCard";

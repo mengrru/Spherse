@@ -2,7 +2,7 @@ import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { toast } from "sonner";
-import { MarkdownContent } from "../../components/MarkdownContent";
+import { MarkdownContent } from "../../components/markdown-content/MarkdownContent";
 import { Textarea } from "../../components/ui/textarea";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
