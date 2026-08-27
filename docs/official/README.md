@@ -18,6 +18,7 @@
 | 改主题、token、可主题化 DOM 入口 | [`architecture/theming.md`](architecture/theming.md) |
 | 改 i18n | [`architecture/i18n.md`](architecture/i18n.md) |
 | 改数据文件格式与存储位置 | [`data-conventions.md`](data-conventions.md) |
+| 对齐术语 / 查一个词指什么 | [`glossary.md`](glossary.md) |
 | 找文件 / 目录在哪 | [`project-structure.md`](project-structure.md) |
 
 包内编码/review 规范在各 package 的 README，不放这里。

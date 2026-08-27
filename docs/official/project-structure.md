@@ -66,6 +66,7 @@ spherse/
 │   │       ├── __tests__/            # Vitest 单元测试（kernel/capabilities/session/access/tools 分组）
 │   │       └── index.ts              # 公开导出（显式清单，按外部消费面收紧）
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
+│   │   ├── README.md                 # 包级守则：sync 产物、presets.json 格式、注入流程与维护守则
 │   │   ├── presets.json              # 预置 skill、agent 与 prompt template 声明配置
 │   │   ├── templates/
 │   │   │   ├── agent-template.md     # 新 Agent 创建模板源文件
@@ -104,6 +105,7 @@ spherse/
 │   │       │   └── prompt-templates.ts # PRESET_PROMPT_TEMPLATES 常量（{ id, name, prompt }）
 │   │       └── index.ts              # 公开导出：模板内容 + 预置 skill/agent/prompt template 配置
 │   ├── i18n/                         # @spherse/i18n — 纯 TS i18n 基础设施
+│   │   ├── README.md                 # 包级守则：翻译基准、逐条注释规范、校验命令
 │   │   ├── scripts/
 │   │   │   └── check-i18n.mjs        # locale key 一致性校验脚本
 │   │   └── src/
@@ -363,8 +365,10 @@ spherse/
 │   │   │   ├── theming.md            # token 体系/三级主题/DOM 入口
 │   │   │   └── i18n.md               # i18n 架构
 │   │   ├── data-conventions.md       # 数据文件格式与存储约定
+│   │   ├── glossary.md               # 术语表：一词一行 + 权威文档指针
 │   │   └── project-structure.md      # 本文件：完整目录索引
 │   └── dev/                          # 开发过程文档（容易过时）
+│       ├── decisions/                # ADR 决策记录（编号、只追加；索引与规则见 README.md）
 │       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
 │       ├── infra/                    # {yyyy-MM-dd-name}/ 下放基础设施 design + plan
 │       ├── bugfix/                   # bugfix 分析与修复思路

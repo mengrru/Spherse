@@ -13,6 +13,8 @@
 
 ## HostBridge 抽象
 
+renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](../../dev/decisions/0006-host-bridge-shells.md)。
+
 - 接口定义宿主能力：server 连接信息、settings 读写（`getSettings` / `saveSettings`）、`openExternal`，可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile`
 - `HostCapabilities` 声明能力开关，renderer 据此条件渲染宿主专属 UI：
   - 布尔项：`projectManagement` / `filePicker` / `appUpdate` / `devTools` / `mobileAccess` / `openFileExternal`

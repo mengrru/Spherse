@@ -14,8 +14,8 @@
 | Package | 职责 | 包级守则 |
 |---|---|---|
 | `packages/core` | 纯 Node.js 核心逻辑（微内核 + Capability） | [README](packages/core/README.md) |
-| `packages/presets` | 内置模板与预置静态内容 | 遵循 `docs/official/` |
-| `packages/i18n` | i18n 基础设施与翻译资源 | 遵循 `docs/official/` |
+| `packages/presets` | 内置模板与预置静态内容 | [README](packages/presets/README.md) |
+| `packages/i18n` | i18n 基础设施与翻译资源 | [README](packages/i18n/README.md) |
 | `packages/server` | Fastify API 层 | [README](packages/server/README.md) |
 | `packages/app` | 共享 React renderer | [README](packages/app/README.md)（必读） |
 | `packages/desktop` | Electron 桌面壳（main/preload/基础设施） | 遵循 `docs/official/` |
@@ -26,6 +26,7 @@
 
 - 全局架构、package 边界、跨包契约 → [`docs/official/architecture/index.md`](docs/official/architecture/index.md)，按任务路由查 [`docs/official/README.md`](docs/official/README.md)
 - 数据文件格式与存储约定 → [`docs/official/data-conventions.md`](docs/official/data-conventions.md)
+- 术语对齐 / 查一个词指什么 → [`docs/official/glossary.md`](docs/official/glossary.md)
 - 目录结构 → [`docs/official/project-structure.md`](docs/official/project-structure.md)
 - 包内规范 → 对应 package 的 README
 - 历史决策与实施记录（容易过时） → `docs/dev/`，开发新 feature 时优先参考 `docs/official/`
@@ -114,31 +115,39 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
 
 **核心层调试**：`packages/core`、`packages/presets` 和 `packages/server` 不依赖 Electron，可以直接用 Node.js 编译或测试。
 
+## 一般开发流程
+
+1. **需求分析**：需求下发后先对照代码现状分析可行性与影响面，与用户讨论澄清歧义，商定方案；不明确不动手
+2. **design doc**：方案商定后写成 design doc，放 `docs/dev/{features,infra}/{yyyy-MM-dd-name}/`（结构参考同类目录的近期文档；放置规则见 **doc-sync** skill）；写完开 sub agent review，反馈按 critical / important / medium / minor 分级处理
+3. **实现**：复杂需求按 design doc 拆分任务并落盘 `plan.md`，逐项实现勾选；相对简单的任务直接实现。测试不强制 TDD、按场景选：不变量密集的纯逻辑（fold、access policy、错误分类等）先写测试再实现，UI / 集成路径实现后补
+4. **commit + 代码 review**：实现完毕先 commit，再开 sub agent review 对照 design doc 与代码现状审查实现
+5. **反馈处理**：重点关注 critical / important 评论，逐条判断是否成立、是否值得修，有选择性地修（追加 commit）；不成立或暂不修的记录理由，留给步骤 6 回复
+6. **收尾提 PR**：加载 **doc-sync** skill 自查文档同步并更新，然后提 PR；在 PR 中逐条回复 review 反馈——同样分等级，标明哪些已修、哪些未修及原因
+
+## 规范演进
+
+用户在交流中对 design / code 规范提出修正或建议，最终达成一致并执行了的，agent 必须从第一性原理出发分析并沉淀为日后执行规范：
+
+1. **先分析再落笔**：这个修正解决什么问题？背后的原则是否可复用，还是一次性特例？与既有规范是合并、替换还是冲突关系？
+2. **过普适性门槛才入表**：一次性事实修正（数值写错、链接失效等）直接改对应文档，不入规范
+3. **按「写」路由表落到正确的层**（仓库红线 → 本文件；包内 → package README；跨包机制 → official 域文件；流程 → 本文件流程节 / skill），AGENTS.md 不做默认倾倒场
+4. **写成规范语言**：「做 X，因为 Y」，不是会话纪要；优先合并进既有条目，不追加重复条目
+
 ## 开发规范
 
-- **过程文档**：feature spec/plan、infra design、bugfix 分析必须放 `docs/dev/` 对应子目录（见文档地图「写」表），不要放到其它位置；`docs/dev/` 下的文档是历史记录，容易过时
-- **文档同步**：按文档地图「写」表维护；完成 feature/infra/bugfix 后、或用户要求 commit 前，加载 **doc-sync** skill 逐项检查
-- **预置内容维护**：修改 `packages/presets/templates/` 下模板后，应通过 `npm run build --workspace=packages/presets` 或 root `npm run build` 触发同步脚本，确保生成内容可用
-- **用户主题 Skill 维护**：修改 design system、全局主题机制、聊天窗口 DOM 结构、聊天布局、CSS token 或可主题化选择器时，必须检查 `packages/presets/skills/spherse-create-ui-theme/` 和 `packages/presets/skills/spherse-create-agent-chat-theme/` 是否需要同步更新
-- **E2E 验证选择**：feature 实现完成后，应根据当前变更影响面选择可能受影响的 E2E 覆盖场景运行测试；不要求每次都跑全量 E2E。可通过 `npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts` 跑单个 spec，或用 `-g` 按 case 名过滤。改动涉及 Electron 启动、项目恢复、路由、store、server API、文件树、content browser、chat/session、文本选择发起会话、native dependency 或 E2E helper 时，优先运行对应 E2E；合并/发布前再跑 `npm run verify:e2e`
-- **手动 commit**：完成代码后不要自动 commit，等待用户明确要求时再提交
-- **commit 前检查**：用户提示 commit 后，先加载 **doc-sync** skill 确认文档同步完成，再执行 commit
+- **E2E 验证选择**：feature 实现完成后，按变更影响面选择可能受影响的 E2E 场景运行，不要求全量；单 spec：`npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts`，或 `-g` 按 case 名过滤
+  - 改动涉及 Electron 启动、项目恢复、路由、store、server API、文件树、content browser、chat/session、文本选择发起会话、native dependency 或 E2E helper 时，优先运行对应 E2E；合并/发布前再跑 `npm run verify:e2e`
 
-## 编码规范
+## 编码规范（仓库级红线）
 
-- **语言**：TypeScript（ESM），strict mode
-- **TypeScript 配置**：target ES2022, module Node16, moduleResolution Node16
-- **依赖规范**：
-  - pi-agent-core 的 `AgentTool` 接口使用 `@sinclair/typebox` 定义参数 schema
-- **导出规范**：package 的 `index.ts`（barrel 入口）只导出外部实际使用的符号；外部仅作为类型使用的符号用 `export type` 导出，不导出未在外部消费的内容。定期检查导出清单，移除多余的导出
-- **工具模式**：所有 AgentTool 使用工厂函数模式 `createXxxTool(projectRoot: string): AgentTool`
-- **路径安全**：所有项目内路径解析必须使用 `@spherse/core` 的 `resolveProjectPath` / `assertInsideProject` / `isPathInside`，通过 `path.relative` 判断边界，避免 `startsWith` 前缀误判导致路径穿越
-- **API contract**：HTTP request/response 与 WebSocket message/event 的运行时 schema 统一定义在 `@spherse/server/contracts`，server route、renderer API client 和 WebSocket 边界必须复用同一套 schema/parser，不新增裸 `JSON.parse` 或仅靠 TypeScript 泛型的边界校验
-- **并发写入安全**：会写文件的工具应共享 `FileWriteMutex`，避免同一文件并发写导致内容丢失
+包内细则在各 package README 与 `docs/official/` 对应域文件，此处只留跨包红线：
+
+- **语言**：TypeScript（ESM，strict），target ES2022 / module Node16 / moduleResolution Node16
+- **导出规范**：package 的 `index.ts` 只导出外部实际使用的符号，仅作类型用的用 `export type`；定期移除多余导出
+- **路径安全**：项目内路径解析必须用 `@spherse/core` 的 `resolveProjectPath` / `assertInsideProject` / `isPathInside`，禁止 `startsWith` 前缀判断
+- **API contract**：边界 schema 统一在 `@spherse/server/contracts` 并复用同一套 parser，规则见 [server README](packages/server/README.md)
+- **契约测试（跨层接缝）**：对 core 的 PM 写入门面与 `SessionPort` 方法，消费方包（server/desktop）至少各有一条不 mock 被测方法本身的契约测试——层间解耦越彻底，mock 拼接缝的盲区越大
 - **不添加注释**：除非用户明确要求
-- **Lint 规范**：ESLint 9 flat config 位于 root `eslint.config.js`，覆盖所有 package；`packages/app` 启用 React Hooks / React Refresh 规则；commit 前由 Husky pre-commit 钩子自动检查
-- **Git 规范**：commit message 使用 `feat:` / `fix:` / `chore:` 前缀
-- **前端规范**：`packages/app` 的架构、TanStack Query/Zustand 状态边界、组件、路由、依赖注入、effect、样式、i18n 与测试规则统一维护在 [`packages/app/README.md`](packages/app/README.md)，修改 renderer 时必须遵守；不要在本文件重复维护第二份规则。
-- **i18n 文案规范**：`packages/i18n/src/locales/zh-CN.ts` 是翻译基准，每条文案必须结合实际 UI 场景写注释（说明出现位置、上下文、交互状态等），用于指导其它语言版本（`zh-TW`、`en`）的翻译
-- **测试覆盖**：`packages/core` 的开发需保证单元测试覆盖，修改已有模块后应补充或更新对应测试
-- **契约测试（跨层接缝）**：对 core 的 PM 写入门面（writeFile/writeBinaryFile/createEntry/deletePath/copyFileWithin）与 SessionPort 方法，消费方包（server/desktop）至少各有一条**不 mock 被测方法本身**的契约测试（真 ProjectManager / 真 runtime），钉住该包依赖的门面行为——层间解耦越彻底，双方 mock 拼接缝的盲区越大，契约测试是唯一的对冲
+- **Lint**：ESLint 9 flat config 在 root `eslint.config.js`；pre-commit 钩子自动执行 `npm run lint`
+- **Git**：commit message 用 `feat:` / `fix:` / `chore:` 前缀
+- **前端**：renderer 规则统一在 [`packages/app/README.md`](packages/app/README.md)（必读），不在本文件重复维护

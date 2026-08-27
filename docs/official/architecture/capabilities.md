@@ -18,7 +18,7 @@
 | `interaction` | `run_command`（逐次审批）、`ask_user`（问答门） |
 | `project-config` | `manage_project_config` 工具 |
 | `data` | `read_data` / `query_data` / `mutate_data` 工具（`*.data.json`） |
-| `trigger` | `emit_trigger_event` / `manage_trigger` 工具 + `TriggerManager` / `TimerService` 调度 |
+| `trigger` | `emit_trigger_event` / `manage_trigger` 工具 + `TriggerManager` / `TimerService` 调度（time 型 10 分钟墙钟对齐轮询、event 型即时；磁盘为唯一真相源，每 tick 重读） |
 | `mcp` | MCP server 连接、工具运行时合并、`<mcp-context>` 注入 |
 | `attachments` | 图片等附件处理器 |
 | `compaction` | 上下文压缩（afterTurn 计划、`compaction/applied` 重启点） |
@@ -66,6 +66,8 @@
   - yolo agent（`profile.yolo`）的 approvalGate 为 undefined，审批静默跳过
 - **MCP 是静态 toolMap 的唯一例外**：mcp capability 的 turnHooks 按**配置版本** memo，配置变更后下一 turn 自动重合并
   - 首 turn 前按 agent 连接 enabled 的 MCP server，发现的工具以 `mcp__{server}_{shortid}__{tool}` 命名追加进 `agent.state.tools`
+  - 连接按 agent 缓存、跨会话共享（含 inflight 去重）；单个 server 连接失败降级为告警，不阻断会话
+  - 声明 `resources` / `prompts` capability 的 server 额外合成 `read_resource` / `get_prompt` 工具，与发现工具共用命名空间
   - 同时经 beforeTurn 向 systemPrompt 追加 `<mcp-context>` block（不走 contextBlocks 贡献点）
   - 配置变更经 `onAgentConfigChanged(agentId, "mcp")` bump 版本使 memo 失效
 

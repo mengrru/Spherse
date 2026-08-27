@@ -18,7 +18,7 @@
 
 ## 路径分类（`access/path-category.ts`）
 
-`categorizePath(rel, extraRules?)` 把项目内相对路径映射到 `PathCategory`。内置模式按声明序匹配（**表格即匹配序**，`spherseOther` 兜底必须在最后，否则会吞掉更精确的 agent 子路径；`M` = `.spherse`）：
+`categorizePath(rel, extraRules?)` 把项目内相对路径映射到 `PathCategory`。内置模式按声明序匹配（**表格即匹配序**，`spherseOther` 兜底必须在最后，否则会吞掉更精确的 agent 子路径；`M` = `.spherse`）。集中裁决的由来见 [ADR-0005](../../dev/decisions/0005-path-access-policy.md)：
 
 | 类别 | 模式 |
 |---|---|

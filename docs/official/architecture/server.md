@@ -64,6 +64,8 @@
 
 ## contracts 机制
 
+契约进代码的由来见 [ADR-0007](../../dev/decisions/0007-contracts-in-code.md)。
+
 - `@spherse/server/contracts` 子入口导出：聚合 `schemas`、`parseContract` / `parseApiResponse`、全部 `Static<>` 类型、chat WS 与 bus 的 parser
 - 两种绑定机制（选用规则见 server README）：Fastify `schema` option（驱动 fast-json-stringify + Ajv，约 51 处）与 handler 内 `parseContract`（含 pi 复杂嵌套对象的端点，约 16 处）
 - renderer 的 `parseApiResponse` 是同一 `parseContract` 在客户端的别名——server route、WS 边界、API client 复用同一套 schema

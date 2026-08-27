@@ -28,11 +28,15 @@ Every code change has a documentation surface. This skill walks the full checkli
 |---|---|
 | Files/dirs/packages added, moved, or removed | `docs/official/project-structure.md` (tree + surrounding notes) |
 | Architecture decisions, package boundaries, capability/assembly changes, API contract approach | the matching domain file under `docs/official/architecture/` (routing table in `docs/official/README.md`; follow its writing rules) |
+| An architecture decision made or overturned | append a new ADR under `docs/dev/decisions/` (thin: 10-20 lines; overturned ⇒ only flip status to superseded); link it from the matching official doc claim |
 | Data file formats, storage location conventions | `docs/official/data-conventions.md` |
+| New domain concept or overloaded term introduced | `docs/official/glossary.md` (one-line definition + authoritative doc link) |
 | Package-level coding/review rules | the package's own README (`packages/{pkg}/README.md`) |
 | User-visible strings | the **i18n** skill (add keys + translations) |
 | Design system, theme mechanism, chat DOM/layout/CSS tokens, themeable selectors | `packages/presets/skills/spherse-create-ui-theme/` and `packages/presets/skills/spherse-create-agent-chat-theme/` |
+| Presets templates or skill sources edited under `packages/presets/` | trigger the sync build so generated constants are usable: `npm run build --workspace=packages/presets` (see `packages/presets/README.md`) |
 | A backlog item completed | tick it in `docs/dev/backlog.md`; append newly-discovered follow-ups as new items |
+| User gave a design/code convention correction that was agreed and executed during this session | distill it via first-principles analysis and persist it to the correct layer (root `AGENTS.md` rules / package README / official domain file / skill) — merge into an existing entry when possible; one-off factual fixes do not qualify (see AGENTS.md「规范演进」) |
 | New tooling, commands, or verification steps | the relevant section of `AGENTS.md` (keep it lean — links, not detail) |
 
 Process docs (`docs/dev/{features,infra,bugfix,investigation}/...`) should already exist from the workflow; this skill only verifies they were placed there, never creates them retroactively.

@@ -23,8 +23,8 @@ ProjectRuntime           对外协调层，聚合以上全部
 
 ## 核心契约
 
-- **唯一装配点**：`assembleProject`（`factory.ts`）是组合根。新增能力 = 新 capability 目录 + 装配点一行，不改中心文件
-- **依赖方向单向**：`kernel/` 只含类型与纯组合子、零 I/O；`capabilities/*` 不触达 SessionManager / AgentRunner 实例，只依赖 kernel 类型与支撑层（store 类型、fold 纯函数）；`AgentRunner` 对具体能力零 import
+- **唯一装配点**：`assembleProject`（`factory.ts`）是组合根。新增能力 = 新 capability 目录 + 装配点一行，不改中心文件（为什么见 [ADR-0003](../../dev/decisions/0003-single-assembly-point.md)）
+- **依赖方向单向**：`kernel/` 只含类型与纯组合子、零 I/O；`capabilities/*` 不触达 SessionManager / AgentRunner 实例，只依赖 kernel 类型与支撑层（store 类型、fold 纯函数）；`AgentRunner` 对具体能力零 import（为什么见 [ADR-0002](../../dev/decisions/0002-capability-kernel.md)）
 - **数据边界**：server 不得见到 store 实例。跨层数据访问一律经 `ProjectManager` 门面
 - **导出收紧**：`index.ts` 只导出外部实际消费的符号；store 内部类（`AgentStore`、`SessionStore` 等）不外泄，包入口不导出 `ProjectStore`
 - **写入串行**：一切会写文件的路径共享同一 `FileWriteMutex` 实例（装配点创建、全链路注入）
@@ -52,10 +52,13 @@ ProjectRuntime           对外协调层，聚合以上全部
 
 - **SessionManager** 是纯 session 池：session map 生命周期、legacy 迁移、hot-reload 标记、`setDefaultModel` / `setSampling` 经 `RunConfigHolder` 单点派发。构造只收成品 `RuntimeDeps`，不自带默认装配
 - **AgentRunner** 直接作为会话对象并执行 turn；事件经 `EventPipeline`（log → capability middleware → sanitizer → 持久化翻译）对外直播
-- **SessionEventLog 是消息唯一真相**：user / assistant / tool result / turn 边界追加到 per-agent SQLite events 表，`deriveMessages(events)` fold 结果单向同步给 pi 的内存数组，内存可随时丢弃重建
+- **SessionEventLog 是消息唯一真相**：user / assistant / tool result / turn 边界追加到 per-agent SQLite events 表，`deriveMessages(events)` fold 结果单向同步给 pi 的内存数组，内存可随时丢弃重建（为什么见 [ADR-0001](../../dev/decisions/0001-event-log-fold.md)）
   - 不变量：`seq` 在单个 session log 内从 0 连续，`open` 校验损坏即抛；`appendBatch` 落库失败回滚内存追加
-  - restore 先 `repairLog` 为未闭合 turn 补合成 toolResult 与 `turn/end(aborted)` 再 fold
-- `turn/retried`、`turn/withdrawn`、`compaction/applied` 是 fold 的控制事件（重启点），restore 时按其语义重建；WS 协议不受存储格式影响
+  - restore 先 `repairLog` 为未闭合 turn 持久化补写合成 error toolResult 与 `turn/end(aborted)`（二次恢复幂等），再 fold
+- **控制事件（重启点）**：`turn/retried`、`turn/withdrawn`、`compaction/applied`，restore 时按语义重建；WS 协议不受存储格式影响
+  - withdraw：`turn/withdrawn {seq}` 锚定被撤回的 user message，fold 从日志推导废弃区间 `[seq, 本事件 seq)`；末轮已被 digest 覆盖（lastUserEvent.seq ≤ anchorSeq）时拒绝撤回
+  - compaction：阈值触发时经 agent 自身 streamFn 生成 LLM 摘要——精确复刻请求前缀（systemPrompt + tools + fold 视图 + 追加摘要指令）命中 provider prompt cache；失败且 tokens ≤ 90% window 跳过本轮，> 90% 回退机械拼接
+    摘要来源以 `digestSource: "llm" | "mechanical"` 标记
 - 触发器 ⇄ 会话的循环依赖经 `SessionPort` 消解：factory 先构造 SessionManager，port 是普通对象，capability 在 `init` 中拿到它
 
 ## ProjectRuntime（对外协调层）
