@@ -5,6 +5,7 @@
   "scripts": {
     "pretest": "npm run build --workspace=@spherse/i18n",
     "test": "vitest run",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

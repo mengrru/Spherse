@@ -4,7 +4,7 @@ vi.mock("electron", () => ({
   app: { isPackaged: false },
 }));
 
-import { parseShellPathOutput, mergePath, fixPath } from "./fix-path";
+import { parseShellPathOutput, mergePath, fixPath } from "./fix-path.js";
 
 describe("parseShellPathOutput", () => {
   it("returns PATH entries from a clean single-line output", () => {

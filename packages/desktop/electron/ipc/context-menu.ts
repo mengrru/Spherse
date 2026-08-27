@@ -37,6 +37,6 @@ export function setupContextMenu(win: BrowserWindow): void {
     if (!props.isEditable) return;
     const locale = normalizeLocale(getLocale());
     const menu = Menu.buildFromTemplate(buildEditMenuTemplate(locale, props.editFlags));
-    menu.popup(win);
+    menu.popup({ window: win });
   });
 }

@@ -240,7 +240,7 @@ describe("parseAgentEvent", () => {
     const result = parseAgentEvent({
       type: "message_start",
       message: { role: "assistant", content: [] },
-    });
+    } as unknown as ChatServerEvent);
     expect(result.type).toBe("message_start");
     expect(result).toHaveProperty("message");
   });
@@ -253,7 +253,7 @@ describe("parseAgentEvent", () => {
     expect(result).toHaveProperty("message");
   });
   it("replaces invalid message payload with fallback", () => {
-    const result = parseAgentEvent({ type: "message_start", message: null });
+    const result = parseAgentEvent({ type: "message_start", message: null } as unknown as ChatServerEvent);
     expect(result.type).toBe("message_start");
     expect(result).toHaveProperty("message.role", "user");
   });
@@ -264,7 +264,7 @@ describe("parseAgentEvent", () => {
         { role: "user", content: "hi", timestamp: 1 },
         { role: "totally-bogus" },
       ],
-    });
+    } as unknown as ChatServerEvent);
     expect(result.type).toBe("agent_end");
     if (result.type === "agent_end") {
       expect(result.messages).toHaveLength(2);
@@ -289,7 +289,7 @@ describe("parseAgentEvent", () => {
         { role: "toolResult", toolCallId: "tc1", toolName: "x" },
         { role: "user", content: "junk" },
       ],
-    });
+    } as unknown as ChatServerEvent);
     if (result.type === "turn_end") {
       expect(result.toolResults).toHaveLength(1);
       expect(result.toolResults[0].toolCallId).toBe("tc1");

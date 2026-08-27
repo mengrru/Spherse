@@ -64,7 +64,7 @@ export function UserFilePanel() {
               onFloatFile={
                 floatEnabled
                   ? (path) => {
-                      const ctx = { navigate, projectId, hostKind: bridge.kind };
+                      const ctx = { navigate, projectId, hostKind: bridge.kind, client: null, openExternal: bridge.openExternal };
                       if (floatedFilePaths.has(path)) dispatchAction("unfloatContent", { path }, ctx);
                       else dispatchAction("floatContent", { path }, ctx);
                     }

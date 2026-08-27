@@ -17,6 +17,7 @@
   "scripts": {
     "build": "node scripts/build.mjs && tsc",
     "dev": "node scripts/build.mjs && node scripts/dev.mjs",
+    "typecheck": "tsc --noEmit",
     "pretest": "node scripts/build.mjs",
     "test": "vitest run",
     "test:watch": "vitest",

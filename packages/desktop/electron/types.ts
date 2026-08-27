@@ -10,7 +10,7 @@ import type {
   ThemeMode,
   UpdateEvent,
   UpdateState,
-} from "@spherse/app/src/lib/host-bridge";
+} from "../../app/src/lib/host-bridge.js";
 
 export type {
   MobileAccessEvent,

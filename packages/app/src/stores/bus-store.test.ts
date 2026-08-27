@@ -261,7 +261,7 @@ describe("bus-store", () => {
 
     // Strictly greater: catching a regression where onopen stops updating
     // resumedAt (fake timers freeze the clock, so advance first).
-    expect(useBusStore.getState().resumedAt).toBeGreaterThan(firstResumedAt);
+    expect(useBusStore.getState().resumedAt).toBeGreaterThan(firstResumedAt!);
   });
 
   it("teardown resets resumedAt", async () => {

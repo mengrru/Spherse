@@ -97,7 +97,6 @@ describe("createSession action", () => {
   it("resolves agentSlug from cached agents without listing", async () => {
     mockGetState.mockReturnValue({
       projects: { "proj-1": { agents: [{ id: "id-writer", slug: "writer-a1b2c3" }] } },
-      createSession: mockCreateSession,
     });
     const client = makeClient(async () => []);
     await dispatchAction(
@@ -149,7 +148,6 @@ describe("createSession action", () => {
   it("prefers agentId when both agentId and agentSlug are provided", async () => {
     mockGetState.mockReturnValue({
       projects: { "proj-1": { agents: [{ id: "id-writer", slug: "writer-a1b2c3" }] } },
-      createSession: mockCreateSession,
     });
     const client = makeClient(async () => []);
     await dispatchAction(
@@ -164,7 +162,6 @@ describe("createSession action", () => {
   it("falls through to slug resolution when agentId is an empty string", async () => {
     mockGetState.mockReturnValue({
       projects: { "proj-1": { agents: [{ id: "id-writer", slug: "writer-a1b2c3" }] } },
-      createSession: mockCreateSession,
     });
     const client = makeClient(async () => []);
     await dispatchAction(

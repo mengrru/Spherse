@@ -1,5 +1,5 @@
 import { ipcMain, type BrowserWindow } from "electron";
-import type { MobileAccessEvent, MobileAccessState, MobileTunnelMode } from "@spherse/app/src/lib/host-bridge";
+import type { MobileAccessEvent, MobileAccessState, MobileTunnelMode } from "../../../app/src/lib/host-bridge.js";
 import { getTunnelManager } from "../tunnel/manager.js";
 import {
   getMobileAccess,

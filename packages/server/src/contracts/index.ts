@@ -51,6 +51,7 @@ export type {
   SessionInfoContract,
   SessionListResponse,
   SessionListPageResponse,
+  ProjectSessionListResponse,
   SessionCreateResponse,
   SessionRenameRequest,
   SessionMessagesResponse,
@@ -66,6 +67,8 @@ export type {
   ContentCreateRequest,
   ContentSaveRequest,
 } from "./content.js";
+
+export type { DataReadResponseContract } from "./data.js";
 
 export type { FileTreeResponse } from "./file-tree.js";
 
@@ -84,6 +87,7 @@ export type {
   TriggerEntryContract,
   TriggerInfoEntryContract,
   TriggerListResponse,
+  ProjectTriggerListResponse,
   TriggerCreateRequest,
   TriggerUpdateRequest,
   TriggerLogEntryContract,
@@ -122,4 +126,5 @@ export type {
   BusClientMessage,
   TriggerServerEvent,
   AgentUpdatedEvent,
+  FsWatchChangeEvent,
 } from "./bus.js";

@@ -39,7 +39,7 @@ import {
   resolveDownloadUrlFromManifest,
   updater,
   type OssUpdateManifest,
-} from "./updater";
+} from "./updater.js";
 
 const MANIFEST_URL =
   "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse/latest.json";

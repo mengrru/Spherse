@@ -266,7 +266,7 @@ describe("collectPendingApprovals", () => {
         messages: [
           { role: "user", content: "hello" },
           { role: "assistant", content: "no tools" },
-        ],
+        ] satisfies ChatMessage[],
       },
     };
 

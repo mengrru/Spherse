@@ -2,6 +2,7 @@ import { app } from "electron";
 import type { BrowserWindow } from "electron";
 import electronUpdater from "electron-updater";
 const { autoUpdater, CancellationToken } = electronUpdater;
+type CancellationTokenType = electronUpdater.CancellationToken;
 import type { UpdateState, UpdateEvent } from "./types.js";
 import { getMainWindow } from "./window.js";
 
@@ -76,7 +77,7 @@ export function compareVersions(a: string, b: string): number {
 export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
   let currentState: UpdateState = { status: "idle" };
   let silent = false;
-  let activeCancellationToken: CancellationToken | null = null;
+  let activeCancellationToken: CancellationTokenType | null = null;
 
   function sendEvent(event: UpdateEvent): void {
     getWindow()?.webContents.send(event.type, event);

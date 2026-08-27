@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectProvider } from "../../context/project-context";
 import { Composer } from "./Composer";
+import type { AttachedImage } from "./types";
 
 let host: HTMLDivElement;
 let root: ReturnType<typeof createRoot> | null = null;
@@ -41,7 +42,7 @@ function renderComposer(props: { streaming?: boolean; loading?: boolean }) {
   return { onSend, onAbort };
 }
 
-function rerenderComposer(props: { streaming?: boolean; loading?: boolean }, onSend: ReturnType<typeof vi.fn>, onAbort: ReturnType<typeof vi.fn>) {
+function rerenderComposer(props: { streaming?: boolean; loading?: boolean }, onSend: (message: string, image?: AttachedImage) => boolean, onAbort: () => void) {
   act(() => {
     root!.render(
       <ProjectProvider projectId="p1" projectRoot="/tmp/p1">
