@@ -26,7 +26,7 @@ Every code change has a documentation surface. This skill walks the full checkli
 
 | Change | Must sync |
 |---|---|
-| Files/dirs/packages added, moved, or removed | `docs/official/project-structure.md` (tree + surrounding notes) |
+| Files/dirs/packages added, moved, or removed | `docs/official/project-structure.md` (tree + surrounding notes). Exception: `.agents/` and `.opencode/` are deliberately NOT recorded there — do not add them back |
 | Architecture decisions, package boundaries, capability/assembly changes, API contract approach | the matching domain file under `docs/official/architecture/` (routing table in `docs/official/README.md`; follow its writing rules) |
 | An architecture decision made or overturned | append a new ADR under `docs/dev/decisions/` (thin: 10-20 lines; overturned ⇒ only flip status to superseded); link it from the matching official doc claim |
 | Data file formats, storage location conventions | `docs/official/data-conventions.md` |

@@ -30,8 +30,8 @@
     },
     {
       "name": "merge",
-      "prompt": "使用 squash-merge-to-dev skill 来 commit 并 squash merge to dev。",
-      "completion": "已 squash merge 到 dev 并切回原分支",
+      "prompt": "commit 当前改动（遵循 commit message 规范），然后将当前分支合并到 dev 并推送（不 squash，保留 commit 历史），完成后切回原分支。",
+      "completion": "已合并到 dev 并推送，且已切回原分支",
       "next": "done"
     },
     {

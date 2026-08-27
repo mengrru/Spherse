@@ -374,14 +374,6 @@ spherse/
 │       ├── bugfix/                   # bugfix 分析与修复思路
 │       ├── investigation/            # 调研文档（{yyyy-MM-dd-name}/ 或单文件）
 │       └── backlog.md                # 待办事项
-├── .agents/
-│   └── skills/                      # 工具无关的 coding-agent skill 定义（opencode 等自动发现）
-│       ├── doc-sync/SKILL.md        # 文档同步检查（feature 完成 / commit 前触发）
-│       ├── i18n/SKILL.md            # i18n 字符串迁移指导
-│       └── ...                      # release-new-version、squash-merge-to-dev、sync-dev-to-main
-├── .opencode/
-│   ├── commands/                    # opencode 自定义命令
-│   └── kanban/                      # opencode kanban 工作流配置
 ├── .github/
 │   └── workflows/
 │       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + 末尾 dispatch deploy-pages 联动 web 部署
