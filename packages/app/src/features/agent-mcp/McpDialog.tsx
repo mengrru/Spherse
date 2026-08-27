@@ -31,7 +31,7 @@ import {
   type McpServerDraft,
 } from "./mcp-form-helpers";
 import { McpServerForm } from "./McpServerForm";
-import { useProjectCatalog } from "../../queries/project";
+import { useProjectAgents } from "../../queries/project";
 
 interface McpDialogProps {
   open: boolean;
@@ -43,7 +43,7 @@ interface McpDialogProps {
 export function McpDialog({ open, onOpenChange, agentId, projectId }: McpDialogProps) {
   const { t } = useI18n();
   const client = useApiClient(projectId);
-  const { agents } = useProjectCatalog(projectId, client);
+  const { agents } = useProjectAgents(projectId, client);
   const agentName = agents.find((agent) => agent.id === agentId)?.name ?? "";
   const [servers, setServers] = useState<McpServerConfig[]>([]);
   const [loading, setLoading] = useState(false);

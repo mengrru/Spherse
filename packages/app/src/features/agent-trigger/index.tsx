@@ -36,7 +36,7 @@ import { EMPTY_RUNNING_TRIGGER_IDS } from "./constants";
 import { useI18n } from "@spherse/i18n/react";
 import { InfoIcon, PlusIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import { useProjectCatalog } from "../../queries/project";
+import { useProjectAgents } from "../../queries/project";
 
 interface TriggerDialogProps {
   open: boolean;
@@ -48,7 +48,7 @@ interface TriggerDialogProps {
 export function TriggerDialog({ open, onOpenChange, agentId, projectId }: TriggerDialogProps) {
   const { t } = useI18n();
   const client = useApiClient(projectId);
-  const { agents } = useProjectCatalog(projectId, client);
+  const { agents } = useProjectAgents(projectId, client);
   const { triggers, isPending } = useAgentTriggers(projectId, client, agentId);
   const runningTriggerIds = useTriggerStore(
     (s) => s.byProject[projectId]?.runningTriggerIdsByAgent?.[agentId] ?? EMPTY_RUNNING_TRIGGER_IDS,

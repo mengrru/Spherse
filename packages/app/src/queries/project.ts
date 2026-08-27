@@ -54,24 +54,41 @@ export async function fetchProjectSessionCatalog(
   };
 }
 
-export function useProjectCatalog(projectId: string, client: ApiClient | null) {
+export function useProjectAgents(projectId: string, client: ApiClient | null) {
   const agentsQuery = useQuery({
     queryKey: projectQueryKeys.agents(projectId),
     queryFn: () => client!.listAgents(),
     enabled: Boolean(projectId && client),
   });
-  const agents = agentsQuery.data ?? EMPTY_AGENTS;
+  return {
+    agents: agentsQuery.data ?? EMPTY_AGENTS,
+    loading: agentsQuery.isPending,
+    error: agentsQuery.error,
+  };
+}
+
+export function useProjectSessions(projectId: string, client: ApiClient | null) {
   const sessionsQuery = useQuery({
     queryKey: projectQueryKeys.sessions(projectId),
     queryFn: () => fetchProjectSessionCatalog(projectId, client!),
     enabled: Boolean(projectId && client),
   });
-
   return {
-    agents,
     sessions: sessionsQuery.data?.sessions ?? EMPTY_SESSIONS,
     sessionPaging: sessionsQuery.data?.paging ?? EMPTY_SESSION_PAGING,
-    loading: agentsQuery.isPending || sessionsQuery.isPending,
+    loading: sessionsQuery.isPending,
+    error: sessionsQuery.error,
+  };
+}
+
+export function useProjectCatalog(projectId: string, client: ApiClient | null) {
+  const agentsQuery = useProjectAgents(projectId, client);
+  const sessionsQuery = useProjectSessions(projectId, client);
+  return {
+    agents: agentsQuery.agents,
+    sessions: sessionsQuery.sessions,
+    sessionPaging: sessionsQuery.sessionPaging,
+    loading: agentsQuery.loading || sessionsQuery.loading,
     error: agentsQuery.error ?? sessionsQuery.error,
   };
 }
