@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { AgentSummary } from "../../../lib/types";
 import { useAgentSessionListUiStore } from "../store";
-import { computeInitialCollapsedAgentIds, expandActiveAgent } from "./use-collapsed-agents-helpers";
+import {
+  computeInitialCollapsedAgentIds,
+  expandActiveAgent,
+  pruneCollapsedAgentIds,
+} from "./use-collapsed-agents-helpers";
 
 const EMPTY_COLLAPSED_AGENT_IDS = new Set<string>();
 
@@ -23,13 +27,9 @@ export function useCollapsedAgents(projectId: string, agents: AgentSummary[], ac
 
   useEffect(() => {
     if (!collapsedInitialized) return;
-    const validAgentIds = new Set(agents.map((agent) => agent.id));
-    const nextCollapsedAgentIds = [...collapsedAgentIds!].filter((id) => validAgentIds.has(id));
-    const changed =
-      nextCollapsedAgentIds.length !== collapsedAgentIds!.size ||
-      nextCollapsedAgentIds.some((id) => !collapsedAgentIds!.has(id));
-    if (changed) {
-      setCollapsedAgentIds(projectId, nextCollapsedAgentIds);
+    const next = pruneCollapsedAgentIds(collapsedAgentIds!, agents);
+    if (next) {
+      setCollapsedAgentIds(projectId, next);
     }
   }, [collapsedInitialized, agents, collapsedAgentIds, projectId, setCollapsedAgentIds]);
 
