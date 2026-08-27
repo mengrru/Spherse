@@ -22,18 +22,25 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@base-ui/react": "^1.5.0",
-    "@spherse/app": "*",
     "@spherse/core": "*",
     "@spherse/i18n": "*",
-    "@spherse/presets": "*",
     "@spherse/server": "*",
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.3.9"
+  },
+  "devDependencies": {
+    "@base-ui/react": "^1.5.0",
+    "@playwright/test": "^1.60.0",
+    "@spherse/app": "*",
+    "@tailwindcss/vite": "^4.2.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.7.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "diff": "^9.0.0",
-    "electron-store": "^11.0.2",
-    "electron-updater": "^6.3.9",
-    "js-yaml": "^4.1.0",
+    "electron": "41.7.1",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^3.0.0",
     "lucide-react": "^1.17.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -43,22 +50,10 @@
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
-    "tw-animate-css": "^1.4.0",
-    "zustand": "^5.0.14"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.60.0",
-    "@tailwindcss/vite": "^4.2.4",
-    "@types/diff": "^7.0.2",
-    "@types/js-yaml": "^4.0.9",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.7.0",
-    "electron": "41.7.1",
-    "electron-builder": "^26.0.12",
-    "electron-vite": "^3.0.0",
     "tailwindcss": "^4.2.4",
+    "tw-animate-css": "^1.4.0",
     "typescript": "^5.7.0",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.6",
+    "zustand": "^5.0.14"
   }
 }

@@ -5,7 +5,7 @@ import type {
   ProjectHostApi,
   RestoredProject,
   SampleManifestEntry,
-} from "@spherse/app/src/lib/host-bridge";
+} from "@spherse/app/host-bridge";
 import { MobileConnectPage } from "./pages/MobileConnectPage";
 
 const WEB_CAPABILITIES: HostCapabilities = {

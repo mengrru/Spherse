@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { toast } from "sonner";
-import { Button } from "@spherse/app/src/components/ui/button";
-import { Input } from "@spherse/app/src/components/ui/input";
-import { Field, FieldLabel } from "@spherse/app/src/components/ui/field";
-import { useHostBridge } from "@spherse/app/src/context/host-bridge-context";
-import { useAppStore } from "@spherse/app/src/stores/app-store";
+import { Button } from "@spherse/app/ui/button";
+import { Input } from "@spherse/app/ui/input";
+import { Field, FieldLabel } from "@spherse/app/ui/field";
+import { useHostBridge } from "@spherse/app/host-bridge-context";
+import { useAppStore } from "@spherse/app/stores/app";
 import { runWebVersionGuard } from "../version-guard";
 import { WEB_CONNECTION_STORAGE_KEY } from "../host-bridge-web";
 

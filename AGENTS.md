@@ -52,7 +52,7 @@
 # 安装依赖
 npm install
 
-# 编译所有 package
+# 编译所有 package（按 workspaces 声明顺序即拓扑序执行：i18n → presets → sdk → core → server → app → web → desktop → landing）
 npm run build
 
 # 监听编译（开发时使用）

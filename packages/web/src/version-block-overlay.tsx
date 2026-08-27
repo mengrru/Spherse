@@ -1,6 +1,6 @@
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
-import { Button } from "@spherse/app/src/components/ui/button";
-import { useSettingsStore } from "@spherse/app/src/stores/settings-store";
+import { Button } from "@spherse/app/ui/button";
+import { useSettingsStore } from "@spherse/app/stores/settings";
 import { WEB_CONNECTION_STORAGE_KEY } from "./host-bridge-web";
 
 declare const __SPHERSE_WEB_VERSION__: string;
