@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { ApiError, type ApiClient } from "../lib/api";
-import { queryClient } from "./client";
-import { projectQueryKeys } from "./keys";
-import type { AgentSummary, SessionInfo } from "../lib/types";
-import { useProjectDataStore } from "../stores/project-data-store";
+import { ApiError, type ApiClient } from "../../lib/api";
+import { queryClient } from "../client";
+import { projectQueryKeys } from "../keys";
+import type { SessionInfo } from "../../lib/types";
+import type { SessionListPageResponse } from "@spherse/server/contracts";
+import { useProjectDataStore } from "../../stores/project-data-store";
+import { ensureProjectAgents } from "./agents";
+import { getProjectGeneration, isCurrentProjectGeneration } from "./lifecycle";
 
 const SESSION_PAGE_SIZE = 10;
-const EMPTY_AGENTS: AgentSummary[] = [];
 const EMPTY_SESSIONS: SessionInfo[] = [];
 const EMPTY_SESSION_PAGING: Record<string, SessionPaging> = {};
 
@@ -21,14 +23,62 @@ interface SessionCatalog {
   paging: Record<string, SessionPaging>;
 }
 
-const projectGenerations = new Map<string, number>();
+type SessionPage = Pick<SessionListPageResponse, "items" | "hasMore">;
 
-function getProjectGeneration(projectId: string): number {
-  return projectGenerations.get(projectId) ?? 0;
+function toPaging(byAgent: Record<string, { hasMore: boolean; loaded: number }>): Record<string, SessionPaging> {
+  return Object.fromEntries(
+    Object.entries(byAgent).map(([agentId, cursor]) => [
+      agentId,
+      { hasMore: cursor.hasMore, offset: cursor.loaded, loadingMore: false },
+    ]),
+  );
 }
 
-function isCurrentProjectGeneration(projectId: string, generation: number): boolean {
-  return getProjectGeneration(projectId) === generation;
+function upsertSessionStart(catalog: SessionCatalog | undefined, session: SessionInfo): SessionCatalog {
+  return {
+    sessions: [session, ...(catalog?.sessions ?? []).filter((item) => item.id !== session.id)],
+    paging: catalog?.paging ?? {},
+  };
+}
+
+function replaceSession(catalog: SessionCatalog, sessionId: string, updated: SessionInfo): SessionCatalog {
+  return {
+    ...catalog,
+    sessions: catalog.sessions.map((item) => (item.id === sessionId ? updated : item)),
+  };
+}
+
+function removeSession(catalog: SessionCatalog, session: SessionInfo): SessionCatalog {
+  const paging = catalog.paging[session.agentId];
+  return {
+    ...catalog,
+    sessions: catalog.sessions.filter((item) => item.id !== session.id),
+    paging: paging
+      ? { ...catalog.paging, [session.agentId]: { ...paging, offset: Math.max(0, paging.offset - 1) } }
+      : catalog.paging,
+  };
+}
+
+function setPagingLoadingMore(catalog: SessionCatalog, agentId: string, loadingMore: boolean): SessionCatalog {
+  const paging = catalog.paging[agentId];
+  if (!paging) return catalog;
+  return { ...catalog, paging: { ...catalog.paging, [agentId]: { ...paging, loadingMore } } };
+}
+
+function appendSessionPage(
+  catalog: SessionCatalog,
+  agentId: string,
+  page: SessionPage,
+  previousOffset: number,
+): SessionCatalog {
+  const existingIds = new Set(catalog.sessions.map((session) => session.id));
+  return {
+    sessions: [...catalog.sessions, ...page.items.filter((session) => !existingIds.has(session.id))],
+    paging: {
+      ...catalog.paging,
+      [agentId]: { hasMore: page.hasMore, offset: previousOffset + page.items.length, loadingMore: false },
+    },
+  };
 }
 
 export async function fetchProjectSessionCatalog(
@@ -42,37 +92,23 @@ export async function fetchProjectSessionCatalog(
   const optimistic = cached?.sessions.filter(
     (session) => initialMessages[session.id] && !fetchedIds.has(session.id),
   ) ?? [];
-  const paging: Record<string, SessionPaging> = Object.fromEntries(
-    Object.entries(result.byAgent).map(([agentId, cursor]) => [
-      agentId,
-      { hasMore: cursor.hasMore, offset: cursor.loaded, loadingMore: false },
-    ]),
-  );
   return {
     sessions: [...optimistic, ...result.sessions],
-    paging,
+    paging: toPaging(result.byAgent),
   };
 }
 
-export function useProjectCatalog(projectId: string, client: ApiClient | null) {
-  const agentsQuery = useQuery({
-    queryKey: projectQueryKeys.agents(projectId),
-    queryFn: () => client!.listAgents(),
-    enabled: Boolean(projectId && client),
-  });
-  const agents = agentsQuery.data ?? EMPTY_AGENTS;
+export function useProjectSessions(projectId: string, client: ApiClient | null) {
   const sessionsQuery = useQuery({
     queryKey: projectQueryKeys.sessions(projectId),
     queryFn: () => fetchProjectSessionCatalog(projectId, client!),
     enabled: Boolean(projectId && client),
   });
-
   return {
-    agents,
     sessions: sessionsQuery.data?.sessions ?? EMPTY_SESSIONS,
     sessionPaging: sessionsQuery.data?.paging ?? EMPTY_SESSION_PAGING,
-    loading: agentsQuery.isPending || sessionsQuery.isPending,
-    error: agentsQuery.error ?? sessionsQuery.error,
+    loading: sessionsQuery.isPending,
+    error: sessionsQuery.error,
   };
 }
 
@@ -127,10 +163,6 @@ export async function ensureProjectSession(
   });
 }
 
-export function getCachedAgents(projectId: string): AgentSummary[] {
-  return queryClient.getQueryData(projectQueryKeys.agents(projectId)) ?? EMPTY_AGENTS;
-}
-
 function getCachedSessions(projectId: string): SessionInfo[] {
   return queryClient.getQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId))?.sessions ?? EMPTY_SESSIONS;
 }
@@ -138,17 +170,6 @@ function getCachedSessions(projectId: string): SessionInfo[] {
 export function getCachedSession(projectId: string, sessionId: string): SessionInfo | undefined {
   return queryClient.getQueryData<SessionInfo>(projectQueryKeys.session(projectId, sessionId))
     ?? getCachedSessions(projectId).find((session) => session.id === sessionId);
-}
-
-export async function ensureProjectAgents(projectId: string, client: ApiClient): Promise<AgentSummary[]> {
-  return queryClient.ensureQueryData({
-    queryKey: projectQueryKeys.agents(projectId),
-    queryFn: () => client.listAgents(),
-  });
-}
-
-export async function refreshProjectAgents(projectId: string): Promise<void> {
-  await queryClient.invalidateQueries({ queryKey: projectQueryKeys.agents(projectId) });
 }
 
 export async function refreshProjectSessions(projectId: string): Promise<void> {
@@ -169,43 +190,20 @@ export async function loadMoreProjectSessions(
   const paging = current?.paging[agentId];
   if (!current || !paging?.hasMore || paging.loadingMore) return;
 
-  queryClient.setQueryData<SessionCatalog>(key, {
-    ...current,
-    paging: { ...current.paging, [agentId]: { ...paging, loadingMore: true } },
-  });
+  queryClient.setQueryData<SessionCatalog>(key, (catalog) =>
+    catalog ? setPagingLoadingMore(catalog, agentId, true) : catalog);
   try {
     const page = await client.listSessionsPage(agentId, {
       limit: SESSION_PAGE_SIZE,
       offset: paging.offset,
     });
     if (!isCurrentProjectGeneration(projectId, generation)) return;
-    queryClient.setQueryData<SessionCatalog>(key, (catalog) => {
-      if (!catalog) return catalog;
-      const existingIds = new Set(catalog.sessions.map((session) => session.id));
-      return {
-        sessions: [
-          ...catalog.sessions,
-          ...page.items.filter((session) => !existingIds.has(session.id)),
-        ],
-        paging: {
-          ...catalog.paging,
-          [agentId]: {
-            hasMore: page.hasMore,
-            offset: paging.offset + page.items.length,
-            loadingMore: false,
-          },
-        },
-      };
-    });
+    queryClient.setQueryData<SessionCatalog>(key, (catalog) =>
+      catalog ? appendSessionPage(catalog, agentId, page, paging.offset) : catalog);
   } catch {
     if (!isCurrentProjectGeneration(projectId, generation)) return;
-    queryClient.setQueryData<SessionCatalog>(key, (catalog) => catalog ? {
-      ...catalog,
-      paging: {
-        ...catalog.paging,
-        [agentId]: { ...catalog.paging[agentId], loadingMore: false },
-      },
-    } : catalog);
+    queryClient.setQueryData<SessionCatalog>(key, (catalog) =>
+      catalog ? setPagingLoadingMore(catalog, agentId, false) : catalog);
   }
 }
 
@@ -228,10 +226,8 @@ export async function createProjectSession(
     status: "active",
   };
   if (!isCurrentProjectGeneration(projectId, generation)) return session;
-  queryClient.setQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId), (catalog) => ({
-    sessions: [session, ...(catalog?.sessions ?? []).filter((item) => item.id !== session.id)],
-    paging: catalog?.paging ?? {},
-  }));
+  queryClient.setQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId), (catalog) =>
+    upsertSessionStart(catalog, session));
   queryClient.setQueryData(projectQueryKeys.session(projectId, session.id), session);
   if (initialMessage) {
     useProjectDataStore.getState().setInitialMessage(projectId, session.id, initialMessage);
@@ -248,10 +244,8 @@ export async function renameProjectSession(
   const generation = getProjectGeneration(projectId);
   const updated = await client.renameSession(session.agentId, session.id, title);
   if (!isCurrentProjectGeneration(projectId, generation)) return updated;
-  queryClient.setQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId), (catalog) => catalog ? {
-    ...catalog,
-    sessions: catalog.sessions.map((item) => item.id === session.id ? updated : item),
-  } : catalog);
+  queryClient.setQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId), (catalog) =>
+    catalog ? replaceSession(catalog, session.id, updated) : catalog);
   queryClient.setQueryData(projectQueryKeys.session(projectId, session.id), updated);
   return updated;
 }
@@ -264,58 +258,8 @@ export async function deleteProjectSession(
   const generation = getProjectGeneration(projectId);
   await client.deleteSession(session.agentId, session.id);
   if (!isCurrentProjectGeneration(projectId, generation)) return;
-  queryClient.setQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId), (catalog) => catalog ? {
-    ...catalog,
-    sessions: catalog.sessions.filter((item) => item.id !== session.id),
-    paging: {
-      ...catalog.paging,
-      [session.agentId]: catalog.paging[session.agentId]
-        ? {
-            ...catalog.paging[session.agentId],
-            offset: Math.max(0, catalog.paging[session.agentId].offset - 1),
-          }
-        : catalog.paging[session.agentId],
-    },
-  } : catalog);
+  queryClient.setQueryData<SessionCatalog>(projectQueryKeys.sessions(projectId), (catalog) =>
+    catalog ? removeSession(catalog, session) : catalog);
   queryClient.removeQueries({ queryKey: projectQueryKeys.session(projectId, session.id) });
   useProjectDataStore.getState().clearInitialMessage(projectId, session.id);
-}
-
-export async function createProjectAgent(
-  projectId: string,
-  client: ApiClient,
-  slug: string,
-  content: string,
-  themeContent?: string,
-): Promise<void> {
-  await client.createAgent(slug, content, themeContent);
-  await refreshProjectAgents(projectId);
-  await refreshProjectSessions(projectId);
-}
-
-export async function updateProjectAgent(
-  projectId: string,
-  client: ApiClient,
-  agentId: string,
-  content: string,
-  themeContent?: string,
-): Promise<void> {
-  await client.updateAgent(agentId, content, themeContent);
-  await refreshProjectAgents(projectId);
-}
-
-export async function deleteProjectAgent(
-  projectId: string,
-  client: ApiClient,
-  agentId: string,
-): Promise<void> {
-  await client.deleteAgent(agentId);
-  await refreshProjectAgents(projectId);
-  await refreshProjectSessions(projectId);
-}
-
-export function clearProjectQueries(projectId: string): void {
-  projectGenerations.set(projectId, getProjectGeneration(projectId) + 1);
-  void queryClient.cancelQueries({ queryKey: projectQueryKeys.all(projectId) });
-  queryClient.removeQueries({ queryKey: projectQueryKeys.all(projectId) });
 }
