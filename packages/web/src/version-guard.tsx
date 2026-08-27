@@ -3,9 +3,9 @@ import { toast } from "sonner";
 import {
   compareAppVersion,
   type AppVersionCompatibility,
-} from "@spherse/app/src/lib/version-compat";
+} from "@spherse/app/version-compat";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
-import { useSettingsStore } from "@spherse/app/src/stores/settings-store";
+import { useSettingsStore } from "@spherse/app/stores/settings";
 import { readWebConnection } from "./host-bridge-web";
 import { VersionBlockOverlay } from "./version-block-overlay";
 

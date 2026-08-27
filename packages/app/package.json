@@ -2,6 +2,18 @@
   "name": "@spherse/app",
   "version": "0.1.0",
   "type": "module",
+  "exports": {
+    "./main": "./src/main.tsx",
+    "./host-bridge": "./src/lib/host-bridge.ts",
+    "./host-bridge-context": "./src/context/host-bridge-context.tsx",
+    "./web-resume-probe": "./src/lib/web-resume-probe.ts",
+    "./version-compat": "./src/lib/version-compat.ts",
+    "./stores/app": "./src/stores/app-store.ts",
+    "./stores/settings": "./src/stores/settings-store.ts",
+    "./ui/button": "./src/components/ui/button.tsx",
+    "./ui/input": "./src/components/ui/input.tsx",
+    "./ui/field": "./src/components/ui/field.tsx"
+  },
   "scripts": {
     "pretest": "npm run build --workspace=@spherse/i18n",
     "test": "vitest run",

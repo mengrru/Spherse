@@ -8,6 +8,7 @@
 
 - `createAppRoot(bridge)` 构建渲染树：QueryClientProvider → HostBridgeProvider → RouterProvider
 - desktop 壳注入 `createElectronHostBridge()`；web 壳注入 `createWebHostBridge()` 外加恢复探针与版本守卫——renderer 代码单份复用，宿主差异全部收敛在 bridge
+- 壳只经 `@spherse/app` package.json `exports` 白名单入口导入（决策见 [ADR-0009](../../dev/decisions/0009-app-exports-whitelist.md)）；ESLint 禁止壳源码经 `@/` alias 深度导入 app 内部模块
 - web 壳首启的连接引导：index 路由经 `bridge.renderConnectPage()` 渲染连接页，连接信息（baseUrl / token）存 localStorage `spherse:connection`，`getServerBaseUrl` / token 从它读取
 - TanStack Query 全局配置（`queries/client.ts`）：`staleTime: Infinity`、`retry: 1`，模块级单例；个别域显式覆盖 gcTime，marketplace-skills 是唯一 `staleTime: 0` 的域
 

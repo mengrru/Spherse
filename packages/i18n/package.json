@@ -21,7 +21,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "node scripts/check-i18n.mjs",
-    "check:i18n": "node scripts/check-i18n.mjs"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "peerDependencies": {
     "react": "^19.0.0"

@@ -15,6 +15,7 @@
 |---|---|---|
 | `packages/core` | 纯 Node.js 核心逻辑（微内核 + Capability） | [README](packages/core/README.md) |
 | `packages/presets` | 内置模板与预置静态内容 | [README](packages/presets/README.md) |
+| `packages/sdk` | Agent Workspace UI SDK（注入 HTML 卡片的 bridge 脚本与宿主类型） | 遵循 `docs/official/` |
 | `packages/i18n` | i18n 基础设施与翻译资源 | [README](packages/i18n/README.md) |
 | `packages/server` | Fastify API 层 | [README](packages/server/README.md) |
 | `packages/app` | 共享 React renderer | [README](packages/app/README.md)（必读） |
@@ -52,14 +53,14 @@
 # 安装依赖
 npm install
 
-# 编译所有 package
+# 编译所有 package（按 workspaces 声明顺序即拓扑序执行：i18n → presets → sdk → core → server → app → web → desktop → landing）
 npm run build
 
 # 监听编译（开发时使用）
-npm run dev --workspace=packages/core    # core 监听
-npm run dev --workspace=packages/presets # presets 监听
-npm run dev --workspace=packages/i18n    # i18n 监听
-npm run dev --workspace=packages/server  # server 监听
+npm run dev -w @spherse/core    # core 监听
+npm run dev -w @spherse/presets # presets 监听
+npm run dev -w @spherse/i18n    # i18n 监听
+npm run dev -w @spherse/server  # server 监听
 
 # 启动桌面应用（会先执行 native dependency rebuild）
 npm run dev

@@ -5,7 +5,7 @@ import type {
   UpdaterHostApi,
   DevToolsHostApi,
   MobileAccessHostApi,
-} from "@spherse/app/src/lib/host-bridge";
+} from "@spherse/app/host-bridge";
 
 const ELECTRON_CAPABILITIES: HostCapabilities = {
   projectManagement: true,

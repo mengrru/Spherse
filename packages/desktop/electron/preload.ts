@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { ElectronAPI, UpdateEvent } from "./types.js";
-import type { MobileAccessEvent } from "../../app/src/lib/host-bridge.js";
+import type { MobileAccessEvent } from "@spherse/app/host-bridge";
 
 const UPDATE_EVENT_CHANNELS = [
   "update-available",
