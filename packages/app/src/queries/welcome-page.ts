@@ -5,6 +5,8 @@ import { projectQueryKeys } from "./keys";
 
 export type WelcomePageResolution = { path: string | null };
 
+export const WELCOME_PAGE_CONFIG_PATH = ".spherse/project.yaml";
+
 async function resolveWelcomePage(client: ApiClient): Promise<WelcomePageResolution> {
   const settings = await client.getWelcomePageSettings();
   if (!settings.path) {

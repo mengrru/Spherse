@@ -4,7 +4,7 @@ export interface ToolGroup {
   label: TranslationKey;
   hint?: TranslationKey;
   toolIds: string[];
-  /** Advanced/dangerous groups render collapsed under a warning header. */
+  /** Advanced groups render collapsed under a warning header. */
   advanced?: boolean;
 }
 
@@ -50,6 +50,12 @@ export const TOOL_GROUPS: ToolGroup[] = [
     label: "tool.manage_trigger",
     hint: "tool.manage_trigger_hint",
     toolIds: ["manage_trigger"],
+    advanced: true,
+  },
+  {
+    label: "tool.manage_project_config",
+    hint: "tool.manage_project_config_hint",
+    toolIds: ["manage_project_config"],
     advanced: true,
   },
 ];

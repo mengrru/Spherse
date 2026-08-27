@@ -52,8 +52,12 @@ describe("WelcomePage structure", () => {
     expect(componentSource).toContain("src={previewUrl}");
   });
 
-  it("invalidates the cached resolution on bus reconnection", () => {
-    expect(componentSource).toContain("void invalidateWelcomePage(projectId)");
+  it("delegates settings invalidation to WelcomePageQueryBridge (no local invalidation)", () => {
+    expect(componentSource).not.toContain("invalidateWelcomePage");
+    expect(componentSource).not.toContain("useReconnectedSync");
+    const bridgeSource = readFileSync(join(currentDir, "WelcomePageQueryBridge.tsx"), "utf8");
+    expect(bridgeSource).toContain("WELCOME_PAGE_CONFIG_PATH");
+    expect(bridgeSource).toContain("invalidateWelcomePage(projectId)");
   });
 
   it("normalizes backslashes so windows paths compare equal", () => {

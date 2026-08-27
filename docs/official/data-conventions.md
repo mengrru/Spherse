@@ -228,8 +228,9 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
 2. 读取 `presets.json` 生成 `PRESET_SKILLS`、`PRESET_AGENTS` 和 `PRESET_PROMPT_TEMPLATES` 常量（分别声明预置 skill 列表、预置 agent 列表和预置 prompt template 列表）
 3. 递归读取 `skills/` 下声明的预置 skill 目录，生成 `PRESET_SKILL_SOURCES` 常量（包含每个 skill 的完整文件内容）
 4. 读取 `templates/prompt-templates/<id>.md` 的正文，合并到 `PRESET_PROMPT_TEMPLATES` 每个条目的 `prompt` 字段
+5. 读取 `templates/preset-agents/<dir>.md` 的完整内容（含 frontmatter `name`），合并到 `PRESET_AGENTS` 每个条目的 `content` 字段
 
-如果 `presets.json` 声明的 skill dir 在 `skills/` 下不存在，或 `presetPromptTemplates` 声明的 `id` 在 `templates/prompt-templates/` 下没有对应 `.md`，构建时报错退出。
+如果 `presets.json` 声明的 skill dir 在 `skills/` 下不存在、`presetPromptTemplates` 声明的 `id` 在 `templates/prompt-templates/` 下没有对应 `.md`，或 `presetAgents` 声明的 `dir` 在 `templates/preset-agents/` 下没有对应 `.md`（或缺 frontmatter `name`），构建时报错退出。
 
 ### presets.json 格式
 
@@ -246,7 +247,9 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
     { "dir": "spherse-write-html" },
     { "dir": "spherse-create-skill" }
   ],
-  "presetAgents": [],
+  "presetAgents": [
+    { "dir": "assistant", "slugBase": "assistant" }
+  ],
   "presetPromptTemplates": [
     { "id": "worldview-assistant", "name": "世界观创作助手" },
     { "id": "roleplay", "name": "角色扮演" }
@@ -255,7 +258,7 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
 ```
 
 - `presetSkills[].dir`：对应 `packages/presets/skills/` 下的目录名，该目录内容会被打包为 builtin skill 源码（`PRESET_SKILL_SOURCES`），由 `SkillStore` 在运行时内存合并（source 为 `builtin`），不复制到项目的 `.spherse/skills/`
-- `presetAgents[].name`：预置 agent 的展示名称，会通过 `AGENT_TEMPLATE` 模板生成 profile.md
+- `presetAgents[].dir`：对应 `packages/presets/templates/preset-agents/<dir>.md` 文件名（不含扩展名），该文件是完整 agent profile（frontmatter 声明 `name`、`tools` 等，正文为 system prompt），构建时整体嵌入 `PRESET_AGENTS` 条目的 `content` 字段；展示 `name` 从 frontmatter 提取，不在 presets.json 重复声明
 - `presetAgents[].slugBase`：预置 agent 的目录 slug 前缀（与 shortId 拼接后形成 agent slug）
 - `presetPromptTemplates[].id`：对应 `packages/presets/templates/prompt-templates/<id>.md` 文件名（不含扩展名），该文件正文作为 prompt 内容合并到 `PRESET_PROMPT_TEMPLATES` 的 `prompt` 字段；构建时缺失对应文件会报错
 - `presetPromptTemplates[].name`：prompt template 在 Agent 创建对话框徽章上展示的名称
@@ -265,7 +268,7 @@ tool update 的 `details.type === "image"` 时，前端 chat 会按 image card �
 新建项目时，`createProject` 检测到项目首次创建，调用 `initPresets()` 执行以下操作：
 
 - 创建空的 `.spherse/skills/` 目录（供用户自建 project-local skill）
-- 根据声明创建预置 agent profile（使用 `AGENT_TEMPLATE` 模板，替换默认名称）。当前 `presetAgents` 为空，不创建任何预置 agent；将来添加条目即可恢复注入
+- 根据 `PRESET_AGENTS` 声明创建预置 agent profile（`content` 为模板完整内容，id/createdAt 由 `ProjectStore.createAgent` 生成）。当前内置「小助手」（slugBase `assistant`）：通用型助手，开启除 `run_command` 外的全部工具（含 `manage_agent`、`manage_trigger`、`memory_save`/`memory_recall` 与 `manage_project_config`，其中写操作仍受审批门控）
 
 builtin skill 不再注入到磁盘，而是由 `SkillStore` 在运行时从 `PRESET_SKILL_SOURCES` 内存合并（source 为 `builtin`，随 app 升级更新）。用户在 `.spherse/skills/` 下自建的 project-local skill（source 为 `project`）按 name 覆盖同名 builtin。
 

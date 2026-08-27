@@ -12,7 +12,7 @@ describe("sync-templates", () => {
     fs.readFileSync(path.join(rootDir, "presets.json"), "utf-8"),
   );
 
-  it("generates presets.ts with PRESET_SKILLS and PRESET_AGENTS matching presets.json", () => {
+  it("generates presets.ts with PRESET_SKILLS and PRESET_AGENTS matching presets.json", async () => {
     const content = fs.readFileSync(
       path.join(generatedDir, "presets.ts"),
       "utf-8",
@@ -23,8 +23,21 @@ describe("sync-templates", () => {
     for (const skill of presetsConfig.presetSkills) {
       expect(content).toContain(`"dir": "${skill.dir}"`);
     }
+
+    const { PRESET_AGENTS } = await import("../src/generated/presets.js");
+    expect(PRESET_AGENTS.length).toBe(presetsConfig.presetAgents.length);
+
     for (const agent of presetsConfig.presetAgents) {
-      expect(content).toContain(`"name": "${agent.name}"`);
+      const template = fs.readFileSync(
+        path.join(rootDir, "templates", "preset-agents", `${agent.dir}.md`),
+        "utf-8",
+      );
+      const name = template.match(/^name:\s*(.+)$/m)?.[1].trim();
+      expect(name).toBeDefined();
+      const generated = PRESET_AGENTS.find((a) => a.slugBase === agent.slugBase);
+      expect(generated).toBeDefined();
+      expect(generated?.name).toBe(name);
+      expect(generated?.content).toBe(template);
       expect(content).toContain(`"slugBase": "${agent.slugBase}"`);
     }
   });

@@ -19,6 +19,7 @@ import { useApiClient } from "../lib/use-connection";
 import { useConnection } from "../lib/use-connection";
 import { ContentQueryBridge } from "../features/content-browser/ContentQueryBridge";
 import { ThemeQueryBridge } from "../features/project-settings/theme-settings/ThemeQueryBridge";
+import { WelcomePageQueryBridge } from "../features/welcome-page/WelcomePageQueryBridge";
 
 export function ProjectScope() {
   const { projectId } = useParams();
@@ -83,6 +84,7 @@ export function ProjectScope() {
           <TriggerEventBridge />
           <ContentQueryBridge />
           <ThemeQueryBridge />
+          <WelcomePageQueryBridge />
       </div>
     </ProjectProvider>
   );

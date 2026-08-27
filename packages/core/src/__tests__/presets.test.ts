@@ -42,7 +42,31 @@ describe("initPresets", () => {
     for (const presetAgent of PRESET_AGENTS) {
       const profile = profiles.find((p) => p.name === presetAgent.name);
       expect(profile).toBeDefined();
-      expect(profile!.slug).toMatch(new RegExp(`^${presetAgent.slug}-[a-f0-9]{6}$`));
+      expect(profile!.slug).toMatch(new RegExp(`^${presetAgent.slugBase}-[a-f0-9]{6}$`));
+      expect(profile!.systemPrompt.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("creates the assistant preset with every tool except run_command", async () => {
+    const { initPresets } = await import("../presets.js");
+    await initPresets(projectStore, spherseDir, createSilentLogger());
+
+    const profile = projectStore.listAgents().find((p) => p.name === "小助手");
+    expect(profile).toBeDefined();
+    expect(profile!.tools).not.toContain("run_command");
+    for (const tool of profile!.tools ?? []) {
+      expect(tool).not.toMatch(/^mcp__/);
+    }
+    for (const expected of [
+      "read_file",
+      "write_file",
+      "manage_agent",
+      "manage_trigger",
+      "memory_save",
+      "memory_recall",
+      "manage_project_config",
+    ]) {
+      expect(profile!.tools).toContain(expected);
     }
   });
 

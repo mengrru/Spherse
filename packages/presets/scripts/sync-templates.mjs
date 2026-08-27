@@ -32,9 +32,25 @@ for (const skill of presetsConfig.presetSkills) {
   }
 }
 
+const presetAgentsDir = join(templatesDir, "preset-agents");
+const presetAgents = presetsConfig.presetAgents.map((agent) => {
+  const filePath = join(presetAgentsDir, `${agent.dir}.md`);
+  if (!existsSync(filePath)) {
+    console.error(`preset agent template not found: ${agent.dir}.md`);
+    process.exit(1);
+  }
+  const content = readFileSync(filePath, "utf-8");
+  const nameMatch = content.match(/^name:\s*(.+)$/m);
+  if (!nameMatch) {
+    console.error(`preset agent template ${agent.dir}.md is missing a frontmatter name`);
+    process.exit(1);
+  }
+  return { name: nameMatch[1].trim(), slugBase: agent.slugBase, content };
+});
+
 const presetsTsContent = `export const PRESET_SKILLS = ${JSON.stringify(presetsConfig.presetSkills, null, 2)} as const;
 
-export const PRESET_AGENTS: readonly { name: string; slugBase: string }[] = ${JSON.stringify(presetsConfig.presetAgents, null, 2)};
+export const PRESET_AGENTS: readonly { name: string; slugBase: string; content: string }[] = ${JSON.stringify(presetAgents, null, 2)};
 `;
 writeFileSync(join(generatedDir, "presets.ts"), presetsTsContent, "utf-8");
 console.log("synced: presets.json → src/generated/presets.ts (PRESET_SKILLS, PRESET_AGENTS)");

@@ -1006,6 +1006,10 @@ export const zhCN = {
   "tool.emit_trigger_event": "触发事件",
   // 独立工具 tooltip：触发事件的作用说明
   "tool.emit_trigger_event_hint": "允许智能体发出自定义事件，触发本项目内其它智能体的事件触发器，使其自动执行预设任务",
+  // 独立工具标签：管理项目配置（manage_project_config，agent 可读取/修改项目级配置，属高级操作）
+  "tool.manage_project_config": "管理项目配置",
+  // 独立工具 tooltip：管理项目配置的作用说明
+  "tool.manage_project_config_hint": "允许智能体查看并修改项目级配置",
   // 独立工具标签：运行命令（run_command，agent 执行 shell 命令，高危，需逐次人工确认）
   "tool.run_command": "运行命令",
   // 独立工具 tooltip：运行命令的安全提示——强调任意命令、逐次确认、有风险
@@ -1022,8 +1026,8 @@ export const zhCN = {
   "tool.manage_trigger": "管理触发器",
   // 独立工具 tooltip：管理触发器的作用与风险说明
   "tool.manage_trigger_hint": "允许智能体查看、创建、修改和删除本项目内智能体的定时/事件触发器。新建、修改和删除前都会要求你确认；触发器可让智能体在无人值守时自动运行",
-  // agent 配置工具权限区的高级功能折叠分组标题（高危工具收起在此）
-  "tool.advanced_section": "高级 / 危险操作",
+  // agent 配置工具权限区的高级功能折叠分组标题（高级工具收起在此）
+  "tool.advanced_section": "高级操作",
 
   // --- Command Card（run_command 工具调用结果卡片与审批） ---
   // 审批态标题：等待用户批准执行命令

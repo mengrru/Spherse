@@ -8,7 +8,9 @@
     { "dir": "spherse-write-html" },
     { "dir": "spherse-create-skill" }
   ],
-  "presetAgents": [],
+  "presetAgents": [
+    { "dir": "assistant", "slugBase": "assistant" }
+  ],
   "presetPromptTemplates": [
     { "id": "worldview-assistant", "name": "世界观创作助手" },
     { "id": "roleplay", "name": "角色扮演" }
