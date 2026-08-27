@@ -1,6 +1,6 @@
 import type { FileEntry } from "../../lib/types";
 
-export type TreeItemType = "file" | "directory";
+type TreeItemType = "file" | "directory";
 
 export interface TreeItem {
   name: string;

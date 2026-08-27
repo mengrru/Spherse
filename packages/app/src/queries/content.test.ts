@@ -81,12 +81,23 @@ describe("directoryKeyMatchesChangedPath", () => {
 });
 
 describe("invalidateProjectFileQueries with a directory path", () => {
+  const projectId = "p1";
+
   beforeEach(() => {
     queryClient.clear();
   });
 
+  it("normalizes windows separators before matching directory keys", async () => {
+    queryClient.setQueryData(projectQueryKeys.directory(projectId, "docs"), []);
+    queryClient.setQueryData(projectQueryKeys.directory(projectId, "other"), []);
+
+    await invalidateProjectFileQueries(projectId, "docs\\a.md");
+
+    expect(queryClient.getQueryState(projectQueryKeys.directory(projectId, "docs"))?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(projectQueryKeys.directory(projectId, "other"))?.isInvalidated).toBe(false);
+  });
+
   it("invalidates open file content queries under the replaced directory", async () => {
-    const projectId = "p1";
     const staleData = { path: ".spherse/skills/demo/SKILL.md", content: "version: 0.1.0", binary: false };
     queryClient.setQueryData(projectQueryKeys.content(projectId, ".spherse/skills/demo/SKILL.md"), staleData);
     queryClient.setQueryData(projectQueryKeys.content(projectId, "notes/other.md"), {

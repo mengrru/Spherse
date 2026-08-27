@@ -205,6 +205,32 @@ test("delete a file via context menu and confirm", async () => {
   }
 });
 
+test("delete an expanded directory removes it with its subtree", async () => {
+  const project = await createFileTreeProject();
+  const { app, page } = await launchFileTreeApp(project);
+
+  try {
+    await treeButton(page, "src").click();
+    await treeButton(page, "components").click();
+    await expect(treeButton(page, "ui")).toBeVisible();
+
+    await treeButton(page, "src").click({ button: "right" });
+    await page.getByRole("menuitem", { name: "删除" }).click();
+
+    const dialog = page.locator('[role="alertdialog"]');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("src");
+
+    await dialog.getByRole("button", { name: "删除" }).click();
+    await expect(dialog).not.toBeVisible();
+
+    await expect(treeButton(page, "src")).not.toBeVisible({ timeout: 5000 });
+    await expect(treeButton(page, "components")).not.toBeVisible();
+  } finally {
+    await app.close();
+  }
+});
+
 test("cancel deletion via alert dialog", async () => {
   const project = await createFileTreeProject();
   const { app, page } = await launchFileTreeApp(project);

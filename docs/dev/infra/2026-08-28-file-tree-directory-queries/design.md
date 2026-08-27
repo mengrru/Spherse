@@ -65,7 +65,8 @@ deleteTarget: DeleteTarget | null
 - `toggleDir(path)`：Set 增删
 - `requestCreate(item, action)`：目录 → 以目录为 parent 并展开；文件 → 以 `parentDirPath` 为 parent
 - `submitCreate`：mkdir / touchFile 成功后 `invalidateProjectFileQueries(projectId, targetPath)`（精准失效父目录）；失败仅 toast，保留 `creating`（输入框不消失，与现状一致）
-- `confirmDelete`：删除成功后失效变更路径；同时清理 `expandedPaths` 中被删路径及其后代（避免本地删除后重建同名目录时幽灵展开态）
+- `confirmDelete`：删除成功后失效变更路径，并清理 `expandedPaths` 中被删路径及其后代（失败路径不清理，保留展开态）
+- controller 在 `projectId` 变化时重置交互状态（expandedPaths / creating / deleteTarget），避免项目切换残留
 - 根 query（loading / 空态）上移到 `FileTree` 组件
 
 ### 组件层
@@ -89,6 +90,8 @@ deleteTarget: DeleteTarget | null
 
 - fs-watch 外部删除已展开目录且之后重建同名目录：`expandedPaths` 残留会使新目录自动展开（无数据正确性问题，children 来自新请求）；不为此外部删除场景引入额外的展开态清理机制
 - predicate 匹配区分大小写：大小写不敏感文件系统上 fs-watch 路径大小写与 key 不一致时会 miss（现状靠全量失效免疫）；记录为已知限制
+- `parentDirOf`（queries/content.ts）与 `parentDirPath`（tree-model.ts）为两份同逻辑拷贝：为避免 queries → components 反向依赖，不共享 import；改动路径语义时需同步两处
+- 本变更前即无文件树「项目切换 / 重连」专属 E2E 用例；验收以既有 file-tree spec 全量通过 + 新增删除已展开目录用例为准
 
 ## 影响文件
 
@@ -107,12 +110,12 @@ deleteTarget: DeleteTarget | null
 
 ## 测试计划
 
-- 单测：`tree-model.test.ts`（buildTreeItems 过滤/排序/路径、parentDirPath）；`content.test.ts`（directory predicate：父目录命中、后代命中、兄弟不命中；全量失效路径不变）
-- E2E：`npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts`（展开/折叠、重新展开取新、context menu 创建文件/文件夹、删除、取消）
+- 单测：`tree-model.test.ts`（buildTreeItems 过滤/排序/路径、parentDirPath）；`content.test.ts`（directory predicate：父目录命中、后代命中、兄弟不命中、反斜杠归一化；全量失效路径不变）
+- E2E：`npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts`（展开/折叠、重新展开取新、context menu 创建文件/文件夹、删除文件、删除已展开目录、取消）
 
 ## 验收标准（对齐 followup doc）
 
 - 本地 state 不再保存服务端 children 快照
 - 删除 `mergeExpandedState` / `mergeRefreshedTree`
 - fs-watch 按父目录精准失效
-- 创建、删除、嵌套展开、重连和项目切换 E2E 覆盖保持通过
+- 创建、删除、嵌套展开、重新展开取新等 E2E 覆盖通过（`e2e/file-tree.spec.ts` 全量）

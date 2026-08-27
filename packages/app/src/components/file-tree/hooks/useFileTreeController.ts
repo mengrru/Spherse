@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../../lib/api";
@@ -35,6 +35,12 @@ export function useFileTreeController(
   const [expandedPaths, setExpandedPaths] = useState<ReadonlySet<string>>(() => new Set());
   const [creating, setCreating] = useState<CreatingState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+
+  useEffect(() => {
+    setExpandedPaths(new Set());
+    setCreating(null);
+    setDeleteTarget(null);
+  }, [projectId]);
 
   const toggleDir = useCallback((path: string) => {
     setExpandedPaths((prev) => {
@@ -98,22 +104,22 @@ export function useFileTreeController(
     if (!deleteTarget) return;
     const target = deleteTarget;
     setDeleteTarget(null);
-    setExpandedPaths((prev) => {
-      const next = new Set<string>();
-      let changed = false;
-      for (const path of prev) {
-        if (path === target.path || path.startsWith(`${target.path}/`)) {
-          changed = true;
-          continue;
-        }
-        next.add(path);
-      }
-      return changed ? next : prev;
-    });
     void client
       .deleteContent(target.path)
       .then(async () => {
         onDeleted?.(target.path);
+        setExpandedPaths((prev) => {
+          const next = new Set<string>();
+          let changed = false;
+          for (const path of prev) {
+            if (path === target.path || path.startsWith(`${target.path}/`)) {
+              changed = true;
+              continue;
+            }
+            next.add(path);
+          }
+          return changed ? next : prev;
+        });
         await invalidateProjectFileQueries(projectId, target.path);
       })
       .catch((err: unknown) => {
