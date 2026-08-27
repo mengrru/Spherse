@@ -1,6 +1,6 @@
 # @spherse/core
 
-纯 Node.js 核心逻辑，采用**微内核 + Capability** 架构。本文是 core 的开发守则——新代码必须遵守，review 时以此为准。架构细节的完整描述见 `docs/official/architecture.md`，目录索引见 `docs/official/project-structure.md`。
+纯 Node.js 核心逻辑，采用**微内核 + Capability** 架构。本文是 core 的开发守则——新代码必须遵守，review 时以此为准。架构细节见 `docs/official/architecture/core.md` 与 `docs/official/architecture/capabilities.md`（按任务路由查 `docs/official/README.md`），目录索引见 `docs/official/project-structure.md`。
 
 ## 架构总览
 

@@ -5,27 +5,45 @@
 设计文档：`docs/official/`
 待办事项：`docs/dev/backlog.md`
 
-## 项目目录索引
+## 文档地图
 
-```
-spherse/
-├── packages/
-│   ├── core/        # @spherse/core — 纯 Node.js 核心逻辑
-│   ├── presets/     # @spherse/presets — 内置模板与预置静态内容
-│   ├── i18n/        # @spherse/i18n — i18n 基础设施与翻译资源
-│   ├── server/      # @spherse/server — Fastify API 层
-│   ├── app/         # @spherse/app — 共享 React renderer（前端源码）
-│   ├── desktop/     # @spherse/desktop — Electron 桌面壳（main/preload/electron 基础设施）
-│   ├── web/         # @spherse/web — Web 版本壳（规划中）
-│   └── landing/     # @spherse/landing — GitHub Pages 项目介绍页
-├── docs/
-│   ├── official/    # 正式项目文档（始终与代码同步）
-│   └── dev/         # 开发过程文档（容易过时）
-├── package.json     # npm workspace root
-└── tsconfig.base.json
-```
+本文是 agent 与新成员的入口：只维护导航、命令和红线，细节一律单一权威来源 + 链接。完整目录索引见 [`docs/official/project-structure.md`](docs/official/project-structure.md)。
 
-完整目录索引见 [`docs/official/project-structure.md`](docs/official/project-structure.md)。
+### Package 一览
+
+| Package | 职责 | 包级守则 |
+|---|---|---|
+| `packages/core` | 纯 Node.js 核心逻辑（微内核 + Capability） | [README](packages/core/README.md) |
+| `packages/presets` | 内置模板与预置静态内容 | 遵循 `docs/official/` |
+| `packages/i18n` | i18n 基础设施与翻译资源 | 遵循 `docs/official/` |
+| `packages/server` | Fastify API 层 | [README](packages/server/README.md) |
+| `packages/app` | 共享 React renderer | [README](packages/app/README.md)（必读） |
+| `packages/desktop` | Electron 桌面壳（main/preload/基础设施） | 遵循 `docs/official/` |
+| `packages/web` | Web 版本壳（移动端 PWA） | 遵循 `docs/official/` |
+| `packages/landing` | GitHub Pages 项目介绍页 | 遵循 `docs/official/` |
+
+### 读：按需加载
+
+- 全局架构、package 边界、跨包契约 → [`docs/official/architecture/index.md`](docs/official/architecture/index.md)，按任务路由查 [`docs/official/README.md`](docs/official/README.md)
+- 数据文件格式与存储约定 → [`docs/official/data-conventions.md`](docs/official/data-conventions.md)
+- 目录结构 → [`docs/official/project-structure.md`](docs/official/project-structure.md)
+- 包内规范 → 对应 package 的 README
+- 历史决策与实施记录（容易过时） → `docs/dev/`，开发新 feature 时优先参考 `docs/official/`
+
+### 写：变更 → 必须同步的文档
+
+| 本次变更 | 需同步 |
+|---|---|
+| 新增/移动/删除文件、目录、package | `docs/official/project-structure.md` |
+| 架构决策、package 边界、capability/装配、API contract 方式 | `docs/official/architecture/` 对应域文件（索引见 `docs/official/README.md`） |
+| 数据文件格式、存储位置约定 | `docs/official/data-conventions.md` |
+| 包内编码/review 规范 | 对应 `packages/{pkg}/README.md` |
+| 用户可见文案 | 加载 **i18n** skill |
+| design system、主题机制、聊天 DOM/布局/CSS token | 检查 `packages/presets/skills/` 下两个 theme skill |
+| feature spec/plan、infra design、bugfix 分析、调研 | `docs/dev/{features,infra,bugfix,investigation}/{yyyy-MM-dd-name}/` |
+| 完成 backlog 条目 | `docs/dev/backlog.md` 勾选，并补充新增条目 |
+
+完成 feature/infra/bugfix 后、或用户要求 commit 前，加载 **doc-sync** skill 按上表逐项检查同步。
 
 ## 启动和联调方式
 
@@ -98,19 +116,13 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
 
 ## 开发规范
 
-- **文档规范**：
-  - `docs/official/` — 正式项目文档，始终与代码保持同步
-  - `docs/dev/features/{yyyy-MM-dd-feature-name}/` — **开发中的 feature spec 和 implementation plan，务必放此目录，不要放到其它位置**
-  - `docs/dev/infra/{yyyy-MM-dd-name}/` — 基础设施相关的 design 和 plan
-  - `docs/dev/bugfix/{yyyy-MM-dd-bugfix-name}/` — bugfix 分析与修复思路，包含 `design.md`（问题分析与方案）和 `plan.md`（实施计划）
-  - `docs/dev/` 下的文档容易过时，开发新 feature 时应优先参考 `docs/official/`，开发完成后根据情况更新 `docs/official/`
-- **`docs/official/` 维护**：完成 feature 后，检查 `docs/official/` 下是否有需要同步更新的文档（如新增文件/目录、新增工具、架构变更等），保持文档与代码一致
-- **Backlog 维护**：每完成一个 feature 后，更新 `docs/dev/backlog.md` 中对应条目的状态（`[ ]` → `[x]`），并补充新增的 backlog 条目
+- **过程文档**：feature spec/plan、infra design、bugfix 分析必须放 `docs/dev/` 对应子目录（见文档地图「写」表），不要放到其它位置；`docs/dev/` 下的文档是历史记录，容易过时
+- **文档同步**：按文档地图「写」表维护；完成 feature/infra/bugfix 后、或用户要求 commit 前，加载 **doc-sync** skill 逐项检查
 - **预置内容维护**：修改 `packages/presets/templates/` 下模板后，应通过 `npm run build --workspace=packages/presets` 或 root `npm run build` 触发同步脚本，确保生成内容可用
 - **用户主题 Skill 维护**：修改 design system、全局主题机制、聊天窗口 DOM 结构、聊天布局、CSS token 或可主题化选择器时，必须检查 `packages/presets/skills/spherse-create-ui-theme/` 和 `packages/presets/skills/spherse-create-agent-chat-theme/` 是否需要同步更新
 - **E2E 验证选择**：feature 实现完成后，应根据当前变更影响面选择可能受影响的 E2E 覆盖场景运行测试；不要求每次都跑全量 E2E。可通过 `npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts` 跑单个 spec，或用 `-g` 按 case 名过滤。改动涉及 Electron 启动、项目恢复、路由、store、server API、文件树、content browser、chat/session、文本选择发起会话、native dependency 或 E2E helper 时，优先运行对应 E2E；合并/发布前再跑 `npm run verify:e2e`
 - **手动 commit**：完成代码后不要自动 commit，等待用户明确要求时再提交
-- **commit 前检查**：用户提示 commit 后，先确认 `docs/dev/backlog.md` 和 `docs/official/` 已根据本次变更得到应有的更新，再执行 commit
+- **commit 前检查**：用户提示 commit 后，先加载 **doc-sync** skill 确认文档同步完成，再执行 commit
 
 ## 编码规范
 

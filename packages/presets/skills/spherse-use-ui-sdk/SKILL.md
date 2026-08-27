@@ -5,7 +5,7 @@ description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK �
 
 # UI SDK — `window.spherse`
 
-Spherse 中的 HTML 内容（欢迎页、Content Browser 预览、聊天 HtmlCard）都在 iframe 中展示。**App 会自动向每个 HTML 注入一个零依赖的 SDK 脚本**，暴露 `window.spherse`（大小写不敏感，`window.Spherse` 是别名）。你**不需要**手写 `postMessage`、不需要内联 Promise wrapper、不需要引入任何脚本标签 —— 直接用即可。
+Spherse 中的 HTML 内容（欢迎页、Content Browser 预览、聊天 HtmlCard）都在 iframe 中展示。**App 会自动向每个 HTML 注入一个零依赖的 SDK 脚本**，暴露 `window.spherse`（另有别名 `window.Spherse`，其它大小写不可用）。你**不需要**手写 `postMessage`、不需要内联 Promise wrapper、不需要引入任何脚本标签 —— 直接用即可。
 
 ## 快速上手
 

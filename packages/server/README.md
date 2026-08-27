@@ -1,6 +1,6 @@
 # @spherse/server
 
-Fastify API 层，为 Spherse 桌面应用提供多项目 HTTP + WebSocket 服务。在 Electron main process 中以 `fastify.listen(127.0.0.1, 0)` 启动，renderer 通过 `@spherse/server/contracts` 子入口复用同一套 TypeBox schema 校验边界 JSON。
+Fastify API 层，为 Spherse 桌面应用提供多项目 HTTP + WebSocket 服务。在 Electron main process 中以固定默认端口 `53972` 绑定 `127.0.0.1` 启动（`EADDRINUSE` 时回退 OS 随机端口），renderer 通过 `@spherse/server/contracts` 子入口复用同一套 TypeBox schema 校验边界 JSON。
 
 ## Routes & Contracts 规范
 
@@ -52,7 +52,7 @@ Fastify API 层，为 Spherse 桌面应用提供多项目 HTTP + WebSocket 服�
    );
    ```
 
-   当前覆盖：session messages、turn context。其余 route 一律用机制 1。
+   当前覆盖（含 pi 复杂嵌套对象或需要 handler 内双重校验的端点）：sessions 全部读端点、skills 创建/install、content 目录与读取、debug turn-context、marketplace install、data 四个 body。其余 route 一律用机制 1。
 
 3. **WebSocket** —— 不走 Fastify schema，收到的 JSON 必须通过 contract parser 校验，非法消息返回统一 error event：
 

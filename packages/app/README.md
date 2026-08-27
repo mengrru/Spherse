@@ -2,7 +2,7 @@
 
 Spherse 的共享 React renderer。desktop 与 web 壳均复用本 package；这里负责路由、页面与 feature UI、服务端状态缓存、客户端状态和 UI SDK host bridge，不包含 Electron main/preload 或 Fastify 服务端实现。
 
-正式系统设计见 [`../../docs/official/architecture.md`](../../docs/official/architecture.md)，完整目录索引见 [`../../docs/official/project-structure.md`](../../docs/official/project-structure.md)。本文同时是 `packages/app` 的开发守则，新代码和 review 必须遵守。
+正式系统设计见 [`../../docs/official/README.md`](../../docs/official/README.md)（前端域：`architecture/frontend.md`、`architecture/chat.md`、`architecture/theming.md`），完整目录索引见 [`../../docs/official/project-structure.md`](../../docs/official/project-structure.md)。本文同时是 `packages/app` 的开发守则，新代码和 review 必须遵守。
 
 已识别但尚未实施的架构优化见 [`../../docs/dev/infra/2026-08-22-frontend-architecture-followup/followup.md`](../../docs/dev/infra/2026-08-22-frontend-architecture-followup/followup.md)。
 
@@ -76,7 +76,7 @@ src/
 
 ### TanStack Query
 
-- 服务端数据不得复制进 Zustand。`project-data-store` 只保存初始消息、streaming session id、trigger 启用标记等运行时投影。
+- 服务端数据不得复制进 Zustand。`project-data-store` 只保存初始消息与 streaming session id 等运行时投影。
 - Query 代码统一放在 `queries/`：`client.ts` 持有单例，`keys.ts` 定义 key factory，领域文件管理查询、mutation、失效和命令式访问。
 - query key 必须包含 `projectId`；关闭项目时清除该项目的全部 query cache。
 - React 组件使用 query hook；UI SDK、bus callback 等非 React 边界使用 query 层提供的命令式 facade，不在调用方拼 key 或实现 cache-first fallback。
@@ -132,7 +132,7 @@ src/
 - 业务组件不使用 `dark:`；暗色适配由 CSS 变量完成。
 - 使用逻辑属性支持 RTL：`ms/me`、`ps/pe`、`start/end`、`text-start/text-end`。
 - 新颜色在 `styles.css` 注册 `--sp-*` 和对应 `--color-*`。
-- 修改主题 token、可主题化 `data-*` hook、聊天 DOM/布局时，同步检查 `packages/presets/skills/create-ui-theme/` 与 `create-agent-chat-theme/`。
+- 修改主题 token、可主题化 `data-*` hook、聊天 DOM/布局时，同步检查 `packages/presets/skills/spherse-create-ui-theme/` 与 `spherse-create-agent-chat-theme/`。
 - 可能受用户主题 `transform/filter/backdrop-filter` 影响的全屏浮层必须 portal 到 `document.body`。
 
 ## API 与 i18n

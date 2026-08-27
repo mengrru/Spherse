@@ -339,7 +339,7 @@ spherse/
 │   │   └── src/
 │   │       ├── styles.css            # Tailwind v4 + --sp-* token 体系（从 app 精简复制）
 │   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）及单测
-│   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型，自建 locale catalog）
+│   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型与 locale 工具，自建 catalog）
 │   │       │   ├── index.ts          # useLandingI18n hook + localStorage 持久化
 │   │       │   └── locales/          # zh-CN / zh-TW / en 三语
 │   │       ├── components/           # 页面组件（Hero、Carousel、FeatureCards、FeatureModal、LanguageSwitcher 等）
@@ -348,7 +348,22 @@ spherse/
 ├── scripts/
 │   └── rebuild-native.mjs            # Electron native dependency rebuild
 ├── docs/
-│   ├── official/                     # 正式项目文档（始终与代码同步）
+│   ├── official/                     # 正式项目文档（始终与代码同步；索引与写作规范见 README.md）
+│   │   ├── README.md                 # 按任务路由的索引 + official 写作规范
+│   │   ├── architecture/             # 架构文档（按域拆分）
+│   │   │   ├── index.md              # 全局概览 + package 边界
+│   │   │   ├── core.md               # 内核/会话运行时/store/PM 门面
+│   │   │   ├── capabilities.md       # 能力模块与工具聚合
+│   │   │   ├── security.md           # 访问策略/审批/run_command 安全模型
+│   │   │   ├── server.md             # Fastify/contracts/WS/bus
+│   │   │   ├── desktop.md            # Electron/设置/模型配置/更新
+│   │   │   ├── frontend.md           # 路由/查询缓存/feature 组织
+│   │   │   ├── chat.md               # 聊天流式/重试/历史/滚动
+│   │   │   ├── ui-sdk.md             # UI SDK 与注入桥
+│   │   │   ├── theming.md            # token 体系/三级主题/DOM 入口
+│   │   │   └── i18n.md               # i18n 架构
+│   │   ├── data-conventions.md       # 数据文件格式与存储约定
+│   │   └── project-structure.md      # 本文件：完整目录索引
 │   └── dev/                          # 开发过程文档（容易过时）
 │       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
 │       ├── infra/                    # {yyyy-MM-dd-name}/ 下放基础设施 design + plan
