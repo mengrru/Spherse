@@ -57,6 +57,7 @@
 - [ ] **chat 域小清理**：① 删除 `packages/core/src/session/event-middlewares.ts` 的 `persistEventMiddleware` 死代码（AgentRunner 用功能更全的私有 `persistMiddleware`，公共版无任何消费方）；② `packages/app/src/lib/web-resume-probe.ts` 反向 import chat runtime 与 bus store，违反「lib 不反向依赖 feature」守则——挪进 bridge 层或 features/chat，消除 app README 守则的唯一例外。
 - [ ] **server 契约缺口修复（4 处）**：① `POST /attachments` 响应无 schema——renderer 在 `api.ts` 本地另定义 `attachmentUploadResponse` 手工校验，契约应上收到 contracts；② `DELETE /attachments` body 无 schema 无 parseContract；③ `images/export` body schema 内联手写，未进 contracts；④ agent 级 `GET .../agents/:agentId/sessions` 整路由无 schema（无 limit 分支返回裸 `listSessions()`）。四处均违反 server README「所有 JSON route 绑定机制 1（Fastify schema option）」规则；修复时补 contract 或在 README 豁免清单显式登记取舍。
 - [ ] **安全语义对齐（三项决策 + 落地）**：① `.spherse` 未分类文件（`spherseOther`）LLM 可读——`LLM_READ` 白名单包含该类别且有测试钉住（`access-policy.test.ts`），与「避免内部数据泄漏」的最初意图相悖，需决策收紧为不可读或接受现状并改测试意图注释；② `memory_save`/`memory_recall` 直连 MemoryStore 完全不经 access policy——用户 deny `.spherse` 后 memory 持久化照常工作，与文档曾声称的「安全优先语义」不符，需决策是否让 memory 工具走 policy 或显式豁免；③ `manage_project_config` 的 `update_welcome_page` 是写操作且 UI 归入高级工具组，但 core 层未包 `withApproval`（与 run_command/manage_agent/manage_trigger 的「高级写操作经审批」模式不一致），yolo 警示文案也未提及它——需决策补审批或在文档/文案中显式声明豁免取舍。
+- [ ] **data-conventions.md 拆分阈值**：重写后 265 行（规范上限约 200），当前单主题表格密度高、尚可维护；若继续增长（如新增数据文件类型或卡片种类），优先把「HTML Card / Image Card」两节拆出 `docs/official/cards.md`，或把「触发器 + Session 数据」合并拆出会话域文件，拆分时同步更新 core.md / chat.md / capabilities.md 中的交叉引用。
 
 ## 功能增强
 
