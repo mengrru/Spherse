@@ -1,29 +1,15 @@
-import { ErrorEventCode } from "@spherse/server/contracts";
 import type { ChatMessage, SendableImage } from "../types";
-
-export const MAX_AUTO_RETRY = 2;
 
 export type RetryPlan =
   | { kind: "none" }
   | { kind: "retry-last" }
   | { kind: "resend"; content: string; attachment?: SendableImage; dropCount: number };
 
-export function shouldAutoRetry(messages: ChatMessage[], retryCount: number): boolean {
-  const last = messages[messages.length - 1];
-  if (!last || last.role !== "assistant" || !last._error) return false;
-  if (last._withdrawError) return false;
-  if (last._errorCode !== ErrorEventCode.Transient) return false;
-  return retryCount < MAX_AUTO_RETRY;
-}
-
-export function planRetry(messages: ChatMessage[], retryCount: number, isAuto: boolean): RetryPlan {
+export function planRetry(messages: ChatMessage[]): RetryPlan {
   const last = messages[messages.length - 1];
 
   if (last?.role === "assistant" && last._error) {
     if (last._withdrawError) {
-      return { kind: "none" };
-    }
-    if (isAuto && (last._errorCode !== ErrorEventCode.Transient || retryCount >= MAX_AUTO_RETRY)) {
       return { kind: "none" };
     }
     if (last._turnError) {
@@ -40,8 +26,6 @@ export function planRetry(messages: ChatMessage[], retryCount: number, isAuto: b
     }
     return { kind: "none" };
   }
-
-  if (isAuto) return { kind: "none" };
 
   if (last?.role === "user" && last._sendFailed) {
     return {

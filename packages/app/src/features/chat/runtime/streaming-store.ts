@@ -13,13 +13,12 @@ import {
   reduceSessionEvents,
   type StreamingSessionData,
 } from "../model/chat-session-reducer";
-import { planRetry, shouldAutoRetry } from "../model/retry-plan";
+import { planRetry } from "../model/retry-plan";
 import { lastWithdrawableUserIndex } from "../model/withdrawable";
 import type { SendableImage, ChatMessage } from "../types";
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 30 * 1000;
-const AUTO_RETRY_BACKOFFS = [2000, 5000];
 
 interface StreamingSession extends StreamingSessionData {
   attachedCount: number;
@@ -32,8 +31,6 @@ interface StreamingSession extends StreamingSessionData {
   connectionStatus: "disconnected" | "connecting" | "open";
   historyError: boolean;
   reconnectFailed: boolean;
-  retryCount: number;
-  autoRetrying: boolean;
   pendingWithdraw: boolean;
 }
 
@@ -46,7 +43,7 @@ interface StreamingStoreActions {
   detach: (sessionId: string) => void;
   disconnect: (sessionId: string) => void;
   touch: (sessionId: string) => void;
-  sendMessage: (sessionId: string, text: string, image?: SendableImage, opts?: { isRetry?: boolean }) => boolean;
+  sendMessage: (sessionId: string, text: string, image?: SendableImage) => boolean;
   retry: (sessionId: string) => void;
   withdrawLastTurn: (sessionId: string) => void;
   abort: (sessionId: string) => void;
@@ -97,11 +94,11 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     }
   }
 
-  function executeRetry(sessionId: string, isAuto: boolean): void {
+  function executeRetry(sessionId: string): void {
     const session = get().sessions[sessionId];
     const runtime = runtimes.get(sessionId);
     if (!session || session.streaming || !runtime?.isOpen()) return;
-    const plan = planRetry(session.messages, session.retryCount, isAuto);
+    const plan = planRetry(session.messages);
     if (plan.kind === "none") return;
 
     if (plan.kind === "retry-last") {
@@ -109,7 +106,6 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         ...current,
         messages: markRetrying(current.messages),
         streaming: true,
-        retryCount: isAuto ? current.retryCount + 1 : 0,
         lastActivityAt: Date.now(),
       }));
       useProjectDataStore.getState().setStreaming(session.projectId, sessionId, true);
@@ -120,9 +116,8 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     updateSession(sessionId, (current) => ({
       ...current,
       messages: current.messages.slice(0, current.messages.length - plan.dropCount),
-      retryCount: isAuto ? current.retryCount + 1 : 0,
     }));
-    get().sendMessage(sessionId, plan.content, plan.attachment, { isRetry: true });
+    get().sendMessage(sessionId, plan.content, plan.attachment);
   }
 
   function settlePendingWithdraw(
@@ -183,24 +178,6 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
       return changed ? { sessions: next } : state;
     });
-
-    for (const sessionId of queued.keys()) {
-      maybeAutoRetry(sessionId);
-    }
-  }
-
-  function maybeAutoRetry(sessionId: string): void {
-    const session = get().sessions[sessionId];
-    if (!session || session.streaming || session.autoRetrying) return;
-    if (!shouldAutoRetry(session.messages, session.retryCount)) return;
-    const backoff = AUTO_RETRY_BACKOFFS[Math.min(session.retryCount, AUTO_RETRY_BACKOFFS.length - 1)];
-    updateSession(sessionId, (current) => ({ ...current, autoRetrying: true }));
-    setTimeout(() => {
-      const current = get().sessions[sessionId];
-      if (!current || !current.autoRetrying) return;
-      updateSession(sessionId, (s) => ({ ...s, autoRetrying: false }));
-      executeRetry(sessionId, true);
-    }, backoff);
   }
 
   function enqueueEvent(sessionId: string, event: AgentEvent) {
@@ -253,8 +230,6 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         connectionStatus: "disconnected",
         historyError: false,
         reconnectFailed: false,
-        retryCount: 0,
-        autoRetrying: false,
         pendingWithdraw: false,
       };
       return {
@@ -286,7 +261,6 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
               sessionId,
               session.streaming,
             );
-            maybeAutoRetry(sessionId);
           }
         },
         flushEvents: flushQueuedEvents,
@@ -374,12 +348,11 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       updateSession(sessionId, (session) => ({ ...session, lastActivityAt: Date.now() }));
     },
 
-    sendMessage(sessionId, text, image, opts) {
+    sendMessage(sessionId, text, image) {
       const session = get().sessions[sessionId];
       if (!session) return false;
       const content = text.trim();
       if (!content || session.streaming) return false;
-      const isRetry = opts?.isRetry === true;
 
       const runtime = runtimes.get(sessionId);
       const attachments = image
@@ -407,7 +380,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
           },
         ],
         ...(canSend
-          ? { streaming: true, ...(isRetry ? {} : { retryCount: 0, autoRetrying: false }) }
+          ? { streaming: true }
           : {}),
         lastActivityAt: Date.now(),
       }));
@@ -419,7 +392,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     },
 
     retry(sessionId) {
-      executeRetry(sessionId, false);
+      executeRetry(sessionId);
     },
 
     withdrawLastTurn(sessionId) {
