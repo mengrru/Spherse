@@ -35,7 +35,7 @@ PR #24 已完成第一阶段状态边界收敛：
 | P1 | 移除 streaming/trigger 镜像 | 消除跨 store 手工同步 | 下次修改 SessionRow/AgentRow 状态来源 |
 | P1 | 标准化 React mutation hooks | 统一 pending/error/乐观更新 | 出现第二个需要 mutation 状态的消费方 |
 | P2 | 迁移 dialog 服务端状态 | 删除 load-on-open effect 模板 | 逐个 dialog 功能修改时顺带迁移 |
-| P2 | 收敛项目级 bridge | 控制 ProjectScope 基础设施膨胀 | bridge 数量继续增长时 |
+| P2 | 收敛项目级 bridge（已实施，见 `2026-08-28-project-lifecycle-orchestration/design.md`，同 PR 一并修复关闭项目不断开 streaming runtime 的泄漏并收敛关闭级联清理） | 控制 ProjectScope 基础设施膨胀 | bridge 数量继续增长时 |
 | P2 | 建立组件测试基础设施 | 提升交互与 Query 边界测试质量 | 开始批量补组件测试时 |
 
 ## P0：拆分聚合查询
@@ -286,6 +286,8 @@ useCreateAgentMutation()
 ```
 
 该组件仅负责挂载自治 bridge，不成为新事件总线或 service locator。
+
+> 已实施（2026-08-28）：见 `2026-08-28-project-lifecycle-orchestration/design.md`。触发条件由 ThemeQueryBridge + WelcomePageQueryBridge 满足；同 PR 补齐 `closeProjectCascade` 级联清理与 streaming runtime 关闭断开。
 
 ## P2：组件测试基础设施
 

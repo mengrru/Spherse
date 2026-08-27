@@ -9,7 +9,7 @@
 SDK 由两半组成，仅以 postMessage 协议耦合：
 
 - **`@spherse/sdk`**（`packages/sdk/`）：被注入 iframe 的客户端运行时，暴露 `window.spherse.*`
-- **`src/ui-sdk/`**（app 内）：host 桥——接收 action、定向分发事件；`UiSdkBridge` 挂 ProjectScope，自治获取 projectId 与 client
+- **`src/ui-sdk/`**（app 内）：host 桥——接收 action、定向分发事件；`UiSdkBridge` 挂 ProjectRuntimeBridges（ProjectScope 内），自治获取 projectId 与 client
 
 ## @spherse/sdk
 

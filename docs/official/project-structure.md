@@ -214,7 +214,9 @@ spherse/
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │   │       ├── layouts/
-│   │       │   └── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet 与自治基础设施 bridge，承载项目级生命周期
+│   │       │   ├── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet 与项目级 hook
+│   │       │   ├── ProjectRuntimeBridges.tsx # 项目级桥纯挂载 fragment（FeatureGate manager + 各自治 bridge）
+│   │       │   └── project-lifecycle.ts  # closeProjectCascade：项目关闭级联清理单一入口（structure test 强制清理面完整）
 │   │       ├── hooks/
 │   │       │   ├── useSidePanel.ts       # side panel pinned/hover/mobileOpen 状态合并派生 + clickAway props
 │   │       │   ├── useCustomTheme.ts
@@ -263,10 +265,10 @@ spherse/
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
 │   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、设置 store、类型与测试
-│   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）+ WelcomePageQueryBridge（project.yaml fs-watch/reconnect → welcome-page 查询失效，ProjectScope 挂载）
+│   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）+ WelcomePageQueryBridge（project.yaml fs-watch/reconnect → welcome-page 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   ├── project-settings/     # 项目设置弹窗集合
 │   │       │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
-│   │       │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗 + ThemeQueryBridge（fs-watch/reconnect → theme-settings 查询失效，ProjectScope 挂载）
+│   │       │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗 + ThemeQueryBridge（fs-watch/reconnect → theme-settings 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   └── text-selection-session/ # 划选文本后发起会话
 │   │       ├── pages/
 │   │       │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat

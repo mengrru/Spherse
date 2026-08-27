@@ -13,6 +13,7 @@
 - [ ] **`data-chat-root` 伪元素偏移防御**：`[data-chat-root]`（`features/chat/index.tsx`）同样是 `flex flex-col` 容器，用户在 agent theme 写 `::before/::after` 漏 `position` 时会同样挤压聊天列导致偏移。但 chat-root 默认非定位上下文，不能直接照搬 `data-app-root` 的 `position: absolute` 默认值（否则伪元素会逃逸到最近的定位祖先 `data-app-root`）。需先把 chat-root 设为定位上下文（如加 `position: relative`），再在 base styles 给 `[data-chat-root]::before/::after` 加同款 `position: absolute; pointer-events: none` 默认值，并同步 `spherse-create-agent-chat-theme` skill 文档。
 - [ ] **chat 错误分类兜底 TRANSIENT 的收敛**：服务端 `classify-run-error.ts` 与 renderer `classify-error.ts` 对未知错误都兜底 TRANSIENT——程序性错误（TypeError、内部 bug）也被标为可重试类。前端自动重试已移除（bd58e1e），误分类现仅影响错误展示，但手动 retry-last 会重新执行副作用工具，误分类仍会诱导用户重试。方向：不可重试类（ValidationError 文案等）前置排除，双端规则保持一致。
 - [ ] **恢复 Windows 自动更新 feed（latest.yml，双 arch）**：CI 自 OSS 镜像改造（ba8c049）起统一 `--publish never` + `gh release upload`，release 上不再有 `latest.yml`，Windows 客户端 electron-updater 检查更新因 404 报 `update-error`。恢复需研究多 arch 语义：一个 `latest.yml` 只指向一个安装包，x64 与 arm64 需按 electron-updater 的 channel 文件约定（如 `latest.yml` / `latest-arm64.yml`）分别生成并上传，避免 arm64 设备被推 x64 包（或反向）。可考虑在 `publish-oss` 或 build job 中集中生成。
+- [ ] **refreshProjects 路径不回收 streaming runtime**：外部关闭/多窗口场景下项目从快照消失时，`app-store.refreshProjects` 只改 projects map，不走 `closeProjectCascade`，该项目 chat streaming runtime（WS + 重连定时器）仍存活。受「全局 store 不得依赖 feature-local store」约束，修复需 streaming runtime 生命周期整体重构，宜与 followup P1「移除 streaming/trigger 镜像」合并考虑。参见 `docs/dev/infra/2026-08-28-project-lifecycle-orchestration/design.md` 已知缺口
 
 ## 技术债（重构与收敛）
 
@@ -31,6 +32,7 @@
 - [ ] **server 契约缺口修复（4 处）**：① `POST /attachments` 响应无 schema——renderer 在 `api.ts` 本地另定义 `attachmentUploadResponse` 手工校验，契约应上收到 contracts；② `DELETE /attachments` body 无 schema 无 parseContract；③ `images/export` body schema 内联手写，未进 contracts；④ agent 级 `GET .../agents/:agentId/sessions` 整路由无 schema（无 limit 分支返回裸 `listSessions()`）。四处均违反 server README「所有 JSON route 绑定机制 1（Fastify schema option）」规则；修复时补 contract 或在 README 豁免清单显式登记取舍。
 - [ ] **安全语义对齐（三项决策 + 落地）**：① `.spherse` 未分类文件（`spherseOther`）LLM 可读——`LLM_READ` 白名单包含该类别且有测试钉住（`access-policy.test.ts`），与「避免内部数据泄漏」的最初意图相悖，需决策收紧为不可读或接受现状并改测试意图注释；② `memory_save`/`memory_recall` 直连 MemoryStore 完全不经 access policy——用户 deny `.spherse` 后 memory 持久化照常工作，与文档曾声称的「安全优先语义」不符，需决策是否让 memory 工具走 policy 或显式豁免；③ `manage_project_config` 的 `update_welcome_page` 是写操作且 UI 归入高级工具组，但 core 层未包 `withApproval`（与 run_command/manage_agent/manage_trigger 的「高级写操作经审批」模式不一致），yolo 警示文案也未提及它——需决策补审批或在文档/文案中显式声明豁免取舍。
 - [ ] **跨层接缝契约清单对账**：SessionPort 5 方法（create/restore/sendMessage/abortSession/sessionExists）在 server/desktop 包的契约覆盖缺口逐条对账（trigger 路径、ws-chat 路径），按 AGENTS.md 契约规矩补齐。
+- [ ] **项目关闭路径 E2E 缺口**：无 spec 覆盖 activity-bar 关闭项目 → `closeProjectCascade` 级联清理（streaming 断开、query cache 清除、再打开同名项目状态干净）。级联清理现仅由单测锁住；补 E2E 时可用 mock agent 制造 streaming 中关闭场景。
 
 ## 条件触发（设计决策）
 
