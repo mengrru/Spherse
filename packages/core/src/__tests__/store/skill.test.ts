@@ -219,6 +219,75 @@ describe("SkillStore with builtin sources", () => {
   });
 });
 
+describe("SkillStore with additional project sources", () => {
+  let projectRoot: string;
+  let skillDir: string;
+  let agentsSkillDir: string;
+
+  beforeEach(async () => {
+    projectRoot = await createTempProject();
+    skillDir = path.join(projectRoot, ".spherse", "skills");
+    agentsSkillDir = path.join(projectRoot, ".agents", "skills");
+  });
+
+  afterEach(async () => {
+    await cleanupDir(projectRoot);
+  });
+
+  it("loads skills and companion files from an additional project directory", async () => {
+    await writeFile(
+      agentsSkillDir,
+      "external/SKILL.md",
+      "---\nname: external\ndescription: External skill\n---\nExternal body.",
+    );
+    await writeFile(agentsSkillDir, "external/references/guide.md", "Guide");
+
+    const store = new SkillStore(skillDir, undefined, undefined, [agentsSkillDir]);
+    const skill = await store.get("external");
+
+    expect(skill).toMatchObject({
+      name: "external",
+      source: "project",
+      instructions: "External body.",
+      files: ["references/guide.md"],
+    });
+    expect(skill?.filePath).toBe(path.join(agentsSkillDir, "external", "SKILL.md"));
+    expect((await store.list()).map((item) => item.name)).toEqual(["external"]);
+  });
+
+  it("prefers the primary project directory over additional directories and builtins", async () => {
+    await writeFile(
+      skillDir,
+      "shared/SKILL.md",
+      "---\nname: shared\ndescription: Spherse skill\n---\nSpherse body.",
+    );
+    await writeFile(
+      agentsSkillDir,
+      "shared/SKILL.md",
+      "---\nname: shared\ndescription: Agent skill\n---\nAgent body.",
+    );
+    const store = new SkillStore(
+      skillDir,
+      [{
+        dir: "shared",
+        files: [{
+          relativePath: "SKILL.md",
+          content: "---\nname: shared\ndescription: Builtin skill\n---\nBuiltin body.",
+        }],
+      }],
+      undefined,
+      [agentsSkillDir],
+    );
+
+    expect(await store.get("shared")).toMatchObject({
+      description: "Spherse skill",
+      instructions: "Spherse body.",
+    });
+    expect(await store.list()).toHaveLength(1);
+    expect((await store.list())[0]).toMatchObject({ description: "Spherse skill" });
+  });
+});
+
 interface ZipEntrySpec {
   entryName: string;
   content?: string;

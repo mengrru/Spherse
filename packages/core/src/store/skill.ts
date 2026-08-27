@@ -49,11 +49,18 @@ function parseSkillVersion(value: unknown): string | undefined {
 
 export class SkillStore {
   private skillDir: string;
+  private additionalSkillDirs: string[];
   private builtinSources?: readonly PresetSkillSource[];
   private fileWriteMutex: FileWriteMutex;
 
-  constructor(skillDir: string, builtinSources?: readonly PresetSkillSource[], fileWriteMutex?: FileWriteMutex) {
+  constructor(
+    skillDir: string,
+    builtinSources?: readonly PresetSkillSource[],
+    fileWriteMutex?: FileWriteMutex,
+    additionalSkillDirs: readonly string[] = [],
+  ) {
     this.skillDir = path.resolve(skillDir);
+    this.additionalSkillDirs = additionalSkillDirs.map((dir) => path.resolve(dir));
     this.builtinSources = builtinSources;
     this.fileWriteMutex = fileWriteMutex ?? new FileWriteMutex();
   }
@@ -65,7 +72,14 @@ export class SkillStore {
       byName.set(skill.name, skill);
     }
 
-    const projectSkills = await this.listProject();
+    for (const additionalSkillDir of this.additionalSkillDirs) {
+      const additionalSkills = await this.listProject(additionalSkillDir);
+      for (const skill of additionalSkills) {
+        byName.set(skill.name, skill);
+      }
+    }
+
+    const projectSkills = await this.listProject(this.skillDir);
     for (const skill of projectSkills) {
       byName.set(skill.name, skill);
     }
@@ -74,8 +88,13 @@ export class SkillStore {
   }
 
   async get(name: string): Promise<SkillDefinition | null> {
-    const projectSkill = await this.parseSkill(name);
+    const projectSkill = await this.parseSkill(this.skillDir, name);
     if (projectSkill) return projectSkill;
+
+    for (const additionalSkillDir of this.additionalSkillDirs) {
+      const additionalSkill = await this.parseSkill(additionalSkillDir, name);
+      if (additionalSkill) return additionalSkill;
+    }
 
     const builtin = this.parseBuiltin(this.builtinSources).find((s) => s.name === name);
     return builtin ?? null;
@@ -215,20 +234,20 @@ export class SkillStore {
     }
   }
 
-  private async listProject(): Promise<SkillDefinition[]> {
+  private async listProject(skillDir: string): Promise<SkillDefinition[]> {
     try {
-      const entries = await fs.readdir(this.skillDir, { withFileTypes: true });
+      const entries = await fs.readdir(skillDir, { withFileTypes: true });
       const dirs = entries.filter((e) => e.isDirectory());
-      const skills = await Promise.all(dirs.map((d) => this.parseSkill(d.name)));
+      const skills = await Promise.all(dirs.map((d) => this.parseSkill(skillDir, d.name)));
       return skills.filter((s): s is SkillDefinition => s !== null);
     } catch {
       return [];
     }
   }
 
-  private async parseSkill(dirName: string): Promise<SkillDefinition | null> {
-    const skillMdPath = path.resolve(this.skillDir, dirName, "SKILL.md");
-    if (!isPathInside(this.skillDir, skillMdPath)) return null;
+  private async parseSkill(skillDir: string, dirName: string): Promise<SkillDefinition | null> {
+    const skillMdPath = path.resolve(skillDir, dirName, "SKILL.md");
+    if (!isPathInside(skillDir, skillMdPath)) return null;
     try {
       const raw = await fs.readFile(skillMdPath, "utf-8");
       const { data, content } = matter(raw);

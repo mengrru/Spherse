@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createSilentLogger } from "../../logger.js";
 import { ProjectStore } from "../../store/project.js";
 import { ProjectConfigStore } from "../../store/project-config.js";
-import { createTempProject, cleanupDir, readFile, removeFile, pathExists } from "../helpers.js";
+import { createTempProject, cleanupDir, readFile, removeFile, pathExists, writeFile } from "../helpers.js";
 
 const VALID_PROFILE = `---
 name: World Builder
@@ -42,6 +42,21 @@ describe("ProjectStore — lifecycle", () => {
     await store2.open();
     const config = store2.config.get();
     expect(config.name).toBe("MyProject");
+  });
+
+  it("loads project skills from .agents/skills", async () => {
+    await store.create("MyProject");
+    await writeFile(
+      projectRoot,
+      ".agents/skills/external/SKILL.md",
+      "---\nname: external\ndescription: External skill\n---\nExternal instructions.",
+    );
+
+    expect(await store.skill.get("external")).toMatchObject({
+      name: "external",
+      instructions: "External instructions.",
+      source: "project",
+    });
   });
 
   it("throws when opening non-existent project", async () => {

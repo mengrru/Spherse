@@ -20,10 +20,11 @@ Skill 按作用范围分为两个层级：
 
 - **Project-level**：适用于所有 agent 都应遵循的通用规范（如世界观术语表、项目写作风格、文件命名约定）。
 - **Agent-level**：适用于某个 agent 专属的工作方式（如某个角色扮演 agent 的对话风格、某个助手 agent 的特定输出格式）。Agent-level skill 放在该 agent 自己的目录下，不污染其它 agent 的 skill 列表。
+- 项目根目录的 `.agents/skills/{skill-name}/` 也会作为 project-level 兼容目录被载入。已有项目可以直接复用该目录；新建 Skill 时仍优先写入 `.spherse/skills`，因为 Skill Panel、安装与市场更新只管理这个主目录。
 
 ### 优先级
 
-当 project-level 与 agent-level 存在同名 skill 时，agent-level 覆盖 project-level（agent-level > project > builtin）。
+同名 skill 的优先级为 agent-level > `.spherse/skills` > `.agents/skills` > builtin。
 
 ### 如何获取 agent slug
 
