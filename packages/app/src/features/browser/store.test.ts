@@ -143,7 +143,7 @@ describe("useBrowserStore", () => {
 
   it("persists state to localStorage", () => {
     useBrowserStore.getState().openFloat("project-1", "http://localhost:3000");
-    const raw = (globalThis.localStorage.getItem as ReturnType<typeof vi.fn>)("spherse:floating-browser");
+    const raw = globalThis.localStorage.getItem("spherse:floating-browser");
     expect(raw).toBeTruthy();
     expect(JSON.parse(raw!)["project-1"]["http://localhost:3000"]).toBeDefined();
   });

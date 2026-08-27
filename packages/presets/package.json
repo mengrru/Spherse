@@ -10,11 +10,16 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist", "templates", "skills"],
+  "files": [
+    "dist",
+    "templates",
+    "skills"
+  ],
   "scripts": {
     "prebuild": "node scripts/sync-templates.mjs",
     "build": "tsc",
     "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"

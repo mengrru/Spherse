@@ -173,7 +173,7 @@
 
 - [x] **本地验证流水线**：新增 root `npm run verify` 覆盖 lint/build/core+i18n+app unit tests/i18n check，新增 `npm run verify:e2e` 在此基础上运行 app E2E。
 - [x] **PR build pipeline**：新增 `.github/workflows/pr-build.yml`，`pull_request` 触发（`paths-ignore` 跳过纯文档变更），复用 root `npm run verify`（lint/build/单测/i18n check）在合并前自动验证，避免把 lint/类型/单测问题带进 dev/main。
-- [ ] **app 包类型检查纳入 verify**：`packages/app` 的 build 走 `electron-vite build`，只做转译不做类型检查；`tsconfig.node.json`（electron 目录）与 `tsconfig.json`（renderer）的类型错误会被静默放过（如 schema 变更后遗留的 `settings.defaultModel` 读取）。应新增 `npm run typecheck`（`tsc --noEmit` 双 project）并纳入 root `npm run verify`，防止类型错误漏到运行时。
+- [x] **app 包类型检查纳入 verify**：`packages/app` 的 build 走 `electron-vite build`，只做转译不做类型检查；`tsconfig.node.json`（electron 目录）与 `tsconfig.json`（renderer）的类型错误会被静默放过（如 schema 变更后遗留的 `settings.defaultModel` 读取）。应新增 `npm run typecheck`（`tsc --noEmit` 双 project）并纳入 root `npm run verify`，防止类型错误漏到运行时。
 - [ ] **React DOM 组件测试工具链**：为 `packages/app` 引入组件级测试基础设施（如 Testing Library + user-event + jsdom/happy-dom），用于测试 React 组件渲染、ARIA 状态、用户交互和菜单/折叠等局部 UI 行为，补足当前 Vitest 单测与 Playwright E2E 之间的测试层级。
 - [x] **electron-builder 打包**：配置生产构建和跨平台打包
 - [x] **dev/prod 环境隔离**：通过 bootstrap 入口引导文件将 dev 模式的 userData 重定向到独立目录，实现 dev 和 prod 数据完全隔离、可同时运行

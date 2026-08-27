@@ -46,7 +46,7 @@ export function AgentSessionList() {
   const { t } = useI18n();
   const { sessionId: activeSessionId = null } = useParams();
   const navigate = useNavigate();
-  const { kind: hostKind } = useHostBridge();
+  const { kind: hostKind, openExternal } = useHostBridge();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const agentDialogEnabled = useFeature("agent-dialog");
@@ -137,10 +137,10 @@ export function AgentSessionList() {
     deleteSession: (session) => setDialog({ kind: "delete-session", session }),
     renameSession: handleRenameSession,
     floatSession: (s) => {
-      dispatchAction("floatSession", { sessionId: s.id }, { navigate, projectId, hostKind });
+      dispatchAction("floatSession", { sessionId: s.id }, { navigate, projectId, hostKind, client, openExternal });
     },
     cancelFloat: () => {
-      dispatchAction("unfloatSession", {}, { navigate, projectId, hostKind });
+      dispatchAction("unfloatSession", {}, { navigate, projectId, hostKind, client, openExternal });
     },
     exportSession: handleExportSession,
     showSessionStatus: (session) => setDialog({ kind: "session-status", session }),

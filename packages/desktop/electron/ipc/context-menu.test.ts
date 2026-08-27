@@ -36,9 +36,8 @@ describe("buildEditMenuTemplate", () => {
   it("disables items whose editFlag is false/absent", () => {
     const template = buildEditMenuTemplate("en", {});
     const labeled = template.filter(
-      (i): i is { role: string; label: string; enabled?: boolean } =>
-        "role" in i && "label" in i,
-    );
+      (i) => "role" in i && "label" in i,
+    ) as Array<{ role: string; label: string; enabled?: boolean }>;
     expect(labeled.every((i) => i.enabled === false)).toBe(true);
   });
 
@@ -49,9 +48,8 @@ describe("buildEditMenuTemplate", () => {
     });
     const find = (role: string) =>
       template.find(
-        (i): i is { role: string; label: string; enabled?: boolean } =>
-          "role" in i && (i as { role: string }).role === role,
-      );
+        (i) => "role" in i && (i as { role: string }).role === role,
+      ) as { role: string; label: string; enabled?: boolean } | undefined;
 
     expect(find("copy")?.label).toBe("复制");
     expect(find("paste")?.label).toBe("粘贴");

@@ -16,7 +16,7 @@ vi.mock("electron", () => ({
   nativeTheme: { themeSource: "system" },
 }));
 
-import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore, getMobileAccess, setMobileAccess } from "./settings";
+import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore, getMobileAccess, setMobileAccess } from "./settings.js";
 import { getAppModelCatalog } from "./model-catalog.js";
 
 describe("mergeModelGroup sampling passthrough", () => {

@@ -56,6 +56,15 @@ npm run lint --workspace=packages/app    # 单 workspace lint
 
 提交前会通过 Husky pre-commit 钩子自动执行 `npm run lint`，lint 不通过则阻塞提交。钩子不会自动修改或暂存文件，需手动运行 `npm run lint:fix` 修复。
 
+**Typecheck 命令**：
+
+```bash
+npm run typecheck                             # 全仓库类型检查（所有 workspace）
+npm run typecheck --workspace=packages/app    # 单 workspace 类型检查
+```
+
+renderer 侧（app/web/landing）的 vite/vitest 构建不做类型检查，类型错误只能通过 typecheck 发现。全包 typecheck 依赖 Node 侧包（i18n/presets/sdk/core/server）的 `dist` 类型产物，需在 `npm run build` 之后执行；`npm run verify` 已按 lint → build → typecheck → test 顺序串好。
+
 **测试命令**：
 
 ```bash
@@ -66,7 +75,7 @@ npm test --workspace=packages/server        # 运行 server/API contract 测试
 npm test --workspace=packages/i18n           # 运行 i18n 测试
 npm test --workspace=packages/app           # 运行前端 store/组件相关测试
 npm test --workspace=packages/desktop       # 运行 Electron 主进程 / IPC 相关测试
-npm run verify                              # lint + build + unit tests + i18n check
+npm run verify                              # lint + build + typecheck + unit tests + i18n check
 npm run verify:e2e                          # verify + Electron E2E
 ```
 

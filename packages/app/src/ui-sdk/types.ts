@@ -5,11 +5,11 @@ import type { HostKind } from "../lib/host-bridge";
 export interface ActionContext {
   navigate: NavigateFunction;
   projectId: string;
-  client?: ApiClient;
+  client: ApiClient | null;
   source?: MessageEventSource | null;
   requestId?: string;
   hostKind: HostKind;
-  openExternal?: (url: string) => Promise<void>;
+  openExternal: (url: string) => Promise<void>;
 }
 
 export type ActionHandler<P = Record<string, unknown>> = (

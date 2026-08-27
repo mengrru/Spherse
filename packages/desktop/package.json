@@ -8,6 +8,7 @@
     "build": "electron-vite build",
     "dev": "electron-vite dev",
     "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "pretest": "npm run build --workspace=@spherse/i18n",
     "test": "vitest run",
     "pretest:e2e": "node ../../scripts/rebuild-native.mjs",
