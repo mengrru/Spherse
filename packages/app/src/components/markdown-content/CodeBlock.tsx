@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { CheckIcon, CopyIcon } from "lucide-react";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 import { extractCodeText } from "./markdown-code-text";
 
 interface CodeBlockProps extends React.HTMLAttributes<HTMLPreElement> {

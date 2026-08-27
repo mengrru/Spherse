@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { FieldGroup } from "../../components/ui/field";
-import { MarkdownContent } from "../../components/MarkdownContent";
+import { MarkdownContent } from "../../components/markdown-content/MarkdownContent";
 import { SectionTitle } from "./SectionTitle";
 import { useUpdateChecker } from "./use-update-checker";
 import { useHostBridge } from "../../context/host-bridge-context";
