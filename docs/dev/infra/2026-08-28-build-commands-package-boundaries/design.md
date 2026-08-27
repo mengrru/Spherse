@@ -78,10 +78,19 @@ app package.json 增加 `exports`，仅暴露壳实际消费的 10 个入口：
 3. 桌面 smoke E2E（`app-launch.spec.ts`）验证 renderer 打包与启动链路；
 4. CI 脚本名兼容性核对：`verify`（pr-build）、`build` + `build --workspace=packages/desktop`（build-and-release）、`build:landing` / `build:web`（deploy-pages）均不变名。
 
+## Review 反馈处理（2026-08-28）
+
+- **I-1（important，已修）**：root `npm run build` 全 workspace 化会使发版 CI（build-and-release.yml）在三平台 matrix 中构建无关的 web/landing，扩大失败面且产物丢弃。恢复 `build:desktop` 脚本（i18n→presets→sdk→core→server→desktop 链）供发版 CI 专用，顺带消除该 workflow 中 root build + 单独 desktop build 的历史冗余；root `build`（全量）语义服务于 `verify` 门禁与本地。
+- **M-1（medium，已修）**：desktop/web 保留的 `@/*` alias（app src 内部在用）构成 exports 白名单旁路，一次性 grep 不防回归。为 `packages/{desktop,web}/src` 增加 ESLint `no-restricted-imports` 规则，禁止壳包经 `@/` 深度导入 app 内部模块。
+- **M-2（medium，入 backlog）**：E2E 启动的是 electron-vite 产物 + workspace node_modules，非打包产物，依赖再分类缺运行时级验证；本次以产物 grep 补充闭环（`dist/main/chunks` 运行时外部依赖恰为 prod 树），packaged-app smoke 入 backlog「基础设施」节。
+- **m-1（minor，已修）**：desktop `electron/server.ts` 的 `import type { FastifyInstance }` 属 phantom type 依赖，desktop devDeps 显式声明 fastify。
+- **m-2 / m-3（minor，已修）**：AGENTS.md「Package 一览」补 `packages/sdk` 行；「监听编译」示例统一 `-w @spherse/<pkg>` 包名风格。
+
 ## 风险
 
 | 风险 | 缓解 |
 |---|---|
 | npm `--workspaces` 顺序语义依赖声明顺序（文档行为，非显眼特性） | 改动后立即以 `typecheck --workspaces` 输出顺序实证；AGENTS.md 注明列表即拓扑序、新增包按层插入 |
-| exports 阻断未知的深度导入 | 全仓 grep 已穷举（desktop 2 文件 + web 5 文件 + preload 相对导入）；verify/typecheck/E2E 兜底 |
-| electron-builder prod deps 收集行为与预期不符 | `--dir` 产物 A/B 实测核对，不达标则回退方案 2 |
+| exports 阻断未知的深度导入 | 全仓 grep 已穷举（desktop 5 文件 + web 5 文件，含 electron 侧相对导入）；ESLint 禁 `@/` 旁路防回归；verify/typecheck/E2E 兜底 |
+| electron-builder prod deps 收集行为与预期不符 | `--dir` 产物 A/B 实测核对（asar 129MB→85MB、485→328 包、react 链 73→0、main 外置树完整） |
+

@@ -83,6 +83,23 @@ export default [
     },
   },
   {
+    files: ["packages/desktop/src/**/*.{ts,tsx}", "packages/web/src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/*"],
+              message:
+                "壳包不得经 @/ alias 深度导入 @spherse/app 内部模块；只允许 @spherse/app package.json exports 白名单入口（@spherse/app/*）",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: [
       "packages/core/src/**/*.ts",
       "packages/server/src/**/*.ts",

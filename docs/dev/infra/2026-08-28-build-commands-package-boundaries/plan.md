@@ -28,4 +28,13 @@
 - [x] backlog「基础设施」节新增：contracts 拆包、Turborepo 评估两条
 - [x] AGENTS.md 命令区同步（workspaces 有序列表语义）
 - [x] `npm run verify` 全绿 + `app-launch.spec.ts` E2E 通过
-- [ ] doc-sync 自查
+- [x] doc-sync 自查
+
+## ⑤ Review 反馈处理（sub agent review：无 critical，I-1 ×1 / M-2 / m-1/2/3）
+
+- [x] I-1：恢复 `build:desktop` 供发版 CI 专用，消除 root build 语义外溢与 CI 双重构建冗余
+- [x] M-1：desktop/web src 增加 ESLint no-restricted-imports 禁 `@/` 深度导入（已用探针文件实证规则生效）
+- [x] M-2：packaged-app smoke 启动验证入 backlog
+- [x] m-1：desktop devDeps 显式声明 fastify（消除 phantom type 依赖）
+- [x] m-2 / m-3：AGENTS.md 补 sdk 行、监听编译示例统一包名风格
+

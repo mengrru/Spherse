@@ -2,6 +2,8 @@
 
 Spherse 的共享 React renderer。desktop 与 web 壳均复用本 package；这里负责路由、页面与 feature UI、服务端状态缓存、客户端状态和 UI SDK host bridge，不包含 Electron main/preload 或 Fastify 服务端实现。
 
+对壳的公共 API 面是 package.json `exports` 白名单（`./main`、`./host-bridge`、`./stores/*`、`./ui/*` 等）：壳只从这些入口导入，禁止 `@/` 或 `@spherse/app/src` 深度导入（ESLint 在壳侧强制）；新增壳消费入口需同步维护白名单。
+
 正式系统设计见 [`../../docs/official/README.md`](../../docs/official/README.md)（前端域：`architecture/frontend.md`、`architecture/chat.md`、`architecture/theming.md`），完整目录索引见 [`../../docs/official/project-structure.md`](../../docs/official/project-structure.md)。本文同时是 `packages/app` 的开发守则，新代码和 review 必须遵守。
 
 已识别但尚未实施的架构优化见 [`../../docs/dev/infra/2026-08-22-frontend-architecture-followup/followup.md`](../../docs/dev/infra/2026-08-22-frontend-architecture-followup/followup.md)。

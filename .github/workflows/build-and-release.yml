@@ -68,11 +68,8 @@ jobs:
         working-directory: packages/desktop
         run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
 
-      - name: Build all packages
-        run: npm run build
-
-      - name: Build desktop (electron-vite)
-        run: npm run build --workspace=packages/desktop
+      - name: Build desktop chain (i18n -> presets -> sdk -> core -> server -> desktop)
+        run: npm run build:desktop
 
       - name: Download Electron binary
         shell: bash

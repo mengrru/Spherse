@@ -16,6 +16,7 @@
   "scripts": {
     "predev": "node scripts/rebuild-native.mjs",
     "build": "npm run build --workspaces --if-present",
+    "build:desktop": "npm run build -w @spherse/i18n -w @spherse/presets -w @spherse/sdk -w @spherse/core -w @spherse/server -w @spherse/desktop",
     "build:web": "npm run build -w @spherse/i18n -w @spherse/presets -w @spherse/sdk -w @spherse/core -w @spherse/server -w @spherse/web",
     "build:landing": "npm run build -w @spherse/i18n -w @spherse/landing",
     "check:i18n": "npm run check -w @spherse/i18n",
