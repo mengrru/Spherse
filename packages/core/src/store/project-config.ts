@@ -8,7 +8,7 @@ import {
 } from "../access/denied-paths.js";
 import type { ProjectConfig } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
-import { ValidationError } from "../errors.js";
+import { ValidationError, ProjectConfigNotFoundError, ProjectConfigParseError } from "../errors.js";
 import { categorizePath } from "../access/path-category.js";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
@@ -36,11 +36,22 @@ export class ProjectConfigStore {
 
   async read(): Promise<ProjectConfig> {
     if (!fsSync.existsSync(this.configPath)) {
-      throw new Error(`project.yaml not found at ${this.configPath}`);
+      throw new ProjectConfigNotFoundError(`project.yaml not found at ${this.configPath}`);
     }
 
     const raw = await fs.readFile(this.configPath, "utf-8");
-    this.config = YAML.parse(raw) as ProjectConfig;
+    let parsed: unknown;
+    try {
+      parsed = YAML.parse(raw);
+    } catch (err) {
+      throw new ProjectConfigParseError(
+        `project.yaml is not valid YAML at ${this.configPath}: ${(err as Error).message}`,
+      );
+    }
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new ProjectConfigParseError(`project.yaml is empty or invalid at ${this.configPath}`);
+    }
+    this.config = parsed as ProjectConfig;
 
     if (!this.config.id) {
       this.config.id = nanoid(8);

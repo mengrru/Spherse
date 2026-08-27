@@ -63,6 +63,20 @@ describe("ProjectStore — lifecycle", () => {
     await expect(store.open()).rejects.toThrow("project.yaml not found");
   });
 
+  it("throws a ProjectConfigNotFoundError when opening non-existent project", async () => {
+    await expect(store.open()).rejects.toMatchObject({ name: "ProjectConfigNotFoundError" });
+  });
+
+  it("preserves existing AGENTS.md and CHANGELOG.md on create", async () => {
+    await writeFile(projectRoot, "AGENTS.md", "# user guide");
+    await writeFile(projectRoot, "CHANGELOG.md", "- existing history\n");
+
+    await store.create("TestProject");
+
+    expect(await readFile(projectRoot, "AGENTS.md")).toBe("# user guide");
+    expect(await readFile(projectRoot, "CHANGELOG.md")).toBe("- existing history\n");
+  });
+
   it("throws when accessing config before open", () => {
     expect(() => store.config).toThrow("Project is not open");
   });

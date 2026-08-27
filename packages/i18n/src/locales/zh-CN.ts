@@ -290,6 +290,8 @@ export const zhCN = {
   "activity-bar.settingsTooltip": "设置",
   // 左侧活动栏添加项目按钮悬停提示
   "activity-bar.addProjectTooltip": "添加项目",
+  // 活动栏"添加项目"失败（如所选目录的 .spherse/project.yaml 损坏、无法读取）时弹出的错误 toast
+  "activity-bar.openProjectFailed": "打开项目失败，请检查项目文件是否损坏",
   // 项目右键菜单：关闭项目
   "activity-bar.closeProject": "关闭项目",
   // 项目右键菜单：在系统文件管理器中打开项目文件夹

@@ -47,8 +47,8 @@ export function registerProjectIpc(
       try {
         const { projectId } = await registerProject(entry.path, { lastOpened: entry.lastOpened });
         results.push({ id: projectId, path: entry.path, name: entry.name, lastOpened: entry.lastOpened });
-      } catch {
-        // directory deleted or corrupt, skip silently
+      } catch (err) {
+        console.error(`[restore-projects] failed to open project at ${entry.path}:`, err);
       }
     }
     return results;

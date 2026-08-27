@@ -144,6 +144,7 @@ export const en: Record<TranslationKey, string> = {
   "common.send": "Send",
   "activity-bar.settingsTooltip": "Settings",
   "activity-bar.addProjectTooltip": "Add Project",
+  "activity-bar.openProjectFailed": "Failed to open the project. Please check the project files for corruption.",
   "activity-bar.closeProject": "Close Project",
   "activity-bar.openProjectFolder": "Open Project Folder",
   "activity-bar.settings": "Settings",

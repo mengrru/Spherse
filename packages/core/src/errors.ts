@@ -39,3 +39,17 @@ export class MigrationRequiredError extends Error {
     this.name = "MigrationRequiredError";
   }
 }
+
+export class ProjectConfigNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProjectConfigNotFoundError";
+  }
+}
+
+export class ProjectConfigParseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ProjectConfigParseError";
+  }
+}
