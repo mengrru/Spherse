@@ -66,6 +66,7 @@ spherse/
 │   │       ├── __tests__/            # Vitest 单元测试（kernel/capabilities/session/access/tools 分组）
 │   │       └── index.ts              # 公开导出（显式清单，按外部消费面收紧）
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
+│   │   ├── README.md                 # 包级守则：sync 产物、presets.json 格式、注入流程与维护守则
 │   │   ├── presets.json              # 预置 skill、agent 与 prompt template 声明配置
 │   │   ├── templates/
 │   │   │   ├── agent-template.md     # 新 Agent 创建模板源文件
@@ -104,6 +105,7 @@ spherse/
 │   │       │   └── prompt-templates.ts # PRESET_PROMPT_TEMPLATES 常量（{ id, name, prompt }）
 │   │       └── index.ts              # 公开导出：模板内容 + 预置 skill/agent/prompt template 配置
 │   ├── i18n/                         # @spherse/i18n — 纯 TS i18n 基础设施
+│   │   ├── README.md                 # 包级守则：翻译基准、逐条注释规范、校验命令
 │   │   ├── scripts/
 │   │   │   └── check-i18n.mjs        # locale key 一致性校验脚本
 │   │   └── src/
@@ -339,7 +341,7 @@ spherse/
 │   │   └── src/
 │   │       ├── styles.css            # Tailwind v4 + --sp-* token 体系（从 app 精简复制）
 │   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）及单测
-│   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型，自建 locale catalog）
+│   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型与 locale 工具，自建 catalog）
 │   │       │   ├── index.ts          # useLandingI18n hook + localStorage 持久化
 │   │       │   └── locales/          # zh-CN / zh-TW / en 三语
 │   │       ├── components/           # 页面组件（Hero、Carousel、FeatureCards、FeatureModal、LanguageSwitcher 等）
@@ -348,16 +350,30 @@ spherse/
 ├── scripts/
 │   └── rebuild-native.mjs            # Electron native dependency rebuild
 ├── docs/
-│   ├── official/                     # 正式项目文档（始终与代码同步）
+│   ├── official/                     # 正式项目文档（始终与代码同步；索引与写作规范见 README.md）
+│   │   ├── README.md                 # 按任务路由的索引 + official 写作规范
+│   │   ├── architecture/             # 架构文档（按域拆分）
+│   │   │   ├── index.md              # 全局概览 + package 边界
+│   │   │   ├── core.md               # 内核/会话运行时/store/PM 门面
+│   │   │   ├── capabilities.md       # 能力模块与工具聚合
+│   │   │   ├── security.md           # 访问策略/审批/run_command 安全模型
+│   │   │   ├── server.md             # Fastify/contracts/WS/bus
+│   │   │   ├── desktop.md            # Electron/设置/模型配置/更新
+│   │   │   ├── frontend.md           # 路由/查询缓存/feature 组织
+│   │   │   ├── chat.md               # 聊天流式/重试/历史/滚动
+│   │   │   ├── ui-sdk.md             # UI SDK 与注入桥
+│   │   │   ├── theming.md            # token 体系/三级主题/DOM 入口
+│   │   │   └── i18n.md               # i18n 架构
+│   │   ├── data-conventions.md       # 数据文件格式与存储约定
+│   │   ├── glossary.md               # 术语表：一词一行 + 权威文档指针
+│   │   └── project-structure.md      # 本文件：完整目录索引
 │   └── dev/                          # 开发过程文档（容易过时）
+│       ├── decisions/                # ADR 决策记录（编号、只追加；索引与规则见 README.md）
 │       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
 │       ├── infra/                    # {yyyy-MM-dd-name}/ 下放基础设施 design + plan
 │       ├── bugfix/                   # bugfix 分析与修复思路
+│       ├── investigation/            # 调研文档（{yyyy-MM-dd-name}/ 或单文件）
 │       └── backlog.md                # 待办事项
-├── .opencode/
-│   └── skills/                      # opencode coding-agent skill 定义
-│       └── i18n/
-│           └── SKILL.md             # i18n 字符串迁移指导
 ├── .github/
 │   └── workflows/
 │       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + 末尾 dispatch deploy-pages 联动 web 部署
@@ -365,6 +381,8 @@ spherse/
 │       └── deploy-pages.yml          # main 分支 landing/web/i18n 变更或发版流水线 workflow_dispatch 触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
+├── AGENTS.md                         # agent/新成员入口：文档地图 + 命令 + 红线（细节单一权威来源 + 链接）
+├── opencode.json                     # opencode 配置
 ├── eslint.config.js                  # ESLint 9 flat config（全仓库 lint 规则）
 ├── package.json                      # npm workspace root
 └── tsconfig.base.json                # 共享 TypeScript 配置

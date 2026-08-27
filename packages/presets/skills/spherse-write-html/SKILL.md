@@ -236,7 +236,7 @@ spherse.openExternalLink("https://example.com");
 - `spherse.openFile(path | { path, float })` — 在 Content Browser 打开项目文件；`float:true` 以浮窗打开（desktop）
 - `spherse.openExternalLink(url)` — 在系统默认浏览器打开外部链接（http/https/mailto/tel）
 - `spherse.data.get/set/delete(params)` → `Promise` — key-value 数据读写
-- `spherse.api.*` — 只读查询项目信息（agents / sessions / content / triggers / settings）
+- `spherse.api.*` — 只读查询项目信息（agents / sessions / content / fileTree，完整 op 清单见 `spherse-use-ui-sdk` skill）
 - `spherse.events.on("file:update", filter, handler)` — 订阅指定项目文件的变化信号
 
 `spherse` 全局对象由 App 自动注入到每个 HTML，无需自己写 `<script>` 加载或内联 wrapper。

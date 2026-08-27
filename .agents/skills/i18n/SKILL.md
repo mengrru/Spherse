@@ -15,11 +15,11 @@ This skill guides the coding agent through identifying user-visible strings in S
 
 - React component text shown to users (buttons, labels, placeholders, error messages, empty states, dialog titles)
 - Electron IPC error/confirmation messages shown to users
-- Server route error messages returned to the frontend
-- Core tool error messages shown in the UI
+- Web shell UI (version guard, connect page)
 
 ### What NOT to translate
 
+- Anything in `packages/server` or `packages/core` — they do NOT depend on `@spherse/i18n`. Server/core surface errors as structured codes (e.g. chat `ErrorEventCode`); the renderer owns the i18n rendering decision
 - Route paths, query parameters, storage keys
 - CSS class names, ARIA ids, test ids
 - API endpoint paths
@@ -38,8 +38,8 @@ Examples:
 - `settings.title`
 - `settings.models.defaultModel`
 - `content.save.error`
-- `server.content.notFound`
-- `core.tools.readFile.pathRequired`
+- `chat.error.modelNotConfigured`
+- `project.open.failed`
 
 ## Step-by-step Process
 
@@ -56,7 +56,7 @@ Examples:
 
 5. **Replace** the hardcoded string in source code:
    - In React components: `const { t } = useI18n();` then `t("key")`
-   - In server/core/Electron: `translate(locale, "key", params)` (using locale from context or provider)
+   - In Electron main / web shell: `translate(locale, "key", params)` (using locale from settings or provider)
 
 6. **For strings with variables**: use `{name}` interpolation in the locale value, never concatenate translated parts:
    - ✅ `"无法读取文件：{path}"` + `t("key", { path })`
@@ -79,7 +79,7 @@ Examples:
 ## Catalog Location
 
 - Locale files: `packages/i18n/src/locales/{zh-CN,zh-TW,en}.ts`
-- Type definition: `packages/i18n/src/types.ts`
+- Canonical catalog & `TranslationKey` derivation: `packages/i18n/src/catalog.ts`
 - Translation API: `packages/i18n/src/translate.ts`
 
 ## Important Rules

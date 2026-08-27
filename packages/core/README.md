@@ -1,6 +1,6 @@
 # @spherse/core
 
-纯 Node.js 核心逻辑，采用**微内核 + Capability** 架构。本文是 core 的开发守则——新代码必须遵守，review 时以此为准。架构细节的完整描述见 `docs/official/architecture.md`，目录索引见 `docs/official/project-structure.md`。
+纯 Node.js 核心逻辑，采用**微内核 + Capability** 架构。本文是 core 的开发守则——新代码必须遵守，review 时以此为准。架构细节见 `docs/official/architecture/core.md` 与 `docs/official/architecture/capabilities.md`（按任务路由查 `docs/official/README.md`），目录索引见 `docs/official/project-structure.md`。
 
 ## 架构总览
 
@@ -65,7 +65,9 @@
 
 ## 关键约定
 
-- **写入一律走门面**：任何组件写项目文件必须经 `ProjectManager`（`writeFile` / `writeBinaryFile` / `createEntry` / `deletePath` / `copyFileWithin`，内部 = resolveProjectPath + accessPolicy + per-path FileWriteMutex）。禁止 route / capability 直接 `fs.writeFile` 项目内路径。
+- **工具模式**：AgentTool 一律工厂函数 `createXxxTool(projectRoot: string): AgentTool`，参数 schema 用 `@sinclair/typebox` 定义（与 pi-agent-core 的 `AgentTool` 接口对齐）
+- **路径安全**：项目内路径解析必须用 `resolveProjectPath` / `assertInsideProject` / `isPathInside`（`path.relative` 判边界），禁止 `startsWith` 前缀判断——前缀误判会导致路径穿越
+- **写入一律走门面**：任何组件写项目文件必须经 `ProjectManager`（`writeFile` / `writeBinaryFile` / `createEntry` / `deletePath` / `copyFileWithin`；内部 = resolveProjectPath + accessPolicy + per-path FileWriteMutex）。禁止 route / capability 直接 `fs.writeFile` 项目内路径。
 - **FileWriteMutex 全链路一把**：由装配点创建唯一实例注入。任何构造器都不得默认 `new FileWriteMutex()`。
 - **model catalog 实例归组合根**：`ModelCatalog` 由 desktop main / server registry 持有注入。core 不得新增模块级可变导出。
 - **Runner 并发语义**：同一 session 并发 `sendMessage`/`retryLastTurn` 抛 `ValidationError`（in-flight guard）；control sink 经 `swapEventSink` 栈恢复。新调用路径必须经 Runner，不得绕过。
@@ -73,7 +75,7 @@
 - **access 裁决优先级**：deniedPaths > capability pathRules > 内置类别白名单；pathRules 仅作用于 LLM 端。
 - **导出面**：`index.ts` 显式清单，只导出外部实际消费的符号；新增导出先查消费面。
 - **类型源**：gates 自 `kernel/gates.ts`、AttachmentProcessor 自 `attachments/index.ts`——不要从 tools 的 re-export 壳 import。
-- **测试不伸私有**：测 AgentRunner 直接构造它（`AgentRunner.init(deps, …)`），不要从 SessionManager 里挖 `(x as any).sessions`。
+- **测试不伸私有**：测 AgentRunner 直接构造它（`AgentRunner.init(deps, …)`），不要从 SessionManager 里挖 `(x as any).sessions`。修改已有模块后必须补充或更新对应测试，不留「下次一起补」
 
 ## 验证
 

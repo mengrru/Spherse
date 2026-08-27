@@ -1,10 +1,12 @@
 # 数据约定
 
-## 世界观项目结构
+> 覆盖：项目内数据文件的路径布局、格式与存储不变量——`.spherse/` 树、project.yaml、agent / trigger / skill 定义、sessions.db 与数据文件。
+> 运行机制（事件投影、compaction、MCP 连接生命周期、触发器调度）见 `architecture/` 对应域文件；本文只记录「什么数据、放在哪、什么格式、什么不变量」。
+> 预置模板与 presets.json 见 `packages/presets/README.md`；访问控制 category 语义见 `architecture/security.md`。
 
-用户的世界观项目是独立文件夹，结构为 `.spherse/`（系统文件）+ 用户自定义内容目录。
+## 项目目录布局
 
-默认系统文件：
+项目是独立文件夹：`.spherse/`（系统数据）+ 用户自定义内容目录。
 
 ```text
 project-root/
@@ -12,128 +14,157 @@ project-root/
 │   └── <skill-name>/SKILL.md
 ├── .spherse/
 │   ├── project.yaml
-│   ├── theme.css
+│   ├── theme.css                  # 可选：用户自定义全局主题时才存在
 │   ├── agents/
 │   │   └── {agent-slug}/
 │   │       ├── profile.md
-│   │       ├── theme.css
-│   │       ├── mcp.json               # 可选：MCP 连接器配置（agent 右键「连接器」对话框管理）
-│   │       ├── sessions.db
-   │   │       ├── triggers/
+│   │       ├── theme.css          # 可选：agent 聊天窗口主题
+│   │       ├── mcp.json           # 可选：MCP 连接器配置
+│   │       ├── sessions.db        # 惰性：首次访问会话时创建
+│   │       ├── triggers/          # 惰性：首次保存触发器时创建
 │   │       │   ├── index.yml
 │   │       │   └── logs.jsonl
-│   │       └── skills/              # 可选：agent-level 私有 skill（按需创建）
+│   │       └── skills/            # 可选：agent-level 私有 skill
 │   │           └── <skill-name>/SKILL.md
-│   ├── generated-images/          # generate_image 工具自动保存的图片（按时间戳+hex 命名）
-│   ├── attachments/               # chat 图片输入等用户上传附件落盘（POST /attachments 上传，base64 仅在本轮 LLM 调用瞬间存在）
-│   └── skills/
+│   ├── generated-images/          # generate_image 落盘（首次生图时创建）
+│   ├── attachments/               # 聊天图片上传落盘
+│   └── skills/                    # 新建项目时创建的空目录（用户自建 project skill）
 │       └── <skill-name>/SKILL.md
-├── AGENTS.md
-└── CHANGELOG.md
+├── AGENTS.md                      # 创建时写默认模板；缺失不影响任何功能
+└── CHANGELOG.md                   # 创建时写空文件；append_changelog 工具追加
 ```
 
-`.spherse/theme.css` 是可选文件，只在用户自定义主题时存在。新项目创建时，系统会自动根据 `presets.json` 创建预置 agent（创建到 `.spherse/agents/`）并创建空的 `.spherse/skills/` 目录（供用户自建 skill）。builtin skill 随 app 内置，通过 `SkillStore` 内存合并，不写入磁盘。
+- `AGENTS.md` 缺失时 `readIndex()` 返回空串，agent system prompt 仅由 profile 与 skill / context 组成
+- `theme.css`（项目级与 agent 级）均按需写入；不存在时读取为空串、UI 用默认样式
+- `mcp.json`、`triggers/`、`sessions.db` 均为惰性创建：首次写入或首次访问才落盘
+- `attachments/`：`POST /api/projects/:projectId/attachments` 上传，仅 png / jpg / webp、≤5MB，命名 `{epoch-ms}-{8hex}.{ext}`；多模态 base64 仅在本轮 LLM 调用瞬间存在，持久化前被 sanitizer 剥离
+- `generated-images/`：`generate_image` 自动保存，命名 `{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`，重名冲突时重试
+- builtin skill 随 app 内置、`SkillStore` 内存合并，不写入磁盘（见「Skill 定义格式」）
 
-`AGENTS.md` 是可选文件：新项目创建时会写入默认模板，但该文件缺失不影响任何功能（创建/恢复 session 等行为正常，`readIndex()` 返回空串，agent system prompt 仅由 profile 与 skill/context 组成）。
+## project.yaml
 
-## Project 配置
-
-`.spherse/project.yaml` 对应 `ProjectConfig`：
+对应 `ProjectConfig`：
 
 ```yaml
+id: aB3xK9mQ
 name: My World
 created: 1760000000000
 welcomePage:
   path: welcome.html
+aiAccess:
+  deniedPaths:
+    - drafts/private.md
 ```
 
-模型选择不由项目配置持有，而是由用户级全局设置（`AppSettings.models.text.defaultModel`）决定；项目级不再有 `defaultModel` 字段（老项目 `project.yaml` 中残留的该字段会被忽略，不报错）。
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `id` | 是 | nanoid(8)。创建时生成；legacy 项目读取缺失时自动补种回写；registry 检测 id 冲突时重新生成 |
+| `name` | 是 | 展示名 |
+| `created` | 是 | Unix epoch ms |
+| `welcomePage.path` | 否 | 项目根路由的自定义欢迎页，校验见下 |
+| `aiAccess.deniedPaths` | 否 | 同时禁止 AI 工具读写的项目相对路径数组，校验见下 |
 
-特殊文件路径（`AGENTS.md`、`CHANGELOG.md`、`.spherse/agents/` 等）由 `@spherse/core` 的 `access/path-category.ts` 中 `PATH_PATTERNS` 常量固定，不可配置。
+- 解析为 YAML 后裸 cast，core 侧无 schema 校验；残留未知字段（如老项目的 `defaultModel`）静默忽略，随下次保存原样保留
+- 模型选择不在项目配置：由用户级 `AppSettings.models.text.defaultModel` 决定
+- 特殊文件路径归属由 `@spherse/core` 的 `access/path-category.ts` 中 `PATH_PATTERNS` 固定（17 类 + `userFiles` 兜底），不可配置；capability 可经 `pathRules` 声明优先裁决（memory capability 已在使用，见 `architecture/security.md`）
+- `welcomePage.path` 校验：`/` 分隔、拒绝绝对路径与 `..`、扩展名白名单 html / htm / png / jpg / jpeg / gif / webp / svg、必须归类为 `userFiles`（即排除 `.spherse/**`、AGENTS.md、CHANGELOG.md）；保存时不要求文件存在；渲染时 settings 查询失败或资源加载失败回退占位态
+- `deniedPaths` 校验：拒绝绝对路径、`..` 与尾部斜杠并去重；保留路径（一切非 `userFiles` 类别）不可加入——它们由 access policy 白名单另行控制
 
-可选字段 `aiAccess.deniedPaths` 是项目相对路径数组，用于同时禁止 AI 工具读取和写入这些路径。路径使用 `/` 分隔，不允许路径穿越，不允许加入 `AGENTS.md`、`CHANGELOG.md` 或 `.spherse` 下任何路径（这些由 access policy 白名单控制）。
+## Agent 定义（profile.md）
 
-可选字段 `welcomePage.path` 是项目相对路径字符串，用于在项目根路由展示用户自定义欢迎页。路径使用 `/` 分隔，不允许路径穿越，不允许 `.spherse` 或 `.spherse/**`，支持扩展名 `html`、`htm`、`png`、`jpg`、`jpeg`、`gif`、`webp`、`svg`。保存配置时不要求文件已经存在；渲染时如果预览接口返回 403/404 或请求失败，前端回退到默认空状态。
+存放于 `.spherse/agents/{agent-slug}/profile.md`，Markdown + YAML frontmatter；gray-matter 手工解析、core 侧无 schema 校验，`name` 缺失时整个 profile 被跳过。
 
-## Agent 定义格式
+**slug（目录名）规则**：`slugBase` 与 `shortId` 拼接，形如 `world-builder-a1b2c3`。
 
-Agent 定义是 Markdown 文件 + YAML frontmatter，存放于 `.spherse/agents/{agent-slug}/profile.md`。agent slug（目录名）由 `slugBase` 与 `shortId`（agent UUID 去连字符后的前 6 位）拼接而成，形如 `world-builder-a1b2c3`。`slugBase` 由 `deriveAgentSlugBase` 从初始 agent name 派生（trim、小写、空白替换为连字符、仅保留 `[a-z0-9\u4e00-\u9fff-]` 以兼容中文名、折叠连续连字符、去首尾连字符、截断 40 字符，为空时回退 `agent`）；`buildAgentDirName` 在目录名已存在时依次把 shortId 加长到 8/10/12 位，仍冲突则追加 `-2`/`-3`… 后缀。agent id 恒由 core `crypto.randomUUID()` 生成。目录名在创建时生成，之后不再变（`manage_agent` 的 `update` 也不会改动 id 与 slug）。
+- `slugBase`：由初始 name 派生——trim、小写、空白转连字符、仅保留 `[a-z0-9\u4e00-\u9fff-]`（兼容中文名）、折叠连续连字符、去首尾、截断 40 字符、为空回退 `agent`
+- `shortId`：agent UUID 去连字符前 6 位；目录名冲突时依次加长到 8 / 10 / 12 位，仍冲突追加 `-2` / `-3`… 后缀
+- `id` 恒由 `crypto.randomUUID()` 生成；目录名与 id 创建后不变，`manage_agent` 更新亦不改
 
-Agent 聊天窗口主题存放于同目录的 `theme.css`。该文件由 Agent Dialog 的“主题”标签页编辑，正常新建流程会从 `@spherse/presets` 的 `agent-theme-template.css` 初始化。文件不存在时读取结果为空字符串，聊天窗口使用全局默认样式。
+frontmatter 字段：
 
-Agent 的 MCP 连接器配置存放于同目录的 `mcp.json`（可选文件）。由 agent 右键菜单「连接器（MCP）」对话框管理，记录该 agent 启用的 MCP server 列表（stdio 子进程 / http streamable / sse 三种传输方式，每项含 `id`/`name`/`enabled`/`transport` 及对应的连接参数）。运行时按 agent 维度连接所有 `enabled` 的 server（连接按 agent 缓存、跨会话共享），将发现的工具以 `mcp__{server}_{shortid}__{tool}` 命名（`shortid` 为 server id 前 8 位）合并进该 agent 的工具集——合并发生在首次向会话发送消息时（懒加载），而非会话创建时。连接时还按 server capability 消费 instructions / resources / prompts：server `instructions` 连同 resources / prompts 目录序列化为 `<mcp-context>` block 注入 system prompt；声明 `resources` capability 的 server 创建 `read_resource` 工具，声明 `prompts` capability 的 server 创建 `get_prompt` 工具。单个 server 连接失败不影响其它 server（降级为告警，不阻断会话）。连接在 MCP 配置更新 / 删除 agent / 项目关闭时断开（由 `McpConnectionManager.invalidate` / `closeAll` 处理）。文件不存在时视为无连接器。该文件可能含 `headers`/`env` 等敏感信息，因此对 LLM 工具不可读写（`agentMcp` category，不在 LLM 读/写白名单内）。
+| 字段 | 必填 | 说明 |
+|---|---|---|
+| `name` | 是 | 展示名称 |
+| `alias` | 否 | 设定后代替 `name` 显示在助手消息气泡；未设或留空回退 `name` |
+| `id` | 自动 | UUID；读取缺失时自动生成并回写 |
+| `createdAt` | 自动 | epoch ms；创建时生成后不变 |
+| `model` | 否 | 覆盖全局默认模型 |
+| `tools` | 否 | 允许的工具名列表；缺省不分配任何工具 |
+| `context` | 否 | 项目根内相对路径列表，构建 system prompt 时预读注入；access policy 不可读的路径静默跳过 |
+| `yolo` | 否 | 自动放行：true 时危险工具跳过审批门，文件访问策略不受影响；仅 Agent Dialog 可改，`manage_agent` 不管理 |
+| `timePerception` | 否 | 时间感知配置，见下 |
+| `output` | 否 | 预留字段，当前无消费方 |
 
-必需字段：
+`timePerception`：`{ enabled, epochMs, startMs, flowRate, timeZone? }`。
 
-- `name`：展示名称
+- 感知时间由纯函数 `perceivedMs = startMs + (realMs - epochMs) × flowRate` 从消息真实时间戳推导；streamDecorator 对 wire 上带时间戳的 user 消息前插 `<time>` 标签（不持久化）；生效条件 `enabled && flowRate > 0`
+- 启用标记是独立 context block（`<session-context>` 之后）
+- `manage_agent` 只切换 `enabled`：首次开启固化 `epochMs = startMs = 写入时刻, flowRate = 1` 的默认配置（防锚点漂移），关闭即删除整个 key
+- 锚点、起点、流速、时区仅 Agent Dialog 可调
 
-常用可选字段：
+`theme.css`（同目录，可选）：Agent Dialog「主题」页编辑，新建初始为空白，presets 模板仅作参考物料；缺失读取为空串、聊天窗口用全局默认样式。
 
-- `alias`：别名，设定后显示在助手消息气泡上代替 `name`；未设置或留空时回退到 `name`
-- `id`：UUID，首次读取缺失 id 的文件时自动生成并回写；设计意图为不可变
-- `createdAt`：创建时间，Unix epoch milliseconds；创建时自动生成，之后保持不变
-- `model`：覆盖项目默认模型
-- `tools`：允许使用的 tool 名称列表；缺省时不分配任何工具（空列表）
-- `context`：项目根目录内相对路径列表，SessionRuntime 构建 system prompt 时预读取并注入
-- `output`：预留的输出路径、命名和 frontmatter 配置
-- `timePerception`：时间感知配置（per-agent），启用后 Agent 在对话中看到的时间线可与真实世界不同步。含 `enabled`（布尔）、`epochMs`（锚定真实时刻）、`startMs`（感知时间起点）、`flowRate`（感知/真实时间比率，1 = 正常速度）、`timeZone`（可选 IANA 时区名）。感知时间由纯函数 `perceivedMs = startMs + (realMs - epochMs) × flowRate` 从每条消息的真实时间戳推导，通过模块级函数 `composeStreamFn` 在 streamFn 边界对每条 user 消息注入 `<time>感知时间</time>` XML 标签（不持久化），system prompt 的 `<session-context>` 标记是否启用并指示 Agent 不要在回复中输出 `<time>` 标签。`manage_agent` 工具只能读写该配置的开关（`time_perception.enabled`）：开启时若无既有配置则固化 `epochMs = startMs = 写入时刻, flowRate = 1` 的默认配置（避免解析时默认导致锚点漂移），若已有配置则保留锚点/起点/流速/时区仅翻转 `enabled`；关闭时整个删除该 key（与 Agent Dialog 行为一致）。锚点、起点、流速、时区的详细配置仅由用户在 Agent Dialog 中操作。
+### mcp.json
 
-示例：
+外层为对象 `{ "servers": [...] }`，每项一个 server：
 
-```markdown
----
-id: 550e8400-e29b-41d4-a716-446655440000
-createdAt: 1760000000000
-name: Historian
-model: glm-4.5-air
-tools:
-  - read_file
-  - write_file
-  - edit_file
-context:
-  - AGENTS.md
-  - lore/timeline.md
----
-
-Agent system prompt content...
+```json
+{ "id": "uuid", "name": "search", "enabled": true, "transport": "http", "url": "https://…" }
 ```
 
-## 触发器数据
+- base 字段：`id` / `name` / `enabled`（缺省 true）；stdio 型带 `command` 与可选 `args` / `env` / `cwd`，http 与 sse 型带 `url` 与可选 `headers`
+- 由 agent 右键「连接器（MCP）」对话框管理；非法项与重复 id 静默丢弃，文件不存在视为无连接器
+- 可能含 `headers` / `env` 敏感信息：`agentMcp` category 对 LLM 工具不可读写
+- 连接生命周期、工具合并与命名见 `architecture/capabilities.md`「聚合与过滤」
 
-触发器配置存储在 `.spherse/agents/{agent-slug}/triggers/index.yml`，YAML 数组格式，每个元素为 `TriggerEntry`：
+## 触发器（triggers/）
 
-```yaml
-- id: uuid
-  type: time
-  name: 每日回顾
-  enabled: true
-  cron: "0 9 * * *"
-  mode: reusable_session
-  message: "回顾进展 {{date}}"
-  notify: true
-  notificationMessage: "每日回顾已发送"
-  createdAt: 1749600000000
-  updatedAt: 1749600000000
-  boundSessionId: sess-abc123
-```
+`index.yml` 为 YAML 数组，元素 `TriggerEntry`：
 
-`type` 区分两种触发方式：`time`（cron 定时触发，需配 `cron` 字段）和 `event`（用户事件触发，需配 `eventName` 字段）。`mode` 支持三种会话策略：`reusable_session`（新建 trigger 的默认值）首次触发时新建一个会话并绑定，之后每次触发复用该会话，绑定 ID 记录在 `boundSessionId` 字段（仅由运行时写入）；`new_session` 每次触发都新建会话执行；`existing_session` 在用户指定的已有会话中执行，需配合 `targetSessionId` 字段填写目标会话 ID。`reusable_session` 模式下若绑定会话已被删除（归档），下次触发会自动新建并重新绑定（运行时按 `status: active` 判定会话可用，删除会话不主动清理绑定）；用户可通过 `POST .../triggers/:triggerId/reset-binding` 主动解除绑定。`notify` 为 `true` 时，renderer 会在任务完成后显示通知；`notificationMessage` 为可选自定义通知内容。`message` 支持模板变量：`{{agent_name}}`（别名 `{{agentName}}`，注入 agent 名称）、`{{payload}}`（仅 event 类型，注入事件附带的字符串 payload）、`{{date}}`/`{{time}}`/`{{datetime}}`/`{{weekday}}`（按本地时区注入当前日期时间）；`sp:` 前缀为内部事件保留（如 `sp:time-tick`）。
+| 字段 | 说明 |
+|---|---|
+| `id` | nanoid，server 路由生成 |
+| `type` | `time`（配 `cron`）或 `event`（配 `eventName`） |
+| `name` / `enabled` | 展示名与开关 |
+| `mode` | `reusable_session`（UI 新建默认）/ `new_session` / `existing_session`（配 `targetSessionId`） |
+| `message` | 触发时发送的消息，支持模板变量 |
+| `notify` / `notificationMessage` | 完成后 renderer 通知与可选自定义内容 |
+| `createdAt` / `updatedAt` | epoch ms |
+| `boundSessionId` | 仅运行时写入：reusable 模式的绑定会话 |
 
-执行日志追加写入同目录下的 `logs.jsonl`，每行一个 JSON 对象。日志包含 `id`、`agentId`、`triggerId`、`status`、`triggeredAt`、`completedAt`、`error`、`sessionId`、`agentName`、`triggerName`、`eventName` 等字段，用于运行日志 UI 展示与问题排查。日志文件超过 2MB 时保留最近 5000 行。
+- reusable 模式：首次触发新建会话并绑定；绑定会话归档后（按 `status: active` 判定）下次触发自动重绑；`POST .../triggers/:triggerId/reset-binding` 主动解绑
+- 模板变量：`{{agent_name}}`（别名 `{{agentName}}`）、`{{payload}}`（仅 event 型）、`{{date}}` / `{{time}}` / `{{datetime}}` / `{{weekday}}`（本地时区）；未知变量原样保留；`sp:` 前缀为内部事件保留
+- 同一 trigger 的并发触发被 executor 的 in-progress 集合挡掉
 
-触发器中 `type: time` 的条目由 TimerService 按 10 分钟轮询检查 cron 命中情况，实际执行时间可能比 cron 表达式指定时间延迟数分钟；`type: event` 的条目在收到对应用户事件时立即触发。TriggerManager 以磁盘为唯一真相源，每次 tick / 事件都从磁盘重新读取 trigger 配置。
+执行日志追加写入 `logs.jsonl`，每行一个 JSON，字段：`triggerId`、`triggerName?`、`agentName?`、`eventName?`、`sessionId`、`triggeredAt`、`completedAt?`、`status`（running / success / failed）、`error?`。
 
-## Session 数据
+- 轮转：文件超过 2MB 且超过 5000 行时截断保留最近 5000 行
 
-每个 agent 拥有独立的 SQLite 数据库文件，位于 `.spherse/agents/{agent-slug}/sessions.db`。`sessions` 表保存列表元数据：`id`、`agent_id`、`title`、`created_at`、`updated_at`、`status`、`source`，以及为会话分支预留的 `parent_session_id` / `fork_seq` 与 legacy 迁移标记 `migrated_at`。每个 session 的状态为 `active` 或 `archived`。
+调度语义：`time` 型由 TimerService 每 10 分钟轮询 cron 命中（实际执行可延迟数分钟），`event` 型收到用户事件即时触发；磁盘是唯一真相源，每 tick / 事件都重新读取配置。机制见 `architecture/capabilities.md`。
 
-新会话历史写入 append-only `events` 表，主键为 `(session_id, seq)`；事件信封包含 `type`、会话内连续 `seq`、`time`、JSON `data` 与 `schema_version`。当前事件词汇表为 `turn/start`、`turn/end`、`user/message`、`assistant/message`、`tool/result`、`compaction/applied`、`turn/retried`、`turn/withdrawn`。运行时消息由事件 fold 投影，内存消息数组只是可重建缓存：compaction 和 retry 均追加重启点事件，不修改或删除历史事件；`turn/withdrawn { seq }` 锚定被撤回的 user message 事件 seq，废弃区间 `[seq, 本事件 seq)` 由 fold 从日志推导（`collectAbandonedSeqs` 统一收集 retried 列表与 withdrawn 区间），消息撤回（撤回最后一轮）由此实现；末轮已被 compaction digest 覆盖时 `AgentRunner.withdrawLastTurn` 拒绝撤回（digest 无法非破坏性剔除单轮内容）；旧版本二进制读取含 `turn/withdrawn` 的日志时会因未知事件类型跳过该事件、重新显示被撤回的消息（additive 事件不升 schema version，正向兼容优先）。崩溃恢复发现未闭合 turn 时会持久化合成错误 toolResult 与 aborted turn/end，保证二次恢复幂等。
+## Session 数据（sessions.db）
 
-升级前的 `messages` / `compactions` 表保留只读，用于迁移前的历史展示，不再作为新写入路径。首次 restore（包括打开聊天、静默发送和 trigger 复用）会在单个 SQLite 事务中把旧历史惰性转换为 events 并写入 `migrated_at`，然后继续恢复可写会话。旧表数据原样保留，迁移幂等且完全属于 core 内部实现，不暴露客户端迁移 API 或状态字段。
+每个 agent 一个 SQLite 文件（WAL 模式），位于 agent 目录下。
 
-`sessions.title` 是可选的用户可编辑展示标题。用户重命名 session 时只更新 `title`，不更新 `updated_at`，因此不会改变 session 列表按最近对话活动排序的行为。
+- `sessions` 表（列表元数据）：`id`、`agent_id`、`title`、`created_at`、`updated_at`、`status`（active / archived）、`source`、`parent_session_id` / `fork_seq`（会话分支预留）、`migrated_at`（legacy 迁移标记）
+  - `title` 是可选用户可编辑标题——重命名只更新 title 不动 `updated_at`，列表按 `updated_at DESC, id DESC` 排序，保持「最近活动」语义
+- `events` 表（append-only，主键 `(session_id, seq)`）：信封为 `{ type, seq, time, data, schema_version }`。当前事件词汇表：
+  - `turn/start`、`turn/end`（reason: completed / aborted / error）
+  - `user/message`、`assistant/message`、`tool/result`
+  - `compaction/applied`（anchorSeq、digestContent、digestSource、excludedSeqs）
+  - `turn/retried`（abandonedSeqs）、`turn/withdrawn`（seq）
 
-删除 agent 时，ProjectRuntime 关闭该 agent 的 DB 连接并删除整个 agent 目录，`sessions.db` 随 `profile.md`、`theme.css`、`mcp.json` 一起移除。
+存储不变量（fold 投影与控制事件语义见 `architecture/core.md`「会话运行时」）：
+
+- **append-only**：消息与控制事件只追加；compaction、retry、withdraw 均以重启点事件表达，不修改或删除历史
+- **seq 连续**：session log 内从 0 连续，`open` 校验损坏即抛；`appendBatch` 落库失败回滚内存追加
+- **可重建**：运行时消息数组是 fold 投影缓存，可随时丢弃重建
+- **正向兼容**：未知事件类型被 fold 白名单过滤跳过；additive 事件不升 schema version
+- **崩溃恢复幂等**：restore 为未闭合 turn 持久化补写合成 error toolResult 与 aborted `turn/end`，二次恢复不再追加
+
+legacy 迁移：升级前的 `messages` / `compactions` 表保留只读，用于迁移前历史展示；首次 restore（打开聊天、静默发送、trigger 复用）在单个 SQLite 事务内把旧历史转换为 events 并标记 `migrated_at`。迁移幂等、完全属 core 内部实现，不暴露迁移 API 或状态字段。
+
+删除 agent 时关闭该 agent 的 DB 连接并删除整个 agent 目录，`sessions.db` 随 profile、theme、mcp 配置一起移除。
 
 ## System Prompt XML 约定
 
@@ -143,30 +174,40 @@ Agent system prompt content...
 |---|---|
 | `<project-instructions>` | AGENTS.md 内容 |
 | `<agent-profile>` | agent profile 主体 |
-| `<session-context>` | 当前会话上下文（agent name/alias/slug, session id，key-value 格式；时间感知启用时含 `time-perception: enabled` 标记） |
-| `<skill-catalog>` | 可用技能目录（仅 name+description） |
-| `<skill-item name="…" description="…"/>` | 单个技能条目（自闭合，嵌套在 skill-catalog 内） |
+| `<session-context>` | 当前会话上下文，key-value：`agent-name` / `agent-alias`（设置时）/ `agent-slug` / `session-id` |
 | `<preloaded-context>` | 预载文件区 |
 | `<context-file path="…">` | 单个预载文件（嵌套在 preloaded-context 内） |
+| `<skill-catalog>` | 可用技能目录（仅 name + description） |
+| `<skill-item name="…" description="…"/>` | 单个技能条目（自闭合，嵌套在 skill-catalog 内，属性经 XML 转义） |
+| `<memory>` | memory capability 注入的最近记忆（默认 20 条，每行 `- ` 前缀） |
+| `<mcp-context>` | MCP server 说明与资源目录，嵌套 `<server>` / `<instructions>` / `<resources>`（内含自闭合 `<resource>` / `<resource-template>`）/ `<prompts>`；经 beforeTurn 追加，不走 contextBlocks 贡献点 |
 | `<skill-content name="…">` | load_skill 工具返回的技能全文 |
-| `<compaction-digest covers="…">` | 压缩历史摘要（合成消息） |
+| `<compaction-digest>` | 压缩历史摘要（fold 合成的 user 消息） |
 
-agent profile 的 `context` 字段指定的文件通过 `<preloaded-context>` / `<context-file>` 注入 system prompt；`<skill-catalog>` 仅列出技能的 name + description，agent 需要完整指令时调用 `load_skill` 工具获取被 `<skill-content>` 包裹的全文。会话历史超过上下文窗口阈值时触发 compaction：以精确复刻 agent 请求前缀（systemPrompt + tools + fold 视图消息 + 追加摘要指令，命中 provider prompt cache）的方式调用同款模型生成 LLM 摘要（失败且 tokens ≤ 90% window 时跳过本轮，> 90% 时回退机械拼接摘要），摘要存入 `compaction/applied` 事件的 `digestContent`（含 `digestSource: "llm" | "mechanical"` 标记，输出中的 digest 标签会被转义防注入），fold 时合成为 `<compaction-digest>` 包裹的 user 消息保留（详见 `docs/dev/features/2026-08-23-llm-compaction/design.md`）。
+- 固定段顺序：project-instructions → agent-profile → session-context → preloaded-context，之后按 capability 注册序追加 contextBlocks（skill-catalog → time-perception → memory），空块过滤、以空行连接
+- **time-perception 块是裸文本、无 XML 标签**（`time-perception: enabled` 与指示语），渲染在 `<session-context>` 之后
+- `<skill-catalog>` 仅列 name + description；project skill 带附加文件时，`load_skill` 输出末尾追加 `## Skill Files` 清单（附加文件的项目内完整相对路径，提示用 `read_file` 读取）
+- compaction 摘要写入前经转义防注入（digest 标签破坏嵌套）；双路生成与阈值机制见 `architecture/core.md`「会话运行时」
 
 ## Skill 定义格式
 
-Skill 分为 builtin、project-level 和 agent-level 三层。builtin skill 由 app 内置只读；project-level skill 从 `.spherse/skills/<skill-name>/SKILL.md` 和兼容目录 `.agents/skills/<skill-name>/SKILL.md` 发现；agent-level skill 位于 `.spherse/agents/{agent-slug}/skills/<skill-name>/SKILL.md`，仅对对应 agent 生效。合并优先级为 agent-level > `.spherse/skills` > `.agents/skills` > builtin，同名时只使用优先级最高的一项。格式均为 YAML frontmatter + Markdown body。磁盘 skill 目录除 `SKILL.md` 外，还可携带附加文件（如 `references/*.md`、`scripts/*.js`、`assets/*`），与 `SKILL.md` 同目录放置。
+Skill 分为 builtin、project-level 和 agent-level 三层：
 
-`SkillDefinition` 的 `source` 字段标识来源（`builtin` 或 `project`）；`.spherse/skills`、`.agents/skills` 和 agent-level skill 均使用 `source: project`，builtin skill 的 `filePath` 为合成路径 `builtin://<dir>/SKILL.md`。`SkillDefinition` 的 `files` 字段为 `string[]`，列出 skill 目录下（不含 `SKILL.md`）附加文件的 posix 风格相对路径；无附加文件或 builtin skill 时为 `[]`。`SkillStore` 在解析磁盘 skill 时递归枚举其目录（跳过 hidden/`node_modules`/`.git` 条目）填充该字段。
+- builtin 由 app 内置只读；project-level 从 `.spherse/skills/<skill-name>/SKILL.md` 与兼容目录 `.agents/skills/` 发现；agent-level 位于 `.spherse/agents/{agent-slug}/skills/`，仅对该 agent 生效（无 UI 管理，仅手动放置文件）
+- 合并优先级 agent-level > `.spherse/skills` > `.agents/skills` > builtin，同名只取最高优先级一项
+- 格式均为 YAML frontmatter + Markdown body；磁盘 skill 目录除 `SKILL.md` 外可携带附加文件（如 `references/*.md`、`scripts/*.js`、`assets/*`）
 
-必需字段：
+frontmatter 必需字段 `name`、`description`，可选 `version`。`SkillDefinition.source` 标识来源：`.spherse/skills`、`.agents/skills` 与 agent-level 均为 `project`；builtin 为 `builtin`。
 
-- `name`
-- `description`
+- builtin 的 filePath 是合成路径 `builtin://<dir>/SKILL.md`，`files` 恒为 `[]`
+- project skill 的 `files` 为附加文件 posix 相对路径数组，解析时递归枚举填充（跳过 hidden / `node_modules` / `.git`，排除 `SKILL.md`）
+- Markdown body 作为完整 instructions 由 `load_skill` 按需加载
 
-Markdown body 会作为完整 instructions 被 `load_skill` 工具按需加载。当 project skill 带有附加文件（`files` 非空）时，`load_skill` 输出会在指令末尾追加 `## Skill Files` 段，逐项列出附加文件在项目内的完整相对路径，并提示 agent 用 `read_file` 工具读取；builtin skill 因 `files` 恒为 `[]` 不输出该清单。
+写入口径（三种均只以 `.spherse/skills` 为目标；`.agents/skills` 仅作兼容发现源，不在 SkillPanel 展示或管理；写逻辑在 `SkillStore`，`ProjectManager` 为纯委托）：
 
-项目 skill（`source: project`）可通过 UI 创建与安装：前端 SkillPanel 调用 `POST /api/projects/:projectId/skills`（body：name/description/instructions）创建，或经原生文件选择器选 zip 后调用 `POST /api/projects/:projectId/skills/install`（body：zipPath 绝对路径）安装。两种写操作和市场更新均只以 `.spherse/skills` 为目标；`.agents/skills` 仅作为兼容发现源，不在 SkillPanel 中单独展示或管理。zip 约定：顶层有且仅有一个技能文件夹，内含合法 `SKILL.md`，frontmatter `name` 须与文件夹名一致；同名冲突时返回 409，不覆盖。写逻辑实现在 `SkillStore.createSkill/installSkill`，`ProjectManager` 为纯委托。
+- **UI 创建**：`POST /api/projects/:projectId/skills`（body：name / description / instructions）；name 非空、不含 `/ \ :`、不以 `.` 开头
+- **本地 zip 安装**：`POST .../skills/install`（body：zipPath 绝对路径）；zip 顶层有且仅有一个技能文件夹、内含合法 `SKILL.md`、frontmatter name 与文件夹名一致、含 zip-slip 防护；同名冲突返回 409、不覆盖
+- **市场安装**：`GET .../marketplace/skills` 拉取远端 manifest（30s 缓存），`POST .../skills/marketplace-install`（body：name / version，版本不匹配 409）；强制 overwrite——备份后原子替换、失败回滚
 
 ```markdown
 ---
@@ -179,97 +220,48 @@ Full skill instructions in Markdown...
 
 ## 内容文件
 
-- 创作内容使用项目根目录下的普通文件，优先使用 Markdown/YAML/HTML 等人类可读格式
-- 内容浏览 API 会过滤 `.spherse`、`node_modules`、`.git` 和 dotfile/dotdir，避免系统文件进入常规创作视图
-- 文件读取、写入、删除、新建文件、新建目录都必须做 `path.resolve` 后的项目根目录边界校验
-- AI 工具（read_file/write_file/edit_file/list_files/search_content/move_file/copy_file/render_card）和 server 通用路由（content/preview/images）的读写权限由 `@spherse/core` 的 access policy 统一管理：`categorizePath` 将路径分类为语义 category，`llmAccessPolicy`/`serverAccessPolicy` 基于 category 白名单控制读写范围
-- 会写文件的 agent tools 共享 `FileWriteMutex`，避免同一文件并发写覆盖
-- **二进制文件处理**：`read_file` 和 `search_content` 通过 null-byte 启发式（前 8KB 采样）检测二进制文件。`read_file` 检测到二进制时拒绝读取并返回提示（图片文件引导使用 `render_card` 展示）；`search_content` 静默跳过二进制文件。server content 路由同样用 `isBinaryBuffer`（前 8KB 采样）嗅探，二进制文件返回 `binary:true` + 空 content（白名单文本格式 md/html/image 含 ico 走专属 viewer，其余二进制由前端 Content Browser 渲染占位卡 `UnsupportedFileCard`，桌面端经 `HostCapabilities.openFileExternal` 提供「用默认应用打开」按钮）
-- **`.spherse` 元数据目录**：`list_files` 和 `search_content` 默认不列出/搜索 `.spherse` 目录及其子路径（参数 `include_meta`，默认 false）；设置 `include_meta=true` 可进入。`spherseOther` category（`.spherse/**` 兜底）对 LLM 可读；`agentSessions`（`sessions.db*`，含 WAL/SHM sidecar）与 `agentMcp`（`mcp.json`，可能含 headers/env 敏感信息）始终不可读
+- 创作内容使用项目根目录下的普通文件，优先 Markdown / YAML / HTML 等人类可读格式
+- 可见性过滤：文件树路由恒过滤 dotfile / dotdir（含 `.spherse`，无开关）；`list_files` / `search_content` 默认过滤 `.spherse`（参数 `include_meta`，默认 false）与 `node_modules` / `.git`
+- 读写权限语义（category 白名单、LLM 与 server 两套 policy、`pathRules` 优先裁决）见 `architecture/security.md`
+- 可读性边界：`spherseOther`（`.spherse/**` 兜底）对 LLM 可读；`agentSessions`（`sessions.db*` 含 WAL / SHM）与 `agentMcp`（`mcp.json`）永不可读
+- 路径安全：一切项目内路径解析必须 `path.resolve` 后做根目录边界校验（`resolveProjectPath` / `assertInsideProject`）
+- 并发写：会写文件的 agent tools 与 DataStore 共享 `FileWriteMutex`
+- **二进制处理**：`read_file` / `search_content` 以 null-byte 启发式（前 8KB 采样）检测二进制——`read_file` 拒绝读取并返回提示（图片引导 `render_card`），`search_content` 静默跳过；server content 路由同样嗅探，二进制返回 `binary: true` + 空 content
+  - 白名单文本格式（md / html / 图片含 ico）走专属 viewer，其余二进制渲染 `UnsupportedFileCard` 占位卡（桌面端经 `HostCapabilities.openFileExternal` 提供「用默认应用打开」）
 
 ## 活网页数据文件（`*.data.json`）
 
-「活网页」的数据载体：HTML 页面（UI SDK `data.*` action 或 `fetch`）与 agent（`read_data`/`query_data`/`mutate_data` 工具）共同读写。
+「活网页」的数据载体：HTML 页面（UI SDK `data.*` action）与 agent（`read_data` / `query_data` / `mutate_data`）共同读写，两侧汇入 core `DataStore` 单例。SDK 侧 action 语义与限流见 `architecture/ui-sdk.md`。
 
-- 命名约定 `{页面名}.data.json`，与 HTML 同级；不能放在 `.spherse/` 下（HtmlCard 场景的 `.spherse/data/cards/` 例外）
-- 顶层 `$` 前缀键为平台保留（如 `$manifest`）：SDK 写入拒绝、`data.keys`/`data.entries` 不返回、dot-path 寻址不可达
-- 所有写入（SDK 经 server `/data/read|raw-set|raw-delete|mutate` 路由、agent 经 data capability）汇入 core `DataStore` 单例：tmp+rename 原子落盘、`FileWriteMutex` 锁内完成读-改-写、内容哈希 version + `ifVersion` 乐观锁、`idempotencyKey` 幂等、`origin`（sdk/agent）变更事件
-- **写入粒度约定**：集合的结构性增删改走 `data.mutate`（SDK）/`mutate_data`（agent）同一套 manifest 入口（锁内 item 级原子，并发互不覆盖）；`data.set` 仅适合单值/低冲突数据，对数组整体 set 会覆盖并发写入
-- agent 首次接触文件用 `read_data`（不带 path）获取 outline：结构大纲 + `$manifest` 入口签名（`name!`/`name?` 标注必填/可选）；无 manifest 的存量文件自动降级为 outline + dot-path 局部读（数组默认 20 条分页）+ `edit_file`/`write_file` 整文件改
-- `$manifest` 由页面生成时的 agent 同源产出（`spherse-build-data-app` / `spherse-write-html` skill 约束），声明业务命名的 `queries`（enum 过滤/sort/dir/identity 游标分页）与 `mutations`（append/update/remove/set + fields 类型校验 + auto 补全 uuid/nowIso + match 定位）；执行时锁内现场校验路径，失配报 `manifest_stale`/`unknown_entry`（附 valid names），不信任缓存健康度
-- 数据文件损坏（撕裂 JSON）报 `file_corrupted`，不自动修复
+- 命名约定 `{页面名}.data.json`、与 HTML 同级（约定，代码不强制）；不得位于 `.spherse/` 下——例外前缀 `.spherse/data/cards/` 仅对 agent 工具与 server 路由开放，SDK host 侧一律拒绝，当前无生产写入方
+- 顶层 `$` 前缀键为平台保留（如 `$manifest`）：SDK 写入拒绝、`data.keys` / `data.entries` 不返回、dot-path 寻址不可达、core `writeRaw` 抛 `ForbiddenKeyError`
+- 写入不变量：tmp + rename 原子落盘、`FileWriteMutex` 锁内读-改-写、sha256 内容哈希 version + `ifVersion` 乐观锁、`idempotencyKey` 幂等（LRU 1024）、单文件 20MB 上限、变更事件携带 `origin`（sdk / agent）
+- **写入粒度约定**：集合的结构性增删改走 `data.mutate`（SDK）/ `mutate_data`（agent）同一套 manifest 入口（锁内 item 级原子，并发互不覆盖）；`data.set` 仅适合单值 / 低冲突数据，整值覆盖并发写入
+- agent 首次接触文件用 `read_data`（不带 path）获取 outline：结构大纲 + `$manifest` 入口签名（`name!` / `name?` 标注必填 / 可选，超 4096 字符截断）
+  - 无 manifest 的存量文件降级为 outline + dot-path 局部读（数组默认 20 条分页、上限 100）+ `edit_file` / `write_file` 整文件改
+- `$manifest` 由页面生成时的 agent 同源产出（`spherse-build-data-app` / `spherse-write-html` skill 约束）：
+  - `queries` 声明等值过滤 / sort / dir / identity 游标分页；`mutations` 声明 append / update / remove / set + fields 类型校验 + auto 补全 uuid / nowIso + match 定位
+  - 执行时锁内现场校验 manifest 健康，失配报 `manifest_stale` / `unknown_entry`（附 valid names），不信任缓存健康度
+- 损坏（撕裂 JSON）报 `file_corrupted`，不自动修复；server 路由错误映射——version_conflict 409、unknown_entry 404、manifest_stale 409、validation_failed 400、forbidden_key 400、file_corrupted 422
 
 ## HTML Card
 
-`render_card` tool 支持以下数据来源：
+`render_card` 的 result `details` 只存元数据（`cardType` / `title` / `file_path` / 尺寸），HTML 全文仅经 `onUpdate`（`tool_execution_update`）传给前端——不持久化到 DB、不占 context window。
 
-- `file_path`（推荐）：项目根目录内的文件相对路径。
-  - HTML 文件：注入 `<base href="${apiBase}/preview/{dir}/">`（文件所在目录），使相对资源（图片/CSS/JS）按文件系统目录关系解析
-  - 图片文件（png/jpg/jpeg/gif/webp/svg/ico）：**不**以文本读取，前端直接以 `<img src="${previewUrl}">` 渲染，避免二进制被当 UTF-8 读成乱码
-- `content`：直接提供 inline 自包含 HTML（无外部资源引用）。注入 `<base href="${apiBase}/preview/">`，使相对路径相对于项目根解析
+| 来源 | 参数 | 行为 |
+|---|---|---|
+| 项目文件（推荐） | `file_path` | HTML 读全文注入；图片（png / jpg / jpeg / gif / webp / svg / ico）不做文本读取，前端直接 `<img>` 渲染 |
+| inline | `content` | 自包含 HTML（无外部资源引用） |
 
-tool update 的 `details.type === "html"` 时，前端 chat 会按 HTML card 渲染。
-
-HTML 全文仅通过 `onUpdate`（`tool_execution_update`）传给前端，**不**包含在 tool 返回值的 `details` 中（避免持久化到 DB 和浪费 context window）。历史恢复时：inline 来源从 tool call 的 `arguments.content` 重建；HTML 文件来源经 preview URL 重新加载；图片来源仅凭 `details.file_path` 重建（前端按扩展名识别为图片直接渲染，无需读取文件内容）。
+- base 注入：file 模式为 `${apiBase}/preview/{dir}/`（文件所在目录），inline 模式为 `${apiBase}/preview/`（项目根）——相对资源按文件系统目录关系解析
+- 尺寸参数默认 height 400 / max_width 800 / max_height 600
+- 历史恢复：inline 来源从 tool call 的 `arguments.content` 重建；HTML 文件来源经 preview URL 重新加载；图片来源仅凭 `details.file_path` 按扩展名识别直接渲染
+- inline 卡片提供「保存为项目文件」按钮
 
 ## Image Card
 
-`generate_image` tool 接收文本 prompt（及可选 `size` / `quality` 参数），调用 pi-ai 图片生成 provider（OpenRouter、智谱或 OpenAI）生成图片，自动保存到 `.spherse/generated-images/{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`。文件名基于 UTC 时间戳 + 4 位随机 hex，避免并发写冲突，不使用 `FileWriteMutex`。成功返回时 content text 包含图片存储路径。图片生成成功后自动以卡片展示，无需额外调用 `render_card`。
+`generate_image` 接收 prompt（及可选 `size` / `quality`），经 pi-ai 图片生成 provider（OpenRouter / 智谱 / OpenAI；模型经 env `SPHERSE_IMAGE_MODEL` 与 `SPHERSE_IMAGE_API_KEY` 配置）生成图片。
 
-`size` / `quality` 参数按 provider 能力透传：OpenAI 与智谱读取后写入各自请求体；OpenRouter（pi-ai 内置）忽略未知字段。各模型支持的具体取值不同（详见各 provider API 文档），留空则用模型默认值。
-
-tool update 的 `details.type === "image"` 时，前端 chat 会按 image card 渲染（三态：generating / done / error）。`done` 态通过 `GET /api/projects/:projectId/preview/<relPath>` 加载图片，卡片右上角提供导出按钮（经 `POST /api/projects/:projectId/images/export` 复制到用户选择的项目内路径）。
-
-## 预置模板
-
-内置模板与预置内容由 `packages/presets/` 维护。构建前执行 `scripts/sync-templates.mjs` 完成以下同步：
-
-1. 将 `templates/*.md` 和 `templates/*.css` 同步为 TypeScript 常量（`AGENT_TEMPLATE`、`AGENT_THEME_TEMPLATE`）
-2. 读取 `presets.json` 生成 `PRESET_SKILLS`、`PRESET_AGENTS` 和 `PRESET_PROMPT_TEMPLATES` 常量（分别声明预置 skill 列表、预置 agent 列表和预置 prompt template 列表）
-3. 递归读取 `skills/` 下声明的预置 skill 目录，生成 `PRESET_SKILL_SOURCES` 常量（包含每个 skill 的完整文件内容）
-4. 读取 `templates/prompt-templates/<id>.md` 的正文，合并到 `PRESET_PROMPT_TEMPLATES` 每个条目的 `prompt` 字段
-5. 读取 `templates/preset-agents/<dir>.md` 的完整内容（含 frontmatter `name`），合并到 `PRESET_AGENTS` 每个条目的 `content` 字段
-
-如果 `presets.json` 声明的 skill dir 在 `skills/` 下不存在、`presetPromptTemplates` 声明的 `id` 在 `templates/prompt-templates/` 下没有对应 `.md`，或 `presetAgents` 声明的 `dir` 在 `templates/preset-agents/` 下没有对应 `.md`（或缺 frontmatter `name`），构建时报错退出。
-
-### presets.json 格式
-
-`packages/presets/presets.json` 声明预置内容，包含两类：新项目创建时注入的内容（`presetSkills`、`presetAgents`）和供 UI 直接消费的内容（`presetPromptTemplates`，由 Agent 创建对话框作为可复用 prompt 模板徽章展示，不参与项目创建注入）：
-
-```json
-{
-  "presetSkills": [
-    { "dir": "spherse-guide" },
-    { "dir": "spherse-create-ui-theme" },
-    { "dir": "spherse-create-agent-chat-theme" },
-    { "dir": "spherse-use-ui-sdk" },
-    { "dir": "spherse-build-data-app" },
-    { "dir": "spherse-write-html" },
-    { "dir": "spherse-create-skill" }
-  ],
-  "presetAgents": [
-    { "dir": "assistant", "slugBase": "assistant" }
-  ],
-  "presetPromptTemplates": [
-    { "id": "worldview-assistant", "name": "世界观创作助手" },
-    { "id": "roleplay", "name": "角色扮演" }
-  ]
-}
-```
-
-- `presetSkills[].dir`：对应 `packages/presets/skills/` 下的目录名，该目录内容会被打包为 builtin skill 源码（`PRESET_SKILL_SOURCES`），由 `SkillStore` 在运行时内存合并（source 为 `builtin`），不复制到项目的 `.spherse/skills/`
-- `presetAgents[].dir`：对应 `packages/presets/templates/preset-agents/<dir>.md` 文件名（不含扩展名），该文件是完整 agent profile（frontmatter 声明 `name`、`tools` 等，正文为 system prompt），构建时整体嵌入 `PRESET_AGENTS` 条目的 `content` 字段；展示 `name` 从 frontmatter 提取，不在 presets.json 重复声明
-- `presetAgents[].slugBase`：预置 agent 的目录 slug 前缀（与 shortId 拼接后形成 agent slug）
-- `presetPromptTemplates[].id`：对应 `packages/presets/templates/prompt-templates/<id>.md` 文件名（不含扩展名），该文件正文作为 prompt 内容合并到 `PRESET_PROMPT_TEMPLATES` 的 `prompt` 字段；构建时缺失对应文件会报错
-- `presetPromptTemplates[].name`：prompt template 在 Agent 创建对话框徽章上展示的名称
-
-### 预置内容注入
-
-新建项目时，`createProject` 检测到项目首次创建，调用 `initPresets()` 执行以下操作：
-
-- 创建空的 `.spherse/skills/` 目录（供用户自建 project-local skill）
-- 根据 `PRESET_AGENTS` 声明创建预置 agent profile（`content` 为模板完整内容，id/createdAt 由 `ProjectStore.createAgent` 生成）。当前内置「小助手」（slugBase `assistant`）：通用型助手，开启除 `run_command` 外的全部工具（含 `manage_agent`、`manage_trigger`、`memory_save`/`memory_recall` 与 `manage_project_config`，其中写操作仍受审批门控）
-
-builtin skill 不再注入到磁盘，而是由 `SkillStore` 在运行时从 `PRESET_SKILL_SOURCES` 内存合并（source 为 `builtin`，随 app 升级更新）。用户在 `.spherse/skills/` 下自建的 project-local skill（source 为 `project`）按 name 覆盖同名 builtin。
-
-非新建项目（已存在的项目重新打开）不会触发 agent 注入。注入后的预置 agent 属于用户所有，用户可自由修改或删除。
+- 保存到 `.spherse/generated-images/{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`——UTC 时间戳 + 随机 hex 避免并发冲突、重名重试，不使用 `FileWriteMutex`；成功返回 content 含存储路径，自动以卡片展示（无需再调 `render_card`）
+- 参数按 provider 透传：OpenAI 写入 size 与 quality；智谱仅写入 size；OpenRouter（pi-ai 内置）忽略未知字段；留空用模型默认值
+- 卡片三态 generating / done / error：done 经 preview URL 加载，右上角导出按钮（`POST .../images/export` 复制到用户选择的项目内路径）；未配置模型或模型解析失败落 error 态

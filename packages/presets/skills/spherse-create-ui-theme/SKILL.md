@@ -329,7 +329,7 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 /* .spherse/theme.css —— 项目级全局 chat 默认样式（作用于所有 agent 的聊天窗口） */
 [data-chat-root] {
   [data-chat-bubble] { border-radius: 8px; }
-  [data-chat-md-code] { background: #1a1a2e; }
+  [data-md-code] { background: #1a1a2e; }
 }
 ```
 
@@ -347,6 +347,7 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 | `data-md-code` | 代码块（`<pre>`） |
 | `data-md-code-inline` | 行内代码（`<code>`） |
 | `data-md-quote` | 引用块（`<blockquote>`） |
+| `data-md-img` | Markdown 图片（`<img>`） |
 
 示例：
 

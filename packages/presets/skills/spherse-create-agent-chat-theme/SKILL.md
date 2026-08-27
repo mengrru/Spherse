@@ -75,6 +75,7 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 | `data-md-code` | 代码块（`<pre>`） |
 | `data-md-code-inline` | 行内代码（`<code>`） |
 | `data-md-quote` | 引用块（`<blockquote>`） |
+| `data-md-img` | Markdown 图片（`<img>`） |
 
 > 以上钩子均在聊天窗口 DOM 内，可嵌套在 `[data-chat-root] { ... }` 中定制。
 >
