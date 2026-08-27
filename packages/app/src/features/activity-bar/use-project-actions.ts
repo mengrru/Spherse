@@ -2,15 +2,8 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import { useAppStore } from "../../stores/app-store";
-import { useProjectDataStore } from "../../stores/project-data-store";
-import { clearLastRoute } from "../../lib/localstorage/last-route";
 import { useHostBridge } from "../../context/host-bridge-context";
-import { useAgentSessionListUiStore } from "../agent-session-list/store";
-import { useTriggerStore } from "../agent-trigger/store";
-import { useFloatingChatStore } from "../floating-chat/store";
-import { useFloatingContentBrowserStore } from "../floating-content-browser/store";
-import { useBrowserStore } from "../browser/store";
-import { clearProjectQueries } from "../../queries/project";
+import { closeProjectCascade } from "../../layouts/project-lifecycle";
 
 export function buildProjectRoute(projectId: string, lastRoute?: string): string {
   const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
@@ -22,15 +15,8 @@ export function useProjectActions() {
   const { t } = useI18n();
   const bridge = useHostBridge();
   const openProject = useAppStore((s) => s.openProject);
-  const closeProject = useAppStore((s) => s.closeProject);
   const openProjectFolder = useAppStore((s) => s.openProjectFolder);
   const setActiveProject = useAppStore((s) => s.setActiveProject);
-  const clearProjectData = useProjectDataStore((s) => s.clearProjectData);
-  const clearAgentSessionListUi = useAgentSessionListUiStore((s) => s.clearProject);
-  const clearTriggerData = useTriggerStore((s) => s.clearProject);
-  const clearFloatingChat = useFloatingChatStore((s) => s.clearProject);
-  const clearFloatingContentBrowser = useFloatingContentBrowserStore((s) => s.clearProject);
-  const clearBrowser = useBrowserStore((s) => s.clearProject);
 
   const handleAddProject = async () => {
     try {
@@ -52,15 +38,7 @@ export function useProjectActions() {
   };
 
   const handleCloseProject = async (projectId: string) => {
-    const nextProjectId = await closeProject(bridge, projectId);
-    clearProjectData(projectId);
-    clearProjectQueries(projectId);
-    clearAgentSessionListUi(projectId);
-    clearTriggerData(projectId);
-    clearFloatingChat(projectId);
-    clearFloatingContentBrowser(projectId);
-    clearBrowser(projectId);
-    clearLastRoute(projectId);
+    const nextProjectId = await closeProjectCascade(bridge, projectId);
     if (nextProjectId) {
       const project = useAppStore.getState().projects.get(nextProjectId);
       navigate(buildProjectRoute(nextProjectId, project?.lastRoute));

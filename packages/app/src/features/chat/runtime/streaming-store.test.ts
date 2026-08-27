@@ -245,6 +245,59 @@ describe("streaming-store resilience", () => {
     expect(socket.closeSpy).toHaveBeenCalled();
   });
 
+  it("disconnectProject drops all sessions of the project and keeps other projects", async () => {
+    const client = createMockClient();
+    useStreamingStore.getState().attach(client, "target-1", BASE_URL, "closing", "a1");
+    const targetSocket = mock.instances[mock.instances.length - 1];
+    targetSocket.readyState = OPEN;
+    targetSocket.onopen?.({} as Event);
+    useStreamingStore.getState().attach(client, "target-2", BASE_URL, "closing", "a1");
+    const targetSocket2 = mock.instances[mock.instances.length - 1];
+    targetSocket2.readyState = OPEN;
+    targetSocket2.onopen?.({} as Event);
+    useStreamingStore.getState().attach(client, "other-1", BASE_URL, "staying", "a1");
+    const otherSocket = mock.instances[mock.instances.length - 1];
+    otherSocket.readyState = OPEN;
+    otherSocket.onopen?.({} as Event);
+    await vi.advanceTimersByTimeAsync(0);
+
+    useStreamingStore.getState().disconnectProject("closing");
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(useStreamingStore.getState().sessions["target-1"]).toBeUndefined();
+    expect(useStreamingStore.getState().sessions["target-2"]).toBeUndefined();
+    expect(useStreamingStore.getState().sessions["other-1"]).toBeDefined();
+    expect(targetSocket.closeSpy).toHaveBeenCalled();
+    expect(targetSocket2.closeSpy).toHaveBeenCalled();
+    expect(otherSocket.closeSpy).not.toHaveBeenCalled();
+    expect(mock.instances.filter((s) => s.readyState !== CLOSED)).toHaveLength(1);
+  });
+
+  it("disconnectProject disconnects a streaming session that cleanupExpired would keep", async () => {
+    const client = createMockClient();
+    useStreamingStore.getState().attach(client, "leak", BASE_URL, "closing", "a1");
+    const socket = mock.instances[mock.instances.length - 1];
+    socket.readyState = OPEN;
+    socket.onopen?.({} as Event);
+
+    useStreamingStore.getState().sendMessage("leak", "hi");
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "message_start", message: { role: "assistant" } }),
+    } as MessageEvent);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useStreamingStore.getState().sessions.leak.streaming).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(useStreamingStore.getState().sessions.leak).toBeDefined();
+
+    const instancesBeforeDisconnect = mock.instances.length;
+    useStreamingStore.getState().disconnectProject("closing");
+    expect(useStreamingStore.getState().sessions.leak).toBeUndefined();
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(mock.instances).toHaveLength(instancesBeforeDisconnect);
+  });
+
   it("keeps the active run streaming across an unexpected close", async () => {
     const client = createMockClient();
     useStreamingStore.getState().attach(client, "s2", BASE_URL, "p1", "a1");

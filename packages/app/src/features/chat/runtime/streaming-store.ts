@@ -42,6 +42,7 @@ interface StreamingStoreActions {
   attach: (client: ApiClient, sessionId: string, baseUrl: string, projectId: string, agentId: string, initialMessage?: string, accessToken?: string | null) => void;
   detach: (sessionId: string) => void;
   disconnect: (sessionId: string) => void;
+  disconnectProject: (projectId: string) => void;
   touch: (sessionId: string) => void;
   sendMessage: (sessionId: string, text: string, image?: SendableImage) => boolean;
   retry: (sessionId: string) => void;
@@ -341,6 +342,15 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       if (Object.keys(get().sessions).length === 0 && cleanupTimer) {
         clearInterval(cleanupTimer);
         cleanupTimer = undefined;
+      }
+    },
+
+    disconnectProject(projectId) {
+      const sessionIds = Object.entries(get().sessions)
+        .filter(([, session]) => session.projectId === projectId)
+        .map(([sessionId]) => sessionId);
+      for (const sessionId of sessionIds) {
+        get().disconnect(sessionId);
       }
     },
 

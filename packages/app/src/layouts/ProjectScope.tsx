@@ -2,24 +2,16 @@ import { useEffect } from "react";
 import { Outlet, useLocation, useParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { SidePanel } from "../features/side-panel";
-import { FloatingChatManager } from "../features/floating-chat";
-import { FloatingContentBrowserManager } from "../features/floating-content-browser";
-import { BrowserManager } from "../features/browser";
-import { TriggerEventBridge } from "../features/agent-trigger";
-import { FeatureGate } from "../components/FeatureGate";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useAgentBusRefresh } from "../hooks/useAgentBusRefresh";
 import { useSidePanel } from "../hooks/use-side-panel";
-import { UiSdkBridge } from "../ui-sdk";
 import { useAppStore } from "../stores/app-store";
 import { useProjectNavHistory } from "../lib/use-project-navigation";
 import { ProjectProvider } from "../context/project-context";
 import { useHostBridge } from "../context/host-bridge-context";
 import { useApiClient } from "../lib/use-connection";
 import { useConnection } from "../lib/use-connection";
-import { ContentQueryBridge } from "../features/content-browser/ContentQueryBridge";
-import { ThemeQueryBridge } from "../features/project-settings/theme-settings/ThemeQueryBridge";
-import { WelcomePageQueryBridge } from "../features/welcome-page/WelcomePageQueryBridge";
+import { ProjectRuntimeBridges } from "./ProjectRuntimeBridges";
 
 export function ProjectScope() {
   const { projectId } = useParams();
@@ -71,20 +63,7 @@ export function ProjectScope() {
         >
           <Outlet />
         </main>
-        <FeatureGate feature="floating-chat">
-          <FloatingChatManager />
-        </FeatureGate>
-        <FeatureGate feature="floating-content-browser">
-          <FloatingContentBrowserManager />
-        </FeatureGate>
-        <FeatureGate feature="browser">
-          <BrowserManager />
-        </FeatureGate>
-        <UiSdkBridge />
-          <TriggerEventBridge />
-          <ContentQueryBridge />
-          <ThemeQueryBridge />
-          <WelcomePageQueryBridge />
+        <ProjectRuntimeBridges />
       </div>
     </ProjectProvider>
   );
