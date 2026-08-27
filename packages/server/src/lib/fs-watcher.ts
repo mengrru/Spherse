@@ -6,6 +6,7 @@ const WATCHED_CATEGORIES: ReadonlySet<PathCategory> = new Set([
   "userFiles",
   "rootIndex",
   "changelog",
+  "projectConfig",
   "projectTheme",
   "agentTheme",
   "skills",

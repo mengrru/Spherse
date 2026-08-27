@@ -46,6 +46,8 @@ project-root/
 
 Agent 创建界面可配置 Prompt、工具、上下文文件、时间感知、聊天主题和 YOLO 模式。工具必须显式启用；未启用的工具不会交给模型。
 
+新建项目会自带一个预设 Agent「小助手」：通用型助手，默认开启除 `run_command` 外的全部工具，可随时在界面中修改或删除。
+
 ### 会话
 
 同一个 Agent 可以拥有多个互相独立的会话。用户可以：
@@ -80,7 +82,7 @@ Content Browser 支持：
 
 项目根路由可以展示一个自定义 HTML 页面或图片（`html`、`png`、`webp`、`svg` 等常见格式），适合作为项目首页、导航入口、仪表盘或世界观导览。
 
-配置方式：左侧活动栏右键当前项目头像 →「设置 → 欢迎页」→ 填写项目内相对路径。清空配置可恢复默认；未显式配置时自动尝试项目根目录的 `index.html`。欢迎页文件被修改后会自动刷新；文件缺失或加载失败时回退到默认空状态。
+配置方式：左侧活动栏右键当前项目头像 →「设置 → 欢迎页」→ 填写项目内相对路径，或者由启用了 `manage_project_config` 工具的 Agent 在对话中设置（路径会经过校验）。清空配置可恢复默认；未显式配置时自动尝试项目根目录的 `index.html`。欢迎页文件或 `project.yaml` 配置被修改后会自动刷新；文件缺失或加载失败时回退到默认空状态。
 
 ### 工具与审批
 
@@ -94,7 +96,7 @@ Content Browser 支持：
 | 交互与展示 | `ask_user`、`render_card`、`generate_image` |
 | 项目协作 | `append_changelog`、`load_skill`、`emit_trigger_event` |
 | 记忆 | `memory_save`、`memory_recall` |
-| 高级操作 | `run_command`、`manage_agent`、`manage_trigger` |
+| 高级操作 | `run_command`、`manage_agent`、`manage_trigger`、`manage_project_config`（项目级配置） |
 
 `run_command` 以及 `manage_agent` / `manage_trigger` 的写操作通常需要用户审批。`run_command` 以当前系统用户权限执行，没有 OS 级沙箱，文件访问限制也不约束其子进程；只应批准可信命令。YOLO 模式会跳过逐次审批，应谨慎启用。
 

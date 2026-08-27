@@ -6,6 +6,7 @@ import { changelogCapability } from "./changelog/index.js";
 import { renderCapability } from "./render/index.js";
 import { agentMgmtCapability } from "./agent-mgmt/index.js";
 import { interactionCapability } from "./interaction/index.js";
+import { projectConfigCapability } from "./project-config/index.js";
 import { dataCapability } from "./data/index.js";
 
 export function builtinToolCapabilities(sharedDataStore?: DataStore): Capability[] {
@@ -16,6 +17,7 @@ export function builtinToolCapabilities(sharedDataStore?: DataStore): Capability
     renderCapability(),
     agentMgmtCapability(),
     interactionCapability(),
+    projectConfigCapability(),
     dataCapability(sharedDataStore),
   ];
 }

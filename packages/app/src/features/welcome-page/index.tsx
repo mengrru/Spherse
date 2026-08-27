@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
-import { invalidateWelcomePage, useWelcomePage } from "../../queries/welcome-page";
+import { useWelcomePage } from "../../queries/welcome-page";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
-import { useReconnectedSync } from "../../hooks/useReconnectedSync";
 
 const HTML_EXTENSIONS = new Set(["html", "htm"]);
 
@@ -48,14 +47,6 @@ export function WelcomePage({
       setLoadError(false);
       setReloadKey((k) => k + 1);
     }, 300);
-  });
-
-  // Connection-recovered compensation: fs-watch events missed while the bus
-  // was down are not replayed, so invalidate the cached resolution and let
-  // the query refetch (picking up settings changes and file removals that
-  // happened while disconnected).
-  useReconnectedSync(() => {
-    void invalidateWelcomePage(projectId);
   });
 
   useEffect(() => {
