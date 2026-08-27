@@ -45,9 +45,6 @@ export function useChatSession({
   const reconnectFailed = useStreamingStore(
     (s) => s.sessions[sessionId]?.reconnectFailed ?? false,
   );
-  const autoRetrying = useStreamingStore(
-    (s) => s.sessions[sessionId]?.autoRetrying ?? false,
-  );
   const loading =
     historyStatus !== "ready" || connectionStatus === "connecting";
 
@@ -58,7 +55,6 @@ export function useChatSession({
     connectionStatus,
     historyError,
     reconnectFailed,
-    autoRetrying,
     sendMessage: (text: string, image?: AttachedImage) => useStreamingStore.getState().sendMessage(sessionId, text, image),
     retry: () => useStreamingStore.getState().retry(sessionId),
     withdrawLastTurn: () => useStreamingStore.getState().withdrawLastTurn(sessionId),

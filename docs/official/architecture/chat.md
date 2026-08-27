@@ -78,7 +78,7 @@ Composer.send
 | 重试路径 | resend（重发 user 消息） | retry-last（WS `retry` → `retryLastTurn`） |
 
 - **重试决策是纯函数** `retry-plan.ts`：`planRetry` 返回 `none` / `retry-last` / `resend`（含 dropCount）；store 的 `executeRetry` 只执行 plan
-- **自动重试**：`_errorCode === TRANSIENT` 且次数 < 2 时按 backoff `[2s, 5s]` 自动重试；`autoRetrying` 独占退避窗口、`streaming` 防 run 重入；耗尽或永久错误落错误气泡 + 手动按钮
+- **无自动重试**：错误一律落错误气泡 + 手动按钮触发（`_errorCode` 仅用于错误展示分类）；为什么见 [ADR-0008](../../dev/decisions/0008-no-frontend-auto-retry.md)
 - **撤回**：非 streaming 时最新未失败 user 消息可 withdraw；hub 不经 startRun（运行中返回 ConflictError）；成功广播 `turn_withdrawn`，reducer 从该 user 消息处截断；失败给错误气泡打 `_withdrawError`（隐藏 retry）
 
 ## 重连与历史对账

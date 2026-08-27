@@ -21,3 +21,4 @@
 | [0005](0005-path-access-policy.md) | 路径访问权限集中为 category 白名单 | accepted |
 | [0006](0006-host-bridge-shells.md) | 三壳共享 renderer，宿主差异经 HostBridge 抽象 | accepted |
 | [0007](0007-contracts-in-code.md) | API 契约 schema 进代码（contracts + parseContract） | accepted |
+| [0008](0008-no-frontend-auto-retry.md) | chat turn 失败不做前端自动重试，仅手动重试 | accepted |

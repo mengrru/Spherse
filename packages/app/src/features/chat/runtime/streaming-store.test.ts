@@ -566,39 +566,36 @@ describe("streaming-store resilience", () => {
     }
   }
 
-  it("auto-retries a transient Source 2 failure via a retry message after backoff", async () => {
+  it("leaves a transient failure rendered without auto retry", async () => {
     const socket = await attachAndConnect("rt1");
     useStreamingStore.getState().sendMessage("rt1", "hi");
     emit(socket, transientFailureEvents);
     await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(6000);
 
     const session = useStreamingStore.getState().sessions.rt1;
     const last = session.messages[session.messages.length - 1];
     expect(last._error).toBe("rate limit exceeded");
     expect(last._turnError).toBe(true);
-
-    await vi.advanceTimersByTimeAsync(2000);
-
-    expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({ type: "retry" });
-    expect(useStreamingStore.getState().sessions.rt1.retryCount).toBe(1);
+    expect(session.streaming).toBe(false);
+    expect(socket.sent.map((s) => JSON.parse(s)).some((p) => p.type === "retry")).toBe(false);
   });
 
-  it("caps auto-retry at the budget then leaves the error rendered", async () => {
+  it("manual retry sends a retry message and marks the failed turn retrying", async () => {
     const socket = await attachAndConnect("rt2");
     useStreamingStore.getState().sendMessage("rt2", "hi");
+    emit(socket, transientFailureEvents);
+    await vi.advanceTimersByTimeAsync(0);
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      emit(socket, transientFailureEvents);
-      await vi.advanceTimersByTimeAsync(0);
-      await vi.advanceTimersByTimeAsync(6000);
-    }
+    useStreamingStore.getState().retry("rt2");
+    await vi.advanceTimersByTimeAsync(0);
 
-    const retryCount = socket.sent.filter((s) => JSON.parse(s).type === "retry").length;
-    expect(retryCount).toBe(2);
+    expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({ type: "retry" });
     const session = useStreamingStore.getState().sessions.rt2;
+    expect(session.streaming).toBe(true);
     const last = session.messages[session.messages.length - 1];
-    expect(last._error).toBe("rate limit exceeded");
-    expect(session.streaming).toBe(false);
+    expect(last._error).toBeUndefined();
+    expect(last._streaming).toBe(true);
   });
 
   it("manual retry resends the message for a Source 1 error event", async () => {
