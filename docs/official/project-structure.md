@@ -219,7 +219,11 @@ spherse/
 │   │       │   ├── useSidePanel.ts       # side panel pinned/hover/mobileOpen 状态合并派生 + clickAway props
 │   │       │   ├── useCustomTheme.ts
 │   │       │   ├── useDismissable.ts
-│   │       │   └── use-mobile.ts
+│   │       │   ├── use-mobile.ts
+│   │       │   ├── use-coarse-pointer.ts # (pointer: coarse) 探测触摸主输入（软键盘场景，chat Composer 回车换行）
+│   │       │   ├── useAgentBusRefresh.ts # bus agent_updated 事件刷新 agent 列表
+│   │       │   ├── useBusSubscription.ts # bus 事件订阅 hook
+│   │       │   └── useReconnectedSync.ts # bus 重连回调（resync 补偿）
 │   │       ├── ui-sdk/
 │   │       │   ├── UiSdkBridge.tsx       # 自治集成组件：从 ProjectContext 派生 client，统一挂载 action/event bridge
 │   │       │   ├── types.ts              # ActionContext, ActionHandler 类型
@@ -273,7 +277,8 @@ spherse/
 │   │           ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
 │   │           ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel/onFloatFile/floatedFilePaths，被 user-file-panel 与 skill-panel 共用
 │   │           ├── floating-frame/       # 通用浮动窗口 chrome（拖拽/调整大小、titlebar、close），由 floating-chat 与 floating-content-browser 复用；hookPrefix 参数生成各自 data-*-float-* 主题钩子
-│   │           └── MarkdownContent.tsx   # 统一 Markdown 渲染组件
+│   │           ├── MarkdownContent.tsx   # 统一 Markdown 渲染组件
+│   │           └── remark-plain-structure.ts # plain 模式 remark 插件：list/table/thematicBreak 还原为带字面标记的文本行（保序号/行结构）
 │   ├── desktop/                      # @spherse/desktop — Electron 桌面壳（main/preload/electron 基础设施）
 │   │   ├── electron.vite.config.ts   # electron-vite 配置（main + preload + renderer，renderer root 指向 ../app）
 │   │   ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS、extraResources、publish GitHub Releases）
