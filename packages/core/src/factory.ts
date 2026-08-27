@@ -20,6 +20,7 @@ import type { Capability } from "./kernel/capability.js";
 import { ProjectRuntime } from "./project-runtime.js";
 import { initPresets } from "./presets.js";
 import { type Logger, createSilentLogger } from "./logger.js";
+import { ProjectConfigNotFoundError } from "./errors.js";
 import { ModelCatalog } from "./model-providers/catalog.js";
 
 export interface AssembleOptions {
@@ -60,7 +61,10 @@ export async function assembleProject(
   let isNewProject = false;
   try {
     await projectStore.open();
-  } catch {
+  } catch (err) {
+    if (!(err instanceof ProjectConfigNotFoundError)) {
+      throw err;
+    }
     isNewProject = true;
     const dirName = path.basename(path.resolve(projectRoot));
     await projectStore.create(options?.projectName ?? dirName);

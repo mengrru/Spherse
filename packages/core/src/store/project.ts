@@ -26,6 +26,14 @@ export interface ChangelogEntry {
 
 export type AgentChangeAction = "created" | "updated" | "deleted";
 
+async function writeFileIfMissing(filePath: string, content: string): Promise<void> {
+  try {
+    await fs.writeFile(filePath, content, { encoding: "utf-8", flag: "wx" });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+  }
+}
+
 export interface AgentChangePayload {
   agentId: string;
   action: AgentChangeAction;
@@ -85,10 +93,10 @@ export class ProjectStore extends EventEmitter {
     );
 
     const indexPath = path.join(this.rootPath, "AGENTS.md");
-    await fs.writeFile(indexPath, AGENTS_INDEX_TEMPLATE, "utf-8");
+    await writeFileIfMissing(indexPath, AGENTS_INDEX_TEMPLATE);
 
     const changelogPath = path.join(this.rootPath, "CHANGELOG.md");
-    await fs.writeFile(changelogPath, "", "utf-8");
+    await writeFileIfMissing(changelogPath, "");
 
     this.logger.info({ rootPath: this.rootPath, name }, "project created");
   }

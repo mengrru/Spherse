@@ -144,6 +144,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "common.send": "傳送",
   "activity-bar.settingsTooltip": "設定",
   "activity-bar.addProjectTooltip": "新增專案",
+  "activity-bar.openProjectFailed": "開啟專案失敗，請檢查專案檔案是否損壞",
   "activity-bar.closeProject": "關閉專案",
   "activity-bar.openProjectFolder": "開啟專案資料夾",
   "activity-bar.settings": "設定",

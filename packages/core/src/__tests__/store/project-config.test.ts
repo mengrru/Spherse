@@ -97,6 +97,25 @@ describe("ProjectConfigStore", () => {
     await expect(store.read()).rejects.toThrow("project.yaml not found");
   });
 
+  it("throws ProjectConfigNotFoundError when file is missing", async () => {
+    await expect(store.read()).rejects.toMatchObject({ name: "ProjectConfigNotFoundError" });
+  });
+
+  it("throws ProjectConfigParseError on invalid YAML", async () => {
+    await fs.writeFile(configPath, "id: [unclosed", "utf-8");
+    await expect(store.read()).rejects.toMatchObject({ name: "ProjectConfigParseError" });
+  });
+
+  it("throws ProjectConfigParseError on empty file", async () => {
+    await fs.writeFile(configPath, "", "utf-8");
+    await expect(store.read()).rejects.toMatchObject({ name: "ProjectConfigParseError" });
+  });
+
+  it("throws ProjectConfigParseError on YAML array", async () => {
+    await fs.writeFile(configPath, "- a\n- b\n", "utf-8");
+    await expect(store.read()).rejects.toMatchObject({ name: "ProjectConfigParseError" });
+  });
+
   describe("AI access settings", () => {
     beforeEach(async () => {
       await store.write(VALID_CONFIG);

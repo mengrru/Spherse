@@ -1,4 +1,6 @@
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { useI18n } from "@spherse/i18n/react";
 import { useAppStore } from "../../stores/app-store";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { clearLastRoute } from "../../lib/localstorage/last-route";
@@ -17,6 +19,7 @@ export function buildProjectRoute(projectId: string, lastRoute?: string): string
 
 export function useProjectActions() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const bridge = useHostBridge();
   const openProject = useAppStore((s) => s.openProject);
   const closeProject = useAppStore((s) => s.closeProject);
@@ -30,10 +33,15 @@ export function useProjectActions() {
   const clearBrowser = useBrowserStore((s) => s.clearProject);
 
   const handleAddProject = async () => {
-    const projectId = await openProject(bridge);
-    if (projectId) {
-      const project = useAppStore.getState().projects.get(projectId);
-      navigate(buildProjectRoute(projectId, project?.lastRoute));
+    try {
+      const projectId = await openProject(bridge);
+      if (projectId) {
+        const project = useAppStore.getState().projects.get(projectId);
+        navigate(buildProjectRoute(projectId, project?.lastRoute));
+      }
+    } catch (err) {
+      console.error("[activity-bar] failed to open project:", err);
+      toast.error(t("activity-bar.openProjectFailed"));
     }
   };
 

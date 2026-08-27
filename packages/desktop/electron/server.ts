@@ -31,8 +31,8 @@ export async function ensureServer(): Promise<void> {
   for (const { root, lastOpened } of registeredProjects) {
     try {
       await serverHandle.registry.register(root, lastOpened ? { lastOpened } : undefined);
-    } catch {
-      // ignore projects that no longer exist
+    } catch (err) {
+      console.error(`[ensureServer] failed to re-register project at ${root}:`, err);
     }
   }
 }
