@@ -83,7 +83,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
   - 应用级：settings、project-settings、onboarding、debug-tools
 - `layouts/` 仅 `ProjectScope`：项目生命周期编排 + 桥挂载；跨 feature 编排放 layout 或自治 bridge
 - `components/` 收 shadcn/ui 与跨 feature 复用组件；两个可复用子系统：
-  - `file-tree/`：`FileTree` 支持 rootPath / emptyLabel，user-file-panel 与 skill-panel 共用
+  - `file-tree/`：`FileTree` 支持 rootPath / emptyLabel，user-file-panel 与 skill-panel 共用；目录数据全走 directory query（每个目录节点组件自持 `useProjectDirectory`，`enabled: expanded`），controller 只保存交互状态（expandedPaths / creating / deleteTarget）
   - `floating-frame/`：拖拽 / resize chrome，`hookPrefix` 生成 `data-*-float-*` 主题钩子，三个浮窗 feature 复用
 - side-panel 双形态：桌面 pinned 常驻或 hover 展开（clickAway 收起）；移动端（768px 断点）浮动按钮 + transform 滑出面板 + backdrop，关闭态 `inert` 防焦点泄漏
 
