@@ -56,6 +56,63 @@ describe("MarkdownContent plain mode", () => {
     expect(rendered).toContain("italic");
   });
 
+  it("keeps ordered list numbers and line breaks in plain mode", () => {
+    render("1. test1\n2. test2", true);
+    const rendered = html();
+    expect(rendered).not.toContain("<ol");
+    expect(rendered).not.toContain("<li");
+    expect(rendered).toContain("1. test1");
+    expect(rendered).toContain("2. test2");
+    expect(rendered).toContain("<br");
+  });
+
+  it("keeps ordered list start number in plain mode", () => {
+    render("3. alpha\n4. beta", true);
+    expect(host.textContent).toContain("3. alpha");
+    expect(host.textContent).toContain("4. beta");
+  });
+
+  it("keeps unordered list bullets in plain mode", () => {
+    render("- item one\n- item two", true);
+    expect(html()).not.toContain("<ul");
+    expect(host.textContent).toContain("- item one");
+    expect(host.textContent).toContain("- item two");
+  });
+
+  it("keeps inline links inside list items in plain mode", () => {
+    render("1. see [docs](https://example.com)", true);
+    const link = host.querySelector("a");
+    expect(link?.getAttribute("href")).toBe("https://example.com");
+    expect(link?.textContent).toBe("docs");
+  });
+
+  it("keeps task list markers in plain mode", () => {
+    render("- [ ] todo\n- [x] done", true);
+    expect(host.textContent).toContain("[ ] todo");
+    expect(host.textContent).toContain("[x] done");
+  });
+
+  it("renders nested list items with indentation in plain mode", () => {
+    render("- outer\n  - inner", true);
+    expect(host.textContent).toContain("- outer");
+    expect(host.textContent).toContain("\u00a0\u00a0- inner");
+  });
+
+  it("renders table rows as separated lines in plain mode", () => {
+    render("| a | b |\n| --- | --- |\n| 1 | 2 |", true);
+    const rendered = html();
+    expect(rendered).not.toContain("<table");
+    expect(rendered).toContain("<br");
+    expect(host.textContent).toContain("a | b");
+    expect(host.textContent).toContain("1 | 2");
+  });
+
+  it("renders thematic breaks as literal dashes in plain mode", () => {
+    render("above\n\n---\n\nbelow", true);
+    expect(html()).not.toContain("<hr");
+    expect(host.textContent).toContain("---");
+  });
+
   it("preserves blockquote rendering", () => {
     render("> quoted text", true);
     const quote = host.querySelector("blockquote[data-md-quote]");

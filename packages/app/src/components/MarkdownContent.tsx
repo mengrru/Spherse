@@ -5,6 +5,7 @@ import remarkBreaks from "remark-breaks";
 import rehypeSlug from "rehype-slug";
 import { cn } from "@/lib/utils";
 import { CodeBlock } from "./CodeBlock";
+import { remarkPlainStructure } from "./remark-plain-structure";
 
 interface MarkdownContentProps {
   children: string;
@@ -158,7 +159,7 @@ export function MarkdownContent({ children, variant = "document", plain, resolve
   return (
     <div className={variant === "chat" ? "text-sm leading-6" : "text-sm leading-7"}>
       <Markdown
-        remarkPlugins={plain ? [remarkGfm, remarkBreaks] : [remarkGfm]}
+        remarkPlugins={plain ? [remarkGfm, remarkPlainStructure, remarkBreaks] : [remarkGfm]}
         rehypePlugins={[rehypeSlug]}
         allowedElements={plain ? PLAIN_ALLOWED_ELEMENTS : undefined}
         unwrapDisallowed={plain}

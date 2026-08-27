@@ -20,6 +20,7 @@ afterEach(() => {
   }
   host.remove();
   localStorage.clear();
+  vi.restoreAllMocks();
 });
 
 function renderComposer(props: { streaming?: boolean; loading?: boolean }) {
@@ -142,5 +143,49 @@ describe("Composer input availability", () => {
   it("keeps the textarea disabled when streaming and loading are both true", () => {
     renderComposer({ streaming: true, loading: true });
     expect(textarea().hasAttribute("disabled")).toBe(true);
+  });
+});
+
+describe("Composer enter key behavior", () => {
+  function mockPointerCoarse(matches: boolean) {
+    vi.spyOn(window, "matchMedia").mockImplementation(((query: string) => ({
+      matches: query.includes("coarse") && matches,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia);
+  }
+
+  it("sends the draft on Enter with a fine pointer", () => {
+    mockPointerCoarse(false);
+    const { onSend } = renderComposer({ streaming: false });
+    type("hello world");
+    pressEnter();
+    expect(onSend).toHaveBeenCalledWith("hello world", undefined);
+    expect(textarea().getAttribute("enterkeyhint")).toBe("send");
+  });
+
+  it("inserts a newline instead of sending on touch keyboards", () => {
+    mockPointerCoarse(true);
+    const { onSend } = renderComposer({ streaming: false });
+    type("第一行");
+    pressEnter();
+    expect(onSend).not.toHaveBeenCalled();
+    expect(textarea().value).toBe("第一行");
+    expect(textarea().getAttribute("enterkeyhint")).toBe("enter");
+  });
+
+  it("still sends from the send button on touch keyboards", () => {
+    mockPointerCoarse(true);
+    const { onSend } = renderComposer({ streaming: false });
+    type("touch draft");
+    act(() => {
+      composerButton("lucide-send").click();
+    });
+    expect(onSend).toHaveBeenCalledWith("touch draft", undefined);
   });
 });
