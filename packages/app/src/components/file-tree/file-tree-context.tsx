@@ -1,15 +1,20 @@
 import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
-import type { CreatingState, CreateAction, TreeNode } from "./tree-model";
+import type { ApiClient } from "../../lib/api";
+import type { CreatingState, CreateAction, TreeItem } from "./tree-model";
 
 export interface FileTreeContextValue {
+  projectId: string;
+  client: ApiClient;
   selectedFilePath?: string;
+  expandedPaths: ReadonlySet<string>;
   creating: CreatingState | null;
-  toggleNode: (node: TreeNode) => void;
-  requestCreate: (node: TreeNode, action: CreateAction) => void;
+  selectFile: (filePath: string) => void;
+  toggleDir: (path: string) => void;
+  requestCreate: (item: TreeItem, action: CreateAction) => void;
   submitCreate: (parentPath: string, action: CreateAction, name: string) => void;
   cancelCreate: () => void;
-  requestDelete: (node: TreeNode) => void;
+  requestDelete: (item: TreeItem) => void;
   onFloatFile?: (filePath: string) => void;
   floatedFilePaths?: Set<string>;
   readOnly?: boolean;

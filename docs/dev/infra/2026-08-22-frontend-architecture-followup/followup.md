@@ -31,7 +31,7 @@ PR #24 已完成第一阶段状态边界收敛：
 | P0 | 拆分 `useProjectCatalog` | 减少无关 session observer、请求和重渲染 | 下次修改 agent/session 查询 |
 | P0 | 统一 session detail cache | 消除列表/详情双份实体同步 | 下次修改深链或 UI SDK session lookup |
 | P1 | 拆分 `queries/project.ts` | 降低查询、mutation、生命周期混杂复杂度 | 文件超过可维护阈值或新增第三个 project query 域 |
-| P1 | 文件树改为目录 Query + expandedPaths | 删除递归服务端快照和复杂 merge | 下次大改文件树或 fs-watch |
+| P1 | 文件树改为目录 Query + expandedPaths（已实施，见 `2026-08-28-file-tree-directory-queries/design.md`） | 删除递归服务端快照和复杂 merge | 下次大改文件树或 fs-watch |
 | P1 | 移除 streaming/trigger 镜像 | 消除跨 store 手工同步 | 下次修改 SessionRow/AgentRow 状态来源 |
 | P1 | 标准化 React mutation hooks | 统一 pending/error/乐观更新 | 出现第二个需要 mutation 状态的消费方 |
 | P2 | 迁移 dialog 服务端状态 | 删除 load-on-open effect 模板 | 逐个 dialog 功能修改时顺带迁移 |

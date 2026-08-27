@@ -1,47 +1,17 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildNodes,
-  mergeExpandedState,
-  mergeRefreshedTree,
-  updateNode,
-  type TreeNode,
-} from "./tree-model";
+import { buildTreeItems, childPath, parentDirPath } from "./tree-model";
 import type { FileEntry } from "../../lib/types";
 
-describe("mergeRefreshedTree", () => {
-  it("keeps current expansion while accepting refreshed children", () => {
-    const current = buildNodes([{ name: "docs", type: "directory" }], "");
-    current[0] = {
-      ...current[0],
-      expanded: true,
-      loaded: true,
-      children: buildNodes([{ name: "old.md", type: "file" }], "docs"),
-    };
-    const refreshed = buildNodes([{ name: "docs", type: "directory" }], "");
-    refreshed[0] = {
-      ...refreshed[0],
-      expanded: true,
-      loaded: true,
-      children: buildNodes([{ name: "new.md", type: "file" }], "docs"),
-    };
-
-    const merged = mergeRefreshedTree(refreshed, current);
-
-    expect(merged[0].expanded).toBe(true);
-    expect(merged[0].children.map((node) => node.name)).toEqual(["new.md"]);
-  });
-});
-
-describe("buildNodes", () => {
+describe("buildTreeItems", () => {
   it("filters dotfiles and dotdirs", () => {
     const entries: FileEntry[] = [
       { name: ".hidden", type: "file" },
       { name: ".config", type: "directory" },
       { name: "README.md", type: "file" },
     ];
-    const nodes = buildNodes(entries, "");
-    expect(nodes).toHaveLength(1);
-    expect(nodes[0].name).toBe("README.md");
+    const items = buildTreeItems(entries, "");
+    expect(items).toHaveLength(1);
+    expect(items[0].name).toBe("README.md");
   });
 
   it("sorts directories before files, then alphabetically", () => {
@@ -51,8 +21,8 @@ describe("buildNodes", () => {
       { name: "beta.txt", type: "file" },
       { name: "gamma", type: "directory" },
     ];
-    const nodes = buildNodes(entries, "");
-    expect(nodes.map((n) => n.name)).toEqual(["alpha", "gamma", "beta.txt", "zebra.md"]);
+    const items = buildTreeItems(entries, "");
+    expect(items.map((item) => item.name)).toEqual(["alpha", "gamma", "beta.txt", "zebra.md"]);
   });
 
   it("builds paths with parent prefix", () => {
@@ -60,9 +30,9 @@ describe("buildNodes", () => {
       { name: "src", type: "directory" },
       { name: "index.ts", type: "file" },
     ];
-    const nodes = buildNodes(entries, "project");
-    expect(nodes[0].path).toBe("project/src");
-    expect(nodes[1].path).toBe("project/index.ts");
+    const items = buildTreeItems(entries, "project");
+    expect(items[0].path).toBe("project/src");
+    expect(items[1].path).toBe("project/index.ts");
   });
 
   it("builds full project-relative paths when rooted at a nested rootPath", () => {
@@ -70,147 +40,33 @@ describe("buildNodes", () => {
       { name: "foo", type: "directory" },
       { name: "SKILL.md", type: "file" },
     ];
-    const nodes = buildNodes(entries, ".spherse/skills");
-    expect(nodes[0].path).toBe(".spherse/skills/foo");
-    expect(nodes[1].path).toBe(".spherse/skills/SKILL.md");
+    const items = buildTreeItems(entries, ".spherse/skills");
+    expect(items[0].path).toBe(".spherse/skills/foo");
+    expect(items[1].path).toBe(".spherse/skills/SKILL.md");
   });
 
   it("returns empty array for empty input", () => {
-    expect(buildNodes([], "")).toEqual([]);
+    expect(buildTreeItems([], "")).toEqual([]);
   });
 });
 
-describe("updateNode", () => {
-  const tree: TreeNode[] = [
-    {
-      name: "src",
-      path: "src",
-      type: "directory",
-      expanded: false,
-      loaded: true,
-      children: [
-        {
-          name: "index.ts",
-          path: "src/index.ts",
-          type: "file",
-          expanded: false,
-          loaded: false,
-          children: [],
-        },
-      ],
-    },
-    {
-      name: "README.md",
-      path: "README.md",
-      type: "file",
-      expanded: false,
-      loaded: false,
-      children: [],
-    },
-  ];
-
-  it("updates a top-level node", () => {
-    const result = updateNode(tree, "README.md", (n) => ({ ...n, expanded: true }));
-    expect(result[1].expanded).toBe(true);
-    expect(result[0].expanded).toBe(false);
+describe("parentDirPath", () => {
+  it("returns empty string for top-level paths", () => {
+    expect(parentDirPath("docs")).toBe("");
   });
 
-  it("updates a nested node", () => {
-    const result = updateNode(tree, "src/index.ts", (n) => ({ ...n, expanded: true }));
-    expect(result[0].children[0].expanded).toBe(true);
-  });
-
-  it("returns same reference for leaf nodes with no children", () => {
-    const result = updateNode(tree, "README.md", (n) => ({ ...n, expanded: true }));
-    expect(result[0].children[0]).toBe(tree[0].children[0]);
+  it("returns the direct parent for nested paths", () => {
+    expect(parentDirPath("src/components/ui")).toBe("src/components");
+    expect(parentDirPath(".spherse/skills/demo/SKILL.md")).toBe(".spherse/skills/demo");
   });
 });
 
-describe("mergeExpandedState", () => {
-  it("preserves expanded, loaded and children from old nodes", () => {
-    const newNodes: TreeNode[] = [
-      {
-        name: "src",
-        path: "src",
-        type: "directory",
-        expanded: false,
-        loaded: false,
-        children: [],
-      },
-    ];
-    const oldNodes: TreeNode[] = [
-      {
-        name: "src",
-        path: "src",
-        type: "directory",
-        expanded: true,
-        loaded: true,
-        children: [
-          {
-            name: "index.ts",
-            path: "src/index.ts",
-            type: "file",
-            expanded: false,
-            loaded: false,
-            children: [],
-          },
-        ],
-      },
-    ];
-    const result = mergeExpandedState(newNodes, oldNodes);
-    expect(result[0].expanded).toBe(true);
-    expect(result[0].loaded).toBe(true);
-    expect(result[0].children).toBe(oldNodes[0].children);
+describe("childPath", () => {
+  it("concatenates with separator under a parent", () => {
+    expect(childPath("docs", "a.md")).toBe("docs/a.md");
   });
 
-  it("returns new node as-is when no matching old node", () => {
-    const newNodes: TreeNode[] = [
-      {
-        name: "new-dir",
-        path: "new-dir",
-        type: "directory",
-        expanded: false,
-        loaded: false,
-        children: [],
-      },
-    ];
-    const result = mergeExpandedState(newNodes, []);
-    expect(result[0]).toBe(newNodes[0]);
-  });
-
-  it("preserves entire old subtree when old node is loaded", () => {
-    const newNodes: TreeNode[] = [
-      {
-        name: "src",
-        path: "src",
-        type: "directory",
-        expanded: false,
-        loaded: false,
-        children: [],
-      },
-    ];
-    const oldNodes: TreeNode[] = [
-      {
-        name: "src",
-        path: "src",
-        type: "directory",
-        expanded: true,
-        loaded: true,
-        children: [
-          {
-            name: "sub",
-            path: "src/sub",
-            type: "directory",
-            expanded: true,
-            loaded: true,
-            children: [],
-          },
-        ],
-      },
-    ];
-    const result = mergeExpandedState(newNodes, oldNodes);
-    expect(result[0].children[0].expanded).toBe(true);
-    expect(result[0].children[0].loaded).toBe(true);
-    expect(result[0].children).toBe(oldNodes[0].children);
+  it("returns the bare name at the project root", () => {
+    expect(childPath("", "docs")).toBe("docs");
   });
 });

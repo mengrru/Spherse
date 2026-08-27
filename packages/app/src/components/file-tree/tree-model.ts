@@ -1,12 +1,11 @@
 import type { FileEntry } from "../../lib/types";
 
-export interface TreeNode {
+type TreeItemType = "file" | "directory";
+
+export interface TreeItem {
   name: string;
   path: string;
-  type: "file" | "directory";
-  expanded: boolean;
-  children: TreeNode[];
-  loaded: boolean;
+  type: TreeItemType;
 }
 
 export type CreateAction = "new-file" | "new-folder";
@@ -16,9 +15,24 @@ export interface CreatingState {
   action: CreateAction;
 }
 
+export interface DeleteTarget {
+  name: string;
+  path: string;
+  type: TreeItemType;
+}
+
 export const INVALID_NAME_RE = /[/\\:]/;
 
-export function buildNodes(entries: FileEntry[], parentPath: string): TreeNode[] {
+export function childPath(parentPath: string, name: string): string {
+  return parentPath ? `${parentPath}/${name}` : name;
+}
+
+export function parentDirPath(path: string): string {
+  const idx = path.lastIndexOf("/");
+  return idx === -1 ? "" : path.slice(0, idx);
+}
+
+export function buildTreeItems(entries: FileEntry[], parentPath: string): TreeItem[] {
   return entries
     .filter((e) => !e.name.startsWith("."))
     .sort((a, b) => {
@@ -27,56 +41,7 @@ export function buildNodes(entries: FileEntry[], parentPath: string): TreeNode[]
     })
     .map((entry) => ({
       name: entry.name,
-      path: parentPath ? `${parentPath}/${entry.name}` : entry.name,
+      path: childPath(parentPath, entry.name),
       type: entry.type,
-      expanded: false,
-      children: [],
-      loaded: false,
     }));
-}
-
-export function updateNode(
-  nodes: TreeNode[],
-  path: string,
-  update: (node: TreeNode) => TreeNode,
-): TreeNode[] {
-  return nodes.map((node) => {
-    if (node.path === path) return update(node);
-    if (node.children.length === 0) return node;
-    return { ...node, children: updateNode(node.children, path, update) };
-  });
-}
-
-export function mergeExpandedState(
-  newNodes: TreeNode[],
-  oldNodes: TreeNode[],
-): TreeNode[] {
-  return newNodes.map((node) => {
-    const old = oldNodes.find((o) => o.path === node.path);
-    if (!old) return node;
-    return {
-      ...node,
-      expanded: old.expanded,
-      loaded: old.loaded,
-      children: old.children,
-    };
-  });
-}
-
-export function mergeRefreshedTree(
-  refreshedNodes: TreeNode[],
-  currentNodes: TreeNode[],
-): TreeNode[] {
-  return refreshedNodes.map((node) => {
-    const current = currentNodes.find((item) => item.path === node.path);
-    if (!current) return node;
-    return {
-      ...node,
-      expanded: current.expanded,
-      loaded: current.loaded,
-      children: node.loaded
-        ? mergeRefreshedTree(node.children, current.children)
-        : current.children,
-    };
-  });
 }
