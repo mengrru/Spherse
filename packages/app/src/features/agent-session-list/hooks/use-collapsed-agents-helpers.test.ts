@@ -42,6 +42,10 @@ describe("pruneCollapsedAgentIds", () => {
     expect(pruneCollapsedAgentIds(new Set(["agent-1", "agent-2"]), [])).toBeNull();
   });
 
+  it("returns null when the collapsed set is empty", () => {
+    expect(pruneCollapsedAgentIds(new Set(), agents)).toBeNull();
+  });
+
   it("does not mutate the input set", () => {
     const input = new Set(["agent-1", "agent-2"]);
     pruneCollapsedAgentIds(input, [{ id: "agent-1" }]);

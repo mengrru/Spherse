@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { AgentSummary } from "../../../lib/types";
 import { useAgentSessionListUiStore } from "../store";
-import { computeInitialCollapsedAgentIds, expandActiveAgent, pruneCollapsedAgentIds } from "./use-collapsed-agents-helpers";
+import {
+  computeInitialCollapsedAgentIds,
+  expandActiveAgent,
+  pruneCollapsedAgentIds,
+} from "./use-collapsed-agents-helpers";
 
 const EMPTY_COLLAPSED_AGENT_IDS = new Set<string>();
 
