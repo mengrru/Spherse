@@ -3,6 +3,7 @@ import type { BrowserWindow } from "electron";
 import path from "node:path";
 import { existsSync, mkdirSync, cpSync } from "node:fs";
 import { isInsideAnyOpenProject } from "./open-file-path.js";
+import { isInsideUnsafeZone } from "../unsafe-location.js";
 import { translate, normalizeLocale } from "@spherse/i18n";
 import { registerProject, unregisterProject, getServerPort, setProjectLastOpened } from "../server.js";
 import {
@@ -16,9 +17,103 @@ import {
 } from "../settings.js";
 import { readSampleManifest, resolveSampleSrcDir } from "../sample-projects.js";
 
+type TestDialogEntry = {
+  kind: "confirmUnsafeLocation" | "startupUnsafeWarning";
+  detail: string;
+};
+
+function testDialogLog(): TestDialogEntry[] {
+  const g = globalThis as { __spherseTestDialogs?: TestDialogEntry[] };
+  g.__spherseTestDialogs ??= [];
+  return g.__spherseTestDialogs;
+}
+
+function forcedDialogSeam(): { record: (entry: TestDialogEntry) => void; response: number } | null {
+  const raw = process.env.SPHERSE_E2E_DIALOG_RESPONSE;
+  if (raw === undefined) return null;
+  const response = Number.parseInt(raw, 10);
+  return {
+    record: (entry) => {
+      testDialogLog().push(entry);
+    },
+    response: Number.isNaN(response) ? 0 : response,
+  };
+}
+
+export async function confirmUnsafeLocation(
+  targetPath: string,
+  win: BrowserWindow | null,
+): Promise<boolean> {
+  if (!isInsideUnsafeZone(targetPath)) return true;
+  const locale = normalizeLocale(getLocale());
+  const options = {
+    type: "warning" as const,
+    title: translate(locale, "project.unsafeLocation.title"),
+    message: translate(locale, "project.unsafeLocation.title"),
+    detail: translate(locale, "project.unsafeLocation.message"),
+    buttons: [
+      translate(locale, "project.unsafeLocation.openAnyway"),
+      translate(locale, "common.cancel"),
+    ],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  };
+  const forced = forcedDialogSeam();
+  if (forced) {
+    forced.record({ kind: "confirmUnsafeLocation", detail: options.detail });
+    return forced.response === 0;
+  }
+  const result = win
+    ? await dialog.showMessageBox(win, options)
+    : await dialog.showMessageBox(options);
+  return result.response === 0;
+}
+
 export function registerProjectIpc(
   getWindow: () => BrowserWindow | null,
 ): void {
+  let unsafeStartupWarningShown = false;
+
+  async function warnUnsafeRestoredProjects(
+    restored: Array<{ name: string; path: string }>,
+  ): Promise<void> {
+    if (unsafeStartupWarningShown) return;
+    const unsafeNames = restored
+      .filter((r) => isInsideUnsafeZone(r.path))
+      .map((r) => r.name);
+    if (unsafeNames.length === 0) return;
+    unsafeStartupWarningShown = true;
+    const locale = normalizeLocale(getLocale());
+    const options = {
+      type: "warning" as const,
+      title: translate(locale, "project.unsafeLocation.title"),
+      message: translate(locale, "project.unsafeLocation.title"),
+      detail: translate(locale, "project.unsafeLocation.startupMessage", {
+        names: unsafeNames.join(
+          translate(locale, "project.unsafeLocation.namesSeparator"),
+        ),
+      }),
+      buttons: [translate(locale, "project.unsafeLocation.acknowledge")],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    };
+    const forced = forcedDialogSeam();
+    if (forced) {
+      forced.record({ kind: "startupUnsafeWarning", detail: options.detail });
+      return;
+    }
+    try {
+      const win = getWindow();
+      if (win) await dialog.showMessageBox(win, options);
+      else await dialog.showMessageBox(options);
+    } catch (err) {
+      unsafeStartupWarningShown = false;
+      console.error("[restore-projects] failed to show unsafe location warning:", err);
+    }
+  }
+
   ipcMain.handle("select-directory", async () => {
     const win = getWindow();
     if (!win) return null;
@@ -29,6 +124,7 @@ export function registerProjectIpc(
   });
 
   ipcMain.handle("open-project", async (_event, projectRoot: string) => {
+    if (!(await confirmUnsafeLocation(projectRoot, getWindow()))) return null;
     return registerProject(projectRoot, { lastOpened: new Date().toISOString() });
   });
 
@@ -51,6 +147,7 @@ export function registerProjectIpc(
         console.error(`[restore-projects] failed to open project at ${entry.path}:`, err);
       }
     }
+    await warnUnsafeRestoredProjects(results);
     return results;
   });
 
@@ -128,6 +225,7 @@ export function registerProjectIpc(
       const result = await dialog.showOpenDialog(win, { properties: ["openDirectory"], title });
       if (result.canceled || result.filePaths.length === 0) return null;
       const parentDir = result.filePaths[0];
+      if (!(await confirmUnsafeLocation(parentDir, win))) return null;
       targetDir = path.join(parentDir, entry.displayName);
       let counter = 2;
       while (existsSync(targetDir)) {

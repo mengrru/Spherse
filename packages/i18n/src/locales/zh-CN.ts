@@ -271,6 +271,20 @@ export const zhCN = {
   // 自动检测发现新版本 → 右下角 toast 的「去更新」按钮，打开平台对应下载链接
   "settings.update.goUpdate": "去更新",
 
+  // --- Project ---
+  // 打开/创建项目时选中了位于 Spherse 应用目录内（更新会被覆盖清空）的文件夹 → 警告框标题
+  "project.unsafeLocation.title": "不建议在此位置存放项目",
+  // 警告框正文：解释应用目录内的项目数据会在更新时丢失
+  "project.unsafeLocation.message": "该位置位于 Spherse 应用目录内，更新 Spherse 时该位置会被覆盖清空，项目数据会丢失。建议将项目移动到其他位置后再打开。",
+  // 警告框按钮：仍要在此位置打开项目
+  "project.unsafeLocation.openAnyway": "仍然打开",
+  // 启动时检测到已打开的项目位于应用目录内 → 警告框正文（{names} 为项目名列表）
+  "project.unsafeLocation.startupMessage": "以下项目位于 Spherse 应用目录内，更新 Spherse 时会被覆盖清空：{names}。建议将它们移动到其他位置。",
+  // 启动警告框中项目名列表的连接符
+  "project.unsafeLocation.namesSeparator": "、",
+  // 启动警告框确认按钮
+  "project.unsafeLocation.acknowledge": "知道了",
+
   // --- Common ---
   // 通用取消按钮
   "common.cancel": "取消",
