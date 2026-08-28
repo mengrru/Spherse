@@ -33,7 +33,7 @@
 ## settings 持久化
 
 - electron-store 落 userData 下 `settings.json`；`AppSettings` schema：
-  - `locale` + `models: { text, image }`——每 group 含 `defaultModel`、per-provider `apiKey`，text 另含可选 `sampling`
+  - `locale` + `models: { text, image }`——每 group 含 `defaultModel`、per-provider `apiKey`，text 另含可选 `sampling` 与 `thinkingLevel`（off/low/medium/high，缺省 medium）
   - 可选 `customProviders` / `debugToolsEnabled` / `theme` / `mobileAccess`
 - **API key 掩码与合并**：显示前 4 + `****` + 后 4；保存时空串跳过、含 `****` 保留旧值
   - `saveSettings` 强制保留 `mobileAccess` 旧值，防 renderer 覆写
@@ -44,8 +44,9 @@
 
 ## 模型与采样配置传播
 
-- save-settings 链：`if (defaultModel)` 才 `updateDefaultModel()`；`updateSampling()` 无条件（undefined 即「恢复 provider 默认」需要传播）→ registry fan-out 各项目并缓存供后续 register → `SessionManager`
+- save-settings 链：`if (defaultModel)` 才 `updateDefaultModel()`；`updateSampling()` / `updateThinkingLevel()` 无条件（undefined 即「恢复默认」需要传播）→ registry fan-out 各项目并缓存供后续 register → `SessionManager`
 - 热替换：`setDefaultModel` 遍历活跃会话，仅在解析结果变化时重赋 `agent.state.model`（下一轮生效）；未配置的 agent 跳过不抛错；profile 显式指定 `model` 者不受全局默认影响
+- `setThinkingLevel` 重赋各 agent 的 `state.thinkingLevel`（下一轮生效）；`off` 即关闭思考，实际档位由 pi-ai 按模型 `clampThinkingLevel` 就近取档（不支持推理的模型忽略）
 - `setSampling` 重赋各 agent 的 `streamFn`；注入点 `getChatStreamFn`：
   - `temperature` 走 pi-ai typed 字段直接进 options
   - `topP` 经 `onPayload` 按 `model.api` 分支——openai 系 / anthropic 根级 `top_p`，google 走 `config.topP`，未知 no-op

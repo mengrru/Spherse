@@ -6,12 +6,12 @@
 
 ## 组合根与生命周期
 
-- `createMultiProjectServer({ defaultModel?, sampling?, auth?, port?, modelCatalog?, appVersion? })` 创建单实例，返回 `{ fastify, registry, logger }`
+- `createMultiProjectServer({ defaultModel?, sampling?, thinkingLevel?, auth?, port?, modelCatalog?, appVersion? })` 创建单实例，返回 `{ fastify, registry, logger }`
 - 初始化顺序：logger → appVersion → Fastify（debug 级 + query redact）→ CORS → websocket → multipart（5MB）→ 错误处理器
   - 之后：ProjectRegistry → ChatSessionHub → auth hook → 全部路由 → chat / bus WS handler
 - **端口**：默认固定 53972、只绑 `127.0.0.1`；`EADDRINUSE` 才回退 OS 随机端口
 - desktop 启动链：`app.whenReady` → `ensureServer()` → 重放已注册项目
-  - `ensureServer` 以 settings 的 model/sampling、mobile token、`getAppModelCatalog()` 单例与 app 版本建服务
+  - `ensureServer` 以 settings 的 model/sampling/thinkingLevel、mobile token、`getAppModelCatalog()` 单例与 app 版本建服务
   - token 变更时 removeAll → close → 以新 token 重建
 - shutdown：tunnel stop → `registry.removeAll()`（allSettled）→ `fastify.close()`
 

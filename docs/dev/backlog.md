@@ -51,6 +51,7 @@
 - [ ] **移动端 MobileLayout 打磨 + 移动专属 UI**：当前 web 端复用桌面 ActivityBar 的 avatar 列表做项目切换。需要做移动专属的项目列表 UI（取代 avatar 列表）+ 移动专属 settings 入口（locale/theme 本地化 + 断开连接）+ bottom-sheet 风格统一应用到所有 Dialog。参见 `docs/dev/features/2026-07-20-mobile-app/design.md` §3.2 与 `design-pr4b.md`
 - [ ] **GitHub Copilot OAuth 登录**：当前 GitHub Copilot 走 apiKey 路径（用户手动粘贴 `COPILOT_GITHUB_TOKEN`）。pi-ai 的 `githubCopilotProvider()` 同时声明了 `lazyOAuth` device-flow；接入需 electron 层调用 pi-ai OAuth helper + 持久化 refresh token + 前端「用 GitHub 登录」按钮，实现免粘贴 token。
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试
+- [ ] **思考强度 composer 会话级覆盖（二期）**：全局默认已落地（settings → RunConfig 传播链）；二期在聊天输入框加快捷档位切换，仅当前会话生效。要点：chat WS `message` payload 加 `thinkingLevel?` 字段（contracts + 契约测试）、`AgentRunner.sendMessage` turn 前一次性覆盖 `agent.state.thinkingLevel`、composer 按 sessionId sticky 状态（同 draft 键控模式）、档位按当前生效模型 `getSupportedThinkingLevels` 动态显示。参见 `docs/dev/features/2026-08-28-model-thinking-intensity/design.md` 二期草图
 - [ ] **Presets i18n**：为 `@spherse/presets` 内置模板和预置内容增加多语言支持，作为 i18n 基础设施完成后的独立任务
 
 ## 基础设施
