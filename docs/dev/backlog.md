@@ -55,6 +55,7 @@
 
 ## 基础设施
 
+- [ ] **限制 skill ZIP 安装资源消耗**：`adm-zip 0.6.0` 可关闭 forged uncompressed-size OOM 漏洞，但 `SkillStore.installSkill()` 仍会无上限读取 entry table、`SKILL.md` 并解压完整外部 ZIP。增加压缩包字节数、entry 数、单 entry 展开大小、总展开大小/磁盘预算约束，超限在解压前拒绝，并补 zip bomb / 大量 entry / 超大合法 archive 测试。参见 `docs/dev/investigation/2026-08-28-dependency-security/README.md`
 - [ ] **打包产物 smoke 启动验证**：desktop 依赖再分类（2026-08-28，asar 内 node_modules 收敛为 main 外置树）与后续任何 electron-builder 依赖变更，现有 E2E 无法覆盖——E2E 启动的是 electron-vite `dist/` + workspace node_modules，devDeps 全可见，非打包产物。方向：`electron-builder --dir` 后启动 unpacked `.app`/`.exe` 做最小 smoke（窗口出现 + server 健康），可先做成 release CI 可选步骤或本地手动验证清单。
 - [ ] **contracts 拆独立包 `@spherse/contracts`**：`@spherse/app` 声明整包 `@spherse/server` 依赖，实际 18 处 import 全部只消费 `@spherse/server/contracts`（类型 + parser），fastify/pino 因此进入前端解析闭包。方向：契约拆为 foundation 层独立包，server 与 app 共同依赖；需同步 server README 的 contract 规则表述与 AGENTS.md「API contract」红线条目。参见 `docs/dev/infra/2026-08-28-build-commands-package-boundaries/design.md`
 - [ ] **Turborepo 编排评估（条件触发：包数增长或 CI 时长成痛点时）**：root 已用显式拓扑序 workspaces 列表让 `npm run build --workspaces` 满足构建顺序（2026-08-28），但仍是全量串行、无缓存、`dev` 无法并行 watch。turbo 可提供 `build dependsOn ^build` 自动拓扑 + 远程缓存 + `--filter` 增量 + `turbo dev --parallel`；评估安装成本与 CI 适配后决定是否引入。参见 `docs/dev/infra/2026-08-28-build-commands-package-boundaries/design.md`

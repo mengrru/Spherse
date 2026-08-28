@@ -112,7 +112,7 @@ Spherse ships as a macOS and Windows desktop app. A token-protected Web client c
 
 ## Local development
 
-Requires Node.js 20+.
+Requires Node.js 22.19+.
 
 ```bash
 git clone https://github.com/mengrru/Spherse.git

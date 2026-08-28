@@ -112,7 +112,7 @@ Spherse 提供 macOS 和 Windows 桌面应用，也可以通过带访问令牌�
 
 ## 本地开发
 
-环境要求：Node.js 20+。
+环境要求：Node.js 22.19+。
 
 ```bash
 git clone https://github.com/mengrru/Spherse.git
