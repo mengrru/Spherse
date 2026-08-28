@@ -27,7 +27,7 @@ export function TriggerTurnGroup({ items, triggerName, hasError, renderItem }: T
               variant="outline"
               size="sm"
               className={`h-auto w-full justify-start gap-1.5 px-3 py-2 text-xs font-normal text-muted-foreground ${
-                open ? "rounded-t-lg" : "rounded-lg"
+                open ? "rounded-t-lg rounded-b-none" : "rounded-lg"
               }`}
               data-chat-turn-collapse
             />
