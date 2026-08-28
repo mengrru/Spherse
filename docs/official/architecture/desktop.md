@@ -75,7 +75,7 @@
 - IPC 契约以事件流为唯一真相源：invoke 返回 void / state，`webContents.send` 推 5 个事件
   - renderer `useUpdateChecker` 用 `useReducer` 状态机：idle / checking / upToDate / available / downloading / downloaded / error（`errorPhase` 区分检查与下载失败）；挂载恢复只保留 available/downloading/downloaded，终态归位 idle（重开 settings 按钮恢复可点击）；忽略 silent `update-available`（避免与 toast 双弹）
   - 全局 `UpdateNoticeBridge`（App 根挂载）消费 silent `update-available`：右下角 toast「去更新」→ `openExternal` 平台下载链接（缺失回退官网），至多每天一条
-- CI：git tag 触发，mac（arm64/x64）与 win（x64/arm64 交叉）并行 `--publish never` 构建，`gh release upload` 后 `publish-oss` 汇总上传并生成 `latest.json`，末尾联动部署 web 版
+- CI：git tag 触发，mac（arm64/x64）与 win（x64/arm64 交叉）并行 `--publish never` 构建，`gh release upload` 后 `publish-oss` 汇总上传并生成 `latest.json`，随后 `publish-changelog`（`scripts/build-changelog.mjs`）全量重建 `changelog.json` 上传 OSS（串行在 `publish-oss` 之后，避免与 `latest.json` 版本不一致窗口；landing `/download` 页消费），末尾联动部署 web 版
 
 ## debug 工具
 

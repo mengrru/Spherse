@@ -350,15 +350,16 @@ spherse/
 │   │   │   └── themes/              # 轮播切换时动态加载的主题 CSS（覆盖 --sp-* 变量）
 │   │   └── src/
 │   │       ├── styles.css            # Tailwind v4 + --sp-* token 体系（从 app 精简复制）
-│   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）及单测
+│   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）、changelog.ts（OSS changelog.json 拉取）及单测
 │   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型与 locale 工具，自建 catalog）
 │   │       │   ├── index.ts          # useLandingI18n hook + localStorage 持久化
 │   │       │   └── locales/          # zh-CN / zh-TW / en 三语
-│   │       ├── components/           # 页面组件（Hero、Carousel、FeatureCards、FeatureModal、LanguageSwitcher 等）
+│   │       ├── components/           # 页面组件（Hero、Carousel、FeatureCards、DownloadPage、FeatureModal、LanguageSwitcher 等）
 │   │       │   └── ui/              # 从 app 复制的 shadcn 组件（button、dialog）
 │   │       └── data/                # 轮播与 feature 配置数据
 ├── scripts/
-│   └── rebuild-native.mjs            # Electron native dependency rebuild
+│   ├── rebuild-native.mjs            # Electron native dependency rebuild
+│   └── build-changelog.mjs           # 发版 CI 用：GitHub releases 全量拉取 → 筛选/结构化 → changelog.json（纯函数导出供 desktop 测试）
 ├── docs/
 │   ├── official/                     # 正式项目文档（始终与代码同步；索引与写作规范见 README.md）
 │   │   ├── README.md                 # 按任务路由的索引 + official 写作规范
@@ -386,7 +387,7 @@ spherse/
 │       └── backlog.md                # 待办事项
 ├── .github/
 │   └── workflows/
-│       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + 末尾 dispatch deploy-pages 联动 web 部署
+│       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + publish-changelog 生成上传 changelog.json + 末尾 dispatch deploy-pages 联动 web 部署
 │       ├── pr-build.yml              # PR 触发的 CI：checkout + npm ci + npm run verify（lint/build/typecheck/单测/i18n check）
 │       └── deploy-pages.yml          # main 分支 landing/web/i18n 变更或发版流水线 workflow_dispatch 触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/

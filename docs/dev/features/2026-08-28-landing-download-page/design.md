@@ -1,7 +1,7 @@
 # Landing Download 页面 + Release Changelog 链路
 
 - 日期：2026-08-28
-- 状态：Draft
+- 状态：Implemented（2026-08-28，75da4d1 + review 反馈 0a1d3fd）
 - 关联：`docs/dev/infra/2026-07-27-release-oss-mirror/design.md`（OSS 镜像与 latest.json）、`docs/dev/infra/2026-08-17-app-update-oss-source/design.md`（OSS 清单消费方）、`.agents/skills/release-new-version/SKILL.md`（发版流程）
 
 ## 背景
