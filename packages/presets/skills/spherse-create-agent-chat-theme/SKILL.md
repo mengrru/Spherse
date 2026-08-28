@@ -83,6 +83,19 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 >
 > 其它可主题化区域（项目面板 `data-project-panel`、内容浏览器 `data-content-browser`、文档视图容器 `data-content-doc`）在聊天窗口 DOM 之外，**不受 agent theme 影响**，请在项目级 `.spherse/theme.css` 中定制，详见 `spherse-create-ui-theme` skill。
 
+## 头像
+
+助手头像用 `[data-chat-message][data-role="assistant"]::before` 实现（`content` 占位 + `background` 画图）。注意：消息外层行 `[data-chat-message]` 是 **flex 布局**（`flex items-start`），`::before` 作为第一个 flex item 默认停在气泡**左上角**。
+
+尖角在左下角（如 `border-radius: 18px 18px 18px 4px`）时，给头像加 `align-self: flex-end` 与尖角对齐；在左上角则保持默认：
+
+```css
+[data-chat-message][data-role="assistant"]::before {
+  /* ...尺寸、圆角、背景... */
+  align-self: flex-end;
+}
+```
+
 ## 引用图片与字体
 
 主题以 `<link>` 从项目 preview 路由载入，CSS 中相对 `url()` 的解析基址为 agent 目录 `.spherse/agents/{agent-slug}/`。因此本地图片、字体等资源可以用相对路径正常引用。
@@ -139,6 +152,8 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
     height: 36px;
     margin-right: 8px;
     flex-shrink: 0;
+    /* 气泡尖角在左下角（border-radius: 18px 18px 18px 4px），头像沉底对齐尖角 */
+    align-self: flex-end;
     border-radius: 50%;
     background: radial-gradient(circle at 40% 35%, #e2c87a 0%, #c9a04a 40%, #8a6a2a 100%);
     box-shadow: 0 0 12px rgba(201, 160, 74, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.3);
@@ -247,4 +262,5 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 - 把根级变量 / 背景声明写到 `[data-chat-root] { ... }` 之外——它们不会作用于聊天窗口。所有规则都要嵌套在根块内。
 - 用位置选择器（如 `> div`、`> div:first-child`）选气泡或输入框——这些会随 DOM 结构变化失效。改用命名钩子 `[data-chat-bubble]` / `[data-chat-composer-input]`。
 - 在 agent theme 里改侧边栏变量。Agent theme 只影响聊天窗口，不影响项目侧边栏；侧边栏变量应写在项目级 `.spherse/theme.css`。
+- 头像停留在气泡左上角、与左下角的尖角错位——消息行是 flex 布局，头像默认在行顶；尖角在左下时需给头像加 `align-self: flex-end`（见「头像」一节）。
 - 重复定义同一 `::before` 头像规则。如非有意覆盖，每条规则只写一次。
