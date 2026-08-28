@@ -49,7 +49,7 @@ Composer.send
 
 ## Core：一次 sendMessage（`agent-runner.ts`）
 
-1. guard 链：`ensureNotBusy`（in-flight 抛 ValidationError）→ 消费 pendingReload → `ensureModel` → `ensureWritable` → beforeTurn hook → 组装附件消息
+1. guard 链：`ensureNotBusy`（in-flight 抛 ValidationError）→ 消费 pendingReload → `ensureModel` → `ensureWritable` → beforeTurn hook → 组装附件消息。所有权在 `ensureNotBusy` 通过时同步取得，覆盖至 afterTurn 结束；preflight 任一阶段抛错都会释放，不会写入 phantom turn 或卡死 busy 状态
 2. **先持久化**：`appendBatch([user/message, turn/start])` 成功后才 `agent.prompt`
 3. 事件经 EventPipeline（log → capability middlewares → 附件 sanitizer → persistMiddleware）流向 hub；control 事件旁路——`controlBus.swapEventSink` 直达 sink 不过中间件
 4. 落库映射：`message_end` → `assistant/message` / `tool/result`；`agent_end` → `turn/end`（reason 取自最后 assistant 的 stopReason）

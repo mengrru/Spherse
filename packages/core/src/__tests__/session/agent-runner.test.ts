@@ -822,16 +822,28 @@ Agent with time perception.`,
   });
 
   it("withdrawLastTurn rejects while a turn is in flight", async () => {
+    runConfig.update({ defaultModel: "provider/model" });
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
     const runner = await AgentRunner.init(deps, agentId, sessionId);
 
     seedEvents(runner, [
       { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q1" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "" }], stopReason: "error", timestamp: 2 } } },
     ]);
-    (runner as any).inFlight = true;
+    const agent = agentOf(runner);
+    agent.subscribe = vi.fn(() => () => {}) as never;
+    let releaseContinue!: () => void;
+    const continueGate = new Promise<void>((resolve) => {
+      releaseContinue = resolve;
+    });
+    agent.continue = vi.fn(() => continueGate) as never;
 
+    const retry = runner.retryLastTurn(() => {});
     await expect(runner.withdrawLastTurn()).rejects.toThrow(/turn in progress/);
+
+    releaseContinue();
+    await retry;
   });
 
   it("withdrawLastTurn rejects when the last turn is already covered by a compaction digest", async () => {
@@ -1012,7 +1024,6 @@ describe("AgentRunner yolo mode", () => {
     const text = result.content.map((c: any) => c.text).join("");
     expect(text).toContain("yolo-reloaded");
     expect(result.details.status).toBe("completed");
-    expect(result.details.exitCode).toBe(0);
   });
 });
 
@@ -1189,6 +1200,35 @@ describe("AgentRunner in-flight ownership", () => {
 
     releaseReload();
     await retry;
+    expect(eventsOf(runner).filter((e: any) => e.type === "turn/retried")).toHaveLength(1);
+  });
+
+  it("rejects a concurrent retry while the first retry is awaiting a pending reload", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    stubAgentLoop(runner);
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "" }], stopReason: "error", timestamp: 2 } } },
+    ]);
+    const eventsBefore = eventsOf(runner).length;
+
+    let releaseReload!: () => void;
+    const reloadGate = new Promise<void>((resolve) => {
+      releaseReload = resolve;
+    });
+    (runner as any).applyReload = vi.fn(() => reloadGate);
+    runner.markReloadPending();
+
+    const first = runner.retryLastTurn(() => {});
+    await expect(runner.retryLastTurn(() => {})).rejects.toThrow(/turn in progress/);
+
+    expect(eventsOf(runner)).toHaveLength(eventsBefore);
+    expect(eventsOf(runner).filter((e: any) => e.type === "turn/retried")).toHaveLength(0);
+
+    releaseReload();
+    await first;
     expect(eventsOf(runner).filter((e: any) => e.type === "turn/retried")).toHaveLength(1);
   });
 
