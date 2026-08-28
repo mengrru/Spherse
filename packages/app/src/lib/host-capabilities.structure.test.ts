@@ -20,12 +20,30 @@ function collectSourceFiles(dir: string): string[] {
   return files;
 }
 
+function extractInterfaceBody(source: string, name: string): string {
+  const start = source.indexOf(`export interface ${name} {`);
+  if (start === -1) return "";
+  let depth = 0;
+  let bodyStart = -1;
+  for (let i = start; i < source.length; i++) {
+    const ch = source[i];
+    if (ch === "{") {
+      depth++;
+      if (bodyStart === -1) bodyStart = i + 1;
+    } else if (ch === "}") {
+      depth--;
+      if (depth === 0) return source.slice(bodyStart, i);
+    }
+  }
+  return "";
+}
+
 describe("HostCapabilities field hygiene", () => {
   it("declares exactly the expected capability fields", () => {
     const source = readFileSync(join(appSrc, "lib/host-bridge.ts"), "utf-8");
-    const match = source.match(/export interface HostCapabilities \{([^}]+)\}/);
-    expect(match).not.toBeNull();
-    const fields = [...match![1].matchAll(/^ {2}([a-zA-Z]+):/gm)].map((m) => m[1]);
+    const body = extractInterfaceBody(source, "HostCapabilities");
+    expect(body).not.toBe("");
+    const fields = [...body.matchAll(/^ {2}([a-zA-Z]+):/gm)].map((m) => m[1]);
     expect([...fields].sort()).toEqual(EXPECTED_CAPABILITY_FIELDS);
   });
 

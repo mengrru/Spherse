@@ -97,17 +97,23 @@ export function HtmlCardRenderer({ card, defaultCollapsed = false }: HtmlCardRen
   const height = Math.min(card.height ?? 400, card.max_height ?? 600);
 
   async function handleSave() {
-    if (!client || !projectRoot || !card.html) return;
+    if (!card.html) return;
 
     const suggestedName = card.title
       ? sanitizeFileName(card.title) + ".html"
       : "untitled.html";
 
     if (!bridge.showSaveDialog) {
-      const blob = new Blob([ensureCharset(card.html)], { type: "text/html" });
-      await bridge.saveBlob?.(suggestedName, blob);
+      try {
+        const blob = new Blob([ensureCharset(card.html)], { type: "text/html" });
+        await bridge.saveBlob?.(suggestedName, blob);
+      } catch (err) {
+        toast.error(t("chat.saveFailed", { message: (err as Error).message }));
+      }
       return;
     }
+
+    if (!client || !projectRoot) return;
 
     const defaultPath = joinProjectPath(projectRoot, suggestedName);
 

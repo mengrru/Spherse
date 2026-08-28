@@ -18,12 +18,13 @@ export function ImageCardRenderer({ card }: ImageCardRendererProps) {
   const bridge = useHostBridge();
 
   async function handleExport() {
-    if (!client || !projectRoot || !card.path) return;
+    if (!card.path) return;
 
     const ext = card.path.split(".").pop() ?? "png";
     const suggestedName = `image-${Date.now()}.${ext}`;
 
     if (!bridge.showSaveDialog) {
+      if (!client) return;
       try {
         const res = await fetch(client.getPreviewUrl(card.path));
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -33,6 +34,8 @@ export function ImageCardRenderer({ card }: ImageCardRendererProps) {
       }
       return;
     }
+
+    if (!client || !projectRoot) return;
 
     const defaultPath = joinProjectPath(projectRoot, suggestedName);
 
