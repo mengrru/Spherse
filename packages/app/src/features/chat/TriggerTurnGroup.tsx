@@ -19,14 +19,16 @@ export function TriggerTurnGroup({ items, triggerName, hasError, renderItem }: T
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex w-full flex-col gap-3">
+    <div className="flex w-full flex-col">
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger
           render={
             <Button
               variant="outline"
               size="sm"
-              className="h-auto w-full justify-start gap-1.5 rounded-lg px-3 py-2 text-xs font-normal text-muted-foreground"
+              className={`h-auto w-full justify-start gap-1.5 px-3 py-2 text-xs font-normal text-muted-foreground ${
+                open ? "rounded-t-lg" : "rounded-lg"
+              }`}
               data-chat-turn-collapse
             />
           }
@@ -50,7 +52,7 @@ export function TriggerTurnGroup({ items, triggerName, hasError, renderItem }: T
           )}
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+          <div className="flex flex-col gap-3 rounded-b-lg border border-t-0 border-border p-3">
             {items.map((item) => renderItem(item))}
           </div>
         </CollapsibleContent>
