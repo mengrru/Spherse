@@ -116,7 +116,7 @@ export interface HostCapabilities {
 export interface ProjectHostApi {
   selectDirectory(): Promise<string | null>;
   selectSkillZip(): Promise<string | null>;
-  openProject(projectRoot: string): Promise<{ projectId: string }>;
+  openProject(projectRoot: string): Promise<{ projectId: string } | null>;
   restoreProjects(): Promise<RestoredProject[]>;
   addOpenProject(projectId: string, projectRoot: string): Promise<void>;
   closeProject(projectId: string, projectPath: string): Promise<void>;

@@ -3,6 +3,7 @@ import type { BrowserWindow } from "electron";
 import path from "node:path";
 import { existsSync, mkdirSync, cpSync } from "node:fs";
 import { isInsideAnyOpenProject } from "./open-file-path.js";
+import { isInsideUnsafeZone } from "../unsafe-location.js";
 import { translate, normalizeLocale } from "@spherse/i18n";
 import { registerProject, unregisterProject, getServerPort, setProjectLastOpened } from "../server.js";
 import {
@@ -15,6 +16,31 @@ import {
   bumpLastOpenedById,
 } from "../settings.js";
 import { readSampleManifest, resolveSampleSrcDir } from "../sample-projects.js";
+
+export async function confirmUnsafeLocation(
+  targetPath: string,
+  win: BrowserWindow | null,
+): Promise<boolean> {
+  if (!isInsideUnsafeZone(targetPath)) return true;
+  const locale = normalizeLocale(getLocale());
+  const options = {
+    type: "warning" as const,
+    title: translate(locale, "project.unsafeLocation.title"),
+    message: translate(locale, "project.unsafeLocation.title"),
+    detail: translate(locale, "project.unsafeLocation.message"),
+    buttons: [
+      translate(locale, "project.unsafeLocation.openAnyway"),
+      translate(locale, "common.cancel"),
+    ],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true,
+  };
+  const result = win
+    ? await dialog.showMessageBox(win, options)
+    : await dialog.showMessageBox(options);
+  return result.response === 0;
+}
 
 export function registerProjectIpc(
   getWindow: () => BrowserWindow | null,
@@ -29,6 +55,7 @@ export function registerProjectIpc(
   });
 
   ipcMain.handle("open-project", async (_event, projectRoot: string) => {
+    if (!(await confirmUnsafeLocation(projectRoot, getWindow()))) return null;
     return registerProject(projectRoot, { lastOpened: new Date().toISOString() });
   });
 
@@ -128,6 +155,7 @@ export function registerProjectIpc(
       const result = await dialog.showOpenDialog(win, { properties: ["openDirectory"], title });
       if (result.canceled || result.filePaths.length === 0) return null;
       const parentDir = result.filePaths[0];
+      if (!(await confirmUnsafeLocation(parentDir, getWindow()))) return null;
       targetDir = path.join(parentDir, entry.displayName);
       let counter = 2;
       while (existsSync(targetDir)) {

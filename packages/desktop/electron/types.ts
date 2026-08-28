@@ -27,7 +27,7 @@ export type {
 export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>;
   selectSkillZip: () => Promise<string | null>;
-  openProject: (projectRoot: string) => Promise<{ projectId: string }>;
+  openProject: (projectRoot: string) => Promise<{ projectId: string } | null>;
   getServerPort: () => Promise<number>;
   restoreProjects: () => Promise<RestoredProject[]>;
   addOpenProject: (projectId: string, projectRoot: string) => Promise<void>;
