@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import type { CustomProviderDef, SamplingParams } from "@spherse/core";
+import type { CustomProviderDef, SamplingParams, ThinkingLevel } from "@spherse/core";
 import type { ProviderConfig, SettingsApi } from "./types";
 import { generateCustomProviderId } from "./custom-provider-id.js";
 
@@ -8,10 +8,12 @@ interface GroupFormState {
   apiKeys: Record<string, string>;
   defaultModel: string;
   sampling?: SamplingParams;
+  thinkingLevel?: ThinkingLevel;
   setApiKey: (id: string, value: string) => void;
   commitApiKey: (id: string, value: string) => void;
   changeDefaultModel: (model: string) => Promise<boolean>;
   patchSampling: (params: SamplingParams) => Promise<boolean>;
+  changeThinkingLevel: (level: ThinkingLevel | undefined) => Promise<boolean>;
   connect: (id: string) => Promise<boolean>;
   disconnect: (id: string) => Promise<boolean>;
   customProviders?: CustomProviderDef[];
@@ -26,6 +28,7 @@ interface GroupData {
   apiKeys: Record<string, string>;
   defaultModel: string;
   sampling?: SamplingParams;
+  thinkingLevel?: ThinkingLevel;
 }
 
 function extractKeys(providers: Record<string, { apiKey?: string }> | undefined): Record<string, string> {
@@ -65,6 +68,7 @@ export function useSettingsForm(api: SettingsApi) {
         apiKeys: extractKeys(settings?.models?.text?.providers),
         defaultModel: settings?.models?.text?.defaultModel ?? "",
         sampling: settings?.models?.text?.sampling,
+        thinkingLevel: settings?.models?.text?.thinkingLevel,
       });
       setImageData({
         apiKeys: extractKeys(settings?.models?.image?.providers),
@@ -87,7 +91,7 @@ export function useSettingsForm(api: SettingsApi) {
       try {
         await api.saveSettings({
           models: {
-            text: { defaultModel: t.defaultModel, providers: keysToProviders(t.apiKeys), sampling: t.sampling },
+            text: { defaultModel: t.defaultModel, providers: keysToProviders(t.apiKeys), sampling: t.sampling, thinkingLevel: t.thinkingLevel },
             image: { defaultModel: i.defaultModel, providers: keysToProviders(i.apiKeys) },
           },
           customProviders: cp,
@@ -158,6 +162,7 @@ export function useSettingsForm(api: SettingsApi) {
     apiKeys: data.apiKeys,
     defaultModel: data.defaultModel,
     sampling: data.sampling,
+    thinkingLevel: data.thinkingLevel,
     setApiKey: (id, value) => {
       setData({ ...data, apiKeys: { ...data.apiKeys, [id]: value } });
     },
@@ -174,6 +179,11 @@ export function useSettingsForm(api: SettingsApi) {
     },
     patchSampling: async (params) => {
       const next = { ...data, sampling: mergeSampling(data.sampling, params) };
+      setData(next);
+      return kind === "text" ? save(next, undefined) : save(undefined, next);
+    },
+    changeThinkingLevel: async (level) => {
+      const next = { ...data, thinkingLevel: level };
       setData(next);
       return kind === "text" ? save(next, undefined) : save(undefined, next);
     },

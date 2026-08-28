@@ -17,6 +17,7 @@ import { useSettingsForm } from "./use-settings-form";
 import type { GroupFormState } from "./use-settings-form";
 import { type SettingsApi } from "./types";
 import { DefaultModelField } from "./DefaultModelField";
+import { ThinkingLevelField } from "./ThinkingLevelField";
 import { ModelProviderItem } from "./ModelProviderItem";
 import { CustomProviderDialog } from "./CustomProviderDialog";
 import { SectionTitle } from "./SectionTitle";
@@ -88,6 +89,12 @@ function ModelGroupTab({
           value={group.defaultModel}
           onChange={(model) => { void group.changeDefaultModel(model); }}
         />
+        {kind === "text" && (
+          <ThinkingLevelField
+            value={group.thinkingLevel}
+            onChange={(level) => { void group.changeThinkingLevel(level); }}
+          />
+        )}
       </FieldGroup>
       {kind === "text" && (
         <AdvancedSettings

@@ -46,7 +46,7 @@ export function maskModelGroup(group: ModelGroupSettings | undefined): ModelGrou
       providers[id] = { apiKey: maskApiKey(creds.apiKey) };
     }
   }
-  return { defaultModel: group?.defaultModel ?? "", providers, sampling: group?.sampling };
+  return { defaultModel: group?.defaultModel ?? "", providers, sampling: group?.sampling, thinkingLevel: group?.thinkingLevel };
 }
 
 export function getMaskedSettings(): AppSettings | null {
@@ -84,7 +84,7 @@ export function mergeModelGroup(
       providers[id] = { apiKey: newKey };
     }
   }
-  return { defaultModel, providers, sampling: incoming?.sampling };
+  return { defaultModel, providers, sampling: incoming?.sampling, thinkingLevel: incoming?.thinkingLevel };
 }
 
 export function saveSettings(incoming: AppSettings): void {

@@ -2,7 +2,7 @@ import { ipcMain } from "electron";
 import { getMaskedSettings, saveSettings } from "../settings.js";
 import { getImageSupportedProviders } from "@spherse/core";
 import { getAppModelCatalog } from "../model-catalog.js";
-import { updateDefaultModel, updateSampling } from "../server.js";
+import { updateDefaultModel, updateSampling, updateThinkingLevel } from "../server.js";
 import type { AppSettings } from "@spherse/core";
 
 export function registerSettingsIpc(): void {
@@ -17,6 +17,7 @@ export function registerSettingsIpc(): void {
       updateDefaultModel(defaultModel);
     }
     updateSampling(settings.models?.text?.sampling);
+    updateThinkingLevel(settings.models?.text?.thinkingLevel);
     return { success: true };
   });
 

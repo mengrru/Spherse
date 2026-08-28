@@ -1,7 +1,7 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { createProject, ModelCatalog } from "@spherse/core";
-import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger, SamplingParams } from "@spherse/core";
+import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger, SamplingParams, ThinkingLevel } from "@spherse/core";
 
 export interface ProjectContext {
   runtime: ProjectRuntime;
@@ -32,6 +32,7 @@ export class ProjectRegistry {
   private logger: Logger;
   private defaultModel?: string;
   private sampling?: SamplingParams;
+  private thinkingLevel?: ThinkingLevel;
 
   private readonly modelCatalog: ModelCatalog;
 
@@ -41,11 +42,12 @@ export class ProjectRegistry {
 
   constructor(
     logger: Logger,
-    options?: { defaultModel?: string; sampling?: SamplingParams; modelCatalog?: ModelCatalog },
+    options?: { defaultModel?: string; sampling?: SamplingParams; thinkingLevel?: ThinkingLevel; modelCatalog?: ModelCatalog },
   ) {
     this.logger = logger;
     this.defaultModel = options?.defaultModel;
     this.sampling = options?.sampling;
+    this.thinkingLevel = options?.thinkingLevel;
     this.modelCatalog = options?.modelCatalog ?? new ModelCatalog();
   }
 
@@ -78,6 +80,7 @@ export class ProjectRegistry {
     const runtime = await createProject(resolvedRoot, {
       defaultModel: this.defaultModel,
       sampling: this.sampling,
+      thinkingLevel: this.thinkingLevel,
       logger: projectLogger,
       ...(this.modelCatalog ? { modelCatalog: this.modelCatalog } : {}),
     });
@@ -189,6 +192,17 @@ export class ProjectRegistry {
         ctx.runtime.sessionRuntime.setSampling(sampling);
       } catch (err) {
         this.logger.error({ err }, "failed to update sampling for project");
+      }
+    }
+  }
+
+  setThinkingLevel(thinkingLevel: ThinkingLevel | undefined): void {
+    this.thinkingLevel = thinkingLevel;
+    for (const ctx of this.projects.values()) {
+      try {
+        ctx.runtime.sessionRuntime.setThinkingLevel(thinkingLevel);
+      } catch (err) {
+        this.logger.error({ err }, "failed to update thinking level for project");
       }
     }
   }

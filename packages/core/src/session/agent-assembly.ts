@@ -223,7 +223,7 @@ export async function buildAgent(
     initialState: {
       systemPrompt,
       model,
-      thinkingLevel: "medium",
+      thinkingLevel: deps.runConfig.current().thinkingLevel ?? "medium",
       tools,
     },
     sessionId,

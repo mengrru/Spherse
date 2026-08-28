@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { app } from "electron";
 import { createMultiProjectServer } from "@spherse/server";
 import type { ProjectRegistry } from "@spherse/server";
-import type { SamplingParams } from "@spherse/core";
+import type { SamplingParams, ThinkingLevel } from "@spherse/core";
 import { getSettings, getMobileAccess } from "./settings.js";
 import { getAppModelCatalog } from "./model-catalog.js";
 
@@ -23,6 +23,7 @@ export async function ensureServer(): Promise<void> {
   const result = await createMultiProjectServer({
     defaultModel: settings?.models?.text?.defaultModel,
     sampling: settings?.models?.text?.sampling,
+    thinkingLevel: settings?.models?.text?.thinkingLevel,
     auth: activeAccessToken ? { accessToken: activeAccessToken } : undefined,
     modelCatalog: getAppModelCatalog(),
     appVersion: app.getVersion(),
@@ -86,6 +87,11 @@ export function updateDefaultModel(defaultModel: string | undefined): void {
 export function updateSampling(sampling: SamplingParams | undefined): void {
   if (!serverHandle) return;
   serverHandle.registry.setSampling(sampling);
+}
+
+export function updateThinkingLevel(thinkingLevel: ThinkingLevel | undefined): void {
+  if (!serverHandle) return;
+  serverHandle.registry.setThinkingLevel(thinkingLevel);
 }
 
 export async function stopServer(): Promise<void> {

@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import multipart from "@fastify/multipart";
-import type { Logger, SamplingParams, ModelCatalog } from "@spherse/core";
+import type { Logger, SamplingParams, ThinkingLevel, ModelCatalog } from "@spherse/core";
 import {
   NotFoundError,
   ValidationError,
@@ -33,6 +33,7 @@ export interface MultiProjectServer {
 export interface CreateServerOptions {
   defaultModel?: string;
   sampling?: SamplingParams;
+  thinkingLevel?: ThinkingLevel;
   auth?: AuthOptions;
   port?: number;
   modelCatalog?: ModelCatalog;
@@ -102,6 +103,7 @@ export async function createMultiProjectServer(
   const registry = new ProjectRegistry(logger, {
     defaultModel: options?.defaultModel,
     sampling: options?.sampling,
+    thinkingLevel: options?.thinkingLevel,
     modelCatalog: options?.modelCatalog,
   });
 

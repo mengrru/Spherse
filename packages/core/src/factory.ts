@@ -1,6 +1,6 @@
 import path from "node:path";
 import { PROJECT_META_DIR } from "./types.js";
-import type { SamplingParams } from "./types.js";
+import type { SamplingParams, ThinkingLevel } from "./types.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { ProjectStore } from "./store/project.js";
 import { ProjectManager } from "./project-manager.js";
@@ -27,6 +27,7 @@ export interface AssembleOptions {
   projectName?: string;
   defaultModel?: string;
   sampling?: SamplingParams;
+  thinkingLevel?: ThinkingLevel;
   logger?: Logger;
   modelCatalog?: ModelCatalog;
   capabilities?: Capability[] | ((builtin: Capability[]) => Capability[]);
@@ -85,6 +86,7 @@ export async function assembleProject(
   const runConfig = new RunConfigHolder({
     ...(options?.defaultModel !== undefined ? { defaultModel: options.defaultModel } : {}),
     ...(options?.sampling !== undefined ? { sampling: options.sampling } : {}),
+    ...(options?.thinkingLevel !== undefined ? { thinkingLevel: options.thinkingLevel } : {}),
   });
   const deps = createRuntimeDeps({
     projectStore,

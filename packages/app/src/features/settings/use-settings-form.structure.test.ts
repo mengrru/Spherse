@@ -44,6 +44,33 @@ describe("useSettingsForm sampling wiring", () => {
   });
 });
 
+describe("useSettingsForm thinkingLevel wiring", () => {
+  it("reads text thinkingLevel from settings on init", () => {
+    expect(source).toContain("thinkingLevel: settings?.models?.text?.thinkingLevel");
+  });
+
+  it("includes thinkingLevel in the text group of the save payload", () => {
+    expect(source).toContain("thinkingLevel: t.thinkingLevel");
+  });
+
+  it("omits thinkingLevel from the image group of the save payload", () => {
+    const imageLine = source
+      .split("\n")
+      .find((l) => l.includes("image:") && l.includes("keysToProviders(i.apiKeys)"));
+    expect(imageLine).toBeDefined();
+    expect(imageLine).not.toContain("thinkingLevel");
+  });
+
+  it("exposes changeThinkingLevel and persists immediately", () => {
+    expect(source).toContain("changeThinkingLevel: async (level) => {");
+    expect(source).toContain("const next = { ...data, thinkingLevel: level }");
+  });
+
+  it("does not read image thinkingLevel from settings on init", () => {
+    expect(source).not.toContain("settings?.models?.image?.thinkingLevel");
+  });
+});
+
 describe("useSettingsForm api key persistence", () => {
   it("exposes commitApiKey on the group form state", () => {
     expect(source).toContain("commitApiKey: (id: string, value: string) => void");

@@ -38,7 +38,7 @@ renderer 单份代码经 `HostBridge` 抽象在桌面与 Web 复用：desktop �
 
 ```
 desktop main
-  → settings（model / sampling / token / appVersion）
+  → settings（model / sampling / thinkingLevel / token / appVersion）
   → getAppModelCatalog() 单例
   → createMultiProjectServer({ modelCatalog, auth, ... })
       → ProjectRegistry
