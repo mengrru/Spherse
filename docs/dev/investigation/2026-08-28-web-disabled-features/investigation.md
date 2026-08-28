@@ -98,8 +98,8 @@
 
 ## 四、顺带发现的漂移与边角问题
 
-1. **capability 声明与消费漂移**：`projectManagement` / `appUpdate` / `devTools` / `settings.editable/scope` 在 app 源码零消费，实际 gating 靠 feature-registry 或 optional API 缺失
-2. **settings 矛盾**：capability 声明 `editable: true` 但 registry 整体禁用
-3. **「只读」非服务端强制**：skill marketplace 等写 API 在 web 照常可用（入口未 gate）；desktop renderer 与 web 持同一 token，server 无法区分
-4. **browser 路由未排除**：web 直接输 `/project/:id/browser` 会渲染实际不可用的全页浏览器
-5. **web `saveBlob` 无调用方**：疑似待接线的保存降级路径
+1. **capability 声明与消费漂移**：`projectManagement` / `appUpdate` / `devTools` / `settings.editable/scope` 在 app 源码零消费，实际 gating 靠 feature-registry 或 optional API 缺失。**已修（2026-08-28）**：双机制保留（capabilities 表达能力程度、feature-registry 表达 feature × 宿主矩阵，语义正交），删除全部零消费字段，分工契约写入 `docs/official/architecture/frontend.md`，`host-capabilities.structure.test.ts` 钉住「声明即必须被消费」
+2. **settings 矛盾**：capability 声明 `editable: true` 但 registry 整体禁用。**已随 #1 消解**：零消费的 `settings` capability 已删除；开启 settings 时按「小量适配」节方案重新设计 scope 过滤
+3. **「只读」非服务端强制**：skill marketplace 等写 API 在 web 照常可用（入口未 gate）；desktop renderer 与 web 持同一 token，server 无法区分。**2026-08-28 确认符合预期**（token 持有者 = 受信的信任模型，UI gate 只做交互约束不做安全边界）
+4. **browser 路由未排除**：web 直接输 `/project/:id/browser` 会渲染实际不可用的全页浏览器。**已修（2026-08-28）**：BrowserPage 内 `useFeature("browser")` gate，不可用宿主 redirect 回项目首页
+5. **web `saveBlob` 无调用方**：疑似待接线的保存降级路径。**已修（2026-08-28）**：HtmlCard / ImageCard 在 `showSaveDialog` 缺失时降级走 `saveBlob`（ImageCard 经 previewUrl fetch 取 blob），web 上保存/导出改为下载到本机设备
