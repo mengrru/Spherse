@@ -1012,5 +1012,206 @@ describe("AgentRunner yolo mode", () => {
     const text = result.content.map((c: any) => c.text).join("");
     expect(text).toContain("yolo-reloaded");
     expect(result.details.status).toBe("completed");
+    expect(result.details.exitCode).toBe(0);
+  });
+});
+
+describe("AgentRunner in-flight ownership", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let deps: RuntimeDeps;
+  let runConfig: RunConfigHolder;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-inflight-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore as any;
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
+    runtime.timerService.stop();
+    runConfig = new RunConfigHolder({ defaultModel: "provider/model" });
+    deps = {
+      projectStore,
+      projectRoot: projectStore.getRootPath(),
+      fileWriteMutex: (runtime as any).sessionRuntime.deps.fileWriteMutex,
+      logger: createSilentLogger(),
+      runConfig,
+      modelResolver: createModelResolver(stubCatalog),
+      modelCatalog: stubCatalog,
+      capabilities: builtinToolCapabilities(),
+      stores: createStoreRegistry(),
+      attachmentProcessors: [],
+    };
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function stubAgentLoop(runner: AgentRunner): void {
+    const agent = agentOf(runner);
+    agent.subscribe = vi.fn(() => () => {}) as never;
+    agent.prompt = vi.fn().mockResolvedValue(undefined) as never;
+    agent.continue = vi.fn().mockResolvedValue(undefined) as never;
+  }
+
+  it("rejects a concurrent send while the first is awaiting beforeTurn, without persisting a phantom turn", async () => {
+    let releaseFirst!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    let hookCalls = 0;
+    deps.createTurnHooks = () => ({
+      beforeTurn: async () => {
+        hookCalls++;
+        if (hookCalls === 1) await gate;
+      },
+    });
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    stubAgentLoop(runner);
+
+    const first = runner.sendMessage("first", [], () => {});
+    const second = runner.sendMessage("second", [], () => {});
+
+    await expect(second).rejects.toThrow(/turn in progress/);
+    expect(hookCalls).toBe(1);
+    expect(eventsOf(runner)).toHaveLength(0);
+
+    releaseFirst();
+    await first;
+
+    expect(hookCalls).toBe(1);
+    const userEvents = eventsOf(runner).filter((e: any) => e.type === "user/message");
+    expect(userEvents).toHaveLength(1);
+    expect((userEvents[0].data.message as any).content[0].text).toBe("first");
+    expect(eventsOf(runner).filter((e: any) => e.type === "turn/start")).toHaveLength(1);
+    expect((agentOf(runner).prompt as ReturnType<typeof vi.fn>).mock.calls[0][0].content[0].text).toBe(
+      "first",
+    );
+  });
+
+  it("releases ownership when preflight throws, so the next send can proceed", async () => {
+    let hookCalls = 0;
+    deps.createTurnHooks = () => ({
+      beforeTurn: async () => {
+        hookCalls++;
+        if (hookCalls === 1) throw new Error("hook boom");
+      },
+    });
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    stubAgentLoop(runner);
+
+    await expect(runner.sendMessage("boom", [], () => {})).rejects.toThrow("hook boom");
+    expect(eventsOf(runner)).toHaveLength(0);
+
+    await expect(runner.sendMessage("ok", [], () => {})).resolves.toBeUndefined();
+    expect(eventsOf(runner).filter((e: any) => e.type === "user/message")).toHaveLength(1);
+  });
+
+  it("releases ownership when the agent run rejects", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    stubAgentLoop(runner);
+    agentOf(runner).prompt = vi.fn().mockRejectedValue(new Error("provider down")) as never;
+
+    await expect(runner.sendMessage("boom", [], () => {})).rejects.toThrow("provider down");
+    expect((runner as any).inFlight).toBe(false);
+
+    agentOf(runner).prompt = vi.fn().mockResolvedValue(undefined) as never;
+    await expect(runner.sendMessage("ok", [], () => {})).resolves.toBeUndefined();
+  });
+
+  it("rejects retryLastTurn while a send owns preflight, without abandoning the failed turn", async () => {
+    let releaseSend!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releaseSend = resolve;
+    });
+    deps.createTurnHooks = () => ({
+      beforeTurn: async () => {
+        await gate;
+      },
+    });
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    stubAgentLoop(runner);
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "" }], stopReason: "error", timestamp: 2 } } },
+    ]);
+    const eventsBefore = eventsOf(runner).length;
+
+    const send = runner.sendMessage("next", [], () => {});
+    await expect(runner.retryLastTurn(() => {})).rejects.toThrow(/turn in progress/);
+
+    expect(eventsOf(runner)).toHaveLength(eventsBefore);
+    expect(eventsOf(runner).filter((e: any) => e.type === "turn/retried")).toHaveLength(0);
+    expect(agentOf(runner).state.messages.at(-1).stopReason).toBe("error");
+
+    releaseSend();
+    await send;
+  });
+
+  it("rejects send while retryLastTurn is awaiting a pending reload", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    stubAgentLoop(runner);
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "" }], stopReason: "error", timestamp: 2 } } },
+    ]);
+    const eventsBefore = eventsOf(runner).length;
+
+    let releaseReload!: () => void;
+    const reloadGate = new Promise<void>((resolve) => {
+      releaseReload = resolve;
+    });
+    const originalApplyReload = (runner as any).applyReload.bind(runner);
+    (runner as any).applyReload = vi.fn(() => reloadGate.then(() => originalApplyReload()));
+    runner.markReloadPending();
+
+    const retry = runner.retryLastTurn(() => {});
+    await expect(runner.sendMessage("sneak", [], () => {})).rejects.toThrow(/turn in progress/);
+
+    expect(eventsOf(runner)).toHaveLength(eventsBefore);
+
+    releaseReload();
+    await retry;
+    expect(eventsOf(runner).filter((e: any) => e.type === "turn/retried")).toHaveLength(1);
+  });
+
+  it("rejects send while retryLastTurn is running the agent continuation", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    stubAgentLoop(runner);
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "hi" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "" }], stopReason: "error", timestamp: 2 } } },
+    ]);
+
+    let releaseContinue!: () => void;
+    const continueGate = new Promise<void>((resolve) => {
+      releaseContinue = resolve;
+    });
+    agentOf(runner).continue = vi.fn(() => continueGate) as never;
+
+    const retry = runner.retryLastTurn(() => {});
+    await expect(runner.sendMessage("sneak", [], () => {})).rejects.toThrow(/turn in progress/);
+
+    releaseContinue();
+    await retry;
   });
 });
