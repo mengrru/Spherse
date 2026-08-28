@@ -103,8 +103,8 @@ export async function assembleProject(
   const sessionPort: SessionPort = {
     createSession: (agentId, source) => sessionRuntime.createSession(agentId, source),
     restoreSession: (agentId, sessionId) => sessionRuntime.restoreSession(agentId, sessionId),
-    sendMessage: (sessionId, message, onEvent) =>
-      sessionRuntime.sendMessage(sessionId, message, [], onEvent as never),
+    sendMessage: (sessionId, message, onEvent, meta) =>
+      sessionRuntime.sendMessage(sessionId, message, [], onEvent as never, meta),
     abortSession: (sessionId) => sessionRuntime.abortSession(sessionId),
     sessionExists: (agentId, sessionId) => sessionRuntime.sessionExists(agentId, sessionId),
   };

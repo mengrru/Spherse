@@ -42,6 +42,8 @@ export const schemas = {
     entries: Type.Array(Type.Object({
       id: Type.Number(),
       message: Type.Unknown(),
+      source: Type.Optional(Type.Literal("triggered")),
+      triggerName: Type.Optional(Type.String()),
     })),
     hasMore: Type.Boolean(),
     oldestId: Type.Union([Type.Number(), Type.Null()]),

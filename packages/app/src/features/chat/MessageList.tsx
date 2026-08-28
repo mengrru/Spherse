@@ -7,7 +7,9 @@ import { Button } from "../../components/ui/button";
 import { ChevronDownIcon } from "lucide-react";
 import { MessageItem } from "./MessageItem";
 import { ThinkingIndicator } from "./ThinkingIndicator";
+import { TriggerTurnGroup } from "./TriggerTurnGroup";
 import { computeSupersededToolCallIds } from "./model/html-card-dedup";
+import { groupTurns, type TurnGroupItem } from "./model/turn-groups";
 import { lastWithdrawableUserIndex } from "./model/withdrawable";
 
 interface MessageListProps {
@@ -37,6 +39,8 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
     [messages],
   );
 
+  const groups = useMemo(() => groupTurns(messages), [messages]);
+
   if (loading && messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center p-4">
@@ -56,9 +60,25 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
   const lastMessage = messages[messages.length - 1];
   const withdrawableIndex = streaming ? -1 : lastWithdrawableUserIndex(messages);
 
-  const reversed = messages
-    .map((message, index) => ({ message, index }))
-    .reverse();
+  const renderItem = ({ message, index }: TurnGroupItem) => {
+    const isLast = index === messages.length - 1;
+    const showTime =
+      message.role === "user" || isLast || messages[index + 1]?.role === "user";
+    return (
+      <MessageItem
+        key={index}
+        message={message}
+        agent={agent}
+        showTime={showTime}
+        supersededToolCallIds={supersededToolCallIds}
+        onNavigateToPath={onNavigateToPath}
+        onRespondApproval={onRespondApproval}
+        onRespondQuestion={onRespondQuestion}
+        onRetry={isLast ? onRetry : undefined}
+        onWithdraw={index === withdrawableIndex ? onWithdraw : undefined}
+      />
+    );
+  };
 
   return (
     <div className="relative flex-1 min-h-0">
@@ -68,25 +88,19 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
             <ThinkingIndicator />
           </div>
         )}
-        {reversed.map(({ message, index }) => {
-          const isLast = index === messages.length - 1;
-          const showTime =
-            message.role === "user" || isLast || messages[index + 1]?.role === "user";
-          return (
-            <MessageItem
-              key={index}
-              message={message}
-              agent={agent}
-              showTime={showTime}
-              supersededToolCallIds={supersededToolCallIds}
-              onNavigateToPath={onNavigateToPath}
-              onRespondApproval={onRespondApproval}
-              onRespondQuestion={onRespondQuestion}
-              onRetry={isLast ? onRetry : undefined}
-              onWithdraw={index === withdrawableIndex ? onWithdraw : undefined}
+        {[...groups].reverse().map((group) =>
+          group.kind === "trigger" ? (
+            <TriggerTurnGroup
+              key={`turn-${group.items[0].message._messageId ?? group.items[0].index}`}
+              items={group.items}
+              triggerName={group.triggerName}
+              hasError={group.hasError}
+              renderItem={renderItem}
             />
-          );
-        })}
+          ) : (
+            renderItem(group.item)
+          ),
+        )}
         {hasMore && (
           <div className="flex justify-center py-2">
             <Button

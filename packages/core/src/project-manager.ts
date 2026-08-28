@@ -205,7 +205,12 @@ export class ProjectManager {
     }
     const selected = eligible.slice(start);
     return {
-      entries: selected.map((entry) => ({ id: entry.seq, message: entry.message })),
+      entries: selected.map((entry) => ({
+        id: entry.seq,
+        message: entry.message,
+        ...(entry.source !== undefined ? { source: entry.source } : {}),
+        ...(entry.triggerName !== undefined ? { triggerName: entry.triggerName } : {}),
+      })),
       hasMore: selected.length < eligible.length,
       oldestId: selected[0]?.seq ?? null,
     };

@@ -62,13 +62,19 @@ export function mergeHistoryMessages(
 }
 
 export function parseHistoryMessages(
-  history: Array<{ id: number; message: unknown } | unknown>,
+  history: Array<{ id: number; message: unknown; source?: "triggered"; triggerName?: string } | unknown>,
 ): ChatMessage[] {
-  const entries = history.map((entry) => (
-    isObject(entry) && typeof entry.id === "number" && "message" in entry
-      ? { id: entry.id, message: entry.message }
-      : { id: undefined, message: entry }
-  ));
+  const entries = history.map((entry) => {
+    if (isObject(entry) && typeof entry.id === "number" && "message" in entry) {
+      return {
+        id: entry.id,
+        message: entry.message,
+        ...(entry.source !== undefined ? { source: entry.source } : {}),
+        ...(entry.triggerName !== undefined ? { triggerName: entry.triggerName } : {}),
+      };
+    }
+    return { id: undefined, message: entry };
+  });
   const rawMessages = entries.map((entry) => entry.message);
   const toolResultMap = collectToolResultDetails(rawMessages);
 
@@ -76,6 +82,8 @@ export function parseHistoryMessages(
   for (const entry of entries) {
     if (isUserMessage(entry.message)) {
       const rawAttachments = (entry.message as { _attachments?: unknown })._attachments;
+      const source = (entry as { source?: "triggered" }).source;
+      const triggerName = (entry as { triggerName?: string }).triggerName;
       loaded.push({
         ...(entry.id !== undefined ? { _messageId: entry.id } : {}),
         role: "user",
@@ -83,6 +91,8 @@ export function parseHistoryMessages(
         ...(Array.isArray(rawAttachments) && rawAttachments.length > 0
           ? { _attachments: rawAttachments as ChatMessage["_attachments"] }
           : {}),
+        ...(source === "triggered" ? { _triggered: true as const } : {}),
+        ...(source === "triggered" && triggerName !== undefined ? { _triggerName: triggerName } : {}),
         timestamp: entry.message.timestamp,
       });
       continue;

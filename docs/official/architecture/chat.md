@@ -65,6 +65,7 @@ Composer.send
 - `ChatMessage` 的 `_` 前缀字段是 view 投影：
   - 身份与状态：`_messageId`（= seq，历史对账去重键）、`_optimistic` / `_streaming` / `_sendFailed`
   - 内容投影：`_toolCalls`（含其上的 `_card`）、`_error` / `_errorCode` / `_turnError` / `_withdrawError`、`_runChanges` / `_attachments`
+  - 来源投影：`_triggered` / `_triggerName`（trigger 发送的 user message，来自分页 entry 的 `source`/`triggerName`；`turn-groups.ts` 据此把该轮派生为折叠组，摘要条见 `TriggerTurnGroup`）
 - `useChatSession` 只做 attach/detach 与状态选择——切换页面不中断后台流式；正常断线保留 streaming 与未完成消息，`agent_end` / `error` 事件或服务端 `run_status: inactive` 结束运行态（正常完成即经 `agent_end`）
 
 ## 错误与重试
@@ -91,6 +92,7 @@ Composer.send
 - 对账失败按 `[1, 2, 5]s` 退避重试；全失败时仅「从未 ready 过」的会话置 `historyError`（曾 ready 的保持 ready，缓冲事件仍会被应用）
 - **分页**：`GET .../sessions/:id/messages?limit=&before=`，默认 20、clamp [1, 200]；shape `{ entries, hasMore, oldestId }`
   - `id` / `oldestId` 在 events 投影路径为事件 seq，legacy 路径为 messages 表行 id——两者都是单调 cursor，前端无需区分
+  - entry 可携带可选 `source: "triggered"` + `triggerName`（trigger 发送标记，仅 events 投影路径；legacy 路径无此字段）
 - **页原子性**：events 投影与 legacy 两条路径都在页首遇孤儿 toolResult 时向后扩展页边界，保证单页内 toolCall/toolResult 配对自洽——前端按页解析、跨页不重新配对
 - 上翻加载 `loadMore` 以 `oldestLoadedId` 为 cursor，守卫 `hasMore && !loadingMore`
 

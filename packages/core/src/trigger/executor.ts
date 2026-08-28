@@ -121,11 +121,16 @@ export class TriggerExecutor extends EventEmitter {
       let agentEnded = false;
       let turnError: string | undefined;
 
-      await this.deps.session.sendMessage(sessionId, resolvedMessage, (event) => {
-        if (event.type !== "agent_end") return;
-        agentEnded = true;
-        turnError = readTurnError(event);
-      });
+      await this.deps.session.sendMessage(
+        sessionId,
+        resolvedMessage,
+        (event) => {
+          if (event.type !== "agent_end") return;
+          agentEnded = true;
+          turnError = readTurnError(event);
+        },
+        { source: "triggered", triggerName },
+      );
 
       if (turnError !== undefined) {
         throw new Error(turnError);

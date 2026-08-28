@@ -14,7 +14,7 @@ import { createAttachmentSanitizer } from "../attachments/sanitizer.js";
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
 import { collectAbandonedSeqs, deriveMessages, repairLog } from "./fold.js";
 import { SessionEventLog } from "./event-log.js";
-import type { SessionEvent } from "./events.js";
+import type { SessionEvent, SendMessageMeta } from "./events.js";
 import { readCurrentTokens } from "../context/token-estimate.js";
 import {
   buildAgent,
@@ -115,6 +115,7 @@ export class AgentRunner {
     message: string,
     attachments: ReadonlyArray<Attachment>,
     onEvent: RunnerEventHandler,
+    meta?: SendMessageMeta,
   ): Promise<void> {
     this.ensureNotBusy();
     if (this.pendingReload) {
@@ -138,7 +139,14 @@ export class AgentRunner {
       : userMessage;
 
     this.eventLog!.appendBatch([
-      { type: "user/message", data: { message: sanitizedUserMessage as never } },
+      {
+        type: "user/message",
+        data: {
+          message: sanitizedUserMessage as never,
+          ...(meta?.source !== undefined ? { source: meta.source } : {}),
+          ...(meta?.triggerName !== undefined ? { triggerName: meta.triggerName } : {}),
+        },
+      },
       { type: "turn/start", data: {} },
     ]);
 

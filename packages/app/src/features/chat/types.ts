@@ -102,6 +102,8 @@ export interface ChatMessage {
   _sendFailed?: boolean;
   _runChanges?: FileChangeCard[];
   _attachments?: ChatAttachment[];
+  _triggered?: true;
+  _triggerName?: string;
   timestamp?: number;
 }
 

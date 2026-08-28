@@ -3,6 +3,7 @@ import type { Logger } from "../logger.js";
 import { NotFoundError } from "../errors.js";
 import { AgentRunner, type RunnerEventHandler } from "./agent-runner.js";
 import { SessionEventLog } from "./event-log.js";
+import type { SendMessageMeta } from "./events.js";
 import { deriveMessages } from "./fold.js";
 import { computeSessionStatus, type SessionStatus } from "./status.js";
 import type { TurnContextSnapshot } from "./types.js";
@@ -69,10 +70,11 @@ export class SessionManager {
     message: string,
     attachments: Attachment[],
     onEvent: RunnerEventHandler,
+    meta?: SendMessageMeta,
   ): Promise<void> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new NotFoundError(`No active session "${sessionId}"`);
-    return session.sendMessage(message, attachments, onEvent);
+    return session.sendMessage(message, attachments, onEvent, meta);
   }
 
   abortSession(sessionId: string): void {
