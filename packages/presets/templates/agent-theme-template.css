@@ -54,24 +54,24 @@
   /*   border-radius: 18px 18px 4px 18px; */
   /*   box-shadow: 0 2px 12px rgba(201, 160, 74, 0.2); */
   /* } */
-   /* [data-chat-message][data-role="assistant"] [data-chat-bubble] { */
-   /*   color: #e2ddd4; */
-   /*   background: rgba(24, 23, 36, 0.9); */
-   /*   border: 1px solid rgba(201, 160, 74, 0.08); */
-   /*   border-radius: 18px 18px 18px 4px; */
-   /*   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03); */
-   /* } */
+  /* [data-chat-message][data-role="assistant"] [data-chat-bubble] { */
+  /*   color: #e2ddd4; */
+  /*   background: rgba(24, 23, 36, 0.9); */
+  /*   border: 1px solid rgba(201, 160, 74, 0.08); */
+  /*   border-radius: 18px 18px 18px 4px; */
+  /*   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03); */
+  /* } */
 
-   /* === Trigger 对话轮折叠摘要条（data-chat-turn-collapse 挂在摘要按钮上） === */
-   /* [data-chat-turn-collapse] { */
-   /*   color: #9a9184; */
-   /*   background: rgba(24, 23, 36, 0.6); */
-   /*   border: 1px solid rgba(201, 160, 74, 0.1); */
-   /* } */
-   /* [data-chat-turn-collapse]:hover { */
-   /*   color: #e2ddd4; */
-   /*   border-color: rgba(201, 160, 74, 0.25); */
-   /* } */
+  /* === Trigger 对话轮折叠摘要条（data-chat-turn-collapse 挂在摘要按钮上） === */
+  /* [data-chat-turn-collapse] { */
+  /*   color: #9a9184; */
+  /*   background: rgba(24, 23, 36, 0.6); */
+  /*   border: 1px solid rgba(201, 160, 74, 0.1); */
+  /* } */
+  /* [data-chat-turn-collapse]:hover { */
+  /*   color: #e2ddd4; */
+  /*   border-color: rgba(201, 160, 74, 0.25); */
+  /* } */
 
 
   /* === 输入框 === */

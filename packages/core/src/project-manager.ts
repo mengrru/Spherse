@@ -183,7 +183,11 @@ export class ProjectManager {
     sessionId: string,
     limit: number,
     beforeId?: number,
-  ): { entries: Array<{ id: number; message: unknown }>; hasMore: boolean; oldestId: number | null } {
+  ): {
+    entries: Array<{ id: number; message: unknown; source?: "triggered"; triggerName?: string }>;
+    hasMore: boolean;
+    oldestId: number | null;
+  } {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return { entries: [], hasMore: false, oldestId: null };
     const sessions = agentStore.sessions;

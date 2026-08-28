@@ -1,7 +1,7 @@
 # Trigger 对话轮折叠设计
 
 - 日期：2026-08-28
-- 状态：待实施
+- 状态：已实施
 
 ## 背景与问题
 
@@ -116,5 +116,5 @@ Trigger 以 `existing_session` / `reusable_session` 模式向既有 session 注�
 
 - `docs/official/architecture/chat.md`：`_` 前缀 view 字段清单加 `_triggered`/`_triggerName`；分页 entry 形状描述加可选 source/triggerName
 - `docs/official/project-structure.md`：新增 `features/chat/model/turn-groups.ts`
-- `packages/presets/templates/agent-theme-template.css` + 两个 theme skill：`data-chat-turn-collapse` 钩子
+- `packages/presets/templates/agent-theme-template.css` + 两个 theme skill：`data-chat-turn-collapse` 钩子（实施备注：`spherse-create-ui-theme/SKILL.md` 的 chat 节仅为示例、不维护钩子清单，钩子权威表在 agent-chat-theme skill 与 `theming.md`，已同步后者——ui-theme skill 记为豁免）
 - `docs/official/data-conventions.md`：`user/message` event data 可选字段（若该文档维护 event 形状清单）

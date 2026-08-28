@@ -144,3 +144,82 @@ describe("SessionPort vocabulary (abort propagation + typed events)", () => {
     }
   });
 });
+
+describe("trigger turn metadata (executor → assembled SessionPort → event log)", () => {
+  it("persists source/triggerName on the user message without mocking any seam method", async () => {
+    const { createProject } = await import("../../factory.js");
+    const fs = await import("node:fs");
+    const os = await import("node:os");
+    const path = await import("node:path");
+    const finalAssistant = {
+      role: "assistant",
+      content: [{ type: "text", text: "ok" }],
+      stopReason: "stop",
+      usage: {
+        input: 1,
+        output: 1,
+        cacheRead: 0,
+        cacheWrite: 0,
+        totalTokens: 2,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      },
+      timestamp: Date.now(),
+    };
+    const catalog = {
+      getChatStreamFn: () =>
+        async () => ({
+          async *[Symbol.asyncIterator]() {},
+          result: async () => finalAssistant,
+        }),
+      resolveModelById: (modelId: string) => {
+        const slashIdx = modelId.indexOf("/");
+        return slashIdx >= 0
+          ? { id: modelId.slice(slashIdx + 1), provider: modelId.slice(0, slashIdx) }
+          : { id: modelId, provider: modelId };
+      },
+    } as never;
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-trigger-meta-"));
+    try {
+      const runtime = await createProject(dir, {
+        defaultModel: "openai/gpt-4o",
+        modelCatalog: catalog,
+      });
+      runtime.timerService.stop();
+      await runtime.projectManager.createAgent(undefined, "---\nname: t\n---\nbody");
+      const agentId = runtime.projectManager.listAgents()[0].id;
+      const sessionId = await runtime.sessionRuntime.createSession(agentId);
+
+      const entry = {
+        id: "tr-meta",
+        enabled: true,
+        type: "event" as const,
+        eventName: "evt-meta",
+        mode: "existing_session" as const,
+        targetSessionId: sessionId,
+        message: "hi from trigger",
+        notify: false,
+        createdAt: 0,
+        updatedAt: 0,
+      };
+      runtime.triggerManager.create(agentId, entry);
+      expect(runtime.triggerManager.get(agentId, "tr-meta")).toMatchObject({ id: "tr-meta" });
+      runtime.triggerManager.runNow(agentId, "tr-meta");
+
+      let userEntry: { id: number; message: unknown; source?: string; triggerName?: string } | undefined;
+      await vi.waitFor(() => {
+        const history = runtime.projectManager.getRecentSessionHistory(agentId, sessionId, 20);
+        userEntry = history.entries.find((item) => item.id === 0);
+        expect(userEntry).toBeDefined();
+      });
+      expect(userEntry).toMatchObject({
+        message: expect.objectContaining({ role: "user" }),
+        source: "triggered",
+        triggerName: "evt-meta",
+      });
+      await runtime.shutdown();
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
