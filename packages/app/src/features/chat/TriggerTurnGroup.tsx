@@ -50,7 +50,9 @@ export function TriggerTurnGroup({ items, triggerName, hasError, renderItem }: T
           )}
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="flex flex-col gap-3">{items.map((item) => renderItem(item))}</div>
+          <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
+            {items.map((item) => renderItem(item))}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </div>
