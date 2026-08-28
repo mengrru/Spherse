@@ -143,7 +143,8 @@ spherse/
 │   │           └── events.test.ts             # 文件事件订阅、定向分发与幂等取消
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
-    │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry
+    │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry；Host 校验 + 认证制 CORS + auth 三个 onRequest hook（顺序即防线，见 architecture/server.md）
+    │   │       ├── cors.ts              # 认证制 CORS hook：preflight 反射放行，actual response 仅 token 有效才设 ACAO
     │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove
     │   │       ├── marketplace.ts        # 技能市场 service：OSS manifest 代理（30s 内存缓存，env SPHERSE_MARKETPLACE_MANIFEST_URL 可覆盖 URL）+ zip 下载（同源 SSRF 校验、50MB 上限）
@@ -311,8 +312,8 @@ spherse/
 │   │   │   │   ├── cloudflare-provider.ts # Cloudflare Quick Tunnel 实现：spawn cloudflared tunnel --url、stdout 抓取 *.trycloudflare.com URL、packaged 二进制路径解析
 │   │   │   │   └── manager.ts         # TunnelManager 单例：start/stop/restart 状态机 + onStateChange 事件订阅
 │   │   │   ├── window.ts             # BrowserWindow 创建与管理
-│   │   │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新 + restartServerWithAuth（启用/停用 mobile access 时带 token 重启）
-│   │   │   └── settings.ts           # electron-store 封装 + env 管理（含自定义供应商 syncCustomProviders 注册）+ openProjects/locale 持久化 + mobileAccess（token/enabled/mode/publicDomain）持久化 + generateAccessToken
+│   │   │   ├── server.ts             # server 实例管理（ensure/restart/stop，恒带 serverToken 鉴权）+ 动态 host 重放（syncAllowedHosts）+ 运行时 defaultModel 更新
+│   │   │   └── settings.ts           # electron-store 封装 + env 管理（含自定义供应商 syncCustomProviders 注册）+ openProjects/locale 持久化 + mobileAccess（enabled/mode/publicDomain）持久化 + serverToken（顶层 key，getServerToken 迁移链）+ generateAccessToken
 │   │   └── e2e/                      # Playwright E2E 测试
 │   │       ├── helpers/
 │   │       │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
