@@ -46,6 +46,21 @@ export const en: Record<keyof typeof zhCN, string> = {
 
   "home.moreCases": "Explore more possibilities",
   "nav.explore": "Explore",
+  "nav.download": "Download",
+
+  "download.pageTitle": "Download Spherse",
+  "download.pageSubtitle": "Get the latest version, or browse the release history",
+  "download.latestSection": "Latest release downloads",
+  "download.latestLabel": "Latest",
+  "download.macArm64": "macOS (Apple Silicon)",
+  "download.macIntel": "macOS (Intel)",
+  "download.winX64": "Windows (x64)",
+  "download.winArm64": "Windows (ARM64)",
+  "download.hint": "Direct installer download",
+  "download.download": "Download",
+  "download.fallback": "Get it from GitHub Releases",
+  "download.changelogTitle": "Changelog",
+  "download.viewOnGithub": "View on GitHub",
 
   "cases.pageTitle": "Examples",
   "cases.pageSubtitle": "Download sample projects to explore what Spherse can do",

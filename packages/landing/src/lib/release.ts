@@ -1,4 +1,4 @@
-const FALLBACK_URL = "https://github.com/mengrru/Spherse/releases/latest";
+export const FALLBACK_URL = "https://github.com/mengrru/Spherse/releases/latest";
 
 const MANIFEST_URL: string | undefined = import.meta.env.VITE_OSS_MANIFEST_URL;
 
@@ -19,13 +19,13 @@ export function detectPlatform(): Platform {
   return "mac";
 }
 
-interface Manifest {
+export interface Manifest {
   version: string;
   mac: { arm64: string; intel: string };
   win: { x64?: string; arm64?: string; setup?: string };
 }
 
-async function fetchLatestManifest(): Promise<Manifest> {
+export async function fetchLatestManifest(): Promise<Manifest> {
   if (!MANIFEST_URL) throw new Error("VITE_OSS_MANIFEST_URL not configured");
   const res = await fetch(MANIFEST_URL);
   if (!res.ok) throw new Error(`OSS manifest responded ${res.status}`);

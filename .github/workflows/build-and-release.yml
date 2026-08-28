@@ -219,13 +219,53 @@ jobs:
             -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET" \
             --force -u
 
+  # 全量重建 changelog：拉取全部 GitHub release notes，筛掉 docs/chore/infra 条目并
+  # 结构化后上传 OSS spherse/changelog.json。只依赖 create-release，与 build 并行；
+  # workflow_dispatch 重发布时 create-release 被 skip，本 job 仍执行（全量重建幂等，
+  # 可用于修复/刷新历史 changelog）。
+  publish-changelog:
+    needs: create-release
+    if: always() && needs.create-release.result != 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.19
+
+      - name: Generate changelog
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/build-changelog.mjs --repo "${GITHUB_REPOSITORY}" --output /tmp/changelog.json
+
+      - name: Install ossutil
+        run: |
+          curl -fsSL -o /tmp/ossutil https://gosspublic.alicdn.com/ossutil/1.7.18/ossutil64
+          chmod +x /tmp/ossutil
+
+      - name: Upload changelog to OSS
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+        run: |
+          /tmp/ossutil cp /tmp/changelog.json "oss://${OSS_BUCKET}/spherse/changelog.json" \
+            -e "$OSS_ENDPOINT" \
+            -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET" \
+            --force -u
+
   # 发版完成后联动部署 web 版（GitHub Pages：landing + web）。
   # GITHUB_TOKEN 触发的事件默认不会级联 workflow run，但 workflow_dispatch 是官方例外，
   # 因此用 gh workflow run（需要 actions: write 权限）触发 deploy-pages.yml；
   # ref 用发版 tag，保证 Pages 内容与本次发版代码一致。
   deploy-web:
-    needs: publish-oss
-    if: github.event_name == 'push' && needs.publish-oss.result == 'success'
+    needs: [publish-oss, publish-changelog]
+    if: >-
+      github.event_name == 'push' &&
+      needs.publish-oss.result == 'success' &&
+      needs.publish-changelog.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: read

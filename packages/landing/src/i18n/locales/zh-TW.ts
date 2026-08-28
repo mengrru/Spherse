@@ -44,6 +44,21 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
 
   "home.moreCases": "探索更多可能",
   "nav.explore": "探索",
+  "nav.download": "下載",
+
+  "download.pageTitle": "下載 Spherse",
+  "download.pageSubtitle": "取得最新版本，或瀏覽各版本更新記錄",
+  "download.latestSection": "最新版本下載",
+  "download.latestLabel": "最新版本",
+  "download.macArm64": "macOS（Apple Silicon）",
+  "download.macIntel": "macOS（Intel）",
+  "download.winX64": "Windows（x64）",
+  "download.winArm64": "Windows（ARM64）",
+  "download.hint": "安裝包直鏈下載",
+  "download.download": "下載",
+  "download.fallback": "前往 GitHub Releases 下載",
+  "download.changelogTitle": "更新日誌",
+  "download.viewOnGithub": "在 GitHub 檢視",
 
   "cases.pageTitle": "案例",
   "cases.pageSubtitle": "下載範例專案，體驗 Spherse 的更多可能",

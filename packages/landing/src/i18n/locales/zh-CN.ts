@@ -64,6 +64,27 @@ export const zhCN = {
 
   "home.moreCases": "探索更多可能",
   "nav.explore": "探索",
+  "nav.download": "下载",
+
+  // 下载页（/download）标题与副标题。
+  "download.pageTitle": "下载 Spherse",
+  "download.pageSubtitle": "获取最新版本，或浏览各版本更新记录",
+  // 下载页最新版本区的无障碍名称。
+  "download.latestSection": "最新版本下载",
+  // 下载页最新版本徽章中「最新版本」字样。
+  "download.latestLabel": "最新版本",
+  "download.macArm64": "macOS（Apple Silicon）",
+  "download.macIntel": "macOS（Intel）",
+  "download.winX64": "Windows（x64）",
+  "download.winArm64": "Windows（ARM64）",
+  // 平台卡片上按钮旁的补充说明（安装包直链）。
+  "download.hint": "安装包直链下载",
+  "download.download": "下载",
+  // manifest 拉取失败时的兜底卡片文案。
+  "download.fallback": "前往 GitHub Releases 下载",
+  "download.changelogTitle": "更新日志",
+  // changelog 每版本面板右上角 GitHub 外链的无障碍标签。
+  "download.viewOnGithub": "在 GitHub 查看",
 
   "cases.pageTitle": "案例",
   "cases.pageSubtitle": "下载示例项目，体验 Spherse 的更多可能",
