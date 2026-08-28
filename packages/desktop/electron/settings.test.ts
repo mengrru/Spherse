@@ -16,7 +16,7 @@ vi.mock("electron", () => ({
   nativeTheme: { themeSource: "system" },
 }));
 
-import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore, getMobileAccess, setMobileAccess } from "./settings.js";
+import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore, getMobileAccess, setMobileAccess, getServerToken, setServerToken, generateAccessToken } from "./settings.js";
 import { getAppModelCatalog } from "./model-catalog.js";
 
 describe("mergeModelGroup sampling passthrough", () => {
@@ -323,5 +323,48 @@ describe("mobileAccess persistence", () => {
       mode: "manual",
       publicDomain: "https://x.com",
     });
+  });
+});
+
+describe("serverToken", () => {
+  it("generates and persists when nothing exists", () => {
+    settingsStore.set("settings", undefined);
+    settingsStore.set("serverToken", undefined);
+    const token = getServerToken();
+    expect(token).toBeTruthy();
+    expect(settingsStore.get("serverToken")).toBe(token);
+  });
+
+  it("migrates from legacy mobileAccess.token", () => {
+    settingsStore.set("settings", { mobileAccess: { enabled: true, token: "legacy-tok", mode: "quick" } });
+    settingsStore.set("serverToken", undefined);
+    expect(getServerToken()).toBe("legacy-tok");
+    expect(settingsStore.get("serverToken")).toBe("legacy-tok");
+  });
+
+  it("prefers existing serverToken over legacy token", () => {
+    settingsStore.set("settings", { mobileAccess: { enabled: true, token: "legacy-tok", mode: "quick" } });
+    settingsStore.set("serverToken", "current-tok");
+    expect(getServerToken()).toBe("current-tok");
+  });
+
+  it("setServerToken overwrites and getServerToken returns it", () => {
+    settingsStore.set("serverToken", "a");
+    setServerToken("b");
+    expect(getServerToken()).toBe("b");
+  });
+
+  it("saveSettings does not drop serverToken (top-level key)", () => {
+    settingsStore.set("serverToken", "keep-me");
+    settingsStore.set("settings", undefined);
+    saveSettings({
+      locale: "en",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+    });
+    expect(settingsStore.get("serverToken")).toBe("keep-me");
+  });
+
+  it("generateAccessToken produces distinct secrets", () => {
+    expect(generateAccessToken()).not.toBe(generateAccessToken());
   });
 });

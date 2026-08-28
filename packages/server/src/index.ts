@@ -1,6 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import type { AddressInfo } from "node:net";
-import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import multipart from "@fastify/multipart";
 import type { Logger, SamplingParams, ThinkingLevel, ModelCatalog } from "@spherse/core";
@@ -14,6 +13,7 @@ import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
 import { registerAuthHook, type AuthOptions } from "./auth.js";
+import { registerAuthGatedCors } from "./cors.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { setAppVersion } from "./server-info.js";
 import { ChatSessionHub } from "./chat-session-hub.js";
@@ -24,10 +24,29 @@ export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type P
 
 export const DEFAULT_SERVER_PORT = 53972;
 
+const STATIC_ALLOWED_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+
+function normalizeHostname(input: string): string {
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? input : `http://${input}`;
+  return new URL(withScheme).hostname.replace(/^\[|\]$/g, "");
+}
+
+function isHostAllowed(hostHeader: string | undefined, dynamicHosts: Set<string>): boolean {
+  if (!hostHeader) return false;
+  try {
+    const hostname = normalizeHostname(hostHeader);
+    return STATIC_ALLOWED_HOSTS.has(hostname) || dynamicHosts.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
 export interface MultiProjectServer {
   fastify: FastifyInstance;
   registry: ProjectRegistry;
   logger: Logger;
+  addAllowedHosts: (hosts: string[]) => void;
+  removeAllowedHosts: (hosts: string[]) => void;
 }
 
 export interface CreateServerOptions {
@@ -66,7 +85,14 @@ export async function createMultiProjectServer(
     forceCloseConnections: true,
   });
 
-  await fastify.register(cors, { origin: true });
+  const dynamicAllowedHosts = new Set<string>();
+  fastify.addHook("onRequest", async (req, reply) => {
+    if (!isHostAllowed(req.headers.host, dynamicAllowedHosts)) {
+      return reply.code(403).send({ error: "Forbidden host" });
+    }
+  });
+  registerAuthGatedCors(fastify, () => options?.auth?.accessToken);
+
   await fastify.register(websocket);
   await fastify.register(multipart, {
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -121,7 +147,7 @@ export async function createMultiProjectServer(
   fastify.addHook("onResponse", async (req, reply) => {
     const urlPath = req.url.split("?", 1)[0];
     if (!urlPath.includes("/preview/")) return;
-    req.log.info({ statusCode: reply.statusCode }, "preview response");
+    req.log.info({ statusCode: reply.statusCode, url: urlPath.replace(/(\/__auth\/)[^/]+/g, "$1<redacted>") }, "preview response");
   });
 
   const preferredPort = options?.port ?? DEFAULT_SERVER_PORT;
@@ -136,5 +162,24 @@ export async function createMultiProjectServer(
   const address = fastify.server.address() as AddressInfo;
   logger.info({ port: address.port }, "server listening");
 
-  return { fastify, registry, logger };
+  const addAllowedHosts = (hosts: string[]): void => {
+    for (const host of hosts) {
+      try {
+        dynamicAllowedHosts.add(normalizeHostname(host));
+      } catch {
+        logger.warn({ host }, "ignoring invalid allowed host");
+      }
+    }
+  };
+  const removeAllowedHosts = (hosts: string[]): void => {
+    for (const host of hosts) {
+      try {
+        dynamicAllowedHosts.delete(normalizeHostname(host));
+      } catch {
+        /* invalid host, nothing to remove */
+      }
+    }
+  };
+
+  return { fastify, registry, logger, addAllowedHosts, removeAllowedHosts };
 }

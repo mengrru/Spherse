@@ -1,12 +1,8 @@
 import { ipcMain, type BrowserWindow } from "electron";
 import type { MobileAccessEvent, MobileAccessState, MobileTunnelMode } from "@spherse/app/host-bridge";
 import { getTunnelManager } from "../tunnel/manager.js";
-import {
-  getMobileAccess,
-  setMobileAccess,
-  generateAccessToken,
-} from "../settings.js";
-import { ensureServer, restartServerWithAuth, getServerPort } from "../server.js";
+import { getMobileAccess, setMobileAccess, getServerToken, setServerToken, generateAccessToken } from "../settings.js";
+import { ensureServer, restartServer, syncAllowedHosts, getServerPort } from "../server.js";
 
 const MOBILE_EVENT_CHANNEL = "mobile-access:event";
 
@@ -36,7 +32,7 @@ export function buildState(): MobileAccessState {
   if (mode === "manual") {
     return {
       enabled: mobile.enabled,
-      token: mobile.token ?? null,
+      token: getServerToken(),
       mode,
       serverPort,
       manualDomain,
@@ -52,7 +48,7 @@ export function buildState(): MobileAccessState {
   const tunnel = getTunnelManager().getState();
   return {
     enabled: mobile.enabled,
-    token: mobile.token ?? null,
+    token: getServerToken(),
     mode,
     serverPort,
     manualDomain,
@@ -85,6 +81,7 @@ export function registerMobileAccessIpc(getWindow: () => BrowserWindow | null): 
   const broadcast = makeBroadcaster(getWindow);
 
   getTunnelManager().onStateChange(() => {
+    syncAllowedHosts();
     if (getMobileAccess().mode !== "manual") {
       broadcast(buildState());
     }
@@ -100,11 +97,9 @@ export function registerMobileAccessIpc(getWindow: () => BrowserWindow | null): 
       return serialize(async () => {
         const mode = options?.mode ?? "quick";
         const publicDomain = mode === "manual" ? normalizeDomain(options?.publicDomain) : undefined;
-        const current = getMobileAccess();
-        const token = current.token ?? generateAccessToken();
-        setMobileAccess({ enabled: true, token, mode, publicDomain });
-        await restartServerWithAuth(token);
+        setMobileAccess({ enabled: true, mode, publicDomain });
         await ensureServer();
+        syncAllowedHosts();
         if (mode === "quick") {
           await getTunnelManager().start(getServerPort());
         } else {
@@ -119,6 +114,7 @@ export function registerMobileAccessIpc(getWindow: () => BrowserWindow | null): 
     return serialize(async () => {
       setMobileAccess({ enabled: false });
       await getTunnelManager().stop();
+      syncAllowedHosts();
       return buildState();
     });
   });
@@ -126,9 +122,8 @@ export function registerMobileAccessIpc(getWindow: () => BrowserWindow | null): 
   ipcMain.handle("mobile-access:regenerate-token", async (): Promise<MobileAccessState> => {
     return serialize(async () => {
       const current = getMobileAccess();
-      const token = generateAccessToken();
-      setMobileAccess({ token });
-      await restartServerWithAuth(token);
+      setServerToken(generateAccessToken());
+      await restartServer();
       await ensureServer();
       if (current.enabled && current.mode === "quick") {
         await getTunnelManager().restart(getServerPort());
@@ -152,23 +147,18 @@ export function registerMobileAccessIpc(getWindow: () => BrowserWindow | null): 
     "mobile-access:set-mode",
     async (_evt, mode: MobileTunnelMode): Promise<MobileAccessState> => {
       return serialize(async () => {
-        const current = getMobileAccess();
         setMobileAccess({ mode });
         if (mode === "manual") {
           await getTunnelManager().stop();
-          if (!current.token) {
-            const token = generateAccessToken();
-            setMobileAccess({ token });
-            await restartServerWithAuth(token);
-            await ensureServer();
-          }
         } else {
+          const current = getMobileAccess();
           if (current.enabled) {
             await getTunnelManager().start(getServerPort());
           } else {
             await getTunnelManager().stop();
           }
         }
+        syncAllowedHosts();
         return buildState();
       });
     },
@@ -179,6 +169,7 @@ export function registerMobileAccessIpc(getWindow: () => BrowserWindow | null): 
     async (_evt, domain: string): Promise<MobileAccessState> => {
       return serialize(async () => {
         setMobileAccess({ publicDomain: normalizeDomain(domain) });
+        syncAllowedHosts();
         return buildState();
       });
     },
