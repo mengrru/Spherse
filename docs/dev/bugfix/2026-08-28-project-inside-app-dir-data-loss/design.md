@@ -33,12 +33,13 @@
 - `open-project`：`registerProject` 之前 `await confirmUnsafeLocation(projectRoot, win)`，未确认 → 返回 `null`（与 `select-directory` 取消同语义，renderer `openProject` 返回 null 无副作用）。
 - `open-sample-project`：`showOpenDialog` 拿到 `parentDir` 之后、`mkdirSync`（`project.ts:165`）之前检查，未确认 → 返回 `null`（复制尚未发生，零代价）。
 
-### 3. i18n（三语言各 5 个新 key）
+### 3. i18n（三语言各 6 个新 key）
 
 - `project.unsafeLocation.title`：警告框标题
 - `project.unsafeLocation.message`：解释「该位置位于 Spherse 应用目录内，更新 Spherse 时该位置会被覆盖清空，项目数据会丢失；建议将项目移动到其他位置」（措辞不区分 Windows「删安装目录」/ macOS「替换 bundle」的精确语义，两边都成立）
 - `project.unsafeLocation.openAnyway`：按钮「仍然打开」
 - `project.unsafeLocation.startupMessage`：启动存量警告正文，`{names}` 插值项目名列表
+- `project.unsafeLocation.namesSeparator`：项目名列表连接符（zh `、` / en `, `，避免硬编码语言相关标点）
 - `project.unsafeLocation.acknowledge`：启动警告框按钮「知道了」
 - 「取消」按钮复用 `common.cancel`
 
@@ -46,15 +47,14 @@
 
 `restore-projects` 恢复完成后，对恢复结果中位于易失区的项目弹一次原生警告框（type: `"warning"`，正文列出项目名，按钮「知道了」）：
 
-- **每会话一次**：`registerProjectIpc` 闭包内 `unsafeStartupWarningShown` 标志，`refreshProjects`（断线重连补偿）再次触发 `restore-projects` 不会重复弹；
-- 弹框失败（异常）不清标志、记日志，下次恢复重试——不因弹框故障丢提示；
+- **每会话一次**：`registerProjectIpc` 闭包内 `unsafeStartupWarningShown` 标志；**置位先于 await 弹框**（并发恢复——启动时 App 恢复与 `useReconnectedSync` 补偿刷新都会调 `restore-projects`——只会弹一次），弹框抛错时在 catch 复位以便下次恢复重试，不因弹框故障丢提示；
 - dev 模式 `isInsideUnsafeZone` 恒 false，无弹框，E2E 不受影响。
 
 ## 影响面
 
 - desktop：新增 `electron/unsafe-location.ts` + `unsafe-location.test.ts`；`electron/ipc/project.ts` guard + 存量启动警告 + 新增 `electron/ipc/project.test.ts`；`electron/types.ts` 的 `ElectronAPI.openProject` 返回类型加 `| null`
 - app：`src/lib/host-bridge.ts` 的 `ProjectHostApi.openProject` 返回类型加 `| null`（仅类型，无行为改动；`app-store.ts:184-185` 已按 null 处理）
-- i18n：zh-CN / zh-TW / en 各 5 个新 key
+- i18n：zh-CN / zh-TW / en 各 6 个新 key
 - core / server：不改
 
 ## 测试

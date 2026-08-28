@@ -268,6 +268,8 @@ export const zhCN = {
   "project.unsafeLocation.openAnyway": "仍然打开",
   // 启动时检测到已打开的项目位于应用目录内 → 警告框正文（{names} 为项目名列表）
   "project.unsafeLocation.startupMessage": "以下项目位于 Spherse 应用目录内，更新 Spherse 时会被覆盖清空：{names}。建议将它们移动到其他位置。",
+  // 启动警告框中项目名列表的连接符
+  "project.unsafeLocation.namesSeparator": "、",
   // 启动警告框确认按钮
   "project.unsafeLocation.acknowledge": "知道了",
 

@@ -55,13 +55,16 @@ export function registerProjectIpc(
       .filter((r) => isInsideUnsafeZone(r.path))
       .map((r) => r.name);
     if (unsafeNames.length === 0) return;
+    unsafeStartupWarningShown = true;
     const locale = normalizeLocale(getLocale());
     const options = {
       type: "warning" as const,
       title: translate(locale, "project.unsafeLocation.title"),
       message: translate(locale, "project.unsafeLocation.title"),
       detail: translate(locale, "project.unsafeLocation.startupMessage", {
-        names: unsafeNames.join("、"),
+        names: unsafeNames.join(
+          translate(locale, "project.unsafeLocation.namesSeparator"),
+        ),
       }),
       buttons: [translate(locale, "project.unsafeLocation.acknowledge")],
       defaultId: 0,
@@ -72,8 +75,8 @@ export function registerProjectIpc(
       const win = getWindow();
       if (win) await dialog.showMessageBox(win, options);
       else await dialog.showMessageBox(options);
-      unsafeStartupWarningShown = true;
     } catch (err) {
+      unsafeStartupWarningShown = false;
       console.error("[restore-projects] failed to show unsafe location warning:", err);
     }
   }

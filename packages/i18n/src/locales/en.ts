@@ -134,6 +134,7 @@ export const en: Record<TranslationKey, string> = {
   "project.unsafeLocation.message": "This location is inside the Spherse app directory. Updating Spherse will overwrite and clear this location, and your project data will be lost. Consider moving the project elsewhere before opening it.",
   "project.unsafeLocation.openAnyway": "Open anyway",
   "project.unsafeLocation.startupMessage": "The following projects are inside the Spherse app directory and will be overwritten and cleared when Spherse updates: {names}. Consider moving them elsewhere.",
+  "project.unsafeLocation.namesSeparator": ", ",
   "project.unsafeLocation.acknowledge": "Got it",
   "common.cancel": "Cancel",
   "common.delete": "Delete",
