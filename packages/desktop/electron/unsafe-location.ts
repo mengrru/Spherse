@@ -3,7 +3,11 @@ import { app } from "electron";
 import { isPathInside } from "@spherse/core";
 
 export function getUnsafeZoneRoot(): string | null {
-  if (!app.isPackaged) return null;
+  if (!app.isPackaged) {
+    const override = process.env.SPHERSE_UNSAFE_ZONE;
+    if (override) return path.resolve(override);
+    return null;
+  }
   if (process.platform === "win32") {
     return path.win32.dirname(process.execPath);
   }

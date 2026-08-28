@@ -17,6 +17,29 @@ import {
 } from "../settings.js";
 import { readSampleManifest, resolveSampleSrcDir } from "../sample-projects.js";
 
+type TestDialogEntry = {
+  kind: "confirmUnsafeLocation" | "startupUnsafeWarning";
+  detail: string;
+};
+
+function testDialogLog(): TestDialogEntry[] {
+  const g = globalThis as { __spherseTestDialogs?: TestDialogEntry[] };
+  g.__spherseTestDialogs ??= [];
+  return g.__spherseTestDialogs;
+}
+
+function forcedDialogSeam(): { record: (entry: TestDialogEntry) => void; response: number } | null {
+  const raw = process.env.SPHERSE_E2E_DIALOG_RESPONSE;
+  if (raw === undefined) return null;
+  const response = Number.parseInt(raw, 10);
+  return {
+    record: (entry) => {
+      testDialogLog().push(entry);
+    },
+    response: Number.isNaN(response) ? 0 : response,
+  };
+}
+
 export async function confirmUnsafeLocation(
   targetPath: string,
   win: BrowserWindow | null,
@@ -36,6 +59,11 @@ export async function confirmUnsafeLocation(
     cancelId: 1,
     noLink: true,
   };
+  const forced = forcedDialogSeam();
+  if (forced) {
+    forced.record({ kind: "confirmUnsafeLocation", detail: options.detail });
+    return forced.response === 0;
+  }
   const result = win
     ? await dialog.showMessageBox(win, options)
     : await dialog.showMessageBox(options);
@@ -71,6 +99,11 @@ export function registerProjectIpc(
       cancelId: 0,
       noLink: true,
     };
+    const forced = forcedDialogSeam();
+    if (forced) {
+      forced.record({ kind: "startupUnsafeWarning", detail: options.detail });
+      return;
+    }
     try {
       const win = getWindow();
       if (win) await dialog.showMessageBox(win, options);

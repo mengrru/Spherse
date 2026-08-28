@@ -41,6 +41,16 @@ describe("getUnsafeZoneRoot", () => {
     expect(getUnsafeZoneRoot()).toBeNull();
   });
 
+  it("honors the SPHERSE_UNSAFE_ZONE override when not packaged (E2E seam)", () => {
+    appMock.isPackaged = false;
+    process.env.SPHERSE_UNSAFE_ZONE = "/tmp/e2e-zone";
+    try {
+      expect(getUnsafeZoneRoot()).toBe(path.resolve("/tmp/e2e-zone"));
+    } finally {
+      delete process.env.SPHERSE_UNSAFE_ZONE;
+    }
+  });
+
   it("win32: zone is the NSIS install directory (lexical win32 semantics)", () => {
     withProcess("win32", "C:\\Program Files\\Spherse\\Spherse.exe", () => {
       expect(getUnsafeZoneRoot()).toBe(path.win32.dirname("C:\\Program Files\\Spherse\\Spherse.exe"));

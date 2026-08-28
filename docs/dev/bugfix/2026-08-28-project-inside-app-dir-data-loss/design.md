@@ -21,15 +21,16 @@
 ### 1. 新增 `packages/desktop/electron/unsafe-location.ts`
 
 - `getUnsafeZoneRoot(): string | null`：
-  - 非 packaged（dev）返回 `null`（不拦截，避免误伤 electron 二进制所在目录）；
+  - 非 packaged（dev）：`SPHERSE_UNSAFE_ZONE` env 存在时返回 `path.resolve(override)`（**E2E seam**，让 E2E 在未打包形态下指定易失区），否则返回 `null`（不拦截，避免误伤 electron 二进制所在目录）；
   - Windows：`path.win32.dirname(process.execPath)`（安装目录，NSIS 卸载器的 `RMDir /r` 作用域）。**显式用 `path.win32`**：Linux CI 上 `node:path` 是 POSIX 实现，平台无关的 zone 计算必须按 `process.platform` 选 path 实现，保证 Linux CI 上也能词法级测试 Windows 分支；
   - macOS：从 `process.execPath`（`…/Spherse.app/Contents/MacOS/Spherse`）逐级向上找到 `.app` 目录（不区分大小写比较后缀，macOS 文件系统大小写不敏感）。更新替换的是整个 bundle，故 zone = `.app` 目录；
   - macOS 找不到 `.app` 祖先（packaged 下不可达的防御分支）与 Linux（当前无产品目标）→ 返回 `null`（无法确定易失区时不拦截，避免误报）。
 - `isInsideUnsafeZone(target: string): boolean`：zone 为 null → false；否则 `isPathInside(zone, target)`（复用 `@spherse/core` 的 `isPathInside`，符合仓库路径安全红线，禁止 startsWith 前缀判断）。`isPathInside` 在运行时与所选 path 实现同语义（Windows 上 `node:path` 即 win32），Linux CI 上的 win32 语义差异仅影响测试覆盖范围，见「测试」。
 
-### 2. `electron/ipc/project.ts`：`confirmUnsafeLocation` helper + 两处 guard
+### 2. `electron/ipc/project.ts`：`confirmUnsafeLocation` helper + 两处 guard + 弹窗 E2E seam
 
 - 新增导出 `confirmUnsafeLocation(targetPath: string, win: BrowserWindow | null): Promise<boolean>`（供测试）：`isInsideUnsafeZone` 未命中 → true；命中 → `dialog.showMessageBox`（type: `"warning"`，按钮 [仍然打开, 取消]，`defaultId`/`cancelId` = 1，`noLink: true`），返回 `response === 0`。`win` 为 null 时调用无 parent 的 `dialog.showMessageBox(options)` 重载（Electron 允许，不阻塞行为）。
+- **弹窗 E2E seam**：env `SPHERSE_E2E_DIALOG_RESPONSE` 存在时（值为弹窗 response，默认 0），不弹原生框（Playwright 无法驱动原生 dialog），把 `{ kind, detail }` 记入主进程 `globalThis.__spherseTestDialogs` 并按 env 值返回——E2E 经 `app.evaluate` 读取记录断言，行为侧（拒绝/确认的后果）经 renderer 断言。
 - `open-project`：`registerProject` 之前 `await confirmUnsafeLocation(projectRoot, win)`，未确认 → 返回 `null`（与 `select-directory` 取消同语义，renderer `openProject` 返回 null 无副作用）。
 - `open-sample-project`：`showOpenDialog` 拿到 `parentDir` 之后、`mkdirSync`（`project.ts:165`）之前检查，未确认 → 返回 `null`（复制尚未发生，零代价）。
 
@@ -70,7 +71,11 @@
   - 安全路径 → 不弹框直接走原有流程；
   - `restore-projects`：unsafe 恢复结果 → 弹一次列出项目名的警告（断言 detail 含名字）；同会话再次恢复不再弹；无 unsafe 项目不弹；弹框抛错不置位标志、下次恢复重试。
 - i18n：`npm run check:i18n` + `npm test --workspace=packages/i18n`。
-- E2E（按 AGENTS.md 按影响面选择）：dev 模式 `isPackaged=false` 下 guard 恒 no-op，改动低风险；跑 `app-launch.spec.ts`、`project-close.spec.ts` 确认 open/close 流程无回归。
+- E2E（新增 `e2e/unsafe-location-guard.spec.ts`，dev 模式经 `SPHERSE_UNSAFE_ZONE` + `SPHERSE_E2E_DIALOG_RESPONSE` seam 驱动）：
+  - 拒绝：renderer 直调 `electronAPI.openProject(zone 内路径)` → 返回 null、停留 onboarding、主进程记录 1 条 `confirmUnsafeLocation`；
+  - 确认：返回 projectId，reload 后项目出现在活动栏（`[data-project-avatar]` 计数 1），主进程记录 confirm + 后续 reload 触发的 `startupUnsafeWarning`（含项目名）；
+  - 存量启动警告：预置 settings.json 的 openProjects 指向 zone 内项目 → 启动后项目恢复、主进程记录 1 条 `startupUnsafeWarning` 且 detail 含项目名。
+  - 既有 `app-launch.spec.ts`、`project-close.spec.ts` 回归不受影响（无 seam env 时 dev 下 guard 恒 no-op）。
 
 ## 行为变更说明
 

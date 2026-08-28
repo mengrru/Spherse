@@ -294,7 +294,7 @@ spherse/
 │   │   │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
 │   │   │   ├── updater.ts            # 更新检测：OSS latest.json 清单 + compareVersions + 平台 downloadUrl 解析（electron-updater 仅保留 Windows in-app 下载 API，feed 已废弃）、silent 检测不改写交互状态、startAutoUpdateChecks 调度（启动 5s + 每小时 tick，≥24h 且用户活动时静默检测）
 │   │   │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）
-│   │   │   ├── unsafe-location.ts    # 项目路径「易失区」判定：getUnsafeZoneRoot 计算更新时会被覆盖清空的目录（win32 = dirname(process.execPath)，NSIS 卸载器 RMDir /r $INSTDIR 作用域；darwin = .app bundle 目录；dev/linux 无），isInsideUnsafeZone 经 @spherse/core 的 isPathInside 判断（打开/示例项目 IPC 弹警告框用）
+│   │   │   ├── unsafe-location.ts    # 项目路径「易失区」判定：getUnsafeZoneRoot 计算更新时会被覆盖清空的目录（win32 = dirname(process.execPath)，NSIS 卸载器 RMDir /r $INSTDIR 作用域；darwin = .app bundle 目录；dev/linux 无，dev 下 SPHERSE_UNSAFE_ZONE env 可覆盖供 E2E 指定），isInsideUnsafeZone 经 @spherse/core 的 isPathInside 判断（打开/示例项目 IPC 弹警告框用）
 │   │   │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │   │   │   │   ├── index.ts          # registerAllIpc 聚合
 │   │   │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化、打开示例项目、打开项目文件夹（shell.openPath）、用默认应用打开文件（openFileExternal）；confirmUnsafeLocation 对安装目录内路径弹警告框（默认取消），restore-projects 恢复后对存量易失区项目每会话弹一次迁移警告
@@ -321,6 +321,7 @@ spherse/
 │   │       ├── app-launch.spec.ts    # App 启动验证 smoke test
 │   │       ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
 │   │       ├── project-close.spec.ts # 项目关闭 E2E 测试（streaming 中关闭断连 runtime、重启后干净重开）
+│   │       ├── unsafe-location-guard.spec.ts # 易失区拦截 E2E 测试（SPHERSE_UNSAFE_ZONE + SPHERSE_E2E_DIALOG_RESPONSE seam：拒绝/确认 open-project、存量项目启动警告）
 │   │       ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │   │       ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
 │   │       ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）

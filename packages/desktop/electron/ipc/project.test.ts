@@ -111,6 +111,8 @@ beforeEach(() => {
   serverMock.registerProject.mockReset();
   settingsMock.openProjects = [];
   translateMock.mockClear();
+  delete process.env.SPHERSE_E2E_DIALOG_RESPONSE;
+  (globalThis as { __spherseTestDialogs?: unknown }).__spherseTestDialogs = undefined;
   registerProjectIpc(() => win);
 });
 
@@ -282,5 +284,43 @@ describe("restore-projects startup warning", () => {
     unsafeMock.isInsideUnsafeZone.mockReturnValue(true);
     await invoke("restore-projects");
     expect(dialogMock.showMessageBox).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("forced dialog seam (SPHERSE_E2E_DIALOG_RESPONSE)", () => {
+  function recordedDialogs(): Array<{ kind: string; detail: string }> {
+    const g = globalThis as { __spherseTestDialogs?: Array<{ kind: string; detail: string }> };
+    return g.__spherseTestDialogs ?? [];
+  }
+
+  it("confirmUnsafeLocation records the entry and maps response 1 to decline without showing a dialog", async () => {
+    unsafeMock.isInsideUnsafeZone.mockReturnValue(true);
+    process.env.SPHERSE_E2E_DIALOG_RESPONSE = "1";
+    await expect(confirmUnsafeLocation("/unsafe/proj", win)).resolves.toBe(false);
+    expect(dialogMock.showMessageBox).not.toHaveBeenCalled();
+    expect(recordedDialogs()).toEqual([
+      { kind: "confirmUnsafeLocation", detail: "project.unsafeLocation.message" },
+    ]);
+  });
+
+  it("confirmUnsafeLocation maps response 0 to confirm", async () => {
+    unsafeMock.isInsideUnsafeZone.mockReturnValue(true);
+    process.env.SPHERSE_E2E_DIALOG_RESPONSE = "0";
+    await expect(confirmUnsafeLocation("/unsafe/proj", win)).resolves.toBe(true);
+    expect(dialogMock.showMessageBox).not.toHaveBeenCalled();
+  });
+
+  it("startup warning records the joined names via the seam", async () => {
+    settingsMock.openProjects = [
+      { id: "a", path: "/unsafe/p1", name: "p1", lastOpened: "2026-01-01T00:00:00.000Z" },
+    ];
+    serverMock.registerProject.mockResolvedValue({ projectId: "pid-1" });
+    unsafeMock.isInsideUnsafeZone.mockReturnValue(true);
+    process.env.SPHERSE_E2E_DIALOG_RESPONSE = "0";
+    await invoke("restore-projects");
+    expect(dialogMock.showMessageBox).not.toHaveBeenCalled();
+    expect(recordedDialogs()).toEqual([
+      { kind: "startupUnsafeWarning", detail: "project.unsafeLocation.startupMessage:p1" },
+    ]);
   });
 });
