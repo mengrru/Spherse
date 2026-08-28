@@ -138,6 +138,30 @@ describe("api contracts", () => {
     expect(parseApiResponse(schemas.sessionMessagesResponse, [{ role: "user" }])).toEqual([{ role: "user" }]);
   });
 
+  it("round-trips trigger source metadata on session message pages", () => {
+    const page = {
+      entries: [
+        { id: 1, message: { role: "user", content: "hi" }, source: "triggered", triggerName: "每日汇报" },
+        { id: 2, message: { role: "assistant", content: [] } },
+      ],
+      hasMore: false,
+      oldestId: 1,
+    };
+    expect(parseApiResponse(schemas.sessionMessagesPageResponse, page)).toEqual(page);
+    expect(() =>
+      parseApiResponse(schemas.sessionMessagesPageResponse, {
+        ...page,
+        entries: [{ id: 1, message: {}, source: "manual" }],
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionMessagesPageResponse, {
+        ...page,
+        entries: [{ id: 1, message: {}, triggerName: 42 }],
+      }),
+    ).toThrow(/Invalid payload/);
+  });
+
   it("validates session create request", () => {
     expect(parseApiResponse(schemas.sessionCreateRequest, {})).toEqual({});
     expect(parseApiResponse(schemas.sessionCreateRequest, { title: "Trip Plan" })).toEqual({

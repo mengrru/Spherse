@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import { deriveHistoryEntries, deriveMessages, repairLog } from "../../session/fold.js";
+import { deriveHistoryEntries, deriveMessageEntries, deriveMessages, repairLog } from "../../session/fold.js";
 import type { SessionEvent, SessionEventType, SessionEventMap } from "../../session/events.js";
 
 function ev<T extends SessionEventType>(type: T, data: SessionEventMap[T], seq: number): SessionEvent {
@@ -276,6 +276,57 @@ describe("deriveMessages", () => {
     }
 
     expect(deriveMessages(events)).toEqual(mirror);
+  });
+});
+
+describe("user/message source metadata", () => {
+  const triggerUser = (text: string, seq: number, triggerName: string) =>
+    ev(
+      "user/message",
+      {
+        message: { role: "user", content: text, timestamp: seq } as AgentMessage,
+        source: "triggered",
+        triggerName,
+      },
+      seq,
+    );
+
+  it("history projection carries source and triggerName", () => {
+    const events = [
+      triggerUser("report", 0, "每日汇报"),
+      assistant("done", 1),
+      user("manual", 2),
+      assistant("reply", 3),
+    ];
+    const history = deriveHistoryEntries(events);
+    expect(history[0]).toMatchObject({ seq: 0, source: "triggered", triggerName: "每日汇报" });
+    expect(history[2].source).toBeUndefined();
+    expect(history[2].triggerName).toBeUndefined();
+  });
+
+  it("message projection carries source and triggerName", () => {
+    const events = [triggerUser("report", 0, "t1"), assistant("done", 1)];
+    const entries = deriveMessageEntries(events);
+    expect(entries[0]).toMatchObject({ seq: 0, source: "triggered", triggerName: "t1" });
+    expect(entries[1].source).toBeUndefined();
+  });
+
+  it("withdrawn trigger turn drops the marker together with the message", () => {
+    const events = [
+      user("q1", 0),
+      triggerUser("report", 1, "t1"),
+      assistant("done", 2),
+      ev("turn/withdrawn", { seq: 1 }, 3),
+    ];
+    const history = deriveHistoryEntries(events);
+    expect(history.map((entry) => entry.seq)).toEqual([0]);
+    expect(history[0].source).toBeUndefined();
+  });
+
+  it("legacy events without the fields project cleanly", () => {
+    const events = [user("q1", 0), assistant("a1", 1)];
+    const history = deriveHistoryEntries(events);
+    expect(history.every((entry) => entry.source === undefined && entry.triggerName === undefined)).toBe(true);
   });
 });
 

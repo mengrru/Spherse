@@ -4,6 +4,7 @@ import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import type { ProjectStore } from "../store/project.js";
 import type { AgentProfile } from "../types.js";
 import type { PathRule } from "../access/path-category.js";
+import type { SendMessageMeta } from "../session/events.js";
 
 export type SessionEventPayload =
   | { type: string; [key: string]: unknown }
@@ -16,6 +17,7 @@ export interface SessionPort {
     sessionId: string,
     message: string,
     onEvent: (event: SessionEventPayload) => void,
+    meta?: SendMessageMeta,
   ): Promise<void>;
   abortSession(sessionId: string): void;
   sessionExists(agentId: string, sessionId: string): boolean;

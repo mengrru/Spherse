@@ -6,6 +6,8 @@ import { MESSAGE_EVENT_TYPES, type SessionEvent } from "./events.js";
 export interface DerivedMessageEntry {
   seq: number;
   message: AgentMessage;
+  source?: "triggered";
+  triggerName?: string;
 }
 
 interface RestartState {
@@ -29,10 +31,7 @@ export function deriveHistoryEntries(
   const entries: DerivedMessageEntry[] = [];
   for (const event of events) {
     if (!MESSAGE_EVENT_TYPES.has(event.type) || abandonedSeqs.has(event.seq)) continue;
-    entries.push({
-      seq: event.seq,
-      message: (event.data as { message: AgentMessage }).message,
-    });
+    entries.push(projectMessageEvent(event));
   }
   return entries;
 }
@@ -59,12 +58,23 @@ export function deriveMessageEntries(
     if (restart.compaction && event.seq <= restart.compaction.anchorSeq) continue;
     if (restart.compaction?.excludedSeqs.has(event.seq)) continue;
     if (restart.abandonedSeqs.has(event.seq)) continue;
-    entries.push({
-      seq: event.seq,
-      message: (event.data as { message: AgentMessage }).message,
-    });
+    entries.push(projectMessageEvent(event));
   }
   return entries;
+}
+
+function projectMessageEvent(event: SessionEvent): DerivedMessageEntry {
+  const data = event.data as {
+    message: AgentMessage;
+    source?: "triggered";
+    triggerName?: string;
+  };
+  return {
+    seq: event.seq,
+    message: data.message,
+    ...(data.source !== undefined ? { source: data.source } : {}),
+    ...(data.triggerName !== undefined ? { triggerName: data.triggerName } : {}),
+  };
 }
 
 function scanRestarts(events: readonly SessionEvent[]): RestartState {

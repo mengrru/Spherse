@@ -55,6 +55,7 @@ describe("TriggerExecutor", () => {
       "s-new",
       "Hello world",
       expect.any(Function),
+      { source: "triggered", triggerName: "evt" },
     );
     expect(triggered).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: "a1", triggerId: "tr-1" }),

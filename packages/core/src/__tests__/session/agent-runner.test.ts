@@ -507,6 +507,65 @@ Agent with time perception.`,
     }
   });
 
+  it("sendMessage meta lands in the event log and never leaks to the LLM wire", async () => {
+    const wireContexts: unknown[] = [];
+    const finalAssistant = {
+      role: "assistant",
+      content: [{ type: "text", text: "ok" }],
+      stopReason: "stop",
+      usage: {
+        input: 1,
+        output: 1,
+        cacheRead: 0,
+        cacheWrite: 0,
+        totalTokens: 2,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      },
+      timestamp: Date.now(),
+    };
+    getChatStreamFnMock.mockImplementation(
+      () =>
+        (async (_model: unknown, context: { messages: unknown[] }) => {
+          wireContexts.push(structuredClone({ messages: context.messages }));
+          return {
+            async *[Symbol.asyncIterator]() {},
+            result: async () => finalAssistant,
+          };
+        }) as never,
+    );
+
+    try {
+      const agentStore = getAgentStore(runtime, agentId);
+      const sessionId = agentStore.sessions.createSession();
+      const metaDeps = {
+        ...deps,
+        runConfig: new RunConfigHolder({ defaultModel: "openai/gpt-4o" }),
+        attachmentProcessors: [],
+      };
+      const runner = await AgentRunner.init(metaDeps, agentId, sessionId);
+
+      await runner.sendMessage("from trigger", [], () => {}, {
+        source: "triggered",
+        triggerName: "daily",
+      });
+      await runner.sendMessage("from user", [], () => {});
+
+      const userEvents = eventsOf(runner).filter((e: { type: string }) => e.type === "user/message");
+      expect(userEvents[0].data).toMatchObject({ source: "triggered", triggerName: "daily" });
+      expect(userEvents[1].data.source).toBeUndefined();
+      expect(userEvents[1].data.triggerName).toBeUndefined();
+
+      for (const wire of wireContexts) {
+        for (const message of (wire as { messages: Array<Record<string, unknown>> }).messages) {
+          expect(message.source).toBeUndefined();
+          expect(message.triggerName).toBeUndefined();
+        }
+      }
+    } finally {
+      getChatStreamFnMock.mockImplementation(() => vi.fn() as never);
+    }
+  });
+
   it("maybeCompact appends compaction/applied with real anchorSeq", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();

@@ -183,7 +183,13 @@ describe("TriggerManager", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(createSessionSpy).toHaveBeenCalledWith(agentId, "triggered");
-    expect(sendMessageSpy).toHaveBeenCalledWith("fake-session", "Hello Alice", [], expect.any(Function));
+    expect(sendMessageSpy).toHaveBeenCalledWith(
+      "fake-session",
+      "Hello Alice",
+      [],
+      expect.any(Function),
+      { source: "triggered", triggerName: "user-login" },
+    );
 
     sendMessageSpy.mockRestore();
     createSessionSpy.mockRestore();
@@ -223,7 +229,13 @@ describe("TriggerManager", () => {
     triggerManager.onUserEvent("test-event", "");
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(sendMessageSpy).toHaveBeenCalledWith("fake-session", "Payload: []", [], expect.any(Function));
+    expect(sendMessageSpy).toHaveBeenCalledWith(
+      "fake-session",
+      "Payload: []",
+      [],
+      expect.any(Function),
+      { source: "triggered", triggerName: "test-event" },
+    );
     sendMessageSpy.mockRestore();
   });
 

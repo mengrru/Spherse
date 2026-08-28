@@ -3,10 +3,15 @@ import type { AssistantMessage, ToolResultMessage } from "@earendil-works/pi-ai"
 
 export type TurnEndReason = "completed" | "aborted" | "error";
 
+export interface SendMessageMeta {
+  source?: "triggered";
+  triggerName?: string;
+}
+
 export interface SessionEventMap {
   "turn/start": Record<string, never>;
   "turn/end": { reason: TurnEndReason };
-  "user/message": { message: AgentMessage };
+  "user/message": { message: AgentMessage; source?: "triggered"; triggerName?: string };
   "assistant/message": { message: AssistantMessage };
   "tool/result": { message: ToolResultMessage };
   "compaction/applied": {

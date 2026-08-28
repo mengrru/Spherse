@@ -652,6 +652,12 @@ export const zhCN = {
   "chat.startConversation": "发送一条消息开始对话",
   // 历史消息分页「加载更多」按钮文案
   "chat.loadMore": "加载更多",
+  // trigger 轮折叠摘要条文案，{name} 为触发器名称
+  "chat.triggerTurnSummary": "触发器「{name}」触发的对话轮",
+  // 触发器名称缺失时，trigger 轮折叠摘要条的回退文案
+  "chat.triggerTurnSummaryFallback": "触发器触发的对话轮",
+  // trigger 轮运行失败时，折叠摘要条上的错误徽标文案
+  "chat.triggerTurnErrorBadge": "运行失败",
   // HtmlCard 通过 file_path 渲染时，前端拉取文件内容期间的占位提示
   "chat.loading": "加载中...",
   // 聊天保存成功提示

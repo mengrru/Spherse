@@ -62,6 +62,18 @@
   /*   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03); */
   /* } */
 
+  /* === Trigger 对话轮折叠摘要条（data-chat-turn-collapse 挂在摘要按钮上） === */
+  /* [data-chat-turn-collapse] { */
+  /*   color: #9a9184; */
+  /*   background: rgba(24, 23, 36, 0.6); */
+  /*   border: 1px solid rgba(201, 160, 74, 0.1); */
+  /* } */
+  /* [data-chat-turn-collapse]:hover { */
+  /*   color: #e2ddd4; */
+  /*   border-color: rgba(201, 160, 74, 0.25); */
+  /* } */
+
+
   /* === 输入框 === */
   /* [data-chat-composer] { */
   /*   background: rgba(12, 11, 18, 0.92); */
