@@ -12,12 +12,13 @@ export type FeatureName =
   | "open-project";
 
 const ELECTRON_ONLY: ReadonlySet<HostKind> = new Set(["electron"]);
+const ALL_HOSTS: ReadonlySet<HostKind> = new Set(["electron", "web"]);
 
 export const FEATURE_HOST_MATRIX: Record<FeatureName, ReadonlySet<HostKind>> = {
   settings: ELECTRON_ONLY,
-  "agent-dialog": ELECTRON_ONLY,
-  "agent-trigger": ELECTRON_ONLY,
-  "agent-mcp": ELECTRON_ONLY,
+  "agent-dialog": ALL_HOSTS,
+  "agent-trigger": ALL_HOSTS,
+  "agent-mcp": ALL_HOSTS,
   "floating-chat": ELECTRON_ONLY,
   "floating-content-browser": ELECTRON_ONLY,
   browser: ELECTRON_ONLY,
