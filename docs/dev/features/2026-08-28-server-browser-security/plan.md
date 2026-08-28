@@ -36,9 +36,17 @@ Design：[design.md](./design.md)
 
 ## 验证
 
-- [x] `npm run verify` 通过（lint 0 errors 既有 warnings；server 270 / desktop 165 全绿；i18n check 通过）
+- [x] `npm run verify` 通过（lint 0 errors 既有 warnings；server 270 / desktop 171 全绿；i18n check 通过）
 - [x] E2E：agent-list / floating-chat / ui-sdk / ui-sdk-html-card / chat-retry / chat-withdraw / app-launch / file-tree 通过；`ui-sdk.spec.ts:199 rate limit` 与 `chat-retry` 偶发超时为干净 dev 上可复现的既有问题（stash 验证），与本变更无关
 - [ ] 手动（延后）：quick tunnel、manual domain、manual regenerate 后仍可访问、prod 包 renderer
+
+## Review 反馈处理（commit 2）
+
+- [x] M1：补 `desktop/electron/server.test.ts`（desiredHosts/syncAllowedHosts 期望态 6 例，含 restart 重放与 publicUrl 变化），不 mock 被测模块
+- [x] M2：web 无测试基建，记录「不补」决定到 design 已知取舍
+- [x] m1：删除 removeAllowedHosts 违规注释
+- [x] m2：legacy token 清理时点记录到 design 已知取舍
+- m3：doc-sync 步骤处理（见下）
 
 ## 收尾
 

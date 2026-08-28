@@ -71,6 +71,8 @@ token 恒定后 `/ws/*` 已有强制 query token 认证，drive-by 场景已覆�
 - **CORS hook 依赖 auth 校验逻辑**：D2 复用 token 校验（提取 `verifyPresentedToken(req, token)` 共享 helper），CORS 与 auth 的判定保持单一来源，避免两套逻辑漂移。
 - **Electron prod renderer 为 `file://`（`Origin: null`）**：不需要特殊处理——D2 是认证制而非 Origin 制，null Origin 请求带 token 即可读。
 - **mobile `enable` 后 `MobileAccessState.token` 恒有值**：UI 展示语义从"mobile 凭据"变为"server 凭据"，现有文案不改（同一 token，位置不变）。
+- **version-guard 不补行为测试（review 后决定）**：`packages/web` 无任何测试基建（无 test script / vitest 配置），为一条断言新建整套基建超出本变更范围；服务端侧已有「无 token 无 ACAO」契约测试钉住失败根源，version-guard 附带 token 的行为留待 web 包引入测试基建时补。
+- **legacy `mobileAccess.token` 残留**：迁移后不主动清空（避免用户回退旧版本时 token 失效导致已连接客户端全断），读取兼容一个版本后在后续版本一次性清理。
 
 ## 文件变更清单
 

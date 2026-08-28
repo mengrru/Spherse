@@ -176,7 +176,7 @@ export async function createMultiProjectServer(
       try {
         dynamicAllowedHosts.delete(normalizeHostname(host));
       } catch {
-        /* invalid host, nothing to remove */
+        continue;
       }
     }
   };
