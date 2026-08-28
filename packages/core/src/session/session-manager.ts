@@ -162,4 +162,11 @@ export class SessionManager {
       session.applySampling(sampling);
     }
   }
+
+  setThinkingLevel(thinkingLevel: Parameters<RunConfigHolder["update"]>[0]["thinkingLevel"]): void {
+    this.runConfigHolder.update({ thinkingLevel });
+    for (const session of this.sessions.values()) {
+      session.applyThinkingLevel(thinkingLevel);
+    }
+  }
 }

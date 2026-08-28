@@ -3,6 +3,7 @@ export type {
   AgentProfile,
   ProviderCredentials,
   SamplingParams,
+  ThinkingLevel,
   ModelGroupSettings,
   MobileAccessSettings,
   AppSettings,

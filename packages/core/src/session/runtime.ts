@@ -1,7 +1,7 @@
 import type { ProjectStore } from "../store/project.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import type { Logger } from "../logger.js";
-import type { SamplingParams } from "../types.js";
+import type { SamplingParams, ThinkingLevel } from "../types.js";
 import { composeTurnHooks, type TurnHooksFactory } from "../kernel/turn-hooks.js";
 import type { ModelResolver } from "./model-resolver.js";
 import { createModelResolver } from "./model-resolver.js";
@@ -13,6 +13,7 @@ import type { StoreRegistry } from "../kernel/ports.js";
 export interface RunConfig {
   readonly defaultModel?: string;
   readonly sampling?: SamplingParams;
+  readonly thinkingLevel?: ThinkingLevel;
 }
 
 export interface RunConfigSource {

@@ -76,6 +76,61 @@ describe("maskModelGroup sampling passthrough", () => {
   });
 });
 
+describe("thinkingLevel persistence", () => {
+  it("mergeModelGroup uses incoming thinkingLevel when present", () => {
+    const result = mergeModelGroup(
+      { defaultModel: "deepseek/v4", providers: {}, thinkingLevel: "high" },
+      { defaultModel: "", providers: {}, thinkingLevel: "low" },
+    );
+
+    expect(result.thinkingLevel).toBe("high");
+  });
+
+  it("mergeModelGroup does not fall back to prev when incoming omits thinkingLevel", () => {
+    const result = mergeModelGroup(
+      { defaultModel: "deepseek/v4", providers: {} },
+      { defaultModel: "", providers: {}, thinkingLevel: "low" },
+    );
+
+    expect(result.thinkingLevel).toBeUndefined();
+  });
+
+  it("maskModelGroup preserves thinkingLevel", () => {
+    const result = maskModelGroup({
+      defaultModel: "deepseek/v4",
+      providers: {},
+      thinkingLevel: "off",
+    });
+
+    expect(result.thinkingLevel).toBe("off");
+  });
+
+  it("getMaskedSettings returns stored thinkingLevel for text group", () => {
+    settingsStore.set("settings", {
+      locale: "zh-CN",
+      models: {
+        text: { defaultModel: "", providers: {}, thinkingLevel: "high" },
+        image: { defaultModel: "", providers: {} },
+      },
+    });
+
+    expect(getMaskedSettings()?.models.text.thinkingLevel).toBe("high");
+  });
+
+  it("saveSettings round-trips thinkingLevel through merge", () => {
+    settingsStore.set("settings", undefined);
+    saveSettings({
+      locale: "zh-CN",
+      models: {
+        text: { defaultModel: "", providers: {}, thinkingLevel: "low" },
+        image: { defaultModel: "", providers: {} },
+      },
+    });
+
+    expect(settingsStore.get("settings")?.models.text.thinkingLevel).toBe("low");
+  });
+});
+
 describe("theme persistence", () => {
   it("getMaskedSettings defaults theme to system when absent", () => {
     settingsStore.set("settings", {

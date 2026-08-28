@@ -1,6 +1,6 @@
 import type { Agent, AgentEvent, AgentMessage, AgentTool } from "@earendil-works/pi-agent-core";
 import { prepareAttachmentUserMessage, stripUserAttachments, type Attachment } from "../attachments/index.js";
-import type { SamplingParams } from "../types.js";
+import type { SamplingParams, ThinkingLevel } from "../types.js";
 import { MigrationRequiredError, NotFoundError, ValidationError } from "../errors.js";
 import { createEventPipeline, type EventMiddleware } from "../kernel/event-pipeline.js";
 import type { SessionControlEvent } from "./types.js";
@@ -342,6 +342,13 @@ export class AgentRunner {
       sampling,
       streamDecoratorsFor(this.deps.capabilities, this.viewOf(profile)),
     );
+  }
+
+  applyThinkingLevel(thinkingLevel: ThinkingLevel | undefined): void {
+    const next = thinkingLevel ?? "medium";
+    if (this.agent.state.thinkingLevel !== next) {
+      this.agent.state.thinkingLevel = next;
+    }
   }
 
   private viewOf(profile: import("../types.js").AgentProfile): import("../kernel/ports.js").SessionView {

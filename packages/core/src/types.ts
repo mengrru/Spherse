@@ -96,10 +96,13 @@ export interface SamplingParams {
   topP?: number;
 }
 
+export type ThinkingLevel = "off" | "low" | "medium" | "high";
+
 export interface ModelGroupSettings {
   defaultModel: string;
   providers: Record<string, ProviderCredentials>;
   sampling?: SamplingParams;
+  thinkingLevel?: ThinkingLevel;
 }
 
 export type ThemeMode = "light" | "dark" | "system";

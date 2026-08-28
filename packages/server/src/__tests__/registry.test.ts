@@ -34,6 +34,7 @@ function createRuntime(projectId = "p1", root = "/proj/p1") {
     sessionRuntime: {
       setDefaultModel: vi.fn(),
       setSampling: vi.fn(),
+      setThinkingLevel: vi.fn(),
     },
     scheduler: {},
     shutdown: vi.fn(),
@@ -95,6 +96,65 @@ describe("ProjectRegistry sampling", () => {
     expect(createProjectMock).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ sampling: { temperature: 0.9, topP: 0.1 } }),
+    );
+  });
+});
+
+describe("ProjectRegistry thinkingLevel", () => {
+  beforeEach(() => {
+    createProjectMock.mockReset();
+  });
+
+  it("passes constructor thinkingLevel to createProject on register", async () => {
+    createProjectMock.mockResolvedValue(createRuntime());
+    const registry = new ProjectRegistry(createLogger(), {
+      defaultModel: "m",
+      thinkingLevel: "high",
+    });
+
+    await registry.register("/proj/p1");
+
+    expect(createProjectMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        thinkingLevel: "high",
+        defaultModel: "m",
+      }),
+    );
+  });
+
+  it("propagates setThinkingLevel to existing project session runtime", async () => {
+    const runtime = createRuntime();
+    createProjectMock.mockResolvedValue(runtime);
+    const registry = new ProjectRegistry(createLogger());
+
+    await registry.register("/proj/p1");
+    registry.setThinkingLevel("low");
+
+    expect(runtime.sessionRuntime.setThinkingLevel).toHaveBeenCalledWith("low");
+  });
+
+  it("propagates undefined thinkingLevel (reset)", async () => {
+    const runtime = createRuntime();
+    createProjectMock.mockResolvedValue(runtime);
+    const registry = new ProjectRegistry(createLogger(), { thinkingLevel: "high" });
+
+    await registry.register("/proj/p1");
+    registry.setThinkingLevel(undefined);
+
+    expect(runtime.sessionRuntime.setThinkingLevel).toHaveBeenCalledWith(undefined);
+  });
+
+  it("applies thinkingLevel to projects registered after setThinkingLevel", async () => {
+    createProjectMock.mockResolvedValue(createRuntime());
+    const registry = new ProjectRegistry(createLogger());
+
+    registry.setThinkingLevel("off");
+    await registry.register("/proj/p1");
+
+    expect(createProjectMock).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ thinkingLevel: "off" }),
     );
   });
 });

@@ -206,6 +206,72 @@ describe("SessionManager sampling (temperature + topP) propagation", () => {
   });
 });
 
+describe("SessionManager thinking level propagation", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-think-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      thinkingLevel: "high",
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore;
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
+    runtime.timerService.stop();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("passes constructor thinkingLevel to buildAgent", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+
+    expect(activeAgent(runtime as RuntimeInternals, sessionId).state.thinkingLevel).toBe("high");
+  });
+
+  it("updates thinkingLevel via setThinkingLevel for subsequent buildAgent", async () => {
+    runtime.sessionRuntime.setThinkingLevel("low");
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+
+    expect(activeAgent(runtime as RuntimeInternals, sessionId).state.thinkingLevel).toBe("low");
+  });
+
+  it("falls back to medium after setThinkingLevel(undefined)", async () => {
+    runtime.sessionRuntime.setThinkingLevel(undefined);
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+
+    expect(activeAgent(runtime as RuntimeInternals, sessionId).state.thinkingLevel).toBe("medium");
+  });
+
+  it("hot-swaps thinkingLevel on active agents when setThinkingLevel is called", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    const agent = activeAgent(runtime as RuntimeInternals, sessionId);
+    expect(agent.state.thinkingLevel).toBe("high");
+
+    runtime.sessionRuntime.setThinkingLevel("off");
+
+    expect(agent.state.thinkingLevel).toBe("off");
+  });
+
+  it("hot-swaps thinkingLevel on ALL active agents (multiple sessions)", async () => {
+    const sessionIdA = await runtime.sessionRuntime.createSession(agentId);
+    const sessionIdB = await runtime.sessionRuntime.createSession(agentId);
+
+    runtime.sessionRuntime.setThinkingLevel("low");
+
+    for (const sid of [sessionIdA, sessionIdB]) {
+      expect(activeAgent(runtime as RuntimeInternals, sid).state.thinkingLevel).toBe("low");
+    }
+  });
+});
+
 describe("SessionManager default model hot-swap", () => {
   let tmpDir: string;
   let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
