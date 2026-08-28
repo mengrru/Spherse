@@ -13,6 +13,7 @@
 - [ ] **`data-chat-root` 伪元素偏移防御**：`[data-chat-root]`（`features/chat/index.tsx`）同样是 `flex flex-col` 容器，用户在 agent theme 写 `::before/::after` 漏 `position` 时会同样挤压聊天列导致偏移。但 chat-root 默认非定位上下文，不能直接照搬 `data-app-root` 的 `position: absolute` 默认值（否则伪元素会逃逸到最近的定位祖先 `data-app-root`）。需先把 chat-root 设为定位上下文（如加 `position: relative`），再在 base styles 给 `[data-chat-root]::before/::after` 加同款 `position: absolute; pointer-events: none` 默认值，并同步 `spherse-create-agent-chat-theme` skill 文档。
 - [ ] **chat 错误分类兜底 TRANSIENT 的收敛**：服务端 `classify-run-error.ts` 与 renderer `classify-error.ts` 对未知错误都兜底 TRANSIENT——程序性错误（TypeError、内部 bug）也被标为可重试类。前端自动重试已移除（bd58e1e），误分类现仅影响错误展示，但手动 retry-last 会重新执行副作用工具，误分类仍会诱导用户重试。方向：不可重试类（ValidationError 文案等）前置排除，双端规则保持一致。
 - [ ] **恢复 Windows 自动更新 feed（latest.yml，双 arch）**：CI 自 OSS 镜像改造（ba8c049）起统一 `--publish never` + `gh release upload`，release 上不再有 `latest.yml`，Windows 客户端 electron-updater 检查更新因 404 报 `update-error`。恢复需研究多 arch 语义：一个 `latest.yml` 只指向一个安装包，x64 与 arm64 需按 electron-updater 的 channel 文件约定（如 `latest.yml` / `latest-arm64.yml`）分别生成并上传，避免 arm64 设备被推 x64 包（或反向）。可考虑在 `publish-oss` 或 build job 中集中生成。
+- [ ] **refreshProjects 路径不回收 streaming runtime**：外部关闭/多窗口场景下项目从快照消失时，`app-store.refreshProjects` 只改 projects map，不走 `closeProjectCascade`，该项目 chat streaming runtime（WS + 重连定时器）仍存活。受「全局 store 不得依赖 feature-local store」约束，修复需 streaming runtime 生命周期整体重构，宜与 followup P1「移除 streaming/trigger 镜像」合并考虑。参见 `docs/dev/infra/2026-08-28-project-lifecycle-orchestration/design.md` 已知缺口
 
 ## 技术债（重构与收敛）
 

@@ -21,7 +21,7 @@ flowchart TB
   Router --> App["App shell"]
   App --> ProjectScope["ProjectScope layout"]
   ProjectScope --> ProjectProvider["ProjectProvider"]
-  ProjectScope --> Bridges["Bus / Query / UI SDK bridges"]
+  ProjectScope --> Bridges["ProjectRuntimeBridges: bus / query / UI SDK bridges"]
   ProjectProvider --> Pages["pages: route adapters"]
   Pages --> Features["features: business UI"]
   Features --> Components["components: shared UI"]
@@ -93,7 +93,7 @@ src/
 - 只被单个 feature 使用的状态放 `features/<name>/store.ts`。feature-local store 不应被其他 feature 或全局 store import。
 - 全局 store 不得依赖 feature-local store。
 - store 呿名为 `use{SemanticName}Store`，作用域由文件位置表达。
-- 关闭项目时，由编排层显式清理所有 per-project store 和 query cache。
+- 关闭项目时由 `layouts/project-lifecycle.ts` 的 `closeProjectCascade` 显式清理所有 per-project store 和 query cache：新增 per-project store 必须定义 `clearProject` action 并加入该清单，`project-lifecycle.structure.test.ts` 会强制检查。
 
 ## 组件与 Feature
 

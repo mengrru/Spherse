@@ -286,6 +286,32 @@ describe("useAppStore openSampleProject", () => {
   });
 });
 
+describe("useAppStore closeProject", () => {
+  beforeEach(() => {
+    setupStoreTest(false);
+  });
+
+  it("still removes the project when persisting the next active id fails", async () => {
+    useAppStore.setState({
+      projects: new Map<string, ProjectState>([
+        ["project-a", projectState()],
+        ["project-b", projectState({ id: "project-b", path: "/tmp/project-b", name: "project-b" })],
+      ]),
+      activeProjectId: "project-a",
+    });
+    const bridge = createMockHostBridge();
+    (bridge.project?.setLastActiveProject as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("persist failed"),
+    );
+
+    const nextActiveId = await useAppStore.getState().closeProject(bridge, "project-a");
+
+    expect(nextActiveId).toBe("project-b");
+    expect(useAppStore.getState().projects.has("project-a")).toBe(false);
+    expect(useAppStore.getState().activeProjectId).toBe("project-b");
+  });
+});
+
 describe("useAppStore refreshProjects", () => {
   beforeEach(() => {
     setupStoreTest(false);

@@ -31,6 +31,10 @@ export function useProjectNavHistory(projectId: string): void {
   }, [location.pathname, location.search, projectId]);
 }
 
+export function clearProjectNavHistory(projectId: string): void {
+  projectNavStacks.delete(projectId);
+}
+
 export function useProjectNavigation(): { back: () => void } {
   const navigate = useNavigate();
   const { projectId } = useProjectCtx();

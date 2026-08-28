@@ -64,13 +64,14 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | useAgentBusRefresh（hook） | agent | agent_updated 刷 agents；created / deleted 加刷 sessions |
 | UiSdkBridge（event 桥） | fs-watch | 变更事件 debounce 后定向转发给订阅的 iframe（见 [ui-sdk.md](ui-sdk.md)） |
 
-- 纯失效桥挂 ProjectScope；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 streaming-store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
+- 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 5 个 bridge）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 streaming-store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
 - **重连补偿**：bus 重连置 `resumedAt`，各桥经 `useReconnectedSync` 批量失效缓存——错过的事件不重放，靠失效重拉对齐
 - App 级补偿：重连后 refreshProjects；路由指向已消失项目时重定向
 
 ## 项目生命周期
 
-- closeProject 编排链（`use-project-actions.ts`）：clearProjectData → clearProjectQueries → 各 feature store `clearProject` → clearLastRoute——per-project 状态全部显式清理
+- 项目关闭级联清理单一入口 `closeProjectCascade`（`layouts/project-lifecycle.ts`，调用方 `use-project-actions.ts` 只保留导航/toast）：app-store `closeProject`（host 侧关闭，失败即抛、本地不动）→ streaming `disconnectProject`（断开该项目全部 chat runtime）→ `clearProjectQueries` → 各 feature store `clearProject` → `clearProjectData` → `clearProjectNavHistory` → `clearLastRoute`
+- 清理面为显式清单，`project-lifecycle.structure.test.ts` 递归扫描全部定义 `clearProject` action 的 store 强制其出现在 cascade 中——新增 per-project store 必须定义 `clearProject` 并纳入清单；不做注册表/事件总线
 - projectId 全链路一致：URL param → ProjectContext（`useProjectCtx`）→ query key → localStorage key 后缀 → bus 订阅 key
 - 依赖注入：`ProjectContext` 注入稳定只读的 projectId / projectRoot；`useConnection()` 返回 connection 本体，`useApiClient(projectId)` 从 connection 派生 ApiClient
 
@@ -81,7 +82,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
   - 内容与浏览：content-browser、browser、welcome-page、text-selection-session
   - 会话：chat、floating-chat、floating-content-browser
   - 应用级：settings、project-settings、onboarding、debug-tools
-- `layouts/` 仅 `ProjectScope`：项目生命周期编排 + 桥挂载；跨 feature 编排放 layout 或自治 bridge
+- `layouts/`：`ProjectScope`（项目工作区 layout route）+ `ProjectRuntimeBridges`（项目级桥挂载）+ `project-lifecycle.ts`（项目关闭级联清理）；跨 feature 编排放 layout 或自治 bridge
 - `components/` 收 shadcn/ui 与跨 feature 复用组件；两个可复用子系统：
   - `file-tree/`：`FileTree` 支持 rootPath / emptyLabel，user-file-panel 与 skill-panel 共用；目录数据全走 directory query（每个目录节点组件自持 `useProjectDirectory`，`enabled: expanded`），controller 只保存交互状态（expandedPaths / creating / deleteTarget）
   - `floating-frame/`：拖拽 / resize chrome，`hookPrefix` 生成 `data-*-float-*` 主题钩子，三个浮窗 feature 复用
