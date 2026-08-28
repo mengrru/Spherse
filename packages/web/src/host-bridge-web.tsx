@@ -9,13 +9,9 @@ import type {
 import { MobileConnectPage } from "./pages/MobileConnectPage";
 
 const WEB_CAPABILITIES: HostCapabilities = {
-  projectManagement: false,
   filePicker: false,
-  appUpdate: false,
-  devTools: false,
   mobileAccess: false,
   openFileExternal: false,
-  settings: { editable: true, scope: "local-only" },
   content: { editable: false },
 };
 

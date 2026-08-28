@@ -17,11 +17,11 @@
 renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](../../dev/decisions/0006-host-bridge-shells.md)。
 
 - 接口定义宿主能力：server 连接信息、settings 读写（`getSettings` / `saveSettings`）、`openExternal`，可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile`
-- `HostCapabilities` 声明能力开关，renderer 据此条件渲染宿主专属 UI：
-  - 布尔项：`projectManagement` / `filePicker` / `appUpdate` / `devTools` / `mobileAccess` / `openFileExternal`
-  - 对象项：`settings.editable`、`settings.scope`、`content.editable`
-- desktop 实现全能力开启；web 实现大多 false（settings 可编辑、content 只读），project API 走 HTTP
-- 消费经 `useHostBridge()`；feature 可见性经 `useFeature` + `FeatureGate` 按 hostKind 判定
+- `HostCapabilities` 声明能力**程度**（同功能在各宿主的差异，如可编辑与否），renderer 据此条件渲染；feature 级整块开关不在这里，走 feature-registry。字段清单由 `host-capabilities.structure.test.ts` 钉住：**声明即必须被消费**（加字段必须带消费点，零消费字段删除）
+  - 布尔项：`filePicker` / `mobileAccess` / `openFileExternal`
+  - 对象项：`content.editable`
+- desktop 实现全开；web 实现 `content` 只读、其余 false，project API 走 HTTP
+- 消费经 `useHostBridge()`；feature 可见性经 `useFeature` + `FeatureGate` 按 hostKind 查 `feature-registry.ts` 矩阵（改动需同步 `feature-registry.test.ts`）
 
 ## 路由模型
 

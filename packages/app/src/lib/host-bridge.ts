@@ -103,13 +103,9 @@ export interface MobileAccessHostApi {
 }
 
 export interface HostCapabilities {
-  projectManagement: boolean;
   filePicker: boolean;
-  appUpdate: boolean;
-  devTools: boolean;
   mobileAccess: boolean;
   openFileExternal: boolean;
-  settings: { editable: boolean; scope: "local-only" | "synced" };
   content: { editable: boolean };
 }
 

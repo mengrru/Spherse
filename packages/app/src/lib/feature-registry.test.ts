@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { FEATURE_HOST_MATRIX, isFeatureEnabled } from "./feature-registry";
 
+const WEB_ENABLED_FEATURES = ["agent-dialog", "agent-mcp", "agent-trigger"] as const;
+
 describe("feature-registry", () => {
-  it("declares every gated feature as electron-only in the current matrix", () => {
+  it("declares the full gated feature set in the current matrix", () => {
     const allFeatures = Object.keys(FEATURE_HOST_MATRIX) as Array<keyof typeof FEATURE_HOST_MATRIX>;
     expect(allFeatures.sort()).toEqual(
       [
@@ -19,7 +21,6 @@ describe("feature-registry", () => {
     );
     for (const feature of allFeatures) {
       expect(FEATURE_HOST_MATRIX[feature].has("electron")).toBe(true);
-      expect(FEATURE_HOST_MATRIX[feature].has("web")).toBe(false);
     }
   });
 
@@ -30,9 +31,16 @@ describe("feature-registry", () => {
     }
   });
 
-  it("disables every gated feature on the web host", () => {
+  it("enables agent management features on the web host", () => {
+    for (const feature of WEB_ENABLED_FEATURES) {
+      expect(isFeatureEnabled(feature, "web")).toBe(true);
+    }
+  });
+
+  it("keeps host-dependent features disabled on the web host", () => {
     const allFeatures = Object.keys(FEATURE_HOST_MATRIX) as Array<keyof typeof FEATURE_HOST_MATRIX>;
     for (const feature of allFeatures) {
+      if ((WEB_ENABLED_FEATURES as readonly string[]).includes(feature)) continue;
       expect(isFeatureEnabled(feature, "web")).toBe(false);
     }
   });

@@ -18,12 +18,28 @@ export function ImageCardRenderer({ card }: ImageCardRendererProps) {
   const bridge = useHostBridge();
 
   async function handleExport() {
-    if (!client || !projectRoot || !card.path) return;
+    if (!card.path) return;
 
     const ext = card.path.split(".").pop() ?? "png";
-    const defaultPath = joinProjectPath(projectRoot, `image-${Date.now()}.${ext}`);
+    const suggestedName = `image-${Date.now()}.${ext}`;
 
-    const filePath = await bridge.showSaveDialog?.({
+    if (!bridge.showSaveDialog) {
+      if (!client) return;
+      try {
+        const res = await fetch(client.getPreviewUrl(card.path));
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await bridge.saveBlob?.(suggestedName, await res.blob());
+      } catch (err) {
+        toast.error(t("chat.imageExportFailed", { message: (err as Error).message }));
+      }
+      return;
+    }
+
+    if (!client || !projectRoot) return;
+
+    const defaultPath = joinProjectPath(projectRoot, suggestedName);
+
+    const filePath = await bridge.showSaveDialog({
       defaultPath,
       filters: [
         { name: ext.toUpperCase(), extensions: [ext] },
