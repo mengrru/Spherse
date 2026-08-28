@@ -6,13 +6,9 @@ function createMockHostBridge(overrides: Partial<HostBridge> = {}): HostBridge {
   return {
     kind: "electron",
     capabilities: {
-      projectManagement: true,
       filePicker: true,
-      appUpdate: true,
-      devTools: true,
       mobileAccess: false,
       openFileExternal: false,
-      settings: { editable: true, scope: "local-only" },
       content: { editable: true },
     },
     getServerBaseUrl: vi.fn().mockResolvedValue("http://localhost:5173"),

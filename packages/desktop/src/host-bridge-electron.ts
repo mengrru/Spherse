@@ -8,13 +8,9 @@ import type {
 } from "@spherse/app/host-bridge";
 
 const ELECTRON_CAPABILITIES: HostCapabilities = {
-  projectManagement: true,
   filePicker: true,
-  appUpdate: true,
-  devTools: true,
   mobileAccess: true,
   openFileExternal: true,
-  settings: { editable: true, scope: "local-only" },
   content: { editable: true },
 };
 
