@@ -133,6 +133,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "project.unsafeLocation.title": "不建議在此位置存放專案",
   "project.unsafeLocation.message": "此位置位於 Spherse 應用程式目錄內，更新 Spherse 時此位置會被覆蓋清空，專案資料會遺失。建議將專案移動到其他位置後再開啟。",
   "project.unsafeLocation.openAnyway": "仍然開啟",
+  "project.unsafeLocation.startupMessage": "以下專案位於 Spherse 應用程式目錄內，更新 Spherse 時會被覆蓋清空：{names}。建議將它們移動到其他位置。",
+  "project.unsafeLocation.acknowledge": "知道了",
   "common.cancel": "取消",
   "common.delete": "刪除",
   "common.save": "儲存",

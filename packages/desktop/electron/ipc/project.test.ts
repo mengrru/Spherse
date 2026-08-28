@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BrowserWindow } from "electron";
 
-const { dialogMock, fsMock, unsafeMock, serverMock } = vi.hoisted(() => {
+const { dialogMock, fsMock, unsafeMock, serverMock, translateMock, settingsMock } = vi.hoisted(() => {
   const dialogMock = {
     showMessageBox: vi.fn(),
     showOpenDialog: vi.fn(),
@@ -20,7 +20,14 @@ const { dialogMock, fsMock, unsafeMock, serverMock } = vi.hoisted(() => {
     getServerPort: vi.fn(),
     setProjectLastOpened: vi.fn(),
   };
-  return { dialogMock, fsMock, unsafeMock, serverMock };
+  const translateMock = vi.fn(
+    (_locale: string, key: string, params?: Record<string, string | number>) =>
+      params ? `${key}:${String(params.names)}` : key,
+  );
+  const settingsMock = {
+    openProjects: [] as Array<{ id: string; path: string; name: string; lastOpened: string }>,
+  };
+  return { dialogMock, fsMock, unsafeMock, serverMock, translateMock, settingsMock };
 });
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
@@ -53,7 +60,7 @@ vi.mock("../unsafe-location.js", () => unsafeMock);
 vi.mock("../server.js", () => serverMock);
 
 vi.mock("../settings.js", () => ({
-  getOpenProjects: () => [],
+  getOpenProjects: () => settingsMock.openProjects,
   addOpenProject: () => undefined,
   removeOpenProject: () => undefined,
   setLastActiveProject: () => undefined,
@@ -74,7 +81,7 @@ vi.mock("./open-file-path.js", () => ({
 }));
 
 vi.mock("@spherse/i18n", () => ({
-  translate: (_locale: string, key: string) => key,
+  translate: translateMock,
   normalizeLocale: (locale: string) => locale,
 }));
 
@@ -100,6 +107,8 @@ beforeEach(() => {
   unsafeMock.isInsideUnsafeZone.mockReset();
   unsafeMock.isInsideUnsafeZone.mockReturnValue(false);
   serverMock.registerProject.mockReset();
+  settingsMock.openProjects = [];
+  translateMock.mockClear();
   registerProjectIpc(() => win);
 });
 
@@ -184,5 +193,55 @@ describe("open-sample-project guard", () => {
     expect(fsMock.mkdirSync).not.toHaveBeenCalled();
     expect(fsMock.cpSync).not.toHaveBeenCalled();
     expect(serverMock.registerProject).not.toHaveBeenCalled();
+  });
+});
+
+describe("restore-projects startup warning", () => {
+  beforeEach(() => {
+    settingsMock.openProjects = [
+      { id: "a", path: "/unsafe/p1", name: "p1", lastOpened: "2026-01-02T00:00:00.000Z" },
+      { id: "b", path: "/safe/p2", name: "p2", lastOpened: "2026-01-01T00:00:00.000Z" },
+    ];
+    serverMock.registerProject.mockImplementation(async (root: string) => ({
+      projectId: `pid-${root}`,
+    }));
+    unsafeMock.isInsideUnsafeZone.mockImplementation((p: unknown) => p === "/unsafe/p1");
+    dialogMock.showMessageBox.mockResolvedValue({ response: 0 });
+  });
+
+  it("shows a one-time warning listing unsafe restored projects", async () => {
+    const result = await invoke("restore-projects");
+    expect(result).toHaveLength(2);
+    expect(dialogMock.showMessageBox).toHaveBeenCalledTimes(1);
+    expect(dialogMock.showMessageBox).toHaveBeenCalledWith(
+      win,
+      expect.objectContaining({
+        type: "warning",
+        detail: "project.unsafeLocation.startupMessage:p1",
+        buttons: ["project.unsafeLocation.acknowledge"],
+      }),
+    );
+  });
+
+  it("does not warn again on subsequent restores in the same session", async () => {
+    await invoke("restore-projects");
+    dialogMock.showMessageBox.mockClear();
+    await invoke("restore-projects");
+    expect(dialogMock.showMessageBox).not.toHaveBeenCalled();
+  });
+
+  it("skips the warning when no restored project is unsafe", async () => {
+    unsafeMock.isInsideUnsafeZone.mockReturnValue(false);
+    await invoke("restore-projects");
+    expect(dialogMock.showMessageBox).not.toHaveBeenCalled();
+  });
+
+  it("does not warn when the dialog fails and retries on the next restore", async () => {
+    dialogMock.showMessageBox.mockRejectedValueOnce(new Error("dialog failed"));
+    await invoke("restore-projects");
+    expect(dialogMock.showMessageBox).toHaveBeenCalledTimes(1);
+    dialogMock.showMessageBox.mockResolvedValue({ response: 0 });
+    await invoke("restore-projects");
+    expect(dialogMock.showMessageBox).toHaveBeenCalledTimes(2);
   });
 });

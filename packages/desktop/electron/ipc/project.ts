@@ -45,6 +45,39 @@ export async function confirmUnsafeLocation(
 export function registerProjectIpc(
   getWindow: () => BrowserWindow | null,
 ): void {
+  let unsafeStartupWarningShown = false;
+
+  async function warnUnsafeRestoredProjects(
+    restored: Array<{ name: string; path: string }>,
+  ): Promise<void> {
+    if (unsafeStartupWarningShown) return;
+    const unsafeNames = restored
+      .filter((r) => isInsideUnsafeZone(r.path))
+      .map((r) => r.name);
+    if (unsafeNames.length === 0) return;
+    const locale = normalizeLocale(getLocale());
+    const options = {
+      type: "warning" as const,
+      title: translate(locale, "project.unsafeLocation.title"),
+      message: translate(locale, "project.unsafeLocation.title"),
+      detail: translate(locale, "project.unsafeLocation.startupMessage", {
+        names: unsafeNames.join("、"),
+      }),
+      buttons: [translate(locale, "project.unsafeLocation.acknowledge")],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    };
+    try {
+      const win = getWindow();
+      if (win) await dialog.showMessageBox(win, options);
+      else await dialog.showMessageBox(options);
+      unsafeStartupWarningShown = true;
+    } catch (err) {
+      console.error("[restore-projects] failed to show unsafe location warning:", err);
+    }
+  }
+
   ipcMain.handle("select-directory", async () => {
     const win = getWindow();
     if (!win) return null;
@@ -78,6 +111,7 @@ export function registerProjectIpc(
         console.error(`[restore-projects] failed to open project at ${entry.path}:`, err);
       }
     }
+    await warnUnsafeRestoredProjects(results);
     return results;
   });
 

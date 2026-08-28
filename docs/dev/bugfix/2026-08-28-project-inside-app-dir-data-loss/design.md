@@ -33,18 +33,28 @@
 - `open-project`：`registerProject` 之前 `await confirmUnsafeLocation(projectRoot, win)`，未确认 → 返回 `null`（与 `select-directory` 取消同语义，renderer `openProject` 返回 null 无副作用）。
 - `open-sample-project`：`showOpenDialog` 拿到 `parentDir` 之后、`mkdirSync`（`project.ts:165`）之前检查，未确认 → 返回 `null`（复制尚未发生，零代价）。
 
-### 3. i18n（三语言各 3 个新 key）
+### 3. i18n（三语言各 5 个新 key）
 
 - `project.unsafeLocation.title`：警告框标题
 - `project.unsafeLocation.message`：解释「该位置位于 Spherse 应用目录内，更新 Spherse 时该位置会被覆盖清空，项目数据会丢失；建议将项目移动到其他位置」（措辞不区分 Windows「删安装目录」/ macOS「替换 bundle」的精确语义，两边都成立）
 - `project.unsafeLocation.openAnyway`：按钮「仍然打开」
+- `project.unsafeLocation.startupMessage`：启动存量警告正文，`{names}` 插值项目名列表
+- `project.unsafeLocation.acknowledge`：启动警告框按钮「知道了」
 - 「取消」按钮复用 `common.cancel`
+
+### 4. 存量项目启动警告（补齐 `setActiveProject` 切换路径的盲区）
+
+`restore-projects` 恢复完成后，对恢复结果中位于易失区的项目弹一次原生警告框（type: `"warning"`，正文列出项目名，按钮「知道了」）：
+
+- **每会话一次**：`registerProjectIpc` 闭包内 `unsafeStartupWarningShown` 标志，`refreshProjects`（断线重连补偿）再次触发 `restore-projects` 不会重复弹；
+- 弹框失败（异常）不清标志、记日志，下次恢复重试——不因弹框故障丢提示；
+- dev 模式 `isInsideUnsafeZone` 恒 false，无弹框，E2E 不受影响。
 
 ## 影响面
 
-- desktop：新增 `electron/unsafe-location.ts` + `unsafe-location.test.ts`；`electron/ipc/project.ts` guard + 新增 `electron/ipc/project.test.ts`；`electron/types.ts` 的 `ElectronAPI.openProject` 返回类型加 `| null`
+- desktop：新增 `electron/unsafe-location.ts` + `unsafe-location.test.ts`；`electron/ipc/project.ts` guard + 存量启动警告 + 新增 `electron/ipc/project.test.ts`；`electron/types.ts` 的 `ElectronAPI.openProject` 返回类型加 `| null`
 - app：`src/lib/host-bridge.ts` 的 `ProjectHostApi.openProject` 返回类型加 `| null`（仅类型，无行为改动；`app-store.ts:184-185` 已按 null 处理）
-- i18n：zh-CN / zh-TW / en 各 3 个新 key
+- i18n：zh-CN / zh-TW / en 各 5 个新 key
 - core / server：不改
 
 ## 测试
@@ -57,24 +67,24 @@
 - `electron/ipc/project.test.ts`（新增，仿 `ipc/mobile.test.ts` 的 handlers Map + `vi.mock` 模式）：mock `electron`（ipcMain/dialog/shell）、`../server.js`、`../settings.js`、`../sample-projects.js`、`./open-file-path.js`、`@spherse/i18n`、`node:fs` 的 `cpSync/mkdirSync/existsSync`：
   - `open-project`：unsafe + 用户点取消 → handler 返回 null 且 `registerProject` 未调用；点「仍然打开」→ 正常调用 `registerProject`；
   - `open-sample-project`：unsafe `parentDir` + 取消 → 返回 null 且 `cpSync` 未调用；
-  - 安全路径 → 不弹框直接走原有流程。
+  - 安全路径 → 不弹框直接走原有流程；
+  - `restore-projects`：unsafe 恢复结果 → 弹一次列出项目名的警告（断言 detail 含名字）；同会话再次恢复不再弹；无 unsafe 项目不弹；弹框抛错不置位标志、下次恢复重试。
 - i18n：`npm run check:i18n` + `npm test --workspace=packages/i18n`。
 - E2E（按 AGENTS.md 按影响面选择）：dev 模式 `isPackaged=false` 下 guard 恒 no-op，改动低风险；跑 `app-launch.spec.ts`、`project-close.spec.ts` 确认 open/close 流程无回归。
 
 ## 行为变更说明
 
 - 新增/示例项目：选中的文件夹位于易失区时弹警告框，默认取消，选「仍然打开」可强行继续（用户可能有正当理由临时放置）。
-- **存量项目不受拦截**：guard 只挂在 `open-project` / `open-sample-project` 上；已恢复列表中的项目在活动栏切换走 `setActiveProject`（`app-store.ts:178-182` 命中 existing 直接返回，不触 IPC），不会弹警告。这意味着已被清空重建的空项目下次更新仍可能再次被清空——启动时对存量易失区项目弹警告记为 backlog（见下）。
+- **存量项目**：启动恢复时若已有打开项目位于易失区，弹一次警告列出项目名（每会话一次），提示迁移；活动栏切换走 `setActiveProject` 不触 IPC 的盲区由此补齐。
 - 已存在的易失区项目在更新被清空后，仍会被 `restore-projects` 重建为空项目——本次不改（数据已丢，恢复超出本次范围）。
 
 ## 不做的事（记录理由，均写入 backlog）
 
 - **NSIS `customRemoveFiles` 只删应用自有文件**：该宏替换卸载器「删除已装文件」整块逻辑（`uninstaller.nsh:160-188`），需在自定义脚本里维护完整文件清单，与未来自动更新/文件布局变化强耦合，且实现不当会让更新残留旧文件，不推荐。
-- **启动时（restore-projects）对存量易失区项目弹警告**：覆盖 `setActiveProject` 切换路径的存量盲区（见行为变更说明）；与方案 A 叠加噪音、收益边际，记为 backlog。
 - **macOS `/Volumes` 挂载卷检测**：独立一类问题（挂载卷卸载即丢），本次不混入；记为 backlog。
 - **更新前拦截**（download/install 时检查）：当前更新为浏览器下载 + 手动安装，应用内无介入点；待 backlog #149 恢复应用内下载后再评估。
 
 ## 文档同步（实现完成后执行 doc-sync）
 
 - `docs/official/project-structure.md`：新增 `packages/desktop/electron/unsafe-location.ts` 与两个测试文件
-- `docs/dev/backlog.md`：新增「启动时对存量易失区项目弹警告」「macOS /Volumes 挂载卷项目检测」两条
+- `docs/dev/backlog.md`：新增「macOS /Volumes 挂载卷项目检测」条目（「启动时对存量易失区项目弹警告」已随本次实现落地，不新增）
