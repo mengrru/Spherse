@@ -10,7 +10,7 @@
 
 1. **Windows（NSIS）**：electron-builder 生成的卸载器在卸载/更新时会执行 `RMDir /r $INSTDIR`（`app-builder-lib/templates/nsis/uninstaller.nsh:187`），**递归删除整个安装目录**，包括用户放入的任意文件。更新流程 = 新安装器静默执行旧卸载器再重装（`isUpdated` 分支先 rename 到 `$PLUGINSDIR\old-install` 再删，结果一致）。本项目 NSIS 配置为 `oneClick: false` + `allowToChangeInstallationDirectory: true`（`electron-builder.yml`），用户可将应用装到自定义目录（如 `D:\Spherse`），并在其中存放项目文件夹。
 2. **macOS（DMG）**：更新 = 用新 `Spherse.app` 替换整个 bundle，bundle 内用户文件同样丢失（少见，但文件选择器可达）。
-3. **丢失后的二次伤害**：安装目录被清空后，`restore-projects`（`electron/ipc/project.ts:43`）重新注册项目路径，`assembleProject`（`core/src/factory.ts:61-71`）发现 `project.yaml` 不存在 → 抛 `ProjectConfigNotFoundError` → 按新项目重建空 `.spherse`——项目由此呈现"重置清空"，且用户无感知。
+3. **丢失后的二次伤害**：安装目录被清空后，`restore-projects`（`electron/ipc/project.ts:70`）重新注册项目路径，`assembleProject`（`core/src/factory.ts:61-71`）发现 `project.yaml` 不存在 → 抛 `ProjectConfigNotFoundError` → 按新项目重建空 `.spherse`——项目由此呈现"重置清空"，且用户无感知。
 
 `userData`（`%APPDATA%\Spherse` / `~/Library/Application Support/Spherse`）不受影响（`deleteAppDataOnUninstall` 未开启，默认 false），settings 安全。
 
@@ -31,7 +31,7 @@
 
 - 新增导出 `confirmUnsafeLocation(targetPath: string, win: BrowserWindow | null): Promise<boolean>`（供测试）：`isInsideUnsafeZone` 未命中 → true；命中 → `dialog.showMessageBox`（type: `"warning"`，按钮 [仍然打开, 取消]，`defaultId`/`cancelId` = 1，`noLink: true`），返回 `response === 0`。`win` 为 null 时调用无 parent 的 `dialog.showMessageBox(options)` 重载（Electron 允许，不阻塞行为）。
 - `open-project`：`registerProject` 之前 `await confirmUnsafeLocation(projectRoot, win)`，未确认 → 返回 `null`（与 `select-directory` 取消同语义，renderer `openProject` 返回 null 无副作用）。
-- `open-sample-project`：`showOpenDialog` 拿到 `parentDir` 之后、`mkdirSync`（`project.ts:137`）之前检查，未确认 → 返回 `null`（复制尚未发生，零代价）。
+- `open-sample-project`：`showOpenDialog` 拿到 `parentDir` 之后、`mkdirSync`（`project.ts:165`）之前检查，未确认 → 返回 `null`（复制尚未发生，零代价）。
 
 ### 3. i18n（三语言各 3 个新 key）
 

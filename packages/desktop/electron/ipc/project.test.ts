@@ -150,6 +150,14 @@ describe("open-project guard", () => {
     await expect(invoke("open-project", "/unsafe/proj")).resolves.toBeNull();
     expect(serverMock.registerProject).not.toHaveBeenCalled();
   });
+
+  it("registers the project when the user confirms the unsafe location", async () => {
+    unsafeMock.isInsideUnsafeZone.mockReturnValue(true);
+    dialogMock.showMessageBox.mockResolvedValue({ response: 0 });
+    serverMock.registerProject.mockResolvedValue({ projectId: "pid-1" });
+    await expect(invoke("open-project", "/unsafe/proj")).resolves.toEqual({ projectId: "pid-1" });
+    expect(serverMock.registerProject).toHaveBeenCalledWith("/unsafe/proj", { lastOpened: expect.any(String) });
+  });
 });
 
 describe("open-sample-project guard", () => {

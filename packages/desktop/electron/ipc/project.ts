@@ -155,7 +155,7 @@ export function registerProjectIpc(
       const result = await dialog.showOpenDialog(win, { properties: ["openDirectory"], title });
       if (result.canceled || result.filePaths.length === 0) return null;
       const parentDir = result.filePaths[0];
-      if (!(await confirmUnsafeLocation(parentDir, getWindow()))) return null;
+      if (!(await confirmUnsafeLocation(parentDir, win))) return null;
       targetDir = path.join(parentDir, entry.displayName);
       let counter = 2;
       while (existsSync(targetDir)) {
