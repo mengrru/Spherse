@@ -64,11 +64,13 @@
 
 ### 一键无痛（翻 feature-registry 即可，底层全走 server HTTP API，零 bridge 依赖）
 
+三个 feature 已于 2026-08-28 开启（`feature-registry.ts` 翻为 `ALL_HOSTS`）。
+
 | Feature | 验证结论 | 残留注意点 |
 |---|---|---|
-| **agent-dialog** | `AgentDialog.tsx`/`AgentDialogForm.tsx` 仅用 `useApiClient`（server API）+ `@spherse/presets` + UI 组件，无任何 host bridge 调用 | 入口多为右键菜单/侧栏「…」菜单，移动端触屏可达性需验证（长按或改显式菜单） |
-| **agent-trigger** | `agent-trigger/` 目录零 bridge 依赖，CRUD 走 server API；TriggerEventBridge 本就跨平台运行 | 同上（TriggerList/TriggerForm 为桌面表单 UI，移动端可用性需过一遍） |
-| **agent-mcp** | `McpDialog.tsx:114` → `client.updateAgentMcp` → server `req.projectCtx.runtime.updateAgentMcp`（`packages/server/src/routes/agent-mcp.ts:33`），纯 server 侧生效，desktop 无 IPC 参与 | 同上 |
+| **agent-dialog** | `AgentDialog.tsx`/`AgentDialogForm.tsx` 仅用 `useApiClient`（server API）+ `@spherse/presets` + UI 组件，无任何 host bridge 调用 | 「新建 Agent」有独立入口（侧栏 `…` DropdownMenu，点按可用）；但**编辑/删除 agent 的唯一入口是 AgentRow 右键 ContextMenu**（`AgentRow.tsx:64-96`），移动端依赖长按（Base UI ContextMenu 原生支持 500ms 长按），未真机验证 |
+| **agent-trigger** | `agent-trigger/` 目录零 bridge 依赖，CRUD 走 server API；TriggerEventBridge 本就跨平台运行 | **触发器配置的唯一入口是 AgentRow 右键 ContextMenu**（`AgentRow.tsx:69-74`），同上依赖长按；TriggerList/TriggerForm 为桌面表单 UI，窄屏可用性需过一遍 |
+| **agent-mcp** | `McpDialog.tsx:114` → `client.updateAgentMcp` → server `req.projectCtx.runtime.updateAgentMcp`（`packages/server/src/routes/agent-mcp.ts:33`），纯 server 侧生效，desktop 无 IPC 参与 | **MCP 配置的唯一入口是 AgentRow 右键 ContextMenu**（`AgentRow.tsx:75-79`），同上依赖长按 |
 
 ### 小量适配可开（非一键，改动小）
 
