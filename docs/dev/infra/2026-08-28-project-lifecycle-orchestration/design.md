@@ -109,7 +109,7 @@ export async function closeProjectCascade(
 
 - 单测：streaming-store `disconnectProject`（断开目标项目全部 runtime、不影响其他项目、streaming 中的 session 也被断开且不再重连）；structure tests（清理面扫描、bridge 组件纯挂载）；cascade 行为测试（成功清理全表面、host close 失败时本地状态不动）；app-store `closeProject`（setLastActiveProject 失败仍完成本地删除）
 - 既有测试回归：`npm test --workspace=packages/app`
-- E2E：当前无直接覆盖项目关闭的 spec；按变更影响面运行 `app-launch`（layout 挂载/项目恢复）、`chat-streaming-resilience`（streaming store）、`floating-chat`（经 ProjectRuntimeBridges 挂载）。项目关闭路径的 E2E 缺口记录到 backlog
+- E2E：`project-close.spec.ts`——streaming 中经 activity bar 关闭项目断开 chat runtime（WS mock 计数断言无重连）、关闭后 reload 不再恢复项目且 lastRoute 已清、重开项目落到欢迎页；另按变更影响面运行 `app-launch`、`chat-streaming-resilience`、`floating-chat`
 
 ## 验收标准（对齐 followup doc）
 

@@ -314,10 +314,12 @@ spherse/
 │   │   └── e2e/                      # Playwright E2E 测试
 │   │       ├── helpers/
 │   │       │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
-│   │       │   └── file-tree.ts      # 文件树 E2E 测试辅助（项目创建、app launch）
+│   │       │   ├── file-tree.ts      # 文件树 E2E 测试辅助（项目创建、app launch）
+│   │       │   └── chat.ts           # Chat E2E 测试辅助（mock agent 项目、WS mock、会话 API）
 │   │       ├── agent-dialog.spec.ts  # Agent 对话框搜索文件 E2E 测试
 │   │       ├── app-launch.spec.ts    # App 启动验证 smoke test
 │   │       ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
+│   │       ├── project-close.spec.ts # 项目关闭 E2E 测试（streaming 中关闭断连 runtime、重启后干净重开）
 │   │       ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │   │       ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
 │   │       ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）

@@ -63,11 +63,7 @@ export async function launchChatApp(project: ChatProject): Promise<{ app: Electr
   const page = await app.firstWindow();
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
-  await page.evaluate(async ({ id, projectRoot }) => {
-    await window.electronAPI.openProject(projectRoot);
-    await window.electronAPI.addOpenProject(id, projectRoot);
-    await window.electronAPI.setLastActiveProject(id);
-  }, { id: project.projectId, projectRoot: project.root });
+  await openProjectInApp(page, project);
   return { app, page };
 }
 
@@ -89,6 +85,18 @@ export async function createSessionViaApi(page: Page, projectId: string, agentId
 export async function navigateToSession(page: Page, projectId: string, sessionId: string): Promise<void> {
   const projectUrl = `/project/${projectId}/chat/${sessionId}`;
   await page.goto(`file://${rendererEntry}?e2e=${navToken}#${projectUrl}`);
+}
+
+export async function navigateToProjectRoot(page: Page, projectId: string): Promise<void> {
+  await page.goto(`file://${rendererEntry}?e2e=${Date.now()}#/project/${projectId}`);
+}
+
+export async function openProjectInApp(page: Page, project: ChatProject): Promise<void> {
+  await page.evaluate(async ({ id, projectRoot }) => {
+    await window.electronAPI.openProject(projectRoot);
+    await window.electronAPI.addOpenProject(id, projectRoot);
+    await window.electronAPI.setLastActiveProject(id);
+  }, { id: project.projectId, projectRoot: project.root });
 }
 
 export function assistantTextMessage(text: string): MockEvent[] {
