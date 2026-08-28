@@ -67,11 +67,11 @@ describe("build-and-release.yml: deploy-web job", () => {
 describe("build-and-release.yml: publish-changelog job", () => {
   const publishChangelog = release.jobs["publish-changelog"];
 
-  it("依赖 create-release，与其失败路径解耦（tag push 与 dispatch 重发布都执行）", () => {
-    expect(publishChangelog.needs).toBe("create-release");
+  it("串行在 publish-oss 之后执行，避免 changelog 先于 latest.json 更新（版本不一致窗口）", () => {
+    expect(publishChangelog.needs).toBe("publish-oss");
     const condition: string = publishChangelog.if;
     expect(condition).toContain("always()");
-    expect(condition).toContain("needs.create-release.result != 'failure'");
+    expect(condition).toContain("needs.publish-oss.result == 'success'");
   });
 
   it("用 scripts/build-changelog.mjs 生成 changelog 并上传到 spherse/changelog.json", () => {

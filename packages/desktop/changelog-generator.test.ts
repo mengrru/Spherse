@@ -57,11 +57,30 @@ describe("parseEntry", () => {
     });
   });
 
-  it("returns type null for entries without a type prefix", () => {
-    expect(parseEntry("* 无类型前缀条目 in https://x/pull/53")).toEqual({
-      type: null,
-      text: "无类型前缀条目",
+  it("only strips bare link tails pointing at github.com", () => {
+    expect(
+      parseEntry("* fix: 修复 X in https://github.com/mengrru/Spherse/pull/9"),
+    ).toEqual({ type: "fix", text: "修复 X" });
+    expect(parseEntry("* fix: 参见文档 in https://example.com/docs")).toEqual({
+      type: "fix",
+      text: "参见文档 in https://example.com/docs",
     });
+  });
+
+  it("leaves non-conventional type prefixes as plain text", () => {
+    expect(
+      parseEntry("* Note: something in https://github.com/mengrru/Spherse/pull/9"),
+    ).toEqual({ type: null, text: "Note: something" });
+    expect(parseEntry("* perf: 提升性能 by @u in https://github.com/o/r/pull/1")).toEqual({
+      type: "perf",
+      text: "提升性能",
+    });
+  });
+
+  it("returns type null for entries without a type prefix", () => {
+    expect(
+      parseEntry("* 无类型前缀条目 in https://github.com/mengrru/Spherse/pull/53"),
+    ).toEqual({ type: null, text: "无类型前缀条目" });
   });
 
   it("ignores non-bullet lines and empty entries", () => {

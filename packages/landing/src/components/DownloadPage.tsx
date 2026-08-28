@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ChevronDown, Download, ExternalLink } from "lucide-react";
 import { FALLBACK_URL, fetchLatestManifest, type Manifest } from "../lib/release";
 import { fetchChangelog, type Changelog } from "../lib/changelog";
+import { InstallTip } from "./InstallTip";
 import type { TranslationKey } from "../i18n";
 
 const GITHUB_TAG_URL_BASE = "https://github.com/mengrru/Spherse/releases/tag";
@@ -69,6 +70,9 @@ export function DownloadPage({ t }: DownloadPageProps) {
 
   const cards = manifest ? platformCards(manifest) : [];
   const releases = changelog?.releases ?? [];
+  const showFallback = manifestFailed || (manifest !== null && cards.length === 0);
+  const showMacTip = showFallback || cards.some((card) => card.key.startsWith("mac-"));
+  const showWinTip = showFallback || cards.some((card) => card.key.startsWith("win-"));
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -105,7 +109,7 @@ export function DownloadPage({ t }: DownloadPageProps) {
               </a>
             ))}
           </div>
-        ) : manifestFailed ? (
+        ) : showFallback ? (
           <a
             href={FALLBACK_URL}
             target="_blank"
@@ -116,6 +120,12 @@ export function DownloadPage({ t }: DownloadPageProps) {
             {t("download.fallback")}
           </a>
         ) : null}
+        {(showMacTip || showWinTip) && (
+          <div className="mt-4 flex flex-col gap-3">
+            {showMacTip && <InstallTip platform="mac" t={t} />}
+            {showWinTip && <InstallTip platform="win" t={t} />}
+          </div>
+        )}
       </section>
 
       {releases.length > 0 && (

@@ -2,9 +2,10 @@ import { writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 
 const FILTERED_TYPES = new Set(["docs", "chore", "infra"]);
+const BADGE_TYPES = new Set(["feat", "fix", "refactor", "test", "perf", "style"]);
 const ENTRY_TYPE_PATTERN = /^([A-Za-z]+)(?::|：)\s*/;
 const TRAILING_BY_LINK_PATTERN = /(?:^|\s)by\s+@[\w.-]+\s+in\s+https?:\/\/\S+\s*$/;
-const TRAILING_LINK_PATTERN = /\s+in\s+https?:\/\/\S+\s*$/;
+const TRAILING_LINK_PATTERN = /\s+in\s+https?:\/\/github\.com\/\S+\s*$/;
 
 export function parseEntry(rawLine) {
   const line = rawLine.trim();
@@ -16,8 +17,10 @@ export function parseEntry(rawLine) {
   if (typeMatch) {
     const candidate = typeMatch[1].toLowerCase();
     if (FILTERED_TYPES.has(candidate)) return null;
-    type = candidate;
-    rest = rest.slice(typeMatch[0].length);
+    if (BADGE_TYPES.has(candidate)) {
+      type = candidate;
+      rest = rest.slice(typeMatch[0].length);
+    }
   }
   rest = rest
     .replace(TRAILING_BY_LINK_PATTERN, "")

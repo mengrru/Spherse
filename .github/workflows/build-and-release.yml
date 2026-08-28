@@ -220,12 +220,14 @@ jobs:
             --force -u
 
   # 全量重建 changelog：拉取全部 GitHub release notes，筛掉 docs/chore/infra 条目并
-  # 结构化后上传 OSS spherse/changelog.json。只依赖 create-release，与 build 并行；
-  # workflow_dispatch 重发布时 create-release 被 skip，本 job 仍执行（全量重建幂等，
+  # 结构化后上传 OSS spherse/changelog.json。串行在 publish-oss 之后而非与 build 并行：
+  # latest.json 更新完成后才写入新版本 changelog，避免发版期间（或 build 失败后）
+  # changelog 首条与 latest.json 版本不一致。
+  # workflow_dispatch 重发布时 publish-oss 也会执行，本 job 随之运行（全量重建幂等，
   # 可用于修复/刷新历史 changelog）。
   publish-changelog:
-    needs: create-release
-    if: always() && needs.create-release.result != 'failure'
+    needs: publish-oss
+    if: always() && needs.publish-oss.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

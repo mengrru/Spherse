@@ -35,14 +35,14 @@ Landing page 首页 Hero 只有按平台自动检测的下载按钮，用户无�
 | 决策点 | 结论 |
 |---|---|
 | changelog 生成策略 | **全量重建**：每次从 GitHub API 拉取全部 release 重新生成整个 changelog.json。幂等可自愈，筛选规则变更后重跑即全量生效，OSS 文件丢失可恢复 |
-| 条目清理 | 去掉 PR 链接**和作者**：`feat: xxx by @mengrru in https://…/pull/40` → `{type: "feat", text: "xxx"}`（结构化条目，CI 单点解析类型，前端零解析直接渲染徽章） |
+| 条目清理 | 去掉 PR 链接**和作者**：`feat: xxx by @mengrru in https://…/pull/40` → `{type: "feat", text: "xxx"}`（结构化条目，CI 单点解析类型，前端零解析直接渲染徽章）。类型仅白名单（feat/fix/refactor/test/perf/style）结构化，其余前缀（如 `Note:`）归为无类型纯文本；裸 ` in <url>` 尾部仅剥 github.com 域名链接，避免误截正文自带链接 |
 | 空版本处理 | **过滤**：筛完后 notes 为空的 release 不写入 changelog.json（真实数据核查：现有 25 个 release 中 16 个无 `## What's Changed` 内容、仅 9 个有效，避免页面被空面板稀释） |
 | 失败策略 | `deploy-web` 等待 `publish-changelog` 完成，changelog 上传失败阻塞 Pages 部署，失败显性化 |
 | 展示形式 | 每版本一个折叠面板，最新版默认展开，其余折叠 |
 
 ### CI：`publish-changelog` job（`build-and-release.yml`）
 
-新 job 与 `build` 并行（只依赖 `create-release`，不等待构建产物），流程：
+新 job 串行在 `publish-oss` 之后执行（不发并行）：`latest.json` 更新完成后才写入新版本 changelog，避免发版期间或 build 失败后 OSS 上 changelog 首条与 latest.json 版本不一致。流程：
 
 ```
 gh api（分页拉全量 releases）→ 纯函数变换（scripts/build-changelog.mjs）→ ossutil 上传 spherse/changelog.json
@@ -50,14 +50,14 @@ gh api（分页拉全量 releases）→ 纯函数变换（scripts/build-changelo
 
 ```yaml
 publish-changelog:
-  needs: create-release
-  # tag push（create-release 成功）与 workflow_dispatch 重发布（create-release skipped）都执行：
+  needs: publish-oss
+  # tag push 与 workflow_dispatch 重发布都执行（publish-oss 两条路径都运行）：
   # 全量重建幂等，dispatch 重跑可修复/刷新历史
-  if: always() && needs.create-release.result != 'failure'
+  if: always() && needs.publish-oss.result == 'success'
   steps:
     - checkout（取 scripts/build-changelog.mjs）
     - setup-node 22.19
-    - node scripts/build-changelog.mjs --repo "$GITHUB_REPOSITORY" --output changelog.json
+    - node scripts/build-changelog.mjs --repo "$GITHUB_REPOSITORY" --output /tmp/changelog.json
       env: GH_TOKEN（读 releases API）
     - 安装 ossutil（复用 publish-oss 的 curl 步骤）
     - 上传 oss://${OSS_BUCKET}/spherse/changelog.json（--force -u）
@@ -89,8 +89,8 @@ transformReleases(releases):
   3. 每个 release body：
      a. 只取「## What's Changed」小节（按 ## 标题切分；New Contributors、Full Changelog 等其余小节全部丢弃）
      b. 取 `* ` 开头的条目行
-     c. 解析类型前缀：`^([A-Za-z]+)[：:]\s*` → type（小写化）；命中 docs / chore / infra 的条目丢弃（兼容全角冒号，如既有 commit `feat：xxx`）
-     d. 去尾部：` by @user in <url>` 优先，兜底 ` in <url>`；trim，得到 text
+     c. 解析类型前缀：`^([A-Za-z]+)[：:]\s*` → type（小写化）；命中 docs / chore / infra 的条目丢弃（兼容全角冒号，如既有 commit `feat：xxx`）；仅白名单类型（feat/fix/refactor/test/perf/style）结构化并剥前缀，其余前缀不剥、条目整体作为纯文本
+     d. 去尾部：` by @user in <url>` 优先，兜底 ` in https://github.com/…`（仅 github.com 域，防误截正文链接）；trim，得到 text
      e. 条目结构化为 {type, text}（无前缀条目 type 为 null）
   4. date 取 published_at 的日期部分；tag 保留原始 tag_name（前端版本外链直接用，不假设 v 前缀）
   5. 筛完后 notes 为空的 release 丢弃（见决策表「空版本处理」）
@@ -130,7 +130,7 @@ CLI：`node scripts/build-changelog.mjs --repo owner/name --output <file>`（缺
 
 **`src/components/DownloadPage.tsx`**（参考 `CasesPage`/`DocsPage` 的 props 传 `t` 模式）：
 
-- 下载区：fetch `latest.json` → 版本号 + 4 张平台卡片（macOS Apple Silicon / macOS Intel / Windows x64 / Windows ARM64），直接 `href` 到 manifest URL；manifest fetch 失败 → 单卡兜底 GitHub Releases 链接（复用 `FALLBACK_URL`）；
+- 下载区：fetch `latest.json` → 版本号 + 4 张平台卡片（macOS Apple Silicon / macOS Intel / Windows x64 / Windows ARM64），直接 `href` 到 manifest URL；manifest fetch 失败**或平台 URL 全空** → 单卡兜底 GitHub Releases 链接（复用 `FALLBACK_URL`）；卡片下方按涉及平台复用 `InstallTip`（Gatekeeper/SmartScreen 安装提示，与 Hero 体验一致）；
 - 更新日志区：fetch changelog.json → 每版本折叠面板（最新默认展开），条目按 `type` 字段渲染徽章（feat 绿 / fix 琥珀 / 其他中性 / null 纯文本，零解析），版本标题右侧外链 `https://github.com/mengrru/Spherse/releases/tag/{tag}`（schema 直存 tag）。
 
 **路由与导航**：`App.tsx` 加 `<Route path="/download">`；`Header.tsx` 在 Explore 与语言切换之间加 `nav.download` 链接。GitHub Pages 404.html 深链回退机制自动覆盖新路由，无需改动。
@@ -141,7 +141,7 @@ CLI：`node scripts/build-changelog.mjs --repo owner/name --output <file>`（缺
 |---|---|
 | `.github/workflows/build-and-release.yml` | 新增 `publish-changelog` job；`deploy-web` needs 加 `publish-changelog` |
 | `scripts/build-changelog.mjs` | 新增：拉取 + 纯函数变换 + CLI |
-| `packages/desktop/release-pipeline.test.ts` | 更新 deploy-web needs 断言；新增 publish-changelog job 结构断言（needs create-release、dispatch 也执行、上传路径 spherse/changelog.json） |
+| `packages/desktop/release-pipeline.test.ts` | 更新 deploy-web needs 断言；新增 publish-changelog job 结构断言（needs publish-oss、publish-oss 成功才执行、上传路径 spherse/changelog.json） |
 | `packages/desktop/changelog-generator.test.ts` | 新增：纯函数变换测试（见测试策略） |
 | `packages/landing/src/lib/release.ts` | 导出 `fetchLatestManifest`、`export type { Manifest }`、`FALLBACK_URL` |
 | `packages/landing/src/lib/changelog.ts`（+ `.test.ts`） | 新增：`Changelog` 类型 + `fetchChangelog()`（零类型解析，结构化 schema） |
@@ -170,7 +170,7 @@ CLI：`node scripts/build-changelog.mjs --repo owner/name --output <file>`（缺
 **`packages/desktop/release-pipeline.test.ts` 更新**：
 
 - deploy-web：needs 为 `[publish-oss, publish-changelog]`，条件含两个 `result == 'success'`；
-- publish-changelog：`needs: create-release`、`always() && result != 'failure'` 条件、执行 `scripts/build-changelog.mjs`、上传目标含 `spherse/changelog.json`。
+- publish-changelog：`needs: publish-oss`、`always() && needs.publish-oss.result == 'success'` 条件、执行 `scripts/build-changelog.mjs`、上传目标含 `spherse/changelog.json`。
 
 **`packages/landing/src/lib/changelog.test.ts`**（照抄 `release.test.ts` 的 stubGlobal fetch 范式）：
 
