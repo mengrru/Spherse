@@ -102,9 +102,16 @@ export function HtmlCardRenderer({ card, defaultCollapsed = false }: HtmlCardRen
     const suggestedName = card.title
       ? sanitizeFileName(card.title) + ".html"
       : "untitled.html";
+
+    if (!bridge.showSaveDialog) {
+      const blob = new Blob([ensureCharset(card.html)], { type: "text/html" });
+      await bridge.saveBlob?.(suggestedName, blob);
+      return;
+    }
+
     const defaultPath = joinProjectPath(projectRoot, suggestedName);
 
-    const filePath = await bridge.showSaveDialog?.({
+    const filePath = await bridge.showSaveDialog({
       defaultPath,
       filters: [{ name: "HTML", extensions: ["html", "htm"] }],
     });
