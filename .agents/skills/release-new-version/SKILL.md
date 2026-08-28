@@ -51,16 +51,18 @@ description: Use when the user says "发新版本", "release", "publish a new ve
 
 5. **确认 CI 触发**
    提示用户可在 GitHub Actions 页面查看构建进度。CI 会：
-   - 创建 GitHub Draft Release
+   - 创建 GitHub Release（`--generate-notes` 自动生成 release notes）
    - 构建 macOS arm64/intel DMG + Windows x64/arm64 EXE
    - 上传到 GitHub Release
    - 上传到阿里云 OSS 镜像 + 更新 `latest.json`
+   - 全量重建 changelog 并上传 OSS `spherse/changelog.json`（landing `/download` 页消费）
 
 ## Key Knowledge
 
 - **不需要手动改 version**：CI step `Sync app version from tag`（build-and-release.yml:62-64）执行 `npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version`，从 tag 名自动设置 `packages/desktop` 的版本号。
 - **`packages/desktop/package.json` 的 version 平时保持 `0.1.0`**，不随发布更新，只在 CI 构建时临时设置。
 - **tag push 即触发**：workflow 监听 `push.tags: ["v*"]`，推送 tag 自动启动全流程。
+- **changelog 可自愈重建**：`publish-changelog` 为全量重建（幂等），changelog 内容异常或 OSS 文件丢失时，手动 workflow_dispatch 该 workflow（输入任一已发布 tag）即可重新生成上传，无需发新版本。
 - **为什么 --ff-only**：不产生 merge commit，main 的历史是 dev 历史的完整延续；无法 fast-forward 时明确报错而不是静默创建 merge commit。
 
 ## Edge Cases

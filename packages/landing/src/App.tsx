@@ -8,6 +8,7 @@ import { FeatureCards } from "./components/FeatureCards";
 import { UpcomingFeatures } from "./components/UpcomingFeatures";
 import { CasesPage } from "./components/CasesPage";
 import { DocsPage } from "./components/DocsPage";
+import { DownloadPage } from "./components/DownloadPage";
 
 export function App() {
   const { locale, setLocale, t } = useLandingI18n();
@@ -39,6 +40,7 @@ export function App() {
               }
             />
             <Route path="/explore" element={<CasesPage t={t} />} />
+            <Route path="/download" element={<DownloadPage t={t} />} />
             <Route path="/docs" element={<DocsPage t={t} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

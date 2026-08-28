@@ -29,17 +29,19 @@ const pages = loadWorkflow("deploy-pages.yml");
 const deployWeb = release.jobs["deploy-web"];
 
 describe("build-and-release.yml: deploy-web job", () => {
-  it("存在 deploy-web job，且排在 publish-oss 之后", () => {
+  it("存在 deploy-web job，且排在 publish-oss 与 publish-changelog 之后", () => {
     expect(deployWeb).toBeDefined();
-    expect(deployWeb.needs).toBe("publish-oss");
-    // 链路锚点：publish-oss 必须仍然存在，否则 needs 悬空
+    expect(deployWeb.needs).toEqual(["publish-oss", "publish-changelog"]);
+    // 链路锚点：两个前置 job 必须仍然存在，否则 needs 悬空
     expect(release.jobs["publish-oss"]).toBeDefined();
+    expect(release.jobs["publish-changelog"]).toBeDefined();
   });
 
-  it("仅在 tag push 且 publish-oss 成功时触发（workflow_dispatch 重发布不重刷 Pages）", () => {
+  it("仅在 tag push 且 publish-oss / publish-changelog 均成功时触发（workflow_dispatch 重发布不重刷 Pages）", () => {
     const condition: string = deployWeb.if;
     expect(condition).toContain("github.event_name == 'push'");
     expect(condition).toContain("needs.publish-oss.result == 'success'");
+    expect(condition).toContain("needs.publish-changelog.result == 'success'");
   });
 
   it("持有 actions: write 权限（GITHUB_TOKEN 级联 workflow_dispatch 的前提）", () => {
@@ -59,6 +61,34 @@ describe("build-and-release.yml: deploy-web job", () => {
     expect(run).toContain("-f include_web=true");
 
     expect(step.env?.GH_TOKEN).toBe("${{ secrets.GITHUB_TOKEN }}");
+  });
+});
+
+describe("build-and-release.yml: publish-changelog job", () => {
+  const publishChangelog = release.jobs["publish-changelog"];
+
+  it("串行在 publish-oss 之后执行，避免 changelog 先于 latest.json 更新（版本不一致窗口）", () => {
+    expect(publishChangelog.needs).toBe("publish-oss");
+    const condition: string = publishChangelog.if;
+    expect(condition).toContain("always()");
+    expect(condition).toContain("needs.publish-oss.result == 'success'");
+  });
+
+  it("用 scripts/build-changelog.mjs 生成 changelog 并上传到 spherse/changelog.json", () => {
+    const generate = publishChangelog.steps.find(
+      (s: any) => String(s.run ?? "").includes("scripts/build-changelog.mjs"),
+    );
+    expect(generate).toBeDefined();
+    expect(generate.env?.GH_TOKEN).toBe("${{ secrets.GITHUB_TOKEN }}");
+
+    const upload = publishChangelog.steps.find(
+      (s: any) =>
+        String(s.uses ?? "").startsWith("peaceiris") === false &&
+        String(s.run ?? "").includes("ossutil cp") &&
+        String(s.run ?? "").includes("spherse/changelog.json"),
+    );
+    expect(upload).toBeDefined();
+    expect(upload.env?.OSS_BUCKET).toBe("${{ secrets.OSS_BUCKET }}");
   });
 });
 
