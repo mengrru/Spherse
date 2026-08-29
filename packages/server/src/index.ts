@@ -14,6 +14,7 @@ import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
 import { registerAuthHook, type AuthOptions } from "./auth.js";
 import { registerAuthGatedCors } from "./cors.js";
+import { registerHostGuard } from "./host-guard.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { setAppVersion } from "./server-info.js";
 import { ChatSessionHub } from "./chat-session-hub.js";
@@ -23,23 +24,6 @@ import { handleBusWebSocket } from "./ws-bus.js";
 export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type ProjectInfo, type RegisterOptions } from "./registry.js";
 
 export const DEFAULT_SERVER_PORT = 53972;
-
-const STATIC_ALLOWED_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
-
-function normalizeHostname(input: string): string {
-  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(input) ? input : `http://${input}`;
-  return new URL(withScheme).hostname.replace(/^\[|\]$/g, "");
-}
-
-function isHostAllowed(hostHeader: string | undefined, dynamicHosts: Set<string>): boolean {
-  if (!hostHeader) return false;
-  try {
-    const hostname = normalizeHostname(hostHeader);
-    return STATIC_ALLOWED_HOSTS.has(hostname) || dynamicHosts.has(hostname);
-  } catch {
-    return false;
-  }
-}
 
 export interface MultiProjectServer {
   fastify: FastifyInstance;
@@ -85,12 +69,7 @@ export async function createMultiProjectServer(
     forceCloseConnections: true,
   });
 
-  const dynamicAllowedHosts = new Set<string>();
-  fastify.addHook("onRequest", async (req, reply) => {
-    if (!isHostAllowed(req.headers.host, dynamicAllowedHosts)) {
-      return reply.code(403).send({ error: "Forbidden host" });
-    }
-  });
+  const hostGuard = registerHostGuard(fastify);
   registerAuthGatedCors(fastify, () => options?.auth?.accessToken);
 
   await fastify.register(websocket);
@@ -162,24 +141,11 @@ export async function createMultiProjectServer(
   const address = fastify.server.address() as AddressInfo;
   logger.info({ port: address.port }, "server listening");
 
-  const addAllowedHosts = (hosts: string[]): void => {
-    for (const host of hosts) {
-      try {
-        dynamicAllowedHosts.add(normalizeHostname(host));
-      } catch {
-        logger.warn({ host }, "ignoring invalid allowed host");
-      }
-    }
+  return {
+    fastify,
+    registry,
+    logger,
+    addAllowedHosts: hostGuard.addAllowedHosts,
+    removeAllowedHosts: hostGuard.removeAllowedHosts,
   };
-  const removeAllowedHosts = (hosts: string[]): void => {
-    for (const host of hosts) {
-      try {
-        dynamicAllowedHosts.delete(normalizeHostname(host));
-      } catch {
-        continue;
-      }
-    }
-  };
-
-  return { fastify, registry, logger, addAllowedHosts, removeAllowedHosts };
 }
