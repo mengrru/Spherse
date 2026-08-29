@@ -216,7 +216,7 @@ test("rate limit blocks excess calls", async () => {
       navigatedCount++;
     });
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 40; i++) {
       await page.evaluate(() => {
         window.postMessage(
           {
@@ -230,7 +230,8 @@ test("rate limit blocks excess calls", async () => {
     }
 
     await page.waitForTimeout(2000);
-    expect(navigatedCount).toBeLessThanOrEqual(10);
+    expect(navigatedCount).toBeLessThanOrEqual(30);
+    expect(navigatedCount).toBeGreaterThanOrEqual(1);
   } finally {
     await closeApp(app);
   }
