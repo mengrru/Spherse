@@ -112,3 +112,9 @@
 - **m-1（minor，入 backlog）**：`src/index.ts` 原样继承约 21 处无外部消费者的导出（`parseTriggerServerEvent` + 20 个类型），属存量问题非本次回归；已入 backlog「清理 @spherse/contracts 导出面冗余」单独机械清理。
 - **m-2（minor，已修）**：验证项 3 的 `npm ls` 补 `--omit=dev`（不带时会把 contracts 的 devDependencies 边渲染进输出，产生误判）。
 - **m-3（minor，已修）**：`ErrorMessageSection.structure.test.ts` 用例名从 "server contracts" 同步为 `@spherse/contracts`。
+
+### CI 修复（2026-08-29 追加）
+
+PR CI 的 E2E workflow（dev 新增 `e2e.yml`，晚于本分支创建，设计时不可见）失败：desktop `test:e2e` 的显式构建链 `-w i18n -w presets -w sdk -w core -w server` 未含 `@spherse/contracts`，fresh checkout 下 server tsc 找不到新包类型。修复：链中 core 与 server 之间插入 `-w @spherse/contracts`。该链与 root `build:desktop` / `build:web` 同属手写拓扑知识的第 4 处复制，收敛方向（单一链源）见 backlog「架构契约可测试化」/「Turborepo 编排评估」条目。
+
+验证：`rm -rf packages/*/dist` 后全量 `test:e2e`（77 用例）+ `npm run verify` 在合并最新 dev 后的树上全绿。
