@@ -260,10 +260,10 @@ Phase 3 按单补写时以此为准；标注「已补」的条目已在本期以
 - renders a NativeSelect with the four generic levels
 - defaults the select value to medium when undefined
 【不补：tooltip/i18n key/props 类型/颜色 token】
-=== features/chat/save-export-degradation.structure.test.ts 【已补：save-export-degradation.test.tsx】
-- HtmlCard falls back to saveBlob when showSaveDialog is unavailable
-- ImageCard falls back to fetching the preview url and saving a blob
-- BrowserPage redirects to the project home when the browser feature is disabled
+=== features/chat/save-export-degradation.structure.test.ts 【部分已补：save-export-degradation.test.tsx 覆盖 HtmlCard saveBlob / ImageCard fetch 兜底；BrowserPage 仅断言禁用时 null 渲染——render 期 navigate 在 MemoryRouter 下不生效，重定向断言待 backlog「BrowserPage render 期 navigate 重定向疑似失效」修复后补真路由断言】
+- HtmlCard falls back to saveBlob when showSaveDialog is unavailable 【已补】
+- ImageCard falls back to fetching the preview url and saving a blob 【已补】
+- BrowserPage redirects to the project home when the browser feature is disabled 【部分已补】
 === features/chat/Composer.structure.test.ts 【已补：Composer.test.tsx（含附件管线）】
 - passes an optional AttachedImage through onSend
 - renders a hidden image file input triggered by the attach button

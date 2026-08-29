@@ -133,13 +133,13 @@ export default [
         "error",
         {
           selector:
-            "JSXAttribute[name.name='className'] > Literal[value=/dark:/], JSXAttribute[name.name='className'] > TemplateElement[value.raw=/dark:/]",
+            "JSXAttribute[name.name='className'] > Literal[value=/dark:/], JSXAttribute[name.name='className'] JSXExpressionContainer > Literal[value=/dark:/], JSXAttribute[name.name='className'] JSXExpressionContainer TemplateLiteral TemplateElement[value.raw=/dark:/], JSXAttribute[name.name='className'] JSXExpressionContainer CallExpression[callee.name='cn'] Literal[value=/dark:/]",
           message:
             "业务组件禁止 dark: 工具类；暗色适配由 CSS 变量完成（packages/app README「样式」节）。components/ui primitives 不在本规则范围",
         },
         {
           selector:
-            "JSXAttribute[name.name='className'] > Literal[value=/#[0-9a-fA-F]{3,8}\\b|rgba?\\(/], JSXAttribute[name.name='className'] > TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}\\b|rgba?\\(/], JSXAttribute[name.name='className'] > Literal[value=/\\b(?:text|bg|border|ring|fill|stroke|from|to|via)-(?:\\[#|\\[rgb)/], JSXAttribute[name.name='className'] > TemplateElement[value.raw=/\\b(?:text|bg|border|ring|fill|stroke|from|to|via)-(?:\\[#|\\[rgb)/]",
+            "JSXAttribute[name.name='className'] > Literal[value=/#[0-9a-fA-F]{3,8}\\b|rgba?\\(/], JSXAttribute[name.name='className'] > Literal[value=/\\b(?:text|bg|border|ring|fill|stroke|from|to|via)-(?:\\[#|\\[rgb)/], JSXAttribute[name.name='className'] JSXExpressionContainer > Literal[value=/#[0-9a-fA-F]{3,8}\\b|rgba?\\(/], JSXAttribute[name.name='className'] JSXExpressionContainer > Literal[value=/\\b(?:text|bg|border|ring|fill|stroke|from|to|via)-(?:\\[#|\\[rgb)/], JSXAttribute[name.name='className'] JSXExpressionContainer TemplateLiteral TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}\\b|rgba?\\(/], JSXAttribute[name.name='className'] JSXExpressionContainer TemplateLiteral TemplateElement[value.raw=/\\b(?:text|bg|border|ring|fill|stroke|from|to|via)-(?:\\[#|\\[rgb)/], JSXAttribute[name.name='className'] JSXExpressionContainer CallExpression[callee.name='cn'] Literal[value=/#[0-9a-fA-F]{3,8}\\b|rgba?\\(/], JSXAttribute[name.name='className'] JSXExpressionContainer CallExpression[callee.name='cn'] Literal[value=/\\b(?:text|bg|border|ring|fill|stroke|from|to|via)-(?:\\[#|\\[rgb)/]",
           message:
             "颜色只允许 shadcn 语义 token 与 Spherse token；禁止硬编码 hex/rgb 或 Tailwind 任意色值 class（packages/app README「样式」节）",
         },

@@ -138,10 +138,12 @@ describe("WelcomePage reload", () => {
   it("clears the debounce timer on unmount", async () => {
     const { unmount } = renderWithProviders(<WelcomePage fallback={<div>fallback</div>} />);
     await connectBus();
+    const before = vi.getTimerCount();
 
     emitFsWatch("welcome/index.html");
-    unmount();
+    expect(vi.getTimerCount()).toBe(before + 1);
 
-    expect(() => act(() => vi.advanceTimersByTime(300))).not.toThrow();
+    unmount();
+    expect(vi.getTimerCount()).toBe(before);
   });
 });

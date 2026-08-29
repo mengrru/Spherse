@@ -69,10 +69,12 @@ describe("WithdrawButton", () => {
 
   it("clears the reset timer on unmount", async () => {
     const { unmount } = renderWithProviders(<WithdrawButton onWithdraw={onWithdraw} />);
+    const before = vi.getTimerCount();
 
     await user.click(screen.getByRole("button", { name: "撤回" }));
-    unmount();
+    expect(vi.getTimerCount()).toBe(before + 1);
 
-    expect(() => act(() => vi.advanceTimersByTime(3000))).not.toThrow();
+    unmount();
+    expect(vi.getTimerCount()).toBe(before);
   });
 });
