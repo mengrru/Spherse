@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Download, ExternalLink } from "lucide-react";
-import { FALLBACK_URL, fetchLatestManifest, type Manifest } from "../lib/release";
+import {
+  FALLBACK_URL,
+  fetchLatestManifest,
+  type Manifest,
+  type Platform,
+} from "../lib/release";
 import { fetchChangelog, type Changelog } from "../lib/changelog";
 import { InstallTip } from "./InstallTip";
 import type { TranslationKey } from "../i18n";
@@ -20,20 +25,37 @@ interface DownloadPageProps {
 
 interface PlatformCard {
   key: string;
+  platform: Platform;
   labelKey: TranslationKey;
   url: string;
 }
 
 function platformCards(manifest: Manifest): PlatformCard[] {
   const cards: PlatformCard[] = [
-    { key: "mac-arm64", labelKey: "download.macArm64", url: manifest.mac?.arm64 ?? "" },
-    { key: "mac-intel", labelKey: "download.macIntel", url: manifest.mac?.intel ?? "" },
+    {
+      key: "mac-arm64",
+      platform: "mac",
+      labelKey: "download.macArm64",
+      url: manifest.mac?.arm64 ?? "",
+    },
+    {
+      key: "mac-intel",
+      platform: "mac",
+      labelKey: "download.macIntel",
+      url: manifest.mac?.intel ?? "",
+    },
     {
       key: "win-x64",
+      platform: "win",
       labelKey: "download.winX64",
       url: manifest.win?.x64 ?? manifest.win?.setup ?? "",
     },
-    { key: "win-arm64", labelKey: "download.winArm64", url: manifest.win?.arm64 ?? "" },
+    {
+      key: "win-arm64",
+      platform: "win",
+      labelKey: "download.winArm64",
+      url: manifest.win?.arm64 ?? "",
+    },
   ];
   return cards.filter((card) => card.url.length > 0);
 }
@@ -48,6 +70,11 @@ export function DownloadPage({ t }: DownloadPageProps) {
   const [manifestFailed, setManifestFailed] = useState(false);
   const [changelog, setChangelog] = useState<Changelog | null>(null);
   const [openIndex, setOpenIndex] = useState<number | null>(0);
+  const [tipPlatforms, setTipPlatforms] = useState<Platform[]>([]);
+
+  const revealTip = (platform: Platform) => {
+    setTipPlatforms((prev) => (prev.includes(platform) ? prev : [...prev, platform]));
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -71,8 +98,6 @@ export function DownloadPage({ t }: DownloadPageProps) {
   const cards = manifest ? platformCards(manifest) : [];
   const releases = changelog?.releases ?? [];
   const showFallback = manifestFailed || (manifest !== null && cards.length === 0);
-  const showMacTip = showFallback || cards.some((card) => card.key.startsWith("mac-"));
-  const showWinTip = showFallback || cards.some((card) => card.key.startsWith("win-"));
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -96,6 +121,7 @@ export function DownloadPage({ t }: DownloadPageProps) {
               <a
                 key={card.key}
                 href={card.url}
+                onClick={() => revealTip(card.platform)}
                 className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-4 transition-colors hover:border-foreground/30"
               >
                 <span className="flex flex-col gap-0.5">
@@ -114,16 +140,20 @@ export function DownloadPage({ t }: DownloadPageProps) {
             href={FALLBACK_URL}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => {
+              revealTip("mac");
+              revealTip("win");
+            }}
             className="flex items-center justify-center rounded-xl border border-border bg-card px-4 py-4 text-sm text-foreground transition-colors hover:border-foreground/30"
           >
             <ExternalLink className="me-2 size-4" />
             {t("download.fallback")}
           </a>
         ) : null}
-        {(showMacTip || showWinTip) && (
+        {tipPlatforms.length > 0 && (
           <div className="mt-4 flex flex-col gap-3">
-            {showMacTip && <InstallTip platform="mac" t={t} />}
-            {showWinTip && <InstallTip platform="win" t={t} />}
+            {tipPlatforms.includes("mac") && <InstallTip platform="mac" t={t} />}
+            {tipPlatforms.includes("win") && <InstallTip platform="win" t={t} />}
           </div>
         )}
       </section>
