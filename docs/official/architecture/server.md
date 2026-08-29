@@ -98,7 +98,7 @@
 
 ## 访问策略白名单（server 端）
 
-- **read**：userFiles / rootIndex / changelog / projectTheme / generatedImages / attachments / skills / agentTheme / agentSkills
+- **read**：userFiles / rootIndex / changelog / projectTheme / generatedImages / attachments / skills / agentTheme / agentSkills / agentAssets
 - **write**：userFiles / rootIndex / changelog / projectTheme / attachments / skills / agentSkills
 - 全部经 core `serverAccessPolicy`（见 [security.md](security.md)）；capability 私有路径（pathRules）对 server 不可写，开放需经 PM 门面
 

@@ -28,7 +28,7 @@
 | agentsRoot | `M/agents` |
 | agentProfile / agentTheme / agentMcp | `M/agents/*/profile.md` / `theme.css` / `mcp.json` |
 | agentSessions | `M/agents/*/sessions.db*` |
-| agentSkills / agentTriggers / agentTriggerLogs | `M/agents/*/skills/**` / `triggers/index.yml` / `triggers/logs.jsonl` |
+| agentSkills / agentAssets / agentTriggers / agentTriggerLogs | `M/agents/*/skills/**` / `assets/**` / `triggers/index.yml` / `triggers/logs.jsonl` |
 | spherseMetaDir / spherseOther | `M` / `M/**`（兜底，最后） |
 
 - 匹配顺序：extraRules 逐条优先 → 内置模式按上表声明序 → 都不中归 `userFiles`
@@ -49,10 +49,10 @@
 
 ### 白名单
 
-- **LLM read**（16 类）：
+- **LLM read**（17 类）：
   - userFiles、rootIndex、changelog、projectConfig、projectTheme、generatedImages、attachments、skills
-  - agentsRoot、agentProfile、agentTheme、agentSkills、agentTriggers、agentTriggerLogs、spherseMetaDir、**spherseOther**
-- **LLM write**（5 类 + 规则授权）：userFiles、projectTheme、skills、agentTheme、agentSkills——AI 可直接创建/修改项目与 agent 级 skill
+  - agentsRoot、agentProfile、agentTheme、agentSkills、agentAssets、agentTriggers、agentTriggerLogs、spherseMetaDir、**spherseOther**
+- **LLM write**（6 类 + 规则授权）：userFiles、projectTheme、skills、agentTheme、agentSkills、agentAssets（agent 私有静态资源，如 theme 配图/字体）——AI 可直接创建/修改项目与 agent 级 skill 及 assets
 - **server read / write**：见 [server.md](server.md)「访问策略白名单」
 - **agentMcp 与 agentSessions 不在任何白名单**：mcp.json（含 headers/env 明文）与 sessions.db 对 LLM 和 server 通用路由均不可读写，只经专用门面（McpConfigStore / SessionStore）
 

@@ -27,6 +27,7 @@ const LLM_READ: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "agentProfile",
   "agentTheme",
   "agentSkills",
+  "agentAssets",
   "agentTriggers",
   "agentTriggerLogs",
   "spherseMetaDir",
@@ -39,6 +40,7 @@ const LLM_WRITE: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "skills",
   "agentTheme",
   "agentSkills",
+  "agentAssets",
 ]);
 
 const SRV_READ: ReadonlySet<PathCategory> = new Set<PathCategory>([
@@ -51,6 +53,7 @@ const SRV_READ: ReadonlySet<PathCategory> = new Set<PathCategory>([
   "skills",
   "agentTheme",
   "agentSkills",
+  "agentAssets",
 ]);
 
 const SRV_WRITE: ReadonlySet<PathCategory> = new Set<PathCategory>([

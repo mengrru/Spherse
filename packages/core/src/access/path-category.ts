@@ -22,6 +22,7 @@ export type PathCategory =
   | "agentMcp"
   | "agentSessions"
   | "agentSkills"
+  | "agentAssets"
   | "agentTriggers"
   | "agentTriggerLogs"
   | "spherseMetaDir"
@@ -42,6 +43,7 @@ const PATH_PATTERNS: Record<string, string> = {
   agentMcp: `${PROJECT_META_DIR}/agents/*/mcp.json`,
   agentSessions: `${PROJECT_META_DIR}/agents/*/sessions.db*`,
   agentSkills: `${PROJECT_META_DIR}/agents/*/skills/**`,
+  agentAssets: `${PROJECT_META_DIR}/agents/*/assets/**`,
   agentTriggers: `${PROJECT_META_DIR}/agents/*/triggers/index.yml`,
   agentTriggerLogs: `${PROJECT_META_DIR}/agents/*/triggers/logs.jsonl`,
   spherseMetaDir: PROJECT_META_DIR,
