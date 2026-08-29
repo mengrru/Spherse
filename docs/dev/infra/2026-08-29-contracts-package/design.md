@@ -81,7 +81,7 @@
 
 1. `npm run verify` 全绿（build 顺序实证 contracts 在 core 后 server 前；随迁的 3 个契约测试文件在新包通过、server 侧 2 个改 specifier 的测试通过）
 2. 全仓 grep（排除 `dist/`、`node_modules/`）无残留 `server/contracts` 引用；`packages/server/dist/` 迁移时已清理重建
-3. `npm ls fastify --workspace=@spherse/app` 为空（app 生产依赖闭包不再含 fastify）；`@sinclair/typebox` 在 app dependencies 中显式声明、已从 server dependencies 移除
+3. `npm ls fastify --workspace=@spherse/app --omit=dev` 为空（app 生产依赖闭包不再含 fastify；不带 `--omit=dev` 时 npm ls 会渲染 contracts 的 devDependencies 边，属预期）；`@sinclair/typebox` 在 app dependencies 中显式声明、已从 server dependencies 移除
 4. E2E：改动运行时值消费集中在 chat WS 边界（`parseChatServerEvent` / `CHAT_CLOSE_CODES` / `ErrorEventCode`），跑 `e2e/chat-streaming-resilience.spec.ts` 覆盖该边界，附 `e2e/app-launch.spec.ts` 兜底启动链路
 
 ## 风险
@@ -104,3 +104,11 @@
 - **m-8（minor，已修）**：新包测试相对路径改 `../index.js`。
 - **m-9（minor，已修）**：server 移除迁移后死掉的 `@sinclair/typebox` 依赖，理由入改动表。
 - **m-10（minor，不修）**：eslint node-globals 块按包枚举不会命中新包，但 TS 文件 `no-undef` 关闭无实际影响，不为此扩配置；新包 lint 覆盖由 `packages/*/src/**/*.ts` glob 自动获得。
+
+## Code Review 反馈处理（2026-08-29，commit bc5ac6c）
+
+0 critical / 0 important / 0 medium / 3 minor，实现与设计逐项一致、契约测试 64 用例与 server 侧 21 用例实跑通过、blame 历史保留。
+
+- **m-1（minor，入 backlog）**：`src/index.ts` 原样继承约 21 处无外部消费者的导出（`parseTriggerServerEvent` + 20 个类型），属存量问题非本次回归；已入 backlog「清理 @spherse/contracts 导出面冗余」单独机械清理。
+- **m-2（minor，已修）**：验证项 3 的 `npm ls` 补 `--omit=dev`（不带时会把 contracts 的 devDependencies 边渲染进输出，产生误判）。
+- **m-3（minor，已修）**：`ErrorMessageSection.structure.test.ts` 用例名从 "server contracts" 同步为 `@spherse/contracts`。
