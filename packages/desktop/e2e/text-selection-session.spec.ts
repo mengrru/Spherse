@@ -125,6 +125,95 @@ test("text selection session shows stable button, fixed popover, and highlight o
   }
 });
 
+test("text selection copies via Ctrl/Cmd+C after native selection is released", async () => {
+  const project = await createTextSelectionProject();
+  const { app, page } = await launchAppWithProject(project);
+
+  try {
+    await page.waitForSelector("text=The obsidian tower stands beside the northern sea.");
+    const mouseUp = { x: 720, y: 400 };
+    await page.evaluate(() => {
+      const textNode = [...document.querySelectorAll("p")]
+        .flatMap((node) => [...node.childNodes])
+        .find((node) => node.textContent?.includes("obsidian tower"));
+      if (!textNode) throw new Error("target text node not found");
+      const start = textNode.textContent!.indexOf("obsidian tower");
+      const end = start + "obsidian tower".length;
+      const range = document.createRange();
+      range.setStart(textNode, start);
+      range.setEnd(textNode, end);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+    await page.evaluate(({ x, y }) => {
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: x, clientY: y }));
+    }, mouseUp);
+
+    const toolbar = page.getByTestId("text-selection-toolbar");
+    await expect(toolbar).toBeVisible();
+    await expect.poll(() => page.evaluate(() => window.getSelection()?.isCollapsed ?? true)).toBe(true);
+
+    await app.evaluate(({ clipboard }) => clipboard.clear());
+    await page.keyboard.press("ControlOrMeta+c");
+
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe("obsidian tower");
+    await expect(toolbar).toBeHidden();
+    await expect(page.getByTestId("text-selection-highlight")).toBeHidden();
+  } finally {
+    await app.close();
+  }
+});
+
+test("text selection keyboard copy does not hijack editable targets inside popover", async () => {
+  const project = await createTextSelectionProject();
+  const { app, page } = await launchAppWithProject(project);
+
+  try {
+    await page.waitForSelector("text=The obsidian tower stands beside the northern sea.");
+    const mouseUp = { x: 720, y: 400 };
+    await page.evaluate(() => {
+      const textNode = [...document.querySelectorAll("p")]
+        .flatMap((node) => [...node.childNodes])
+        .find((node) => node.textContent?.includes("obsidian tower"));
+      if (!textNode) throw new Error("target text node not found");
+      const start = textNode.textContent!.indexOf("obsidian tower");
+      const end = start + "obsidian tower".length;
+      const range = document.createRange();
+      range.setStart(textNode, start);
+      range.setEnd(textNode, end);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+    await page.evaluate(({ x, y }) => {
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: x, clientY: y }));
+    }, mouseUp);
+
+    const toolbar = page.getByTestId("text-selection-toolbar");
+    await expect(toolbar).toBeVisible();
+    await toolbar.getByRole("button", { name: "发起会话" }).click();
+    const popover = page.getByTestId("text-selection-popover");
+    await expect(popover).toBeVisible();
+
+    const commentText = "editable comment copy";
+    const commentInput = page.getByPlaceholder("添加补充说明（可选）...");
+    await commentInput.fill(commentText);
+    await commentInput.evaluate((el) => {
+      el.focus();
+      el.setSelectionRange(0, el.value.length);
+    });
+
+    await app.evaluate(({ clipboard }) => clipboard.clear());
+    await page.keyboard.press("ControlOrMeta+c");
+
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe(commentText);
+    await expect(popover).toBeVisible();
+  } finally {
+    await app.close();
+  }
+});
+
 test("text selection session keeps long agent list scrollable in a compact viewport", async () => {
   const project = await createTextSelectionProject();
   const { app, page } = await launchAppWithProject(project);

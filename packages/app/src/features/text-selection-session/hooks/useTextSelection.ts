@@ -40,6 +40,12 @@ function getHighlightRects(range: Range): HighlightRect[] {
   return fallback ? [fallback] : [];
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  return target.closest("input, textarea") !== null;
+}
+
 function getButtonPosition(event: MouseEvent) {
   const minX = VIEWPORT_PADDING + BUTTON_ESTIMATED_WIDTH / 2;
   const maxX = window.innerWidth - VIEWPORT_PADDING - BUTTON_ESTIMATED_WIDTH / 2;
@@ -94,6 +100,34 @@ export function useTextSelection({
     document.addEventListener("mouseup", handleMouseUp);
     return () => document.removeEventListener("mouseup", handleMouseUp);
   }, [disabled]);
+
+  useEffect(() => {
+    if (!selectionState) return;
+
+    // handleMouseUp snapshots the selection and destroys the native one
+    // (removeAllRanges), so Ctrl/Cmd+C alone has nothing to copy. While the
+    // snapshot is alive, serve the shortcut from the snapshot, mirroring the
+    // toolbar copy button.
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "c") return;
+      // Native copy inside editable targets (e.g. the start-session popover
+      // comment box) must keep working untouched.
+      if (isEditableTarget(event.target)) return;
+      // A fresh native selection can coexist with the snapshot (Ctrl+A, or
+      // dragging outside the content area, which skips the mouseup clear) —
+      // let the native copy win instead of stale snapshot text.
+      const nativeSelection = window.getSelection();
+      if (nativeSelection && !nativeSelection.isCollapsed && nativeSelection.toString().trim()) return;
+      event.preventDefault();
+      navigator.clipboard
+        .writeText(selectionState.text)
+        .then(() => setSelectionState(null))
+        .catch(() => {});
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectionState]);
 
   useEffect(() => {
     if (!selectionState) return;
