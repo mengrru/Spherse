@@ -75,6 +75,18 @@ describe("categorizePath", () => {
     ).toBe("agentSkills");
   });
 
+  it("classifies agent-level assets directory", () => {
+    expect(categorizePath(".spherse/agents/historian-abc123/assets")).toBe(
+      "agentAssets",
+    );
+    expect(
+      categorizePath(".spherse/agents/historian-abc123/assets/bg.png"),
+    ).toBe("agentAssets");
+    expect(
+      categorizePath(".spherse/agents/historian-abc123/assets/fonts/main.woff2"),
+    ).toBe("agentAssets");
+  });
+
   it("classifies .spherse directory itself as spherseMetaDir", () => {
     expect(categorizePath(".spherse")).toBe("spherseMetaDir");
   });

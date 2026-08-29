@@ -100,12 +100,13 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 
 主题以 `<link>` 从项目 preview 路由载入，CSS 中相对 `url()` 的解析基址为 agent 目录 `.spherse/agents/{agent-slug}/`。因此本地图片、字体等资源可以用相对路径正常引用。
 
-- **素材放在 agent 目录**：推荐把图片/字体放进 agent 目录，用相对路径引用：
+- **素材放在 agent 的 assets 目录**：推荐把图片/字体放进 `.spherse/agents/{agent-slug}/assets/`（该目录对你开放读写），theme.css 用相对路径引用：
   ```css
   [data-chat-root] {
-    background-image: url(./bg.png);
+    background-image: url(./assets/bg.png);
   }
   ```
+  注意 agent 目录根下的其它未归类文件（如直接放 `bg.png` 在 agent 目录）你无法写入；SVG 等文本素材可直接 `write_file` 创建，PNG/JPG 等二进制文件你无法直接生成，需要用户手动放入。
 - **引用项目内其它位置的文件**：用 `../` 跳出 agent 目录（`../` 到 `.spherse/`，再 `../` 到项目根）：
   ```css
   [data-chat-root] {
