@@ -51,6 +51,9 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.6",
     "@types/diff": "^7.0.2",
     "@types/js-yaml": "^4.0.9",
     "@types/qrcode": "^1.5.6",

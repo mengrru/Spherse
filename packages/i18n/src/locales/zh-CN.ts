@@ -719,6 +719,10 @@ export const zhCN = {
   "chat.approvalNotDelivered": "操作未送达，连接可能已断开",
   // Composer 底部「附加图片」按钮的悬停提示
   "chat.attachImage": "附加图片",
+  // Composer 底部「发送」按钮（纸飞机图标）的悬停提示
+  "chat.send": "发送",
+  // Composer 流式生成中「停止」按钮（方块图标）的悬停提示
+  "chat.stop": "停止",
   // 附加图片在压缩或上传过程中失败时的错误提示，{message} 为错误信息
   "chat.imageAttachFailed": "添加图片失败：{message}",
   // Composer 待发送图片缩略图上的「移除」按钮悬停提示

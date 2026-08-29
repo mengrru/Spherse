@@ -169,7 +169,7 @@ src/test/
 
 ## 风险与对策
 
-1. **RTL auto-cleanup 失效**（vitest 未开 globals）：setup 显式 `afterEach(cleanup)`，Phase 1 试点验证无跨测试 DOM 泄漏。
+1. **RTL auto-cleanup 失效**（vitest 未开 globals）：setup 显式 `afterEach(cleanup)`，Phase 1 试点验证无跨测试 DOM 泄漏。**试点发现的两个补充事实**：(a) vitest 4 的 fake timers 与 userEvent 并存需 `vi.useFakeTimers({ shouldAdvanceTime: true })`，否则 userEvent 内部调度永不触发、测试超时；(b) vitest 的 afterEach 按注册逆序执行，setup 级 cleanup 在测试文件 afterEach **之后**运行——组件卸载副作用（如 Composer 卸载时把草稿写回 localStorage）会污染下一个测试，此类测试需在自身 afterEach 里先显式 `cleanup()` 再清 storage。
 2. **base-ui 在 jsdom 的兼容性**：floating-ui 定位类组件 `getBoundingClientRect` 全 0，不影响 open 状态断言；focus/pointer 依赖按需 stub 或 `fireEvent` 兜底，沉淀进 `src/test/jsdom-stubs.ts`。
 3. **删除 structure 测试的覆盖缺口**：下期域的高价值断言（onboarding 防重入、welcome 防抖/key 强刷）已提升到本期补写；其余实现细节断言丢失是目标而非风险；全部被删 it 以归档清单附录在案，Phase 3 按单补写。
 4. **jest-dom 与 vitest 4 兼容**：jest-dom ≥6.6 提供 `/vitest` 入口，试点阶段先验证 matchers 类型与行为。

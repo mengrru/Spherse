@@ -353,6 +353,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "chat.connectionReconnect": "重新連線",
   "chat.approvalNotDelivered": "操作未送達，連線可能已中斷",
   "chat.attachImage": "附加圖片",
+  "chat.send": "發送",
+  "chat.stop": "停止",
   "chat.imageAttachFailed": "新增圖片失敗：{message}",
   "chat.removeAttachment": "移除圖片",
   "chat.approvalToastMessage": "一個 Agent 正在等待你的確認",
