@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import {
+
+import { closeApp } from "./helpers/electron";
   createChatProject,
   launchChatApp,
   getServerPort,
@@ -87,7 +89,7 @@ test("closing a streaming project disconnects its chat runtime", async () => {
     await page.waitForTimeout(2000);
     expect(sockets.opened).toBe(1);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -122,6 +124,6 @@ test("reopening a closed project after restart starts clean", async () => {
     await expect(page.locator("[data-chat-composer]")).toHaveCount(0);
     await expect(page.getByText("Spherse", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

@@ -3,6 +3,8 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createFileTreeProject, launchFileTreeApp } from "./helpers/file-tree";
 
+import { closeApp } from "./helpers/electron";
+
 test.setTimeout(60_000);
 
 function sidebar(page: import("@playwright/test").Page) {
@@ -30,7 +32,7 @@ test("file tree shows root files and directories", async () => {
     expect(sidebarBox).not.toBeNull();
     expect(sidebarBox!.width).toBeCloseTo(260, -1);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -62,7 +64,7 @@ test("folder expand and collapse", async () => {
     await expect(treeButton(page, "components")).not.toBeVisible();
     await expect(treeButton(page, "main.ts")).not.toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -86,7 +88,7 @@ test("re-expanding a collapsed folder shows fresh content", async () => {
     await srcRow.click();
     await expect(treeButton(page, "new-file.ts")).toBeVisible({ timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -114,7 +116,7 @@ test("deeply nested file name truncates with ellipsis", async () => {
       sidebarBox!.x + sidebarBox!.width + 1,
     );
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -136,7 +138,7 @@ test("create a new file via context menu", async () => {
 
     await expect(treeButton(page, "notes.md")).toBeVisible({ timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -157,7 +159,7 @@ test("create a new folder via context menu", async () => {
 
     await expect(treeButton(page, "images")).toBeVisible({ timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -176,7 +178,7 @@ test("cancel creating a file with Escape", async () => {
 
     await expect(input).not.toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -201,7 +203,7 @@ test("delete a file via context menu and confirm", async () => {
 
     await expect(guideRow).not.toBeVisible({ timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -227,7 +229,7 @@ test("delete an expanded directory removes it with its subtree", async () => {
     await expect(treeButton(page, "src")).not.toBeVisible({ timeout: 5000 });
     await expect(treeButton(page, "components")).not.toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -250,7 +252,7 @@ test("cancel deletion via alert dialog", async () => {
     await expect(dialog).not.toBeVisible();
     await expect(guideRow).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -273,6 +275,6 @@ test("sidebar does not expand when file names overflow", async () => {
     expect(afterExpandBox).not.toBeNull();
     expect(Math.abs(afterExpandBox!.width - initialBox!.width)).toBeLessThan(2);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

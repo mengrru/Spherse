@@ -10,6 +10,21 @@ const appRoot = path.resolve(__dirname, "../..");
 const mainEntry = path.join(appRoot, "dist", "main", "index.js");
 const rendererEntry = path.join(appRoot, "dist", "renderer", "index.html");
 
+export async function closeApp(app: ElectronApplication | undefined): Promise<void> {
+  if (!app) return;
+  try {
+    await Promise.race([
+      app.close(),
+      new Promise<void>((_, reject) => setTimeout(() => reject(new Error("app.close timeout")), 20_000)),
+    ]);
+  } catch {
+    const pid = app.process()?.pid;
+    if (pid) {
+      try { process.kill(pid, "SIGKILL"); } catch { /* already dead */ }
+    }
+  }
+}
+
 export interface TestProject {
   root: string;
   contentPath: string;

@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -131,7 +133,7 @@ test("openFile action navigates from iframe", async () => {
       ),
     );
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -159,7 +161,7 @@ test("createSession action navigates from iframe", async () => {
       page.getByPlaceholder("输入消息... (Shift+Enter 换行)"),
     ).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -192,7 +194,7 @@ test("unknown action is ignored", async () => {
     await page.waitForTimeout(500);
     expect(page.url()).toBe(urlBefore);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -230,7 +232,7 @@ test("rate limit blocks excess calls", async () => {
     await page.waitForTimeout(2000);
     expect(navigatedCount).toBeLessThanOrEqual(10);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -291,7 +293,7 @@ test("openSession action navigates to an existing session without sending a mess
     // openSession must NOT send a message — the session stays empty.
     expect(await getSessionMessageCount(page, project.projectId, sessionId)).toBe(0);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -313,6 +315,6 @@ test("showToast action renders a sonner toast", async () => {
       timeout: 10_000,
     });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

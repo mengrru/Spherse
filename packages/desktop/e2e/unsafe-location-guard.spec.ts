@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -67,7 +69,7 @@ test("declining the unsafe location keeps the project unopened", async () => {
     expect(dialogs).toHaveLength(1);
     expect(dialogs[0]).toEqual({ kind: "confirmUnsafeLocation", detail: expect.any(String) });
   } finally {
-    await app?.close();
+    await closeApp(app);
   }
 });
 
@@ -105,7 +107,7 @@ test("confirming the unsafe location opens the project", async () => {
       detail: expect.stringContaining("my-project"),
     });
   } finally {
-    await app?.close();
+    await closeApp(app);
   }
 });
 
@@ -141,6 +143,6 @@ test("startup warns about restored projects inside the unsafe zone", async () =>
       detail: expect.stringContaining("my-project"),
     });
   } finally {
-    await app?.close();
+    await closeApp(app);
   }
 });

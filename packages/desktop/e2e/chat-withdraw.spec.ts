@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
+
+import { closeApp } from "./helpers/electron";
   createChatProject,
   launchChatApp,
   getServerPort,
@@ -54,7 +56,7 @@ test("withdraw button removes the last user turn after server confirms", async (
     await expect(page.locator("text=Answer")).toHaveCount(0);
     expect(received).toEqual(["withdraw"]);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -102,6 +104,6 @@ test("withdraw failure shows error without retry affordance", async () => {
     await expect(page.locator("[data-chat-retry]")).toHaveCount(0);
     await expect(page.locator("text=question")).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

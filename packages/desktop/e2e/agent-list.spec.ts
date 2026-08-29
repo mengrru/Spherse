@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -141,7 +143,7 @@ test("right-click session row opens context menu with rename, rename updates tit
 
     await expect(page.getByText("My Renamed Session")).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -173,7 +175,7 @@ test("rename with empty input shows validation error and keeps editing", async (
 
     await expect(page.getByText("Valid Name")).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -205,7 +207,7 @@ test("escape cancels rename without saving", async () => {
     const titleAfterCancel = await sessionRow.textContent();
     expect(titleAfterCancel).toBe(originalTitle);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -224,7 +226,7 @@ test("all agents are collapsed by default", async () => {
     await expect(agentTrigger(page, "Researcher")).not.toHaveAttribute("data-panel-open", "");
     await expect(agentTrigger(page, "Reviewer")).not.toHaveAttribute("data-panel-open", "");
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -249,6 +251,6 @@ test("expanding all agents keeps them all open — no auto-collapse", async () =
     await expect(agentPanel(page, "Writer")).toHaveAttribute("data-open", "");
     await expect(agentPanel(page, "Researcher")).toHaveAttribute("data-open", "");
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

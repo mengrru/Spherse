@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -161,7 +163,7 @@ async function assertCardReceivesRuntime(
     const frame = page.frameLocator("[data-chat-message] iframe").first();
     await expect(frame.locator("#out")).toHaveText(`sid:${sessionId}`, { timeout: 15_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 }
 

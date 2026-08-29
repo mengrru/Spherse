@@ -5,6 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createFileTreeProject } from "./helpers/file-tree";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -50,6 +52,6 @@ test("app launches and shows main UI", async () => {
     await expect(page.locator("aside")).toBeVisible();
     await expect(page.getByText("文件")).toBeVisible();
   } finally {
-    await app?.close();
+    await closeApp(app);
   }
 });

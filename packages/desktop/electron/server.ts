@@ -3,12 +3,32 @@ import { app } from "electron";
 import { createMultiProjectServer } from "@spherse/server";
 import type { ProjectRegistry } from "@spherse/server";
 import type { SamplingParams, ThinkingLevel } from "@spherse/core";
+import { settleWithin } from "@spherse/core";
 import { getSettings, getMobileAccess } from "./settings.js";
 import { getAppModelCatalog } from "./model-catalog.js";
 
 interface ServerHandle {
   fastify: FastifyInstance;
   registry: ProjectRegistry;
+}
+
+const SERVER_STAGE_TIMEOUT_MS = 10_000;
+
+function logStageOutcome(stage: string, outcome: "timeout" | "error", detail?: unknown): void {
+  if (outcome === "error") {
+    console.error(`[server] shutdown stage "${stage}" failed:`, detail);
+  } else {
+    console.error(`[server] shutdown stage "${stage}" timed out after ${SERVER_STAGE_TIMEOUT_MS}ms, continuing`);
+  }
+}
+
+async function closeServerHandle(handle: ServerHandle): Promise<void> {
+  await settleWithin(handle.registry.removeAll(), SERVER_STAGE_TIMEOUT_MS, (outcome, detail) => {
+    logStageOutcome("registry.removeAll", outcome, detail);
+  });
+  await settleWithin(handle.fastify.close(), SERVER_STAGE_TIMEOUT_MS, (outcome, detail) => {
+    logStageOutcome("fastify.close", outcome, detail);
+  });
 }
 
 let serverHandle: ServerHandle | null = null;
@@ -40,13 +60,13 @@ export async function ensureServer(): Promise<void> {
 
 export async function restartServerWithAuth(token: string | undefined): Promise<void> {
   if (serverHandle) {
-    registeredProjects = serverHandle.registry.listInfo().map((info) => ({
+    const handle = serverHandle;
+    serverHandle = null;
+    registeredProjects = handle.registry.listInfo().map((info) => ({
       root: info.rootPath,
       lastOpened: info.lastOpened,
     }));
-    await serverHandle.registry.removeAll();
-    await serverHandle.fastify.close();
-    serverHandle = null;
+    await closeServerHandle(handle);
   }
   activeAccessToken = token;
 }
@@ -96,9 +116,9 @@ export function updateThinkingLevel(thinkingLevel: ThinkingLevel | undefined): v
 
 export async function stopServer(): Promise<void> {
   if (!serverHandle) return;
-  await serverHandle.registry.removeAll();
-  await serverHandle.fastify.close();
+  const handle = serverHandle;
   serverHandle = null;
+  await closeServerHandle(handle);
   registeredProjects = [];
   activeAccessToken = undefined;
 }

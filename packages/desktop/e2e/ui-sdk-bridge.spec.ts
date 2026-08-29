@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -155,7 +157,7 @@ test("window.spherse is injected with the documented surface", async () => {
       { timeout: 10_000 },
     );
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -172,7 +174,7 @@ test("spherse.openFile() (fire) navigates the host", async () => {
       ),
     );
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -188,7 +190,7 @@ test("spherse.data.set/get round-trip resolves via call()", async () => {
     await frame.locator("#btn-data-get").click();
     await expect(frame.locator("#status")).toHaveText("get:99", { timeout: 10_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -201,7 +203,7 @@ test("spherse.api.agents.list() bridges to the server HTTP allowlist", async () 
     await frame.locator("#btn-agents").click();
     await expect(frame.locator("#status")).toHaveText("agents:1 agents", { timeout: 10_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -219,7 +221,7 @@ test("spherse.api.fileTree() bridges to the server HTTP allowlist", async () => 
     // At least AGENTS.md, the html fixture, and the target file exist.
     expect(count).toBeGreaterThanOrEqual(3);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -234,7 +236,7 @@ test("spherse.api.call() rejects when the op is not allowlisted", async () => {
       timeout: 10_000,
     });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -254,6 +256,6 @@ test("spherse.events.on() receives filtered file:update events", async () => {
       { timeout: 10_000 },
     );
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

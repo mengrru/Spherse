@@ -63,6 +63,7 @@ export async function createMultiProjectServer(
         },
       },
     },
+    forceCloseConnections: true,
   });
 
   await fastify.register(cors, { origin: true });
