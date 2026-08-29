@@ -107,10 +107,10 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
   }
   ```
   注意 agent 目录根下的其它未归类文件（如直接放 `bg.png` 在 agent 目录）你无法写入；SVG 等文本素材可直接 `write_file` 创建，PNG/JPG 等二进制文件你无法直接生成，需要用户手动放入。
-- **引用项目内其它位置的文件**：用 `../` 跳出 agent 目录（`../` 到 `.spherse/`，再 `../` 到项目根）：
+- **引用项目内其它位置的文件**：用 `../` 逐级跳出 agent 目录（`../` 到 `.spherse/agents/`，`../../` 到 `.spherse/`，`../../../` 到项目根）：
   ```css
   [data-chat-root] {
-    background-image: url(../assets/welcome.png);   /* 项目根 assets/ 下 */
+    background-image: url(../../../assets/welcome.png);   /* 项目根 assets/ 下 */
   }
   ```
 - **远程 URL**：`url(https://example.com/texture.png)` 照常工作，不受影响。

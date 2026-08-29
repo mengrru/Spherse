@@ -24,9 +24,9 @@ project-root/
 │   │       ├── triggers/          # 惰性：首次保存触发器时创建
 │   │       │   ├── index.yml
 │   │       │   └── logs.jsonl
-  │   │       ├── skills/            # 可选：agent-level 私有 skill
-  │   │       │   └── <skill-name>/SKILL.md
-  │   │       └── assets/            # 可选：agent 私有静态资源（theme 配图、字体等），LLM 读写、server 只读
+│   │       ├── skills/            # 可选：agent-level 私有 skill
+│   │       │   └── <skill-name>/SKILL.md
+│   │       └── assets/            # 可选：agent 私有静态资源（theme 配图、字体等），LLM 读写、server 只读
 │   ├── generated-images/          # generate_image 落盘（首次生图时创建）
 │   ├── attachments/               # 聊天图片上传落盘
 │   └── skills/                    # 新建项目时创建的空目录（用户自建 project skill）

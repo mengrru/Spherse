@@ -48,7 +48,7 @@
 | Tool（AgentTool） | agent 可调用的操作，工厂函数模式 `createXxxTool(projectRoot)` | [architecture/capabilities.md](architecture/capabilities.md) |
 | 审批门（ApprovalGate） | 危险工具 execute 前的人工确认（`withApproval` 包装） | [architecture/security.md](architecture/security.md) |
 | 问答门（askGate） | `ask_user` 工具向用户提问的同步等待机制 | [architecture/capabilities.md](architecture/capabilities.md) |
-| category（PATH_PATTERNS） | 路径语义分类（17 类 + `userFiles` 兜底），access policy 的裁决基础 | [architecture/security.md](architecture/security.md) |
+| category（PATH_PATTERNS） | 路径语义分类（18 类 + `userFiles` 兜底），access policy 的裁决基础 | [architecture/security.md](architecture/security.md) |
 | llmAccessPolicy / serverAccessPolicy | LLM 工具与 server 路由各自的白名单裁决器，基于 category | [architecture/security.md](architecture/security.md) |
 | FileWriteMutex | 装配点创建、全链路注入的共享文件写互斥（防并发写撕裂） | [architecture/core.md](architecture/core.md) |
 | ModelCatalog | 模型目录；所有权在 desktop main 组合根，注入链上不自建 | [architecture/desktop.md](architecture/desktop.md) |
