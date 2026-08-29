@@ -11,7 +11,7 @@ const appRoot = path.resolve(__dirname, "..");
 const releaseDir = path.join(appRoot, "release");
 
 const executableEnv = process.env.SPHERSE_SMOKE_EXECUTABLE;
-const smokeEnabled = executableEnv !== undefined || process.env.SPHERSE_SMOKE === "1";
+const smokeEnabled = !!executableEnv || process.env.SPHERSE_SMOKE === "1";
 const expectedVersion = process.env.SPHERSE_SMOKE_VERSION;
 
 test.skip(!smokeEnabled, "packaged smoke test requires SPHERSE_SMOKE=1 or SPHERSE_SMOKE_EXECUTABLE");
@@ -41,7 +41,11 @@ async function discoverExecutable(): Promise<string> {
     return binary;
   }
   if (process.platform === "win32") {
-    const binary = path.join(releaseDir, "win-unpacked", "Spherse.exe");
+    const dirs = ["win-unpacked", "win-arm64-unpacked"].filter((dir) => existsSync(path.join(releaseDir, dir)));
+    if (dirs.length === 0) {
+      throw new Error(`no Windows unpacked directory (win*-unpacked) under ${releaseDir}`);
+    }
+    const binary = path.join(releaseDir, dirs[0], "Spherse.exe");
     if (!existsSync(binary)) {
       throw new Error(`packaged binary not found: ${binary}`);
     }
@@ -59,13 +63,14 @@ test("packaged app launches, mounts renderer and serves /health", async () => {
     app = await electron.launch({
       executablePath: executable,
       args: [`--user-data-dir=${userDataDir}`],
+      timeout: 60_000,
       env: {
         ...process.env,
         ELECTRON_ENABLE_LOGGING: "1",
       },
     });
 
-    const page = await app.firstWindow();
+    const page = await app.firstWindow({ timeout: 60_000 });
     expect(page).not.toBeNull();
     await page.waitForLoadState("domcontentloaded");
 
