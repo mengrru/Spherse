@@ -43,7 +43,7 @@ Process docs (`docs/dev/{features,infra,bugfix,investigation}/...`) should alrea
 
 ## Writing rules
 
-- `docs/official/` describes **current** conventions and contracts, not history or implementation narratives. Update in place; do not append changelog-style entries.
+- `docs/official/` describes **current** conventions and contracts, not history or implementation narratives. Update in place; do not append changelog-style entries. Rationale (why / trade-offs / counter-examples) lives in ADRs or design docs — official text states the conclusion only, at most with one link to the ADR.
 - Keep the single-source principle: a fact lives in exactly one layer — `AGENTS.md` (navigation + red lines) → `docs/official/` (cross-package truth) → package README (in-package rules). Everywhere else, link.
 - When code and official docs disagree, treat it as a bug: either the doc is stale (fix it to match code) or the code violates a documented contract (flag it to the user instead of silently rewriting the doc).
 - Do not retro-edit historical `docs/dev/` records to match later refactors; they are allowed to be stale. `docs/dev/backlog.md` is the exception — it is a live document.

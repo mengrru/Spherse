@@ -9,12 +9,12 @@
 - `createMultiProjectServer({ defaultModel?, sampling?, thinkingLevel?, auth?, port?, modelCatalog?, appVersion? })` 创建单实例，返回 `{ fastify, registry, logger, addAllowedHosts, removeAllowedHosts }`
 - 初始化顺序：logger → appVersion → Fastify（debug 级 + query redact）→ **Host 校验 hook → 认证制 CORS hook** → websocket → multipart（5MB）→ 错误处理器
   - 之后：ProjectRegistry → ChatSessionHub → auth hook → 全部路由 → chat / bus WS handler
-  - 三个 onRequest hook 的注册顺序即执行顺序（Host → CORS → auth），CORS hook 对 OPTIONS 直接 204 短路——preflight 不携带凭据，若在 auth 之后注册会被 401 短路破坏所有跨域客户端
-  - hook 均注册在根实例（不包 `fastify.register`，encapsulation 上下文内 hook 不作用于全局路由）
-- **端口**：默认固定 53972、只绑 `127.0.0.1`；`EADDRINUSE` 才回退 OS 随机端口；端口确定性不作为安全手段
+  - onRequest hook 顺序固定 Host → CORS → auth；CORS hook 对 OPTIONS 直接 204 短路
+  - hook 注册在根实例（`fastify.register` 封装上下文内不生效）
+- **端口**：默认固定 53972、只绑 `127.0.0.1`；`EADDRINUSE` 才回退 OS 随机端口
 - desktop 启动链：`app.whenReady` → `ensureServer()`（恒传 `auth.accessToken = getServerToken()`）→ 重放已注册项目 → 重放动态 host
   - `ensureServer` 以 settings 的 model/sampling/thinkingLevel、server token、`getAppModelCatalog()` 单例与 app 版本建服务
-  - server 重建（regenerate token）后由 `syncAllowedHosts()` 按当前 mobileAccess 状态重放动态 host——动态集合是实例状态，重启即空
+  - server 重建（regenerate token）后由 `syncAllowedHosts()` 按当前 mobileAccess 状态重放动态 host
 - shutdown：tunnel stop → `registry.removeAll()`（allSettled）→ `fastify.close()`
 
 ## ProjectRegistry
@@ -29,14 +29,14 @@
 
 安全模型的由来见 [ADR-0010](../../dev/decisions/0010-server-auth-model.md)。
 
-- 安全模型 = **loopback 绑定 + always-on access token + Host 校验**；loopback 只解决网络可达性，不防御用户浏览器中恶意网页的 drive-by 请求（认证才解决）
+- 安全模型 = **loopback 绑定 + always-on access token + Host 校验**
 - **always-on token**：desktop 端 `getServerToken()` 恒有值（迁移链：`serverToken` 顶层 key → legacy `mobileAccess.token` → 生成并持久化），auth hook 恒注册；仅 server 包独立使用（如测试）可不传 auth
-  - 公开路径仅 `/health` 与 `/api/connection/info`（版本信息，信息暴露极小）
+  - 公开路径仅 `/health` 与 `/api/connection/info`
   - token 呈现：HTTP `Authorization: Bearer` → query `token` → preview 路径 token（`/preview/__auth/<token>/...`，为 iframe/img 等无法带 header 的场景设计）；WS 只接受 query `token`；比较用 `timingSafeEqual`；`verifyPresentedToken` 是 auth hook 与 CORS hook 的单一校验来源
-  - 裸调本地 API（脚本/curl）需从 desktop settings 文件读 `serverToken`
-- **认证制 CORS**（`src/cors.ts`）：preflight 无条件反射放行（204，仅授权"发送"）；actual response 仅当请求携带有效 token 才设 `ACAO: <req Origin>` + `Vary: Origin`，永不 `credentials`。PWA 任意部署 Origin → 静态 allowlist 不可行，"持有有效 token"即身份证明；无 token 的跨域请求可达但不可读（公开路径同样适用）
-- **Host 校验**：静态集合 `localhost` / `127.0.0.1` / `[::1]`（任意端口）+ 动态集合（tunnel `publicUrl`、manual `publicDomain` 的 hostname，经 `URL` 解析，缺失/不可解析拒绝）——防 DNS rebinding；Host hook 覆盖 WS upgrade（handshake 走完整 fastify 生命周期）
-- WS 不做 Origin allowlist：PWA Origin 任意、静态列表必误杀；WS 身份防线是 token，rebinding 由 Host 校验拦截
+  - 裸调本地 API（脚本/curl）从 desktop settings 文件读 `serverToken`
+- **认证制 CORS**（`src/cors.ts`）：preflight 反射放行（204）；actual response 仅当请求携带有效 token 才设 `ACAO: <req Origin>` + `Vary: Origin`；永不设置 credentials
+- **Host 校验**：静态集合 `localhost` / `127.0.0.1` / `[::1]`（任意端口）+ 动态集合（tunnel `publicUrl`、manual `publicDomain` 的 hostname，经 `URL` 解析），缺失或不可解析一律拒绝；覆盖 WS upgrade
+- WS 不做 Origin 校验：身份防线是 token，rebinding 由 Host 校验拦截
 - quick 模式经 Cloudflare tunnel 把 loopback 端口穿隧道；token 轮换（regenerate）重建 server 实例
 
 ## 路由
