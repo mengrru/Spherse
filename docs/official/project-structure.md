@@ -285,6 +285,7 @@ spherse/
 │   │           ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel/onFloatFile/floatedFilePaths，被 user-file-panel 与 skill-panel 共用
 │   │           ├── floating-frame/       # 通用浮动窗口 chrome（拖拽/调整大小、titlebar、close），由 floating-chat 与 floating-content-browser 复用；hookPrefix 参数生成各自 data-*-float-* 主题钩子
 │   │           └── markdown-content/     # Markdown 渲染域：MarkdownContent（统一渲染组件，plain 模式用于用户消息）、CodeBlock、markdown-code-text（代码块文本抽取）、remark-plain-structure（plain 模式 remark 插件：list/table/thematicBreak 还原为带字面标记的文本行，保序号/行结构）
+│   │       └── test/                    # 组件测试共享工具：render.tsx（renderWithProviders + createTestQueryClient）、host-bridge.ts（createMockHostBridge）、jest-dom.d.ts（vitest matcher 类型入口）
 │   ├── desktop/                      # @spherse/desktop — Electron 桌面壳（main/preload/electron 基础设施）
 │   │   ├── electron.vite.config.ts   # electron-vite 配置（main + preload + renderer，renderer root 指向 ../app）
 │   │   ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS、extraResources、publish GitHub Releases）

@@ -152,9 +152,20 @@ npm run build --workspace=packages/desktop
 ```
 
 - 修改 Query/store/reducer 时补充对应单元测试，覆盖项目隔离、失效、竞态和清理。
-- Query 相关测试应每测试新建 QueryClient，或在 `beforeEach` 显式清空共享 test cache，禁止跨测试泄漏状态。
+- Query 相关测试应每测试新建 QueryClient（`createTestQueryClient()`），或在 `beforeEach` 显式清空共享 test cache，禁止跨测试泄漏状态。
 - 按影响面运行 Electron E2E。涉及项目恢复、路由、文件树、content browser、chat/session 或 UI SDK 时，优先运行对应 spec。
 - 合并或发布前运行根目录 `npm run verify:e2e`。
+
+### 组件测试（Testing Library）
+
+组件/hook 的渲染与交互测试使用 Testing Library（`@testing-library/react` + `user-event` + `jest-dom`，jsdom 环境）：
+
+1. 新组件/hook 测试一律 `render` / `renderHook` / `screen` / `userEvent`，禁止新增 `createRoot` 手写样板。
+2. Provider 搭建走 `src/test/render.tsx` 的 `renderWithProviders`（ProjectProvider + MemoryRouter + 可选 QueryClient/HostBridge/I18n）；host bridge mock 一律走 `src/test/host-bridge.ts` 的 `createMockHostBridge`。
+3. 查询优先级：`getByRole` / `getByLabelText` / `getByDisplayValue`；`data-testid` 仅在无语义属性可用时使用；禁止图标类名查询。图标按钮必须有 `title`/`aria-label` 提供可访问名。
+4. fake timers 场景使用 `vi.useFakeTimers({ shouldAdvanceTime: true })`，否则 userEvent 内部调度会挂起。
+5. 组件卸载副作用会写状态（如 Composer 卸载回写草稿 localStorage）时，测试需在自身 `afterEach` 先显式 `cleanup()` 再清理 storage——vitest afterEach 按注册逆序执行，setup 级 cleanup 在测试文件 afterEach 之后才运行。
+6. `.structure.test` 仅允许架构不变量（全 src 扫描、跨文件完整性、层边界负断言），禁止断言单文件实现细节；行为断言一律写渲染测试。semantic token / `dark:` / 硬编码颜色由 ESLint `no-restricted-syntax` 规则守卫（`components/ui` primitives 豁免）。
 
 ## 开发检查清单
 
