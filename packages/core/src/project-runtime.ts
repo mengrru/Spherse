@@ -8,6 +8,9 @@ import type { DataStore } from "./capabilities/data/index.js";
 import type { AgentConfigChangeKind, Capability } from "./kernel/capability.js";
 import type { AgentProfile } from "./types.js";
 import { type Logger, createSilentLogger } from "./logger.js";
+import { settleWithin } from "./utils/settle-within.js";
+
+const CAPABILITY_SHUTDOWN_TIMEOUT_MS = 5_000;
 
 export class ProjectRuntime {
   readonly projectManager: ProjectManager;
@@ -99,7 +102,22 @@ export class ProjectRuntime {
     this.logger.info({ projectId: this.projectId }, "project runtime shutting down");
     await this.sessionRuntime.closeAll();
     for (const capability of this.capabilities) {
-      await capability.shutdown?.();
+      await settleWithin(
+        capability.shutdown?.(),
+        CAPABILITY_SHUTDOWN_TIMEOUT_MS,
+        (outcome, detail) => {
+          this.logger.warn(
+            {
+              projectId: this.projectId,
+              capability: capability.id,
+              outcome,
+              err: outcome === "error" ? detail : undefined,
+              timeoutMs: CAPABILITY_SHUTDOWN_TIMEOUT_MS,
+            },
+            "capability shutdown did not complete, continuing",
+          );
+        },
+      );
     }
     this.projectManager.close();
   }

@@ -6,7 +6,6 @@
 
 ## Bug
 
-- [ ] **E2E `app.close()` 间歇悬死（存量基建 flake）**：顺序启动多个 Electron E2E 实例时，`app.close()` 偶发 60s 悬死（无断言失败、无页面快照；逐步日志定位到 close 不返回）。干净 main 可复现，疑点在 server shutdown 链路（`stopServer` → `registry.removeAll()` → capability `shutdown`/sqlite/fs-watch 关闭竞态）。修复方向：给 shutdown 各环节加超时并审计具体卡住的 await；临时缓解可在 CI 重试。
 - [ ] **损坏项目滞留 openProjects 无移除入口**：项目打开失败（project.yaml 损坏等）后该路径一直留在 openProjects 设置里，每次启动重试失败记日志，暂无 UI 内移除 / 修复入口。参见 `docs/dev/bugfix/2026-08-27-project-open-overwrite/design.md`（#42 遗留）
 - [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。
 - [ ] **system-prompt XML 包裹对用户内容闭合标签不健壮**：`serializeSystemPrompt`（`packages/core/src/context/serialize.ts`）对 `<project-instructions>`/`<agent-profile>`/`<context-file>` 的 inner content 原样包裹、不转义。若用户的 AGENTS.md 或预载文件内含 `</project-instructions>` 等闭合标签，会破坏 system prompt 结构。需评估方案：对 inner content 转义、改用 CDATA、或在包裹时检测冲突标签；同时更新 `serialize.test.ts` 中「不转义 inner content」的现有断言。参见 `docs/dev/features/2026-07-02-context-engineering/design.md` §6.3

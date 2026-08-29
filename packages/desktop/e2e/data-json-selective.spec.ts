@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -148,7 +150,7 @@ test("20 parallel SDK writes through server DataStore lose nothing; $manifest st
     expect(onDisk.$manifest).toBeDefined();
     expect(onDisk.$manifest.mutations.addTodo.op).toBe("append");
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -168,7 +170,7 @@ test("data.mutate from page applies manifest mutations atomically", async () => 
       expect(t.id).toMatch(/^[0-9a-f-]{36}$/);
     }
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -185,6 +187,6 @@ test("data.entries excludes $-prefixed keys; $-key writes are rejected", async (
     await frame.locator("#btn-set-manifest").click();
     await expect(frame.locator("#manifest-result")).toContainText("rejected", { timeout: 15_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

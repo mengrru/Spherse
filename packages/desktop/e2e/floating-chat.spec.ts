@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -70,20 +72,6 @@ async function createSessionViaApi(page: Page, projectId: string, agentId: strin
   if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
   const { sessionId } = body as { sessionId: string };
   return sessionId;
-}
-
-async function closeApp(app: ElectronApplication) {
-  try {
-    await Promise.race([
-      app.close(),
-      new Promise<void>((_, reject) => setTimeout(() => reject(new Error("app.close timeout")), 5_000)),
-    ]);
-  } catch {
-    const pid = app.process()?.pid;
-    if (pid) {
-      try { process.kill(pid, "SIGKILL"); } catch { /* already dead */ }
-    }
-  }
 }
 
 async function navigateToProject(page: Page, projectId: string) {

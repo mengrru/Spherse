@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createFileTreeProject, launchFileTreeApp } from "./helpers/file-tree";
 
+import { closeApp } from "./helpers/electron";
+
 test.setTimeout(60_000);
 
 function sidebar(page: import("@playwright/test").Page) {
@@ -28,7 +30,7 @@ test("right-click float opens floating content window with file body", async () 
     await expect(page.locator("[data-content-float-root] [data-content-doc]")).toBeVisible({ timeout: 5000 });
     await expect(page.locator("[data-content-float-titlebar]")).toContainText("README.md");
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -48,7 +50,7 @@ test("markdown content scrolls within the float", async () => {
     });
     expect(scrollable).toBe(true);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -64,7 +66,7 @@ test("close button removes floating content window", async () => {
 
     await expect(page.locator("[data-content-float-root]")).toHaveCount(0, { timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -82,7 +84,7 @@ test("menu toggles to cancel-float when file is already floated", async () => {
     await page.getByRole("menuitem", { name: "取消浮窗" }).click();
     await expect(page.locator("[data-content-float-root]")).toHaveCount(0, { timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -100,7 +102,7 @@ test("multiple files can be floated simultaneously", async () => {
     await floatFile(page, "chapter1.md");
     await expect(page.locator("[data-content-float-root]")).toHaveCount(2, { timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -125,7 +127,7 @@ test("HTML file renders as preview iframe, not source", async () => {
     expect(iframeBox).not.toBeNull();
     expect(iframeBox!.height).toBeGreaterThan(rootBox!.height - titlebarBox!.height - 20);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -142,6 +144,6 @@ test("double-click title bar opens file in content browser and closes float", as
     await expect(page.locator("[data-content-float-root]")).toHaveCount(0, { timeout: 5000 });
     await expect(page).toHaveURL(new RegExp(`/content\\?path=${encodeURIComponent("README.md")}$`));
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

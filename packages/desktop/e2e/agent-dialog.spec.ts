@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -94,7 +96,7 @@ test("search file suggestions appear when typing in agent dialog", async () => {
     const suggestion = page.getByText("world/characters.md");
     await expect(suggestion).toBeVisible({ timeout: 5000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -117,7 +119,7 @@ test("clicking suggestion adds path as badge in agent dialog", async () => {
     const badge = page.locator("[data-slot='badge']").filter({ hasText: "world/locations.md" });
     await expect(badge).toBeVisible({ timeout: 3000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -137,6 +139,6 @@ test("enter key manually adds typed path in agent dialog", async () => {
     const badge = page.locator("[data-slot='badge']").filter({ hasText: "world/history/timeline.md" });
     await expect(badge).toBeVisible({ timeout: 3000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -126,7 +128,7 @@ test("data.set + data.get round trip", async () => {
     await frame.locator("#btn-get-score").click();
     await expect(frame.locator("#get-result")).toContainText("42", { timeout: 10_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -146,7 +148,7 @@ test("data.get nonexistent key returns null", async () => {
     await frame.locator("#btn-get-missing").click();
     await expect(frame.locator("#get-result")).toContainText("null", { timeout: 10_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -172,7 +174,7 @@ test("data.delete removes key", async () => {
     await frame.locator("#btn-get-score").click();
     await expect(frame.locator("#get-result")).toContainText("null", { timeout: 10_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -203,7 +205,7 @@ test("data persistence survives navigation", async () => {
     await frame2.locator("#btn-get-score").click();
     await expect(frame2.locator("#get-result")).toContainText("42", { timeout: 10_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -224,6 +226,6 @@ test("data.set with complex JSON value", async () => {
     await expect(frame.locator("#set-result")).toContainText('"name":"Alice"', { timeout: 10_000 });
     await expect(frame.locator("#set-result")).toContainText("[1,2,3]", { timeout: 10_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

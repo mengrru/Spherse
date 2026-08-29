@@ -47,6 +47,13 @@ describe("createMultiProjectServer port binding", () => {
     expect(address.port).toBe(port);
   });
 
+  it("enables forceCloseConnections so close cannot hang on leftover sockets", async () => {
+    const port = await getFreePort();
+    const server = await createMultiProjectServer({ port });
+    servers.push(server);
+    expect(server.fastify.initialConfig.forceCloseConnections).toBe(true);
+  });
+
   it("falls back to an OS-assigned port when the preferred port is in use", async () => {
     const port = await getFreePort();
     const blocker = await occupyPort(port);
