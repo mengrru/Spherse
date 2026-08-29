@@ -15,7 +15,31 @@ permissions:
   contents: write
 
 jobs:
+  # 发版门禁：lint + build + typecheck + 全 workspace 单测 + i18n check。
+  # 失败则 create-release/build 均不启动（不产生空 draft release，避免阻塞同 tag 重打）。
+  # workflow_dispatch 重发布跳过：原 tag push 时已通过验证，无需重复拖慢重发布。
+  verify:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.19
+
+      - name: Install dependencies (skip native compilation)
+        run: npm ci --ignore-scripts
+
+      - name: Download Electron binary
+        shell: bash
+        run: node node_modules/electron/install.js
+
+      - name: Verify (lint + build + typecheck + unit tests + i18n)
+        run: npm run verify
+
   create-release:
+    needs: verify
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:

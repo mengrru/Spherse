@@ -51,6 +51,7 @@ description: Use when the user says "发新版本", "release", "publish a new ve
 
 5. **确认 CI 触发**
    提示用户可在 GitHub Actions 页面查看构建进度。CI 会：
+   - verify 门禁（ubuntu 上跑 `npm run verify`：lint + build + typecheck + 单测 + i18n；失败则不建 release、不打包）
    - 创建 GitHub Release（`--generate-notes` 自动生成 release notes）
    - 构建 macOS arm64/intel DMG + Windows x64/arm64 EXE
    - 打包产物冒烟验证（`e2e/packaged-smoke.spec.ts`，仅在 arch 匹配的 job 上执行：mac arm64 / win x64；启动 unpacked 二进制验证 renderer 挂载 + server `/health` + 版本号同步）
