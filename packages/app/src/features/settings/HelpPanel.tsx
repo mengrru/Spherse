@@ -2,8 +2,7 @@ import { FieldGroup } from "../../components/ui/field";
 import { SectionTitle } from "./SectionTitle";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useI18n } from "@spherse/i18n/react";
-
-const DOCS_URL = "https://spherse.mengru.work/docs";
+import { DOCS_URL } from "../../lib/urls";
 
 export function HelpPanel() {
   const { t } = useI18n();

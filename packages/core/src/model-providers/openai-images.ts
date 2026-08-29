@@ -9,6 +9,8 @@ import { createImagesProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
 
 export type OpenaiImagesApi = "openai-images";
 
+const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
+
 export interface OpenaiImagesModelRecord {
   id: string;
   name: string;
@@ -26,7 +28,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
     name: "GPT Image 2",
     provider: "openai",
     api: "openai-images",
-    baseUrl: "https://api.openai.com/v1",
+    baseUrl: OPENAI_API_BASE_URL,
     input: ["text"],
     output: ["image"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -36,7 +38,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
     name: "GPT Image 1.5",
     provider: "openai",
     api: "openai-images",
-    baseUrl: "https://api.openai.com/v1",
+    baseUrl: OPENAI_API_BASE_URL,
     input: ["text"],
     output: ["image"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -46,7 +48,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
     name: "GPT Image 1",
     provider: "openai",
     api: "openai-images",
-    baseUrl: "https://api.openai.com/v1",
+    baseUrl: OPENAI_API_BASE_URL,
     input: ["text"],
     output: ["image"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -56,7 +58,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
     name: "GPT Image 1 Mini",
     provider: "openai",
     api: "openai-images",
-    baseUrl: "https://api.openai.com/v1",
+    baseUrl: OPENAI_API_BASE_URL,
     input: ["text"],
     output: ["image"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -66,7 +68,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
     name: "DALL·E 3",
     provider: "openai",
     api: "openai-images",
-    baseUrl: "https://api.openai.com/v1",
+    baseUrl: OPENAI_API_BASE_URL,
     input: ["text"],
     output: ["image"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },

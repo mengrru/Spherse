@@ -200,6 +200,7 @@ spherse/
 │   │       │   ├── electron-api.ts   # 全局 Window.electronAPI 类型声明（类型来自 @shared/electron-api）
 │   │       │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界，模块级 per-project 历史栈）
 │   │       │   ├── use-connection.ts  # useApiClient(projectId) / useConnection() — 基于 app-store connection 派生 ApiClient
+│   │       │   ├── urls.ts            # 官网域派生的集中 URL 常量（WEB_APP_URL/DOCS_URL/EXPLORE_URL/DOWNLOAD_PAGE_URL）
 │   │       │   ├── utils.ts          # shadcn/ui cn() 工具
 │   │       │   └── localstorage/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
@@ -351,7 +352,7 @@ spherse/
 │   │   │   └── themes/              # 轮播切换时动态加载的主题 CSS（覆盖 --sp-* 变量）
 │   │   └── src/
 │   │       ├── styles.css            # Tailwind v4 + --sp-* token 体系（从 app 精简复制）
-│   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）、changelog.ts（OSS changelog.json 拉取）及单测
+│   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）、changelog.ts（OSS changelog.json 拉取）、urls.ts（GitHub 仓库 URL 常量派生）及单测
 │   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型与 locale 工具，自建 catalog）
 │   │       │   ├── index.ts          # useLandingI18n hook + localStorage 持久化
 │   │       │   └── locales/          # zh-CN / zh-TW / en 三语

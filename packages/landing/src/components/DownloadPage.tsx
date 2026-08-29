@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, Download, ExternalLink } from "lucide-react";
 import {
-  FALLBACK_URL,
   fetchLatestManifest,
   type Manifest,
   type Platform,
 } from "../lib/release";
 import { fetchChangelog, type Changelog } from "../lib/changelog";
+import {
+  GITHUB_RELEASES_LATEST_URL,
+  GITHUB_RELEASES_TAG_URL_BASE,
+} from "../lib/urls";
 import { InstallTip } from "./InstallTip";
 import type { TranslationKey } from "../i18n";
-
-const GITHUB_TAG_URL_BASE = "https://github.com/mengrru/Spherse/releases/tag";
 
 const TYPE_BADGE_CLASS: Record<string, string> = {
   feat: "bg-success/10 text-success",
@@ -137,7 +138,7 @@ export function DownloadPage({ t }: DownloadPageProps) {
           </div>
         ) : showFallback ? (
           <a
-            href={FALLBACK_URL}
+            href={GITHUB_RELEASES_LATEST_URL}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => {
@@ -189,7 +190,7 @@ export function DownloadPage({ t }: DownloadPageProps) {
                       />
                     </button>
                     <a
-                      href={`${GITHUB_TAG_URL_BASE}/${release.tag}`}
+                      href={`${GITHUB_RELEASES_TAG_URL_BASE}/${release.tag}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={t("download.viewOnGithub")}

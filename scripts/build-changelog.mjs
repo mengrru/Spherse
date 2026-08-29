@@ -98,12 +98,14 @@ export function buildChangelog(releases, now = new Date()) {
   };
 }
 
+const GITHUB_API_ORIGIN = "https://api.github.com";
+
 export async function fetchAllPages(repo, { token, fetchImpl = globalThis.fetch } = {}) {
   if (!fetchImpl) throw new Error("fetch is unavailable");
   const all = [];
   let page = 1;
   for (;;) {
-    const url = `https://api.github.com/repos/${repo}/releases?per_page=100&page=${page}`;
+    const url = `${GITHUB_API_ORIGIN}/repos/${repo}/releases?per_page=100&page=${page}`;
     const res = await fetchImpl(url, {
       headers: {
         Accept: "application/vnd.github+json",
