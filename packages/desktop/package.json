@@ -13,6 +13,7 @@
     "test": "vitest run",
     "pretest:e2e": "node ../../scripts/rebuild-native.mjs",
     "test:e2e": "npm run build --workspace=@spherse/i18n && npm run build && playwright test -c playwright.config.ts",
+    "test:smoke": "playwright test -c playwright.config.ts e2e/packaged-smoke.spec.ts",
     "pack": "electron-builder --dir",
     "predist": "node ../../scripts/rebuild-native.mjs && electron-vite build",
     "dist": "electron-builder",

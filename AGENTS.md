@@ -141,6 +141,7 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
 
 - **E2E 验证选择**：feature 实现完成后，按变更影响面选择可能受影响的 E2E 场景运行，不要求全量；单 spec：`npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts`，或 `-g` 按 case 名过滤
   - 改动涉及 Electron 启动、项目恢复、路由、store、server API、文件树、content browser、chat/session、文本选择发起会话、native dependency 或 E2E helper 时，优先运行对应 E2E；合并/发布前再跑 `npm run verify:e2e`
+  - 改动涉及打包链（electron-builder 配置、asar / 外置 node_modules、native dependency 重编、安装包产物）时，跑 `npm run pack -w @spherse/desktop && SPHERSE_SMOKE=1 npm run test:smoke -w @spherse/desktop` 验证打包产物本身（release CI 会在 arch 匹配的 job 上自动执行该 smoke）
 
 ## 编码规范（仓库级红线）
 
