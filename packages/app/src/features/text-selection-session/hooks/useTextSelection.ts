@@ -40,6 +40,12 @@ function getHighlightRects(range: Range): HighlightRect[] {
   return fallback ? [fallback] : [];
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable) return true;
+  return target.closest("input, textarea") !== null;
+}
+
 function getButtonPosition(event: MouseEvent) {
   const minX = VIEWPORT_PADDING + BUTTON_ESTIMATED_WIDTH / 2;
   const maxX = window.innerWidth - VIEWPORT_PADDING - BUTTON_ESTIMATED_WIDTH / 2;
@@ -94,6 +100,23 @@ export function useTextSelection({
     document.addEventListener("mouseup", handleMouseUp);
     return () => document.removeEventListener("mouseup", handleMouseUp);
   }, [disabled]);
+
+  useEffect(() => {
+    if (!selectionState) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "c") return;
+      if (isEditableTarget(event.target)) return;
+      event.preventDefault();
+      navigator.clipboard
+        .writeText(selectionState.text)
+        .then(() => setSelectionState(null))
+        .catch(() => {});
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectionState]);
 
   useEffect(() => {
     if (!selectionState) return;
