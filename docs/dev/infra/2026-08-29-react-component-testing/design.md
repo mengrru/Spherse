@@ -188,3 +188,171 @@ npm run verify                        # lint + build + typecheck + test 全链
 - `packages/app/README.md`：「测试与验证」节写入红线与工具用法
 - `docs/official/project-structure.md`：packages/app 新增 `src/test/` 目录
 - `docs/dev/backlog.md`：Phase 3 遗留补测条目
+
+## 附录：Phase 2 删除的 structure 断言清单
+
+Phase 3 按单补写时以此为准；标注「已补」的条目已在本期以 TL 行为测试覆盖。
+
+```
+=== components/markdown-content/CodeBlock.structure.test.ts 【已补：CodeBlock.test.tsx 覆盖，直接删】
+- keeps the data-md-code theme hook on the inner pre, not the wrapper div
+- guards against a missing navigator.clipboard before writing
+=== components/ui/combobox.structure.test.ts 【不补：Tailwind class 复读】
+- keeps the input at fixed height when the popup content overflows
+=== ui-sdk/UiSdkBridge.structure.test.ts 【不补：hook 名清单复读，挂载清单由 ProjectRuntimeBridges.structure 覆盖】
+- owns UI SDK project integration
+=== features/settings/use-settings-form.structure.test.ts 【已补：use-settings-form.test.tsx renderHook】
+- reads text sampling from settings on init
+- includes sampling in the text group of the save payload
+- omits sampling from the image group of the save payload
+- exposes a single patchSampling (no setTemperature/resetTemperature/setTopP/resetTopP)
+- persists sampling immediately via mergeSampling + save
+- preserves sampling (via spread of data) when disconnecting a provider
+- does not read image sampling from settings on init
+- reads text thinkingLevel from settings on init
+- includes thinkingLevel in the text group of the save payload
+- omits thinkingLevel from the image group of the save payload
+- exposes changeThinkingLevel and persists immediately
+- does not read image thinkingLevel from settings on init
+- exposes commitApiKey on the group form state
+- commitApiKey persists the key by saving the updated apiKeys (not only local state)
+- reads customProviders from settings on init
+- includes customProviders in the save payload
+- accepts a customProvidersOverride param on save
+- exposes customProviders and the three mutation methods on the text group
+- addCustomProvider generates an id and refreshes the catalog on success
+- refreshTextCatalog refetches supported providers
+- updateCustomProvider keeps the id stable
+- removeCustomProvider clears apiKey and defaultModel referencing the provider
+- does not expose custom provider methods on the image group
+=== features/settings/CustomProviderDialog.structure.test.ts 【已补：CustomProviderDialog.test.tsx】
+- reinitializes form fields when the dialog opens (effect keyed on open)
+- switches title between add/edit based on initial
+- parses model ids by splitting on comma and newline, trimming, dropping empties, deduping
+- validates baseUrl via new URL and http(s) protocol check
+- disables Save while validation fails and renders Cancel outline
+- assembles the def preserving initial.id in edit mode / empty id in add mode
+【不补：prop 接口/import 来源/Dialog 模式/控件选型/i18n key 清单/颜色 token 类断言（ESLint 化）】
+=== features/settings/UpdateChecker.structure.test.ts 【已补：UpdateChecker.test.tsx】
+- renders status-based buttons (idle/checking/upToDate/error/downloading)
+- wires the check button to check()
+- renders a progress bar for the downloading state
+- wires cancelDownload on the cancel button
+- renders an update-available dialog bound to status === available
+- supports both manual download (openExternal) and auto download (acceptDownload)
+- renders a downloaded dialog with restart actions
+【不补：使用哪个 hook/window.electronAPI 负断言/i18n key 清单/颜色 token】
+=== features/settings/AdvancedSettings.structure.test.ts 【已补：AdvancedSettings.test.tsx】
+- is collapsed by default
+- commits on blur via config.parse (not on every keystroke)
+- resets a field via onSet(undefined) rather than a dedicated onReset prop
+- constrains topP to 0–1 (max: 1) while temperature has no max
+【不补：primitive 选型/props 形状/tooltip 位置/图标旋转/i18n/颜色 token】
+=== features/settings/ModelProviderItem.structure.test.ts 【已补：ModelProviderItem.test.tsx】
+- custom row renders the Custom badge + baseUrl subtitle
+- custom row renders edit/delete icon buttons wired to onEdit/onDelete
+- hides edit/delete buttons when their callbacks are undefined
+- keyless row renders the keyless badge and omits the api-key input + connect/disconnect
+- keeps the built-in api-key input + connect/disconnect behavior for keyed rows
+- persists the api key on blur via onApiKeyCommit
+【不补：props 类型/lucide import 风格/颜色 token】
+=== features/settings/ThinkingLevelField.structure.test.ts 【已补：ThinkingLevelField.test.tsx】
+- renders a NativeSelect with the four generic levels
+- defaults the select value to medium when undefined
+【不补：tooltip/i18n key/props 类型/颜色 token】
+=== features/chat/save-export-degradation.structure.test.ts 【已补：save-export-degradation.test.tsx】
+- HtmlCard falls back to saveBlob when showSaveDialog is unavailable
+- ImageCard falls back to fetching the preview url and saving a blob
+- BrowserPage redirects to the project home when the browser feature is disabled
+=== features/chat/Composer.structure.test.ts 【已补：Composer.test.tsx（含附件管线）】
+- passes an optional AttachedImage through onSend
+- renders a hidden image file input triggered by the attach button
+- swaps the attach button icon for the spinner while busy
+- runs the compress -> upload pipeline and deletes on remove
+- tracks an idle/compressing/uploading/error status and disables send while busy
+- keeps the textarea editable while streaming and only disables it while loading
+- surfaces attach failures via the i18n toast
+=== features/chat/ErrorMessageSection.structure.test.ts 【已补：ErrorMessageSection.test.tsx】
+- renders the i18n model-not-configured text when errorCode is ModelNotConfigured
+- falls back to the raw error for other codes
+- renders an open-settings button for Auth errors
+【不补：prop 类型/import 来源/i18n hook/颜色 token】
+=== features/chat/MessageItem.structure.test.ts 【已补：MessageItem.test.tsx】
+- renders a withdraw action for user messages when onWithdraw is provided
+- renders user message image attachments through the preview url
+- opens chat bubble links via the shared link resolver instead of navigating in place
+【不补：渲染顺序断言（源码顺序）/锚点链接/链接颜色/portal 细节（并入 HtmlCard/ImageCard 行为）】
+=== features/chat/TriggerTurnGroup.structure.test.ts 【已补：TriggerTurnGroup.test.tsx】
+- defaults to collapsed and renders messages only through CollapsibleContent
+- shows the error badge only when the turn failed
+【不补：data-chat-turn-collapse 属性（theme hook，随渲染断言顺带）/MessageList 分组接线（turn-groups.test.ts 已覆盖分组逻辑）】
+=== features/chat/HtmlCard.structure.test.ts 【已补：HtmlCard 行为断言并入 save-export-degradation.test.tsx 与 HtmlCard.test.ts】
+- renders the expanded overlay through a portal to document.body
+=== features/chat/Header.structure.test.ts 【已补：随 Chat 渲染断言 data-chat-header；极薄，不单独建文件】
+- exposes data-chat-header for agent theme CSS targeting
+=== features/content-browser/UnsupportedFileCard.structure.test.ts 【已补：UnsupportedFileCard.test.tsx】
+- gates the button on the openFileExternal capability
+- opens the file via the project host api
+- joins projectRoot + relative filePath into an absolute path
+【不补：context 读取方式/i18n key/window.electronAPI 负断言/颜色 token】
+=== features/content-browser/ContentView.structure.test.tsx 【已补：ContentView.test.tsx】
+- binds Cmd/Ctrl+F to open the find bar when enabled
+- accepts optional parent-controlled findOpen props with an internal fallback
+- closes find when the view becomes non-searchable
+【不补：findEnabled 覆盖面（列表枚举属实现细节）/FindBar props 形状/ref 合并】
+=== features/onboarding/OnboardingPage.structure.test.ts 【防重入已补；其余下期】
+- guards open-or-create and open-sample actions against rapid re-entry 【已补】
+- loads the sample manifest once on mount via host bridge 【下期】
+- renders two onboarding actions: the merged open-or-create card and the sample card 【下期】
+- navigates to the opened project on success 【下期】
+- surfaces errors via sonner toast keyed off the error code 【下期】
+- catches unexpected rejections in both actions so failures are visible (not silent) 【下期】
+【不补：自治性（架构类）/window.electronAPI/颜色 token】
+=== features/welcome-page/WelcomePage.structure.test.ts 【防抖与 key 强刷已补；其余下期】
+- debounces reload to coalesce rapid save bursts and clears prior load errors 【已补】
+- uses a cache-stable preview URL and forces reload via React key on iframe/img 【已补】
+- clears the debounce timer on unmount 【已补】
+- renders the fallback when the query errors or resolves no path 【下期】
+- only reloads when the changed path matches the current welcome page path 【下期】
+- normalizes backslashes so windows paths compare equal 【下期】
+- falls back to project root index.html in the query when no welcome page is configured 【下期】
+【不补：query 接线/bus 订阅细节/失效归属 bridge（架构类）】
+=== features/skill-panel/MarketplaceDialog.structure.test.ts 【下期补测】
+- invalidates marketplace and local skill queries each time the dialog opens
+- installs via the marketplace install client method and invalidates skill queries
+- handles 409 manifest drift by toasting and invalidating marketplace queries
+- renders loading, error with retry, and empty states
+【不补：prop 接口/Dialog 模式/deriveSkillCardState（marketplace-state.test.ts 已覆盖）/loading 三态清单】
+=== features/skill-panel/SkillPanel.structure.test.ts 【下期补测】
+- renders the skills section with a create/install menu and a skills-rooted tree
+- wires file selection and deletion to navigation like UserFilePanel
+- installs via the host bridge instead of window.electronAPI
+=== features/agent-trigger/TriggerFeature.structure.test.ts 【下期补测】
+- renders the manual trigger button before the edit button
+- places the create button in the config content area, coexisting with the list
+- shows all three session modes in the expanded trigger profile
+- shows trigger logs by reversing the API order
+- shows completion timestamps for completed trigger logs
+- includes trigger type selector in the form
+- shows event-specific fields only for event type
+【不补：websocket 归属（架构类）/toast（TriggerEventBridge.test.tsx 已覆盖）/空数组 fallback（微性能）/draft 契约（实现细节）】
+=== hooks/useBusSubscription.structure.test.ts 【下期补测】
+- holds the latest handler in a ref so handler changes do not re-subscribe
+- registers the handler on mount and removes it on cleanup
+- delegates dispatched events through the stable wrapper to the ref
+【不补：依赖数组形状（ref 模式的目的即上一条）】
+=== features/agent-dialog/AgentDialog.structure.test.ts 【下期补测】
+- fills prompt directly when empty, confirms when non-empty
+【不补：import 来源/Picker 位置/AlertDialog 选型】
+=== features/debug-tools/DebugTools.structure.test.ts 【下期补测】
+- reads isDev through the host bridge devTools api
+- wires debug actions through bridge.devTools
+【不补：window.electronAPI 负断言（被 bridge mock 行为隐式覆盖）】
+=== components/markdown-content/MarkdownContent.structure.test.ts 【下期补测】
+- exposes a linkClassName prop for context-specific link color overrides
+- merges linkClassName after the text-primary baseline so twMerge lets it win
+=== features/agent-session-list/AgentRow.structure.test.ts 【下期补测】
+- uses CollapsibleTrigger so agent and file tree rows share expanded-state behavior（行为化：行点击展开 + chevron 状态）
+=== components/ui/sonner.structure.test.ts 【已补：随 Toaster 渲染断言；极薄，并入相邻测试或单独渲染断言】
+- exposes data-toast-root for project theme CSS targeting
+```

@@ -1,9 +1,31 @@
 import { cleanup, screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 import { renderWithProviders } from "../../test/render";
 import { Composer } from "./Composer";
+import { compressImage } from "./utils/compress-image";
 import type { AttachedImage } from "./types";
+
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
+
+const uploadAttachedImage = vi.fn();
+const deleteAttachment = vi.fn();
+
+vi.mock("../../lib/use-connection", () => ({
+  useApiClient: () => ({
+    uploadAttachedImage,
+    deleteAttachment,
+    getPreviewUrl: (path: string) => `http://localhost:5173/api/projects/p1/preview/${path}`,
+  }),
+  useConnection: () => ({ baseUrl: "http://localhost:5173", accessToken: null }),
+}));
+
+vi.mock("./utils/compress-image", () => ({
+  compressImage: vi.fn(),
+}));
 
 let user: ReturnType<typeof userEvent.setup>;
 
@@ -142,5 +164,78 @@ describe("Composer enter key behavior", () => {
     await user.type(screen.getByRole("textbox"), "touch draft");
     await user.click(screen.getByRole("button", { name: "发送" }));
     expect(onSend).toHaveBeenCalledWith("touch draft", undefined);
+  });
+});
+
+describe("Composer attachment pipeline", () => {
+  function hiddenFileInput(): HTMLInputElement {
+    const input = document.querySelector('input[type="file"]');
+    if (!input) throw new Error("file input not found");
+    return input as HTMLInputElement;
+  }
+
+  beforeEach(() => {
+    vi.mocked(compressImage).mockReset();
+    uploadAttachedImage.mockReset();
+    deleteAttachment.mockReset().mockResolvedValue(undefined);
+    vi.mocked(toast.error).mockClear();
+  });
+
+  it("runs the compress -> upload pipeline, disables send while busy and passes the image through onSend", async () => {
+    let releaseCompress!: (value: { blob: Blob; width: number; height: number; mimeType: "image/jpeg" }) => void;
+    vi.mocked(compressImage).mockImplementation(
+      () => new Promise((resolve) => (releaseCompress = resolve)),
+    );
+    uploadAttachedImage.mockResolvedValue({ path: "attachments/img-1.jpg" });
+
+    const { onSend } = renderComposer({ streaming: false });
+    await user.type(screen.getByRole("textbox"), "with picture");
+
+    const file = new File(["raw"], "pic.png", { type: "image/png" });
+    await user.upload(hiddenFileInput(), file);
+
+    expect(compressImage).toHaveBeenCalledWith(file);
+    expect(screen.getByRole("button", { name: "发送" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "移除图片" })).not.toBeInTheDocument();
+
+    releaseCompress({ blob: new Blob(["compressed"]), width: 800, height: 600, mimeType: "image/jpeg" });
+    await screen.findByRole("button", { name: "移除图片" });
+
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    expect(uploadAttachedImage).toHaveBeenCalledWith(expect.any(Blob), { width: 800, height: 600 });
+    expect(onSend).toHaveBeenCalledWith(
+      "with picture",
+      expect.objectContaining({ path: "attachments/img-1.jpg", mimeType: "image/jpeg" }),
+    );
+  });
+
+  it("deletes the uploaded attachment on remove", async () => {
+    vi.mocked(compressImage).mockResolvedValue({ blob: new Blob(["c"]), width: 10, height: 10, mimeType: "image/jpeg" });
+    uploadAttachedImage.mockResolvedValue({ path: "attachments/img-2.jpg" });
+
+    renderComposer({ streaming: false });
+    await user.upload(hiddenFileInput(), new File(["x"], "p.png", { type: "image/png" }));
+    await screen.findByRole("button", { name: "移除图片" });
+
+    await user.click(screen.getByRole("button", { name: "移除图片" }));
+
+    expect(deleteAttachment).toHaveBeenCalledWith("attachments/img-2.jpg");
+    expect(screen.queryByRole("button", { name: "移除图片" })).not.toBeInTheDocument();
+  });
+
+  it("surfaces attach failures via the i18n toast and recovers", async () => {
+    vi.mocked(compressImage).mockRejectedValue(new Error("too large"));
+    const { onSend } = renderComposer({ streaming: false });
+    await user.type(screen.getByRole("textbox"), "draft");
+
+    await user.upload(hiddenFileInput(), new File(["x"], "p.png", { type: "image/png" }));
+
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(vi.mocked(toast.error).mock.calls.at(-1)![0]).toContain("添加图片失败");
+    expect(uploadAttachedImage).not.toHaveBeenCalled();
+
+    expect(screen.getByRole("button", { name: "发送" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    expect(onSend).toHaveBeenCalledWith("draft", undefined);
   });
 });
