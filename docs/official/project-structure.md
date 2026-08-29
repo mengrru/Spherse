@@ -319,6 +319,7 @@ spherse/
 │   │       │   └── chat.ts           # Chat E2E 测试辅助（mock agent 项目、WS mock、会话 API）
 │   │       ├── agent-dialog.spec.ts  # Agent 对话框搜索文件 E2E 测试
 │   │       ├── app-launch.spec.ts    # App 启动验证 smoke test
+│   │       ├── packaged-smoke.spec.ts # 打包产物冒烟测试（SPHERSE_SMOKE=1 门控：启动 electron-builder unpacked 二进制，验证 renderer 挂载 + server /health + 版本号；release CI 在 arch 匹配的 matrix job 上必跑）
 │   │       ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
 │   │       ├── project-close.spec.ts # 项目关闭 E2E 测试（streaming 中关闭断连 runtime、重启后干净重开）
 │   │       ├── unsafe-location-guard.spec.ts # 易失区拦截 E2E 测试（SPHERSE_UNSAFE_ZONE + SPHERSE_E2E_DIALOG_RESPONSE seam：拒绝/确认 open-project、存量项目启动警告）

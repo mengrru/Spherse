@@ -95,6 +95,18 @@ jobs:
             npx electron-builder ${{ matrix.build-args }} --publish never
           fi
 
+      - name: Smoke test packaged app
+        # 只在 runner 架构与目标架构一致的 matrix job 上执行（mac arm64 / win x64）：
+        # mac intel 交叉构建需 Rosetta、win arm64 无法在 x64 runner 上运行，均跳过
+        if: >-
+          (runner.os == 'macOS' && matrix.target-arch == 'arm64') ||
+          (runner.os == 'Windows' && matrix.target-arch == 'x64')
+        working-directory: packages/desktop
+        shell: bash
+        env:
+          SPHERSE_SMOKE: "1"
+        run: SPHERSE_SMOKE_VERSION="${GITHUB_REF_NAME#v}" npx playwright test -c playwright.config.ts e2e/packaged-smoke.spec.ts
+
       - name: Upload macOS dmg
         if: runner.os == 'macOS'
         working-directory: packages/desktop
