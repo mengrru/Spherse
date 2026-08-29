@@ -150,7 +150,7 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
 包内细则在各 package README 与 `docs/official/` 对应域文件，此处只留跨包红线：
 
 - **语言**：TypeScript（ESM，strict），target ES2022 / module Node16 / moduleResolution Node16
-- **导出规范**：package 的 `index.ts` 只导出外部实际使用的符号，仅作类型用的用 `export type`；定期移除多余导出
+- **导出规范**：package 的 `index.ts` 只导出外部实际使用的符号，仅作类型用的用 `export type`；定期移除多余导出。例外：作为共享词汇的协议包 `@spherse/contracts` 导出面镜像契约面（schema 与派生类型全集导出），规则见 [contracts README](packages/contracts/README.md)
 - **路径安全**：项目内路径解析必须用 `@spherse/core` 的 `resolveProjectPath` / `assertInsideProject` / `isPathInside`，禁止 `startsWith` 前缀判断
 - **API contract**：边界 schema 统一在独立包 `@spherse/contracts` 并复用同一套 parser，规则见 [server README](packages/server/README.md) 与 [contracts README](packages/contracts/README.md)
 - **契约测试（跨层接缝）**：对 core 的 PM 写入门面与 `SessionPort` 方法，消费方包（server/desktop）至少各有一条不 mock 被测方法本身的契约测试——层间解耦越彻底，mock 拼接缝的盲区越大
