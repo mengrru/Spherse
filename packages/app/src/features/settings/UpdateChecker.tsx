@@ -13,6 +13,7 @@ import { MarkdownContent } from "../../components/markdown-content/MarkdownConte
 import { SectionTitle } from "./SectionTitle";
 import { useUpdateChecker } from "./use-update-checker";
 import { useHostBridge } from "../../context/host-bridge-context";
+import { DOWNLOAD_PAGE_URL } from "../../lib/urls";
 
 export function UpdateChecker() {
   const bridge = useHostBridge();
@@ -65,7 +66,7 @@ export function UpdateChecker() {
               <Button
                 variant="outline"
                 onClick={() =>
-                  void bridge.openExternal("https://spherse.mengru.work/")
+                  void bridge.openExternal(DOWNLOAD_PAGE_URL)
                 }
               >
                 {t("settings.about.gotoDownloadPage")}

@@ -12,9 +12,12 @@ import type {
 import { getAppVersion } from "./server-info.js";
 import { HttpError } from "./errors.js";
 
+const OSS_BUCKET_BASE_URL =
+  "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse";
+
 export const MARKETPLACE_MANIFEST_URL =
   process.env.SPHERSE_MARKETPLACE_MANIFEST_URL ??
-  "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse/skills/manifest.json";
+  `${OSS_BUCKET_BASE_URL}/skills/manifest.json`;
 
 const MANIFEST_CACHE_TTL_MS = 30_000;
 const MANIFEST_FETCH_TIMEOUT_MS = 10_000;

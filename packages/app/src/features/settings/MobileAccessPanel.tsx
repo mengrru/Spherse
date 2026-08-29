@@ -18,8 +18,8 @@ import { useAppStore } from "../../stores/app-store";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
 import { useLocation } from "react-router";
 import { Copy, RefreshCw } from "lucide-react";
+import { WEB_APP_URL } from "../../lib/urls";
 
-const WEB_APP_URL = "https://spherse.mengru.work/web/";
 const CLOUDFLARE_DOCS_URL = "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/";
 
 function buildDeeplink(publicUrl: string, token: string, targetPath?: string): string {

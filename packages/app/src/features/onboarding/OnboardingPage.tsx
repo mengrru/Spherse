@@ -7,8 +7,7 @@ import type { SampleManifestEntry } from "../../lib/host-bridge";
 import { useAppStore } from "../../stores/app-store";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
-
-const EXPLORE_URL = "https://spherse.mengru.work/explore";
+import { EXPLORE_URL } from "../../lib/urls";
 
 const ERROR_KEYS: Record<string, TranslationKey> = {
   copyFailed: "onboarding.error.copyFailed",

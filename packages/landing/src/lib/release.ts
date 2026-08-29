@@ -1,4 +1,4 @@
-export const FALLBACK_URL = "https://github.com/mengrru/Spherse/releases/latest";
+import { GITHUB_RELEASES_LATEST_URL } from "./urls";
 
 const MANIFEST_URL: string | undefined = import.meta.env.VITE_OSS_MANIFEST_URL;
 
@@ -85,5 +85,5 @@ export async function resolveDownloadUrl(platform: Platform): Promise<string> {
   } catch {
     // ignore — fall through to fallback
   }
-  return FALLBACK_URL;
+  return GITHUB_RELEASES_LATEST_URL;
 }
