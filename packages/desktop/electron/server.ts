@@ -1,13 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { app } from "electron";
 import { createMultiProjectServer } from "@spherse/server";
-import type { ProjectRegistry } from "@spherse/server";
+import type { ProjectRegistry, MultiProjectServer } from "@spherse/server";
 import type { SamplingParams, ThinkingLevel } from "@spherse/core";
 import { settleWithin } from "@spherse/core";
-import { getSettings, getMobileAccess } from "./settings.js";
+import { getSettings, getMobileAccess, getServerToken } from "./settings.js";
 import { getAppModelCatalog } from "./model-catalog.js";
+import { getTunnelManager } from "./tunnel/manager.js";
 
 interface ServerHandle {
+  server: MultiProjectServer;
   fastify: FastifyInstance;
   registry: ProjectRegistry;
 }
@@ -32,23 +34,40 @@ async function closeServerHandle(handle: ServerHandle): Promise<void> {
 }
 
 let serverHandle: ServerHandle | null = null;
-let activeAccessToken: string | undefined;
 let registeredProjects: Array<{ root: string; lastOpened?: string }> = [];
+let appliedHosts: string[] = [];
+
+function desiredHosts(): string[] {
+  const mobile = getMobileAccess();
+  if (!mobile.enabled) return [];
+  if (mobile.mode === "manual") {
+    return mobile.publicDomain?.trim() ? [mobile.publicDomain.trim()] : [];
+  }
+  const publicUrl = getTunnelManager().getState().publicUrl;
+  return publicUrl ? [publicUrl] : [];
+}
+
+export function syncAllowedHosts(): void {
+  if (!serverHandle) return;
+  const desired = desiredHosts();
+  if (appliedHosts.length) serverHandle.server.removeAllowedHosts(appliedHosts);
+  if (desired.length) serverHandle.server.addAllowedHosts(desired);
+  appliedHosts = desired;
+}
 
 export async function ensureServer(): Promise<void> {
   if (serverHandle) return;
   const settings = getSettings();
-  const mobile = getMobileAccess();
-  activeAccessToken = mobile.token;
   const result = await createMultiProjectServer({
     defaultModel: settings?.models?.text?.defaultModel,
     sampling: settings?.models?.text?.sampling,
     thinkingLevel: settings?.models?.text?.thinkingLevel,
-    auth: activeAccessToken ? { accessToken: activeAccessToken } : undefined,
+    auth: { accessToken: getServerToken() },
     modelCatalog: getAppModelCatalog(),
     appVersion: app.getVersion(),
   });
-  serverHandle = { fastify: result.fastify, registry: result.registry };
+  serverHandle = { server: result, fastify: result.fastify, registry: result.registry };
+  appliedHosts = [];
   for (const { root, lastOpened } of registeredProjects) {
     try {
       await serverHandle.registry.register(root, lastOpened ? { lastOpened } : undefined);
@@ -56,9 +75,10 @@ export async function ensureServer(): Promise<void> {
       console.error(`[ensureServer] failed to re-register project at ${root}:`, err);
     }
   }
+  syncAllowedHosts();
 }
 
-export async function restartServerWithAuth(token: string | undefined): Promise<void> {
+export async function restartServer(): Promise<void> {
   if (serverHandle) {
     const handle = serverHandle;
     serverHandle = null;
@@ -68,7 +88,6 @@ export async function restartServerWithAuth(token: string | undefined): Promise<
     }));
     await closeServerHandle(handle);
   }
-  activeAccessToken = token;
 }
 
 export function getServerPort(): number {
@@ -120,5 +139,5 @@ export async function stopServer(): Promise<void> {
   serverHandle = null;
   await closeServerHandle(handle);
   registeredProjects = [];
-  activeAccessToken = undefined;
+  appliedHosts = [];
 }

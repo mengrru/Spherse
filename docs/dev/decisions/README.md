@@ -23,3 +23,4 @@
 | [0007](0007-contracts-in-code.md) | API 契约 schema 进代码（contracts + parseContract） | accepted |
 | [0008](0008-no-frontend-auto-retry.md) | chat turn 失败不做前端自动重试，仅手动重试 | accepted |
 | [0009](0009-app-exports-whitelist.md) | 壳消费 app 仅经 exports 白名单 | accepted |
+| [0010](0010-server-auth-model.md) | 本地 server 鉴权模型：always-on token + 认证制 CORS + Host 校验 | accepted |

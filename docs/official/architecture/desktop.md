@@ -9,7 +9,7 @@
 - 入口 `electron/bootstrap.ts`：dev（`!app.isPackaged` 且非 test）将 userData 重定向 `Spherse-Dev/`
   - dev 与 prod 的 electron-store / localStorage 完全隔离，可同时运行
   - E2E 由 Playwright 传 `--user-data-dir` + `NODE_ENV=test` 跳过重定向
-- `app.whenReady` 顺序：`fixPath` → `restoreEnvFromSettings` → manual 模式无 token 则生成 → `ensureServer()` → 创建窗口与右键菜单 → 注册全部 IPC → quick 模式启动 tunnel；更新检查另以 `setTimeout` 5s 调度，与 tunnel 无先后依赖
+- `app.whenReady` 顺序：`fixPath` → `restoreEnvFromSettings` → `ensureServer()`（恒带 server token）→ 创建窗口与右键菜单 → 注册全部 IPC → quick 模式启动 tunnel；更新检查另以 `setTimeout` 5s 调度，与 tunnel 无先后依赖
 - BrowserWindow：1200×800、`contextIsolation: true`、`nodeIntegration: false`、preload 白名单桥
 - `fixPath` 仅 packaged + darwin/linux：spawn 登录 shell 取 `$PATH` 去重合并，保证 GUI 启动拿到 CLI 环境
 - 优雅退出：`window-all-closed` / `before-quit`（幂等标记）→ tunnel stop → `stopServer()` → quit
@@ -35,6 +35,7 @@
 - electron-store 落 userData 下 `settings.json`；`AppSettings` schema：
   - `locale` + `models: { text, image }`——每 group 含 `defaultModel`、per-provider `apiKey`，text 另含可选 `sampling` 与 `thinkingLevel`（off/low/medium/high，缺省 medium）
   - 可选 `customProviders` / `debugToolsEnabled` / `theme` / `mobileAccess`
+- **serverToken 是 settingsStore 顶层 key，不是 AppSettings 字段**（`saveSettings` 会从零重建 AppSettings）。`getServerToken()` 迁移链：`serverToken` → legacy `mobileAccess.token` → 生成并持久化；它是 server 鉴权唯一凭据来源（见 [server.md](server.md)「鉴权模型」）
 - **API key 掩码与合并**：显示前 4 + `****` + 后 4；保存时空串跳过、含 `****` 保留旧值
   - `saveSettings` 强制保留 `mobileAccess` 旧值，防 renderer 覆写
 - `applySettingsToEnv`（保存后立即执行）：
@@ -64,7 +65,8 @@
 - 两模式：`quick`（Cloudflare Quick Tunnel，免域名）/ `manual`（自建公网域名，不做隧道只提供 URL）
 - `CloudflareTunnelProvider`：spawn `cloudflared tunnel --no-autoupdate --url ...`，stdout / stderr 正则抓 `*.trycloudflare.com`，30s 启动超时；stop 为 SIGTERM → 3s → SIGKILL；`TunnelManager` 以 promise 防重入
 - 二进制解析三级：packaged 先找 `resources/cloudflared/<platform-arch>/`，再各平台常见安装位置，最后 PATH 裸命令（spawn env 附带常见 PATH 目录）——**安装包未内置 cloudflared**，缺失时给安装引导
-- token：`randomBytes(32)` hex；生成于启动（manual 无 token）、enable、regenerate、set-mode 切 manual 且无 token；换 token 必 `restartServerWithAuth` 重建 server 并重放项目
+- token：`randomBytes(32)` hex，即 server 鉴权的 always-on token（存 settingsStore 顶层 `serverToken`）；仅 regenerate 轮换（`setServerToken` → `restartServer` 重建 server 并重放项目与动态 host）；enable / set-mode 不生成或轮换 token
+- 动态 host：`syncAllowedHosts()` 按当前 mobileAccess 状态计算期望集（enabled + quick → tunnel publicUrl；manual → publicDomain）重放到 server 实例；每次 `ensureServer()` 后必重放，tunnel `onStateChange` 与 mobile 各 handler 增量同步
 - renderer 侧 MobileAccessPanel 提供 deeplink + 二维码（`.../web/#/?base=<url>&token=<t>`）
 
 ## App 更新机制

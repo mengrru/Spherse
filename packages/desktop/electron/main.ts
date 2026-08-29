@@ -1,28 +1,24 @@
 import { app } from "electron";
 import { createWindow, getMainWindow } from "./window.js";
-import { restoreEnvFromSettings } from "./settings.js";
+import { restoreEnvFromSettings, getMobileAccess } from "./settings.js";
 import { fixPath } from "./fix-path.js";
 import { ensureServer, stopServer, getServerPort } from "./server.js";
 import { registerAllIpc } from "./ipc/index.js";
 import { startAutoUpdateChecks } from "./updater.js";
 import { setupContextMenu } from "./ipc/context-menu.js";
 import { getTunnelManager } from "./tunnel/manager.js";
-import { getMobileAccess, setMobileAccess, generateAccessToken } from "./settings.js";
 import { settleWithin } from "@spherse/core";
 
 app.whenReady().then(async () => {
   await fixPath();
   restoreEnvFromSettings();
-  const mobile = getMobileAccess();
-  if ((mobile.mode ?? "quick") === "manual" && !mobile.token) {
-    setMobileAccess({ token: generateAccessToken() });
-  }
   await ensureServer();
   createWindow();
   setupContextMenu(getMainWindow()!);
   registerAllIpc(getMainWindow);
   startAutoUpdateChecks();
 
+  const mobile = getMobileAccess();
   if (mobile.enabled && (mobile.mode ?? "quick") === "quick") {
     try {
       void getTunnelManager().start(getServerPort());

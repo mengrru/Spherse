@@ -1,6 +1,5 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import type { AddressInfo } from "node:net";
-import cors from "@fastify/cors";
 import websocket from "@fastify/websocket";
 import multipart from "@fastify/multipart";
 import type { Logger, SamplingParams, ThinkingLevel, ModelCatalog } from "@spherse/core";
@@ -14,6 +13,8 @@ import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
 import { registerAuthHook, type AuthOptions } from "./auth.js";
+import { registerAuthGatedCors } from "./cors.js";
+import { registerHostGuard } from "./host-guard.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { setAppVersion } from "./server-info.js";
 import { ChatSessionHub } from "./chat-session-hub.js";
@@ -28,6 +29,8 @@ export interface MultiProjectServer {
   fastify: FastifyInstance;
   registry: ProjectRegistry;
   logger: Logger;
+  addAllowedHosts: (hosts: string[]) => void;
+  removeAllowedHosts: (hosts: string[]) => void;
 }
 
 export interface CreateServerOptions {
@@ -66,7 +69,9 @@ export async function createMultiProjectServer(
     forceCloseConnections: true,
   });
 
-  await fastify.register(cors, { origin: true });
+  const hostGuard = registerHostGuard(fastify);
+  registerAuthGatedCors(fastify, () => options?.auth?.accessToken);
+
   await fastify.register(websocket);
   await fastify.register(multipart, {
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -121,7 +126,7 @@ export async function createMultiProjectServer(
   fastify.addHook("onResponse", async (req, reply) => {
     const urlPath = req.url.split("?", 1)[0];
     if (!urlPath.includes("/preview/")) return;
-    req.log.info({ statusCode: reply.statusCode }, "preview response");
+    req.log.info({ statusCode: reply.statusCode, url: urlPath.replace(/(\/__auth\/)[^/]+/g, "$1<redacted>") }, "preview response");
   });
 
   const preferredPort = options?.port ?? DEFAULT_SERVER_PORT;
@@ -136,5 +141,11 @@ export async function createMultiProjectServer(
   const address = fastify.server.address() as AddressInfo;
   logger.info({ port: address.port }, "server listening");
 
-  return { fastify, registry, logger };
+  return {
+    fastify,
+    registry,
+    logger,
+    addAllowedHosts: hostGuard.addAllowedHosts,
+    removeAllowedHosts: hostGuard.removeAllowedHosts,
+  };
 }

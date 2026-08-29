@@ -4,6 +4,8 @@ const mobileStore: { enabled: boolean; token?: string; mode?: "quick" | "manual"
   enabled: false,
 };
 
+let serverToken: string | undefined;
+
 let tunnelState = {
   status: "stopped" as "stopped" | "starting" | "running" | "error",
   publicUrl: null as string | null,
@@ -53,16 +55,22 @@ vi.mock("../settings.js", () => ({
     return { ...mobileStore, mode: mobileStore.mode ?? "quick" };
   },
   generateAccessToken: () => "generated-token",
+  getServerToken: () => serverToken,
+  setServerToken: (token: string) => {
+    serverToken = token;
+  },
 }));
 
-const { ensureServer, restartServerWithAuth } = vi.hoisted(() => ({
+const { ensureServer, restartServer, syncAllowedHosts } = vi.hoisted(() => ({
   ensureServer: vi.fn(async () => undefined),
-  restartServerWithAuth: vi.fn(async () => undefined),
+  restartServer: vi.fn(async () => undefined),
+  syncAllowedHosts: vi.fn(() => undefined),
 }));
 
 vi.mock("../server.js", () => ({
   ensureServer,
-  restartServerWithAuth,
+  restartServer,
+  syncAllowedHosts,
   getServerPort: () => 7654,
 }));
 
@@ -116,7 +124,14 @@ describe("buildState", () => {
     mobileStore.token = undefined;
     mobileStore.mode = "quick";
     mobileStore.publicDomain = undefined;
+    serverToken = undefined;
     tunnelState = { status: "stopped", publicUrl: null, startedAt: null, error: null };
+  });
+
+  it("reports token from serverToken store", () => {
+    serverToken = "srv-token";
+    const state = buildState();
+    expect(state.token).toBe("srv-token");
   });
 
   it("reports quick mode with tunnel manager state", () => {
@@ -186,21 +201,28 @@ describe("IPC handlers", () => {
     mobileStore.token = undefined;
     mobileStore.mode = "quick";
     mobileStore.publicDomain = undefined;
+    serverToken = undefined;
     tunnelState = { status: "stopped", publicUrl: null, startedAt: null, error: null };
     tunnelMock.start.mockClear();
     tunnelMock.stop.mockClear();
     tunnelMock.restart.mockClear();
     ensureServer.mockClear();
-    restartServerWithAuth.mockClear();
+    restartServer.mockClear();
+    syncAllowedHosts.mockClear();
   });
 
-  it("enable in quick mode starts tunnel manager", async () => {
-    const state = await invoke("mobile-access:enable", { mode: "quick" }) as { enabled: boolean; mode: string };
+  it("enable in quick mode starts tunnel manager without rotating token", async () => {
+    serverToken = "srv-token";
+    const state = await invoke("mobile-access:enable", { mode: "quick" }) as { enabled: boolean; mode: string; token: string | null };
     expect(mobileStore.enabled).toBe(true);
     expect(mobileStore.mode).toBe("quick");
+    expect(mobileStore.token).toBeUndefined();
+    expect(serverToken).toBe("srv-token");
+    expect(restartServer).not.toHaveBeenCalled();
     expect(tunnelMock.start).toHaveBeenCalledWith(7654);
     expect(state.enabled).toBe(true);
     expect(state.mode).toBe("quick");
+    expect(state.token).toBe("srv-token");
   });
 
   it("enable in manual mode does not start tunnel manager and stops it", async () => {
@@ -213,62 +235,65 @@ describe("IPC handlers", () => {
     expect(state.manualDomain).toBe("https://spherse.example.com");
   });
 
-  it("disable stops tunnel but does NOT clear auth", async () => {
+  it("disable stops tunnel but does NOT clear token", async () => {
     mobileStore.enabled = true;
-    mobileStore.token = "existing-token";
     mobileStore.mode = "quick";
+    serverToken = "existing-token";
     await invoke("mobile-access:disable");
     expect(mobileStore.enabled).toBe(false);
-    expect(mobileStore.token).toBe("existing-token");
+    expect(serverToken).toBe("existing-token");
     expect(tunnelMock.stop).toHaveBeenCalled();
-    expect(restartServerWithAuth).not.toHaveBeenCalled();
-    expect(ensureServer).not.toHaveBeenCalled();
+    expect(restartServer).not.toHaveBeenCalled();
+    expect(syncAllowedHosts).toHaveBeenCalled();
   });
 
-  it("regenerate-token restarts server with new token even when disabled", async () => {
+  it("regenerate-token rotates serverToken and restarts server even when disabled", async () => {
     mobileStore.enabled = false;
-    mobileStore.token = "old-token";
+    serverToken = "old-token";
     await invoke("mobile-access:regenerate-token");
-    expect(mobileStore.token).toBe("generated-token");
-    expect(restartServerWithAuth).toHaveBeenCalledWith("generated-token");
+    expect(serverToken).toBe("generated-token");
+    expect(restartServer).toHaveBeenCalled();
     expect(ensureServer).toHaveBeenCalled();
     expect(tunnelMock.restart).not.toHaveBeenCalled();
   });
 
   it("regenerate-token restarts tunnel in quick mode when enabled", async () => {
     mobileStore.enabled = true;
-    mobileStore.token = "old-token";
+    serverToken = "old-token";
     mobileStore.mode = "quick";
     await invoke("mobile-access:regenerate-token");
     expect(tunnelMock.restart).toHaveBeenCalledWith(7654);
   });
 
-  it("set-public-domain normalizes and persists the domain", async () => {
+  it("set-public-domain normalizes, persists the domain and syncs hosts", async () => {
     mobileStore.enabled = true;
     mobileStore.mode = "manual";
     const state = await invoke("mobile-access:set-public-domain", "my.domain.com") as { manualDomain: string };
     expect(mobileStore.publicDomain).toBe("https://my.domain.com");
     expect(state.manualDomain).toBe("https://my.domain.com");
+    expect(syncAllowedHosts).toHaveBeenCalled();
   });
 
-  it("set-mode to manual stops tunnel and auto-generates token if none", async () => {
+  it("set-mode to manual stops tunnel without generating a token", async () => {
     mobileStore.enabled = true;
-    mobileStore.token = undefined;
+    serverToken = undefined;
     mobileStore.mode = "quick";
     await invoke("mobile-access:set-mode", "manual");
     expect(mobileStore.mode).toBe("manual");
-    expect(mobileStore.token).toBe("generated-token");
+    expect(serverToken).toBeUndefined();
+    expect(mobileStore.token).toBeUndefined();
     expect(tunnelMock.stop).toHaveBeenCalled();
-    expect(restartServerWithAuth).toHaveBeenCalledWith("generated-token");
+    expect(restartServer).not.toHaveBeenCalled();
+    expect(syncAllowedHosts).toHaveBeenCalled();
   });
 
-  it("set-mode to manual keeps existing token", async () => {
+  it("set-mode to manual keeps existing token without restart", async () => {
     mobileStore.enabled = true;
-    mobileStore.token = "existing-token";
+    serverToken = "existing-token";
     mobileStore.mode = "quick";
     await invoke("mobile-access:set-mode", "manual");
-    expect(mobileStore.token).toBe("existing-token");
-    expect(restartServerWithAuth).not.toHaveBeenCalled();
+    expect(serverToken).toBe("existing-token");
+    expect(restartServer).not.toHaveBeenCalled();
   });
 
   it("set-mode to quick while enabled starts tunnel", async () => {

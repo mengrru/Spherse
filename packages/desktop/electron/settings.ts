@@ -16,6 +16,7 @@ type SettingsSchema = {
   settings?: AppSettings;
   openProjects?: OpenProjectEntry[];
   lastActiveProject?: string | null;
+  serverToken?: string;
 };
 
 export const settingsStore = new Store<SettingsSchema>({
@@ -223,6 +224,23 @@ export function setLocale(locale: string): void {
 
 export function generateAccessToken(): string {
   return crypto.randomBytes(32).toString("hex");
+}
+
+export function getServerToken(): string {
+  const existing = settingsStore.get("serverToken");
+  if (existing) return existing;
+  const legacy = settingsStore.get("settings")?.mobileAccess?.token;
+  if (legacy) {
+    settingsStore.set("serverToken", legacy);
+    return legacy;
+  }
+  const token = generateAccessToken();
+  settingsStore.set("serverToken", token);
+  return token;
+}
+
+export function setServerToken(token: string): void {
+  settingsStore.set("serverToken", token);
 }
 
 export function getMobileAccess(): MobileAccessSettings {

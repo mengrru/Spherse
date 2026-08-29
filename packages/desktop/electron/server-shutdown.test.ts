@@ -13,6 +13,7 @@ vi.mock("electron", () => ({
 vi.mock("./settings.js", () => ({
   getSettings: () => undefined,
   getMobileAccess: () => ({}),
+  getServerToken: () => "shutdown-test-token",
 }));
 vi.mock("./model-catalog.js", () => ({
   getAppModelCatalog: () => undefined,
@@ -21,7 +22,7 @@ vi.mock("@spherse/server", () => ({
   createMultiProjectServer: createServerMock,
 }));
 
-import { ensureServer, stopServer, restartServerWithAuth } from "./server.js";
+import { ensureServer, stopServer, restartServer } from "./server.js";
 
 function mockHandle(): void {
   fastifyClose.mockResolvedValue(undefined);
@@ -99,8 +100,8 @@ describe("stopServer staged shutdown", () => {
     expect(registryRemoveAll).toHaveBeenCalledTimes(1);
   });
 
-  it("routes restartServerWithAuth through the same staged close", async () => {
-    await restartServerWithAuth("token-1");
+  it("routes restartServer through the same staged close", async () => {
+    await restartServer();
     expect(registryRemoveAll).toHaveBeenCalledTimes(1);
     expect(fastifyClose).toHaveBeenCalledTimes(1);
   });

@@ -239,9 +239,10 @@ test("rate limit blocks excess calls", async () => {
 
 async function createSessionViaApi(page: Page, projectId: string, agentId: string): Promise<string> {
   const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const token = (await page.evaluate(() => window.electronAPI.getMobileAccessState())).token ?? null;
   const res = await fetch(
     `http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`,
-    { method: "POST" },
+    { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {} },
   );
   const body = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
@@ -254,8 +255,10 @@ async function getSessionMessageCount(
   sessionId: string,
 ): Promise<number> {
   const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const token = (await page.evaluate(() => window.electronAPI.getMobileAccessState())).token ?? null;
   const res = await fetch(
     `http://localhost:${port}/api/projects/${projectId}/sessions/${encodeURIComponent(sessionId)}/messages`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
   );
   const body = (await res.json()) as { messages?: unknown[] };
   return body.messages?.length ?? 0;
@@ -267,7 +270,7 @@ test("openSession action navigates to an existing session without sending a mess
 
   try {
     const sessionId = await createSessionViaApi(page, project.projectId, "test-agent");
-    expect(getSessionMessageCount(page, project.projectId, sessionId)).resolves.toBe(0);
+    await expect(getSessionMessageCount(page, project.projectId, sessionId)).resolves.toBe(0);
 
     const projectUrl = `/project/${project.projectId}`;
     await page.goto(

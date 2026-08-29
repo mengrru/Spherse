@@ -71,10 +71,21 @@ export async function getServerPort(page: Page): Promise<number> {
   return page.evaluate(() => window.electronAPI.getServerPort());
 }
 
+export async function getServerAccessToken(page: Page): Promise<string | null> {
+  const state = await page.evaluate(() => window.electronAPI.getMobileAccessState());
+  return state.token ?? null;
+}
+
+export async function authHeaders(page: Page): Promise<Record<string, string>> {
+  const token = await getServerAccessToken(page);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function createSessionViaApi(page: Page, projectId: string, agentId: string): Promise<string> {
   const port = await getServerPort(page);
   const res = await fetch(`http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
+    headers: await authHeaders(page),
   });
   const body = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);

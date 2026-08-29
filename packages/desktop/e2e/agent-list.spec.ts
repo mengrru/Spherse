@@ -82,8 +82,10 @@ async function launchApp(project: { root: string; projectId: string }): Promise<
 
 async function createSessionViaApi(page: Page, projectId: string, agentId: string): Promise<string> {
   const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const token = (await page.evaluate(() => window.electronAPI.getMobileAccessState())).token ?? null;
   const res = await fetch(`http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const body = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
