@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -75,8 +77,10 @@ async function launchApp(project: { root: string; projectId: string }): Promise<
 
 async function createSessionViaApi(page: Page, projectId: string, agentId: string): Promise<string> {
   const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const token = (await page.evaluate(() => window.electronAPI.getMobileAccessState())).token ?? null;
   const res = await fetch(`http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`, {
     method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   const body = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
@@ -161,7 +165,7 @@ async function assertCardReceivesRuntime(
     const frame = page.frameLocator("[data-chat-message] iframe").first();
     await expect(frame.locator("#out")).toHaveText(`sid:${sessionId}`, { timeout: 15_000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 }
 

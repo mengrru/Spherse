@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { closeApp } from "./helpers/electron";
 import {
   createChatProject,
   launchChatApp,
@@ -51,7 +52,7 @@ test("failed assistant response shows error with retry button; retry produces a 
     await page.waitForSelector("text=Retried successfully", { timeout: 5000 });
     await expect(page.locator("[data-chat-error]")).toHaveCount(0);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -101,6 +102,6 @@ test("error event (pre-prompt failure) shows error UI; retry resends the message
     await page.waitForSelector("text=Recovered", { timeout: 5000 });
     await expect(page.locator("[data-chat-error]")).toHaveCount(0);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

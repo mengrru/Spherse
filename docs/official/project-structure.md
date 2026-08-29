@@ -62,7 +62,7 @@ spherse/
 │   │       ├── attachments/          # 附件域：AttachmentProcessor 端口 + image-processor + sanitizer（base64 卫生不变量）+ strip/sanitize
 │   │       ├── mcp/                  # mcp-client（连接与工具适配）/ mcp-connection-manager / config / types / json-schema-to-typebox
 │   │       ├── model-providers/      # ModelCatalog 类（per-runtime 实例，所有权在组合根）+ zhipu/openai images + index（仅 images 静态目录导出）
-│   │       ├── utils/                # file-write-mutex（全链路唯一实例）/ fs-walk / path-safety / binary-detect / xml-escape
+│   │       ├── utils/                # file-write-mutex（全链路唯一实例）/ fs-walk / path-safety / binary-detect / xml-escape / settle-within（shutdown 等待有界化）
 │   │       ├── __tests__/            # Vitest 单元测试（kernel/capabilities/session/access/tools 分组）
 │   │       └── index.ts              # 公开导出（显式清单，按外部消费面收紧）
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
@@ -158,7 +158,9 @@ spherse/
 │   │       └── __tests__/            # 契约测试（正向通过 / 负向抛 Invalid payload + Fastify coercion 兼容）
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
-    │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry
+    │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry；组合 auth / cors / host-guard 中间件
+    │   │       ├── cors.ts              # 认证制 CORS 中间件（preflight 反射放行，token 有效才设 ACAO）
+    │   │       ├── host-guard.ts        # Host 校验中间件（静态集合 + 动态注册，返回 HostGuard 管理动态 host）
     │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove
     │   │       ├── marketplace.ts        # 技能市场 service：OSS manifest 代理（30s 内存缓存，env SPHERSE_MARKETPLACE_MANIFEST_URL 可覆盖 URL）+ zip 下载（同源 SSRF 校验、50MB 上限）
@@ -202,6 +204,7 @@ spherse/
 │   │       │   ├── electron-api.ts   # 全局 Window.electronAPI 类型声明（类型来自 @shared/electron-api）
 │   │       │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界，模块级 per-project 历史栈）
 │   │       │   ├── use-connection.ts  # useApiClient(projectId) / useConnection() — 基于 app-store connection 派生 ApiClient
+│   │       │   ├── urls.ts            # 官网域派生的集中 URL 常量（WEB_APP_URL/DOCS_URL/EXPLORE_URL/DOWNLOAD_PAGE_URL）
 │   │       │   ├── utils.ts          # shadcn/ui cn() 工具
 │   │       │   └── localstorage/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
@@ -312,8 +315,8 @@ spherse/
 │   │   │   │   ├── cloudflare-provider.ts # Cloudflare Quick Tunnel 实现：spawn cloudflared tunnel --url、stdout 抓取 *.trycloudflare.com URL、packaged 二进制路径解析
 │   │   │   │   └── manager.ts         # TunnelManager 单例：start/stop/restart 状态机 + onStateChange 事件订阅
 │   │   │   ├── window.ts             # BrowserWindow 创建与管理
-│   │   │   ├── server.ts             # 多 Fastify 实例管理（Map<projectPath, {server, engine}>）+ 运行时 defaultModel 更新 + restartServerWithAuth（启用/停用 mobile access 时带 token 重启）
-│   │   │   └── settings.ts           # electron-store 封装 + env 管理（含自定义供应商 syncCustomProviders 注册）+ openProjects/locale 持久化 + mobileAccess（token/enabled/mode/publicDomain）持久化 + generateAccessToken
+│   │   │   ├── server.ts             # server 实例管理（ensure/restart/stop，恒带 serverToken 鉴权）+ 动态 host 重放（syncAllowedHosts）+ defaultModel 更新
+│   │   │   └── settings.ts           # electron-store 封装 + env 管理（含 syncCustomProviders）+ openProjects/locale/mobileAccess 持久化 + serverToken（顶层 key，getServerToken 迁移链）+ generateAccessToken
 │   │   └── e2e/                      # Playwright E2E 测试
 │   │       ├── helpers/
 │   │       │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
@@ -353,7 +356,7 @@ spherse/
 │   │   │   └── themes/              # 轮播切换时动态加载的主题 CSS（覆盖 --sp-* 变量）
 │   │   └── src/
 │   │       ├── styles.css            # Tailwind v4 + --sp-* token 体系（从 app 精简复制）
-│   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）、changelog.ts（OSS changelog.json 拉取）及单测
+│   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）、changelog.ts（OSS changelog.json 拉取）、urls.ts（GitHub 仓库 URL 常量派生）及单测
 │   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型与 locale 工具，自建 catalog）
 │   │       │   ├── index.ts          # useLandingI18n hook + localStorage 持久化
 │   │       │   └── locales/          # zh-CN / zh-TW / en 三语
@@ -392,6 +395,7 @@ spherse/
 │   └── workflows/
 │       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + publish-changelog 生成上传 changelog.json + 末尾 dispatch deploy-pages 联动 web 部署
 │       ├── pr-build.yml              # PR 触发的 CI：checkout + npm ci + npm run verify（lint/build/typecheck/单测/i18n check）
+│       ├── e2e.yml                   # PR 触发的 CI：macOS runner 跑 Electron E2E 全套（非 required，结果仅供参考；docs-only 跳过）
 │       └── deploy-pages.yml          # main 分支 landing/web/i18n 变更或发版流水线 workflow_dispatch 触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）

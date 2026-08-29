@@ -3,6 +3,7 @@ import { Download, LoaderCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { InstallTip } from "./InstallTip";
 import { detectPlatform, resolveDownloadUrl, type Platform } from "../lib/release";
+import { GITHUB_REPO_URL } from "../lib/urls";
 import type { TranslationKey } from "../i18n";
 
 function GithubIcon({ className }: { className?: string }) {
@@ -78,7 +79,7 @@ export function Hero({ t }: HeroProps) {
               {t(downloadLabelKey[platform])}
             </Button>
           ))}
-          <Button size="lg" variant="ghost" render={<a href="https://github.com/mengrru/Spherse" target="_blank" rel="noopener noreferrer" />}>
+          <Button size="lg" variant="ghost" render={<a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" />}>
             <GithubIcon className="size-5" />
             GitHub
           </Button>

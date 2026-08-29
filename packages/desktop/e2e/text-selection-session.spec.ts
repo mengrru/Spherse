@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createTextSelectionProject, launchAppWithProject } from "./helpers/electron";
+import { closeApp, createTextSelectionProject, launchAppWithProject } from "./helpers/electron";
 
 test("text selection session shows stable button, fixed popover, and highlight overlay", async () => {
   const project = await createTextSelectionProject();
@@ -121,7 +121,7 @@ test("text selection session shows stable button, fixed popover, and highlight o
     }, secondMouseUp);
     await expect(button).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -161,7 +161,7 @@ test("text selection copies via Ctrl/Cmd+C after native selection is released", 
     await expect(toolbar).toBeHidden();
     await expect(page.getByTestId("text-selection-highlight")).toBeHidden();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -210,7 +210,7 @@ test("text selection keyboard copy does not hijack editable targets inside popov
     await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe(commentText);
     await expect(popover).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -265,6 +265,6 @@ test("text selection session keeps long agent list scrollable in a compact viewp
     expect(agentListScroll.scrollHeight).toBeGreaterThan(agentListScroll.clientHeight);
     expect(agentListScroll.overflowY).toBe("auto");
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

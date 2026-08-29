@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -91,6 +93,6 @@ test("packaged app launches, mounts renderer and serves /health", async () => {
       expect(version).toBe(expectedVersion);
     }
   } finally {
-    await app?.close();
+    await closeApp(app);
   }
 });

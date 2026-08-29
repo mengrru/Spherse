@@ -39,6 +39,15 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(aBuf, bBuf);
 }
 
+export function verifyPresentedToken(req: FastifyRequest, token: string): boolean {
+  const isWsRoute = req.url.startsWith("/ws/");
+  const presented = isWsRoute
+    ? extractQueryToken(req)
+    : (extractBearerToken(req) ?? extractQueryToken(req) ?? extractPreviewPathToken(req));
+  if (!presented) return false;
+  return safeEqual(presented, token);
+}
+
 export function registerAuthHook(
   fastify: FastifyInstance,
   options: AuthOptions,
@@ -54,10 +63,7 @@ export function registerAuthHook(
     const isWsRoute = req.url.startsWith("/ws/");
     if (!isApiRoute && !isWsRoute) return;
 
-    const presented = isWsRoute
-      ? extractQueryToken(req)
-      : (extractBearerToken(req) ?? extractQueryToken(req) ?? extractPreviewPathToken(req));
-    if (!presented || !safeEqual(presented, token)) {
+    if (!verifyPresentedToken(req, token)) {
       return reply.code(401).send({ error: "Unauthorized" });
     }
   });

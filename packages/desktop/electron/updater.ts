@@ -9,8 +9,9 @@ import { getMainWindow } from "./window.js";
 // 更新检测源：CI publish-oss job 每次发版自动维护的 OSS 清单（国内可达，
 // 与 landing page 下载按钮同源）。替代此前 GitHub API / electron-updater
 // GitHub feed（后者 latest.yml 自 ba8c049 起不再上传，检测必然 404）。
-const OSS_UPDATE_MANIFEST_URL =
-  "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse/latest.json";
+const OSS_BUCKET_BASE_URL =
+  "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse";
+const OSS_UPDATE_MANIFEST_URL = `${OSS_BUCKET_BASE_URL}/latest.json`;
 
 /**
  * OSS latest.json 清单结构（与 landing `resolveDownloadUrl` / CI `publish-oss`

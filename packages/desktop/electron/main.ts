@@ -1,27 +1,24 @@
 import { app } from "electron";
 import { createWindow, getMainWindow } from "./window.js";
-import { restoreEnvFromSettings } from "./settings.js";
+import { restoreEnvFromSettings, getMobileAccess } from "./settings.js";
 import { fixPath } from "./fix-path.js";
 import { ensureServer, stopServer, getServerPort } from "./server.js";
 import { registerAllIpc } from "./ipc/index.js";
 import { startAutoUpdateChecks } from "./updater.js";
 import { setupContextMenu } from "./ipc/context-menu.js";
 import { getTunnelManager } from "./tunnel/manager.js";
-import { getMobileAccess, setMobileAccess, generateAccessToken } from "./settings.js";
+import { settleWithin } from "@spherse/core";
 
 app.whenReady().then(async () => {
   await fixPath();
   restoreEnvFromSettings();
-  const mobile = getMobileAccess();
-  if ((mobile.mode ?? "quick") === "manual" && !mobile.token) {
-    setMobileAccess({ token: generateAccessToken() });
-  }
   await ensureServer();
   createWindow();
   setupContextMenu(getMainWindow()!);
   registerAllIpc(getMainWindow);
   startAutoUpdateChecks();
 
+  const mobile = getMobileAccess();
   if (mobile.enabled && (mobile.mode ?? "quick") === "quick") {
     try {
       void getTunnelManager().start(getServerPort());
@@ -31,11 +28,24 @@ app.whenReady().then(async () => {
   }
 });
 
+const TUNNEL_STOP_TIMEOUT_MS = 5_000;
+const GRACEFUL_SHUTDOWN_HARD_EXIT_MS = 30_000;
+
 let quitting = false;
 async function gracefulShutdown(): Promise<void> {
   if (quitting) return;
   quitting = true;
-  await getTunnelManager().stop();
+  setTimeout(() => {
+    console.error("[main] graceful shutdown timed out, forcing app exit");
+    app.exit(1);
+  }, GRACEFUL_SHUTDOWN_HARD_EXIT_MS).unref();
+  await settleWithin(getTunnelManager().stop(), TUNNEL_STOP_TIMEOUT_MS, (outcome, detail) => {
+    if (outcome === "error") {
+      console.error("[main] tunnel stop failed:", detail);
+    } else {
+      console.error(`[main] tunnel stop timed out after ${TUNNEL_STOP_TIMEOUT_MS}ms, continuing`);
+    }
+  });
   await stopServer();
   app.quit();
 }

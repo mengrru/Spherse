@@ -54,8 +54,10 @@ export async function runWebVersionGuard(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     const base = conn.baseUrl.replace(/\/+$/, "");
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (conn.token) headers.Authorization = `Bearer ${conn.token}`;
     const res = await fetch(`${base}/api/connection/info`, {
-      headers: { Accept: "application/json" },
+      headers,
       signal: controller.signal,
     });
     clearTimeout(timeout);

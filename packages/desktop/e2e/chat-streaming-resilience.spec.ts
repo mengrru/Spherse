@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { closeApp } from "./helpers/electron";
 import type { Page } from "@playwright/test";
 import {
   createChatProject,
@@ -44,7 +45,7 @@ test("abort button visible throughout entire agent turn until agent_end", async 
     await expect(page.locator("[data-chat-composer] button svg.lucide-send")).toBeVisible();
     await expect(textarea).toHaveValue("typed while streaming");
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -76,7 +77,7 @@ test("streaming continues after switching away and back", async () => {
     await page.waitForSelector("text=Based on the file content.", { timeout: 10000 });
     await expect(page.locator("[data-chat-composer] button svg.lucide-send")).toBeVisible({ timeout: 10000 });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -114,6 +115,6 @@ test("sidebar shows streaming indicator on background session", async () => {
 
     await page.waitForSelector(`[data-session-id="${sessionA}"] svg.lucide-loader-circle`, { state: "hidden", timeout: 10000 }).catch(() => {});
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

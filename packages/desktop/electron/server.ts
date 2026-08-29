@@ -1,34 +1,73 @@
 import type { FastifyInstance } from "fastify";
 import { app } from "electron";
 import { createMultiProjectServer } from "@spherse/server";
-import type { ProjectRegistry } from "@spherse/server";
+import type { ProjectRegistry, MultiProjectServer } from "@spherse/server";
 import type { SamplingParams, ThinkingLevel } from "@spherse/core";
-import { getSettings, getMobileAccess } from "./settings.js";
+import { settleWithin } from "@spherse/core";
+import { getSettings, getMobileAccess, getServerToken } from "./settings.js";
 import { getAppModelCatalog } from "./model-catalog.js";
+import { getTunnelManager } from "./tunnel/manager.js";
 
 interface ServerHandle {
+  server: MultiProjectServer;
   fastify: FastifyInstance;
   registry: ProjectRegistry;
 }
 
+const SERVER_STAGE_TIMEOUT_MS = 10_000;
+
+function logStageOutcome(stage: string, outcome: "timeout" | "error", detail?: unknown): void {
+  if (outcome === "error") {
+    console.error(`[server] shutdown stage "${stage}" failed:`, detail);
+  } else {
+    console.error(`[server] shutdown stage "${stage}" timed out after ${SERVER_STAGE_TIMEOUT_MS}ms, continuing`);
+  }
+}
+
+async function closeServerHandle(handle: ServerHandle): Promise<void> {
+  await settleWithin(handle.registry.removeAll(), SERVER_STAGE_TIMEOUT_MS, (outcome, detail) => {
+    logStageOutcome("registry.removeAll", outcome, detail);
+  });
+  await settleWithin(handle.fastify.close(), SERVER_STAGE_TIMEOUT_MS, (outcome, detail) => {
+    logStageOutcome("fastify.close", outcome, detail);
+  });
+}
+
 let serverHandle: ServerHandle | null = null;
-let activeAccessToken: string | undefined;
 let registeredProjects: Array<{ root: string; lastOpened?: string }> = [];
+let appliedHosts: string[] = [];
+
+function desiredHosts(): string[] {
+  const mobile = getMobileAccess();
+  if (!mobile.enabled) return [];
+  if (mobile.mode === "manual") {
+    return mobile.publicDomain?.trim() ? [mobile.publicDomain.trim()] : [];
+  }
+  const publicUrl = getTunnelManager().getState().publicUrl;
+  return publicUrl ? [publicUrl] : [];
+}
+
+export function syncAllowedHosts(): void {
+  if (!serverHandle) return;
+  const desired = desiredHosts();
+  if (appliedHosts.length) serverHandle.server.removeAllowedHosts(appliedHosts);
+  if (desired.length) serverHandle.server.addAllowedHosts(desired);
+  appliedHosts = desired;
+}
 
 export async function ensureServer(): Promise<void> {
   if (serverHandle) return;
   const settings = getSettings();
-  const mobile = getMobileAccess();
-  activeAccessToken = mobile.token;
   const result = await createMultiProjectServer({
     defaultModel: settings?.models?.text?.defaultModel,
     sampling: settings?.models?.text?.sampling,
     thinkingLevel: settings?.models?.text?.thinkingLevel,
-    auth: activeAccessToken ? { accessToken: activeAccessToken } : undefined,
+    auth: { accessToken: getServerToken() },
     modelCatalog: getAppModelCatalog(),
     appVersion: app.getVersion(),
   });
-  serverHandle = { fastify: result.fastify, registry: result.registry };
+  serverHandle = { server: result, fastify: result.fastify, registry: result.registry };
+  appliedHosts = [];
   for (const { root, lastOpened } of registeredProjects) {
     try {
       await serverHandle.registry.register(root, lastOpened ? { lastOpened } : undefined);
@@ -36,19 +75,19 @@ export async function ensureServer(): Promise<void> {
       console.error(`[ensureServer] failed to re-register project at ${root}:`, err);
     }
   }
+  syncAllowedHosts();
 }
 
-export async function restartServerWithAuth(token: string | undefined): Promise<void> {
+export async function restartServer(): Promise<void> {
   if (serverHandle) {
-    registeredProjects = serverHandle.registry.listInfo().map((info) => ({
+    const handle = serverHandle;
+    serverHandle = null;
+    registeredProjects = handle.registry.listInfo().map((info) => ({
       root: info.rootPath,
       lastOpened: info.lastOpened,
     }));
-    await serverHandle.registry.removeAll();
-    await serverHandle.fastify.close();
-    serverHandle = null;
+    await closeServerHandle(handle);
   }
-  activeAccessToken = token;
 }
 
 export function getServerPort(): number {
@@ -96,9 +135,9 @@ export function updateThinkingLevel(thinkingLevel: ThinkingLevel | undefined): v
 
 export async function stopServer(): Promise<void> {
   if (!serverHandle) return;
-  await serverHandle.registry.removeAll();
-  await serverHandle.fastify.close();
+  const handle = serverHandle;
   serverHandle = null;
+  await closeServerHandle(handle);
   registeredProjects = [];
-  activeAccessToken = undefined;
+  appliedHosts = [];
 }

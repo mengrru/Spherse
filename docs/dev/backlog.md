@@ -4,9 +4,12 @@
 > 完成即删本条，不勾选滞留；新条目按性质入节；等待触发条件的设计决策放「条件触发」节，触发条件写进标题。
 > 历史完成记录见 git log 与 `docs/dev/`。
 
+## 验证补全
+
+- [ ] **手动验证 server 浏览器安全边界加固的真实隧道链路**：`2026-08-28-server-browser-security` 已合入 always-on token + 认证制 CORS + Host 校验，自动化已覆盖 server/desktop 语义（`browser-security.test.ts` / `server.test.ts`），但缺真机回归：① cloudflared 转发到 `http://localhost:{port}` 时的实际 Host 头形态（决定 quick 模式是否依赖动态 host 注册）；② quick tunnel 全流程（含 PWA WS 连接）；③ manual domain 反代访问与 regenerate 后域名仍可访问；④ prod 打包 renderer（file:// origin）API/WS。参见 `docs/dev/features/2026-08-28-server-browser-security/plan.md` 验证节。
+
 ## Bug
 
-- [ ] **E2E `app.close()` 间歇悬死（存量基建 flake）**：顺序启动多个 Electron E2E 实例时，`app.close()` 偶发 60s 悬死（无断言失败、无页面快照；逐步日志定位到 close 不返回）。干净 main 可复现，疑点在 server shutdown 链路（`stopServer` → `registry.removeAll()` → capability `shutdown`/sqlite/fs-watch 关闭竞态）。修复方向：给 shutdown 各环节加超时并审计具体卡住的 await；临时缓解可在 CI 重试。
 - [ ] **损坏项目滞留 openProjects 无移除入口**：项目打开失败（project.yaml 损坏等）后该路径一直留在 openProjects 设置里，每次启动重试失败记日志，暂无 UI 内移除 / 修复入口。参见 `docs/dev/bugfix/2026-08-27-project-open-overwrite/design.md`（#42 遗留）
 - [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。
 - [ ] **system-prompt XML 包裹对用户内容闭合标签不健壮**：`serializeSystemPrompt`（`packages/core/src/context/serialize.ts`）对 `<project-instructions>`/`<agent-profile>`/`<context-file>` 的 inner content 原样包裹、不转义。若用户的 AGENTS.md 或预载文件内含 `</project-instructions>` 等闭合标签，会破坏 system prompt 结构。需评估方案：对 inner content 转义、改用 CDATA、或在包裹时检测冲突标签；同时更新 `serialize.test.ts` 中「不转义 inner content」的现有断言。参见 `docs/dev/features/2026-07-02-context-engineering/design.md` §6.3
@@ -39,6 +42,7 @@
 - [ ] **run-state 下沉 core（条件触发：roundtable / 动态 tools 立项时）**：hub 的 channel.running 与 runner 的 inFlight boolean 合并为 core 单一 run-state 真相（server 409 与重连快照重放改为消费 core 派生；run-identity 下沉）。队列/优先级/来源区分等调度语义等第一个真实消费者（moderator 编排）定义后再做——in-flight fail-fast 是安全不变量，不是调度策略，两者正交。
 - [ ] **yolo 审批策略泛化（条件触发：第二个审批策略需求出现时）**：`profile.yolo ? undefined : approvalGate` 泛化为 `approvalPolicy` 贡献点（白名单命令免审批/分级审批等）。
 - [ ] **data-conventions.md 拆分阈值（条件触发：文件继续增长时）**：重写后 265 行（规范上限约 200），当前单主题表格密度高、尚可维护；若继续增长（如新增数据文件类型或卡片种类），优先把「HTML Card / Image Card」两节拆出 `docs/official/cards.md`，或把「触发器 + Session 数据」合并拆出会话域文件，拆分时同步更新 core.md / chat.md / capabilities.md 中的交叉引用。
+- [ ] **shutdown 生命周期统一契约（条件触发：streaming runtime 生命周期重构或 capability 拆分立项时）**：当前 shutdown 正确性靠调用点手工防御（`ProjectRuntime.shutdown` 手工顺序 + `settleWithin` 逐 capability 包裹、desktop `closeServerHandle` 分段超时、main.ts 硬兜底，见 `docs/dev/bugfix/2026-08-29-e2e-app-close-hang/design.md`），组件 close 语义异构（`closeAll` 同步清 map 且不 abort 在跑 turn、sqlite/fs-watch 同步、MCP close 异步无界），且无 cancellation 传播——超时即放弃，底层工作泄漏至 `app.exit` 强杀。方向：统一 lifecycle 端口（`stop(signal)` 按启动逆序）、AbortSignal 两阶段升级（graceful → 取消 → 才放弃）、声明式 phase 注册（超时/隔离/逆序由结构保证，与「PM 写入门面声明式校验组合」「架构契约可测试化」同哲学）。与「refreshProjects 路径不回收 streaming runtime」「Capability 接口拆分调研」同属生命周期归属问题，触发时合并设计。
 
 ## 功能增强
 
@@ -60,6 +64,5 @@
 
 - [ ] **限制 skill ZIP 安装资源消耗**：`adm-zip 0.6.0` 可关闭 forged uncompressed-size OOM 漏洞，但 `SkillStore.installSkill()` 仍会无上限读取 entry table、`SKILL.md` 并解压完整外部 ZIP。增加压缩包字节数、entry 数、单 entry 展开大小、总展开大小/磁盘预算约束，超限在解压前拒绝，并补 zip bomb / 大量 entry / 超大合法 archive 测试。参见 `docs/dev/investigation/2026-08-28-dependency-security/README.md`
 - [ ] **Turborepo 编排评估（条件触发：包数增长或 CI 时长成痛点时）**：root 已用显式拓扑序 workspaces 列表让 `npm run build --workspaces` 满足构建顺序（2026-08-28），但仍是全量串行、无缓存、`dev` 无法并行 watch。turbo 可提供 `build dependsOn ^build` 自动拓扑 + 远程缓存 + `--filter` 增量 + `turbo dev --parallel`；评估安装成本与 CI 适配后决定是否引入。参见 `docs/dev/infra/2026-08-28-build-commands-package-boundaries/design.md`
-- [ ] **收敛全仓 base URL 为集中静态常量**：同一域名散布多处、各自定义局部常量或 inline，改域名 / 换 bucket 需全仓 grep 且易漏。现状：① 官网域 `spherse.mengru.work` 在 app 内 5 处（`MobileAccessPanel.tsx` `WEB_APP_URL`、`HelpPanel.tsx` `DOCS_URL`、`OnboardingPage.tsx` `EXPLORE_URL`、`UpdateChecker.tsx` inline 错误兜底、`UpdateNoticeBridge.tsx` `DOWNLOAD_PAGE_FALLBACK_URL`）；② OSS bucket 完整 URL 在 `packages/desktop/electron/updater.ts`（latest.json）与 `packages/server/src/marketplace.ts`（skills manifest.json）各写一份（landing 侧已走 `VITE_OSS_MANIFEST_URL` 构建期注入）；③ `packages/core/src/model-providers/openai-images.ts` 内 `https://api.openai.com/v1` 重复 5 次；④ GitHub 仓库 URL 在 landing 内散布（`release.ts` `FALLBACK_URL`、`DownloadPage.tsx` `GITHUB_TAG_URL_BASE`、`Hero.tsx` inline 链接）与 `scripts/build-changelog.mjs` API host。方向：按消费包建集中 URL 常量模块并消灭 inline 字面量——app 侧 `lib/urls.ts` 以官网域常量派生 `/web/`、`/docs`、`/explore` 等路径，desktop / server 各自收敛 OSS host 常量，core provider 文件内单常量复用；保留各包构建边界（app/core 不跨包共享），landing 维持 env 注入模式。测试 fixture、i18n placeholder 示例、tunnel URL 正则不属于收敛范围。
 - [ ] **React DOM 组件测试工具链**：为 `packages/app` 引入组件级测试基础设施（如 Testing Library + user-event + jsdom/happy-dom），用于测试 React 组件渲染、ARIA 状态、用户交互和菜单/折叠等局部 UI 行为，补足当前 Vitest 单测与 Playwright E2E 之间的测试层级。
 - [ ] **日志 level 区分 dev/prod**：当前 server logger level 硬编码 `debug`（`packages/server/src/logger.ts:18`），dev/prod 配置完全一致。prod 中 pino-pretty 输出到 stdout 但打包后 Electron 应用的 stdout 未挂终端/文件、日志直接丢弃，debug bus stream 无订阅者时也不留存——无内存占用问题，但 `logAgentEvent` 对每个 agent 事件都打 debug 日志，每轮 turn 几十上百条，pino 仍会完整序列化→格式化→写 fd→遍历订阅者，全是无意义开销。应支持 `SPHERSE_LOG_LEVEL` env override（或 `app.isPackaged` 时降为 `info`/`warn`），在 `electron/server.ts` 调 `createMultiProjectServer` 时传 `logLevel` 选项下去；进一步可考虑 prod 默认 `silent` + 仅保留 debug bus stream。参见 `docs/dev/infra/2026-06-06-server-core-logging/design.md`

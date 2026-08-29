@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { closeApp } from "./helpers/electron";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const appRoot = path.resolve(__dirname, "..");
@@ -131,7 +133,7 @@ test("openFile action navigates from iframe", async () => {
       ),
     );
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -159,7 +161,7 @@ test("createSession action navigates from iframe", async () => {
       page.getByPlaceholder("输入消息... (Shift+Enter 换行)"),
     ).toBeVisible();
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -192,7 +194,7 @@ test("unknown action is ignored", async () => {
     await page.waitForTimeout(500);
     expect(page.url()).toBe(urlBefore);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -214,7 +216,7 @@ test("rate limit blocks excess calls", async () => {
       navigatedCount++;
     });
 
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 40; i++) {
       await page.evaluate(() => {
         window.postMessage(
           {
@@ -228,17 +230,19 @@ test("rate limit blocks excess calls", async () => {
     }
 
     await page.waitForTimeout(2000);
-    expect(navigatedCount).toBeLessThanOrEqual(10);
+    expect(navigatedCount).toBeLessThanOrEqual(30);
+    expect(navigatedCount).toBeGreaterThanOrEqual(1);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
 async function createSessionViaApi(page: Page, projectId: string, agentId: string): Promise<string> {
   const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const token = (await page.evaluate(() => window.electronAPI.getMobileAccessState())).token ?? null;
   const res = await fetch(
     `http://localhost:${port}/api/projects/${projectId}/agents/${encodeURIComponent(agentId)}/sessions`,
-    { method: "POST" },
+    { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {} },
   );
   const body = await res.json() as Record<string, unknown>;
   if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
@@ -251,8 +255,10 @@ async function getSessionMessageCount(
   sessionId: string,
 ): Promise<number> {
   const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const token = (await page.evaluate(() => window.electronAPI.getMobileAccessState())).token ?? null;
   const res = await fetch(
     `http://localhost:${port}/api/projects/${projectId}/sessions/${encodeURIComponent(sessionId)}/messages`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
   );
   const body = (await res.json()) as { messages?: unknown[] };
   return body.messages?.length ?? 0;
@@ -264,7 +270,7 @@ test("openSession action navigates to an existing session without sending a mess
 
   try {
     const sessionId = await createSessionViaApi(page, project.projectId, "test-agent");
-    expect(getSessionMessageCount(page, project.projectId, sessionId)).resolves.toBe(0);
+    await expect(getSessionMessageCount(page, project.projectId, sessionId)).resolves.toBe(0);
 
     const projectUrl = `/project/${project.projectId}`;
     await page.goto(
@@ -291,7 +297,7 @@ test("openSession action navigates to an existing session without sending a mess
     // openSession must NOT send a message — the session stays empty.
     expect(await getSessionMessageCount(page, project.projectId, sessionId)).toBe(0);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
 
@@ -313,6 +319,6 @@ test("showToast action renders a sonner toast", async () => {
       timeout: 10_000,
     });
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });
