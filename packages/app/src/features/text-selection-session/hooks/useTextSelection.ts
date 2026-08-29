@@ -104,9 +104,18 @@ export function useTextSelection({
   useEffect(() => {
     if (!selectionState) return;
 
+    // handleMouseUp snapshots the selection and destroys the native one
+    // (removeAllRanges), so Ctrl/Cmd+C alone has nothing to copy. While the
+    // snapshot is alive, serve the shortcut from the snapshot, mirroring the
+    // toolbar copy button.
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "c") return;
+      // Native copy inside editable targets (e.g. the start-session popover
+      // comment box) must keep working untouched.
       if (isEditableTarget(event.target)) return;
+      // A fresh native selection can coexist with the snapshot (Ctrl+A, or
+      // dragging outside the content area, which skips the mouseup clear) —
+      // let the native copy win instead of stale snapshot text.
       const nativeSelection = window.getSelection();
       if (nativeSelection && !nativeSelection.isCollapsed && nativeSelection.toString().trim()) return;
       event.preventDefault();
