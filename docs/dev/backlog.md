@@ -38,6 +38,7 @@
 - [ ] **run-state 下沉 core（条件触发：roundtable / 动态 tools 立项时）**：hub 的 channel.running 与 runner 的 inFlight boolean 合并为 core 单一 run-state 真相（server 409 与重连快照重放改为消费 core 派生；run-identity 下沉）。队列/优先级/来源区分等调度语义等第一个真实消费者（moderator 编排）定义后再做——in-flight fail-fast 是安全不变量，不是调度策略，两者正交。
 - [ ] **yolo 审批策略泛化（条件触发：第二个审批策略需求出现时）**：`profile.yolo ? undefined : approvalGate` 泛化为 `approvalPolicy` 贡献点（白名单命令免审批/分级审批等）。
 - [ ] **data-conventions.md 拆分阈值（条件触发：文件继续增长时）**：重写后 265 行（规范上限约 200），当前单主题表格密度高、尚可维护；若继续增长（如新增数据文件类型或卡片种类），优先把「HTML Card / Image Card」两节拆出 `docs/official/cards.md`，或把「触发器 + Session 数据」合并拆出会话域文件，拆分时同步更新 core.md / chat.md / capabilities.md 中的交叉引用。
+- [ ] **shutdown 生命周期统一契约（条件触发：streaming runtime 生命周期重构或 capability 拆分立项时）**：当前 shutdown 正确性靠调用点手工防御（`ProjectRuntime.shutdown` 手工顺序 + `settleWithin` 逐 capability 包裹、desktop `closeServerHandle` 分段超时、main.ts 硬兜底，见 `docs/dev/bugfix/2026-08-29-e2e-app-close-hang/design.md`），组件 close 语义异构（`closeAll` 同步清 map 且不 abort 在跑 turn、sqlite/fs-watch 同步、MCP close 异步无界），且无 cancellation 传播——超时即放弃，底层工作泄漏至 `app.exit` 强杀。方向：统一 lifecycle 端口（`stop(signal)` 按启动逆序）、AbortSignal 两阶段升级（graceful → 取消 → 才放弃）、声明式 phase 注册（超时/隔离/逆序由结构保证，与「PM 写入门面声明式校验组合」「架构契约可测试化」同哲学）。与「refreshProjects 路径不回收 streaming runtime」「Capability 接口拆分调研」同属生命周期归属问题，触发时合并设计。
 
 ## 功能增强
 
