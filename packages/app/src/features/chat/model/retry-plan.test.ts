@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ErrorEventCode } from "@spherse/server/contracts";
+import { ErrorEventCode } from "@spherse/contracts";
 import { planRetry } from "./retry-plan";
 import type { ChatMessage } from "../types";
 

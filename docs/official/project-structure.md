@@ -141,25 +141,27 @@ spherse/
 │   │           ├── messaging.test.ts          # postAction/fire/call（resolve/reject/超时/并发 requestId 匹配）
 │   │           ├── context.test.ts            # 运行时种子化（window.__SPHERSE__ 同步 + spherse:runtime 异步 + waiter 队列）
 │   │           └── events.test.ts             # 文件事件订阅、定向分发与幂等取消
+│   ├── contracts/                   # @spherse/contracts — 跨进程边界 wire 协议（HTTP/WS schema + parser）
+│   │   └── src/
+│   │       ├── index.ts              # 聚合 schemas 与类型 re-export，包唯一入口
+│   │       ├── common.ts             # okResponse/errorResponse、parseContract/parseApiResponse
+│   │       ├── agents.ts             # AgentProfile、AgentCreate/Update、MCP（mcpServerConfig/AgentMcpResponse/AgentMcpUpdateRequest）Request/Response
+│   │       ├── sessions.ts           # SessionInfo、SessionList/Messages Response、SessionMessagesPage（分页信封）、rename 请求
+│   │       ├── content.ts            # FileEntry、ContentResponse、create/save 请求
+│   │       ├── file-tree.ts          # FileTreeResponse
+│   │       ├── settings.ts           # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
+│   │       ├── trigger.ts            # TriggerEntry、TriggerCreate/Update 请求、List/Log Response
+│   │       ├── skills.ts             # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
+│   │       ├── marketplace.ts        # MarketplaceSkillEntry、MarketplaceManifestResponse、SkillMarketplaceInstallRequest（{name, version}）
+│   │       ├── debug.ts              # TurnContextSnapshot
+│   │       ├── websocket.ts          # ChatClientMessage/ChatServerEvent/TriggerServerEvent + parser
+│   │       └── __tests__/            # 契约测试（正向通过 / 负向抛 Invalid payload + Fastify coercion 兼容）
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
     │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry
     │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove
     │   │       ├── marketplace.ts        # 技能市场 service：OSS manifest 代理（30s 内存缓存，env SPHERSE_MARKETPLACE_MANIFEST_URL 可覆盖 URL）+ zip 下载（同源 SSRF 校验、50MB 上限）
-    │   │       ├── contracts/            # HTTP/WebSocket runtime schema 与解析 helper（@spherse/server/contracts）
-    │   │       │   ├── index.ts          # 聚合 schemas 与类型 re-export，对外稳定入口
-    │   │       │   ├── common.ts         # okResponse/errorResponse、parseContract/parseApiResponse
-    │   │       │   ├── agents.ts         # AgentProfile、AgentCreate/Update、MCP（mcpServerConfig/AgentMcpResponse/AgentMcpUpdateRequest）Request/Response
-    │   │       │   ├── sessions.ts       # SessionInfo、SessionList/Messages Response、SessionMessagesPage（分页信封）、rename 请求
-    │   │       │   ├── content.ts        # FileEntry、ContentResponse、create/save 请求
-    │   │       │   ├── file-tree.ts      # FileTreeResponse
-    │   │       │   ├── settings.ts       # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
-    │   │       │   ├── trigger.ts        # TriggerEntry、TriggerCreate/Update 请求、List/Log Response
-    │   │       │   ├── skills.ts         # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
-    │   │       │   ├── marketplace.ts    # MarketplaceSkillEntry、MarketplaceManifestResponse、SkillMarketplaceInstallRequest（{name, version}）
-    │   │       │   ├── debug.ts          # TurnContextSnapshot
-    │   │       │   └── websocket.ts      # ChatClientMessage/ChatServerEvent/TriggerServerEvent + parser
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取

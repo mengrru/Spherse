@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { nanoid } from "nanoid";
 import { isValidCron, isReservedEventName, requiresTargetSession } from "@spherse/core";
-import { schemas } from "@spherse/server/contracts";
-import type { TriggerCreateRequest, TriggerUpdateRequest } from "@spherse/server/contracts";
+import { schemas } from "@spherse/contracts";
+import type { TriggerCreateRequest, TriggerUpdateRequest } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { badRequest, notFound } from "../errors.js";
 

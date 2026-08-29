@@ -1,4 +1,4 @@
-import type { ErrorEventCode } from "@spherse/server/contracts";
+import type { ErrorEventCode } from "@spherse/contracts";
 
 export interface HtmlCard {
   type: "html";

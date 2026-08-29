@@ -4,11 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { nanoid } from "nanoid";
-import { schemas, parseContract } from "./contracts/index.js";
+import { schemas, parseContract } from "@spherse/contracts";
 import type {
   MarketplaceManifestResponse,
   MarketplaceSkillEntry,
-} from "./contracts/index.js";
+} from "@spherse/contracts";
 import { getAppVersion } from "./server-info.js";
 import { HttpError } from "./errors.js";
 

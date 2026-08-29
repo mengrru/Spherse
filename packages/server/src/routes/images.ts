@@ -2,7 +2,7 @@ import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
 import { AccessDeniedError } from "@spherse/core";
-import { schemas } from "@spherse/server/contracts";
+import { schemas } from "@spherse/contracts";
 import { forbidden } from "../errors.js";
 
 export function registerImagesRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {

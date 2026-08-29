@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { schemas, parseContract } from "@spherse/server/contracts";
-import type { SkillCreateRequest, SkillInstallRequest } from "@spherse/server/contracts";
+import { schemas, parseContract } from "@spherse/contracts";
+import type { SkillCreateRequest, SkillInstallRequest } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
 

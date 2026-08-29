@@ -139,7 +139,7 @@ src/
 
 ## API 与 i18n
 
-- HTTP/WebSocket 边界复用 `@spherse/server/contracts` 的 schema/parser，不新增裸 `JSON.parse` 或仅靠 TypeScript 泛型的边界校验。
+- HTTP/WebSocket 边界复用 `@spherse/contracts` 的 schema/parser，不新增裸 `JSON.parse` 或仅靠 TypeScript 泛型的边界校验。
 - 用户可见文案必须进入 `@spherse/i18n`。
 - `packages/i18n/src/locales/zh-CN.ts` 是翻译基准；新增文案要写清 UI 位置、上下文和交互状态注释，并同步其他语言。
 

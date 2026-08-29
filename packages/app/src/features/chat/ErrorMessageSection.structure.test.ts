@@ -13,7 +13,7 @@ describe("ErrorMessageSection structure", () => {
   });
 
   it("imports ErrorEventCode from server contracts", () => {
-    expect(source).toContain('from "@spherse/server/contracts"');
+    expect(source).toContain('from "@spherse/contracts"');
     expect(source).toContain("ErrorEventCode");
   });
 

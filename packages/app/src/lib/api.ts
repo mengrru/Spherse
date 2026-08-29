@@ -29,8 +29,8 @@ import type {
   SessionStatusResponse,
   DataReadResponseContract as DataReadResponse,
   MarketplaceManifestResponse,
-} from "@spherse/server/contracts";
-import { parseApiResponse, schemas } from "@spherse/server/contracts";
+} from "@spherse/contracts";
+import { parseApiResponse, schemas } from "@spherse/contracts";
 import { Type } from "@sinclair/typebox";
 
 const attachmentUploadResponse = Type.Object({

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { parseBusServerMessage } from "@spherse/server/contracts";
+import { parseBusServerMessage } from "@spherse/contracts";
 import type { HostBridge } from "../lib/host-bridge";
 import { buildWsUrl } from "../lib/api";
 

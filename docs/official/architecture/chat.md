@@ -1,7 +1,7 @@
 # Chat 数据流
 
 > 覆盖：一条消息从发送到渲染的全链路——renderer runtime → server `ChatSessionHub` → core `AgentRunner` → EventPipeline → 持久化，以及错误、重试、重连、历史对账与滚动的机制。
-> wire 协议 contract 定义见 `@spherse/server/contracts`（`websocket.ts`）；core 事件日志与 fold 语义见 [core.md](core.md)；前端路由与查询缓存见 [frontend.md](frontend.md)。
+> wire 协议 contract 定义见 `@spherse/contracts`（`websocket.ts`）；core 事件日志与 fold 语义见 [core.md](core.md)；前端路由与查询缓存见 [frontend.md](frontend.md)。
 > 本文只描述数据流与机制；UI SDK 侧的发送入口（open/float 语义）见 [ui-sdk.md](ui-sdk.md)。
 
 ## 全链路总览

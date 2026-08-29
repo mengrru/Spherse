@@ -1,4 +1,4 @@
-import type { FsWatchChangeEvent } from "@spherse/server/contracts";
+import type { FsWatchChangeEvent } from "@spherse/contracts";
 
 export const FILE_UPDATE_DEBOUNCE_MS = 300;
 

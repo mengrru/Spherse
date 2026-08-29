@@ -8,7 +8,7 @@ import {
   isBinaryBuffer,
   BINARY_SAMPLE_SIZE,
 } from "@spherse/core";
-import { schemas, parseContract } from "@spherse/server/contracts";
+import { schemas, parseContract } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { forbidden, notFound, badRequest, conflict } from "../errors.js";
 

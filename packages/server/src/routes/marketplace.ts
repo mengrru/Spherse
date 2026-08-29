@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
-import { schemas, parseContract } from "@spherse/server/contracts";
-import type { SkillMarketplaceInstallRequest } from "@spherse/server/contracts";
+import { schemas, parseContract } from "@spherse/contracts";
+import type { SkillMarketplaceInstallRequest } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound, conflict } from "../errors.js";
 import { marketplaceService, type MarketplaceService } from "../marketplace.js";

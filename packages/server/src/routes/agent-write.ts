@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { schemas } from "@spherse/server/contracts";
-import type { AgentCreateRequest, AgentUpdateRequest } from "@spherse/server/contracts";
+import { schemas } from "@spherse/contracts";
+import type { AgentCreateRequest, AgentUpdateRequest } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { badRequest } from "../errors.js";
 

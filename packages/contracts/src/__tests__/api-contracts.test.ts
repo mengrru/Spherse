@@ -5,7 +5,7 @@ import {
   parseChatClientMessage,
   parseChatServerEvent,
   schemas,
-} from "../../contracts/index.js";
+} from "../index.js";
 
 describe("api contracts", () => {
   it("accepts valid chat websocket client messages", () => {

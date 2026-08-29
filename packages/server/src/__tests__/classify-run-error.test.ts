@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ModelNotConfiguredError, ConflictError, ValidationError } from "@spherse/core";
-import { ErrorEventCode } from "../contracts/websocket.js";
+import { ErrorEventCode } from "@spherse/contracts";
 import { classifyRunError } from "../classify-run-error.js";
 
 describe("classifyRunError", () => {

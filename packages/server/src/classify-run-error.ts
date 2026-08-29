@@ -1,5 +1,5 @@
 import { ModelNotConfiguredError, ConflictError, ValidationError } from "@spherse/core";
-import { ErrorEventCode } from "./contracts/websocket.js";
+import { ErrorEventCode } from "@spherse/contracts";
 
 export function classifyRunError(err: unknown): ErrorEventCode {
   if (err instanceof ModelNotConfiguredError) return ErrorEventCode.ModelNotConfigured;

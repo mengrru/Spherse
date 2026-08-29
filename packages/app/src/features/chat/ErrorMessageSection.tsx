@@ -3,7 +3,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../compo
 import { Button } from "../../components/ui/button";
 import { ChevronRightIcon, AlertTriangleIcon, RotateCwIcon, SettingsIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
-import { ErrorEventCode } from "@spherse/server/contracts";
+import { ErrorEventCode } from "@spherse/contracts";
 import { useAppUiStore } from "../../stores/app-ui-store";
 
 interface ErrorMessageSectionProps {

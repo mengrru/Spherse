@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseChatClientMessage,
   parseChatServerEvent,
-} from "../../contracts/index.js";
+} from "../index.js";
 
 describe("chat websocket control contract", () => {
   it("accepts question control_request server event", () => {

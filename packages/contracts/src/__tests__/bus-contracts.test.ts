@@ -3,7 +3,7 @@ import {
   parseBusClientMessage,
   parseBusServerMessage,
   parseTriggerServerEvent,
-} from "../../contracts/index.js";
+} from "../index.js";
 
 describe("bus server message contract", () => {
   it("accepts trigger_triggered envelope", () => {

@@ -3,7 +3,7 @@ import { NotFoundError, ModelNotConfiguredError, ValidationError } from "@sphers
 
 import { handleChatWebSocket } from "../ws-chat.js";
 import { ChatSessionHub } from "../chat-session-hub.js";
-import { CHAT_CLOSE_CODES } from "../contracts/index.js";
+import { CHAT_CLOSE_CODES } from "@spherse/contracts";
 
 interface MockSocket {
   on: ReturnType<typeof vi.fn>;
