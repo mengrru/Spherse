@@ -391,6 +391,7 @@ spherse/
 │   └── workflows/
 │       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + publish-changelog 生成上传 changelog.json + 末尾 dispatch deploy-pages 联动 web 部署
 │       ├── pr-build.yml              # PR 触发的 CI：checkout + npm ci + npm run verify（lint/build/typecheck/单测/i18n check）
+│       ├── e2e.yml                   # PR 触发的 CI：macOS runner 跑 Electron E2E 全套（非 required，结果仅供参考；docs-only 跳过）
 │       └── deploy-pages.yml          # main 分支 landing/web/i18n 变更或发版流水线 workflow_dispatch 触发的 CI：构建并部署到 GitHub Pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
