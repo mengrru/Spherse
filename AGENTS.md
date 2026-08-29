@@ -61,6 +61,7 @@ npm run build
 
 # 监听编译（开发时使用）
 npm run dev -w @spherse/core    # core 监听
+npm run dev -w @spherse/contracts # contracts 监听
 npm run dev -w @spherse/presets # presets 监听
 npm run dev -w @spherse/i18n    # i18n 监听
 npm run dev -w @spherse/server  # server 监听
