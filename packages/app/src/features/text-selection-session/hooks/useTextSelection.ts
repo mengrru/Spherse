@@ -107,6 +107,8 @@ export function useTextSelection({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.key.toLowerCase() !== "c") return;
       if (isEditableTarget(event.target)) return;
+      const nativeSelection = window.getSelection();
+      if (nativeSelection && !nativeSelection.isCollapsed && nativeSelection.toString().trim()) return;
       event.preventDefault();
       navigator.clipboard
         .writeText(selectionState.text)

@@ -18,8 +18,14 @@
 保留既有「快照 + 自绘高亮」设计，在快照存活期间补回键盘复制路径：
 
 - `useTextSelection` 新增 keydown effect：`selectionState` 存在时监听 Ctrl/Cmd+C（排除 Alt 组合），`preventDefault()` 后 `navigator.clipboard.writeText(selectionState.text)`，成功后清除选区状态，与工具栏复制按钮行为一致
-- 焦点在可编辑元素内（input/textarea/contentEditable，如弹窗补充说明输入框）时不拦截，保证编辑场景的原生复制不受影响
+- 拦截前两个放行守卫：
+  - 焦点在可编辑元素内（input/textarea/contentEditable，如弹窗补充说明输入框）不拦截，保证编辑场景的原生复制不受影响
+  - 存在非空原生选区时不拦截（如 Ctrl+A 全选、或划选了 content 区域外的文本——该路径 mouseup 不清除旧快照），避免旧快照覆盖用户新选区
+- 已知取舍：keydown 监听不受 `disabled` 门控，「发起会话」弹窗打开期间（快照存活）焦点在非编辑区按 Ctrl/Cmd+C 仍会复制快照并连带关闭弹窗——视为任务完成路径，与 Escape/点击外部关闭一致
+- 快捷键匹配用 `event.key === "c"`（非拉丁布局下失效），与仓库既有 Cmd/Ctrl+F、Cmd/Ctrl+S 写法保持一致，不单独特殊化
 
 ## 4. 测试
 
-- `packages/desktop/e2e/text-selection-session.spec.ts` 新增用例：划选后原生选区已 collapse 的前提下按 Ctrl/Cmd+C，通过主进程 `clipboard.readText()` 断言剪贴板内容为选中文本，且工具栏与高亮 overlay 随之清除
+- `packages/desktop/e2e/text-selection-session.spec.ts` 新增用例：
+  - 划选后原生选区已 collapse 的前提下按 Ctrl/Cmd+C，通过主进程 `clipboard.readText()` 断言剪贴板内容为选中文本，且工具栏与高亮 overlay 随之清除（按键前 `clipboard.clear()` 作哨兵，排除本机剪贴板残留假阳性）
+  - 打开「发起会话」弹窗后在补充说明 textarea 内选中文本按 Ctrl/Cmd+C，断言剪贴板内容为所输文本（可编辑排除守卫生效）且弹窗不关闭
