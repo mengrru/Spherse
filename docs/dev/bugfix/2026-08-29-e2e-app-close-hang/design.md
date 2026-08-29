@@ -72,13 +72,13 @@ window-all-closed / before-quit
 
 ### 层 3：E2E 侧防御（冗余保险）
 
-`e2e/helpers/electron.ts` 新增导出 `closeApp(app)`：`Promise.race(app.close(), 20s timeout)`，超时 `app.process().kill("SIGKILL")` 兜底——提炼自 `floating-chat.spec.ts:75-87` 既有本地实现，替换全部 spec 的 `await app.close()` / `app?.close()` 调用（含 `unsafe-location-guard.spec.ts`、`app-launch.spec.ts` 的 optional-chaining 变体，共 16 个文件）。20s 选择：正常退出 < 2s；主进程侧 stage 超时日志（5s/10s/10s 档）在最坏 25s 叠加路径下也能先于 kill 落盘前两条，诊断信息基本不丢；主进程 30s 硬兜底作为真实用户场景的最终防线，E2E 无需等它。
+`e2e/helpers/electron.ts` 新增导出 `closeApp(app)`：`Promise.race(app.close(), 20s timeout)`，超时 `app.process().kill("SIGKILL")` 兜底——提炼自 `floating-chat.spec.ts:75-87` 既有本地实现，替换全部 spec 的 `await app.close()` / `app?.close()` 调用（含 `unsafe-location-guard.spec.ts`、`app-launch.spec.ts`、`packaged-smoke.spec.ts` 的 optional-chaining 变体，共 18 个 spec 文件）。20s 选择：正常退出 < 2s；主进程侧 stage 超时日志（5s/10s/10s 档）在最坏 25s 叠加路径下也能先于 kill 落盘前两条，诊断信息基本不丢；主进程 30s 硬兜底作为真实用户场景的最终防线，E2E 无需等它。
 
 ## 影响面
 
 - core：新增 `utils/settle-within.ts` + 测试；`project-runtime.ts` shutdown 错误隔离 + 超时；`index.ts` 导出 `settleWithin`
 - server：`index.ts` Fastify 选项 `forceCloseConnections: true` + `create-server.test.ts` 契约断言
-- desktop：`electron/main.ts` 硬兜底 + tunnel 超时；`electron/server.ts` `closeServerHandle` 分阶段超时；`e2e/helpers/electron.ts` `closeApp` + 16 个 spec 调用点机械替换（`floating-chat.spec.ts` 删本地重复实现）
+- desktop：`electron/main.ts` 硬兜底 + tunnel 超时；`electron/server.ts` `closeServerHandle` 分阶段超时；`e2e/helpers/electron.ts` `closeApp` + 18 个 spec 调用点机械替换（`floating-chat.spec.ts` 删本地重复实现）
 - i18n / app：不改（无用户可见文案变化；30s 强退仅在已挂死路径发生）
 
 ## 测试
@@ -86,9 +86,9 @@ window-all-closed / before-quit
 - core `__tests__/utils/settle-within.test.ts`：正常完成即透传且**不触发 onSettle（含迟到的定时器不回调）**、超时回调并 resolve、源 promise reject 回调并 resolve（不产生 unhandled rejection）、空 promise 立即 resolve。
 - core `__tests__/project-runtime-shutdown.test.ts`：直接构造 `ProjectRuntime`（fake projectManager/sessionRuntime/capabilities）——① 某 capability shutdown 永不 resolve → `runtime.shutdown()` 在超时内返回且后续 capability 的 shutdown 与 `projectManager.close` 仍执行；② 某 capability shutdown 抛错 → 不中断后续 capability；③ 正常路径行为不变（close 仍被调用）。
 - server `__tests__/create-server.test.ts`：断言 `fastify.initialConfig.forceCloseConnections === true`（钉住配置不回退）。
-- desktop `electron/__tests__/server-shutdown.test.ts`：mock `electron` / `./settings.js` / `./model-catalog.js` / `@spherse/server`——① `ensureServer` 注入永不 resolve 的 `registry.removeAll()` → `stopServer()` 在超时内返回且输出 stage 超时日志，且 `fastify.close` 仍被调用；② `restartServerWithAuth` 同样走 `closeServerHandle`（断言两阶段均执行）；③ stop 后再次 `stopServer()` no-op（handle 已入口置空）。
+- desktop `electron/server-shutdown.test.ts`（co-located，仿包内 `updater.test.ts` 惯例）：mock `electron` / `./settings.js` / `./model-catalog.js` / `@spherse/server`——① `ensureServer` 注入永不 resolve 的 `registry.removeAll()` → `stopServer()` 在超时内返回且输出 stage 超时日志，且 `fastify.close` 仍被调用；② `restartServerWithAuth` 同样走 `closeServerHandle`（断言两阶段均执行）；③ stop 后再次 `stopServer()` no-op（handle 已入口置空）。
 - `main.ts` `gracefulShutdown` 不做单测（入口模块依赖重、mock 成本高于收益），由 E2E 与 code review 覆盖。
-- E2E 验证：改动涉及 Electron 启动与 E2E helper，跑 `app-launch.spec.ts` + `file-tree.spec.ts` + `floating-chat.spec.ts`（共享 `closeApp` 的直接消费者）。
+- E2E 验证：改动涉及 Electron 启动与 E2E helper，跑 `app-launch.spec.ts` + `file-tree.spec.ts` + `floating-chat.spec.ts`（共享 `closeApp` 的直接消费者），以及调用点被机械替换的 `chat-retry` / `chat-streaming-resilience` / `chat-withdraw` / `project-close` / `text-selection-session`。
 
 ## 行为变更说明
 

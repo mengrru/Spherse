@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { createTextSelectionProject, launchAppWithProject } from "./helpers/electron";
+import { closeApp, createTextSelectionProject, launchAppWithProject } from "./helpers/electron";
 
 test("text selection session shows stable button, fixed popover, and highlight overlay", async () => {
   const project = await createTextSelectionProject();

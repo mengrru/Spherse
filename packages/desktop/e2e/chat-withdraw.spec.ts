@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
-import {
-
 import { closeApp } from "./helpers/electron";
+import {
   createChatProject,
   launchChatApp,
   getServerPort,
