@@ -511,7 +511,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "tool.manage_agent": "管理智能體",
   "tool.manage_trigger": "管理觸發器",
   "tool.manage_project": "管理專案",
-  "tool.manage_project_hint": "允許智能體管理本專案：查看、建立和修改其它智能體的設定（名稱、別名、提示詞、模型、工具權限、上下文檔案），管理其定時／事件觸發器，以及查看和修改專案層級配置。修改智能體與觸發器前會要求你確認；專案層級配置的修改不經確認直接生效；刪除智能體仍需你在介面中手動操作",
+  "tool.manage_project_hint": "允許智能體管理本專案：查看、建立和修改其它智能體的配置，管理其定時／事件觸發器，以及查看和修改專案層級配置",
   "command.pendingApproval": "等待確認：智能體請求執行命令",
   "command.cwd": "工作目錄",
   "command.warning": "此命令將以你的系統權限執行，可讀寫專案外檔案、發起網路請求，請仔細核對後再批准。",
