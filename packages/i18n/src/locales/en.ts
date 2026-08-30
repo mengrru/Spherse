@@ -353,6 +353,8 @@ export const en: Record<TranslationKey, string> = {
   "chat.connectionReconnect": "Reconnect",
   "chat.approvalNotDelivered": "Action not delivered — connection may be lost",
   "chat.attachImage": "Attach image",
+  "chat.send": "Send",
+  "chat.stop": "Stop",
   "chat.imageAttachFailed": "Failed to attach image: {message}",
   "chat.removeAttachment": "Remove image",
   "chat.approvalToastMessage": "An agent is waiting for your confirmation",

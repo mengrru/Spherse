@@ -201,7 +201,13 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
             {attachBusy ? <Loader2Icon className="animate-spin" /> : <ImageIcon />}
           </Button>
           {streaming ? (
-            <Button variant="destructive" size="icon-lg" onClick={onAbort}>
+            <Button
+              variant="destructive"
+              size="icon-lg"
+              onClick={onAbort}
+              title={t("chat.stop")}
+              aria-label={t("chat.stop")}
+            >
               <SquareIcon />
             </Button>
           ) : (
@@ -209,6 +215,8 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
               size="icon-lg"
               onClick={send}
               disabled={!input.trim() || attachBusy}
+              title={t("chat.send")}
+              aria-label={t("chat.send")}
             >
               <SendIcon />
             </Button>

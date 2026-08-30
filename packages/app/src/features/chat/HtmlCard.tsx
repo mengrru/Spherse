@@ -143,7 +143,14 @@ export function HtmlCardRenderer({ card, defaultCollapsed = false }: HtmlCardRen
     "text-muted-foreground opacity-0 transition-opacity hover:bg-transparent hover:text-foreground group-hover/card:opacity-100 [.group-title_&]:opacity-100";
 
   const saveButton = card.html ? (
-    <Button variant="ghost" size="icon-xs" onClick={handleSave} className={actionBtnClass}>
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onClick={handleSave}
+      className={actionBtnClass}
+      title={t("common.save")}
+      aria-label={t("common.save")}
+    >
       <DownloadIcon className="size-3.5" />
     </Button>
   ) : null;

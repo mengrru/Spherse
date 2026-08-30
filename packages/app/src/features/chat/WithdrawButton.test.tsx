@@ -1,98 +1,80 @@
-import { act } from "react";
-import { createRoot } from "react-dom/client";
+import { act, screen } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ProjectProvider } from "../../context/project-context";
+import { renderWithProviders } from "../../test/render";
 import { WithdrawButton } from "./WithdrawButton";
 
-let host: HTMLDivElement;
-let root: ReturnType<typeof createRoot> | null = null;
+let user: ReturnType<typeof userEvent.setup>;
+let onWithdraw: ReturnType<typeof vi.fn<() => void>>;
 
 beforeEach(() => {
-  vi.useFakeTimers();
-  host = document.createElement("div");
-  document.body.appendChild(host);
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  user = userEvent.setup();
+  onWithdraw = vi.fn();
 });
 
 afterEach(() => {
-  if (root) {
-    act(() => root!.unmount());
-    root = null;
-  }
-  host.remove();
   vi.useRealTimers();
 });
 
 function renderWithdrawButton() {
-  const onWithdraw = vi.fn();
-  act(() => {
-    root = createRoot(host);
-    root.render(
-      <ProjectProvider projectId="p1" projectRoot="/tmp/p1">
-        <WithdrawButton onWithdraw={onWithdraw} />
-      </ProjectProvider>,
-    );
-  });
-  return {
-    onWithdraw,
-    arm: () => host.querySelector<HTMLButtonElement>("[data-chat-withdraw]")!,
-    confirm: () => host.querySelector<HTMLButtonElement>("[data-chat-withdraw-confirm]")!,
-    cancel: () => host.querySelector<HTMLButtonElement>("[data-chat-withdraw-cancel]")!,
-  };
+  renderWithProviders(<WithdrawButton onWithdraw={onWithdraw} />);
 }
 
 describe("WithdrawButton", () => {
-  it("arms on click and confirms withdraw on the second click", () => {
-    const ui = renderWithdrawButton();
+  it("arms on click and confirms withdraw on the second click", async () => {
+    renderWithdrawButton();
 
-    act(() => ui.arm().click());
-    act(() => ui.confirm().click());
+    await user.click(screen.getByRole("button", { name: "撤回" }));
+    await user.click(screen.getByRole("button", { name: "确认撤回" }));
 
-    expect(ui.onWithdraw).toHaveBeenCalledTimes(1);
-    expect(ui.confirm()).toBeNull();
+    expect(onWithdraw).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "确认撤回" })).not.toBeInTheDocument();
   });
 
-  it("cancel resets to the unarmed state without withdrawing", () => {
-    const ui = renderWithdrawButton();
+  it("cancel resets to the unarmed state without withdrawing", async () => {
+    renderWithdrawButton();
 
-    act(() => ui.arm().click());
-    act(() => ui.cancel().click());
+    await user.click(screen.getByRole("button", { name: "撤回" }));
+    await user.click(screen.getByRole("button", { name: "取消撤回" }));
 
-    expect(ui.onWithdraw).not.toHaveBeenCalled();
-    expect(ui.cancel()).toBeNull();
-    expect(ui.arm()).not.toBeNull();
+    expect(onWithdraw).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "取消撤回" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "撤回" })).toBeInTheDocument();
   });
 
-  it("auto-resets after 3 seconds without interaction", () => {
-    const ui = renderWithdrawButton();
+  it("auto-resets after 3 seconds without interaction", async () => {
+    renderWithdrawButton();
 
-    act(() => ui.arm().click());
+    await user.click(screen.getByRole("button", { name: "撤回" }));
     act(() => vi.advanceTimersByTime(3000));
 
-    expect(ui.confirm()).toBeNull();
-    expect(ui.arm()).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "确认撤回" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "撤回" })).toBeInTheDocument();
 
-    act(() => ui.arm().click());
-    act(() => ui.confirm().click());
-    expect(ui.onWithdraw).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "撤回" }));
+    await user.click(screen.getByRole("button", { name: "确认撤回" }));
+    expect(onWithdraw).toHaveBeenCalledTimes(1);
   });
 
-  it("stays armed within the 3 second window", () => {
-    const ui = renderWithdrawButton();
+  it("stays armed within the 3 second window", async () => {
+    renderWithdrawButton();
 
-    act(() => ui.arm().click());
+    await user.click(screen.getByRole("button", { name: "撤回" }));
     act(() => vi.advanceTimersByTime(2500));
-    act(() => ui.confirm().click());
+    await user.click(screen.getByRole("button", { name: "确认撤回" }));
 
-    expect(ui.onWithdraw).toHaveBeenCalledTimes(1);
+    expect(onWithdraw).toHaveBeenCalledTimes(1);
   });
 
-  it("clears the reset timer on unmount", () => {
-    const ui = renderWithdrawButton();
+  it("clears the reset timer on unmount", async () => {
+    const { unmount } = renderWithProviders(<WithdrawButton onWithdraw={onWithdraw} />);
+    const before = vi.getTimerCount();
 
-    act(() => ui.arm().click());
-    act(() => root!.unmount());
-    root = null;
+    await user.click(screen.getByRole("button", { name: "撤回" }));
+    expect(vi.getTimerCount()).toBe(before + 1);
 
-    expect(() => act(() => vi.advanceTimersByTime(3000))).not.toThrow();
+    unmount();
+    expect(vi.getTimerCount()).toBe(before);
   });
 });

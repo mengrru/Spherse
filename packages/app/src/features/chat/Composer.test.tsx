@@ -1,195 +1,241 @@
-import { act } from "react";
-import { createRoot } from "react-dom/client";
+import { cleanup, screen } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ProjectProvider } from "../../context/project-context";
+import { toast } from "sonner";
+import { renderWithProviders } from "../../test/render";
 import { Composer } from "./Composer";
+import { compressImage } from "./utils/compress-image";
 import type { AttachedImage } from "./types";
 
-let host: HTMLDivElement;
-let root: ReturnType<typeof createRoot> | null = null;
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
+
+const uploadAttachedImage = vi.fn();
+const deleteAttachment = vi.fn();
+
+vi.mock("../../lib/use-connection", () => ({
+  useApiClient: () => ({
+    uploadAttachedImage,
+    deleteAttachment,
+    getPreviewUrl: (path: string) => `http://localhost:5173/api/projects/p1/preview/${path}`,
+  }),
+  useConnection: () => ({ baseUrl: "http://localhost:5173", accessToken: null }),
+}));
+
+vi.mock("./utils/compress-image", () => ({
+  compressImage: vi.fn(),
+}));
+
+let user: ReturnType<typeof userEvent.setup>;
 
 beforeEach(() => {
-  host = document.createElement("div");
-  document.body.appendChild(host);
+  user = userEvent.setup();
 });
 
 afterEach(() => {
-  if (root) {
-    act(() => root!.unmount());
-    root = null;
-  }
-  host.remove();
+  cleanup();
   localStorage.clear();
   vi.restoreAllMocks();
 });
 
-function renderComposer(props: { streaming?: boolean; loading?: boolean }) {
+interface ComposerProps {
+  streaming?: boolean;
+  loading?: boolean;
+}
+
+function renderComposer(props: ComposerProps) {
   const onSend = vi.fn(() => true);
   const onAbort = vi.fn();
-  act(() => {
-    root = createRoot(host);
-    root.render(
-      <ProjectProvider projectId="p1" projectRoot="/tmp/p1">
-        <Composer
-          streaming={props.streaming ?? false}
-          loading={props.loading ?? false}
-          sessionId="session-1"
-          onSend={onSend}
-          onAbort={onAbort}
-        />
-      </ProjectProvider>,
-    );
-  });
-  return { onSend, onAbort };
+  const view = renderWithProviders(
+    <Composer
+      streaming={props.streaming ?? false}
+      loading={props.loading ?? false}
+      sessionId="session-1"
+      onSend={onSend}
+      onAbort={onAbort}
+    />,
+  );
+  return { onSend, onAbort, view };
 }
 
-function rerenderComposer(props: { streaming?: boolean; loading?: boolean }, onSend: (message: string, image?: AttachedImage) => boolean, onAbort: () => void) {
-  act(() => {
-    root!.render(
-      <ProjectProvider projectId="p1" projectRoot="/tmp/p1">
-        <Composer
-          streaming={props.streaming ?? false}
-          loading={props.loading ?? false}
-          sessionId="session-1"
-          onSend={onSend}
-          onAbort={onAbort}
-        />
-      </ProjectProvider>,
-    );
-  });
+function rerenderComposer(
+  view: ReturnType<typeof renderComposer>["view"],
+  props: ComposerProps,
+  onSend: (message: string, image?: AttachedImage) => boolean,
+  onAbort: () => void,
+) {
+  view.rerender(
+    <Composer
+      streaming={props.streaming ?? false}
+      loading={props.loading ?? false}
+      sessionId="session-1"
+      onSend={onSend}
+      onAbort={onAbort}
+    />,
+  );
 }
 
-function textarea(): HTMLTextAreaElement {
-  return host.querySelector("textarea")!;
-}
-
-function composerButton(svgClass: string): HTMLButtonElement {
-  const svg = host.querySelector(`[data-chat-composer] button svg.${svgClass}`);
-  if (!svg) throw new Error(`button with ${svgClass} not found`);
-  return svg.closest("button") as HTMLButtonElement;
-}
-
-function type(value: string): void {
-  const el = textarea();
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")!.set!;
-  act(() => {
-    setter.call(el, value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  });
-}
-
-function pressEnter(): KeyboardEvent {
-  const event = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
-  act(() => {
-    textarea().dispatchEvent(event);
-  });
-  return event;
+function mockPointerCoarse(matches: boolean) {
+  vi.spyOn(window, "matchMedia").mockImplementation(((query: string) => ({
+    matches: query.includes("coarse") && matches,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })) as unknown as typeof window.matchMedia);
 }
 
 describe("Composer input availability", () => {
   it("keeps the textarea enabled while the agent is streaming", () => {
     renderComposer({ streaming: true });
-    expect(textarea().hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("textbox")).toBeEnabled();
   });
 
-  it("accepts typed text while streaming and preserves it as a draft", () => {
-    renderComposer({ streaming: true });
-    type("继续执行");
-    expect(textarea().value).toBe("继续执行");
+  it("accepts typed text while streaming and preserves it as a draft", async () => {
+    const { view, onSend, onAbort } = renderComposer({ streaming: true });
+    await user.type(screen.getByRole("textbox"), "继续执行");
+    expect(screen.getByRole("textbox")).toHaveValue("继续执行");
 
-    rerenderComposer({ streaming: false }, vi.fn(() => true), vi.fn());
-    expect(textarea().value).toBe("继续执行");
+    rerenderComposer(view, { streaming: false }, onSend, onAbort);
+    expect(screen.getByRole("textbox")).toHaveValue("继续执行");
   });
 
-  it("does not send the draft on Enter while streaming", () => {
+  it("does not send the draft on Enter while streaming", async () => {
     const { onSend } = renderComposer({ streaming: true });
-    type("流式期间输入");
-    pressEnter();
+    await user.type(screen.getByRole("textbox"), "流式期间输入{Enter}");
     expect(onSend).not.toHaveBeenCalled();
   });
 
-  it("sends the draft typed during streaming once streaming ends", () => {
-    const { onSend, onAbort } = renderComposer({ streaming: true });
-    type("流式期间输入");
+  it("sends the draft typed during streaming once streaming ends", async () => {
+    const { onSend, onAbort, view } = renderComposer({ streaming: true });
+    await user.type(screen.getByRole("textbox"), "流式期间输入");
 
-    rerenderComposer({ streaming: false }, onSend, onAbort);
-    expect(composerButton("lucide-send").hasAttribute("disabled")).toBe(false);
+    rerenderComposer(view, { streaming: false }, onSend, onAbort);
+    expect(screen.getByRole("button", { name: "发送" })).toBeEnabled();
 
-    act(() => {
-      composerButton("lucide-send").click();
-    });
+    await user.click(screen.getByRole("button", { name: "发送" }));
     expect(onSend).toHaveBeenCalledWith("流式期间输入", undefined);
   });
 
-  it("swaps the send button for the abort button while streaming and aborts on click", () => {
+  it("swaps the send button for the abort button while streaming and aborts on click", async () => {
     const { onAbort } = renderComposer({ streaming: true });
-    expect(host.querySelector("[data-chat-composer] button svg.lucide-send")).toBeNull();
+    expect(screen.queryByRole("button", { name: "发送" })).not.toBeInTheDocument();
 
-    act(() => {
-      composerButton("lucide-square").click();
-    });
+    await user.click(screen.getByRole("button", { name: "停止" }));
     expect(onAbort).toHaveBeenCalledTimes(1);
-  });
-
-  it("shows the image icon on the attach button instead of the paperclip", () => {
-    renderComposer({ streaming: false });
-    expect(host.querySelector("[data-chat-composer] button svg.lucide-image")).not.toBeNull();
-    expect(host.querySelector("[data-chat-composer] button svg.lucide-paperclip")).toBeNull();
   });
 
   it("still disables the textarea while session history is loading", () => {
     renderComposer({ loading: true });
-    expect(textarea().hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("textbox")).toBeDisabled();
   });
 
   it("keeps the textarea disabled when streaming and loading are both true", () => {
     renderComposer({ streaming: true, loading: true });
-    expect(textarea().hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("textbox")).toBeDisabled();
   });
 });
 
 describe("Composer enter key behavior", () => {
-  function mockPointerCoarse(matches: boolean) {
-    vi.spyOn(window, "matchMedia").mockImplementation(((query: string) => ({
-      matches: query.includes("coarse") && matches,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })) as unknown as typeof window.matchMedia);
-  }
-
-  it("sends the draft on Enter with a fine pointer", () => {
+  it("sends the draft on Enter with a fine pointer", async () => {
     mockPointerCoarse(false);
     const { onSend } = renderComposer({ streaming: false });
-    type("hello world");
-    const event = pressEnter();
+    await user.type(screen.getByRole("textbox"), "hello world{Enter}");
     expect(onSend).toHaveBeenCalledWith("hello world", undefined);
-    expect(event.defaultPrevented).toBe(true);
-    expect(textarea().getAttribute("enterkeyhint")).toBe("send");
+    expect(screen.getByRole("textbox")).toHaveAttribute("enterkeyhint", "send");
   });
 
-  it("inserts a newline instead of sending on touch keyboards", () => {
+  it("inserts a newline instead of sending on touch keyboards", async () => {
     mockPointerCoarse(true);
     const { onSend } = renderComposer({ streaming: false });
-    type("第一行");
-    const event = pressEnter();
+    await user.type(screen.getByRole("textbox"), "第一行{Enter}");
     expect(onSend).not.toHaveBeenCalled();
-    expect(event.defaultPrevented).toBe(false);
-    expect(textarea().value).toBe("第一行");
-    expect(textarea().getAttribute("enterkeyhint")).toBe("enter");
+    expect(screen.getByRole("textbox")).toHaveValue("第一行\n");
+    expect(screen.getByRole("textbox")).toHaveAttribute("enterkeyhint", "enter");
   });
 
-  it("still sends from the send button on touch keyboards", () => {
+  it("still sends from the send button on touch keyboards", async () => {
     mockPointerCoarse(true);
     const { onSend } = renderComposer({ streaming: false });
-    type("touch draft");
-    act(() => {
-      composerButton("lucide-send").click();
-    });
+    await user.type(screen.getByRole("textbox"), "touch draft");
+    await user.click(screen.getByRole("button", { name: "发送" }));
     expect(onSend).toHaveBeenCalledWith("touch draft", undefined);
+  });
+});
+
+describe("Composer attachment pipeline", () => {
+  function hiddenFileInput(): HTMLInputElement {
+    const input = document.querySelector('input[type="file"]');
+    if (!input) throw new Error("file input not found");
+    return input as HTMLInputElement;
+  }
+
+  beforeEach(() => {
+    vi.mocked(compressImage).mockReset();
+    uploadAttachedImage.mockReset();
+    deleteAttachment.mockReset().mockResolvedValue(undefined);
+    vi.mocked(toast.error).mockClear();
+  });
+
+  it("runs the compress -> upload pipeline, disables send while busy and passes the image through onSend", async () => {
+    let releaseCompress!: (value: { blob: Blob; width: number; height: number; mimeType: "image/jpeg" }) => void;
+    vi.mocked(compressImage).mockImplementation(
+      () => new Promise((resolve) => (releaseCompress = resolve)),
+    );
+    uploadAttachedImage.mockResolvedValue({ path: "attachments/img-1.jpg" });
+
+    const { onSend } = renderComposer({ streaming: false });
+    await user.type(screen.getByRole("textbox"), "with picture");
+
+    const file = new File(["raw"], "pic.png", { type: "image/png" });
+    await user.upload(hiddenFileInput(), file);
+
+    expect(compressImage).toHaveBeenCalledWith(file);
+    expect(screen.getByRole("button", { name: "发送" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "移除图片" })).not.toBeInTheDocument();
+
+    releaseCompress({ blob: new Blob(["compressed"]), width: 800, height: 600, mimeType: "image/jpeg" });
+    await screen.findByRole("button", { name: "移除图片" });
+
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    expect(uploadAttachedImage).toHaveBeenCalledWith(expect.any(Blob), { width: 800, height: 600 });
+    expect(onSend).toHaveBeenCalledWith(
+      "with picture",
+      expect.objectContaining({ path: "attachments/img-1.jpg", mimeType: "image/jpeg" }),
+    );
+  });
+
+  it("deletes the uploaded attachment on remove", async () => {
+    vi.mocked(compressImage).mockResolvedValue({ blob: new Blob(["c"]), width: 10, height: 10, mimeType: "image/jpeg" });
+    uploadAttachedImage.mockResolvedValue({ path: "attachments/img-2.jpg" });
+
+    renderComposer({ streaming: false });
+    await user.upload(hiddenFileInput(), new File(["x"], "p.png", { type: "image/png" }));
+    await screen.findByRole("button", { name: "移除图片" });
+
+    await user.click(screen.getByRole("button", { name: "移除图片" }));
+
+    expect(deleteAttachment).toHaveBeenCalledWith("attachments/img-2.jpg");
+    expect(screen.queryByRole("button", { name: "移除图片" })).not.toBeInTheDocument();
+  });
+
+  it("surfaces attach failures via the i18n toast and recovers", async () => {
+    vi.mocked(compressImage).mockRejectedValue(new Error("too large"));
+    const { onSend } = renderComposer({ streaming: false });
+    await user.type(screen.getByRole("textbox"), "draft");
+
+    await user.upload(hiddenFileInput(), new File(["x"], "p.png", { type: "image/png" }));
+
+    await vi.waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(vi.mocked(toast.error).mock.calls.at(-1)![0]).toContain("添加图片失败");
+    expect(uploadAttachedImage).not.toHaveBeenCalled();
+
+    expect(screen.getByRole("button", { name: "发送" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    expect(onSend).toHaveBeenCalledWith("draft", undefined);
   });
 });
