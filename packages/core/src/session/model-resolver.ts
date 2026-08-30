@@ -1,7 +1,6 @@
 import type { Model, Api } from "@earendil-works/pi-ai";
 import type { AgentProfile } from "../types.js";
 import { ModelNotConfiguredError } from "../errors.js";
-import { resolveEffectiveModelId } from "./status.js";
 import type { ModelCatalog } from "../model-providers/catalog.js";
 
 export interface ModelResolver {
@@ -13,13 +12,20 @@ export function createModelResolver(catalog: Pick<ModelCatalog, "resolveModelByI
   const resolveModelById = catalog.resolveModelById.bind(catalog);
 
   const tryResolve = (profile: AgentProfile, defaultModel?: string): Model<Api> | undefined => {
-    const modelId = resolveEffectiveModelId(profile, defaultModel);
-    if (!modelId) return undefined;
-    try {
-      return resolveModelById(modelId) as Model<Api>;
-    } catch {
-      return undefined;
+    const candidates = profile.model
+      ? profile.model === defaultModel
+        ? [profile.model]
+        : [profile.model, defaultModel]
+      : [defaultModel];
+    for (const modelId of candidates) {
+      if (!modelId) continue;
+      try {
+        return resolveModelById(modelId) as Model<Api>;
+      } catch {
+        continue;
+      }
     }
+    return undefined;
   };
 
   return {

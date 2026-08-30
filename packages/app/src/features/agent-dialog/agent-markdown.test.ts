@@ -83,9 +83,40 @@ describe("parseAgentMarkdown", () => {
   });
 
   it("keeps extra frontmatter keys separate from form data", () => {
-    const raw = "---\nname: Agent\nautoRun: true\nmodel: gpt-4\n---\n\nsystem prompt";
+    const raw = "---\nname: Agent\nautoRun: true\ncustomKey: 42\n---\n\nsystem prompt";
     const result = parseAgentMarkdown(raw);
-    expect(result.extraFrontmatter).toEqual({ autoRun: true, model: "gpt-4" });
+    expect(result.extraFrontmatter).toEqual({ autoRun: true, customKey: 42 });
+  });
+
+  it("parses model when present", () => {
+    const raw = "---\nname: Agent\nmodel: openai/gpt-4o\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.model).toBe("openai/gpt-4o");
+  });
+
+  it("returns undefined model when missing or empty", () => {
+    expect(parseAgentMarkdown("---\nname: Agent\n---\n\np").formData.model).toBeUndefined();
+    expect(parseAgentMarkdown("---\nname: Agent\nmodel: ''\n---\n\np").formData.model).toBeUndefined();
+    expect(parseAgentMarkdown("---\nname: Agent\nmodel: 123\n---\n\np").formData.model).toBeUndefined();
+  });
+
+  it("does not leak model into extra frontmatter", () => {
+    const raw = "---\nname: Agent\nmodel: openai/gpt-4o\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.extraFrontmatter).not.toHaveProperty("model");
+  });
+
+  it("parses thinkingLevel when present", () => {
+    const raw = "---\nname: Agent\nthinkingLevel: high\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.thinkingLevel).toBe("high");
+  });
+
+  it("ignores invalid thinkingLevel values", () => {
+    const raw = "---\nname: Agent\nthinkingLevel: extreme\n---\n\nsystem prompt";
+    const result = parseAgentMarkdown(raw);
+    expect(result.formData.thinkingLevel).toBeUndefined();
+    expect(result.extraFrontmatter).not.toHaveProperty("thinkingLevel");
   });
 
   it("handles CRLF line endings", () => {
@@ -218,13 +249,52 @@ describe("buildAgentMarkdown", () => {
   it("preserves alias through a round-trip with extra frontmatter", () => {
     const md = buildAgentMarkdown(
       { name: "Agent", alias: "小明", tools: ["read_file"], context: [], systemPrompt: "hello", yolo: false },
-      { model: "gpt-4" },
+      { schedule: true },
       false,
     );
     const parsed = parseAgentMarkdown(md);
     expect(parsed.formData.alias).toBe("小明");
-    expect(parsed.extraFrontmatter).toEqual({ model: "gpt-4" });
+    expect(parsed.extraFrontmatter).toEqual({ schedule: true });
     expect(parsed.extraFrontmatter).not.toHaveProperty("alias");
+  });
+
+  it("writes model and thinkingLevel into frontmatter when set", () => {
+    const md = buildAgentMarkdown(
+      {
+        name: "Agent",
+        model: "openai/gpt-4o",
+        thinkingLevel: "high",
+        tools: [],
+        context: [],
+        systemPrompt: "hello",
+        yolo: false,
+      },
+      {},
+      false,
+    );
+    const parsed = parseAgentMarkdown(md);
+    expect(parsed.formData.model).toBe("openai/gpt-4o");
+    expect(parsed.formData.thinkingLevel).toBe("high");
+  });
+
+  it("omits model and thinkingLevel when unset", () => {
+    const md = buildAgentMarkdown(
+      { name: "Agent", tools: [], context: [], systemPrompt: "hello", yolo: false },
+      {},
+      false,
+    );
+    expect(md).not.toContain("model:");
+    expect(md).not.toContain("thinkingLevel:");
+  });
+
+  it("drops a previously set model when cleared", () => {
+    const md = buildAgentMarkdown(
+      { name: "Agent", model: undefined, thinkingLevel: undefined, tools: [], context: [], systemPrompt: "hello", yolo: false },
+      {},
+      false,
+    );
+    expect(md).not.toContain("model:");
+    expect(md).not.toContain("thinkingLevel:");
   });
 
   it("writes timePerception when enabled", () => {

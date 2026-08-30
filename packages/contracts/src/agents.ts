@@ -15,6 +15,14 @@ const agentProfile = Type.Object({
   slug: Type.String(),
   createdAt: Type.Optional(Type.Number()),
   model: Type.Optional(Type.String()),
+  thinkingLevel: Type.Optional(
+    Type.Union([
+      Type.Literal("off"),
+      Type.Literal("low"),
+      Type.Literal("medium"),
+      Type.Literal("high"),
+    ]),
+  ),
   schedule: Type.Optional(Type.Boolean()),
   tools: Type.Optional(Type.Array(Type.String())),
   context: Type.Optional(Type.Array(Type.String())),

@@ -75,6 +75,27 @@ You are a world building assistant.`;
     expect(profile!.yolo).toBeUndefined();
   });
 
+  it("parses thinkingLevel from frontmatter", async () => {
+    await writeProfile("---\nname: Agent\nthinkingLevel: high\n---\n\nprompt");
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.thinkingLevel).toBe("high");
+  });
+
+  it("ignores invalid thinkingLevel values", async () => {
+    await writeProfile("---\nname: Agent\nthinkingLevel: extreme\n---\n\nprompt");
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.thinkingLevel).toBeUndefined();
+  });
+
+  it("trims empty model to undefined", async () => {
+    await writeProfile("---\nname: Agent\nmodel: \"\"\n---\n\nprompt");
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.model).toBeUndefined();
+  });
+
   it("returns null when profile.md does not exist", async () => {
     const profile = await store.read();
     expect(profile).toBeNull();

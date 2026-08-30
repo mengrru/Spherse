@@ -270,6 +270,21 @@ describe("SessionManager thinking level propagation", () => {
       expect(activeAgent(runtime as RuntimeInternals, sid).state.thinkingLevel).toBe("low");
     }
   });
+
+  it("prefers the per-agent thinkingLevel over the global setting", async () => {
+    const projectStore = runtime.projectManager.projectStore;
+    const agentStore = projectStore.agents.get(agentId) as {
+      _profile: { thinkingLevel?: string };
+    };
+    agentStore._profile = { ...agentStore._profile, thinkingLevel: "low" };
+
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    expect(activeAgent(runtime as RuntimeInternals, sessionId).state.thinkingLevel).toBe("low");
+
+    runtime.sessionRuntime.setThinkingLevel("off");
+
+    expect(activeAgent(runtime as RuntimeInternals, sessionId).state.thinkingLevel).toBe("low");
+  });
 });
 
 describe("SessionManager default model hot-swap", () => {
@@ -321,6 +336,26 @@ describe("SessionManager default model hot-swap", () => {
 
     expect(agent.state.model?.id).toBe("pinned");
     expect(agent.state.model?.provider).toBe("custom");
+  });
+
+  it("falls back to the global default when the per-agent model is stale", async () => {
+    const projectStore = runtime.projectManager.projectStore;
+    const agentStore = projectStore.agents.get(agentId) as {
+      _profile: { model?: string };
+    };
+    agentStore._profile = { ...agentStore._profile, model: "custom/stale" };
+
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    const agent = activeAgent(runtime as RuntimeInternals, sessionId);
+    expect(agent.state.model?.id).toBe("stale");
+
+    resolveModelByIdMock.mockImplementationOnce(() => {
+      throw new Error("unknown model");
+    });
+    runtime.sessionRuntime.setDefaultModel("openai/gpt-4o");
+
+    expect(agent.state.model?.id).toBe("gpt-4o");
+    expect(agent.state.model?.provider).toBe("openai");
   });
 
   it("hot-swaps model on ALL active agents (multiple sessions)", async () => {

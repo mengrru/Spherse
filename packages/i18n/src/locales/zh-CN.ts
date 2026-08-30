@@ -354,6 +354,14 @@ export const zhCN = {
   "agent-dialog.aliasPlaceholder": "留空则显示名称",
   // 智能体别名 tooltip：说明别名会显示在智能体的消息气泡上，未设置时显示名称
   "agent-dialog.aliasHint": "设置后在智能体的消息气泡上显示该别名，未设置时显示名称。",
+  // 智能体模型配置字段标签：为智能体单独指定模型与思考强度
+  "agent-dialog.modelLabel": "模型",
+  // 智能体模型字段 tooltip：留空或所选模型已下线时回退到全局默认模型
+  "agent-dialog.modelHint": "为该智能体单独指定模型；留空或所选模型已不可用时，使用全局默认模型。",
+  // 智能体思考强度字段 tooltip：说明可按智能体覆盖全局思考强度
+  "agent-dialog.thinkingLevelHint": "为该智能体单独指定思考强度；选择「跟随全局」时使用全局设置。",
+  // 思考强度下拉的「跟随全局」选项文案
+  "agent-dialog.thinkingLevelFollowGlobal": "跟随全局",
   // Agent 提示词字段标签
   "agent-dialog.promptLabel": "提示词",
   // Agent 提示词字段 tooltip：说明提示词的作用（智能体的设定，智能体始终记住）

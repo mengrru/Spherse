@@ -1,9 +1,17 @@
 import yaml from "js-yaml";
-import type { TimePerceptionConfig } from "@spherse/core";
+import type { ThinkingLevel, TimePerceptionConfig } from "@spherse/core";
 
 export type TimePerceptionFormData = {
   enabled: boolean;
 } & Partial<Omit<TimePerceptionConfig, "enabled">>;
+
+const THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "low", "medium", "high"];
+
+function parseThinkingLevel(raw: unknown): ThinkingLevel | undefined {
+  return typeof raw === "string" && THINKING_LEVELS.includes(raw as ThinkingLevel)
+    ? (raw as ThinkingLevel)
+    : undefined;
+}
 
 function parseTimePerception(raw: unknown): TimePerceptionFormData | undefined {
   if (raw == null || typeof raw !== "object") return undefined;
@@ -20,6 +28,8 @@ function parseTimePerception(raw: unknown): TimePerceptionFormData | undefined {
 export interface AgentFormData {
   name: string;
   alias?: string;
+  model?: string;
+  thinkingLevel?: ThinkingLevel;
   tools: string[];
   context: string[];
   systemPrompt: string;
@@ -39,6 +49,8 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
       formData: {
         name: "",
         alias: undefined,
+        model: undefined,
+        thinkingLevel: undefined,
         tools: [],
         context: [],
         systemPrompt: raw.trim(),
@@ -52,12 +64,14 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
   const body = raw.slice(match[0].length).trim();
   const frontmatter = yaml.load(frontmatterRaw) as Record<string, unknown>;
 
-  const { name, alias, tools, context, timePerception, yolo, ...extra } = frontmatter;
+  const { name, alias, model, thinkingLevel, tools, context, timePerception, yolo, ...extra } = frontmatter;
 
   return {
     formData: {
       name: typeof name === "string" ? name : "",
       alias: typeof alias === "string" && alias.trim() ? alias : undefined,
+      model: typeof model === "string" && model.trim() ? model : undefined,
+      thinkingLevel: parseThinkingLevel(thinkingLevel),
       tools: Array.isArray(tools)
         ? tools.filter((t): t is string => typeof t === "string")
         : [],
@@ -84,6 +98,12 @@ export function buildAgentMarkdown(
   };
   if (formData.alias?.trim()) {
     frontmatter.alias = formData.alias.trim();
+  }
+  if (formData.model?.trim()) {
+    frontmatter.model = formData.model.trim();
+  }
+  if (formData.thinkingLevel) {
+    frontmatter.thinkingLevel = formData.thinkingLevel;
   }
   if (formData.context.length > 0) {
     frontmatter.context = formData.context;

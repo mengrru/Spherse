@@ -46,13 +46,13 @@
 ## 模型与采样配置传播
 
 - save-settings 链：`if (defaultModel)` 才 `updateDefaultModel()`；`updateSampling()` / `updateThinkingLevel()` 无条件（undefined 即「恢复默认」需要传播）→ registry fan-out 各项目并缓存供后续 register → `SessionManager`
-- 热替换：`setDefaultModel` 遍历活跃会话，仅在解析结果变化时重赋 `agent.state.model`（下一轮生效）；未配置的 agent 跳过不抛错；profile 显式指定 `model` 者不受全局默认影响
-- `setThinkingLevel` 重赋各 agent 的 `state.thinkingLevel`（下一轮生效）；`off` 即关闭思考，实际档位由 pi-ai 按模型 `clampThinkingLevel` 就近取档（不支持推理的模型忽略）
+- 热替换：`setDefaultModel` 遍历活跃会话，仅在解析结果变化时重赋 `agent.state.model`（下一轮生效）；未配置的 agent 跳过不抛错；profile 显式指定 `model` 者优先，但所选模型已不可解析（过期）时回退全局默认（`model-resolver` 按候选序尝试）
+- `setThinkingLevel` 重赋各 agent 的 `state.thinkingLevel`（下一轮生效），profile `thinkingLevel` 覆盖全局值（见 [`../data-conventions.md`](../data-conventions.md)「Agent 定义」）；`off` 即关闭思考，实际档位由 pi-ai 按模型 `clampThinkingLevel` 就近取档（不支持推理的模型忽略）
 - `setSampling` 重赋各 agent 的 `streamFn`；注入点 `getChatStreamFn`：
   - `temperature` 走 pi-ai typed 字段直接进 options
   - `topP` 经 `onPayload` 按 `model.api` 分支——openai 系 / anthropic 根级 `top_p`，google 走 `config.topP`，未知 no-op
 - 模型解析延迟到 send 路径：无模型时可打开会话存活，`sendMessage` 前 `ensureModel` 抛 `ModelNotConfiguredError`
-  - 转为 `MODEL_NOT_CONFIGURED` error 事件，不关连接；`resolveEffectiveModelId` 用 `||` 语义（空串视为未配置）
+  - 转为 `MODEL_NOT_CONFIGURED` error 事件，不关连接；空串 model 在 profile 解析层即归一为未配置
 - 已知边界：清空 defaultModel 后运行时旧默认保留至重启（`if` 守卫 + registry 缓存）
 - **provider catalog**：core `ModelCatalog` 类实例由 desktop `getAppModelCatalog()` 持有单例，经 `CreateServerOptions` 注入 server；文本 17 个内置 provider，图片 3 家（openrouter / zhipu / openai）
 
