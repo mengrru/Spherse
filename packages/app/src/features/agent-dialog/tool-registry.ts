@@ -41,21 +41,9 @@ export const TOOL_GROUPS: ToolGroup[] = [
     advanced: true,
   },
   {
-    label: "tool.manage_agent",
-    hint: "tool.manage_agent_hint",
-    toolIds: ["manage_agent"],
-    advanced: true,
-  },
-  {
-    label: "tool.manage_trigger",
-    hint: "tool.manage_trigger_hint",
-    toolIds: ["manage_trigger"],
-    advanced: true,
-  },
-  {
-    label: "tool.manage_project_config",
-    hint: "tool.manage_project_config_hint",
-    toolIds: ["manage_project_config"],
+    label: "tool.manage_project",
+    hint: "tool.manage_project_hint",
+    toolIds: ["manage_agent", "manage_trigger", "manage_project_config"],
     advanced: true,
   },
 ];

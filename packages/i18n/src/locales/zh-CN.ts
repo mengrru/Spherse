@@ -1042,10 +1042,6 @@ export const zhCN = {
   "tool.emit_trigger_event": "触发事件",
   // 独立工具 tooltip：触发事件的作用说明
   "tool.emit_trigger_event_hint": "允许智能体发出自定义事件，触发本项目内其它智能体的事件触发器，使其自动执行预设任务",
-  // 独立工具标签：管理项目配置（manage_project_config，agent 可读取/修改项目级配置，属高级操作）
-  "tool.manage_project_config": "管理项目配置",
-  // 独立工具 tooltip：管理项目配置的作用说明
-  "tool.manage_project_config_hint": "允许智能体查看并修改项目级配置",
   // 独立工具标签：运行命令（run_command，agent 执行 shell 命令，高危，需逐次人工确认）
   "tool.run_command": "运行命令",
   // 独立工具 tooltip：运行命令的安全提示——强调任意命令、逐次确认、有风险
@@ -1056,12 +1052,12 @@ export const zhCN = {
   "tool.ask_user_hint": "允许智能体在运行中向你提问并等待回答，适合缺少关键信息时使用",
   // 独立工具标签：管理智能体（manage_agent，agent 可查看/新建/修改本项目内智能体的名称、提示词、工具、上下文、时间感知开关，高危，写操作需人工确认）
   "tool.manage_agent": "管理智能体",
-  // 独立工具 tooltip：管理智能体的作用与风险说明
-  "tool.manage_agent_hint": "允许智能体查看、创建和修改本项目内其它智能体的配置（名称、别名、提示词、模型、工具权限、上下文文件），以及开启/关闭其它智能体的时间感知（锚点、起点、流速、时区等详细参数仍需你在界面中配置）。新建和修改前都会要求你确认；智能体 ID 和目录名由应用生成，无法指定；删除智能体仍需你在界面中手动操作",
   // 独立工具标签：管理触发器（manage_trigger，agent 可查看/新建/修改/删除定时与事件触发器，高危，写操作需人工确认）
   "tool.manage_trigger": "管理触发器",
-  // 独立工具 tooltip：管理触发器的作用与风险说明
-  "tool.manage_trigger_hint": "允许智能体查看、创建、修改和删除本项目内智能体的定时/事件触发器。新建、修改和删除前都会要求你确认；触发器可让智能体在无人值守时自动运行",
+  // 复合工具标签：管理项目（agent 配置界面将 manage_agent / manage_trigger / manage_project_config 三个管理工具合并为单一选项，高危，写操作需人工确认）
+  "tool.manage_project": "管理项目",
+  // 复合工具 tooltip：管理项目的作用说明
+  "tool.manage_project_hint": "允许智能体管理本项目：查看、创建和修改其它智能体的配置，管理其定时/事件触发器，以及查看和修改项目级配置",
   // agent 配置工具权限区的高级功能折叠分组标题（高级工具收起在此）
   "tool.advanced_section": "高级操作",
 
