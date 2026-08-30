@@ -16,6 +16,7 @@ import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { deriveAgentSlugBase, buildAgentDirName } from "./agent-slug.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 import { ValidationError, NotFoundError } from "../errors.js";
+import { assertContextFilesWithinPolicy } from "../session/context-file-policy.js";
 
 export interface ChangelogEntry {
   agent: string;
@@ -175,6 +176,7 @@ export class ProjectStore extends EventEmitter {
     if (typeof data.name !== "string") {
       throw new ValidationError("agent profile name is required");
     }
+    await assertContextFilesWithinPolicy(this.rootPath, data.context);
 
     const id = crypto.randomUUID();
     const createdAt = typeof data.createdAt === "number" ? data.createdAt : Date.now();
@@ -203,6 +205,7 @@ export class ProjectStore extends EventEmitter {
   async updateAgent(agentId: string, content: string, themeContent?: string): Promise<AgentStore> {
     const agentStore = this._agents.get(agentId);
     if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    await assertContextFilesWithinPolicy(this.rootPath, matter(content).data.context);
     await agentStore.saveProfile(content);
     if (themeContent !== undefined) {
       await agentStore.profile.saveTheme(themeContent);

@@ -44,6 +44,7 @@ export type { PathCategory } from "./access/path-category.js";
 export { serverAccessPolicy } from "./access/access-policy.js";
 export type { AccessPolicy, Decision } from "./access/access-policy.js";
 export { shouldSkipDirEntry } from "./utils/fs-walk.js";
+export { inspectContextFiles } from "./session/context-file-policy.js";
 export { isBinaryBuffer, BINARY_SAMPLE_SIZE } from "./utils/binary-detect.js";
 export { settleWithin } from "./utils/settle-within.js";
 export { ModelCatalog, getImageSupportedProviders, CUSTOM_PROVIDER_DEFAULTS } from "./model-providers/index.js";

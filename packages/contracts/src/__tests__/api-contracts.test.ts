@@ -8,6 +8,41 @@ import {
 } from "../index.js";
 
 describe("api contracts", () => {
+  it("accepts a valid context files inspect request", () => {
+    expect(
+      parseApiResponse(schemas.contextFilesInspectRequest, { paths: ["a.md", "b.txt"] }),
+    ).toEqual({ paths: ["a.md", "b.txt"] });
+    expect(parseApiResponse(schemas.contextFilesInspectRequest, { paths: [] })).toEqual({
+      paths: [],
+    });
+  });
+
+  it("rejects malformed context files inspect requests", () => {
+    expect(() => parseApiResponse(schemas.contextFilesInspectRequest, { paths: "a.md" })).toThrow(
+      /Invalid payload/,
+    );
+    expect(() =>
+      parseApiResponse(schemas.contextFilesInspectRequest, {
+        paths: Array.from({ length: 1001 }, (_, i) => `f${i}.md`),
+      }),
+    ).toThrow(/Invalid payload/);
+  });
+
+  it("parses a context files inspect response", () => {
+    const payload = {
+      files: [
+        { path: "a.md", exists: true, sizeBytes: 128, allowed: true },
+        { path: "b.png", exists: false, sizeBytes: 0, allowed: false },
+      ],
+    };
+    expect(parseApiResponse(schemas.contextFilesInspectResponse, payload)).toEqual(payload);
+    expect(() =>
+      parseApiResponse(schemas.contextFilesInspectResponse, {
+        files: [{ path: "a.md", exists: true, sizeBytes: -1, allowed: true }],
+      }),
+    ).toThrow(/Invalid payload/);
+  });
+
   it("accepts valid chat websocket client messages", () => {
     expect(parseChatClientMessage({ type: "message", content: "hello" })).toEqual({
       type: "message",

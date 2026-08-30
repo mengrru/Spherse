@@ -29,6 +29,8 @@ import type {
   SessionStatusResponse,
   DataReadResponseContract as DataReadResponse,
   MarketplaceManifestResponse,
+  ContextFilesInspectResponse,
+  ContextFileStatContract,
 } from "@spherse/contracts";
 import { parseApiResponse, schemas } from "@spherse/contracts";
 import { Type } from "@sinclair/typebox";
@@ -421,6 +423,17 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       const res = await authedFetch(`${apiBase}/file-tree`);
       if (!res.ok) return [];
       return parseJsonResponse<string[]>(res, schemas.fileTreeResponse);
+    },
+
+    async inspectContextFiles(paths: string[]): Promise<ContextFileStatContract[]> {
+      const res = await authedFetch(`${apiBase}/context-files/inspect`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paths }),
+      });
+      await assertOk(res);
+      const parsed = await parseJsonResponse<ContextFilesInspectResponse>(res, schemas.contextFilesInspectResponse);
+      return parsed.files;
     },
 
     async getTurnContext(sessionId: string): Promise<TurnContextSnapshotContract> {
