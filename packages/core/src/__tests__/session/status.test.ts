@@ -59,6 +59,13 @@ describe("resolveContextWindow", () => {
     resolveModelByIdMock.mockReturnValueOnce({ id: "m", provider: "p" });
     expect(resolveContextWindow({ ...baseProfile, model: "p/m" }, resolveModelByIdMock)).toBeNull();
   });
+
+  it("does not fall back to the global default when the per-agent model resolves but lacks contextWindow", () => {
+    resolveModelByIdMock.mockReturnValueOnce({ id: "own", provider: "p" });
+    expect(
+      resolveContextWindow({ ...baseProfile, model: "p/own" }, resolveModelByIdMock, "p/default"),
+    ).toBeNull();
+  });
 });
 
 describe("extractLastUsageTotalTokens", () => {

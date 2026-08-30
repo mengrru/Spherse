@@ -1,6 +1,7 @@
 import type { Model, Api } from "@earendil-works/pi-ai";
 import type { AgentProfile } from "../types.js";
 import { ModelNotConfiguredError } from "../errors.js";
+import { resolveModelWithFallback } from "./status.js";
 import type { ModelCatalog } from "../model-providers/catalog.js";
 
 export interface ModelResolver {
@@ -11,22 +12,12 @@ export interface ModelResolver {
 export function createModelResolver(catalog: Pick<ModelCatalog, "resolveModelById">): ModelResolver {
   const resolveModelById = catalog.resolveModelById.bind(catalog);
 
-  const tryResolve = (profile: AgentProfile, defaultModel?: string): Model<Api> | undefined => {
-    const candidates = profile.model
-      ? profile.model === defaultModel
-        ? [profile.model]
-        : [profile.model, defaultModel]
-      : [defaultModel];
-    for (const modelId of candidates) {
-      if (!modelId) continue;
-      try {
-        return resolveModelById(modelId) as Model<Api>;
-      } catch {
-        continue;
-      }
-    }
-    return undefined;
-  };
+  const tryResolve = (profile: AgentProfile, defaultModel?: string): Model<Api> | undefined =>
+    resolveModelWithFallback(
+      profile,
+      (modelId) => resolveModelById(modelId) as Model<Api>,
+      defaultModel,
+    );
 
   return {
     resolveFor: tryResolve,

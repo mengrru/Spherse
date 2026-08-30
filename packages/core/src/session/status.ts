@@ -9,26 +9,32 @@ export interface SessionStatus {
   contextWindowLimit: number | null;
 }
 
+export function resolveModelWithFallback<T>(
+  profile: AgentProfile,
+  resolveModelById: (modelId: string) => T,
+  defaultModel?: string,
+): T | undefined {
+  const candidates = profile.model ? [profile.model, defaultModel] : [defaultModel];
+  for (const modelId of candidates) {
+    if (!modelId) continue;
+    try {
+      return resolveModelById(modelId);
+    } catch {
+      continue;
+    }
+  }
+  return undefined;
+}
+
 export function resolveContextWindow(
   profile: AgentProfile,
   resolveModelById: (modelId: string) => unknown,
   defaultModel?: string,
 ): number | null {
-  const candidates = profile.model
-    ? profile.model === defaultModel
-      ? [profile.model]
-      : [profile.model, defaultModel]
-    : [defaultModel];
-  for (const modelId of candidates) {
-    if (!modelId) continue;
-    try {
-      const window = (resolveModelById(modelId) as { contextWindow?: number })?.contextWindow;
-      if (window != null) return window;
-    } catch {
-      continue;
-    }
-  }
-  return null;
+  const model = resolveModelWithFallback(profile, resolveModelById, defaultModel) as
+    | { contextWindow?: number }
+    | undefined;
+  return model?.contextWindow ?? null;
 }
 
 export function computeSessionStatus(
