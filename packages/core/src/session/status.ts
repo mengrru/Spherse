@@ -9,25 +9,26 @@ export interface SessionStatus {
   contextWindowLimit: number | null;
 }
 
-export function resolveEffectiveModelId(
-  profile: AgentProfile,
-  defaultModel?: string,
-): string | undefined {
-  return profile.model || defaultModel || undefined;
-}
-
 export function resolveContextWindow(
   profile: AgentProfile,
   resolveModelById: (modelId: string) => unknown,
   defaultModel?: string,
 ): number | null {
-  const modelId = resolveEffectiveModelId(profile, defaultModel);
-  if (!modelId) return null;
-  try {
-    return (resolveModelById(modelId) as { contextWindow?: number })?.contextWindow ?? null;
-  } catch {
-    return null;
+  const candidates = profile.model
+    ? profile.model === defaultModel
+      ? [profile.model]
+      : [profile.model, defaultModel]
+    : [defaultModel];
+  for (const modelId of candidates) {
+    if (!modelId) continue;
+    try {
+      const window = (resolveModelById(modelId) as { contextWindow?: number })?.contextWindow;
+      if (window != null) return window;
+    } catch {
+      continue;
+    }
   }
+  return null;
 }
 
 export function computeSessionStatus(
