@@ -96,7 +96,7 @@ Content Browser 支持：
 | 交互与展示 | `ask_user`、`render_card`、`generate_image` |
 | 项目协作 | `append_changelog`、`load_skill`、`emit_trigger_event` |
 | 记忆 | `memory_save`、`memory_recall` |
-| 高级操作 | `run_command`、`manage_agent`、`manage_trigger`、`manage_project_config`（项目级配置） |
+| 高级操作 | `run_command`、`manage_agent`、`manage_trigger`、`manage_project_config`（Agent 配置界面中三个 `manage_*` 合并为单一「管理项目」选项，勾选即同时启用） |
 
 `run_command` 以及 `manage_agent` / `manage_trigger` 的写操作通常需要用户审批。`run_command` 以当前系统用户权限执行，没有 OS 级沙箱，文件访问限制也不约束其子进程；只应批准可信命令。YOLO 模式会跳过逐次审批，应谨慎启用。
 

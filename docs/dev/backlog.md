@@ -21,6 +21,7 @@
 
 ## 技术债（重构与收敛）
 
+- [ ] **清理 agent dialog 工具选项合并后的 i18n 死键**：三个 manage tool 在 agent dialog 合并为「管理项目」后，`tool.manage_project_config` / `tool.manage_project_config_hint` / `tool.manage_agent_hint` / `tool.manage_trigger_hint` 已无代码引用（`tool.manage_agent` / `tool.manage_trigger` 仍被 ApprovalCard 使用，需保留）；`check-i18n` 不检测未使用键，需人工核对后删除。
 - [ ] **ActivityBar 自治化（D7，推迟）**：ActivityBar 改为 feature root 自治（自己读 store + navigate），App.tsx 精简为中转站。参见 `docs/dev/features/2026-06-19-frontend-routing-p0/design.md`（D7）
 - [ ] **逐步禁止 `any`**：梳理 agent/runtime payload、SQLite row casting、测试 tool context 等现有 `any` 来源，优先通过明确事件/消息/数据库 row 类型替换；完成后开启 `@typescript-eslint/no-explicit-any` 的 warning 或 error 模式。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
 - [ ] **消除 server contract 中的 `Type.Unknown()`**：当前 `contracts/websocket.ts`（chat 事件的 `message`/`args`/`result`/`toolResults`/`assistantMessageEvent`、trigger 事件的 `trigger`）、`contracts/debug.ts`（`messages`、tool `parameters`）、`contracts/sessions.ts`（`sessionMessagesResponse`）用 `Type.Unknown()` 承接 pi-ai/pi-agent-core 的复杂嵌套对象，仅作结构校验。后续应引入 pi-ai `Message` 联合、tool call/result、`AgentMessage[]` 等精确 TypeBox schema 替换，消除所有 `unknown`。
