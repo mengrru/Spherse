@@ -83,71 +83,75 @@ export function ModelConfigField({
 
   return (
     <Field>
-      <HintLabel hint={t("agent-dialog.modelHint")}>{t("agent-dialog.modelLabel")}</HintLabel>
-      <Combobox
-        value={model ?? FOLLOW_DEFAULT}
-        onValueChange={(v) => {
-          const next = v as string;
-          onModelChange(next === FOLLOW_DEFAULT ? undefined : next);
-        }}
-        filter={null}
-        defaultInputValue=""
-        onInputValueChange={(input) => setQuery(input)}
-        onOpenChange={(open) => { if (open) setQuery(""); }}
-      >
-        <ComboboxTrigger>
-          <span className={cn("flex-1 truncate text-start", !model && "text-muted-foreground")}>
-            {selectedLabel}
-          </span>
-          <ComboboxIcon />
-        </ComboboxTrigger>
-        <ComboboxContent>
-          <ComboboxInput placeholder={t("settings.models.searchPlaceholder")} />
-          <ComboboxList>
-            <ComboboxItem value={FOLLOW_DEFAULT}>
-              {t("settings.models.defaultModel")}
-            </ComboboxItem>
-            {filtered.length === 0 ? (
-              <p className="px-2 py-4 text-center text-xs text-muted-foreground">
-                {t("settings.models.noResults")}
-              </p>
-            ) : (
-              filtered.map(({ id, config, models }) => (
-                <ComboboxGroup key={id}>
-                  <ComboboxGroupLabel>{config.name}</ComboboxGroupLabel>
-                  {models.map((m) => (
-                    <ComboboxItem key={`${id}/${m.id}`} value={`${id}/${m.id}`}>
-                      {m.name}
-                    </ComboboxItem>
-                  ))}
-                </ComboboxGroup>
-              ))
-            )}
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
-      <div className="mt-2 space-y-1.5">
-        <HintLabel hint={t("agent-dialog.thinkingLevelHint")}>
-          {t("settings.models.thinkingLevel")}
-        </HintLabel>
-        <NativeSelect
-          className="w-full"
-          value={thinkingLevel ?? FOLLOW_DEFAULT}
-          onChange={(e) =>
-            onThinkingLevelChange(
-              e.target.value === FOLLOW_DEFAULT ? undefined : (e.target.value as ThinkingLevel),
-            )
-          }
-        >
-          <NativeSelectOption value={FOLLOW_DEFAULT}>
-            {t("agent-dialog.thinkingLevelFollowGlobal")}
-          </NativeSelectOption>
-          {THINKING_LEVELS.map((level) => (
-            <NativeSelectOption key={level} value={level}>
-              {t(`settings.models.thinkingLevel.${level}`)}
+      <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-3">
+        <div className="space-y-1.5">
+          <HintLabel hint={t("agent-dialog.modelHint")}>{t("agent-dialog.modelLabel")}</HintLabel>
+          <Combobox
+            value={model ?? FOLLOW_DEFAULT}
+            onValueChange={(v) => {
+              const next = v as string;
+              onModelChange(next === FOLLOW_DEFAULT ? undefined : next);
+            }}
+            filter={null}
+            defaultInputValue=""
+            onInputValueChange={(input) => setQuery(input)}
+            onOpenChange={(open) => { if (open) setQuery(""); }}
+          >
+            <ComboboxTrigger>
+              <span className={cn("flex-1 truncate text-start", !model && "text-muted-foreground")}>
+                {selectedLabel}
+              </span>
+              <ComboboxIcon />
+            </ComboboxTrigger>
+            <ComboboxContent>
+              <ComboboxInput placeholder={t("settings.models.searchPlaceholder")} />
+              <ComboboxList>
+                <ComboboxItem value={FOLLOW_DEFAULT}>
+                  {t("settings.models.defaultModel")}
+                </ComboboxItem>
+                {filtered.length === 0 ? (
+                  <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+                    {t("settings.models.noResults")}
+                  </p>
+                ) : (
+                  filtered.map(({ id, config, models }) => (
+                    <ComboboxGroup key={id}>
+                      <ComboboxGroupLabel>{config.name}</ComboboxGroupLabel>
+                      {models.map((m) => (
+                        <ComboboxItem key={`${id}/${m.id}`} value={`${id}/${m.id}`}>
+                          {m.name}
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxGroup>
+                  ))
+                )}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </div>
+        <div className="space-y-1.5">
+          <HintLabel hint={t("agent-dialog.thinkingLevelHint")}>
+            {t("settings.models.thinkingLevel")}
+          </HintLabel>
+          <NativeSelect
+            className="w-full"
+            value={thinkingLevel ?? FOLLOW_DEFAULT}
+            onChange={(e) =>
+              onThinkingLevelChange(
+                e.target.value === FOLLOW_DEFAULT ? undefined : (e.target.value as ThinkingLevel),
+              )
+            }
+          >
+            <NativeSelectOption value={FOLLOW_DEFAULT}>
+              {t("agent-dialog.thinkingLevelFollowGlobal")}
             </NativeSelectOption>
-          ))}
-        </NativeSelect>
+            {THINKING_LEVELS.map((level) => (
+              <NativeSelectOption key={level} value={level}>
+                {t(`settings.models.thinkingLevel.${level}`)}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+        </div>
       </div>
     </Field>
   );
