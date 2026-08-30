@@ -25,7 +25,11 @@ export function modelExistsInCatalog(
   providers: Record<string, ProviderCatalogItem>,
 ): boolean {
   const slashIdx = modelId.indexOf("/");
-  if (slashIdx < 0) return false;
+  if (slashIdx < 0) {
+    return Object.values(providers).some((config) =>
+      config.models.some((m) => m.id === modelId),
+    );
+  }
   const providerId = modelId.slice(0, slashIdx);
   const modelPart = modelId.slice(slashIdx + 1);
   return providers[providerId]?.models.some((m) => m.id === modelPart) ?? false;
@@ -54,7 +58,12 @@ export function ModelConfigField({
   const selectedLabel = (() => {
     if (!model) return t("settings.models.defaultModel");
     const slashIdx = model.indexOf("/");
-    if (slashIdx < 0) return model;
+    if (slashIdx < 0) {
+      const found = Object.values(providers)
+        .flatMap((config) => config.models)
+        .find((m) => m.id === model);
+      return found?.name ?? model;
+    }
     const providerId = model.slice(0, slashIdx);
     const modelPart = model.slice(slashIdx + 1);
     const found = providers[providerId]?.models.find((m) => m.id === modelPart);
@@ -95,26 +104,24 @@ export function ModelConfigField({
         <ComboboxContent>
           <ComboboxInput placeholder={t("settings.models.searchPlaceholder")} />
           <ComboboxList>
-            {providerEntries.length === 0 ? (
+            <ComboboxItem value={FOLLOW_DEFAULT}>
+              {t("settings.models.defaultModel")}
+            </ComboboxItem>
+            {filtered.length === 0 ? (
               <p className="px-2 py-4 text-center text-xs text-muted-foreground">
                 {t("settings.models.noResults")}
               </p>
             ) : (
-              <>
-                <ComboboxItem value={FOLLOW_DEFAULT}>
-                  {t("settings.models.defaultModel")}
-                </ComboboxItem>
-                {filtered.map(({ id, config, models }) => (
-                  <ComboboxGroup key={id}>
-                    <ComboboxGroupLabel>{config.name}</ComboboxGroupLabel>
-                    {models.map((m) => (
-                      <ComboboxItem key={`${id}/${m.id}`} value={`${id}/${m.id}`}>
-                        {m.name}
-                      </ComboboxItem>
-                    ))}
-                  </ComboboxGroup>
-                ))}
-              </>
+              filtered.map(({ id, config, models }) => (
+                <ComboboxGroup key={id}>
+                  <ComboboxGroupLabel>{config.name}</ComboboxGroupLabel>
+                  {models.map((m) => (
+                    <ComboboxItem key={`${id}/${m.id}`} value={`${id}/${m.id}`}>
+                      {m.name}
+                    </ComboboxItem>
+                  ))}
+                </ComboboxGroup>
+              ))
             )}
           </ComboboxList>
         </ComboboxContent>
