@@ -515,7 +515,7 @@ export const en: Record<TranslationKey, string> = {
   "tool.manage_trigger": "Manage Triggers",
   "tool.manage_trigger_hint": "Allows the agent to inspect, create, edit and delete the scheduled/event triggers of agents in this project. Creating, editing and deleting requires your confirmation; triggers let agents run unattended",
   "tool.manage_project": "Manage Project",
-  "tool.manage_project_hint": "Allows the agent to manage this project: inspect, create and edit other agents (name, alias, system prompt, model, tool permissions, context files), manage their scheduled/event triggers, and read and modify project-level settings. Write actions require your confirmation; deleting an agent still has to be done by you in the UI",
+  "tool.manage_project_hint": "Allows the agent to manage this project: inspect, create and edit other agents (name, alias, system prompt, model, tool permissions, context files), manage their scheduled/event triggers, and read and modify project-level settings. Changes to agents and triggers require your confirmation; project-level settings take effect without confirmation; deleting an agent still has to be done by you in the UI",
   "command.pendingApproval": "Awaiting confirmation: the agent wants to run a command",
   "command.cwd": "Working directory",
   "command.warning": "This command will run with your system privileges — it can read/write files outside the project and make network requests. Review carefully before approving.",
