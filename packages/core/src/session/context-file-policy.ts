@@ -20,21 +20,20 @@ export async function inspectContextFiles(
   const stats: ContextFileStat[] = [];
   for (const relPath of paths) {
     const allowed = isTextContextPath(relPath);
-    let exists = false;
-    let sizeBytes = 0;
-    try {
-      const resolved = resolveProjectPath(projectRoot, relPath);
-      const stat = await fs.stat(resolved);
-      if (stat.isFile()) {
-        exists = true;
-        sizeBytes = stat.size;
-      }
-    } catch {
-      // traversal or missing: report as non-existent
-    }
-    stats.push({ path: relPath, exists, sizeBytes, allowed });
+    const size = await sizeOfRegularFile(projectRoot, relPath);
+    stats.push({ path: relPath, exists: size !== undefined, sizeBytes: size ?? 0, allowed });
   }
   return stats;
+}
+
+async function sizeOfRegularFile(projectRoot: string, relPath: string): Promise<number | undefined> {
+  try {
+    const resolved = resolveProjectPath(projectRoot, relPath);
+    const stat = await fs.stat(resolved);
+    return stat.isFile() ? stat.size : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function formatKb(bytes: number): string {

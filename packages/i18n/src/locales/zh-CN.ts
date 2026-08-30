@@ -380,10 +380,10 @@ export const zhCN = {
   "agent-dialog.refsPlaceholder": "输入路径搜索文件，回车添加",
   // 添加参考资料时格式不被允许的报错（仅允许纯文本文件）
   "agent-dialog.refsFormatError": "不支持的文件格式：仅允许纯文本文件",
-  // 添加参考资料时总大小超过上限的报错
-  "agent-dialog.refsSizeError": "参考资料总大小不能超过 512 kB",
-  // 参考资料当前总用量展示，{used} 为已用大小（如 320.0 kB）
-  "agent-dialog.refsUsage": "已用 {used} / 512 kB",
+  // 添加参考资料时总大小超过上限的报错，{limit} 为上限（如 512.0 kB）
+  "agent-dialog.refsSizeError": "参考资料总大小不能超过 {limit}",
+  // 参考资料当前总用量展示，{used} 为已用大小（如 320.0 kB），{limit} 为上限
+  "agent-dialog.refsUsage": "已用 {used} / {limit}",
   // 检查参考资料（大小/格式）请求失败的报错
   "agent-dialog.refsInspectError": "检查参考资料失败",
   // Agent 保存失败提示

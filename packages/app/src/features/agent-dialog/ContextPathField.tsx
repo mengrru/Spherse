@@ -49,6 +49,7 @@ export function ContextPathField({
     [contextPaths, sizeByPath],
   );
   const overLimit = usedBytes > CONTEXT_TOTAL_SIZE_LIMIT_BYTES;
+  const limitLabel = formatKb(CONTEXT_TOTAL_SIZE_LIMIT_BYTES);
 
   async function handleAdd(path: string) {
     if (contextPaths.includes(path)) return;
@@ -63,7 +64,7 @@ export function ContextPathField({
         .filter((s) => s.exists && s.path !== path)
         .reduce((sum, s) => sum + s.sizeBytes, 0);
       if (candidate?.exists && totalWithout + candidate.sizeBytes > CONTEXT_TOTAL_SIZE_LIMIT_BYTES) {
-        toast.error(t("agent-dialog.refsSizeError"));
+        toast.error(t("agent-dialog.refsSizeError", { limit: limitLabel }));
         return;
       }
       onAdd(path);
@@ -107,9 +108,9 @@ export function ContextPathField({
         placeholder={t("agent-dialog.refsPlaceholder")}
         filter={isTextContextPath}
       />
-      {contextPaths.length > 0 && (
+      {contextPaths.length > 0 && !usageQuery.isError && (
         <p className={`text-xs ${overLimit ? "text-destructive" : "text-muted-foreground"}`}>
-          {t("agent-dialog.refsUsage", { used: formatKb(usedBytes) })}
+          {t("agent-dialog.refsUsage", { used: formatKb(usedBytes), limit: limitLabel })}
         </p>
       )}
     </Field>

@@ -74,7 +74,7 @@ export function isTextContextPath(relPath: string): boolean;
   - Web/脚本：`css scss sass less js mjs cjs ts tsx jsx vue svelte astro`
   - 编程语言：`py pyi rb go rs java kt kts swift c h cpp cc cxx hpp hh cs php dart lua pl r jl scala m mm sh bash zsh fish ps1 psm1 bat cmd vim el lisp clj cljs edn ex exs erl hrl hs ml mli fs fsx nim zig v d groovy gradle tf hcl diff patch`
 - 初始 basename 集合：`makefile dockerfile license licence notice readme procfile jenkinsfile vagrantfile gemfile rakefile .gitignore .gitattributes .dockerignore .editorconfig`（`.env` 家族由前缀规则覆盖）
-- 纯数据 + 纯函数，无 fs 依赖，browser-safe；从 `packages/presets/src/index.ts` 导出。
+- 纯数据 + 纯函数，无 fs 依赖，browser-safe；从 `packages/presets/src/index.ts` 只导出 `CONTEXT_TOTAL_SIZE_LIMIT_BYTES` 与 `isTextContextPath`（遵循 index 只导出实际消费符号的红线，Set 常量留模块内部）。
 
 ### 4.2 contracts：inspect 端点契约
 
@@ -187,10 +187,11 @@ if (usedBytes + size > CONTEXT_TOTAL_SIZE_LIMIT_BYTES) { logger?.warn(...); cont
 | Key | zh-CN | en | zh-TW |
 |---|---|---|---|
 | `agent-dialog.refsFormatError` | 不支持的文件格式：仅允许纯文本文件 | Unsupported file format: only plain-text files are allowed | 不支援的檔案格式：僅允許純文字檔案 |
-| `agent-dialog.refsSizeError` | 参考资料总大小不能超过 512 kB | Reference files total size cannot exceed 512 kB | 參考資料總大小不能超過 512 kB |
-| `agent-dialog.refsUsage` | 已用 {used} / 512 kB | {used} / 512 kB used | 已用 {used} / 512 kB |
+| `agent-dialog.refsSizeError` | 参考资料总大小不能超过 {limit} | Reference files total size cannot exceed {limit} | 參考資料總大小不能超過 {limit} |
+| `agent-dialog.refsUsage` | 已用 {used} / {limit} | {used} / {limit} used | 已用 {used} / {limit} |
+| `agent-dialog.refsInspectError` | 检查参考资料失败 | Failed to check reference files | 檢查參考資料失敗 |
 
-实现时加载 i18n skill 按其流程操作。
+`{used}` / `{limit}` 由前端用 presets 常量格式化（`512.0 kB`）注入，避免上限数值硬编码在文案里漂移。实现时加载 i18n skill 按其流程操作。
 
 ## 7. 错误处理
 

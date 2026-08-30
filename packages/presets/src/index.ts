@@ -6,7 +6,5 @@ export { PRESET_SKILL_SOURCES } from "./generated/preset-skills.js";
 export { PRESET_PROMPT_TEMPLATES } from "./generated/prompt-templates.js";
 export {
   CONTEXT_TOTAL_SIZE_LIMIT_BYTES,
-  TEXT_FILE_EXTENSIONS,
-  TEXT_FILE_BASENAMES,
   isTextContextPath,
 } from "./context-file-policy.js";

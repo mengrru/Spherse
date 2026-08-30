@@ -51,7 +51,7 @@ describe("ContextPathField", () => {
     render({ contextPaths: ["a.md", "b.txt"] });
 
     await waitFor(() => {
-      expect(screen.getByText(/已用 3\.0 kB \/ 512 kB/)).toBeInTheDocument();
+      expect(screen.getByText(/已用 3\.0 kB \/ 512\.0 kB/)).toBeInTheDocument();
     });
   });
 
@@ -97,7 +97,7 @@ describe("ContextPathField", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("参考资料总大小不能超过 512 kB");
+      expect(toast.error).toHaveBeenCalledWith("参考资料总大小不能超过 512.0 kB");
     });
     expect(onAdd).not.toHaveBeenCalled();
   });
