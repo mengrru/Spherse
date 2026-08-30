@@ -10,6 +10,7 @@ const MIN_SUMMARY_TOKEN_BUDGET = 1500;
 const MAX_SUMMARY_TOKEN_BUDGET = 16_000;
 
 export function computeSummaryTokenBudget(currentTokens: number): number {
+  if (!Number.isFinite(currentTokens)) return MAX_SUMMARY_TOKEN_BUDGET;
   const scaled = Math.round(currentTokens * SUMMARY_BUDGET_RATIO);
   return Math.min(MAX_SUMMARY_TOKEN_BUDGET, Math.max(MIN_SUMMARY_TOKEN_BUDGET, scaled));
 }
@@ -55,7 +56,10 @@ export async function summarizeForCompaction(
     options.currentTokens === undefined
       ? MAX_SUMMARY_TOKEN_BUDGET
       : computeSummaryTokenBudget(options.currentTokens);
-  const instruction = buildSummaryInstruction(tokenBudget);
+  const modelMaxTokens = (model as { maxTokens?: number }).maxTokens;
+  const maxTokens =
+    modelMaxTokens === undefined ? tokenBudget : Math.min(tokenBudget, modelMaxTokens);
+  const instruction = buildSummaryInstruction(maxTokens);
 
   const llmMessages = await agent.convertToLlm(foldMessages as never);
   const context = {
@@ -63,10 +67,6 @@ export async function summarizeForCompaction(
     tools: agent.state.tools,
     messages: [...llmMessages, { role: "user", content: instruction } as Message],
   };
-
-  const modelMaxTokens = (model as { maxTokens?: number }).maxTokens;
-  const maxTokens =
-    modelMaxTokens === undefined ? tokenBudget : Math.min(tokenBudget, modelMaxTokens);
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SUMMARIZE_TIMEOUT_MS);
@@ -83,6 +83,12 @@ export async function summarizeForCompaction(
     };
     if (finalMessage.stopReason === "error" || finalMessage.stopReason === "aborted") {
       return null;
+    }
+    if (finalMessage.stopReason === "length") {
+      deps.logger.warn(
+        { sessionId, maxTokens },
+        "compaction summary hit the token budget, digest may be truncated",
+      );
     }
 
     const text = (finalMessage.content ?? [])

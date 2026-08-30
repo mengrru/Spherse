@@ -6,7 +6,7 @@ import {
   computeSummaryTokenBudget,
   summarizeForCompaction,
 } from "../../capabilities/compaction/summarize.js";
-import { createSilentLogger } from "../../logger.js";
+import { createSilentLogger, type Logger } from "../../logger.js";
 
 function fakeAgent(overrides: Record<string, unknown> = {}): Agent {
   return {
@@ -60,6 +60,11 @@ describe("computeSummaryTokenBudget", () => {
 
   it("caps very large contexts at the maximum budget", () => {
     expect(computeSummaryTokenBudget(1_000_000)).toBe(16_000);
+  });
+
+  it("falls back to the maximum budget on non-finite input", () => {
+    expect(computeSummaryTokenBudget(Number.NaN)).toBe(16_000);
+    expect(computeSummaryTokenBudget(Number.POSITIVE_INFINITY)).toBe(16_000);
   });
 });
 
@@ -128,11 +133,11 @@ describe("summarizeForCompaction", () => {
   });
 
   it("clamps the hard maxTokens to the model output limit", async () => {
-    const calls: Array<{ options?: unknown }> = [];
+    const calls: Array<{ context: unknown; options?: unknown }> = [];
     const agent = fakeAgent({
       state: { model: { id: "test-model", contextWindow: 100_000, maxTokens: 4096 } },
-      streamFunction: (_model: unknown, _context: unknown, options: unknown) => {
-        calls.push({ options });
+      streamFunction: (_model: unknown, context: unknown, options: unknown) => {
+        calls.push({ context, options });
         return {
           result: async () => ({
             stopReason: "stop",
@@ -147,6 +152,32 @@ describe("summarizeForCompaction", () => {
     }, { currentTokens: 120_000 });
 
     expect((calls[0].options as { maxTokens: number }).maxTokens).toBe(4096);
+    const context = calls[0].context as { messages: Message[] };
+    expect(context.messages[context.messages.length - 1].content).toBe(
+      buildSummaryInstruction(4096),
+    );
+  });
+
+  it("warns but keeps a budget-truncated summary", async () => {
+    const warnings: unknown[] = [];
+    const logger = {
+      warn: (obj: unknown) => warnings.push(obj),
+    } as unknown as Logger;
+    const agent = fakeAgent({
+      streamFunction: () => ({
+        result: async () => ({
+          stopReason: "length",
+          content: [{ type: "text", text: "z".repeat(80) }],
+        }),
+      }),
+    });
+
+    const result = await summarizeForCompaction(agent, foldMessages, "s", { logger }, {
+      currentTokens: 120_000,
+    });
+
+    expect(result?.digest).toBe("z".repeat(80));
+    expect(warnings).toHaveLength(1);
   });
 
   it("sends the converted (projected) messages, not the raw fold view", async () => {
