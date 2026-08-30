@@ -67,7 +67,7 @@ describe("web save degradation: HtmlCard", () => {
 describe("web save degradation: ImageCard", () => {
   it("falls back to fetching the preview url and saving a blob", async () => {
     const blob = new Blob(["img"], { type: "image/png" });
-    vi.mocked(fetch).mockResolvedValue(new Response(blob, { status: 200 }) as never);
+    vi.mocked(fetch).mockResolvedValue({ ok: true, blob: async () => blob } as never);
     const user = userEvent.setup();
     const bridge = createMockHostBridge({ showSaveDialog: undefined, saveBlob });
     renderWithProviders(
