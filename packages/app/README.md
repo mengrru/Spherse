@@ -161,7 +161,7 @@ npm run build --workspace=packages/desktop
 组件/hook 的渲染与交互测试使用 Testing Library（`@testing-library/react` + `user-event` + `jest-dom`，jsdom 环境）：
 
 1. 新组件/hook 测试一律 `render` / `renderHook` / `screen` / `userEvent`，禁止新增 `createRoot` 手写样板。
-2. Provider 搭建走 `src/test/render.tsx` 的 `renderWithProviders`（ProjectProvider + MemoryRouter + 可选 QueryClient/HostBridge/I18n）；host bridge mock 一律走 `src/test/host-bridge.ts` 的 `createMockHostBridge`。
+2. Provider 搭建走 `src/test/render.tsx` 的 `renderWithProviders`（ProjectProvider + MemoryRouter + 可选 QueryClient/HostBridge/I18n）；host bridge mock 一律走 `src/test/host-bridge.ts` 的 `createMockHostBridge`；bus 事件测试走 `src/test/bus.ts` 的 MockWebSocket harness（`stubMockBusSocket`/`connectMockBus`/`emitBusEvent`/`bumpBusResumedAt`/`teardownMockBus`），不自建 MockWebSocket 副本。
 3. 查询优先级：`getByRole` / `getByLabelText` / `getByDisplayValue`；`data-testid` 仅在无语义属性可用时使用；禁止图标类名查询。图标按钮必须有 `title`/`aria-label` 提供可访问名。
 4. fake timers 场景使用 `vi.useFakeTimers({ shouldAdvanceTime: true })`，否则 userEvent 内部调度会挂起。
 5. 组件卸载副作用会写状态（如 Composer 卸载回写草稿 localStorage）时，测试需在自身 `afterEach` 先显式 `cleanup()` 再清理 storage——vitest afterEach 按注册逆序执行，setup 级 cleanup 在测试文件 afterEach 之后才运行。
