@@ -5,7 +5,10 @@ import os from "node:os";
 import type { Agent } from "@earendil-works/pi-agent-core";
 import { compactionCapability } from "../../capabilities/compaction/index.js";
 import type { MaybeCompactDeps } from "../../capabilities/compaction/transform.js";
-import { SUMMARY_INSTRUCTION } from "../../capabilities/compaction/summarize.js";
+import {
+  buildSummaryInstruction,
+  computeSummaryTokenBudget,
+} from "../../capabilities/compaction/summarize.js";
 import { composeTurnHooks } from "../../kernel/turn-hooks.js";
 import { SessionEventLog } from "../../session/event-log.js";
 import { deriveMessages } from "../../session/fold.js";
@@ -135,7 +138,9 @@ describe("compaction capability", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].options?.sessionId).toBe(sessionId);
     const sentMessages = calls[0].context.messages;
-    expect(sentMessages[sentMessages.length - 1].content).toBe(SUMMARY_INSTRUCTION);
+    expect(sentMessages[sentMessages.length - 1].content).toBe(
+      buildSummaryInstruction(computeSummaryTokenBudget(8_000)),
+    );
     expect(sentMessages.length).toBeGreaterThan(25);
   });
 

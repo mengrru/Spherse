@@ -38,7 +38,9 @@ export async function maybeCompactLog(
       return seq === undefined ? [] : [seq];
     });
 
-    const summary = await summarizeForCompaction(agent, messages, sessionId, deps);
+    const summary = await summarizeForCompaction(agent, messages, sessionId, deps, {
+      currentTokens,
+    });
     let digestContent: string;
     let digestSource: "llm" | "mechanical";
     if (summary) {
