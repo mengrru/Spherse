@@ -20,7 +20,7 @@ vi.mock("../project-panel", () => ({
 import { useIsMobile } from "../../hooks/use-mobile";
 
 function mobileDrawer(): HTMLElement {
-  const drawer = document.querySelector("div.fixed.inset-y-0") as HTMLElement | null;
+  const drawer = document.querySelector("[data-side-panel-drawer]") as HTMLElement | null;
   if (!drawer) throw new Error("mobile drawer not found");
   return drawer;
 }
@@ -120,7 +120,7 @@ describe("SidePanel desktop branch", () => {
     expect(desktopPanel().hasAttribute("inert")).toBe(true);
   });
 
-  it("renders the pinned panel without inert and without the hover reveal strip", () => {
+  it("renders the pinned panel always visible without inert", () => {
     setMobile(false);
     useSidePanelStore.setState({ pinned: true });
     renderWithProviders(<SidePanel />);

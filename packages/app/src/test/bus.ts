@@ -16,6 +16,7 @@ export interface MockBusSocket {
 }
 
 let socket: MockBusSocket | null = null;
+let originalWebSocket: unknown;
 
 class MockWebSocket {
   static OPEN = OPEN;
@@ -42,12 +43,15 @@ class MockWebSocket {
 
 export function stubMockBusSocket(): void {
   socket = null;
+  originalWebSocket = globalThis.WebSocket;
   useBusStore.setState({ status: "idle", resumedAt: null });
   vi.stubGlobal("WebSocket", MockWebSocket);
 }
 
 export async function connectMockBus(): Promise<MockBusSocket> {
-  await useBusStore.getState().init(createMockHostBridge() as never);
+  await act(async () => {
+    await useBusStore.getState().init(createMockHostBridge() as never);
+  });
   if (!socket) throw new Error("bus socket not created");
   socket.readyState = OPEN;
   act(() => {
@@ -75,8 +79,10 @@ export function bumpBusResumedAt(): void {
 }
 
 export function teardownMockBus(): void {
-  useBusStore.getState().teardown();
-  useBusStore.setState({ status: "idle", resumedAt: null });
+  act(() => {
+    useBusStore.getState().teardown();
+    useBusStore.setState({ status: "idle", resumedAt: null });
+  });
   socket = null;
-  vi.unstubAllGlobals();
+  vi.stubGlobal("WebSocket", originalWebSocket as typeof WebSocket);
 }

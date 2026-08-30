@@ -20,6 +20,7 @@ function Harness({ text, onClose }: { text: string; onClose?: () => void }) {
 
 async function renderAndQuery(text: string, query: string) {
   render(<Harness text={text} />);
+  expect(countLabel()).toBe("");
   const user = userEvent.setup();
   await user.type(screen.getByPlaceholderText("查找"), query);
   await act(async () => {
