@@ -1062,6 +1062,10 @@ export const zhCN = {
   "tool.manage_trigger": "管理触发器",
   // 独立工具 tooltip：管理触发器的作用与风险说明
   "tool.manage_trigger_hint": "允许智能体查看、创建、修改和删除本项目内智能体的定时/事件触发器。新建、修改和删除前都会要求你确认；触发器可让智能体在无人值守时自动运行",
+  // 复合工具标签：管理项目（agent 配置界面将 manage_agent / manage_trigger / manage_project_config 三个管理工具合并为单一选项，高危，写操作需人工确认）
+  "tool.manage_project": "管理项目",
+  // 复合工具 tooltip：管理项目的作用与风险说明
+  "tool.manage_project_hint": "允许智能体管理本项目：查看、创建和修改其它智能体的配置（名称、别名、提示词、模型、工具权限、上下文文件），管理其定时/事件触发器，以及查看和修改项目级配置。涉及配置变更的写操作前都会要求你确认；删除智能体仍需你在界面中手动操作",
   // agent 配置工具权限区的高级功能折叠分组标题（高级工具收起在此）
   "tool.advanced_section": "高级操作",
 
