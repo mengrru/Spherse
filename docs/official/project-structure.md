@@ -383,6 +383,7 @@ spherse/
 │   │   │   ├── theming.md            # token 体系/三级主题/DOM 入口
 │   │   │   └── i18n.md               # i18n 架构
 │   │   ├── data-conventions.md       # 数据文件格式与存储约定
+│   │   ├── testing.md                # 测试体系：分层、选型规则、验证链
 │   │   ├── glossary.md               # 术语表：一词一行 + 权威文档指针
 │   │   └── project-structure.md      # 本文件：完整目录索引
 │   └── dev/                          # 开发过程文档（容易过时）
