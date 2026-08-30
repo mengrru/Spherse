@@ -1,4 +1,4 @@
-import { CHAT_CLOSE_CODES, parseChatServerEvent } from "@spherse/server/contracts";
+import { CHAT_CLOSE_CODES, parseChatServerEvent } from "@spherse/contracts";
 import type { ApiClient } from "../../../lib/api";
 import { buildWsUrl } from "../../../lib/api";
 import { parseAgentEvent, type AgentEvent } from "../model/agent-event-parse";

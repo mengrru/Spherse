@@ -1,8 +1,8 @@
 # ADR-0007：API 契约 schema 进代码（contracts + parseContract）
 
 - 状态：accepted
-- 日期：2026-06-09（引入）；bus / data / marketplace 等后续路由逐步收敛
-- 影响：`packages/server/src/contracts/`、全部 HTTP route 与 WS 边界、renderer API client
+- 日期：2026-06-09（引入）；bus / data / marketplace 等后续路由逐步收敛；2026-08-29 契约拆至独立包 `@spherse/contracts`（server ↔ renderer 双侧共享，见 `docs/dev/infra/2026-08-29-contracts-package/design.md`）
+- 影响：`packages/contracts/`、全部 HTTP route 与 WS 边界、renderer API client
 
 ## 背景
 
@@ -10,7 +10,7 @@ HTTP / WebSocket 边界曾靠裸 `JSON.parse` 与 TypeScript 泛型：类型只�
 
 ## 决策
 
-- request / response 与 WS message 的运行时 schema 统一定义在 `@spherse/server/contracts`（typebox）
+- request / response 与 WS message 的运行时 schema 统一定义在 `@spherse/contracts`（typebox）
 - server route、renderer API client、WebSocket 边界复用同一套 schema / parser（`parseContract`），不新增裸 `JSON.parse`
 - 新路由绑定 Fastify schema option，契约缺口在 review 中显式登记
 

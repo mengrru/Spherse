@@ -2,7 +2,7 @@ import { Writable } from "node:stream";
 import type { FastifyInstance, FastifyBaseLogger } from "fastify";
 import type { WebSocket } from "@fastify/websocket";
 import type { TriggerEventPayload, TriggerManager, ProjectManager, AgentChangePayload } from "@spherse/core";
-import { parseBusClientMessage } from "@spherse/server/contracts";
+import { parseBusClientMessage } from "@spherse/contracts";
 import type { ProjectRegistry } from "./registry.js";
 import { acquireFsWatch, releaseFsWatch } from "./lib/fs-watcher.js";
 import type { FsWatchListener } from "./lib/fs-watcher.js";

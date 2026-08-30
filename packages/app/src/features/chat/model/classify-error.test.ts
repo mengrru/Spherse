@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ErrorEventCode } from "@spherse/server/contracts";
+import { ErrorEventCode } from "@spherse/contracts";
 import { classifyErrorMessageString } from "./classify-error";
 
 describe("classifyErrorMessageString", () => {

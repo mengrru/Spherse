@@ -1,4 +1,4 @@
-import type { FsWatchChangeEvent } from "@spherse/server/contracts";
+import type { FsWatchChangeEvent } from "@spherse/contracts";
 import { normalizeEventPath } from "./file-update";
 import type {
   EventSourceWindow,

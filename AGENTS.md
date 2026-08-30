@@ -14,6 +14,7 @@
 | Package | 职责 | 包级守则 |
 |---|---|---|
 | `packages/core` | 纯 Node.js 核心逻辑（微内核 + Capability） | [README](packages/core/README.md) |
+| `packages/contracts` | 跨进程边界 wire 协议（HTTP/WS schema + parser，server 与 renderer 共同依赖） | [README](packages/contracts/README.md) |
 | `packages/presets` | 内置模板与预置静态内容 | [README](packages/presets/README.md) |
 | `packages/sdk` | Agent Workspace UI SDK（注入 HTML 卡片的 bridge 脚本与宿主类型） | 遵循 `docs/official/` |
 | `packages/i18n` | i18n 基础设施与翻译资源 | [README](packages/i18n/README.md) |
@@ -55,11 +56,12 @@
 # 安装依赖
 npm install
 
-# 编译所有 package（按 workspaces 声明顺序即拓扑序执行：i18n → presets → sdk → core → server → app → web → desktop → landing）
+# 编译所有 package（按 workspaces 声明顺序即拓扑序执行：i18n → presets → sdk → core → contracts → server → app → web → desktop → landing）
 npm run build
 
 # 监听编译（开发时使用）
 npm run dev -w @spherse/core    # core 监听
+npm run dev -w @spherse/contracts # contracts 监听
 npm run dev -w @spherse/presets # presets 监听
 npm run dev -w @spherse/i18n    # i18n 监听
 npm run dev -w @spherse/server  # server 监听
@@ -148,9 +150,9 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
 包内细则在各 package README 与 `docs/official/` 对应域文件，此处只留跨包红线：
 
 - **语言**：TypeScript（ESM，strict），target ES2022 / module Node16 / moduleResolution Node16
-- **导出规范**：package 的 `index.ts` 只导出外部实际使用的符号，仅作类型用的用 `export type`；定期移除多余导出
+- **导出规范**：package 的 `index.ts` 只导出外部实际使用的符号，仅作类型用的用 `export type`；定期移除多余导出。例外：作为共享词汇的协议包 `@spherse/contracts` 导出面镜像契约面（schema 与派生类型全集导出），规则见 [contracts README](packages/contracts/README.md)
 - **路径安全**：项目内路径解析必须用 `@spherse/core` 的 `resolveProjectPath` / `assertInsideProject` / `isPathInside`，禁止 `startsWith` 前缀判断
-- **API contract**：边界 schema 统一在 `@spherse/server/contracts` 并复用同一套 parser，规则见 [server README](packages/server/README.md)
+- **API contract**：边界 schema 统一在独立包 `@spherse/contracts` 并复用同一套 parser，规则见 [server README](packages/server/README.md) 与 [contracts README](packages/contracts/README.md)
 - **契约测试（跨层接缝）**：对 core 的 PM 写入门面与 `SessionPort` 方法，消费方包（server/desktop）至少各有一条不 mock 被测方法本身的契约测试——层间解耦越彻底，mock 拼接缝的盲区越大
 - **不添加注释**：除非用户明确要求
 - **Lint**：ESLint 9 flat config 在 root `eslint.config.js`；pre-commit 钩子自动执行 `npm run lint`

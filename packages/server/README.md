@@ -1,22 +1,12 @@
 # @spherse/server
 
-Fastify API 层，为 Spherse 桌面应用提供多项目 HTTP + WebSocket 服务。在 Electron main process 中以固定默认端口 `53972` 绑定 `127.0.0.1` 启动（`EADDRINUSE` 时回退 OS 随机端口），renderer 通过 `@spherse/server/contracts` 子入口复用同一套 TypeBox schema 校验边界 JSON。
+Fastify API 层，为 Spherse 桌面应用提供多项目 HTTP + WebSocket 服务。在 Electron main process 中以固定默认端口 `53972` 绑定 `127.0.0.1` 启动（`EADDRINUSE` 时回退 OS 随机端口）。HTTP / WS 边界的 schema 与 parser 定义在独立包 `@spherse/contracts`，server 与 renderer 共同依赖。
 
 ## Routes & Contracts 规范
 
 ### 文件组织（一一对应）
 
-`contracts/` 与 `routes/` 按业务域同名文件一一对应；`contracts/index.ts` 聚合所有 `schemas` 与类型 re-export，是 `@spherse/server/contracts` 子入口的稳定边界，新增域时在此处追加 import / spread / type re-export。
-
-`contracts/index.ts` 聚合所有 `schemas` 与类型 re-export，是 `@spherse/server/contracts` 子入口的稳定边界；新增域时在此处追加 import / spread / type re-export。
-
-### Schema 定义规范
-
-- **库**：`@sinclair/typebox` 的 `Type.*` 构造器。所有 schema 为 `Type.Object` / `Type.Array` / `Type.Union` 等纯数据描述，可同时用于运行时校验和类型推导（`Static<typeof schema>`）。
-- **命名**：资源 + 操作风格，无 HTTP 动词前缀。例如 `agentCreateRequest`、`agentCreateResponse`、`sessionListResponse`、`scheduleUpdateRequest`。`Request` 后缀表示入站 body，`Response` 后缀表示出站 payload，列表用 `*ListResponse`。
-- **可选字段**：frontmatter 透传字段（如 `createdAt`、`model`）一律 `Type.Optional(...)`，因 core 的 store 不会保证所有文件都写出该字段。
-- **`Type.Unknown()` 使用约束**：仅用于承接 pi-ai/pi-agent-core 复杂嵌套对象（chat 事件的 `message`/`args`/`result`、debug 的 `messages`/`parameters`、session messages）。这类字段只做结构校验，不强行 schema 化。逐步精确化的优化项见 `docs/dev/backlog.md`。
-- **导出**：每个 contract 文件导出 `schemas` 对象（runtime schema 集合）+ `Static<>` 派生类型。`index.ts` 负责 re-export，对外只暴露稳定类型名。
+`@spherse/contracts` 的 `src/` 与本包 `routes/` 按业务域同名文件一一对应；新增域时在新包 `src/index.ts` 追加 import / spread / type re-export。schema 定义规范（命名、`Type.Optional`、`Type.Unknown` 约束等）见 [`packages/contracts/README.md`](../contracts/README.md)。
 
 ### Route 绑定规范
 
@@ -57,7 +47,7 @@ Fastify API 层，为 Spherse 桌面应用提供多项目 HTTP + WebSocket 服�
 3. **WebSocket** —— 不走 Fastify schema，收到的 JSON 必须通过 contract parser 校验，非法消息返回统一 error event：
 
    ```ts
-   import { parseChatClientMessage, parseChatServerEvent } from "@spherse/server/contracts";
+   import { parseChatClientMessage, parseChatServerEvent } from "@spherse/contracts";
    const msg = parseChatClientMessage(rawJson);  // 抛 Error 即边界非法
    ```
 
@@ -119,16 +109,16 @@ renderer 的 `packages/app/src/lib/api.ts` 对每个响应统一走 `parseApiRes
 ## 子入口
 
 ```
-@spherse/server          # → dist/index.js  (createMultiProjectServer、ProjectRegistry)
-@spherse/server/contracts# → dist/contracts/index.js  (schemas、parser、类型)
+@spherse/server           # → dist/index.js  (createMultiProjectServer、ProjectRegistry)
+@spherse/contracts        # 独立包 → schemas、parser、类型（server 与 renderer 共同依赖）
 ```
 
 ## 开发
 
 ```bash
 npm run dev --workspace=packages/server    # tsc --watch
-npm test --workspace=packages/server      # vitest（含 contract schema 测试）
+npm test --workspace=packages/server      # vitest（含 WS 集成测试）
 npm run lint --workspace=packages/server  # eslint
 ```
 
-新增 / 修改 schema 后补 `src/__tests__/contracts/api-contracts.test.ts` 的用例，确保正向样本通过、负向样本抛 `Invalid payload`。
+新增 / 修改 schema 的契约测试要求见 [`packages/contracts/README.md`](../contracts/README.md)。

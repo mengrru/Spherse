@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
 import { getImageSupportedProviders, resolveProjectPath } from "@spherse/core";
-import { schemas } from "@spherse/server/contracts";
+import { schemas } from "@spherse/contracts";
 
 export function registerSettingsRoutes(fastify: FastifyInstance, registry: ProjectRegistry): void {
   fastify.get("/api/settings/providers", {

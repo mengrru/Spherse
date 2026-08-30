@@ -38,7 +38,7 @@ The main agent loads this skill, then dispatches a review sub agent (research-on
 ## Repo red lines (check at minimum)
 
 - Path safety: `resolveProjectPath` / `assertInsideProject` / `isPathInside`; `startsWith` prefix checks are path traversal bugs
-- Contracts: HTTP/WS boundary schemas live in `@spherse/server/contracts` and reuse the shared parsers; no new raw `JSON.parse` at boundaries
+- Contracts: HTTP/WS boundary schemas live in `@spherse/contracts` and reuse the shared parsers; no new raw `JSON.parse` at boundaries
 - Concurrency: never construct a new `FileWriteMutex` — the assembly point owns the single instance, injected everywhere
 - Export surface: package `index.ts` exports only consumed symbols; `export type` for type-only
 - No comments unless explicitly requested

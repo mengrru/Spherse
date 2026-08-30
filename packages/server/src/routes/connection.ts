@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { schemas } from "@spherse/server/contracts";
+import { schemas } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
 import { getAppVersion } from "../server-info.js";

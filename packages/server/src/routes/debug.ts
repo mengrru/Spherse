@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { schemas, parseContract } from "@spherse/server/contracts";
+import { schemas, parseContract } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 
 export function registerDebugRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {

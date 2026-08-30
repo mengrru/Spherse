@@ -3,7 +3,7 @@ import { ApiError, type ApiClient } from "../../lib/api";
 import { queryClient } from "../client";
 import { projectQueryKeys } from "../keys";
 import type { SessionInfo } from "../../lib/types";
-import type { SessionListPageResponse } from "@spherse/server/contracts";
+import type { SessionListPageResponse } from "@spherse/contracts";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import { ensureProjectAgents } from "./agents";
 import { getProjectGeneration, isCurrentProjectGeneration } from "./lifecycle";

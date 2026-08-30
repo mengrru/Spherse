@@ -8,7 +8,7 @@ import {
   VersionConflictError,
   type DataStore,
 } from "@spherse/core";
-import { schemas, parseContract } from "@spherse/server/contracts";
+import { schemas, parseContract } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 
 function dataStoreOf(registry: ProjectRegistry, req: { params: { projectId: string } }): DataStore {

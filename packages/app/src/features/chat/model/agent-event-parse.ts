@@ -10,7 +10,7 @@ import type {
   ToolResultMessage,
   UserMessage,
 } from "@spherse/core";
-import type { ChatServerEvent } from "@spherse/server/contracts";
+import type { ChatServerEvent } from "@spherse/contracts";
 
 export type AgentEvent = ChatServerEvent;
 

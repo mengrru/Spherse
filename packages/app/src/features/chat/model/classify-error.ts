@@ -1,4 +1,4 @@
-import { ErrorEventCode } from "@spherse/server/contracts";
+import { ErrorEventCode } from "@spherse/contracts";
 
 const PERMANENT_PATTERNS = [
   /prompt is too long/i,

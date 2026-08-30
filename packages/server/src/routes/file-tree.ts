@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
-import { schemas } from "@spherse/server/contracts";
+import { schemas } from "@spherse/contracts";
 import { shouldSkipDirEntry } from "@spherse/core";
 import type { ProjectRegistry } from "../registry.js";
 

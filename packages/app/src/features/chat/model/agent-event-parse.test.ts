@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ErrorEventCode, type ChatServerEvent } from "@spherse/server/contracts";
+import { ErrorEventCode, type ChatServerEvent } from "@spherse/contracts";
 import {
   isAgentMessage,
   isAssistantMessage,
