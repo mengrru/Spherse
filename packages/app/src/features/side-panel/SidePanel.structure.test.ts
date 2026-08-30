@@ -33,41 +33,4 @@ describe("SidePanel structure", () => {
     expect(source).not.toContain("onClose=");
     expect(source).not.toContain("onSettings=");
   });
-
-  it("branches into a mobile sliding panel path via useIsMobile", () => {
-    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
-
-    expect(source).toContain("useIsMobile");
-    expect(source).not.toContain("<Sheet");
-    expect(source).toContain("showMobile");
-    expect(source).toContain("hideMobile");
-    expect(source).toContain("mobileOpen");
-  });
-
-  it("renders a fixed start-edge vertical tab button on mobile", () => {
-    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
-
-    expect(source).toContain("fixed start-0 top-1/2");
-    expect(source).toContain("-translate-y-1/2");
-    expect(source).toContain("rounded-e-md");
-    expect(source).toContain("ChevronRightIcon");
-    expect(source).toContain("onClick={showMobile}");
-    expect(source).toContain('aria-haspopup="dialog"');
-    expect(source).toContain('aria-expanded={mobileOpen}');
-    expect(source).toContain('aria-label={t("side-panel.openTooltip")}');
-  });
-
-  it("closes the mobile drawer after navigating from within it", () => {
-    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
-
-    expect(source).toContain("useLocation");
-    expect(source).toContain("hideMobile()");
-  });
-
-  it("marks off-screen sliding containers with inert to prevent focus leaking", () => {
-    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
-
-    expect(source).toContain("inert={!mobileOpen}");
-    expect(source).toContain("inert={!visible}");
-  });
 });

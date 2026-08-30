@@ -53,6 +53,7 @@ export function SidePanel() {
           aria-hidden={!mobileOpen}
         />
         <div
+          data-side-panel-drawer
           className={`fixed inset-y-0 start-0 z-50 flex h-full transition-transform duration-200 ease-out ${
             mobileOpen ? "translate-x-0" : "-translate-x-full"
           }`}

@@ -1,10 +1,11 @@
-import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render } from "@testing-library/react";
 import { I18nProvider } from "@spherse/i18n/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UpdateNoticeBridge } from "./UpdateNoticeBridge";
 import { HostBridgeProvider } from "../../context/host-bridge-context";
 import type { HostBridge, UpdateEvent } from "../../lib/host-bridge";
+import { DOWNLOAD_PAGE_URL } from "../../lib/urls";
+import { createMockHostBridge } from "../../test/host-bridge";
 
 type UpdateEventListener = (event: UpdateEvent) => void;
 
@@ -18,46 +19,31 @@ function lastToastCall(mock: { mock: { calls: unknown[][] } }): ToastSuccessCall
   return calls[calls.length - 1];
 }
 
-let host: HTMLDivElement;
-let root: Root | null = null;
 let listeners: UpdateEventListener[] = [];
 let openExternal: ReturnType<typeof vi.fn>;
 
 function createBridge(withUpdater: boolean): HostBridge {
-  const bridge = {
-    kind: "electron" as const,
-    capabilities: {},
-    getServerBaseUrl: async () => "http://localhost:5173",
-    getSettings: async () => null,
-    saveSettings: async () => ({ success: true }),
-    openExternal,
-  };
-  if (withUpdater) {
-    return {
-      ...bridge,
-      updater: {
-        onUpdateEvent: (callback: UpdateEventListener) => {
-          listeners.push(callback);
-          return () => {};
-        },
+  const bridge = createMockHostBridge({ openExternal: openExternal as never });
+  if (!withUpdater) return bridge;
+  return {
+    ...bridge,
+    updater: {
+      onUpdateEvent: (callback: UpdateEventListener) => {
+        listeners.push(callback);
+        return () => {};
       },
-    } as unknown as HostBridge;
-  }
-  return bridge as unknown as HostBridge;
+    } as never,
+  };
 }
 
 function renderBridge(bridge: HostBridge) {
-  const Probe = () => (
+  return render(
     <I18nProvider locale="zh-CN">
       <HostBridgeProvider bridge={bridge}>
         <UpdateNoticeBridge />
       </HostBridgeProvider>
-    </I18nProvider>
+    </I18nProvider>,
   );
-  act(() => {
-    root = createRoot(host);
-    root.render(<Probe />);
-  });
 }
 
 function emit(event: UpdateEvent) {
@@ -67,18 +53,11 @@ function emit(event: UpdateEvent) {
 }
 
 beforeEach(() => {
-  host = document.createElement("div");
-  document.body.appendChild(host);
   listeners = [];
-  openExternal = vi.fn();
+  openExternal = vi.fn(async () => {});
 });
 
 afterEach(() => {
-  if (root) {
-    act(() => root!.unmount());
-    root = null;
-  }
-  host.remove();
   vi.restoreAllMocks();
 });
 
@@ -114,7 +93,7 @@ describe("UpdateNoticeBridge", () => {
 
     expect(toastMock).toHaveBeenCalledTimes(1);
     lastToastCall(toastMock)[1]?.action?.onClick();
-    expect(openExternal).toHaveBeenCalledWith("https://spherse.mengru.work/");
+    expect(openExternal).toHaveBeenCalledWith(DOWNLOAD_PAGE_URL);
   });
 
   it("ignores manual update-available events and non-available events", async () => {
@@ -136,7 +115,7 @@ describe("UpdateNoticeBridge", () => {
   });
 
   it("renders nothing without an updater api (web host)", () => {
-    renderBridge(createBridge(false));
-    expect(host.childElementCount).toBe(0);
+    const { container } = renderBridge(createBridge(false));
+    expect(container.childElementCount).toBe(0);
   });
 });

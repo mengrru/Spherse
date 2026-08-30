@@ -1,7 +1,7 @@
 import { act, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useWelcomePage } from "../../queries/welcome-page";
-import { useBusStore } from "../../stores/bus-store";
+import { connectMockBus, emitBusEvent, stubMockBusSocket, teardownMockBus } from "../../test/bus";
 import { renderWithProviders } from "../../test/render";
 import { WelcomePage } from "./index";
 
@@ -16,47 +16,9 @@ vi.mock("../../lib/use-connection", () => ({
   useConnection: () => ({ baseUrl: "http://localhost:5173", accessToken: null }),
 }));
 
-const OPEN = 1;
-
-interface MockSocket {
-  readyState: number;
-  onopen: ((ev: Event) => void | null);
-  onmessage: ((ev: MessageEvent) => void | null);
-  onclose: ((ev: CloseEvent) => void | null);
-  onerror: ((ev: Event) => void | null);
-  sent: string[];
-  close: () => void;
-}
-
-let socket: MockSocket | null = null;
-
-class MockWebSocket {
-  static OPEN = OPEN;
-  static CONNECTING = 0;
-  static CLOSING = 2;
-  static CLOSED = 3;
-  readyState = 0;
-  onopen: ((ev: Event) => void) | null = null;
-  onmessage: ((ev: MessageEvent) => void) | null = null;
-  onclose: ((ev: CloseEvent) => void) | null = null;
-  onerror: ((ev: Event) => void) | null = null;
-  sent: string[] = [];
-  constructor() {
-    socket = this as unknown as MockSocket;
-  }
-  send(data: string) {
-    this.sent.push(data);
-  }
-  close() {
-    this.readyState = 3;
-    this.onclose?.({} as CloseEvent);
-  }
-}
-
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
-  useBusStore.setState({ status: "idle", resumedAt: null });
-  vi.stubGlobal("WebSocket", MockWebSocket);
+  stubMockBusSocket();
   vi.mocked(useWelcomePage).mockReturnValue({
     data: { path: "welcome/index.html" },
     isError: false,
@@ -64,42 +26,23 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  useBusStore.getState().teardown();
-  useBusStore.setState({ status: "idle", resumedAt: null });
-  socket = null;
+  teardownMockBus();
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
-async function connectBus() {
-  await useBusStore.getState().init({
-    kind: "electron",
-    capabilities: {},
-    getServerBaseUrl: async () => "http://localhost:5173",
-    getSettings: async () => null,
-    saveSettings: async () => ({ success: true }),
-    openExternal: async () => {},
-  } as never);
-  if (!socket) throw new Error("socket not created");
-  socket.readyState = OPEN;
-  act(() => {
-    socket!.onopen?.({} as Event);
-  });
-}
-
 function emitFsWatch(path: string) {
-  socket!.onmessage?.({ data: JSON.stringify({
+  emitBusEvent({
     channel: "fs-watch",
     projectId: "p1",
     type: "change",
     payload: { eventType: "change", path },
-  }) } as MessageEvent);
+  });
 }
 
 describe("WelcomePage reload", () => {
   it("debounces rapid save bursts into a single forced reload via the React key", async () => {
     const view = renderWithProviders(<WelcomePage fallback={<div>fallback</div>} />);
-    await connectBus();
+    await connectMockBus();
 
     const iframeBefore = screen.getByTitle("Welcome Page");
     emitFsWatch("welcome/index.html");
@@ -124,7 +67,7 @@ describe("WelcomePage reload", () => {
       isError: false,
     } as never);
     const view = renderWithProviders(<WelcomePage fallback={<div>fallback</div>} />);
-    await connectBus();
+    await connectMockBus();
 
     const imgBefore = screen.getByAltText("Welcome Page");
     emitFsWatch("welcome\\poster.png");
@@ -137,7 +80,7 @@ describe("WelcomePage reload", () => {
 
   it("clears the debounce timer on unmount", async () => {
     const { unmount } = renderWithProviders(<WelcomePage fallback={<div>fallback</div>} />);
-    await connectBus();
+    await connectMockBus();
     const before = vi.getTimerCount();
 
     emitFsWatch("welcome/index.html");
