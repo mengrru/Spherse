@@ -45,7 +45,8 @@ spherse/
 │   │       │   ├── events.ts / event-log.ts # SessionEvent 词汇表 + append-only SessionEventLog 门面
 │   │       │   ├── fold.ts           # events → AgentMessage 投影 + open-turn repair
 │   │       │   ├── legacy-migrate.ts # messages/compactions → events 按会话幂等迁移
-│   │       │   ├── read-context-files.ts # profile 声明 context 文件读取（注入 systemPrompt 的 preloaded block；access policy 过滤）
+│   │       │   ├── read-context-files.ts # profile 声明 context 文件读取（注入 systemPrompt 的 preloaded block；access policy 过滤 + 纯文本/总量 512kB 兜底）
+│   │       │   ├── context-file-policy.ts # inspectContextFiles（路径→存在/大小/格式探测）+ assertContextFilesWithinPolicy（agent 保存门校验）
 │   │       │   ├── event-middlewares.ts # log/persist（session 层不变量）
 │   │       │   ├── log-agent-event.ts # agent event → pino 日志映射
 │   │       │   └── status.ts / types.ts
@@ -102,7 +103,8 @@ spherse/
 │   │       │   ├── agent-theme-template.ts
 │   │       │   ├── presets.ts        # PRESET_SKILLS, PRESET_AGENTS 常量
 │   │       │   ├── preset-skills.ts  # PRESET_SKILL_SOURCES 常量
-│   │       │   └── prompt-templates.ts # PRESET_PROMPT_TEMPLATES 常量（{ id, name, prompt }）
+│   │   │   └── prompt-templates.ts # PRESET_PROMPT_TEMPLATES 常量（{ id, name, prompt }）
+│   │       ├── context-file-policy.ts # 参考资料共享策略：CONTEXT_TOTAL_SIZE_LIMIT_BYTES + isTextContextPath（core/app 单一来源）
 │   │       └── index.ts              # 公开导出：模板内容 + 预置 skill/agent/prompt template 配置
 │   ├── i18n/                         # @spherse/i18n — 纯 TS i18n 基础设施
 │   │   ├── README.md                 # 包级守则：翻译基准、逐条注释规范、校验命令
@@ -149,6 +151,7 @@ spherse/
 │   │       ├── sessions.ts           # SessionInfo、SessionList/Messages Response、SessionMessagesPage（分页信封）、rename 请求
 │   │       ├── content.ts            # FileEntry、ContentResponse、create/save 请求
 │   │       ├── file-tree.ts          # FileTreeResponse
+│   │       ├── context-files.ts      # ContextFilesInspect Request/Response（context 参考资料探测）
 │   │       ├── settings.ts           # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
 │   │       ├── trigger.ts            # TriggerEntry、TriggerCreate/Update 请求、List/Log Response
 │   │       ├── skills.ts             # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
@@ -172,6 +175,7 @@ spherse/
 │       │       │   ├── sessions.ts       # Session 创建/查询/重命名/删除与消息读取
 │   │       │   ├── content.ts        # 内容浏览、读取、保存、删除、新建文件/目录
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
+│   │       │   ├── context-files.ts  # POST context-files/inspect：参考资料存在/大小/格式批量探测
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
     │   │       │   ├── marketplace.ts    # 技能市场路由（GET /marketplace/skills 代理 manifest；POST /skills/marketplace-install 按 {name, version} 下载 zip 并覆盖安装）

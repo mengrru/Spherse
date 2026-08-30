@@ -20,6 +20,15 @@
 
 修改 `templates/` 或 `skills/` 下的源文件后，通过 `npm run build --workspace=packages/presets` 或 root `npm run build` 触发同步，确保生成内容可用。
 
+## 共享策略常量（src/context-file-policy.ts）
+
+agent 参考资料限制的单一来源（core 校验/组装与 app UI 共用，browser-safe 纯函数）：
+
+- `CONTEXT_TOTAL_SIZE_LIMIT_BYTES`：参考资料总大小上限（512 × 1024 字节）
+- `isTextContextPath(relPath)`：纯文本判定（扩展名 allowlist + 知名无扩展名文件名 + `.env` 前缀家族，大小写不敏感）
+
+扩展名/文件名集合是模块内部常量，调整只在 `src/context-file-policy.ts` 一处；约束语义与消费层见 `docs/official/data-conventions.md` 的 agent frontmatter `context` 字段。
+
 ## presets.json 格式
 
 声明两类预置内容：新项目创建时注入的（`presetSkills`、`presetAgents`）与供 UI 直接消费的（`presetPromptTemplates`，不参与项目创建注入）：

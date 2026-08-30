@@ -91,7 +91,7 @@ frontmatter 字段：
 | `createdAt` | 自动 | epoch ms；创建时生成后不变 |
 | `model` | 否 | 覆盖全局默认模型 |
 | `tools` | 否 | 允许的工具名列表；缺省不分配任何工具 |
-| `context` | 否 | 项目根内相对路径列表，构建 system prompt 时预读注入；access policy 不可读的路径静默跳过 |
+| `context` | 否 | 项目根内相对路径列表，构建 system prompt 时预读注入；**仅允许纯文本文件（扩展名/知名文件名 allowlist，判定与 512kB 上限常量单一来源 `@spherse/presets` 的 `context-file-policy`）**，所有现存文件总大小 ≤ 512kB——agent 保存时校验（`ProjectStore` 漏斗，UI 与 `manage_agent` 共用），组装期按声明顺序贪心装填兜底跳过越界文件；access policy 不可读的路径静默跳过 |
 | `yolo` | 否 | 自动放行：true 时危险工具跳过审批门，文件访问策略不受影响；仅 Agent Dialog 可改，`manage_agent` 不管理 |
 | `timePerception` | 否 | 时间感知配置，见下 |
 | `output` | 否 | 预留字段，当前无消费方 |
@@ -176,7 +176,7 @@ legacy 迁移：升级前的 `messages` / `compactions` 表保留只读，用于
 | `<project-instructions>` | AGENTS.md 内容 |
 | `<agent-profile>` | agent profile 主体 |
 | `<session-context>` | 当前会话上下文，key-value：`agent-name` / `agent-alias`（设置时）/ `agent-slug` / `session-id` |
-| `<preloaded-context>` | 预载文件区 |
+| `<preloaded-context>` | 预载文件区（仅纯文本文件，总量 ≤ 512kB；越界/非文本文件组装期跳过并 warn log） |
 | `<context-file path="…">` | 单个预载文件（嵌套在 preloaded-context 内） |
 | `<skill-catalog>` | 可用技能目录（仅 name + description） |
 | `<skill-item name="…" description="…"/>` | 单个技能条目（自闭合，嵌套在 skill-catalog 内，属性经 XML 转义） |

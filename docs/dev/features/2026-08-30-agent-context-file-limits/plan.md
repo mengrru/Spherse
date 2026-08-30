@@ -15,5 +15,5 @@ Design doc: `design.md`
 - [x] 4. server：`routes/context-files.ts` POST inspect + 注册 + 路由测试 + create/update 拒绝契约测试
 - [x] 5. app：`lib/api.ts` inspectContextFiles + `SearchFileField` filter prop + `ContextPathField` 添加校验与用量行 + 组件测试
 - [x] 6. i18n：`refsFormatError` / `refsSizeError` / `refsUsage` / `refsInspectError` 三语言
-- [ ] 7. 验证：相关 workspace lint + typecheck + 单测，`npm run verify`
-- [ ] 8. doc-sync：data-conventions / architecture / presets README / project-structure / backlog
+- [x] 7. 验证：相关 workspace lint + typecheck + 单测，`npm run verify`
+- [x] 8. doc-sync：data-conventions / architecture(server.md) / presets README / project-structure 已更新；backlog 无对应条目（design 声称新增但从未写入，no-op）
