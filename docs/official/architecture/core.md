@@ -58,6 +58,7 @@ ProjectRuntime           对外协调层，聚合以上全部
 - **控制事件（重启点）**：`turn/retried`、`turn/withdrawn`、`compaction/applied`，restore 时按语义重建；WS 协议不受存储格式影响
   - withdraw：`turn/withdrawn {seq}` 锚定被撤回的 user message，fold 从日志推导废弃区间 `[seq, 本事件 seq)`；末轮已被 digest 覆盖（lastUserEvent.seq ≤ anchorSeq）时拒绝撤回
   - compaction：阈值触发时经 agent 自身 streamFn 生成 LLM 摘要——精确复刻请求前缀（systemPrompt + tools + fold 视图 + 追加摘要指令）命中 provider prompt cache；失败且 tokens ≤ 90% window 跳过本轮，> 90% 回退机械拼接
+    摘要长度预算按压缩时 context tokens 的 5% 动态给定（clamp 1500–16000），同时约束摘要指令文本与 stream `maxTokens`（再与模型输出上限取 min）
     摘要来源以 `digestSource: "llm" | "mechanical"` 标记
 - 触发器 ⇄ 会话的循环依赖经 `SessionPort` 消解：factory 先构造 SessionManager，port 是普通对象，capability 在 `init` 中拿到它
 
