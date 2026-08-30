@@ -19,9 +19,10 @@ interface SearchFileFieldProps {
   exclude?: string[];
   onSelect: (path: string) => void;
   placeholder?: string;
+  filter?: (path: string) => boolean;
 }
 
-export function SearchFileField({ exclude = [], onSelect, placeholder }: SearchFileFieldProps) {
+export function SearchFileField({ exclude = [], onSelect, placeholder, filter }: SearchFileFieldProps) {
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const [input, setInput] = useState("");
@@ -55,6 +56,7 @@ export function SearchFileField({ exclude = [], onSelect, placeholder }: SearchF
     const matched = fileTree
       .filter((f) => fuzzyMatch(f, query))
       .filter((f) => !exclude.includes(f))
+      .filter((f) => !filter || filter(f))
       .map((f) => ({ name: f.split("/").pop() ?? f, fullPath: f }));
     setSuggestions(matched.slice(0, 8));
     setOpen(matched.length > 0);

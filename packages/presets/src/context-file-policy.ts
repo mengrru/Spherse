@@ -1,0 +1,128 @@
+const TEXT_EXTENSION_GROUPS: ReadonlyArray<readonly string[]> = [
+  ["txt", "text", "md", "markdown", "mdx", "rst", "adoc", "org"],
+  [
+    "json",
+    "jsonc",
+    "json5",
+    "yaml",
+    "yml",
+    "toml",
+    "csv",
+    "tsv",
+    "xml",
+    "html",
+    "htm",
+    "xhtml",
+    "ini",
+    "cfg",
+    "conf",
+    "config",
+    "properties",
+    "env",
+    "plist",
+    "sql",
+    "graphql",
+    "gql",
+    "proto",
+    "lock",
+    "log",
+  ],
+  ["css", "scss", "sass", "less", "js", "mjs", "cjs", "ts", "tsx", "jsx", "vue", "svelte", "astro"],
+  [
+    "py",
+    "pyi",
+    "rb",
+    "go",
+    "rs",
+    "java",
+    "kt",
+    "kts",
+    "swift",
+    "c",
+    "h",
+    "cpp",
+    "cc",
+    "cxx",
+    "hpp",
+    "hh",
+    "cs",
+    "php",
+    "dart",
+    "lua",
+    "pl",
+    "r",
+    "jl",
+    "scala",
+    "m",
+    "mm",
+    "sh",
+    "bash",
+    "zsh",
+    "fish",
+    "ps1",
+    "psm1",
+    "bat",
+    "cmd",
+    "vim",
+    "el",
+    "lisp",
+    "clj",
+    "cljs",
+    "edn",
+    "ex",
+    "exs",
+    "erl",
+    "hrl",
+    "hs",
+    "ml",
+    "mli",
+    "fs",
+    "fsx",
+    "nim",
+    "zig",
+    "v",
+    "d",
+    "groovy",
+    "gradle",
+    "tf",
+    "hcl",
+    "diff",
+    "patch",
+  ],
+];
+
+const TEXT_BASENAMES = [
+  "makefile",
+  "dockerfile",
+  "license",
+  "licence",
+  "notice",
+  "readme",
+  "procfile",
+  "jenkinsfile",
+  "vagrantfile",
+  "gemfile",
+  "rakefile",
+  ".gitignore",
+  ".gitattributes",
+  ".dockerignore",
+  ".editorconfig",
+];
+
+export const CONTEXT_TOTAL_SIZE_LIMIT_BYTES = 512 * 1024;
+
+export const TEXT_FILE_EXTENSIONS: ReadonlySet<string> = new Set(
+  TEXT_EXTENSION_GROUPS.flatMap((group) => group),
+);
+
+export const TEXT_FILE_BASENAMES: ReadonlySet<string> = new Set(TEXT_BASENAMES);
+
+export function isTextContextPath(relPath: string): boolean {
+  const basename = relPath.split("/").pop() ?? relPath;
+  const lower = basename.toLowerCase();
+  if (lower.startsWith(".env")) return true;
+  if (TEXT_FILE_BASENAMES.has(lower)) return true;
+  const dot = basename.lastIndexOf(".");
+  if (dot <= 0) return false;
+  return TEXT_FILE_EXTENSIONS.has(basename.slice(dot + 1).toLowerCase());
+}

@@ -378,6 +378,14 @@ export const zhCN = {
   "agent-dialog.refsHint": "一开始就让智能体记住的文件内容。智能体会一直记住这些内容。",
   // Agent 参考资料路径输入框占位提示
   "agent-dialog.refsPlaceholder": "输入路径搜索文件，回车添加",
+  // 添加参考资料时格式不被允许的报错（仅允许纯文本文件）
+  "agent-dialog.refsFormatError": "不支持的文件格式：仅允许纯文本文件",
+  // 添加参考资料时总大小超过上限的报错
+  "agent-dialog.refsSizeError": "参考资料总大小不能超过 512 kB",
+  // 参考资料当前总用量展示，{used} 为已用大小（如 320.0 kB）
+  "agent-dialog.refsUsage": "已用 {used} / 512 kB",
+  // 检查参考资料（大小/格式）请求失败的报错
+  "agent-dialog.refsInspectError": "检查参考资料失败",
   // Agent 保存失败提示
   "agent-dialog.saveFailed": "保存失败",
   // 编辑 Agent 时读取原始内容/主题失败的提示（出现在弹窗主体）

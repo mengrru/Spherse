@@ -55,7 +55,7 @@ const ManageAgentParams = Type.Object({
   context: Type.Optional(
     Type.Array(Type.String(), {
       description:
-        "Full replacement list of project-relative file paths preloaded into the agent's context. Omit to leave unchanged.",
+        "Full replacement list of project-relative file paths preloaded into the agent's context. Only plain-text files are allowed (text/code/config extensions or well-known text filenames like Makefile/Dockerfile), and the total size of all files must stay within 512 kB. Omit to leave unchanged.",
     }),
   ),
   time_perception: Type.Optional(

@@ -13,6 +13,7 @@ import { registerPreviewRoutes } from "./preview.js";
 import { registerSkillRoutes } from "./skills.js";
 import { registerMarketplaceRoutes } from "./marketplace.js";
 import { registerFileTreeRoutes } from "./file-tree.js";
+import { registerContextFileRoutes } from "./context-files.js";
 import { registerDebugRoutes } from "./debug.js";
 import { registerTriggerRoutes } from "./trigger.js";
 import { registerImagesRoutes } from "./images.js";
@@ -55,6 +56,7 @@ export function registerAllRoutes(
   registerSkillRoutes(fastify, registry);
   registerMarketplaceRoutes(fastify, registry);
   registerFileTreeRoutes(fastify, registry);
+  registerContextFileRoutes(fastify, registry);
   registerDebugRoutes(fastify, registry);
   registerTriggerRoutes(fastify, registry);
   registerImagesRoutes(fastify, registry);
