@@ -10,7 +10,10 @@ import { createAskGate } from "./ask-gate.js";
 import type { SessionStatus } from "./status.js";
 import type { RuntimeDeps } from "./runtime.js";
 import { logEventMiddleware } from "./event-middlewares.js";
-import { createAttachmentSanitizer } from "../attachments/sanitizer.js";
+import {
+  createAttachmentSanitizer,
+  type AttachmentSanitizer,
+} from "../attachments/sanitizer.js";
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
 import { collectAbandonedSeqs, deriveMessages, repairLog } from "./fold.js";
 import { SessionEventLog } from "./event-log.js";
@@ -118,53 +121,57 @@ export class AgentRunner {
     meta?: SendMessageMeta,
   ): Promise<void> {
     this.ensureNotBusy();
-    if (this.pendingReload) {
-      this.pendingReload = false;
-      await this.applyReload();
-    }
-    this.ensureModel();
-    this.ensureWritable();
-    await this.turnHooks.beforeTurn?.(this.agent);
-    const sessionLogger = this.deps.logger.child({ sessionId: this.sessionId });
-
-    const sanitizer = createAttachmentSanitizer(attachments);
-    const userMessage = await prepareAttachmentUserMessage(
-      message,
-      attachments,
-      this.deps.projectRoot,
-      this.deps.attachmentProcessors,
-    );
-    const sanitizedUserMessage = sanitizer
-      ? (stripUserAttachments(userMessage as never, attachments) as typeof userMessage)
-      : userMessage;
-
-    this.eventLog!.appendBatch([
-      {
-        type: "user/message",
-        data: {
-          message: sanitizedUserMessage as never,
-          ...(meta?.source !== undefined ? { source: meta.source } : {}),
-          ...(meta?.triggerName !== undefined ? { triggerName: meta.triggerName } : {}),
-        },
-      },
-      { type: "turn/start", data: {} },
-    ]);
-
-    const dispatch = createEventPipeline(
-      [
-        logEventMiddleware(sessionLogger),
-        ...this.capabilityMiddlewares,
-        ...(sanitizer ? [sanitizer.middleware] : []),
-        this.persistMiddleware(),
-      ],
-      onEvent,
-    );
-
-    const previousSink = this.controlBus.swapEventSink(onEvent);
-    const unsubscribe = this.agent.subscribe(dispatch);
     this.inFlight = true;
-
+    let sanitizer: AttachmentSanitizer | null = null;
+    let unsubscribe: (() => void) | undefined;
+    let restoreSink: (() => void) | undefined;
     try {
+      if (this.pendingReload) {
+        this.pendingReload = false;
+        await this.applyReload();
+      }
+      this.ensureModel();
+      this.ensureWritable();
+      await this.turnHooks.beforeTurn?.(this.agent);
+      const sessionLogger = this.deps.logger.child({ sessionId: this.sessionId });
+
+      sanitizer = createAttachmentSanitizer(attachments);
+      const userMessage = await prepareAttachmentUserMessage(
+        message,
+        attachments,
+        this.deps.projectRoot,
+        this.deps.attachmentProcessors,
+      );
+      const sanitizedUserMessage = sanitizer
+        ? (stripUserAttachments(userMessage as never, attachments) as typeof userMessage)
+        : userMessage;
+
+      this.eventLog!.appendBatch([
+        {
+          type: "user/message",
+          data: {
+            message: sanitizedUserMessage as never,
+            ...(meta?.source !== undefined ? { source: meta.source } : {}),
+            ...(meta?.triggerName !== undefined ? { triggerName: meta.triggerName } : {}),
+          },
+        },
+        { type: "turn/start", data: {} },
+      ]);
+
+      const dispatch = createEventPipeline(
+        [
+          logEventMiddleware(sessionLogger),
+          ...this.capabilityMiddlewares,
+          ...(sanitizer ? [sanitizer.middleware] : []),
+          this.persistMiddleware(),
+        ],
+        onEvent,
+      );
+
+      const previousSink = this.controlBus.swapEventSink(onEvent);
+      restoreSink = () => this.controlBus.swapEventSink(previousSink);
+      unsubscribe = this.agent.subscribe(dispatch);
+
       await this.agent.prompt(userMessage);
       await this.applyAfterTurnHooks();
     } finally {
@@ -172,61 +179,64 @@ export class AgentRunner {
         const result = sanitizer.finalize(this.agent.state.messages);
         this.agent.state.messages = result.messages;
       }
-      unsubscribe();
-      this.controlBus.swapEventSink(previousSink);
+      unsubscribe?.();
+      restoreSink?.();
       this.inFlight = false;
     }
   }
 
   async retryLastTurn(onEvent: RunnerEventHandler): Promise<void> {
     this.ensureNotBusy();
-    if (this.pendingReload) {
-      this.pendingReload = false;
-      await this.applyReload();
-    }
-    const lastEvent = [...this.eventLog!.events]
-      .reverse()
-      .find((event) => event.type === "assistant/message");
-    const lastBuffered = this.agent.state.messages[this.agent.state.messages.length - 1];
-    if (
-      !lastEvent ||
-      lastEvent.type !== "assistant/message" ||
-      !lastBuffered ||
-      lastBuffered.role !== "assistant" ||
-      (lastBuffered as { stopReason?: string }).stopReason !== "error"
-    ) {
-      throw new ValidationError(
-        `Session "${this.sessionId}" has no failed assistant turn to retry`,
-      );
-    }
-
-    this.ensureModel();
-    this.eventLog!.appendBatch([
-      { type: "turn/retried", data: { abandonedSeqs: [lastEvent.seq] } },
-      { type: "turn/start", data: {} },
-    ]);
-    this.syncBufferFromLog();
-
-    const sessionLogger = this.deps.logger.child({ sessionId: this.sessionId });
-    const dispatch = createEventPipeline(
-      [
-        logEventMiddleware(sessionLogger),
-        ...this.capabilityMiddlewares,
-        this.persistMiddleware(),
-      ],
-      onEvent,
-    );
-
-    const previousSink = this.controlBus.swapEventSink(onEvent);
-    const unsubscribe = this.agent.subscribe(dispatch);
     this.inFlight = true;
-
+    let unsubscribe: (() => void) | undefined;
+    let restoreSink: (() => void) | undefined;
     try {
+      if (this.pendingReload) {
+        this.pendingReload = false;
+        await this.applyReload();
+      }
+      const lastEvent = [...this.eventLog!.events]
+        .reverse()
+        .find((event) => event.type === "assistant/message");
+      const lastBuffered = this.agent.state.messages[this.agent.state.messages.length - 1];
+      if (
+        !lastEvent ||
+        lastEvent.type !== "assistant/message" ||
+        !lastBuffered ||
+        lastBuffered.role !== "assistant" ||
+        (lastBuffered as { stopReason?: string }).stopReason !== "error"
+      ) {
+        throw new ValidationError(
+          `Session "${this.sessionId}" has no failed assistant turn to retry`,
+        );
+      }
+
+      this.ensureModel();
+      this.eventLog!.appendBatch([
+        { type: "turn/retried", data: { abandonedSeqs: [lastEvent.seq] } },
+        { type: "turn/start", data: {} },
+      ]);
+      this.syncBufferFromLog();
+
+      const sessionLogger = this.deps.logger.child({ sessionId: this.sessionId });
+      const dispatch = createEventPipeline(
+        [
+          logEventMiddleware(sessionLogger),
+          ...this.capabilityMiddlewares,
+          this.persistMiddleware(),
+        ],
+        onEvent,
+      );
+
+      const previousSink = this.controlBus.swapEventSink(onEvent);
+      restoreSink = () => this.controlBus.swapEventSink(previousSink);
+      unsubscribe = this.agent.subscribe(dispatch);
+
       await this.agent.continue();
       await this.applyAfterTurnHooks();
     } finally {
-      unsubscribe();
-      this.controlBus.swapEventSink(previousSink);
+      unsubscribe?.();
+      restoreSink?.();
       this.inFlight = false;
     }
   }
