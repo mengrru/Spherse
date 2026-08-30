@@ -19,6 +19,7 @@
 - [ ] **恢复 Windows 自动更新 feed（latest.yml，双 arch）**：CI 自 OSS 镜像改造（ba8c049）起统一 `--publish never` + `gh release upload`，release 上不再有 `latest.yml`，Windows 客户端 electron-updater 检查更新因 404 报 `update-error`。恢复需研究多 arch 语义：一个 `latest.yml` 只指向一个安装包，x64 与 arm64 需按 electron-updater 的 channel 文件约定（如 `latest.yml` / `latest-arm64.yml`）分别生成并上传，避免 arm64 设备被推 x64 包（或反向）。可考虑在 `publish-oss` 或 build job 中集中生成。
 - [ ] **refreshProjects 路径不回收 streaming runtime**：外部关闭/多窗口场景下项目从快照消失时，`app-store.refreshProjects` 只改 projects map，不走 `closeProjectCascade`，该项目 chat streaming runtime（WS + 重连定时器）仍存活。受「全局 store 不得依赖 feature-local store」约束，修复需 streaming runtime 生命周期整体重构，宜与 followup P1「移除 streaming/trigger 镜像」合并考虑。参见 `docs/dev/infra/2026-08-28-project-lifecycle-orchestration/design.md` 已知缺口
 - [ ] **BrowserPage render 期 navigate 重定向疑似失效**：`pages/BrowserPage.tsx` 在 render 期间调用 `navigate(...)`（React Router 反模式）。组件测试迁移（2026-08-29）中用 MemoryRouter 验证发现该调用不会完成导航，仅返回 null——web 壳访问 `/project/:id/browser` 时可能停在空白路由而非回到项目首页。修复方向：改为 `useEffect` 内导航或 `<Navigate replace />`；修复后可在 `save-export-degradation.test.tsx` 补真正的路由断言。
+- [ ] **desktop 契约测试缺位**：AGENTS.md 红线要求「core 的 PM 写入门面与 `SessionPort` 方法，消费方包（server/desktop）至少各有一条不 mock 被测方法本身的契约测试」；server 侧已有（`write-facade-contract.test.ts`），desktop 侧现有 `electron/ipc/project.test.ts`、`electron/server.test.ts` 均 vi.mock 了 server/门面，不满足红线。需补一条走真实门面（或真实 IPC 边界）的契约测试。
 
 ## 技术债（重构与收敛）
 

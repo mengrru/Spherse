@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | 纯逻辑单测 | Node / jsdom | store、query、reducer、纯函数、hook 数据流 | core / server / app / contracts / sdk 等 | 秒级 |
 | 组件测试 | jsdom + Testing Library | React 组件渲染、ARIA 状态、交互 | `packages/app` | 秒级 |
-| 契约测试 | Node | 跨层接缝：PM 写入门面、`SessionPort`、HTTP/WS contract | core / server / desktop 各自持有 | 秒级 |
+| 契约测试 | Node | 跨层接缝：PM 写入门面、`SessionPort`、HTTP/WS contract | core / server | 秒级 |
 | 架构不变量 | Node（源码扫描） | 跨文件完整性、层边界负断言 | `packages/app`（`*.structure.test.ts`） | 秒级 |
 | E2E | 真实 Electron + Playwright | 启动链、路由、多面板集成、UI SDK | `packages/desktop/e2e/` | 分钟级 |
 | 打包 smoke | 打包产物（asar） | electron-builder 配置、native dependency、安装包可启动 | `packages/desktop/e2e/packaged-smoke.spec.ts` | 分钟级 |
@@ -41,7 +41,7 @@
 
 ### E2E（packages/desktop）
 
-- 覆盖 Electron 启动、项目恢复、路由、文件树、content browser、chat/session、文本选择发起会话、UI SDK bridge、浮窗等跨面板集成。
+- 覆盖 Electron 启动、项目恢复、路由、store、server API、文件树、content browser、chat/session、文本选择发起会话、UI SDK bridge、浮窗等跨面板集成；改动涉及上述面或 native dependency、E2E helper 时优先运行对应 spec。
 - **按变更影响面选择受影响的 spec 运行，不要求全量**；单 spec：`npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts`，或追加 `-g "<case 名>"` 过滤。合并/发布前跑 `npm run verify:e2e`。
 - 涉及打包链（electron-builder 配置、asar/外置 node_modules、native dependency 重编、安装包产物）时，跑 `npm run pack -w @spherse/desktop && SPHERSE_SMOKE=1 npm run test:smoke -w @spherse/desktop` 验证产物本身；release CI 会在 arch 匹配的 job 上自动执行该 smoke。
 
@@ -73,7 +73,7 @@ npm run verify:e2e    # verify + desktop 全量 E2E（合并/发布前）
 ```
 
 - 单包快速回路：`npm test --workspace=packages/<pkg>`（app 组件测试依赖 i18n/presets 等 dist，跨包改动后先 `npm run build`）。
-- pre-commit 钩子执行 `npm run lint`；CI 在 push/PR 上执行 `verify`，release 流程附 E2E 与打包 smoke。
+- pre-commit 钩子执行 `npm run lint`；PR（非 docs-only）上 CI 跑 `npm run verify` 与全量 E2E；tag push 发版跑 verify 与 arch 匹配 job 上的打包 smoke（发版不跑 E2E，拦截在 PR 阶段）。
 
 ## 维护规则
 
