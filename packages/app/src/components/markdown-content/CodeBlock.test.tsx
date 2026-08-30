@@ -1,11 +1,10 @@
-import { act } from "react";
+import { act, render, screen } from "@testing-library/react";
+import { userEvent } from "@testing-library/user-event";
 import { createElement, type ReactNode } from "react";
-import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CodeBlock } from "./CodeBlock";
 
-let host: HTMLDivElement;
-let root: ReturnType<typeof createRoot> | null = null;
+let user: ReturnType<typeof userEvent.setup>;
 let writeText: ReturnType<typeof vi.fn>;
 
 function setClipboard(value: { writeText?: unknown } | undefined) {
@@ -13,86 +12,63 @@ function setClipboard(value: { writeText?: unknown } | undefined) {
 }
 
 beforeEach(() => {
-  host = document.createElement("div");
-  document.body.appendChild(host);
+  user = userEvent.setup();
   writeText = vi.fn().mockResolvedValue(undefined);
   setClipboard({ writeText });
 });
 
 afterEach(() => {
-  if (root) {
-    act(() => root!.unmount());
-    root = null;
-  }
-  host.remove();
+  vi.useRealTimers();
 });
 
-function render(children: ReactNode) {
-  act(() => {
-    root = createRoot(host);
-    root.render(<CodeBlock className="mb-3">{children}</CodeBlock>);
-  });
-}
-
-function pre(): HTMLPreElement {
-  return host.querySelector("pre[data-md-code]")!;
+function renderCode(children: ReactNode) {
+  return render(<CodeBlock className="mb-3">{children}</CodeBlock>);
 }
 
 function copyButton(): HTMLButtonElement {
-  return host.querySelector("button[aria-label]")!;
+  return screen.getByRole("button", { name: "复制代码" });
 }
 
 describe("CodeBlock", () => {
   it("renders data-md-code on the inner pre and keeps the code text", () => {
-    render(createElement("code", { className: "language-js" }, "const x = 1;\n"));
-    expect(pre()).not.toBeNull();
-    expect(pre().textContent).toContain("const x = 1;");
-    expect(host.querySelector("div.group.relative")).not.toBeNull();
+    const { container } = renderCode(createElement("code", { className: "language-js" }, "const x = 1;\n"));
+    const pre = container.querySelector("pre[data-md-code]")!;
+    expect(pre).not.toBeNull();
+    expect(pre.textContent).toContain("const x = 1;");
+    expect(container.querySelector("div.group.relative")).not.toBeNull();
   });
 
   it("renders a copy button with the copy-code accessible label", () => {
-    render("code text");
-    expect(copyButton()).toBeDefined();
-    expect(copyButton().getAttribute("aria-label")).toBe("复制代码");
-    expect(copyButton().getAttribute("title")).toBe("复制代码");
+    renderCode("code text");
+    expect(copyButton()).toHaveAttribute("title", "复制代码");
   });
 
   it("copies the extracted code text to the clipboard on click", async () => {
-    render(createElement("code", null, "console.log(1);\n"));
-    await act(async () => {
-      copyButton().click();
-    });
+    renderCode(createElement("code", null, "console.log(1);\n"));
+    await user.click(copyButton());
     expect(writeText).toHaveBeenCalledWith("console.log(1);\n");
   });
 
   it("swaps to a check icon after a successful copy and resets after 2s", async () => {
-    render(createElement("code", null, "hello"));
-    vi.useFakeTimers();
-    try {
-      await act(async () => {
-        copyButton().click();
-      });
-      expect(host.querySelector("button svg.lucide-check")).not.toBeNull();
-      expect(host.querySelector("button svg.lucide-copy")).toBeNull();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    user = userEvent.setup();
+    renderCode(createElement("code", null, "hello"));
 
-      act(() => {
-        vi.advanceTimersByTime(2000);
-      });
-      expect(host.querySelector("button svg.lucide-check")).toBeNull();
-      expect(host.querySelector("button svg.lucide-copy")).not.toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
+    await user.click(copyButton());
+    expect(copyButton().querySelector("svg.lucide-check")).not.toBeNull();
+    expect(copyButton().querySelector("svg.lucide-copy")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(copyButton().querySelector("svg.lucide-check")).toBeNull();
+    expect(copyButton().querySelector("svg.lucide-copy")).not.toBeNull();
   });
 
-  it("does not throw when the clipboard is unavailable", () => {
+  it("does not throw when the clipboard is unavailable", async () => {
     setClipboard(undefined);
-    render("text");
-    expect(() => {
-      act(() => {
-        copyButton().click();
-      });
-    }).not.toThrow();
+    renderCode("text");
+    await user.click(copyButton());
     expect(writeText).not.toHaveBeenCalled();
   });
 });

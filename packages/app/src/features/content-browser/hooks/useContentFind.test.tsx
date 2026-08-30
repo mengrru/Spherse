@@ -1,25 +1,9 @@
-import { act, useEffect, useRef } from "react";
-import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { act, render } from "@testing-library/react";
+import { useEffect, useRef } from "react";
+import { describe, expect, it } from "vitest";
 import { useContentFind, type ContentFindApi } from "./useContentFind";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-
-let host: HTMLDivElement;
-let root: ReturnType<typeof createRoot> | null = null;
-
-beforeEach(() => {
-  host = document.createElement("div");
-  document.body.appendChild(host);
-});
-
-afterEach(() => {
-  if (root) {
-    act(() => root!.unmount());
-    root = null;
-  }
-  host.remove();
-});
 
 function Harness({
   text,
@@ -42,98 +26,91 @@ function Harness({
   );
 }
 
+function renderHarness(text: string) {
+  let api: ContentFindApi | null = null;
+  const view = render(<Harness text={text} onApi={(a) => (api = a)} />);
+  return {
+    view,
+    api: () => {
+      if (!api) throw new Error("api not captured");
+      return api;
+    },
+  };
+}
+
 describe("useContentFind", () => {
   it("counts matches and cycles next/prev with wraparound", async () => {
-    let api: ContentFindApi | null = null;
+    const { api } = renderHarness("foo bar foo baz foo");
     await act(async () => {
-      root = createRoot(host);
-      root.render(<Harness text="foo bar foo baz foo" onApi={(a) => (api = a)} />);
-    });
-    await act(async () => {
-      api!.setQuery("foo");
+      api().setQuery("foo");
     });
     await act(async () => {
       await sleep(170);
     });
-    expect(api!.matchCount).toBe(3);
-    expect(api!.matchIndex).toBe(0);
+    expect(api().matchCount).toBe(3);
+    expect(api().matchIndex).toBe(0);
 
     await act(async () => {
-      api!.next();
+      api().next();
     });
-    expect(api!.matchIndex).toBe(1);
+    expect(api().matchIndex).toBe(1);
     await act(async () => {
-      api!.next();
+      api().next();
     });
-    expect(api!.matchIndex).toBe(2);
+    expect(api().matchIndex).toBe(2);
     await act(async () => {
-      api!.next();
+      api().next();
     });
-    expect(api!.matchIndex).toBe(0);
+    expect(api().matchIndex).toBe(0);
 
     await act(async () => {
-      api!.prev();
+      api().prev();
     });
-    expect(api!.matchIndex).toBe(2);
+    expect(api().matchIndex).toBe(2);
   });
 
   it("clears matches when the query is emptied", async () => {
-    let api: ContentFindApi | null = null;
+    const { api } = renderHarness("alpha alpha");
     await act(async () => {
-      root = createRoot(host);
-      root.render(<Harness text="alpha alpha" onApi={(a) => (api = a)} />);
-    });
-    await act(async () => {
-      api!.setQuery("alpha");
+      api().setQuery("alpha");
     });
     await act(async () => {
       await sleep(170);
     });
-    expect(api!.matchCount).toBe(2);
+    expect(api().matchCount).toBe(2);
     await act(async () => {
-      api!.setQuery("");
+      api().setQuery("");
     });
     await act(async () => {
       await sleep(170);
     });
-    expect(api!.matchCount).toBe(0);
-    expect(api!.matchIndex).toBe(-1);
+    expect(api().matchCount).toBe(0);
+    expect(api().matchIndex).toBe(-1);
   });
 
   it("caps matches at the limit and reports overLimit", async () => {
-    let api: ContentFindApi | null = null;
+    const { api } = renderHarness("a".repeat(2010));
     await act(async () => {
-      root = createRoot(host);
-      root.render(<Harness text={"a".repeat(2010)} onApi={(a) => (api = a)} />);
-    });
-    await act(async () => {
-      api!.setQuery("a");
+      api().setQuery("a");
     });
     await act(async () => {
       await sleep(170);
     });
-    expect(api!.matchCount).toBe(2000);
-    expect(api!.overLimit).toBe(true);
+    expect(api().matchCount).toBe(2000);
+    expect(api().overLimit).toBe(true);
   });
 
   it("cleans up the highlight <mark> on unmount (fallback path)", async () => {
-    let api: ContentFindApi | null = null;
+    const { view, api } = renderHarness("hello world hello");
     await act(async () => {
-      root = createRoot(host);
-      root.render(<Harness text="hello world hello" onApi={(a) => (api = a)} />);
-    });
-    await act(async () => {
-      api!.setQuery("hello");
+      api().setQuery("hello");
     });
     await act(async () => {
       await sleep(170);
     });
-    expect(host.querySelectorAll("mark.sp-find-mark").length).toBeGreaterThan(0);
+    expect(view.container.querySelectorAll("mark.sp-find-mark").length).toBeGreaterThan(0);
 
-    act(() => {
-      root!.unmount();
-      root = null;
-    });
-    expect(host.querySelectorAll("mark.sp-find-mark").length).toBe(0);
+    view.unmount();
+    expect(view.container.querySelectorAll("mark.sp-find-mark").length).toBe(0);
   });
 });
