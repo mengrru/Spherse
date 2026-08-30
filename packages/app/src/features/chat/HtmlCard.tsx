@@ -329,7 +329,7 @@ export function HtmlCardRenderer({ card, defaultCollapsed = false }: HtmlCardRen
                 onClick={() => setExpanded(false)}
                 title={t("chat.close")}
               >
-                <XIcon />
+                <XIcon className="size-3.5" />
               </Button>
             </div>
             <div className="min-h-0 flex-1 p-2">

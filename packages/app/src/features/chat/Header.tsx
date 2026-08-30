@@ -21,7 +21,7 @@ export function Header({ agent, onClose }: HeaderProps) {
           onClick={onClose}
           title={t("chat.close")}
         >
-          <XIcon />
+          <XIcon className="size-3.5" />
         </Button>
       )}
     </div>
