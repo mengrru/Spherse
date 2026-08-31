@@ -129,7 +129,7 @@ export function Header({
         ) : null}
         {!isEditing && (
           <Button variant="ghost" size="icon-sm" onClick={onClose} title={t("common.close")} aria-label={t("common.close")}>
-            <XIcon />
+            <XIcon className="size-3.5" />
           </Button>
         )}
       </div>

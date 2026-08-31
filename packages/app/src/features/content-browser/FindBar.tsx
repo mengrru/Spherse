@@ -84,7 +84,7 @@ export function FindBar({ containerRef, contentKey, onClose }: FindBarProps) {
         title={t("content-browser.find.close")}
         aria-label={t("content-browser.find.close")}
       >
-        <XIcon />
+        <XIcon className="size-3.5" />
       </Button>
     </div>
   );
