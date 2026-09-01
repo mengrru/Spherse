@@ -95,7 +95,11 @@ describe("custom provider user-agent", () => {
     expect(requestHeaders[0].has("user-agent")).toBe(false);
   });
 
-  it("keeps the SDK default user-agent for builtin providers", async () => {
+  it("sends pi's runtime user-agent for builtin providers (pi-ai >=0.84.3)", async () => {
+    // pi-ai 0.84.3 起 OpenAI 兼容适配器默认发送 pi 的运行时 UA，
+    // 不再落到 OpenAI SDK 默认的 OpenAI/JS（见 pi release v0.84.3
+    // "Changed inherited Anthropic, Azure OpenAI, Google, Mistral, and
+    // OpenAI adapters to send Pi's default User-Agent unless overridden"）。
     const builtinModels = catalog.getChatModels()
       .getModels("deepseek")
       .filter((m) => m.api === "openai-completions");
@@ -104,7 +108,7 @@ describe("custom provider user-agent", () => {
     const requestHeaders = await captureRequestHeaders(builtinModels[0], { apiKey: "sk-test" });
 
     expect(requestHeaders).toHaveLength(1);
-    expect(requestHeaders[0].get("user-agent")).toMatch(/^OpenAI\/JS/);
+    expect(requestHeaders[0].get("user-agent")).toMatch(/^pi \(/);
   });
 
   it("prefers an explicitly provided user-agent over suppression", async () => {
