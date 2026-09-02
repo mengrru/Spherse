@@ -1,4 +1,4 @@
-import { ConflictError, type Attachment, type SessionManager } from "@spherse/core";
+import { ConflictError, type Attachment, type SessionManager, type SettledFrame } from "@spherse/core";
 import type { FastifyBaseLogger } from "fastify";
 import { classifyRunError } from "./classify-run-error.js";
 
@@ -25,7 +25,7 @@ interface ChatChannel {
 
 export interface ChatSessionAttachment {
   ready: Promise<boolean>;
-  sendMessage(content: string, attachments?: Attachment[]): Promise<void>;
+  sendMessage(content: string, attachments?: Attachment[], intentId?: string): Promise<void>;
   retryLastTurn(): Promise<void>;
   withdrawLastTurn(): Promise<void>;
   abort(): void;
@@ -74,7 +74,7 @@ export class ChatSessionHub {
 
     return {
       ready,
-      sendMessage: async (content, attachments) => {
+      sendMessage: async (content, attachments, intentId) => {
         if (!(await ready) || !active) return;
         await this.startRun(channel, (onEvent) =>
           channel.runtime.sendMessage(
@@ -82,6 +82,7 @@ export class ChatSessionHub {
             content,
             attachments ?? [],
             onEvent,
+            intentId !== undefined ? { intentId } : undefined,
           ),
         );
       },
@@ -96,8 +97,8 @@ export class ChatSessionHub {
         if (channel.running) {
           throw new ConflictError(`Session "${channel.sessionId}" is already running`);
         }
-        const seq = await channel.runtime.withdrawLastTurn(channel.sessionId);
-        this.publish(channel, { type: "turn_withdrawn", seq });
+        const { seq, upTo } = await channel.runtime.withdrawLastTurn(channel.sessionId);
+        this.publish(channel, { type: "turn_withdrawn", seq, upTo });
       },
       abort: () => {
         if (active) channel.runtime.abortSession(channel.sessionId);
@@ -155,6 +156,20 @@ export class ChatSessionHub {
         channel.attachments -= 1;
         this.cleanupIfIdle(channel);
       });
+  }
+
+  async readEventsSince(
+    projectId: string,
+    runtime: SessionManager,
+    agentId: string,
+    sessionId: string,
+    since: number,
+    limit: number,
+  ): Promise<{ frames: SettledFrame[]; hasMore: boolean }> {
+    runtime.requireEventizedSession(agentId, sessionId);
+    const channel = this.getOrCreateChannel(projectId, runtime, agentId, sessionId);
+    await channel.ready;
+    return runtime.getSessionEventsSince(agentId, sessionId, since, limit);
   }
 
   private getOrCreateChannel(

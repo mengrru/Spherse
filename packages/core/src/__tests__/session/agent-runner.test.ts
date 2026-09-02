@@ -771,7 +771,7 @@ Agent with time perception.`,
 
     const anchor = await runner.withdrawLastTurn();
 
-    expect(anchor).toBe(2);
+    expect(anchor).toEqual({ seq: 2, upTo: 4 });
     const withdrawnEvents = eventsOf(runner).filter((e: any) => e.type === "turn/withdrawn");
     expect(withdrawnEvents).toHaveLength(1);
     expect(withdrawnEvents[0].data).toEqual({ seq: 2 });
@@ -794,7 +794,7 @@ Agent with time perception.`,
 
     const anchor = await runner.withdrawLastTurn();
 
-    expect(anchor).toBe(0);
+    expect(anchor).toEqual({ seq: 0, upTo: 2 });
     expect(agent.state.messages).toEqual([]);
     expect(deriveMessages(agentStore.sessions.readEvents(sessionId))).toEqual([]);
   });
@@ -879,7 +879,7 @@ Agent with time perception.`,
 
     const anchor = await runner.withdrawLastTurn();
 
-    expect(anchor).toBe(3);
+    expect(anchor).toEqual({ seq: 3, upTo: 5 });
     const messages = agentOf(runner).state.messages;
     expect(messages.length).toBe(1);
     expect((messages[0] as any).content).toContain("digest of q1/a1");

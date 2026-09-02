@@ -1,10 +1,10 @@
 import type { AgentChangePayload } from "../store/project.js";
 import type { Logger } from "../logger.js";
-import { NotFoundError } from "../errors.js";
+import { MigrationRequiredError, NotFoundError } from "../errors.js";
 import { AgentRunner, type RunnerEventHandler } from "./agent-runner.js";
 import { SessionEventLog } from "./event-log.js";
-import type { SendMessageMeta } from "./events.js";
-import { deriveMessages } from "./fold.js";
+import type { SendMessageMeta, SettledFrame } from "./events.js";
+import { deriveMessages, projectSettledFrames } from "./fold.js";
 import { computeSessionStatus, type SessionStatus } from "./status.js";
 import type { TurnContextSnapshot } from "./types.js";
 import type { Attachment } from "../attachments/index.js";
@@ -90,7 +90,9 @@ export class SessionManager {
     return session.retryLastTurn(onEvent);
   }
 
-  async withdrawLastTurn(sessionId: string): Promise<number> {
+  async withdrawLastTurn(
+    sessionId: string,
+  ): Promise<{ seq: number; upTo: number }> {
     const session = this.sessions.get(sessionId);
     if (!session) throw new NotFoundError(`No active session "${sessionId}"`);
     return session.withdrawLastTurn();
@@ -122,6 +124,34 @@ export class SessionManager {
       agentStore.getProfile(),
       this.deps.modelCatalog.resolveModelById.bind(this.deps.modelCatalog),
       this.runConfigHolder.current().defaultModel,
+    );
+  }
+
+  requireEventizedSession(agentId: string, sessionId: string): void {
+    const agentStore = this.deps.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    if (!agentStore.sessions.getSession(sessionId)) {
+      throw new NotFoundError(`Session "${sessionId}" not found`);
+    }
+    if (agentStore.sessions.sessionNeedsMigration(sessionId)) {
+      throw new MigrationRequiredError(
+        `Session "${sessionId}" uses the legacy message format and must be migrated first`,
+      );
+    }
+  }
+
+  getSessionEventsSince(
+    agentId: string,
+    sessionId: string,
+    since: number,
+    limit: number,
+  ): { frames: SettledFrame[]; hasMore: boolean } {
+    this.requireEventizedSession(agentId, sessionId);
+    const agentStore = this.deps.projectStore.getAgent(agentId)!;
+    return projectSettledFrames(
+      agentStore.sessions.readEvents(sessionId),
+      since,
+      limit,
     );
   }
 

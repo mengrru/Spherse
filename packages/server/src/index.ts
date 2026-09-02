@@ -3,15 +3,9 @@ import type { AddressInfo } from "node:net";
 import websocket from "@fastify/websocket";
 import multipart from "@fastify/multipart";
 import type { Logger, SamplingParams, ThinkingLevel, ModelCatalog } from "@spherse/core";
-import {
-  NotFoundError,
-  ValidationError,
-  AccessDeniedError,
-  ConflictError,
-} from "@spherse/core";
 import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
-import { HttpError, errorMessage } from "./errors.js";
+import { registerCoreErrorHandler } from "./errors.js";
 import { registerAuthHook, type AuthOptions } from "./auth.js";
 import { registerAuthGatedCors } from "./cors.js";
 import { registerHostGuard } from "./host-guard.js";
@@ -79,28 +73,7 @@ export async function createMultiProjectServer(
 
   fastify.get("/health", { schema: { response: { 200: { type: "object", properties: { ok: { type: "boolean" } } } } } }, async () => ({ ok: true }));
 
-  fastify.setErrorHandler((err, req, reply) => {
-    if (err instanceof HttpError) {
-      return reply.code(err.statusCode).send(err.body ?? { error: err.message });
-    }
-    if (err instanceof NotFoundError) {
-      return reply.code(404).send({ error: err.message });
-    }
-    if (err instanceof ValidationError) {
-      return reply.code(400).send({ error: err.message });
-    }
-    if (err instanceof AccessDeniedError) {
-      return reply.code(403).send({ error: err.message });
-    }
-    if (err instanceof ConflictError) {
-      return reply.code(409).send({ error: err.message });
-    }
-    if (err instanceof Error && "validation" in err && err.validation) {
-      return reply.code(400).send({ error: err.message });
-    }
-    req.log.error({ err }, "unhandled request error");
-    reply.code(500).send({ error: errorMessage(err) });
-  });
+  registerCoreErrorHandler(fastify);
 
   fastify.setNotFoundHandler((req, reply) => {
     reply.code(404).send({ error: "Route not found" });

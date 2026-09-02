@@ -53,7 +53,7 @@ function createMockRegistry() {
   const sessionRuntime = {
     restoreSession: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn().mockResolvedValue(undefined),
-    withdrawLastTurn: vi.fn().mockResolvedValue(2),
+    withdrawLastTurn: vi.fn().mockResolvedValue({ seq: 2, upTo: 4 }),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
@@ -99,7 +99,7 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     socket.simulateMessage(Buffer.from(JSON.stringify({ type: "withdraw" })));
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sessionRuntime.withdrawLastTurn).toHaveBeenCalledWith("s1");
-    expect(sentObjects(socket)).toContainEqual({ type: "turn_withdrawn", seq: 2 });
+    expect(sentObjects(socket)).toContainEqual({ type: "turn_withdrawn", seq: 2, upTo: 4 });
   });
 
   it("sends error event when withdrawLastTurn rejects", async () => {
@@ -244,5 +244,31 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sentObjects(socket)).toContainEqual({ type: "error", message: "oops", code: "TRANSIENT" });
     expect(socket.close).not.toHaveBeenCalled();
+  });
+
+  it("passes intentId from the message frame through to sendMessage meta", async () => {
+    socket.simulateMessage(
+      Buffer.from(JSON.stringify({ type: "message", content: "hi", intentId: "01JWS" })),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sessionRuntime.sendMessage).toHaveBeenCalledWith(
+      "s1",
+      "hi",
+      [],
+      expect.any(Function),
+      { intentId: "01JWS" },
+    );
+  });
+
+  it("sends message without meta when the frame carries no intentId", async () => {
+    socket.simulateMessage(Buffer.from(JSON.stringify({ type: "message", content: "hi" })));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sessionRuntime.sendMessage).toHaveBeenCalledWith(
+      "s1",
+      "hi",
+      [],
+      expect.any(Function),
+      undefined,
+    );
   });
 });

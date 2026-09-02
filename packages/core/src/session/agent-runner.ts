@@ -17,7 +17,7 @@ import {
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
 import { collectAbandonedSeqs, deriveMessages, repairLog } from "./fold.js";
 import { SessionEventLog } from "./event-log.js";
-import type { SessionEvent, SendMessageMeta } from "./events.js";
+import type { SessionEvent, SendMessageMeta, SettledFrame } from "./events.js";
 import { readCurrentTokens } from "../context/token-estimate.js";
 import {
   buildAgent,
@@ -27,7 +27,9 @@ import {
   streamDecoratorsFor,
 } from "./agent-assembly.js";
 
-export type RunnerEventHandler = (event: AgentEvent | SessionControlEvent) => void;
+export type RunnerEventHandler = (
+  event: AgentEvent | SessionControlEvent | SettledFrame,
+) => void;
 
 export class AgentRunner {
   private eventLog: SessionEventLog | null = null;
@@ -146,24 +148,31 @@ export class AgentRunner {
         ? (stripUserAttachments(userMessage as never, attachments) as typeof userMessage)
         : userMessage;
 
-      this.eventLog!.appendBatch([
+      const batch = this.eventLog!.appendBatch([
         {
           type: "user/message",
           data: {
             message: sanitizedUserMessage as never,
             ...(meta?.source !== undefined ? { source: meta.source } : {}),
             ...(meta?.triggerName !== undefined ? { triggerName: meta.triggerName } : {}),
+            ...(meta?.intentId !== undefined ? { intentId: meta.intentId } : {}),
           },
         },
         { type: "turn/start", data: {} },
       ]);
+      onEvent({
+        type: "message_settled",
+        seq: batch[0].seq,
+        message: sanitizedUserMessage as never,
+        ...(meta?.intentId !== undefined ? { intentId: meta.intentId } : {}),
+      });
 
       const dispatch = createEventPipeline(
         [
           logEventMiddleware(sessionLogger),
           ...this.capabilityMiddlewares,
           ...(sanitizer ? [sanitizer.middleware] : []),
-          this.persistMiddleware(),
+          this.persistMiddleware(onEvent),
         ],
         onEvent,
       );
@@ -212,10 +221,15 @@ export class AgentRunner {
       }
 
       this.ensureModel();
-      this.eventLog!.appendBatch([
+      const retryBatch = this.eventLog!.appendBatch([
         { type: "turn/retried", data: { abandonedSeqs: [lastEvent.seq] } },
         { type: "turn/start", data: {} },
       ]);
+      onEvent({
+        type: "turn_retried",
+        seq: retryBatch[0].seq,
+        abandonedSeqs: [lastEvent.seq],
+      });
       this.syncBufferFromLog();
 
       const sessionLogger = this.deps.logger.child({ sessionId: this.sessionId });
@@ -223,7 +237,7 @@ export class AgentRunner {
         [
           logEventMiddleware(sessionLogger),
           ...this.capabilityMiddlewares,
-          this.persistMiddleware(),
+          this.persistMiddleware(onEvent),
         ],
         onEvent,
       );
@@ -241,7 +255,7 @@ export class AgentRunner {
     }
   }
 
-  async withdrawLastTurn(): Promise<number> {
+  async withdrawLastTurn(): Promise<{ seq: number; upTo: number }> {
     this.ensureNotBusy();
     const events = this.eventLog!.events;
     const lastUserEvent = [...events]
@@ -260,9 +274,9 @@ export class AgentRunner {
         `Session "${this.sessionId}" last turn is already compacted into a digest and cannot be withdrawn`,
       );
     }
-    this.eventLog!.append("turn/withdrawn", { seq: lastUserEvent.seq });
+    const withdrawn = this.eventLog!.append("turn/withdrawn", { seq: lastUserEvent.seq });
     this.syncBufferFromLog();
-    return lastUserEvent.seq;
+    return { seq: lastUserEvent.seq, upTo: withdrawn.seq };
   }
 
   private ensureNotBusy(): void {
@@ -419,11 +433,20 @@ export class AgentRunner {
     }
   }
 
-  private persistMiddleware(): EventMiddleware<AgentEvent> {
+  private persistMiddleware(onEvent: RunnerEventHandler): EventMiddleware<AgentEvent> {
     return (event, next) => {
       if (this.eventLog) {
         if (event.type === "message_end") {
-          this.appendMessageEvent(event.message);
+          const persisted = this.appendMessageEvent(event.message);
+          if (persisted) {
+            next({ ...event, seq: persisted.seq } as typeof event);
+            onEvent({
+              type: "message_settled",
+              seq: persisted.seq,
+              message: event.message as never,
+            });
+            return;
+          }
         } else if (event.type === "agent_end") {
           const lastMessage = [...event.messages]
             .reverse()
@@ -444,13 +467,15 @@ export class AgentRunner {
     };
   }
 
-  private appendMessageEvent(message: unknown): void {
+  private appendMessageEvent(message: unknown): SessionEvent | undefined {
     const role = (message as { role?: string }).role;
     if (role === "assistant") {
-      this.eventLog!.append("assistant/message", { message: message as never });
-    } else if (role === "toolResult") {
-      this.eventLog!.append("tool/result", { message: message as never });
+      return this.eventLog!.append("assistant/message", { message: message as never });
     }
+    if (role === "toolResult") {
+      return this.eventLog!.append("tool/result", { message: message as never });
+    }
+    return undefined;
   }
 
   private syncBufferFromLog(): void {

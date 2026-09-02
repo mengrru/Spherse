@@ -41,6 +41,31 @@ const toolResultMessages = Type.Unsafe<ToolResultMessage[]>(
 );
 const toolArgs = Type.Unsafe<Record<string, unknown>>(Type.Unknown());
 
+const messageSettledFrame = Type.Object({
+  type: Type.Literal("message_settled"),
+  seq: Type.Integer(),
+  message: agentMessage,
+  intentId: Type.Optional(Type.String()),
+});
+
+const turnWithdrawnFrame = Type.Object({
+  type: Type.Literal("turn_withdrawn"),
+  seq: Type.Integer(),
+  upTo: Type.Optional(Type.Integer()),
+});
+
+const turnRetriedFrame = Type.Object({
+  type: Type.Literal("turn_retried"),
+  seq: Type.Integer(),
+  abandonedSeqs: Type.Array(Type.Integer()),
+});
+
+export const settledFrame = Type.Union([
+  messageSettledFrame,
+  turnWithdrawnFrame,
+  turnRetriedFrame,
+]);
+
 const chatServerEvent = Type.Union([
   Type.Object({ type: Type.Literal("agent_start") }),
   Type.Object({
@@ -62,7 +87,11 @@ const chatServerEvent = Type.Union([
     message: agentMessage,
     assistantMessageEvent: Type.Optional(Type.Unknown()),
   }),
-  Type.Object({ type: Type.Literal("message_end"), message: agentMessage }),
+  Type.Object({
+    type: Type.Literal("message_end"),
+    message: agentMessage,
+    seq: Type.Optional(Type.Integer()),
+  }),
   Type.Object({
     type: Type.Literal("tool_execution_start"),
     toolCallId: Type.String(),
@@ -120,7 +149,10 @@ const chatServerEvent = Type.Union([
   Type.Object({
     type: Type.Literal("turn_withdrawn"),
     seq: Type.Integer(),
+    upTo: Type.Optional(Type.Integer()),
   }),
+  messageSettledFrame,
+  turnRetriedFrame,
   Type.Object({
     type: Type.Literal("error"),
     message: Type.String(),
@@ -143,6 +175,7 @@ export const schemas = {
           }),
         ),
       ),
+      intentId: Type.Optional(Type.String()),
     }),
     Type.Object({ type: Type.Literal("abort") }),
     Type.Object({ type: Type.Literal("ping") }),

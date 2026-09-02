@@ -22,7 +22,7 @@ function createRuntime() {
         });
       },
     ),
-    withdrawLastTurn: vi.fn().mockResolvedValue(4),
+    withdrawLastTurn: vi.fn().mockResolvedValue({ seq: 4, upTo: 6 }),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
@@ -155,7 +155,7 @@ describe("ChatSessionHub", () => {
     attachment.close();
   });
 
-  it("withdrawLastTurn publishes turn_withdrawn with the anchor seq", async () => {
+  it("withdrawLastTurn publishes turn_withdrawn with the anchor seq and boundary", async () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
@@ -168,7 +168,7 @@ describe("ChatSessionHub", () => {
     await attachment.withdrawLastTurn();
 
     expect(mock.runtime.withdrawLastTurn).toHaveBeenCalledWith("s1");
-    expect(events).toEqual([{ type: "turn_withdrawn", seq: 4 }]);
+    expect(events).toEqual([{ type: "turn_withdrawn", seq: 4, upTo: 6 }]);
     attachment.close();
   });
 
@@ -275,6 +275,57 @@ describe("ChatSessionHub", () => {
     );
     expect(logger.error).toHaveBeenCalled();
     attachment.close();
+  });
+
+  it("broadcasts settled frames and replays them from the run buffer on re-attach", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const firstEvents: any[] = [];
+    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      firstEvents.push(event),
+    );
+    await first.ready;
+
+    const run = first.sendMessage("hi", [], "01JINTENT");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+    mock.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+    mock.emit({
+      type: "message_end",
+      message: { role: "assistant", content: [{ type: "text", text: "ok" }] },
+      seq: 2,
+    });
+    mock.emit({ type: "message_settled", seq: 2, message: { role: "assistant", content: [{ type: "text", text: "ok" }] } });
+    first.close();
+
+    expect(mock.runtime.sendMessage).toHaveBeenCalledWith(
+      "s1",
+      "hi",
+      [],
+      expect.any(Function),
+      { intentId: "01JINTENT" },
+    );
+    expect(firstEvents).toContainEqual({
+      type: "message_settled",
+      seq: 2,
+      message: { role: "assistant", content: [{ type: "text", text: "ok" }] },
+    });
+
+    const replayed: any[] = [];
+    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      replayed.push(event),
+    );
+    await second.ready;
+    expect(replayed.map((event) => event.type)).toContain("message_settled");
+    expect(replayed).toContainEqual({
+      type: "message_settled",
+      seq: 2,
+      message: { role: "assistant", content: [{ type: "text", text: "ok" }] },
+    });
+
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await run;
+    second.close();
   });
 
   it("startDetachedRun rethrows restore failures", async () => {

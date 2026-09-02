@@ -519,7 +519,7 @@ describe("SessionManager lifecycle", () => {
 
     const anchor = await runtime.sessionRuntime.withdrawLastTurn(sessionId);
 
-    expect(anchor).toBe(0);
+    expect(anchor).toEqual({ seq: 0, upTo: 2 });
     expect(agentStore.sessions.readEvents(sessionId).at(-1)).toMatchObject({
       type: "turn/withdrawn",
       data: { seq: 0 },

@@ -6,12 +6,13 @@ export type TurnEndReason = "completed" | "aborted" | "error";
 export interface SendMessageMeta {
   source?: "triggered";
   triggerName?: string;
+  intentId?: string;
 }
 
 export interface SessionEventMap {
   "turn/start": Record<string, never>;
   "turn/end": { reason: TurnEndReason };
-  "user/message": { message: AgentMessage; source?: "triggered"; triggerName?: string };
+  "user/message": { message: AgentMessage; source?: "triggered"; triggerName?: string; intentId?: string };
   "assistant/message": { message: AssistantMessage };
   "tool/result": { message: ToolResultMessage };
   "compaction/applied": {
@@ -23,6 +24,11 @@ export interface SessionEventMap {
   "turn/retried": { abandonedSeqs: number[] };
   "turn/withdrawn": { seq: number };
 }
+
+export type SettledFrame =
+  | { type: "message_settled"; seq: number; message: AgentMessage; intentId?: string }
+  | { type: "turn_withdrawn"; seq: number; upTo: number }
+  | { type: "turn_retried"; seq: number; abandonedSeqs: number[] };
 
 export type SessionEventType = keyof SessionEventMap;
 

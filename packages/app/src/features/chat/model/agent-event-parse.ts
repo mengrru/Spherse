@@ -170,6 +170,8 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
       return { type: "message_update", message: parseAgentMessage(event.message) };
     case "message_end":
       return { type: "message_end", message: parseAgentMessage(event.message) };
+    default:
+      throw new Error(`unsupported chat server event: ${(event as { type: string }).type}`);
   }
 }
 

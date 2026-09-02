@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { settledFrame } from "./websocket.js";
 
 const sessionInfo = Type.Object({
   id: Type.String(),
@@ -48,6 +49,10 @@ export const schemas = {
     hasMore: Type.Boolean(),
     oldestId: Type.Union([Type.Number(), Type.Null()]),
   }),
+  sessionEventsResponse: Type.Object({
+    events: Type.Array(settledFrame),
+    hasMore: Type.Boolean(),
+  }),
   sessionStatus: Type.Object({
     currentTokens: Type.Number(),
     contextWindowLimit: Type.Union([Type.Number(), Type.Null()]),
@@ -65,4 +70,5 @@ export type SendMessageRequest = Static<typeof schemas.sendMessageRequest>;
 export type SendMessageOkResponse = Static<typeof schemas.sendMessageOkResponse>;
 export type SessionMessagesResponse = Static<typeof schemas.sessionMessagesResponse>;
 export type SessionMessagesPageResponse = Static<typeof schemas.sessionMessagesPageResponse>;
+export type SessionEventsResponse = Static<typeof schemas.sessionEventsResponse>;
 export type SessionStatusResponse = Static<typeof schemas.sessionStatus>;

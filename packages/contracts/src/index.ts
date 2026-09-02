@@ -56,6 +56,7 @@ export type {
   SessionRenameRequest,
   SessionMessagesResponse,
   SessionMessagesPageResponse,
+  SessionEventsResponse,
   SessionStatusResponse,
 } from "./sessions.js";
 

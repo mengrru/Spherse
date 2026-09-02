@@ -1,13 +1,14 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { ToolResultMessage } from "@earendil-works/pi-ai";
 import { wrapDigestContent } from "../context/compaction.js";
-import { MESSAGE_EVENT_TYPES, type SessionEvent } from "./events.js";
+import { MESSAGE_EVENT_TYPES, type SessionEvent, type SettledFrame } from "./events.js";
 
 export interface DerivedMessageEntry {
   seq: number;
   message: AgentMessage;
   source?: "triggered";
   triggerName?: string;
+  intentId?: string;
 }
 
 interface RestartState {
@@ -68,13 +69,66 @@ function projectMessageEvent(event: SessionEvent): DerivedMessageEntry {
     message: AgentMessage;
     source?: "triggered";
     triggerName?: string;
+    intentId?: string;
   };
   return {
     seq: event.seq,
     message: data.message,
     ...(data.source !== undefined ? { source: data.source } : {}),
     ...(data.triggerName !== undefined ? { triggerName: data.triggerName } : {}),
+    ...(data.intentId !== undefined ? { intentId: data.intentId } : {}),
   };
+}
+
+export function projectSettledFrames(
+  events: readonly SessionEvent[],
+  since: number,
+  limit: number,
+): { frames: SettledFrame[]; hasMore: boolean } {
+  const frames: SettledFrame[] = [];
+  let hasMore = false;
+  for (const event of events) {
+    if (event.seq <= since) continue;
+    const frame = settledFrameOf(event);
+    if (!frame) continue;
+    if (frames.length === limit) {
+      hasMore = true;
+      break;
+    }
+    frames.push(frame);
+  }
+  return { frames, hasMore };
+}
+
+function settledFrameOf(event: SessionEvent): SettledFrame | undefined {
+  switch (event.type) {
+    case "user/message": {
+      const intentId = (event.data as { intentId?: string }).intentId;
+      return {
+        type: "message_settled",
+        seq: event.seq,
+        message: event.data.message,
+        ...(intentId !== undefined ? { intentId } : {}),
+      };
+    }
+    case "assistant/message":
+    case "tool/result":
+      return {
+        type: "message_settled",
+        seq: event.seq,
+        message: event.data.message,
+      };
+    case "turn/withdrawn":
+      return { type: "turn_withdrawn", seq: event.data.seq, upTo: event.seq };
+    case "turn/retried":
+      return {
+        type: "turn_retried",
+        seq: event.seq,
+        abandonedSeqs: event.data.abandonedSeqs,
+      };
+    default:
+      return undefined;
+  }
 }
 
 function scanRestarts(events: readonly SessionEvent[]): RestartState {

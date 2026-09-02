@@ -102,6 +102,34 @@ export function registerSessionRoutes(
     },
   );
 
+  fastify.get<{
+    Params: { projectId: string; agentId: string; id: string };
+    Querystring: { since?: string; limit?: string };
+  }>(
+    "/api/projects/:projectId/agents/:agentId/sessions/:id/events",
+    {
+      schema: { response: { 200: schemas.sessionEventsResponse } },
+    },
+    async (req) => {
+      const parsedSince = req.query.since !== undefined ? parseInt(req.query.since, 10) : -1;
+      const since = Number.isNaN(parsedSince) || parsedSince < -1 ? -1 : parsedSince;
+      const parsedLimit = parseInt(req.query.limit ?? "200", 10);
+      const limit = Math.min(200, Math.max(1, Number.isNaN(parsedLimit) ? 200 : parsedLimit));
+      const result = await hub.readEventsSince(
+        req.params.projectId,
+        req.projectCtx!.sessionRuntime,
+        req.params.agentId,
+        req.params.id,
+        since,
+        limit,
+      );
+      return parseContract(schemas.sessionEventsResponse, {
+        events: result.frames,
+        hasMore: result.hasMore,
+      });
+    },
+  );
+
   fastify.post<{
     Params: { projectId: string; agentId: string; id: string };
     Body: { content: string };
