@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeHistoryMessages, parseHistoryMessages } from "./chat-history";
+import { parseHistoryMessages } from "./chat-history";
 
 describe("parseHistoryMessages trigger metadata", () => {
   it("maps source/triggerName onto user view fields", () => {
@@ -33,22 +33,5 @@ describe("parseHistoryMessages trigger metadata", () => {
     const result = parseHistoryMessages([{ role: "user", content: "x" }]);
     expect(result[0]).toMatchObject({ role: "user", content: "x" });
     expect(result[0]._triggered).toBeUndefined();
-  });
-});
-
-describe("mergeHistoryMessages trigger metadata", () => {
-  it("preserves trigger fields when merging persisted messages across pages", () => {
-    const older = parseHistoryMessages([
-      { id: 1, message: { role: "user", content: "report", timestamp: 1 }, source: "triggered", triggerName: "t" },
-      { id: 2, message: { role: "assistant", content: [{ type: "text", text: "done" }], timestamp: 2 } },
-    ]);
-    const newer = parseHistoryMessages([
-      { id: 3, message: { role: "user", content: "hi", timestamp: 3 } },
-    ]);
-
-    const merged = mergeHistoryMessages([...older, ...newer], older);
-    const triggerUser = merged.find((message) => message._messageId === 1);
-    expect(triggerUser).toMatchObject({ _triggered: true, _triggerName: "t" });
-    expect(merged).toHaveLength(3);
   });
 });

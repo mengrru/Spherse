@@ -4,7 +4,7 @@ import { useProjectDataStore } from "../stores/project-data-store";
 import { clearProjectQueries } from "../queries/project";
 import { clearLastRoute } from "../lib/localstorage/last-route";
 import { clearProjectNavHistory } from "../lib/use-project-navigation";
-import { useStreamingStore } from "../features/chat/runtime/streaming-store";
+import { useStreamingStore } from "../features/chat/replica-store";
 import { useAgentSessionListUiStore } from "../features/agent-session-list/store";
 import { useTriggerStore } from "../features/agent-trigger/store";
 import { useFloatingChatStore } from "../features/floating-chat/store";

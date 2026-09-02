@@ -1,7 +1,7 @@
 # Chat 前端重写：日志副本模型（Log-Replica）+ 分层渲染演进
 
 - 日期：2026-09-03
-- 状态：设计稿（v2 合并稿；sub agent review 16 条已处理：resend 复合限定已落库失败对、ApprovalNoticeBridge/store 字段面/setStreaming 侧带传播补进兼容面、notices 清除补兜底、settle 所有权交接显式化、legacy 快照条目与事件 seq 命名空间隔离、ws-chat.ts 入改动清单等）
+- 状态：PR-A（协议先行）与 PR-B（app 副本切换）已实现；PR-C（渲染层 part 化）待立项（v2 合并稿；sub agent review 16 条已处理：resend 复合限定已落库失败对、ApprovalNoticeBridge/store 字段面/setStreaming 侧带传播补进兼容面、notices 清除补兜底、settle 所有权交接显式化、legacy 快照条目与事件 seq 命名空间隔离、ws-chat.ts 入改动清单等）
 - 来源：合并评审稿 `design/chat-replica-rewrite-q2m8`（日志副本模型，15 条 review 反馈已处理，全部继承）与渲染层演进分析两个正交轴；相对评审稿的修订以【v2】标注，未标注处为全盘采纳。本稿取代评审稿，其分支不再合并（避免同目录冲突）
 - 依赖：#81（runtime 重构）、#82（页覆盖回补 + investigation 文档与 backlog H1 条目）先行合并——本设计删除 #82 大部分产物，属预期演进；文中引用的 investigation 路径与 `coverLoadedWindow` 等符号在 #82 合并后生效
 - 前置调研：`docs/dev/investigation/2026-09-02-chat-user-messages-cluster/README.md`（#82 分支）

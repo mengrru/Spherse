@@ -3,7 +3,7 @@ import type { ChatMessage, SendableImage } from "../types";
 export type RetryPlan =
   | { kind: "none" }
   | { kind: "retry-last" }
-  | { kind: "resend"; content: string; attachment?: SendableImage; dropCount: number };
+  | { kind: "resend"; content: string; attachment?: SendableImage; failedIntent: boolean };
 
 export function planRetry(messages: ChatMessage[]): RetryPlan {
   const last = messages[messages.length - 1];
@@ -16,12 +16,20 @@ export function planRetry(messages: ChatMessage[]): RetryPlan {
       return { kind: "retry-last" };
     }
     const userMsg = findLastUser(messages);
+    if (userMsg?._messageId !== undefined) {
+      return {
+        kind: "resend",
+        content: userMsg.content,
+        attachment: toSendable(userMsg),
+        failedIntent: false,
+      };
+    }
     if (userMsg) {
       return {
         kind: "resend",
         content: userMsg.content,
         attachment: toSendable(userMsg),
-        dropCount: messages.length - messages.lastIndexOf(userMsg),
+        failedIntent: true,
       };
     }
     return { kind: "none" };
@@ -32,7 +40,7 @@ export function planRetry(messages: ChatMessage[]): RetryPlan {
       kind: "resend",
       content: last.content,
       attachment: toSendable(last),
-      dropCount: 1,
+      failedIntent: true,
     };
   }
 

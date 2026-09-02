@@ -20,47 +20,6 @@ interface ToolResultDetailsBag {
   details: unknown;
 }
 
-export function mergeHistoryMessages(
-  current: ChatMessage[],
-  history: ChatMessage[],
-): ChatMessage[] {
-  if (current.length === 0) return history;
-  if (history.length === 0) return current;
-  if (
-    !current.some((message) => message._messageId !== undefined) &&
-    !history.some((message) => message._messageId !== undefined)
-  ) {
-    return [...history, ...current];
-  }
-  const persisted = new Map<number, ChatMessage>();
-  for (const message of current) {
-    if (message._messageId !== undefined) {
-      persisted.set(message._messageId, message);
-    }
-  }
-  for (const message of history) {
-    if (message._messageId !== undefined) {
-      persisted.set(message._messageId, message);
-    }
-  }
-  const merged = [...persisted.values()].sort(
-    (a, b) => (a._messageId ?? 0) - (b._messageId ?? 0),
-  );
-  const historyUserContents = new Set(
-    history
-      .filter((message) => message.role === "user")
-      .map((message) => message.content),
-  );
-  const transients = current.filter((message) => {
-    if (message._messageId !== undefined) return false;
-    if (message._optimistic) {
-      return !historyUserContents.has(message.content);
-    }
-    return Boolean(message._error);
-  });
-  return [...merged, ...transients];
-}
-
 export function parseHistoryMessages(
   history: Array<{ id: number; message: unknown; source?: "triggered"; triggerName?: string } | unknown>,
 ): ChatMessage[] {

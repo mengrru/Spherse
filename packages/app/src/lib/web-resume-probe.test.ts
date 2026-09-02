@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setupWebResumeProbe } from "./web-resume-probe";
 import { useBusStore } from "../stores/bus-store";
-import { useStreamingStore } from "../features/chat/runtime/streaming-store";
+import { useStreamingStore } from "../features/chat/replica-store";
 
 let resumeProbeSpy: ReturnType<typeof vi.fn>;
 let resumeProbeAllSpy: ReturnType<typeof vi.fn>;

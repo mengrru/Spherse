@@ -4,6 +4,7 @@ import { useProjectCtx } from "../../context/project-context";
 import { useApiClient, useConnection } from "../../lib/use-connection";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
+import type { KeyedMessage } from "./replica/derive";
 import { Composer } from "./Composer";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
@@ -12,7 +13,9 @@ import { ChatRuntimeProvider } from "./runtime-context";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
-import { useStreamingStore } from "./runtime/streaming-store";
+import { useStreamingStore } from "./replica-store";
+
+const EMPTY_KEYED: KeyedMessage[] = [];
 
 export interface ChatProps {
   sessionId: string;
@@ -52,6 +55,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     initialMessage,
     accessToken,
   });
+  const keyed = useStreamingStore((s) => s.sessions[sessionId]?.view.keyed ?? EMPTY_KEYED);
   const hasMore = useStreamingStore((s) => s.sessions[sessionId]?.hasMore ?? false);
   const loadingMore = useStreamingStore((s) => s.sessions[sessionId]?.loadingMore ?? false);
   const { containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId, loadingMore);
@@ -87,7 +91,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           onRetryHistory={retryHistory}
         />
         <MessageList
-          messages={messages}
+          items={keyed}
           agent={agent}
           streaming={streaming}
           loading={loading}

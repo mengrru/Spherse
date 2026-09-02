@@ -7,7 +7,7 @@ import {
   createSessionViaApi,
   navigateToSession,
   assistantTextMessage,
-  type MockEvent,
+  mockChatServer,
 } from "./helpers/chat";
 
 test("withdraw button removes the last user turn after server confirms", async () => {
@@ -19,22 +19,15 @@ test("withdraw button removes the last user turn after server confirms", async (
     const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
 
     const received: string[] = [];
-    await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
-      ws.onMessage((message) => {
-        const parsed = JSON.parse(message as string);
-        if (parsed.type === "ping") {
-          ws.send(JSON.stringify({ type: "pong" }));
-          return;
-        }
-        if (parsed.type === "message") {
-          for (const event of assistantTextMessage("Answer")) ws.send(JSON.stringify(event));
-          return;
-        }
-        if (parsed.type === "withdraw") {
-          received.push("withdraw");
-          ws.send(JSON.stringify({ type: "turn_withdrawn", seq: 1 }));
-        }
-      });
+    await mockChatServer(page, port, (parsed, send, tools) => {
+      if (parsed.type === "message") {
+        tools.runTurn(String(parsed.content), parsed.intentId as string | undefined, assistantTextMessage("Answer"));
+        return;
+      }
+      if (parsed.type === "withdraw") {
+        received.push("withdraw");
+        send({ type: "turn_withdrawn", seq: 0, upTo: 2 });
+      }
     });
 
     await navigateToSession(page, project.projectId, sessionId);
@@ -67,25 +60,18 @@ test("withdraw failure shows error without retry affordance", async () => {
     const port = await getServerPort(page);
     const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
 
-    await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
-      ws.onMessage((message) => {
-        const parsed = JSON.parse(message as string);
-        if (parsed.type === "ping") {
-          ws.send(JSON.stringify({ type: "pong" }));
-          return;
-        }
-        if (parsed.type === "message") {
-          for (const event of assistantTextMessage("Answer")) ws.send(JSON.stringify(event));
-          return;
-        }
-        if (parsed.type === "withdraw") {
-          ws.send(JSON.stringify({
-            type: "error",
-            message: "Session last turn is already compacted",
-            code: "PERMANENT",
-          }));
-        }
-      });
+    await mockChatServer(page, port, (parsed, send, tools) => {
+      if (parsed.type === "message") {
+        tools.runTurn(String(parsed.content), parsed.intentId as string | undefined, assistantTextMessage("Answer"));
+        return;
+      }
+      if (parsed.type === "withdraw") {
+        send({
+          type: "error",
+          message: "Session last turn is already compacted",
+          code: "PERMANENT",
+        });
+      }
     });
 
     await navigateToSession(page, project.projectId, sessionId);

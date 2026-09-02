@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { ApiClient } from "../../../lib/api";
 import type { AttachedImage, ChatMessage } from "../types";
-import { useStreamingStore } from "../runtime/streaming-store";
+import { useStreamingStore } from "../replica-store";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 

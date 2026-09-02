@@ -25,6 +25,7 @@ import type {
   TurnContextSnapshotContract,
   SessionMessagesResponse,
   SessionMessagesPageResponse,
+  SessionEventsResponse,
   SessionListPageResponse,
   SessionStatusResponse,
   DataReadResponseContract as DataReadResponse,
@@ -166,6 +167,17 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/messages`);
       await assertOk(res);
       return parseJsonResponse<SessionMessagesResponse>(res, schemas.sessionMessagesResponse);
+    },
+
+    async getSessionEvents(agentId: string, id: string, opts?: { since?: number; limit?: number }): Promise<SessionEventsResponse> {
+      const params = new URLSearchParams();
+      if (opts?.since !== undefined) params.set("since", String(opts.since));
+      if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+      const query = params.toString();
+      const url = `${apiBase}/agents/${encodeURIComponent(agentId)}/sessions/${encodeURIComponent(id)}/events${query ? `?${query}` : ""}`;
+      const res = await authedFetch(url);
+      await assertOk(res);
+      return parseJsonResponse<SessionEventsResponse>(res, schemas.sessionEventsResponse);
     },
 
     async getSessionMessagesPage(agentId: string, id: string, opts?: { limit?: number; before?: number }): Promise<SessionMessagesPageResponse> {

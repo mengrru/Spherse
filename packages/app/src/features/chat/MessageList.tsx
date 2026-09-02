@@ -2,7 +2,7 @@ import type { RefObject } from "react";
 import { useMemo } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentSummary } from "../../lib/types";
-import type { ChatMessage } from "./types";
+import type { KeyedMessage } from "./replica/derive";
 import { Button } from "../../components/ui/button";
 import { ChevronDownIcon } from "lucide-react";
 import { MessageItem } from "./MessageItem";
@@ -13,7 +13,7 @@ import { groupTurns, type TurnGroupItem } from "./model/turn-groups";
 import { lastWithdrawableUserIndex } from "./model/withdrawable";
 
 interface MessageListProps {
-  messages: ChatMessage[];
+  items: KeyedMessage[];
   agent: AgentSummary;
   streaming: boolean;
   loading?: boolean;
@@ -30,8 +30,10 @@ interface MessageListProps {
   onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry, onWithdraw, hasMore, loadingMore, onLoadMore }: MessageListProps) {
+export function MessageList({ items, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry, onWithdraw, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
+
+  const messages = useMemo(() => items.map((item) => item.message), [items]);
 
   // 相同 file_path 的 html card 只展开最近一张；较早的同路径卡片折叠（不挂载 iframe）。
   const supersededToolCallIds = useMemo(
@@ -39,7 +41,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
     [messages],
   );
 
-  const groups = useMemo(() => groupTurns(messages), [messages]);
+  const groups = useMemo(() => groupTurns(items), [items]);
 
   if (loading && messages.length === 0) {
     return (
@@ -60,13 +62,13 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
   const lastMessage = messages[messages.length - 1];
   const withdrawableIndex = streaming ? -1 : lastWithdrawableUserIndex(messages);
 
-  const renderItem = ({ message, index }: TurnGroupItem) => {
+  const renderItem = ({ message, key, index }: TurnGroupItem) => {
     const isLast = index === messages.length - 1;
     const showTime =
       message.role === "user" || isLast || messages[index + 1]?.role === "user";
     return (
       <MessageItem
-        key={index}
+        key={key}
         message={message}
         agent={agent}
         showTime={showTime}
@@ -91,7 +93,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
         {[...groups].reverse().map((group) =>
           group.kind === "trigger" ? (
             <TriggerTurnGroup
-              key={`turn-${group.items[0].message._messageId ?? group.items[0].index}`}
+              key={`turn-${group.items[0].key}`}
               items={group.items}
               triggerName={group.triggerName}
               hasError={group.hasError}

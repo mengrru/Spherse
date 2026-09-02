@@ -143,14 +143,39 @@ async function assertCardReceivesRuntime(
     const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
 
     await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
+      let seq = -1;
+      const nextSeq = () => {
+        seq += 1;
+        return seq;
+      };
+      const send = (event: Record<string, unknown>) => ws.send(JSON.stringify(event));
+      send({ type: "run_status", active: false });
       ws.onMessage((message) => {
         const parsed = JSON.parse(message as string);
         if (parsed.type === "ping") {
-          ws.send(JSON.stringify({ type: "pong" }));
+          send({ type: "pong" });
         } else if (parsed.type === "message") {
+          send({
+            type: "message_settled",
+            seq: nextSeq(),
+            message: { role: "user", content: String(parsed.content), timestamp: Date.now() },
+            ...(parsed.intentId !== undefined ? { intentId: parsed.intentId } : {}),
+          });
+          send({ type: "run_status", active: true });
           for (const event of createCardSequence(mode)) {
-            ws.send(JSON.stringify(event));
+            if (event.type === "message_start" || event.type === "message_update" || event.type === "message_end") {
+              const role = (event.message as { role?: string } | undefined)?.role;
+              if (role !== "assistant") continue;
+            }
+            if (event.type === "message_end") {
+              const settleSeq = nextSeq();
+              send({ ...event, seq: settleSeq });
+              send({ type: "message_settled", seq: settleSeq, message: event.message });
+              continue;
+            }
+            send(event);
           }
+          send({ type: "run_status", active: false });
         }
       });
     });

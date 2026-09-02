@@ -1,16 +1,13 @@
-import {
-  ChatSessionRuntime,
-  type ChatSessionRuntimeState,
-} from "./chat-session-runtime";
+import { ChatSessionRuntime } from "./chat-session-runtime";
 
-export class ChatRuntimeRegistry<T extends ChatSessionRuntimeState> {
-  private readonly runtimes = new Map<string, ChatSessionRuntime<T>>();
+export class ChatRuntimeRegistry {
+  private readonly runtimes = new Map<string, ChatSessionRuntime>();
 
-  get(sessionId: string): ChatSessionRuntime<T> | undefined {
+  get(sessionId: string): ChatSessionRuntime | undefined {
     return this.runtimes.get(sessionId);
   }
 
-  set(sessionId: string, runtime: ChatSessionRuntime<T>): void {
+  set(sessionId: string, runtime: ChatSessionRuntime): void {
     this.runtimes.set(sessionId, runtime);
   }
 

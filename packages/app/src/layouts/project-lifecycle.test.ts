@@ -2,12 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { closeProjectCascade } from "./project-lifecycle";
 import { useAppStore, type ProjectState } from "../stores/app-store";
 import { useProjectDataStore } from "../stores/project-data-store";
-import { useStreamingStore } from "../features/chat/runtime/streaming-store";
+import { useStreamingStore } from "../features/chat/replica-store";
 import { useAgentSessionListUiStore } from "../features/agent-session-list/store";
 import { queryClient } from "../queries/client";
 import { projectQueryKeys } from "../queries/keys";
 import { getLastRoute, setLastRoute } from "../lib/localstorage/last-route";
 import { clearProjectNavHistory } from "../lib/use-project-navigation";
+import { initialReplica as initialReplicaOf } from "../features/chat/replica/session-replica";
 import type { HostBridge } from "../lib/host-bridge";
 
 vi.mock("../lib/use-project-navigation", async (importOriginal) => {
@@ -33,21 +34,26 @@ function seedStreamingSession(sessionId: string, projectId: string): void {
     sessions: {
       ...state.sessions,
       [sessionId]: {
+        replica: initialReplicaOf(),
+        view: { keyed: [], messages: [], streaming: false },
         messages: [],
         streaming: false,
         lastActivityAt: Date.now(),
         scrollPosition: 0,
         attachedCount: 1,
-        initialMessageSent: false,
+        initialQueued: false,
         projectId,
         hasMore: false,
-        oldestLoadedId: null,
         loadingMore: false,
         historyStatus: "ready",
         connectionStatus: "open",
         historyError: false,
         reconnectFailed: false,
-        pendingWithdraw: false,
+        client: null,
+        agentId: "a1",
+        generation: 1,
+        syncInFlight: false,
+        resendPending: null,
       },
     },
   }));

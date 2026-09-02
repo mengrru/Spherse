@@ -169,7 +169,20 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
     case "message_update":
       return { type: "message_update", message: parseAgentMessage(event.message) };
     case "message_end":
-      return { type: "message_end", message: parseAgentMessage(event.message) };
+      return {
+        type: "message_end",
+        message: parseAgentMessage(event.message),
+        ...(event.seq !== undefined ? { seq: event.seq } : {}),
+      };
+    case "message_settled":
+      return {
+        type: "message_settled",
+        seq: event.seq,
+        message: parseAgentMessage(event.message),
+        ...(event.intentId !== undefined ? { intentId: event.intentId } : {}),
+      };
+    case "turn_retried":
+      return { type: "turn_retried", seq: event.seq, abandonedSeqs: [...event.abandonedSeqs] };
     default:
       throw new Error(`unsupported chat server event: ${(event as { type: string }).type}`);
   }

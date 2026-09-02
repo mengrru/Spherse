@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useMatch, useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { collectPendingApprovals } from "./model/approval-notice";
-import { useStreamingStore } from "./runtime/streaming-store";
+import { useStreamingStore } from "./replica-store";
 import { getCachedAgents, getCachedSession } from "../../queries/project";
 
 export function ApprovalNoticeBridge() {

@@ -115,7 +115,7 @@ export {
   ErrorEventCode,
   CHAT_CLOSE_CODES,
 } from "./websocket.js";
-export type { ChatClientMessage, ChatServerEvent } from "./websocket.js";
+export type { ChatClientMessage, ChatServerEvent, SettledFrameContract } from "./websocket.js";
 
 export {
   parseBusServerMessage,

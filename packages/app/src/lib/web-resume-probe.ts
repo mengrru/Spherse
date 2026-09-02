@@ -1,5 +1,5 @@
 import { useBusStore } from "../stores/bus-store";
-import { useStreamingStore } from "../features/chat/runtime/streaming-store";
+import { useStreamingStore } from "../features/chat/replica-store";
 import { createResumeProbeScheduler } from "./resume-probe-scheduler";
 
 const RESUME_PROBE_THRESHOLD_MS = 30_000;

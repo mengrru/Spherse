@@ -29,16 +29,41 @@ async function routeStreamingWithTracking(
     ws.onClose(() => {
       tracking.closed += 1;
     });
+    let seq = -1;
+    const nextSeq = () => {
+      seq += 1;
+      return seq;
+    };
+    const send = (event: MockEvent) => ws.send(JSON.stringify(event));
+    send({ type: "run_status", active: false });
     ws.onMessage((message) => {
       const parsed = JSON.parse(message as string);
       if (parsed.type === "ping") {
-        ws.send(JSON.stringify({ type: "pong" }));
+        send({ type: "pong" });
       } else if (parsed.type === "message") {
+        send({
+          type: "message_settled",
+          seq: nextSeq(),
+          message: { role: "user", content: String(parsed.content), timestamp: Date.now() },
+          ...(parsed.intentId !== undefined ? { intentId: parsed.intentId } : {}),
+        });
+        send({ type: "run_status", active: true });
         for (const event of events) {
-          ws.send(JSON.stringify(event));
+          if (event.type === "message_start" || event.type === "message_update" || event.type === "message_end") {
+            const role = (event.message as { role?: string } | undefined)?.role;
+            if (role !== "assistant") continue;
+          }
+          if (event.type === "message_end") {
+            const settleSeq = nextSeq();
+            send({ ...event, seq: settleSeq });
+            send({ type: "message_settled", seq: settleSeq, message: event.message });
+            continue;
+          }
+          send(event);
         }
       } else if (parsed.type === "abort") {
-        ws.send(JSON.stringify({ type: "agent_end", messages: [] }));
+        send({ type: "agent_end", messages: [] });
+        send({ type: "run_status", active: false });
       }
     });
   });

@@ -25,7 +25,10 @@
 | 控制事件（重启点） | `turn/retried` / `turn/withdrawn` / `compaction/applied` 三类事件，restore 时按语义重建 | [architecture/core.md](architecture/core.md) |
 | compaction（上下文压缩） | 历史超阈值时生成摘要、以 `compaction/applied` 重启点表达；LLM 双路与机械回退 | [architecture/core.md](architecture/core.md) |
 | withdraw（撤回） | 以 `turn/withdrawn {seq}` 锚定被撤回 user message，fold 推导废弃区间 | [architecture/core.md](architecture/core.md) |
-| 历史对账 | renderer 重连后拉取历史、按 `_messageId` 去重合并的过程 | [architecture/chat.md](architecture/chat.md) |
+| 确认帧（settled frame） | 已落库事实的 wire 帧：`message_settled` / `turn_withdrawn` / `turn_retried`，客户端按 seq 幂等 fold | [architecture/chat.md](architecture/chat.md) |
+| 三区副本（replica） | renderer 会话状态模型：`durable`（已确认有序集）+ `run`（进行中瞬态）+ `pending`（乐观写）+ `notices`（本地注记） | [architecture/chat.md](architecture/chat.md) |
+| 水位线（highSeq） | durable 已见最大 seq，单调不减；前向来源出现低于水位线的缺失条目即判定失效并全量重同步 | [architecture/chat.md](architecture/chat.md) |
+| intentId | 客户端生成的发送回执 id：随 `message` 帧上行、落库后经 `message_settled` 回显，乐观 intent 据此确认 | [architecture/chat.md](architecture/chat.md) |
 
 ## Capability 架构
 

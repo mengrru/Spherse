@@ -8,7 +8,7 @@ import {
   navigateToSession,
   assistantTextMessage,
   assistantFailedMessage,
-  type MockEvent,
+  mockChatServer,
 } from "./helpers/chat";
 
 test("failed assistant response shows error with retry button; retry produces a new response", async () => {
@@ -20,21 +20,20 @@ test("failed assistant response shows error with retry button; retry produces a 
     const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
 
     let attempt = 0;
-    await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
-      ws.onMessage((message) => {
-        const parsed = JSON.parse(message as string);
-        if (parsed.type === "ping") {
-          ws.send(JSON.stringify({ type: "pong" }));
-          return;
-        }
-        if (parsed.type === "message" || parsed.type === "retry") {
-          attempt += 1;
-          const events: MockEvent[] = attempt === 1
+    await mockChatServer(page, port, (parsed, _send, tools) => {
+      if (parsed.type === "message") {
+        attempt += 1;
+        tools.runTurn(
+          String(parsed.content),
+          parsed.intentId as string | undefined,
+          attempt === 1
             ? assistantFailedMessage("Something went wrong")
-            : assistantTextMessage("Retried successfully");
-          for (const event of events) ws.send(JSON.stringify(event));
-        }
-      });
+            : assistantTextMessage("Retried successfully"),
+        );
+      } else if (parsed.type === "retry") {
+        tools.turnRetried();
+        tools.runEvents(assistantTextMessage("Retried successfully"));
+      }
     });
 
     await navigateToSession(page, project.projectId, sessionId);
@@ -65,26 +64,18 @@ test("error event (pre-prompt failure) shows error UI; retry resends the message
     const sessionId = await createSessionViaApi(page, project.projectId, "assistant-1");
 
     let attempt = 0;
-    await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
-      ws.onMessage((message) => {
-        const parsed = JSON.parse(message as string);
-        if (parsed.type === "ping") {
-          ws.send(JSON.stringify({ type: "pong" }));
-          return;
-        }
-        if (parsed.type === "message") {
-          attempt += 1;
-          if (attempt === 1) {
-            ws.send(JSON.stringify({
-              type: "error",
-              message: "No model configured",
-              code: "MODEL_NOT_CONFIGURED",
-            }));
-          } else {
-            for (const event of assistantTextMessage("Recovered")) ws.send(JSON.stringify(event));
-          }
-        }
-      });
+    await mockChatServer(page, port, (parsed, send, tools) => {
+      if (parsed.type !== "message") return;
+      attempt += 1;
+      if (attempt === 1) {
+        send({
+          type: "error",
+          message: "No model configured",
+          code: "MODEL_NOT_CONFIGURED",
+        });
+      } else {
+        tools.runTurn(String(parsed.content), parsed.intentId as string | undefined, assistantTextMessage("Recovered"));
+      }
     });
 
     await navigateToSession(page, project.projectId, sessionId);
