@@ -1,7 +1,7 @@
 # Fix：重连对账 fetch 窗口未覆盖已加载视图时 user 消息堆叠到最近处
 
 - 日期：2026-09-02
-- 状态：已实施（design review 反馈已处理：循环内 merge 必须原子归约缓冲事件、refreshHistory 循环逐迭代重读 streaming、空页不回写分页、加页数上限、共享 helper 改为两处独立实现）
+- 状态：已实施（design review 反馈已处理：循环内 merge 必须原子归约缓冲事件、refreshHistory 循环逐迭代重读 streaming、空页不回写分页、加页数上限、共享 helper 改为两处独立实现；code review 反馈已处理：回补早退路径补 `flushBuffered` 防丢缓冲事件、页级 catch 纳入 parseHistoryMessages、补齐空页/页上限/streaming 翻转三组终止规则测试）
 - 调查文档：[`docs/dev/investigation/2026-09-02-chat-user-messages-cluster/README.md`](../../investigation/2026-09-02-chat-user-messages-cluster/README.md)
 - 分支：`fix/chat-history-page-coverage`，**叠在 `refactor/chat-runtime-analysis-8f3k2`（PR #81）之上**——修复直接落在重构后的 `history-reconciler.ts` / `history-actions.ts`，PR base 为重构分支，须在 #81 合并后合并
 
@@ -44,6 +44,6 @@
 
 ## 风险与边界
 
-- **重连补拉放大请求量**：极端情况下（上次对账很早、其间积压大量消息）一次重连会连续拉 N 页；每页 20 条、串行执行，量级可控且只发生在重连时
+- **回补请求放大**：除重连外，`TriggerEventBridge` 在每次 `trigger_completed` 都会触发 `refreshHistory`（同样回补）——深滚动会话在触发器频发时可能反复补拉；上限 50 页/次 + 串行执行约束了最坏情况（每页 20 条），接受
 - **中间态闪烁**：回补过程中 user 消息短暂位于末尾，页到位后归位——与现状"永久堆叠"相比是净改善
 - **H1 未修**：`repro.test.snippet.ts` 仍为 failing 场景（未纳入测试套件），hub runEvents TTL 另行立项
