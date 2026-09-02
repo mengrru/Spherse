@@ -60,6 +60,7 @@ Composer.send
 
 - **`ChatSessionRuntime`（非响应式）**：持有 WS、心跳、重连/探活 timer 与发送动作；每次连接组合一个 `HistoryReconciler`（连接期事件缓冲 + 历史对账状态机，`history-reconciler.ts`，随 socket 生命周期新建）；经 `ChatRuntimeRegistry` 管理生命周期，transport 不进 Zustand
 - **`streaming-store`（Zustand）**：只持 UI 可观察状态与 actions；`connectionStatus`（disconnected/connecting/open）与 `historyStatus`（pending/syncing/ready）是正交维度；history 分页动作（loadMore / refreshHistory）在 `history-actions.ts`，经 port 接口（getSession / updateSession）与 session 状态解耦
+- **重连对账保证覆盖**：reconcile / refreshHistory 在最新页 merge 后，按 `before: oldestLoadedId` 逐页回补直到覆盖重连前的已加载低水位（`oldestLoadedId`），防止超长 run 把 optimistic user 消息推出页外后 `mergeHistoryMessages` 的 transient 尾部追加将其堆叠到视图末尾；终止条件：覆盖低水位 / `hasMore` 耗尽 / 单页失败 / 空页 / 50 页上限
 - **`chat-session-reducer`（纯函数）**：事件 → view state 归约，`applySessionEvents` 为归约 + withdraw 结算（`settlePendingWithdraw`）的完整管线；历史解析与稳定 ID 合并在 `chat-history.ts`，tool/card 投影在 `chat-tool-projection.ts`
 - 事件按 **animation frame 批量归约**：单次 `set()` 内 flush 整个 eventQueue，避免高频 token update 触发过多 render
 - `ChatMessage` 的 `_` 前缀字段是 view 投影：

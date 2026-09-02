@@ -10,6 +10,7 @@
 
 ## Bug
 
+- [ ] **chat 重连对账丢 in-flight 流式回复（H1 竞态）**：reconcile fetch 落在 run 持久化窗口内（`user/message` run 前落库、`assistant/message` `message_end` 才落库）且 run 在 fetch 响应前结束（hub `runEvents` 已清空、replay 为空）时，客户端 `mergeHistoryMessages` 的 transient 过滤器丢弃未持久化的流式回复且无补回路径。方向：hub 的 `runEvents` 在 run 结束后保留短 TTL 供窗口期内重连客户端 replay。复现测试片段见 `docs/dev/investigation/2026-09-02-chat-user-messages-cluster/repro.test.snippet.ts`（未入测试套件）
 - [ ] **补齐 session/agent/project abort-and-drain 生命周期**：destroy/evict/close 当前仅删除 map entry，删除或 shutdown 后 turn、trigger 和 hub channel 仍可能执行工具或写入已关闭 store。先设计并实现 admission 关闭、preflight 取消、完整 turn/pending restore/trigger drain、hub project/agent/session quiesce、capability teardown、store close 顺序及共享 shutdown Promise；顺手收口 turn finally 清理链的单点抛错风险（如 `sanitizer.finalize` 抛错会跳过 unsubscribe/sink 恢复/释放 busy）。参见 `docs/dev/investigation/2026-08-29-session-lifecycle-concurrency/README.md`
 - [ ] **损坏项目滞留 openProjects 无移除入口**：项目打开失败（project.yaml 损坏等）后该路径一直留在 openProjects 设置里，每次启动重试失败记日志，暂无 UI 内移除 / 修复入口。参见 `docs/dev/bugfix/2026-08-27-project-open-overwrite/design.md`（#42 遗留）
 - [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。

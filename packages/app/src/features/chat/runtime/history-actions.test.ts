@@ -159,4 +159,72 @@ describe("refreshSessionHistory", () => {
     expect(harness.state).toBe(flipped);
     expect(harness.state?.messages).toEqual([]);
   });
+
+  it("backfills older pages until the loaded window covers the previous low watermark", async () => {
+    const serverEntries = Array.from({ length: 25 }, (_, i) => ({
+      id: i + 1,
+      message:
+        i % 2 === 0
+          ? { role: "user", content: `q${i + 1}` }
+          : { role: "assistant", content: [{ type: "text", text: `a${i + 1}` }] },
+    }));
+    const client: ApiClient = {
+      getSessionMessagesPage: vi.fn((_agentId: string, _sessionId: string, params: { limit?: number; before?: number }) => {
+        const eligible = serverEntries.filter((entry) => params?.before === undefined || entry.id < params.before);
+        const selected = eligible.slice(-(params?.limit ?? 20));
+        return Promise.resolve({
+          entries: selected,
+          hasMore: selected.length < eligible.length,
+          oldestId: selected[0]?.id ?? null,
+        });
+      }),
+    } as unknown as ApiClient;
+    const harness = portOf(session({
+      messages: [
+        { role: "user", content: "q1", _messageId: 1 } as ChatMessage,
+        { role: "assistant", content: "a2", _messageId: 2 } as ChatMessage,
+      ],
+      hasMore: true,
+      oldestLoadedId: 1,
+      historyStatus: "ready",
+    }));
+
+    refreshSessionHistory(harness.port, client, "a1", "s1");
+    await vi.waitFor(() => {
+      expect(harness.state?.oldestLoadedId).toBe(1);
+      expect(harness.state?.hasMore).toBe(false);
+    });
+
+    expect(harness.state?.messages.map((m) => m.content)).toEqual(
+      serverEntries.map((entry, i) => (i % 2 === 0 ? `q${i + 1}` : `a${i + 1}`)),
+    );
+    expect(client.getSessionMessagesPage).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops the backfill when the session starts streaming mid-refresh", async () => {
+    const harness = portOf(session({
+      messages: [{ role: "user", content: "q1", _messageId: 1 } as ChatMessage],
+      hasMore: true,
+      oldestLoadedId: 5,
+      historyStatus: "ready",
+    }));
+    const fetch = vi.fn(() =>
+      Promise.resolve({
+        entries: [{ id: 9, message: { role: "user", content: "new" } }],
+        hasMore: true,
+        oldestId: 9,
+      }));
+    const client = { getSessionMessagesPage: fetch } as unknown as ApiClient;
+
+    refreshSessionHistory(harness.port, client, "a1", "s1");
+    harness.port.updateSession((s) => ({ ...s, streaming: true }));
+    await vi.waitFor(() => {
+      expect(harness.state?.oldestLoadedId).toBe(5);
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(harness.state?.oldestLoadedId).toBe(5);
+    expect(harness.state?.hasMore).toBe(true);
+  });
 });

@@ -747,4 +747,77 @@ describe("streaming-store resilience", () => {
       expect(setStreamingSpy).not.toHaveBeenCalled();
     });
   });
+
+  it("clusters already-sent user messages at the recent end when a long run overflows the history page", async () => {
+    const serverEvents: Array<{ id: number; message: unknown }> = [
+      { id: 1, message: { role: "user", content: "old question", timestamp: 1 } },
+      { id: 2, message: { role: "assistant", content: [{ type: "text", text: "old answer" }], timestamp: 2 } },
+    ];
+    const client: ApiClient = {
+      getSessionMessagesPage: vi.fn((_agentId: string, _sessionId: string, params: { limit?: number; before?: number }) => {
+        const eligible = serverEvents.filter((entry) => params?.before === undefined || entry.id < params.before);
+        const selected = eligible.slice(-(params?.limit ?? 20));
+        return Promise.resolve({
+          entries: selected,
+          hasMore: selected.length < eligible.length,
+          oldestId: selected[0]?.id ?? null,
+        });
+      }),
+    } as unknown as ApiClient;
+
+    useStreamingStore.getState().attach(client, "cov1", BASE_URL, "p1", "a1");
+    const socket = mock.instances[mock.instances.length - 1];
+    socket.readyState = OPEN;
+    socket.onopen?.({} as Event);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const sendAndReply = async (userText: string, replyText: string) => {
+      useStreamingStore.getState().sendMessage("cov1", userText);
+      await vi.advanceTimersByTimeAsync(0);
+      socket.onmessage?.({ data: JSON.stringify({ type: "message_start", message: { role: "assistant" } }) } as MessageEvent);
+      socket.onmessage?.({ data: JSON.stringify({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: replyText }] } }) } as MessageEvent);
+      socket.onmessage?.({ data: JSON.stringify({ type: "run_status", active: false }) } as MessageEvent);
+      await vi.advanceTimersByTimeAsync(0);
+    };
+    await sendAndReply("A", "1");
+    await sendAndReply("B", "2");
+    useStreamingStore.getState().sendMessage("cov1", "C");
+    await vi.advanceTimersByTimeAsync(0);
+    socket.onmessage?.({ data: JSON.stringify({ type: "message_start", message: { role: "assistant" } }) } as MessageEvent);
+    for (let i = 1; i <= 25; i++) {
+      socket.onmessage?.({ data: JSON.stringify({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: `m${i}` }] } }) } as MessageEvent);
+    }
+    await vi.advanceTimersByTimeAsync(0);
+
+    let nextId = 3;
+    serverEvents.push(
+      { id: nextId++, message: { role: "user", content: "A", timestamp: 3 } },
+      { id: nextId++, message: { role: "assistant", content: [{ type: "text", text: "1" }], timestamp: 4 } },
+      { id: nextId++, message: { role: "user", content: "B", timestamp: 5 } },
+      { id: nextId++, message: { role: "assistant", content: [{ type: "text", text: "2" }], timestamp: 6 } },
+      { id: nextId++, message: { role: "user", content: "C", timestamp: 7 } },
+    );
+    for (let i = 1; i <= 25; i++) {
+      serverEvents.push({ id: nextId++, message: { role: "assistant", content: [{ type: "text", text: `m${i}` }], timestamp: 7 + i } });
+    }
+
+    socket.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    const reopened = mock.instances[mock.instances.length - 1];
+    reopened.readyState = OPEN;
+    reopened.onopen?.({} as Event);
+    await vi.advanceTimersByTimeAsync(0);
+
+    const messages = useStreamingStore.getState().sessions.cov1.messages;
+    expect(messages.map((m) => m.content)).toEqual([
+      "old question",
+      "old answer",
+      "A",
+      "1",
+      "B",
+      "2",
+      "C",
+      ...Array.from({ length: 25 }, (_, i) => `m${i + 1}`),
+    ]);
+  });
 });

@@ -6,6 +6,7 @@ import {
 } from "../model/chat-history";
 import { reduceSessionEvents } from "../model/chat-session-reducer";
 import type { ChatSessionRuntimeState } from "./chat-session-runtime";
+import { COVERAGE_MAX_PAGES, resolveHistoryLowWater } from "./history-actions";
 
 const RECONCILE_BACKOFFS = [1000, 2000, 5000];
 
@@ -62,6 +63,9 @@ export class HistoryReconciler<T extends ChatSessionRuntimeState> {
             { limit: 20 },
           );
           if (!this.callbacks.isCurrent()) return;
+          const preMergeSession = this.callbacks.getSession();
+          if (!preMergeSession) return;
+          const lowWater = resolveHistoryLowWater(preMergeSession);
           const historyMessages = parseHistoryMessages(result.entries);
           this.callbacks.updateSession((session) => {
             const reconciled = {
@@ -81,6 +85,8 @@ export class HistoryReconciler<T extends ChatSessionRuntimeState> {
               ),
             };
           });
+          await this.coverLoadedWindow(client, agentId, sessionId, lowWater);
+          this.flushBuffered();
           succeeded = true;
           return;
         } catch (err) {
@@ -108,6 +114,53 @@ export class HistoryReconciler<T extends ChatSessionRuntimeState> {
       if (this.callbacks.isCurrent() && session && (succeeded || this.historyWasReady)) {
         this.callbacks.setStreaming(session.streaming);
       }
+    }
+  }
+
+  private async coverLoadedWindow(
+    client: ApiClient,
+    agentId: string,
+    sessionId: string,
+    lowWater: number | null,
+  ): Promise<void> {
+    if (lowWater === null) return;
+    for (let page = 0; page < COVERAGE_MAX_PAGES; page++) {
+      const session = this.callbacks.getSession();
+      if (!this.callbacks.isCurrent() || !session) return;
+      if (!session.hasMore || session.oldestLoadedId === null) return;
+      if (session.oldestLoadedId <= lowWater) return;
+      let pendingResult: Awaited<ReturnType<ApiClient["getSessionMessagesPage"]>> | undefined;
+      let olderMessages;
+      try {
+        const result = await client.getSessionMessagesPage(agentId, sessionId, {
+          limit: 20,
+          before: session.oldestLoadedId,
+        });
+        if (!this.callbacks.isCurrent()) return;
+        if (result.entries.length === 0) return;
+        olderMessages = parseHistoryMessages(result.entries);
+        pendingResult = result;
+      } catch (err) {
+        console.warn(
+          "[history-reconciler] failed to cover loaded window:",
+          err,
+        );
+        return;
+      }
+      if (!this.callbacks.isCurrent()) return;
+      const result = pendingResult;
+      this.callbacks.updateSession((current) => {
+        const merged = {
+          ...current,
+          messages: mergeHistoryMessages(current.messages, olderMessages),
+          hasMore: result.hasMore,
+          oldestLoadedId: result.oldestId,
+        };
+        return {
+          ...merged,
+          ...reduceSessionEvents(merged, this.buffered.splice(0), Date.now()),
+        };
+      });
     }
   }
 }
