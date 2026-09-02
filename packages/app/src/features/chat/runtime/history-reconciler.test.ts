@@ -248,4 +248,97 @@ describe("HistoryReconciler", () => {
     const closed = session({ historyStatus: "ready" });
     expect(reconciler.applyClosedState(closed)).toBe(closed);
   });
+
+  it("backfills older pages until the loaded window covers the previous low watermark", async () => {
+    const harness = createHarness();
+    harness.state = session({
+      oldestLoadedId: 2,
+      hasMore: true,
+      historyStatus: "ready",
+    });
+    const reconciler = new HistoryReconciler<TestSession>(harness.callbacks);
+    const calls: Array<{ limit?: number; before?: number }> = [];
+    const client: ApiClient = {
+      getSessionMessagesPage: vi.fn((_agentId: string, _sessionId: string, params: { limit?: number; before?: number }) => {
+        calls.push(params);
+        if (params?.before === undefined) {
+          return Promise.resolve({
+            entries: Array.from({ length: 20 }, (_, i) => ({
+              id: 13 + i,
+              message: { role: "assistant", content: [{ type: "text", text: `m${13 + i}` }] },
+            })),
+            hasMore: true,
+            oldestId: 13,
+          });
+        }
+        return Promise.resolve({
+          entries: [
+            { id: 1, message: { role: "user", content: "old question" } },
+            { id: 2, message: { role: "assistant", content: [{ type: "text", text: "old answer" }] } },
+          ],
+          hasMore: false,
+          oldestId: 1,
+        });
+      }),
+    } as unknown as ApiClient;
+
+    reconciler.onOpen();
+    await reconciler.reconcile(client, "a1", "s1");
+
+    expect(calls).toEqual([
+      { limit: 20 },
+      { limit: 20, before: 13 },
+    ]);
+    expect(harness.state?.oldestLoadedId).toBe(1);
+    expect(harness.state?.hasMore).toBe(false);
+    expect(harness.state?.messages.map((m) => m.content)).toEqual([
+      "old question",
+      "old answer",
+      ...Array.from({ length: 20 }, (_, i) => `m${13 + i}`),
+    ]);
+  });
+
+  it("reduces events buffered during the backfill loop with the older page merge", async () => {
+    const harness = createHarness();
+    harness.state = session({
+      oldestLoadedId: 1,
+      hasMore: true,
+      historyStatus: "ready",
+    });
+    const reconciler = new HistoryReconciler<TestSession>(harness.callbacks);
+    let releaseOlder: ((value: unknown) => void) | undefined;
+    const client: ApiClient = {
+      getSessionMessagesPage: vi.fn((_agentId: string, _sessionId: string, params: { limit?: number; before?: number }) => {
+        if (params?.before === undefined) {
+          return Promise.resolve({
+            entries: Array.from({ length: 20 }, (_, i) => ({
+              id: 13 + i,
+              message: { role: "assistant", content: [{ type: "text", text: `m${13 + i}` }] },
+            })),
+            hasMore: true,
+            oldestId: 13,
+          });
+        }
+        return new Promise((resolve) => {
+          releaseOlder = resolve;
+        });
+      }),
+    } as unknown as ApiClient;
+
+    reconciler.onOpen();
+    const promise = reconciler.reconcile(client, "a1", "s1");
+    await vi.advanceTimersByTimeAsync(0);
+    reconciler.buffer({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: "live during backfill" }] } } as AgentEvent);
+    releaseOlder?.({
+      entries: [{ id: 1, message: { role: "user", content: "old question" } }],
+      hasMore: false,
+      oldestId: 1,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    await promise;
+
+    const texts = harness.state?.messages.map((m) => m.content);
+    expect(texts).toContain("live during backfill");
+    expect(texts?.[texts.length - 1]).toBe("live during backfill");
+  });
 });
