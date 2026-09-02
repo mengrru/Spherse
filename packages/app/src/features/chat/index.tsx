@@ -13,7 +13,7 @@ import { ChatRuntimeProvider } from "./runtime-context";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
-import { useStreamingStore } from "./replica-store";
+import { useReplicaStore } from "./replica-store";
 
 const EMPTY_KEYED: KeyedMessage[] = [];
 
@@ -55,9 +55,9 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     initialMessage,
     accessToken,
   });
-  const keyed = useStreamingStore((s) => s.sessions[sessionId]?.view.keyed ?? EMPTY_KEYED);
-  const hasMore = useStreamingStore((s) => s.sessions[sessionId]?.hasMore ?? false);
-  const loadingMore = useStreamingStore((s) => s.sessions[sessionId]?.loadingMore ?? false);
+  const keyed = useReplicaStore((s) => s.sessions[sessionId]?.view.keyed ?? EMPTY_KEYED);
+  const hasMore = useReplicaStore((s) => s.sessions[sessionId]?.hasMore ?? false);
+  const loadingMore = useReplicaStore((s) => s.sessions[sessionId]?.loadingMore ?? false);
   const { containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId, loadingMore);
   const themeHref = useAgentTheme(client, agent.id, agent.slug, projectId);
 
@@ -105,7 +105,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           onWithdraw={withdrawLastTurn}
           hasMore={hasMore}
           loadingMore={loadingMore}
-          onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}
+          onLoadMore={() => useReplicaStore.getState().loadMore(client, sessionId, agent.id)}
         />
         <Composer
           streaming={streaming}

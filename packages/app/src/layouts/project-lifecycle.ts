@@ -4,7 +4,7 @@ import { useProjectDataStore } from "../stores/project-data-store";
 import { clearProjectQueries } from "../queries/project";
 import { clearLastRoute } from "../lib/localstorage/last-route";
 import { clearProjectNavHistory } from "../lib/use-project-navigation";
-import { useStreamingStore } from "../features/chat/replica-store";
+import { useReplicaStore } from "../features/chat/replica-store";
 import { useAgentSessionListUiStore } from "../features/agent-session-list/store";
 import { useTriggerStore } from "../features/agent-trigger/store";
 import { useFloatingChatStore } from "../features/floating-chat/store";
@@ -16,7 +16,7 @@ export async function closeProjectCascade(
   projectId: string,
 ): Promise<string | null> {
   const nextProjectId = await useAppStore.getState().closeProject(bridge, projectId);
-  useStreamingStore.getState().disconnectProject(projectId);
+  useReplicaStore.getState().disconnectProject(projectId);
   clearProjectQueries(projectId);
   useAgentSessionListUiStore.getState().clearProject(projectId);
   useTriggerStore.getState().clearProject(projectId);

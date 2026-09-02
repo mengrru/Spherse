@@ -1,3 +1,4 @@
+import type { SettledFrameContract } from "@spherse/contracts";
 import type { AgentMessage } from "@spherse/core";
 import type { AgentEvent } from "../model/agent-event-parse";
 import { isAssistantMessage } from "../model/agent-event-parse";
@@ -19,6 +20,7 @@ import {
   addIntent,
   failIntent,
   initialPending,
+  markDisconnectSeen,
   removeIntent,
   setWithdrawInFlight,
   type PendingIntent,
@@ -30,7 +32,6 @@ import {
   clearNoticesOnDurableError,
   clearRunErrorNotices,
   initialNotices,
-  nextNoticeId,
   type NoticesZone,
 } from "./notices";
 
@@ -52,7 +53,8 @@ export type ReplicaInternalFrame =
   | { type: "snapshotApplied"; snapshot: ReplicaSnapshotInput; full: boolean }
   | { type: "loadMoreApplied"; page: ReplicaSnapshotInput }
   | { type: "legacySnapshotMode" }
-  | { type: "runKilled" };
+  | { type: "runKilled" }
+  | { type: "syncSettled"; frame: SettledFrameContract };
 
 export type ReplicaFrame = AgentEvent | ReplicaInternalFrame;
 
@@ -84,6 +86,9 @@ export function initialReplica(): SessionReplica {
 
 export function reduceReplica(state: SessionReplica, frame: ReplicaFrame, now: number): SessionReplica {
   if (isInternalFrame(frame)) {
+    if (frame.type === "syncSettled") {
+      return reduceServerEvent(state, frame.frame, now, { lenientReorder: true });
+    }
     return reduceInternal(state, frame);
   }
   return reduceServerEvent(state, frame, now);
@@ -102,13 +107,14 @@ const INTERNAL_FRAME_TYPES: ReadonlySet<string> = new Set([
   "loadMoreApplied",
   "legacySnapshotMode",
   "runKilled",
+  "syncSettled",
 ]);
 
 function isInternalFrame(frame: ReplicaFrame): frame is ReplicaInternalFrame {
   return INTERNAL_FRAME_TYPES.has(frame.type);
 }
 
-function reduceServerEvent(state: SessionReplica, event: AgentEvent, now: number): SessionReplica {
+function reduceServerEvent(state: SessionReplica, event: AgentEvent, now: number, opts?: { lenientReorder?: boolean }): SessionReplica {
   let durable = state.durable;
   let run = state.run;
   let pending = state.pending;
@@ -121,7 +127,7 @@ function reduceServerEvent(state: SessionReplica, event: AgentEvent, now: number
           type: "message_settled",
           seq: event.seq,
           message: event.message,
-        });
+        }, opts);
         durable = outcome.durable;
         if (outcome.entry && isAssistantMessage(event.message) && event.message.stopReason === "error") {
           notices = clearNoticesOnDurableError(notices, event.seq);
@@ -131,7 +137,7 @@ function reduceServerEvent(state: SessionReplica, event: AgentEvent, now: number
       return assemble(state, durable, run, pending, notices);
     }
     case "message_settled": {
-      const outcome = applySettledFrame(durable, event);
+      const outcome = applySettledFrame(durable, event, opts);
       durable = outcome.durable;
       if (event.intentId !== undefined) {
         pending = removeIntent(pending, event.intentId);
@@ -143,12 +149,13 @@ function reduceServerEvent(state: SessionReplica, event: AgentEvent, now: number
         notices = clearRunErrorNotices(notices);
       }
       if (isAssistantMessage(event.message)) {
-        run = { ...run, draft: run.draft?._streaming ? null : run.draft };
+        const inRunScope = event.seq > (run.startedAfterSeq ?? -1);
+        run = inRunScope && run.draft?._streaming ? { ...run, draft: null } : run;
       }
       return assemble(state, durable, run, pending, notices);
     }
     case "turn_withdrawn": {
-      const outcome = applySettledFrame(durable, event);
+      const outcome = applySettledFrame(durable, event, opts);
       durable = outcome.durable;
       pending = setWithdrawInFlight(pending, false);
       notices = clearNoticesCoveredByDeletion(
@@ -159,16 +166,17 @@ function reduceServerEvent(state: SessionReplica, event: AgentEvent, now: number
       return assemble(state, durable, run, pending, notices);
     }
     case "turn_retried": {
-      const outcome = applySettledFrame(durable, event);
+      const outcome = applySettledFrame(durable, event, opts);
       durable = outcome.durable;
       run = { ...run, retrying: false };
       return assemble(state, durable, run, pending, notices);
     }
     case "error": {
+      const noticeId = `${durable.highSeq ?? "null"}:${notices.items.length}`;
       if (pending.withdrawInFlight) {
         pending = setWithdrawInFlight(pending, false);
         notices = appendNotice(notices, {
-          id: nextNoticeId(),
+          id: `withdrawFailed:${noticeId}`,
           kind: "withdrawFailed",
           bornAtSeq: durable.highSeq,
           message: event.message,
@@ -185,7 +193,7 @@ function reduceServerEvent(state: SessionReplica, event: AgentEvent, now: number
         run = { ...run, draft: run.draft ? { ...run.draft, _streaming: false } : null };
       }
       notices = appendNotice(notices, {
-        id: nextNoticeId(),
+        id: `error:${noticeId}`,
         kind: "error",
         bornAtSeq: durable.highSeq,
         message: event.message,
@@ -209,7 +217,8 @@ function reduceInternal(state: SessionReplica, frame: ReplicaInternalFrame): Ses
       return { ...state, connectionStatus: "open" };
     case "disconnected": {
       const run = frame.fatal ? endRunForFatal(state.run) : state.run;
-      return { ...state, connectionStatus: "disconnected", run };
+      const pending = markDisconnectSeen(state.pending);
+      return { ...state, connectionStatus: "disconnected", run, pending };
     }
     case "replayCompleted":
       return state;
@@ -219,8 +228,11 @@ function reduceInternal(state: SessionReplica, frame: ReplicaInternalFrame): Ses
       return { ...state, historyStatus: "syncing" };
     case "syncSucceeded": {
       let pending = state.pending;
-      if (pending.lastSendingId !== null) {
-        pending = failIntent(pending, pending.lastSendingId);
+      const lostIntent = pending.intents.find(
+        (intent) => intent.intentId === pending.lastSendingId && intent.state === "sending" && intent.seenDisconnect === true,
+      );
+      if (lostIntent) {
+        pending = failIntent(pending, lostIntent.intentId);
       }
       const run = state.run.active
         ? state.run
@@ -255,6 +267,8 @@ function reduceInternal(state: SessionReplica, frame: ReplicaInternalFrame): Ses
         : state.run;
       return { ...state, run };
     }
+    default:
+      return state;
   }
 }
 

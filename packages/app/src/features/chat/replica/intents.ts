@@ -6,6 +6,7 @@ export type PendingIntent = {
   attachment?: SendableImage;
   state: "queued" | "sending" | "failed";
   createdAt: number;
+  seenDisconnect?: boolean;
 };
 
 export interface PendingZone {
@@ -51,6 +52,16 @@ export function failIntent(pending: PendingZone, intentId: string): PendingZone 
 
 export function replaceIntent(pending: PendingZone, removedId: string, next: PendingIntent): PendingZone {
   return addIntent(removeIntent(pending, removedId), next);
+}
+
+export function markDisconnectSeen(pending: PendingZone): PendingZone {
+  let changed = false;
+  const intents = pending.intents.map((intent) => {
+    if (intent.state !== "sending" || intent.seenDisconnect) return intent;
+    changed = true;
+    return { ...intent, seenDisconnect: true };
+  });
+  return changed ? { ...pending, intents } : pending;
 }
 
 export function setWithdrawInFlight(pending: PendingZone, inFlight: boolean): PendingZone {

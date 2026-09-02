@@ -262,7 +262,7 @@ describe("session replica: lifecycle frames", () => {
       { type: "message_update", message: assistantEvent("orphan") },
       { type: "run_status", active: false },
     ]);
-    state = { ...state, pending: { ...state.pending, intents: [{ intentId: "i9", content: "lost", state: "sending", createdAt: 1 }], lastSendingId: "i9" } };
+    state = { ...state, pending: { ...state.pending, intents: [{ intentId: "i9", content: "lost", state: "sending", createdAt: 1, seenDisconnect: true }], lastSendingId: "i9" } };
 
     state = run([{ type: "syncSucceeded" }], state);
 

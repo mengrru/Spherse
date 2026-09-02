@@ -146,7 +146,7 @@ export class ChatSessionRuntime {
             ws.close();
           } catch (err) {
             console.warn("[chat-session-runtime] probe close failed:", err);
-        }
+          }
         }
       }, RESUME_PROBE_TIMEOUT_MS);
       return;

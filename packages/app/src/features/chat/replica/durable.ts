@@ -17,7 +17,7 @@ export interface DurableZone {
   highSeq: number | null;
   hasMore: boolean;
   oldestLoadedId: number | null;
-  resyncNeeded: boolean;
+  resyncNeeded: number | null;
 }
 
 export function initialDurable(): DurableZone {
@@ -27,7 +27,7 @@ export function initialDurable(): DurableZone {
     highSeq: null,
     hasMore: false,
     oldestLoadedId: null,
-    resyncNeeded: false,
+    resyncNeeded: null,
   };
 }
 
@@ -37,9 +37,23 @@ export interface SettledFrameOutcome {
   violation: boolean;
 }
 
-export function applySettledFrame(durable: DurableZone, frame: SettledFrameContract): SettledFrameOutcome {
+export function applySettledFrame(
+  durable: DurableZone,
+  frame: SettledFrameContract,
+  opts?: { lenientReorder?: boolean },
+): SettledFrameOutcome {
   if (durable.mode === "snapshot") {
-    durable = { ...initialDurable(), mode: "events" };
+    if (frame.type === "message_settled") {
+      durable = { ...initialDurable(), mode: "events" };
+    } else {
+      // legacy snapshot entries share no namespace with event seqs; a deletion
+      // frame proves eventized data exists but carries nothing to rebuild from
+      return {
+        durable: { ...initialDurable(), mode: "events", resyncNeeded: frame.seq },
+        entry: null,
+        violation: true,
+      };
+    }
   } else if (durable.mode === "unknown") {
     durable = { ...durable, mode: "events" };
   }
@@ -49,15 +63,21 @@ export function applySettledFrame(durable: DurableZone, frame: SettledFrameContr
     if (existing) {
       return { durable, entry: null, violation: false };
     }
-    if (durable.highSeq !== null && frame.seq <= durable.highSeq) {
-      return { durable: { ...durable, resyncNeeded: true }, entry: null, violation: true };
-    }
     const entry: DurableEntry = {
       seq: frame.seq,
       message: frame.message,
       ...(frame.intentId !== undefined ? { intentId: frame.intentId } : {}),
     };
-    return { durable: insertEntry(durable, entry, frame.seq), entry, violation: false };
+    const belowWatermark = durable.highSeq !== null && frame.seq <= durable.highSeq;
+    const next = insertEntry(durable, entry, frame.seq);
+    if (!belowWatermark || opts?.lenientReorder) {
+      return { durable: next, entry, violation: false };
+    }
+    return {
+      durable: { ...next, resyncNeeded: next.resyncNeeded ?? frame.seq },
+      entry,
+      violation: true,
+    };
   }
   if (frame.type === "turn_withdrawn") {
     const upTo = frame.upTo ?? frame.seq + 1;
@@ -65,10 +85,13 @@ export function applySettledFrame(durable: DurableZone, frame: SettledFrameContr
       (entry) => entry.seq < frame.seq || entry.seq >= upTo,
     );
     const highSeq = Math.max(durable.highSeq ?? -1, upTo);
+    const resyncNeeded = durable.resyncNeeded !== null && durable.resyncNeeded >= frame.seq && durable.resyncNeeded < upTo
+      ? null
+      : durable.resyncNeeded;
     return {
       durable: entries.length === durable.entries.length
-        ? { ...durable, highSeq }
-        : { ...durable, entries, highSeq },
+        ? { ...durable, highSeq, resyncNeeded }
+        : { ...durable, entries, highSeq, resyncNeeded },
       entry: null,
       violation: false,
     };
@@ -76,10 +99,13 @@ export function applySettledFrame(durable: DurableZone, frame: SettledFrameContr
   const abandoned = new Set(frame.abandonedSeqs);
   const entries = durable.entries.filter((entry) => !abandoned.has(entry.seq));
   const highSeq = Math.max(durable.highSeq ?? -1, frame.seq);
+  const resyncNeeded = durable.resyncNeeded !== null && abandoned.has(durable.resyncNeeded)
+    ? null
+    : durable.resyncNeeded;
   return {
     durable: entries.length === durable.entries.length
-      ? { ...durable, highSeq }
-      : { ...durable, entries, highSeq },
+      ? { ...durable, highSeq, resyncNeeded }
+      : { ...durable, entries, highSeq, resyncNeeded },
     entry: null,
     violation: false,
   };
@@ -109,7 +135,7 @@ export function applySnapshot(
       highSeq,
       hasMore: snapshot.hasMore,
       oldestLoadedId: snapshot.oldestId,
-      resyncNeeded: false,
+      resyncNeeded: null,
     };
   }
 
@@ -126,7 +152,7 @@ export function applySnapshot(
     highSeq: highSeq === -1 ? null : highSeq,
     hasMore: snapshot.hasMore,
     oldestLoadedId: snapshot.oldestId,
-    resyncNeeded: false,
+    resyncNeeded: null,
   };
 }
 
@@ -179,11 +205,6 @@ export function enterSnapshotMode(durable: DurableZone): DurableZone {
   return { ...durable, mode: "snapshot", highSeq: null };
 }
 
-export function clearResyncNeeded(durable: DurableZone): DurableZone {
-  if (!durable.resyncNeeded) return durable;
-  return { ...durable, resyncNeeded: false };
-}
-
 function insertEntry(durable: DurableZone, entry: DurableEntry, seq: number): DurableZone {
   const entries: DurableEntry[] = [];
   let inserted = false;
@@ -195,5 +216,6 @@ function insertEntry(durable: DurableZone, entry: DurableEntry, seq: number): Du
     entries.push(existing);
   }
   if (!inserted) entries.push(entry);
-  return { ...durable, entries, highSeq: Math.max(durable.highSeq ?? -1, seq) };
+  const resyncNeeded = durable.resyncNeeded === seq ? null : durable.resyncNeeded;
+  return { ...durable, entries, highSeq: Math.max(durable.highSeq ?? -1, seq), resyncNeeded };
 }

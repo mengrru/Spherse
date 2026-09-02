@@ -147,7 +147,7 @@ describe("sync orchestration", () => {
     });
     await runSync(h.deps, "full");
     expect(h.replica().durable.entries).toHaveLength(1);
-    expect(h.replica().durable.resyncNeeded).toBe(false);
+    expect(h.replica().durable.resyncNeeded).toBe(null);
   });
 });
 

@@ -16,7 +16,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("../../features/chat/replica-store", () => ({
-  useStreamingStore: {
+  useReplicaStore: {
     getState: () => ({
       sendMessage: mockWsSend,
       sessions: sessionsState(),

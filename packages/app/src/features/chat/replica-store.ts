@@ -31,6 +31,7 @@ const CLEANUP_INTERVAL_MS = 30 * 1000;
 export interface ReplicaSessionRecord {
   replica: SessionReplica;
   view: DerivedView;
+  derivedFrom: SessionReplica | null;
   messages: DerivedView["messages"];
   streaming: boolean;
   hasMore: boolean;
@@ -51,11 +52,11 @@ export interface ReplicaSessionRecord {
   resendPending: { content: string; attachment?: SendableImage } | null;
 }
 
-interface StreamingStoreState {
+interface ReplicaStoreState {
   sessions: Record<string, ReplicaSessionRecord>;
 }
 
-interface StreamingStoreActions {
+interface ReplicaStoreActions {
   attach: (client: ApiClient, sessionId: string, baseUrl: string, projectId: string, agentId: string, initialMessage?: string, accessToken?: string | null) => void;
   detach: (sessionId: string) => void;
   disconnect: (sessionId: string) => void;
@@ -76,7 +77,7 @@ interface StreamingStoreActions {
   loadMore: (client: ApiClient, sessionId: string, agentId: string) => void;
 }
 
-export const useStreamingStore = create<StreamingStoreState & StreamingStoreActions>((set, get) => {
+export const useReplicaStore = create<ReplicaStoreState & ReplicaStoreActions>((set, get) => {
   let cleanupTimer: ReturnType<typeof setInterval> | undefined;
   const runtimes = new ChatRuntimeRegistry();
   const frameQueue = new Map<string, ReplicaFrame[]>();
@@ -90,7 +91,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
   ): void {
     const prev = get().sessions[sessionId];
     if (!prev) return;
-    const view = deriveReplica(replica);
+    const view = prev.derivedFrom === replica ? prev.view : deriveReplica(replica);
     set((state) => {
       const current = state.sessions[sessionId];
       if (!current) return state;
@@ -147,7 +148,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
           replica = reduceReplica(replica, frame, now);
           if (frame.type === "replayCompleted") sawReplayCompleted = true;
         }
-        const view = deriveReplica(replica);
+        const view = record.derivedFrom === replica ? record.view : deriveReplica(replica);
         if (view.streaming !== record.view.streaming) {
           streamingNotifications.push({ projectId: record.projectId, sessionId, streaming: view.streaming });
         }
@@ -162,6 +163,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
             ...record,
             replica,
             view,
+            derivedFrom: replica,
             messages: view.messages,
             streaming: view.streaming,
             hasMore: replica.durable.hasMore,
@@ -270,10 +272,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
 
     let kind: SyncKind;
     if (trigger === "replay") {
-      const durable = record.replica.durable;
-      kind = durable.mode === "unknown" && durable.entries.length === 0 && durable.highSeq === null
-        ? "initial"
-        : "catchup";
+      kind = !record.replica.everReady ? "initial" : "catchup";
     } else if (trigger === "violation") {
       kind = "full";
     } else {
@@ -298,7 +297,13 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       client,
       agentId: record.agentId,
       sessionId,
-      emit: (frame: ReplicaFrame) => enqueueFrame(sessionId, frame),
+      emit: (frame: ReplicaFrame) => {
+        if (frame.type === "message_settled" || frame.type === "turn_withdrawn" || frame.type === "turn_retried") {
+          enqueueFrame(sessionId, { type: "syncSettled", frame });
+          return;
+        }
+        enqueueFrame(sessionId, frame);
+      },
       getState: () => {
         const current = get().sessions[sessionId];
         return current && current.generation === generation ? current.replica : undefined;
@@ -367,6 +372,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       const record: ReplicaSessionRecord = {
         replica,
         view,
+        derivedFrom: replica,
         messages: view.messages,
         streaming: view.streaming,
         hasMore: replica.durable.hasMore,
@@ -590,6 +596,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     loadMore(client, sessionId, agentId) {
       const record = get().sessions[sessionId];
       if (!record || record.loadingMore || !record.replica.durable.hasMore || record.replica.durable.oldestLoadedId === null) return;
+      const generation = record.generation;
       set((state) => {
         const current = state.sessions[sessionId];
         if (!current) return state;
@@ -598,7 +605,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       client.getSessionMessagesPage(agentId, sessionId, { limit: 20, before: record.replica.durable.oldestLoadedId })
         .then((result) => {
           const current = get().sessions[sessionId];
-          if (!current) return;
+          if (!current || current.generation !== generation) return;
           commitReplica(sessionId, reduceReplica(current.replica, {
             type: "loadMoreApplied",
             page: {

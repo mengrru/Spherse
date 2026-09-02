@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ChatMessage } from "../types";
-import { useStreamingStore } from "../replica-store";
+import { useReplicaStore } from "../replica-store";
 
 const NEAR_BOTTOM_THRESHOLD = 100;
 
@@ -70,7 +70,7 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
 
     if (!restoredScrollRef.current) {
       restoredScrollRef.current = true;
-      const saved = useStreamingStore.getState().sessions[sessionId]?.scrollPosition;
+      const saved = useReplicaStore.getState().sessions[sessionId]?.scrollPosition;
       if (saved && saved < 0) {
         container.scrollTop = saved;
         syncBottomState();
@@ -107,7 +107,7 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
     const container = containerRef.current;
     if (!container) return;
     return () => {
-      useStreamingStore.getState().setScrollPosition(sessionId, scrollTopRef.current);
+      useReplicaStore.getState().setScrollPosition(sessionId, scrollTopRef.current);
     };
   }, [sessionId]);
 

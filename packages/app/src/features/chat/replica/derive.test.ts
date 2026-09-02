@@ -138,6 +138,88 @@ describe("derive: settle-crossing golden (run zone ≡ durable derivation)", () 
     expect(withChanges?._runChanges).toEqual([
       { path: "/repo/a.ts", ops: [{ toolCallId: "w1", toolName: "write_file", args: { path: "/repo/a.ts" } }] },
     ]);
+
+    const cold = run([
+      {
+        type: "snapshotApplied",
+        snapshot: {
+          entries: [
+            { id: 0, message: userMessage("edit") },
+            { id: 1, message: assistantToolCallMessage("", [writeFileCall]) },
+            { id: 2, message: commandToolResult("w1") },
+          ],
+          hasMore: false,
+          oldestId: 0,
+        },
+        full: true,
+      },
+      { type: "syncSucceeded" },
+    ]);
+    expect(deriveReplica(cold).messages).toEqual(live);
+  });
+
+  it("renders approval/question control cards identically across the settle crossing", () => {
+    const runCommand = { id: "c1", name: "run_command", arguments: { command: "npm test", cwd: "/repo" } };
+    const frames: ReplicaFrame[] = [
+      { type: "message_settled", seq: 0, message: userMessage("run tests") },
+      { type: "agent_start" },
+      { type: "message_end", message: assistantToolCallMessage("working", [runCommand]), seq: 1 },
+      { type: "message_settled", seq: 1, message: assistantToolCallMessage("working", [runCommand]) },
+      { type: "tool_execution_start", toolCallId: "c1", toolName: "run_command", args: { command: "npm test", cwd: "/repo" } },
+      { type: "control_request", requestId: "req-1", kind: "approval", toolCallId: "c1", toolName: "run_command", args: { command: "npm test" } },
+      { type: "control_resolved", requestId: "req-1", kind: "approval", approved: true },
+      {
+        type: "message_end",
+        seq: 2,
+        message: {
+          ...commandToolResult("c1"),
+          toolCallId: "c1",
+        },
+      },
+      {
+        type: "message_settled",
+        seq: 2,
+        message: {
+          ...commandToolResult("c1"),
+          toolCallId: "c1",
+        },
+      },
+      { type: "agent_end", messages: [] },
+      { type: "run_status", active: false },
+      { type: "syncSucceeded" },
+    ];
+    const live = deriveReplica(run(frames)).messages;
+
+    const cold = run([
+      {
+        type: "snapshotApplied",
+        snapshot: {
+          entries: [
+            { id: 0, message: userMessage("run tests") },
+            { id: 1, message: assistantToolCallMessage("working", [runCommand]) },
+            {
+              id: 2,
+              message: {
+                ...commandToolResult("c1"),
+                toolCallId: "c1",
+              },
+            },
+          ],
+          hasMore: false,
+          oldestId: 0,
+        },
+        full: true,
+      },
+      { type: "syncSucceeded" },
+    ]);
+    expect(deriveReplica(cold).messages).toEqual(live);
+
+    const commandCards = live
+      .flatMap((message) => message._toolCalls ?? [])
+      .map((toolCall) => toolCall._card)
+      .filter((card): card is NonNullable<typeof card> => card?.type === "command");
+    expect(commandCards).toHaveLength(1);
+    expect(commandCards[0]).toMatchObject({ status: "completed", command: "npm test", stdout: "ok" });
   });
 });
 

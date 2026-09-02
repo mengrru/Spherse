@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { closeProjectCascade } from "./project-lifecycle";
 import { useAppStore, type ProjectState } from "../stores/app-store";
 import { useProjectDataStore } from "../stores/project-data-store";
-import { useStreamingStore } from "../features/chat/replica-store";
+import { useReplicaStore } from "../features/chat/replica-store";
 import { useAgentSessionListUiStore } from "../features/agent-session-list/store";
 import { queryClient } from "../queries/client";
 import { projectQueryKeys } from "../queries/keys";
@@ -30,12 +30,13 @@ function createBridge(closeProjectImpl?: ReturnType<typeof vi.fn>): HostBridge {
 }
 
 function seedStreamingSession(sessionId: string, projectId: string): void {
-  useStreamingStore.setState((state) => ({
+  useReplicaStore.setState((state) => ({
     sessions: {
       ...state.sessions,
       [sessionId]: {
         replica: initialReplicaOf(),
         view: { keyed: [], messages: [], streaming: false },
+        derivedFrom: null,
         messages: [],
         streaming: false,
         lastActivityAt: Date.now(),
@@ -84,7 +85,7 @@ describe("closeProjectCascade", () => {
       activeProjectId: null,
       initializing: false,
     });
-    useStreamingStore.setState({ sessions: {} });
+    useReplicaStore.setState({ sessions: {} });
     useProjectDataStore.setState({ projects: {} });
     useAgentSessionListUiStore.setState({ collapsedAgentIdsByProject: {} });
   });
@@ -99,8 +100,8 @@ describe("closeProjectCascade", () => {
     expect(useAppStore.getState().projects.has("p1")).toBe(false);
     expect(useAppStore.getState().activeProjectId).toBe("p2");
     expect(bridge.project?.setLastActiveProject).toHaveBeenCalledWith("p2");
-    expect(useStreamingStore.getState().sessions.s1).toBeUndefined();
-    expect(useStreamingStore.getState().sessions.s2).toBeDefined();
+    expect(useReplicaStore.getState().sessions.s1).toBeUndefined();
+    expect(useReplicaStore.getState().sessions.s2).toBeDefined();
     expect(queryClient.getQueryData(projectQueryKeys.sessions("p1"))).toBeUndefined();
     expect(useAgentSessionListUiStore.getState().collapsedAgentIdsByProject.p1).toBeUndefined();
     expect(useProjectDataStore.getState().projects.p1).toBeUndefined();
@@ -116,7 +117,7 @@ describe("closeProjectCascade", () => {
 
     expect(useAppStore.getState().projects.has("p1")).toBe(true);
     expect(useAppStore.getState().activeProjectId).toBe("p1");
-    expect(useStreamingStore.getState().sessions.s1).toBeDefined();
+    expect(useReplicaStore.getState().sessions.s1).toBeDefined();
     expect(queryClient.getQueryData(projectQueryKeys.sessions("p1"))).toBeDefined();
     expect(useAgentSessionListUiStore.getState().collapsedAgentIdsByProject.p1).toBeDefined();
     expect(useProjectDataStore.getState().projects.p1).toBeDefined();

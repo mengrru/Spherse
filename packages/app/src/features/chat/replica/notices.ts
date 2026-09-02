@@ -17,12 +17,6 @@ export function initialNotices(): NoticesZone {
   return { items: [] };
 }
 
-let noticeSeq = 0;
-export function nextNoticeId(): string {
-  noticeSeq += 1;
-  return `notice-${noticeSeq}`;
-}
-
 export function appendNotice(notices: NoticesZone, notice: ChatNotice): NoticesZone {
   return { items: [...notices.items, notice] };
 }

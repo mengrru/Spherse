@@ -57,6 +57,13 @@ export function parseAgentMessage(payload: unknown): AgentMessage {
   return isAgentMessage(payload) ? payload : FALLBACK_MESSAGE;
 }
 
+export function parseSettledAgentMessage(payload: unknown): AgentMessage {
+  if (!isAgentMessage(payload)) {
+    throw new Error("invalid settled message payload");
+  }
+  return payload;
+}
+
 function parseToolResultMessages(payload: unknown): ToolResultMessage[] {
   if (!Array.isArray(payload)) return [];
   return payload.filter(isToolResultMessage);
@@ -171,14 +178,16 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
     case "message_end":
       return {
         type: "message_end",
-        message: parseAgentMessage(event.message),
+        message: event.seq !== undefined
+          ? parseSettledAgentMessage(event.message)
+          : parseAgentMessage(event.message),
         ...(event.seq !== undefined ? { seq: event.seq } : {}),
       };
     case "message_settled":
       return {
         type: "message_settled",
         seq: event.seq,
-        message: parseAgentMessage(event.message),
+        message: parseSettledAgentMessage(event.message),
         ...(event.intentId !== undefined ? { intentId: event.intentId } : {}),
       };
     case "turn_retried":

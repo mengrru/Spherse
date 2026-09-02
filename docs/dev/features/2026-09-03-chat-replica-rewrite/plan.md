@@ -80,10 +80,10 @@ interface RunTail {
 
 ### sync（`replica/sync.ts`，successor of history-reconciler）
 
-- 冷启动（durable 空）：tier③ 快照 page1（范围替换 full）→ tier② `since=highSeq` 确认模式 / 补快照后事件；410 → `legacySnapshotMode`
+- 冷启动（`everReady=false`，不受 replay buffer 帧污染）：tier③ 快照 full → tier② `since=highSeq` 确认模式 / 补快照后事件；410 → `legacySnapshotMode`
 - 重连（`replayCompleted` 后）：tier② `since=highSeq` + hasMore 续拉；410 → tier③ 刷新 + snapshot 模式
-- 水位线失效（`resyncNeeded`）→ tier③ full 重同步
-- 快照后前缀与 `oldestSeq` 之间留洞 → tier② 补 `[highSeq+1, oldestSeq)`，失败丢弃前缀
+- 水位线失效（`resyncNeeded` = 缺失 seq）→ tier③ full 重同步；tier② 帧经 `syncSettled` 宽松插入（与 live 交错乱序不告警）
+- ~~快照后留洞补拉~~：不实现——初始完整页 + loadMore 连续前插 + 范围替换保前缀共同保证无洞（design #6 已记录修订）；唯一洞来源由水位线失效兜底
 - 失败重试 `[1,2,5]s`（沿用）；曾 ready 会话失败保持 ready；`historyError` 语义与 ConnectionBanner 契约不变
 - `loadMore`：tier③ `before=oldestLoadedId` 反向分页 → durable 头部插入（不触发水位线）
 

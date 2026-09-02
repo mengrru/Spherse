@@ -2,7 +2,7 @@ import { registerAction } from "../registry";
 import { respond } from "../respond";
 import { toast } from "sonner";
 import { translate, normalizeLocale } from "@spherse/i18n";
-import { useStreamingStore } from "../../features/chat/replica-store";
+import { useReplicaStore } from "../../features/chat/replica-store";
 import { useSettingsStore } from "../../stores/settings-store";
 import { ApiError } from "../../lib/api";
 import { openChat } from "./open-chat";
@@ -26,7 +26,7 @@ registerAction("sendMessage", async (params, ctx) => {
     return;
   }
 
-  const { sendMessage: wsSend, sessions: wsSessions } = useStreamingStore.getState();
+  const { sendMessage: wsSend, sessions: wsSessions } = useReplicaStore.getState();
 
   if (wsSessions[sessionId]?.streaming) {
     respond(ctx, false, { error: "session_busy" });

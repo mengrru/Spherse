@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { ApiClient } from "../../../lib/api";
 import type { AttachedImage, ChatMessage } from "../types";
-import { useStreamingStore } from "../replica-store";
+import { useReplicaStore } from "../replica-store";
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
 
@@ -23,26 +23,26 @@ export function useChatSession({
   accessToken?: string | null;
 }) {
   useEffect(() => {
-    useStreamingStore.getState().attach(client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken);
-    return () => useStreamingStore.getState().detach(sessionId);
+    useReplicaStore.getState().attach(client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken);
+    return () => useReplicaStore.getState().detach(sessionId);
   }, [client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken]);
 
-  const messages = useStreamingStore(
+  const messages = useReplicaStore(
     (s) => s.sessions[sessionId]?.messages ?? EMPTY_MESSAGES,
   );
-  const streaming = useStreamingStore(
+  const streaming = useReplicaStore(
     (s) => s.sessions[sessionId]?.streaming ?? false,
   );
-  const historyStatus = useStreamingStore(
+  const historyStatus = useReplicaStore(
     (s) => s.sessions[sessionId]?.historyStatus ?? "pending",
   );
-  const connectionStatus = useStreamingStore(
+  const connectionStatus = useReplicaStore(
     (s) => s.sessions[sessionId]?.connectionStatus ?? "disconnected",
   );
-  const historyError = useStreamingStore(
+  const historyError = useReplicaStore(
     (s) => s.sessions[sessionId]?.historyError ?? false,
   );
-  const reconnectFailed = useStreamingStore(
+  const reconnectFailed = useReplicaStore(
     (s) => s.sessions[sessionId]?.reconnectFailed ?? false,
   );
   const loading =
@@ -55,15 +55,15 @@ export function useChatSession({
     connectionStatus,
     historyError,
     reconnectFailed,
-    sendMessage: (text: string, image?: AttachedImage) => useStreamingStore.getState().sendMessage(sessionId, text, image),
-    retry: () => useStreamingStore.getState().retry(sessionId),
-    withdrawLastTurn: () => useStreamingStore.getState().withdrawLastTurn(sessionId),
-    abort: () => useStreamingStore.getState().abort(sessionId),
-    reconnect: () => useStreamingStore.getState().reconnect(sessionId),
-    retryHistory: () => useStreamingStore.getState().retryHistory(client, agentId, sessionId),
+    sendMessage: (text: string, image?: AttachedImage) => useReplicaStore.getState().sendMessage(sessionId, text, image),
+    retry: () => useReplicaStore.getState().retry(sessionId),
+    withdrawLastTurn: () => useReplicaStore.getState().withdrawLastTurn(sessionId),
+    abort: () => useReplicaStore.getState().abort(sessionId),
+    reconnect: () => useReplicaStore.getState().reconnect(sessionId),
+    retryHistory: () => useReplicaStore.getState().retryHistory(client, agentId, sessionId),
     respondApproval: (requestId: string, approved: boolean) =>
-      useStreamingStore.getState().respondApproval(sessionId, requestId, approved),
+      useReplicaStore.getState().respondApproval(sessionId, requestId, approved),
     respondQuestion: (requestId: string, answer: string) =>
-      useStreamingStore.getState().respondQuestion(sessionId, requestId, answer),
+      useReplicaStore.getState().respondQuestion(sessionId, requestId, answer),
   };
 }

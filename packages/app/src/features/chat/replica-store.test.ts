@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useStreamingStore } from "./replica-store";
+import { useReplicaStore } from "./replica-store";
 import { collectPendingApprovals } from "./model/approval-notice";
 import { useProjectDataStore } from "../../stores/project-data-store";
 import type { ApiClient } from "../../lib/api";
@@ -95,8 +95,8 @@ describe("replica-store resilience", () => {
   });
 
   afterEach(() => {
-    for (const id of Object.keys(useStreamingStore.getState().sessions)) {
-      useStreamingStore.getState().disconnect(id);
+    for (const id of Object.keys(useReplicaStore.getState().sessions)) {
+      useReplicaStore.getState().disconnect(id);
     }
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -111,7 +111,7 @@ describe("replica-store resilience", () => {
 
   async function attachAndConnect(sessionId = "s1", client?: ApiClient) {
     const apiClient = client ?? createMockClient();
-    useStreamingStore.getState().attach(apiClient, sessionId, BASE_URL, "p1", "a1");
+    useReplicaStore.getState().attach(apiClient, sessionId, BASE_URL, "p1", "a1");
     const socket = mock.instances[mock.instances.length - 1];
     socket.readyState = OPEN;
     socket.onopen?.({} as Event);
@@ -132,7 +132,7 @@ describe("replica-store resilience", () => {
   }
 
   function sessionOf(sessionId: string) {
-    return useStreamingStore.getState().sessions[sessionId];
+    return useReplicaStore.getState().sessions[sessionId];
   }
 
   it("attach opens a websocket to the chat endpoint", async () => {
@@ -150,6 +150,60 @@ describe("replica-store resilience", () => {
     expect(sessionOf("cold").messages.map((message) => message.content)).toEqual(["cached"]);
     expect(sessionOf("cold").historyStatus).toBe("ready");
     void socket;
+  });
+
+  it("attaching a session with an in-flight run replays confirmation frames and still snapshots full history", async () => {
+    const client = createMockClient({
+      page: { entries: [
+        { id: 0, message: userMessage("older turn") },
+        { id: 1, message: assistantText("older reply") },
+        { id: 4, message: userMessage("in-flight turn") },
+      ] },
+    });
+    useReplicaStore.getState().attach(client, "live", BASE_URL, "p1", "a1");
+    const socket = mock.instances[mock.instances.length - 1];
+    socket.readyState = OPEN;
+    socket.onopen?.({} as Event);
+    await settle(2);
+    emit(socket, [
+      { type: "message_settled", seq: 4, message: userMessage("in-flight turn") },
+      { type: "message_start", message: { role: "assistant", content: [], timestamp: 1 } },
+      { type: "message_update", message: assistantText("streaming…") },
+      { type: "run_status", active: true },
+    ]);
+    await settle();
+
+    expect(client.getSessionMessagesPage).toHaveBeenCalledWith("a1", "live", { limit: 20 });
+    const record = sessionOf("live");
+    expect(record.messages.map((message) => message.content)).toEqual([
+      "older turn",
+      "older reply",
+      "in-flight turn",
+      "streaming…",
+    ]);
+    expect(record.streaming).toBe(true);
+    expect(record.historyStatus).toBe("ready");
+  });
+
+  it("sync completion fails a sending intent only after the link went down (no duplicate-send retry window)", async () => {
+    const socket = await attachAndConnect("intent-live");
+    useReplicaStore.getState().sendMessage("intent-live", "in flight");
+    await settle(2);
+    emit(socket, [{ type: "run_status", active: true }]);
+    await settle(2);
+
+    const live = sessionOf("intent-live");
+    expect(live.messages.at(-1)?._sendFailed).toBeUndefined();
+
+    socket.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    const reopened = mock.instances[mock.instances.length - 1];
+    reopened.readyState = OPEN;
+    reopened.onopen?.({} as Event);
+    emit(reopened, [{ type: "run_status", active: false }]);
+    await settle();
+
+    expect(sessionOf("intent-live").messages.some((message) => message._sendFailed)).toBe(true);
   });
 
   it("heartbeat sends ping every 30s", async () => {
@@ -185,7 +239,7 @@ describe("replica-store resilience", () => {
   describe("sendMessage (intents)", () => {
     it("attaches an optimistic user message, the intentId wire frame, and settles via the confirmation frame", async () => {
       const socket = await attachAndConnect("send1");
-      useStreamingStore.getState().sendMessage("send1", "hello");
+      useReplicaStore.getState().sendMessage("send1", "hello");
       await settle(2);
 
       const record = sessionOf("send1");
@@ -206,7 +260,7 @@ describe("replica-store resilience", () => {
     it("marks the intent failed when the socket is closed at send time", async () => {
       const socket = await attachAndConnect("send2");
       socket.readyState = CLOSED;
-      useStreamingStore.getState().sendMessage("send2", "never sent");
+      useReplicaStore.getState().sendMessage("send2", "never sent");
       await settle(2);
       const last = sessionOf("send2").messages.at(-1);
       expect(last).toMatchObject({ content: "never sent", _sendFailed: true });
@@ -223,7 +277,7 @@ describe("replica-store resilience", () => {
         previewUrl: `${BASE_URL}/preview/x.png`,
       };
 
-      useStreamingStore.getState().sendMessage("img1", "look", image);
+      useReplicaStore.getState().sendMessage("img1", "look", image);
       await settle(2);
 
       expect(sessionOf("img1").messages.at(-1)).toMatchObject({
@@ -244,7 +298,7 @@ describe("replica-store resilience", () => {
 
     it("sends a text-only message without attachments when no image is provided", async () => {
       const socket = await attachAndConnect("img2");
-      useStreamingStore.getState().sendMessage("img2", "hello");
+      useReplicaStore.getState().sendMessage("img2", "hello");
       await settle(2);
 
       const payload = sentPayloads(socket).find((p) => p.type === "message" && p.content === "hello");
@@ -256,7 +310,7 @@ describe("replica-store resilience", () => {
   describe("withdraw", () => {
     it("sends withdraw and applies turn_withdrawn{seq, upTo} to drop the last user turn", async () => {
       const socket = await attachAndConnect("w1");
-      useStreamingStore.getState().sendMessage("w1", "q2");
+      useReplicaStore.getState().sendMessage("w1", "q2");
       const intentId = sentPayloads(socket).find((p) => p.type === "message")?.intentId;
       emit(socket, [
         { type: "message_settled", seq: 0, message: userMessage("q2"), intentId },
@@ -267,7 +321,7 @@ describe("replica-store resilience", () => {
       await settle(2);
       expect(sessionOf("w1").streaming).toBe(false);
 
-      useStreamingStore.getState().withdrawLastTurn("w1");
+      useReplicaStore.getState().withdrawLastTurn("w1");
       expect(sentPayloads(socket)).toContainEqual({ type: "withdraw" });
 
       emit(socket, [{ type: "turn_withdrawn", seq: 0, upTo: 2 }]);
@@ -277,29 +331,29 @@ describe("replica-store resilience", () => {
 
     it("is a no-op while streaming", async () => {
       const socket = await attachAndConnect("w2");
-      useStreamingStore.getState().sendMessage("w2", "hi");
+      useReplicaStore.getState().sendMessage("w2", "hi");
       await settle(2);
       expect(sessionOf("w2").streaming).toBe(true);
 
-      useStreamingStore.getState().withdrawLastTurn("w2");
+      useReplicaStore.getState().withdrawLastTurn("w2");
       expect(sentPayloads(socket)).not.toContainEqual({ type: "withdraw" });
     });
 
     it("is a no-op when the last user message failed to send", async () => {
       const socket = await attachAndConnect("w3");
       socket.readyState = CLOSED;
-      useStreamingStore.getState().sendMessage("w3", "never sent");
+      useReplicaStore.getState().sendMessage("w3", "never sent");
       await settle(2);
       const failed = sessionOf("w3").messages.at(-1);
       expect(failed?._sendFailed).toBe(true);
 
-      useStreamingStore.getState().withdrawLastTurn("w3");
+      useReplicaStore.getState().withdrawLastTurn("w3");
       expect(sentPayloads(socket)).not.toContainEqual({ type: "withdraw" });
     });
 
     it("marks a withdraw failure error bubble as non-retryable", async () => {
       const socket = await attachAndConnect("w4");
-      useStreamingStore.getState().sendMessage("w4", "q1");
+      useReplicaStore.getState().sendMessage("w4", "q1");
       const intentId = sentPayloads(socket).find((p) => p.type === "message")?.intentId;
       emit(socket, [
         { type: "message_settled", seq: 0, message: userMessage("q1"), intentId },
@@ -308,7 +362,7 @@ describe("replica-store resilience", () => {
       ]);
       await settle(2);
 
-      useStreamingStore.getState().withdrawLastTurn("w4");
+      useReplicaStore.getState().withdrawLastTurn("w4");
       emit(socket, [
         { type: "error", message: "Session \"w4\" has no user message to withdraw", code: "PERMANENT" },
       ]);
@@ -338,7 +392,7 @@ describe("replica-store resilience", () => {
 
     it("does not reconnect after disconnect", async () => {
       const socket = await attachAndConnect();
-      useStreamingStore.getState().disconnect("s1");
+      useReplicaStore.getState().disconnect("s1");
       await vi.advanceTimersByTimeAsync(60_000);
       expect(mock.instances).toHaveLength(1);
       expect(socket.closeSpy).toHaveBeenCalled();
@@ -373,7 +427,7 @@ describe("replica-store resilience", () => {
           { id: 2, message: assistantText("old answer") },
         ] },
       });
-      useStreamingStore.getState().attach(client, "s7", BASE_URL, "p1", "a1");
+      useReplicaStore.getState().attach(client, "s7", BASE_URL, "p1", "a1");
       const socket = mock.instances[mock.instances.length - 1];
       socket.readyState = OPEN;
       socket.onopen?.({} as Event);
@@ -392,7 +446,7 @@ describe("replica-store resilience", () => {
 
     it("keeps the active run streaming across an unexpected close", async () => {
       const socket = await attachAndConnect("s2");
-      useStreamingStore.getState().sendMessage("s2", "hi");
+      useReplicaStore.getState().sendMessage("s2", "hi");
       emit(socket, [
         { type: "run_status", active: true },
         { type: "message_start", message: { role: "assistant", content: [], timestamp: 1 } },
@@ -411,7 +465,7 @@ describe("replica-store resilience", () => {
 
     it("does not resend the initial message on reconnect", async () => {
       const client = createMockClient();
-      useStreamingStore.getState().attach(client, "s4", BASE_URL, "p1", "a1", "first message");
+      useReplicaStore.getState().attach(client, "s4", BASE_URL, "p1", "a1", "first message");
       const socket = mock.instances[mock.instances.length - 1];
       socket.readyState = OPEN;
       socket.onopen?.({} as Event);
@@ -447,13 +501,13 @@ describe("replica-store resilience", () => {
 
     it("recovers a response that completed while the websocket was disconnected via tier-2 events", async () => {
       const client = createMockClient();
-      useStreamingStore.getState().attach(client, "s9", BASE_URL, "p1", "a1");
+      useReplicaStore.getState().attach(client, "s9", BASE_URL, "p1", "a1");
       const socket = mock.instances[mock.instances.length - 1];
       socket.readyState = OPEN;
       socket.onopen?.({} as Event);
       await settle(2);
 
-      useStreamingStore.getState().sendMessage("s9", "hi");
+      useReplicaStore.getState().sendMessage("s9", "hi");
       const intentId = sentPayloads(socket).find((p) => p.type === "message")?.intentId;
       emit(socket, [
         { type: "run_status", active: true },
@@ -501,7 +555,7 @@ describe("replica-store resilience", () => {
         oldestId: 9,
       });
 
-      useStreamingStore.getState().resync(client, "a1", "sr");
+      useReplicaStore.getState().resync(client, "a1", "sr");
       await settle(2);
 
       const record = sessionOf("sr");
@@ -517,7 +571,7 @@ describe("replica-store resilience", () => {
     it("resync is a no-op when the session is not cached", async () => {
       const client = createMockClient();
       const spy = client.getSessionMessagesPage as ReturnType<typeof vi.fn>;
-      useStreamingStore.getState().resync(client, "a1", "unknown");
+      useReplicaStore.getState().resync(client, "a1", "unknown");
       await settle(2);
       expect(spy).not.toHaveBeenCalled();
     });
@@ -525,7 +579,7 @@ describe("replica-store resilience", () => {
     it("resync does not clobber a session that is actively streaming", async () => {
       const client = createMockClient();
       const socket = await attachAndConnect("ss", client);
-      useStreamingStore.getState().sendMessage("ss", "hi");
+      useReplicaStore.getState().sendMessage("ss", "hi");
       emit(socket, [{ type: "run_status", active: true }]);
       await settle(2);
 
@@ -533,7 +587,7 @@ describe("replica-store resilience", () => {
       const spy = client.getSessionMessagesPage as ReturnType<typeof vi.fn>;
       spy.mockClear();
 
-      useStreamingStore.getState().resync(client, "a1", "ss");
+      useReplicaStore.getState().resync(client, "a1", "ss");
       await settle(2);
 
       expect(spy).not.toHaveBeenCalled();
@@ -553,7 +607,7 @@ describe("replica-store resilience", () => {
         hasMore: false,
         oldestId: 3,
       });
-      useStreamingStore.getState().loadMore(client, "lm", "a1");
+      useReplicaStore.getState().loadMore(client, "lm", "a1");
       await settle(2);
 
       const record = sessionOf("lm");
@@ -576,7 +630,7 @@ describe("replica-store resilience", () => {
 
     it("leaves a transient failure rendered without auto retry", async () => {
       const socket = await attachAndConnect("rt1");
-      useStreamingStore.getState().sendMessage("rt1", "hi");
+      useReplicaStore.getState().sendMessage("rt1", "hi");
       const intentId = sentPayloads(socket).find((p) => p.type === "message")?.intentId;
       emit(socket, [
         { type: "message_settled", seq: 0, message: userMessage("hi"), intentId },
@@ -595,7 +649,7 @@ describe("replica-store resilience", () => {
 
     it("sends a retry frame and marks the failed turn retrying (retry-last)", async () => {
       const socket = await attachAndConnect("rt2");
-      useStreamingStore.getState().sendMessage("rt2", "hi");
+      useReplicaStore.getState().sendMessage("rt2", "hi");
       const intentId = sentPayloads(socket).find((p) => p.type === "message")?.intentId;
       emit(socket, [
         { type: "message_settled", seq: 0, message: userMessage("hi"), intentId },
@@ -603,7 +657,7 @@ describe("replica-store resilience", () => {
       ]);
       await settle(2);
 
-      useStreamingStore.getState().retry("rt2");
+      useReplicaStore.getState().retry("rt2");
       await settle(2);
 
       expect(sentPayloads(socket)).toContainEqual({ type: "retry" });
@@ -617,12 +671,12 @@ describe("replica-store resilience", () => {
     it("pure-resends (rebuild intent) for a send failure without triggering withdraw", async () => {
       const socket = await attachAndConnect("rt3");
       socket.readyState = CLOSED;
-      useStreamingStore.getState().sendMessage("rt3", "hi");
+      useReplicaStore.getState().sendMessage("rt3", "hi");
       await settle(2);
       expect(sessionOf("rt3").messages.at(-1)?._sendFailed).toBe(true);
 
       socket.readyState = OPEN;
-      useStreamingStore.getState().retry("rt3");
+      useReplicaStore.getState().retry("rt3");
       await settle(2);
 
       expect(sentPayloads(socket).some((p) => p.type === "withdraw")).toBe(false);
@@ -634,7 +688,7 @@ describe("replica-store resilience", () => {
 
     it("composite-resends (withdraw then send) when the failed pair is committed", async () => {
       const socket = await attachAndConnect("rt4");
-      useStreamingStore.getState().sendMessage("rt4", "hi");
+      useReplicaStore.getState().sendMessage("rt4", "hi");
       const intentId = sentPayloads(socket).find((p) => p.type === "message")?.intentId;
       emit(socket, [
         { type: "message_settled", seq: 0, message: userMessage("hi"), intentId },
@@ -644,7 +698,7 @@ describe("replica-store resilience", () => {
       ]);
       await settle(2);
 
-      useStreamingStore.getState().retry("rt4");
+      useReplicaStore.getState().retry("rt4");
       await settle(2);
 
       expect(sentPayloads(socket)).toContainEqual({ type: "withdraw" });
@@ -660,7 +714,7 @@ describe("replica-store resilience", () => {
 
     it("falls back to a pure send when the composite withdraw is rejected", async () => {
       const socket = await attachAndConnect("rt5");
-      useStreamingStore.getState().sendMessage("rt5", "hi");
+      useReplicaStore.getState().sendMessage("rt5", "hi");
       const intentId = sentPayloads(socket).find((p) => p.type === "message")?.intentId;
       emit(socket, [
         { type: "message_settled", seq: 0, message: userMessage("hi"), intentId },
@@ -670,7 +724,7 @@ describe("replica-store resilience", () => {
       ]);
       await settle(2);
 
-      useStreamingStore.getState().retry("rt5");
+      useReplicaStore.getState().retry("rt5");
       await settle(2);
       emit(socket, [{ type: "error", message: "cannot withdraw", code: "PERMANENT" }]);
       await settle(2);
@@ -697,17 +751,17 @@ describe("replica-store resilience", () => {
   describe("project lifecycle", () => {
     it("disconnectProject drops all sessions of the project and keeps other projects", async () => {
       const client = createMockClient();
-      useStreamingStore.getState().attach(client, "target-1", BASE_URL, "closing", "a1");
+      useReplicaStore.getState().attach(client, "target-1", BASE_URL, "closing", "a1");
       const targetSocket = mock.instances[mock.instances.length - 1];
       targetSocket.readyState = OPEN;
       targetSocket.onopen?.({} as Event);
-      useStreamingStore.getState().attach(client, "other-1", BASE_URL, "staying", "a1");
+      useReplicaStore.getState().attach(client, "other-1", BASE_URL, "staying", "a1");
       const otherSocket = mock.instances[mock.instances.length - 1];
       otherSocket.readyState = OPEN;
       otherSocket.onopen?.({} as Event);
       await settle(2);
 
-      useStreamingStore.getState().disconnectProject("closing");
+      useReplicaStore.getState().disconnectProject("closing");
       await vi.advanceTimersByTimeAsync(60_000);
 
       expect(sessionOf("target-1")).toBeUndefined();
@@ -719,12 +773,12 @@ describe("replica-store resilience", () => {
 
     it("disconnectProject disconnects a streaming session that cleanupExpired would keep", async () => {
       const client = createMockClient();
-      useStreamingStore.getState().attach(client, "leak", BASE_URL, "closing", "a1");
+      useReplicaStore.getState().attach(client, "leak", BASE_URL, "closing", "a1");
       const socket = mock.instances[mock.instances.length - 1];
       socket.readyState = OPEN;
       socket.onopen?.({} as Event);
 
-      useStreamingStore.getState().sendMessage("leak", "hi");
+      useReplicaStore.getState().sendMessage("leak", "hi");
       emit(socket, [{ type: "run_status", active: true }]);
       await settle(2);
       expect(sessionOf("leak").streaming).toBe(true);
@@ -733,7 +787,7 @@ describe("replica-store resilience", () => {
       expect(sessionOf("leak")).toBeDefined();
 
       const instancesBeforeDisconnect = mock.instances.length;
-      useStreamingStore.getState().disconnectProject("closing");
+      useReplicaStore.getState().disconnectProject("closing");
       expect(sessionOf("leak")).toBeUndefined();
 
       await vi.advanceTimersByTimeAsync(60_000);
@@ -744,7 +798,7 @@ describe("replica-store resilience", () => {
   describe("control responses", () => {
     it("respondQuestion routes the answer to the session runtime", async () => {
       const socket = await attachAndConnect("qs1");
-      const delivered = useStreamingStore.getState().respondQuestion("qs1", "req-1", "yes");
+      const delivered = useReplicaStore.getState().respondQuestion("qs1", "req-1", "yes");
       expect(delivered).toBe(true);
       expect(sentPayloads(socket)).toContainEqual({
         type: "resolve_control_request",
@@ -755,7 +809,7 @@ describe("replica-store resilience", () => {
     });
 
     it("respondQuestion returns false when no runtime is attached", () => {
-      expect(useStreamingStore.getState().respondQuestion("missing", "req-1", "yes")).toBe(false);
+      expect(useReplicaStore.getState().respondQuestion("missing", "req-1", "yes")).toBe(false);
     });
   });
 
@@ -765,7 +819,7 @@ describe("replica-store resilience", () => {
       const socket = await attachAndConnect("side");
       setStreaming.mockClear();
 
-      useStreamingStore.getState().sendMessage("side", "hi");
+      useReplicaStore.getState().sendMessage("side", "hi");
       const intentId = sentPayloads(socket).find((p) => p.type === "message")?.intentId;
       await settle(2);
       expect(setStreaming).toHaveBeenCalledWith("p1", "side", true);
@@ -786,7 +840,7 @@ describe("replica-store resilience", () => {
     it("probes attached sessions and closes the socket when no pong arrives", async () => {
       const socket = await attachAndConnect("s1");
       socket.sent.length = 0;
-      useStreamingStore.getState().resumeProbeAll();
+      useReplicaStore.getState().resumeProbeAll();
       expect(sentPayloads(socket)).toContainEqual({ type: "ping" });
       await vi.advanceTimersByTimeAsync(5000);
       expect(socket.closeSpy).toHaveBeenCalled();
@@ -795,7 +849,7 @@ describe("replica-store resilience", () => {
     it("keeps the socket open when a pong arrives within the probe timeout", async () => {
       const socket = await attachAndConnect("s1");
       socket.sent.length = 0;
-      useStreamingStore.getState().resumeProbeAll();
+      useReplicaStore.getState().resumeProbeAll();
       socket.onmessage?.({ data: JSON.stringify({ type: "pong" }) } as MessageEvent);
       await vi.advanceTimersByTimeAsync(6000);
       expect(socket.closeSpy).not.toHaveBeenCalled();
@@ -803,14 +857,14 @@ describe("replica-store resilience", () => {
 
     it("skips detached sessions", async () => {
       const socket = await attachAndConnect("s1");
-      useStreamingStore.getState().detach("s1");
+      useReplicaStore.getState().detach("s1");
       socket.sent.length = 0;
-      useStreamingStore.getState().resumeProbeAll();
+      useReplicaStore.getState().resumeProbeAll();
       expect(socket.sent).toHaveLength(0);
     });
 
     it("is a no-op when no session ever attached", () => {
-      expect(() => useStreamingStore.getState().resumeProbeAll()).not.toThrow();
+      expect(() => useReplicaStore.getState().resumeProbeAll()).not.toThrow();
     });
   });
 
@@ -824,7 +878,7 @@ describe("replica-store resilience", () => {
       ]);
       await settle(2);
 
-      const sessions = useStreamingStore.getState().sessions;
+      const sessions = useReplicaStore.getState().sessions;
       const pending = collectPendingApprovals(sessions);
       expect(pending).toContainEqual(
         expect.objectContaining({ kind: "approval", requestId: "req-9", sessionId: "ap1", projectId: "p1", command: "npm test" }),

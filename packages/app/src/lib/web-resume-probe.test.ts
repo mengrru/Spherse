@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setupWebResumeProbe } from "./web-resume-probe";
 import { useBusStore } from "../stores/bus-store";
-import { useStreamingStore } from "../features/chat/replica-store";
+import { useReplicaStore } from "../features/chat/replica-store";
 
 let resumeProbeSpy: ReturnType<typeof vi.fn>;
 let resumeProbeAllSpy: ReturnType<typeof vi.fn>;
@@ -10,7 +10,7 @@ let dispose: (() => void) | null = null;
 beforeEach(() => {
   vi.useFakeTimers();
   resumeProbeSpy = vi.spyOn(useBusStore.getState(), "resumeProbe").mockReturnValue();
-  resumeProbeAllSpy = vi.spyOn(useStreamingStore.getState(), "resumeProbeAll").mockReturnValue();
+  resumeProbeAllSpy = vi.spyOn(useReplicaStore.getState(), "resumeProbeAll").mockReturnValue();
 });
 
 afterEach(() => {

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useMatch, useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { collectPendingApprovals } from "./model/approval-notice";
-import { useStreamingStore } from "./replica-store";
+import { useReplicaStore } from "./replica-store";
 import { getCachedAgents, getCachedSession } from "../../queries/project";
 
 export function ApprovalNoticeBridge() {
@@ -20,7 +20,7 @@ export function ApprovalNoticeBridge() {
 
   useEffect(() => {
     const check = () => {
-      const pending = collectPendingApprovals(useStreamingStore.getState().sessions);
+      const pending = collectPendingApprovals(useReplicaStore.getState().sessions);
       const pendingIds = new Set(pending.map((item) => item.requestId));
       notifiedRef.current = new Set([...notifiedRef.current].filter((id) => pendingIds.has(id)));
       for (const item of pending) {
@@ -48,7 +48,7 @@ export function ApprovalNoticeBridge() {
       }
     };
     check();
-    const unsubscribe = useStreamingStore.subscribe(check);
+    const unsubscribe = useReplicaStore.subscribe(check);
     return unsubscribe;
   }, [navigate, activeSessionId]);
 

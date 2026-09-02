@@ -46,7 +46,8 @@ export function reduceRunTail(run: RunTail, event: AgentEvent, ctx: RunTailConte
     case "run_status":
       return event.active ? startRun(run, ctx) : endRun(run);
     case "agent_end":
-      return endRun(run);    case "message_start":
+      return endRun(run);
+    case "message_start":
       return isAssistantMessage(event.message) ? applyMessageStart(run) : run;
     case "message_update":
       return isAssistantMessage(event.message) ? applyMessageUpdate(run, event.message.content) : run;

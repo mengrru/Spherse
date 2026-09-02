@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
-import { useStreamingStore } from "../chat/replica-store";
+import { useReplicaStore } from "../chat/replica-store";
 import { useTriggerStore, getCachedTriggersForAgent } from "./store";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { useReconnectedSync } from "../../hooks/useReconnectedSync";
@@ -46,7 +46,7 @@ export function TriggerEventBridge() {
     if (type === "trigger_completed") {
       const p = payload as { agentId: string; triggerId: string; sessionId: string };
       showTriggerNotification(p.agentId, p.triggerId, p.sessionId);
-      if (client) useStreamingStore.getState().resync(client, p.agentId, p.sessionId);
+      if (client) useReplicaStore.getState().resync(client, p.agentId, p.sessionId);
     }
   });
 

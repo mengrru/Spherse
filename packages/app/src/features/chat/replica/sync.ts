@@ -53,8 +53,8 @@ export async function runSync(deps: SyncDeps, kind: SyncKind): Promise<void> {
             snapshot: toSnapshotInput(snapshot),
             full: false,
           });
-        } catch {
-          // keep whatever snapshot entries are already loaded
+        } catch (snapshotErr) {
+          void snapshotErr;
         }
       }
       deps.emit({ type: "syncSucceeded" });

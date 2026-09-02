@@ -35,13 +35,31 @@ describe("durable zone", () => {
     expect(durable).toBe(before);
   });
 
-  it("flags a watermark violation when a forward frame carries a missing seq below the watermark", () => {
+  it("flags a watermark violation carrying the missing seq when a forward frame arrives below the watermark", () => {
     let durable = initialDurable();
     durable = applySettledFrame(durable, { type: "message_settled", seq: 10, message: userMessage("q") }).durable;
     const outcome = applySettledFrame(durable, { type: "message_settled", seq: 7, message: assistantMessage("gap") });
     expect(outcome.violation).toBe(true);
-    expect(outcome.durable.resyncNeeded).toBe(true);
-    expect(outcome.durable.entries.map((entry) => entry.seq)).toEqual([10]);
+    expect(outcome.durable.resyncNeeded).toBe(7);
+    expect(outcome.durable.entries.map((entry) => entry.seq)).toEqual([7, 10]);
+  });
+
+  it("applies tier-2 frames below the watermark leniently without flagging (tier-2 vs live interleaving is expected)", () => {
+    let durable = initialDurable();
+    durable = applySettledFrame(durable, { type: "message_settled", seq: 50, message: userMessage("live-first") }).durable;
+    durable = applySettledFrame(durable, { type: "message_settled", seq: 49, message: assistantMessage("tier2-late") }, { lenientReorder: true }).durable;
+    durable = applySettledFrame(durable, { type: "message_settled", seq: 48, message: assistantMessage("tier2-late") }, { lenientReorder: true }).durable;
+    expect(durable.resyncNeeded).toBe(null);
+    expect(durable.entries.map((entry) => entry.seq)).toEqual([48, 49, 50]);
+  });
+
+  it("clears the violation flag when the withdrawal range covers the missing seq", () => {
+    let durable = initialDurable();
+    durable = applySettledFrame(durable, { type: "message_settled", seq: 10, message: userMessage("q") }).durable;
+    durable = applySettledFrame(durable, { type: "message_settled", seq: 8, message: assistantMessage("gap") }).durable;
+    expect(durable.resyncNeeded).toBe(8);
+    durable = applySettledFrame(durable, { type: "turn_withdrawn", seq: 7, upTo: 11 }).durable;
+    expect(durable.resyncNeeded).toBe(null);
   });
 
   it("deletes the [seq, upTo) range for turn_withdrawn and advances the watermark to upTo", () => {
@@ -116,7 +134,23 @@ describe("durable zone", () => {
 
     expect(durable.entries.map((entry) => entry.seq)).toEqual([0, 1]);
     expect(durable.highSeq).toBe(1);
-    expect(durable.resyncNeeded).toBe(false);
+    expect(durable.resyncNeeded).toBe(null);
+  });
+
+  it("flags a resync when a deletion frame is the first eventized data in snapshot mode", () => {
+    let durable = initialDurable();
+    durable = applySnapshot(durable, {
+      entries: [{ id: 5, message: userMessage("legacy row") }],
+      hasMore: false,
+      oldestId: 5,
+      full: false,
+    });
+    durable = enterSnapshotMode(durable);
+
+    const outcome = applySettledFrame(durable, { type: "turn_withdrawn", seq: 0, upTo: 2 });
+    expect(outcome.durable.mode).toBe("events");
+    expect(outcome.durable.entries).toEqual([]);
+    expect(outcome.durable.resyncNeeded).toBe(0);
   });
 
   it("drops all snapshot entries when the first eventized frame arrives in snapshot mode", () => {

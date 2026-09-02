@@ -1,5 +1,5 @@
 import { useBusStore } from "../stores/bus-store";
-import { useStreamingStore } from "../features/chat/replica-store";
+import { useReplicaStore } from "../features/chat/replica-store";
 import { createResumeProbeScheduler } from "./resume-probe-scheduler";
 
 const RESUME_PROBE_THRESHOLD_MS = 30_000;
@@ -24,7 +24,7 @@ export function setupWebResumeProbe(): () => void {
 
   const probe = () => {
     useBusStore.getState().resumeProbe();
-    useStreamingStore.getState().resumeProbeAll();
+    useReplicaStore.getState().resumeProbeAll();
   };
 
   const onVisibility = () => {
