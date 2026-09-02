@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -19,6 +19,21 @@ const silentLogger: Logger = {
   fatal: () => {},
   child: () => silentLogger,
 };
+
+const { getChatStreamFnMock, resolveModelByIdMock } = vi.hoisted(() => ({
+  getChatStreamFnMock: vi.fn(() => vi.fn()),
+  resolveModelByIdMock: vi.fn((modelId: string) => {
+    const slashIdx = modelId.indexOf("/");
+    return slashIdx >= 0
+      ? { id: modelId.slice(slashIdx + 1), provider: modelId.slice(0, slashIdx) }
+      : { id: modelId, provider: modelId };
+  }),
+}));
+
+const stubCatalog = {
+  getChatStreamFn: getChatStreamFnMock,
+  resolveModelById: resolveModelByIdMock,
+} as never;
 
 const TEST_AGENT_PROFILE = `---
 name: Test Agent
@@ -41,17 +56,24 @@ describe("session events contract: real SessionManager through real route + hub"
   let tmpDir: string;
   let runtime: ProjectRuntime;
   let app: FastifyInstance;
+  let hub: ChatSessionHub;
   let agentId: string;
   let agentSlug: string;
 
   beforeAll(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "spherse-events-contract-"));
-    runtime = await createProject(tmpDir, { projectName: "Contract", logger: silentLogger });
+    runtime = await createProject(tmpDir, {
+      projectName: "Contract",
+      logger: silentLogger,
+      modelCatalog: stubCatalog,
+      defaultModel: "openai/gpt-4o",
+    });
     const projectStore = runtime.projectManager.projectStore;
     const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
     agentId = testAgent.getProfile().id;
     agentSlug = testAgent.getProfile().slug;
 
+    hub = new ChatSessionHub(silentLogger as never);
     app = Fastify();
     app.addHook("preHandler", async (req: FastifyRequest) => {
       req.projectCtx = {
@@ -60,7 +82,7 @@ describe("session events contract: real SessionManager through real route + hub"
       };
     });
     registerCoreErrorHandler(app);
-    registerSessionRoutes(app, {} as ProjectRegistry, new ChatSessionHub(silentLogger as never));
+    registerSessionRoutes(app, {} as ProjectRegistry, hub);
     await app.ready();
   });
 
@@ -190,5 +212,91 @@ describe("session events contract: real SessionManager through real route + hub"
       url: `/api/projects/p1/agents/${agentId}/sessions/no-such-session/events`,
     });
     expect(res.statusCode).toBe(404);
+  });
+
+  it("clamps limit to 200 and reports hasMore", async () => {
+    const sessionId = seedSession(
+      Array.from({ length: 205 }, (_, i) => ({
+        type: "user/message",
+        data: { message: { role: "user", content: `q${i}`, timestamp: i + 1 } },
+      })),
+    );
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/projects/p1/agents/${agentId}/sessions/${sessionId}/events?limit=500`,
+    });
+    const json = res.json() as { events: unknown[]; hasMore: boolean };
+    expect(json.events).toHaveLength(200);
+    expect(json.hasMore).toBe(true);
+  });
+
+  it("real write facade: sendMessage intentId → settled frames → withdraw broadcast, through real SessionManager", async () => {
+    const finalAssistant = {
+      role: "assistant",
+      content: [{ type: "text", text: "ok" }],
+      stopReason: "stop",
+      usage: {
+        input: 1,
+        output: 1,
+        cacheRead: 0,
+        cacheWrite: 0,
+        totalTokens: 2,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      },
+      timestamp: Date.now(),
+    };
+    getChatStreamFnMock.mockImplementation(
+      () =>
+        (async () => ({
+          async *[Symbol.asyncIterator]() {},
+          result: async () => finalAssistant,
+        })) as never,
+    );
+
+    const sessionId = agentStore().sessions.createSession();
+    const events: any[] = [];
+    const attachment = hub.attach(
+      "p1",
+      runtime.sessionRuntime,
+      agentId,
+      sessionId,
+      (event) => events.push(event),
+    );
+    expect(await attachment.ready).toBe(true);
+
+    await attachment.sendMessage("hello", [], "01JFACADE");
+
+    const userSettled = events.find(
+      (event) => event.type === "message_settled" && event.message?.role === "user",
+    );
+    expect(userSettled).toMatchObject({ seq: 0, intentId: "01JFACADE" });
+    const assistantSettled = events.filter(
+      (event) => event.type === "message_settled" && event.message?.role === "assistant",
+    );
+    expect(assistantSettled).toHaveLength(1);
+    expect(assistantSettled[0].seq).toBe(2);
+    const transientEnd = events.find(
+      (event) => event.type === "message_end" && event.message?.role === "assistant",
+    );
+    expect(transientEnd.seq).toBe(2);
+    expect(events.indexOf(transientEnd)).toBeLessThan(events.indexOf(assistantSettled[0]));
+
+    await attachment.withdrawLastTurn();
+    expect(events.at(-1)).toEqual({ type: "turn_withdrawn", seq: 0, upTo: 4 });
+
+    const endpoint = await app.inject({
+      method: "GET",
+      url: `/api/projects/p1/agents/${agentId}/sessions/${sessionId}/events`,
+    });
+    const frames = (endpoint.json() as { events: any[] }).events;
+    expect(frames.map((frame) => frame.type)).toEqual([
+      "message_settled",
+      "message_settled",
+      "turn_withdrawn",
+    ]);
+    expect(frames[2]).toEqual({ type: "turn_withdrawn", seq: 0, upTo: 4 });
+
+    attachment.close();
+    getChatStreamFnMock.mockImplementation(() => vi.fn() as never);
   });
 });

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   parseChatClientMessage,
   parseChatServerEvent,
+  parseContract,
+  schemas,
 } from "../index.js";
 
 describe("chat websocket control contract", () => {
@@ -210,5 +212,99 @@ describe("chat websocket control contract", () => {
     expect(() =>
       parseChatServerEvent({ type: "turn_withdrawn", seq: "3" }),
     ).toThrow(/Invalid payload/);
+  });
+
+  it("accepts turn_withdrawn with optional upTo", () => {
+    const event = { type: "turn_withdrawn", seq: 3, upTo: 6 };
+    expect(parseChatServerEvent(event)).toEqual(event);
+    expect(parseChatServerEvent({ type: "turn_withdrawn", seq: 3 })).toEqual({
+      type: "turn_withdrawn",
+      seq: 3,
+    });
+  });
+
+  it("accepts message_settled with and without intentId", () => {
+    const withIntent = {
+      type: "message_settled",
+      seq: 42,
+      message: { role: "user", content: "hi" },
+      intentId: "01JTEST",
+    };
+    expect(parseChatServerEvent(withIntent)).toEqual(withIntent);
+    const withoutIntent = {
+      type: "message_settled",
+      seq: 43,
+      message: { role: "assistant", content: [] },
+    };
+    expect(parseChatServerEvent(withoutIntent)).toEqual(withoutIntent);
+  });
+
+  it("rejects message_settled without seq or message", () => {
+    expect(() =>
+      parseChatServerEvent({ type: "message_settled", message: { role: "user", content: "hi" } }),
+    ).toThrow(/Invalid payload/);
+    expect(() => parseChatServerEvent({ type: "message_settled", seq: 42 })).toThrow(
+      /Invalid payload/,
+    );
+    expect(() => parseChatServerEvent({ type: "message_settled", seq: "42", message: {} })).toThrow(
+      /Invalid payload/,
+    );
+  });
+
+  it("accepts message_end with optional seq", () => {
+    const event = {
+      type: "message_end",
+      message: { role: "assistant", content: [] },
+      seq: 42,
+    };
+    expect(parseChatServerEvent(event)).toEqual(event);
+    expect(
+      parseChatServerEvent({ type: "message_end", message: { role: "assistant", content: [] } }),
+    ).toEqual({ type: "message_end", message: { role: "assistant", content: [] } });
+    expect(() => parseChatServerEvent({ type: "message_end", message: {}, seq: "42" })).toThrow(
+      /Invalid payload/,
+    );
+  });
+
+  it("accepts turn_retried and rejects malformed variants", () => {
+    const event = { type: "turn_retried", seq: 50, abandonedSeqs: [45, 46] };
+    expect(parseChatServerEvent(event)).toEqual(event);
+    expect(() => parseChatServerEvent({ type: "turn_retried", seq: 50 })).toThrow(
+      /Invalid payload/,
+    );
+    expect(() =>
+      parseChatServerEvent({ type: "turn_retried", seq: 50, abandonedSeqs: [true] }),
+    ).toThrow(/Invalid payload/);
+  });
+
+  it("accepts client message with optional intentId and rejects malformed intentId", () => {
+    expect(
+      parseChatClientMessage({ type: "message", content: "hi", intentId: "01JWS" }),
+    ).toEqual({ type: "message", content: "hi", intentId: "01JWS" });
+    expect(parseChatClientMessage({ type: "message", content: "hi" })).toEqual({
+      type: "message",
+      content: "hi",
+    });
+    expect(() =>
+      parseChatClientMessage({ type: "message", content: "hi", intentId: 42 }),
+    ).toThrow(/Invalid payload/);
+  });
+
+  it("settledFrame schema accepts the three frame kinds and rejects others", () => {
+    const { settledFrame } = schemas;
+    expect(
+      parseContract(settledFrame, { type: "message_settled", seq: 1, message: {} }),
+    ).toEqual({ type: "message_settled", seq: 1, message: {} });
+    expect(parseContract(settledFrame, { type: "turn_withdrawn", seq: 1, upTo: 3 })).toEqual({
+      type: "turn_withdrawn",
+      seq: 1,
+      upTo: 3,
+    });
+    expect(parseContract(settledFrame, { type: "turn_retried", seq: 5, abandonedSeqs: [] })).toEqual(
+      { type: "turn_retried", seq: 5, abandonedSeqs: [] },
+    );
+    expect(() => parseContract(settledFrame, { type: "message_end", seq: 1 })).toThrow(
+      /Invalid payload/,
+    );
   });
 });

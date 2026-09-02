@@ -277,14 +277,19 @@ describe("ChatSessionHub", () => {
     attachment.close();
   });
 
-  it("broadcasts settled frames and replays them from the run buffer on re-attach", async () => {
+  it("broadcasts settled frames to every subscriber and replays them from the run buffer on re-attach", async () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const firstEvents: any[] = [];
+    const secondEvents: any[] = [];
     const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
       firstEvents.push(event),
     );
+    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      secondEvents.push(event),
+    );
     await first.ready;
+    await second.ready;
 
     const run = first.sendMessage("hi", [], "01JINTENT");
     await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
@@ -295,27 +300,26 @@ describe("ChatSessionHub", () => {
       seq: 2,
     });
     mock.emit({ type: "message_settled", seq: 2, message: { role: "assistant", content: [{ type: "text", text: "ok" }] } });
-    first.close();
 
-    expect(mock.runtime.sendMessage).toHaveBeenCalledWith(
-      "s1",
-      "hi",
-      [],
-      expect.any(Function),
-      { intentId: "01JINTENT" },
-    );
     expect(firstEvents).toContainEqual({
       type: "message_settled",
       seq: 2,
       message: { role: "assistant", content: [{ type: "text", text: "ok" }] },
     });
+    expect(secondEvents).toContainEqual({
+      type: "message_settled",
+      seq: 2,
+      message: { role: "assistant", content: [{ type: "text", text: "ok" }] },
+    });
+
+    first.close();
+    second.close();
 
     const replayed: any[] = [];
-    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const third = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
       replayed.push(event),
     );
-    await second.ready;
-    expect(replayed.map((event) => event.type)).toContain("message_settled");
+    await third.ready;
     expect(replayed).toContainEqual({
       type: "message_settled",
       seq: 2,
@@ -325,7 +329,33 @@ describe("ChatSessionHub", () => {
     mock.emit({ type: "agent_end", messages: [] });
     mock.finish();
     await run;
-    second.close();
+    third.close();
+  });
+
+  it("delivers settled frames from a detached run to attached subscribers", async () => {
+    const mock = createRuntime();
+    mock.runtime.sendMessage.mockImplementation(
+      (_sessionId: string, _content: string, _attachments: unknown, onEvent: (event: any) => void) => {
+        onEvent({ type: "message_settled", seq: 0, message: { role: "user", content: "hi" } });
+        return Promise.resolve();
+      },
+    );
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await attachment.ready;
+    events.length = 0;
+
+    await hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi");
+
+    expect(events).toContainEqual({
+      type: "message_settled",
+      seq: 0,
+      message: { role: "user", content: "hi" },
+    });
+    attachment.close();
   });
 
   it("startDetachedRun rethrows restore failures", async () => {

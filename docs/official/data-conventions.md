@@ -151,7 +151,7 @@ frontmatter 字段：
   - `title` 是可选用户可编辑标题——重命名只更新 title 不动 `updated_at`，列表按 `updated_at DESC, id DESC` 排序，保持「最近活动」语义
 - `events` 表（append-only，主键 `(session_id, seq)`）：信封为 `{ type, seq, time, data, schema_version }`。当前事件词汇表：
   - `turn/start`、`turn/end`（reason: completed / aborted / error）
-  - `user/message`（data 可选 `source: "triggered"` + `triggerName`，trigger 发送标记；absent = 手动发送）、`assistant/message`、`tool/result`
+  - `user/message`（data 可选 `source: "triggered"` + `triggerName`，trigger 发送标记，absent = 手动发送；可选 `intentId`，客户端乐观写回执标记，经确认帧回显）、`assistant/message`、`tool/result`
   - `compaction/applied`（anchorSeq、digestContent、digestSource、excludedSeqs）
   - `turn/retried`（abandonedSeqs）、`turn/withdrawn`（seq）
 

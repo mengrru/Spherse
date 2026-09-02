@@ -283,6 +283,42 @@ describe("AgentRunner settled frames", () => {
     expect(transientEnd.seq).toBe(toolSeq);
   });
 
+  it("locks current behavior: an aborted assistant message_end still persists and settles", async () => {
+    const { runner, sessionId } = await createRunner();
+    const seen: any[] = [];
+    const abortedPartial = {
+      role: "assistant",
+      content: [{ type: "text", text: "partial before abort" }],
+      stopReason: "aborted",
+      timestamp: Date.now(),
+    };
+    stubAgentLoopWith(runner, (emit) => {
+      emit({ type: "message_start", message: abortedPartial });
+      emit({ type: "message_update", message: abortedPartial });
+      emit({ type: "message_end", message: abortedPartial });
+      emit({ type: "agent_end", messages: [abortedPartial] });
+    });
+
+    await runner.sendMessage("hello", [], (e) => seen.push(e));
+
+    const persisted = eventsOf(runner)
+      .filter((e: any) => e.type === "assistant/message")
+      .map((e: any) => e.data.message);
+    expect(persisted).toEqual([abortedPartial]);
+    expect(seen).toContainEqual({
+      type: "message_settled",
+      seq: eventsOf(runner).find((e: any) => e.type === "assistant/message")?.seq,
+      message: abortedPartial,
+    });
+    const turnEnd = eventsOf(runner).find((e: any) => e.type === "turn/end");
+    expect(turnEnd.data.reason).toBe("aborted");
+
+    const store = ((deps.projectStore as any).getAgent(agentId) as any).sessions;
+    expect(deriveHistoryEntries(store.readEvents(sessionId)).map((e) => e.message)).toContainEqual(
+      abortedPartial,
+    );
+  });
+
   it("emits turn_retried with the appended event seq before transient events", async () => {
     const { runner } = await createRunner();
     const failed = {

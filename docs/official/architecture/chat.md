@@ -26,10 +26,12 @@ Composer.send
 
 ## Wire 协议（`contracts/websocket.ts`）
 
-- **client → server**：`message`（content + attachments 路径引用）、`abort`、`ping`、`retry`、`withdraw`、`resolve_control_request`（kind approval：approved / reason；kind question：answer）
+- **client → server**：`message`（content + attachments 路径引用 + 可选 `intentId` ULID，用于乐观写确认回执）、`abort`、`ping`、`retry`、`withdraw`、`resolve_control_request`（kind approval：approved / reason；kind question：answer）
 - **server → client**：
-  - pi 生命周期族：`agent_start` / `agent_end` / `turn_start` / `turn_end` / `message_start` / `message_update` / `message_end` / `tool_execution_start` / `tool_execution_update` / `tool_execution_end`
-  - session 级：`run_status`（active）、`control_request` / `control_resolved`、`turn_withdrawn`（seq）、`error`（message + code）、`pong`
+  - pi 生命周期族：`agent_start` / `agent_end` / `turn_start` / `turn_end` / `message_start` / `message_update` / `message_end`（可选 `seq`：assistant/toolResult 携带其落库 seq，与瞬态事件同帧序下发）/ `tool_execution_start` / `tool_execution_update` / `tool_execution_end`
+  - **确认帧族**（已落库事实，客户端按 seq 幂等 fold；`message_end{seq}` 与 `message_settled{seq}` 等效）：`message_settled`（seq + message + 可选 intentId）、`turn_withdrawn`（seq + upTo，撤回区间 `[seq, upTo)`）、`turn_retried`（seq + abandonedSeqs）
+  - session 级：`run_status`（active）、`control_request` / `control_resolved`、`error`（message + code）、`pong`
+  - v1 客户端对未知帧 parser 抛错、由 runtime try/catch 跳过——新增帧类型无需版本握手
 - **error code**（`classify-run-error.ts`）：`MODEL_NOT_CONFIGURED`、`AUTH_ERROR`、`PERMANENT`、`TRANSIENT`。规则：
   - 401/403 → AUTH；429/5xx/网络错误 → TRANSIENT
   - 其余 4xx 及 `ConflictError` / `ValidationError` → PERMANENT
@@ -46,15 +48,16 @@ Composer.send
 - **HTTP 静默发送**：`POST .../sessions/:id/messages`，目标会话未 attach WS 时 UI SDK 走此路径（`open:false` 只控制不跳转导航）：
   - `startDetachedRun` 只递增 attachment 计数保持 channel 存活、不注册订阅者——调用方只拿 `{ok:true}`，run 失败经 error 事件到达 WS 订阅者
   - 与 WS 共享 run 序列化（running 时 409）
+- **事件增量端点**：`GET .../sessions/:id/events?since=&limit=`（cap 200 + hasMore 续拉）——hub channel `await ready`（restore 含 repairLog 修复）后从 log 投影确认帧词汇；未迁移 legacy 会话预检即拒（`MigrationRequiredError` → 410 `{reason: "legacy-unmigrated"}`），不触发迁移
 
 ## Core：一次 sendMessage（`agent-runner.ts`）
 
 1. guard 链：`ensureNotBusy`（in-flight 抛 ValidationError）→ 消费 pendingReload → `ensureModel` → `ensureWritable` → beforeTurn hook → 组装附件消息。所有权在 `ensureNotBusy` 通过时同步取得，覆盖至 afterTurn 结束；preflight 任一阶段抛错都会释放，不会写入 phantom turn 或卡死 busy 状态
 2. **先持久化**：`appendBatch([user/message, turn/start])` 成功后才 `agent.prompt`
 3. 事件经 EventPipeline（log → capability middlewares → 附件 sanitizer → persistMiddleware）流向 hub；control 事件旁路——`controlBus.swapEventSink` 直达 sink 不过中间件
-4. 落库映射：`message_end` → `assistant/message` / `tool/result`；`agent_end` → `turn/end`（reason 取自最后 assistant 的 stopReason）
-5. `retryLastTurn`：要求末条为失败 assistant；追加 `turn/retried`（abandonedSeqs）+ `turn/start`，`agent.continue()`
-6. `withdrawLastTurn`：定位最后 `user/message`，已被 abandoned/compaction 覆盖则拒绝；追加 `turn/withdrawn`
+4. 落库映射：`message_end` → `assistant/message` / `tool/result`；`agent_end` → `turn/end`（reason 取自最后 assistant 的 stopReason）。**确认帧发射**：assistant/toolResult 的瞬态 `message_end` 携带落库 seq 下发，紧随其后经 onEvent 发 `message_settled`（同一 publish 链路，WS 保序）；`user/message` 在 appendBatch 后、pipeline 创建前直发 `message_settled`（含 `intentId` 回执）
+5. `retryLastTurn`：要求末条为失败 assistant；追加 `turn/retried`（abandonedSeqs）+ `turn/start` 后经 onEvent 发 `turn_retried` 确认帧，再 `agent.continue()`
+6. `withdrawLastTurn`：定位最后 `user/message`，已被 abandoned/compaction 覆盖则拒绝；追加 `turn/withdrawn` 并返回 `{ seq, upTo }`（撤回区间 `[seq, upTo)`），hub 据此广播
 
 ## Renderer：runtime / store / reducer 三层
 

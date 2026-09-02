@@ -147,7 +147,8 @@ export class SessionManager {
     limit: number,
   ): { frames: SettledFrame[]; hasMore: boolean } {
     this.requireEventizedSession(agentId, sessionId);
-    const agentStore = this.deps.projectStore.getAgent(agentId)!;
+    const agentStore = this.deps.projectStore.getAgent(agentId);
+    if (!agentStore) return { frames: [], hasMore: false };
     return projectSettledFrames(
       agentStore.sessions.readEvents(sessionId),
       since,

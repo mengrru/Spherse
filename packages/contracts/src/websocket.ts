@@ -196,10 +196,12 @@ export const schemas = {
     }),
   ]),
   chatServerEvent,
+  settledFrame,
 } as const;
 
 export type ChatClientMessage = Static<typeof schemas.chatClientMessage>;
 export type ChatServerEvent = Static<typeof chatServerEvent>;
+export type SettledFrameContract = Static<typeof settledFrame>;
 
 export function parseChatClientMessage(payload: unknown): ChatClientMessage {
   return parseContract(schemas.chatClientMessage, payload);
