@@ -2,20 +2,21 @@ import { create } from "zustand";
 import type { ApiClient } from "../../../lib/api";
 import { useProjectDataStore } from "../../../stores/project-data-store";
 import type { AgentEvent } from "../model/agent-event-parse";
-import {
-  mergeHistoryMessages,
-  parseHistoryMessages,
-} from "../model/chat-history";
 import { ChatRuntimeRegistry } from "./chat-runtime-registry";
 import { ChatSessionRuntime } from "./chat-session-runtime";
 import {
+  loadMoreHistory,
+  refreshSessionHistory,
+  type HistorySessionPort,
+} from "./history-actions";
+import {
+  applySessionEvents,
   markRetrying,
-  reduceSessionEvents,
   type StreamingSessionData,
 } from "../model/chat-session-reducer";
 import { planRetry } from "../model/retry-plan";
 import { lastWithdrawableUserIndex } from "../model/withdrawable";
-import type { SendableImage, ChatMessage } from "../types";
+import type { SendableImage } from "../types";
 
 const DEFAULT_TTL_MS = 5 * 60 * 1000;
 const CLEANUP_INTERVAL_MS = 30 * 1000;
@@ -121,28 +122,13 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     get().sendMessage(sessionId, plan.content, plan.attachment);
   }
 
-  function settlePendingWithdraw(
-    session: StreamingSession,
-    events: AgentEvent[],
-  ): StreamingSession {
-    if (!session.pendingWithdraw) return session;
-    const failed = events.some((event) => event.type === "error");
-    if (!failed && !events.some((event) => event.type === "turn_withdrawn")) return session;
-    const messages = failed ? flagWithdrawError(session.messages) : session.messages;
-    return { ...session, messages, pendingWithdraw: false };
-  }
-
-  function flagWithdrawError(messages: ChatMessage[]): ChatMessage[] {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const message = messages[i];
-      if (message.role !== "assistant") break;
-      if (message._error) {
-        const next = [...messages];
-        next[i] = { ...message, _withdrawError: true };
-        return next;
-      }
+  function applyEventsAndNotify(sessionId: string, events: AgentEvent[]) {
+    const before = get().sessions[sessionId]?.streaming;
+    updateSession(sessionId, (session) => applySessionEvents(session, events, Date.now()));
+    const after = get().sessions[sessionId];
+    if (after && after.streaming !== before) {
+      useProjectDataStore.getState().setStreaming(after.projectId, sessionId, after.streaming);
     }
-    return messages;
   }
 
   function flushQueuedEvents() {
@@ -160,9 +146,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
       for (const [sessionId, events] of queued) {
         const session = next[sessionId];
         if (!session) continue;
-        const reduced = reduceSessionEvents(session, events, now);
-        const merged = reduced === session ? session : { ...session, ...reduced };
-        const settled = settlePendingWithdraw(merged, events);
+        const settled = applySessionEvents(session, events, now);
         if (settled === session) continue;
         if (settled.streaming !== session.streaming) {
           streamingChanges.push({ projectId: session.projectId, sessionId, streaming: settled.streaming });
@@ -242,6 +226,13 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     });
   }
 
+  function sessionPort(sessionId: string): HistorySessionPort<StreamingSession> {
+    return {
+      getSession: () => get().sessions[sessionId],
+      updateSession: (updater) => updateSession(sessionId, updater),
+    };
+  }
+
   function connect(client: ApiClient, sessionId: string, baseUrl: string, projectId: string, agentId: string, initialMessage: string | undefined, accessToken: string | null) {
     let runtime = runtimes.get(sessionId);
     if (!runtime) {
@@ -249,21 +240,7 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
         getSession: () => get().sessions[sessionId],
         updateSession: (updater) => updateSession(sessionId, updater),
         enqueueEvent: (event) => enqueueEvent(sessionId, event),
-        applyEvents: (events) => {
-          updateSession(sessionId, (session) => {
-            const reduced = reduceSessionEvents(session, events, Date.now());
-            const merged = reduced === session ? session : { ...session, ...reduced };
-            return settlePendingWithdraw(merged, events);
-          });
-          const session = get().sessions[sessionId];
-          if (session) {
-            useProjectDataStore.getState().setStreaming(
-              session.projectId,
-              sessionId,
-              session.streaming,
-            );
-          }
-        },
+        applyEvents: (events) => applyEventsAndNotify(sessionId, events),
         flushEvents: flushQueuedEvents,
         setStreaming: (streaming) => {
           setStreamingAndNotify(sessionId, projectId, streaming);
@@ -471,55 +448,11 @@ export const useStreamingStore = create<StreamingStoreState & StreamingStoreActi
     },
 
     loadMore(client, sessionId, agentId) {
-      const session = get().sessions[sessionId];
-      if (!session || session.loadingMore || !session.hasMore || session.oldestLoadedId === null) return;
-      updateSession(sessionId, (s) => ({ ...s, loadingMore: true }));
-      client.getSessionMessagesPage(agentId, sessionId, { limit: 20, before: session.oldestLoadedId })
-        .then((result) => {
-          const historyMessages = parseHistoryMessages(result.entries);
-          updateSession(sessionId, (s) => {
-            const messages = mergeHistoryMessages(s.messages, historyMessages);
-            return {
-              ...s,
-              messages,
-              hasMore: result.hasMore,
-              oldestLoadedId: result.oldestId,
-              loadingMore: false,
-            };
-          });
-        })
-        .catch((err: unknown) => {
-          console.warn("[streaming-store] failed to load more history:", err);
-          updateSession(sessionId, (s) => ({ ...s, loadingMore: false }));
-        });
+      loadMoreHistory(sessionPort(sessionId), client, agentId, sessionId);
     },
 
     refreshHistory(client, agentId, sessionId) {
-      const session = get().sessions[sessionId];
-      if (!session || session.streaming) return;
-      client.getSessionMessagesPage(agentId, sessionId, { limit: 20 })
-        .then((result) => {
-          const historyMessages = parseHistoryMessages(result.entries);
-          updateSession(sessionId, (s) => {
-            if (s.streaming) return s;
-            const messages = mergeHistoryMessages(s.messages, historyMessages);
-            return {
-              ...s,
-              messages,
-              hasMore: result.hasMore,
-              oldestLoadedId: result.oldestId,
-              historyStatus: "ready",
-              historyError: false,
-            };
-          });
-        })
-        .catch((err: unknown) => {
-          console.warn("[streaming-store] failed to refresh session history:", err);
-        });
+      refreshSessionHistory(sessionPort(sessionId), client, agentId, sessionId);
     },
   };
 });
-
-export { parseHistoryMessages } from "../model/chat-history";
-export { appendErrorMessage } from "../model/chat-session-reducer";
-export type { StreamingSessionData } from "../model/chat-session-reducer";

@@ -259,7 +259,7 @@ spherse/
 │   │       │   ├── activity-bar/         # 自治型 Activity Bar（项目头像轨、设置/添加按钮），内部读 app-store/app-ui-store 与 useProjectActions；pin 按钮通过 pinToggle prop 可选注入
 │   │       │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 running 运行态 feature store 与 TriggerEventBridge（trigger 域唯一事件接线：查询失效 + 运行态 + 通知）
 │   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
-│   │       │   ├── chat/                 # 对话 feature；model/ 放事件解析、历史投影、turn 分组派生与 reducer，runtime/ 放 streaming store、WS/心跳/重连 runtime，hooks/ 放 UI hooks，lib/ 放聚合/diff/format-time 纯函数，utils/ 放图片压缩（compress-image）；根目录保留页面组件、运行时 context、chat 专属类型与附件 UI（AttachmentBar/MessageAttachments）
+│   │   │   ├── chat/                 # 对话 feature；model/ 放事件解析、历史投影、turn 分组派生与 reducer，runtime/ 放 streaming store、WS runtime（心跳/重连/探活）、history 对账（history-reconciler）与分页动作（history-actions），hooks/ 放 UI hooks，lib/ 放聚合/diff/format-time 纯函数，utils/ 放图片压缩（compress-image）；根目录保留页面组件、运行时 context、chat 专属类型与附件 UI（AttachmentBar/MessageAttachments）
 │   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑、复制路径/刷新、冲突提示，ContentQueryBridge 集中处理 fs-watch/reconnect 缓存失效；二进制文件拦截渲染占位卡 UnsupportedFileCard（桌面端经 HostCapabilities.openFileExternal 提供「用默认应用打开」按钮）
 │   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
 │   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、主题隔离），复用 components/floating-frame；含 useFloatingSessionId
