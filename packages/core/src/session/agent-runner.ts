@@ -363,7 +363,8 @@ export class AgentRunner {
   }
 
   applyThinkingLevel(thinkingLevel: ThinkingLevel | undefined): void {
-    const next = thinkingLevel ?? "medium";
+    const profile = this.deps.projectStore.getAgent(this.agentId)?.getProfile();
+    const next = profile?.thinkingLevel ?? thinkingLevel ?? "medium";
     if (this.agent.state.thinkingLevel !== next) {
       this.agent.state.thinkingLevel = next;
     }
@@ -392,6 +393,8 @@ export class AgentRunner {
       );
       this.agent.state.systemPrompt = systemPrompt;
       this.agent.state.tools = tools;
+      this.applyDefaultModel(this.deps.runConfig.current().defaultModel);
+      this.applyThinkingLevel(this.deps.runConfig.current().thinkingLevel);
       this.agent.streamFunction = composeStreamFn(
         this.deps.modelCatalog,
         this.deps.runConfig.current().sampling,

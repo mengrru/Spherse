@@ -23,6 +23,7 @@ export interface AgentProfile {
   slug: string;
   createdAt?: number;
   model?: string;
+  thinkingLevel?: ThinkingLevel;
   tools?: string[];
   context?: string[];
   output?: {

@@ -644,6 +644,28 @@ Agent with time perception.`,
     expect(agent.state.tools).toEqual([]);
   });
 
+  it("applyReload re-applies model and thinkingLevel from fresh profile", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    runConfig.update({ defaultModel: "provider/global-default", thinkingLevel: "low" });
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const agent = agentOf(runner);
+    expect(agent.state.model?.id).toBe("global-default");
+    expect(agent.state.thinkingLevel).toBe("low");
+
+    agentStore._profile = {
+      ...agentStore._profile,
+      model: "provider/agent-own",
+      thinkingLevel: "high",
+    };
+
+    await runnerOf(runner).applyReload();
+
+    expect(agent.state.model?.id).toBe("agent-own");
+    expect(agent.state.model?.provider).toBe("provider");
+    expect(agent.state.thinkingLevel).toBe("high");
+  });
+
   it("retryLastTurn also consumes a pending reload before continuing (M5)", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();

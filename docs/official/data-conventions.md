@@ -89,7 +89,8 @@ frontmatter 字段：
 | `alias` | 否 | 设定后代替 `name` 显示在助手消息气泡；未设或留空回退 `name` |
 | `id` | 自动 | UUID；读取缺失时自动生成并回写 |
 | `createdAt` | 自动 | epoch ms；创建时生成后不变 |
-| `model` | 否 | 覆盖全局默认模型 |
+| `model` | 否 | 覆盖全局默认模型；所选模型已不在模型列表（过期）时回退全局默认 |
+| `thinkingLevel` | 否 | 覆盖全局思考强度，取值 `off` / `low` / `medium` / `high`；非法值忽略、未设回退全局设置 |
 | `tools` | 否 | 允许的工具名列表；缺省不分配任何工具 |
 | `context` | 否 | 项目根内相对路径列表，构建 system prompt 时预读注入；access policy 不可读的路径静默跳过 |
 | `yolo` | 否 | 自动放行：true 时危险工具跳过审批门，文件访问策略不受影响；仅 Agent Dialog 可改，`manage_agent` 不管理 |

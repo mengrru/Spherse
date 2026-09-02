@@ -2,8 +2,16 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
-import type { AgentProfile, TimePerceptionConfig } from "../types.js";
+import type { AgentProfile, ThinkingLevel, TimePerceptionConfig } from "../types.js";
 import { ValidationError } from "../errors.js";
+
+const THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "low", "medium", "high"];
+
+function parseThinkingLevel(raw: unknown): ThinkingLevel | undefined {
+  return typeof raw === "string" && THINKING_LEVELS.includes(raw as ThinkingLevel)
+    ? (raw as ThinkingLevel)
+    : undefined;
+}
 
 function parseTimePerception(raw: unknown): TimePerceptionConfig | undefined {
   if (raw == null || typeof raw !== "object") return undefined;
@@ -113,7 +121,8 @@ export class AgentProfileStore {
             : undefined,
         slug: this.slug,
         createdAt: data.createdAt,
-        model: data.model,
+        model: typeof data.model === "string" && data.model.trim() ? data.model : undefined,
+        thinkingLevel: parseThinkingLevel(data.thinkingLevel),
         tools: data.tools,
         context: data.context,
         output: data.output,

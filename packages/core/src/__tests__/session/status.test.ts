@@ -3,7 +3,6 @@ import { describe, it, expect, vi } from "vitest";
 const resolveModelByIdMock = vi.fn((modelId: string) => ({ id: modelId, provider: "x", contextWindow: 32768 }));
 
 import {
-  resolveEffectiveModelId,
   resolveContextWindow,
   extractLastUsageTotalTokens,
   computeSessionStatus,
@@ -22,24 +21,6 @@ const baseProfile: AgentProfile = {
   updatedAt: 0,
 };
 
-describe("resolveEffectiveModelId", () => {
-  it("prefers the profile model", () => {
-    expect(resolveEffectiveModelId({ ...baseProfile, model: "openai/gpt" }, "fallback")).toBe("openai/gpt");
-  });
-
-  it("falls back to the global default model", () => {
-    expect(resolveEffectiveModelId(baseProfile, "anthropic/claude")).toBe("anthropic/claude");
-  });
-
-  it("returns undefined when neither is set", () => {
-    expect(resolveEffectiveModelId(baseProfile, undefined)).toBeUndefined();
-  });
-
-  it("treats empty strings as unset", () => {
-    expect(resolveEffectiveModelId({ ...baseProfile, model: "" }, "")).toBeUndefined();
-  });
-});
-
 describe("resolveContextWindow", () => {
   it("returns the contextWindow from the resolved model", () => {
     resolveModelByIdMock.mockReturnValueOnce({ id: "m", provider: "p", contextWindow: 200000 });
@@ -57,9 +38,33 @@ describe("resolveContextWindow", () => {
     expect(resolveContextWindow({ ...baseProfile, model: "p/missing" }, resolveModelByIdMock)).toBeNull();
   });
 
+  it("falls back to the global default when the per-agent model is stale", () => {
+    resolveModelByIdMock.mockImplementationOnce(() => {
+      throw new Error("unknown model");
+    });
+    resolveModelByIdMock.mockReturnValueOnce({ id: "default", provider: "p", contextWindow: 128000 });
+    expect(
+      resolveContextWindow({ ...baseProfile, model: "p/stale" }, resolveModelByIdMock, "p/default"),
+    ).toBe(128000);
+  });
+
+  it("prefers the per-agent model over the global default", () => {
+    resolveModelByIdMock.mockReturnValueOnce({ id: "own", provider: "p", contextWindow: 64000 });
+    expect(
+      resolveContextWindow({ ...baseProfile, model: "p/own" }, resolveModelByIdMock, "p/default"),
+    ).toBe(64000);
+  });
+
   it("returns null when the resolved model lacks contextWindow", () => {
     resolveModelByIdMock.mockReturnValueOnce({ id: "m", provider: "p" });
     expect(resolveContextWindow({ ...baseProfile, model: "p/m" }, resolveModelByIdMock)).toBeNull();
+  });
+
+  it("does not fall back to the global default when the per-agent model resolves but lacks contextWindow", () => {
+    resolveModelByIdMock.mockReturnValueOnce({ id: "own", provider: "p" });
+    expect(
+      resolveContextWindow({ ...baseProfile, model: "p/own" }, resolveModelByIdMock, "p/default"),
+    ).toBeNull();
   });
 });
 

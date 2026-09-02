@@ -1,8 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { TranslationKey } from "@spherse/i18n";
+import type { ProviderCatalogItem } from "@spherse/core";
 import { parseAgentMarkdown, buildAgentMarkdown } from "./agent-markdown";
 import type { AgentFormData } from "./agent-markdown";
+import { useProjectCtx } from "../../context/project-context";
+import { useHostBridge } from "../../context/host-bridge-context";
+import { useApiClient } from "../../lib/use-connection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import {
   AlertDialog,
@@ -23,6 +27,7 @@ import { Switch } from "../../components/ui/switch";
 import { Label } from "../../components/ui/label";
 import { ToolPicker } from "./ToolPicker";
 import { ADVANCED_TOOL_IDS } from "./tool-registry";
+import { ModelConfigField, modelExistsInCatalog } from "./ModelConfigField";
 import { ContextPathField } from "./ContextPathField";
 import { TimePerceptionField } from "./TimePerceptionField";
 import { HintLabel } from "./HintLabel";
@@ -42,12 +47,46 @@ interface AgentDialogFormProps {
 
 export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDialogFormProps) {
   const { t } = useI18n();
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
+  const bridge = useHostBridge();
   const parsed = useMemo(() => parseAgentMarkdown(initial.raw), [initial.raw]);
   const [formData, setFormData] = useState<AgentFormData>(parsed.formData);
   const [themeContent, setThemeContent] = useState(initial.theme);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmTemplate, setConfirmTemplate] = useState<PromptTemplate | null>(null);
+  const [providers, setProviders] = useState<Record<string, ProviderCatalogItem> | null>(null);
+  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      client.getSupportedProviders().catch(() => null),
+      bridge.getSettings().catch(() => null),
+    ]).then(([catalog, settings]) => {
+      if (cancelled) return;
+      if (catalog) setProviders(catalog);
+      const keys: Record<string, string> = {};
+      for (const [id, credentials] of Object.entries(settings?.models?.text?.providers ?? {})) {
+        if (typeof credentials?.apiKey === "string" && credentials.apiKey.trim()) {
+          keys[id] = credentials.apiKey;
+        }
+      }
+      setApiKeys(keys);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [client, bridge]);
+
+  useEffect(() => {
+    if (providers == null) return;
+    setFormData((prev) => {
+      if (!prev.model || modelExistsInCatalog(prev.model, providers)) return prev;
+      return { ...prev, model: undefined };
+    });
+  }, [providers]);
 
   const handleSelectTemplate = (template: PromptTemplate) => {
     if (formData.systemPrompt.trim() === "") {
@@ -128,6 +167,16 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
                 placeholder={t("agent-dialog.aliasPlaceholder")}
               />
             </Field>
+            <ModelConfigField
+              providers={providers ?? {}}
+              apiKeys={apiKeys}
+              model={formData.model}
+              thinkingLevel={formData.thinkingLevel}
+              onModelChange={(model) => setFormData((prev) => ({ ...prev, model }))}
+              onThinkingLevelChange={(thinkingLevel) =>
+                setFormData((prev) => ({ ...prev, thinkingLevel }))
+              }
+            />
             <ToolPicker selectedTools={formData.tools} onToggleGroup={toggleGroup} />
             {hasAdvancedTool && (
               <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
