@@ -86,6 +86,7 @@ export class HistoryReconciler<T extends ChatSessionRuntimeState> {
             };
           });
           await this.coverLoadedWindow(client, agentId, sessionId, lowWater);
+          this.flushBuffered();
           succeeded = true;
           return;
         } catch (err) {
@@ -128,12 +129,17 @@ export class HistoryReconciler<T extends ChatSessionRuntimeState> {
       if (!this.callbacks.isCurrent() || !session) return;
       if (!session.hasMore || session.oldestLoadedId === null) return;
       if (session.oldestLoadedId <= lowWater) return;
-      let result;
+      let pendingResult: Awaited<ReturnType<ApiClient["getSessionMessagesPage"]>> | undefined;
+      let olderMessages;
       try {
-        result = await client.getSessionMessagesPage(agentId, sessionId, {
+        const result = await client.getSessionMessagesPage(agentId, sessionId, {
           limit: 20,
           before: session.oldestLoadedId,
         });
+        if (!this.callbacks.isCurrent()) return;
+        if (result.entries.length === 0) return;
+        olderMessages = parseHistoryMessages(result.entries);
+        pendingResult = result;
       } catch (err) {
         console.warn(
           "[history-reconciler] failed to cover loaded window:",
@@ -142,8 +148,7 @@ export class HistoryReconciler<T extends ChatSessionRuntimeState> {
         return;
       }
       if (!this.callbacks.isCurrent()) return;
-      if (result.entries.length === 0) return;
-      const olderMessages = parseHistoryMessages(result.entries);
+      const result = pendingResult;
       this.callbacks.updateSession((current) => {
         const merged = {
           ...current,

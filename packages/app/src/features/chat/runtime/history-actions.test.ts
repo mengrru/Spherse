@@ -200,4 +200,31 @@ describe("refreshSessionHistory", () => {
     );
     expect(client.getSessionMessagesPage).toHaveBeenCalledTimes(2);
   });
+
+  it("stops the backfill when the session starts streaming mid-refresh", async () => {
+    const harness = portOf(session({
+      messages: [{ role: "user", content: "q1", _messageId: 1 } as ChatMessage],
+      hasMore: true,
+      oldestLoadedId: 5,
+      historyStatus: "ready",
+    }));
+    const fetch = vi.fn(() =>
+      Promise.resolve({
+        entries: [{ id: 9, message: { role: "user", content: "new" } }],
+        hasMore: true,
+        oldestId: 9,
+      }));
+    const client = { getSessionMessagesPage: fetch } as unknown as ApiClient;
+
+    refreshSessionHistory(harness.port, client, "a1", "s1");
+    harness.port.updateSession((s) => ({ ...s, streaming: true }));
+    await vi.waitFor(() => {
+      expect(harness.state?.oldestLoadedId).toBe(5);
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(harness.state?.oldestLoadedId).toBe(5);
+    expect(harness.state?.hasMore).toBe(true);
+  });
 });
