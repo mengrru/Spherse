@@ -10,7 +10,7 @@ Run multiple agents—with independent identities, permissions, skills, and auto
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<img src="packages/landing/public/screenshots/carousel-2.png" alt="Spherse application screenshot" />
+<img src="packages/landing/public/screenshots/screenshots-collage.png" alt="Spherse application screenshot" />
 
 </div>
 

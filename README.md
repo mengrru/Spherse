@@ -10,7 +10,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<img src="packages/landing/public/screenshots/carousel-2.png" alt="Spherse 应用截图" />
+<img src="packages/landing/public/screenshots/screenshots-collage.png" alt="Spherse 应用截图" />
 
 </div>
 
