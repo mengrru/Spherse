@@ -1,7 +1,7 @@
 # Chat runtime 重构：reconcile 状态机提取、事件管线去重与 history 提取
 
 - 日期：2026-09-02
-- 状态：实施中（design review 已处理：onclose 降级语义补接口、#4 行为变更补测试、泛型 `as T` 定案、`HistoryPaginationState` 约束修正、批处理 `now` 单值、reconciler 不设 dispose）
+- 状态：已实施（design review：onclose 降级语义补接口、#4 行为变更补测试、泛型 `as T` 定案、`HistoryPaginationState` 约束修正、批处理 `now` 单值、reconciler 不设 dispose；code review：#4 反向测试改为命中 buffered flush 路径、`PendingWithdrawSession` / `SessionEventState` 不导出）
 - 分支：`refactor/chat-runtime-analysis-8f3k2`
 
 ## 背景与问题
@@ -45,14 +45,14 @@
 ### `model/chat-session-reducer.ts`（+#2/#3）
 
 ```ts
-export interface PendingWithdrawSession {
+interface PendingWithdrawSession {   // 模块内约束类型，不导出（零外部消费）
   messages: ChatMessage[];
   pendingWithdraw: boolean;
 }
 
 export function settlePendingWithdraw<T extends PendingWithdrawSession>(session: T, events: AgentEvent[]): T;
 
-export interface SessionEventState extends StreamingSessionData, PendingWithdrawSession {}
+interface SessionEventState extends StreamingSessionData, PendingWithdrawSession {}
 
 export function applySessionEvents<T extends SessionEventState>(session: T, events: AgentEvent[], now: number): T;
 ```
@@ -122,7 +122,7 @@ export function refreshSessionHistory<T extends HistoryPaginationState>(port, cl
 - `applyEvents` callback：`updateSession(applySessionEvents)` + streaming 变化时通知（#4）
 - `loadMore` / `refreshHistory` 委托 `history-actions`
 - 删除尾部三个零消费 re-export（#10）
-- 预计 525 → ~410 行；`chat-session-runtime.ts` 预计 449 → ~280 行
+- 实际结果：streaming-store.ts 525 → 458 行；chat-session-runtime.ts 449 → 362 行；新增 history-reconciler.ts 113 行 + history-actions.ts 75 行；reducer +41 行
 
 ## 测试
 
@@ -130,7 +130,7 @@ export function refreshSessionHistory<T extends HistoryPaginationState>(port, cl
 - `model/chat-session-reducer.test.ts` 新增 `applySessionEvents` / `settlePendingWithdraw` 纯函数用例（error 结算 `_withdrawError`、`turn_withdrawn` 清 pendingWithdraw、无事件命中原引用返回）
 - 新增 `runtime/history-reconciler.test.ts`：fake callbacks + fake timer，覆盖 reconcile 期间缓冲、onclose flush、退避重试耗尽 → historyError、socket 更替后中止、重试耗尽但 `historyWasReady=true` 时 finally 仍通知、onclose 降级
 - 新增 `runtime/history-actions.test.ts`：port 级单测覆盖 loadMore 四重 guard、refreshHistory 双 streaming guard、页面结果合并
-- **#4 行为变更专项**（`streaming-store.test.ts` 新增）：(a) 缓冲 flush 路径中 streaming 翻转（如 reconcile 期间 `run_status active:false` → onclose）时 `projectDataStore.streamingSessionIds` 正确更新；(b) 无 streaming 变化的事件批不再触发 project store set（spy `setStreaming` setter）
+- **#4 行为变更专项**（`streaming-store.test.ts` 新增，两条均走 buffered flush 路径以命中被改动的 `applyEvents` 代码）：(a) 缓冲 flush 中 streaming 翻转（reconcile 挂起期间 `run_status active:true` → onclose flush）时 `projectDataStore.streamingSessionIds` 正确更新；(b) 缓冲 flush 无 streaming 变化（`message_update`）时不触发 project store set（spy 断言）
 - 验证链：`npm run lint --workspace=packages/app` → `npm run typecheck --workspace=packages/app` → `npm test --workspace=packages/app`
 - E2E：无用户可见变更，不跑专项；合并前按惯例 `npm run verify:e2e`
 

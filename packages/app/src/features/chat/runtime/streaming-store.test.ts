@@ -723,25 +723,27 @@ describe("streaming-store resilience", () => {
       ).toBe(true);
     });
 
-    it("does not notify the project store when streaming is unchanged", async () => {
-      const setStreamingSpy = vi.spyOn(
-        useProjectDataStore.getState(),
-        "setStreaming",
-      );
-      const client = createMockClient();
+    it("does not notify the project store when a buffered flush leaves streaming unchanged", async () => {
+      const client: ApiClient = {
+        getSessionMessagesPage: vi.fn(() => new Promise(() => {})),
+      } as unknown as ApiClient;
       useStreamingStore.getState().attach(client, "sn2", BASE_URL, "p1", "a1");
       const socket = mock.instances[mock.instances.length - 1];
       socket.readyState = OPEN;
       socket.onopen?.({} as Event);
-      await vi.advanceTimersByTimeAsync(0);
-      setStreamingSpy.mockClear();
+      const setStreamingSpy = vi.spyOn(
+        useProjectDataStore.getState(),
+        "setStreaming",
+      );
 
       socket.onmessage?.({
         data: JSON.stringify({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: "partial" }] } }),
       } as MessageEvent);
+      socket.close();
       await vi.advanceTimersByTimeAsync(0);
 
       expect(useStreamingStore.getState().sessions.sn2.streaming).toBe(false);
+      expect(useStreamingStore.getState().sessions.sn2.messages).toHaveLength(1);
       expect(setStreamingSpy).not.toHaveBeenCalled();
     });
   });

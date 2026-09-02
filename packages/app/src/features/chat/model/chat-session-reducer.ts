@@ -45,7 +45,7 @@ export function reduceSessionEvents(
   };
 }
 
-export interface PendingWithdrawSession {
+interface PendingWithdrawSession {
   messages: ChatMessage[];
   pendingWithdraw: boolean;
 }
@@ -74,7 +74,7 @@ function flagWithdrawError(messages: ChatMessage[]): ChatMessage[] {
   return messages;
 }
 
-export interface SessionEventState extends StreamingSessionData, PendingWithdrawSession {}
+interface SessionEventState extends StreamingSessionData, PendingWithdrawSession {}
 
 export function applySessionEvents<T extends SessionEventState>(
   session: T,
