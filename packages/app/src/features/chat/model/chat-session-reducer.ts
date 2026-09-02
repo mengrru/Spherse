@@ -45,6 +45,47 @@ export function reduceSessionEvents(
   };
 }
 
+export interface PendingWithdrawSession {
+  messages: ChatMessage[];
+  pendingWithdraw: boolean;
+}
+
+export function settlePendingWithdraw<T extends PendingWithdrawSession>(
+  session: T,
+  events: AgentEvent[],
+): T {
+  if (!session.pendingWithdraw) return session;
+  const failed = events.some((event) => event.type === "error");
+  if (!failed && !events.some((event) => event.type === "turn_withdrawn")) return session;
+  const messages = failed ? flagWithdrawError(session.messages) : session.messages;
+  return { ...session, messages, pendingWithdraw: false } as T;
+}
+
+function flagWithdrawError(messages: ChatMessage[]): ChatMessage[] {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message.role !== "assistant") break;
+    if (message._error) {
+      const next = [...messages];
+      next[i] = { ...message, _withdrawError: true };
+      return next;
+    }
+  }
+  return messages;
+}
+
+export interface SessionEventState extends StreamingSessionData, PendingWithdrawSession {}
+
+export function applySessionEvents<T extends SessionEventState>(
+  session: T,
+  events: AgentEvent[],
+  now: number,
+): T {
+  const reduced = reduceSessionEvents(session, events, now);
+  const merged = reduced === session ? session : ({ ...session, ...reduced } as T);
+  return settlePendingWithdraw(merged, events);
+}
+
 export function appendErrorMessage(prev: ChatMessage[], message: string, code?: ErrorEventCode): ChatMessage[] {
   const last = prev[prev.length - 1];
   if (last?.role === "assistant" && last._streaming) {

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { ErrorEventCode } from "@spherse/contracts";
 import {
   appendErrorMessage,
+  applySessionEvents,
   markRetrying,
   reduceSessionEvents,
+  settlePendingWithdraw,
   type StreamingSessionData,
 } from "./chat-session-reducer";
 import {
@@ -993,5 +995,110 @@ describe("generic approval card lifecycle", () => {
       { role: "assistant", content: "Hi", _streaming: false },
     ];
     expect(markRetrying(messages)).toBe(messages);
+  });
+});
+
+describe("settlePendingWithdraw", () => {
+  interface WithdrawSession {
+    messages: ChatMessage[];
+    streaming: boolean;
+    lastActivityAt: number;
+    scrollPosition: number;
+    pendingWithdraw: boolean;
+  }
+
+  function withdrawSession(overrides: Partial<WithdrawSession> = {}): WithdrawSession {
+    return {
+      messages: [
+        { role: "user", content: "q1" },
+        { role: "assistant", content: "a1" },
+      ],
+      streaming: false,
+      lastActivityAt: 1,
+      scrollPosition: 0,
+      pendingWithdraw: true,
+      ...overrides,
+    };
+  }
+
+  it("is a no-op when no withdraw is pending", () => {
+    const session = withdrawSession({ pendingWithdraw: false });
+    expect(settlePendingWithdraw(session, [{ type: "turn_withdrawn", seq: 0 } as AgentEvent])).toBe(session);
+  });
+
+  it("is a no-op when events neither fail nor withdraw", () => {
+    const session = withdrawSession();
+    expect(settlePendingWithdraw(session, [{ type: "turn_start" } as AgentEvent])).toBe(session);
+  });
+
+  it("clears pendingWithdraw when turn_withdrawn arrives", () => {
+    const session = withdrawSession();
+    const next = settlePendingWithdraw(session, [
+      { type: "turn_withdrawn", seq: 0 } as AgentEvent,
+    ]);
+    expect(next.pendingWithdraw).toBe(false);
+    expect(next.messages).toBe(session.messages);
+  });
+
+  it("flags the trailing error bubble as _withdrawError on error", () => {
+    const session = withdrawSession({
+      messages: [
+        { role: "user", content: "q1" },
+        { role: "assistant", content: "", _error: "boom", _turnError: true },
+      ],
+    });
+    const next = settlePendingWithdraw(session, [
+      { type: "error", message: "boom" } as unknown as AgentEvent,
+    ]);
+    expect(next.pendingWithdraw).toBe(false);
+    expect(next.messages[1]._withdrawError).toBe(true);
+    expect(next.messages).toHaveLength(2);
+  });
+});
+
+describe("applySessionEvents", () => {
+  interface FullSession {
+    messages: ChatMessage[];
+    streaming: boolean;
+    lastActivityAt: number;
+    scrollPosition: number;
+    pendingWithdraw: boolean;
+  }
+
+  function fullSession(overrides: Partial<FullSession> = {}): FullSession {
+    return {
+      messages: [],
+      streaming: false,
+      lastActivityAt: 1,
+      scrollPosition: 0,
+      pendingWithdraw: false,
+      ...overrides,
+    };
+  }
+
+  it("returns the same reference when nothing applies", () => {
+    const session = fullSession();
+    expect(applySessionEvents(session, [{ type: "turn_start" } as AgentEvent], 100)).toBe(session);
+  });
+
+  it("reduces events and settles a pending withdraw in one pass", () => {
+    const session = fullSession({
+      messages: [{ role: "user", content: "q1" }],
+      pendingWithdraw: true,
+    });
+    const next = applySessionEvents(session, [
+      { type: "turn_withdrawn", seq: 0 } as AgentEvent,
+    ], 200);
+    expect(next.messages).toEqual([]);
+    expect(next.pendingWithdraw).toBe(false);
+    expect(next.lastActivityAt).toBe(200);
+  });
+
+  it("flips streaming through run_status events", () => {
+    const session = fullSession({ streaming: false });
+    const next = applySessionEvents(session, [
+      { type: "run_status", active: true } as AgentEvent,
+    ], 200);
+    expect(next.streaming).toBe(true);
   });
 });
