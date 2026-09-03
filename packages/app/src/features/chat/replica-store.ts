@@ -84,6 +84,28 @@ export const useReplicaStore = create<ReplicaStoreState & ReplicaStoreActions>((
   let flushRaf: number | undefined;
   let generationCounter = 0;
 
+  function materialize(
+    record: ReplicaSessionRecord,
+    replica: SessionReplica,
+    view: DerivedView,
+    now: number,
+  ): ReplicaSessionRecord {
+    return {
+      ...record,
+      replica,
+      view,
+      derivedFrom: replica,
+      messages: view.messages,
+      streaming: view.streaming,
+      hasMore: replica.durable.hasMore,
+      historyStatus: replica.historyStatus,
+      connectionStatus: replica.connectionStatus,
+      historyError: replica.historyError,
+      reconnectFailed: replica.reconnectFailed,
+      lastActivityAt: now,
+    };
+  }
+
   function commitReplica(
     sessionId: string,
     replica: SessionReplica,
@@ -98,20 +120,7 @@ export const useReplicaStore = create<ReplicaStoreState & ReplicaStoreActions>((
       return {
         sessions: {
           ...state.sessions,
-          [sessionId]: {
-            ...current,
-            replica,
-            view,
-            messages: view.messages,
-            streaming: view.streaming,
-            hasMore: replica.durable.hasMore,
-            historyStatus: replica.historyStatus,
-            connectionStatus: replica.connectionStatus,
-            historyError: replica.historyError,
-            reconnectFailed: replica.reconnectFailed,
-            lastActivityAt: Date.now(),
-            ...extras,
-          },
+          [sessionId]: { ...materialize(current, replica, view, Date.now()), ...extras },
         },
       };
     });
@@ -159,20 +168,7 @@ export const useReplicaStore = create<ReplicaStoreState & ReplicaStoreActions>((
           violationTargets.add(sessionId);
         }
         if (replica !== record.replica) {
-          next[sessionId] = {
-            ...record,
-            replica,
-            view,
-            derivedFrom: replica,
-            messages: view.messages,
-            streaming: view.streaming,
-            hasMore: replica.durable.hasMore,
-            historyStatus: replica.historyStatus,
-            connectionStatus: replica.connectionStatus,
-            historyError: replica.historyError,
-            reconnectFailed: replica.reconnectFailed,
-            lastActivityAt: now,
-          };
+          next[sessionId] = materialize(record, replica, view, now);
           changed = true;
         }
       }
