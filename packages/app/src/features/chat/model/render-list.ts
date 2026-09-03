@@ -99,10 +99,6 @@ function projectToolCalls(
 
 function applySessionFlags(items: RenderItem[], session: ChatSessionData): void {
   if (items.length === 0) return;
-  const last = items[items.length - 1];
-  if (session.retrying && last.message._error !== undefined) {
-    last.retrying = true;
-  }
   if (session.withdrawError) {
     for (let i = items.length - 1; i >= 0; i--) {
       if (items[i].message.role === "user") break;

@@ -122,7 +122,6 @@ export interface RenderItem {
   message: ChatMessage;
   streaming?: boolean;
   sendFailed?: boolean;
-  retrying?: boolean;
   withdrawError?: boolean;
 }
 

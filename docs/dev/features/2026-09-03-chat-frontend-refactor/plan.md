@@ -25,5 +25,6 @@
 ## 实现中的设计偏差记录
 
 1. `applyRetryLast` 未按 design 原文"删除尾部 error run"，而是**剥离 error segment 并复用激活该 run**（对齐现状 `markRetrying` 语义：server retryLastTurn 只 abandon 最后一条失败 assistant 消息，早前 segment 保留；复用 run id 保证 key 稳定）；history 宿主的 error 则做尾部截断（sanctioned，server 同步 abandon）
-2. `applyHistoryResult` loadMore 模式**保留 active run**（design 原文写三条路径一致丢弃 active run——loadMore 无重放跟随，丢弃会丢内容；旧页与 active run 无重叠，保留是安全的）
+2. `applyHistoryResult` loadMore 模式**完全不触碰 runs/interactions/outbox**（design 决策表初稿曾写"三条路径一致"，已在 design 中修正为按路径区分：loadMore 旧页不可能覆盖新内容，丢弃已完成 run 会造成内容丢失——review C1 修复）
 3. error 事件先于 message_end 到达时，新实现原地终结 segment（旧实现会追加第二条消息）——记为有意改进
+4. `RenderItem.retrying` 字段在 review 中确认无消费者（retrying 显示由"run 剥离 error + active"与列表级 ThinkingIndicator 承担），已删除（review m2）

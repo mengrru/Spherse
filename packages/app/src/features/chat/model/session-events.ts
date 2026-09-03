@@ -538,21 +538,18 @@ export function applyHistoryResult<T extends ChatSessionData>(
     );
 
   let seq = session.seq;
-  const runs: RunState[] = [];
+  let runs = session.runs;
+  let interactions = session.interactions;
   if (mode === "reconcile") {
     const droppedActive = session.runs.find((run) => run.active);
     if (droppedActive) seq = Math.min(seq, droppedActive.id - 1);
-    for (const run of session.runs) {
-      if (run.active) continue;
-      if (keepErrorRun(run)) runs.push(run);
-    }
-  } else {
-    for (const run of session.runs) {
-      if (run.active || keepErrorRun(run)) runs.push(run);
-    }
+    runs = session.runs.filter((run) => !run.active && keepErrorRun(run));
+    interactions = filterInteractionsByRuns(interactions, runs);
+  } else if (mode === "refresh") {
+    runs = session.runs.filter((run) => run.active || keepErrorRun(run));
+    interactions = filterInteractionsByRuns(interactions, runs);
   }
 
-  const interactions = filterInteractionsByRuns(session.interactions, runs);
   const retrying = mode === "reconcile" && !runs.some((run) => run.active) ? false : session.retrying;
 
   return {

@@ -720,4 +720,26 @@ describe("streaming-store resilience", () => {
       expect(() => useStreamingStore.getState().resumeProbeAll()).not.toThrow();
     });
   });
+
+  it("syncs derived streaming to project-data-store once per transition", async () => {
+    const socket = await attachAndConnect("sync1");
+    const spy = vi.spyOn(useProjectDataStore.getState(), "setStreaming");
+    const send = (raw: unknown) =>
+      socket.onmessage?.({ data: JSON.stringify(raw) } as MessageEvent);
+
+    send({ type: "run_status", active: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useProjectDataStore.getState().projects["p1"]?.streamingSessionIds.has("sync1")).toBe(true);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    send({ type: "message_start", message: { role: "assistant", content: [] } });
+    send({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: "hi" }] } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    send({ type: "run_status", active: false });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useProjectDataStore.getState().projects["p1"]?.streamingSessionIds.has("sync1")).toBe(false);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
 });

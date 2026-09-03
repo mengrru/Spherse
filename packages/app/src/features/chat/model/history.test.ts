@@ -272,7 +272,7 @@ describe("consumeOutbox", () => {
       outboxEntry({ id: "o1", content: "hello" }),
       outboxEntry({ id: "o2", content: "world" }),
     ];
-    const history = [
+    const history: ChatMessage[] = [
       historyUser(1, "hello"),
       { role: "user", content: "world" },
       historyUser(2, "other"),

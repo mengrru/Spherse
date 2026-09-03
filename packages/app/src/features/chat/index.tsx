@@ -42,8 +42,6 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     abort,
     reconnect,
     retryHistory,
-    respondApproval,
-    respondQuestion,
   } = useChatSession({
     client,
     sessionId,
@@ -64,15 +62,15 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
 
   const actions = useMemo(() => ({
     respondApproval: (requestId: string, approved: boolean) => {
-      const delivered = respondApproval(requestId, approved);
+      const delivered = useStreamingStore.getState().respondApproval(sessionId, requestId, approved);
       if (!delivered) toast.error(t("chat.approvalNotDelivered"));
     },
     respondQuestion: (requestId: string, answer: string): boolean => {
-      const delivered = respondQuestion(requestId, answer);
+      const delivered = useStreamingStore.getState().respondQuestion(sessionId, requestId, answer);
       if (!delivered) toast.error(t("chat.questionNotDelivered"));
       return delivered;
     },
-  }), [respondApproval, respondQuestion, t]);
+  }), [sessionId, t]);
 
   const runtime = useMemo(() => ({ sessionId, agentId: agent.id }), [sessionId, agent.id]);
 

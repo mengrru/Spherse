@@ -160,6 +160,73 @@ describe("projectChatCard", () => {
       });
     });
 
+    it("reconstructs inline html from arguments when details lack html and file_path", () => {
+      const card = projectChatCard(
+        "render_card",
+        { type: "html", content: "<h1>Hi</h1>" },
+        {
+          resultDetails: { cardType: "html", title: "Test", width: 500, height: 400, max_width: 800, max_height: 600 },
+        },
+      );
+
+      expect(card).toEqual({
+        type: "html",
+        html: "<h1>Hi</h1>",
+        file_path: undefined,
+        title: "Test",
+        width: 500,
+        height: 400,
+        max_width: 800,
+        max_height: 600,
+      });
+    });
+
+    it("recovers render_card file_path card without html in details", () => {
+      const card = projectChatCard(
+        "render_card",
+        { type: "html", file_path: "card.html" },
+        {
+          resultDetails: { cardType: "html", file_path: "card.html", height: 400, max_width: 800, max_height: 600 },
+        },
+      );
+
+      expect(card).toEqual({
+        type: "html",
+        html: undefined,
+        file_path: "card.html",
+        title: undefined,
+        width: undefined,
+        height: 400,
+        max_width: 800,
+        max_height: 600,
+      });
+    });
+
+    it("prefers legacy details.html over arguments content (backward compat)", () => {
+      const card = projectChatCard(
+        "render_card",
+        { type: "html", content: "<h1>New</h1>" },
+        {
+          resultDetails: { cardType: "html", html: "<h1>Legacy</h1>", height: 400, max_width: 800, max_height: 600 },
+        },
+      );
+
+      expect(card?.type === "html" ? card.html : undefined).toBe("<h1>Legacy</h1>");
+    });
+
+    it("ignores arguments.content when file_path is present (both-args edge case)", () => {
+      const card = projectChatCard(
+        "render_card",
+        { type: "html", content: "<h1>Inline</h1>", file_path: "card.html" },
+        {
+          resultDetails: { cardType: "html", file_path: "card.html", height: 400, max_width: 800, max_height: 600 },
+        },
+      );
+
+      expect(card?.type === "html" ? card.html : undefined).toBeUndefined();
+      expect(card?.type === "html" ? card.file_path : undefined).toBe("card.html");
+    });
+
     it("rebuilds an image card from generate_image result details", () => {
       const card = projectChatCard(
         "generate_image",

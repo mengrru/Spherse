@@ -18,7 +18,7 @@ const agent = { id: "a1", name: "Helper", alias: "" } as unknown as AgentSummary
 
 function renderMessage(
   message: Partial<ChatMessage> & { role: "user" | "assistant" },
-  meta: Partial<Pick<RenderItem, "streaming" | "sendFailed" | "retrying" | "withdrawError">> = {},
+  meta: Partial<Pick<RenderItem, "streaming" | "sendFailed" | "withdrawError">> = {},
   props: { onWithdraw?: () => void } = {},
 ) {
   renderWithProviders(

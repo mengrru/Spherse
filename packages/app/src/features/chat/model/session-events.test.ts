@@ -619,16 +619,23 @@ describe("history result application", () => {
     ]);
   });
 
-  it("loadMore keeps active runs (no replay follows an older-page fetch)", () => {
+  it("loadMore keeps runs untouched (older pages cannot cover them)", () => {
     const base = reduceSessionEvents(session(), [
       { type: "agent_start" },
       { type: "message_start", message: { role: "assistant", content: [] } },
+      { type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "done" }] } },
+      { type: "run_status", active: false },
     ] as unknown as AgentEvent[], 1);
+    expect(base.runs).toHaveLength(1);
+    expect(base.runs[0].active).toBe(false);
 
     const next = applyHistoryResult(base, page([{ id: 1, message: { role: "user", content: "old" } }]), "loadMore");
 
-    expect(next.runs).toHaveLength(1);
-    expect(next.runs[0].active).toBe(true);
+    expect(next.runs).toBe(base.runs);
+    expect(messagesOf(next)).toEqual([
+      { role: "user", content: "old", _messageId: 1, timestamp: undefined },
+      { role: "assistant", content: "done", timestamp: 1 },
+    ]);
   });
 
   it("keeps inactive error runs whose error is not in loaded history (Source-1 bubble)", () => {
