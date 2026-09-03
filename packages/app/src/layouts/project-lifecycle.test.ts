@@ -3,6 +3,7 @@ import { closeProjectCascade } from "./project-lifecycle";
 import { useAppStore, type ProjectState } from "../stores/app-store";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useStreamingStore } from "../features/chat/runtime/streaming-store";
+import { createInitialSessionData } from "../features/chat/model/session-events";
 import { useAgentSessionListUiStore } from "../features/agent-session-list/store";
 import { queryClient } from "../queries/client";
 import { projectQueryKeys } from "../queries/keys";
@@ -33,21 +34,14 @@ function seedStreamingSession(sessionId: string, projectId: string): void {
     sessions: {
       ...state.sessions,
       [sessionId]: {
-        messages: [],
-        streaming: false,
+        ...createInitialSessionData(),
         lastActivityAt: Date.now(),
-        scrollPosition: 0,
         attachedCount: 1,
         initialMessageSent: false,
         projectId,
-        hasMore: false,
-        oldestLoadedId: null,
         loadingMore: false,
-        historyStatus: "ready",
         connectionStatus: "open",
-        historyError: false,
         reconnectFailed: false,
-        pendingWithdraw: false,
       },
     },
   }));

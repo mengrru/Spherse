@@ -3,6 +3,7 @@ import { respond } from "../respond";
 import { toast } from "sonner";
 import { translate, normalizeLocale } from "@spherse/i18n";
 import { useStreamingStore } from "../../features/chat/runtime/streaming-store";
+import { isSessionStreaming } from "../../features/chat/types";
 import { useSettingsStore } from "../../stores/settings-store";
 import { ApiError } from "../../lib/api";
 import { openChat } from "./open-chat";
@@ -28,7 +29,7 @@ registerAction("sendMessage", async (params, ctx) => {
 
   const { sendMessage: wsSend, sessions: wsSessions } = useStreamingStore.getState();
 
-  if (wsSessions[sessionId]?.streaming) {
+  if (wsSessions[sessionId] && isSessionStreaming(wsSessions[sessionId])) {
     respond(ctx, false, { error: "session_busy" });
   } else if (wsSend(sessionId, message)) {
     respond(ctx, true);

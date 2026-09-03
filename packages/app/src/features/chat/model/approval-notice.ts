@@ -1,4 +1,4 @@
-import type { ChatMessage } from "../types";
+import type { ChatSessionData } from "../types";
 
 export interface PendingApproval {
   kind: "approval" | "question";
@@ -6,52 +6,22 @@ export interface PendingApproval {
   sessionId: string;
   projectId: string;
   toolName: string;
-  command?: string;
 }
 
 export function collectPendingApprovals(
-  sessions: Record<string, { messages: ChatMessage[]; projectId: string }>,
+  sessions: Record<string, { data: ChatSessionData; projectId: string }>,
 ): PendingApproval[] {
   const result: PendingApproval[] = [];
   for (const [sessionId, session] of Object.entries(sessions)) {
-    for (const message of session.messages) {
-      if (message.role !== "assistant" || !message._toolCalls) continue;
-      for (const toolCall of message._toolCalls) {
-        const card = toolCall._card;
-        if (!card) continue;
-        if (card.type === "command") {
-          if (card.requestId) {
-            result.push({
-              kind: "approval",
-              requestId: card.requestId,
-              sessionId,
-              projectId: session.projectId,
-              toolName: toolCall.toolName,
-              command: card.command,
-            });
-          }
-        } else if (card.type === "approval") {
-          if (card.requestId) {
-            result.push({
-              kind: "approval",
-              requestId: card.requestId,
-              sessionId,
-              projectId: session.projectId,
-              toolName: toolCall.toolName,
-            });
-          }
-        } else if (card.type === "question") {
-          if (card.requestId) {
-            result.push({
-              kind: "question",
-              requestId: card.requestId,
-              sessionId,
-              projectId: session.projectId,
-              toolName: toolCall.toolName,
-            });
-          }
-        }
-      }
+    for (const interaction of Object.values(session.data.interactions)) {
+      if (interaction.status.type !== "pending") continue;
+      result.push({
+        kind: interaction.kind,
+        requestId: interaction.requestId,
+        sessionId,
+        projectId: session.projectId,
+        toolName: interaction.toolName,
+      });
     }
   }
   return result;

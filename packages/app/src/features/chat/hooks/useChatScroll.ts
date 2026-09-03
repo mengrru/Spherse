@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { ChatMessage } from "../types";
+import type { RenderItem } from "../types";
 import { useStreamingStore } from "../runtime/streaming-store";
 
 const NEAR_BOTTOM_THRESHOLD = 100;
@@ -8,7 +8,7 @@ export function isNearBottom(scrollTop: number, threshold: number = NEAR_BOTTOM_
   return scrollTop >= -threshold;
 }
 
-export function useChatScroll(messages: ChatMessage[], sessionId: string, loadingMore: boolean = false) {
+export function useChatScroll(items: RenderItem[], sessionId: string, loadingMore: boolean = false) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -35,7 +35,7 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
     setIsAtBottom(true);
   }, []);
 
-  const hasMessages = messages.length > 0;
+  const hasMessages = items.length > 0;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -66,7 +66,7 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (!container || messages.length === 0) return;
+    if (!container || items.length === 0) return;
 
     if (!restoredScrollRef.current) {
       restoredScrollRef.current = true;
@@ -77,13 +77,13 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
       } else {
         scrollToBottom("instant");
       }
-      prevCountRef.current = messages.length;
+      prevCountRef.current = items.length;
       return;
     }
 
     if (pendingLoadingMoreRef.current) {
       pendingLoadingMoreRef.current = false;
-      prevCountRef.current = messages.length;
+      prevCountRef.current = items.length;
       if (preLoadMoreScrollTopRef.current !== null) {
         container.scrollTop = preLoadMoreScrollTopRef.current;
         scrollTopRef.current = preLoadMoreScrollTopRef.current;
@@ -94,14 +94,14 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
     }
 
     const prevCount = prevCountRef.current;
-    prevCountRef.current = messages.length;
-    const lastMsg = messages[messages.length - 1];
+    prevCountRef.current = items.length;
+    const lastMsg = items[items.length - 1]?.message;
 
-    if (messages.length > prevCount && lastMsg?.role === "user") {
+    if (items.length > prevCount && lastMsg?.role === "user") {
       scrollToBottom("smooth");
       return;
     }
-  }, [messages, sessionId, scrollToBottom, syncBottomState]);
+  }, [items, sessionId, scrollToBottom, syncBottomState]);
 
   useEffect(() => {
     const container = containerRef.current;

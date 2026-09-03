@@ -91,7 +91,7 @@ describe("sendMessage action", () => {
   it("sends over websocket when connected and responds ok", async () => {
     mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { streaming: false },
+      "s1": { runs: [], outbox: [] },
     });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
     expect(mockWsSend).toHaveBeenCalledWith("s1", "hi");
@@ -102,7 +102,7 @@ describe("sendMessage action", () => {
   });
 
   it("falls back to the http client when websocket is not connected", async () => {
-    sessionsState.mockReturnValue({ "s1": { streaming: false } });
+    sessionsState.mockReturnValue({ "s1": { runs: [], outbox: [] } });
     await dispatchAction(
       "sendMessage",
       { sessionId: "s1", message: "hi" },
@@ -116,7 +116,7 @@ describe("sendMessage action", () => {
   });
 
   it("maps http 409 to session_busy", async () => {
-    sessionsState.mockReturnValue({ "s1": { streaming: false } });
+    sessionsState.mockReturnValue({ "s1": { runs: [], outbox: [] } });
     mockClientSendMessage.mockRejectedValue(
       new ApiError("Session \"s1\" is already running", 409),
     );
@@ -135,7 +135,7 @@ describe("sendMessage action", () => {
   });
 
   it("maps generic http failure to send_failed", async () => {
-    sessionsState.mockReturnValue({ "s1": { streaming: false } });
+    sessionsState.mockReturnValue({ "s1": { runs: [], outbox: [] } });
     mockClientSendMessage.mockRejectedValue(new Error("network"));
     await dispatchAction(
       "sendMessage",
@@ -152,7 +152,7 @@ describe("sendMessage action", () => {
   });
 
   it("responds send_failed when websocket is down and ctx has no client", async () => {
-    sessionsState.mockReturnValue({ "s1": { streaming: false } });
+    sessionsState.mockReturnValue({ "s1": { runs: [], outbox: [] } });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
     expect(mockPostMessage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -165,7 +165,7 @@ describe("sendMessage action", () => {
 
   it("responds session_busy and skips send when streaming", async () => {
     sessionsState.mockReturnValue({
-      "s1": { streaming: true },
+      "s1": { runs: [{ id: 1, active: true, segments: [] }], outbox: [] },
     });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
     expect(mockWsSend).not.toHaveBeenCalled();
@@ -182,7 +182,7 @@ describe("sendMessage action", () => {
 
   it("does not respond when no requestId/source (fire-and-forget), still navigates", async () => {
     sessionsState.mockReturnValue({
-      "s1": { streaming: true },
+      "s1": { runs: [{ id: 1, active: true, segments: [] }], outbox: [] },
     });
     await dispatchAction(
       "sendMessage",
@@ -197,7 +197,7 @@ describe("sendMessage action", () => {
   it("navigates to chat route by default", async () => {
     mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { streaming: false },
+      "s1": { runs: [], outbox: [] },
     });
     await dispatchAction("sendMessage", { sessionId: "s1", message: "hi" }, makeCtx());
     expect(mockNavigate).toHaveBeenCalledWith("/project/proj-1/chat/s1");
@@ -206,7 +206,7 @@ describe("sendMessage action", () => {
   it("skips navigation when open is false", async () => {
     mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { streaming: false },
+      "s1": { runs: [], outbox: [] },
     });
     await dispatchAction(
       "sendMessage",
@@ -219,7 +219,7 @@ describe("sendMessage action", () => {
   it("skips navigation when open is false even with float", async () => {
     mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { streaming: false },
+      "s1": { runs: [], outbox: [] },
     });
     await dispatchAction(
       "sendMessage",
@@ -233,7 +233,7 @@ describe("sendMessage action", () => {
   it("opens floating chat when float is true", async () => {
     mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { streaming: false },
+      "s1": { runs: [], outbox: [] },
     });
     await dispatchAction(
       "sendMessage",
@@ -247,7 +247,7 @@ describe("sendMessage action", () => {
   it("downgrades float to chat page navigation on web", async () => {
     mockWsSend.mockReturnValue(true);
     sessionsState.mockReturnValue({
-      "s1": { streaming: false },
+      "s1": { runs: [], outbox: [] },
     });
     await dispatchAction(
       "sendMessage",

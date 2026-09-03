@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { ApiClient } from "../../../lib/api";
-import type { AttachedImage, ChatMessage } from "../types";
+import { buildRenderList } from "../model/render-list";
 import { useStreamingStore } from "../runtime/streaming-store";
+import { isSessionStreaming, type AttachedImage, type RenderItem } from "../types";
 
-const EMPTY_MESSAGES: ChatMessage[] = [];
+const EMPTY_ITEMS: RenderItem[] = [];
 
 export function useChatSession({
   client,
@@ -27,35 +28,31 @@ export function useChatSession({
     return () => useStreamingStore.getState().detach(sessionId);
   }, [client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken]);
 
-  const messages = useStreamingStore(
-    (s) => s.sessions[sessionId]?.messages ?? EMPTY_MESSAGES,
+  const session = useStreamingStore((s) => s.sessions[sessionId]);
+  const items = useMemo(
+    () => (session ? buildRenderList(session) : EMPTY_ITEMS),
+    [session],
   );
-  const streaming = useStreamingStore(
-    (s) => s.sessions[sessionId]?.streaming ?? false,
-  );
-  const historyStatus = useStreamingStore(
-    (s) => s.sessions[sessionId]?.historyStatus ?? "pending",
-  );
-  const connectionStatus = useStreamingStore(
-    (s) => s.sessions[sessionId]?.connectionStatus ?? "disconnected",
-  );
-  const historyError = useStreamingStore(
-    (s) => s.sessions[sessionId]?.historyError ?? false,
-  );
-  const reconnectFailed = useStreamingStore(
-    (s) => s.sessions[sessionId]?.reconnectFailed ?? false,
-  );
+  const streaming = session ? isSessionStreaming(session) : false;
+  const historyStatus = session?.history.historyStatus ?? "pending";
+  const connectionStatus = session?.connectionStatus ?? "disconnected";
+  const historyError = session?.history.historyError ?? false;
+  const reconnectFailed = session?.reconnectFailed ?? false;
   const loading =
     historyStatus !== "ready" || connectionStatus === "connecting";
 
   return {
-    messages,
+    items,
     streaming,
     loading,
     connectionStatus,
     historyError,
     reconnectFailed,
-    sendMessage: (text: string, image?: AttachedImage) => useStreamingStore.getState().sendMessage(sessionId, text, image),
+    sendMessage: (text: string, image?: AttachedImage) => {
+      if (!image) return useStreamingStore.getState().sendMessage(sessionId, text);
+      const { previewUrl: _previewUrl, ...sendable } = image;
+      return useStreamingStore.getState().sendMessage(sessionId, text, sendable);
+    },
     retry: () => useStreamingStore.getState().retry(sessionId),
     withdrawLastTurn: () => useStreamingStore.getState().withdrawLastTurn(sessionId),
     abort: () => useStreamingStore.getState().abort(sessionId),

@@ -2,7 +2,7 @@ import type { RefObject } from "react";
 import { useMemo } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentSummary } from "../../lib/types";
-import type { ChatMessage } from "./types";
+import type { RenderItem } from "./types";
 import { Button } from "../../components/ui/button";
 import { ChevronDownIcon } from "lucide-react";
 import { MessageItem } from "./MessageItem";
@@ -13,7 +13,7 @@ import { groupTurns, type TurnGroupItem } from "./model/turn-groups";
 import { lastWithdrawableUserIndex } from "./model/withdrawable";
 
 interface MessageListProps {
-  messages: ChatMessage[];
+  items: RenderItem[];
   agent: AgentSummary;
   streaming: boolean;
   loading?: boolean;
@@ -21,8 +21,6 @@ interface MessageListProps {
   isAtBottom: boolean;
   onScrollToBottom: () => void;
   onNavigateToPath?: (path: string) => void;
-  onRespondApproval?: (requestId: string, approved: boolean) => void;
-  onRespondQuestion?: (requestId: string, answer: string) => boolean | void;
   onRetry?: () => void;
   onWithdraw?: () => void;
   hasMore?: boolean;
@@ -30,25 +28,25 @@ interface MessageListProps {
   onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry, onWithdraw, hasMore, loadingMore, onLoadMore }: MessageListProps) {
+export function MessageList({ items, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRetry, onWithdraw, hasMore, loadingMore, onLoadMore }: MessageListProps) {
   const { t } = useI18n();
 
   // 相同 file_path 的 html card 只展开最近一张；较早的同路径卡片折叠（不挂载 iframe）。
   const supersededToolCallIds = useMemo(
-    () => computeSupersededToolCallIds(messages),
-    [messages],
+    () => computeSupersededToolCallIds(items),
+    [items],
   );
 
-  const groups = useMemo(() => groupTurns(messages), [messages]);
+  const groups = useMemo(() => groupTurns(items), [items]);
 
-  if (loading && messages.length === 0) {
+  if (loading && items.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center p-4">
         <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
       </div>
     );
   }
-  if (messages.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-2 p-4">
         <div className="text-muted-foreground text-sm font-medium">{agent.name}</div>
@@ -57,23 +55,21 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
     );
   }
 
-  const lastMessage = messages[messages.length - 1];
-  const withdrawableIndex = streaming ? -1 : lastWithdrawableUserIndex(messages);
+  const lastItem = items[items.length - 1];
+  const withdrawableIndex = streaming ? -1 : lastWithdrawableUserIndex(items);
 
-  const renderItem = ({ message, index }: TurnGroupItem) => {
-    const isLast = index === messages.length - 1;
+  const renderItem = ({ item, index }: TurnGroupItem) => {
+    const isLast = index === items.length - 1;
     const showTime =
-      message.role === "user" || isLast || messages[index + 1]?.role === "user";
+      item.message.role === "user" || isLast || items[index + 1]?.message.role === "user";
     return (
       <MessageItem
-        key={index}
-        message={message}
+        key={item.key}
+        item={item}
         agent={agent}
         showTime={showTime}
         supersededToolCallIds={supersededToolCallIds}
         onNavigateToPath={onNavigateToPath}
-        onRespondApproval={onRespondApproval}
-        onRespondQuestion={onRespondQuestion}
         onRetry={isLast ? onRetry : undefined}
         onWithdraw={index === withdrawableIndex ? onWithdraw : undefined}
       />
@@ -83,7 +79,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
   return (
     <div className="relative flex-1 min-h-0">
       <div ref={containerRef} className="h-full overflow-y-auto p-4 flex flex-col-reverse gap-3" data-chat-messages>
-        {streaming && lastMessage?.role === "user" && (
+        {streaming && lastItem.message.role === "user" && (
           <div className="self-start">
             <ThinkingIndicator />
           </div>
@@ -91,7 +87,7 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
         {[...groups].reverse().map((group) =>
           group.kind === "trigger" ? (
             <TriggerTurnGroup
-              key={`turn-${group.items[0].message._messageId ?? group.items[0].index}`}
+              key={group.items[0].item.key}
               items={group.items}
               triggerName={group.triggerName}
               hasError={group.hasError}

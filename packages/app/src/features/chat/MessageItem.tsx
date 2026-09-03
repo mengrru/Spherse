@@ -1,12 +1,7 @@
-import { useCallback } from "react";
 import type { AgentSummary } from "../../lib/types";
-import type { ChatMessage } from "./types";
+import type { ChatMessage, RenderItem } from "./types";
 import { MarkdownContent } from "../../components/markdown-content/MarkdownContent";
-import { HtmlCardRenderer } from "./HtmlCard";
-import { ImageCardRenderer } from "./ImageCard";
-import { CommandCardRenderer } from "./CommandCard";
-import { ApprovalCardRenderer } from "./ApprovalCard";
-import { QuestionCardRenderer } from "./QuestionCard";
+import { CardRenderer } from "./CardRenderer";
 import { ToolCallSection } from "./ToolCallSection";
 import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
@@ -16,38 +11,24 @@ import { MessageAttachments } from "./MessageAttachments";
 import { SendFailedBar } from "./SendFailedBar";
 import { WithdrawButton } from "./WithdrawButton";
 import { useOpenExternalLink } from "../browser/open-external-url";
+import { useChatLinkHandler } from "./hooks/useChatLinkHandler";
 import { formatMessageTime } from "./lib/format-time";
 
 interface MessageItemProps {
-  message: ChatMessage;
+  item: RenderItem;
   agent: AgentSummary;
   showTime?: boolean;
   supersededToolCallIds?: Set<string>;
   onNavigateToPath?: (path: string) => void;
-  onRespondApproval?: (requestId: string, approved: boolean) => void;
-  onRespondQuestion?: (requestId: string, answer: string) => boolean | void;
   onRetry?: () => void;
   onWithdraw?: () => void;
 }
 
-export function MessageItem({ message, agent, showTime, supersededToolCallIds, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry, onWithdraw }: MessageItemProps) {
+export function MessageItem({ item, agent, showTime, supersededToolCallIds, onNavigateToPath, onRetry, onWithdraw }: MessageItemProps) {
+  const { message, streaming, sendFailed, withdrawError } = item;
   const isUser = message.role === "user";
   const openLink = useOpenExternalLink();
-
-  const handleLinkClick = useCallback(
-    async (href: string, event: React.MouseEvent<HTMLAnchorElement>) => {
-      if (!href) return;
-      event.preventDefault();
-      if (href.startsWith("#")) {
-        if (href.length > 1) {
-          document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
-        return;
-      }
-      openLink(href);
-    },
-    [openLink],
-  );
+  const handleLinkClick = useChatLinkHandler(openLink);
 
   return (
     <div
@@ -66,63 +47,22 @@ export function MessageItem({ message, agent, showTime, supersededToolCallIds, o
             : "border border-border bg-card text-card-foreground"
         }`}
       >
-        <div className="text-[11px] font-semibold mb-1 opacity-70">
-          {message.role === "assistant" && (agent.alias || agent.name)}
-        </div>
-        <div className="text-sm">
-          {message._streaming && message.content === "" ? (
-            <ThinkingIndicator />
-          ) : (
-            <>
-              <MarkdownContent variant="chat" plain={isUser} linkClassName="text-inherit" onLinkClick={handleLinkClick}>{message.content}</MarkdownContent>
-              {message._streaming && message.content && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
-            </>
-          )}
-        </div>
-        {isUser && message._attachments && message._attachments.length > 0 && (
-          <MessageAttachments attachments={message._attachments} />
-        )}
-        {message._toolCalls && message._toolCalls.length > 0 && (
-          <ToolCallSection toolCalls={message._toolCalls} onNavigateToPath={onNavigateToPath} />
-        )}
-        {message._error && <ErrorMessageSection error={message._error} errorCode={message._errorCode} onRetry={message._withdrawError ? undefined : onRetry} />}
-        {message._toolCalls
-          ?.filter((toolCall) => toolCall._card)
-          .map((toolCall) => {
-            const card = toolCall._card!;
-            if (card.type === "html") {
-              return (
-                <HtmlCardRenderer
-                  key={toolCall.toolCallId}
-                  card={card}
-                  defaultCollapsed={supersededToolCallIds?.has(toolCall.toolCallId) ?? false}
-                />
-              );
-            }
-            if (card.type === "command") {
-              return <CommandCardRenderer key={toolCall.toolCallId} card={card} onRespondApproval={onRespondApproval} />;
-            }
-            if (card.type === "approval") {
-              return <ApprovalCardRenderer key={toolCall.toolCallId} card={card} onRespondApproval={onRespondApproval} />;
-            }
-            if (card.type === "image") {
-              return <ImageCardRenderer key={toolCall.toolCallId} card={card} />;
-            }
-            if (card.type === "question") {
-              return <QuestionCardRenderer key={toolCall.toolCallId} card={card} onRespondQuestion={onRespondQuestion} />;
-            }
-            return null;
-          })}
-        {message._runChanges && message._runChanges.length > 0 && (
-          <div className="mt-5">
-            {message._runChanges.map((change) => (
-              <FileViewerCard key={change.path} change={change} onNavigateToPath={onNavigateToPath} />
-            ))}
-          </div>
+        {isUser ? (
+          <UserMessageBody message={message} onLinkClick={handleLinkClick} />
+        ) : (
+          <AssistantMessageBody
+            message={message}
+            agent={agent}
+            streaming={streaming}
+            supersededToolCallIds={supersededToolCallIds}
+            onNavigateToPath={onNavigateToPath}
+            onRetry={withdrawError ? undefined : onRetry}
+            onLinkClick={handleLinkClick}
+          />
         )}
       </div>
-        {isUser && message._sendFailed && <SendFailedBar onRetry={onRetry} />}
-        {!message._streaming && (
+        {isUser && sendFailed && <SendFailedBar onRetry={onRetry} />}
+        {!streaming && (
           <div className={`flex items-center gap-1 pb-1 opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100 ${isUser ? "md:flex-row-reverse" : ""}`}>
             {isUser && onWithdraw && <WithdrawButton onWithdraw={onWithdraw} />}
             <CopyButton text={message.content} />
@@ -135,5 +75,80 @@ export function MessageItem({ message, agent, showTime, supersededToolCallIds, o
         )}
       </div>
     </div>
+  );
+}
+
+function UserMessageBody({
+  message,
+  onLinkClick,
+}: {
+  message: ChatMessage;
+  onLinkClick: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
+  return (
+    <>
+      <div className="text-sm">
+        <MarkdownContent variant="chat" plain linkClassName="text-inherit" onLinkClick={onLinkClick}>{message.content}</MarkdownContent>
+      </div>
+      {message._attachments && message._attachments.length > 0 && (
+        <MessageAttachments attachments={message._attachments} />
+      )}
+    </>
+  );
+}
+
+function AssistantMessageBody({
+  message,
+  agent,
+  streaming,
+  supersededToolCallIds,
+  onNavigateToPath,
+  onRetry,
+  onLinkClick,
+}: {
+  message: ChatMessage;
+  agent: AgentSummary;
+  streaming?: boolean;
+  supersededToolCallIds?: Set<string>;
+  onNavigateToPath?: (path: string) => void;
+  onRetry?: () => void;
+  onLinkClick: (href: string, event: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
+  return (
+    <>
+      <div className="text-[11px] font-semibold mb-1 opacity-70">
+        {agent.alias || agent.name}
+      </div>
+      <div className="text-sm">
+        {streaming && message.content === "" ? (
+          <ThinkingIndicator />
+        ) : (
+          <>
+            <MarkdownContent variant="chat" linkClassName="text-inherit" onLinkClick={onLinkClick}>{message.content}</MarkdownContent>
+            {streaming && message.content && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
+          </>
+        )}
+      </div>
+      {message._toolCalls && message._toolCalls.length > 0 && (
+        <ToolCallSection toolCalls={message._toolCalls} onNavigateToPath={onNavigateToPath} />
+      )}
+      {message._error && <ErrorMessageSection error={message._error} errorCode={message._errorCode} onRetry={onRetry} />}
+      {message._toolCalls
+        ?.filter((toolCall) => toolCall._card)
+        .map((toolCall) => (
+          <CardRenderer
+            key={toolCall.toolCallId}
+            card={toolCall._card!}
+            superseded={supersededToolCallIds?.has(toolCall.toolCallId)}
+          />
+        ))}
+      {message._runChanges && message._runChanges.length > 0 && (
+        <div className="mt-5">
+          {message._runChanges.map((change) => (
+            <FileViewerCard key={change.path} change={change} onNavigateToPath={onNavigateToPath} />
+          ))}
+        </div>
+      )}
+    </>
   );
 }

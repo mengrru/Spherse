@@ -62,6 +62,9 @@ export interface ToolCallInfo {
   result?: string;
   partialResult?: string;
   status: "running" | "completed" | "error";
+  partialDetails?: unknown;
+  resultDetails?: unknown;
+  isError?: boolean;
   _card?: ChatCard;
 }
 
@@ -92,14 +95,10 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   _messageId?: number;
-  _optimistic?: boolean;
-  _streaming?: boolean;
   _toolCalls?: ToolCallInfo[];
   _error?: string;
   _errorCode?: ErrorEventCode;
   _turnError?: boolean;
-  _withdrawError?: boolean;
-  _sendFailed?: boolean;
   _runChanges?: FileChangeCard[];
   _attachments?: ChatAttachment[];
   _triggered?: true;
@@ -116,4 +115,87 @@ export interface FileChangeOp {
 export interface FileChangeCard {
   path: string;
   ops: FileChangeOp[];
+}
+
+export interface RenderItem {
+  key: string;
+  message: ChatMessage;
+  streaming?: boolean;
+  sendFailed?: boolean;
+  retrying?: boolean;
+  withdrawError?: boolean;
+}
+
+export interface HistoryState {
+  messages: ChatMessage[];
+  hasMore: boolean;
+  oldestLoadedId: number | null;
+  historyStatus: "pending" | "syncing" | "ready";
+  historyError: boolean;
+}
+
+export interface SegmentError {
+  message: string;
+  code?: ErrorEventCode;
+  turnError: boolean;
+}
+
+export interface AssistantSegment {
+  content: string;
+  toolCalls: ToolCallInfo[];
+  finished: boolean;
+  error?: SegmentError;
+  timestamp?: number;
+}
+
+export interface RunState {
+  id: number;
+  active: boolean;
+  segments: AssistantSegment[];
+}
+
+export interface OutboxEntry {
+  id: string;
+  seq: number;
+  content: string;
+  attachments?: ChatAttachment[];
+  timestamp: number;
+  status: "pending" | "sent" | "failed";
+  sentAfterMessageId: number | null;
+}
+
+export type InteractionStatus =
+  | { type: "pending" }
+  | { type: "approved" }
+  | { type: "rejected" }
+  | { type: "answered"; answer: string }
+  | { type: "timeout" };
+
+export interface InteractionState {
+  kind: "approval" | "question";
+  requestId: string;
+  toolCallId: string;
+  toolName: string;
+  status: InteractionStatus;
+}
+
+export interface ChatSessionData {
+  history: HistoryState;
+  runs: RunState[];
+  outbox: OutboxEntry[];
+  interactions: Record<string, InteractionState>;
+  seq: number;
+  pendingWithdraw: boolean;
+  retrying: boolean;
+  withdrawError: boolean;
+  lastActivityAt: number;
+  scrollPosition: number;
+}
+
+export function isSessionStreaming(session: ChatSessionData): boolean {
+  return (
+    session.outbox.some((entry) => entry.status === "pending") ||
+    session.runs.some((run) => run.active) ||
+    session.retrying
+  );
 }

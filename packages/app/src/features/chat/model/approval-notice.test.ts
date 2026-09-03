@@ -1,35 +1,33 @@
 import { describe, expect, it } from "vitest";
-import type { ChatMessage } from "../types";
 import { collectPendingApprovals } from "./approval-notice";
+import { createInitialSessionData } from "./session-events";
+import type { ChatSessionData, InteractionState } from "../types";
 
-function assistantMessage(toolCalls: ChatMessage["_toolCalls"]): ChatMessage {
-  return { role: "assistant", content: "", _toolCalls: toolCalls };
+function makeSession(
+  projectId: string,
+  interactions: InteractionState[] = [],
+  messages: ChatSessionData["history"]["messages"] = [],
+): { data: ChatSessionData; projectId: string } {
+  const data = createInitialSessionData();
+  data.history.messages = messages;
+  for (const interaction of interactions) {
+    data.interactions[interaction.requestId] = interaction;
+  }
+  return { data, projectId };
 }
 
 describe("collectPendingApprovals", () => {
   it("collects a pending run_command approval (command card with requestId)", () => {
     const sessions = {
-      s1: {
-        projectId: "p1",
-        messages: [
-          assistantMessage([
-            {
-              toolCallId: "tc1",
-              toolName: "run_command",
-              args: { command: "echo hi" },
-              status: "running",
-              _card: {
-                type: "command",
-                status: "pending_approval",
-                command: "echo hi",
-                stdout: "",
-                stderr: "",
-                requestId: "r1",
-              },
-            },
-          ]),
-        ],
-      },
+      s1: makeSession("p1", [
+        {
+          kind: "approval",
+          requestId: "r1",
+          toolCallId: "tc1",
+          toolName: "run_command",
+          status: { type: "pending" },
+        },
+      ]),
     };
 
     const result = collectPendingApprovals(sessions);
@@ -41,33 +39,21 @@ describe("collectPendingApprovals", () => {
         sessionId: "s1",
         projectId: "p1",
         toolName: "run_command",
-        command: "echo hi",
       },
     ]);
   });
 
   it("collects a pending generic-tool approval (approval card with requestId)", () => {
     const sessions = {
-      s2: {
-        projectId: "p1",
-        messages: [
-          assistantMessage([
-            {
-              toolCallId: "tc2",
-              toolName: "manage_agent",
-              args: { name: "x" },
-              status: "running",
-              _card: {
-                type: "approval",
-                status: "pending",
-                toolName: "manage_agent",
-                args: { name: "x" },
-                requestId: "r2",
-              },
-            },
-          ]),
-        ],
-      },
+      s2: makeSession("p1", [
+        {
+          kind: "approval",
+          requestId: "r2",
+          toolCallId: "tc2",
+          toolName: "manage_agent",
+          status: { type: "pending" },
+        },
+      ]),
     };
 
     const result = collectPendingApprovals(sessions);
@@ -85,26 +71,15 @@ describe("collectPendingApprovals", () => {
 
   it("collects a pending ask_user question (question card with requestId)", () => {
     const sessions = {
-      s3: {
-        projectId: "p1",
-        messages: [
-          assistantMessage([
-            {
-              toolCallId: "tc3",
-              toolName: "ask_user",
-              args: { question: "Deploy?" },
-              status: "running",
-              _card: {
-                type: "question",
-                status: "pending",
-                question: "Deploy?",
-                options: ["yes", "no"],
-                requestId: "r3",
-              },
-            },
-          ]),
-        ],
-      },
+      s3: makeSession("p1", [
+        {
+          kind: "question",
+          requestId: "r3",
+          toolCallId: "tc3",
+          toolName: "ask_user",
+          status: { type: "pending" },
+        },
+      ]),
     };
 
     const result = collectPendingApprovals(sessions);
@@ -122,40 +97,22 @@ describe("collectPendingApprovals", () => {
 
   it("excludes answered and timed-out question cards (requestId cleared)", () => {
     const sessions = {
-      s1: {
-        projectId: "p1",
-        messages: [
-          assistantMessage([
-            {
-              toolCallId: "tc4",
-              toolName: "ask_user",
-              args: {},
-              status: "completed",
-              _card: {
-                type: "question",
-                status: "answered",
-                question: "Deploy?",
-                answer: "yes",
-                requestId: undefined,
-              },
-            },
-          ]),
-          assistantMessage([
-            {
-              toolCallId: "tc5",
-              toolName: "ask_user",
-              args: {},
-              status: "completed",
-              _card: {
-                type: "question",
-                status: "timeout",
-                question: "Rollback?",
-                requestId: undefined,
-              },
-            },
-          ]),
-        ],
-      },
+      s1: makeSession("p1", [
+        {
+          kind: "question",
+          requestId: "r4",
+          toolCallId: "tc4",
+          toolName: "ask_user",
+          status: { type: "answered", answer: "yes" },
+        },
+        {
+          kind: "question",
+          requestId: "r5",
+          toolCallId: "tc5",
+          toolName: "ask_user",
+          status: { type: "timeout" },
+        },
+      ]),
     };
 
     expect(collectPendingApprovals(sessions)).toEqual([]);
@@ -163,27 +120,15 @@ describe("collectPendingApprovals", () => {
 
   it("excludes resolved approvals (requestId cleared to undefined)", () => {
     const sessions = {
-      s1: {
-        projectId: "p1",
-        messages: [
-          assistantMessage([
-            {
-              toolCallId: "tc1",
-              toolName: "run_command",
-              args: { command: "echo hi" },
-              status: "completed",
-              _card: {
-                type: "command",
-                status: "completed",
-                command: "echo hi",
-                stdout: "hi",
-                stderr: "",
-                requestId: undefined,
-              },
-            },
-          ]),
-        ],
-      },
+      s1: makeSession("p1", [
+        {
+          kind: "approval",
+          requestId: "r6",
+          toolCallId: "tc6",
+          toolName: "run_command",
+          status: { type: "approved" },
+        },
+      ]),
     };
 
     expect(collectPendingApprovals(sessions)).toEqual([]);
@@ -191,20 +136,7 @@ describe("collectPendingApprovals", () => {
 
   it("ignores tool calls without an approval card", () => {
     const sessions = {
-      s1: {
-        projectId: "p1",
-        messages: [
-          assistantMessage([
-            {
-              toolCallId: "tc9",
-              toolName: "write_file",
-              args: {},
-              status: "running",
-              _card: undefined,
-            },
-          ]),
-        ],
-      },
+      s1: makeSession("p1", []),
     };
 
     expect(collectPendingApprovals(sessions)).toEqual([]);
@@ -212,47 +144,24 @@ describe("collectPendingApprovals", () => {
 
   it("aggregates pending approvals across multiple sessions and projects", () => {
     const sessions = {
-      a: {
-        projectId: "pA",
-        messages: [
-          assistantMessage([
-            {
-              toolCallId: "t",
-              toolName: "run_command",
-              args: {},
-              status: "running",
-              _card: {
-                type: "command",
-                status: "pending_approval",
-                command: "ls",
-                stdout: "",
-                stderr: "",
-                requestId: "ra",
-              },
-            },
-          ]),
-        ],
-      },
-      b: {
-        projectId: "pB",
-        messages: [
-          assistantMessage([
-            {
-              toolCallId: "t",
-              toolName: "manage_trigger",
-              args: {},
-              status: "running",
-              _card: {
-                type: "approval",
-                status: "pending",
-                toolName: "manage_trigger",
-                args: {},
-                requestId: "rb",
-              },
-            },
-          ]),
-        ],
-      },
+      a: makeSession("pA", [
+        {
+          kind: "approval",
+          requestId: "ra",
+          toolCallId: "t",
+          toolName: "run_command",
+          status: { type: "pending" },
+        },
+      ]),
+      b: makeSession("pB", [
+        {
+          kind: "approval",
+          requestId: "rb",
+          toolCallId: "t",
+          toolName: "manage_trigger",
+          status: { type: "pending" },
+        },
+      ]),
     };
 
     const result = collectPendingApprovals(sessions);
@@ -261,13 +170,10 @@ describe("collectPendingApprovals", () => {
 
   it("skips user messages and messages without tool calls", () => {
     const sessions = {
-      s1: {
-        projectId: "p1",
-        messages: [
-          { role: "user", content: "hello" },
-          { role: "assistant", content: "no tools" },
-        ] satisfies ChatMessage[],
-      },
+      s1: makeSession("p1", [], [
+        { role: "user", content: "hello" },
+        { role: "assistant", content: "no tools" },
+      ]),
     };
 
     expect(collectPendingApprovals(sessions)).toEqual([]);
