@@ -9,6 +9,7 @@ import { Header } from "./Header";
 import { MessageList } from "./MessageList";
 import { ConnectionBanner } from "./ConnectionBanner";
 import { ChatRuntimeProvider } from "./runtime-context";
+import { ChatActionsProvider } from "./chat-actions-context";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
@@ -29,7 +30,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
   const { baseUrl, accessToken } = useConnection();
   const { t } = useI18n();
   const {
-    messages,
+    items,
     streaming,
     loading,
     connectionStatus,
@@ -41,8 +42,6 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     abort,
     reconnect,
     retryHistory,
-    respondApproval,
-    respondQuestion,
   } = useChatSession({
     client,
     sessionId,
@@ -52,65 +51,66 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     initialMessage,
     accessToken,
   });
-  const hasMore = useStreamingStore((s) => s.sessions[sessionId]?.hasMore ?? false);
+  const hasMore = useStreamingStore((s) => s.sessions[sessionId]?.history.hasMore ?? false);
   const loadingMore = useStreamingStore((s) => s.sessions[sessionId]?.loadingMore ?? false);
-  const { containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId, loadingMore);
+  const { containerRef, isAtBottom, scrollToBottom } = useChatScroll(items, sessionId, loadingMore);
   const themeHref = useAgentTheme(client, agent.id, agent.slug, projectId);
 
   const handleClose = () => {
     onClose?.();
   };
 
-  const handleRespondApproval = (requestId: string, approved: boolean) => {
-    const delivered = respondApproval(requestId, approved);
-    if (!delivered) toast.error(t("chat.approvalNotDelivered"));
-  };
-
-  const handleRespondQuestion = (requestId: string, answer: string): boolean => {
-    const delivered = respondQuestion(requestId, answer);
-    if (!delivered) toast.error(t("chat.questionNotDelivered"));
-    return delivered;
-  };
+  const actions = useMemo(() => ({
+    respondApproval: (requestId: string, approved: boolean) => {
+      const delivered = useStreamingStore.getState().respondApproval(sessionId, requestId, approved);
+      if (!delivered) toast.error(t("chat.approvalNotDelivered"));
+    },
+    respondQuestion: (requestId: string, answer: string): boolean => {
+      const delivered = useStreamingStore.getState().respondQuestion(sessionId, requestId, answer);
+      if (!delivered) toast.error(t("chat.questionNotDelivered"));
+      return delivered;
+    },
+  }), [sessionId, t]);
 
   const runtime = useMemo(() => ({ sessionId, agentId: agent.id }), [sessionId, agent.id]);
 
   return (
     <ChatRuntimeProvider runtime={runtime}>
-      <div className="flex flex-col h-full" data-chat-root>
-        {themeHref && <link rel="stylesheet" href={themeHref} />}
-        {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
-        <ConnectionBanner
-          connectionStatus={connectionStatus}
-          reconnectFailed={reconnectFailed}
-          historyError={historyError}
-          onReconnect={reconnect}
-          onRetryHistory={retryHistory}
-        />
-        <MessageList
-          messages={messages}
-          agent={agent}
-          streaming={streaming}
-          loading={loading}
-          containerRef={containerRef}
-          isAtBottom={isAtBottom}
-          onScrollToBottom={() => scrollToBottom("smooth")}
-          onNavigateToPath={onNavigateToPath}
-          onRespondApproval={handleRespondApproval}
-          onRespondQuestion={handleRespondQuestion}
-          onRetry={retry}
-          onWithdraw={withdrawLastTurn}
-          hasMore={hasMore}
-          loadingMore={loadingMore}
-          onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}
-        />
-        <Composer
-          streaming={streaming}
-          loading={loading}
-          sessionId={sessionId}
-          onSend={sendMessage}
-          onAbort={abort}
-        />
-      </div>
+      <ChatActionsProvider actions={actions}>
+        <div className="flex flex-col h-full" data-chat-root>
+          {themeHref && <link rel="stylesheet" href={themeHref} />}
+          {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
+          <ConnectionBanner
+            connectionStatus={connectionStatus}
+            reconnectFailed={reconnectFailed}
+            historyError={historyError}
+            onReconnect={reconnect}
+            onRetryHistory={retryHistory}
+          />
+          <MessageList
+            items={items}
+            agent={agent}
+            streaming={streaming}
+            loading={loading}
+            containerRef={containerRef}
+            isAtBottom={isAtBottom}
+            onScrollToBottom={() => scrollToBottom("smooth")}
+            onNavigateToPath={onNavigateToPath}
+            onRetry={retry}
+            onWithdraw={withdrawLastTurn}
+            hasMore={hasMore}
+            loadingMore={loadingMore}
+            onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}
+          />
+          <Composer
+            streaming={streaming}
+            loading={loading}
+            sessionId={sessionId}
+            onSend={sendMessage}
+            onAbort={abort}
+          />
+        </div>
+      </ChatActionsProvider>
     </ChatRuntimeProvider>
   );
 }

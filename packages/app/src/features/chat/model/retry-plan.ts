@@ -1,53 +1,54 @@
-import type { ChatMessage, SendableImage } from "../types";
+import type { ChatSessionData, RenderItem, SendableImage } from "../types";
 
 export type RetryPlan =
   | { kind: "none" }
   | { kind: "retry-last" }
-  | { kind: "resend"; content: string; attachment?: SendableImage; dropCount: number };
+  | { kind: "resend"; content: string; attachment?: SendableImage };
 
-export function planRetry(messages: ChatMessage[]): RetryPlan {
-  const last = messages[messages.length - 1];
+export function planRetry(
+  items: RenderItem[],
+  session: ChatSessionData,
+): RetryPlan {
+  const last = items[items.length - 1];
 
-  if (last?.role === "assistant" && last._error) {
-    if (last._withdrawError) {
+  if (last?.message.role === "assistant" && last.message._error) {
+    if (session.withdrawError) {
       return { kind: "none" };
     }
-    if (last._turnError) {
+    if (last.message._turnError) {
       return { kind: "retry-last" };
     }
-    const userMsg = findLastUser(messages);
-    if (userMsg) {
+    const userItem = findLastUser(items);
+    if (userItem) {
       return {
         kind: "resend",
-        content: userMsg.content,
-        attachment: toSendable(userMsg),
-        dropCount: messages.length - messages.lastIndexOf(userMsg),
+        content: userItem.message.content,
+        attachment: toSendable(userItem.message),
       };
     }
     return { kind: "none" };
   }
 
-  if (last?.role === "user" && last._sendFailed) {
+  if (last?.message.role === "user" && last.sendFailed) {
     return {
       kind: "resend",
-      content: last.content,
-      attachment: toSendable(last),
-      dropCount: 1,
+      content: last.message.content,
+      attachment: toSendable(last.message),
     };
   }
 
   return { kind: "none" };
 }
 
-function findLastUser(messages: ChatMessage[]): ChatMessage | undefined {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role === "user") return messages[i];
+function findLastUser(items: RenderItem[]): RenderItem | undefined {
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (items[i].message.role === "user") return items[i];
   }
   return undefined;
 }
 
-function toSendable(msg: ChatMessage): SendableImage | undefined {
-  const a = msg._attachments?.[0];
+function toSendable(message: RenderItem["message"]): SendableImage | undefined {
+  const a = message._attachments?.[0];
   if (!a) return undefined;
   return {
     path: a.path,

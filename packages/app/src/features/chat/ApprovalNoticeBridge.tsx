@@ -20,7 +20,15 @@ export function ApprovalNoticeBridge() {
 
   useEffect(() => {
     const check = () => {
-      const pending = collectPendingApprovals(useStreamingStore.getState().sessions);
+      const sessions = useStreamingStore.getState().sessions;
+      const pending = collectPendingApprovals(
+        Object.fromEntries(
+          Object.entries(sessions).map(([sessionId, session]) => [
+            sessionId,
+            { data: session, projectId: session.projectId },
+          ]),
+        ),
+      );
       const pendingIds = new Set(pending.map((item) => item.requestId));
       notifiedRef.current = new Set([...notifiedRef.current].filter((id) => pendingIds.has(id)));
       for (const item of pending) {

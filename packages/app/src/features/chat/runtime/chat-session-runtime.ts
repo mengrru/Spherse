@@ -4,13 +4,14 @@ import { buildWsUrl } from "../../../lib/api";
 import { parseAgentEvent, type AgentEvent } from "../model/agent-event-parse";
 import type { SendableImage } from "../types";
 import {
-  mergeHistoryMessages,
-  parseHistoryMessages,
-} from "../model/chat-history";
-import {
-  reduceSessionEvents,
-  type StreamingSessionData,
-} from "../model/chat-session-reducer";
+  applyFatalClose,
+  beginHistorySync,
+  markHistoryFailed,
+  markHistoryInterrupted,
+  type HistoryApplyMode,
+  type HistoryPageResult,
+} from "../model/session-events";
+import type { ChatSessionData } from "../types";
 
 const RECONNECT_BACKOFFS = [1000, 2000, 5000, 10000, 30000];
 const MAX_RECONNECT_ATTEMPTS = 10;
@@ -22,12 +23,8 @@ const FATAL_CLOSE_CODES = new Set<number>([
   CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE,
 ]);
 
-export interface ChatSessionRuntimeState extends StreamingSessionData {
-  hasMore: boolean;
-  oldestLoadedId: number | null;
-  historyStatus: "pending" | "syncing" | "ready";
+export interface ChatSessionRuntimeState extends ChatSessionData {
   connectionStatus: "disconnected" | "connecting" | "open";
-  historyError: boolean;
   reconnectFailed: boolean;
 }
 
@@ -45,8 +42,8 @@ interface ChatSessionRuntimeCallbacks<T extends ChatSessionRuntimeState> {
   updateSession(updater: (session: T) => T): void;
   enqueueEvent(event: AgentEvent): void;
   applyEvents(events: AgentEvent[]): void;
+  applyHistoryResult(result: HistoryPageResult, mode: HistoryApplyMode): void;
   flushEvents(): void;
-  setStreaming(streaming: boolean): void;
   takeInitialMessage(content: string): boolean;
   shouldReconnect(): boolean;
 }
@@ -98,7 +95,6 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
     };
 
     const reconcileHistory = async () => {
-      let succeeded = false;
       try {
         for (let attempt = 0; attempt <= RECONCILE_BACKOFFS.length; attempt++) {
           try {
@@ -108,26 +104,9 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
               { limit: 20 },
             );
             if (this.ws !== ws || !this.callbacks.getSession()) return;
-            const historyMessages = parseHistoryMessages(result.entries);
-            this.callbacks.updateSession((session) => {
-              const reconciled = {
-                ...session,
-                messages: mergeHistoryMessages(session.messages, historyMessages),
-                hasMore: result.hasMore,
-                oldestLoadedId: result.oldestId,
-                historyStatus: "ready" as const,
-                historyError: false,
-              };
-              return {
-                ...reconciled,
-                ...reduceSessionEvents(
-                  reconciled,
-                  connectionEvents.splice(0),
-                  Date.now(),
-                ),
-              };
-            });
-            succeeded = true;
+            this.callbacks.applyHistoryResult(result, "reconcile");
+            const buffered = connectionEvents.splice(0);
+            if (buffered.length > 0) this.callbacks.applyEvents(buffered);
             return;
           } catch (err) {
             console.warn(
@@ -141,19 +120,11 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
               continue;
             }
             applyConnectionEvents();
-            this.callbacks.updateSession((session) => ({
-              ...session,
-              historyStatus: historyWasReady ? "ready" : "pending",
-              historyError: !historyWasReady,
-            }));
+            this.callbacks.updateSession((session) => markHistoryFailed(session, historyWasReady));
           }
         }
       } finally {
         reconcilingHistory = false;
-        const session = this.callbacks.getSession();
-        if (this.ws === ws && session && (succeeded || historyWasReady)) {
-          this.callbacks.setStreaming(session.streaming);
-        }
       }
     };
 
@@ -195,23 +166,11 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
       this.callbacks.flushEvents();
       const fatal = FATAL_CLOSE_CODES.has(event.code);
       this.callbacks.updateSession((session) => ({
-        ...session,
+        ...(fatal ? applyFatalClose(session) : session),
         connectionStatus: "disconnected",
-        historyStatus:
-          session.historyStatus === "syncing"
-            ? (historyWasReady ? "ready" : "pending")
-            : session.historyStatus,
-        messages: fatal
-          ? session.messages.map((message) => (
-              message._streaming
-                ? { ...message, _streaming: false }
-                : message
-            ))
-          : session.messages,
-        streaming: fatal ? false : session.streaming,
+        history: markHistoryInterrupted(session, historyWasReady).history,
       }));
       if (fatal) {
-        this.callbacks.setStreaming(false);
         this.manuallyClosed = true;
         return;
       }
@@ -225,13 +184,12 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
       this.startHeartbeat(ws);
       this.reconnectAttempt = 0;
       historyWasReady =
-        this.callbacks.getSession()?.historyStatus === "ready";
+        this.callbacks.getSession()?.history.historyStatus === "ready";
       reconcilingHistory = true;
       this.callbacks.updateSession((session) => ({
-        ...session,
+        ...beginHistorySync(session),
         connectionStatus: "open",
         reconnectFailed: false,
-        historyStatus: "syncing",
       }));
       void reconcileHistory();
       if (

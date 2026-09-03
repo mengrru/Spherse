@@ -1,9 +1,9 @@
-import type { ChatMessage } from "../types";
+import type { RenderItem } from "../types";
 
-export function lastWithdrawableUserIndex(messages: ChatMessage[]): number {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i].role !== "user") continue;
-    return messages[i]._sendFailed ? -1 : i;
+export function lastWithdrawableUserIndex(items: RenderItem[]): number {
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (items[i].message.role !== "user") continue;
+    return items[i].sendFailed ? -1 : i;
   }
   return -1;
 }

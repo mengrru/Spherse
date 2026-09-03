@@ -1,7 +1,7 @@
-import type { ChatMessage } from "../types";
+import type { RenderItem } from "../types";
 
 export interface TurnGroupItem {
-  message: ChatMessage;
+  item: RenderItem;
   index: number;
 }
 
@@ -9,7 +9,7 @@ export type TurnGroup =
   | { kind: "plain"; item: TurnGroupItem }
   | { kind: "trigger"; items: TurnGroupItem[]; triggerName?: string; hasError: boolean };
 
-export function groupTurns(messages: ChatMessage[]): TurnGroup[] {
+export function groupTurns(items: RenderItem[]): TurnGroup[] {
   const groups: TurnGroup[] = [];
   let current: Extract<TurnGroup, { kind: "trigger" }> | null = null;
 
@@ -20,26 +20,26 @@ export function groupTurns(messages: ChatMessage[]): TurnGroup[] {
     }
   };
 
-  for (let index = 0; index < messages.length; index++) {
-    const message = messages[index];
-    if (message.role === "user") {
+  for (let index = 0; index < items.length; index++) {
+    const item = items[index];
+    if (item.message.role === "user") {
       closeCurrent();
-      if (message._triggered) {
+      if (item.message._triggered) {
         current = {
           kind: "trigger",
-          items: [{ message, index }],
-          ...(message._triggerName !== undefined ? { triggerName: message._triggerName } : {}),
+          items: [{ item, index }],
+          ...(item.message._triggerName !== undefined ? { triggerName: item.message._triggerName } : {}),
           hasError: false,
         };
         continue;
       }
     }
     if (current) {
-      current.items.push({ message, index });
-      if (message._turnError || message._error) current.hasError = true;
+      current.items.push({ item, index });
+      if (item.message._turnError || item.message._error) current.hasError = true;
       continue;
     }
-    groups.push({ kind: "plain", item: { message, index } });
+    groups.push({ kind: "plain", item: { item, index } });
   }
   closeCurrent();
 

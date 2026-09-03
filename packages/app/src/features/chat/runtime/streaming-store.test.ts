@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useStreamingStore } from "./streaming-store";
 import { useProjectDataStore } from "../../../stores/project-data-store";
+import { buildRenderList } from "../model/render-list";
+import { isSessionStreaming } from "../types";
 import type { ApiClient } from "../../../lib/api";
 
 interface MockWebSocketInstance {
@@ -137,7 +139,7 @@ describe("streaming-store resilience", () => {
       data: JSON.stringify({ type: "agent_end", messages: [] }),
     } as MessageEvent);
     await vi.advanceTimersByTimeAsync(0);
-    expect(useStreamingStore.getState().sessions.w1.streaming).toBe(false);
+    expect(isSessionStreaming(useStreamingStore.getState().sessions.w1)).toBe(false);
 
     useStreamingStore.getState().withdrawLastTurn("w1");
     expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({ type: "withdraw" });
@@ -147,15 +149,14 @@ describe("streaming-store resilience", () => {
     } as MessageEvent);
     await vi.advanceTimersByTimeAsync(0);
 
-    const messages = useStreamingStore.getState().sessions.w1.messages;
-    expect(messages).toEqual([]);
+    expect(buildRenderList(useStreamingStore.getState().sessions.w1)).toEqual([]);
   });
 
   it("withdrawLastTurn is a no-op while streaming", async () => {
     const socket = await attachAndConnect("w2");
     useStreamingStore.getState().sendMessage("w2", "hi");
     await vi.advanceTimersByTimeAsync(0);
-    expect(useStreamingStore.getState().sessions.w2.streaming).toBe(true);
+    expect(isSessionStreaming(useStreamingStore.getState().sessions.w2)).toBe(true);
 
     useStreamingStore.getState().withdrawLastTurn("w2");
 
@@ -172,14 +173,19 @@ describe("streaming-store resilience", () => {
         message: { role: "assistant", content: [{ type: "text", text: "a1" }] },
       }),
     } as MessageEvent);
-    socket.onmessage?.({ data: JSON.stringify({ type: "agent_end", messages: [] }) } as MessageEvent);
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "agent_end", messages: [] }),
+    } as MessageEvent);
     await vi.advanceTimersByTimeAsync(0);
 
     socket.readyState = 3;
     store.sendMessage("w3", "never sent");
     await vi.advanceTimersByTimeAsync(0);
-    const failed = useStreamingStore.getState().sessions.w3.messages.at(-1);
-    expect(failed?._sendFailed).toBe(true);
+    const session = useStreamingStore.getState().sessions.w3;
+    const failedItem = buildRenderList(session).at(-1);
+    expect(failedItem?.message.content).toBe("never sent");
+    expect(failedItem?.sendFailed).toBe(true);
+    expect(session.outbox.at(-1)?.status).toBe("failed");
     socket.readyState = OPEN;
 
     store.withdrawLastTurn("w3");
@@ -196,7 +202,9 @@ describe("streaming-store resilience", () => {
         message: { role: "assistant", content: [{ type: "text", text: "a1" }] },
       }),
     } as MessageEvent);
-    socket.onmessage?.({ data: JSON.stringify({ type: "agent_end", messages: [] }) } as MessageEvent);
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "agent_end", messages: [] }),
+    } as MessageEvent);
     await vi.advanceTimersByTimeAsync(0);
 
     useStreamingStore.getState().withdrawLastTurn("w4");
@@ -209,9 +217,9 @@ describe("streaming-store resilience", () => {
     } as MessageEvent);
     await vi.advanceTimersByTimeAsync(0);
 
-    const last = useStreamingStore.getState().sessions.w4.messages.at(-1);
-    expect(last?._error).toContain("no user message to withdraw");
-    expect(last?._withdrawError).toBe(true);
+    const last = buildRenderList(useStreamingStore.getState().sessions.w4).at(-1);
+    expect(last?.message._error).toContain("no user message to withdraw");
+    expect(last?.withdrawError).toBe(true);
   });
 
   it("does not treat a delayed heartbeat tick after renderer suspension as a timeout", async () => {
@@ -285,7 +293,7 @@ describe("streaming-store resilience", () => {
       data: JSON.stringify({ type: "message_start", message: { role: "assistant" } }),
     } as MessageEvent);
     await vi.advanceTimersByTimeAsync(0);
-    expect(useStreamingStore.getState().sessions.leak.streaming).toBe(true);
+    expect(isSessionStreaming(useStreamingStore.getState().sessions.leak)).toBe(true);
 
     await vi.advanceTimersByTimeAsync(10 * 60_000);
     expect(useStreamingStore.getState().sessions.leak).toBeDefined();
@@ -307,26 +315,32 @@ describe("streaming-store resilience", () => {
 
     useStreamingStore.getState().sendMessage("s2", "hi");
     socket.onmessage?.({
+      data: JSON.stringify({ type: "run_status", active: true }),
+    } as MessageEvent);
+    socket.onmessage?.({
       data: JSON.stringify({ type: "message_start", message: { role: "assistant" } }),
     } as MessageEvent);
     socket.onmessage?.({
       data: JSON.stringify({
         type: "message_update",
-        message: { role: "assistant", content: [{ type: "text", text: "partial" }] },
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "partial" }],
+        },
       }),
     } as MessageEvent);
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(useStreamingStore.getState().sessions.s2.streaming).toBe(true);
+    expect(isSessionStreaming(useStreamingStore.getState().sessions.s2)).toBe(true);
 
     socket.close();
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(useStreamingStore.getState().sessions.s2.streaming).toBe(true);
-    const messages = useStreamingStore.getState().sessions.s2.messages;
-    const last = messages[messages.length - 1];
-    expect(last.role).toBe("assistant");
-    expect(last._streaming).toBe(true);
+    const session = useStreamingStore.getState().sessions.s2;
+    expect(isSessionStreaming(session)).toBe(true);
+    const last = buildRenderList(session).at(-1);
+    expect(last?.message.role).toBe("assistant");
+    expect(last?.streaming).toBe(true);
   });
 
   it("escalates backoff across repeated reconnect failures", async () => {
@@ -386,13 +400,13 @@ describe("streaming-store resilience", () => {
     socket.onopen?.({} as Event);
     await vi.advanceTimersByTimeAsync(0);
 
-    const messagesBefore = useStreamingStore.getState().sessions.s7.messages;
+    const messagesBefore = useStreamingStore.getState().sessions.s7.history.messages;
     expect(messagesBefore.length).toBeGreaterThan(0);
 
     socket.onclose?.({ code: 4401 } as CloseEvent);
     await vi.advanceTimersByTimeAsync(60_000);
 
-    const messagesAfter = useStreamingStore.getState().sessions.s7.messages;
+    const messagesAfter = useStreamingStore.getState().sessions.s7.history.messages;
     expect(messagesAfter).toEqual(messagesBefore);
     expect(messagesAfter.length).toBeGreaterThan(0);
   });
@@ -437,7 +451,7 @@ describe("streaming-store resilience", () => {
       }),
     } as MessageEvent);
     await vi.advanceTimersByTimeAsync(0);
-    expect(useStreamingStore.getState().sessions.s9.streaming).toBe(true);
+    expect(isSessionStreaming(useStreamingStore.getState().sessions.s9)).toBe(true);
 
     (client.getSessionMessagesPage as ReturnType<typeof vi.fn>).mockResolvedValue({
       entries: [
@@ -465,8 +479,8 @@ describe("streaming-store resilience", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     const recovered = useStreamingStore.getState().sessions.s9;
-    expect(recovered.streaming).toBe(false);
-    expect(recovered.messages.map((message) => message.content)).toEqual([
+    expect(isSessionStreaming(recovered)).toBe(false);
+    expect(buildRenderList(recovered).map((item) => item.message.content)).toEqual([
       "hi",
       "done",
     ]);
@@ -501,14 +515,14 @@ describe("streaming-store resilience", () => {
     useStreamingStore.getState().refreshHistory(client, "a1", "sr");
     await vi.advanceTimersByTimeAsync(0);
 
-    const messages = useStreamingStore.getState().sessions.sr.messages;
-    expect(messages.map((m) => m.content)).toEqual([
+    const session = useStreamingStore.getState().sessions.sr;
+    expect(buildRenderList(session).map((item) => item.message.content)).toEqual([
       "old",
       "old reply",
       "new",
       "fresh reply",
     ]);
-    expect(useStreamingStore.getState().sessions.sr.hasMore).toBe(true);
+    expect(session.history.hasMore).toBe(true);
   });
 
   it("refreshHistory is a no-op when the session is not cached", async () => {
@@ -533,7 +547,7 @@ describe("streaming-store resilience", () => {
     } as MessageEvent);
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(useStreamingStore.getState().sessions.ss.streaming).toBe(true);
+    expect(isSessionStreaming(useStreamingStore.getState().sessions.ss)).toBe(true);
     const spy = client.getSessionMessagesPage as ReturnType<typeof vi.fn>;
     spy.mockClear();
 
@@ -561,12 +575,19 @@ describe("streaming-store resilience", () => {
     useStreamingStore.getState().sendMessage("img1", "look", image);
     await vi.advanceTimersByTimeAsync(0);
 
-    const messages = useStreamingStore.getState().sessions.img1.messages;
-    expect(messages[messages.length - 1]).toMatchObject({
+    const session = useStreamingStore.getState().sessions.img1;
+    const items = buildRenderList(session);
+    expect(items[items.length - 1]?.message).toMatchObject({
       role: "user",
       content: "look",
-      _optimistic: true,
       _attachments: [
+        { type: "image", path: ".spherse/attachments/x.png", mimeType: "image/png", width: 10, height: 20 },
+      ],
+    });
+    expect(session.outbox.at(-1)).toMatchObject({
+      content: "look",
+      status: "pending",
+      attachments: [
         { type: "image", path: ".spherse/attachments/x.png", mimeType: "image/png", width: 10, height: 20 },
       ],
     });
@@ -586,8 +607,8 @@ describe("streaming-store resilience", () => {
     const messagePayload = sent.find((p) => p.type === "message" && p.content === "hello");
     expect(messagePayload.attachments).toBeUndefined();
 
-    const messages = useStreamingStore.getState().sessions.img2.messages;
-    expect(messages[messages.length - 1]._attachments).toBeUndefined();
+    const items = buildRenderList(useStreamingStore.getState().sessions.img2);
+    expect(items[items.length - 1]?.message._attachments).toBeUndefined();
   });
 
   it("respondQuestion routes the answer to the session runtime", async () => {
@@ -627,10 +648,10 @@ describe("streaming-store resilience", () => {
     await vi.advanceTimersByTimeAsync(6000);
 
     const session = useStreamingStore.getState().sessions.rt1;
-    const last = session.messages[session.messages.length - 1];
-    expect(last._error).toBe("rate limit exceeded");
-    expect(last._turnError).toBe(true);
-    expect(session.streaming).toBe(false);
+    const last = buildRenderList(session).at(-1);
+    expect(last?.message._error).toBe("rate limit exceeded");
+    expect(last?.message._turnError).toBe(true);
+    expect(isSessionStreaming(session)).toBe(false);
     expect(socket.sent.map((s) => JSON.parse(s)).some((p) => p.type === "retry")).toBe(false);
   });
 
@@ -645,10 +666,10 @@ describe("streaming-store resilience", () => {
 
     expect(socket.sent.map((s) => JSON.parse(s))).toContainEqual({ type: "retry" });
     const session = useStreamingStore.getState().sessions.rt2;
-    expect(session.streaming).toBe(true);
-    const last = session.messages[session.messages.length - 1];
-    expect(last._error).toBeUndefined();
-    expect(last._streaming).toBe(true);
+    expect(isSessionStreaming(session)).toBe(true);
+    const last = buildRenderList(session).at(-1);
+    expect(last?.message._error).toBeUndefined();
+    expect(last?.streaming).toBe(true);
   });
 
   it("manual retry resends the message for a Source 1 error event", async () => {
@@ -698,5 +719,27 @@ describe("streaming-store resilience", () => {
     it("is a no-op when no session ever attached", () => {
       expect(() => useStreamingStore.getState().resumeProbeAll()).not.toThrow();
     });
+  });
+
+  it("syncs derived streaming to project-data-store once per transition", async () => {
+    const socket = await attachAndConnect("sync1");
+    const spy = vi.spyOn(useProjectDataStore.getState(), "setStreaming");
+    const send = (raw: unknown) =>
+      socket.onmessage?.({ data: JSON.stringify(raw) } as MessageEvent);
+
+    send({ type: "run_status", active: true });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useProjectDataStore.getState().projects["p1"]?.streamingSessionIds.has("sync1")).toBe(true);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    send({ type: "message_start", message: { role: "assistant", content: [] } });
+    send({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: "hi" }] } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    send({ type: "run_status", active: false });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useProjectDataStore.getState().projects["p1"]?.streamingSessionIds.has("sync1")).toBe(false);
+    expect(spy).toHaveBeenCalledTimes(2);
   });
 });

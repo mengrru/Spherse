@@ -5,7 +5,7 @@ import type { AgentSummary } from "../../lib/types";
 import { createMockHostBridge } from "../../test/host-bridge";
 import { renderWithProviders } from "../../test/render";
 import { MessageItem } from "./MessageItem";
-import type { ChatMessage } from "./types";
+import type { ChatMessage, RenderItem } from "./types";
 
 vi.mock("../../lib/use-connection", () => ({
   useApiClient: () => ({
@@ -18,10 +18,15 @@ const agent = { id: "a1", name: "Helper", alias: "" } as unknown as AgentSummary
 
 function renderMessage(
   message: Partial<ChatMessage> & { role: "user" | "assistant" },
+  meta: Partial<Pick<RenderItem, "streaming" | "sendFailed" | "withdrawError">> = {},
   props: { onWithdraw?: () => void } = {},
 ) {
   renderWithProviders(
-    <MessageItem message={{ content: "hello", ...message } as ChatMessage} agent={agent} onWithdraw={props.onWithdraw} />,
+    <MessageItem
+      item={{ key: "t-0", message: { content: "hello", ...message } as ChatMessage, ...meta }}
+      agent={agent}
+      onWithdraw={props.onWithdraw}
+    />,
     { bridge: createMockHostBridge() },
   );
 }
@@ -30,7 +35,7 @@ describe("MessageItem withdraw action", () => {
   it("renders a withdraw action for user messages when onWithdraw is provided", async () => {
     const user = userEvent.setup();
     const onWithdraw = vi.fn();
-    renderMessage({ role: "user" }, { onWithdraw });
+    renderMessage({ role: "user" }, {}, { onWithdraw });
 
     await user.click(screen.getByRole("button", { name: "撤回" }));
     await user.click(screen.getByRole("button", { name: "确认撤回" }));
@@ -43,7 +48,7 @@ describe("MessageItem withdraw action", () => {
   });
 
   it("omits the withdraw action while streaming", () => {
-    renderMessage({ role: "user", _streaming: true } as never);
+    renderMessage({ role: "user" }, { streaming: true });
     expect(screen.queryByRole("button", { name: "撤回" })).not.toBeInTheDocument();
   });
 });
@@ -54,7 +59,7 @@ describe("MessageItem user attachments", () => {
     renderMessage({
       role: "user",
       content: "look at this",
-      _attachments: [{ type: "image", path: "uploads/pic.png", name: "pic.png" }] as never,
+      _attachments: [{ type: "image", path: "uploads/pic.png", mimeType: "image/png" }],
     });
     const thumbnail = document.querySelector<HTMLImageElement>('img[src$="uploads/pic.png"]');
     expect(thumbnail).not.toBeNull();
@@ -67,7 +72,7 @@ describe("MessageItem user attachments", () => {
   });
 
   it("renders no attachment block when the list is empty", () => {
-    renderMessage({ role: "user", _attachments: [] as never });
+    renderMessage({ role: "user", _attachments: [] });
     expect(document.querySelector("img")).toBeNull();
   });
 });
@@ -77,7 +82,7 @@ describe("MessageItem bubble links", () => {
     const user = userEvent.setup();
     const openExternal = vi.fn(async () => {});
     renderWithProviders(
-      <MessageItem message={{ role: "assistant", content: "[docs](https://example.com/x)" } as ChatMessage} agent={agent} />,
+      <MessageItem item={{ key: "t-0", message: { role: "assistant", content: "[docs](https://example.com/x)" } }} agent={agent} />,
       { bridge: createMockHostBridge({ openExternal }) },
     );
 
@@ -89,7 +94,7 @@ describe("MessageItem bubble links", () => {
     const user = userEvent.setup();
     const openExternal = vi.fn(async () => {});
     renderWithProviders(
-      <MessageItem message={{ role: "assistant", content: "[jump](#section)" } as ChatMessage} agent={agent} />,
+      <MessageItem item={{ key: "t-0", message: { role: "assistant", content: "[jump](#section)" } }} agent={agent} />,
       { bridge: createMockHostBridge({ openExternal }) },
     );
 

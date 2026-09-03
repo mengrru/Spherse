@@ -5,14 +5,9 @@ import {
   isToolResultMessage,
   isUserMessage,
 } from "./agent-event-parse";
-import {
-  buildCardFromToolResult,
-  extractMessageText,
-  extractToolCalls,
-} from "./chat-tool-projection";
+import { extractMessageText, extractToolCalls } from "./tool-card";
 import { classifyErrorMessageString } from "./classify-error";
-import { aggregateFileChanges, attachRunChanges } from "../lib/aggregate-file-changes";
-import type { ChatMessage, ToolCallInfo } from "../types";
+import type { ChatMessage, OutboxEntry, ToolCallInfo } from "../types";
 
 interface ToolResultDetailsBag {
   result: string;
@@ -20,45 +15,46 @@ interface ToolResultDetailsBag {
   details: unknown;
 }
 
-export function mergeHistoryMessages(
-  current: ChatMessage[],
-  history: ChatMessage[],
+export function mergeHistoryPage(
+  existing: ChatMessage[],
+  incoming: ChatMessage[],
 ): ChatMessage[] {
-  if (current.length === 0) return history;
-  if (history.length === 0) return current;
-  if (
-    !current.some((message) => message._messageId !== undefined) &&
-    !history.some((message) => message._messageId !== undefined)
-  ) {
-    return [...history, ...current];
-  }
-  const persisted = new Map<number, ChatMessage>();
-  for (const message of current) {
+  const merged = new Map<number, ChatMessage>();
+  for (const message of existing) {
     if (message._messageId !== undefined) {
-      persisted.set(message._messageId, message);
+      merged.set(message._messageId, message);
     }
   }
-  for (const message of history) {
+  for (const message of incoming) {
     if (message._messageId !== undefined) {
-      persisted.set(message._messageId, message);
+      merged.set(message._messageId, message);
     }
   }
-  const merged = [...persisted.values()].sort(
+  return [...merged.values()].sort(
     (a, b) => (a._messageId ?? 0) - (b._messageId ?? 0),
   );
-  const historyUserContents = new Set(
-    history
-      .filter((message) => message.role === "user")
-      .map((message) => message.content),
-  );
-  const transients = current.filter((message) => {
-    if (message._messageId !== undefined) return false;
-    if (message._optimistic) {
-      return !historyUserContents.has(message.content);
-    }
-    return Boolean(message._error);
-  });
-  return [...merged, ...transients];
+}
+
+export function consumeOutbox(
+  outbox: OutboxEntry[],
+  history: ChatMessage[],
+): OutboxEntry[] {
+  if (outbox.length === 0) return outbox;
+  const consumed = new Set<number>();
+  const kept: OutboxEntry[] = [];
+  for (const entry of outbox) {
+    const lowerBound = entry.sentAfterMessageId ?? Number.NEGATIVE_INFINITY;
+    const matched = history.some((message) => {
+      if (message.role !== "user" || message._messageId === undefined) return false;
+      if (message.content !== entry.content) return false;
+      if (message._messageId <= lowerBound) return false;
+      if (consumed.has(message._messageId)) return false;
+      consumed.add(message._messageId);
+      return true;
+    });
+    if (!matched) kept.push(entry);
+  }
+  return kept.length === outbox.length ? outbox : kept;
 }
 
 export function parseHistoryMessages(
@@ -124,21 +120,7 @@ export function parseHistoryMessages(
       });
     }
   }
-
-  const runEndIndices: number[] = [];
-  for (let i = 1; i < loaded.length; i++) {
-    if (loaded[i].role === "user") runEndIndices.push(i - 1);
-  }
-  if (loaded.length > 0) runEndIndices.push(loaded.length - 1);
-
-  let result = loaded;
-  for (const runEndIndex of runEndIndices) {
-    const changes = aggregateFileChanges(result, runEndIndex);
-    if (changes.length > 0) {
-      result = attachRunChanges(result, runEndIndex, changes);
-    }
-  }
-  return result;
+  return loaded;
 }
 
 function collectToolResultDetails(
@@ -169,11 +151,6 @@ function enrichToolCalls(
     );
     if (!original) return info;
     const toolResult = toolResultMap.get(info.toolCallId);
-    const card = buildCardFromToolResult(
-      original.name,
-      original,
-      toolResult?.details,
-    );
     return {
       ...info,
       result: toolResult?.result,
@@ -182,7 +159,8 @@ function enrichToolCalls(
           ? "error"
           : "completed"
         : "completed",
-      ...(card ? { _card: card } : {}),
+      isError: toolResult?.isError,
+      resultDetails: toolResult?.details,
     };
   });
 }
