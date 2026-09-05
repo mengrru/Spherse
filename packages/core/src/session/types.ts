@@ -20,6 +20,7 @@ export type SessionControlEvent =
       toolCallId: string;
       toolName: string;
       args: unknown;
+      seq?: number;
     }
   | {
       type: "control_resolved";
@@ -27,6 +28,8 @@ export type SessionControlEvent =
       kind: "approval";
       approved: boolean;
       reason?: string;
+      aborted?: boolean;
+      seq?: number;
     }
   | {
       type: "control_request";
@@ -35,6 +38,7 @@ export type SessionControlEvent =
       toolCallId: string;
       toolName: string;
       args: unknown;
+      seq?: number;
     }
   | {
       type: "control_resolved";
@@ -42,4 +46,6 @@ export type SessionControlEvent =
       kind: "question";
       answer?: string;
       timedOut: boolean;
+      aborted?: boolean;
+      seq?: number;
     };

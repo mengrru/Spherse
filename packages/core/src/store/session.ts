@@ -257,6 +257,15 @@ export class SessionStore {
     return SessionStore.rowsToEvents(rows);
   }
 
+  readEventCount(sessionId: string): number {
+    const row = this.db
+      .prepare<[string], { count: number }>(
+        "SELECT COUNT(*) AS count FROM events WHERE session_id = ?",
+      )
+      .get(sessionId);
+    return row?.count ?? 0;
+  }
+
   private static rowsToEvents(rows: EventRow[]): SessionEvent[] {
     return rows.map((row) => {
       assertSupportedEventVersion(row);

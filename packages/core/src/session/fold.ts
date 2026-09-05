@@ -2,12 +2,21 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { ToolResultMessage } from "@earendil-works/pi-ai";
 import { wrapDigestContent } from "../context/compaction.js";
 import { MESSAGE_EVENT_TYPES, type SessionEvent } from "./events.js";
+import type { ControlRequestKind } from "./types.js";
 
 export interface DerivedMessageEntry {
   seq: number;
   message: AgentMessage;
   source?: "triggered";
   triggerName?: string;
+}
+
+export interface PendingControlEntry {
+  seq: number;
+  requestId: string;
+  kind: ControlRequestKind;
+  toolCallId: string;
+  toolName: string;
 }
 
 interface RestartState {
@@ -102,6 +111,28 @@ export function collectAbandonedSeqs(events: readonly SessionEvent[]): Set<numbe
     }
   }
   return abandoned;
+}
+
+export function derivePendingControls(
+  events: readonly SessionEvent[],
+): PendingControlEntry[] {
+  const pending = new Map<string, PendingControlEntry>();
+  for (const event of events) {
+    if (event.type === "control/requested") {
+      pending.set(event.data.requestId, {
+        seq: event.seq,
+        requestId: event.data.requestId,
+        kind: event.data.kind,
+        toolCallId: event.data.toolCallId,
+        toolName: event.data.toolName,
+      });
+    } else if (event.type === "control/resolved") {
+      pending.delete(event.data.requestId);
+    } else if (event.type === "turn/end") {
+      pending.clear();
+    }
+  }
+  return [...pending.values()];
 }
 
 const INTERRUPTED_TOOL_TEXT = "The tool call was interrupted and did not execute.";

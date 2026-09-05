@@ -401,3 +401,50 @@ describe("repairLog", () => {
     expect(repairs[0].data).toEqual({ reason: "aborted" });
   });
 });
+
+describe("derivePendingControls", () => {
+  it("returns unresolved requested controls with their metadata", async () => {
+    const { derivePendingControls } = await import("../../session/fold.js");
+    const pending = derivePendingControls([
+      user("hi", 0),
+      ev("turn/start", {}, 1),
+      ev("control/requested", { requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command", args: {} }, 2),
+    ]);
+    expect(pending).toEqual([
+      { seq: 2, requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command" },
+    ]);
+  });
+
+  it("drops requests paired with a resolved event", async () => {
+    const { derivePendingControls } = await import("../../session/fold.js");
+    const pending = derivePendingControls([
+      ev("control/requested", { requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command", args: {} }, 0),
+      ev("control/resolved", { requestId: "r1", kind: "approval", approved: true }, 1),
+      ev("control/requested", { requestId: "r2", kind: "question", toolCallId: "tc2", toolName: "ask_user", args: {} }, 2),
+      ev("control/resolved", { requestId: "r2", kind: "question", timedOut: true }, 3),
+    ]);
+    expect(pending).toEqual([]);
+  });
+
+  it("excludes requests separated from the log tail by a turn/end (crash danglings via repair)", async () => {
+    const { derivePendingControls } = await import("../../session/fold.js");
+    const pending = derivePendingControls([
+      ev("control/requested", { requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command", args: {} }, 0),
+      ev("turn/end", { reason: "aborted" }, 1),
+    ]);
+    expect(pending).toEqual([]);
+  });
+
+  it("keeps a request from the latest turn even when earlier turns ended", async () => {
+    const { derivePendingControls } = await import("../../session/fold.js");
+    const pending = derivePendingControls([
+      ev("control/requested", { requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command", args: {} }, 0),
+      ev("control/resolved", { requestId: "r1", kind: "approval", approved: true }, 1),
+      ev("turn/end", { reason: "completed" }, 2),
+      ev("control/requested", { requestId: "r2", kind: "question", toolCallId: "tc2", toolName: "ask_user", args: {} }, 3),
+    ]);
+    expect(pending).toEqual([
+      { seq: 3, requestId: "r2", kind: "question", toolCallId: "tc2", toolName: "ask_user" },
+    ]);
+  });
+});

@@ -1,6 +1,7 @@
 import {
   ConflictError,
   type Attachment,
+  type SendMessageMeta,
   type SessionManager,
 } from "@spherse/core";
 import type { FastifyBaseLogger } from "fastify";
@@ -138,7 +139,14 @@ export class ChatChannel {
     };
   }
 
-  async startDetachedRun(content: string): Promise<void> {
+  async startDetachedRun(
+    content: string,
+    options?: {
+      meta?: SendMessageMeta;
+      onEvent?: (event: CoreEvent) => void;
+      awaitRun?: boolean;
+    },
+  ): Promise<void> {
     this.attachments += 1;
     try {
       await this.ready;
@@ -150,21 +158,39 @@ export class ChatChannel {
       this.cleanupIfIdle();
       throw err;
     }
-    this.startRun((onEvent) =>
-      this.runtime.sendMessage(this.sessionId, content, [], onEvent),
-    )
-      .catch((err) => {
-        this.logger.error({ err, sessionId: this.sessionId }, "detached chat run failed");
-        this.publish({
-          type: "error",
-          message: err instanceof Error ? err.message : "chat error",
-          code: classifyRunError(err),
-        });
-      })
-      .finally(() => {
-        this.attachments -= 1;
-        this.cleanupIfIdle();
+    const executor = (broadcast: CoreEventHandler) => {
+      const fanOut = (event: CoreEvent) => {
+        options?.onEvent?.(event);
+        broadcast(event);
+      };
+      if (options?.meta !== undefined) {
+        return this.runtime.sendMessage(this.sessionId, content, [], fanOut, options.meta);
+      }
+      return this.runtime.sendMessage(this.sessionId, content, [], fanOut);
+    };
+    const handleFailure = (err: unknown) => {
+      this.logger.error({ err, sessionId: this.sessionId }, "detached chat run failed");
+      this.publish({
+        type: "error",
+        message: err instanceof Error ? err.message : "chat error",
+        code: classifyRunError(err),
       });
+    };
+    const release = () => {
+      this.attachments -= 1;
+      this.cleanupIfIdle();
+    };
+    if (options?.awaitRun) {
+      return this.startRun(executor)
+        .catch((err: unknown) => {
+          handleFailure(err);
+          throw err;
+        })
+        .finally(release);
+    }
+    void this.startRun(executor)
+      .catch(handleFailure)
+      .finally(release);
   }
 
   private release(): void {

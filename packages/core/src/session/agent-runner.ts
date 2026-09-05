@@ -172,7 +172,7 @@ export class AgentRunner {
         onEvent,
       );
 
-      const previousSink = this.controlBus.swapEventSink(onEvent);
+      const previousSink = this.controlBus.swapEventSink(this.persistingControlSink(onEvent));
       restoreSink = () => this.controlBus.swapEventSink(previousSink);
       unsubscribe = this.agent.subscribe(dispatch);
 
@@ -232,7 +232,7 @@ export class AgentRunner {
         onEvent,
       );
 
-      const previousSink = this.controlBus.swapEventSink(onEvent);
+      const previousSink = this.controlBus.swapEventSink(this.persistingControlSink(onEvent));
       restoreSink = () => this.controlBus.swapEventSink(previousSink);
       unsubscribe = this.agent.subscribe(dispatch);
 
@@ -421,6 +421,41 @@ export class AgentRunner {
     if (this.eventLog.events.length !== eventsBefore) {
       this.syncBufferFromLog();
     }
+  }
+
+  private persistingControlSink(onEvent: RunnerEventHandler): RunnerEventHandler {
+    return (event) => {
+      if (
+        !this.eventLog ||
+        (event.type !== "control_request" && event.type !== "control_resolved")
+      ) {
+        onEvent(event);
+        return;
+      }
+      if (event.type === "control_request") {
+        const persisted = this.eventLog.append("control/requested", {
+          requestId: event.requestId,
+          kind: event.kind,
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          args: event.args,
+        });
+        onEvent({ ...event, seq: persisted.seq });
+        return;
+      }
+      const persisted = this.eventLog.append("control/resolved", {
+        requestId: event.requestId,
+        kind: event.kind,
+        ...(event.kind === "approval"
+          ? { approved: event.approved, ...(event.reason !== undefined ? { reason: event.reason } : {}) }
+          : {}),
+        ...(event.kind === "question"
+          ? { ...(event.answer !== undefined ? { answer: event.answer } : {}), timedOut: event.timedOut }
+          : {}),
+        ...(event.aborted !== undefined ? { aborted: event.aborted } : {}),
+      });
+      onEvent({ ...event, seq: persisted.seq });
+    };
   }
 
   private persistMiddleware(): EventMiddleware<AgentEvent> {
