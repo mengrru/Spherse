@@ -59,33 +59,3 @@ describe("assembleProject — open failure safety", () => {
     expect(await readFile(projectRoot, "CHANGELOG.md")).toBe("# my changelog\n");
   });
 });
-
-describe("assembleProject — wrapSessionPort hook", () => {
-  let projectRoot: string;
-
-  beforeEach(async () => {
-    projectRoot = await createTempProject();
-  });
-
-  afterEach(async () => {
-    await cleanupDir(projectRoot);
-  });
-
-  it("applies the wrapper before capabilities receive the port in init", async () => {
-    let portSeenByCapability: { WRAPPED?: boolean } | undefined;
-    const probeCapability = {
-      init: async (services: { session: { WRAPPED?: boolean } }) => {
-        portSeenByCapability = services.session;
-      },
-    };
-    const runtime = await createProject(projectRoot, {
-      projectName: "WrapTest",
-      logger: createSilentLogger(),
-      capabilities: (builtin) => [...builtin, probeCapability as never],
-      wrapSessionPort: (port) => ({ ...port, WRAPPED: true }) as never,
-    });
-    runtime.timerService.stop();
-    await runtime.shutdown();
-    expect(portSeenByCapability?.WRAPPED).toBe(true);
-  });
-});

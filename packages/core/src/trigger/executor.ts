@@ -129,7 +129,7 @@ export class TriggerExecutor extends EventEmitter {
           agentEnded = true;
           turnError = readTurnError(event);
         },
-        { source: "triggered", triggerName, agentId },
+        { source: "triggered", triggerName },
       );
 
       if (turnError !== undefined) {

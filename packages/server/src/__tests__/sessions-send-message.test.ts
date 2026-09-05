@@ -15,11 +15,14 @@ declare module "fastify" {
 function createRuntime() {
   let emit: ((event: any) => void) | undefined;
   let finish: (() => void) | undefined;
+  let logListener: ((event: any) => void) | undefined;
+  const appendLog = (event: any) => logListener?.(event);
   const runtime = {
     restoreSession: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn(
       (_sessionId: string, _content: string, _attachments: unknown, onEvent: (event: any) => void) => {
         emit = onEvent;
+        appendLog({ type: "turn/start", seq: 0, time: 1, data: {} });
         return new Promise<void>((resolve) => {
           finish = resolve;
         });
@@ -28,13 +31,19 @@ function createRuntime() {
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
-    subscribeSessionEvents: vi.fn(() => () => {}),
+    subscribeSessionEvents: vi.fn((_sessionId: string, listener: (event: any) => void) => {
+      logListener = listener;
+      return () => {
+        logListener = undefined;
+      };
+    }),
     readSessionEventsAfter: vi.fn(() => []),
     getSessionLastSeq: vi.fn(() => -1),
   };
   return {
     runtime,
     emit: (event: any) => emit?.(event),
+    appendLog,
     finish: () => finish?.(),
   };
 }
@@ -84,6 +93,7 @@ describe("POST .../sessions/:id/messages route", () => {
     expect(mock.runtime.destroySession).not.toHaveBeenCalled();
 
     mock.emit({ type: "agent_end", messages: [] });
+    mock.appendLog({ type: "turn/end", seq: 1, time: 1, data: { reason: "completed" } });
     mock.finish();
     await vi.waitFor(() => expect(mock.runtime.destroySession).toHaveBeenCalledWith("s1"));
   });
@@ -138,6 +148,7 @@ describe("POST .../sessions/:id/messages route", () => {
 
     await vi.waitFor(() => expect(events).toContainEqual({ type: "run_status", active: true }));
     mock.emit({ type: "agent_end", messages: [] });
+    mock.appendLog({ type: "turn/end", seq: 1, time: 1, data: { reason: "completed" } });
     mock.finish();
     await vi.waitFor(() => expect(events).toContainEqual({ type: "run_status", active: false }));
     expect(mock.runtime.restoreSession).toHaveBeenCalledTimes(1);

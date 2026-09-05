@@ -1,7 +1,6 @@
 import {
   ConflictError,
   type Attachment,
-  type SendMessageMeta,
   type SessionManager,
 } from "@spherse/core";
 import type { FastifyBaseLogger } from "fastify";
@@ -139,14 +138,7 @@ export class ChatChannel {
     };
   }
 
-  async startDetachedRun(
-    content: string,
-    options?: {
-      meta?: SendMessageMeta;
-      onEvent?: (event: CoreEvent) => void;
-      awaitRun?: boolean;
-    },
-  ): Promise<void> {
+  async startDetachedRun(content: string): Promise<void> {
     this.attachments += 1;
     try {
       await this.ready;
@@ -158,39 +150,21 @@ export class ChatChannel {
       this.cleanupIfIdle();
       throw err;
     }
-    const executor = (broadcast: CoreEventHandler) => {
-      const fanOut = (event: CoreEvent) => {
-        options?.onEvent?.(event);
-        broadcast(event);
-      };
-      if (options?.meta !== undefined) {
-        return this.runtime.sendMessage(this.sessionId, content, [], fanOut, options.meta);
-      }
-      return this.runtime.sendMessage(this.sessionId, content, [], fanOut);
-    };
-    const handleFailure = (err: unknown) => {
-      this.logger.error({ err, sessionId: this.sessionId }, "detached chat run failed");
-      this.publish({
-        type: "error",
-        message: err instanceof Error ? err.message : "chat error",
-        code: classifyRunError(err),
+    this.startRun((onEvent) =>
+      this.runtime.sendMessage(this.sessionId, content, [], onEvent),
+    )
+      .catch((err) => {
+        this.logger.error({ err, sessionId: this.sessionId }, "detached chat run failed");
+        this.publish({
+          type: "error",
+          message: err instanceof Error ? err.message : "chat error",
+          code: classifyRunError(err),
+        });
+      })
+      .finally(() => {
+        this.attachments -= 1;
+        this.cleanupIfIdle();
       });
-    };
-    const release = () => {
-      this.attachments -= 1;
-      this.cleanupIfIdle();
-    };
-    if (options?.awaitRun) {
-      return this.startRun(executor)
-        .catch((err: unknown) => {
-          handleFailure(err);
-          throw err;
-        })
-        .finally(release);
-    }
-    void this.startRun(executor)
-      .catch(handleFailure)
-      .finally(release);
   }
 
   private release(): void {
@@ -204,6 +178,12 @@ export class ChatChannel {
       const wireEvent = this.projector.consumeLogEvent(event);
       if (wireEvent !== undefined) {
         this.publish(wireEvent);
+      }
+      if (
+        wireEvent?.type === "run_status" &&
+        (wireEvent as { active?: unknown }).active === false
+      ) {
+        this.cleanupIfIdle();
       }
     });
   }
@@ -235,7 +215,7 @@ export class ChatChannel {
     }
     this.notify(subscriber, {
       type: "run_status",
-      active: this.running,
+      active: this.projector.isRunActive(),
     });
   }
 
@@ -248,7 +228,6 @@ export class ChatChannel {
     this.running = true;
     this.runEvents = [];
     this.projector.resetRun();
-    this.publish({ type: "run_status", active: true });
     try {
       await executor((event) => {
         const enriched = this.projector.enrich(event);
@@ -259,7 +238,6 @@ export class ChatChannel {
       this.running = false;
       this.runEvents = [];
       this.projector.clearPendingEcho();
-      this.publish({ type: "run_status", active: false });
       this.cleanupIfIdle();
     }
   }
@@ -318,7 +296,12 @@ export class ChatChannel {
   }
 
   private cleanupIfIdle(): void {
-    if (!this.initialized || this.running || this.attachments > 0) {
+    if (
+      !this.initialized ||
+      this.running ||
+      this.attachments > 0 ||
+      this.projector.isRunActive()
+    ) {
       return;
     }
     this.runtime.destroySession(this.sessionId);
