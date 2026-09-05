@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createProject, type Logger, type ProjectRuntime } from "@spherse/core";
-import { ChatSessionHub } from "../chat-session-hub.js";
+import { ChatSessionHub } from "../chat/chat-session-hub.js";
 
 const silentLogger: Logger = {
   debug: () => {},

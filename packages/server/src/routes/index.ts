@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ProjectRegistry, ProjectContextCompat } from "../registry.js";
-import type { ChatSessionHub } from "../chat-session-hub.js";
+import type { ChatSessionHub } from "../chat/index.js";
 import { notFound } from "../errors.js";
 import { registerAgentRoutes } from "./agents.js";
 import { registerAgentWriteRoutes } from "./agent-write.js";

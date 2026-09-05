@@ -159,9 +159,11 @@ spherse/
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
     │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry；组合 auth / cors / host-guard 中间件
-    │   │       ├── cors.ts              # 认证制 CORS 中间件（preflight 反射放行，token 有效才设 ACAO）
-    │   │       ├── host-guard.ts        # Host 校验中间件（静态集合 + 动态注册，返回 HostGuard 管理动态 host）
-    │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
+│   │       ├── middlewares/          # 请求边界防护三件套（onRequest hook，均由 index.ts 装配）
+│   │       │   ├── auth.ts           # token 校验（Bearer/query/preview-path 提取 + timingSafeEqual）+ registerAuthHook
+│   │       │   ├── cors.ts           # 认证制 CORS（preflight 反射放行，token 有效才设 ACAO）
+│   │       │   └── host-guard.ts     # Host 校验（静态集合 + 动态注册，返回 HostGuard 管理动态 host）
+│   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove
     │   │       ├── marketplace.ts        # 技能市场 service：OSS manifest 代理（30s 内存缓存，env SPHERSE_MARKETPLACE_MANIFEST_URL 可覆盖 URL）+ zip 下载（同源 SSRF 校验、50MB 上限）
 │   │       ├── routes/               # REST 路由，按业务域拆分
@@ -180,13 +182,18 @@ spherse/
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
 │       │       │   ├── trigger.ts         # 触发器 CRUD 与手动触发（/triggers、/trigger-logs、/run）
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
-│   │       ├── chat-session-hub.ts      # ChatSessionHub：channel 注册表（Map<projectId:sessionId, ChatChannel> + 身份守卫删除）
-│   │       ├── chat-channel.ts          # ChatChannel：单 session 生命周期（restore/run 序列化/快照压缩/握手重放/fanout/空闲销毁）
-│   │       ├── chat-wire-projector.ts   # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
-│   │       ├── ws-chat.ts            # WebSocket 对话流（/ws/projects/:projectId/chat/...，双向 session-scoped，?since= 游标重放）
-│   │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，trigger/fs-watch/debug 按 projectId×channel 订阅）
-│       │       └── lib/
-│       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
+│   │       ├── chat/                  # chat 域（对外仅经 index.ts 导出 handleChatWebSocket + ChatSessionHub）
+│   │       │   ├── index.ts            # 域门面
+│   │       │   ├── chat-session-hub.ts # ChatSessionHub：channel 注册表（Map<projectId:sessionId, ChatChannel> + 身份守卫删除）
+│   │       │   ├── chat-channel.ts     # ChatChannel：单 session 生命周期（restore/run 序列化/快照压缩/握手重放/fanout/空闲销毁）
+│   │       │   ├── chat-wire-projector.ts # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
+│   │       │   ├── ws-chat.ts          # WebSocket 对话流端点（/ws/projects/:projectId/chat/...，?since= 游标重放）
+│   │       │   └── classify-run-error.ts # run 错误 → wire error code 分类
+│   │       ├── bus/                  # bus 域（全局多路复用 bus WebSocket，trigger/fs-watch/debug/agent 按 projectId×channel 订阅；对外经 index.ts 导出 handleBusWebSocket）
+│   │       │   ├── ws-bus.ts           # 端点 + BusConnectionHandler（订阅生命周期、trigger/agent payload 转发）
+│   │       │   └── fs-watcher.ts       # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
+│   │       └── lib/
+│   │           └── debug-sink.ts     # debug 订阅注册表 + createDebugBusStream（pino multistream 的 WS 广播流，无 Fastify/ws 依赖；logger 与 bus 域共同消费）
 │   ├── app/                          # @spherse/app — 共享 React renderer（前端源码，被 desktop/web 消费）
 │   │   ├── README.md                 # renderer 架构、状态边界、编码规范与验证清单
 │   │   ├── index.html                # renderer 入口 HTML（vite 入口）

@@ -39,7 +39,7 @@ Composer.send
 - **close code**：`4400 PROTOCOL_ERROR`、`4401 SESSION_UNRECOVERABLE`、`4402 MIGRATION_REQUIRED`——renderer 视为 fatal 不再重连；瞬时错误以 1000 关闭触发重连
 - 出站校验默认关闭（生产直发），`SPHERSE_VALIDATE_WS=1` 开启调试；schema 由 `chat-wire-schema.test.ts` 全事件族钉住
 
-## Server：hub / channel / projector（`chat-session-hub.ts` + `chat-channel.ts` + `chat-wire-projector.ts`）
+## Server：hub / channel / projector（`server/src/chat/`，对外仅经 `chat/index.ts` 导出）
 
 - **`ChatSessionHub`（注册表）**：`Map<projectId:sessionId, ChatChannel>` + getOrCreate + 身份守卫删除回调；hub 实例由 `server/index.ts` 创建，WS 与 sessions 路由共享
 - **`ChatChannel`（单 session 生命周期）**：restore→ready、事件日志订阅、attach（连接级生命周期为闭包）、run 序列化（`startRun` 在 running 时抛 `ConflictError`，HTTP 映射 409，WS 路径表现为 error 事件 code=PERMANENT）、快照压缩（run 期间 `message_update` 同一消息窗口只留最后一条、`tool_execution_update` 同 toolCallId 只留最后一条）、握手重放、fanout、空闲销毁（`cleanupIfIdle`）

@@ -12,14 +12,14 @@ import {
 import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
-import { registerAuthHook, type AuthOptions } from "./auth.js";
-import { registerAuthGatedCors } from "./cors.js";
-import { registerHostGuard } from "./host-guard.js";
+import { registerAuthHook, type AuthOptions } from "./middlewares/auth.js";
+import { registerAuthGatedCors } from "./middlewares/cors.js";
+import { registerHostGuard } from "./middlewares/host-guard.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { setAppVersion } from "./server-info.js";
-import { ChatSessionHub } from "./chat-session-hub.js";
-import { handleChatWebSocket } from "./ws-chat.js";
-import { handleBusWebSocket } from "./ws-bus.js";
+import { ChatSessionHub } from "./chat/index.js";
+import { handleChatWebSocket } from "./chat/index.js";
+import { handleBusWebSocket } from "./bus/index.js";
 
 export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type ProjectInfo, type RegisterOptions } from "./registry.js";
 

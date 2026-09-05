@@ -1,42 +1,12 @@
-import { Writable } from "node:stream";
 import type { FastifyInstance, FastifyBaseLogger } from "fastify";
 import type { WebSocket } from "@fastify/websocket";
 import type { TriggerEventPayload, TriggerManager, ProjectManager, AgentChangePayload } from "@spherse/core";
 import { parseBusClientMessage } from "@spherse/contracts";
-import type { ProjectRegistry } from "./registry.js";
-import { acquireFsWatch, releaseFsWatch } from "./lib/fs-watcher.js";
-import type { FsWatchListener } from "./lib/fs-watcher.js";
-
-type DebugSubscriber = (envelopeJson: string) => void;
-
-const debugSubscribers = new Set<DebugSubscriber>();
-
-export function addDebugSubscriber(fn: DebugSubscriber): void {
-  debugSubscribers.add(fn);
-}
-
-export function removeDebugSubscriber(fn: DebugSubscriber): void {
-  debugSubscribers.delete(fn);
-}
-
-export function createDebugBusStream(): Writable {
-  return new Writable({
-    write(chunk: Buffer, _encoding: string, callback: () => void) {
-      const line = chunk.toString().trim();
-      if (!line) {
-        callback();
-        return;
-      }
-      const envelopeJson = JSON.stringify({ channel: "debug", type: "log", payload: { line } });
-      for (const fn of debugSubscribers) {
-        try {
-          fn(envelopeJson);
-        } catch { /* stale subscriber */ }
-      }
-      callback();
-    },
-  });
-}
+import type { ProjectRegistry } from "../registry.js";
+import { acquireFsWatch, releaseFsWatch } from "./fs-watcher.js";
+import type { FsWatchListener } from "./fs-watcher.js";
+import { addDebugSubscriber, removeDebugSubscriber } from "../lib/debug-sink.js";
+import type { DebugSubscriber } from "../lib/debug-sink.js";
 
 const EVENT_TYPES = ["trigger_triggered", "trigger_completed", "trigger_failed", "trigger_updated"] as const;
 type TriggerEventType = (typeof EVENT_TYPES)[number];

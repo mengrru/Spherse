@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Fastify from "fastify";
 import { NotFoundError, ConflictError } from "@spherse/core";
 import { registerSessionRoutes } from "../routes/sessions.js";
-import { ChatSessionHub } from "../chat-session-hub.js";
+import { ChatSessionHub } from "../chat/chat-session-hub.js";
 import type { FastifyRequest } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
 

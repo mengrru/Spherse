@@ -3,7 +3,7 @@ import Fastify from "fastify";
 import { registerSessionRoutes } from "../routes/sessions.js";
 import type { FastifyRequest } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
-import type { ChatSessionHub } from "../chat-session-hub.js";
+import type { ChatSessionHub } from "../chat/chat-session-hub.js";
 
 declare module "fastify" {
   interface FastifyRequest {
