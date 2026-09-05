@@ -153,6 +153,7 @@ hub 持有的是 `SessionManager` 而非 store，且其 sessions map 为 private
 - 行为对齐：trigger 撞上运行中 session 的冲突语义不变（今天 `ensureNotBusy` 抛 ValidationError → trigger failed；收口后 hub `startRun` 抛 ConflictError → 同样 failed，错误路径统一）
 - 按仓库契约测试红线，server/desktop 对新 SessionPort 门面各补一条不 mock 被测方法的真实边界测试
 - trigger 完成通知仍走 bus trigger 频道（TriggerEventBridge 的 query 失效职责不变，删掉的只是 refreshHistory 部分，见 §7）
+- **行为面记录（PR5 实现确认）**：① trigger run 中途同步 throw（model 未配置、restore 失败等）会向该 session 的 chat 订阅者广播 `error` 事件——旧行为是完全不可见，现选择保留（订阅者已看到 run_status 翻转，静默失败更难排查）；冲突路径仍为 pre-check 抛出、不广播。② 中间态（PR5 合入、PR3/PR4 未合）下，已打开的旧 session 页面在 trigger run 期间能看到 assistant 流式但看不到触发 user 消息（旧 reducer 丢弃 `user_message`），重连/重开后经对账补全——接受此窗口，PR3/PR4 修复。③ SessionPort 契约测试由 server 侧承担（desktop 经 `createMultiProjectServer` 整体嵌入 server，不直接消费 SessionPort，红线「消费方包」不适用）。
 
 ### 2.4 分页性能（增量 fold 缓存）
 

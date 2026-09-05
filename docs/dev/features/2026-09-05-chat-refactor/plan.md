@@ -45,14 +45,14 @@
 
 ## PR5 trigger 收口 + control 落库 + 分页性能（core + server，依赖 PR1）
 
-- [ ] core：`assembleProject` 增加 `wrapSessionPort?: (port: SessionPort) => SessionPort` 钩子（sessionRuntime 创建后、capabilities init 前应用）；`SessionPort.sendMessage` 调用上下文补 agentId
-- [ ] server：hub 公开 `startRunWithMeta(channel, meta, executor)`；trigger 的 sendMessage 经 wrapSessionPort 走 hub（meta 带 source/triggerName）
-- [ ] core：SessionEventMap 新增 `control/requested` / `control/resolved`；AgentRunner 的 control sink 包装层 append → emit + seq 回填 wire 事件；`rejectAll`(abort) 补发 `resolved {aborted}`；fold pending 投影（requested 未配对 resolved 且无 turn/end 隔断）+ contracts 信封变体
-- [ ] SessionPort 门面契约测试（server/desktop 各一条不 mock 被测方法，仓库红线）
-- [ ] trigger 冲突语义对齐测试（ConflictError ↔ ensureNotBusy 行为等价）
-- [ ] fold-on-write 投影缓存挂 project-manager 层（按 session 键控、事件数版本号失效、LRU 上限，覆盖未激活 session）+ `getRecentSessionHistory` 走缓存切片；性质测试（缓存 == 全量重 fold）
-- [ ] 删 `TriggerEventBridge` 的 refreshHistory 调用（trigger run 此后 live 可达；query 失效保留）
-- [ ] E2E：trigger run 在已打开 session 页面可见（run_status + 流式）
+- [x] core：`assembleProject` 增加 `wrapSessionPort?: (port: SessionPort) => SessionPort` 钩子（sessionRuntime 创建后、capabilities init 前应用）；`SessionPort.sendMessage` 调用上下文补 agentId（meta 扩展路线：`SendMessageMeta.agentId`，hub 路由后剥离不入持久化）
+- [x] server：hub 公开 `startRunWithMeta`（channel `startDetachedRun` 增 meta/onEvent/awaitRun 选项，trigger 走完成语义）；trigger 的 sendMessage 经 wrapSessionPort 走 hub（meta 带 source/triggerName）
+- [x] core：SessionEventMap 新增 `control/requested` / `control/resolved`；AgentRunner 的 control sink 包装层 append → emit + seq 回填 wire 事件；`rejectAll`(abort) 补发 `resolved {aborted}`；fold pending 投影（requested 未配对 resolved 且无 turn/end 隔断）+ contracts 信封变体
+- [x] SessionPort 门面契约测试——server 侧 `trigger-hub-routing.test.ts`（真 registry + hub + triggerManager + AgentRunner，仅 stub 最深 pi agentRef，被测路由链全真）；desktop 经 createMultiProjectServer 整体嵌入、不直接消费 SessionPort，红线由 server 侧承担（裁决记录于 design §2.3）
+- [x] trigger 冲突语义对齐测试（ConflictError ↔ ensureNotBusy 行为等价；executor 单元级 + server 真边界级各一条）
+- [x] fold-on-write 投影缓存挂 project-manager 层（按 session 键控、事件数版本号失效、LRU 32，覆盖未激活 session）+ `getRecentSessionHistory` 走缓存切片；性质测试（缓存分页 == 全量重 fold + 失效 + 淘汰）
+- [x] 删 `TriggerEventBridge` 的 refreshHistory 调用（trigger run 此后 live 可达；query 失效保留）
+- [x] E2E：~~trigger run 在已打开 session 页面可见~~——deviation：e2e 无服务端 LLM stub 模式（chat spec 均为 renderer 级 WS mock），改为 server 真实边界契约测试钉住 live 可达性（user_message echo + run_status 双向）；中间态渲染缺口（旧 reducer 丢 user_message）已在 design §2.3 记录，PR3 修复；chat-streaming-resilience / chat-retry e2e 回归通过
 
 ## PR6 收尾
 

@@ -9,6 +9,7 @@ import { classifyRunError } from "./classify-run-error.js";
 import { ChatWireProjector } from "./chat-wire-projector.js";
 
 type CoreEventHandler = Parameters<SessionManager["sendMessage"]>[3];
+export type DetachedRunHandler = CoreEventHandler;
 type CoreEvent = Parameters<CoreEventHandler>[0];
 type Subscriber = (event: unknown) => void;
 
@@ -143,7 +144,7 @@ export class ChatChannel {
     content: string,
     options?: {
       meta?: SendMessageMeta;
-      onEvent?: (event: CoreEvent) => void;
+      onEvent?: DetachedRunHandler;
       awaitRun?: boolean;
     },
   ): Promise<void> {

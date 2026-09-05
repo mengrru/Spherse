@@ -26,6 +26,7 @@
 | Event Log（events 表） | 消息唯一真相：per-session append-only 事件日志，主键 `(session_id, seq)` | [data-conventions.md](data-conventions.md) |
 | fold（投影） | 从事件日志推导内存消息数组的纯函数过程；内存只是可重建缓存 | [architecture/core.md](architecture/core.md) |
 | 控制事件（重启点） | `turn/retried` / `turn/withdrawn` / `compaction/applied` 三类事件，restore 时按语义重建 | [architecture/core.md](architecture/core.md) |
+| control gate 事件 | `control/requested` / `control/resolved` 审批/问答门事件（区别于上面的重启点控制事件），落库并附 seq；pending = requested 未配对 resolved 且无 turn/end 隔断 | [architecture/core.md](architecture/core.md) |
 | compaction（上下文压缩） | 历史超阈值时生成摘要、以 `compaction/applied` 重启点表达；LLM 双路与机械回退 | [architecture/core.md](architecture/core.md) |
 | withdraw（撤回） | 以 `turn/withdrawn {seq}` 锚定被撤回 user message，fold 推导废弃区间 | [architecture/core.md](architecture/core.md) |
 | 历史对账 | renderer 重连后拉取历史、按 `_messageId` 去重合并的过程 | [architecture/chat.md](architecture/chat.md) |

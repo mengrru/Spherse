@@ -224,6 +224,16 @@ describe("chat websocket control contract", () => {
       seq: 12,
     };
     expect(parseChatServerEvent(request)).toEqual(request);
+    const questionRequest = {
+      type: "control_request",
+      requestId: "req11",
+      kind: "question",
+      toolCallId: "call11",
+      toolName: "ask_user",
+      args: { question: "Q?" },
+      seq: 15,
+    };
+    expect(parseChatServerEvent(questionRequest)).toEqual(questionRequest);
     const aborted = {
       type: "control_resolved",
       requestId: "req9",
@@ -285,6 +295,14 @@ describe("chat websocket control contract", () => {
     });
     expect(() =>
       parseChatReplayEvent({ type: "control/requested", seq: 5, time: 1 }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseChatReplayEvent({
+        type: "control/resolved",
+        seq: 6,
+        time: 1,
+        data: { requestId: "req1" },
+      }),
     ).toThrow(/Invalid payload/);
   });
 });

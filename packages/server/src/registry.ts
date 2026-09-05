@@ -157,12 +157,12 @@ export class ProjectRegistry {
             sessionId,
             message,
             triggerMeta,
-            onEvent as never,
+            onEvent,
           );
         }
-        this.logger.debug(
-          { projectRoot: resolvedRoot },
-          "session port sendMessage fell back to direct path (no trigger context or not yet assembled)",
+        this.logger.warn(
+          { projectRoot: resolvedRoot, source: meta?.source, hasAgentId: agentId !== undefined },
+          "trigger sendMessage fell back to the direct path (no trigger context or project not yet assembled); the run will not be broadcast to chat subscribers",
         );
         return port.sendMessage(sessionId, message, onEvent, meta);
       },

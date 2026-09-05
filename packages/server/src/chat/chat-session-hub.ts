@@ -1,6 +1,6 @@
 import type { SendMessageMeta, SessionManager } from "@spherse/core";
 import type { FastifyBaseLogger } from "fastify";
-import { ChatChannel, type ChatSessionAttachment } from "./chat-channel.js";
+import { ChatChannel, type ChatSessionAttachment, type DetachedRunHandler } from "./chat-channel.js";
 
 type Subscriber = (event: unknown) => void;
 
@@ -40,12 +40,12 @@ export class ChatSessionHub {
     sessionId: string,
     content: string,
     meta: SendMessageMeta,
-    onEvent?: (event: unknown) => void,
+    onEvent?: DetachedRunHandler,
   ): Promise<void> {
     return this.getOrCreate(projectId, runtime, agentId, sessionId).startDetachedRun(content, {
       meta,
       awaitRun: true,
-      ...(onEvent !== undefined ? { onEvent: onEvent as never } : {}),
+      ...(onEvent !== undefined ? { onEvent } : {}),
     });
   }
 
