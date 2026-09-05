@@ -344,7 +344,7 @@ describe("ChatSessionHub", () => {
     ]);
     expect(events[0]).toEqual({ type: "session_ready", lastSeq: 9, replay: true });
     expect(events[1].events.map((event: any) => event.seq)).toEqual([8, 9]);
-    expect(events.at(-1)).toEqual({ type: "run_status", active: false });
+    expect(events.at(-1)).toEqual({ type: "run_status", active: true });
     attachment.close();
   });
 

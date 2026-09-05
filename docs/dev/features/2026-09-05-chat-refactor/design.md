@@ -150,7 +150,7 @@ hub 持有的是 `SessionManager` 而非 store，且其 sessions map 为 private
 
 现状：trigger capability 经 sessionPort 直连 SessionManager；channel 订阅 `SessionEventLog`。**关键观察：直连 run 的全部持久化事件（user/message、turn/start、assistant/message、turn/end、control/*）本来就流经 log 订阅**——echo、turn_retried 广播、消息内容对已 attach 的订阅者天然可见。唯一缺的是 `run_status`（channel 私有 `running` 标志不知道非自己发起的 run），而 run 边界就在 log 里。
 
-- **run_status 派生化**（`ChatWireProjector`）：跟踪 open turn（有 `turn/start` 无配对 `turn/end`），在 log 订阅路径发布 `run_status` 翻转（幂等：重复 turn/start / 落单 turn/end 不发）；`isRunActive()` 供握手（`run_status` 初值）与 `cleanupIfIdle`（busy 判定 = 自有 run ‖ log open turn，防止直连 run 进行中销毁 session）
+- **run_status 派生化**（`ChatWireProjector`）：跟踪 open turn（有 `turn/start` 无配对 `turn/end`），在 log 订阅路径发布 `run_status` 翻转（幂等：重复 turn/start / 落单 turn/end 不发）；channel 建立订阅时从 log 尾部反向扫描初始化 open turn（mid-run attach 握手即得 active）；`assistant/message`/`tool/result` 在非 channel 发起的 run 中翻译为带 seq 的 `message_end`（完成内容可见），channel 自有 run 由 pi 流负责内容、log 仅 seq 配对（防双发）；`isRunActive()` 供握手初值与 `cleanupIfIdle`（busy 判定 = 自有 run ‖ log open turn，防止直连 run 进行中销毁 session）
 - channel 的 `running` 退化为「自己发起的 run」标志：只服务快照捕获与自有发送的 409 互斥；`startRun` 不再手动 publish `run_status`（log 路径接管，含 WS/HTTP 发送路径——顺序变为 echo → run_status(true) → 流式 → run_status(false) → agent_end）
 - **core 是唯一互斥点**：`ensureNotBusy` 不变；trigger 撞运行中 session 维持 ValidationError → trigger failed 现行为
 - trigger executor 零改动（不路由、不加 meta）；hub/registry/factory 零新增钩子

@@ -57,13 +57,11 @@ describe("direct trigger run is visible through the session event log (log-deriv
     sessionId = await runtime.sessionRuntime.createSession(agentId);
     store = projectStore.agents.get(agentId).sessions;
   });
-
   afterAll(async () => {
     runtime.timerService.stop();
     await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
-
   it("a subscriber attached to the session sees the trigger run: echo, turn boundaries, completed content", async () => {
     await runtime.sessionRuntime.restoreSession(agentId, sessionId);
     const runner = runtime.sessionRuntime.sessions.get(sessionId);
@@ -131,6 +129,11 @@ describe("direct trigger run is visible through the session event log (log-deriv
     await vi.waitFor(() => {
       expect(events).toContainEqual({ type: "run_status", active: false });
     });
+    expect(events).toContainEqual({
+      type: "message_end",
+      message: expect.objectContaining({ role: "assistant" }),
+      seq: expect.any(Number),
+    });
     const persisted = store.readEvents(sessionId).find((e: any) => e.type === "user/message");
     expect(persisted.data.source).toBe("triggered");
     expect(persisted.data.triggerName).toBe("log-vis-trigger");
@@ -141,5 +144,69 @@ describe("direct trigger run is visible through the session event log (log-deriv
       expect(logs.some((l) => l.triggerId === "tr-log-vis" && l.status === "success")).toBe(true);
     });
     attachment.close();
+  });
+  it("attaching mid-run shows the derived active state and never destroys the session under a direct run", async () => {
+    await runtime.sessionRuntime.restoreSession(agentId, sessionId);
+    const runner = runtime.sessionRuntime.sessions.get(sessionId);
+    const liveAgent = runner.agentRef;
+    let dispatch: ((event: unknown) => unknown) | undefined;
+    let resolvePrompt: (() => void) | undefined;
+    liveAgent.subscribe = vi.fn((handler: (event: unknown) => unknown) => {
+      dispatch = handler;
+      return () => {};
+    });
+    liveAgent.prompt = vi.fn(
+      () => new Promise<void>((resolve) => { resolvePrompt = resolve; }),
+    );
+
+    const hub = new ChatSessionHub(silentLogger as never);
+    const entry = {
+      id: "tr-mid-run",
+      name: "mid-run-trigger",
+      enabled: true,
+      type: "event",
+      eventName: "mid-evt",
+      mode: "existing_session",
+      targetSessionId: sessionId,
+      message: "Mid {{payload}}",
+      notify: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    } as never;
+    runtime.triggerManager.create(agentId, entry);
+    runtime.triggerManager.onUserEvent("mid-evt", "");
+    await vi.waitFor(() => expect(dispatch).toBeDefined());
+
+    const lateEvents: any[] = [];
+    const attachment = hub.attach("p1", runtime.sessionRuntime, agentId, sessionId, (event) =>
+      lateEvents.push(event),
+    );
+    await attachment.ready;
+    expect(lateEvents.map((e) => e.type)).toContain("session_ready");
+    expect(lateEvents.at(-1)).toEqual({ type: "run_status", active: true });
+    attachment.close();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(runtime.sessionRuntime.sessions.get(sessionId)).toBeDefined();
+
+    const reattached: any[] = [];
+    const reattachment = hub.attach("p1", runtime.sessionRuntime, agentId, sessionId, (event) =>
+      reattached.push(event),
+    );
+    await reattachment.ready;
+    expect(reattached.at(-1)).toEqual({ type: "run_status", active: true });
+
+    const assistantMessage = { role: "assistant", content: [{ type: "text", text: "late" }] };
+    await dispatch?.({ type: "message_end", message: assistantMessage });
+    await dispatch?.({ type: "agent_end", messages: [] });
+    resolvePrompt?.();
+
+    await vi.waitFor(() => {
+      expect(reattached).toContainEqual({ type: "run_status", active: false });
+    });
+    expect(reattached).toContainEqual({
+      type: "message_end",
+      message: assistantMessage,
+      seq: expect.any(Number),
+    });
   });
 });
