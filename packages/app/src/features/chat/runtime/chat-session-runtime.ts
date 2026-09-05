@@ -167,6 +167,7 @@ export class ChatSessionRuntime<T extends ChatSessionRuntimeState> {
           return;
         }
         const parsed = parseAgentEvent(parseChatServerEvent(raw));
+        if (!parsed) return;
         if (reconcilingHistory) {
           connectionEvents.push(parsed);
         } else {

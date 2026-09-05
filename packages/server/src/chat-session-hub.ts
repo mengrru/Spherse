@@ -1,10 +1,17 @@
-import { ConflictError, type Attachment, type SessionManager } from "@spherse/core";
+import {
+  ConflictError,
+  type Attachment,
+  type SessionManager,
+} from "@spherse/core";
 import type { FastifyBaseLogger } from "fastify";
 import { classifyRunError } from "./classify-run-error.js";
 
 type CoreEventHandler = Parameters<SessionManager["sendMessage"]>[3];
 type CoreEvent = Parameters<CoreEventHandler>[0];
 type Subscriber = (event: unknown) => void;
+
+const REPLAY_BATCH_SIZE = 200;
+const REPLAY_READ_LIMIT = Number.MAX_SAFE_INTEGER;
 
 export type ControlRequestDecision =
   | { approved: boolean; reason?: string }
@@ -21,11 +28,15 @@ interface ChatChannel {
   subscribers: Set<Subscriber>;
   running: boolean;
   runEvents: CoreEvent[];
+  logUnsubscribe?: () => void;
+  pendingClientId?: string;
+  messageSeqByEventId: Map<string, number>;
+  lastTurnEndSeq?: number;
 }
 
 export interface ChatSessionAttachment {
   ready: Promise<boolean>;
-  sendMessage(content: string, attachments?: Attachment[]): Promise<void>;
+  sendMessage(content: string, attachments?: Attachment[], clientId?: string): Promise<void>;
   retryLastTurn(): Promise<void>;
   withdrawLastTurn(): Promise<void>;
   abort(): void;
@@ -47,6 +58,7 @@ export class ChatSessionHub {
     agentId: string,
     sessionId: string,
     subscriber: Subscriber,
+    options?: { since?: number },
   ): ChatSessionAttachment {
     const channel = this.getOrCreateChannel(
       projectId,
@@ -60,13 +72,7 @@ export class ChatSessionHub {
 
     const ready = channel.ready.then(() => {
       if (!active) return false;
-      for (const event of channel.runEvents) {
-        this.notify(channel, subscriber, event);
-      }
-      this.notify(channel, subscriber, {
-        type: "run_status",
-        active: channel.running,
-      });
+      this.handshake(channel, subscriber, options?.since);
       channel.subscribers.add(subscriber);
       subscribed = true;
       return true;
@@ -74,16 +80,22 @@ export class ChatSessionHub {
 
     return {
       ready,
-      sendMessage: async (content, attachments) => {
+      sendMessage: async (content, attachments, clientId) => {
         if (!(await ready) || !active) return;
-        await this.startRun(channel, (onEvent) =>
-          channel.runtime.sendMessage(
-            channel.sessionId,
-            content,
-            attachments ?? [],
-            onEvent,
-          ),
-        );
+        if (clientId !== undefined) channel.pendingClientId = clientId;
+        try {
+          await this.startRun(channel, (onEvent) =>
+            channel.runtime.sendMessage(
+              channel.sessionId,
+              content,
+              attachments ?? [],
+              onEvent,
+            ),
+          );
+        } catch (err) {
+          channel.pendingClientId = undefined;
+          throw err;
+        }
       },
       retryLastTurn: async () => {
         if (!(await ready) || !active) return;
@@ -178,13 +190,15 @@ export class ChatSessionHub {
       subscribers: new Set(),
       running: false,
       runEvents: [],
+      messageSeqByEventId: new Map(),
     };
     channel.ready = runtime.restoreSession(agentId, sessionId)
       .then(() => {
         channel.initialized = true;
+        channel.logUnsubscribe = this.subscribeLog(channel) ?? undefined;
       })
       .catch((err) => {
-        if (this.channels.get(key) === channel) this.channels.delete(key);
+        if (this.channels.get(key) === channel) this.deleteChannel(channel);
         throw err;
       })
       .finally(() => {
@@ -192,6 +206,103 @@ export class ChatSessionHub {
       });
     this.channels.set(key, channel);
     return channel;
+  }
+
+  private subscribeLog(channel: ChatChannel): (() => void) | null {
+    return channel.runtime.subscribeSessionEvents(channel.sessionId, (event) => {
+      switch (event.type) {
+        case "user/message": {
+          const clientId = channel.pendingClientId;
+          channel.pendingClientId = undefined;
+          this.publish(channel, {
+            type: "user_message",
+            seq: event.seq,
+            message: event.data.message,
+            ...(clientId !== undefined ? { clientId } : {}),
+            ...(event.data.source !== undefined ? { source: event.data.source } : {}),
+            ...(event.data.triggerName !== undefined
+              ? { triggerName: event.data.triggerName }
+              : {}),
+          });
+          break;
+        }
+        case "turn/retried":
+          this.publish(channel, {
+            type: "turn_retried",
+            seq: event.seq,
+            abandonedSeqs: event.data.abandonedSeqs,
+          });
+          break;
+        case "assistant/message":
+        case "tool/result": {
+          const id = (event.data.message as { id?: unknown }).id;
+          if (id !== undefined) {
+            channel.messageSeqByEventId.set(String(id), event.seq);
+          }
+          break;
+        }
+        case "turn/end":
+          channel.lastTurnEndSeq = event.seq;
+          break;
+        default:
+          break;
+      }
+    });
+  }
+
+  private handshake(
+    channel: ChatChannel,
+    subscriber: Subscriber,
+    since: number | undefined,
+  ): void {
+    const lastSeq = channel.runtime.getSessionLastSeq(channel.agentId, channel.sessionId);
+    this.notify(channel, subscriber, {
+      type: "session_ready",
+      lastSeq,
+      replay: true,
+    });
+    if (since !== undefined) {
+      const events = channel.runtime.readSessionEventsAfter(
+        channel.agentId,
+        channel.sessionId,
+        since,
+        REPLAY_READ_LIMIT,
+      );
+      for (let i = 0; i < events.length; i += REPLAY_BATCH_SIZE) {
+        this.notify(channel, subscriber, {
+          type: "replay_events",
+          events: events.slice(i, i + REPLAY_BATCH_SIZE),
+        });
+      }
+      this.notify(channel, subscriber, { type: "replay_done" });
+    }
+    for (const event of channel.runEvents) {
+      this.notify(channel, subscriber, event);
+    }
+    this.notify(channel, subscriber, {
+      type: "run_status",
+      active: channel.running,
+    });
+  }
+
+  private enrichWireEvent(channel: ChatChannel, event: CoreEvent): CoreEvent {
+    if (event.type === "message_end") {
+      const id = (event.message as { id?: unknown }).id;
+      const seq = id !== undefined ? channel.messageSeqByEventId.get(String(id)) : undefined;
+      return seq === undefined ? event : ({ ...event, seq } as CoreEvent);
+    }
+    if (event.type === "agent_end") {
+      return channel.lastTurnEndSeq === undefined
+        ? event
+        : ({ ...event, seq: channel.lastTurnEndSeq } as CoreEvent);
+    }
+    return event;
+  }
+
+  private deleteChannel(channel: ChatChannel): void {
+    channel.logUnsubscribe?.();
+    channel.logUnsubscribe = undefined;
+    this.channels.delete(channel.key);
   }
 
   private async startRun(
@@ -203,15 +314,19 @@ export class ChatSessionHub {
     }
     channel.running = true;
     channel.runEvents = [];
+    channel.messageSeqByEventId.clear();
+    channel.lastTurnEndSeq = undefined;
     this.publish(channel, { type: "run_status", active: true });
     try {
       await executor((event) => {
-        this.recordRunEvent(channel, event);
-        this.publish(channel, event);
+        const enriched = this.enrichWireEvent(channel, event);
+        this.recordRunEvent(channel, enriched);
+        this.publish(channel, enriched);
       });
     } finally {
       channel.running = false;
       channel.runEvents = [];
+      channel.pendingClientId = undefined;
       this.publish(channel, { type: "run_status", active: false });
       this.cleanupIfIdle(channel);
     }
@@ -284,6 +399,6 @@ export class ChatSessionHub {
       return;
     }
     channel.runtime.destroySession(channel.sessionId);
-    this.channels.delete(channel.key);
+    this.deleteChannel(channel);
   }
 }

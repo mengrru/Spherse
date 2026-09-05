@@ -4,6 +4,7 @@ import { ChatSessionHub } from "../chat-session-hub.js";
 function createRuntime() {
   let emit: ((event: any) => void) | undefined;
   let finish: (() => void) | undefined;
+  let logListener: ((event: any) => void) | undefined;
   const runtime = {
     restoreSession: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn(
@@ -26,10 +27,21 @@ function createRuntime() {
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
+    subscribeSessionEvents: vi.fn(
+      (_sessionId: string, listener: (event: any) => void) => {
+        logListener = listener;
+        return () => {
+          logListener = undefined;
+        };
+      },
+    ),
+    readSessionEventsAfter: vi.fn(() => []),
+    getSessionLastSeq: vi.fn(() => -1),
   };
   return {
     runtime,
     emit: (event: any) => emit?.(event),
+    appendLog: (event: any) => logListener?.(event),
     finish: () => finish?.(),
   };
 }
@@ -86,10 +98,12 @@ describe("ChatSessionHub", () => {
 
     expect(mock.runtime.restoreSession).toHaveBeenCalledTimes(1);
     expect(replayed.map((event) => event.type)).toEqual([
+      "session_ready",
       "agent_start",
       "message_update",
       "run_status",
     ]);
+    expect(replayed[0]).toEqual({ type: "session_ready", lastSeq: -1, replay: true });
     expect(replayed.at(-1)).toEqual({ type: "run_status", active: true });
 
     mock.emit({ type: "agent_end", messages: [] });
@@ -285,5 +299,287 @@ describe("ChatSessionHub", () => {
     await expect(
       hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi"),
     ).rejects.toThrow("no such session");
+  });
+
+  it("sends session_ready, since replay, replay_done, then run_status", async () => {
+    const mock = createRuntime();
+    mock.runtime.getSessionLastSeq.mockReturnValue(9);
+    mock.runtime.readSessionEventsAfter.mockReturnValue([
+      { type: "user/message", seq: 8, time: 1, data: { message: { role: "user", content: "hi" } } },
+      { type: "turn/start", seq: 9, time: 1, data: {} },
+    ]);
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach(
+      "p1",
+      mock.runtime as never,
+      "a1",
+      "s1",
+      (event) => events.push(event),
+      { since: 7 },
+    );
+    await attachment.ready;
+
+    expect(mock.runtime.readSessionEventsAfter).toHaveBeenCalledWith(
+      "a1",
+      "s1",
+      7,
+      expect.any(Number),
+    );
+    expect(events.map((event) => event.type)).toEqual([
+      "session_ready",
+      "replay_events",
+      "replay_done",
+      "run_status",
+    ]);
+    expect(events[0]).toEqual({ type: "session_ready", lastSeq: 9, replay: true });
+    expect(events[1].events.map((event: any) => event.seq)).toEqual([8, 9]);
+    expect(events.at(-1)).toEqual({ type: "run_status", active: false });
+    attachment.close();
+  });
+
+  it("skips the replay entirely when no since cursor is provided", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await attachment.ready;
+
+    expect(mock.runtime.readSessionEventsAfter).not.toHaveBeenCalled();
+    expect(events.map((event) => event.type)).toEqual(["session_ready", "run_status"]);
+    attachment.close();
+  });
+
+  it("batches replay events in chunks of 200", async () => {
+    const mock = createRuntime();
+    mock.runtime.readSessionEventsAfter.mockReturnValue(
+      Array.from({ length: 250 }, (_, i) => ({
+        type: "turn/start",
+        seq: i,
+        time: 1,
+        data: {},
+      })),
+    );
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach(
+      "p1",
+      mock.runtime as never,
+      "a1",
+      "s1",
+      (event) => events.push(event),
+      { since: -1 },
+    );
+    await attachment.ready;
+
+    const batches = events.filter((event) => event.type === "replay_events");
+    expect(batches.map((batch) => batch.events.length)).toEqual([200, 50]);
+    expect(events.at(-2)?.type).toBe("replay_done");
+    attachment.close();
+  });
+
+  it("echoes persisted user/message with clientId and trigger metadata to all subscribers", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const eventsA: any[] = [];
+    const eventsB: any[] = [];
+    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      eventsA.push(event),
+    );
+    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      eventsB.push(event),
+    );
+    await first.ready;
+    await second.ready;
+    eventsA.length = 0;
+    eventsB.length = 0;
+
+    const run = first.sendMessage("hi", [], "client-1");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+    mock.appendLog({
+      type: "user/message",
+      seq: 5,
+      time: 1,
+      data: {
+        message: { role: "user", content: "hi" },
+        source: "triggered",
+        triggerName: "t1",
+      },
+    });
+
+    const expectedEcho = {
+      type: "user_message",
+      seq: 5,
+      message: { role: "user", content: "hi" },
+      clientId: "client-1",
+      source: "triggered",
+      triggerName: "t1",
+    };
+    expect(eventsA).toContainEqual(expectedEcho);
+    expect(eventsB).toContainEqual(expectedEcho);
+
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await run;
+    first.close();
+    second.close();
+  });
+
+  it("echoes user_message without clientId for detached runs", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await attachment.ready;
+    events.length = 0;
+
+    await hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi");
+    mock.appendLog({
+      type: "user/message",
+      seq: 3,
+      time: 1,
+      data: { message: { role: "user", content: "hi" } },
+    });
+
+    expect(events).toContainEqual({
+      type: "user_message",
+      seq: 3,
+      message: { role: "user", content: "hi" },
+    });
+
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({ type: "run_status", active: false }),
+    );
+    attachment.close();
+  });
+
+  it("does not leak clientId from a rejected send into later echoes", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await first.ready;
+
+    const run = first.sendMessage("hi");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+
+    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    await second.ready;
+    await expect(second.sendMessage("again", [], "client-b")).rejects.toThrow(
+      /already running/,
+    );
+
+    mock.appendLog({
+      type: "user/message",
+      seq: 2,
+      time: 1,
+      data: { message: { role: "user", content: "hi" } },
+    });
+    const echo = events.find((event) => event.type === "user_message");
+    expect(echo).toEqual({
+      type: "user_message",
+      seq: 2,
+      message: { role: "user", content: "hi" },
+    });
+
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await run;
+    first.close();
+    second.close();
+  });
+
+  it("broadcasts turn_retried when the log records turn/retried", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await attachment.ready;
+    events.length = 0;
+
+    const run = attachment.retryLastTurn();
+    await vi.waitFor(() => expect(mock.runtime.retryLastTurn).toHaveBeenCalled());
+    mock.appendLog({
+      type: "turn/retried",
+      seq: 7,
+      time: 1,
+      data: { abandonedSeqs: [5, 6] },
+    });
+
+    expect(events).toContainEqual({
+      type: "turn_retried",
+      seq: 7,
+      abandonedSeqs: [5, 6],
+    });
+
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await run;
+    attachment.close();
+  });
+
+  it("enriches message_end and agent_end with persisted seqs", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await attachment.ready;
+    events.length = 0;
+
+    const run = attachment.sendMessage("hi");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+
+    const assistantMessage = { id: "m1", role: "assistant", content: [] };
+    mock.appendLog({
+      type: "assistant/message",
+      seq: 9,
+      time: 1,
+      data: { message: assistantMessage },
+    });
+    mock.emit({ type: "message_end", message: assistantMessage });
+    mock.appendLog({ type: "turn/end", seq: 10, time: 1, data: { reason: "completed" } });
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await run;
+
+    expect(events).toContainEqual({
+      type: "message_end",
+      message: assistantMessage,
+      seq: 9,
+    });
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: "agent_end", seq: 10 }),
+    );
+    attachment.close();
+  });
+
+  it("unsubscribes the log listener when the channel is cleaned up", async () => {
+    const mock = createRuntime();
+    const unsubscribe = vi.fn();
+    mock.runtime.subscribeSessionEvents.mockReturnValue(unsubscribe);
+    const hub = new ChatSessionHub(logger);
+    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    await attachment.ready;
+    expect(mock.runtime.subscribeSessionEvents).toHaveBeenCalledWith(
+      "s1",
+      expect.any(Function),
+    );
+
+    attachment.close();
+
+    expect(mock.runtime.destroySession).toHaveBeenCalledWith("s1");
+    expect(unsubscribe).toHaveBeenCalled();
   });
 });

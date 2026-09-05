@@ -2,6 +2,7 @@ import { Type, type Static } from "@sinclair/typebox";
 import type {
   AgentEvent,
   AgentMessage,
+  AssistantMessage,
   SessionControlEvent,
   ToolResultMessage,
 } from "@spherse/core";
@@ -15,7 +16,9 @@ export enum ErrorEventCode {
 }
 
 export const CHAT_CLOSE_CODES = {
+  PROTOCOL_ERROR: 4400,
   SESSION_UNRECOVERABLE: 4401,
+  MIGRATION_REQUIRED: 4402,
 } as const;
 
 /**
@@ -36,10 +39,80 @@ type EventOf<
 > = Extract<TEvent, { type: TType }>;
 
 const agentMessage = Type.Unsafe<AgentMessage>(Type.Unknown());
+const assistantMessage = Type.Unsafe<AssistantMessage>(Type.Unknown());
+const toolResultMessage = Type.Unsafe<ToolResultMessage>(Type.Unknown());
 const toolResultMessages = Type.Unsafe<ToolResultMessage[]>(
   Type.Array(Type.Unknown()),
 );
 const toolArgs = Type.Unsafe<Record<string, unknown>>(Type.Unknown());
+
+export const chatReplayEvent = Type.Union([
+  Type.Object({
+    type: Type.Literal("turn/start"),
+    seq: Type.Integer(),
+    time: Type.Integer(),
+    data: Type.Object({}),
+  }),
+  Type.Object({
+    type: Type.Literal("turn/end"),
+    seq: Type.Integer(),
+    time: Type.Integer(),
+    data: Type.Object({
+      reason: Type.Union([
+        Type.Literal("completed"),
+        Type.Literal("aborted"),
+        Type.Literal("error"),
+      ]),
+    }),
+  }),
+  Type.Object({
+    type: Type.Literal("user/message"),
+    seq: Type.Integer(),
+    time: Type.Integer(),
+    data: Type.Object({
+      message: agentMessage,
+      source: Type.Optional(Type.Literal("triggered")),
+      triggerName: Type.Optional(Type.String()),
+    }),
+  }),
+  Type.Object({
+    type: Type.Literal("assistant/message"),
+    seq: Type.Integer(),
+    time: Type.Integer(),
+    data: Type.Object({ message: assistantMessage }),
+  }),
+  Type.Object({
+    type: Type.Literal("tool/result"),
+    seq: Type.Integer(),
+    time: Type.Integer(),
+    data: Type.Object({ message: toolResultMessage }),
+  }),
+  Type.Object({
+    type: Type.Literal("compaction/applied"),
+    seq: Type.Integer(),
+    time: Type.Integer(),
+    data: Type.Object({
+      anchorSeq: Type.Integer(),
+      digestContent: Type.String(),
+      excludedSeqs: Type.Array(Type.Integer()),
+      digestSource: Type.Optional(
+        Type.Union([Type.Literal("llm"), Type.Literal("mechanical")]),
+      ),
+    }),
+  }),
+  Type.Object({
+    type: Type.Literal("turn/retried"),
+    seq: Type.Integer(),
+    time: Type.Integer(),
+    data: Type.Object({ abandonedSeqs: Type.Array(Type.Integer()) }),
+  }),
+  Type.Object({
+    type: Type.Literal("turn/withdrawn"),
+    seq: Type.Integer(),
+    time: Type.Integer(),
+    data: Type.Object({ seq: Type.Integer() }),
+  }),
+]);
 
 const chatServerEvent = Type.Union([
   Type.Object({ type: Type.Literal("agent_start") }),
@@ -48,6 +121,7 @@ const chatServerEvent = Type.Union([
     messages: Type.Unsafe<
       EventOf<AgentEvent, "agent_end">["messages"]
     >(Type.Array(Type.Unknown())),
+    seq: Type.Optional(Type.Integer()),
   }),
   Type.Object({ type: Type.Literal("run_status"), active: Type.Boolean() }),
   Type.Object({ type: Type.Literal("turn_start") }),
@@ -62,7 +136,11 @@ const chatServerEvent = Type.Union([
     message: agentMessage,
     assistantMessageEvent: Type.Optional(Type.Unknown()),
   }),
-  Type.Object({ type: Type.Literal("message_end"), message: agentMessage }),
+  Type.Object({
+    type: Type.Literal("message_end"),
+    message: agentMessage,
+    seq: Type.Optional(Type.Integer()),
+  }),
   Type.Object({
     type: Type.Literal("tool_execution_start"),
     toolCallId: Type.String(),
@@ -122,6 +200,29 @@ const chatServerEvent = Type.Union([
     seq: Type.Integer(),
   }),
   Type.Object({
+    type: Type.Literal("user_message"),
+    seq: Type.Integer(),
+    message: agentMessage,
+    clientId: Type.Optional(Type.String()),
+    source: Type.Optional(Type.String()),
+    triggerName: Type.Optional(Type.String()),
+  }),
+  Type.Object({
+    type: Type.Literal("turn_retried"),
+    seq: Type.Integer(),
+    abandonedSeqs: Type.Array(Type.Integer()),
+  }),
+  Type.Object({
+    type: Type.Literal("session_ready"),
+    lastSeq: Type.Integer(),
+    replay: Type.Boolean(),
+  }),
+  Type.Object({
+    type: Type.Literal("replay_events"),
+    events: Type.Array(chatReplayEvent),
+  }),
+  Type.Object({ type: Type.Literal("replay_done") }),
+  Type.Object({
     type: Type.Literal("error"),
     message: Type.String(),
     code: Type.Optional(Type.Enum(ErrorEventCode)),
@@ -134,6 +235,7 @@ export const schemas = {
     Type.Object({
       type: Type.Literal("message"),
       content: Type.String(),
+      clientId: Type.Optional(Type.String()),
       attachments: Type.Optional(
         Type.Array(
           Type.Object({
@@ -163,10 +265,12 @@ export const schemas = {
     }),
   ]),
   chatServerEvent,
+  chatReplayEvent,
 } as const;
 
 export type ChatClientMessage = Static<typeof schemas.chatClientMessage>;
 export type ChatServerEvent = Static<typeof chatServerEvent>;
+export type ChatReplayEvent = Static<typeof chatReplayEvent>;
 
 export function parseChatClientMessage(payload: unknown): ChatClientMessage {
   return parseContract(schemas.chatClientMessage, payload);
@@ -174,4 +278,8 @@ export function parseChatClientMessage(payload: unknown): ChatClientMessage {
 
 export function parseChatServerEvent(payload: unknown): ChatServerEvent {
   return parseContract(chatServerEvent, payload);
+}
+
+export function parseChatReplayEvent(payload: unknown): ChatReplayEvent {
+  return parseContract(chatReplayEvent, payload);
 }

@@ -120,6 +120,11 @@ describe("parseAgentMessage", () => {
 });
 
 describe("parseAgentEvent", () => {
+  function defined<T>(value: T | undefined): T {
+    if (value === undefined) throw new Error("expected a parsed event");
+    return value;
+  }
+
   it("passes through agent_start unchanged", () => {
     expect(parseAgentEvent({ type: "agent_start" })).toEqual({ type: "agent_start" });
   });
@@ -139,6 +144,18 @@ describe("parseAgentEvent", () => {
       type: "turn_withdrawn",
       seq: 3,
     });
+  });
+  it("drops protocol v2 events until the new runtime consumes them", () => {
+    expect(parseAgentEvent({ type: "session_ready", lastSeq: 3, replay: true })).toBeUndefined();
+    expect(parseAgentEvent({ type: "replay_done" })).toBeUndefined();
+    expect(
+      parseAgentEvent({
+        type: "user_message",
+        seq: 4,
+        message: { role: "user", content: "hi", timestamp: 1 },
+      }),
+    ).toBeUndefined();
+    expect(parseAgentEvent({ type: "turn_retried", seq: 5, abandonedSeqs: [3] })).toBeUndefined();
   });
   it("passes through tool_execution_* unchanged", () => {
     expect(
@@ -237,34 +254,34 @@ describe("parseAgentEvent", () => {
     });
   });
   it("narrows assistant message in message_start", () => {
-    const result = parseAgentEvent({
+    const result = defined(parseAgentEvent({
       type: "message_start",
       message: { role: "assistant", content: [] },
-    } as unknown as ChatServerEvent);
+    } as unknown as ChatServerEvent));
     expect(result.type).toBe("message_start");
     expect(result).toHaveProperty("message");
   });
   it("narrows user message in message_end", () => {
-    const result = parseAgentEvent({
+    const result = defined(parseAgentEvent({
       type: "message_end",
       message: { role: "user", content: "hi", timestamp: 1 },
-    });
+    }));
     expect(result.type).toBe("message_end");
     expect(result).toHaveProperty("message");
   });
   it("replaces invalid message payload with fallback", () => {
-    const result = parseAgentEvent({ type: "message_start", message: null } as unknown as ChatServerEvent);
+    const result = defined(parseAgentEvent({ type: "message_start", message: null } as unknown as ChatServerEvent));
     expect(result.type).toBe("message_start");
     expect(result).toHaveProperty("message.role", "user");
   });
   it("agent_end coerces messages array via parseAgentMessage", () => {
-    const result = parseAgentEvent({
+    const result = defined(parseAgentEvent({
       type: "agent_end",
       messages: [
         { role: "user", content: "hi", timestamp: 1 },
         { role: "totally-bogus" },
       ],
-    } as unknown as ChatServerEvent);
+    } as unknown as ChatServerEvent));
     expect(result.type).toBe("agent_end");
     if (result.type === "agent_end") {
       expect(result.messages).toHaveLength(2);
@@ -273,23 +290,23 @@ describe("parseAgentEvent", () => {
     }
   });
   it("agent_end tolerates missing messages array", () => {
-    const result = parseAgentEvent({
+    const result = defined(parseAgentEvent({
       type: "agent_end",
       messages: "not-an-array",
-    } as unknown as ChatServerEvent);
+    } as unknown as ChatServerEvent));
     if (result.type === "agent_end") {
       expect(result.messages).toEqual([]);
     }
   });
   it("turn_end filters toolResults to valid ToolResultMessage", () => {
-    const result = parseAgentEvent({
+    const result = defined(parseAgentEvent({
       type: "turn_end",
       message: { role: "assistant", content: [] },
       toolResults: [
         { role: "toolResult", toolCallId: "tc1", toolName: "x" },
         { role: "user", content: "junk" },
       ],
-    } as unknown as ChatServerEvent);
+    } as unknown as ChatServerEvent));
     if (result.type === "turn_end") {
       expect(result.toolResults).toHaveLength(1);
       expect(result.toolResults[0].toolCallId).toBe("tc1");
