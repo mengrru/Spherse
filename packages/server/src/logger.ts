@@ -1,6 +1,6 @@
 import pino from "pino";
 import type { Logger } from "@spherse/core";
-import { createDebugBusStream } from "./ws-bus.js";
+import { createDebugBusStream } from "./lib/debug-sink.js";
 
 export type PrettyStream = ReturnType<typeof pino.transport>;
 

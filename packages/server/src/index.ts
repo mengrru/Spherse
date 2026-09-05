@@ -19,7 +19,7 @@ import { registerAllRoutes } from "./routes/index.js";
 import { setAppVersion } from "./server-info.js";
 import { ChatSessionHub } from "./chat/index.js";
 import { handleChatWebSocket } from "./chat/index.js";
-import { handleBusWebSocket } from "./ws-bus.js";
+import { handleBusWebSocket } from "./bus/index.js";
 
 export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type ProjectInfo, type RegisterOptions } from "./registry.js";
 

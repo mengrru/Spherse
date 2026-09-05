@@ -189,9 +189,11 @@ spherse/
 │   │       │   ├── chat-wire-projector.ts # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
 │   │       │   ├── ws-chat.ts          # WebSocket 对话流端点（/ws/projects/:projectId/chat/...，?since= 游标重放）
 │   │       │   └── classify-run-error.ts # run 错误 → wire error code 分类
-│   │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，trigger/fs-watch/debug 按 projectId×channel 订阅）
-│       │       └── lib/
-│       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
+│   │       ├── bus/                  # bus 域（全局多路复用 bus WebSocket，trigger/fs-watch/debug/agent 按 projectId×channel 订阅；对外经 index.ts 导出 handleBusWebSocket）
+│   │       │   ├── ws-bus.ts           # 端点 + BusConnectionHandler（订阅生命周期、trigger/agent payload 转发）
+│   │       │   └── fs-watcher.ts       # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
+│   │       └── lib/
+│   │           └── debug-sink.ts     # debug 订阅注册表 + createDebugBusStream（pino multistream 的 WS 广播流，无 Fastify/ws 依赖；logger 与 bus 域共同消费）
 │   ├── app/                          # @spherse/app — 共享 React renderer（前端源码，被 desktop/web 消费）
 │   │   ├── README.md                 # renderer 架构、状态边界、编码规范与验证清单
 │   │   ├── index.html                # renderer 入口 HTML（vite 入口）

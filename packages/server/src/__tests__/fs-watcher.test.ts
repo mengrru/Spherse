@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
-import type { acquireFsWatch as AcquireFsWatch } from "../lib/fs-watcher.js";
-import type { releaseFsWatch as ReleaseFsWatch } from "../lib/fs-watcher.js";
+import type { acquireFsWatch as AcquireFsWatch } from "../bus/fs-watcher.js";
+import type { releaseFsWatch as ReleaseFsWatch } from "../bus/fs-watcher.js";
 
 interface FakeWatcher {
   on: ReturnType<typeof vi.fn>;
@@ -58,7 +58,7 @@ describe("ProjectFsWatcher", () => {
   beforeEach(async () => {
     vi.resetModules();
     mock = installFsWatchMock();
-    const mod = await import("../lib/fs-watcher.js");
+    const mod = await import("../bus/fs-watcher.js");
     acquireFsWatch = mod.acquireFsWatch;
     releaseFsWatch = mod.releaseFsWatch;
   });

@@ -2,18 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventEmitter } from "node:events";
 import type { Writable } from "node:stream";
 
-vi.mock("../lib/fs-watcher.js", () => ({
+vi.mock("../bus/fs-watcher.js", () => ({
   acquireFsWatch: vi.fn(() => ({ ok: true as const })),
   releaseFsWatch: vi.fn(),
 }));
 
-import { acquireFsWatch, releaseFsWatch } from "../lib/fs-watcher.js";
-import {
-  handleBusWebSocket,
-  addDebugSubscriber,
-  removeDebugSubscriber,
-  createDebugBusStream,
-} from "../ws-bus.js";
+import { acquireFsWatch, releaseFsWatch } from "../bus/fs-watcher.js";
+import { handleBusWebSocket } from "../bus/ws-bus.js";
+import { addDebugSubscriber, removeDebugSubscriber, createDebugBusStream } from "../lib/debug-sink.js";
 
 interface MockSocket {
   on: ReturnType<typeof vi.fn>;
