@@ -51,7 +51,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
   - 纯内存（关项目即清）：agent-session-list 折叠、agent-trigger 运行态
 - **query key 一律 `["projects", projectId, ...]`**（`queries/keys.ts` factory）；文件内容 query 定义在 `features/content-browser/hooks/useContentFile.ts`——域 key 统一，定义位置按消费方就近
 - **项目关闭清缓存**：`clearProjectQueries` 三步——generation++ → cancelQueries → removeQueries；generation 递增使迟到异步结果拒绝写入已清缓存
-- 总线层 `bus-store`：全局多路复用 WS（`/ws/bus`），channels trigger / agent / fs-watch / debug；backoff `[1,2,5,10,30]s`、心跳 30s/60s
+- 总线层 `bus-store`：全局多路复用 WS（`/ws/bus`），channels trigger / agent / fs-watch / debug；连接委托 `lib/ws/ws-connection.ts`（backoff `[1,2,5,10,30]s`、心跳 30s/60s、probe 5s；store 只保留 resumedAt 与订阅派发）
 
 ## 失效桥（bus → query invalidation）
 
