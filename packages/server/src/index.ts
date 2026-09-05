@@ -106,14 +106,14 @@ export async function createMultiProjectServer(
     reply.code(404).send({ error: "Route not found" });
   });
 
+  const chatHub = new ChatSessionHub(logger);
   const registry = new ProjectRegistry(logger, {
     defaultModel: options?.defaultModel,
     sampling: options?.sampling,
     thinkingLevel: options?.thinkingLevel,
     modelCatalog: options?.modelCatalog,
+    chatHub,
   });
-
-  const chatHub = new ChatSessionHub(logger);
 
   registerAuthHook(fastify, options?.auth ?? {});
   registerAllRoutes(fastify, registry, {

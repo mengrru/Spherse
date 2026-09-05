@@ -31,6 +31,7 @@ export interface AssembleOptions {
   logger?: Logger;
   modelCatalog?: ModelCatalog;
   capabilities?: Capability[] | ((builtin: Capability[]) => Capability[]);
+  wrapSessionPort?: (port: SessionPort) => SessionPort;
 }
 
 export function defaultCapabilities(
@@ -100,7 +101,7 @@ export async function assembleProject(
 
   const sessionRuntime = new SessionManager(deps, { initialRunConfig: runConfig });
 
-  const sessionPort: SessionPort = {
+  let sessionPort: SessionPort = {
     createSession: (agentId, source) => sessionRuntime.createSession(agentId, source),
     restoreSession: (agentId, sessionId) => sessionRuntime.restoreSession(agentId, sessionId),
     sendMessage: (sessionId, message, onEvent, meta) =>
@@ -108,6 +109,9 @@ export async function assembleProject(
     abortSession: (sessionId) => sessionRuntime.abortSession(sessionId),
     sessionExists: (agentId, sessionId) => sessionRuntime.sessionExists(agentId, sessionId),
   };
+  if (options?.wrapSessionPort) {
+    sessionPort = options.wrapSessionPort(sessionPort);
+  }
 
   for (const capability of capabilities) {
     if (!capability.init) continue;
