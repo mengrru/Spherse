@@ -8,7 +8,7 @@ Fastify API 层，为 Spherse 桌面应用提供多项目 HTTP + WebSocket 服�
 
 `@spherse/contracts` 的 `src/` 与本包 `routes/` 按业务域同名文件一一对应；新增域时在新包 `src/index.ts` 追加 import / spread / type re-export。schema 定义规范（命名、`Type.Optional`、`Type.Unknown` 约束等）见 [`packages/contracts/README.md`](../contracts/README.md)。
 
-`src/` 目录按域而非按层组织：内聚的 WS 域收进域目录（当前仅 `chat/`——hub/channel/projector/ws-chat/classify-run-error，对外只经 `chat/index.ts` 导出 `handleChatWebSocket` + `ChatSessionHub`，channel/projector 是内部实现）；不设 `services/`、`ws/` 等通用层目录。REST 端点一律进 `routes/`，跨 route 共享的有状态编排留在顶层（`registry.ts`、`marketplace.ts`、`ws-bus.ts`）。
+`src/` 目录按域而非按层组织：内聚的 WS 域收进域目录（当前仅 `chat/`——hub/channel/projector/ws-chat/classify-run-error，对外只经 `chat/index.ts` 导出 `handleChatWebSocket` + `ChatSessionHub`，channel/projector 是内部实现）；唯一例外是 `middlewares/`（auth/cors/host-guard 三件套——Fastify onRequest 请求边界防护，仅由 `index.ts` 装配点引用）。不设 `services/`、`ws/` 等其余通用层目录：跨 route 共享的有状态编排留顶层（`registry.ts`、`marketplace.ts`、`ws-bus.ts`），单文件域不开目录、长胖再升级为域目录。
 
 ### Route 绑定规范
 

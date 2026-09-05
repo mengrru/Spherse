@@ -34,8 +34,8 @@
   - 公开路径仅 `/health` 与 `/api/connection/info`
   - token 呈现：HTTP `Authorization: Bearer` → query `token` → preview 路径 token（`/preview/__auth/<token>/...`，为 iframe/img 等无法带 header 的场景设计）；WS 只接受 query `token`；比较用 `timingSafeEqual`；`verifyPresentedToken` 是 auth hook 与 CORS hook 的单一校验来源
   - 裸调本地 API（脚本/curl）从 desktop settings 文件读 `serverToken`
-- **认证制 CORS**（`src/cors.ts`）：preflight 反射放行（204）；actual response 仅当请求携带有效 token 才设 `ACAO: <req Origin>` + `Vary: Origin`；永不设置 credentials
-- **Host 校验**（`src/host-guard.ts`）：静态集合 `localhost` / `127.0.0.1` / `[::1]`（任意端口）+ 动态集合（tunnel `publicUrl`、manual `publicDomain` 的 hostname，经 `URL` 解析），缺失或不可解析一律拒绝；覆盖 WS upgrade
+- **认证制 CORS**（`src/middlewares/cors.ts`）：preflight 反射放行（204）；actual response 仅当请求携带有效 token 才设 `ACAO: <req Origin>` + `Vary: Origin`；永不设置 credentials
+- **Host 校验**（`src/middlewares/host-guard.ts`）：静态集合 `localhost` / `127.0.0.1` / `[::1]`（任意端口）+ 动态集合（tunnel `publicUrl`、manual `publicDomain` 的 hostname，经 `URL` 解析），缺失或不可解析一律拒绝；覆盖 WS upgrade
 - WS 不做 Origin 校验：身份防线是 token，rebinding 由 Host 校验拦截
 - quick 模式经 Cloudflare tunnel 把 loopback 端口穿隧道；token 轮换（regenerate）重建 server 实例
 

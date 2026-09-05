@@ -159,9 +159,11 @@ spherse/
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
     │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry；组合 auth / cors / host-guard 中间件
-    │   │       ├── cors.ts              # 认证制 CORS 中间件（preflight 反射放行，token 有效才设 ACAO）
-    │   │       ├── host-guard.ts        # Host 校验中间件（静态集合 + 动态注册，返回 HostGuard 管理动态 host）
-    │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
+│   │       ├── middlewares/          # 请求边界防护三件套（onRequest hook，均由 index.ts 装配）
+│   │       │   ├── auth.ts           # token 校验（Bearer/query/preview-path 提取 + timingSafeEqual）+ registerAuthHook
+│   │       │   ├── cors.ts           # 认证制 CORS（preflight 反射放行，token 有效才设 ACAO）
+│   │       │   └── host-guard.ts     # Host 校验（静态集合 + 动态注册，返回 HostGuard 管理动态 host）
+│   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove
     │   │       ├── marketplace.ts        # 技能市场 service：OSS manifest 代理（30s 内存缓存，env SPHERSE_MARKETPLACE_MANIFEST_URL 可覆盖 URL）+ zip 下载（同源 SSRF 校验、50MB 上限）
 │   │       ├── routes/               # REST 路由，按业务域拆分

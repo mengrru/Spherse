@@ -12,9 +12,9 @@ import {
 import { ProjectRegistry } from "./registry.js";
 import { createServerLogger, createPrettyStream } from "./logger.js";
 import { HttpError, errorMessage } from "./errors.js";
-import { registerAuthHook, type AuthOptions } from "./auth.js";
-import { registerAuthGatedCors } from "./cors.js";
-import { registerHostGuard } from "./host-guard.js";
+import { registerAuthHook, type AuthOptions } from "./middlewares/auth.js";
+import { registerAuthGatedCors } from "./middlewares/cors.js";
+import { registerHostGuard } from "./middlewares/host-guard.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { setAppVersion } from "./server-info.js";
 import { ChatSessionHub } from "./chat/index.js";

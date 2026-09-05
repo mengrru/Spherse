@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
-import { registerAuthHook } from "../auth.js";
+import { registerAuthHook } from "../middlewares/auth.js";
 
 function buildApp(token?: string): FastifyInstance {
   const app = Fastify();
