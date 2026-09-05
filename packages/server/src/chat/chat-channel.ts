@@ -174,18 +174,42 @@ export class ChatChannel {
   }
 
   private subscribeLog(): (() => void) | null {
+    this.initRunStateFromLog();
     return this.runtime.subscribeSessionEvents(this.sessionId, (event) => {
       const wireEvent = this.projector.consumeLogEvent(event);
       if (wireEvent !== undefined) {
         this.publish(wireEvent);
       }
-      if (
-        wireEvent?.type === "run_status" &&
-        (wireEvent as { active?: unknown }).active === false
-      ) {
+      if (wireEvent?.type === "run_status" && wireEvent.active === false) {
         this.cleanupIfIdle();
       }
     });
+  }
+
+  private initRunStateFromLog(): void {
+    const lastSeq = this.runtime.getSessionLastSeq(this.agentId, this.sessionId);
+    if (lastSeq < 0) return;
+    const PAGE = 200;
+    let since = lastSeq - PAGE;
+    for (;;) {
+      const events = this.runtime.readSessionEventsAfter(
+        this.agentId,
+        this.sessionId,
+        since,
+        PAGE,
+      );
+      if (events.length === 0) return;
+      for (let i = events.length - 1; i >= 0; i--) {
+        if (events[i].type === "turn/end") return;
+        if (events[i].type === "turn/start") {
+          this.projector.markRunActive();
+          return;
+        }
+      }
+      const oldest = events[0].seq;
+      if (oldest <= 0) return;
+      since = oldest - 1 - PAGE;
+    }
   }
 
   private handshake(subscriber: Subscriber, since: number | undefined): void {
@@ -228,6 +252,7 @@ export class ChatChannel {
     this.running = true;
     this.runEvents = [];
     this.projector.resetRun();
+    this.projector.setOwnRun(true);
     try {
       await executor((event) => {
         const enriched = this.projector.enrich(event);
@@ -237,6 +262,7 @@ export class ChatChannel {
     } finally {
       this.running = false;
       this.runEvents = [];
+      this.projector.setOwnRun(false);
       this.projector.clearPendingEcho();
       this.cleanupIfIdle();
     }
