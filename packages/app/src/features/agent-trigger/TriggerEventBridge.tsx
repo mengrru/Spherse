@@ -3,8 +3,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
-import { useApiClient } from "../../lib/use-connection";
-import { useStreamingStore } from "../chat/runtime/streaming-store";
+
 import { useTriggerStore, getCachedTriggersForAgent } from "./store";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { useReconnectedSync } from "../../hooks/useReconnectedSync";
@@ -15,7 +14,6 @@ const INVALIDATING_EVENTS = new Set(["trigger_updated", "trigger_completed", "tr
 
 export function TriggerEventBridge() {
   const { projectId } = useProjectCtx();
-  const client = useApiClient(projectId);
   const navigate = useNavigate();
   const { t } = useI18n();
   const handleTriggerEvent = useTriggerStore((s) => s.handleTriggerEvent);
@@ -46,7 +44,6 @@ export function TriggerEventBridge() {
     if (type === "trigger_completed") {
       const p = payload as { agentId: string; triggerId: string; sessionId: string };
       showTriggerNotification(p.agentId, p.triggerId, p.sessionId);
-      if (client) useStreamingStore.getState().refreshHistory(client, p.agentId, p.sessionId);
     }
   });
 

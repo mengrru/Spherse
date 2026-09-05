@@ -9,6 +9,7 @@ export interface ControlRequest {
 }
 
 interface PendingRequest {
+  requestId: string;
   kind: ControlRequestKind;
   resolve: (decision: unknown) => void;
   reject: (err: Error) => void;
@@ -42,6 +43,7 @@ export class SessionControlBus {
         }
       }, timeoutMs);
       this.pending.set(req.requestId, {
+        requestId: req.requestId,
         kind: req.kind,
         resolve: resolve as (d: unknown) => void,
         reject,
@@ -71,6 +73,7 @@ export class SessionControlBus {
     for (const entry of this.pending.values()) {
       clearTimeout(entry.timer);
       entry.reject(new Error(reason));
+      this.emitAborted(entry.requestId, entry.kind);
     }
     this.pending.clear();
   }
@@ -98,6 +101,26 @@ export class SessionControlBus {
         kind,
         answer: d.answer,
         timedOut: d.timedOut,
+      });
+    }
+  }
+
+  private emitAborted(requestId: string, kind: ControlRequestKind): void {
+    if (kind === "approval") {
+      this.emit({
+        type: "control_resolved",
+        requestId,
+        kind,
+        approved: false,
+        aborted: true,
+      });
+    } else {
+      this.emit({
+        type: "control_resolved",
+        requestId,
+        kind,
+        timedOut: false,
+        aborted: true,
       });
     }
   }

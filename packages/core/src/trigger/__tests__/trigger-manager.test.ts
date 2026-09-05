@@ -188,7 +188,7 @@ describe("TriggerManager", () => {
       "Hello Alice",
       [],
       expect.any(Function),
-      { source: "triggered", triggerName: "user-login" },
+      { source: "triggered", triggerName: "user-login", agentId },
     );
 
     sendMessageSpy.mockRestore();
@@ -234,7 +234,7 @@ describe("TriggerManager", () => {
       "Payload: []",
       [],
       expect.any(Function),
-      { source: "triggered", triggerName: "test-event" },
+      { source: "triggered", triggerName: "test-event", agentId },
     );
     sendMessageSpy.mockRestore();
   });
