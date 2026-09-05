@@ -43,6 +43,7 @@ chat（每 session 一条，`chat-session-runtime.ts`）与 bus（全局一条�
 | 4 | 前端四层 | L1 通用 WS 抽象（chat/bus 共用）→ L2 per-session 域状态 store（统管消息/连接投影/分页/游标，ws 生命周期为其 action）→ L3 身份化 reducer + 视图模型 → L4 纯渲染 |
 | 5 | trigger 收口 + 服务端性能纳入本次 | 实现分 PR，同一 design doc |
 | 6 | 快照机制保留 | 进行中 run 的流式部分无持久化形态，attach 时的压缩快照（`runEvents`）与游标重放并存、按身份去重 |
+| 7 | control 事件落库 | `control/requested`/`control/resolved` 进 SessionEventMap（append → emit，persist-before-callback 同款）；wire 事件附 seq 并纳入游标推进集合；`rejectAll`(abort) 补发 `resolved {aborted}` 修多端缺口；pending 投影 = requested 未配对 resolved 且无 `turn/end` 隔断（repair 合成的 turn/end 自动排除崩溃悬空）。快照收缩见 §1.8 |
 
 ## §1 Wire 协议 v2（`contracts/websocket.ts`）
 
@@ -117,13 +118,15 @@ connect URL 增加可选 query 参数 `since`（数字，**取值域 ≥ -1**：
 | 旧 app + 新 server | 旧 app 忽略新事件类型（parse 失败静默丢弃）；新增字段 TypeBox 默认放行 additionalProperties，无破坏 |
 | 新 app + 旧 server | 无 `session_ready` → 回退 legacy 对账（现有代码路径保留至版本门槛提升） |
 
-### 1.8 快照收缩（与 PR4 联动，服务端不可单方面先行）
+### 1.8 快照收缩与 control 落库（PR4/PR5 联动，服务端不可单方面先行）
 
-快照（`runEvents`）与游标重放的分工审计：已完成消息（`message_end` ⟺ 已落库）在快照里是**纯冗余**——游标重放必然覆盖；快照不可替代的内容只有 in-flight 状态：未关闭消息窗口的 start + 最后一条 update（累积快照语义）、进行中的 tool_execution、**pending control_request（完全不落库，快照是唯一恢复路径）**。
+快照（`runEvents`）与游标重放的分工审计：**已完成消息（`message_end` ⟺ 已落库）在快照里是纯冗余**——游标重放必然覆盖；流式中的 partial 消息与执行中工具也不依赖快照——累积快照语义下，重连后**下一条 live 事件即全量补偿**；快照保留 in-flight 的 start + 最后一条 update 只是把「静默期（LLM 卡顿/长工具）重连的空窗」从几十秒缩到零，是 UX 补偿而非正确性需求。
 
-收缩后快照 = O(in-flight)：pi 顺序流保证同时最多一个开放消息窗口，上界恒小；`recordRunEvent` 的压缩逻辑已是该形状的一半，补「已完成消息丢弃 + 字节预算」即可。静默期（thinking/慢工具）重连的 partial 文本由快照保留的「最后一条 update」覆盖，不依赖下一条 delta。
+**唯一正确性需求是 pending control_request**（不落库、一次性广播、不会再发）——由决策 #7 落库解决。关键不变量：pending 期间 run 阻塞在 gate 上、无后续落库，`control/requested` 必然紧邻 log 尾部，因此冷启动（游标 = HTTP 首页最后 message 的 seq）与重连的游标重放**必然覆盖**它。
 
-前置条件：客户端 reducer 须支持「无完整前史的快照」与「update 懒建气泡」（messageId 机制支持），故归入 PR4 前后端同改，PR1-PR3 期间维持全量快照。
+收缩后快照 = O(in-flight)：开放消息窗口的 start + 最后一条 update + 执行中 tool_execution；control 事件落库后快照中保留双通道副本（reducer 按 requestId 幂等），稳定后可删。快照另加字节/条目预算兜底。
+
+前置条件：客户端 reducer 须支持「无完整前史的快照」与「update 懒建气泡」（messageId 机制支持）+ `applyPersistedEvent` 消费 control 事件，故归入 PR4 前后端同改；core 词汇表与落库点在 PR5 先行。
 
 ## §2 服务端改造
 

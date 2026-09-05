@@ -34,19 +34,20 @@
 
 ## PR4 前端 L3/L4 reducer + 渲染
 
-- [ ] `applyWireEvent`（message id stitch + turn 感知，废除尾部定位）+ `applyPersistedEvent`（seq 幂等、按 seq 截断/移除）
+- [ ] `applyWireEvent`（message id stitch + turn 感知，废除尾部定位）+ `applyPersistedEvent`（seq 幂等、按 seq 截断/移除，**消费 control/requested、control/resolved**）
 - [ ] 冷启动 entries 合并缩小化；删 `mergeHistoryMessages` transient 过滤/内容匹配
-- [ ] reducer 支持「无完整前史的快照」与 update 懒建气泡；服务端同步落地快照收缩为 O(in-flight)（丢已完成消息 + 字节预算，见 design §1.8）
+- [ ] reducer 支持「无完整前史的快照」与 update 懒建气泡；服务端同步落地快照收缩为 O(in-flight) + 字节预算（design §1.8）；control 事件按 requestId 幂等去重（快照/重放双通道）
 - [ ] 视图模型下沉：groupTurns / superseded 进 model 层；MessageList key 稳定化
 - [ ] ConnectionBanner 消费新状态机（waiting-backoff 独立文案）
 - [ ] HtmlCard 取数解耦（loader 注入）；组件去除 `getState()` 反向调用
 - [ ] 顺手修：Composer mimeType、`ChatRuntimeProvider` 更名
 - [ ] reducer 性质测试（随机事件流不变量）+ store 结构测试更新
 
-## PR5 trigger 收口 + 分页性能（core + server，依赖 PR1）
+## PR5 trigger 收口 + control 落库 + 分页性能（core + server，依赖 PR1）
 
 - [ ] core：`assembleProject` 增加 `wrapSessionPort?: (port: SessionPort) => SessionPort` 钩子（sessionRuntime 创建后、capabilities init 前应用）；`SessionPort.sendMessage` 调用上下文补 agentId
 - [ ] server：hub 公开 `startRunWithMeta(channel, meta, executor)`；trigger 的 sendMessage 经 wrapSessionPort 走 hub（meta 带 source/triggerName）
+- [ ] core：SessionEventMap 新增 `control/requested` / `control/resolved`；AgentRunner 的 control sink 包装层 append → emit + seq 回填 wire 事件；`rejectAll`(abort) 补发 `resolved {aborted}`；fold pending 投影（requested 未配对 resolved 且无 turn/end 隔断）+ contracts 信封变体
 - [ ] SessionPort 门面契约测试（server/desktop 各一条不 mock 被测方法，仓库红线）
 - [ ] trigger 冲突语义对齐测试（ConflictError ↔ ensureNotBusy 行为等价）
 - [ ] fold-on-write 投影缓存挂 project-manager 层（按 session 键控、事件数版本号失效、LRU 上限，覆盖未激活 session）+ `getRecentSessionHistory` 走缓存切片；性质测试（缓存 == 全量重 fold）
