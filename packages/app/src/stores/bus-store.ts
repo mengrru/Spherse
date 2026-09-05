@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { parseBusServerMessage } from "@spherse/contracts";
 import type { HostBridge } from "../lib/host-bridge";
 import { buildWsUrl } from "../lib/api";
+import { WsConnection, type WsConnectionState } from "../lib/ws/ws-connection";
 
 export type BusChannel = "trigger" | "agent" | "fs-watch" | "debug";
 export type BusStatus = "idle" | "connecting" | "open" | "closed";
@@ -25,67 +26,15 @@ const HEARTBEAT_TIMEOUT_MS = 60000;
 const RESUME_PROBE_TIMEOUT_MS = 5000;
 const DEBUG_KEY = "__global__::debug";
 
-let ws: WebSocket | null = null;
+let connection: WsConnection | null = null;
 const handlers = new Map<string, Set<BusHandler>>();
-let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
-let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
-let probeTimer: ReturnType<typeof setTimeout> | undefined;
-let lastPongAt = 0;
-let reconnectAttempt = 0;
-let activeBridge: HostBridge | null = null;
 
 function keyFor(projectId: string, channel: BusChannel): string {
   return `${projectId}::${channel}`;
 }
 
 function sendRaw(msg: unknown): void {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    try {
-      ws.send(JSON.stringify(msg));
-    } catch { /* ws closed concurrently */ }
-  }
-}
-
-function sendSubscribe(projectId: string, channel: BusChannel): void {
-  sendRaw({ kind: "subscribe", projectId, channel });
-}
-
-function sendUnsubscribe(projectId: string, channel: BusChannel): void {
-  sendRaw({ kind: "unsubscribe", projectId, channel });
-}
-
-function clearReconnectTimer(): void {
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = undefined;
-  }
-}
-
-function clearHeartbeatTimer(): void {
-  if (heartbeatTimer) {
-    clearInterval(heartbeatTimer);
-    heartbeatTimer = undefined;
-  }
-}
-
-function clearProbeTimer(): void {
-  if (probeTimer) {
-    clearTimeout(probeTimer);
-    probeTimer = undefined;
-  }
-}
-
-function startHeartbeat(): void {
-  clearHeartbeatTimer();
-  lastPongAt = Date.now();
-  heartbeatTimer = setInterval(() => {
-    sendRaw({ kind: "ping" });
-    if (Date.now() - lastPongAt > HEARTBEAT_TIMEOUT_MS) {
-      if (ws) {
-        try { ws.close(); } catch { /* already closed */ }
-      }
-    }
-  }, HEARTBEAT_INTERVAL_MS);
+  connection?.send(JSON.stringify(msg));
 }
 
 function replaySubscriptions(): void {
@@ -93,152 +42,115 @@ function replaySubscriptions(): void {
     const sep = key.indexOf("::");
     const projectId = key.slice(0, sep);
     const channel = key.slice(sep + 2) as BusChannel;
-    sendSubscribe(projectId, channel);
+    sendRaw({ kind: "subscribe", projectId, channel });
   }
 }
 
-export const useBusStore = create<BusStore>((set, get) => {
-  function scheduleReconnect(): void {
-    set({ status: "connecting" });
-    clearReconnectTimer();
-    const delay = RECONNECT_BACKOFFS[Math.min(reconnectAttempt, RECONNECT_BACKOFFS.length - 1)];
-    reconnectAttempt += 1;
-    reconnectTimer = setTimeout(() => {
-      if (activeBridge) void get().init(activeBridge);
-    }, delay);
+function dispatchMessage(parsed: unknown): void {
+  let message;
+  try {
+    message = parseBusServerMessage(parsed);
+  } catch (err) {
+    console.warn("[bus-store] unparseable ws message:", err);
+    return;
   }
+  if (message.channel === "__system__") {
+    if (message.type === "fs_watch_error") {
+      console.debug("[bus-store] fs_watch_error", message.payload);
+    }
+    return;
+  }
+  const key = message.channel === "debug"
+    ? DEBUG_KEY
+    : `${message.projectId}::${message.channel}`;
+  const subs = handlers.get(key);
+  if (subs) {
+    for (const h of subs) h(message.type, message.payload);
+  }
+}
 
-  return {
-    status: "idle",
-    resumedAt: null,
+function isActive(state: WsConnectionState): boolean {
+  return state === "connecting" || state === "open" || state === "waiting-backoff";
+}
 
-    async init(bridge: HostBridge) {
-      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
-        return;
-      }
-      const baseUrl = await bridge.getServerBaseUrl();
-      if (!baseUrl) {
-        return;
-      }
-      set({ status: "connecting" });
-      activeBridge = bridge;
-      const accessToken = (await bridge.getServerAccessToken?.()) ?? null;
-      const wsUrl = buildWsUrl(baseUrl, "/ws/bus", accessToken);
-      const socket = new WebSocket(wsUrl);
-      ws = socket;
+export const useBusStore = create<BusStore>((set) => ({
+  status: "idle",
+  resumedAt: null,
 
-      socket.onopen = () => {
-        if (ws !== socket) return;
-        reconnectAttempt = 0;
-        set({ status: "open", resumedAt: Date.now() });
-        replaySubscriptions();
-        startHeartbeat();
-      };
+  async init(bridge) {
 
-      socket.onmessage = (event) => {
-        if (ws !== socket) return;
-        let parsed;
-        try {
-          parsed = parseBusServerMessage(JSON.parse(event.data));
-        } catch (err) {
-          console.warn("[bus-store] unparseable ws message:", err);
-          return;
-        }
-        if (parsed.channel === "__system__") {
-          if (parsed.type === "pong") {
-            lastPongAt = Date.now();
-            clearProbeTimer();
-          } else if (parsed.type === "fs_watch_error") {
-            console.debug("[bus-store] fs_watch_error", parsed.payload);
+    if (connection && isActive(connection.getState())) return;
+    connection?.close();
+    connection = new WsConnection(
+      {
+        url: async () => {
+          const baseUrl = await bridge.getServerBaseUrl();
+          if (!baseUrl) return "";
+          const accessToken = (await bridge.getServerAccessToken?.()) ?? null;
+          return buildWsUrl(baseUrl, "/ws/bus", accessToken);
+        },
+        heartbeat: { pingIntervalMs: HEARTBEAT_INTERVAL_MS, pongTimeoutMs: HEARTBEAT_TIMEOUT_MS },
+        backoffMs: RECONNECT_BACKOFFS,
+        maxRetries: Infinity,
+        fatalCloseCodes: new Set<number>(),
+        probeTimeoutMs: RESUME_PROBE_TIMEOUT_MS,
+        pingPayload: JSON.stringify({ kind: "ping" }),
+        isPong: (parsed) =>
+          (parsed as { channel?: unknown })?.channel === "__system__" &&
+          (parsed as { type?: unknown })?.type === "pong",
+        label: "bus-ws",
+      },
+      {
+        onMessage: dispatchMessage,
+        onStateChange: ({ state }) => {
+          if (state === "open") {
+            set({ status: "open", resumedAt: Date.now() });
+            replaySubscriptions();
+          } else if (state === "connecting" || state === "waiting-backoff") {
+            set({ status: "connecting" });
           }
-          return;
-        }
-        const key = parsed.channel === "debug" ? DEBUG_KEY : `${parsed.projectId}::${parsed.channel}`;
-        const subs = handlers.get(key);
-        if (subs) {
-          for (const h of subs) h(parsed.type, parsed.payload);
-        }
-      };
+        },
+      },
+    );
+    await connection.connect();
+  },
 
-      socket.onclose = () => {
-        if (ws !== socket) return;
-        clearHeartbeatTimer();
-        scheduleReconnect();
-      };
+  resumeProbe() {
+    connection?.probe();
+  },
 
-      socket.onerror = () => {
-        /* onclose will follow; handled by onclose */
-      };
-    },
+  addHandler(projectId, channel, handler) {
+    const key = keyFor(projectId, channel);
+    let subs = handlers.get(key);
+    const wasEmpty = !subs || subs.size === 0;
+    if (!subs) {
+      subs = new Set();
+      handlers.set(key, subs);
+    }
+    subs.add(handler);
+    if (wasEmpty) sendRaw({ kind: "subscribe", projectId, channel });
+  },
 
-    /**
-     * Actively probe the bus connection for liveness (e.g. after the host page
-     * resumed from background suspension where iOS silently drops sockets
-     * without firing onclose). If the socket is already stale it is closed
-     * immediately so the existing reconnect/backoff path takes over; otherwise
-     * a ping is sent and a short probe timeout closes the socket if no pong
-     * arrives. No-op when the socket is not OPEN (the existing reconnect
-     * machinery already owns that case).
-     */
-    resumeProbe() {
-      clearProbeTimer();
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      const socket = ws;
-      if (Date.now() - lastPongAt > HEARTBEAT_TIMEOUT_MS) {
-        try { ws.close(); } catch { /* already closed */ }
-        return;
-      }
-      const pongAtStart = lastPongAt;
-      sendRaw({ kind: "ping" });
-      probeTimer = setTimeout(() => {
-        probeTimer = undefined;
-        if (ws !== socket || ws.readyState !== WebSocket.OPEN) return;
-        if (lastPongAt === pongAtStart) {
-          try { ws.close(); } catch { /* already closed */ }
-        }
-      }, RESUME_PROBE_TIMEOUT_MS);
-    },
+  removeHandler(projectId, channel, handler) {
+    const key = keyFor(projectId, channel);
+    const subs = handlers.get(key);
+    if (!subs) return;
+    subs.delete(handler);
+    if (subs.size === 0) {
+      handlers.delete(key);
+      sendRaw({ kind: "unsubscribe", projectId, channel });
+    }
+  },
 
-    addHandler(projectId, channel, handler) {
-      const key = keyFor(projectId, channel);
-      let subs = handlers.get(key);
-      const wasEmpty = !subs || subs.size === 0;
-      if (!subs) {
-        subs = new Set();
-        handlers.set(key, subs);
-      }
-      subs.add(handler);
-      if (wasEmpty) sendSubscribe(projectId, channel);
-    },
+  emitAgentTriggerEvent(projectId, eventName, payload) {
+    sendRaw({ kind: "emit-trigger-event", projectId, eventName, payload });
+  },
 
-    removeHandler(projectId, channel, handler) {
-      const key = keyFor(projectId, channel);
-      const subs = handlers.get(key);
-      if (!subs) return;
-      subs.delete(handler);
-      if (subs.size === 0) {
-        handlers.delete(key);
-        sendUnsubscribe(projectId, channel);
-      }
-    },
+  teardown() {
+    connection?.close();
+    connection = null;
+    handlers.clear();
 
-    emitAgentTriggerEvent(projectId, eventName, payload) {
-      sendRaw({ kind: "emit-trigger-event", projectId, eventName, payload });
-    },
-
-    teardown() {
-      clearReconnectTimer();
-      clearHeartbeatTimer();
-      clearProbeTimer();
-      if (ws) {
-        try { ws.close(); } catch { /* already closed */ }
-      }
-      ws = null;
-      handlers.clear();
-      reconnectAttempt = 0;
-      lastPongAt = 0;
-      activeBridge = null;
-      set({ status: "idle", resumedAt: null });
-    },
-  };
-});
+    set({ status: "idle", resumedAt: null });
+  },
+}));

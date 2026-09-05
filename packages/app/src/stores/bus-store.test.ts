@@ -1,55 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useBusStore } from "./bus-store";
 import type { HostBridge } from "../lib/host-bridge";
-
-interface MockWebSocketInstance {
-  url: string;
-  readyState: number;
-  onopen: ((ev: Event) => void) | null;
-  onmessage: ((ev: MessageEvent) => void) | null;
-  onclose: ((ev: CloseEvent) => void) | null;
-  onerror: ((ev: Event) => void) | null;
-  sent: string[];
-  closeSpy: ReturnType<typeof vi.fn>;
-  close: () => void;
-}
-
-const OPEN = 1;
-const CONNECTING = 0;
-const CLOSED = 3;
-
-function createMockWebSocket() {
-  const instances: MockWebSocketInstance[] = [];
-
-  class MockWebSocket {
-    static OPEN = OPEN;
-    static CONNECTING = CONNECTING;
-    static CLOSING = 2;
-    static CLOSED = CLOSED;
-    url: string;
-    readyState = CONNECTING;
-    onopen: ((ev: Event) => void) | null = null;
-    onmessage: ((ev: MessageEvent) => void) | null = null;
-    onclose: ((ev: CloseEvent) => void) | null = null;
-    onerror: ((ev: Event) => void) | null = null;
-    sent: string[] = [];
-    closeSpy = vi.fn();
-    constructor(url: string) {
-      this.url = url;
-      instances.push(this as unknown as MockWebSocketInstance);
-    }
-    send(data: string) {
-      this.sent.push(data);
-    }
-    close() {
-      this.readyState = CLOSED;
-      this.closeSpy();
-      this.onclose?.({} as CloseEvent);
-    }
-  }
-
-  return { MockWebSocket, instances };
-}
+import {
+  createMockWebSocket,
+  openInstance,
+  WS_CONNECTING,
+  WS_OPEN,
+  type MockWebSocketInstance,
+} from "../test/mock-web-socket";
 
 function lastSentSubscribe(instances: MockWebSocketInstance[]) {
   const last = instances[instances.length - 1];
@@ -102,8 +60,7 @@ describe("bus-store", () => {
   async function connect() {
     await useBusStore.getState().init(bridge);
     const socket = mock.instances[mock.instances.length - 1];
-    socket.readyState = OPEN;
-    socket.onopen?.({} as Event);
+    openInstance(socket);
     return socket;
   }
 
@@ -112,9 +69,15 @@ describe("bus-store", () => {
     expect(useBusStore.getState().status).toBe("connecting");
     const socket = mock.instances[mock.instances.length - 1];
     expect(socket.url).toBe("ws://localhost:5173/ws/bus");
-    socket.readyState = OPEN;
-    socket.onopen?.({} as Event);
+    openInstance(socket);
     expect(useBusStore.getState().status).toBe("open");
+  });
+
+  it("does not create a socket when the server base url is unavailable", async () => {
+    (bridge.getServerBaseUrl as ReturnType<typeof vi.fn>).mockResolvedValue("");
+    await useBusStore.getState().init(bridge);
+    expect(mock.instances).toHaveLength(0);
+    expect(useBusStore.getState().status).toBe("idle");
   });
 
   it("first subscriber sends a subscribe message", async () => {
@@ -223,8 +186,7 @@ describe("bus-store", () => {
     await vi.advanceTimersByTimeAsync(1000);
     const reopened = mock.instances[mock.instances.length - 1];
     expect(reopened).not.toBe(socket);
-    reopened.readyState = OPEN;
-    reopened.onopen?.({} as Event);
+    openInstance(reopened);
 
     expect(useBusStore.getState().status).toBe("open");
     const subscribeAfterReconnect = lastSentSubscribe(mock.instances);
@@ -252,8 +214,7 @@ describe("bus-store", () => {
     socket.close();
     await vi.advanceTimersByTimeAsync(1000);
     const reopened = mock.instances[mock.instances.length - 1];
-    reopened.readyState = OPEN;
-    reopened.onopen?.({} as Event);
+    openInstance(reopened);
 
     // Strictly greater: catching a regression where onopen stops updating
     // resumedAt (fake timers freeze the clock, so advance first).
@@ -271,20 +232,22 @@ describe("bus-store", () => {
     it("is a no-op when the socket is not OPEN (existing reconnect owns it)", async () => {
       await useBusStore.getState().init(bridge);
       const socket = mock.instances[mock.instances.length - 1];
-      socket.readyState = CONNECTING;
+      socket.readyState = WS_CONNECTING;
       expect(() => useBusStore.getState().resumeProbe()).not.toThrow();
       expect(socket.closeSpy).not.toHaveBeenCalled();
       expect(socket.sent).toHaveLength(0);
     });
 
-    it("closes immediately when the heartbeat is already stale", async () => {
+    it("re-arms a short probe against the stale pending ping and closes it", async () => {
       const socket = await connect();
       await vi.advanceTimersByTimeAsync(61000);
-      socket.sent.length = 0;
       socket.closeSpy.mockClear();
+      const sentBefore = socket.sent.length;
       useBusStore.getState().resumeProbe();
+      expect(socket.sent).toHaveLength(sentBefore);
+      await vi.advanceTimersByTimeAsync(5000);
       expect(socket.closeSpy).toHaveBeenCalled();
-      expect(socket.sent.filter((s) => JSON.parse(s).kind === "ping")).toHaveLength(0);
+      expect(useBusStore.getState().status).toBe("connecting");
     });
 
     it("pings a healthy socket and does not close when pong arrives in time", async () => {
@@ -311,5 +274,18 @@ describe("bus-store", () => {
       expect(socket.closeSpy).toHaveBeenCalled();
       expect(useBusStore.getState().status).toBe("connecting");
     });
+  });
+
+  it("keeps the socket reference across state (sanity: open socket is used for sends)", async () => {
+    await connect();
+    expect(useBusStore.getState().emitAgentTriggerEvent("p1", "evt", "x")).toBeUndefined();
+    const socket = mock.instances[mock.instances.length - 1];
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({
+      kind: "emit-trigger-event",
+      projectId: "p1",
+      eventName: "evt",
+      payload: "x",
+    }));
+    expect(socket.readyState).toBe(WS_OPEN);
   });
 });
