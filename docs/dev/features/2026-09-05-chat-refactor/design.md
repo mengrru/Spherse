@@ -144,15 +144,20 @@ clientId 传递：WS 层 `attachment.sendMessage(content, attachments, clientId?
 
 hub 持有的是 `SessionManager` 而非 store，且其 sessions map 为 private、server 侧不持有 SessionStore 引用——已在 `SessionManager` 上补**门面方法**：`readSessionEventsAfter(agentId, sessionId, sinceSeq, limit)`（优先内存日志尾部，未激活 session 回落 store 查询）、`getSessionLastSeq(agentId, sessionId)`（返回 -1 表示空）与 `subscribeSessionEvents(sessionId, listener)`。这是 §1.1「同 tick 切片 + 订阅」论述成立的前置条件，纳入 §9 契约测试。重放不做 fold——原始事件直出，这是「重放词汇 = 原始事件」决策的性能红利。
 
-### 2.3 trigger run 收口
+### 2.3 trigger run 可见性：log 派生（推翻原 wrapSessionPort 收口方案）
 
-现状：trigger capability 经 `factory.ts:103-110` 的 sessionPort 直连 SessionManager，绕过 hub。改造需要 core 与 server 两侧配合（仅 server 侧不可行——capabilities 函数执行时 sessionRuntime 尚未创建（`factory.ts:81-84` vs `:101`）、TriggerManager 构造后 port 不可替换、`SessionPort.sendMessage` 无 agentId 参数（hub 建 channel 必需）、hub 无带 meta 的公共 startRun 变体）：
+> 历史记录：初版实现（PR #89，已关闭）采用 `wrapSessionPort` 钩子把 trigger 的 sendMessage 路由经 hub channel（`startRunWithMeta` 完成语义）。用户 review 推翻：channel 本就订阅 event log，可见性应在反向路径自然产生，正向路由引入了 wrapper 倒灌、`meta.agentId` 走私、惰性 projectId 盒等时间耦合补丁。重做为下述方案。
 
-- core：`assembleProject` 增加可选 `wrapSessionPort?: (port: SessionPort) => SessionPort` 钩子，在 sessionRuntime 创建后、capabilities init 前应用；`SessionPort.sendMessage` 调用上下文补 agentId（签名或 meta 扩展，二选一）
-- server：包装实现将 trigger 的 sendMessage 改走 hub 公共 API `startRunWithMeta(channel, meta, executor)`；hub 时序无问题（hub 在 server index 创建，早于按需 assembleProject）
-- 行为对齐：trigger 撞上运行中 session 的冲突语义不变（今天 `ensureNotBusy` 抛 ValidationError → trigger failed；收口后 hub `startRun` 抛 ConflictError → 同样 failed，错误路径统一）
-- 按仓库契约测试红线，server/desktop 对新 SessionPort 门面各补一条不 mock 被测方法的真实边界测试
+现状：trigger capability 经 sessionPort 直连 SessionManager；channel 订阅 `SessionEventLog`。**关键观察：直连 run 的全部持久化事件（user/message、turn/start、assistant/message、turn/end、control/*）本来就流经 log 订阅**——echo、turn_retried 广播、消息内容对已 attach 的订阅者天然可见。唯一缺的是 `run_status`（channel 私有 `running` 标志不知道非自己发起的 run），而 run 边界就在 log 里。
+
+- **run_status 派生化**（`ChatWireProjector`）：跟踪 open turn（有 `turn/start` 无配对 `turn/end`），在 log 订阅路径发布 `run_status` 翻转（幂等：重复 turn/start / 落单 turn/end 不发）；`isRunActive()` 供握手（`run_status` 初值）与 `cleanupIfIdle`（busy 判定 = 自有 run ‖ log open turn，防止直连 run 进行中销毁 session）
+- channel 的 `running` 退化为「自己发起的 run」标志：只服务快照捕获与自有发送的 409 互斥；`startRun` 不再手动 publish `run_status`（log 路径接管，含 WS/HTTP 发送路径——顺序变为 echo → run_status(true) → 流式 → run_status(false) → agent_end）
+- **core 是唯一互斥点**：`ensureNotBusy` 不变；trigger 撞运行中 session 维持 ValidationError → trigger failed 现行为
+- trigger executor 零改动（不路由、不加 meta）；hub/registry/factory 零新增钩子
 - trigger 完成通知仍走 bus trigger 频道（TriggerEventBridge 的 query 失效职责不变，删掉的只是 refreshHistory 部分，见 §7）
+- 契约测试：`trigger-log-visibility.test.ts`——真 createProject（无任何 wrapper）+ hub attach + 真实 triggerManager fire 直连发送，断言订阅者收到 echo（source/triggerName）+ run_status 双向翻转 + 完成内容 + trigger success 日志
+
+**有意识的取舍**：① 直连 trigger run 无实时流式——partial 只在 pi 内存流，打开的页面看到消息在 `message_end` 落库时完整弹出（仍优于旧态「完全不可见直到 refreshHistory」）；mid-run attach 同理（已完成部分 + run_status true，无 in-flight 快照）。② trigger 失败对 chat 订阅者不可见（trigger 有自己的 toast/日志渠道）。若未来要流式可见，是「core 广播 in-flight」的独立课题，不属于本次重构。
 
 ### 2.4 分页性能（增量 fold 缓存）
 
@@ -214,7 +219,7 @@ interface WsConnectionConfig {
 |---|---|
 | `ChatSessionRuntime` + registry + **重连 reconcile** | PR3（游标重放上线；legacy **冷对账**路径保留在新 store，见 §1.7/§4） |
 | `mergeHistoryMessages` transient 过滤 / 内容匹配合并 | PR4（新 reducer） |
-| `TriggerEventBridge` 的 refreshHistory 调用 | PR5（trigger 收口后 live 事件可达；session 列表 query 失效保留） |
+| `TriggerEventBridge` 的 refreshHistory 调用 | PR5（log 派生可见性后 live 事件可达；session 列表 query 失效保留） |
 | `project-data-store.streamingSessionIds` | PR3（改 selector） |
 | legacy 冷对账路径（新 app + 旧 server） | 保留至 web 版本兼容门槛提升（`lib/version-compat.ts` minVersion 覆盖 v2 server），单列小 PR 删除 |
 
@@ -226,10 +231,10 @@ interface WsConnectionConfig {
 | PR2 | app L1：`WsConnection` + bus-store 迁移（行为对齐测试） | 无（可与 PR1 并行） |
 | PR3 | app L2：session store + 游标重放接入，删重连 reconcile，streaming 派生化 | PR1、PR2 |
 | PR4 | app L3+L4：身份化 reducer、视图模型、渲染修复 | PR3 |
-| PR5 | core+server：trigger 收口（wrapSessionPort 钩子 + port 签名 + hub startRunWithMeta）+ 分页 fold 缓存；删 TriggerEventBridge 的 refreshHistory | PR1 |
+| PR5 | core+server：control 事件落库 + run_status log 派生化（§2.3）+ 分页 fold 缓存；删 TriggerEventBridge 的 refreshHistory | PR1 |
 | PR6 | 文档同步 + legacy 冷对账路径清理评估（视版本门槛） | 全部 |
 
-每个 PR 独立可合：PR1/2 无行为耦合，PR3 是最大风险点（连接与数据流同时换），PR4 纯前端可回滚。**PR3 必须在 PR5 合入后才可合**：删 refreshHistory 依赖 trigger 收口在先，否则 attach 中的 session 在 trigger run 期间失去唯一补偿通道（PR5 的 refreshHistory 拆除条目随收口一并落地）。
+每个 PR 独立可合：PR1/2 无行为耦合，PR3 是最大风险点（连接与数据流同时换），PR4 纯前端可回滚。**PR3 必须在 PR5 合入后才可合**：删 refreshHistory 依赖 log 派生可见性在先（run_status 派生 + control 落库），否则 attach 中的 session 在 trigger run 期间失去唯一补偿通道。
 
 ## §9 测试策略
 

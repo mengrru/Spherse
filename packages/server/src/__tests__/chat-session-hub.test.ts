@@ -5,11 +5,14 @@ function createRuntime() {
   let emit: ((event: any) => void) | undefined;
   let finish: (() => void) | undefined;
   let logListener: ((event: any) => void) | undefined;
+  let nextSeq = 0;
+  const appendLog = (event: any) => logListener?.(event);
   const runtime = {
     restoreSession: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn(
-      (_sessionId: string, _content: string, _attachments: unknown, onEvent: (event: any) => void) => {
+      (_sessionId: string, content: string, _attachments: unknown, onEvent: (event: any) => void) => {
         emit = onEvent;
+        appendLog({ type: "turn/start", seq: nextSeq++, time: 1, data: {} });
         return new Promise<void>((resolve) => {
           finish = resolve;
         });
@@ -18,6 +21,8 @@ function createRuntime() {
     retryLastTurn: vi.fn(
       (_sessionId: string, onEvent: (event: any) => void) => {
         emit = onEvent;
+        appendLog({ type: "turn/retried", seq: nextSeq++, time: 1, data: { abandonedSeqs: [] } });
+        appendLog({ type: "turn/start", seq: nextSeq++, time: 1, data: {} });
         return new Promise<void>((resolve) => {
           finish = resolve;
         });
@@ -106,6 +111,7 @@ describe("ChatSessionHub", () => {
     expect(replayed[0]).toEqual({ type: "session_ready", lastSeq: -1, replay: true });
     expect(replayed.at(-1)).toEqual({ type: "run_status", active: true });
 
+    mock.appendLog({ type: "turn/end", seq: 99, time: 1, data: { reason: "completed" } });
     mock.emit({ type: "agent_end", messages: [] });
     mock.finish();
     await run;
@@ -131,19 +137,21 @@ describe("ChatSessionHub", () => {
     const run = attachment.retryLastTurn();
     await vi.waitFor(() => expect(mock.runtime.retryLastTurn).toHaveBeenCalled());
     mock.emit({ type: "agent_start" });
+    mock.appendLog({ type: "turn/end", seq: 99, time: 1, data: { reason: "completed" } });
     mock.emit({ type: "agent_end", messages: [] });
     mock.finish();
     await run;
 
     expect(mock.runtime.retryLastTurn).toHaveBeenCalledWith("s1", expect.any(Function));
     expect(events.map((e) => e.type)).toEqual([
+      "turn_retried",
       "run_status",
       "agent_start",
-      "agent_end",
       "run_status",
+      "agent_end",
     ]);
-    expect(events[0]).toEqual({ type: "run_status", active: true });
-    expect(events.at(-1)).toEqual({ type: "run_status", active: false });
+    expect(events[1]).toEqual({ type: "run_status", active: true });
+    expect(events[3]).toEqual({ type: "run_status", active: false });
     attachment.close();
   });
 
@@ -239,7 +247,9 @@ describe("ChatSessionHub", () => {
     expect(events).toContainEqual({ type: "run_status", active: true });
     expect(mock.runtime.destroySession).not.toHaveBeenCalled();
 
+    mock.appendLog({ type: "turn/end", seq: 99, time: 1, data: { reason: "completed" } });
     mock.emit({ type: "agent_end", messages: [] });
+    mock.appendLog({ type: "turn/end", seq: 4, time: 1, data: { reason: "completed" } });
     mock.finish();
     await vi.waitFor(() =>
       expect(events).toContainEqual({ type: "run_status", active: false }),
@@ -452,6 +462,7 @@ describe("ChatSessionHub", () => {
     });
 
     mock.emit({ type: "agent_end", messages: [] });
+    mock.appendLog({ type: "turn/end", seq: 4, time: 1, data: { reason: "completed" } });
     mock.finish();
     await vi.waitFor(() =>
       expect(events).toContainEqual({ type: "run_status", active: false }),

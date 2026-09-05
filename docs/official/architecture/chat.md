@@ -29,8 +29,8 @@ Composer.send
 - **client → server**：`message`（content + 可选 `clientId`（乐观消息结算标识）+ attachments 路径引用）、`abort`、`ping`、`retry`、`withdraw`、`resolve_control_request`（kind approval：approved / reason；kind question：answer）
 - **server → client**：
   - pi 生命周期族：`agent_start` / `agent_end`（可带 `seq`） / `turn_start` / `turn_end` / `message_start` / `message_update` / `message_end`（可带 `messageId` + `seq`） / `tool_execution_start` / `tool_execution_update` / `tool_execution_end`
-  - session 级：`run_status`（active）、`control_request` / `control_resolved`、`turn_withdrawn`（seq）、`turn_retried`（seq + abandonedSeqs）、`user_message`（seq + clientId? + source? + triggerName?，user 消息回显/ack）、`error`（message + code）、`pong`
-  - 重放族：`session_ready`（lastSeq + replay，attach 后恒为首个事件）、`replay_events`（原始 SessionEvent 信封分批，每批 ≤200）、`replay_done`
+  - session 级：`run_status`（active，log 派生）、`control_request` / `control_resolved`（落库，可带 `seq`；abort 路径 `resolved` 带 `aborted: true`）、`turn_withdrawn`（seq）、`turn_retried`（seq + abandonedSeqs）、`user_message`（seq + clientId? + source? + triggerName?，user 消息回显/ack）、`error`（message + code）、`pong`
+  - 重放族：`session_ready`（lastSeq + replay，attach 后恒为首个事件）、`replay_events`（原始 SessionEvent 信封分批，每批 ≤200，含 `control/requested`/`control/resolved`）、`replay_done`
 - **身份与游标**（[ADR-0011](../../dev/decisions/0011-chat-wire-cursor-replay.md)）：持久事件按 `seq` 幂等；流式 wire 消息按 hub 生成的 `messageId` stitch（pi message payload 运行时无 id 字段），`message_end.seq` 经落库实例引用配对（persist-before-callback）；connect query `?since=`（≥ -1）触发游标重放，游标为客户端 per-connection 状态
 - **error code**（`classify-run-error.ts`）：`MODEL_NOT_CONFIGURED`、`AUTH_ERROR`、`PERMANENT`、`TRANSIENT`。规则：
   - 401/403 → AUTH；429/5xx/网络错误 → TRANSIENT
@@ -42,8 +42,9 @@ Composer.send
 ## Server：hub / channel / projector（`server/src/chat/`，对外仅经 `chat/index.ts` 导出）
 
 - **`ChatSessionHub`（注册表）**：`Map<projectId:sessionId, ChatChannel>` + getOrCreate + 身份守卫删除回调；hub 实例由 `server/index.ts` 创建，WS 与 sessions 路由共享
-- **`ChatChannel`（单 session 生命周期）**：restore→ready、事件日志订阅、attach（连接级生命周期为闭包）、run 序列化（`startRun` 在 running 时抛 `ConflictError`，HTTP 映射 409，WS 路径表现为 error 事件 code=PERMANENT）、快照压缩（run 期间 `message_update` 同一消息窗口只留最后一条、`tool_execution_update` 同 toolCallId 只留最后一条）、握手重放、fanout、空闲销毁（`cleanupIfIdle`）
-- **`ChatWireProjector`（persist→wire 翻译纯状态机）**：经 `SessionEventLog.subscribe` 消费落库事件——`user/message` → `user_message` echo（clientId + trigger meta）、`turn/retried` → `turn_retried` 广播、落库实例引用→seq 配对、run 级 `messageId` 序列；对 pi wire 事件做富化。pending echo 与 run 状态在 run 边界重置
+- **`ChatChannel`（单 session 生命周期）**：restore→ready、事件日志订阅、attach（连接级生命周期为闭包）、run 序列化（`startRun` 在 running 时抛 `ConflictError`，HTTP 映射 409，WS 路径表现为 error 事件 code=PERMANENT）、快照压缩（run 期间 `message_update` 同一消息窗口只留最后一条、`tool_execution_update` 同 toolCallId 只留最后一条）、握手重放、fanout、空闲销毁（`cleanupIfIdle`：busy = 自有 run ‖ log 派生 open turn——直连 run（如 trigger）进行中不销毁）
+- **run_status 从 event log 派生**（`ChatWireProjector.isRunActive`，open turn 跟踪）：所有 run（WS / HTTP 静默 / trigger 直连）的 turn 边界都写入 log，log 订阅路径统一发布 `run_status` 翻转；channel 不再在 startRun 手动发布——trigger 等直连 run 因此天然对订阅者可见（echo + 边界 + 完成内容；流式 partial 除外）。wire 顺序：`user_message` echo → `run_status(true)` → 流式 → `run_status(false)` → `agent_end`
+- **`ChatWireProjector`（persist→wire 翻译纯状态机）**：经 `SessionEventLog.subscribe` 消费落库事件——`user/message` → `user_message` echo（clientId + trigger meta）、`turn/retried` → `turn_retried` 广播、turn 边界 → `run_status` 翻转、落库实例引用→seq 配对、run 级 `messageId` 序列；对 pi wire 事件做富化。pending echo 与 run 状态在 run 边界重置
 - **attach 握手顺序**：ready 后同步块内 session_ready（lastSeq）→ since 游标重放（`readSessionEventsAfter` 原始事件分批，每批 200）→ replay_done → 当前 run 压缩快照 → run_status 当前值 → 加入订阅（无 await，切片与订阅同 tick 原子）
 - **HTTP 静默发送**：`POST .../sessions/:id/messages`，目标会话未 attach WS 时 UI SDK 走此路径（`open:false` 只控制不跳转导航）：
   - `startDetachedRun` 只递增 attachment 计数保持 channel 存活、不注册订阅者——调用方只拿 `{ok:true}`，run 失败经 error 事件到达 WS 订阅者（echo 无 clientId，仅推进其他端）

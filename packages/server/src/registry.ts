@@ -1,8 +1,7 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { createProject, ModelCatalog } from "@spherse/core";
-import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger, SamplingParams, ThinkingLevel, SessionPort, SendMessageMeta } from "@spherse/core";
-import type { ChatSessionHub } from "./chat/index.js";
+import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger, SamplingParams, ThinkingLevel } from "@spherse/core";
 
 export interface ProjectContext {
   runtime: ProjectRuntime;
@@ -26,8 +25,6 @@ export interface RegisterOptions {
   lastOpened?: string;
 }
 
-type SessionPortFactory = (port: SessionPort) => SessionPort;
-
 export class ProjectRegistry {
   private projects = new Map<string, ProjectContextCompat>();
   private pending = new Map<string, Promise<ProjectContextCompat>>();
@@ -38,7 +35,6 @@ export class ProjectRegistry {
   private thinkingLevel?: ThinkingLevel;
 
   private readonly modelCatalog: ModelCatalog;
-  private readonly chatHub: ChatSessionHub | undefined;
 
   getSupportedProviders() {
     return this.modelCatalog.getSupportedProviders();
@@ -46,14 +42,13 @@ export class ProjectRegistry {
 
   constructor(
     logger: Logger,
-    options?: { defaultModel?: string; sampling?: SamplingParams; thinkingLevel?: ThinkingLevel; modelCatalog?: ModelCatalog; chatHub?: ChatSessionHub },
+    options?: { defaultModel?: string; sampling?: SamplingParams; thinkingLevel?: ThinkingLevel; modelCatalog?: ModelCatalog },
   ) {
     this.logger = logger;
     this.defaultModel = options?.defaultModel;
     this.sampling = options?.sampling;
     this.thinkingLevel = options?.thinkingLevel;
     this.modelCatalog = options?.modelCatalog ?? new ModelCatalog();
-    this.chatHub = options?.chatHub;
   }
 
   async register(projectRoot: string, options?: RegisterOptions): Promise<ProjectContextCompat> {
@@ -82,18 +77,12 @@ export class ProjectRegistry {
 
   private async doRegister(resolvedRoot: string, options?: RegisterOptions): Promise<ProjectContextCompat> {
     const projectLogger = this.logger.child({ projectRoot: resolvedRoot });
-    const assembled: { projectId?: string; sessionRuntime?: SessionManager } = {};
     const runtime = await createProject(resolvedRoot, {
       defaultModel: this.defaultModel,
       sampling: this.sampling,
       thinkingLevel: this.thinkingLevel,
       logger: projectLogger,
       ...(this.modelCatalog ? { modelCatalog: this.modelCatalog } : {}),
-      ...(this.chatHub
-        ? {
-            wrapSessionPort: this.wrapPortForHub(resolvedRoot, assembled),
-          }
-        : {}),
     });
 
     let projectId = runtime.projectId;
@@ -106,8 +95,6 @@ export class ProjectRegistry {
       );
       projectId = newId;
     }
-    assembled.projectId = projectId;
-    assembled.sessionRuntime = runtime.sessionRuntime;
 
     const ctx: ProjectContextCompat = Object.freeze({
       runtime,
@@ -127,46 +114,6 @@ export class ProjectRegistry {
       this.lastOpenedMap.set(projectId, options.lastOpened);
     }
     return ctx;
-  }
-
-  private wrapPortForHub(
-    resolvedRoot: string,
-    assembled: { projectId?: string; sessionRuntime?: SessionManager },
-  ): SessionPortFactory {
-    const hub = this.chatHub!;
-    return (port) => ({
-      ...port,
-      sendMessage: (sessionId, message, onEvent, meta) => {
-        const agentId = meta?.agentId;
-        const projectId = assembled.projectId;
-        const sessionRuntime = assembled.sessionRuntime;
-        if (
-          meta?.source === "triggered" &&
-          agentId !== undefined &&
-          projectId !== undefined &&
-          sessionRuntime !== undefined
-        ) {
-          const triggerMeta: SendMessageMeta = {
-            source: "triggered",
-            ...(meta.triggerName !== undefined ? { triggerName: meta.triggerName } : {}),
-          };
-          return hub.startRunWithMeta(
-            projectId,
-            sessionRuntime,
-            agentId,
-            sessionId,
-            message,
-            triggerMeta,
-            onEvent as never,
-          );
-        }
-        this.logger.debug(
-          { projectRoot: resolvedRoot },
-          "session port sendMessage fell back to direct path (no trigger context or not yet assembled)",
-        );
-        return port.sendMessage(sessionId, message, onEvent, meta);
-      },
-    });
   }
 
   get(projectId: string): ProjectContextCompat | undefined {

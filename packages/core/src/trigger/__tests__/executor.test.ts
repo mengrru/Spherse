@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import { TriggerExecutor } from "../executor.js";
-import { ConflictError, ValidationError } from "../../errors.js";
 import type { SessionPort } from "../../kernel/ports.js";
 import type { TriggerStore } from "../../store/trigger.js";
 import type { TriggerEntry } from "../../types.js";
@@ -56,7 +55,7 @@ describe("TriggerExecutor", () => {
       "s-new",
       "Hello world",
       expect.any(Function),
-      { source: "triggered", triggerName: "evt", agentId: "a1" },
+      { source: "triggered", triggerName: "evt" },
     );
     expect(triggered).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: "a1", triggerId: "tr-1" }),
@@ -85,45 +84,6 @@ describe("TriggerExecutor", () => {
     );
     expect(failed).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: "a1", triggerId: "tr-1", error: "Error: boom" }),
-    );
-  });
-
-  it("records a failed log on ConflictError (hub-routed busy session) with the same failure semantics as a direct ValidationError", async () => {
-    const conflictDeps = makeDeps({
-      sendMessage: vi.fn(async () => {
-        throw new ConflictError(`Session "s-new" is already running`);
-      }) as unknown as SessionPort["sendMessage"],
-    });
-    const conflictFailed = vi.fn();
-    conflictDeps.executor.on("trigger_failed", conflictFailed);
-    await conflictDeps.executor.fire(makeEntry(), "a1", "Agent", "");
-
-    const validationDeps = makeDeps({
-      sendMessage: vi.fn(async () => {
-        throw new ValidationError(`Session "s-new" already has a turn in progress`);
-      }) as unknown as SessionPort["sendMessage"],
-    });
-    const validationFailed = vi.fn();
-    validationDeps.executor.on("trigger_failed", validationFailed);
-    await validationDeps.executor.fire(makeEntry(), "a1", "Agent", "");
-
-    expect(conflictDeps.store.appendLog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "failed",
-        error: expect.stringContaining("already running"),
-      }),
-    );
-    expect(validationDeps.store.appendLog).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "failed",
-        error: expect.stringContaining("already has a turn"),
-      }),
-    );
-    expect(conflictFailed).toHaveBeenCalledWith(
-      expect.objectContaining({ agentId: "a1", triggerId: "tr-1" }),
-    );
-    expect(validationFailed).toHaveBeenCalledWith(
-      expect.objectContaining({ agentId: "a1", triggerId: "tr-1" }),
     );
   });
 

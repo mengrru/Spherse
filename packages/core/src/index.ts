@@ -25,8 +25,6 @@ export type { ProjectManager } from "./project-manager.js";
 export type { SessionManager } from "./session/session-manager.js";
 export type { SessionEvent } from "./session/events.js";
 export type { SessionControlEvent } from "./session/types.js";
-export type { SendMessageMeta } from "./session/events.js";
-export type { SessionPort } from "./kernel/ports.js";
 export type { TriggerManager } from "./trigger/trigger-manager.js";
 export type { TriggerEventPayload } from "./trigger/trigger-manager.js";
 export type { TimerService } from "./trigger/timer-service.js";

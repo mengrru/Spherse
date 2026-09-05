@@ -8,12 +8,17 @@ export class ChatWireProjector {
   private currentMessageId?: string;
   private messageCounter = 0;
   private lastTurnEndSeq?: number;
+  private openTurn = false;
 
   resetRun(): void {
     this.messageSeqByRef = new WeakMap();
     this.currentMessageId = undefined;
     this.messageCounter = 0;
     this.lastTurnEndSeq = undefined;
+  }
+
+  isRunActive(): boolean {
+    return this.openTurn;
   }
 
   markPendingEcho(clientId: string): void {
@@ -56,9 +61,16 @@ export class ChatWireProjector {
       case "tool/result":
         this.messageSeqByRef.set(event.data.message as object, event.seq);
         return undefined;
-      case "turn/end":
+      case "turn/start":
+        if (this.openTurn) return undefined;
+        this.openTurn = true;
+        return { type: "run_status", active: true };
+      case "turn/end": {
         this.lastTurnEndSeq = event.seq;
-        return undefined;
+        if (!this.openTurn) return undefined;
+        this.openTurn = false;
+        return { type: "run_status", active: false };
+      }
       default:
         return undefined;
     }

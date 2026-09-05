@@ -7,7 +7,6 @@ export type TurnEndReason = "completed" | "aborted" | "error";
 export interface SendMessageMeta {
   source?: "triggered";
   triggerName?: string;
-  agentId?: string;
 }
 
 export interface SessionEventMap {

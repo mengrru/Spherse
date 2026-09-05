@@ -160,7 +160,17 @@ describe("ChatWireProjector", () => {
       seq: 9,
       abandonedSeqs: [5, 6],
     });
-    expect(projector.consumeLogEvent(logEvent("turn/start", 0, {}))).toBeUndefined();
+    expect(projector.consumeLogEvent(logEvent("turn/start", 0, {}))).toEqual({
+      type: "run_status",
+      active: true,
+    });
+    expect(projector.consumeLogEvent(logEvent("turn/start", 1, {}))).toBeUndefined();
+    expect(projector.consumeLogEvent(logEvent("turn/end", 2, { reason: "completed" }))).toEqual({
+      type: "run_status",
+      active: false,
+    });
+    expect(projector.consumeLogEvent(logEvent("turn/end", 3, { reason: "completed" }))).toBeUndefined();
+    expect(projector.isRunActive()).toBe(false);
     expect(
       projector.consumeLogEvent(
         logEvent("compaction/applied", 4, {
