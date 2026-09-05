@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { schemas, parseContract } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
-import type { ChatSessionHub } from "../chat-session-hub.js";
+import type { ChatSessionHub } from "../chat/index.js";
 import { notFound } from "../errors.js";
 
 export function registerSessionRoutes(

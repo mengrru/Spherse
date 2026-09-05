@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ChatWireProjector } from "../chat-wire-projector.js";
+import { ChatWireProjector } from "../chat/chat-wire-projector.js";
 import type { SessionEvent } from "@spherse/core";
 
 function logEvent<T extends SessionEvent["type"]>(

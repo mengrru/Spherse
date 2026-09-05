@@ -17,8 +17,8 @@ import { registerAuthGatedCors } from "./cors.js";
 import { registerHostGuard } from "./host-guard.js";
 import { registerAllRoutes } from "./routes/index.js";
 import { setAppVersion } from "./server-info.js";
-import { ChatSessionHub } from "./chat-session-hub.js";
-import { handleChatWebSocket } from "./ws-chat.js";
+import { ChatSessionHub } from "./chat/index.js";
+import { handleChatWebSocket } from "./chat/index.js";
 import { handleBusWebSocket } from "./ws-bus.js";
 
 export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type ProjectInfo, type RegisterOptions } from "./registry.js";

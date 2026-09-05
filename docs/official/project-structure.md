@@ -180,10 +180,13 @@ spherse/
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
 │       │       │   ├── trigger.ts         # 触发器 CRUD 与手动触发（/triggers、/trigger-logs、/run）
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
-│   │       ├── chat-session-hub.ts      # ChatSessionHub：channel 注册表（Map<projectId:sessionId, ChatChannel> + 身份守卫删除）
-│   │       ├── chat-channel.ts          # ChatChannel：单 session 生命周期（restore/run 序列化/快照压缩/握手重放/fanout/空闲销毁）
-│   │       ├── chat-wire-projector.ts   # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
-│   │       ├── ws-chat.ts            # WebSocket 对话流（/ws/projects/:projectId/chat/...，双向 session-scoped，?since= 游标重放）
+│   │       ├── chat/                  # chat 域（对外仅经 index.ts 导出 handleChatWebSocket + ChatSessionHub）
+│   │       │   ├── index.ts            # 域门面
+│   │       │   ├── chat-session-hub.ts # ChatSessionHub：channel 注册表（Map<projectId:sessionId, ChatChannel> + 身份守卫删除）
+│   │       │   ├── chat-channel.ts     # ChatChannel：单 session 生命周期（restore/run 序列化/快照压缩/握手重放/fanout/空闲销毁）
+│   │       │   ├── chat-wire-projector.ts # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
+│   │       │   ├── ws-chat.ts          # WebSocket 对话流端点（/ws/projects/:projectId/chat/...，?since= 游标重放）
+│   │       │   └── classify-run-error.ts # run 错误 → wire error code 分类
 │   │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，trigger/fs-watch/debug 按 projectId×channel 订阅）
 │       │       └── lib/
 │       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪

@@ -6,8 +6,8 @@ import {
   ValidationError,
 } from "@spherse/core";
 
-import { handleChatWebSocket } from "../ws-chat.js";
-import { ChatSessionHub } from "../chat-session-hub.js";
+import { handleChatWebSocket } from "../chat/ws-chat.js";
+import { ChatSessionHub } from "../chat/chat-session-hub.js";
 import { CHAT_CLOSE_CODES } from "@spherse/contracts";
 
 interface MockSocket {
