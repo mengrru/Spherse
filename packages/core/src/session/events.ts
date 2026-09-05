@@ -1,5 +1,6 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { AssistantMessage, ToolResultMessage } from "@earendil-works/pi-ai";
+import type { ControlRequestKind } from "./types.js";
 
 export type TurnEndReason = "completed" | "aborted" | "error";
 
@@ -22,6 +23,22 @@ export interface SessionEventMap {
   };
   "turn/retried": { abandonedSeqs: number[] };
   "turn/withdrawn": { seq: number };
+  "control/requested": {
+    requestId: string;
+    kind: ControlRequestKind;
+    toolCallId: string;
+    toolName: string;
+    args: unknown;
+  };
+  "control/resolved": {
+    requestId: string;
+    kind: ControlRequestKind;
+    approved?: boolean;
+    reason?: string;
+    answer?: string;
+    timedOut?: boolean;
+    aborted?: boolean;
+  };
 }
 
 export type SessionEventType = keyof SessionEventMap;

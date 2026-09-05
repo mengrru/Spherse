@@ -50,6 +50,7 @@ describe("ChatWireProjector", () => {
   it("pairs message_end with the seq recorded from the log by reference", () => {
     const projector = new ChatWireProjector();
     projector.resetRun();
+    projector.setOwnRun(true);
     const assistant = { role: "assistant", content: [] };
     const other = { role: "toolResult", content: [] };
 
@@ -160,7 +161,17 @@ describe("ChatWireProjector", () => {
       seq: 9,
       abandonedSeqs: [5, 6],
     });
-    expect(projector.consumeLogEvent(logEvent("turn/start", 0, {}))).toBeUndefined();
+    expect(projector.consumeLogEvent(logEvent("turn/start", 0, {}))).toEqual({
+      type: "run_status",
+      active: true,
+    });
+    expect(projector.consumeLogEvent(logEvent("turn/start", 1, {}))).toBeUndefined();
+    expect(projector.consumeLogEvent(logEvent("turn/end", 2, { reason: "completed" }))).toEqual({
+      type: "run_status",
+      active: false,
+    });
+    expect(projector.consumeLogEvent(logEvent("turn/end", 3, { reason: "completed" }))).toBeUndefined();
+    expect(projector.isRunActive()).toBe(false);
     expect(
       projector.consumeLogEvent(
         logEvent("compaction/applied", 4, {
@@ -185,5 +196,42 @@ describe("ChatWireProjector", () => {
     const projector = new ChatWireProjector();
     const event = { type: "tool_execution_start", toolCallId: "tc1" };
     expect(projector.enrich(event)).toBe(event);
+  });
+});
+
+describe("foreign run message translation", () => {
+  it("translates persisted message events for runs not initiated by this channel", () => {
+    const projector = new ChatWireProjector();
+    const assistant = { role: "assistant", content: [] };
+    expect(
+      projector.consumeLogEvent(logEvent("assistant/message", 4, { message: assistant as never })),
+    ).toEqual({ type: "message_end", message: assistant, seq: 4 });
+    const toolResult = { role: "toolResult", toolCallId: "t1" };
+    expect(
+      projector.consumeLogEvent(logEvent("tool/result", 5, { message: toolResult as never })),
+    ).toEqual({ type: "message_end", message: toolResult, seq: 5 });
+  });
+
+  it("suppresses translation while an own run is in flight (pi stream owns content)", () => {
+    const projector = new ChatWireProjector();
+    projector.setOwnRun(true);
+    const assistant = { role: "assistant", content: [] };
+    expect(
+      projector.consumeLogEvent(logEvent("assistant/message", 4, { message: assistant as never })),
+    ).toBeUndefined();
+    projector.setOwnRun(false);
+    expect(
+      projector.consumeLogEvent(logEvent("assistant/message", 5, { message: assistant as never })),
+    ).toEqual({ type: "message_end", message: assistant, seq: 5 });
+  });
+
+  it("markRunActive seeds the derived state without emitting", () => {
+    const projector = new ChatWireProjector();
+    projector.markRunActive();
+    expect(projector.isRunActive()).toBe(true);
+    expect(projector.consumeLogEvent(logEvent("turn/start", 1, {}))).toBeUndefined();
+    expect(
+      projector.consumeLogEvent(logEvent("turn/end", 2, { reason: "completed" })),
+    ).toEqual({ type: "run_status", active: false });
   });
 });

@@ -164,4 +164,29 @@ describe("SessionControlBus", () => {
     await expect(p).rejects.toThrow("session aborted");
     expect(bus.pendingCount).toBe(0);
   });
+
+  it("rejectAll emits aborted control_resolved for every pending request", async () => {
+    const bus = new SessionControlBus();
+    const events: any[] = [];
+    bus.setEventSink((e) => events.push(e));
+    const approval = bus.request(
+      { requestId: "ra", kind: "approval", toolCallId: "tc", toolName: "run_command", args: {} },
+      60_000,
+      { approved: false },
+    );
+    const question = bus.request(
+      { requestId: "rq", kind: "question", toolCallId: "tq", toolName: "ask_user", args: {} },
+      60_000,
+      { timedOut: true },
+    );
+    bus.rejectAll("session aborted");
+    await expect(approval).rejects.toThrow("session aborted");
+    await expect(question).rejects.toThrow("session aborted");
+    expect(events).toEqual([
+      { type: "control_request", requestId: "ra", kind: "approval", toolCallId: "tc", toolName: "run_command", args: {} },
+      { type: "control_request", requestId: "rq", kind: "question", toolCallId: "tq", toolName: "ask_user", args: {} },
+      { type: "control_resolved", requestId: "ra", kind: "approval", approved: false, aborted: true },
+      { type: "control_resolved", requestId: "rq", kind: "question", timedOut: false, aborted: true },
+    ]);
+  });
 });

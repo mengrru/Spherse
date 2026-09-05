@@ -43,16 +43,15 @@
 - [ ] 顺手修：Composer mimeType、`ChatRuntimeProvider` 更名
 - [ ] reducer 性质测试（随机事件流不变量）+ store 结构测试更新
 
-## PR5 trigger 收口 + control 落库 + 分页性能（core + server，依赖 PR1）
+## PR5 control 落库 + run_status log 派生 + 分页性能（core + server，依赖 PR1；trigger 可见性方案见 design §2.3 修订版）
 
-- [ ] core：`assembleProject` 增加 `wrapSessionPort?: (port: SessionPort) => SessionPort` 钩子（sessionRuntime 创建后、capabilities init 前应用）；`SessionPort.sendMessage` 调用上下文补 agentId
-- [ ] server：hub 公开 `startRunWithMeta(channel, meta, executor)`；trigger 的 sendMessage 经 wrapSessionPort 走 hub（meta 带 source/triggerName）
-- [ ] core：SessionEventMap 新增 `control/requested` / `control/resolved`；AgentRunner 的 control sink 包装层 append → emit + seq 回填 wire 事件；`rejectAll`(abort) 补发 `resolved {aborted}`；fold pending 投影（requested 未配对 resolved 且无 turn/end 隔断）+ contracts 信封变体
-- [ ] SessionPort 门面契约测试（server/desktop 各一条不 mock 被测方法，仓库红线）
-- [ ] trigger 冲突语义对齐测试（ConflictError ↔ ensureNotBusy 行为等价）
-- [ ] fold-on-write 投影缓存挂 project-manager 层（按 session 键控、事件数版本号失效、LRU 上限，覆盖未激活 session）+ `getRecentSessionHistory` 走缓存切片；性质测试（缓存 == 全量重 fold）
-- [ ] 删 `TriggerEventBridge` 的 refreshHistory 调用（trigger run 此后 live 可达；query 失效保留）
-- [ ] E2E：trigger run 在已打开 session 页面可见（run_status + 流式）
+- [x] core：SessionEventMap 新增 `control/requested` / `control/resolved`；AgentRunner 的 control sink 包装层 append → emit + seq 回填 wire 事件；`rejectAll`(abort) 补发 `resolved {aborted}`；fold pending 投影（requested 未配对 resolved 且无 turn/end 隔断）+ contracts 信封变体
+- [x] server：`ChatWireProjector` run_status 派生化（open turn 跟踪 + 幂等翻转 + `isRunActive()`）；channel 握手 `run_status` 初值与 `cleanupIfIdle` busy 判定改用派生态；`startRun` 不再手动 publish `run_status`（WS/HTTP 发送路径同样由 log 接管，事件顺序变为 echo → run_status → 流式 → run_status(false) → agent_end）
+- [x] 契约测试：`trigger-log-visibility.test.ts`——真 createProject（零 wrapper）+ hub attach + 真实 triggerManager 直连发送，订阅者收到 echo（source/triggerName）+ run_status 双向 + 完成内容 + trigger success；trigger 撞 busy 维持 ValidationError → failed（既有 executor 测试覆盖，无需路由等价测试）
+- [x] fold-on-write 投影缓存挂 project-manager 层（按 session 键控、事件数版本号失效、LRU 32，覆盖未激活 session）+ `getRecentSessionHistory` 走缓存切片；性质测试（缓存分页 == 全量重 fold + 失效 + 淘汰）
+- [x] 删 `TriggerEventBridge` 的 refreshHistory 调用（log 派生可见性使 live 事件可达；query 失效保留）
+- [x] E2E deviation：e2e 无服务端 LLM stub 模式（chat spec 均为 renderer 级 WS mock），live 可达性由上述真实边界契约测试钉住；chat-streaming-resilience / chat-retry 回归通过
+- 有意取舍（design §2.3）：直连 trigger run 无实时流式（消息于 message_end 落库时完整弹出）、mid-run attach 无 in-flight 快照、trigger 失败对 chat 订阅者不可见
 
 ## PR6 收尾
 

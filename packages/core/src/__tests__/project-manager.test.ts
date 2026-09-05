@@ -219,3 +219,112 @@ describe("ProjectManager event-backed session reads", () => {
     }
   });
 });
+
+describe("ProjectManager history fold cache", () => {
+  const setup = async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-cache-"));
+    const projectStore = new ProjectStore(root, createSilentLogger());
+    await projectStore.create("Test");
+    const agentStore = await projectStore.createAgent(
+      "test-agent",
+      "---\nname: Test\ntools: []\n---\n\nTest.",
+    );
+    const manager = new ProjectManager(projectStore, createSilentLogger());
+    return { root, projectStore, agentStore, manager };
+  };
+
+  const userEvent = (seq: number, text: string) => ({
+    type: "user/message" as const,
+    seq,
+    time: seq,
+    data: { message: { role: "user", content: text, timestamp: seq } },
+  });
+  const assistantEvent = (seq: number, text: string) => ({
+    type: "assistant/message" as const,
+    seq,
+    time: seq,
+    data: { message: { role: "assistant", content: [{ type: "text", text }], timestamp: seq } },
+  });
+
+  it("cached pagination equals a fresh full re-fold for arbitrary event sequences", async () => {
+    const { root, projectStore, agentStore, manager } = await setup();
+    try {
+      const sessionId = agentStore.sessions.createSession();
+      const events: Array<ReturnType<typeof userEvent> | ReturnType<typeof assistantEvent>> = [];
+      for (let i = 0; i < 40; i++) {
+        events.push(i % 2 === 0 ? userEvent(i, `q${i}`) : assistantEvent(i, `a${i}`));
+      }
+      agentStore.sessions.appendEvents(sessionId, events, EVENT_SCHEMA_VERSION);
+      const agentId = agentStore.getProfile().id;
+
+      const { deriveHistoryEntries } = await import("../session/fold.js");
+      const fresh = deriveHistoryEntries(agentStore.sessions.readEvents(sessionId));
+      let cursor: number | undefined;
+      const seen: number[] = [];
+      for (;;) {
+        const page = manager.getRecentSessionHistory(agentId, sessionId, 3, cursor);
+        seen.push(...page.entries.map((e) => e.id));
+        if (!page.hasMore || page.oldestId === null) break;
+        cursor = page.oldestId;
+      }
+      expect([...seen].sort((a, b) => a - b)).toEqual(fresh.map((e) => e.seq));
+      expect(new Set(seen).size).toBe(seen.length);
+      expect(manager.getRecentSessionHistory(agentId, sessionId, 5).entries).toEqual(
+        fresh.slice(-5).map((entry) => expect.objectContaining({ id: entry.seq })),
+      );
+    } finally {
+      projectStore.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("invalidates on event count change and reflects new appends", async () => {
+    const { root, projectStore, agentStore, manager } = await setup();
+    try {
+      const sessionId = agentStore.sessions.createSession();
+      const agentId = agentStore.getProfile().id;
+      agentStore.sessions.appendEvents(
+        sessionId,
+        [userEvent(0, "q0"), assistantEvent(1, "a0")],
+        EVENT_SCHEMA_VERSION,
+      );
+      expect(manager.getRecentSessionHistory(agentId, sessionId, 10).entries).toHaveLength(2);
+      agentStore.sessions.appendEvents(
+        sessionId,
+        [userEvent(2, "q1"), assistantEvent(3, "a1")],
+        EVENT_SCHEMA_VERSION,
+      );
+      const after = manager.getRecentSessionHistory(agentId, sessionId, 10);
+      expect(after.entries).toHaveLength(4);
+      expect(after.entries.at(-1)).toMatchObject({ id: 3 });
+    } finally {
+      projectStore.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("evicts least-recently-used sessions beyond the cache limit without changing results", async () => {
+    const { root, projectStore, agentStore, manager } = await setup();
+    try {
+      const agentId = agentStore.getProfile().id;
+      const sessionIds: string[] = [];
+      for (let i = 0; i < 34; i++) {
+        const sessionId = agentStore.sessions.createSession();
+        agentStore.sessions.appendEvents(
+          sessionId,
+          [userEvent(0, `q${i}`)],
+          EVENT_SCHEMA_VERSION,
+        );
+        sessionIds.push(sessionId);
+        manager.getRecentSessionHistory(agentId, sessionId, 10);
+      }
+      const first = manager.getRecentSessionHistory(agentId, sessionIds[0], 10);
+      expect(first.entries).toHaveLength(1);
+      const last = manager.getRecentSessionHistory(agentId, sessionIds[33], 10);
+      expect(last.entries).toHaveLength(1);
+    } finally {
+      projectStore.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

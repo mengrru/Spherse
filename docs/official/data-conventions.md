@@ -154,12 +154,13 @@ frontmatter 字段：
   - `user/message`（data 可选 `source: "triggered"` + `triggerName`，trigger 发送标记；absent = 手动发送）、`assistant/message`、`tool/result`
   - `compaction/applied`（anchorSeq、digestContent、digestSource、excludedSeqs）
   - `turn/retried`（abandonedSeqs）、`turn/withdrawn`（seq）
+  - `control/requested`（requestId、kind、toolCallId、toolName、args）与 `control/resolved`（requestId、kind、approval 的 approved/reason / question 的 answer/timedOut、可选 aborted）——审批/问答 gate 事件；abort 路径的 `rejectAll` 补发 `resolved {aborted}`；fold 白名单不含它们（消息投影忽略），pending 投影 = requested 未配对 resolved 且其后无 turn/end
 
 存储不变量（fold 投影与控制事件语义见 `architecture/core.md`「会话运行时」）：
 
 - **append-only**：消息与控制事件只追加；compaction、retry、withdraw 均以重启点事件表达，不修改或删除历史
 - **seq 连续**：session log 内从 0 连续，`open` 校验损坏即抛；`appendBatch` 落库失败回滚内存追加
-- **可重建**：运行时消息数组是 fold 投影缓存，可随时丢弃重建
+- **可重建**：运行时消息数组是 fold 投影缓存，可随时丢弃重建；分页读取（`getRecentSessionHistory`）另有 project-manager 层的 fold-on-write 缓存（按 session 键控、事件数版本号失效、LRU 上限，覆盖未激活 session），缓存条目视为不可变
 - **正向兼容**：未知事件类型被 fold 白名单过滤跳过；additive 事件不升 schema version
 - **崩溃恢复幂等**：restore 为未闭合 turn 持久化补写合成 error toolResult 与 aborted `turn/end`，二次恢复不再追加
 

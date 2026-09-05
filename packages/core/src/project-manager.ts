@@ -7,9 +7,16 @@ import { resolveProjectPath } from "./utils/path-safety.js";
 import { serverAccessPolicy } from "./access/access-policy.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { ConflictError, NotFoundError, ValidationError } from "./errors.js";
-import { deriveHistoryEntries } from "./session/fold.js";
+import { deriveHistoryEntries, type DerivedMessageEntry } from "./session/fold.js";
 import fs from "node:fs/promises";
 import path from "node:path";
+
+const HISTORY_CACHE_LIMIT = 32;
+
+interface HistoryCacheEntry {
+  version: number;
+  entries: DerivedMessageEntry[];
+}
 
 export class ProjectManager {
   private projectStore: ProjectStore;
@@ -17,11 +24,37 @@ export class ProjectManager {
   private logger: Logger;
 
   private serverPolicy: ReturnType<typeof serverAccessPolicy> | undefined;
+  private readonly historyCache = new Map<string, HistoryCacheEntry>();
 
   constructor(projectStore: ProjectStore, logger: Logger, fileWriteMutex: FileWriteMutex) {
     this.projectStore = projectStore;
     this.fileWriteMutex = fileWriteMutex;
     this.logger = logger ?? createSilentLogger();
+  }
+
+  private derivedHistoryEntries(
+    agentId: string,
+    sessionId: string,
+  ): DerivedMessageEntry[] {
+    const sessions = this.projectStore.getAgent(agentId)?.sessions;
+    if (!sessions) return [];
+    const key = `${agentId}:${sessionId}`;
+    const version = sessions.readEventCount(sessionId);
+    const cached = this.historyCache.get(key);
+    if (cached && cached.version === version) {
+      this.historyCache.delete(key);
+      this.historyCache.set(key, cached);
+      return cached.entries;
+    }
+    const entries = deriveHistoryEntries(sessions.readEvents(sessionId));
+    this.historyCache.delete(key);
+    while (this.historyCache.size >= HISTORY_CACHE_LIMIT) {
+      const oldest = this.historyCache.keys().next().value;
+      if (oldest === undefined) break;
+      this.historyCache.delete(oldest);
+    }
+    this.historyCache.set(key, { version, entries });
+    return entries;
   }
 
   close(): void {
@@ -199,7 +232,7 @@ export class ProjectManager {
         oldestId: result.oldestId,
       };
     }
-    const projected = deriveHistoryEntries(sessions.readEvents(sessionId));
+    const projected = this.derivedHistoryEntries(agentId, sessionId);
     const before = beforeId ?? Number.POSITIVE_INFINITY;
     const eligible = projected.filter((entry) => entry.seq < before);
     // 页首若为孤儿 toolResult，向后扩展到其 toolCall 的 assistant 消息，保证单页配对自洽
