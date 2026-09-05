@@ -117,6 +117,14 @@ connect URL 增加可选 query 参数 `since`（数字，**取值域 ≥ -1**：
 | 旧 app + 新 server | 旧 app 忽略新事件类型（parse 失败静默丢弃）；新增字段 TypeBox 默认放行 additionalProperties，无破坏 |
 | 新 app + 旧 server | 无 `session_ready` → 回退 legacy 对账（现有代码路径保留至版本门槛提升） |
 
+### 1.8 快照收缩（与 PR4 联动，服务端不可单方面先行）
+
+快照（`runEvents`）与游标重放的分工审计：已完成消息（`message_end` ⟺ 已落库）在快照里是**纯冗余**——游标重放必然覆盖；快照不可替代的内容只有 in-flight 状态：未关闭消息窗口的 start + 最后一条 update（累积快照语义）、进行中的 tool_execution、**pending control_request（完全不落库，快照是唯一恢复路径）**。
+
+收缩后快照 = O(in-flight)：pi 顺序流保证同时最多一个开放消息窗口，上界恒小；`recordRunEvent` 的压缩逻辑已是该形状的一半，补「已完成消息丢弃 + 字节预算」即可。静默期（thinking/慢工具）重连的 partial 文本由快照保留的「最后一条 update」覆盖，不依赖下一条 delta。
+
+前置条件：客户端 reducer 须支持「无完整前史的快照」与「update 懒建气泡」（messageId 机制支持），故归入 PR4 前后端同改，PR1-PR3 期间维持全量快照。
+
 ## §2 服务端改造
 
 ### 2.1 seq 上 wire 的内部通道

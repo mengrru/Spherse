@@ -11,6 +11,12 @@ import type { ChatSessionHub } from "./chat-session-hub.js";
 
 const validateOutbound = process.env.SPHERSE_VALIDATE_WS === "1";
 
+function toCloseCode(err: unknown): number {
+  if (err instanceof NotFoundError) return CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE;
+  if (err instanceof MigrationRequiredError) return CHAT_CLOSE_CODES.MIGRATION_REQUIRED;
+  return 1000;
+}
+
 export function handleChatWebSocket(
   fastify: FastifyInstance,
   registry: ProjectRegistry,
@@ -56,11 +62,7 @@ export function handleChatWebSocket(
       const ready = attachment.ready
         .catch((err) => {
           const message = err instanceof Error ? err.message : "request failed";
-          const code = err instanceof NotFoundError
-            ? CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE
-            : err instanceof MigrationRequiredError
-              ? CHAT_CLOSE_CODES.MIGRATION_REQUIRED
-              : 1000;
+          const code = toCloseCode(err);
           send({ type: "error", message });
           socket.close(code, message);
           return false;

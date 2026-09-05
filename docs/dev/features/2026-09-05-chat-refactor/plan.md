@@ -36,6 +36,7 @@
 
 - [ ] `applyWireEvent`（message id stitch + turn 感知，废除尾部定位）+ `applyPersistedEvent`（seq 幂等、按 seq 截断/移除）
 - [ ] 冷启动 entries 合并缩小化；删 `mergeHistoryMessages` transient 过滤/内容匹配
+- [ ] reducer 支持「无完整前史的快照」与 update 懒建气泡；服务端同步落地快照收缩为 O(in-flight)（丢已完成消息 + 字节预算，见 design §1.8）
 - [ ] 视图模型下沉：groupTurns / superseded 进 model 层；MessageList key 稳定化
 - [ ] ConnectionBanner 消费新状态机（waiting-backoff 独立文案）
 - [ ] HtmlCard 取数解耦（loader 注入）；组件去除 `getState()` 反向调用

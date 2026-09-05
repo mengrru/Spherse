@@ -379,6 +379,22 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     );
   });
 
+  it("closes with SESSION_UNRECOVERABLE when the handshake facade read fails", async () => {
+    routeHandler = null;
+    const mock = createMockRegistry();
+    mock.sessionRuntime.getSessionLastSeq.mockImplementation(() => {
+      throw new NotFoundError(`Agent "a1" not found`);
+    });
+    handleChatWebSocket(mockFastify as never, mock.registry as never, new ChatSessionHub(hubLogger));
+    const errSocket = createMockSocket();
+    routeHandler!(errSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(errSocket.close).toHaveBeenCalledWith(
+      CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE,
+      'Agent "a1" not found',
+    );
+  });
+
   it("sends error with MODEL_NOT_CONFIGURED code and keeps connection open", async () => {
     sessionRuntime.sendMessage.mockRejectedValue(new ModelNotConfiguredError());
     socket.simulateMessage(Buffer.from(JSON.stringify({ type: "message", content: "hi" })));
