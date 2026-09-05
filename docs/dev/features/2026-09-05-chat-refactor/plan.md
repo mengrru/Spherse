@@ -7,7 +7,7 @@
 - [x] contracts：`session_ready` / `replay_events` / `replay_done` / `user_message` / `turn_retried` schema；`message_end.seq` / `agent_end.seq` 可选字段；`message.clientId`（**可选**，旧客户端发送不带 clientId 必须放行）；close code 4400/4402；`SessionEvent` 信封 schema 镜像导出
 - [x] core：`SessionStore.readEventsAfter(sessionId, sinceSeq, limit)` SQL 下推 + 单测
 - [x] core：`SessionManager` 门面 `readSessionEventsAfter` / `getSessionLastSeq`（内存日志优先、store 回落）+ 契约测试
-- [x] server hub：经 `SessionEventLog.subscribe` 订阅落库事件（`event-log.ts:50-58` 现成机制）——`user/message` → `user_message` echo（clientId + source/triggerName）；`turn/retried` → `turn_retried` 广播；`message_end`/`agent_end` seq 富化
+- [x] server hub：经 `SessionEventLog.subscribe` 订阅落库事件（`event-log.ts:50-58` 现成机制）——`user/message` → `user_message` echo（clientId + source/triggerName）；`turn/retried` → `turn_retried` 广播；`message_end`/`agent_end` seq 富化；翻译/富化收敛在 `ChatWireProjector` 纯状态机（独立单测，hub 只留 channel/run 生命周期与 fanout）
 - [x] server hub：attach 握手流程（session_ready → since 重放 → replay_done → 快照 → run_status），门面同步切片 + 同 tick 订阅；分批纯同步循环不 yield 事件循环
 - [x] server ws-chat：close code 映射（4400/4402）；出站 TypeBox 校验移到测试、保留 `SPHERSE_VALIDATE_WS` 开关
 - [x] 契约测试：重放顺序、echo.seq 配对、message_end.seq 配对、close code、多 subscriber 互不干扰

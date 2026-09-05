@@ -23,6 +23,7 @@ export {
 export type { ProjectRuntime } from "./project-runtime.js";
 export type { ProjectManager } from "./project-manager.js";
 export type { SessionManager } from "./session/session-manager.js";
+export type { SessionEvent } from "./session/events.js";
 export type { SessionControlEvent } from "./session/types.js";
 export type { TriggerManager } from "./trigger/trigger-manager.js";
 export type { TriggerEventPayload } from "./trigger/trigger-manager.js";

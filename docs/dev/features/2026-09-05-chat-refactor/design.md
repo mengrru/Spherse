@@ -121,10 +121,9 @@ connect URL 增加可选 query 参数 `since`（数字，**取值域 ≥ -1**：
 
 ### 2.1 seq 上 wire 的内部通道
 
-优先复用 `SessionEventLog` 现成的订阅机制：`appendBatch` 落库后已同步 notify 订阅者（`event-log.ts:50-58,66-71`），且覆盖面比扩展 onEvent 更全（`withdrawLastTurn`、afterTurn hooks、repairLog 追加都走 append 而无 onEvent）。通道选型：hub 经 SessionManager 订阅目标 session 的事件日志，收到带 seq 的 `SessionEvent` 后做两件事：
+优先复用 `SessionEventLog` 现成的订阅机制：`appendBatch` 落库后已同步 notify 订阅者（`event-log.ts:50-58,66-71`），且覆盖面比扩展 onEvent 更全（`withdrawLastTurn`、afterTurn hooks、repairLog 追加都走 append 而无 onEvent）。
 
-- wire 事件富化：`message_end.seq`、`agent_end.seq`（与 pi wire 事件的配对在 hub 内按消息 id 完成）
-- 持久事件翻译广播：`user/message` → `user_message` echo（带 clientId、meta）；`turn/retried` → `turn_retried` 广播
+persist→wire 的翻译/富化收敛在 **`ChatWireProjector`**（`server/chat-wire-projector.ts`，结构化类型、零框架依赖的纯状态机）：消费 log 事件产出 echo/`turn_retried` 广播、维护 `pendingClientId`/引用→seq 配对/run 级 messageId 序列/`lastTurnEndSeq`，并对 pi wire 事件做富化。hub 只保留 channel/run 生命周期、快照压缩与 fanout——协议翻译的外部不变量（persist-before-callback 引用配对、pi 顺序流模型）从 hub 的跨方法共享可变状态收敛为 projector 的模块内局部状态，projector 可独立单测（无 runtime mock）。
 
 clientId 传递：WS 层 `attachment.sendMessage(content, attachments, clientId?)` → hub 侧拼 echo（实现时二选一：SendMessageMeta 扩展或回调回传，契约测试钉住「echo.seq == user/message seq」）。compaction/repair 事件经此通道到达但不上 wire（无 UI 效果）。
 

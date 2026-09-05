@@ -5,6 +5,7 @@ import {
 } from "@spherse/core";
 import type { FastifyBaseLogger } from "fastify";
 import { classifyRunError } from "./classify-run-error.js";
+import { ChatWireProjector } from "./chat-wire-projector.js";
 
 type CoreEventHandler = Parameters<SessionManager["sendMessage"]>[3];
 type CoreEvent = Parameters<CoreEventHandler>[0];
@@ -28,12 +29,8 @@ interface ChatChannel {
   subscribers: Set<Subscriber>;
   running: boolean;
   runEvents: CoreEvent[];
+  projector: ChatWireProjector;
   logUnsubscribe?: () => void;
-  pendingClientId?: string;
-  messageSeqByRef: WeakMap<object, number>;
-  currentMessageId?: string;
-  messageCounter: number;
-  lastTurnEndSeq?: number;
 }
 
 export interface ChatSessionAttachment {
@@ -86,7 +83,7 @@ export class ChatSessionHub {
         if (!(await ready) || !active) return;
         try {
           await this.startRun(channel, (onEvent) => {
-            if (clientId !== undefined) channel.pendingClientId = clientId;
+            if (clientId !== undefined) channel.projector.markPendingEcho(clientId);
             return channel.runtime.sendMessage(
               channel.sessionId,
               content,
@@ -95,8 +92,8 @@ export class ChatSessionHub {
             );
           });
         } catch (err) {
-          if (clientId !== undefined && channel.pendingClientId === clientId) {
-            channel.pendingClientId = undefined;
+          if (clientId !== undefined) {
+            channel.projector.discardPendingEcho(clientId);
           }
           throw err;
         }
@@ -194,8 +191,7 @@ export class ChatSessionHub {
       subscribers: new Set(),
       running: false,
       runEvents: [],
-      messageSeqByRef: new WeakMap(),
-      messageCounter: 0,
+      projector: new ChatWireProjector(),
     };
     channel.ready = runtime.restoreSession(agentId, sessionId)
       .then(() => {
@@ -215,38 +211,9 @@ export class ChatSessionHub {
 
   private subscribeLog(channel: ChatChannel): (() => void) | null {
     return channel.runtime.subscribeSessionEvents(channel.sessionId, (event) => {
-      switch (event.type) {
-        case "user/message": {
-          const clientId = channel.pendingClientId;
-          channel.pendingClientId = undefined;
-          this.publish(channel, {
-            type: "user_message",
-            seq: event.seq,
-            message: event.data.message,
-            ...(clientId !== undefined ? { clientId } : {}),
-            ...(event.data.source !== undefined ? { source: event.data.source } : {}),
-            ...(event.data.triggerName !== undefined
-              ? { triggerName: event.data.triggerName }
-              : {}),
-          });
-          break;
-        }
-        case "turn/retried":
-          this.publish(channel, {
-            type: "turn_retried",
-            seq: event.seq,
-            abandonedSeqs: event.data.abandonedSeqs,
-          });
-          break;
-        case "assistant/message":
-        case "tool/result":
-          channel.messageSeqByRef.set(event.data.message as object, event.seq);
-          break;
-        case "turn/end":
-          channel.lastTurnEndSeq = event.seq;
-          break;
-        default:
-          break;
+      const wireEvent = channel.projector.consumeLogEvent(event);
+      if (wireEvent !== undefined) {
+        this.publish(channel, wireEvent);
       }
     });
   }
@@ -286,36 +253,6 @@ export class ChatSessionHub {
     });
   }
 
-  private enrichWireEvent(channel: ChatChannel, event: CoreEvent): CoreEvent {
-    if (event.type === "message_start") {
-      channel.messageCounter += 1;
-      channel.currentMessageId = `m${channel.messageCounter}`;
-      return { ...event, messageId: channel.currentMessageId } as CoreEvent;
-    }
-    if (event.type === "message_update") {
-      return channel.currentMessageId === undefined
-        ? event
-        : ({ ...event, messageId: channel.currentMessageId } as CoreEvent);
-    }
-    if (event.type === "message_end") {
-      const seq = channel.messageSeqByRef.get(event.message as object);
-      const messageId = channel.currentMessageId;
-      channel.currentMessageId = undefined;
-      const enriched = {
-        ...event,
-        ...(messageId !== undefined ? { messageId } : {}),
-        ...(seq !== undefined ? { seq } : {}),
-      };
-      return enriched as CoreEvent;
-    }
-    if (event.type === "agent_end") {
-      return channel.lastTurnEndSeq === undefined
-        ? event
-        : ({ ...event, seq: channel.lastTurnEndSeq } as CoreEvent);
-    }
-    return event;
-  }
-
   private deleteChannel(channel: ChatChannel): void {
     channel.logUnsubscribe?.();
     channel.logUnsubscribe = undefined;
@@ -331,21 +268,18 @@ export class ChatSessionHub {
     }
     channel.running = true;
     channel.runEvents = [];
-    channel.messageSeqByRef = new WeakMap();
-    channel.currentMessageId = undefined;
-    channel.messageCounter = 0;
-    channel.lastTurnEndSeq = undefined;
+    channel.projector.resetRun();
     this.publish(channel, { type: "run_status", active: true });
     try {
       await executor((event) => {
-        const enriched = this.enrichWireEvent(channel, event);
+        const enriched = channel.projector.enrich(event);
         this.recordRunEvent(channel, enriched);
         this.publish(channel, enriched);
       });
     } finally {
       channel.running = false;
       channel.runEvents = [];
-      channel.pendingClientId = undefined;
+      channel.projector.clearPendingEcho();
       this.publish(channel, { type: "run_status", active: false });
       this.cleanupIfIdle(channel);
     }
