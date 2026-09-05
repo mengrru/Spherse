@@ -3,7 +3,7 @@ import type { Logger } from "../logger.js";
 import { NotFoundError } from "../errors.js";
 import { AgentRunner, type RunnerEventHandler } from "./agent-runner.js";
 import { SessionEventLog } from "./event-log.js";
-import type { SendMessageMeta } from "./events.js";
+import type { SendMessageMeta, SessionEvent } from "./events.js";
 import { deriveMessages } from "./fold.js";
 import { computeSessionStatus, type SessionStatus } from "./status.js";
 import type { TurnContextSnapshot } from "./types.js";
@@ -104,6 +104,40 @@ export class SessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) throw new NotFoundError(`No active session "${sessionId}"`);
     return session.getTurnContext();
+  }
+
+  subscribeSessionEvents(
+    sessionId: string,
+    listener: (event: SessionEvent) => void,
+  ): (() => void) | null {
+    return this.sessions.get(sessionId)?.subscribeEvents(listener) ?? null;
+  }
+
+  readSessionEventsAfter(
+    agentId: string,
+    sessionId: string,
+    sinceSeq: number,
+    limit: number,
+  ): SessionEvent[] {
+    const runner = this.sessions.get(sessionId);
+    if (runner) {
+      const start = Math.max(0, sinceSeq + 1);
+      return runner.currentEvents.slice(start, start + limit);
+    }
+    const agentStore = this.deps.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    return agentStore.sessions.readEventsAfter(sessionId, sinceSeq, limit);
+  }
+
+  getSessionLastSeq(agentId: string, sessionId: string): number {
+    const runner = this.sessions.get(sessionId);
+    if (runner) {
+      const events = runner.currentEvents;
+      return events.length > 0 ? events[events.length - 1].seq : -1;
+    }
+    const agentStore = this.deps.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    return agentStore.sessions.maxSeq(sessionId) ?? -1;
   }
 
   getSessionStatus(agentId: string, sessionId: string): SessionStatus {

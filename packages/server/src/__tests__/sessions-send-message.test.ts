@@ -28,6 +28,9 @@ function createRuntime() {
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
+    subscribeSessionEvents: vi.fn(() => () => {}),
+    readSessionEventsAfter: vi.fn(() => []),
+    getSessionLastSeq: vi.fn(() => -1),
   };
   return {
     runtime,

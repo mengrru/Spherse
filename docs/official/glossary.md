@@ -14,7 +14,10 @@
 | yolo | agent frontmatter 的自动放行开关：true 时危险工具跳过审批门，文件访问策略不受影响 | [architecture/security.md](architecture/security.md) |
 | Session（会话） | agent 的对话单元，存于该 agent 的 `sessions.db`；status 为 active / archived | [data-conventions.md](data-conventions.md) |
 | restore | 会话恢复：事件日志校验 + 未闭合 turn 修复 + legacy 迁移 + fold 重建 | [architecture/core.md](architecture/core.md) |
-| ChatSessionHub | server 侧会话编排：channel 管理、run 序列化（并发 409）、断线快照重放、空闲销毁 | [architecture/chat.md](architecture/chat.md) |
+| ChatSessionHub | server 侧 channel 注册表：`Map<projectId:sessionId, ChatChannel>` + 身份守卫删除 | [architecture/chat.md](architecture/chat.md) |
+| ChatChannel | 单 session 生命周期对象：restore、run 序列化、快照压缩、握手重放、fanout、空闲销毁；多 WS 连接共享 | [architecture/chat.md](architecture/chat.md) |
+| ChatWireProjector | persist→wire 翻译纯状态机：echo、seq 引用配对、run 级 messageId | [architecture/chat.md](architecture/chat.md) |
+| 游标重放 | connect 带 `?since=` 时服务端重放 `seq > since` 的原始持久事件，取代 HTTP 对账的增量恢复机制 | [architecture/chat.md](architecture/chat.md) |
 
 ## 事件与投影
 

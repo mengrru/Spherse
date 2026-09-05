@@ -154,7 +154,7 @@ spherse/
 │   │       ├── skills.ts             # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
 │   │       ├── marketplace.ts        # MarketplaceSkillEntry、MarketplaceManifestResponse、SkillMarketplaceInstallRequest（{name, version}）
 │   │       ├── debug.ts              # TurnContextSnapshot
-│   │       ├── websocket.ts          # ChatClientMessage/ChatServerEvent/TriggerServerEvent + parser
+│   │       ├── websocket.ts          # ChatClientMessage/ChatServerEvent/ChatReplayEvent（协议 v2：session_ready/replay_events/user_message/turn_retried、close code 族）+ parser
 │   │       └── __tests__/            # 契约测试（正向通过 / 负向抛 Invalid payload + Fastify coercion 兼容）
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
@@ -180,8 +180,11 @@ spherse/
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
 │       │       │   ├── trigger.ts         # 触发器 CRUD 与手动触发（/triggers、/trigger-logs、/run）
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
-│       │       ├── ws-chat.ts            # WebSocket 对话流（/ws/projects/:projectId/chat/...，双向 session-scoped）
-│       │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，trigger/fs-watch/debug 按 projectId×channel 订阅）
+│   │       ├── chat-session-hub.ts      # ChatSessionHub：channel 注册表（Map<projectId:sessionId, ChatChannel> + 身份守卫删除）
+│   │       ├── chat-channel.ts          # ChatChannel：单 session 生命周期（restore/run 序列化/快照压缩/握手重放/fanout/空闲销毁）
+│   │       ├── chat-wire-projector.ts   # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
+│   │       ├── ws-chat.ts            # WebSocket 对话流（/ws/projects/:projectId/chat/...，双向 session-scoped，?since= 游标重放）
+│   │       ├── ws-bus.ts             # 全局多路复用 bus WebSocket（/ws/bus，trigger/fs-watch/debug 按 projectId×channel 订阅）
 │       │       └── lib/
 │       │           └── fs-watcher.ts     # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
 │   ├── app/                          # @spherse/app — 共享 React renderer（前端源码，被 desktop/web 消费）

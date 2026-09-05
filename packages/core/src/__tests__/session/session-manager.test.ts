@@ -545,6 +545,107 @@ describe("SessionManager lifecycle", () => {
   });
 });
 
+describe("SessionManager event facade", () => {
+  let tmpDir: string;
+  let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+  let agentId: string;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-mgr-facade-"));
+    getChatStreamFnMock.mockClear();
+    resolveModelByIdMock.mockClear();
+    runtime = (await createProject(tmpDir, {
+      projectName: "Test",
+      logger: createSilentLogger(),
+    })) as RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
+    const projectStore = runtime.projectManager.projectStore;
+    const testAgent = await projectStore.createAgent("test-agent", TEST_AGENT_PROFILE);
+    agentId = testAgent.getProfile().id;
+    runtime.timerService.stop();
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const seedSession = (): { sessionId: string; agentStore: any } => {
+    const agentStore = runtime.projectManager.projectStore.agents.get(agentId) as any;
+    const sessionId = agentStore.sessions.createSession();
+    agentStore.sessions.appendEvents(
+      sessionId,
+      [
+        {
+          type: "user/message",
+          seq: 0,
+          time: 1,
+          data: { message: { role: "user", content: "q1", timestamp: 1 } },
+        },
+        {
+          type: "assistant/message",
+          seq: 1,
+          time: 2,
+          data: {
+            message: { role: "assistant", content: [{ type: "text", text: "a1" }], timestamp: 2 },
+          },
+        },
+        { type: "turn/end", seq: 2, time: 3, data: { reason: "completed" } },
+      ],
+      1,
+    );
+    return { sessionId, agentStore };
+  };
+
+  it("reads the event tail from memory while the session is active", async () => {
+    const { sessionId } = seedSession();
+    await runtime.sessionRuntime.restoreSession(agentId, sessionId);
+
+    const tail = runtime.sessionRuntime.readSessionEventsAfter(agentId, sessionId, 0, 10);
+    expect(tail.map((e) => [e.type, e.seq])).toEqual([
+      ["assistant/message", 1],
+      ["turn/end", 2],
+    ]);
+    expect(runtime.sessionRuntime.getSessionLastSeq(agentId, sessionId)).toBe(2);
+  });
+
+  it("falls back to the store after the session is destroyed", async () => {
+    const { sessionId } = seedSession();
+    await runtime.sessionRuntime.restoreSession(agentId, sessionId);
+    runtime.sessionRuntime.destroySession(sessionId);
+
+    const tail = runtime.sessionRuntime.readSessionEventsAfter(agentId, sessionId, 0, 10);
+    expect(tail.map((e) => e.seq)).toEqual([1, 2]);
+    expect(runtime.sessionRuntime.getSessionLastSeq(agentId, sessionId)).toBe(2);
+  });
+
+  it("reports -1 for a session with no events", async () => {
+    const sessionId = await runtime.sessionRuntime.createSession(agentId);
+    expect(runtime.sessionRuntime.getSessionLastSeq(agentId, sessionId)).toBe(-1);
+  });
+
+  it("delivers appended events to multiple subscribers", async () => {
+    const { sessionId } = seedSession();
+    await runtime.sessionRuntime.restoreSession(agentId, sessionId);
+
+    const first: Array<{ type: string; seq: number }> = [];
+    const second: Array<{ type: string; seq: number }> = [];
+    const unsubscribeFirst = runtime.sessionRuntime.subscribeSessionEvents(sessionId, (event) => {
+      first.push({ type: event.type, seq: event.seq });
+    });
+    runtime.sessionRuntime.subscribeSessionEvents(sessionId, (event) => {
+      second.push({ type: event.type, seq: event.seq });
+    });
+
+    await runtime.sessionRuntime.withdrawLastTurn(sessionId);
+    expect(first).toEqual([{ type: "turn/withdrawn", seq: 3 }]);
+    expect(second).toEqual([{ type: "turn/withdrawn", seq: 3 }]);
+    expect(() => unsubscribeFirst!()).not.toThrow();
+  });
+
+  it("returns null when subscribing to an inactive session", () => {
+    expect(runtime.sessionRuntime.subscribeSessionEvents("missing", () => {})).toBeNull();
+  });
+});
+
 describe("SessionManager getSessionStatus", () => {
   let tmpDir: string;
   let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;

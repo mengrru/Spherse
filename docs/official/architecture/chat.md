@@ -26,25 +26,27 @@ Composer.send
 
 ## Wire 协议（`contracts/websocket.ts`）
 
-- **client → server**：`message`（content + attachments 路径引用）、`abort`、`ping`、`retry`、`withdraw`、`resolve_control_request`（kind approval：approved / reason；kind question：answer）
+- **client → server**：`message`（content + 可选 `clientId`（乐观消息结算标识）+ attachments 路径引用）、`abort`、`ping`、`retry`、`withdraw`、`resolve_control_request`（kind approval：approved / reason；kind question：answer）
 - **server → client**：
-  - pi 生命周期族：`agent_start` / `agent_end` / `turn_start` / `turn_end` / `message_start` / `message_update` / `message_end` / `tool_execution_start` / `tool_execution_update` / `tool_execution_end`
-  - session 级：`run_status`（active）、`control_request` / `control_resolved`、`turn_withdrawn`（seq）、`error`（message + code）、`pong`
+  - pi 生命周期族：`agent_start` / `agent_end`（可带 `seq`） / `turn_start` / `turn_end` / `message_start` / `message_update` / `message_end`（可带 `messageId` + `seq`） / `tool_execution_start` / `tool_execution_update` / `tool_execution_end`
+  - session 级：`run_status`（active）、`control_request` / `control_resolved`、`turn_withdrawn`（seq）、`turn_retried`（seq + abandonedSeqs）、`user_message`（seq + clientId? + source? + triggerName?，user 消息回显/ack）、`error`（message + code）、`pong`
+  - 重放族：`session_ready`（lastSeq + replay，attach 后恒为首个事件）、`replay_events`（原始 SessionEvent 信封分批，每批 ≤200）、`replay_done`
+- **身份与游标**（[ADR-0011](../../dev/decisions/0011-chat-wire-cursor-replay.md)）：持久事件按 `seq` 幂等；流式 wire 消息按 hub 生成的 `messageId` stitch（pi message payload 运行时无 id 字段），`message_end.seq` 经落库实例引用配对（persist-before-callback）；connect query `?since=`（≥ -1）触发游标重放，游标为客户端 per-connection 状态
 - **error code**（`classify-run-error.ts`）：`MODEL_NOT_CONFIGURED`、`AUTH_ERROR`、`PERMANENT`、`TRANSIENT`。规则：
   - 401/403 → AUTH；429/5xx/网络错误 → TRANSIENT
   - 其余 4xx 及 `ConflictError` / `ValidationError` → PERMANENT
   - **未知错误兜底 TRANSIENT**
-- **close code**：`4401 SESSION_UNRECOVERABLE`——renderer 视为 fatal 不再重连；瞬时错误以 1000 关闭触发重连
+- **close code**：`4400 PROTOCOL_ERROR`、`4401 SESSION_UNRECOVERABLE`、`4402 MIGRATION_REQUIRED`——renderer 视为 fatal 不再重连；瞬时错误以 1000 关闭触发重连
+- 出站校验默认关闭（生产直发），`SPHERSE_VALIDATE_WS=1` 开启调试；schema 由 `chat-wire-schema.test.ts` 全事件族钉住
 
-## Server：ChatSessionHub（`chat-session-hub.ts`）
+## Server：hub / channel / projector（`chat-session-hub.ts` + `chat-channel.ts` + `chat-wire-projector.ts`）
 
-- channel key = `projectId:sessionId`；负责共享 restore、run 状态序列化、事件广播；hub 实例由 `server/index.ts` 创建，WS 与 sessions 路由共享
-- **run 序列化**：`startRun` 在 channel running 时抛 `ConflictError`（HTTP 映射 409，WS 路径表现为 error 事件 code=PERMANENT）
-- **快照压缩**：run 期间 `message_update` 同一消息窗口只留最后一条、`tool_execution_update` 同 toolCallId 只留最后一条——重放开销 O(压缩后)
-- **重连重放顺序**：attach ready 后先重放压缩快照，再发 `run_status` 当前值，然后才订阅
-- **空闲释放**：`cleanupIfIdle`——initialized 且无 run 且无 attachment 时销毁 session、删 channel
+- **`ChatSessionHub`（注册表）**：`Map<projectId:sessionId, ChatChannel>` + getOrCreate + 身份守卫删除回调；hub 实例由 `server/index.ts` 创建，WS 与 sessions 路由共享
+- **`ChatChannel`（单 session 生命周期）**：restore→ready、事件日志订阅、attach（连接级生命周期为闭包）、run 序列化（`startRun` 在 running 时抛 `ConflictError`，HTTP 映射 409，WS 路径表现为 error 事件 code=PERMANENT）、快照压缩（run 期间 `message_update` 同一消息窗口只留最后一条、`tool_execution_update` 同 toolCallId 只留最后一条）、握手重放、fanout、空闲销毁（`cleanupIfIdle`）
+- **`ChatWireProjector`（persist→wire 翻译纯状态机）**：经 `SessionEventLog.subscribe` 消费落库事件——`user/message` → `user_message` echo（clientId + trigger meta）、`turn/retried` → `turn_retried` 广播、落库实例引用→seq 配对、run 级 `messageId` 序列；对 pi wire 事件做富化。pending echo 与 run 状态在 run 边界重置
+- **attach 握手顺序**：ready 后同步块内 session_ready（lastSeq）→ since 游标重放（`readSessionEventsAfter` 原始事件分批，每批 200）→ replay_done → 当前 run 压缩快照 → run_status 当前值 → 加入订阅（无 await，切片与订阅同 tick 原子）
 - **HTTP 静默发送**：`POST .../sessions/:id/messages`，目标会话未 attach WS 时 UI SDK 走此路径（`open:false` 只控制不跳转导航）：
-  - `startDetachedRun` 只递增 attachment 计数保持 channel 存活、不注册订阅者——调用方只拿 `{ok:true}`，run 失败经 error 事件到达 WS 订阅者
+  - `startDetachedRun` 只递增 attachment 计数保持 channel 存活、不注册订阅者——调用方只拿 `{ok:true}`，run 失败经 error 事件到达 WS 订阅者（echo 无 clientId，仅推进其他端）
   - 与 WS 共享 run 序列化（running 时 409）
 
 ## Core：一次 sendMessage（`agent-runner.ts`）
@@ -83,6 +85,8 @@ Composer.send
 - **撤回**：非 streaming 时最新未失败 user 消息可 withdraw；hub 不经 startRun（运行中返回 ConflictError）；成功广播 `turn_withdrawn`，reducer 从该 user 消息处截断；失败给错误气泡打 `_withdrawError`（隐藏 retry）
 
 ## 重连与历史对账
+
+> 现状为过渡态：server 已发协议 v2（session_ready / 游标重放 / echo），renderer 尚未消费（`agent-event-parse.ts` 对 v2 事件返回 undefined 静默丢弃），仍走下述 HTTP 对账；chat 重构 PR3 起切换为游标重放（设计见 `docs/dev/features/2026-09-05-chat-refactor/design.md`）。
 
 - **心跳**：每 30s ping，连续 60s 无 pong 才关闭；suspend 导致 timer 大幅跳跃时重置探测窗口防误杀；web 壳 hidden ≥30s / bfcache 恢复时主动 probe（5s 短超时）强测死链
 - **重连退避**：`[1, 2, 5, 10, 30]s`，上限 10 次（超限 `reconnectFailed` + 手动重连）；fatal 4401 不重连

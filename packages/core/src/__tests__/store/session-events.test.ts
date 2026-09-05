@@ -122,6 +122,48 @@ describe("SessionStore events", () => {
     });
   });
 
+  describe("readEventsAfter", () => {
+    const seedThree = (): string => {
+      const id = store.createSession();
+      const log = SessionEventLog.open(store, id);
+      log.append("turn/start", {});
+      log.append("user/message", { message: legacyUserMsg("hello") });
+      log.append("turn/end", { reason: "completed" });
+      return id;
+    };
+
+    it("returns only events after sinceSeq in ascending order", () => {
+      const id = seedThree();
+      const tail = store.readEventsAfter(id, 0, 10);
+      expect(tail.map((e) => [e.type, e.seq])).toEqual([
+        ["user/message", 1],
+        ["turn/end", 2],
+      ]);
+    });
+
+    it("returns the full log when sinceSeq is -1", () => {
+      const id = seedThree();
+      expect(store.readEventsAfter(id, -1, 10)).toHaveLength(3);
+    });
+
+    it("returns an empty array when sinceSeq is at or past the tail", () => {
+      const id = seedThree();
+      expect(store.readEventsAfter(id, 2, 10)).toEqual([]);
+      expect(store.readEventsAfter(id, 99, 10)).toEqual([]);
+    });
+
+    it("applies the limit from the oldest matching seq", () => {
+      const id = seedThree();
+      const tail = store.readEventsAfter(id, -1, 2);
+      expect(tail.map((e) => e.seq)).toEqual([0, 1]);
+    });
+
+    it("returns an empty array for a session without events", () => {
+      const id = store.createSession();
+      expect(store.readEventsAfter(id, -1, 10)).toEqual([]);
+    });
+  });
+
   describe("needsMigration / migrated bookkeeping", () => {
     it("fresh session with no history does not need migration", () => {
       const id = store.createSession();

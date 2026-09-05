@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { NotFoundError } from "@spherse/core";
+import { MigrationRequiredError, NotFoundError } from "@spherse/core";
 import {
   CHAT_CLOSE_CODES,
   parseChatClientMessage,
@@ -9,12 +9,23 @@ import { classifyRunError } from "./classify-run-error.js";
 import type { ProjectRegistry } from "./registry.js";
 import type { ChatSessionHub } from "./chat-session-hub.js";
 
+const validateOutbound = process.env.SPHERSE_VALIDATE_WS === "1";
+
+function toCloseCode(err: unknown): number {
+  if (err instanceof NotFoundError) return CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE;
+  if (err instanceof MigrationRequiredError) return CHAT_CLOSE_CODES.MIGRATION_REQUIRED;
+  return 1000;
+}
+
 export function handleChatWebSocket(
   fastify: FastifyInstance,
   registry: ProjectRegistry,
   hub: ChatSessionHub,
 ) {
-  fastify.get<{ Params: { projectId: string; agentId: string; sessionId: string } }>(
+  fastify.get<{
+    Params: { projectId: string; agentId: string; sessionId: string };
+    Querystring: { since?: string };
+  }>(
     "/ws/projects/:projectId/chat/:agentId/:sessionId",
     { websocket: true },
     (socket, req) => {
@@ -24,11 +35,16 @@ export function handleChatWebSocket(
         return;
       }
       const { agentId, sessionId } = req.params;
+      const sinceQuery = Number(req.query?.since);
+      const since =
+        Number.isInteger(sinceQuery) && sinceQuery >= -1 ? sinceQuery : undefined;
       let closed = false;
       const send = (event: unknown): void => {
         if (closed) return;
         try {
-          socket.send(JSON.stringify(parseChatServerEvent(event)));
+          socket.send(
+            JSON.stringify(validateOutbound ? parseChatServerEvent(event) : event),
+          );
         } catch (err) {
           fastify.log.debug({ err, sessionId }, "chat ws send skipped");
         }
@@ -41,13 +57,12 @@ export function handleChatWebSocket(
         agentId,
         sessionId,
         send,
+        since !== undefined ? { since } : undefined,
       );
       const ready = attachment.ready
         .catch((err) => {
           const message = err instanceof Error ? err.message : "request failed";
-          const code = err instanceof NotFoundError
-            ? CHAT_CLOSE_CODES.SESSION_UNRECOVERABLE
-            : 1000;
+          const code = toCloseCode(err);
           send({ type: "error", message });
           socket.close(code, message);
           return false;
@@ -60,6 +75,7 @@ export function handleChatWebSocket(
         } catch (err) {
           fastify.log.warn({ err, sessionId }, "invalid chat ws message");
           send({ type: "error", message: "Invalid WebSocket message" });
+          socket.close(CHAT_CLOSE_CODES.PROTOCOL_ERROR, "Invalid WebSocket message");
           return;
         }
 
@@ -70,7 +86,7 @@ export function handleChatWebSocket(
 
         if (msg.type === "message") {
           try {
-            await attachment.sendMessage(msg.content, msg.attachments ?? []);
+            await attachment.sendMessage(msg.content, msg.attachments ?? [], msg.clientId);
           } catch (err) {
             if (closed) return;
             fastify.log.error({ err, sessionId }, "chat ws message error");

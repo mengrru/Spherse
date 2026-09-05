@@ -110,6 +110,10 @@ export class AgentRunner {
     return this.eventLog?.events ?? [];
   }
 
+  subscribeEvents(listener: (event: SessionEvent) => void): (() => void) | null {
+    return this.eventLog ? this.eventLog.subscribe(listener) : null;
+  }
+
   markReloadPending(): void {
     this.pendingReload = true;
   }

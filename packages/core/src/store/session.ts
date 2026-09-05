@@ -245,6 +245,19 @@ export class SessionStore {
         "SELECT * FROM events WHERE session_id = ? ORDER BY seq ASC",
       )
       .all(sessionId);
+    return SessionStore.rowsToEvents(rows);
+  }
+
+  readEventsAfter(sessionId: string, sinceSeq: number, limit: number): SessionEvent[] {
+    const rows = this.db
+      .prepare<[string, number, number], EventRow>(
+        "SELECT * FROM events WHERE session_id = ? AND seq > ? ORDER BY seq ASC LIMIT ?",
+      )
+      .all(sessionId, sinceSeq, limit);
+    return SessionStore.rowsToEvents(rows);
+  }
+
+  private static rowsToEvents(rows: EventRow[]): SessionEvent[] {
     return rows.map((row) => {
       assertSupportedEventVersion(row);
       return {

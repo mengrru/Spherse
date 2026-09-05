@@ -95,7 +95,7 @@ export function isRejectedToolDetails(x: unknown): boolean {
   return isObject(x) && x.rejected === true;
 }
 
-export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
+export function parseAgentEvent(event: ChatServerEvent): AgentEvent | undefined {
   switch (event.type) {
     case "agent_start":
     case "run_status":
@@ -170,6 +170,8 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent {
       return { type: "message_update", message: parseAgentMessage(event.message) };
     case "message_end":
       return { type: "message_end", message: parseAgentMessage(event.message) };
+    default:
+      return undefined;
   }
 }
 
