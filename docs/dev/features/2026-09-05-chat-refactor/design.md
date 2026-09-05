@@ -177,8 +177,8 @@ interface WsConnectionConfig {
 }
 ```
 
-- 显式状态机：`connecting → open → (waiting-backoff → connecting)* → failed | fatal | closed`——`waiting-backoff` 独立成态，修复 ConnectionBanner 把退避等待与连接尝试混为一谈的问题
-- API：`send(data)`、`close()`、`probe()`、`onMessage`、`onStateChange`；心跳采用 chat 侧现语义（`awaitingPongSince` 精确等待，bus 向其对齐）
+- 显式状态机：`idle → connecting → open → (waiting-backoff → connecting)* → failed | fatal | closed`——`waiting-backoff` 独立成态，修复 ConnectionBanner 把退避等待与连接尝试混为一谈的问题；`idle` 为初始沉默态（初次 connect 时 url 求值为空即停留，bus 的「server 信息未就绪不连」语义需要；重试周期内 url 失败则继续按退避自愈，不落 idle）；`onStateChange` 的 `attempt`/`delayMs` 仅在 `waiting-backoff` 态有意义
+- API：`send(data)`、`close()`、`probe()`、`onMessage`、`onStateChange`；心跳采用 chat 侧现语义（`awaitingPongSince` 精确等待，bus 向其对齐——probe 的旧 `lastPongAt` 立即杀链语义随之改为「re-arm 5s 短探测」，60s 硬超时由心跳 watchdog 承担）
 - 纯 TS 类不进 React/zustand；bus-store 保留 zustand 壳（resumedAt、频道订阅状态），连接委托给 WsConnection，对外 API 不变——5 个 bus 桥（ContentQueryBridge 等）零改动
 
 ## §4 前端 L2：chat session 域 store

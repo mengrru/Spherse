@@ -103,6 +103,37 @@ describe("WsConnection", () => {
       expect(h.conn.getState()).toBe("idle");
     });
 
+    it("keeps retrying when url resolves empty during a retry cycle and recovers", async () => {
+      const urls = ["ws://host/1", "", "ws://host/2"];
+      const h = harness({ url: () => urls.shift() ?? "ws://host/2" });
+      await connectAndOpen(h);
+      lastInstance().close();
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(h.states.at(-1)).toMatchObject({ state: "waiting-backoff", attempt: 2, delayMs: 2000 });
+      await vi.advanceTimersByTimeAsync(2000);
+      openInstance(lastInstance());
+      expect(lastInstance().url).toBe("ws://host/2");
+      expect(h.conn.getState()).toBe("open");
+    });
+
+    it("retries with backoff when the WebSocket constructor throws", async () => {
+      class ThrowingWebSocket extends mock.MockWebSocket {
+        constructor(url: string) {
+          super(url);
+          throw new Error("invalid url");
+        }
+      }
+      vi.stubGlobal("WebSocket", ThrowingWebSocket);
+      const h = harness({ url: () => "ws://host/x", maxRetries: 1 });
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      h.conn.connect();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(h.states.at(-1)).toMatchObject({ state: "waiting-backoff", attempt: 1 });
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(h.states.at(-1)?.state).toBe("failed");
+      warn.mockRestore();
+    });
+
     it("delivers parsed non-pong messages and swallows pongs", async () => {
       const h = harness();
       await connectAndOpen(h);
@@ -202,6 +233,19 @@ describe("WsConnection", () => {
       openInstance(lastInstance());
       lastInstance().close();
       expect(h.states.at(-1)).toMatchObject({ state: "waiting-backoff", attempt: 1, delayMs: 1000 });
+    });
+
+    it("reconnect() while open replaces the socket instead of orphaning it", async () => {
+      const h = harness();
+      await connectAndOpen(h);
+      const first = lastInstance();
+      h.conn.reconnect();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mock.instances).toHaveLength(2);
+      expect(first.closeSpy).toHaveBeenCalled();
+      expect(h.conn.getState()).toBe("connecting");
+      openInstance(lastInstance());
+      expect(h.conn.getState()).toBe("open");
     });
 
     it("manual close goes to closed and never reconnects", async () => {

@@ -238,7 +238,7 @@ describe("bus-store", () => {
       expect(socket.sent).toHaveLength(0);
     });
 
-    it("re-arms a short probe against the stale pending ping and closes it", async () => {
+    it("re-arms a short probe against the stale pending ping and closes it (intentional change: old lastPongAt model closed immediately; the 60s heartbeat watchdog now owns the hard timeout)", async () => {
       const socket = await connect();
       await vi.advanceTimersByTimeAsync(61000);
       socket.closeSpy.mockClear();
@@ -274,6 +274,18 @@ describe("bus-store", () => {
       expect(socket.closeSpy).toHaveBeenCalled();
       expect(useBusStore.getState().status).toBe("connecting");
     });
+  });
+
+  it("init during waiting-backoff is a no-op; the pending backoff still reconnects", async () => {
+    const socket = await connect();
+    socket.close();
+    expect(useBusStore.getState().status).toBe("connecting");
+    await useBusStore.getState().init(bridge);
+    expect(mock.instances).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(mock.instances).toHaveLength(2);
+    openInstance(mock.instances[1]);
+    expect(useBusStore.getState().status).toBe("open");
   });
 
   it("keeps the socket reference across state (sanity: open socket is used for sends)", async () => {

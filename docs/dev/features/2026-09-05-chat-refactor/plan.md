@@ -15,10 +15,10 @@
 
 ## PR2 前端 L1 WsConnection（可与 PR1 并行）
 
-- [ ] `lib/ws/WsConnection`：状态机（connecting/open/waiting-backoff/failed/fatal/closed）、心跳、退避、probe、fatalCodes、maxRetries 配置化
-- [ ] 状态机单测：退避序列、耗尽转 failed、fatal 停止、pong 超时、probe
-- [ ] bus-store 迁移到 WsConnection（对外 API、resumedAt 语义不变），行为对齐测试
-- [ ] E2E：bus 相关场景回归（fs-watch 失效、trigger 通知）
+- [x] `lib/ws/WsConnection`：状态机（idle/connecting/open/waiting-backoff/failed/fatal/closed）、心跳、退避、probe、fatalCodes、maxRetries 配置化（fatal 集合 = {4400,4401,4402}，见 design §1.1；idle 为实现期补充的初始沉默态，已回写 design §3）
+- [x] 状态机单测：退避序列、耗尽转 failed、fatal 停止、pong 超时、probe（26 例，含孤儿连接、url 空自愈、ctor 抛错）
+- [x] bus-store 迁移到 WsConnection（对外 API、resumedAt 语义不变），行为对齐测试（19 例；probe 语义有意变更：旧 lastPongAt 立即杀链 → awaitingPongSince + 5s 短探测，60s 硬超时归心跳 watchdog）
+- [x] E2E：bus 相关场景回归（fs-watch 失效、trigger 通知）——file-tree.spec 11/11 过（fs-watch→query 失效链路）；trigger 通知无专门 E2E 场景，由单测 dispatch 行为钉住 + trigger spec 间接覆盖
 
 ## PR3 前端 L2 session store + 游标重放（依赖 PR1、PR2，且须在 PR5 合入后合并）
 

@@ -118,18 +118,29 @@ export class WsConnection {
 
   private async openSocket(): Promise<void> {
     this.clearBackoffTimer();
+    this.replaceSocket();
     const gen = ++this.gen;
     let url: string | Awaited<string> | undefined;
     try {
       url = await this.config.url();
     } catch (err) {
       console.warn(`[${this.config.label}] failed to resolve ws url:`, err);
-      return;
+      url = undefined;
     }
     if (gen !== this.gen || this.manual) return;
-    if (!url) return;
+    if (!url) {
+      if (this.retryAttempt > 0) this.scheduleRetry();
+      return;
+    }
     this.setState("connecting");
-    const ws = new WebSocket(url);
+    let ws: WebSocket;
+    try {
+      ws = new WebSocket(url);
+    } catch (err) {
+      console.warn(`[${this.config.label}] failed to construct WebSocket:`, err);
+      this.scheduleRetry();
+      return;
+    }
     this.ws = ws;
 
     ws.onopen = () => {
@@ -174,20 +185,33 @@ export class WsConnection {
         this.setState("fatal", { closeCode: event.code });
         return;
       }
-      if (this.retryAttempt >= this.config.maxRetries) {
-        this.setState("failed");
-        return;
-      }
-      const delay = this.config.backoffMs[
-        Math.min(this.retryAttempt, this.config.backoffMs.length - 1)
-      ];
-      this.retryAttempt += 1;
-      this.setState("waiting-backoff", { attempt: this.retryAttempt, delayMs: delay });
-      this.backoffTimer = setTimeout(() => {
-        this.backoffTimer = undefined;
-        void this.openSocket();
-      }, delay);
+      this.scheduleRetry();
     };
+  }
+
+  private scheduleRetry(): void {
+    if (this.retryAttempt >= this.config.maxRetries) {
+      this.setState("failed");
+      return;
+    }
+    const delay = this.config.backoffMs[
+      Math.min(this.retryAttempt, this.config.backoffMs.length - 1)
+    ];
+    this.retryAttempt += 1;
+    this.setState("waiting-backoff", { attempt: this.retryAttempt, delayMs: delay });
+    this.backoffTimer = setTimeout(() => {
+      this.backoffTimer = undefined;
+      void this.openSocket();
+    }, delay);
+  }
+
+  private replaceSocket(): void {
+    const ws = this.ws;
+    if (!ws) return;
+    this.ws = null;
+    this.clearHeartbeatTimer();
+    this.clearProbeTimer();
+    this.safeClose(ws);
   }
 
   private startHeartbeat(ws: WebSocket): void {
