@@ -41,6 +41,7 @@
 - [ ] **server 契约缺口修复（4 处）**：① `POST /attachments` 响应无 schema——renderer 在 `api.ts` 本地另定义 `attachmentUploadResponse` 手工校验，契约应上收到 contracts；② `DELETE /attachments` body 无 schema 无 parseContract；③ `images/export` body schema 内联手写，未进 contracts；④ agent 级 `GET .../agents/:agentId/sessions` 整路由无 schema（无 limit 分支返回裸 `listSessions()`）。四处均违反 server README「所有 JSON route 绑定机制 1（Fastify schema option）」规则；修复时补 contract 或在 README 豁免清单显式登记取舍。
 - [ ] **安全语义对齐（三项决策 + 落地）**：① `.spherse` 未分类文件（`spherseOther`）LLM 可读——`LLM_READ` 白名单包含该类别且有测试钉住（`access-policy.test.ts`），与「避免内部数据泄漏」的最初意图相悖，需决策收紧为不可读或接受现状并改测试意图注释；② `memory_save`/`memory_recall` 直连 MemoryStore 完全不经 access policy——用户 deny `.spherse` 后 memory 持久化照常工作，与文档曾声称的「安全优先语义」不符，需决策是否让 memory 工具走 policy 或显式豁免；③ `manage_project_config` 的 `update_welcome_page` 是写操作且 UI 归入高级工具组，但 core 层未包 `withApproval`（与 run_command/manage_agent/manage_trigger 的「高级写操作经审批」模式不一致），yolo 警示文案也未提及它——需决策补审批或在文档/文案中显式声明豁免取舍。
 - [ ] **跨层接缝契约清单对账**：SessionPort 5 方法（create/restore/sendMessage/abortSession/sessionExists）在 server/desktop 包的契约覆盖缺口逐条对账（trigger 路径、ws-chat 路径），按 AGENTS.md 契约规矩补齐。
+- [ ] **chat WS 出站背压**：`ChatChannel.publish` 同步 `socket.send`，慢客户端（手机 PWA 走公网 tunnel）的 ws 发送缓冲无上限增长（`message_update` 为累积快照，帧大且高频），无人看 `bufferedAmount`。方向：ws-chat 的 send 闭包按 `bufferedAmount` 分级——软阈值（~1MB）丢弃流式 update 帧（累积快照语义下丢中间帧无损，下一条即全量）、硬上限（~16MB）close 断开，客户端经游标重放 + 快照无损恢复。参见 `docs/dev/features/2026-09-05-chat-refactor/design.md`（hub 缺陷分析节）。
 
 ## 条件触发（设计决策）
 
