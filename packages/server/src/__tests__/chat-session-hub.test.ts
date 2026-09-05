@@ -528,7 +528,7 @@ describe("ChatSessionHub", () => {
     attachment.close();
   });
 
-  it("enriches message_end and agent_end with persisted seqs", async () => {
+  it("enriches the wire message stream with messageId and persisted seq", async () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
@@ -541,7 +541,9 @@ describe("ChatSessionHub", () => {
     const run = attachment.sendMessage("hi");
     await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
 
-    const assistantMessage = { id: "m1", role: "assistant", content: [] };
+    const assistantMessage = { role: "assistant", content: [] };
+    mock.emit({ type: "message_start", message: assistantMessage });
+    mock.emit({ type: "message_update", message: assistantMessage });
     mock.appendLog({
       type: "assistant/message",
       seq: 9,
@@ -554,15 +556,105 @@ describe("ChatSessionHub", () => {
     mock.finish();
     await run;
 
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: "message_start", messageId: "m1" }),
+    );
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: "message_update", messageId: "m1" }),
+    );
     expect(events).toContainEqual({
       type: "message_end",
       message: assistantMessage,
+      messageId: "m1",
       seq: 9,
     });
     expect(events).toContainEqual(
       expect.objectContaining({ type: "agent_end", seq: 10 }),
     );
     attachment.close();
+  });
+
+  it("keeps the in-flight run's clientId when a concurrent send hits ConflictError", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const events: any[] = [];
+    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      events.push(event),
+    );
+    await first.ready;
+
+    const run = first.sendMessage("hi", [], "client-a");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+
+    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    await second.ready;
+    await expect(second.sendMessage("again", [], "client-b")).rejects.toThrow(
+      /already running/,
+    );
+
+    mock.appendLog({
+      type: "user/message",
+      seq: 2,
+      time: 1,
+      data: { message: { role: "user", content: "hi" } },
+    });
+    expect(events).toContainEqual({
+      type: "user_message",
+      seq: 2,
+      message: { role: "user", content: "hi" },
+      clientId: "client-a",
+    });
+
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await run;
+    first.close();
+    second.close();
+  });
+
+  it("sends the full handshake sequence when attaching mid-run with a since cursor", async () => {
+    const mock = createRuntime();
+    mock.runtime.getSessionLastSeq.mockReturnValue(11);
+    mock.runtime.readSessionEventsAfter.mockReturnValue([
+      { type: "user/message", seq: 10, time: 1, data: { message: { role: "user", content: "hi" } } },
+      { type: "turn/start", seq: 11, time: 1, data: {} },
+    ]);
+    const hub = new ChatSessionHub(logger);
+    const liveEvents: any[] = [];
+    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      liveEvents.push(event),
+    );
+    await first.ready;
+    liveEvents.length = 0;
+
+    const run = first.sendMessage("hi");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+    mock.emit({ type: "agent_start" });
+    mock.emit({ type: "message_update", message: { role: "assistant", content: [] } });
+
+    const replayEvents: any[] = [];
+    const second = hub.attach(
+      "p1",
+      mock.runtime as never,
+      "a1",
+      "s1",
+      (event) => replayEvents.push(event),
+      { since: 9 },
+    );
+    await second.ready;
+
+    const types = replayEvents.map((event) => event.type);
+    expect(types[0]).toBe("session_ready");
+    expect(types[1]).toBe("replay_events");
+    expect(types[2]).toBe("replay_done");
+    expect(types.slice(3)).toEqual(["agent_start", "message_update", "run_status"]);
+    expect(replayEvents.at(-1)).toEqual({ type: "run_status", active: true });
+
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await run;
+    first.close();
+    second.close();
   });
 
   it("unsubscribes the log listener when the channel is cleaned up", async () => {

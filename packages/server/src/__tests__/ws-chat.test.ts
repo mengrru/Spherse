@@ -163,6 +163,31 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     ]);
   });
 
+  it("treats since=-1 as a full-replay cursor", async () => {
+    routeHandler = null;
+    const mock = createMockRegistry();
+    mock.sessionRuntime.readSessionEventsAfter.mockReturnValue([
+      { type: "turn/start", seq: 0, time: 1, data: {} },
+    ]);
+    handleChatWebSocket(mockFastify as never, mock.registry as never, new ChatSessionHub(hubLogger));
+    const cursorSocket = createMockSocket();
+    routeHandler!(
+      cursorSocket,
+      req({ projectId: "p1", agentId: "a1", sessionId: "s1" }, { since: "-1" }),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mock.sessionRuntime.readSessionEventsAfter).toHaveBeenCalledWith(
+      "a1",
+      "s1",
+      -1,
+      expect.any(Number),
+    );
+    expect(
+      sentObjects(cursorSocket).map((event) => (event as { type: string }).type),
+    ).toEqual(["session_ready", "replay_events", "replay_done", "run_status"]);
+  });
+
   it("routes message sends with a clientId without changing the runtime call", async () => {
     socket.simulateMessage(
       Buffer.from(JSON.stringify({ type: "message", content: "hi", clientId: "c1" })),
@@ -193,6 +218,14 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
       type: "error",
       message: "Invalid WebSocket message",
     });
+    expect(socket.close).toHaveBeenCalledWith(
+      CHAT_CLOSE_CODES.PROTOCOL_ERROR,
+      "Invalid WebSocket message",
+    );
+  });
+
+  it("closes with PROTOCOL_ERROR on a schema-violating client message", () => {
+    socket.simulateMessage(Buffer.from(JSON.stringify({ type: "message" })));
     expect(socket.close).toHaveBeenCalledWith(
       CHAT_CLOSE_CODES.PROTOCOL_ERROR,
       "Invalid WebSocket message",

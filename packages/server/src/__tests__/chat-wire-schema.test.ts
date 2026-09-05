@@ -62,10 +62,13 @@ const serverEventSamples = [
   { type: "turn_start" },
   { type: "turn_end", message: assistantMessage, toolResults: [] },
   { type: "message_start", message: assistantMessage },
+  { type: "message_start", message: assistantMessage, messageId: "m1" },
   { type: "message_update", message: assistantMessage },
+  { type: "message_update", message: assistantMessage, messageId: "m1" },
   { type: "message_update", message: assistantMessage, assistantMessageEvent: { delta: "x" } },
   { type: "message_end", message: assistantMessage },
   { type: "message_end", message: assistantMessage, seq: 9 },
+  { type: "message_end", message: assistantMessage, messageId: "m1", seq: 9 },
   { type: "tool_execution_start", toolCallId: "tc1", toolName: "read_file", args: { path: "a" } },
   {
     type: "tool_execution_update",

@@ -130,15 +130,17 @@ const chatServerEvent = Type.Union([
     message: agentMessage,
     toolResults: toolResultMessages,
   }),
-  Type.Object({ type: Type.Literal("message_start"), message: agentMessage }),
+  Type.Object({ type: Type.Literal("message_start"), message: agentMessage, messageId: Type.Optional(Type.String()) }),
   Type.Object({
     type: Type.Literal("message_update"),
     message: agentMessage,
+    messageId: Type.Optional(Type.String()),
     assistantMessageEvent: Type.Optional(Type.Unknown()),
   }),
   Type.Object({
     type: Type.Literal("message_end"),
     message: agentMessage,
+    messageId: Type.Optional(Type.String()),
     seq: Type.Optional(Type.Integer()),
   }),
   Type.Object({
@@ -204,7 +206,7 @@ const chatServerEvent = Type.Union([
     seq: Type.Integer(),
     message: agentMessage,
     clientId: Type.Optional(Type.String()),
-    source: Type.Optional(Type.String()),
+    source: Type.Optional(Type.Literal("triggered")),
     triggerName: Type.Optional(Type.String()),
   }),
   Type.Object({

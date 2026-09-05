@@ -48,7 +48,7 @@ chat（每 session 一条，`chat-session-runtime.ts`）与 bus（全局一条�
 
 ### 1.1 连接握手与重放流程
 
-connect URL 增加可选 query 参数 `since`（数字，客户端已应用的最高 seq）。attach 成功（restore ready）后服务端按序发送：
+connect URL 增加可选 query 参数 `since`（数字，**取值域 ≥ -1**：`-1` 表示从头全量重放，与 `getSessionLastSeq` 的空日志哨兵值一致；非整数或 < -1 忽略、视为未携带）。attach 成功（restore ready）后服务端按序发送：
 
 ```
 1. session_ready   { lastSeq, replay: true }     ← 能力握手 + 服务端当前最高 seq
@@ -69,13 +69,13 @@ connect URL 增加可选 query 参数 `since`（数字，客户端已应用的�
 | 事件 | 变更 | 说明 |
 |---|---|---|
 | `user_message`（新增） | `{ seq, message, clientId?, source?, triggerName? }` | **user 消息回显/ack**。hub 在 `user/message` 落库后广播给全部订阅者；发送方按 `clientId` 结算乐观消息，其他客户端按 seq 插入。`source`/`triggerName` 透传 `SendMessageMeta`（`core/session/events.ts:6-9`，已存在）。HTTP 静默发送路径（`startDetachedRun`）无 clientId，echo 照发、仅推进其他端游标，行为自洽 |
-| `message_end` | 增加 `seq?: number` | = 对应持久化事件（`assistant/message` 或 `tool/result`）的 seq；流式气泡获得持久身份 |
+| `message_end` | 增加 `seq?: number` 与 `messageId?: string` | seq = 对应持久化事件（`assistant/message` 或 `tool/result`）的 seq；流式气泡获得持久身份。配对机制见下方「不变的部分」 |
 | `agent_end` | 增加 `seq?: number` | = `turn/end` 的 seq |
 | `turn_retried`（新增） | `{ seq, abandonedSeqs: number[] }` | retry 的多端同步：今天只有发送方本地知道重试弃置，其他端靠 HTTP 对账补 |
 | `session_ready` / `replay_events` / `replay_done`（新增） | 见 1.1 | |
 | `replay_events.events[]` | 原始 SessionEvent 信封（type/seq/time/data） | 复用 `@spherse/core` `SessionEventMap` 词汇，contracts 侧 schema 镜像导出 |
 
-不变的部分：pi 流式事件族（`message_start/update`、`tool_execution_*`）payload 透传不动；流式消息的 stitch 身份用 payload 自带的 pi message `id`（`log-agent-event.ts:31` 已在用），`message_end` 到达后绑定 `id → seq`。
+不变的部分：pi 流式事件族（`message_start/update`、`tool_execution_*`）payload 透传不动。**流式消息的 wire 身份是 hub 生成的 `messageId`**（run 级自增 `m1/m2/...`，由 hub 注入 `message_start/update/end`）：pi message payload 运行时**没有 id 字段**（`pi-ai` 构造 assistant message 不赋 id，类型亦未声明，已实证 `anthropic-messages.js` stream 构造），不能作为 stitch 身份。`message_end.seq` 的配对机制是**实例引用相等**：`persistMiddleware` 落库时传入的 message 实例与 wire `message_end` 的 payload 是同一引用（appendBatch 不 clone），hub 以 run 级 WeakMap 引用→seq 配对——该行为由 server 真 runtime 契约测试钉住。
 
 ### 1.3 客户端 → 服务端事件变更
 
@@ -91,12 +91,13 @@ connect URL 增加可选 query 参数 `since`（数字，客户端已应用的�
 
 ### 1.5 重放与快照的重叠去重（reducer 不变量）
 
-重放（持久事件，按 seq）与快照（pi wire 事件，按 message id）存在交集。规则：
+重放（持久事件，按 seq）与快照（pi wire 事件，按 hub 生成的 messageId）存在交集。规则：
 
 1. 持久事件按 seq 幂等：本地已有该 seq → skip
-2. wire 事件按 message id stitch；`message_start` 到达时该 id 已绑定 seq（重放已给过）→ skip
-3. `message_end` 的 seq 已知但 id 未知（重放在先）→ 以持久事件为准，跳过 wire 侧内容
-4. 以上不变量用 reducer 性质测试锁住（§9）
+2. wire 事件按 messageId stitch；`message_start` 到达时该 messageId 已绑定 seq（重放已给过）→ skip
+3. `message_end` 的 seq 已知但 messageId 未见过（重放在先）→ 以持久事件为准，跳过 wire 侧内容
+4. live 期间 `message_end` 同时携带 messageId 与 seq，客户端据此建立 messageId→seq 绑定，供重连快照去重
+5. 以上不变量用 reducer 性质测试锁住（§9）
 
 ### 1.6 close code 族
 
@@ -245,6 +246,8 @@ interface WsConnectionConfig {
 | 风险 | 对策 |
 |---|---|
 | 重放与快照重叠去重出错（重复气泡/丢内容） | §1.5 不变量 + reducer 性质测试；PR3 灰度期内保留 HTTP 刷新按钮兜底 |
+| `message_end.seq` 引用配对依赖 persistMiddleware 不 clone 落库实例 | 真 runtime 契约测试钉住引用一致性；pi/core 升级若引入 clone，富化退化为无 seq（有守卫、不崩），契约测试立即失败暴露 |
+| pi message 无 id、messageId 由 hub 生成 | messageId 只在 wire 层使用、run 级作用域，不落库、不进 core；重连快照保留 messageId（runEvents 存富化后事件） |
 | hub 改动破坏多订阅者广播 | hub 单测覆盖多 subscriber echo/重放互不干扰 |
 | bus 迁移波及 5 个桥 | L1 对外 API 与 bus-store 壳不变；E2E bus 场景回归 |
 | trigger 收口改变错误时序 | 收口前后 trigger 失败路径行为对齐测试（ConflictError ↔ ensureNotBusy） |

@@ -30,7 +30,8 @@ export function handleChatWebSocket(
       }
       const { agentId, sessionId } = req.params;
       const sinceQuery = Number(req.query?.since);
-      const since = Number.isInteger(sinceQuery) && sinceQuery >= 0 ? sinceQuery : undefined;
+      const since =
+        Number.isInteger(sinceQuery) && sinceQuery >= -1 ? sinceQuery : undefined;
       let closed = false;
       const send = (event: unknown): void => {
         if (closed) return;
