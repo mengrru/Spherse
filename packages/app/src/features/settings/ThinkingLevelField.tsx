@@ -6,7 +6,7 @@ import { useI18n } from "@spherse/i18n/react";
 import { SectionTitle } from "./SectionTitle";
 import type { ThinkingLevel } from "@spherse/core";
 
-const THINKING_LEVELS: ThinkingLevel[] = ["off", "low", "medium", "high"];
+const THINKING_LEVELS: ThinkingLevel[] = ["off", "low", "medium", "high", "xhigh", "max"];
 
 export function ThinkingLevelField({
   value,

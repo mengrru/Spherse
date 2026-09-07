@@ -18,7 +18,7 @@ export const zhCN = {
   // 思考强度下拉框的标签（控制模型回答前的推理深度）
   "settings.models.thinkingLevel": "思考强度",
   // 思考强度旁 info tooltip：说明仅对支持推理的模型生效，超出支持范围会就近取档
-  "settings.models.thinkingLevelHint": "控制模型回答前的思考深度，仅对支持推理的模型生效；超出模型支持范围时会自动就近调整。",
+  "settings.models.thinkingLevelHint": "控制模型回答前的思考深度，仅对支持推理的模型生效；超出模型支持范围时会自动就近调整。GPT-6 Astra 不支持关闭思考，选择关闭时使用低档。",
   // 思考强度选项：关闭思考（节省 token）
   "settings.models.thinkingLevel.off": "关闭",
   // 思考强度选项：低
@@ -27,6 +27,8 @@ export const zhCN = {
   "settings.models.thinkingLevel.medium": "中",
   // 思考强度选项：高
   "settings.models.thinkingLevel.high": "高",
+  "settings.models.thinkingLevel.xhigh": "超高",
+  "settings.models.thinkingLevel.max": "最高",
   // 尚未配置任何 API Key 时的提示
   "settings.models.configureFirst": "请先配置 API Key",
   // 默认模型下拉搜索框的占位提示（打开下拉后输入模型名称筛选）

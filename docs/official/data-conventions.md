@@ -67,6 +67,7 @@ aiAccess:
 
 - 解析为 YAML 后裸 cast，core 侧无 schema 校验；残留未知字段（如老项目的 `defaultModel`）静默忽略，随下次保存原样保留
 - 模型选择不在项目配置：由用户级 `AppSettings.models.text.defaultModel` 决定
+- 思考强度保存在用户级 `AppSettings.models.text.thinkingLevel`；取值、默认值与运行时语义见 [Desktop 架构](architecture/desktop.md#settings-持久化)
 - 特殊文件路径归属由 `@spherse/core` 的 `access/path-category.ts` 中 `PATH_PATTERNS` 固定（18 类 + `userFiles` 兜底），不可配置；capability 可经 `pathRules` 声明优先裁决（memory capability 已在使用，见 `architecture/security.md`）
 - `welcomePage.path` 校验：`/` 分隔、拒绝绝对路径与 `..`、扩展名白名单 html / htm / png / jpg / jpeg / gif / webp / svg、必须归类为 `userFiles`（即排除 `.spherse/**`、AGENTS.md、CHANGELOG.md）；保存时不要求文件存在；渲染时 settings 查询失败或资源加载失败回退占位态
 - `deniedPaths` 校验：拒绝绝对路径、`..` 与尾部斜杠并去重；保留路径（一切非 `userFiles` 类别）不可加入——它们由 access policy 白名单另行控制

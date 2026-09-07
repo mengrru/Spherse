@@ -6,6 +6,7 @@ vi.mock("@earendil-works/pi-ai/providers/all", () => ({
   builtinModels: () => ({
     streamSimple: streamSimpleMock,
     getProviders: () => [],
+    getProvider: () => undefined,
     getModels: () => [],
     getModel: () => undefined,
   }),
