@@ -58,5 +58,6 @@ pi-ai / pi-agent-core 0.84.4 已支持 Responses API、`xhigh`、`max`，但模�
 - core 定向测试 80 项通过：Astra 请求、既有采样、自定义 provider UA、会话参数传播。
 - app 全量 1,016 项通过；desktop settings / IPC 定向 36 项通过；i18n 校验通过。
 - 全仓 lint 无错误（16 项已有 warning），build 与 typecheck 通过。
+- Electron `e2e/app-launch.spec.ts` 启动冒烟 1 项通过。
 - `npm run verify` 未全通过：其他 core 测试存在 Windows 文件句柄清理 / POSIX 权限假设问题，server 的 lastOpened 断言失败，desktop 的项目路径断言使用 POSIX 分隔符。相关实现与 origin/dev 相同。
 - 本次触及的 session-manager 测试修复了清理前未 shutdown 导致的 Windows EPERM；修复后 47 项独立复测通过。全仓运行在该修复前已加载此文件，其报告仍包含该组旧失败。
