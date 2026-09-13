@@ -69,6 +69,28 @@ describe("decodeServerFrame", () => {
     });
   });
 
+  it("skips unknown replay events instead of dropping the whole batch", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const frame = decodeServerFrame({
+      type: "replay_events",
+      events: [
+        { type: "turn/start", seq: 1, time: 0, data: {} },
+        { type: "control/requested", seq: 2, time: 1, data: { requestId: "r1" } },
+        { type: "turn/end", seq: 3, time: 2, data: { reason: "completed" } },
+      ],
+    });
+
+    expect(frame).toEqual({
+      kind: "replay-events",
+      events: [
+        { type: "turn/start", seq: 1, time: 0, data: {} },
+        { type: "turn/end", seq: 3, time: 2, data: { reason: "completed" } },
+      ],
+    });
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
   it("returns ignored and warns on invalid frames", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     expect(decodeServerFrame({ type: "bogus" })).toEqual({ kind: "ignored" });

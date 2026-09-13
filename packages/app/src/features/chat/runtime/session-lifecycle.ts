@@ -93,8 +93,11 @@ export function createSessionLifecycle(
         if (frame.kind === "event") deps.deliverEvents(sessionId, [frame.event]);
       },
       getSince: () => {
-        const cursor = host.getSession(sessionId)?.cursor ?? -1;
-        return cursor >= 0 ? cursor : undefined;
+        const session = host.getSession(sessionId);
+        if (!session || session.history.status !== "ready" || session.cursor < 0) {
+          return undefined;
+        }
+        return session.cursor;
       },
       isAttached: () => (host.getSession(sessionId)?.attachedCount ?? 0) > 0,
     });

@@ -318,6 +318,103 @@ describe("entry reducer", () => {
     expect(state.cursor).toBe(9);
   });
 
+  it("does not settle a local optimistic entry with another client's echo", () => {
+    const optimistic: UserEntry = { kind: "user", id: "c1", clientId: "c1", text: "same", optimistic: true };
+    let state = stateWith([optimistic]);
+    state = reduceLiveEvents(state, [
+      event({ type: "user_message", seq: 5, message: { role: "user", content: "same" }, clientId: "c2" }),
+    ], 1);
+
+    expect(state.entries).toHaveLength(2);
+    expect(state.entries[0]).toMatchObject({ id: "c1", optimistic: true });
+    expect(state.entries[1]).toMatchObject({ kind: "user", id: "e5", seq: 5 });
+  });
+
+  it("does not settle a local optimistic entry with a clientId-less echo carrying the same text", () => {
+    const optimistic: UserEntry = { kind: "user", id: "c1", clientId: "c1", text: "same", optimistic: true };
+    let state = stateWith([optimistic]);
+    state = reduceLiveEvents(state, [
+      event({ type: "user_message", seq: 5, message: { role: "user", content: "same" }, source: "triggered" }),
+    ], 1);
+
+    expect(state.entries).toHaveLength(2);
+    expect(state.entries[0]).toMatchObject({ id: "c1", optimistic: true });
+  });
+
+  it("does not reuse a completed entry when a later run reissues the same messageId", () => {
+    let state = createEntryState();
+    state = reduceLiveEvents(state, [
+      event({ type: "agent_start" }),
+      event({ type: "message_start", message: assistantMessage(""), messageId: "m1" }),
+      event({ type: "message_end", message: assistantMessage("first", { timestamp: 1 }), messageId: "m1", seq: 1 }),
+    ], 1);
+
+    state = reduceLiveEvents(state, [
+      event({ type: "agent_start" }),
+      event({ type: "message_start", message: assistantMessage(""), messageId: "m1" }),
+      event({ type: "message_update", message: assistantMessage("second"), messageId: "m1" }),
+    ], 2);
+
+    expect(state.entries).toHaveLength(2);
+    expect(state.entries[0]).toMatchObject({ seq: 1, text: "first", streaming: false });
+    expect(state.entries[1]).toMatchObject({ streamId: "m1", text: "second", streaming: true });
+    expect(state.entries[1].id).not.toBe(state.entries[0].id);
+    expect(state.openStreamId).toBe(state.entries[1].id);
+  });
+
+  it("clears messageId bindings for abandoned seqs so the retry streams again", () => {
+    let state = createEntryState();
+    state = reduceLiveEvents(state, [
+      event({ type: "message_start", message: assistantMessage(""), messageId: "m1" }),
+      event({ type: "message_end", message: assistantMessage("failed", { stopReason: "error", errorMessage: "boom" }), messageId: "m1", seq: 1 }),
+    ], 1);
+    expect(state.seqByMessageId).toEqual({ m1: 1 });
+
+    state = reduceLiveEvents(state, [event({ type: "turn_retried", seq: 2, abandonedSeqs: [1] })], 2);
+    expect(state.seqByMessageId).toEqual({});
+    expect(state.entries).toHaveLength(0);
+
+    state = reduceLiveEvents(state, [
+      event({ type: "message_start", message: assistantMessage(""), messageId: "m1" }),
+      event({ type: "message_update", message: assistantMessage("streaming"), messageId: "m1" }),
+    ], 3);
+    expect(state.entries).toHaveLength(1);
+    expect(state.entries[0]).toMatchObject({ id: "m1", text: "streaming", streaming: true });
+    expect(state.openStreamId).toBe("m1");
+  });
+
+  it("advances the cursor and binds seq on non-assistant message_end", () => {
+    let state = createEntryState();
+    state = reduceLiveEvents(state, [
+      event({
+        type: "message_end",
+        message: { role: "toolResult", toolCallId: "tc1", content: [] },
+        messageId: "m2",
+        seq: 6,
+      }),
+    ], 1);
+
+    expect(state.entries).toHaveLength(0);
+    expect(state.cursor).toBe(6);
+    expect(state.seqByMessageId).toEqual({ m2: 6 });
+  });
+
+  it("clears pendingWithdraw and bindings when a withdraw is replayed", () => {
+    let state = stateWith([
+      { kind: "user", id: "e1", seq: 1, text: "q" },
+      assistantEntry({ id: "e2", seq: 2, text: "a" }),
+    ]);
+    state = { ...state, pendingWithdraw: true, seqByMessageId: { m2: 2, m9: 9 } };
+    state = applyPersistedEvents(state, [
+      replayEvent({ type: "turn/withdrawn", seq: 4, time: 0, data: { seq: 1 } }),
+    ], 0);
+
+    expect(state.entries).toHaveLength(0);
+    expect(state.pendingWithdraw).toBe(false);
+    expect(state.seqByMessageId).toEqual({ m9: 9 });
+    expect(state.cursor).toBe(4);
+  });
+
   it("applies persisted user, assistant and tool messages with seq identity", () => {
     let state = createEntryState();
     state = applyPersistedEvents(state, [

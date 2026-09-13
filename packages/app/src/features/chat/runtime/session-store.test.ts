@@ -463,4 +463,36 @@ describe("chat session store", () => {
     expect(users[1]).toMatchObject({ seq: 2, text: "hi" });
     expect(users[1].optimistic).toBeUndefined();
   });
+
+  it("keeps reconciling over HTTP while the first page never loaded", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const client = createMockClient();
+    (client.getSessionMessagesPage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("nope"));
+    const socket = await attachAndOpen("s1", client);
+    await vi.advanceTimersByTimeAsync(1000);
+    await vi.advanceTimersByTimeAsync(2000);
+    await vi.advanceTimersByTimeAsync(5000);
+    await flush();
+    expect(session().history).toMatchObject({ status: "pending", error: true });
+
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "user_message", seq: 1, message: { role: "user", content: "hi" } }),
+    } as MessageEvent);
+    await flush();
+    expect(session().cursor).toBe(1);
+
+    (client.getSessionMessagesPage as ReturnType<typeof vi.fn>).mockResolvedValue(historyPage([
+      { id: 1, message: { role: "user", content: "hi", timestamp: 10 } },
+    ]));
+    socket.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    const reopened = mock.instances[mock.instances.length - 1];
+    expect(reopened.url).not.toContain("since=");
+    openInstance(reopened);
+    await flush();
+
+    expect(session().history).toMatchObject({ status: "ready", error: false });
+    expect(session().entries).toHaveLength(1);
+    warn.mockRestore();
+  });
 });

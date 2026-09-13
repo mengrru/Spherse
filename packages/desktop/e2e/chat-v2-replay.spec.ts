@@ -40,7 +40,7 @@ test("reconnects with since and replays a run completed while disconnected", asy
   }
 });
 
-test("dedups replay and snapshot when the run continues after reconnect", async () => {
+test("dedups replayed persisted messages with the run snapshot after reconnect", async () => {
   const project = await createChatProject();
   const { app, page } = await launchChatApp(project);
 
@@ -60,14 +60,16 @@ test("dedups replay and snapshot when the run continues after reconnect", async 
     await expect(page.getByText("Hel", { exact: true })).toBeVisible();
 
     server.closeActiveSocket();
+    server.completeMessageWhileDisconnected("Hello world!");
     await expect.poll(() => server.sinceValues.length).toBe(1);
-
-    server.streamAssistant("Hello wor");
-    await expect(page.getByText("Hello wor", { exact: true })).toBeVisible();
-
-    server.finishAssistant("Hello world!");
     await expect(page.getByText("Hello world!", { exact: true })).toHaveCount(1, { timeout: 10000 });
-    await expect(page.locator("[data-chat-message]")).toHaveCount(2);
+
+    server.streamAssistant("Second");
+    await expect(page.getByText("Second", { exact: true })).toBeVisible();
+    server.finishAssistant("Second done");
+    await expect(page.getByText("Second done", { exact: true })).toHaveCount(1, { timeout: 10000 });
+    await expect(page.locator("[data-chat-message]")).toHaveCount(3);
+    await expect(page.getByText("Hel", { exact: true })).toHaveCount(0);
     await expect(page.locator("[data-chat-composer] button svg.lucide-send")).toBeVisible({ timeout: 10000 });
   } finally {
     await closeApp(app);

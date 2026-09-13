@@ -205,6 +205,7 @@ export interface V2ChatServer {
   closeActiveSocket(): void;
   streamAssistant(text: string): void;
   finishAssistant(text: string): void;
+  completeMessageWhileDisconnected(text: string): void;
   completeWhileDisconnected(text: string): void;
 }
 
@@ -348,6 +349,25 @@ export async function mockV2ChatServer(page: Page, port: number): Promise<V2Chat
       running = false;
       currentMessageId = undefined;
       runEvents.length = 0;
+    },
+
+    completeMessageWhileDisconnected(text) {
+      const messageId = currentMessageId;
+      if (messageId === undefined) return;
+      const seq = persistAssistant(text);
+      runEvents.push({
+        type: "message_end",
+        message: { role: "assistant", content: [{ type: "text", text }], timestamp: seq },
+        messageId,
+        seq,
+      });
+      messageCounter += 1;
+      currentMessageId = `m${messageCounter}`;
+      runEvents.push({
+        type: "message_start",
+        message: { role: "assistant", content: [], timestamp: lastSeq },
+        messageId: currentMessageId,
+      });
     },
 
     completeWhileDisconnected(text) {

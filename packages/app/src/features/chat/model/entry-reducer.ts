@@ -60,12 +60,12 @@ export function reduceLiveEvents<T extends ChatEntryState>(
 function applyEvent(state: ChatEntryState, event: AgentEvent, now: number): ChatEntryState {
   switch (event.type) {
     case "agent_start":
-      return {
+      return clearRunScopedIdentity({
         ...state,
         streaming: true,
         openStreamId: null,
         ownerAssistantId: null,
-      };
+      });
 
     case "run_status":
       if (event.active) {
@@ -168,10 +168,20 @@ function applyPersistedEvent(
       return upsertPersistedToolResult(withCursor, event.seq, event.data.message, now);
     case "turn/withdrawn": {
       const from = event.data.seq;
-      const entries = withCursor.entries.filter(
-        (entry) => entry.seq === undefined || entry.seq < from || entry.seq >= event.seq,
-      );
-      return { ...withCursor, entries, ...pruneRefs(withCursor, entries) };
+      const removed = new Set<number>();
+      const entries = withCursor.entries.filter((entry) => {
+        if (entry.seq === undefined) return true;
+        if (entry.seq < from || entry.seq >= event.seq) return true;
+        removed.add(entry.seq);
+        return false;
+      });
+      return {
+        ...withCursor,
+        entries,
+        pendingWithdraw: false,
+        seqByMessageId: dropBindings(withCursor.seqByMessageId, removed),
+        ...pruneRefs(withCursor, entries),
+      };
     }
     case "turn/retried":
       return removeSeqs(withCursor, new Set(event.data.abandonedSeqs), event.seq);
@@ -204,14 +214,13 @@ function applyPersistedUserMessage(
   event: Extract<ChatReplayEvent, { type: "user/message" }>,
   now: number,
 ): ChatEntryState {
-  const withCursor = advanceCursor(state, event.seq);
-  if (withCursor.entries.some((entry) => entry.seq === event.seq)) return withCursor;
+  if (state.entries.some((entry) => entry.seq === event.seq)) return state;
   const message = event.data.message;
   const text = isUserMessage(message) ? extractMessageText(message.content) : "";
   const time = message.timestamp ?? now;
-  const optimisticIndex = findOptimisticUserIndex(withCursor.entries, { text });
+  const optimisticIndex = findOptimisticUserIndex(state.entries, { text });
   if (optimisticIndex >= 0) {
-    const previous = withCursor.entries[optimisticIndex] as UserEntry;
+    const previous = state.entries[optimisticIndex] as UserEntry;
     const { optimistic: _optimistic, sendFailed: _sendFailed, ...rest } = previous;
     const updated: UserEntry = {
       ...rest,
@@ -223,7 +232,7 @@ function applyPersistedUserMessage(
         : {}),
       ...(time !== undefined ? { time } : {}),
     };
-    return { ...withCursor, entries: replaceAt(withCursor.entries, optimisticIndex, updated) };
+    return { ...state, entries: replaceAt(state.entries, optimisticIndex, updated) };
   }
   const entry: UserEntry = {
     kind: "user",
@@ -236,7 +245,7 @@ function applyPersistedUserMessage(
       : {}),
     ...(time !== undefined ? { time } : {}),
   };
-  return { ...withCursor, entries: [...withCursor.entries, entry] };
+  return { ...state, entries: [...state.entries, entry] };
 }
 
 function upsertPersistedAssistant(
@@ -367,10 +376,9 @@ function applyUserMessage(
   if (withCursor.entries.some((entry) => entry.seq === event.seq)) return withCursor;
   const text = isUserMessage(event.message) ? extractMessageText(event.message.content) : "";
   const time = event.message.timestamp ?? now;
-  const optimisticIndex = findOptimisticUserIndex(withCursor.entries, {
-    ...(event.clientId !== undefined ? { clientId: event.clientId } : {}),
-    text,
-  });
+  const optimisticIndex = event.clientId !== undefined
+    ? findOptimisticUserIndex(withCursor.entries, { clientId: event.clientId })
+    : -1;
   if (optimisticIndex >= 0) {
     const previous = withCursor.entries[optimisticIndex] as UserEntry;
     const { optimistic: _optimistic, sendFailed: _sendFailed, ...rest } = previous;
@@ -427,7 +435,7 @@ function applyMessageStart(state: ChatEntryState, event: Extract<AgentEvent, { t
   const streamId = event.messageId ?? nextTransientId("s");
   const entry: AssistantEntry = {
     kind: "assistant",
-    id: streamId,
+    id: transientEntryId(state, streamId),
     streamId,
     text: "",
     toolCalls: [],
@@ -464,7 +472,7 @@ function applyMessageUpdate(state: ChatEntryState, event: Extract<AgentEvent, { 
   const streamId = event.messageId ?? nextTransientId("s");
   const entry: AssistantEntry = {
     kind: "assistant",
-    id: streamId,
+    id: transientEntryId(state, streamId),
     streamId,
     text,
     toolCalls: [],
@@ -481,7 +489,15 @@ function applyMessageUpdate(state: ChatEntryState, event: Extract<AgentEvent, { 
 }
 
 function applyMessageEnd(state: ChatEntryState, event: Extract<AgentEvent, { type: "message_end" }>, now: number): ChatEntryState {
-  if (!isAssistantMessage(event.message)) return state;
+  const { messageId, seq } = event;
+  const seqByMessageId = messageId !== undefined && seq !== undefined
+    ? { ...state.seqByMessageId, [messageId]: seq }
+    : state.seqByMessageId;
+  const cursor = seq !== undefined ? Math.max(state.cursor, seq) : state.cursor;
+  if (!isAssistantMessage(event.message)) {
+    if (cursor === state.cursor && seqByMessageId === state.seqByMessageId) return state;
+    return { ...state, cursor, seqByMessageId };
+  }
   const text = extractMessageText(event.message.content);
   const isError = event.message.stopReason === "error";
   const error: EntryError | undefined = isError
@@ -491,17 +507,14 @@ function applyMessageEnd(state: ChatEntryState, event: Extract<AgentEvent, { typ
       }
     : undefined;
   const time = event.message.timestamp ?? now;
-  const { messageId, seq } = event;
-  const seqByMessageId = messageId !== undefined && seq !== undefined
-    ? { ...state.seqByMessageId, [messageId]: seq }
-    : state.seqByMessageId;
-  const cursor = seq !== undefined ? Math.max(state.cursor, seq) : state.cursor;
 
   const seqIndex = seq !== undefined ? state.entries.findIndex((entry) => entry.seq === seq) : -1;
   if (seqIndex >= 0) {
     const existing = state.entries[seqIndex];
     if (!isAssistantEntry(existing)) return { ...state, cursor, seqByMessageId };
-    if (existing.id === state.openStreamId) {
+    const transientIndex = messageId !== undefined ? findEntryByStreamId(state.entries, messageId) : -1;
+    const openIndex = indexOfId(state.entries, state.openStreamId);
+    if (transientIndex === seqIndex || openIndex === seqIndex) {
       const updated: AssistantEntry = {
         ...existing,
         text,
@@ -520,13 +533,10 @@ function applyMessageEnd(state: ChatEntryState, event: Extract<AgentEvent, { typ
         seqByMessageId,
       };
     }
-    const openIndex = indexOfId(state.entries, state.openStreamId);
     let entries = state.entries;
-    if (openIndex >= 0) {
-      entries = entries.filter((_, index) => index !== openIndex);
-    }
-    if (messageId !== undefined) {
-      entries = entries.filter((entry) => entry.id !== messageId || entry.seq === seq);
+    const dropIndex = transientIndex >= 0 ? transientIndex : openIndex;
+    if (dropIndex >= 0) {
+      entries = entries.filter((_, index) => index !== dropIndex);
     }
     return { ...state, entries, openStreamId: null, ownerAssistantId: existing.id, cursor, seqByMessageId };
   }
@@ -559,7 +569,7 @@ function applyMessageEnd(state: ChatEntryState, event: Extract<AgentEvent, { typ
   const streamId = messageId ?? nextTransientId("s");
   const entry: AssistantEntry = {
     kind: "assistant",
-    id: streamId,
+    id: transientEntryId(state, streamId),
     streamId,
     text,
     toolCalls: [],
@@ -733,8 +743,20 @@ function applyWithdraw(state: ChatEntryState, fromSeq: number): ChatEntryState {
     firstIndex = findLastUserIndex(state.entries);
   }
   const entries = firstIndex >= 0 ? state.entries.slice(0, firstIndex) : state.entries;
+  const removed = new Set<number>();
+  if (firstIndex >= 0) {
+    for (const entry of state.entries.slice(firstIndex)) {
+      if (entry.seq !== undefined) removed.add(entry.seq);
+    }
+  }
   return advanceCursor(
-    { ...state, entries, pendingWithdraw: false, ...pruneRefs(state, entries) },
+    {
+      ...state,
+      entries,
+      pendingWithdraw: false,
+      seqByMessageId: dropBindings(state.seqByMessageId, removed),
+      ...pruneRefs(state, entries),
+    },
     fromSeq,
   );
 }
@@ -775,8 +797,38 @@ function removeSeqs(state: ChatEntryState, seqs: ReadonlySet<number>, cursorSeq:
   const entries = state.entries.filter(
     (entry) => entry.seq === undefined || !seqs.has(entry.seq),
   );
-  if (entries.length === state.entries.length) return { ...state, cursor };
-  return { ...state, entries, cursor, ...pruneRefs(state, entries) };
+  const seqByMessageId = dropBindings(state.seqByMessageId, seqs);
+  if (
+    entries.length === state.entries.length &&
+    seqByMessageId === state.seqByMessageId &&
+    cursor === state.cursor
+  ) {
+    return state;
+  }
+  return {
+    ...state,
+    entries,
+    cursor,
+    seqByMessageId,
+    ...(entries.length !== state.entries.length ? pruneRefs(state, entries) : {}),
+  };
+}
+
+function dropBindings(
+  seqByMessageId: Record<string, number>,
+  seqs: ReadonlySet<number>,
+): Record<string, number> {
+  if (seqs.size === 0) return seqByMessageId;
+  let changed = false;
+  const next: Record<string, number> = {};
+  for (const [messageId, seq] of Object.entries(seqByMessageId)) {
+    if (seqs.has(seq)) {
+      changed = true;
+      continue;
+    }
+    next[messageId] = seq;
+  }
+  return changed ? next : seqByMessageId;
 }
 
 function advanceCursor<T extends ChatEntryState>(state: T, seq: number | undefined): T {
@@ -807,8 +859,31 @@ function findStreamTargetIndex(state: ChatEntryState, messageId: string | undefi
 
 function findEntryByStreamId(entries: ChatEntry[], messageId: string): number {
   return entries.findIndex(
-    (entry) => entry.kind === "assistant" && (entry.streamId === messageId || entry.id === messageId),
+    (entry) => entry.kind === "assistant" && entry.streamId === messageId,
   );
+}
+
+function transientEntryId(state: ChatEntryState, streamId: string): EntryId {
+  return state.entries.some((entry) => entry.id === streamId)
+    ? nextTransientId("s")
+    : streamId;
+}
+
+function clearRunScopedIdentity(state: ChatEntryState): ChatEntryState {
+  const hasBindings = Object.keys(state.seqByMessageId).length > 0;
+  const hasStreams = state.entries.some((entry) => entry.streamId !== undefined);
+  if (!hasBindings && !hasStreams) return state;
+  return {
+    ...state,
+    seqByMessageId: hasBindings ? {} : state.seqByMessageId,
+    entries: hasStreams
+      ? state.entries.map((entry) => {
+          if (entry.streamId === undefined) return entry;
+          const { streamId: _streamId, ...rest } = entry;
+          return rest as ChatEntry;
+        })
+      : state.entries,
+  };
 }
 
 function lastAssistantIndex(entries: ChatEntry[]): number {
