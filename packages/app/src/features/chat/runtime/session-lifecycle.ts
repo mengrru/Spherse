@@ -57,7 +57,9 @@ export function createSessionLifecycle(
     const sessionId = params.sessionId;
     const existing = links.get(sessionId);
     if (existing) {
-      existing.params = params;
+      existing.params = params.initialMessage === undefined && existing.params.initialMessage !== undefined
+        ? { ...params, initialMessage: existing.params.initialMessage }
+        : params;
       return existing.link;
     }
 

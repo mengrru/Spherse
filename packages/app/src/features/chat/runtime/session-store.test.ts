@@ -77,6 +77,18 @@ describe("chat session store", () => {
     expect(session().attachedCount).toBe(2);
   });
 
+  it("sends the initial message when the session re-attaches before the link opens", async () => {
+    useChatSessionStore.getState().attach(createMockClient(), "s1", BASE_URL, "p1", "a1", "hello");
+    useChatSessionStore.getState().attach(createMockClient(), "s1", BASE_URL, "p1", "a1");
+    await flush();
+    const socket = mock.instances[mock.instances.length - 1];
+    openInstance(socket);
+    await flush();
+
+    expect(JSON.parse(socket.sent.at(-1)!)).toMatchObject({ type: "message", content: "hello" });
+    expect(session().entries[0]).toMatchObject({ kind: "user", text: "hello" });
+  });
+
   it("sends an optimistic user entry with a clientId", async () => {
     const socket = await attachAndOpen();
     expect(useChatSessionStore.getState().sendMessage("s1", "hi")).toBe(true);
