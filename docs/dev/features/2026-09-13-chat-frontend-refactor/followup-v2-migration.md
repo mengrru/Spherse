@@ -2,7 +2,7 @@
 
 - 日期：2026-09-13
 - 前置：`docs/dev/features/2026-09-05-chat-refactor/design.md`（协议 v2 完整设计：§1 握手/游标/去重不变量、§2 server、§8 PR 切分、§9 测试）；`docs/dev/features/2026-09-13-chat-frontend-refactor/design.md` §9（Entry 模型的迁移缝）
-- 状态：待实施。09-05 plan 的前端 PR3/PR4 已由 09-13 前端重构替代（旧协议下先行），本文件是剩余的 v2 消费清单
+- 状态：M1–M4 + M6 已实施（`661f2f2` + review 修复 `4d70bda`，计划见 [plan-v2-migration.md](./plan-v2-migration.md)）；M5（control 落库消费 / 快照收缩适配）与遗留清理待 09-05 PR5 合入后做
 - server 侧前置已完成：PR1（contracts v2 + hub 结构化 + seq 富化 + since 重放 + close code）、PR2（WsConnection）；本文件全部是 renderer 侧改动
 
 ## 现状
@@ -49,7 +49,7 @@ type DecodedFrame =
 - `assistant/message` / `tool/result` → 按 `seq` upsert，保留既有 entry id
 - `turn/withdrawn` → 按 `[data.seq, event.seq)` 区间移除（替代「从最后一条 user 截断」）
 - `turn/retried` → 按 `abandonedSeqs` 移除
-- `compaction/applied` → 按 `excludedSeqs` 移除（renderer 目前不消费 compaction，需按 09-05 §1.4 决策实现）
+- `compaction/applied` → **仅推进游标、不移除 entries**（实现时与用户确认的偏差：HTTP 历史投影 `deriveHistoryEntries` 不过滤 compaction，按字面移除会导致「重连后消息消失、刷新又回来」；digest 气泡与压缩隐藏留待 compaction UI 立项）
 - 游标推进：`cursor = max(cursor, seq)`；live 事件同理（`user_message` / `message_end.seq` / `agent_end.seq` / `turn_retried` / `turn_withdrawn`）
 - messageId↔seq stitch：`message_end` 建立 `streamId → seq` 绑定；`message_start` 命中有绑定/重放已给的同一消息时 skip —— 锁 09-05 §1.5 五条不变量
 
@@ -82,10 +82,11 @@ type DecodedFrame =
 
 ## 已知风险 / 验证点
 
-- **v2 下的 `message_update` 懒建**：当前 `applyMessageUpdate` 在无 open window 时用 `event.messageId` 新建 entry，未检查同 id 是否已存在——重放清窗后可能产生重复 key，迁移时改为 upsert（review 未验证疑点）
-- **`findReusableStreamIndex`**：messageId 不匹配时仍会复用尾部 streaming entry 的语义是为旧协议 retry 设计的，v2 下需改为按 messageId 精确绑定 + `turn_retried` 删除（review 未验证疑点）
-- 重放与快照重叠去重错误（重复气泡/丢内容）：靠 property test + 灰度期保留手动刷新兜底
-- `message_end.seq` 的引用配对依赖 persist-before-callback 不 clone：已有真 runtime 契约测试钉住（PR1）
+- **v2 下的 `message_update` 懒建**（已修）：v2 `messageId` 是 run 级身份（hub 每个 run 从 `m1` 重数），entry id 直接取 `messageId` 会与上一 run 的条目撞 key。实现为 `streamId` 存 `messageId`、entry id 冲突时分配本地唯一 id，`agent_start` 清空跨 run 绑定；property test 用「retry 后 m1 复用」与「跨 run m1 复用」锁住
+- **`findReusableStreamIndex`**（已修）：有 `messageId` 时按 `streamId` 精确匹配，不再回退尾部 streaming entry；旧协议（无 messageId）保留尾部复用
+- **重放与快照重叠去重错误**（重复气泡/丢内容）：靠 property test（chunked replay == 全量重建、live/wire 对拍）+ E2E 两场景（断线期间 run 已完成 / run 进行中且 replay∩snapshot 重叠）
+- **`message_end.seq` 的引用配对依赖 persist-before-callback 不 clone**：已有真 runtime 契约测试钉住（PR1）
+- **review 后新增约束**：live echo 只按 `clientId` 结算（文本兜底仅在重放/首页路径）；`getSince` 要求 `history.status === "ready"`，否则回落冷对账（避免首页未加载时静默置 ready）
 
 ## 建议顺序
 

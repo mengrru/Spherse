@@ -31,7 +31,7 @@ Composer.send
   - pi 生命周期族：`agent_start` / `agent_end`（可带 `seq`） / `turn_start` / `turn_end` / `message_start` / `message_update` / `message_end`（可带 `messageId` + `seq`） / `tool_execution_start` / `tool_execution_update` / `tool_execution_end`
   - session 级：`run_status`（active）、`control_request` / `control_resolved`、`turn_withdrawn`（seq）、`turn_retried`（seq + abandonedSeqs）、`user_message`（seq + clientId? + source? + triggerName?，user 消息回显/ack）、`error`（message + code）、`pong`
   - 重放族：`session_ready`（lastSeq + replay，attach 后恒为首个事件）、`replay_events`（原始 SessionEvent 信封分批，每批 ≤200）、`replay_done`
-- **身份与游标**（[ADR-0011](../../dev/decisions/0011-chat-wire-cursor-replay.md)）：持久事件按 `seq` 幂等；流式 wire 消息按 hub 生成的 `messageId` stitch（pi message payload 运行时无 id 字段），`message_end.seq` 经落库实例引用配对（persist-before-callback）；connect query `?since=`（≥ -1）触发游标重放，游标为客户端 per-connection 状态
+- **身份与游标**（[ADR-0011](../../dev/decisions/0011-chat-wire-cursor-replay.md)）：持久事件按 `seq` 幂等；流式 wire 消息按 hub 生成的 `messageId` stitch（pi message payload 运行时无 id 字段；`messageId` 为 **run 级身份**，每个 run 从 `m1` 重新计数），`message_end.seq` 经落库实例引用配对（persist-before-callback）；connect query `?since=`（≥ -1）触发游标重放，游标为客户端 per-connection 状态——`cursor = max(cursor, seq)` 永不回退，live 推进集合为 `user_message` / `message_end` / `agent_end` / `turn_retried` / `turn_withdrawn`，重放的每条事件都推进
 - **error code**（`classify-run-error.ts`）：`MODEL_NOT_CONFIGURED`、`AUTH_ERROR`、`PERMANENT`、`TRANSIENT`。规则：
   - 401/403 → AUTH；429/5xx/网络错误 → TRANSIENT
   - 其余 4xx 及 `ConflictError` / `ValidationError` → PERMANENT
@@ -60,12 +60,12 @@ Composer.send
 
 ## Renderer：Entry → MessageGroup → 组件
 
-- **`ChatEntry`（canonical state，`features/chat/model/entry.ts`）**：事件日志的前端 1:1 投影，按身份寻址——`seq`（持久事件身份；旧协议来自 HTTP entry id，v2 = `SessionEvent.seq`）、`streamId`（流式消息身份；旧协议客户端生成，v2 = server `messageId`）、`clientId`（乐观 user 消息结算）；分 user / assistant / tool-result / error 四类，tool result 独立成条
-  - `entry-reducer.ts`：live 事件归约，显式维护 `openStreamId`（流式窗口）与 `ownerAssistantId`（当前 run 最近 assistant，`agent_start`/`agent_end`/新 user 重置）；tool 事件按 owner 归属，不再靠数组尾部定位
-  - `history-entries.ts`：HTTP 分页 entry → entries；`latest` 模式按 `seq` upsert 并丢弃未持久化窗口（由重连缓冲事件重建），`loadMore` 保留本地尾部；乐观 user 按内容结算（v2 后换 clientId）
+- **`ChatEntry`（canonical state，`features/chat/model/entry.ts`）**：事件日志的前端 1:1 投影，按身份寻址——`seq`（持久事件身份；旧协议来自 HTTP entry id，v2 = `SessionEvent.seq`）、`streamId`（流式消息身份；旧协议客户端生成，v2 = server run 级 `messageId`）、`clientId`（乐观 user 消息结算）；分 user / assistant / tool-result / error 四类，tool result 独立成条
+  - `entry-reducer.ts`：双入口归约——`reduceLiveEvents`（pi live 事件，`openStreamId` 流式窗口 + `ownerAssistantId` owner 跟踪）与 `applyPersistedEvents`（重放 `SessionEvent`，按 `seq` 幂等 upsert、tool owner 配对、`turn/withdrawn` 区间/`turn/retried` 移除）；`seqByMessageId` 记录 run 内 `messageId → seq` 绑定（`agent_start` 清空，`message_end`  seq 已在本地时丢弃 wire 侧窗口）；`dropTransientProjections` 在重放结束时清空无 `seq` 的运行中投影（由快照重建）
+  - `history-entries.ts`：HTTP 分页 entry → entries；`latest` 模式按 `seq` upsert 并丢弃未持久化窗口（由重连缓冲事件重建），`loadMore` 保留本地尾部；乐观 user 结算收敛为 `findOptimisticUserIndex`——live echo 只按 `clientId` 精确匹配，HTTP 首页 / 重放按 unique text 兜底
 - **`MessageGroup`（渲染单元，`message-group.ts`）**：`assembleGroups(entries)` 纯函数分区出 `turn` / `trigger-turn` 组与 `assistant` / `tool-result` / `error` 气泡；每个 entry 恰好归入一个渲染单元，tool call 与 result 按 `toolCallId` 合并，配不上宿主的结果降级为独立气泡——不丢孤儿 log；渲染 key 一律取 entry/group 身份
   - `tool-card.ts` 投影卡片（优先级：pending control > result > partial > resolved control）；`run-changes.ts` 聚合每轮 write_file/edit_file；`group-derivations.ts` 派生 superseded 卡片、撤回/重试目标、待批控制、thinking
-- **runtime 模块（`features/chat/runtime/`）**：`session-link`（每 session 一个 `WsConnection`：url / 心跳 / fatal / probe / 出站）、`session-recovery`（开链 HTTP 对账 + 事件缓冲 + 退避）、`event-queue`（rAF 批处理 + `setTimeout(200ms)` 兜底后台冻结）、`session-lifecycle`（引用计数、TTL 定时器、级联断开、link/recovery 生命周期）、`history-loader`（首页 / loadMore / refresh）、`outbound-actions`（发送 / 重试 / 撤回 / 中断 / 控制响应）、`decode`（wire → event，无损保留 `messageId/seq`）、`session-store`（Zustand 壳 + actions）、`selectors`（对外窄 selector）；transport 不进 Zustand
+- **runtime 模块（`features/chat/runtime/`）**：`session-link`（每 session 一个 `WsConnection`：url（含 `?since=`）/ 心跳 / fatal / probe / 出站）、`session-recovery`（首帧判定：`session_ready` → 游标重放，否则 HTTP 冷对账；事件缓冲 + 退避）、`event-queue`（rAF 批处理 + `setTimeout(200ms)` 兜底后台冻结）、`session-lifecycle`（引用计数、TTL 定时器、级联断开、link/recovery 生命周期）、`history-loader`（首页 / loadMore / refresh）、`outbound-actions`（发送 / 重试 / 撤回 / 中断 / 控制响应）、`decode`（wire → 帧分类：live event / session-ready / replay-events / replay-done，`replay_events` 逐条解析跳过未知事件）、`session-store`（Zustand 壳 + actions）、`selectors`（对外窄 selector）；transport 不进 Zustand
 - `useChatGroups` 组装视图模型（groups / superseded / thinking / 可撤回目标）；`useChatSession` 只做 attach/detach 与状态选择——切换页面不中断后台流式；正常断线保留 streaming 与未完成消息，`agent_end` / `error` 事件或服务端 `run_status: inactive` 结束运行态；fatal close 立即清运行态且不重连
 
 ## 错误与重试
@@ -82,16 +82,19 @@ Composer.send
 - **无自动重试**：错误一律落错误气泡 + 手动按钮触发（`code` 仅用于错误展示分类）；为什么见 [ADR-0008](../../dev/decisions/0008-no-frontend-auto-retry.md)
 - **撤回**：非 streaming 时最新未失败 user entry 可 withdraw；hub 不经 startRun（运行中返回 ConflictError）；成功广播 `turn_withdrawn`，reducer 从该 user entry 处截断；失败给 error 打 `retrySuppressed`（隐藏 retry）
 
-## 重连与历史对账
-
-> 现状为过渡态：server 已发协议 v2（session_ready / 游标重放 / echo），renderer 已按 Entry 模型重构但尚未消费 v2（`decode` 对 v2 事件返回 undefined 静默丢弃），仍走下述 HTTP 对账；迁移清单见 `docs/dev/features/2026-09-13-chat-frontend-refactor/design.md` §9。
+## 重连与游标重放
 
 - **心跳**：每 30s ping，连续 60s 无 pong 才关闭；suspend 导致 timer 大幅跳跃时重置探测窗口防误杀；web 壳 hidden ≥30s / bfcache 恢复时主动 probe（5s 短超时）强测死链
 - **重连退避**：`[1, 2, 5, 10, 30]s`，上限 10 次（超限状态机 `failed` → banner 手动重连）；fatal `4400/4401/4402` 不重连并立即清运行态；detach 后由 `WsConnection.shouldRetry` 阻断重连
-- **对账流程**：onopen → `history.status: syncing` → 拉最新一页历史 → 期间入站事件缓冲 → `applyHistoryPage("latest")` 按 `seq` upsert
-  - 未持久化的本地流式窗口被丢弃，由缓冲的 run 快照重放重建；已结束的 run 由页内持久行接管——因此重放无需事件级幂等
-  - 乐观 user 消息按内容与持久行结算；配不上时保留为本地尾部
-- 对账失败按 `[1, 2, 5]s` 退避重试；全失败时仅「从未 ready 过」的会话置 `history.error`（曾 ready 的保持 ready，缓冲事件仍会被应用）
+- **v2 游标重放**（`history.status` 已 ready 时 connect 带 `?since=cursor`；否则不带并回落冷对账）：
+  - attach 后首帧恒为 `session_ready`：进入重放态，`replay_events` 分批（每批 ≤200）经 `applyPersistedEvents` 归约，期间普通事件缓冲；`replay_done` 时清空无 `seq` 的本地运行中投影（由随后的 run 快照重建），再放行缓冲帧
+  - 重放语义：按 `seq` 幂等 upsert 并推进游标；`user/message` 结算 clientId 未命中的乐观 entry（unique text 兜底）；`turn/withdrawn` 按 `[data.seq, event.seq)` 移除、`turn/retried` 按 `abandonedSeqs` 移除；`compaction/applied` 只推进游标不改 entries（与 HTTP 历史投影一致）
+  - 重放与快照重叠去重（[ADR-0011](../../dev/decisions/0011-chat-wire-cursor-replay.md)）：`messageId` 为 run 级身份，`agent_start` 清空上一 run 的绑定与 `streamId`；wire `message_end` 的 `seq` 已在本地（重放在先）→ 丢弃 wire 侧窗口、以持久事件为准；`messageId` 已绑定 seq 的 `message_start` / `message_update` 直接跳过
+- **legacy 冷对账**（首帧不是 `session_ready` 的旧 server，或首页从未加载成功：新 app + 旧 server 兼容层）：
+  - onopen → `history.status: syncing` → 拉最新一页历史 → 期间入站事件缓冲 → `applyHistoryPage("latest")` 按 `seq` upsert
+  - 未持久化的本地流式窗口被丢弃，由缓冲的 run 快照重放重建；已结束的 run 由页内持久行接管
+  - 乐观 user 消息按 unique text 与持久行结算；配不上时保留为本地尾部
+  - 对账失败按 `[1, 2, 5]s` 退避重试；全失败时仅「从未 ready 过」的会话置 `history.error`（曾 ready 的保持 ready，缓冲事件仍会被应用），后续重连继续对账而非切游标重放
 - **分页**：`GET .../sessions/:id/messages?limit=&before=`，默认 20、clamp [1, 200]；shape `{ entries, hasMore, oldestId }`
   - `id` / `oldestId` 在 events 投影路径为事件 seq，legacy 路径为 messages 表行 id——两者都是单调 cursor，前端无需区分
   - entry 可携带可选 `source: "triggered"` + `triggerName`（trigger 发送标记，仅 events 投影路径；legacy 路径无此字段）
