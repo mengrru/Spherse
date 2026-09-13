@@ -1,9 +1,6 @@
 import type { AgentEvent } from "../model/agent-event-parse";
-import {
-  applyPersistedEvents,
-  clearRun,
-  dropTransientProjections,
-} from "../model/entry-reducer";
+import { clearRun } from "../model/entry-reducer";
+import { applyPersistedEvents, dropTransientProjections } from "../model/persisted-entries";
 import { applyHistoryPage } from "../model/history-entries";
 import { createSessionRecovery, type SessionRecovery } from "./session-recovery";
 import {

@@ -1,16 +1,13 @@
-import type { ChatReplayEvent } from "@spherse/contracts";
 import {
   isAssistantMessage,
   isUserMessage,
   type AgentEvent,
 } from "./agent-event-parse";
-import { extractMessageText, extractToolCalls } from "./chat-tool-projection";
+import { extractMessageText } from "./chat-tool-projection";
 import { classifyErrorMessageString } from "./classify-error";
 import {
-  findOptimisticUserIndex,
   isAssistantEntry,
   nextTransientId,
-  persistedEntryId,
   toolResultEntryId,
   type AssistantEntry,
   type ChatEntry,
@@ -18,32 +15,18 @@ import {
   type EntryError,
   type EntryId,
   type ErrorEntry,
-  type ToolCallRef,
   type ToolResultEntry,
-  type UserEntry,
 } from "./entry";
-
-export interface ChatEntryState {
-  entries: ChatEntry[];
-  openStreamId: EntryId | null;
-  ownerAssistantId: EntryId | null;
-  streaming: boolean;
-  pendingWithdraw: boolean;
-  cursor: number;
-  seqByMessageId: Record<string, number>;
-}
-
-export function createEntryState(): ChatEntryState {
-  return {
-    entries: [],
-    openStreamId: null,
-    ownerAssistantId: null,
-    streaming: false,
-    pendingWithdraw: false,
-    cursor: -1,
-    seqByMessageId: {},
-  };
-}
+import {
+  advanceCursor,
+  dropBindings,
+  indexOfId,
+  pruneRefs,
+  removeSeqs,
+  replaceAt,
+  settleUserEntry,
+  type ChatEntryState,
+} from "./entry-state";
 
 export function reduceLiveEvents<T extends ChatEntryState>(
   state: T,
@@ -141,65 +124,6 @@ function applyEvent(state: ChatEntryState, event: AgentEvent, now: number): Chat
   }
 }
 
-export function applyPersistedEvents<T extends ChatEntryState>(
-  state: T,
-  events: ChatReplayEvent[],
-  now: number,
-): T {
-  let next: ChatEntryState = state;
-  for (const event of events) {
-    next = applyPersistedEvent(next, event, now);
-  }
-  return next as T;
-}
-
-function applyPersistedEvent(
-  state: ChatEntryState,
-  event: ChatReplayEvent,
-  now: number,
-): ChatEntryState {
-  const withCursor = advanceCursor(state, event.seq);
-  switch (event.type) {
-    case "user/message":
-      return applyPersistedUserMessage(withCursor, event, now);
-    case "assistant/message":
-      return upsertPersistedAssistant(withCursor, event.seq, event.data.message, now);
-    case "tool/result":
-      return upsertPersistedToolResult(withCursor, event.seq, event.data.message, now);
-    case "turn/withdrawn": {
-      const from = event.data.seq;
-      const removed = new Set<number>();
-      const entries = withCursor.entries.filter((entry) => {
-        if (entry.seq === undefined) return true;
-        if (entry.seq < from || entry.seq >= event.seq) return true;
-        removed.add(entry.seq);
-        return false;
-      });
-      return {
-        ...withCursor,
-        entries,
-        pendingWithdraw: false,
-        seqByMessageId: dropBindings(withCursor.seqByMessageId, removed),
-        ...pruneRefs(withCursor, entries),
-      };
-    }
-    case "turn/retried":
-      return removeSeqs(withCursor, new Set(event.data.abandonedSeqs), event.seq);
-    case "turn/start":
-    case "turn/end":
-    case "compaction/applied":
-      return withCursor;
-  }
-}
-
-export function dropTransientProjections<T extends ChatEntryState>(state: T): T {
-  const entries = state.entries.filter(
-    (entry) => entry.seq !== undefined || (entry.kind !== "assistant" && entry.kind !== "tool-result"),
-  );
-  if (entries.length === state.entries.length) return state;
-  return { ...state, entries, ...pruneRefs(state, entries) } as T;
-}
-
 export function markRetrying<T extends ChatEntryState>(state: T): T {
   const index = state.entries.length - 1;
   const entry = state.entries[index];
@@ -209,204 +133,28 @@ export function markRetrying<T extends ChatEntryState>(state: T): T {
   return { ...state, entries: replaceAt(state.entries, index, updated) } as T;
 }
 
-function applyPersistedUserMessage(
-  state: ChatEntryState,
-  event: Extract<ChatReplayEvent, { type: "user/message" }>,
-  now: number,
-): ChatEntryState {
-  if (state.entries.some((entry) => entry.seq === event.seq)) return state;
-  const message = event.data.message;
-  const text = isUserMessage(message) ? extractMessageText(message.content) : "";
-  const time = message.timestamp ?? now;
-  const optimisticIndex = findOptimisticUserIndex(state.entries, { text });
-  if (optimisticIndex >= 0) {
-    const previous = state.entries[optimisticIndex] as UserEntry;
-    const { optimistic: _optimistic, sendFailed: _sendFailed, ...rest } = previous;
-    const updated: UserEntry = {
-      ...rest,
-      seq: event.seq,
-      text: text.length > 0 ? text : previous.text,
-      ...(event.data.source === "triggered" ? { triggered: true as const } : {}),
-      ...(event.data.source === "triggered" && event.data.triggerName !== undefined
-        ? { triggerName: event.data.triggerName }
-        : {}),
-      ...(time !== undefined ? { time } : {}),
-    };
-    return { ...state, entries: replaceAt(state.entries, optimisticIndex, updated) };
-  }
-  const entry: UserEntry = {
-    kind: "user",
-    id: persistedEntryId(event.seq),
-    seq: event.seq,
-    text,
-    ...(event.data.source === "triggered" ? { triggered: true as const } : {}),
-    ...(event.data.source === "triggered" && event.data.triggerName !== undefined
-      ? { triggerName: event.data.triggerName }
-      : {}),
-    ...(time !== undefined ? { time } : {}),
-  };
-  return { ...state, entries: [...state.entries, entry] };
-}
-
-function upsertPersistedAssistant(
-  state: ChatEntryState,
-  seq: number,
-  message: Extract<ChatReplayEvent, { type: "assistant/message" }>["data"]["message"],
-  now: number,
-): ChatEntryState {
-  const text = extractMessageText(message.content);
-  const toolCalls: ToolCallRef[] = (extractToolCalls(message) ?? []).map((toolCall) => ({
-    toolCallId: toolCall.toolCallId,
-    toolName: toolCall.toolName,
-    args: toolCall.args,
-  }));
-  const error = message.stopReason === "error"
-    ? {
-        message: message.errorMessage ?? "Unknown error",
-        code: classifyErrorMessageString(message.errorMessage ?? "Unknown error"),
-      }
-    : undefined;
-  const time = message.timestamp ?? now;
-  const index = state.entries.findIndex((entry) => entry.seq === seq);
-  if (index >= 0) {
-    const previous = state.entries[index];
-    if (!isAssistantEntry(previous)) return state;
-    const updated: AssistantEntry = {
-      kind: "assistant",
-      id: previous.id,
-      seq,
-      text,
-      toolCalls,
-      streaming: false,
-      ...(previous.streamId !== undefined ? { streamId: previous.streamId } : {}),
-      time,
-      ...(message.stopReason !== undefined ? { stopReason: message.stopReason } : {}),
-      ...(error ? { error } : {}),
-    };
-    return { ...state, entries: replaceAt(state.entries, index, updated) };
-  }
-  const entry: AssistantEntry = {
-    kind: "assistant",
-    id: persistedEntryId(seq),
-    seq,
-    text,
-    toolCalls,
-    streaming: false,
-    time,
-    ...(message.stopReason !== undefined ? { stopReason: message.stopReason } : {}),
-    ...(error ? { error } : {}),
-  };
-  return { ...state, entries: [...state.entries, entry] };
-}
-
-function upsertPersistedToolResult(
-  state: ChatEntryState,
-  seq: number,
-  message: Extract<ChatReplayEvent, { type: "tool/result" }>["data"]["message"],
-  now: number,
-): ChatEntryState {
-  const text = extractMessageText(message.content);
-  const time = message.timestamp ?? now;
-  const index = state.entries.findIndex((entry) => entry.seq === seq);
-  if (index >= 0) {
-    const previous = state.entries[index];
-    if (previous.kind !== "tool-result") return state;
-    const updated: ToolResultEntry = {
-      ...previous,
-      toolCallId: message.toolCallId,
-      result: text,
-      ...(message.isError !== undefined ? { isError: message.isError } : {}),
-      ...(message.details !== undefined ? { details: message.details } : {}),
-      time,
-    };
-    return { ...state, entries: replaceAt(state.entries, index, updated) };
-  }
-  const transientIndex = state.entries.findIndex(
-    (entry) => entry.kind === "tool-result" && entry.toolCallId === message.toolCallId && entry.seq === undefined,
-  );
-  if (transientIndex >= 0) {
-    const previous = state.entries[transientIndex] as ToolResultEntry;
-    const updated: ToolResultEntry = {
-      ...previous,
-      seq,
-      result: text,
-      ...(message.isError !== undefined ? { isError: message.isError } : {}),
-      ...(message.details !== undefined ? { details: message.details } : {}),
-      time,
-    };
-    const entries = attachToolResultOwner(replaceAt(state.entries, transientIndex, updated), transientIndex);
-    return { ...state, entries };
-  }
-  const entry: ToolResultEntry = {
-    kind: "tool-result",
-    id: persistedEntryId(seq),
-    seq,
-    toolCallId: message.toolCallId,
-    result: text,
-    ...(message.isError !== undefined ? { isError: message.isError } : {}),
-    ...(message.details !== undefined ? { details: message.details } : {}),
-    time,
-  };
-  const entries = attachToolResultOwner([...state.entries, entry], state.entries.length);
-  return { ...state, entries };
-}
-
-function attachToolResultOwner(entries: ChatEntry[], index: number): ChatEntry[] {
-  const entry = entries[index];
-  if (entry.kind !== "tool-result" || entry.ownerId !== undefined) return entries;
-  const ownerId = findToolCallOwner(entries, entry.toolCallId);
-  return ownerId !== undefined ? replaceAt(entries, index, { ...entry, ownerId }) : entries;
-}
-
-function findToolCallOwner(entries: ChatEntry[], toolCallId: string): EntryId | undefined {
-  for (let index = entries.length - 1; index >= 0; index--) {
-    const entry = entries[index];
-    if (entry.kind !== "assistant") continue;
-    if (entry.toolCalls.some((toolCall) => toolCall.toolCallId === toolCallId)) return entry.id;
-  }
-  return undefined;
-}
-
 function applyUserMessage(
   state: ChatEntryState,
   event: Extract<AgentEvent, { type: "user_message" }>,
   now: number,
 ): ChatEntryState {
   const withCursor = advanceCursor(state, event.seq);
-  if (withCursor.entries.some((entry) => entry.seq === event.seq)) return withCursor;
   const text = isUserMessage(event.message) ? extractMessageText(event.message.content) : "";
-  const time = event.message.timestamp ?? now;
-  const optimisticIndex = event.clientId !== undefined
-    ? findOptimisticUserIndex(withCursor.entries, { clientId: event.clientId })
-    : -1;
-  if (optimisticIndex >= 0) {
-    const previous = withCursor.entries[optimisticIndex] as UserEntry;
-    const { optimistic: _optimistic, sendFailed: _sendFailed, ...rest } = previous;
-    const updated: UserEntry = {
-      ...rest,
+  const entries = settleUserEntry(
+    withCursor.entries,
+    {
       seq: event.seq,
-      text: text.length > 0 ? text : previous.text,
-      ...(event.source === "triggered" ? { triggered: true as const } : {}),
+      text,
+      time: event.message.timestamp ?? now,
+      ...(event.clientId !== undefined ? { clientId: event.clientId } : {}),
+      ...(event.source === "triggered" ? { source: event.source } : {}),
       ...(event.source === "triggered" && event.triggerName !== undefined
         ? { triggerName: event.triggerName }
         : {}),
-      ...(time !== undefined ? { time } : {}),
-    };
-    return { ...withCursor, entries: replaceAt(withCursor.entries, optimisticIndex, updated) };
-  }
-  const entry: UserEntry = {
-    kind: "user",
-    id: persistedEntryId(event.seq),
-    seq: event.seq,
-    text,
-    ...(event.clientId !== undefined ? { clientId: event.clientId } : {}),
-    ...(event.source === "triggered" ? { triggered: true as const } : {}),
-    ...(event.source === "triggered" && event.triggerName !== undefined
-      ? { triggerName: event.triggerName }
-      : {}),
-    ...(time !== undefined ? { time } : {}),
-  };
-  return { ...withCursor, entries: [...withCursor.entries, entry] };
+    },
+    event.clientId !== undefined ? { clientId: event.clientId } : {},
+  );
+  return entries === withCursor.entries ? withCursor : { ...withCursor, entries };
 }
 
 function toArgsRecord(args: unknown): Record<string, unknown> {
@@ -791,51 +539,6 @@ function clearPendingQuestionControls(state: ChatEntryState): ChatEntryState {
   return changed ? { ...state, entries } : state;
 }
 
-function removeSeqs(state: ChatEntryState, seqs: ReadonlySet<number>, cursorSeq: number): ChatEntryState {
-  const cursor = Math.max(state.cursor, cursorSeq);
-  if (seqs.size === 0) return cursor === state.cursor ? state : { ...state, cursor };
-  const entries = state.entries.filter(
-    (entry) => entry.seq === undefined || !seqs.has(entry.seq),
-  );
-  const seqByMessageId = dropBindings(state.seqByMessageId, seqs);
-  if (
-    entries.length === state.entries.length &&
-    seqByMessageId === state.seqByMessageId &&
-    cursor === state.cursor
-  ) {
-    return state;
-  }
-  return {
-    ...state,
-    entries,
-    cursor,
-    seqByMessageId,
-    ...(entries.length !== state.entries.length ? pruneRefs(state, entries) : {}),
-  };
-}
-
-function dropBindings(
-  seqByMessageId: Record<string, number>,
-  seqs: ReadonlySet<number>,
-): Record<string, number> {
-  if (seqs.size === 0) return seqByMessageId;
-  let changed = false;
-  const next: Record<string, number> = {};
-  for (const [messageId, seq] of Object.entries(seqByMessageId)) {
-    if (seqs.has(seq)) {
-      changed = true;
-      continue;
-    }
-    next[messageId] = seq;
-  }
-  return changed ? next : seqByMessageId;
-}
-
-function advanceCursor<T extends ChatEntryState>(state: T, seq: number | undefined): T {
-  if (seq === undefined || seq <= state.cursor) return state;
-  return { ...state, cursor: seq };
-}
-
 function isBoundMessage(state: ChatEntryState, messageId: string | undefined): boolean {
   return messageId !== undefined && state.seqByMessageId[messageId] !== undefined;
 }
@@ -898,30 +601,4 @@ function findLastUserIndex(entries: ChatEntry[]): number {
     if (entries[index].kind === "user") return index;
   }
   return -1;
-}
-
-function indexOfId(entries: ChatEntry[], id: EntryId | null): number {
-  if (id === null) return -1;
-  return entries.findIndex((entry) => entry.id === id);
-}
-
-function pruneRefs(
-  state: ChatEntryState,
-  entries: ChatEntry[],
-): Pick<ChatEntryState, "openStreamId" | "ownerAssistantId"> {
-  const ids = new Set(entries.map((entry) => entry.id));
-  return {
-    openStreamId: pickIfPresent(state.openStreamId, ids),
-    ownerAssistantId: pickIfPresent(state.ownerAssistantId, ids),
-  };
-}
-
-function pickIfPresent(id: EntryId | null, ids: ReadonlySet<EntryId>): EntryId | null {
-  return id !== null && ids.has(id) ? id : null;
-}
-
-function replaceAt(entries: ChatEntry[], index: number, entry: ChatEntry): ChatEntry[] {
-  const next = entries.slice();
-  next[index] = entry;
-  return next;
 }

@@ -16,7 +16,7 @@ import {
   type ToolResultEntry,
   type UserEntry,
 } from "./entry";
-import type { ChatEntryState } from "./entry-reducer";
+import type { ChatEntryState } from "./entry-state";
 import type { ChatAttachment } from "../types";
 
 export type HistoryPageEntry = SessionMessagesPageResponse["entries"][number];

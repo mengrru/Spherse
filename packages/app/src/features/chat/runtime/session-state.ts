@@ -1,5 +1,5 @@
 import type { WsConnectionState } from "../../../lib/ws/ws-connection";
-import { createEntryState, type ChatEntryState } from "../model/entry-reducer";
+import { createEntryState, type ChatEntryState } from "../model/entry-state";
 
 export interface ChatHistoryState {
   status: "pending" | "syncing" | "ready";

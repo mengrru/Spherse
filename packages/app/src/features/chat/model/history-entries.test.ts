@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { SessionMessagesPageResponse } from "@spherse/contracts";
 import type { AgentEvent } from "./agent-event-parse";
 import { applyHistoryPage, parseHistoryEntries } from "./history-entries";
-import { createEntryState, reduceLiveEvents } from "./entry-reducer";
+import { createEntryState } from "./entry-state";
+import { reduceLiveEvents } from "./entry-reducer";
 import type { AssistantEntry, ErrorEntry, UserEntry } from "./entry";
 
 function event(payload: object): AgentEvent {

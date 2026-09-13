@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ChatReplayEvent } from "@spherse/contracts";
-import { createEntryState, applyPersistedEvents, reduceLiveEvents } from "./entry-reducer";
+import { reduceLiveEvents } from "./entry-reducer";
+import { createEntryState } from "./entry-state";
+import { applyPersistedEvents } from "./persisted-entries";
 import type { AgentEvent } from "./agent-event-parse";
 import type { ChatEntry } from "./entry";
 
