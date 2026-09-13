@@ -373,12 +373,106 @@ describe("entry reducer", () => {
     expect(state.openStreamId).toBe("m1");
   });
 
+  it("extracts tool calls from assistant content on message_end", () => {
+    let state = createEntryState();
+    state = reduceLiveEvents(state, [
+      event({
+        type: "message_end",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "text", text: "calling" },
+            { type: "toolCall", id: "tc1", name: "read_file", arguments: { path: "a" } },
+          ],
+          timestamp: 3,
+        },
+        seq: 2,
+      }),
+    ], 4);
+
+    expect(state.entries[0]).toMatchObject({
+      kind: "assistant",
+      text: "calling",
+      toolCalls: [{ toolCallId: "tc1", toolName: "read_file", args: { path: "a" } }],
+    });
+  });
+
+  it("creates a tool result entry from message_end for runs without tool events", () => {
+    let state = createEntryState();
+    state = reduceLiveEvents(state, [
+      event({
+        type: "message_end",
+        message: {
+          role: "assistant",
+          content: [
+            { type: "text", text: "calling" },
+            { type: "toolCall", id: "tc1", name: "read_file", arguments: {} },
+          ],
+        },
+        seq: 1,
+      }),
+      event({
+        type: "message_end",
+        message: {
+          role: "toolResult",
+          toolCallId: "tc1",
+          toolName: "read_file",
+          content: [{ type: "text", text: "data" }],
+          isError: false,
+        },
+        seq: 2,
+      }),
+    ], 3);
+
+    const result = state.entries.find((entry) => entry.kind === "tool-result") as ToolResultEntry;
+    expect(result).toMatchObject({
+      toolCallId: "tc1",
+      toolName: "read_file",
+      result: "data",
+      isError: false,
+      seq: 2,
+    });
+    expect(result.ownerId).toBe(state.entries[0].id);
+    expect(state.cursor).toBe(2);
+  });
+
+  it("keeps the structured live tool result when message_end arrives after tool_execution_end", () => {
+    let state = createEntryState();
+    state = reduceLiveEvents(state, [
+      event({ type: "tool_execution_start", toolCallId: "tc1", toolName: "run_command", args: { command: "ls" } }),
+      event({
+        type: "tool_execution_end",
+        toolCallId: "tc1",
+        toolName: "run_command",
+        result: { details: { cardType: "command", command: "ls", stdout: "ok", status: "completed" } },
+        isError: false,
+      }),
+    ], 1);
+    state = reduceLiveEvents(state, [
+      event({
+        type: "message_end",
+        message: {
+          role: "toolResult",
+          toolCallId: "tc1",
+          toolName: "run_command",
+          content: [{ type: "text", text: "ok" }],
+          isError: false,
+        },
+        seq: 4,
+      }),
+    ], 2);
+
+    const result = state.entries.find((entry) => entry.kind === "tool-result") as ToolResultEntry;
+    expect(result.seq).toBe(4);
+    expect(result.result).toMatchObject({ details: { stdout: "ok" } });
+  });
+
   it("advances the cursor and binds seq on non-assistant message_end", () => {
     let state = createEntryState();
     state = reduceLiveEvents(state, [
       event({
         type: "message_end",
-        message: { role: "toolResult", toolCallId: "tc1", content: [] },
+        message: { role: "user", content: "ack" },
         messageId: "m2",
         seq: 6,
       }),

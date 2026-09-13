@@ -55,14 +55,23 @@ const mockFastify = {
 };
 
 function createMockRegistry() {
+  let logListener: ((event: unknown) => void) | undefined;
   const sessionRuntime = {
     restoreSession: vi.fn().mockResolvedValue(undefined),
     sendMessage: vi.fn().mockResolvedValue(undefined),
-    withdrawLastTurn: vi.fn().mockResolvedValue(2),
+    withdrawLastTurn: vi.fn(() => {
+      logListener?.({ type: "turn/withdrawn", seq: 7, time: 1, data: { seq: 2 } });
+      return Promise.resolve(2);
+    }),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
-    subscribeSessionEvents: vi.fn(() => () => {}),
+    subscribeSessionEvents: vi.fn((_sessionId: string, listener: (event: unknown) => void) => {
+      logListener = listener;
+      return () => {
+        logListener = undefined;
+      };
+    }),
     readSessionEventsAfter: vi.fn(() => []),
     getSessionLastSeq: vi.fn(() => -1),
   };

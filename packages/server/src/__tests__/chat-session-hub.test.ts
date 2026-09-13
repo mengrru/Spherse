@@ -28,7 +28,10 @@ function createRuntime() {
         });
       },
     ),
-    withdrawLastTurn: vi.fn().mockResolvedValue(4),
+    withdrawLastTurn: vi.fn(() => {
+      appendLog({ type: "turn/withdrawn", seq: nextSeq++, time: 1, data: { seq: 4 } });
+      return Promise.resolve(4);
+    }),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
     destroySession: vi.fn(),
@@ -175,6 +178,77 @@ describe("ChatSessionHub", () => {
     mock.finish();
     await firstRun;
     attachment.close();
+  });
+
+  it("shrinks the run snapshot to in-flight state once messages complete", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    await first.ready;
+
+    const run = first.sendMessage("hi");
+    await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
+    mock.emit({ type: "agent_start" });
+
+    const userMessage = { role: "user", content: [{ type: "text", text: "hi" }] };
+    mock.emit({ type: "message_start", message: userMessage });
+    mock.emit({ type: "message_end", message: userMessage });
+
+    const completed = { role: "assistant", content: [{ type: "text", text: "done" }] };
+    mock.emit({ type: "message_start", message: completed });
+    mock.emit({ type: "message_update", message: completed });
+    mock.appendLog({ type: "assistant/message", seq: 5, time: 1, data: { message: completed } });
+    mock.emit({ type: "message_end", message: completed });
+
+    const persistedTool = {
+      role: "toolResult",
+      toolCallId: "tc-done",
+      toolName: "read_file",
+      content: [{ type: "text", text: "data" }],
+      isError: false,
+    };
+    mock.emit({ type: "tool_execution_start", toolCallId: "tc-done", toolName: "read_file", args: {} });
+    mock.emit({ type: "tool_execution_update", toolCallId: "tc-done", toolName: "read_file", args: {}, partialResult: "x" });
+    mock.appendLog({ type: "tool/result", seq: 6, time: 1, data: { message: persistedTool } });
+    mock.emit({ type: "message_end", message: persistedTool });
+
+    mock.emit({ type: "message_start", message: { role: "assistant", content: [] } });
+    mock.emit({ type: "message_update", message: { role: "assistant", content: [{ type: "text", text: "running" }] } });
+    mock.emit({ type: "tool_execution_start", toolCallId: "tc-live", toolName: "run_command", args: {} });
+    mock.emit({ type: "tool_execution_update", toolCallId: "tc-live", toolName: "run_command", args: {}, partialResult: "y" });
+
+    first.close();
+
+    const replayed: any[] = [];
+    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+      replayed.push(event),
+    );
+    await second.ready;
+
+    expect(replayed.map((event) => event.type)).toEqual([
+      "session_ready",
+      "agent_start",
+      "message_start",
+      "message_update",
+      "tool_execution_start",
+      "tool_execution_update",
+      "run_status",
+    ]);
+    expect(
+      replayed.some((event) => event.message?.role === "user"),
+    ).toBe(false);
+    expect(
+      replayed.some((event) => event.message?.toolCallId === "tc-done"),
+    ).toBe(false);
+    expect(
+      replayed.some((event) => event.toolCallId === "tc-done"),
+    ).toBe(false);
+
+    mock.appendLog({ type: "turn/end", seq: 7, time: 1, data: { reason: "completed" } });
+    mock.emit({ type: "agent_end", messages: [] });
+    mock.finish();
+    await run;
+    second.close();
   });
 
   it("withdrawLastTurn publishes turn_withdrawn with the anchor seq", async () => {

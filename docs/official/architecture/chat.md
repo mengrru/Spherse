@@ -42,10 +42,10 @@ Composer.send
 ## Server：hub / channel / projector（`server/src/chat/`，对外仅经 `chat/index.ts` 导出）
 
 - **`ChatSessionHub`（注册表）**：`Map<projectId:sessionId, ChatChannel>` + getOrCreate + 身份守卫删除回调；hub 实例由 `server/index.ts` 创建，WS 与 sessions 路由共享
-- **`ChatChannel`（单 session 生命周期）**：restore→ready、事件日志订阅、attach（连接级生命周期为闭包）、run 序列化（`startRun` 在 running 时抛 `ConflictError`，HTTP 映射 409，WS 路径表现为 error 事件 code=PERMANENT）、快照压缩（run 期间 `message_update` 同一消息窗口只留最后一条、`tool_execution_update` 同 toolCallId 只留最后一条）、握手重放、fanout、空闲销毁（`cleanupIfIdle`：busy = 自有 run ‖ log 派生 open turn——直连 run（如 trigger）进行中不销毁）
+- **`ChatChannel`（单 session 生命周期）**：restore→ready、事件日志订阅、attach（连接级生命周期为闭包）、run 序列化（`startRun` 在 running 时抛 `ConflictError`，HTTP 映射 409，WS 路径表现为 error 事件 code=PERMANENT）、快照收缩为 O(in-flight)（`message_update` 同一消息窗口只留最后一条、`tool_execution_update` 同 toolCallId 只留最后一条；消息/工具在落库的 `message_end` 到达后从快照移除——已完成内容由游标重放覆盖，控制事件保留双通道）、握手重放、fanout、空闲销毁（`cleanupIfIdle`：busy = 自有 run ‖ log 派生 open turn——直连 run（如 trigger）进行中不销毁）
 - **run_status 从 event log 派生**（`ChatWireProjector.isRunActive`，open turn 跟踪）：所有 run（WS / HTTP 静默 / trigger 直连）的 turn 边界都写入 log，log 订阅路径统一发布 `run_status` 翻转；channel 不再在 startRun 手动发布——trigger 等直连 run 因此天然对订阅者可见（echo + 边界 + 完成内容；流式 partial 除外）。channel 建立订阅时从 log 尾部反向扫描初始化 open turn（mid-run attach 握手即得 active，且直连 run 进行中不销毁 session）。wire 顺序：`user_message` echo → `run_status(true)` → 流式 → `run_status(false)` → `agent_end`
 - **`ChatWireProjector`（persist→wire 翻译纯状态机）**：经 `SessionEventLog.subscribe` 消费落库事件——`user/message` → `user_message` echo（clientId + trigger meta）、`turn/retried` → `turn_retried` 广播、turn 边界 → `run_status` 翻转、`assistant/message`/`tool/result` 在**非 channel 发起的 run** 中翻译为 `message_end`（带 seq，内容对订阅者可见）、落库实例引用→seq 配对、run 级 `messageId` 序列；对 pi wire 事件做富化（自有 run 的内容由 pi 流负责，log 仅配对，避免双发）。pending echo 与 run 状态在 run 边界重置
-- **attach 握手顺序**：ready 后同步块内 session_ready（lastSeq）→ since 游标重放（`readSessionEventsAfter` 原始事件分批，每批 200）→ replay_done → 当前 run 压缩快照 → run_status 当前值 → 加入订阅（无 await，切片与订阅同 tick 原子）
+- **attach 握手顺序**：ready 后同步块内 session_ready（lastSeq）→ since 游标重放（`readSessionEventsAfter` 原始事件分批，每批 200）→ replay_done → 当前 run 快照（O(in-flight)：在飞消息窗口 + 执行中工具 + 控制事件）→ run_status 当前值 → 加入订阅（无 await，切片与订阅同 tick 原子）
 - **HTTP 静默发送**：`POST .../sessions/:id/messages`，目标会话未 attach WS 时 UI SDK 走此路径（`open:false` 只控制不跳转导航）：
   - `startDetachedRun` 只递增 attachment 计数保持 channel 存活、不注册订阅者——调用方只拿 `{ok:true}`，run 失败经 error 事件到达 WS 订阅者（echo 无 clientId，仅推进其他端）
   - 与 WS 共享 run 序列化（running 时 409）
@@ -62,7 +62,7 @@ Composer.send
 ## Renderer：Entry → MessageGroup → 组件
 
 - **`ChatEntry`（canonical state，`features/chat/model/entry.ts`）**：事件日志的前端 1:1 投影，按身份寻址——`seq`（持久事件身份；旧协议来自 HTTP entry id，v2 = `SessionEvent.seq`）、`streamId`（流式消息身份；旧协议客户端生成，v2 = server run 级 `messageId`）、`clientId`（乐观 user 消息结算）；分 user / assistant / tool-result / error 四类，tool result 独立成条
-  - 归约分三模块：`entry-state.ts`（`ChatEntryState` 形状与共享身份操作：游标推进、`seqByMessageId` 绑定清理、按 seq 移除、乐观 user 结算）；`entry-reducer.ts`（live 入口 `reduceLiveEvents`：pi 事件、`openStreamId` 流式窗口 + `ownerAssistantId` owner 跟踪、run 级 `messageId` 绑定与清理）；`persisted-entries.ts`（重放入口 `applyPersistedEvents`：按 `seq` 幂等 upsert、tool owner 配对、`turn/withdrawn` 区间/`turn/retried` 移除、`compaction/applied` 仅推进游标；`dropTransientProjections` 在重放结束时清空无 `seq` 的运行中投影，由快照重建）
+  - 归约分三模块：`entry-state.ts`（`ChatEntryState` 形状与共享身份操作：游标推进、`seqByMessageId` 绑定清理、按 seq 移除、乐观 user 结算）；`entry-reducer.ts`（live 入口 `reduceLiveEvents`：pi 事件、`openStreamId` 流式窗口 + `ownerAssistantId` owner 跟踪、run 级 `messageId` 绑定与清理、`message_end(toolResult)` 兜底建条目——直连 run 无 tool 事件时的内容来源）；`persisted-entries.ts`（重放入口 `applyPersistedEvents`：按 `seq` 幂等 upsert、tool owner 配对、`turn/withdrawn` 区间/`turn/retried` 移除、`compaction/applied` 仅推进游标、`control/requested|resolved` pending 投影按 requestId 幂等且 `turn/end` 清 pending；`dropTransientProjections` 在重放结束时清空无 `seq` 的运行中投影，由快照重建）
   - `history-entries.ts`：HTTP 分页 entry → entries；`latest` 模式按 `seq` upsert 并丢弃未持久化窗口（由重连缓冲事件重建），`loadMore` 保留本地尾部；乐观 user 结算收敛为 `findOptimisticUserIndex`——live echo 只按 `clientId` 精确匹配，HTTP 首页 / 重放按 unique text 兜底
 - **`MessageGroup`（渲染单元，`message-group.ts`）**：`assembleGroups(entries)` 纯函数分区出 `turn` / `trigger-turn` 组与 `assistant` / `tool-result` / `error` 气泡；每个 entry 恰好归入一个渲染单元，tool call 与 result 按 `toolCallId` 合并，配不上宿主的结果降级为独立气泡——不丢孤儿 log；渲染 key 一律取 entry/group 身份
   - `tool-card.ts` 投影卡片（优先级：pending control > result > partial > resolved control）；`run-changes.ts` 聚合每轮 write_file/edit_file；`group-derivations.ts` 派生 superseded 卡片、撤回/重试目标、待批控制、thinking
@@ -81,7 +81,7 @@ Composer.send
 
 - **重试决策是纯函数** `group-derivations.ts` 的 `planRetry`：返回 `none` / `retry-last` / `resend`（含 dropCount）；store 的 `retry` action 只执行 plan
 - **无自动重试**：错误一律落错误气泡 + 手动按钮触发（`code` 仅用于错误展示分类）；为什么见 [ADR-0008](../../dev/decisions/0008-no-frontend-auto-retry.md)
-- **撤回**：非 streaming 时最新未失败 user entry 可 withdraw；hub 不经 startRun（运行中返回 ConflictError）；成功广播 `turn_withdrawn`，reducer 从该 user entry 处截断；失败给 error 打 `retrySuppressed`（隐藏 retry）
+- **撤回**：非 streaming 时最新未失败 user entry 可 withdraw；hub 不经 startRun（运行中返回 ConflictError）；成功经 log 订阅广播 `turn_withdrawn`（`withdrawLastTurn` 不再手动 publish），reducer 从该 user entry 处截断；失败给 error 打 `retrySuppressed`（隐藏 retry）
 
 ## 重连与游标重放
 

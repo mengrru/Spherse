@@ -181,7 +181,10 @@ describe("ChatWireProjector", () => {
         }),
       ),
     ).toBeUndefined();
-    expect(projector.consumeLogEvent(logEvent("turn/withdrawn", 6, { seq: 2 }))).toBeUndefined();
+    expect(projector.consumeLogEvent(logEvent("turn/withdrawn", 6, { seq: 2 }))).toEqual({
+      type: "turn_withdrawn",
+      seq: 2,
+    });
   });
 
   it("enriches agent_end with the last turn/end seq", () => {

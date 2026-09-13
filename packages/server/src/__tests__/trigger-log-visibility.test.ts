@@ -118,11 +118,22 @@ describe("direct trigger run is visible through the session event log (log-deriv
 
     const assistantMessage = {
       role: "assistant",
-      content: [{ type: "text", text: "done" }],
+      content: [
+        { type: "text", text: "done" },
+        { type: "toolCall", id: "tc-log-vis", name: "read_file", arguments: { path: "a.md" } },
+      ],
     };
     await vi.waitFor(() => expect(dispatch).toBeDefined());
     await dispatch?.({ type: "message_start", message: { ...assistantMessage } });
     await dispatch?.({ type: "message_end", message: assistantMessage });
+    const toolResultMessage = {
+      role: "toolResult",
+      toolCallId: "tc-log-vis",
+      toolName: "read_file",
+      content: [{ type: "text", text: "file content" }],
+      isError: false,
+    };
+    await dispatch?.({ type: "message_end", message: toolResultMessage });
     await dispatch?.({ type: "agent_end", messages: [] });
     resolvePrompt?.();
 
@@ -132,6 +143,11 @@ describe("direct trigger run is visible through the session event log (log-deriv
     expect(events).toContainEqual({
       type: "message_end",
       message: expect.objectContaining({ role: "assistant" }),
+      seq: expect.any(Number),
+    });
+    expect(events).toContainEqual({
+      type: "message_end",
+      message: expect.objectContaining({ role: "toolResult", toolCallId: "tc-log-vis" }),
       seq: expect.any(Number),
     });
     const persisted = store.readEvents(sessionId).find((e: any) => e.type === "user/message");

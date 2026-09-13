@@ -2,7 +2,9 @@ import {
   findOptimisticUserIndex,
   persistedEntryId,
   type ChatEntry,
+  type ControlProjection,
   type EntryId,
+  type ToolCallRef,
   type UserEntry,
 } from "./entry";
 
@@ -143,6 +145,52 @@ export function settleUserEntry(
 export function indexOfId(entries: ChatEntry[], id: EntryId | null): number {
   if (id === null) return -1;
   return entries.findIndex((entry) => entry.id === id);
+}
+
+export function findToolCallOwner(entries: ChatEntry[], toolCallId: string): EntryId | undefined {
+  for (let index = entries.length - 1; index >= 0; index--) {
+    const entry = entries[index];
+    if (entry.kind !== "assistant") continue;
+    if (entry.toolCalls.some((toolCall) => toolCall.toolCallId === toolCallId)) return entry.id;
+  }
+  return undefined;
+}
+
+export function attachToolResultOwner(entries: ChatEntry[], index: number): ChatEntry[] {
+  const entry = entries[index];
+  if (entry.kind !== "tool-result" || entry.ownerId !== undefined) return entries;
+  const ownerId = findToolCallOwner(entries, entry.toolCallId);
+  return ownerId !== undefined ? replaceAt(entries, index, { ...entry, ownerId }) : entries;
+}
+
+export function mergeToolCalls(
+  existing: ToolCallRef[],
+  incoming: ToolCallRef[],
+): ToolCallRef[] {
+  if (incoming.length === 0) return existing;
+  const byId = new Map(existing.map((call) => [call.toolCallId, call]));
+  for (const call of incoming) {
+    const previous = byId.get(call.toolCallId);
+    byId.set(call.toolCallId, previous ? { ...previous, toolName: call.toolName, args: call.args } : call);
+  }
+  return [...byId.values()];
+}
+
+export function clearPendingControls<T extends ChatEntryState>(
+  state: T,
+  kind?: ControlProjection["kind"],
+): T {
+  let changed = false;
+  const entries = state.entries.map((entry) => {
+    if (entry.kind !== "tool-result") return entry;
+    const control = entry.control;
+    if (!control || control.status !== "pending") return entry;
+    if (kind !== undefined && control.kind !== kind) return entry;
+    changed = true;
+    const { control: _control, ...rest } = entry;
+    return rest;
+  });
+  return changed ? ({ ...state, entries } as T) : state;
 }
 
 export function replaceAt(entries: ChatEntry[], index: number, entry: ChatEntry): ChatEntry[] {

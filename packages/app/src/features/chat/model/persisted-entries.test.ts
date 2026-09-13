@@ -191,4 +191,90 @@ describe("persisted entries", () => {
     expect(dropped.ownerAssistantId).toBeNull();
     expect(dropTransientProjections(dropped)).toBe(dropped);
   });
+
+  it("projects pending controls from replay and resolves them by requestId", () => {
+    let state = createEntryState();
+    state = applyPersistedEvents(state, [
+      replayEvent({
+        type: "assistant/message",
+        seq: 1,
+        time: 0,
+        data: {
+          message: {
+            role: "assistant",
+            content: [
+              { type: "text", text: "go" },
+              { type: "toolCall", id: "tc1", name: "run_command", arguments: { command: "rm" } },
+            ],
+            timestamp: 0,
+          },
+        },
+      }),
+      replayEvent({
+        type: "control/requested",
+        seq: 2,
+        time: 2,
+        data: { requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command", args: { command: "rm" } },
+      }),
+    ], 0);
+
+    let result = state.entries.find((entry) => entry.kind === "tool-result") as ToolResultEntry;
+    expect(result).toMatchObject({
+      kind: "tool-result",
+      id: "t:tc1",
+      toolCallId: "tc1",
+      ownerId: "e1",
+      toolName: "run_command",
+      control: { requestId: "r1", kind: "approval", status: "pending" },
+    });
+
+    state = applyPersistedEvents(state, [
+      replayEvent({ type: "control/requested", seq: 2, time: 2, data: { requestId: "r1", kind: "approval", toolCallId: "tc1", toolName: "run_command", args: { command: "rm" } } }),
+      replayEvent({
+        type: "control/resolved",
+        seq: 3,
+        time: 3,
+        data: { requestId: "r1", kind: "approval", approved: false, reason: "denied" },
+      }),
+    ], 0);
+
+    result = state.entries.find((entry) => entry.kind === "tool-result") as ToolResultEntry;
+    expect(result.control).toMatchObject({ status: "rejected", approved: false, reason: "denied" });
+    expect(state.entries.filter((entry) => entry.kind === "tool-result")).toHaveLength(1);
+  });
+
+  it("answers question controls and clears pending controls on turn/end", () => {
+    let state = createEntryState();
+    state = applyPersistedEvents(state, [
+      replayEvent({
+        type: "control/requested",
+        seq: 1,
+        time: 1,
+        data: { requestId: "q1", kind: "question", toolCallId: "tc2", toolName: "ask_user", args: { question: "why" } },
+      }),
+      replayEvent({
+        type: "control/resolved",
+        seq: 2,
+        time: 2,
+        data: { requestId: "q1", kind: "question", answer: "because", timedOut: false },
+      }),
+      replayEvent({
+        type: "control/requested",
+        seq: 3,
+        time: 3,
+        data: { requestId: "q2", kind: "question", toolCallId: "tc3", toolName: "ask_user", args: { question: "again" } },
+      }),
+      replayEvent({ type: "turn/end", seq: 4, time: 4, data: { reason: "aborted" } }),
+    ], 0);
+
+    const first = state.entries.find(
+      (entry) => entry.kind === "tool-result" && entry.toolCallId === "tc2",
+    ) as ToolResultEntry;
+    expect(first.control).toMatchObject({ status: "answered", answer: "because" });
+    const second = state.entries.find(
+      (entry) => entry.kind === "tool-result" && entry.toolCallId === "tc3",
+    ) as ToolResultEntry;
+    expect(second.control).toBeUndefined();
+    expect(state.cursor).toBe(4);
+  });
 });

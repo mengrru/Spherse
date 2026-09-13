@@ -1,9 +1,11 @@
+import type { ToolResultMessage } from "@spherse/core";
 import {
   isAssistantMessage,
+  isToolResultMessage,
   isUserMessage,
   type AgentEvent,
 } from "./agent-event-parse";
-import { extractMessageText } from "./chat-tool-projection";
+import { extractMessageText, extractToolCalls } from "./chat-tool-projection";
 import { classifyErrorMessageString } from "./classify-error";
 import {
   isAssistantEntry,
@@ -19,8 +21,12 @@ import {
 } from "./entry";
 import {
   advanceCursor,
+  attachToolResultOwner,
+  clearPendingControls,
   dropBindings,
+  findToolCallOwner,
   indexOfId,
+  mergeToolCalls,
   pruneRefs,
   removeSeqs,
   replaceAt,
@@ -54,7 +60,7 @@ function applyEvent(state: ChatEntryState, event: AgentEvent, now: number): Chat
       if (event.active) {
         return state.streaming ? state : { ...state, streaming: true };
       }
-      return clearRun(clearPendingQuestionControls(state));
+      return clearRun(clearPendingControls(state, "question"));
 
     case "agent_end":
       return clearRun(advanceCursor(state, event.seq));
@@ -243,10 +249,18 @@ function applyMessageEnd(state: ChatEntryState, event: Extract<AgentEvent, { typ
     : state.seqByMessageId;
   const cursor = seq !== undefined ? Math.max(state.cursor, seq) : state.cursor;
   if (!isAssistantMessage(event.message)) {
+    if (isToolResultMessage(event.message)) {
+      return upsertMessageToolResult(state, event.message, seq, now, cursor, seqByMessageId);
+    }
     if (cursor === state.cursor && seqByMessageId === state.seqByMessageId) return state;
     return { ...state, cursor, seqByMessageId };
   }
   const text = extractMessageText(event.message.content);
+  const contentToolCalls = (extractToolCalls(event.message) ?? []).map((toolCall) => ({
+    toolCallId: toolCall.toolCallId,
+    toolName: toolCall.toolName,
+    args: toolCall.args,
+  }));
   const isError = event.message.stopReason === "error";
   const error: EntryError | undefined = isError
     ? {
@@ -266,6 +280,7 @@ function applyMessageEnd(state: ChatEntryState, event: Extract<AgentEvent, { typ
       const updated: AssistantEntry = {
         ...existing,
         text,
+        toolCalls: mergeToolCalls(existing.toolCalls, contentToolCalls),
         streaming: false,
         time,
         ...(messageId !== undefined ? { streamId: messageId } : {}),
@@ -296,6 +311,7 @@ function applyMessageEnd(state: ChatEntryState, event: Extract<AgentEvent, { typ
     const updated: AssistantEntry = {
       ...entry,
       text,
+      toolCalls: mergeToolCalls(entry.toolCalls, contentToolCalls),
       streaming: false,
       time,
       ...(messageId !== undefined ? { streamId: messageId } : {}),
@@ -313,14 +329,16 @@ function applyMessageEnd(state: ChatEntryState, event: Extract<AgentEvent, { typ
     };
   }
   const last = state.entries[state.entries.length - 1];
-  if (!text && !error && last?.kind === "assistant") return { ...state, cursor, seqByMessageId };
+  if (!text && !error && contentToolCalls.length === 0 && last?.kind === "assistant") {
+    return { ...state, cursor, seqByMessageId };
+  }
   const streamId = messageId ?? nextTransientId("s");
   const entry: AssistantEntry = {
     kind: "assistant",
     id: transientEntryId(state, streamId),
     streamId,
     text,
-    toolCalls: [],
+    toolCalls: contentToolCalls,
     streaming: false,
     time,
     ...(seq !== undefined ? { seq } : {}),
@@ -335,6 +353,53 @@ function applyMessageEnd(state: ChatEntryState, event: Extract<AgentEvent, { typ
     cursor,
     seqByMessageId,
   };
+}
+
+function upsertMessageToolResult(
+  state: ChatEntryState,
+  message: ToolResultMessage,
+  seq: number | undefined,
+  now: number,
+  cursor: number,
+  seqByMessageId: Record<string, number>,
+): ChatEntryState {
+  const text = extractMessageText(message.content);
+  const time = message.timestamp ?? now;
+  const index = state.entries.findIndex(
+    (entry) => entry.kind === "tool-result" && entry.toolCallId === message.toolCallId,
+  );
+  if (index >= 0) {
+    const previous = state.entries[index] as ToolResultEntry;
+    const updated: ToolResultEntry = {
+      ...previous,
+      toolName: previous.toolName || message.toolName,
+      ...(seq !== undefined ? { seq } : {}),
+      ...(previous.result === undefined ? { result: text } : {}),
+      ...(message.details !== undefined ? { details: message.details } : {}),
+      ...(message.isError !== undefined ? { isError: message.isError } : {}),
+    };
+    return {
+      ...state,
+      entries: replaceAt(state.entries, index, updated),
+      cursor,
+      seqByMessageId,
+    };
+  }
+  const ownerId = findToolCallOwner(state.entries, message.toolCallId);
+  const entry: ToolResultEntry = {
+    kind: "tool-result",
+    id: toolResultEntryId(message.toolCallId),
+    toolCallId: message.toolCallId,
+    ...(ownerId !== undefined ? { ownerId } : {}),
+    toolName: message.toolName,
+    result: text,
+    ...(message.details !== undefined ? { details: message.details } : {}),
+    ...(message.isError !== undefined ? { isError: message.isError } : {}),
+    time,
+    ...(seq !== undefined ? { seq } : {}),
+  };
+  const entries = attachToolResultOwner([...state.entries, entry], state.entries.length);
+  return { ...state, entries, cursor, seqByMessageId };
 }
 
 interface ToolResultPatch {
@@ -525,18 +590,6 @@ export function clearRun<T extends ChatEntryState>(state: T): T {
     ownerAssistantId: null,
     streaming: false,
   } as T;
-}
-
-function clearPendingQuestionControls(state: ChatEntryState): ChatEntryState {
-  let changed = false;
-  const entries = state.entries.map((entry) => {
-    if (entry.kind !== "tool-result") return entry;
-    if (entry.control?.kind !== "question" || entry.control.status !== "pending") return entry;
-    changed = true;
-    const { control: _control, ...rest } = entry;
-    return rest;
-  });
-  return changed ? { ...state, entries } : state;
 }
 
 function isBoundMessage(state: ChatEntryState, messageId: string | undefined): boolean {

@@ -117,8 +117,7 @@ export class ChatChannel {
         if (this.running) {
           throw new ConflictError(`Session "${this.sessionId}" is already running`);
         }
-        const seq = await this.runtime.withdrawLastTurn(this.sessionId);
-        this.publish({ type: "turn_withdrawn", seq });
+        await this.runtime.withdrawLastTurn(this.sessionId);
       },
       abort: () => {
         if (active) this.runtime.abortSession(this.sessionId);
@@ -269,6 +268,9 @@ export class ChatChannel {
   }
 
   private recordRunEvent(event: CoreEvent): void {
+    if (event.type === "message_end" && this.dropCompletedMessage(event)) {
+      return;
+    }
     if (event.type === "message_update") {
       for (let i = this.runEvents.length - 1; i >= 0; i--) {
         if (
@@ -302,6 +304,31 @@ export class ChatChannel {
       }
     }
     this.runEvents.push(event);
+  }
+
+  private dropCompletedMessage(event: CoreEvent): boolean {
+    const message = (event as { message?: { role?: string; toolCallId?: string } }).message;
+    const messageId = (event as { messageId?: string }).messageId;
+    if (!message) return false;
+    if (message.role === "toolResult" && message.toolCallId !== undefined) {
+      const toolCallId = message.toolCallId;
+      this.runEvents = this.runEvents.filter((item) => {
+        const itemMessage = (item as { message?: { role?: string; toolCallId?: string } }).message;
+        if (itemMessage?.role === "toolResult" && itemMessage.toolCallId === toolCallId) {
+          return false;
+        }
+        return (item as { toolCallId?: string }).toolCallId !== toolCallId;
+      });
+      return true;
+    }
+    if (message.role !== "user" && (event as { seq?: number }).seq === undefined) {
+      return false;
+    }
+    if (messageId === undefined) return false;
+    this.runEvents = this.runEvents.filter(
+      (item) => (item as { messageId?: string }).messageId !== messageId,
+    );
+    return true;
   }
 
   private publish(event: unknown): void {

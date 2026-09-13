@@ -5,14 +5,17 @@ import { classifyErrorMessageString } from "./classify-error";
 import {
   isAssistantEntry,
   persistedEntryId,
+  toolResultEntryId,
   type AssistantEntry,
-  type ChatEntry,
-  type EntryId,
+  type ControlProjection,
   type ToolCallRef,
   type ToolResultEntry,
 } from "./entry";
 import {
   advanceCursor,
+  attachToolResultOwner,
+  clearPendingControls,
+  findToolCallOwner,
   pruneRefs,
   removeSeqInterval,
   removeSeqs,
@@ -54,10 +57,15 @@ function applyPersistedEvent(
     }
     case "turn/retried":
       return removeSeqs(withCursor, new Set(event.data.abandonedSeqs), event.seq);
+    case "control/requested":
+      return upsertPersistedControlRequest(withCursor, event);
+    case "control/resolved":
+      return applyPersistedControlResolved(withCursor, event);
     case "turn/start":
-    case "turn/end":
     case "compaction/applied":
       return withCursor;
+    case "turn/end":
+      return clearPendingControls(withCursor);
   }
 }
 
@@ -195,18 +203,71 @@ function upsertPersistedToolResult(
   return { ...state, entries };
 }
 
-function attachToolResultOwner(entries: ChatEntry[], index: number): ChatEntry[] {
-  const entry = entries[index];
-  if (entry.kind !== "tool-result" || entry.ownerId !== undefined) return entries;
-  const ownerId = findToolCallOwner(entries, entry.toolCallId);
-  return ownerId !== undefined ? replaceAt(entries, index, { ...entry, ownerId }) : entries;
+function upsertPersistedControlRequest(
+  state: ChatEntryState,
+  event: Extract<ChatReplayEvent, { type: "control/requested" }>,
+): ChatEntryState {
+  const { requestId, kind, toolCallId, toolName, args } = event.data;
+  const existing = state.entries.find(
+    (entry) => entry.kind === "tool-result" && entry.control?.requestId === requestId,
+  );
+  if (existing !== undefined) return state;
+  const control: ControlProjection = { requestId, kind, status: "pending" };
+  const argsRecord = isRecord(args) ? args : {};
+  const index = state.entries.findIndex(
+    (entry) => entry.kind === "tool-result" && entry.toolCallId === toolCallId,
+  );
+  if (index >= 0) {
+    const previous = state.entries[index] as ToolResultEntry;
+    const updated: ToolResultEntry = {
+      ...previous,
+      toolName,
+      ...(Object.keys(argsRecord).length > 0 ? { args: argsRecord } : {}),
+      control,
+    };
+    return { ...state, entries: replaceAt(state.entries, index, updated) };
+  }
+  const ownerId = findToolCallOwner(state.entries, toolCallId);
+  const entry: ToolResultEntry = {
+    kind: "tool-result",
+    id: toolResultEntryId(toolCallId),
+    toolCallId,
+    ...(ownerId !== undefined ? { ownerId } : {}),
+    toolName,
+    ...(Object.keys(argsRecord).length > 0 ? { args: argsRecord } : {}),
+    control,
+    time: event.time,
+  };
+  return { ...state, entries: [...state.entries, entry] };
 }
 
-function findToolCallOwner(entries: ChatEntry[], toolCallId: string): EntryId | undefined {
-  for (let index = entries.length - 1; index >= 0; index--) {
-    const entry = entries[index];
-    if (entry.kind !== "assistant") continue;
-    if (entry.toolCalls.some((toolCall) => toolCall.toolCallId === toolCallId)) return entry.id;
-  }
-  return undefined;
+function applyPersistedControlResolved(
+  state: ChatEntryState,
+  event: Extract<ChatReplayEvent, { type: "control/resolved" }>,
+): ChatEntryState {
+  const index = state.entries.findIndex(
+    (entry) => entry.kind === "tool-result" && entry.control?.requestId === event.data.requestId,
+  );
+  if (index < 0) return state;
+  const previous = state.entries[index] as ToolResultEntry;
+  const control: ControlProjection = event.data.kind === "approval"
+    ? {
+        requestId: event.data.requestId,
+        kind: "approval",
+        status: event.data.approved ? "approved" : "rejected",
+        approved: event.data.approved ?? false,
+        ...(event.data.reason !== undefined ? { reason: event.data.reason } : {}),
+      }
+    : {
+        requestId: event.data.requestId,
+        kind: "question",
+        status: event.data.timedOut ? "timeout" : "answered",
+        ...(event.data.answer !== undefined ? { answer: event.data.answer } : {}),
+        timedOut: event.data.timedOut ?? false,
+      };
+  return { ...state, entries: replaceAt(state.entries, index, { ...previous, control }) };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

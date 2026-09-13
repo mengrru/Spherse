@@ -66,6 +66,8 @@ export class ChatWireProjector {
           seq: event.seq,
           abandonedSeqs: event.data.abandonedSeqs,
         };
+      case "turn/withdrawn":
+        return { type: "turn_withdrawn", seq: event.data.seq };
       case "assistant/message":
       case "tool/result": {
         const message = event.data.message as object;

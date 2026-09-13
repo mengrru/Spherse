@@ -51,7 +51,9 @@
 - [x] server：`ChatWireProjector` run_status 派生化（open turn 跟踪 + 幂等翻转 + `isRunActive()`）；channel 握手 `run_status` 初值与 `cleanupIfIdle` busy 判定改用派生态；`startRun` 不再手动 publish `run_status`（WS/HTTP 发送路径同样由 log 接管，事件顺序变为 echo → run_status → 流式 → run_status(false) → agent_end）
 - [x] 契约测试：`trigger-log-visibility.test.ts`——真 createProject（零 wrapper）+ hub attach + 真实 triggerManager 直连发送，订阅者收到 echo（source/triggerName）+ run_status 双向 + 完成内容 + trigger success；trigger 撞 busy 维持 ValidationError → failed（既有 executor 测试覆盖，无需路由等价测试）
 - [x] fold-on-write 投影缓存挂 project-manager 层（按 session 键控、事件数版本号失效、LRU 32，覆盖未激活 session）+ `getRecentSessionHistory` 走缓存切片；性质测试（缓存分页 == 全量重 fold + 失效 + 淘汰）
+- [x] 快照收缩为 O(in-flight)：消息窗口/工具事件在落库 `message_end`（assistant / toolResult）到达后从 `runEvents` 移除（user 窗口按 messageId 移除），控制事件保留双通道；握手中的 run 快照只含在飞窗口 + 执行中工具
 - [x] 删 `TriggerEventBridge` 的 refreshHistory 调用（log 派生可见性使 live 事件可达；query 失效保留）
+- [x] rebase 适配（renderer v2 已合入 dev）：`turn_withdrawn` 统一走 log 订阅翻译（删 `withdrawLastTurn` 手动 publish）；renderer 消费 `message_end(toolResult)` 并从 assistant content 补 `toolCalls`（直连 trigger run 无 tool 事件时工具内容可见）；renderer 消费落库 `control/requested|resolved`（pending 投影按 requestId 幂等、`turn/end` 清 pending）
 - [x] E2E deviation：e2e 无服务端 LLM stub 模式（chat spec 均为 renderer 级 WS mock），live 可达性由上述真实边界契约测试钉住；chat-streaming-resilience / chat-retry 回归通过
 - 有意取舍（design §2.3）：直连 trigger run 无实时流式（消息于 message_end 落库时完整弹出）、mid-run attach 无 in-flight 快照、trigger 失败对 chat 订阅者不可见
 
