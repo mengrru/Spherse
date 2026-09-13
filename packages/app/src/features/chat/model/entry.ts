@@ -104,3 +104,20 @@ export function isToolResultEntry(entry: ChatEntry): entry is ToolResultEntry {
 export function isErrorEntry(entry: ChatEntry): entry is ErrorEntry {
   return entry.kind === "error";
 }
+
+export function findOptimisticUserIndex(
+  entries: ChatEntry[],
+  match: { clientId?: string; text?: string },
+): number {
+  if (match.clientId !== undefined) {
+    const index = entries.findIndex(
+      (entry) => entry.kind === "user" && entry.optimistic === true && entry.clientId === match.clientId,
+    );
+    if (index >= 0) return index;
+  }
+  if (!match.text) return -1;
+  const matches = entries
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => entry.kind === "user" && entry.optimistic === true && entry.text === match.text);
+  return matches.length === 1 ? matches[0].index : -1;
+}

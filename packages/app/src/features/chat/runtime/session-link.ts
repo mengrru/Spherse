@@ -7,8 +7,7 @@ import {
   WsConnection,
   type WsConnectionStateChange,
 } from "../../../lib/ws/ws-connection";
-import type { AgentEvent } from "../model/agent-event-parse";
-import { decodeServerFrame } from "./decode";
+import { decodeServerFrame, type DecodedFrame } from "./decode";
 
 export interface SessionLinkParams {
   client: ApiClient;
@@ -21,10 +20,11 @@ export interface SessionLinkParams {
 }
 
 export interface SessionLinkHandlers {
-  onOpen(): void;
+  onOpen(since: number | undefined): void;
   onClose(): void;
   onStateChange(change: WsConnectionStateChange): void;
-  onEvent(event: AgentEvent): void;
+  onFrame(frame: DecodedFrame): void;
+  getSince(): number | undefined;
   isAttached(): boolean;
 }
 
@@ -53,13 +53,16 @@ export function createSessionLink(
   handlers: SessionLinkHandlers,
 ): SessionLink {
   let open = false;
+  let lastSince: number | undefined;
   const connection = new WsConnection(
     {
       url: () => {
         const params = getParams();
+        lastSince = handlers.getSince();
+        const path = `/ws/projects/${params.projectId}/chat/${params.agentId}/${params.sessionId}`;
         return buildWsUrl(
           params.baseUrl,
-          `/ws/projects/${params.projectId}/chat/${params.agentId}/${params.sessionId}`,
+          lastSince !== undefined ? `${path}?since=${lastSince}` : path,
           params.accessToken,
         );
       },
@@ -75,14 +78,13 @@ export function createSessionLink(
     },
     {
       onMessage: (parsed) => {
-        const event = decodeServerFrame(parsed);
-        if (event) handlers.onEvent(event);
+        handlers.onFrame(decodeServerFrame(parsed));
       },
       onStateChange: (change) => {
         handlers.onStateChange(change);
         if (change.state === "open") {
           open = true;
-          handlers.onOpen();
+          handlers.onOpen(lastSince);
           return;
         }
         if (

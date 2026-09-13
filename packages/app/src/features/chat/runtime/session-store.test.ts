@@ -290,4 +290,177 @@ describe("chat session store", () => {
     expect(assistant.toolCalls).toHaveLength(1);
     expect(result.ownerId).toBe(assistant.id);
   });
+
+  it("settles the optimistic entry from the live echo and drops abandoned seqs on retry", async () => {
+    const socket = await attachAndOpen();
+    useChatSessionStore.getState().sendMessage("s1", "hi");
+    await flush();
+    const clientId = (session().entries[0] as UserEntry).clientId;
+
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "user_message", seq: 1, message: { role: "user", content: "hi" }, clientId }),
+    } as MessageEvent);
+    socket.onmessage?.({ data: JSON.stringify({ type: "message_start", message: assistantMessage(""), messageId: "m1" }) } as MessageEvent);
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "message_end", message: assistantMessage("", { stopReason: "error", errorMessage: "boom" }), messageId: "m1", seq: 2 }),
+    } as MessageEvent);
+    socket.onmessage?.({ data: JSON.stringify({ type: "run_status", active: false }) } as MessageEvent);
+    socket.onmessage?.({ data: JSON.stringify({ type: "turn_retried", seq: 3, abandonedSeqs: [2] }) } as MessageEvent);
+    await flush();
+
+    expect(session().entries.map((entry) => entry.kind)).toEqual(["user"]);
+    expect((session().entries[0] as UserEntry).seq).toBe(1);
+    expect((session().entries[0] as UserEntry).optimistic).toBeUndefined();
+    expect(session().cursor).toBe(3);
+  });
+
+  it("replays persisted events after a v2 reconnect and drops stale transient windows", async () => {
+    const client = createMockClient();
+    const socket = await attachAndOpen("s1", client);
+    useChatSessionStore.getState().sendMessage("s1", "hi");
+    await flush();
+    const clientId = (session().entries[0] as UserEntry).clientId;
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "user_message", seq: 1, message: { role: "user", content: "hi" }, clientId }),
+    } as MessageEvent);
+    socket.onmessage?.({ data: JSON.stringify({ type: "message_start", message: assistantMessage(""), messageId: "m1" }) } as MessageEvent);
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "message_update", message: assistantMessage("partial"), messageId: "m1" }),
+    } as MessageEvent);
+    await flush();
+    expect(session().cursor).toBe(1);
+
+    socket.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    const reopened = mock.instances[mock.instances.length - 1];
+    expect(reopened.url).toContain("since=1");
+    openInstance(reopened);
+    reopened.onmessage?.({ data: JSON.stringify({ type: "session_ready", lastSeq: 3, replay: true }) } as MessageEvent);
+    reopened.onmessage?.({
+      data: JSON.stringify({
+        type: "replay_events",
+        events: [
+          {
+            type: "assistant/message",
+            seq: 2,
+            time: 20,
+            data: { message: assistantMessage("done", { timestamp: 20 }) },
+          },
+          { type: "turn/end", seq: 3, time: 21, data: { reason: "completed" } },
+        ],
+      }),
+    } as MessageEvent);
+    reopened.onmessage?.({ data: JSON.stringify({ type: "replay_done" }) } as MessageEvent);
+    reopened.onmessage?.({ data: JSON.stringify({ type: "run_status", active: false }) } as MessageEvent);
+    await flush();
+
+    const recovered = session();
+    expect(recovered.entries.map((entry) => entry.kind)).toEqual(["user", "assistant"]);
+    expect(recovered.entries[1]).toMatchObject({ id: "e2", seq: 2, text: "done", streaming: false });
+    expect(recovered.entries.filter((entry) => entry.kind === "assistant" && entry.streaming)).toHaveLength(0);
+    expect(recovered.cursor).toBe(3);
+    expect(recovered.history.status).toBe("ready");
+    expect(client.getSessionMessagesPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("rebuilds a live window from the snapshot after replay and dedups on message_end", async () => {
+    const client = createMockClient();
+    const socket = await attachAndOpen("s1", client);
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "user_message", seq: 1, message: { role: "user", content: "hi" } }),
+    } as MessageEvent);
+    await flush();
+
+    socket.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    const reopened = mock.instances[mock.instances.length - 1];
+    openInstance(reopened);
+    reopened.onmessage?.({ data: JSON.stringify({ type: "session_ready", lastSeq: 4, replay: true }) } as MessageEvent);
+    reopened.onmessage?.({
+      data: JSON.stringify({
+        type: "replay_events",
+        events: [
+          { type: "turn/start", seq: 2, time: 20, data: {} },
+        ],
+      }),
+    } as MessageEvent);
+    reopened.onmessage?.({ data: JSON.stringify({ type: "replay_done" }) } as MessageEvent);
+    reopened.onmessage?.({ data: JSON.stringify({ type: "message_start", message: assistantMessage(""), messageId: "m1" }) } as MessageEvent);
+    reopened.onmessage?.({
+      data: JSON.stringify({ type: "message_update", message: assistantMessage("partial"), messageId: "m1" }),
+    } as MessageEvent);
+    await flush();
+    expect(session().entries.filter((entry) => entry.kind === "assistant")).toHaveLength(1);
+
+    reopened.onmessage?.({
+      data: JSON.stringify({ type: "message_end", message: assistantMessage("final"), messageId: "m1", seq: 4 }),
+    } as MessageEvent);
+    await flush();
+
+    const assistants = session().entries.filter((entry) => entry.kind === "assistant") as AssistantEntry[];
+    expect(assistants).toHaveLength(1);
+    expect(assistants[0]).toMatchObject({ id: "m1", text: "final", seq: 4 });
+    expect(session().cursor).toBe(4);
+  });
+
+  it("settles a missed echo from the reconnect page when no cursor was recorded", async () => {
+    const client = createMockClient();
+    await attachAndOpen("s1", client);
+    useChatSessionStore.getState().sendMessage("s1", "hi");
+    await flush();
+
+    (client.getSessionMessagesPage as ReturnType<typeof vi.fn>).mockResolvedValue(historyPage([
+      { id: 1, message: { role: "user", content: "hi", timestamp: 10 } },
+    ]));
+    const socket = mock.instances[mock.instances.length - 1];
+    socket.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    openInstance(mock.instances[mock.instances.length - 1]);
+    await flush();
+
+    expect(session().entries).toHaveLength(1);
+    expect(session().entries[0]).toMatchObject({ kind: "user", seq: 1, text: "hi" });
+    expect((session().entries[0] as UserEntry).optimistic).toBeUndefined();
+    expect(session().cursor).toBe(1);
+  });
+
+  it("settles a missed echo from the replay by unique text", async () => {
+    const client = createMockClient();
+    const socket = await attachAndOpen("s1", client);
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "user_message", seq: 1, message: { role: "user", content: "older" } }),
+    } as MessageEvent);
+    await flush();
+    useChatSessionStore.getState().sendMessage("s1", "hi");
+    await flush();
+    expect(session().cursor).toBe(1);
+    expect(session().entries[1]).toMatchObject({ optimistic: true });
+
+    socket.close();
+    await vi.advanceTimersByTimeAsync(1000);
+    const reopened = mock.instances[mock.instances.length - 1];
+    expect(reopened.url).toContain("since=1");
+    openInstance(reopened);
+    reopened.onmessage?.({ data: JSON.stringify({ type: "session_ready", lastSeq: 2, replay: true }) } as MessageEvent);
+    reopened.onmessage?.({
+      data: JSON.stringify({
+        type: "replay_events",
+        events: [
+          {
+            type: "user/message",
+            seq: 2,
+            time: 10,
+            data: { message: { role: "user", content: "hi", timestamp: 10 } },
+          },
+        ],
+      }),
+    } as MessageEvent);
+    reopened.onmessage?.({ data: JSON.stringify({ type: "replay_done" }) } as MessageEvent);
+    await flush();
+
+    const users = session().entries.filter((entry) => entry.kind === "user") as UserEntry[];
+    expect(users).toHaveLength(2);
+    expect(users[1]).toMatchObject({ seq: 2, text: "hi" });
+    expect(users[1].optimistic).toBeUndefined();
+  });
 });

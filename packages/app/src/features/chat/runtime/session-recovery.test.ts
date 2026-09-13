@@ -1,29 +1,47 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { SessionMessagesPageResponse } from "@spherse/contracts";
-import { createHttpRecovery, type RecoveryHost } from "./session-recovery";
+import { createSessionRecovery, type RecoveryHost } from "./session-recovery";
 import type { AgentEvent } from "../model/agent-event-parse";
+import type { DecodedFrame } from "./decode";
 
 function page(): SessionMessagesPageResponse {
   return { entries: [], hasMore: false, oldestId: null };
 }
 
-function event(type: string): AgentEvent {
-  return { type } as unknown as AgentEvent;
+function event(type: string): DecodedFrame {
+  return { kind: "event", event: { type } as unknown as AgentEvent };
+}
+
+function sessionReady(replay = true): DecodedFrame {
+  return { kind: "session-ready", lastSeq: 0, replay };
 }
 
 function createHost(overrides: Partial<RecoveryHost> = {}) {
   const calls = {
     applied: 0,
+    finished: 0,
+    persisted: [] as string[][],
     emitted: [] as AgentEvent[][],
     history: [] as Array<[string, boolean]>,
+    order: [] as string[],
   };
   const host: RecoveryHost = {
     fetchPage: vi.fn().mockResolvedValue(page()),
     applyPage: () => {
       calls.applied += 1;
+      calls.order.push("applyPage");
+    },
+    applyPersistedEvents: (events) => {
+      calls.persisted.push(events.map((item) => item.type));
+      calls.order.push("persisted");
+    },
+    finishReplay: () => {
+      calls.finished += 1;
+      calls.order.push("finishReplay");
     },
     emitEvents: (events) => {
       calls.emitted.push(events);
+      calls.order.push("emit");
     },
     setHistory: (status, error) => {
       calls.history.push([status, error]);
@@ -35,7 +53,7 @@ function createHost(overrides: Partial<RecoveryHost> = {}) {
   return { host, calls };
 }
 
-describe("http recovery", () => {
+describe("session recovery", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -44,19 +62,73 @@ describe("http recovery", () => {
     vi.useRealTimers();
   });
 
-  it("buffers frames during sync, applies the page, then emits buffered events", async () => {
+  it("reconciles over HTTP on a cold open and buffers frames until the page lands", async () => {
     const { host, calls } = createHost();
-    const recovery = createHttpRecovery(host);
+    const recovery = createSessionRecovery(host);
 
-    recovery.onOpen();
+    recovery.onOpen(undefined);
     expect(calls.history[0]).toEqual(["syncing", false]);
     expect(recovery.onFrame(event("buffered"))).toBe(true);
 
     await vi.advanceTimersByTimeAsync(0);
     expect(calls.applied).toBe(1);
-    expect(calls.emitted).toEqual([[event("buffered")]]);
+    expect(calls.emitted).toEqual([[{ type: "buffered" }]]);
     expect(calls.history.at(-1)).toEqual(["ready", false]);
     expect(recovery.onFrame(event("live"))).toBe(false);
+  });
+
+  it("replays from since on a warm open before delivering snapshot frames", () => {
+    const { host, calls } = createHost();
+    const recovery = createSessionRecovery(host);
+
+    recovery.onOpen(5);
+    expect(host.fetchPage).not.toHaveBeenCalled();
+    expect(recovery.onFrame(sessionReady())).toBe(true);
+    expect(recovery.onFrame({ kind: "event", event: { type: "message_start" } as unknown as AgentEvent })).toBe(true);
+    expect(recovery.onFrame({
+      kind: "replay-events",
+      events: [{ type: "user/message" }],
+    } as unknown as DecodedFrame)).toBe(true);
+    expect(recovery.onFrame({
+      kind: "replay-events",
+      events: [{ type: "assistant/message" }],
+    } as unknown as DecodedFrame)).toBe(true);
+    expect(calls.emitted).toEqual([]);
+
+    expect(recovery.onFrame({ kind: "replay-done" })).toBe(true);
+
+    expect(calls.persisted).toEqual([["user/message"], ["assistant/message"]]);
+    expect(calls.finished).toBe(1);
+    expect(calls.emitted).toEqual([[{ type: "message_start" }]]);
+    expect(calls.history.at(-1)).toEqual(["ready", false]);
+    expect(calls.order).toEqual(["persisted", "persisted", "finishReplay", "emit"]);
+    expect(recovery.onFrame(event("live"))).toBe(false);
+  });
+
+  it("falls back to HTTP reconciliation when the first frame is not session_ready", async () => {
+    const { host, calls } = createHost();
+    const recovery = createSessionRecovery(host);
+
+    recovery.onOpen(5);
+    expect(host.fetchPage).not.toHaveBeenCalled();
+    expect(recovery.onFrame(event("legacy"))).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls.applied).toBe(1);
+    expect(calls.emitted).toEqual([[{ type: "legacy" }]]);
+    expect(calls.history.at(-1)).toEqual(["ready", false]);
+  });
+
+  it("falls back to HTTP reconciliation when the server cannot replay", async () => {
+    const { host, calls } = createHost();
+    const recovery = createSessionRecovery(host);
+
+    recovery.onOpen(5);
+    expect(recovery.onFrame(sessionReady(false))).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(0);
+    expect(calls.applied).toBe(1);
+    expect(calls.history.at(-1)).toEqual(["ready", false]);
   });
 
   it("retries with backoff before failing and keeps the never-ready error semantics", async () => {
@@ -67,9 +139,9 @@ describe("http recovery", () => {
       .mockRejectedValueOnce(new Error("nope"));
 
     const pending = createHost({ fetchPage });
-    const pendingRecovery = createHttpRecovery(pending.host);
+    const pendingRecovery = createSessionRecovery(pending.host);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    pendingRecovery.onOpen();
+    pendingRecovery.onOpen(undefined);
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(1000);
     await vi.advanceTimersByTimeAsync(2000);
@@ -82,9 +154,9 @@ describe("http recovery", () => {
       fetchPage: vi.fn().mockRejectedValue(new Error("nope")),
       getHistoryStatus: () => "ready",
     });
-    const readyRecovery = createHttpRecovery(ready.host);
+    const readyRecovery = createSessionRecovery(ready.host);
     const warn2 = vi.spyOn(console, "warn").mockImplementation(() => {});
-    readyRecovery.onOpen();
+    readyRecovery.onOpen(undefined);
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(1000);
     await vi.advanceTimersByTimeAsync(2000);
@@ -99,10 +171,10 @@ describe("http recovery", () => {
       .mockRejectedValueOnce(new Error("nope"))
       .mockResolvedValue(page());
     const { host, calls } = createHost({ fetchPage });
-    const recovery = createHttpRecovery(host);
+    const recovery = createSessionRecovery(host);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    recovery.onOpen();
+    recovery.onOpen(undefined);
     await vi.advanceTimersByTimeAsync(0);
     await vi.advanceTimersByTimeAsync(1000);
     await vi.advanceTimersByTimeAsync(0);
@@ -114,10 +186,10 @@ describe("http recovery", () => {
   it("cancel stops the retry chain", async () => {
     const fetchPage = vi.fn().mockRejectedValue(new Error("nope"));
     const { host } = createHost({ fetchPage });
-    const recovery = createHttpRecovery(host);
+    const recovery = createSessionRecovery(host);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    recovery.onOpen();
+    recovery.onOpen(undefined);
     await vi.advanceTimersByTimeAsync(0);
     recovery.cancel();
     await vi.advanceTimersByTimeAsync(10_000);
@@ -125,17 +197,30 @@ describe("http recovery", () => {
     warn.mockRestore();
   });
 
-  it("flushes buffered frames and restores history status when the socket closes mid-sync", async () => {
+  it("flushes buffered frames and restores history status when the socket closes mid-sync", () => {
     const { host, calls } = createHost({
       fetchPage: vi.fn().mockImplementation(() => new Promise(() => {})),
     });
-    const recovery = createHttpRecovery(host);
+    const recovery = createSessionRecovery(host);
 
-    recovery.onOpen();
+    recovery.onOpen(undefined);
     recovery.onFrame(event("buffered"));
     recovery.onClose();
 
-    expect(calls.emitted).toEqual([[event("buffered")]]);
+    expect(calls.emitted).toEqual([[{ type: "buffered" }]]);
+    expect(calls.history.at(-1)).toEqual(["pending", false]);
+  });
+
+  it("flushes snapshot frames buffered during replay when the socket closes", () => {
+    const { host, calls } = createHost();
+    const recovery = createSessionRecovery(host);
+
+    recovery.onOpen(5);
+    recovery.onFrame(sessionReady());
+    recovery.onFrame(event("snapshot"));
+    recovery.onClose();
+
+    expect(calls.emitted).toEqual([[{ type: "snapshot" }]]);
     expect(calls.history.at(-1)).toEqual(["pending", false]);
   });
 });

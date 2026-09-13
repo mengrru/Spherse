@@ -7,6 +7,7 @@ import {
 import { extractMessageText, extractToolCalls } from "./chat-tool-projection";
 import { classifyErrorMessageString } from "./classify-error";
 import {
+  findOptimisticUserIndex,
   persistedEntryId,
   type AssistantEntry,
   type ChatEntry,
@@ -119,12 +120,13 @@ export function applyHistoryPage<T extends ChatEntryState>(
 
   let cursor = state.cursor;
   if (mode === "latest") {
-    const pageUserTexts = new Set(
-      parsed.filter((entry) => entry.kind === "user").map((entry) => entry.text),
-    );
-    entries = entries.filter(
-      (entry) => !(entry.kind === "user" && entry.optimistic === true && pageUserTexts.has(entry.text)),
-    );
+    for (const pageEntry of parsed) {
+      if (pageEntry.kind !== "user") continue;
+      const optimisticIndex = findOptimisticUserIndex(entries, { text: pageEntry.text });
+      if (optimisticIndex >= 0) {
+        entries = entries.filter((_, index) => index !== optimisticIndex);
+      }
+    }
     for (const entry of parsed) {
       if (entry.seq !== undefined && entry.seq > cursor) cursor = entry.seq;
     }

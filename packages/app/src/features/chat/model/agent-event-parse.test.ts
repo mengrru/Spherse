@@ -145,7 +145,7 @@ describe("parseAgentEvent", () => {
       seq: 3,
     });
   });
-  it("drops protocol v2 events until the new runtime consumes them", () => {
+  it("maps protocol v2 echo events into live events", () => {
     expect(parseAgentEvent({ type: "session_ready", lastSeq: 3, replay: true })).toBeUndefined();
     expect(parseAgentEvent({ type: "replay_done" })).toBeUndefined();
     expect(
@@ -153,9 +153,21 @@ describe("parseAgentEvent", () => {
         type: "user_message",
         seq: 4,
         message: { role: "user", content: "hi", timestamp: 1 },
+        source: "triggered",
+        triggerName: "cron",
       }),
-    ).toBeUndefined();
-    expect(parseAgentEvent({ type: "turn_retried", seq: 5, abandonedSeqs: [3] })).toBeUndefined();
+    ).toEqual({
+      type: "user_message",
+      seq: 4,
+      message: { role: "user", content: "hi", timestamp: 1 },
+      source: "triggered",
+      triggerName: "cron",
+    });
+    expect(parseAgentEvent({ type: "turn_retried", seq: 5, abandonedSeqs: [3] })).toEqual({
+      type: "turn_retried",
+      seq: 5,
+      abandonedSeqs: [3],
+    });
   });
   it("passes through tool_execution_* unchanged", () => {
     expect(

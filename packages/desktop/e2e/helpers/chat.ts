@@ -1,4 +1,4 @@
-import { _electron as electron, type ElectronApplication, type Page } from "@playwright/test";
+import { _electron as electron, type ElectronApplication, type Page, type WebSocketRoute } from "@playwright/test";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -197,4 +197,165 @@ export function createStreamingSequence(): MockEvent[] {
     { type: "turn_end", message: { role: "assistant", content: [{ type: "text", text: "Based on the file content." }] }, toolResults: [] },
     { type: "agent_end", messages: [] },
   ];
+}
+
+export interface V2ChatServer {
+  readonly receivedMessages: number;
+  sinceValues: number[];
+  closeActiveSocket(): void;
+  streamAssistant(text: string): void;
+  finishAssistant(text: string): void;
+  completeWhileDisconnected(text: string): void;
+}
+
+export async function mockV2ChatServer(page: Page, port: number): Promise<V2ChatServer> {
+  const log: MockEvent[] = [];
+  const runEvents: MockEvent[] = [];
+  const sockets: WebSocketRoute[] = [];
+  const sinceValues: number[] = [];
+  let receivedMessages = 0;
+  let lastSeq = -1;
+  let messageCounter = 0;
+  let currentMessageId: string | undefined;
+  let running = false;
+
+  const broadcast = (event: MockEvent): void => {
+    for (const socket of sockets) socket.send(JSON.stringify(event));
+  };
+
+  const persist = (event: MockEvent): MockEvent => {
+    log.push(event);
+    return event;
+  };
+
+  const persistAssistant = (text: string): number => {
+    const seq = ++lastSeq;
+    persist({
+      type: "assistant/message",
+      seq,
+      time: seq,
+      data: { message: { role: "assistant", content: [{ type: "text", text }], timestamp: seq } },
+    });
+    return seq;
+  };
+
+  const persistTurnEnd = (): void => {
+    const seq = ++lastSeq;
+    persist({ type: "turn/end", seq, time: seq, data: { reason: "completed" } });
+  };
+
+  await page.routeWebSocket(`ws://localhost:${port}/ws/projects/**/chat/**`, (ws) => {
+    sockets.push(ws);
+    const sinceParam = new URL(ws.url()).searchParams.get("since");
+    const since = sinceParam === null ? undefined : Number(sinceParam);
+    if (since !== undefined) sinceValues.push(since);
+
+    ws.send(JSON.stringify({ type: "session_ready", lastSeq, replay: true }));
+    if (since !== undefined) {
+      const replay = log.filter((event) => (event.seq as number) > since);
+      if (replay.length > 0) ws.send(JSON.stringify({ type: "replay_events", events: replay }));
+      ws.send(JSON.stringify({ type: "replay_done" }));
+    }
+    for (const event of runEvents) ws.send(JSON.stringify(event));
+    ws.send(JSON.stringify({ type: "run_status", active: running }));
+
+    ws.onMessage((raw) => {
+      const message = JSON.parse(String(raw));
+      if (message.type === "ping") {
+        ws.send(JSON.stringify({ type: "pong" }));
+        return;
+      }
+      if (message.type !== "message") return;
+      receivedMessages += 1;
+      messageCounter += 1;
+      currentMessageId = `m${messageCounter}`;
+      running = true;
+      runEvents.length = 0;
+      const seq = ++lastSeq;
+      const userEvent: MockEvent = {
+        type: "user/message",
+        seq,
+        time: seq,
+        data: { message: { role: "user", content: message.content, timestamp: seq } },
+      };
+      persist(userEvent);
+      broadcast({ type: "run_status", active: true });
+      broadcast({
+        type: "user_message",
+        seq,
+        message: userEvent.data?.message,
+        ...(message.clientId ? { clientId: message.clientId } : {}),
+      });
+    });
+  });
+
+  const recordRunEvent = (event: MockEvent): void => {
+    if (event.type === "message_update") {
+      for (let index = runEvents.length - 1; index >= 0; index--) {
+        if (runEvents[index].type === "message_update") {
+          runEvents[index] = event;
+          return;
+        }
+        if (runEvents[index].type === "message_start") break;
+      }
+    }
+    runEvents.push(event);
+  };
+
+  return {
+    sinceValues,
+
+    get receivedMessages() {
+      return receivedMessages;
+    },
+
+    closeActiveSocket() {
+      const socket = sockets.pop();
+      socket?.close();
+    },
+
+    streamAssistant(text) {
+      const messageId = currentMessageId;
+      if (messageId === undefined) return;
+      const start: MockEvent = { type: "message_start", message: { role: "assistant", content: [] }, messageId };
+      const update: MockEvent = {
+        type: "message_update",
+        message: { role: "assistant", content: [{ type: "text", text }] },
+        messageId,
+      };
+      if (!runEvents.some((event) => event.type === "message_start")) {
+        runEvents.push(start);
+        broadcast(start);
+      }
+      recordRunEvent(update);
+      broadcast(update);
+    },
+
+    finishAssistant(text) {
+      const messageId = currentMessageId;
+      const seq = persistAssistant(text);
+      persistTurnEnd();
+      if (messageId !== undefined) {
+        broadcast({
+          type: "message_end",
+          message: { role: "assistant", content: [{ type: "text", text }], timestamp: lastSeq },
+          messageId,
+          seq,
+        });
+      }
+      broadcast({ type: "agent_end", messages: [], seq: lastSeq });
+      broadcast({ type: "run_status", active: false });
+      running = false;
+      currentMessageId = undefined;
+      runEvents.length = 0;
+    },
+
+    completeWhileDisconnected(text) {
+      persistAssistant(text);
+      persistTurnEnd();
+      running = false;
+      currentMessageId = undefined;
+      runEvents.length = 0;
+    },
+  };
 }

@@ -1,5 +1,5 @@
 import type { WsConnectionState } from "../../../lib/ws/ws-connection";
-import type { ChatEntry, EntryId } from "../model/entry";
+import { createEntryState, type ChatEntryState } from "../model/entry-reducer";
 
 export interface ChatHistoryState {
   status: "pending" | "syncing" | "ready";
@@ -16,17 +16,11 @@ export interface ChatConnectionState {
   closeCode?: number;
 }
 
-export interface ChatSessionState {
+export interface ChatSessionState extends ChatEntryState {
   sessionId: string;
   generation: number;
   projectId: string;
   agentId: string;
-  entries: ChatEntry[];
-  openStreamId: EntryId | null;
-  ownerAssistantId: EntryId | null;
-  streaming: boolean;
-  pendingWithdraw: boolean;
-  cursor: number;
   initialMessageSent: boolean;
   connection: ChatConnectionState;
   history: ChatHistoryState;
@@ -45,16 +39,11 @@ export function createSessionState(
 ): ChatSessionState {
   generationCounter += 1;
   return {
+    ...createEntryState(),
     sessionId,
     generation: generationCounter,
     projectId,
     agentId,
-    entries: [],
-    openStreamId: null,
-    ownerAssistantId: null,
-    streaming: false,
-    pendingWithdraw: false,
-    cursor: -1,
     initialMessageSent: false,
     connection: { state: "idle", attempt: 0, delayMs: 0 },
     history: { status: "pending", hasMore: false, oldestSeq: null, loadingMore: false, error: false },

@@ -1,30 +1,39 @@
-import type { SessionMessagesPageResponse } from "@spherse/contracts";
+import type { ChatReplayEvent, SessionMessagesPageResponse } from "@spherse/contracts";
 import type { AgentEvent } from "../model/agent-event-parse";
+import type { DecodedFrame } from "./decode";
+
+export type HistoryStatus = "pending" | "syncing" | "ready";
 
 export interface RecoveryHost {
   fetchPage(): Promise<SessionMessagesPageResponse>;
   applyPage(page: SessionMessagesPageResponse): void;
+  applyPersistedEvents(events: ChatReplayEvent[]): void;
+  finishReplay(): void;
   emitEvents(events: AgentEvent[]): void;
-  setHistory(status: "pending" | "syncing" | "ready", error: boolean): void;
-  getHistoryStatus(): "pending" | "syncing" | "ready";
+  setHistory(status: HistoryStatus, error: boolean): void;
+  getHistoryStatus(): HistoryStatus;
   isAlive(): boolean;
 }
 
 export interface SessionRecovery {
-  onOpen(): void;
-  onFrame(event: AgentEvent): boolean;
+  onOpen(since: number | undefined): void;
+  onFrame(frame: DecodedFrame): boolean;
   onClose(): void;
   cancel(): void;
 }
 
 const RECONCILE_BACKOFFS = [1000, 2000, 5000] as const;
 
-export function createHttpRecovery(host: RecoveryHost): SessionRecovery {
+type RecoveryMode = "idle" | "awaiting-first-frame" | "http-sync" | "replay" | "live";
+
+export function createSessionRecovery(host: RecoveryHost): SessionRecovery {
   let generation = 0;
-  let buffering = false;
-  let buffer: AgentEvent[] = [];
+  let mode: RecoveryMode = "idle";
+  let buffered: AgentEvent[] = [];
+  let replayBuffered: AgentEvent[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
   let wasReady = false;
+  let sentSince: number | undefined;
 
   const clearTimer = () => {
     if (timer === undefined) return;
@@ -32,22 +41,28 @@ export function createHttpRecovery(host: RecoveryHost): SessionRecovery {
     timer = undefined;
   };
 
-  const flush = () => {
-    buffering = false;
-    const events = buffer;
-    buffer = [];
+  const flushBuffered = () => {
+    const events = buffered;
+    buffered = [];
     if (events.length > 0) host.emitEvents(events);
   };
 
-  const run = async (gen: number) => {
+  const flushReplayBuffered = () => {
+    const events = replayBuffered;
+    replayBuffered = [];
+    if (events.length > 0) host.emitEvents(events);
+  };
+
+  const runHttpSync = async (gen: number) => {
     for (let attempt = 0; attempt <= RECONCILE_BACKOFFS.length; attempt++) {
       if (gen !== generation || !host.isAlive()) return;
       try {
         const page = await host.fetchPage();
         if (gen !== generation || !host.isAlive()) return;
         host.applyPage(page);
-        flush();
+        flushBuffered();
         host.setHistory("ready", false);
+        mode = "live";
         return;
       } catch (err) {
         if (gen !== generation || !host.isAlive()) return;
@@ -61,43 +76,100 @@ export function createHttpRecovery(host: RecoveryHost): SessionRecovery {
           });
           continue;
         }
-        flush();
+        flushBuffered();
         host.setHistory(wasReady ? "ready" : "pending", !wasReady);
+        mode = "live";
         return;
       }
     }
   };
 
+  const startHttpSync = (gen: number) => {
+    mode = "http-sync";
+    void runHttpSync(gen);
+  };
+
   return {
-    onOpen() {
+    onOpen(since) {
       generation += 1;
-      const gen = generation;
-      buffering = true;
-      buffer = [];
+      sentSince = since;
       wasReady = host.getHistoryStatus() === "ready";
       host.setHistory("syncing", false);
-      void run(gen);
+      buffered = [];
+      replayBuffered = [];
+      if (since === undefined) {
+        startHttpSync(generation);
+        return;
+      }
+      mode = "awaiting-first-frame";
     },
 
-    onFrame(event) {
-      if (!buffering) return false;
-      buffer.push(event);
-      return true;
+    onFrame(frame) {
+      switch (mode) {
+        case "awaiting-first-frame": {
+          if (frame.kind === "session-ready") {
+            if (sentSince !== undefined && frame.replay) {
+              mode = "replay";
+            } else {
+              startHttpSync(generation);
+            }
+            return true;
+          }
+          if (frame.kind === "event") buffered.push(frame.event);
+          startHttpSync(generation);
+          return true;
+        }
+        case "http-sync": {
+          if (frame.kind === "event") buffered.push(frame.event);
+          return true;
+        }
+        case "replay": {
+          if (frame.kind === "replay-events") {
+            host.applyPersistedEvents(frame.events);
+            return true;
+          }
+          if (frame.kind === "replay-done") {
+            mode = "live";
+            host.finishReplay();
+            flushReplayBuffered();
+            host.setHistory("ready", false);
+            return true;
+          }
+          if (frame.kind === "event") replayBuffered.push(frame.event);
+          return true;
+        }
+        case "live": {
+          if (frame.kind === "replay-events") {
+            host.applyPersistedEvents(frame.events);
+            return true;
+          }
+          return false;
+        }
+        default:
+          return false;
+      }
     },
 
     onClose() {
       clearTimer();
       generation += 1;
-      if (!buffering) return;
-      flush();
-      host.setHistory(wasReady ? "ready" : "pending", false);
+      const previous = mode;
+      mode = "idle";
+      if (previous === "http-sync" || previous === "awaiting-first-frame") {
+        flushBuffered();
+        host.setHistory(wasReady ? "ready" : "pending", false);
+      } else if (previous === "replay") {
+        flushReplayBuffered();
+        host.setHistory(wasReady ? "ready" : "pending", false);
+      }
     },
 
     cancel() {
       clearTimer();
       generation += 1;
-      buffering = false;
-      buffer = [];
+      mode = "idle";
+      buffered = [];
+      replayBuffered = [];
     },
   };
 }

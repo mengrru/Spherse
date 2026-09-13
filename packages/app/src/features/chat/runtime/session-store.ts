@@ -94,6 +94,7 @@ export const useChatSessionStore = create<ChatSessionStoreState & ChatSessionSto
       onLinkOpen: (sessionId) => sendInitialMessage(sessionId),
       deliverEvents: (sessionId, events) => queue.pushBatch(sessionId, events),
       cancelQueued: (sessionId) => queue.cancel(sessionId),
+      flushPending: () => queue.flushNow(),
     },
   );
 

@@ -153,6 +153,21 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent | undefined 
         approved: event.approved,
         reason: event.reason,
       };
+    case "user_message":
+      return {
+        type: "user_message",
+        seq: event.seq,
+        message: parseAgentMessage(event.message),
+        ...(event.clientId !== undefined ? { clientId: event.clientId } : {}),
+        ...(event.source !== undefined ? { source: event.source } : {}),
+        ...(event.triggerName !== undefined ? { triggerName: event.triggerName } : {}),
+      };
+    case "turn_retried":
+      return {
+        type: "turn_retried",
+        seq: event.seq,
+        abandonedSeqs: event.abandonedSeqs,
+      };
     case "agent_end":
       return {
         type: "agent_end",
