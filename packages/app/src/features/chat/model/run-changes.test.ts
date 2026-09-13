@@ -41,6 +41,27 @@ describe("run changes", () => {
     expect(last.runChanges?.[0].ops.map((op) => op.toolCallId)).toEqual(["tc1", "tc2"]);
   });
 
+  it("does not attach run changes before a file operation completes", () => {
+    const groups = assembleGroups([
+      user(),
+      assistant({
+        id: "a1",
+        toolCalls: [{ toolCallId: "tc1", toolName: "write_file", args: { path: "a.ts" } }],
+      }),
+      toolResult({
+        id: "tr1",
+        ownerId: "a1",
+        toolCallId: "tc1",
+        toolName: "write_file",
+        args: { path: "a.ts" },
+        partialResult: "writing",
+      }),
+    ]);
+    const bubble = groups[0].bubbles[0];
+    if (bubble.kind !== "assistant") return;
+    expect(bubble.runChanges).toBeUndefined();
+  });
+
   it("ignores failed file operations and non-file tools", () => {
     const groups = assembleGroups([
       user(),

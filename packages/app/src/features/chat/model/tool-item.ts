@@ -28,7 +28,7 @@ export function toolItemFromResult(result: ToolResultEntry): ToolItem {
     toolCallId: result.toolCallId,
     toolName,
     args,
-    status: result.isError ? "error" : "completed",
+    status: toolStatus(result),
   };
   const displayResult = displayValue(result.result);
   if (displayResult !== undefined) item.result = displayResult;
@@ -46,7 +46,7 @@ function finalizeToolItem(previous: ToolItem, result: ToolResultEntry): ToolItem
     toolCallId: previous.toolCallId,
     toolName,
     args,
-    status: result.isError ? "error" : "completed",
+    status: toolStatus(result),
   };
   const displayResult = displayValue(result.result);
   if (displayResult !== undefined) item.result = displayResult;
@@ -60,4 +60,10 @@ function finalizeToolItem(previous: ToolItem, result: ToolResultEntry): ToolItem
 function displayValue(value: unknown): string | undefined {
   if (value === undefined) return undefined;
   return typeof value === "string" ? value : JSON.stringify(value);
+}
+
+function toolStatus(result: ToolResultEntry): ToolItem["status"] {
+  if (result.isError === true) return "error";
+  if (result.isError === false || result.result !== undefined) return "completed";
+  return "running";
 }

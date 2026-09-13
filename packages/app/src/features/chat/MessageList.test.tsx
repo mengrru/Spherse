@@ -91,6 +91,36 @@ describe("MessageList", () => {
     expect(document.querySelector(".animate-bounce")).not.toBeNull();
   });
 
+  it("passes the withdraw action only to the withdrawable user bubble", async () => {
+    const user = userEvent.setup();
+    const onWithdraw = vi.fn();
+    renderList(
+      [
+        {
+          id: "g1",
+          kind: "turn",
+          user: { kind: "user", id: "u1", text: "old" },
+          hasError: false,
+          bubbles: [],
+        },
+        {
+          id: "g2",
+          kind: "turn",
+          user: { kind: "user", id: "u2", text: "new" },
+          hasError: false,
+          bubbles: [],
+        },
+      ],
+      { withdrawableUserId: "u2", onWithdraw },
+    );
+
+    const buttons = screen.getAllByRole("button", { name: "撤回" });
+    expect(buttons).toHaveLength(1);
+    await user.click(buttons[0]);
+    await user.click(screen.getByRole("button", { name: "确认撤回" }));
+    expect(onWithdraw).toHaveBeenCalledTimes(1);
+  });
+
   it("loads more history through the load more button", async () => {
     const user = userEvent.setup();
     const onLoadMore = vi.fn();

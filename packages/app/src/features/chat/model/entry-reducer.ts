@@ -432,7 +432,7 @@ function applyWithdraw(state: ChatEntryState): ChatEntryState {
   };
 }
 
-function clearRun(state: ChatEntryState): ChatEntryState {
+export function clearRun<T extends ChatEntryState>(state: T): T {
   const openIndex = indexOfId(state.entries, state.openStreamId);
   let entries = state.entries;
   if (openIndex >= 0) {
@@ -447,7 +447,7 @@ function clearRun(state: ChatEntryState): ChatEntryState {
     openStreamId: null,
     ownerAssistantId: null,
     streaming: false,
-  };
+  } as T;
 }
 
 function clearPendingQuestionControls(state: ChatEntryState): ChatEntryState {

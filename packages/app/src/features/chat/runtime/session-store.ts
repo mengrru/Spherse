@@ -1,23 +1,12 @@
 import { create } from "zustand";
 import type { ApiClient } from "../../../lib/api";
 import type { SendableImage } from "../types";
-import { applyHistoryPage } from "../model/history-entries";
 import { reduceLiveEvents } from "../model/entry-reducer";
 import { createEventQueue, type EventBatches } from "./event-queue";
 import { createHistoryLoader } from "./history-loader";
 import { createOutboundActions } from "./outbound-actions";
-import { createHttpRecovery, type SessionRecovery } from "./session-recovery";
-import {
-  createSessionLink,
-  type SessionLink,
-  type SessionLinkParams,
-} from "./session-link";
+import { createSessionLifecycle } from "./session-lifecycle";
 import { createSessionState, type ChatSessionState } from "./session-state";
-
-interface SessionLinkRecord {
-  link: SessionLink;
-  params: SessionLinkParams;
-}
 
 interface ChatSessionStoreState {
   sessions: Record<string, ChatSessionState>;
@@ -52,14 +41,8 @@ interface ChatSessionStoreActions {
   refreshHistory: (client: ApiClient, agentId: string, sessionId: string) => void;
 }
 
-const DEFAULT_TTL_MS = 5 * 60 * 1000;
-const CLEANUP_INTERVAL_MS = 30 * 1000;
-
 export const useChatSessionStore = create<ChatSessionStoreState & ChatSessionStoreActions>((set, get) => {
-  const links = new Map<string, SessionLinkRecord>();
-  const recoveries = new Map<string, SessionRecovery>();
   const queue = createEventQueue(flushBatches);
-  let cleanupTimer: ReturnType<typeof setInterval> | undefined;
 
   function getSession(sessionId: string): ChatSessionState | undefined {
     return get().sessions[sessionId];
@@ -75,6 +58,14 @@ export const useChatSessionStore = create<ChatSessionStoreState & ChatSessionSto
       const updated = updater(session);
       if (updated === session) return state;
       return { sessions: { ...state.sessions, [sessionId]: updated } };
+    });
+  }
+
+  function removeSession(sessionId: string): void {
+    set((state) => {
+      if (!state.sessions[sessionId]) return state;
+      const { [sessionId]: _removed, ...rest } = state.sessions;
+      return { sessions: rest };
     });
   }
 
@@ -95,109 +86,27 @@ export const useChatSessionStore = create<ChatSessionStoreState & ChatSessionSto
     });
   }
 
+  let sendInitialMessage: (sessionId: string) => void = () => {};
+
+  const lifecycle = createSessionLifecycle(
+    { getSession, getSessions: () => get().sessions, updateSession, removeSession },
+    {
+      onLinkOpen: (sessionId) => sendInitialMessage(sessionId),
+      deliverEvents: (sessionId, events) => queue.pushBatch(sessionId, events),
+      cancelQueued: (sessionId) => queue.cancel(sessionId),
+    },
+  );
+
   const outbound = createOutboundActions({
     getSession,
     updateSession,
-    getLink: (sessionId) => links.get(sessionId)?.link,
-    getInitialMessage: (sessionId) => links.get(sessionId)?.params.initialMessage,
+    getLink: (sessionId) => lifecycle.getLink(sessionId),
+    getInitialMessage: (sessionId) => lifecycle.getInitialMessage(sessionId),
   });
 
+  sendInitialMessage = (sessionId) => outbound.sendInitialMessage(sessionId);
+
   const history = createHistoryLoader({ getSession, updateSession });
-
-  function ensureLink(params: SessionLinkParams): SessionLink {
-    const sessionId = params.sessionId;
-    const existing = links.get(sessionId);
-    if (existing) {
-      existing.params = params;
-      return existing.link;
-    }
-
-    const record: SessionLinkRecord = { link: undefined as unknown as SessionLink, params };
-    const link = createSessionLink(() => record.params, {
-      onOpen: () => {
-        recoveries.get(sessionId)?.onOpen();
-        outbound.sendInitialMessage(sessionId);
-      },
-      onClose: () => {
-        recoveries.get(sessionId)?.onClose();
-      },
-      onStateChange: (change) => {
-        updateSession(sessionId, (session) => ({
-          ...session,
-          connection: {
-            state: change.state,
-            attempt: change.attempt,
-            delayMs: change.delayMs,
-            ...(change.closeCode !== undefined ? { closeCode: change.closeCode } : {}),
-          },
-        }));
-      },
-      onEvent: (event) => {
-        const recovery = recoveries.get(sessionId);
-        if (recovery?.onFrame(event)) return;
-        queue.push(sessionId, event);
-      },
-      isAttached: () => (getSession(sessionId)?.attachedCount ?? 0) > 0,
-    });
-    record.link = link;
-
-    const recovery = createHttpRecovery({
-      fetchPage: () => record.params.client.getSessionMessagesPage(
-        record.params.agentId,
-        sessionId,
-        { limit: 20 },
-      ),
-      applyPage: (page) => {
-        updateSession(sessionId, (session) => {
-          const merged = applyHistoryPage(session, page, "latest");
-          return {
-            ...merged,
-            history: { ...session.history, hasMore: page.hasMore, oldestSeq: page.oldestId },
-          };
-        });
-      },
-      emitEvents: (events) => queue.pushBatch(sessionId, events),
-      setHistory: (status, error) => {
-        updateSession(sessionId, (session) => ({
-          ...session,
-          history: { ...session.history, status, error },
-        }));
-      },
-      getHistoryStatus: () => getSession(sessionId)?.history.status ?? "pending",
-      isAlive: () => getSession(sessionId) !== undefined && links.get(sessionId) === record,
-    });
-
-    links.set(sessionId, record);
-    recoveries.set(sessionId, recovery);
-    return link;
-  }
-
-  function startCleanupTimer(): void {
-    if (cleanupTimer) return;
-    cleanupTimer = setInterval(() => {
-      get().cleanupExpired(DEFAULT_TTL_MS);
-    }, CLEANUP_INTERVAL_MS);
-  }
-
-  function stopCleanupTimerIfEmpty(): void {
-    if (Object.keys(get().sessions).length > 0 || !cleanupTimer) return;
-    clearInterval(cleanupTimer);
-    cleanupTimer = undefined;
-  }
-
-  function destroySession(sessionId: string): void {
-    recoveries.get(sessionId)?.cancel();
-    recoveries.delete(sessionId);
-    links.get(sessionId)?.link.dispose();
-    links.delete(sessionId);
-    queue.cancel(sessionId);
-    set((state) => {
-      if (!state.sessions[sessionId]) return state;
-      const { [sessionId]: _removed, ...rest } = state.sessions;
-      return { sessions: rest };
-    });
-    stopCleanupTimerIfEmpty();
-  }
 
   return {
     sessions: {},
@@ -224,7 +133,7 @@ export const useChatSessionStore = create<ChatSessionStoreState & ChatSessionSto
           },
         };
       });
-      const link = ensureLink({
+      lifecycle.attach({
         client,
         baseUrl,
         projectId,
@@ -233,33 +142,22 @@ export const useChatSessionStore = create<ChatSessionStoreState & ChatSessionSto
         accessToken: accessToken ?? null,
         ...(initialMessage !== undefined ? { initialMessage } : {}),
       });
-      link.connect();
-      startCleanupTimer();
     },
 
     detach(sessionId) {
-      updateSession(sessionId, (session) => ({
-        ...session,
-        attachedCount: Math.max(0, session.attachedCount - 1),
-        lastActivityAt: Date.now(),
-      }));
+      lifecycle.detach(sessionId);
     },
 
     disconnect(sessionId) {
-      destroySession(sessionId);
+      lifecycle.disconnect(sessionId);
     },
 
     disconnectProject(projectId) {
-      const sessionIds = Object.values(get().sessions)
-        .filter((session) => session.projectId === projectId)
-        .map((session) => session.sessionId);
-      for (const sessionId of sessionIds) {
-        destroySession(sessionId);
-      }
+      lifecycle.disconnectProject(projectId);
     },
 
     touch(sessionId) {
-      updateSession(sessionId, (session) => ({ ...session, lastActivityAt: Date.now() }));
+      lifecycle.touch(sessionId);
     },
 
     sendMessage(sessionId, text, image) {
@@ -279,14 +177,11 @@ export const useChatSessionStore = create<ChatSessionStoreState & ChatSessionSto
     },
 
     reconnect(sessionId) {
-      links.get(sessionId)?.link.reconnect();
+      lifecycle.reconnect(sessionId);
     },
 
     resumeProbeAll() {
-      for (const session of Object.values(get().sessions)) {
-        if (session.attachedCount <= 0) continue;
-        links.get(session.sessionId)?.link.probe();
-      }
+      lifecycle.resumeProbeAll();
     },
 
     retryHistory(client, agentId, sessionId) {
@@ -308,12 +203,7 @@ export const useChatSessionStore = create<ChatSessionStoreState & ChatSessionSto
     },
 
     cleanupExpired(ttlMs) {
-      const now = Date.now();
-      for (const session of Object.values(get().sessions)) {
-        if (!session.streaming && session.attachedCount === 0 && now - session.lastActivityAt > ttlMs) {
-          destroySession(session.sessionId);
-        }
-      }
+      lifecycle.cleanupExpired(ttlMs);
     },
 
     loadMore(client, sessionId, agentId) {
@@ -321,7 +211,7 @@ export const useChatSessionStore = create<ChatSessionStoreState & ChatSessionSto
     },
 
     refreshHistory(client, agentId, sessionId) {
-      history.refreshHistory(client, sessionId, agentId);
+      history.refreshHistory(client, agentId, sessionId);
     },
   };
 });

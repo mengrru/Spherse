@@ -31,6 +31,15 @@ function groupWithTools(tools: ToolItem[], id = "g1"): MessageGroup {
   };
 }
 
+function orphanGroup(toolItem: ToolItem, id = "g0"): MessageGroup {
+  return {
+    id,
+    kind: "turn",
+    hasError: false,
+    bubbles: [{ kind: "tool-result", id: `b:${id}`, entryId: id, tool: toolItem }],
+  };
+}
+
 describe("group derivations", () => {
   it("marks all but the latest html card per file path as superseded", () => {
     const groups = [
@@ -99,6 +108,24 @@ describe("group derivations", () => {
       { kind: "approval", requestId: "r2", toolName: "manage_trigger" },
       { kind: "question", requestId: "r3", toolName: "ask_user" },
     ]);
+  });
+
+  it("includes orphan tool-result bubbles in superseded and pending derivations", () => {
+    const orphan = orphanGroup(tool({
+      toolCallId: "tc-orphan",
+      toolName: "run_command",
+      card: { type: "command", status: "pending_approval", command: "rm", stdout: "", stderr: "", requestId: "r9" },
+    }));
+    expect(collectPendingControls([orphan])).toEqual([
+      { kind: "approval", requestId: "r9", toolName: "run_command", command: "rm" },
+    ]);
+
+    const htmlOrphan = orphanGroup(tool({
+      toolCallId: "tc-orphan-html",
+      card: { type: "html", file_path: "x.html" },
+    }));
+    const later = groupWithTools([tool({ toolCallId: "tc2", card: { type: "html", file_path: "x.html" } })], "g2");
+    expect(computeSupersededToolCallIds([htmlOrphan, later]).has("tc-orphan-html")).toBe(true);
   });
 
   it("shows the thinking indicator only while the last entry is a user message", () => {

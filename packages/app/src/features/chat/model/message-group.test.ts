@@ -46,6 +46,28 @@ describe("message groups", () => {
     });
   });
 
+  it("keeps a tool running until a terminal result arrives", () => {
+    const groups = assembleGroups([
+      user(),
+      assistant({
+        id: "a1",
+        toolCalls: [{ toolCallId: "tc1", toolName: "run_command", args: { command: "ls" } }],
+      }),
+      toolResult({
+        id: "tr1",
+        ownerId: "a1",
+        toolCallId: "tc1",
+        toolName: "run_command",
+        partialResult: { details: { cardType: "command", command: "ls", stdout: "", status: "running" } },
+      }),
+    ]);
+    const bubble = groups[0].bubbles[0];
+    expect(bubble.kind).toBe("assistant");
+    if (bubble.kind !== "assistant") return;
+    expect(bubble.tools[0].status).toBe("running");
+    expect(bubble.tools[0].card).toMatchObject({ type: "command", status: "running" });
+  });
+
   it("keeps an unowned tool result as its own bubble instead of dropping it", () => {
     const groups = assembleGroups([
       user(),

@@ -177,6 +177,23 @@ describe("chat session store", () => {
     expect(session().connection.state).toBe("fatal");
   });
 
+  it("clears the streaming run state on a fatal close code", async () => {
+    const socket = await attachAndOpen();
+    socket.onmessage?.({ data: JSON.stringify({ type: "run_status", active: true }) } as MessageEvent);
+    socket.onmessage?.({ data: JSON.stringify({ type: "message_start", message: assistantMessage("") }) } as MessageEvent);
+    socket.onmessage?.({
+      data: JSON.stringify({ type: "message_update", message: assistantMessage("partial") }),
+    } as MessageEvent);
+    await flush();
+    expect(session().streaming).toBe(true);
+
+    socket.onclose?.({ code: 4401 } as CloseEvent);
+    await flush();
+    expect(session().streaming).toBe(false);
+    expect(session().openStreamId).toBeNull();
+    expect((session().entries[0] as AssistantEntry).streaming).toBe(false);
+  });
+
   it("keeps the cursor when messages are cleared by ttl cleanup", async () => {
     await attachAndOpen();
     useChatSessionStore.getState().detach("s1");

@@ -7,7 +7,7 @@ import {
 } from "./helpers/chat";
 import { newHistoryFixture, seedHistorySession } from "./helpers/chat-history";
 
-test("history rendering covers every session event type", async () => {
+test("history rendering covers message, tool, trigger and error events; retried/withdrawn turns stay hidden", async () => {
   const project = await createChatProject();
   const fixture = newHistoryFixture();
   seedHistorySession(project, fixture);

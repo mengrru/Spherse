@@ -1,6 +1,6 @@
 import type { ChatAttachment, SendableImage } from "../types";
 import type { ChatEntry, UserEntry } from "./entry";
-import type { MessageGroup } from "./message-group";
+import type { Bubble, MessageGroup } from "./message-group";
 import type { ToolItem } from "./tool-item";
 
 export function computeSupersededToolCallIds(groups: MessageGroup[]): Set<string> {
@@ -8,8 +8,7 @@ export function computeSupersededToolCallIds(groups: MessageGroup[]): Set<string
   const latestByPath = new Map<string, string>();
   for (const group of groups) {
     for (const bubble of group.bubbles) {
-      if (bubble.kind !== "assistant") continue;
-      for (const tool of bubble.tools) {
+      for (const tool of bubbleTools(bubble)) {
         tools.push(tool);
         const card = tool.card;
         if (card?.type === "html" && card.file_path) {
@@ -83,8 +82,7 @@ export function collectPendingControls(groups: MessageGroup[]): PendingControl[]
   const result: PendingControl[] = [];
   for (const group of groups) {
     for (const bubble of group.bubbles) {
-      if (bubble.kind !== "assistant") continue;
-      for (const tool of bubble.tools) {
+      for (const tool of bubbleTools(bubble)) {
         const card = tool.card;
         if (!card) continue;
         if (card.type === "command" && card.requestId) {
@@ -98,6 +96,12 @@ export function collectPendingControls(groups: MessageGroup[]): PendingControl[]
     }
   }
   return result;
+}
+
+function bubbleTools(bubble: Bubble): ToolItem[] {
+  if (bubble.kind === "assistant") return bubble.tools;
+  if (bubble.kind === "tool-result") return [bubble.tool];
+  return [];
 }
 
 export function shouldShowThinking(entries: ChatEntry[], streaming: boolean): boolean {
