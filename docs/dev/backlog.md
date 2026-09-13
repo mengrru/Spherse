@@ -25,6 +25,8 @@
 
 ## 技术债（重构与收敛）
 
+- [ ] **前端消费 chat 协议 v2（游标重放 + echo 结算）**：server 侧协议 v2 已就绪，renderer 重构后已具备 `seq`/`streamId`/`clientId` 身份，但尚未消费——`decode` 丢弃 v2 事件、恢复仍走 HTTP 对账、乐观结算仍按内容匹配。清单：decode 帧分类、首帧 `session_ready` 判定 + `since` 重放、`applyPersistedEvents`（seq 幂等/截断/compaction）、clientId 结算、游标推进、快照去重不变量；服务端依赖 09-05 PR5（control 落库 / 快照收缩 / trigger 收口）后收尾删 `refreshHistory` 与 legacy 路径。参见 `docs/dev/features/2026-09-13-chat-frontend-refactor/followup-v2-migration.md`
+
 - [ ] **ActivityBar 自治化（D7，推迟）**：ActivityBar 改为 feature root 自治（自己读 store + navigate），App.tsx 精简为中转站。参见 `docs/dev/features/2026-06-19-frontend-routing-p0/design.md`（D7）
 - [ ] **逐步禁止 `any`**：梳理 agent/runtime payload、SQLite row casting、测试 tool context 等现有 `any` 来源，优先通过明确事件/消息/数据库 row 类型替换；完成后开启 `@typescript-eslint/no-explicit-any` 的 warning 或 error 模式。参见 `docs/dev/features/2026-06-05-frontend-lint/design.md`
 - [ ] **消除 server contract 中的 `Type.Unknown()`**：当前 `@spherse/contracts` 的 `websocket.ts`（chat 事件的 `message`/`args`/`result`/`toolResults`/`assistantMessageEvent`、trigger 事件的 `trigger`）、`debug.ts`（`messages`、tool `parameters`）、`sessions.ts`（`sessionMessagesResponse`）用 `Type.Unknown()` 承接 pi-ai/pi-agent-core 的复杂嵌套对象，仅作结构校验。后续应引入 pi-ai `Message` 联合、tool call/result、`AgentMessage[]` 等精确 TypeBox schema 替换，消除所有 `unknown`。
