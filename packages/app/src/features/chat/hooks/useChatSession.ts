@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 import type { ApiClient } from "../../../lib/api";
-import type { AttachedImage, ChatMessage } from "../types";
-import { useStreamingStore } from "../runtime/streaming-store";
+import type { AttachedImage } from "../types";
+import { useChatSessionStore } from "../runtime/session-store";
+import type { ChatConnectionState } from "../runtime/session-state";
+import { useChatGroups } from "./useChatGroups";
 
-const EMPTY_MESSAGES: ChatMessage[] = [];
+const IDLE_CONNECTION: ChatConnectionState = { state: "idle", attempt: 0, delayMs: 0 };
 
 export function useChatSession({
   client,
@@ -23,47 +25,58 @@ export function useChatSession({
   accessToken?: string | null;
 }) {
   useEffect(() => {
-    useStreamingStore.getState().attach(client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken);
-    return () => useStreamingStore.getState().detach(sessionId);
+    useChatSessionStore.getState().attach(
+      client,
+      sessionId,
+      baseUrl,
+      projectId,
+      agentId,
+      initialMessage,
+      accessToken,
+    );
+    return () => useChatSessionStore.getState().detach(sessionId);
   }, [client, sessionId, baseUrl, projectId, agentId, initialMessage, accessToken]);
 
-  const messages = useStreamingStore(
-    (s) => s.sessions[sessionId]?.messages ?? EMPTY_MESSAGES,
+  const timeline = useChatGroups(sessionId);
+  const streaming = useChatSessionStore(
+    (state) => state.sessions[sessionId]?.streaming ?? false,
   );
-  const streaming = useStreamingStore(
-    (s) => s.sessions[sessionId]?.streaming ?? false,
+  const historyStatus = useChatSessionStore(
+    (state) => state.sessions[sessionId]?.history.status ?? "pending",
   );
-  const historyStatus = useStreamingStore(
-    (s) => s.sessions[sessionId]?.historyStatus ?? "pending",
+  const connection = useChatSessionStore(
+    (state) => state.sessions[sessionId]?.connection ?? IDLE_CONNECTION,
   );
-  const connectionStatus = useStreamingStore(
-    (s) => s.sessions[sessionId]?.connectionStatus ?? "disconnected",
+  const historyError = useChatSessionStore(
+    (state) => state.sessions[sessionId]?.history.error ?? false,
   );
-  const historyError = useStreamingStore(
-    (s) => s.sessions[sessionId]?.historyError ?? false,
+  const hasMore = useChatSessionStore(
+    (state) => state.sessions[sessionId]?.history.hasMore ?? false,
   );
-  const reconnectFailed = useStreamingStore(
-    (s) => s.sessions[sessionId]?.reconnectFailed ?? false,
+  const loadingMore = useChatSessionStore(
+    (state) => state.sessions[sessionId]?.history.loadingMore ?? false,
   );
-  const loading =
-    historyStatus !== "ready" || connectionStatus === "connecting";
+  const loading = historyStatus !== "ready" || connection.state === "connecting";
 
   return {
-    messages,
+    ...timeline,
     streaming,
     loading,
-    connectionStatus,
+    connection,
     historyError,
-    reconnectFailed,
-    sendMessage: (text: string, image?: AttachedImage) => useStreamingStore.getState().sendMessage(sessionId, text, image),
-    retry: () => useStreamingStore.getState().retry(sessionId),
-    withdrawLastTurn: () => useStreamingStore.getState().withdrawLastTurn(sessionId),
-    abort: () => useStreamingStore.getState().abort(sessionId),
-    reconnect: () => useStreamingStore.getState().reconnect(sessionId),
-    retryHistory: () => useStreamingStore.getState().retryHistory(client, agentId, sessionId),
+    hasMore,
+    loadingMore,
+    sendMessage: (text: string, image?: AttachedImage) =>
+      useChatSessionStore.getState().sendMessage(sessionId, text, image),
+    retry: () => useChatSessionStore.getState().retry(sessionId),
+    withdrawLastTurn: () => useChatSessionStore.getState().withdrawLastTurn(sessionId),
+    abort: () => useChatSessionStore.getState().abort(sessionId),
+    reconnect: () => useChatSessionStore.getState().reconnect(sessionId),
+    retryHistory: () => useChatSessionStore.getState().retryHistory(client, agentId, sessionId),
     respondApproval: (requestId: string, approved: boolean) =>
-      useStreamingStore.getState().respondApproval(sessionId, requestId, approved),
+      useChatSessionStore.getState().respondApproval(sessionId, requestId, approved),
     respondQuestion: (requestId: string, answer: string) =>
-      useStreamingStore.getState().respondQuestion(sessionId, requestId, answer),
+      useChatSessionStore.getState().respondQuestion(sessionId, requestId, answer),
+    loadMore: () => useChatSessionStore.getState().loadMore(client, sessionId, agentId),
   };
 }

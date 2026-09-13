@@ -23,6 +23,7 @@ export interface WsConnectionConfig {
   probeTimeoutMs: number;
   pingPayload: string;
   isPong: (parsed: unknown) => boolean;
+  shouldRetry?: () => boolean;
   label: string;
 }
 
@@ -190,6 +191,10 @@ export class WsConnection {
   }
 
   private scheduleRetry(): void {
+    if (this.config.shouldRetry && !this.config.shouldRetry()) {
+      this.setState("closed");
+      return;
+    }
     if (this.retryAttempt >= this.config.maxRetries) {
       this.setState("failed");
       return;

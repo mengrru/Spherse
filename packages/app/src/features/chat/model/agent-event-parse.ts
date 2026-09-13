@@ -157,6 +157,7 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent | undefined 
       return {
         type: "agent_end",
         messages: Array.isArray(event.messages) ? event.messages.map(parseAgentMessage) : [],
+        ...(event.seq !== undefined ? { seq: event.seq } : {}),
       };
     case "turn_end":
       return {
@@ -165,11 +166,27 @@ export function parseAgentEvent(event: ChatServerEvent): AgentEvent | undefined 
         toolResults: parseToolResultMessages(event.toolResults),
       };
     case "message_start":
-      return { type: "message_start", message: parseAgentMessage(event.message) };
+      return {
+        type: "message_start",
+        message: parseAgentMessage(event.message),
+        ...(event.messageId !== undefined ? { messageId: event.messageId } : {}),
+      };
     case "message_update":
-      return { type: "message_update", message: parseAgentMessage(event.message) };
+      return {
+        type: "message_update",
+        message: parseAgentMessage(event.message),
+        ...(event.messageId !== undefined ? { messageId: event.messageId } : {}),
+        ...(event.assistantMessageEvent !== undefined
+          ? { assistantMessageEvent: event.assistantMessageEvent }
+          : {}),
+      };
     case "message_end":
-      return { type: "message_end", message: parseAgentMessage(event.message) };
+      return {
+        type: "message_end",
+        message: parseAgentMessage(event.message),
+        ...(event.messageId !== undefined ? { messageId: event.messageId } : {}),
+        ...(event.seq !== undefined ? { seq: event.seq } : {}),
+      };
     default:
       return undefined;
   }

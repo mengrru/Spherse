@@ -1,22 +1,16 @@
 import { WifiOffIcon, RotateCwIcon, AlertTriangleIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { useI18n } from "@spherse/i18n/react";
+import type { WsConnectionState } from "../../lib/ws/ws-connection";
 
 interface ConnectionBannerProps {
-  connectionStatus: "disconnected" | "connecting" | "open";
-  reconnectFailed: boolean;
+  state: WsConnectionState;
   historyError: boolean;
   onReconnect: () => void;
   onRetryHistory: () => void;
 }
 
-export function ConnectionBanner({
-  connectionStatus,
-  reconnectFailed,
-  historyError,
-  onReconnect,
-  onRetryHistory,
-}: ConnectionBannerProps) {
+export function ConnectionBanner({ state, historyError, onReconnect, onRetryHistory }: ConnectionBannerProps) {
   const { t } = useI18n();
 
   if (historyError) {
@@ -37,7 +31,7 @@ export function ConnectionBanner({
     );
   }
 
-  if (reconnectFailed) {
+  if (state === "failed" || state === "fatal") {
     return (
       <div className="mx-auto mb-2 flex items-center justify-center gap-2 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5 text-xs text-destructive">
         <WifiOffIcon className="size-3.5" />
@@ -55,7 +49,7 @@ export function ConnectionBanner({
     );
   }
 
-  if (connectionStatus === "disconnected") {
+  if (state === "idle" || state === "connecting" || state === "waiting-backoff" || state === "closed") {
     return (
       <div className="mx-auto mb-2 flex items-center justify-center gap-1.5 rounded-md border border-border bg-muted px-3 py-1.5 text-xs text-muted-foreground">
         <WifiOffIcon className="size-3.5" />

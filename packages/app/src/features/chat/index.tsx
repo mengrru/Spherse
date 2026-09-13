@@ -8,11 +8,10 @@ import { Composer } from "./Composer";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
 import { ConnectionBanner } from "./ConnectionBanner";
-import { ChatRuntimeProvider } from "./runtime-context";
+import { ChatAgentProvider } from "./chat-agent-context";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
-import { useStreamingStore } from "./runtime/streaming-store";
 
 export interface ChatProps {
   sessionId: string;
@@ -29,12 +28,17 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
   const { baseUrl, accessToken } = useConnection();
   const { t } = useI18n();
   const {
-    messages,
+    entries,
+    groups,
+    supersededToolCallIds,
+    thinking,
+    withdrawableUserId,
     streaming,
     loading,
-    connectionStatus,
+    connection,
     historyError,
-    reconnectFailed,
+    hasMore,
+    loadingMore,
     sendMessage,
     retry,
     withdrawLastTurn,
@@ -43,6 +47,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     retryHistory,
     respondApproval,
     respondQuestion,
+    loadMore,
   } = useChatSession({
     client,
     sessionId,
@@ -52,9 +57,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     initialMessage,
     accessToken,
   });
-  const hasMore = useStreamingStore((s) => s.sessions[sessionId]?.hasMore ?? false);
-  const loadingMore = useStreamingStore((s) => s.sessions[sessionId]?.loadingMore ?? false);
-  const { containerRef, isAtBottom, scrollToBottom } = useChatScroll(messages, sessionId, loadingMore);
+  const { containerRef, isAtBottom, scrollToBottom } = useChatScroll(entries, sessionId, loadingMore);
   const themeHref = useAgentTheme(client, agent.id, agent.slug, projectId);
 
   const handleClose = () => {
@@ -72,24 +75,25 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     return delivered;
   };
 
-  const runtime = useMemo(() => ({ sessionId, agentId: agent.id }), [sessionId, agent.id]);
+  const agentScope = useMemo(() => ({ sessionId, agentId: agent.id }), [sessionId, agent.id]);
 
   return (
-    <ChatRuntimeProvider runtime={runtime}>
+    <ChatAgentProvider agent={agentScope}>
       <div className="flex flex-col h-full" data-chat-root>
         {themeHref && <link rel="stylesheet" href={themeHref} />}
         {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
         <ConnectionBanner
-          connectionStatus={connectionStatus}
-          reconnectFailed={reconnectFailed}
+          state={connection.state}
           historyError={historyError}
           onReconnect={reconnect}
           onRetryHistory={retryHistory}
         />
         <MessageList
-          messages={messages}
+          groups={groups}
           agent={agent}
-          streaming={streaming}
+          thinking={thinking}
+          withdrawableUserId={withdrawableUserId}
+          supersededToolCallIds={supersededToolCallIds}
           loading={loading}
           containerRef={containerRef}
           isAtBottom={isAtBottom}
@@ -101,7 +105,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           onWithdraw={withdrawLastTurn}
           hasMore={hasMore}
           loadingMore={loadingMore}
-          onLoadMore={() => useStreamingStore.getState().loadMore(client, sessionId, agent.id)}
+          onLoadMore={loadMore}
         />
         <Composer
           streaming={streaming}
@@ -111,6 +115,6 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           onAbort={abort}
         />
       </div>
-    </ChatRuntimeProvider>
+    </ChatAgentProvider>
   );
 }

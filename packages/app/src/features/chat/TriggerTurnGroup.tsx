@@ -1,20 +1,19 @@
-import { useState } from "react";
-import type { ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { useI18n } from "@spherse/i18n/react";
-import type { TurnGroupItem } from "./model/turn-groups";
+import type { Bubble, MessageGroup } from "./model/message-group";
+import type { UserEntry } from "./model/entry";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";
 import { AlertTriangleIcon, ChevronRightIcon } from "lucide-react";
 
 interface TriggerTurnGroupProps {
-  items: TurnGroupItem[];
-  triggerName?: string;
-  hasError: boolean;
-  renderItem: (item: TurnGroupItem) => ReactNode;
+  group: MessageGroup;
+  renderUser: (user: UserEntry) => ReactNode;
+  renderBubble: (bubble: Bubble, index: number) => ReactNode;
 }
 
-export function TriggerTurnGroup({ items, triggerName, hasError, renderItem }: TriggerTurnGroupProps) {
+export function TriggerTurnGroup({ group, renderUser, renderBubble }: TriggerTurnGroupProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
@@ -40,11 +39,11 @@ export function TriggerTurnGroup({ items, triggerName, hasError, renderItem }: T
             <ChevronRightIcon className="size-3" />
           </span>
           <span className="truncate">
-            {triggerName !== undefined
-              ? t("chat.triggerTurnSummary", { name: triggerName })
+            {group.triggerName !== undefined
+              ? t("chat.triggerTurnSummary", { name: group.triggerName })
               : t("chat.triggerTurnSummaryFallback")}
           </span>
-          {hasError && (
+          {group.hasError && (
             <Badge variant="outline" className="gap-1 border-destructive/40 text-destructive">
               <AlertTriangleIcon className="size-3" />
               {t("chat.triggerTurnErrorBadge")}
@@ -53,7 +52,10 @@ export function TriggerTurnGroup({ items, triggerName, hasError, renderItem }: T
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="flex flex-col gap-3 rounded-b-lg border border-t-0 border-border p-3">
-            {items.map((item) => renderItem(item))}
+            {group.user && renderUser(group.user)}
+            {group.bubbles.map((bubble, index) => (
+              <Fragment key={bubble.id}>{renderBubble(bubble, index)}</Fragment>
+            ))}
           </div>
         </CollapsibleContent>
       </Collapsible>

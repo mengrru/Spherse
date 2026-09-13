@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { ChatMessage } from "../types";
-import { useStreamingStore } from "../runtime/streaming-store";
+import type { ChatEntry } from "../model/entry";
+import { useChatSessionStore } from "../runtime/session-store";
 
 const NEAR_BOTTOM_THRESHOLD = 100;
 
@@ -8,7 +8,7 @@ export function isNearBottom(scrollTop: number, threshold: number = NEAR_BOTTOM_
   return scrollTop >= -threshold;
 }
 
-export function useChatScroll(messages: ChatMessage[], sessionId: string, loadingMore: boolean = false) {
+export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMore: boolean = false) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -35,7 +35,7 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
     setIsAtBottom(true);
   }, []);
 
-  const hasMessages = messages.length > 0;
+  const hasEntries = entries.length > 0;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -43,7 +43,7 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
     container.addEventListener("scroll", syncBottomState, { passive: true });
     syncBottomState();
     return () => container.removeEventListener("scroll", syncBottomState);
-  }, [syncBottomState, hasMessages]);
+  }, [syncBottomState, hasEntries]);
 
   useEffect(() => {
     restoredScrollRef.current = false;
@@ -66,24 +66,24 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (!container || messages.length === 0) return;
+    if (!container || entries.length === 0) return;
 
     if (!restoredScrollRef.current) {
       restoredScrollRef.current = true;
-      const saved = useStreamingStore.getState().sessions[sessionId]?.scrollPosition;
+      const saved = useChatSessionStore.getState().sessions[sessionId]?.scrollPosition;
       if (saved && saved < 0) {
         container.scrollTop = saved;
         syncBottomState();
       } else {
         scrollToBottom("instant");
       }
-      prevCountRef.current = messages.length;
+      prevCountRef.current = entries.length;
       return;
     }
 
     if (pendingLoadingMoreRef.current) {
       pendingLoadingMoreRef.current = false;
-      prevCountRef.current = messages.length;
+      prevCountRef.current = entries.length;
       if (preLoadMoreScrollTopRef.current !== null) {
         container.scrollTop = preLoadMoreScrollTopRef.current;
         scrollTopRef.current = preLoadMoreScrollTopRef.current;
@@ -94,20 +94,20 @@ export function useChatScroll(messages: ChatMessage[], sessionId: string, loadin
     }
 
     const prevCount = prevCountRef.current;
-    prevCountRef.current = messages.length;
-    const lastMsg = messages[messages.length - 1];
+    prevCountRef.current = entries.length;
+    const lastIsUser = entries[entries.length - 1]?.kind === "user";
 
-    if (messages.length > prevCount && lastMsg?.role === "user") {
+    if (entries.length > prevCount && lastIsUser) {
       scrollToBottom("smooth");
       return;
     }
-  }, [messages, sessionId, scrollToBottom, syncBottomState]);
+  }, [entries, sessionId, scrollToBottom, syncBottomState]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     return () => {
-      useStreamingStore.getState().setScrollPosition(sessionId, scrollTopRef.current);
+      useChatSessionStore.getState().setScrollPosition(sessionId, scrollTopRef.current);
     };
   }, [sessionId]);
 

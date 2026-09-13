@@ -3,17 +3,30 @@ import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { renderWithProviders } from "../../test/render";
 import { TriggerTurnGroup } from "./TriggerTurnGroup";
-import type { TurnGroupItem } from "./model/turn-groups";
+import type { MessageGroup } from "./model/message-group";
 
-const items = [{ kind: "message" }, { kind: "message" }] as unknown as TurnGroupItem[];
+function group(overrides: Partial<MessageGroup> = {}): MessageGroup {
+  return {
+    id: "g1",
+    kind: "trigger-turn",
+    hasError: false,
+    bubbles: [
+      { kind: "assistant", id: "b1", entryId: "a1", text: "one", tools: [] },
+      { kind: "assistant", id: "b2", entryId: "a2", text: "two", tools: [] },
+    ],
+    ...overrides,
+  };
+}
 
 function renderGroup(props: { triggerName?: string; hasError?: boolean } = {}) {
   renderWithProviders(
     <TriggerTurnGroup
-      items={items}
-      triggerName={props.triggerName}
-      hasError={props.hasError ?? false}
-      renderItem={(item) => <div key={String(item)}>rendered-{items.indexOf(item)}</div>}
+      group={group({
+        ...(props.triggerName !== undefined ? { triggerName: props.triggerName } : {}),
+        hasError: props.hasError ?? false,
+      })}
+      renderUser={() => null}
+      renderBubble={(_bubble, index) => <div>rendered-{index}</div>}
     />,
   );
 }

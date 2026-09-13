@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { closeProjectCascade } from "./project-lifecycle";
 import { useAppStore, type ProjectState } from "../stores/app-store";
 import { useProjectDataStore } from "../stores/project-data-store";
-import { useStreamingStore } from "../features/chat/runtime/streaming-store";
+import { useChatSessionStore } from "../features/chat/runtime/session-store";
+import { createSessionState } from "../features/chat/runtime/session-state";
 import { useAgentSessionListUiStore } from "../features/agent-session-list/store";
 import { queryClient } from "../queries/client";
 import { projectQueryKeys } from "../queries/keys";
@@ -29,25 +30,13 @@ function createBridge(closeProjectImpl?: ReturnType<typeof vi.fn>): HostBridge {
 }
 
 function seedStreamingSession(sessionId: string, projectId: string): void {
-  useStreamingStore.setState((state) => ({
+  useChatSessionStore.setState((state) => ({
     sessions: {
       ...state.sessions,
       [sessionId]: {
-        messages: [],
-        streaming: false,
-        lastActivityAt: Date.now(),
-        scrollPosition: 0,
-        attachedCount: 1,
-        initialMessageSent: false,
-        projectId,
-        hasMore: false,
-        oldestLoadedId: null,
-        loadingMore: false,
-        historyStatus: "ready",
-        connectionStatus: "open",
-        historyError: false,
-        reconnectFailed: false,
-        pendingWithdraw: false,
+        ...createSessionState(sessionId, projectId, "a1", 1),
+        history: { status: "ready", hasMore: false, oldestSeq: null, loadingMore: false, error: false },
+        connection: { state: "open", attempt: 0, delayMs: 0 },
       },
     },
   }));
@@ -78,7 +67,7 @@ describe("closeProjectCascade", () => {
       activeProjectId: null,
       initializing: false,
     });
-    useStreamingStore.setState({ sessions: {} });
+    useChatSessionStore.setState({ sessions: {} });
     useProjectDataStore.setState({ projects: {} });
     useAgentSessionListUiStore.setState({ collapsedAgentIdsByProject: {} });
   });
@@ -93,8 +82,8 @@ describe("closeProjectCascade", () => {
     expect(useAppStore.getState().projects.has("p1")).toBe(false);
     expect(useAppStore.getState().activeProjectId).toBe("p2");
     expect(bridge.project?.setLastActiveProject).toHaveBeenCalledWith("p2");
-    expect(useStreamingStore.getState().sessions.s1).toBeUndefined();
-    expect(useStreamingStore.getState().sessions.s2).toBeDefined();
+    expect(useChatSessionStore.getState().sessions.s1).toBeUndefined();
+    expect(useChatSessionStore.getState().sessions.s2).toBeDefined();
     expect(queryClient.getQueryData(projectQueryKeys.sessions("p1"))).toBeUndefined();
     expect(useAgentSessionListUiStore.getState().collapsedAgentIdsByProject.p1).toBeUndefined();
     expect(useProjectDataStore.getState().projects.p1).toBeUndefined();
@@ -110,7 +99,7 @@ describe("closeProjectCascade", () => {
 
     expect(useAppStore.getState().projects.has("p1")).toBe(true);
     expect(useAppStore.getState().activeProjectId).toBe("p1");
-    expect(useStreamingStore.getState().sessions.s1).toBeDefined();
+    expect(useChatSessionStore.getState().sessions.s1).toBeDefined();
     expect(queryClient.getQueryData(projectQueryKeys.sessions("p1"))).toBeDefined();
     expect(useAgentSessionListUiStore.getState().collapsedAgentIdsByProject.p1).toBeDefined();
     expect(useProjectDataStore.getState().projects.p1).toBeDefined();

@@ -56,34 +56,6 @@ export function extractCardFromPartial(
   return undefined;
 }
 
-export function commandCardFromResult(
-  result: unknown,
-  toolCall: ToolCallInfo,
-): CommandCard | undefined {
-  const details = isObject(result) ? result.details : undefined;
-  if (isRejectedToolDetails(details)) {
-    return {
-      type: "command",
-      status: "error",
-      rejected: true,
-      command: typeof toolCall.args.command === "string"
-        ? toolCall.args.command
-        : "",
-      cwd: typeof toolCall.args.cwd === "string" ? toolCall.args.cwd : undefined,
-      stdout: "",
-      stderr: "",
-    };
-  }
-  if (isCommandCardDetails(details)) {
-    const card = commandCardFromDetails(details);
-    return {
-      ...card,
-      status: details.status === "error" ? "error" : "completed",
-    };
-  }
-  return undefined;
-}
-
 export function buildCardFromToolResult(
   toolName: string,
   toolCall: AgentToolCall,

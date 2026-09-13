@@ -8,7 +8,7 @@ import { Button } from "../../components/ui/button";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
-import { useChatRuntime } from "./runtime-context";
+import { useChatAgent } from "./chat-agent-context";
 import { isPathInsideProject, toProjectRelative, joinProjectPath } from "../../lib/project-path";
 import { ensureCharset, buildFileSrcDoc, buildInlineSrcDoc, isImageFile } from "./html-card-src";
 
@@ -26,7 +26,7 @@ export function HtmlCardRenderer({ card, defaultCollapsed = false }: HtmlCardRen
   const { projectRoot, projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const bridge = useHostBridge();
-  const runtime = useChatRuntime();
+  const agent = useChatAgent();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [fetchedHtml, setFetchedHtml] = useState<string | null>(null);
   const [fetchError, setFetchError] = useState(false);
@@ -72,12 +72,12 @@ export function HtmlCardRenderer({ card, defaultCollapsed = false }: HtmlCardRen
   }, [expanded]);
 
   function injectRuntime(iframe: HTMLIFrameElement | null) {
-    if (!iframe || !runtime) return;
+    if (!iframe || !agent) return;
     const win = iframe.contentWindow as (Window & { __SPHERSE__?: unknown }) | null;
     if (!win) return;
     const payload = {
-      sessionId: runtime.sessionId,
-      agentId: runtime.agentId,
+      sessionId: agent.sessionId,
+      agentId: agent.agentId,
       projectId,
     };
     try {

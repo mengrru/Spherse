@@ -1,5 +1,3 @@
-import type { ErrorEventCode } from "@spherse/contracts";
-
 export interface HtmlCard {
   type: "html";
   html?: string;
@@ -86,25 +84,6 @@ export interface SendableImage {
   mimeType: string;
   width?: number;
   height?: number;
-}
-
-export interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-  _messageId?: number;
-  _optimistic?: boolean;
-  _streaming?: boolean;
-  _toolCalls?: ToolCallInfo[];
-  _error?: string;
-  _errorCode?: ErrorEventCode;
-  _turnError?: boolean;
-  _withdrawError?: boolean;
-  _sendFailed?: boolean;
-  _runChanges?: FileChangeCard[];
-  _attachments?: ChatAttachment[];
-  _triggered?: true;
-  _triggerName?: string;
-  timestamp?: number;
 }
 
 export interface FileChangeOp {

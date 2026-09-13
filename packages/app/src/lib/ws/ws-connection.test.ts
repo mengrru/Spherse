@@ -174,6 +174,21 @@ describe("WsConnection", () => {
   });
 
   describe("backoff / retries", () => {
+    it("stops retrying when shouldRetry returns false and reconnects on demand", async () => {
+      let retryAllowed = false;
+      const h = harness({ shouldRetry: () => retryAllowed });
+      await connectAndOpen(h);
+      lastInstance().close();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(mock.instances).toHaveLength(1);
+      expect(h.states.at(-1)?.state).toBe("closed");
+
+      retryAllowed = true;
+      h.conn.connect();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mock.instances).toHaveLength(2);
+    });
+
     it("follows the backoff sequence and reports waiting-backoff with attempt/delay", async () => {
       const h = harness();
       await connectAndOpen(h);

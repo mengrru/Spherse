@@ -15,8 +15,8 @@ vi.mock("sonner", () => ({
   toast: { error: mockToastError },
 }));
 
-vi.mock("../../features/chat/runtime/streaming-store", () => ({
-  useStreamingStore: {
+vi.mock("../../features/chat/runtime/session-store", () => ({
+  useChatSessionStore: {
     getState: () => ({
       sendMessage: mockWsSend,
       sessions: sessionsState(),

@@ -1,21 +1,21 @@
-import type { RefObject } from "react";
-import { useMemo } from "react";
+import { Fragment, type RefObject } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { AgentSummary } from "../../lib/types";
-import type { ChatMessage } from "./types";
 import { Button } from "../../components/ui/button";
 import { ChevronDownIcon } from "lucide-react";
-import { MessageItem } from "./MessageItem";
-import { ThinkingIndicator } from "./ThinkingIndicator";
+import type { Bubble, MessageGroup } from "./model/message-group";
+import type { UserEntry } from "./model/entry";
+import { AssistantBubble } from "./AssistantBubble";
+import { UserBubble } from "./UserBubble";
 import { TriggerTurnGroup } from "./TriggerTurnGroup";
-import { computeSupersededToolCallIds } from "./model/html-card-dedup";
-import { groupTurns, type TurnGroupItem } from "./model/turn-groups";
-import { lastWithdrawableUserIndex } from "./model/withdrawable";
+import { ThinkingIndicator } from "./ThinkingIndicator";
 
 interface MessageListProps {
-  messages: ChatMessage[];
+  groups: MessageGroup[];
   agent: AgentSummary;
-  streaming: boolean;
+  thinking: boolean;
+  withdrawableUserId: string | null;
+  supersededToolCallIds: Set<string>;
   loading?: boolean;
   containerRef: RefObject<HTMLDivElement | null>;
   isAtBottom: boolean;
@@ -30,25 +30,35 @@ interface MessageListProps {
   onLoadMore?: () => void;
 }
 
-export function MessageList({ messages, agent, streaming, loading = false, containerRef, isAtBottom, onScrollToBottom, onNavigateToPath, onRespondApproval, onRespondQuestion, onRetry, onWithdraw, hasMore, loadingMore, onLoadMore }: MessageListProps) {
+export function MessageList({
+  groups,
+  agent,
+  thinking,
+  withdrawableUserId,
+  supersededToolCallIds,
+  loading = false,
+  containerRef,
+  isAtBottom,
+  onScrollToBottom,
+  onNavigateToPath,
+  onRespondApproval,
+  onRespondQuestion,
+  onRetry,
+  onWithdraw,
+  hasMore,
+  loadingMore,
+  onLoadMore,
+}: MessageListProps) {
   const { t } = useI18n();
 
-  // 相同 file_path 的 html card 只展开最近一张；较早的同路径卡片折叠（不挂载 iframe）。
-  const supersededToolCallIds = useMemo(
-    () => computeSupersededToolCallIds(messages),
-    [messages],
-  );
-
-  const groups = useMemo(() => groupTurns(messages), [messages]);
-
-  if (loading && messages.length === 0) {
+  if (loading && groups.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center p-4">
         <div className="text-sm text-muted-foreground">{t("common.loading")}</div>
       </div>
     );
   }
-  if (messages.length === 0) {
+  if (groups.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-2 p-4">
         <div className="text-muted-foreground text-sm font-medium">{agent.name}</div>
@@ -57,25 +67,70 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
     );
   }
 
-  const lastMessage = messages[messages.length - 1];
-  const withdrawableIndex = streaming ? -1 : lastWithdrawableUserIndex(messages);
+  const lastGroup = groups[groups.length - 1];
+  const lastBubble = lastGroup?.bubbles[lastGroup.bubbles.length - 1];
+  const retryTargetUserId = !lastBubble && lastGroup?.user ? lastGroup.user.id : undefined;
 
-  const renderItem = ({ message, index }: TurnGroupItem) => {
-    const isLast = index === messages.length - 1;
-    const showTime =
-      message.role === "user" || isLast || messages[index + 1]?.role === "user";
+  const renderUser = (group: MessageGroup, user: UserEntry) => (
+    <UserBubble
+      key={`u:${user.id}`}
+      text={user.text}
+      attachments={user.attachments}
+      sendFailed={user.sendFailed}
+      timestamp={user.time}
+      showTime
+      onWithdraw={user.id === withdrawableUserId ? onWithdraw : undefined}
+      onRetry={user.id === retryTargetUserId ? onRetry : undefined}
+    />
+  );
+
+  const renderBubble = (group: MessageGroup, bubble: Bubble, index: number) => {
+    const showTime = index === group.bubbles.length - 1;
+    const isRetryTarget = bubble.id === lastBubble?.id;
+    if (bubble.kind === "tool-result") {
+      return (
+        <AssistantBubble
+          key={bubble.id}
+          agent={agent}
+          text=""
+          tools={[bubble.tool]}
+          showTime={showTime}
+          onNavigateToPath={onNavigateToPath}
+          onRespondApproval={onRespondApproval}
+          onRespondQuestion={onRespondQuestion}
+        />
+      );
+    }
+    if (bubble.kind === "error") {
+      return (
+        <AssistantBubble
+          key={bubble.id}
+          agent={agent}
+          text=""
+          tools={[]}
+          error={bubble.error}
+          timestamp={bubble.timestamp}
+          showTime={showTime}
+          onRetry={isRetryTarget ? onRetry : undefined}
+        />
+      );
+    }
     return (
-      <MessageItem
-        key={index}
-        message={message}
+      <AssistantBubble
+        key={bubble.id}
         agent={agent}
+        text={bubble.text}
+        tools={bubble.tools}
+        streaming={bubble.streaming}
+        error={bubble.error}
+        timestamp={bubble.timestamp}
+        runChanges={bubble.runChanges}
         showTime={showTime}
         supersededToolCallIds={supersededToolCallIds}
         onNavigateToPath={onNavigateToPath}
         onRespondApproval={onRespondApproval}
         onRespondQuestion={onRespondQuestion}
-        onRetry={isLast ? onRetry : undefined}
-        onWithdraw={index === withdrawableIndex ? onWithdraw : undefined}
+        onRetry={isRetryTarget ? onRetry : undefined}
       />
     );
   };
@@ -83,22 +138,26 @@ export function MessageList({ messages, agent, streaming, loading = false, conta
   return (
     <div className="relative flex-1 min-h-0">
       <div ref={containerRef} className="h-full overflow-y-auto p-4 flex flex-col-reverse gap-3" data-chat-messages>
-        {streaming && lastMessage?.role === "user" && (
+        {thinking && (
           <div className="self-start">
             <ThinkingIndicator />
           </div>
         )}
         {[...groups].reverse().map((group) =>
-          group.kind === "trigger" ? (
+          group.kind === "trigger-turn" ? (
             <TriggerTurnGroup
-              key={`turn-${group.items[0].message._messageId ?? group.items[0].index}`}
-              items={group.items}
-              triggerName={group.triggerName}
-              hasError={group.hasError}
-              renderItem={renderItem}
+              key={group.id}
+              group={group}
+              renderUser={(user) => renderUser(group, user)}
+              renderBubble={(bubble, index) => renderBubble(group, bubble, index)}
             />
           ) : (
-            renderItem(group.item)
+            <Fragment key={group.id}>
+              {[...group.bubbles].reverse().map((bubble, reversedIndex) =>
+                renderBubble(group, bubble, group.bubbles.length - 1 - reversedIndex),
+              )}
+              {group.user && renderUser(group, group.user)}
+            </Fragment>
           ),
         )}
         {hasMore && (

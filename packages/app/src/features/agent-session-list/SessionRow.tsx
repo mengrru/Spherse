@@ -13,8 +13,7 @@ import {
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
 import { useI18n } from "@spherse/i18n/react";
-import { useProjectDataStore } from "../../stores/project-data-store";
-import { useProjectCtx } from "../../context/project-context";
+import { useSessionStreaming } from "../chat/runtime/selectors";
 import { useFeature } from "../../lib/use-feature";
 import { useAgentSessionActions } from "./actions-context";
 
@@ -68,10 +67,8 @@ export function SessionRow({ session, active, floating }: SessionRowProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurRef = useRef(false);
   const fallbackTitle = getFallbackTitle(session);
-  const { projectId } = useProjectCtx();
-  const isStreaming = useProjectDataStore(
-    (s) => !active && (s.projects[projectId]?.streamingSessionIds.has(session.id) ?? false),
-  );
+  const streaming = useSessionStreaming(session.id);
+  const isStreaming = !active && streaming;
 
   useEffect(() => {
     if (state.mode === "idle") return;
