@@ -2,6 +2,8 @@
 
 对应 [design.md](./design.md)。每个 PR 独立实现、独立 review、独立合入；勾选随实施更新。
 
+> 前端部分（PR3/PR4）已被 `docs/dev/features/2026-09-13-chat-frontend-refactor/` 替代：前端先按旧协议完成 Entry/MessageGroup 重构，renderer 消费 v2（游标重放）作为后续独立迁移（见其 design §9）；PR5/PR6 仍以本文为准。
+
 ## PR1 协议 v2（contracts + server）
 
 - [x] contracts：`session_ready` / `replay_events` / `replay_done` / `user_message` / `turn_retried` schema；`message_end.seq` / `agent_end.seq` 可选字段；`message.clientId`（**可选**，旧客户端发送不带 clientId 必须放行）；close code 4400/4402；`SessionEvent` 信封 schema 镜像导出

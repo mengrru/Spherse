@@ -3,7 +3,7 @@
 - 日期：2026-09-13
 - 分支：`bright-falcon`（单 PR）
 - 前置：`docs/dev/features/2026-09-05-chat-refactor/`（协议 v2 已合入 PR1/PR2；本设计**替代其 §3–§6 的前端部分**，renderer 消费 v2 延后为独立迁移）
-- 状态：设计已与用户对齐；sub agent review 完成（2C/9I/8M/8m，反馈已处理并入正文），待实施
+- 状态：已实施（commit `db4a464` + E2E `fadd5dd`）；code review 完成（2 important / 4 medium / 1 minor，均已处理）；doc-sync 完成
 - 范围：仅 `packages/app`（`features/chat` 及其消费方）；不改 contracts / server / core；`lib/ws/WsConnection` 仅加一个可选配置
 
 ## 1. 背景与动机

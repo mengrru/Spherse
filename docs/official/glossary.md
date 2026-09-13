@@ -28,7 +28,9 @@
 | 控制事件（重启点） | `turn/retried` / `turn/withdrawn` / `compaction/applied` 三类事件，restore 时按语义重建 | [architecture/core.md](architecture/core.md) |
 | compaction（上下文压缩） | 历史超阈值时生成摘要、以 `compaction/applied` 重启点表达；LLM 双路与机械回退 | [architecture/core.md](architecture/core.md) |
 | withdraw（撤回） | 以 `turn/withdrawn {seq}` 锚定被撤回 user message，fold 推导废弃区间 | [architecture/core.md](architecture/core.md) |
-| 历史对账 | renderer 重连后拉取历史、按 `_messageId` 去重合并的过程 | [architecture/chat.md](architecture/chat.md) |
+| 历史对账 | renderer 重连后拉取历史、按 `seq` upsert 合并的过程 | [architecture/chat.md](architecture/chat.md) |
+| Entry（会话条目） | 事件日志的前端 1:1 投影，按 `seq` / `streamId` / `clientId` 身份寻址，含 user/assistant/tool-result/error 四类 | [architecture/chat.md](architecture/chat.md) |
+| MessageGroup（消息组） | 由 entries 组装出的渲染单元（turn / trigger-turn 组，含 assistant/tool-result/error 气泡），保证每条 entry 有归宿 | [architecture/chat.md](architecture/chat.md) |
 
 ## Capability 架构
 
@@ -94,6 +96,6 @@
 | UI SDK（`@spherse/sdk`） | 注入 iframe 的浏览器运行时，暴露 `window.spherse` API | [architecture/ui-sdk.md](architecture/ui-sdk.md) |
 | HostBridge | renderer 对宿主能力的抽象接口，desktop / web 各有实现 | [architecture/frontend.md](architecture/frontend.md) |
 | HostCapabilities | 宿主能力开关声明，renderer 据此条件渲染宿主专属 UI | [architecture/frontend.md](architecture/frontend.md) |
-| streaming-store | chat 的 Zustand store，只持 UI 可观察状态与 actions | [architecture/chat.md](architecture/chat.md) |
+| chat session store | chat 的 Zustand store（`useChatSessionStore`），持有 Entry 状态、连接投影、分页与 actions | [architecture/chat.md](architecture/chat.md) |
 | timePerception | agent 时间感知配置：感知时间 = 真实时间经锚点 / 流速变换 | [data-conventions.md](data-conventions.md) |
 | memory（memory.jsonl） | per-agent 记忆持久化，`memory_save` / `memory_recall` 读写，`<memory>` block 注入 | [architecture/capabilities.md](architecture/capabilities.md) |

@@ -72,13 +72,13 @@ src/
 |---|---|---|
 | 服务端、磁盘是事实源 | TanStack Query | agents、sessions、文件内容、目录列表 |
 | 应用级客户端状态 | `stores/` | 打开项目、locale、side panel 状态 |
-| 单个 feature 的持久客户端状态 | feature-local store | streaming、trigger 运行态、浮窗位置 |
+| 单个 feature 的持久客户端状态 | feature-local store | chat 会话运行时（连接/entries/分页）、trigger 运行态、浮窗位置 |
 | 组件短生命周期状态 | `useState` / `useReducer` / `useRef` | 表单 draft、弹窗、编辑 dirty/conflict |
 | 稳定只读依赖 | Context | projectId/projectRoot、host bridge |
 
 ### TanStack Query
 
-- 服务端数据不得复制进 Zustand。`project-data-store` 只保存初始消息与 streaming session id 等运行时投影。
+- 服务端数据不得复制进 Zustand。`project-data-store` 只保存初始消息（initialMessage）一个运行时投影；chat 会话状态（连接、entries、分页）以 `features/chat/runtime/session-store` 为单一事实源，不做跨 store 镜像。
 - Query 代码统一放在 `queries/`：`client.ts` 持有单例，`keys.ts` 定义 key factory，领域文件管理查询、mutation、失效和命令式访问。
 - query key 必须包含 `projectId`；关闭项目时清除该项目的全部 query cache。
 - React 组件使用 query hook；UI SDK、bus callback 等非 React 边界使用 query 层提供的命令式 facade，不在调用方拼 key 或实现 cache-first fallback。
@@ -91,6 +91,7 @@ src/
 - `settings-store` 管理跨 feature 的 app 级设置；dialog 表单状态留在组件 hook。
 - `side-panel-store` 管理 pinned、hover、mobileOpen 等跨层 UI 状态。
 - 只被单个 feature 使用的状态放 `features/<name>/store.ts`。feature-local store 不应被其他 feature 或全局 store import。
+- 其他 feature 需要该状态的投影时，由拥有者 feature 导出窄 selector hook（唯一公共出口，如 chat 的 `runtime/selectors.ts` 的 `useSessionStreaming`），不得直接 import 对方的 store 或内部模块。
 - 全局 store 不得依赖 feature-local store。
 - store 呿名为 `use{SemanticName}Store`，作用域由文件位置表达。
 - 关闭项目时由 `layouts/project-lifecycle.ts` 的 `closeProjectCascade` 显式清理所有 per-project store 和 query cache：新增 per-project store 必须定义 `clearProject` action 并加入该清单，`project-lifecycle.structure.test.ts` 会强制检查。

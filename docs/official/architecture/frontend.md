@@ -42,8 +42,8 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | app-store | connection、打开项目集合、activeProjectId | 项目集合与 lastActive 经 bridge.project 子 API（desktop 落 electron settings，web 走 HTTP + localStorage）；lastRoute 在 localStorage |
 | settings-store | locale / theme / debugTools | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
 | TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / triggers / welcome-page / theme-settings | 内存 cache，项目关闭清除 |
-| project-data-store | 只保存 initialMessage 与 streaming session id 两个运行时投影 | 内存 |
-| feature stores | 折叠、浮窗、trigger 运行态、chat streaming | 见下 |
+| project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
+| feature stores | 折叠、浮窗、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
 
 - side panel 偏好在 `side-panel-store`（localStorage `spherse:side-panel:pinned`），不在 app-store
 - feature store 持久化分布：
@@ -64,13 +64,13 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | useAgentBusRefresh（hook） | agent | agent_updated 刷 agents；created / deleted 加刷 sessions |
 | UiSdkBridge（event 桥） | fs-watch | 变更事件 debounce 后定向转发给订阅的 iframe（见 [ui-sdk.md](ui-sdk.md)） |
 
-- 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 5 个 bridge）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 streaming-store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
+- 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 5 个 bridge）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 chat session store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
 - **重连补偿**：bus 重连置 `resumedAt`，各桥经 `useReconnectedSync` 批量失效缓存——错过的事件不重放，靠失效重拉对齐
 - App 级补偿：重连后 refreshProjects；路由指向已消失项目时重定向
 
 ## 项目生命周期
 
-- 项目关闭级联清理单一入口 `closeProjectCascade`（`layouts/project-lifecycle.ts`，调用方 `use-project-actions.ts` 只保留导航/toast）：app-store `closeProject`（host 侧关闭，失败即抛、本地不动）→ streaming `disconnectProject`（断开该项目全部 chat runtime）→ `clearProjectQueries` → 各 feature store `clearProject` → `clearProjectData` → `clearProjectNavHistory` → `clearLastRoute`
+- 项目关闭级联清理单一入口 `closeProjectCascade`（`layouts/project-lifecycle.ts`，调用方 `use-project-actions.ts` 只保留导航/toast）：app-store `closeProject`（host 侧关闭，失败即抛、本地不动）→ chat session store `disconnectProject`（断开该项目全部 chat 连接与 TTL 清理）→ `clearProjectQueries` → 各 feature store `clearProject` → `clearProjectData` → `clearProjectNavHistory` → `clearLastRoute`
 - 清理面为显式清单，`project-lifecycle.structure.test.ts` 递归扫描全部定义 `clearProject` action 的 store 强制其出现在 cascade 中——新增 per-project store 必须定义 `clearProject` 并纳入清单；不做注册表/事件总线
 - projectId 全链路一致：URL param → ProjectContext（`useProjectCtx`）→ query key → localStorage key 后缀 → bus 订阅 key
 - 依赖注入：`ProjectContext` 注入稳定只读的 projectId / projectRoot；`useConnection()` 返回 connection 本体，`useApiClient(projectId)` 从 connection 派生 ApiClient

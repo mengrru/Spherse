@@ -8,15 +8,15 @@
 
 ```
 Composer.send
-  → streaming-store.sendMessage          乐观插入 user 消息（断线时标 _sendFailed）
-  → ChatSessionRuntime                   WS { type:"message", content, attachments }
-  → ChatSessionHub.startRun              channel 置 running，广播 run_status
-  → AgentRunner.sendMessage              guard → 先落库 user/message + turn/start → agent.prompt
-  → pi agent loop                        emit 生命周期事件流
-  → EventPipeline                        log → capability middlewares → 附件 sanitizer → persist
-  → hub publish                          广播到 channel 的订阅者（WS attachments）
-  → renderer rAF 批量归约                 eventQueue → requestAnimationFrame flush → reducer
-  → streaming-store / MessageList        view state 与渲染
+  → session-store.sendMessage              乐观插入 user entry（clientId；断线时标 sendFailed）
+  → session-link                            WS { type:"message", content, clientId, attachments }
+  → ChatSessionHub.startRun                 channel 置 running，广播 run_status
+  → AgentRunner.sendMessage                 guard → 先落库 user/message + turn/start → agent.prompt
+  → pi agent loop                           emit 生命周期事件流
+  → EventPipeline                           log → capability middlewares → 附件 sanitizer → persist
+  → hub publish                             广播到 channel 的订阅者（WS attachments）
+  → renderer rAF 批量归约                    event-queue → flush → entry-reducer（entry state）
+  → assembleGroups → MessageGroup           渲染单元（无孤儿 log、稳定 key）
 ```
 
 两个横切不变量：
@@ -58,17 +58,15 @@ Composer.send
 5. `retryLastTurn`：要求末条为失败 assistant；追加 `turn/retried`（abandonedSeqs）+ `turn/start`，`agent.continue()`
 6. `withdrawLastTurn`：定位最后 `user/message`，已被 abandoned/compaction 覆盖则拒绝；追加 `turn/withdrawn`
 
-## Renderer：runtime / store / reducer 三层
+## Renderer：Entry → MessageGroup → 组件
 
-- **`ChatSessionRuntime`（非响应式）**：持有 WS、心跳、重连 timer、连接期事件缓冲、历史对账；经 `ChatRuntimeRegistry` 管理生命周期，transport 不进 Zustand
-- **`streaming-store`（Zustand）**：只持 UI 可观察状态与 actions；`connectionStatus`（disconnected/connecting/open）与 `historyStatus`（pending/syncing/ready）是正交维度
-- **`chat-session-reducer`（纯函数）**：事件 → view state 归约；历史解析与稳定 ID 合并在 `chat-history.ts`，tool/card 投影在 `chat-tool-projection.ts`
-- 事件按 **animation frame 批量归约**：单次 `set()` 内 flush 整个 eventQueue，避免高频 token update 触发过多 render
-- `ChatMessage` 的 `_` 前缀字段是 view 投影：
-  - 身份与状态：`_messageId`（= seq，历史对账去重键）、`_optimistic` / `_streaming` / `_sendFailed`
-  - 内容投影：`_toolCalls`（含其上的 `_card`）、`_error` / `_errorCode` / `_turnError` / `_withdrawError`、`_runChanges` / `_attachments`
-  - 来源投影：`_triggered` / `_triggerName`（trigger 发送的 user message，来自分页 entry 的 `source`/`triggerName`；`turn-groups.ts` 据此把该轮派生为折叠组，摘要条见 `TriggerTurnGroup`）
-- `useChatSession` 只做 attach/detach 与状态选择——切换页面不中断后台流式；正常断线保留 streaming 与未完成消息，`agent_end` / `error` 事件或服务端 `run_status: inactive` 结束运行态（正常完成即经 `agent_end`）
+- **`ChatEntry`（canonical state，`features/chat/model/entry.ts`）**：事件日志的前端 1:1 投影，按身份寻址——`seq`（持久事件身份；旧协议来自 HTTP entry id，v2 = `SessionEvent.seq`）、`streamId`（流式消息身份；旧协议客户端生成，v2 = server `messageId`）、`clientId`（乐观 user 消息结算）；分 user / assistant / tool-result / error 四类，tool result 独立成条
+  - `entry-reducer.ts`：live 事件归约，显式维护 `openStreamId`（流式窗口）与 `ownerAssistantId`（当前 run 最近 assistant，`agent_start`/`agent_end`/新 user 重置）；tool 事件按 owner 归属，不再靠数组尾部定位
+  - `history-entries.ts`：HTTP 分页 entry → entries；`latest` 模式按 `seq` upsert 并丢弃未持久化窗口（由重连缓冲事件重建），`loadMore` 保留本地尾部；乐观 user 按内容结算（v2 后换 clientId）
+- **`MessageGroup`（渲染单元，`message-group.ts`）**：`assembleGroups(entries)` 纯函数分区出 `turn` / `trigger-turn` 组与 `assistant` / `tool-result` / `error` 气泡；每个 entry 恰好归入一个渲染单元，tool call 与 result 按 `toolCallId` 合并，配不上宿主的结果降级为独立气泡——不丢孤儿 log；渲染 key 一律取 entry/group 身份
+  - `tool-card.ts` 投影卡片（优先级：pending control > result > partial > resolved control）；`run-changes.ts` 聚合每轮 write_file/edit_file；`group-derivations.ts` 派生 superseded 卡片、撤回/重试目标、待批控制、thinking
+- **runtime 模块（`features/chat/runtime/`）**：`session-link`（每 session 一个 `WsConnection`：url / 心跳 / fatal / probe / 出站）、`session-recovery`（开链 HTTP 对账 + 事件缓冲 + 退避）、`event-queue`（rAF 批处理 + `setTimeout(200ms)` 兜底后台冻结）、`session-lifecycle`（引用计数、TTL 定时器、级联断开、link/recovery 生命周期）、`history-loader`（首页 / loadMore / refresh）、`outbound-actions`（发送 / 重试 / 撤回 / 中断 / 控制响应）、`decode`（wire → event，无损保留 `messageId/seq`）、`session-store`（Zustand 壳 + actions）、`selectors`（对外窄 selector）；transport 不进 Zustand
+- `useChatGroups` 组装视图模型（groups / superseded / thinking / 可撤回目标）；`useChatSession` 只做 attach/detach 与状态选择——切换页面不中断后台流式；正常断线保留 streaming 与未完成消息，`agent_end` / `error` 事件或服务端 `run_status: inactive` 结束运行态；fatal close 立即清运行态且不重连
 
 ## 错误与重试
 
@@ -76,29 +74,29 @@ Composer.send
 |---|---|---|
 | 来源 | `sendMessage` 在 `agent.prompt` 前抛错 | pi `handleRunFailure` 合成 `message_end`（stopReason error） |
 | 用户消息落库 | 否（appendBatch 前抛出） | 是 |
-| reducer 表现 | 追加裸错误气泡（无 `_turnError`） | 末条 assistant 置 `_error` + `_turnError` |
-| `_errorCode` 来源 | error 事件携带的服务端 code | renderer 从错误文本正则重分类（`classify-error.ts`，规则集与服务端不同） |
+| Entry 表现 | 追加独立 `ErrorEntry`（resend 路径） | 当前 assistant entry 置 `error`（retry-last 路径） |
+| `EntryError.code` 来源 | error 事件携带的服务端 code | renderer 从错误文本正则重分类（`classify-error.ts`，规则集与服务端不同） |
 | 重试路径 | resend（重发 user 消息） | retry-last（WS `retry` → `retryLastTurn`） |
 
-- **重试决策是纯函数** `retry-plan.ts`：`planRetry` 返回 `none` / `retry-last` / `resend`（含 dropCount）；store 的 `executeRetry` 只执行 plan
-- **无自动重试**：错误一律落错误气泡 + 手动按钮触发（`_errorCode` 仅用于错误展示分类）；为什么见 [ADR-0008](../../dev/decisions/0008-no-frontend-auto-retry.md)
-- **撤回**：非 streaming 时最新未失败 user 消息可 withdraw；hub 不经 startRun（运行中返回 ConflictError）；成功广播 `turn_withdrawn`，reducer 从该 user 消息处截断；失败给错误气泡打 `_withdrawError`（隐藏 retry）
+- **重试决策是纯函数** `group-derivations.ts` 的 `planRetry`：返回 `none` / `retry-last` / `resend`（含 dropCount）；store 的 `retry` action 只执行 plan
+- **无自动重试**：错误一律落错误气泡 + 手动按钮触发（`code` 仅用于错误展示分类）；为什么见 [ADR-0008](../../dev/decisions/0008-no-frontend-auto-retry.md)
+- **撤回**：非 streaming 时最新未失败 user entry 可 withdraw；hub 不经 startRun（运行中返回 ConflictError）；成功广播 `turn_withdrawn`，reducer 从该 user entry 处截断；失败给 error 打 `retrySuppressed`（隐藏 retry）
 
 ## 重连与历史对账
 
-> 现状为过渡态：server 已发协议 v2（session_ready / 游标重放 / echo），renderer 尚未消费（`agent-event-parse.ts` 对 v2 事件返回 undefined 静默丢弃），仍走下述 HTTP 对账；chat 重构 PR3 起切换为游标重放（设计见 `docs/dev/features/2026-09-05-chat-refactor/design.md`）。
+> 现状为过渡态：server 已发协议 v2（session_ready / 游标重放 / echo），renderer 已按 Entry 模型重构但尚未消费 v2（`decode` 对 v2 事件返回 undefined 静默丢弃），仍走下述 HTTP 对账；迁移清单见 `docs/dev/features/2026-09-13-chat-frontend-refactor/design.md` §9。
 
 - **心跳**：每 30s ping，连续 60s 无 pong 才关闭；suspend 导致 timer 大幅跳跃时重置探测窗口防误杀；web 壳 hidden ≥30s / bfcache 恢复时主动 probe（5s 短超时）强测死链
-- **重连退避**：`[1, 2, 5, 10, 30]s`，上限 10 次（超限 `reconnectFailed` + 手动重连）；fatal 4401 不重连
-- **对账流程**：onopen → `historyStatus: syncing` → 拉最新一页历史 → 期间入站事件缓冲 → 对账完成后与历史合并一次性 reduce
-  - `mergeHistoryMessages` 按 `_messageId` 去重：未持久化的 transient 消息被丢弃、乐观 user 消息由持久化行替换
-  - 进行中回合由缓冲的 run 快照重放从零重建——重放因此无需事件级幂等
-- 对账失败按 `[1, 2, 5]s` 退避重试；全失败时仅「从未 ready 过」的会话置 `historyError`（曾 ready 的保持 ready，缓冲事件仍会被应用）
+- **重连退避**：`[1, 2, 5, 10, 30]s`，上限 10 次（超限状态机 `failed` → banner 手动重连）；fatal `4400/4401/4402` 不重连并立即清运行态；detach 后由 `WsConnection.shouldRetry` 阻断重连
+- **对账流程**：onopen → `history.status: syncing` → 拉最新一页历史 → 期间入站事件缓冲 → `applyHistoryPage("latest")` 按 `seq` upsert
+  - 未持久化的本地流式窗口被丢弃，由缓冲的 run 快照重放重建；已结束的 run 由页内持久行接管——因此重放无需事件级幂等
+  - 乐观 user 消息按内容与持久行结算；配不上时保留为本地尾部
+- 对账失败按 `[1, 2, 5]s` 退避重试；全失败时仅「从未 ready 过」的会话置 `history.error`（曾 ready 的保持 ready，缓冲事件仍会被应用）
 - **分页**：`GET .../sessions/:id/messages?limit=&before=`，默认 20、clamp [1, 200]；shape `{ entries, hasMore, oldestId }`
   - `id` / `oldestId` 在 events 投影路径为事件 seq，legacy 路径为 messages 表行 id——两者都是单调 cursor，前端无需区分
   - entry 可携带可选 `source: "triggered"` + `triggerName`（trigger 发送标记，仅 events 投影路径；legacy 路径无此字段）
 - **页原子性**：events 投影与 legacy 两条路径都在页首遇孤儿 toolResult 时向后扩展页边界，保证单页内 toolCall/toolResult 配对自洽——前端按页解析、跨页不重新配对
-- 上翻加载 `loadMore` 以 `oldestLoadedId` 为 cursor，守卫 `hasMore && !loadingMore`
+- 上翻加载 `loadMore` 以 `history.oldestSeq` 为 cursor，守卫 `hasMore && !loadingMore`；迟到响应按 session generation 丢弃
 
 ## 滚动（column-reverse 方案）
 
@@ -110,5 +108,5 @@ Composer.send
 
 ## 类型归属
 
-- `ChatMessage`、`ToolCallInfo`、`HtmlCard` 等 chat 内部类型集中在 `features/chat/types.ts`；`lib/types.ts` 只保留 contract re-export 与应用级类型
-- `lib/` 原则上不反向 import feature——`lib/web-resume-probe.ts` 是已知例外（bridge 性质，订阅 chat runtime 与 bus store）
+- `ChatEntry` / `MessageGroup` / `ToolItem` 等会话模型类型在 `features/chat/model/`；`features/chat/types.ts` 只保留卡片与附件类型（`HtmlCard`、`ChatAttachment` 等）；`lib/types.ts` 只保留 contract re-export 与应用级类型
+- `lib/` 原则上不反向 import feature——`lib/web-resume-probe.ts` 是已知例外（bridge 性质，订阅 chat session store 与 bus store）
