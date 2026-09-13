@@ -658,6 +658,8 @@ export const zhCN = {
   "chat.triggerTurnSummaryFallback": "触发器触发的对话轮",
   // trigger 轮运行失败时，折叠摘要条上的错误徽标文案
   "chat.triggerTurnErrorBadge": "运行失败",
+  // trigger 轮正在运行时，折叠摘要条上的状态徽标文案
+  "chat.triggerTurnRunningBadge": "运行中",
   // HtmlCard 通过 file_path 渲染时，前端拉取文件内容期间的占位提示
   "chat.loading": "加载中...",
   // 聊天保存成功提示

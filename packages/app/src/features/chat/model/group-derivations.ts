@@ -110,6 +110,16 @@ export function shouldShowThinking(entries: ChatEntry[], streaming: boolean): bo
   return last?.kind === "user";
 }
 
+export function runningTriggerGroupId(
+  groups: MessageGroup[],
+  streaming: boolean,
+): string | null {
+  if (!streaming) return null;
+  const last = groups[groups.length - 1];
+  if (!last || last.kind !== "trigger-turn" || last.hasError) return null;
+  return last.id;
+}
+
 function findLastUserIndex(entries: ChatEntry[]): number {
   for (let index = entries.length - 1; index >= 0; index--) {
     if (entries[index].kind === "user") return index;

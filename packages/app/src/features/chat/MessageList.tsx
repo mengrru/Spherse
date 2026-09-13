@@ -14,6 +14,7 @@ interface MessageListProps {
   groups: MessageGroup[];
   agent: AgentSummary;
   thinking: boolean;
+  runningGroupId?: string | null;
   withdrawableUserId: string | null;
   supersededToolCallIds: Set<string>;
   loading?: boolean;
@@ -34,6 +35,7 @@ export function MessageList({
   groups,
   agent,
   thinking,
+  runningGroupId,
   withdrawableUserId,
   supersededToolCallIds,
   loading = false,
@@ -148,6 +150,7 @@ export function MessageList({
             <TriggerTurnGroup
               key={group.id}
               group={group}
+              running={group.id === runningGroupId}
               renderUser={(user) => renderUser(group, user)}
               renderBubble={(bubble, index) => renderBubble(group, bubble, index)}
             />

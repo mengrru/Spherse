@@ -4,6 +4,7 @@ import {
   computeSupersededToolCallIds,
   lastWithdrawableUserEntry,
   planRetry,
+  runningTriggerGroupId,
   shouldShowThinking,
 } from "./group-derivations";
 import type { MessageGroup } from "./message-group";
@@ -132,5 +133,17 @@ describe("group derivations", () => {
     expect(shouldShowThinking([user()], true)).toBe(true);
     expect(shouldShowThinking([user()], false)).toBe(false);
     expect(shouldShowThinking([assistant()], true)).toBe(false);
+  });
+
+  it("marks the last trigger turn as running only while streaming without an error", () => {
+    const trigger: MessageGroup = { id: "g-trigger", kind: "trigger-turn", hasError: false, bubbles: [] };
+    const turn: MessageGroup = { id: "g-turn", kind: "turn", hasError: false, bubbles: [] };
+    const failed: MessageGroup = { id: "g-failed", kind: "trigger-turn", hasError: true, bubbles: [] };
+
+    expect(runningTriggerGroupId([turn, trigger], true)).toBe("g-trigger");
+    expect(runningTriggerGroupId([turn, trigger], false)).toBeNull();
+    expect(runningTriggerGroupId([turn, failed], true)).toBeNull();
+    expect(runningTriggerGroupId([trigger, turn], true)).toBeNull();
+    expect(runningTriggerGroupId([], true)).toBeNull();
   });
 });

@@ -4,6 +4,7 @@ import { assembleGroups, type MessageGroup } from "../model/message-group";
 import {
   computeSupersededToolCallIds,
   lastWithdrawableUserEntry,
+  runningTriggerGroupId,
   shouldShowThinking,
 } from "../model/group-derivations";
 import { useChatSessionStore } from "../runtime/session-store";
@@ -15,6 +16,7 @@ export interface ChatTimeline {
   groups: MessageGroup[];
   supersededToolCallIds: Set<string>;
   thinking: boolean;
+  runningGroupId: string | null;
   withdrawableUserId: string | null;
 }
 
@@ -32,6 +34,7 @@ export function useChatGroups(sessionId: string): ChatTimeline {
       groups,
       supersededToolCallIds: computeSupersededToolCallIds(groups),
       thinking: shouldShowThinking(entries, streaming),
+      runningGroupId: runningTriggerGroupId(groups, streaming),
       withdrawableUserId: streaming ? null : lastWithdrawableUserEntry(entries)?.id ?? null,
     };
   }, [entries, streaming]);

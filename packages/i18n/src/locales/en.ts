@@ -322,6 +322,7 @@ export const en: Record<TranslationKey, string> = {
   "chat.triggerTurnSummary": "Conversation turn triggered by {name}",
   "chat.triggerTurnSummaryFallback": "Triggered conversation turn",
   "chat.triggerTurnErrorBadge": "Failed",
+  "chat.triggerTurnRunningBadge": "Running",
   "chat.loading": "Loading...",
   "chat.saveSuccess": "Saved successfully",
   "chat.saveFailed": "Save failed: {message}",

@@ -322,6 +322,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "chat.triggerTurnSummary": "觸發器「{name}」觸發的對話輪",
   "chat.triggerTurnSummaryFallback": "觸發器觸發的對話輪",
   "chat.triggerTurnErrorBadge": "執行失敗",
+  "chat.triggerTurnRunningBadge": "執行中",
   "chat.loading": "載入中...",
   "chat.saveSuccess": "儲存成功",
   "chat.saveFailed": "儲存失敗：{message}",

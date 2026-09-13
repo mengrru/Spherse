@@ -32,6 +32,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     groups,
     supersededToolCallIds,
     thinking,
+    runningGroupId,
     withdrawableUserId,
     streaming,
     loading,
@@ -92,6 +93,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           groups={groups}
           agent={agent}
           thinking={thinking}
+          runningGroupId={runningGroupId}
           withdrawableUserId={withdrawableUserId}
           supersededToolCallIds={supersededToolCallIds}
           loading={loading}

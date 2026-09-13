@@ -18,13 +18,14 @@ function group(overrides: Partial<MessageGroup> = {}): MessageGroup {
   };
 }
 
-function renderGroup(props: { triggerName?: string; hasError?: boolean } = {}) {
+function renderGroup(props: { triggerName?: string; hasError?: boolean; running?: boolean } = {}) {
   renderWithProviders(
     <TriggerTurnGroup
       group={group({
         ...(props.triggerName !== undefined ? { triggerName: props.triggerName } : {}),
         hasError: props.hasError ?? false,
       })}
+      running={props.running ?? false}
       renderUser={() => null}
       renderBubble={(_bubble, index) => <div>rendered-{index}</div>}
     />,
@@ -54,6 +55,14 @@ describe("TriggerTurnGroup", () => {
 
     renderGroup({ hasError: true });
     expect(screen.getByText("运行失败")).toBeInTheDocument();
+  });
+
+  it("shows the running badge only while the turn is executing", () => {
+    renderGroup({ running: false });
+    expect(screen.queryByText("运行中")).not.toBeInTheDocument();
+
+    renderGroup({ running: true });
+    expect(screen.getByText("运行中")).toBeInTheDocument();
   });
 
   it("exposes the data-chat-turn-collapse theme hook on the summary bar", () => {

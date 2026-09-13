@@ -121,6 +121,30 @@ describe("MessageList", () => {
     expect(onWithdraw).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the running badge on the trigger turn identified by runningGroupId", () => {
+    const triggerGroup: MessageGroup = {
+      id: "g1",
+      kind: "trigger-turn",
+      triggerName: "daily",
+      hasError: false,
+      bubbles: [],
+    };
+    renderList([triggerGroup], { runningGroupId: "g1" });
+    expect(screen.getByText("运行中")).toBeInTheDocument();
+  });
+
+  it("does not show the running badge on other trigger turns", () => {
+    const triggerGroup: MessageGroup = {
+      id: "g1",
+      kind: "trigger-turn",
+      triggerName: "daily",
+      hasError: false,
+      bubbles: [],
+    };
+    renderList([triggerGroup], { runningGroupId: "other" });
+    expect(screen.queryByText("运行中")).not.toBeInTheDocument();
+  });
+
   it("loads more history through the load more button", async () => {
     const user = userEvent.setup();
     const onLoadMore = vi.fn();

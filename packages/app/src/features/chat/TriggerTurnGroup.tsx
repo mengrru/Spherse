@@ -5,15 +5,16 @@ import type { UserEntry } from "./model/entry";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../../components/ui/collapsible";
-import { AlertTriangleIcon, ChevronRightIcon } from "lucide-react";
+import { AlertTriangleIcon, ChevronRightIcon, LoaderCircleIcon } from "lucide-react";
 
 interface TriggerTurnGroupProps {
   group: MessageGroup;
+  running?: boolean;
   renderUser: (user: UserEntry) => ReactNode;
   renderBubble: (bubble: Bubble, index: number) => ReactNode;
 }
 
-export function TriggerTurnGroup({ group, renderUser, renderBubble }: TriggerTurnGroupProps) {
+export function TriggerTurnGroup({ group, running = false, renderUser, renderBubble }: TriggerTurnGroupProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
@@ -43,6 +44,12 @@ export function TriggerTurnGroup({ group, renderUser, renderBubble }: TriggerTur
               ? t("chat.triggerTurnSummary", { name: group.triggerName })
               : t("chat.triggerTurnSummaryFallback")}
           </span>
+          {running && (
+            <Badge variant="outline" className="gap-1 text-muted-foreground">
+              <LoaderCircleIcon className="size-3 animate-spin" />
+              {t("chat.triggerTurnRunningBadge")}
+            </Badge>
+          )}
           {group.hasError && (
             <Badge variant="outline" className="gap-1 border-destructive/40 text-destructive">
               <AlertTriangleIcon className="size-3" />
