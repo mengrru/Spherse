@@ -117,17 +117,18 @@ describe("thinkingLevel persistence", () => {
     expect(getMaskedSettings()?.models.text.thinkingLevel).toBe("high");
   });
 
-  it("saveSettings round-trips thinkingLevel through merge", () => {
+  it.each(["low", "xhigh", "max"] as const)("saveSettings round-trips %s through merge and masked reads", (level) => {
     settingsStore.set("settings", undefined);
     saveSettings({
       locale: "zh-CN",
       models: {
-        text: { defaultModel: "", providers: {}, thinkingLevel: "low" },
+        text: { defaultModel: "", providers: {}, thinkingLevel: level },
         image: { defaultModel: "", providers: {} },
       },
     });
 
-    expect(settingsStore.get("settings")?.models.text.thinkingLevel).toBe("low");
+    expect(settingsStore.get("settings")?.models.text.thinkingLevel).toBe(level);
+    expect(getMaskedSettings()?.models.text.thinkingLevel).toBe(level);
   });
 });
 

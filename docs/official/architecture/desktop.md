@@ -33,7 +33,7 @@
 ## settings 持久化
 
 - electron-store 落 userData 下 `settings.json`；`AppSettings` schema：
-  - `locale` + `models: { text, image }`——每 group 含 `defaultModel`、per-provider `apiKey`，text 另含可选 `sampling` 与 `thinkingLevel`（off/low/medium/high，缺省 medium）
+  - `locale` + `models: { text, image }`——每 group 含 `defaultModel`、per-provider `apiKey`，text 另含可选 `sampling` 与 `thinkingLevel`（off/low/medium/high/xhigh/max，缺省 medium）
   - 可选 `customProviders` / `debugToolsEnabled` / `theme` / `mobileAccess`
 - **serverToken 是 settingsStore 顶层 key，不是 AppSettings 字段**（`saveSettings` 会从零重建 AppSettings）。`getServerToken()` 迁移链：`serverToken` → legacy `mobileAccess.token` → 生成并持久化；它是 server 鉴权唯一凭据来源（见 [server.md](server.md)「鉴权模型」）
 - **API key 掩码与合并**：显示前 4 + `****` + 后 4；保存时空串跳过、含 `****` 保留旧值
@@ -47,7 +47,7 @@
 
 - save-settings 链：`if (defaultModel)` 才 `updateDefaultModel()`；`updateSampling()` / `updateThinkingLevel()` 无条件（undefined 即「恢复默认」需要传播）→ registry fan-out 各项目并缓存供后续 register → `SessionManager`
 - 热替换：`setDefaultModel` 遍历活跃会话，仅在解析结果变化时重赋 `agent.state.model`（下一轮生效）；未配置的 agent 跳过不抛错；profile 显式指定 `model` 者不受全局默认影响
-- `setThinkingLevel` 重赋各 agent 的 `state.thinkingLevel`（下一轮生效）；`off` 即关闭思考，实际档位由 pi-ai 按模型 `clampThinkingLevel` 就近取档（不支持推理的模型忽略）
+- `setThinkingLevel` 重赋各 agent 的 `state.thinkingLevel`（下一轮生效）；启用思考时由 pi-ai 按模型 `clampThinkingLevel` 就近取档，不支持推理的模型忽略；`off` 请求关闭，实际效果取决于模型支持范围
 - `setSampling` 重赋各 agent 的 `streamFn`；注入点 `getChatStreamFn`：
   - `temperature` 走 pi-ai typed 字段直接进 options
   - `topP` 经 `onPayload` 按 `model.api` 分支——openai 系 / anthropic 根级 `top_p`，google 走 `config.topP`，未知 no-op
@@ -55,6 +55,8 @@
   - 转为 `MODEL_NOT_CONFIGURED` error 事件，不关连接；`resolveEffectiveModelId` 用 `||` 语义（空串视为未配置）
 - 已知边界：清空 defaultModel 后运行时旧默认保留至重启（`if` 守卫 + registry 缓存）
 - **provider catalog**：core `ModelCatalog` 类实例由 desktop `getAppModelCatalog()` 持有单例，经 `CreateServerOptions` 注入 server；文本 17 个内置 provider，图片 3 家（openrouter / zhipu / openai）
+- OpenAI 目录补充 `gpt-6-astra`（上游已有时复用），使用 Responses API；支持 low/medium/high/xhigh/max，聊天选择 off 时使用 low
+- Astra provider 包装 stream / streamSimple：保留 onPayload 回调，清理 temperature/top_p/top_logprobs 与日志概率 include；旧缓存 retention 转为 `prompt_cache_options.ttl=30m`，禁用缓存时使用无断点的 explicit 模式
 
 ## 外观模式
 

@@ -78,7 +78,8 @@ describe("SessionManager temperature propagation", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -165,7 +166,8 @@ describe("SessionManager sampling (temperature + topP) propagation", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -226,7 +228,8 @@ describe("SessionManager thinking level propagation", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -250,14 +253,14 @@ describe("SessionManager thinking level propagation", () => {
     expect(activeAgent(runtime as RuntimeInternals, sessionId).state.thinkingLevel).toBe("medium");
   });
 
-  it("hot-swaps thinkingLevel on active agents when setThinkingLevel is called", async () => {
+  it.each(["off", "xhigh", "max"] as const)("hot-swaps thinkingLevel to %s on active agents", async (level) => {
     const sessionId = await runtime.sessionRuntime.createSession(agentId);
     const agent = activeAgent(runtime as RuntimeInternals, sessionId);
     expect(agent.state.thinkingLevel).toBe("high");
 
-    runtime.sessionRuntime.setThinkingLevel("off");
+    runtime.sessionRuntime.setThinkingLevel(level);
 
-    expect(agent.state.thinkingLevel).toBe("off");
+    expect(agent.state.thinkingLevel).toBe(level);
   });
 
   it("hot-swaps thinkingLevel on ALL active agents (multiple sessions)", async () => {
@@ -291,7 +294,8 @@ describe("SessionManager default model hot-swap", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -357,7 +361,8 @@ describe("SessionManager lazy model resolution", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -417,7 +422,8 @@ describe("SessionManager lifecycle", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -564,7 +570,8 @@ describe("SessionManager event facade", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -665,7 +672,8 @@ describe("SessionManager getSessionStatus", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -744,7 +752,8 @@ describe("SessionManager agent hot-reload", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -830,7 +839,8 @@ describe("SessionManager createSession title", () => {
     runtime.timerService.stop();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await runtime.shutdown();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 

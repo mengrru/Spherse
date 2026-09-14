@@ -86,15 +86,15 @@ describe("useSettingsForm save payload", () => {
     expect(lastSaved(api).text?.sampling).toEqual({});
   });
 
-  it("persists thinkingLevel changes on the text group only", async () => {
+  it.each(["high", "xhigh", "max"] as const)("persists %s on the text group only", async (level) => {
     const { result } = renderHook(() => useSettingsForm(api));
     await waitFor(() => expect(result.current.text.thinkingLevel).toBe("low"));
 
     await act(async () => {
-      await result.current.text.changeThinkingLevel("high");
+      await result.current.text.changeThinkingLevel(level);
     });
-    expect(result.current.text.thinkingLevel).toBe("high");
-    expect(lastSaved(api).text?.thinkingLevel).toBe("high");
+    expect(result.current.text.thinkingLevel).toBe(level);
+    expect(lastSaved(api).text?.thinkingLevel).toBe(level);
     expect(lastSaved(api).image?.thinkingLevel).toBeUndefined();
   });
 

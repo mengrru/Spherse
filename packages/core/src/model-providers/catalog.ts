@@ -20,6 +20,7 @@ import type {
 } from "../types.js";
 import { createZhipuImagesProvider } from "./zhipu-images.js";
 import { createOpenaiImagesProvider } from "./openai-images.js";
+import { registerOpenaiAstra } from "./openai-astra.js";
 
 export const ENABLED_PROVIDERS = [
   "openai",
@@ -197,6 +198,7 @@ export class ModelCatalog {
 
   constructor() {
     this.models = builtinModels();
+    registerOpenaiAstra(this.models);
     this.imagesModels = builtinImagesModels();
     this.imagesModels.setProvider(createZhipuImagesProvider());
     this.imagesModels.setProvider(createOpenaiImagesProvider());
@@ -321,7 +323,12 @@ export class ModelCatalog {
       models.streamSimple(model, context, {
         ...options,
         ...(temperature != null ? { temperature } : {}),
-        ...(topP != null ? { onPayload: injectTopP(topP) } : {}),
+        ...(topP != null ? {
+          onPayload: options?.onPayload ? async (payload, requestModel) => {
+            const prepared = await options.onPayload?.(payload, requestModel) ?? payload;
+            return injectTopP(topP)(prepared, requestModel) ?? prepared;
+          } : injectTopP(topP),
+        } : {}),
       });
   }
 
