@@ -10,7 +10,7 @@
 
 ## Bug
 
-- [ ] **补齐 session/agent/project abort-and-drain 生命周期**：destroy/evict/close 当前仅删除 map entry，删除或 shutdown 后 turn、trigger 和 hub channel 仍可能执行工具或写入已关闭 store。先设计并实现 admission 关闭、preflight 取消、完整 turn/pending restore/trigger drain、hub project/agent/session quiesce、capability teardown、store close 顺序及共享 shutdown Promise；顺手收口 turn finally 清理链的单点抛错风险（如 `sanitizer.finalize` 抛错会跳过 unsubscribe/sink 恢复/释放 busy）。参见 `docs/dev/investigation/2026-08-29-session-lifecycle-concurrency/README.md`
+- [ ] **补齐 session/agent/project abort-and-drain 生命周期**：destroy/evict/close 当前仅删除 map entry，删除或 shutdown 后 turn、trigger 仍可能执行工具或写入已关闭 store。先设计并实现 admission 关闭、preflight 取消、完整 turn/pending restore/trigger drain、capability teardown、store close 顺序及共享 shutdown Promise；顺手收口 turn finally 清理链的单点抛错风险（如 `sanitizer.finalize` 抛错会跳过 unsubscribe/sink 恢复/释放 busy）。server 侧 hub 的 project/all 级收口与 release 权归 core 已完成（见 [ADR-0012](../decisions/0012-chat-hub-lifecycle-ownership.md)）；剩余 hub 部分是 session/agent 级 delete 时的主动 quiesce 与本项核心 admission 一并设计。参见 `docs/dev/investigation/2026-08-29-session-lifecycle-concurrency/README.md`
 - [ ] **损坏项目滞留 openProjects 无移除入口**：项目打开失败（project.yaml 损坏等）后该路径一直留在 openProjects 设置里，每次启动重试失败记日志，暂无 UI 内移除 / 修复入口。参见 `docs/dev/bugfix/2026-08-27-project-open-overwrite/design.md`（#42 遗留）
 - [ ] **审批卡 abort/run 结束后 pending 态残留**：run 被中断（`rejectAll` 不发 `control_resolved`）时，`run_command` 的 pending_approval CommandCard 与 `manage_agent`/`manage_trigger` 的 pending ApprovalCard 仍保留可交互按钮，点击后静默无效（bus 对未知 requestId 忽略）。ask_user 的 QuestionCard 已在 `run_status inactive` 时由 reducer 清除（`clearPendingQuestionCards`），approval 侧应复用同款收敛（terminalize 或清除），并补 reducer 测试。
 - [ ] **system-prompt XML 包裹对用户内容闭合标签不健壮**：`serializeSystemPrompt`（`packages/core/src/context/serialize.ts`）对 `<project-instructions>`/`<agent-profile>`/`<context-file>` 的 inner content 原样包裹、不转义。若用户的 AGENTS.md 或预载文件内含 `</project-instructions>` 等闭合标签，会破坏 system prompt 结构。需评估方案：对 inner content 转义、改用 CDATA、或在包裹时检测冲突标签；同时更新 `serialize.test.ts` 中「不转义 inner content」的现有断言。参见 `docs/dev/features/2026-07-02-context-engineering/design.md` §6.3
@@ -22,6 +22,7 @@
 - [ ] **BrowserPage render 期 navigate 重定向疑似失效**：`pages/BrowserPage.tsx` 在 render 期间调用 `navigate(...)`（React Router 反模式）。组件测试迁移（2026-08-29）中用 MemoryRouter 验证发现该调用不会完成导航，仅返回 null——web 壳访问 `/project/:id/browser` 时可能停在空白路由而非回到项目首页。修复方向：改为 `useEffect` 内导航或 `<Navigate replace />`；修复后可在 `save-export-degradation.test.tsx` 补真正的路由断言。
 - [ ] **desktop 契约测试缺位**：AGENTS.md 红线要求「core 的 PM 写入门面与 `SessionPort` 方法，消费方包（server/desktop）至少各有一条不 mock 被测方法本身的契约测试」；server 侧已有（`write-facade-contract.test.ts`），desktop 侧现有 `electron/ipc/project.test.ts`、`electron/server.test.ts` 均 vi.mock 了 server/门面，不满足红线。需补一条走真实门面（或真实 IPC 边界）的契约测试。
 - [ ] **补齐 dialog/sheet 关闭按钮 sr-only 文案 i18n**：`packages/app/src/components/ui/dialog.tsx:73` 与 `sheet.tsx:73` 的 `<span className="sr-only">Close</span>` 硬编码英文，屏幕阅读器可读的用户可见文案未走 `@spherse/i18n`（违反仓库红线）；替换为已有 `common.close` 键的 `t()` 即可（2026-08-30 关闭按钮尺寸调整 review 顺带发现）。
+- [ ] **chat WS close reason 截断到 123 字节**：`ws-chat.ts` 的 `socket.close(code, message)` 使用任意 core 错误消息；`ws` 对 >123 字节 reason 抛 `RangeError`，且抛出点在 `setCloseTimer` 之前、会派生 unhandled rejection，close 事件可能不触发导致 attachment lease 无法归还、channel 无法收口。方向：reason 截断（或只传 code），补超长错误消息用例。2026-09-15 hub review 发现（pre-existing）。
 
 ## 技术债（重构与收敛）
 
@@ -44,6 +45,7 @@
 - [ ] **安全语义对齐（三项决策 + 落地）**：① `.spherse` 未分类文件（`spherseOther`）LLM 可读——`LLM_READ` 白名单包含该类别且有测试钉住（`access-policy.test.ts`），与「避免内部数据泄漏」的最初意图相悖，需决策收紧为不可读或接受现状并改测试意图注释；② `memory_save`/`memory_recall` 直连 MemoryStore 完全不经 access policy——用户 deny `.spherse` 后 memory 持久化照常工作，与文档曾声称的「安全优先语义」不符，需决策是否让 memory 工具走 policy 或显式豁免；③ `manage_project_config` 的 `update_welcome_page` 是写操作且 UI 归入高级工具组，但 core 层未包 `withApproval`（与 run_command/manage_agent/manage_trigger 的「高级写操作经审批」模式不一致），yolo 警示文案也未提及它——需决策补审批或在文档/文案中显式声明豁免取舍。
 - [ ] **跨层接缝契约清单对账**：SessionPort 5 方法（create/restore/sendMessage/abortSession/sessionExists）在 server/desktop 包的契约覆盖缺口逐条对账（trigger 路径、ws-chat 路径），按 AGENTS.md 契约规矩补齐。
 - [ ] **chat WS 出站背压**：`ChatChannel.publish` 同步 `socket.send`，慢客户端（手机 PWA 走公网 tunnel）的 ws 发送缓冲无上限增长（`message_update` 为累积快照，帧大且高频），无人看 `bufferedAmount`。方向：ws-chat 的 send 闭包按 `bufferedAmount` 分级——软阈值（~1MB）丢弃流式 update 帧（累积快照语义下丢中间帧无损，下一条即全量）、硬上限（~16MB）close 断开，客户端经游标重放 + 快照无损恢复。参见 `docs/dev/features/2026-09-05-chat-refactor/design.md`（hub 缺陷分析节）。
+- [ ] **server/core 错误消息 i18n**：ws error frame 的 `message` 由 renderer 直接展示（`entry-reducer.applyError`），但 server/core 硬编码英文（新增 `RuntimeClosedError` / `ChannelClosedError` 等），两包均不依赖 `@spherse/i18n`。方向：wire 以稳定 code 为主、renderer 按 code 映射文案；或在 server 注入翻译函数。2026-09-15 hub 收口 review 记录。
 
 ## 条件触发（设计决策）
 

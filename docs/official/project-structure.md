@@ -158,13 +158,14 @@ spherse/
 │   │       └── __tests__/            # 契约测试（正向通过 / 负向抛 Invalid payload + Fastify coercion 兼容）
 │   ├── server/                       # @spherse/server — Fastify API 层
 │   │   └── src/
-    │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry；组合 auth / cors / host-guard 中间件
+    │   │       ├── index.ts              # createMultiProjectServer()，创建 logger、Fastify 实例并注册 ProjectRegistry；组合 auth / cors / host-guard 中间件；返回 MultiProjectServer（含 close() 唯一关停入口）
 │   │       ├── middlewares/          # 请求边界防护三件套（onRequest hook，均由 index.ts 装配）
 │   │       │   ├── auth.ts           # token 校验（Bearer/query/preview-path 提取 + timingSafeEqual）+ registerAuthHook
 │   │       │   ├── cors.ts           # 认证制 CORS（preflight 反射放行，token 有效才设 ACAO）
 │   │       │   └── host-guard.ts     # Host 校验（静态集合 + 动态注册，返回 HostGuard 管理动态 host）
 │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
-    │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove
+    │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove（removal barrier + onRuntimeRemoved 观察者）
+    │   │       ├── shutdown.ts           # closeMultiProjectServer()：hub → registry → fastify 关停顺序、阶段超时与失败隔离
     │   │       ├── marketplace.ts        # 技能市场 service：OSS manifest 代理（30s 内存缓存，env SPHERSE_MARKETPLACE_MANIFEST_URL 可覆盖 URL）+ zip 下载（同源 SSRF 校验、50MB 上限）
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
@@ -184,8 +185,8 @@ spherse/
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
 │   │       ├── chat/                  # chat 域（对外仅经 index.ts 导出 handleChatWebSocket + ChatSessionHub）
 │   │       │   ├── index.ts            # 域门面
-│   │       │   ├── chat-session-hub.ts # ChatSessionHub：channel 注册表（Map<projectId:sessionId, ChatChannel> + 身份守卫删除）
-│   │       │   ├── chat-channel.ts     # ChatChannel：单 session 生命周期（restore/run 序列化/快照压缩/握手重放/fanout/空闲销毁）
+│   │       │   ├── chat-session-hub.ts # ChatSessionHub：channel 注册表（按 SessionManager 身份 × sessionId），closeRuntime/close 收口 + admission
+│   │       │   ├── chat-channel.ts     # ChatChannel：单 session 生命周期（opening/open/closed 状态机、lazy restore 单飞、lease、run 序列化/快照压缩/握手重放/fanout/空闲 release）
 │   │       │   ├── chat-wire-projector.ts # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
 │   │       │   ├── ws-chat.ts          # WebSocket 对话流端点（/ws/projects/:projectId/chat/...，?since= 游标重放）
 │   │       │   └── classify-run-error.ts # run 错误 → wire error code 分类

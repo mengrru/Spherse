@@ -6,7 +6,7 @@
 
 ## 组合根与生命周期
 
-- `createMultiProjectServer({ defaultModel?, sampling?, thinkingLevel?, auth?, port?, modelCatalog?, appVersion? })` 创建单实例，返回 `{ fastify, registry, logger, addAllowedHosts, removeAllowedHosts }`
+- `createMultiProjectServer({ defaultModel?, sampling?, thinkingLevel?, auth?, port?, modelCatalog?, appVersion? })` 创建单实例，返回 `{ fastify, registry, logger, addAllowedHosts, removeAllowedHosts, close }`
 - 初始化顺序：logger → appVersion → Fastify（debug 级 + query redact）→ **Host 校验 hook → 认证制 CORS hook** → websocket → multipart（5MB）→ 错误处理器
   - 之后：ProjectRegistry → ChatSessionHub → auth hook → 全部路由 → chat / bus WS handler
   - onRequest hook 顺序固定 Host → CORS → auth；CORS hook 对 OPTIONS 直接 204 短路
@@ -15,12 +15,13 @@
 - desktop 启动链：`app.whenReady` → `ensureServer()`（恒传 `auth.accessToken = getServerToken()`）→ 重放已注册项目 → 重放动态 host
   - `ensureServer` 以 settings 的 model/sampling/thinkingLevel、server token、`getAppModelCatalog()` 单例与 app 版本建服务
   - server 重建（regenerate token）后由 `syncAllowedHosts()` 按当前 mobileAccess 状态重放动态 host
-- shutdown：tunnel stop → `registry.removeAll()`（allSettled）→ `fastify.close()`
+- shutdown：tunnel stop → `server.close(options?)`（唯一关停入口，幂等共享 Promise；顺序 `chatHub.close()` → `registry.removeAll()`（allSettled）→ `fastify.close()`，阶段各自 `settleWithin` 超时/失败隔离，缺省 10s 与 logger 上报；desktop 只注入超时与日志策略，见 [ADR-0012](../../dev/decisions/0012-chat-hub-lifecycle-ownership.md)）
 
 ## ProjectRegistry
 
 - 维护 `Map<projectId, ProjectContext>`；ctx 为 `Object.freeze` + getter——`runtime`、`projectId`，转发 `projectManager` / `sessionRuntime` / `triggerManager`
 - `register` 按 resolved root 去重复用已有 ctx，pending Promise 去重防并发注册
+- `remove` 顺序：先从 map 摘除（新请求 404）→ 通知 `onRuntimeRemoved`（hub 收口 channel）→ `await runtime.shutdown()`；removal barrier 让同 root 的并发 `register` 等待旧 runtime 关闭后才新建（避免同目录双开 SQLite）
 - projectId 冲突（复制目录）时改写副本的 `project.yaml`（log warn，不中断；重新生成 8 位 nanoid）
 - `setDefaultModel` / `setSampling` 向所有已注册项目 fan-out
 - modelCatalog 注入链：desktop main 单例 → `CreateServerOptions` → registry → 每项目 `createProject`；未注入时 registry 兜底自建（desktop 链路不会走到兜底）

@@ -12,7 +12,7 @@
 - `app.whenReady` 顺序：`fixPath` → `restoreEnvFromSettings` → `ensureServer()`（恒带 server token）→ 创建窗口与右键菜单 → 注册全部 IPC → quick 模式启动 tunnel；更新检查另以 `setTimeout` 5s 调度，与 tunnel 无先后依赖
 - BrowserWindow：1200×800、`contextIsolation: true`、`nodeIntegration: false`、preload 白名单桥
 - `fixPath` 仅 packaged + darwin/linux：spawn 登录 shell 取 `$PATH` 去重合并，保证 GUI 启动拿到 CLI 环境
-- 优雅退出：`window-all-closed` / `before-quit`（幂等标记）→ tunnel stop → `stopServer()` → quit
+- 优雅退出：`window-all-closed` / `before-quit`（幂等标记）→ tunnel stop → `stopServer()` → quit；`stopServer` / `restartServer` 委托 `MultiProjectServer.close()`（注入 10s 阶段超时与日志回调），不再手工编排 registry/fastify 顺序
 
 ## IPC 面
 

@@ -40,5 +40,5 @@ design 见同目录 `design.md`。按任务顺序实现，完成即勾选。
 
 - [x] `npm run lint` / `npm run build` / `npm run typecheck` / 受影响包测试
 - [x] `npm run verify`
-- [ ] commit + code-review skill
-- [ ] doc-sync（design.md 文档同步节）+ design 偏差回写
+- [x] commit + code-review skill（critical 0；important 3 项已修，见第三个 commit）
+- [x] doc-sync（design.md 文档同步节）+ design 偏差回写

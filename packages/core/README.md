@@ -30,7 +30,7 @@
 ```
 
 - **kernel/**：只有类型（`Capability`、`ToolHost`、`SessionPort`、`PathRule`…）和纯组合子（EventPipeline、TurnHooks、ContextBlock）。零 I/O、零实现。
-- **session/**：会话运行时。`AgentRunner` 在固定时机调用 kernel 抽象，对具体能力零 import；`agent-assembly` 从 profile 组装 Agent；`SessionEventLog` 持有 append-only 事件并同步写 SQLite；`SessionManager` 管理 session 池，并在可写 restore 前自动迁移 legacy 会话。
+- **session/**：会话运行时。`AgentRunner` 在固定时机调用 kernel 抽象，对具体能力零 import；`agent-assembly` 从 profile 组装 Agent；`SessionEventLog` 持有 append-only 事件并同步写 SQLite；`SessionManager` 管理 session 池、在可写 restore 前自动迁移 legacy 会话，并提供 `releaseSession`（空闲释放，busy 拒绝）与 restore admission 重检（archived / 已关闭 store 拒绝），server hub 经这两个入口收口而不直接触碰 runner。
 - **capabilities/**：能力模块。每个目录自足，只依赖 kernel 类型，经 `Capability` 接口贡献工具 / context block / turn hooks / attachment processor / path rule / 事件 middleware / 生命周期钩子。
 - **装配点**：`assembleProject` 组合一切。capabilities 列表可参数化（`AssembleOptions.capabilities` 接受数组或 `builtin => list` 函数）。
 
