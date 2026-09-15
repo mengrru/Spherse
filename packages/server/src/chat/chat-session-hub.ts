@@ -1,7 +1,7 @@
 import type { SessionManager } from "@spherse/core";
 import type { FastifyBaseLogger } from "fastify";
 import { RuntimeClosedError } from "../errors.js";
-import { ChatChannel, type ChatSessionAttachment } from "./chat-channel.js";
+import { ChatChannel, type ChannelCloseReason, type ChatSessionAttachment } from "./chat-channel.js";
 
 type Subscriber = (event: unknown) => void;
 
@@ -38,20 +38,32 @@ export class ChatSessionHub {
     this.closedRuntimes.add(runtime);
     const bySession = this.channels.get(runtime);
     if (!bySession) return;
+    this.closeChannels(bySession, "runtime-closed");
     this.channels.delete(runtime);
-    for (const channel of bySession.values()) {
-      channel.close("runtime-closed");
-    }
   }
 
   close(): void {
     this.closed = true;
     const entries = [...this.channels.entries()];
-    this.channels.clear();
     for (const [runtime, bySession] of entries) {
       this.closedRuntimes.add(runtime);
-      for (const channel of bySession.values()) {
-        channel.close("server-closed");
+      this.closeChannels(bySession, "server-closed");
+    }
+    this.channels.clear();
+  }
+
+  private closeChannels(
+    bySession: Map<string, ChatChannel>,
+    reason: ChannelCloseReason,
+  ): void {
+    for (const [sessionId, channel] of bySession) {
+      try {
+        channel.close(reason);
+      } catch (err) {
+        this.logger.error(
+          { err, sessionId, reason },
+          "chat channel close failed",
+        );
       }
     }
   }

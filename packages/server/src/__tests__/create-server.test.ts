@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import net, { type AddressInfo, type Server } from "node:net";
 import { createMultiProjectServer, DEFAULT_SERVER_PORT, type MultiProjectServer } from "../index.js";
 
@@ -72,9 +72,11 @@ describe("createMultiProjectServer port binding", () => {
     const port = await getFreePort();
     const server = await createMultiProjectServer({ port });
     servers.push(server);
+    const closeSpy = vi.spyOn(server.fastify, "close");
 
     await Promise.all([server.close(), server.close()]);
 
+    expect(closeSpy).toHaveBeenCalledTimes(1);
     expect(server.fastify.server.listening).toBe(false);
   });
 });

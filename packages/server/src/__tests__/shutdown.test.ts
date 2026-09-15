@@ -84,6 +84,31 @@ describe("closeMultiProjectServer", () => {
     }
   });
 
+  it("uses the 10s default stage timeout when none is provided", async () => {
+    vi.useFakeTimers();
+    try {
+      const { deps, fastifyClose } = createDeps();
+      deps.registry.removeAll.mockImplementation(() => new Promise(() => {}));
+      const outcomes: string[] = [];
+
+      const closePromise = closeMultiProjectServer(deps as never, {
+        onStageOutcome: (stage, outcome) => {
+          outcomes.push(`${stage}:${outcome}`);
+        },
+      });
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(outcomes).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await closePromise;
+
+      expect(outcomes).toEqual(["registry.removeAll:timeout"]);
+      expect(fastifyClose).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("falls back to the server logger when no outcome callback is provided", async () => {
     const { deps, logger } = createDeps();
     deps.fastify.close.mockRejectedValue(new Error("fastify boom"));

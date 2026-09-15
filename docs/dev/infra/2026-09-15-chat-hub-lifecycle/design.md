@@ -90,13 +90,14 @@ type ChannelCloseReason = "idle" | "runtime-closed" | "server-closed" | "restore
 - **所有 await 后继重检状态**（含 `startDetachedRun` 的 `await ensureReady`）：
   - `sentinel` 检查点：`if (this.state !== "open") throw/downgrade`；在途 `startRun` 的回调经状态判定降级为 no-op，但 `finally` 的 lease 归还与 `running=false` 必须执行（不依赖状态）
 - **attachment `ready: Promise<void>` 语义**（替代 boolean，消除双重含义）：
-  - restore 失败 / attach 期间 channel 被关闭 → reject `ChannelClosedError`
-  - **attachment 自身先被 close** → resolve（socket 已在关闭，调用方不需要信号）；ws-chat 用 `ready.then(() => true, () => false)` 作为 abort/控制响应的门（无 unhandled rejection）
+  - restore 失败 → reject 原始错误（ws 仍按 NotFound → 4401 / MigrationRequired → 4402 映射）
+  - attach 期间 channel 被收口（`closeRuntime` / hub `close()`）→ reject `ChannelClosedError`（ws 映射 1000，可重连）
+  - **attachment 自身先被 close** → 无论 restore 成败均 resolve（socket 已在关闭，调用方不需要信号）；ws-chat 用 `ready.then(() => true, () => false)` 作为 abort/控制响应的门（无 unhandled rejection）
 - **close 后置条件**（全部同步成立，测试逐条钉住）：
 
   | 后置条件 | 保证方式 |
   |---|---|
-  | 无任何 subscriber 回调（含 handshake 路径） | close 清空 `subscribers`；`publish/notify/handshake` 入口判 `state !== "open"` 早退 |
+  | 无任何 subscriber 回调（含 handshake 路径） | close 清空 `subscribers`；`publish` / `handshake` 入口判 `state !== "open"` 早退（`notify` 仅由二者调用） |
   | log 订阅恰好解除一次 | `releaseSubscription()` 幂等，close 只调一次 |
   | hub map 无条目 | identity-guarded `dispose()` |
   | 命令确定性失败 | `sendMessage`/`retryLastTurn`/`withdrawLastTurn` reject `ChannelClosedError`；`abort`/`resolveControlRequest`/attachment `close()` no-op 且幂等 |
@@ -133,7 +134,7 @@ class ChatSessionHub {
 3. `restoreSession` admission 重检（store-closed-safe）：
    - 取 agent store 与 session 行；session 不存在或 `status !== "active"` → `NotFoundError`；store 已关闭（better-sqlite3 抛 `The database connection is not open`）同样映射 `NotFoundError`，不把 SQLite 原文泄给 HTTP/WS
    - 状态检查先于 `migrateLegacySession`（避免对 archived legacy session 做迁移副作用）；migration 之后 `await initForRestore`，再在**与 `sessions.set` 同一同步块内重检一次**（delete 路径的 `destroySession` + archive 均为同步，重检后可杜绝复活）
-   - agent 删除（`deleteAgent` 先 close DB、`await fs.rm` 后才从 map 摘除，`store/project.ts:214-224`）与项目 shutdown 期间的重检失败同样映射 `NotFoundError`
+   - agent 删除（`deleteAgent` 先 close DB、`await fs.rm` 后才从 map 摘除，`store/project.ts:214-224`）与项目 shutdown 期间的重检失败同样映射 `NotFoundError`；`initForRestore` 在 await 中抛出的 store-closed 错误也走同一归一化（agent 缺失/迁移要求等语义错误保持原类型）
 
 `destroySession` 保留，当前生产调用方仅 `ProjectRuntime.deleteSession`（`project-runtime.ts:57`）；`evictAgent` / `closeAll` 不调用它。hub 不再引用。
 
@@ -165,7 +166,7 @@ close(options?: ServerCloseOptions): Promise<void>;
 ```
 
 - 顺序：`chatHub.close()`（同步）→ `settleWithin(registry.removeAll(), timeout)` → `settleWithin(fastify.close(), timeout)`；单阶段超时/失败不阻塞后续阶段
-- 编排抽成 `packages/server/src/shutdown.ts` 的 `closeMultiProjectServer({ hub, registry, fastify }, options)`（顶层跨域编排，符合 server README 的目录约定），让顺序/超时/幂等可用 fakes 单测，不必启动真 server
+- 编排抽成 `packages/server/src/shutdown.ts` 的 `closeMultiProjectServer({ hub, registry, fastify, logger }, options)`（顶层跨域编排，符合 server README 的目录约定），让顺序/超时/幂等可用 fakes 单测，不必启动真 server
 - `stageTimeoutMs` 有默认值（`settleWithin` 要求 number，缺省会导致 0ms 立即超时）；`onStageOutcome` 缺省时由 server logger 记录，阶段失败/超时永不静默
 - `chatHub.close()` 用 try/catch 包裹：hub 收口即使抛错也不阻断后续阶段
 
@@ -191,10 +192,13 @@ close(options?: ServerCloseOptions): Promise<void>;
 
 - **close 是同步终态、不等待在途 run**：等待会把项目关闭绑在模型调用上，且 hub 并不拥有 run 的取消权（core 负责）。代价是 core run 在 channel 关闭后继续执行——backlog「abort-and-drain」要解决的问题；本设计只保证 hub 侧引用与回调干净
 - **trigger `restoreSession → sendMessage` 间隙仍是释放竞态**：runner 已存在但 `isBusy()` 为 false 且 log 无 open turn，`releaseSession` 可在两 await 之间命中，导致 trigger 收到 `NotFoundError`。这是 core admission 的剩余缺口（investigation README:109），本设计不假装关闭它；作为 backlog follow-up 记录，随 core 生命周期工作修复，不作为本次验收条件
+- **`releaseSession` 被 core 拒绝（返回 false）时 `cleanupIfIdle` 仍收口 channel**：唯一已知窗口是 trigger run 的 preflight（`inFlight` 已置但 `turn/start` 未落库，`isRunActive()` 尚为 false）。此时关闭 channel 是安全的——core runner 保留、后续 attach 的 `restoreSession` 直接复用；日志会同时出现 `released: false` 与 `close(idle)`，用于观测该窗口
+- **registry removal barrier 语义**：`remove` 先装 barrier（总是 resolve 的 Promise），`register` 等待 barrier 而非 removal 结果——removal 的 shutdown 失败只透传给 `remove` 调用方，不阻塞同 root 重注册；若 shutdown 永久挂起，同 root 的 register 会一直等待（design 有意取舍，项目关闭本就异常）
 - **restore 挂起仍会 pin channel**：无法取消 core restore（需要 AbortSignal/admission，属 core 工作）。取舍是 `opening` 期间 lease 归零不提前 close，等 settle 后统一 release，避免"新 attach 复用同一 runner 时被旧 channel 误释放"
 - **`closeRuntime` 不主动断开 socket**：channel 终态后命令失败，客户端由项目关闭导航负责断开；server close 由 fastify force-close 兜底
 - **错误映射规则**：`RuntimeClosedError` = 404（admission 拒绝、项目/会话命名空间不可用；WS attach 路径 → error frame + close 1000，客户端可重连到重新注册的项目）；`ChannelClosedError` = 409（已接纳连接在 channel 终态后的命令；`HttpError` 自带 `statusCode`，现有 `classifyRunError` 的 4xx → `PERMANENT` 规则自动生效，无需改分类逻辑，仅补测试）。错误消息为英文并随 error frame 可见于 UI——仓库暂无 server 错误 i18n，沿用现状
 - **detached run 失败在无订阅者时仍只落日志**：失败事件不持久化，随后 attach 的客户端看不到旧错误。补齐需要事实流统一（backlog §统一 chat 事实流），不在本次范围
+- **project shutdown 的 `closeAll()` 与 store close 之间仍有 pending restore 落入窗口**：第二次 admission 重检通过后、`sessions.set` 完成前 runtime 进入关闭（capability shutdown 阶段 store 仍开）时，runner 会装入正在关闭的 runtime；hub 侧因 runtime 身份与 admission 已不可再用它，仅对象驻留至回收。该窗口属 core admission 剩余范围（backlog），本设计不覆盖
 - **hub 仍保留 `projector.isRunActive()` 作为释放守卫**：core `releaseSession` 的 busy 守卫才是权威；保留前者避免直连 run 期间的释放-恢复抖动
 
 ## 影响文件
@@ -225,7 +229,7 @@ close(options?: ServerCloseOptions): Promise<void>;
 - 状态迁移矩阵：opening 期间 attachment close → settle 后 release + close("idle") + map 空；opening 期间 channel close → settle 后不订阅/不回调/不 release；restore 失败 → closed + map 空 + `ready` reject
 - close 后置条件：5 条逐条断言（含 handshake 路径）
 - attachment ready 语义：自身 close → resolve 且无错误帧；channel 期间关闭 → reject 且 ws 映射 error + close 1000
-- lease：detached run 在途时 socket 断开不释放；run settle 后释放；`running` 与 `isRunActive()` 双重守卫各一条
+- lease：detached run 在途时 socket 断开不释放；run settle 后释放；`running` 与 `isRunActive()` 双重守卫各一条；自有 run 在途时 `closeRuntime` → 回调降级 no-op、命令 promise 正常 settle、不 release
 - `startDetachedRun`：closeRuntime 在 restore 在途时 → reject，不在已收口 runtime 上启动
 - admission：`closeRuntime` / `close()` 后 attach 与 detached run 均拒绝（含"runtime 无 channel"时 `close()` 后拒绝）；新 runtime 同 sessionId 得到新 channel
 - ws 边界：registry miss 的显式 close code；attach 同步抛错的 error frame + close 1000（单测走 fake fastify，`@fastify/websocket` 真插件将 handler 抛错转为 `socket.terminate()`/1006，故真路径由 E2E 或集成测试覆盖）；channel 终态后 message 的 error code = PERMANENT；close 后 socket close 回调的双处理为 no-op
@@ -235,13 +239,13 @@ close(options?: ServerCloseOptions): Promise<void>;
 
 - `releaseSession`：无 runner / busy runner no-op；idle 移除；不影响持久化
 - `restoreSession`：archived session 拒绝；delete 在 `initForRestore` 期间发生 → 重检拒绝且不写 map；store 已关闭 → `NotFoundError`（非 SQLite 原文）
-- 真 runtime 契约测试（仓库红线）：现有 `chat-hub-runtime-contract.test.ts` 增加"最后一个 lease 释放 → `hasActiveSession() === false`；直连 run 在途 → 不释放"
+- 真 runtime 契约测试（仓库红线）：现有 `chat-hub-runtime-contract.test.ts` 增加"最后一个 lease 释放 → `hasActiveSession() === false`"；"直连 run 在途 → 不释放"由 `trigger-log-visibility.test.ts`（真 trigger run）覆盖
 - `agent-runner.test.ts`：`isBusy()` 直接用例（false → true → false）
 
 **装配**
 
-- `registry.remove`：observer 在 shutdown 前调用；observer 抛错不阻塞；removal barrier 下同 root 重新 register 等待旧 shutdown；shutdown 失败仍保持"已摘除"
-- `shutdown.test.ts`（fakes + fake timers，承接 desktop 现有超时用例）：hub → registry → fastify 顺序；并发 close 共享 Promise；单阶段超时/失败不阻塞后续；缺省超时与缺省 outcome 日志
+- `registry.remove`：observer 在 shutdown 前调用；observer 抛错不阻塞；removal barrier 下同 root 重新 register 等待旧 shutdown；removal 失败不阻塞并发 register；shutdown 失败仍保持"已摘除"
+- `shutdown.test.ts`（fakes + fake timers，承接 desktop 现有超时用例）：hub → registry → fastify 顺序；并发 close 共享 Promise（`index.ts` 的共享 Promise 用 fastify.close spy 钉住）；单阶段超时/失败不阻塞后续；缺省 10s 超时与缺省 outcome 日志
 - desktop：`server.test.ts` / `server-shutdown.test.ts` 的 mock handle 补 `close`，断言委托与 stage 策略透传
 
 **E2E**

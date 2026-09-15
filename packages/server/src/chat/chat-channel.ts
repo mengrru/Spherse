@@ -15,7 +15,7 @@ type Subscriber = (event: unknown) => void;
 const REPLAY_BATCH_SIZE = 200;
 const REPLAY_READ_LIMIT = Number.MAX_SAFE_INTEGER;
 
-export type ChannelState = "opening" | "open" | "closed";
+type ChannelState = "opening" | "open" | "closed";
 export type ChannelCloseReason = "idle" | "runtime-closed" | "server-closed" | "restore-failed";
 
 export type ControlRequestDecision =
@@ -71,15 +71,21 @@ export class ChatChannel {
     let active = true;
     let subscribed = false;
 
-    const ready = this.ensureReady().then(() => {
-      if (!active) return;
-      if (this.state !== "open") {
-        throw new ChannelClosedError(`Chat channel for session "${this.sessionId}" is closed`);
-      }
-      this.handshake(subscriber, since);
-      this.subscribers.add(subscriber);
-      subscribed = true;
-    });
+    const ready = this.ensureReady().then(
+      () => {
+        if (!active) return;
+        if (this.state !== "open") {
+          throw new ChannelClosedError(`Chat channel for session "${this.sessionId}" is closed`);
+        }
+        this.handshake(subscriber, since);
+        this.subscribers.add(subscriber);
+        subscribed = true;
+      },
+      (err) => {
+        if (!active) return;
+        throw err;
+      },
+    );
     void ready.catch(() => {});
 
     const ensureUsable = async (): Promise<boolean> => {
@@ -185,7 +191,16 @@ export class ChatChannel {
     this.subscribers.clear();
     this.runEvents = [];
     this.dispose();
-    this.logger.info({ sessionId: this.sessionId, reason }, "chat channel closed");
+    this.logger.info(
+      {
+        sessionId: this.sessionId,
+        reason,
+        leases: this.leases,
+        running: this.running,
+        runActive: this.projector.isRunActive(),
+      },
+      "chat channel closed",
+    );
   }
 
   private cleanupIfIdle(): void {
@@ -223,7 +238,10 @@ export class ChatChannel {
     if (this.state === "closed") return;
     this.state = "open";
     this.subscribeLog();
-    this.logger.debug({ sessionId: this.sessionId }, "chat channel opened");
+    this.logger.debug(
+      { sessionId: this.sessionId, leases: this.leases, running: this.running },
+      "chat channel opened",
+    );
     this.cleanupIfIdle();
   }
 

@@ -54,7 +54,15 @@ export class SessionManager {
     if (this.sessions.has(sessionId)) return sessionId;
     this.assertRestorable(agentId, sessionId);
     this.ensureMigrated(agentId, sessionId);
-    const session = await AgentRunner.initForRestore(this.deps, agentId, sessionId);
+    let session: AgentRunner;
+    try {
+      session = await AgentRunner.initForRestore(this.deps, agentId, sessionId);
+    } catch (err) {
+      if (isStoreClosedError(err)) {
+        throw new NotFoundError(`Session "${sessionId}" is not available`);
+      }
+      throw err;
+    }
     this.assertRestorable(agentId, sessionId);
     this.sessions.set(sessionId, session);
     this.deps.logger.info({ sessionId }, "session restored");

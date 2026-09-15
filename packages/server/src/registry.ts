@@ -172,12 +172,16 @@ export class ProjectRegistry {
     const ctx = this.projects.get(projectId);
     if (!ctx) return;
     const root = ctx.runtime.projectManager.getRootPath();
-    const promise = this.doRemove(projectId, ctx);
-    this.removing.set(root, promise);
+    let releaseBarrier!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseBarrier = resolve;
+    });
+    this.removing.set(root, barrier);
     try {
-      await promise;
+      await this.doRemove(projectId, ctx);
     } finally {
-      if (this.removing.get(root) === promise) {
+      releaseBarrier();
+      if (this.removing.get(root) === barrier) {
         this.removing.delete(root);
       }
     }

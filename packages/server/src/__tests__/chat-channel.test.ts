@@ -193,6 +193,55 @@ describe("ChatChannel lifecycle", () => {
     expect(events).toEqual([]);
   });
 
+  it("downgrades an in-flight run to no-ops after closeRuntime and settles without releasing", async () => {
+    const mock = createRuntime();
+    let emit: ((event: any) => void) | undefined;
+    let finish: (() => void) | undefined;
+    mock.runtime.sendMessage.mockImplementation(
+      (_sessionId: string, _content: string, _attachments: unknown, onEvent: (event: any) => void) => {
+        emit = onEvent;
+        return new Promise<void>((resolve) => { finish = resolve; });
+      },
+    );
+    const hub = new ChatSessionHub(logger);
+    const events: unknown[] = [];
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", (event) => events.push(event));
+    await attachment.ready;
+    events.length = 0;
+
+    const run = attachment.sendMessage("hi");
+    await tick();
+
+    hub.closeRuntime(mock.runtime as never);
+    emit?.({ type: "agent_start" });
+    expect(events).toEqual([]);
+    expect(mock.runtime.releaseSession).not.toHaveBeenCalled();
+
+    finish!();
+    await expect(run).resolves.toBeUndefined();
+    expect(mock.runtime.releaseSession).not.toHaveBeenCalled();
+  });
+
+  it("does not release while the channel still owns a running turn", async () => {
+    const mock = createRuntime();
+    let finish: (() => void) | undefined;
+    mock.runtime.sendMessage.mockImplementation(
+      () => new Promise<void>((resolve) => { finish = resolve; }),
+    );
+    const hub = new ChatSessionHub(logger);
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", () => {});
+    await attachment.ready;
+
+    const run = attachment.sendMessage("hi");
+    await tick();
+    attachment.close();
+    expect(mock.runtime.releaseSession).not.toHaveBeenCalled();
+
+    finish!();
+    await run;
+    expect(mock.runtime.releaseSession).toHaveBeenCalledWith("s1");
+  });
+
   it("restore failure closes and disposes the channel so a later attach starts fresh", async () => {
     const mock = createRuntime();
     mock.runtime.restoreSession.mockRejectedValueOnce(new Error("boom"));

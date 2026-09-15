@@ -445,17 +445,27 @@ describe("SessionManager lifecycle", () => {
     expect(runtime.sessionRuntime.sessionExists(agentId, sessionId)).toBe(false);
   });
 
-  it("releaseSession removes an idle runner and refuses a busy one", async () => {
+  it("releaseSession removes an idle runner and refuses one with a turn in flight", async () => {
     const sessionId = await runtime.sessionRuntime.createSession(agentId);
-    const runner = (runtime.sessionRuntime as any).sessions.get(sessionId);
-    expect(runner.isBusy()).toBe(false);
+    runtime.sessionRuntime.setDefaultModel("openai/gpt-4o");
+    const agent = activeAgent(runtime as RuntimeInternals, sessionId);
+    agent.subscribe = vi.fn(() => () => {}) as FakeAgent["subscribe"];
+    let finishPrompt!: () => void;
+    agent.prompt = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finishPrompt = resolve;
+        }),
+    ) as FakeAgent["prompt"];
 
-    (runner as { inFlight: boolean }).inFlight = true;
-    expect(runner.isBusy()).toBe(true);
+    const run = runtime.sessionRuntime.sendMessage(sessionId, "hi", [], () => {});
     expect(runtime.sessionRuntime.releaseSession(sessionId)).toBe(false);
     expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(true);
 
-    (runner as { inFlight: boolean }).inFlight = false;
+    await vi.waitFor(() => expect(agent.prompt).toHaveBeenCalled());
+    finishPrompt();
+    await run;
+
     expect(runtime.sessionRuntime.releaseSession(sessionId)).toBe(true);
     expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(false);
     expect(runtime.sessionRuntime.releaseSession(sessionId)).toBe(false);

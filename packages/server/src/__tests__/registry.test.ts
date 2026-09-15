@@ -360,4 +360,21 @@ describe("ProjectRegistry runtime removal lifecycle", () => {
     const ctx = await registry.register("/proj/p1");
     expect(ctx.projectId).toBe("p3");
   });
+
+  it("a concurrent register proceeds after a failed removal", async () => {
+    const runtime = createRuntime("p1", "/proj/p1");
+    runtime.shutdown.mockRejectedValue(new Error("shutdown boom"));
+    createProjectMock.mockResolvedValue(runtime);
+    const registry = new ProjectRegistry(createLogger());
+    await registry.register("/proj/p1");
+
+    const removal = registry.remove("p1");
+    const fresh = createRuntime("p3", "/proj/p1");
+    createProjectMock.mockResolvedValue(fresh);
+    const registering = registry.register("/proj/p1");
+
+    await expect(removal).rejects.toThrow("shutdown boom");
+    const ctx = await registering;
+    expect(ctx.projectId).toBe("p3");
+  });
 });

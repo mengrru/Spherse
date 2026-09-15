@@ -26,7 +26,7 @@ import {
 } from "./shutdown.js";
 
 export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type ProjectInfo, type RegisterOptions } from "./registry.js";
-export type { ServerCloseOptions, ServerCloseOutcome, ServerCloseStage } from "./shutdown.js";
+export type { ServerCloseOptions } from "./shutdown.js";
 
 export const DEFAULT_SERVER_PORT = 53972;
 
