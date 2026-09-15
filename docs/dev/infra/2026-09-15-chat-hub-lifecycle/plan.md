@@ -42,3 +42,4 @@ design 见同目录 `design.md`。按任务顺序实现，完成即勾选。
 - [x] `npm run verify`
 - [x] commit + code-review skill（critical 0；important 3 项已修，见第三个 commit）
 - [x] doc-sync（design.md 文档同步节）+ design 偏差回写
+- [x] review 后拆分：`RunSnapshot`（chat-run-snapshot.ts）与 `detectOpenTurn` / `replayHandshake`（chat-replay.ts），chat-channel 432 → 323 行，配直接单测

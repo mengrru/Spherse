@@ -186,7 +186,9 @@ spherse/
 │   │       ├── chat/                  # chat 域（对外仅经 index.ts 导出 handleChatWebSocket + ChatSessionHub）
 │   │       │   ├── index.ts            # 域门面
 │   │       │   ├── chat-session-hub.ts # ChatSessionHub：channel 注册表（按 SessionManager 身份 × sessionId），closeRuntime/close 收口 + admission
-│   │       │   ├── chat-channel.ts     # ChatChannel：单 session 生命周期（opening/open/closed 状态机、lazy restore 单飞、lease、run 序列化/快照压缩/握手重放/fanout/空闲 release）
+│   │       │   ├── chat-channel.ts     # ChatChannel：单 session 生命周期（opening/open/closed 状态机、lazy restore 单飞、lease、run 序列化、fanout、空闲 release）
+│   │       │   ├── chat-run-snapshot.ts # RunSnapshot：in-flight 快照压缩（message/tool update 按窗口合并、落库完成项移除）
+│   │       │   ├── chat-replay.ts      # detectOpenTurn / replayHandshake：log 反向 open-turn 扫描与握手重放纯函数
 │   │       │   ├── chat-wire-projector.ts # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
 │   │       │   ├── ws-chat.ts          # WebSocket 对话流端点（/ws/projects/:projectId/chat/...，?since= 游标重放）
 │   │       │   └── classify-run-error.ts # run 错误 → wire error code 分类

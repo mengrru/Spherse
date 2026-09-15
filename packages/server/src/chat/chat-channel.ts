@@ -6,14 +6,12 @@ import {
 import type { FastifyBaseLogger } from "fastify";
 import { ChannelClosedError } from "../errors.js";
 import { classifyRunError } from "./classify-run-error.js";
+import { detectOpenTurn, replayHandshake } from "./chat-replay.js";
+import { RunSnapshot } from "./chat-run-snapshot.js";
 import { ChatWireProjector } from "./chat-wire-projector.js";
 
 type CoreEventHandler = Parameters<SessionManager["sendMessage"]>[3];
-type CoreEvent = Parameters<CoreEventHandler>[0];
 type Subscriber = (event: unknown) => void;
-
-const REPLAY_BATCH_SIZE = 200;
-const REPLAY_READ_LIMIT = Number.MAX_SAFE_INTEGER;
 
 type ChannelState = "opening" | "open" | "closed";
 export type ChannelCloseReason = "idle" | "runtime-closed" | "server-closed" | "restore-failed";
@@ -41,7 +39,7 @@ export class ChatChannel {
   private leases = 0;
   private readonly subscribers = new Set<Subscriber>();
   private running = false;
-  private runEvents: CoreEvent[] = [];
+  private readonly snapshot = new RunSnapshot();
   private readonly projector = new ChatWireProjector();
   private logUnsubscribe?: () => void;
 
@@ -189,7 +187,7 @@ export class ChatChannel {
     this.state = "closed";
     this.releaseSubscription();
     this.subscribers.clear();
-    this.runEvents = [];
+    this.snapshot.reset();
     this.dispose();
     this.logger.info(
       {
@@ -251,7 +249,9 @@ export class ChatChannel {
   }
 
   private subscribeLog(): void {
-    this.initRunStateFromLog();
+    if (detectOpenTurn(this.runtime, this.agentId, this.sessionId)) {
+      this.projector.markRunActive();
+    }
     this.logUnsubscribe = this.runtime.subscribeSessionEvents(this.sessionId, (event) => {
       if (this.state !== "open") return;
       const wireEvent = this.projector.consumeLogEvent(event);
@@ -264,61 +264,16 @@ export class ChatChannel {
     }) ?? undefined;
   }
 
-  private initRunStateFromLog(): void {
-    const lastSeq = this.runtime.getSessionLastSeq(this.agentId, this.sessionId);
-    if (lastSeq < 0) return;
-    const PAGE = 200;
-    let since = lastSeq - PAGE;
-    for (;;) {
-      const events = this.runtime.readSessionEventsAfter(
-        this.agentId,
-        this.sessionId,
-        since,
-        PAGE,
-      );
-      if (events.length === 0) return;
-      for (let i = events.length - 1; i >= 0; i--) {
-        if (events[i].type === "turn/end") return;
-        if (events[i].type === "turn/start") {
-          this.projector.markRunActive();
-          return;
-        }
-      }
-      const oldest = events[0].seq;
-      if (oldest <= 0) return;
-      since = oldest - 1 - PAGE;
-    }
-  }
-
   private handshake(subscriber: Subscriber, since: number | undefined): void {
     if (this.state !== "open") return;
-    const lastSeq = this.runtime.getSessionLastSeq(this.agentId, this.sessionId);
-    this.notify(subscriber, {
-      type: "session_ready",
-      lastSeq,
-      replay: true,
-    });
-    if (since !== undefined) {
-      const events = this.runtime.readSessionEventsAfter(
-        this.agentId,
-        this.sessionId,
-        since,
-        REPLAY_READ_LIMIT,
-      );
-      for (let i = 0; i < events.length; i += REPLAY_BATCH_SIZE) {
-        this.notify(subscriber, {
-          type: "replay_events",
-          events: events.slice(i, i + REPLAY_BATCH_SIZE),
-        });
-      }
-      this.notify(subscriber, { type: "replay_done" });
-    }
-    for (const event of this.runEvents) {
-      this.notify(subscriber, event);
-    }
-    this.notify(subscriber, {
-      type: "run_status",
-      active: this.projector.isRunActive(),
+    replayHandshake({
+      source: this.runtime,
+      agentId: this.agentId,
+      sessionId: this.sessionId,
+      since,
+      snapshot: this.snapshot.inFlight,
+      runActive: this.projector.isRunActive(),
+      notify: (event) => this.notify(subscriber, event),
     });
   }
 
@@ -329,87 +284,23 @@ export class ChatChannel {
       throw new ConflictError(`Session "${this.sessionId}" is already running`);
     }
     this.running = true;
-    this.runEvents = [];
+    this.snapshot.reset();
     this.projector.resetRun();
     this.projector.setOwnRun(true);
     try {
       await executor((event) => {
         if (this.state !== "open") return;
         const enriched = this.projector.enrich(event);
-        this.recordRunEvent(enriched);
+        this.snapshot.record(enriched);
         this.publish(enriched);
       });
     } finally {
       this.running = false;
-      this.runEvents = [];
+      this.snapshot.reset();
       this.projector.setOwnRun(false);
       this.projector.clearPendingEcho();
       this.cleanupIfIdle();
     }
-  }
-
-  private recordRunEvent(event: CoreEvent): void {
-    if (event.type === "message_end" && this.dropCompletedMessage(event)) {
-      return;
-    }
-    if (event.type === "message_update") {
-      for (let i = this.runEvents.length - 1; i >= 0; i--) {
-        if (
-          this.runEvents[i].type === "message_start" ||
-          this.runEvents[i].type === "message_end"
-        ) {
-          break;
-        }
-        if (this.runEvents[i].type === "message_update") {
-          this.runEvents[i] = event;
-          return;
-        }
-      }
-    }
-    if (event.type === "tool_execution_update") {
-      for (let i = this.runEvents.length - 1; i >= 0; i--) {
-        const previous = this.runEvents[i];
-        if (
-          previous.type === "tool_execution_update" &&
-          previous.toolCallId === event.toolCallId
-        ) {
-          this.runEvents[i] = event;
-          return;
-        }
-        if (
-          previous.type === "tool_execution_start" &&
-          previous.toolCallId === event.toolCallId
-        ) {
-          break;
-        }
-      }
-    }
-    this.runEvents.push(event);
-  }
-
-  private dropCompletedMessage(event: CoreEvent): boolean {
-    const message = (event as { message?: { role?: string; toolCallId?: string } }).message;
-    const messageId = (event as { messageId?: string }).messageId;
-    if (!message) return false;
-    if (message.role === "toolResult" && message.toolCallId !== undefined) {
-      const toolCallId = message.toolCallId;
-      this.runEvents = this.runEvents.filter((item) => {
-        const itemMessage = (item as { message?: { role?: string; toolCallId?: string } }).message;
-        if (itemMessage?.role === "toolResult" && itemMessage.toolCallId === toolCallId) {
-          return false;
-        }
-        return (item as { toolCallId?: string }).toolCallId !== toolCallId;
-      });
-      return true;
-    }
-    if (message.role !== "user" && (event as { seq?: number }).seq === undefined) {
-      return false;
-    }
-    if (messageId === undefined) return false;
-    this.runEvents = this.runEvents.filter(
-      (item) => (item as { messageId?: string }).messageId !== messageId,
-    );
-    return true;
   }
 
   private publish(event: unknown): void {

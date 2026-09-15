@@ -205,7 +205,9 @@ close(options?: ServerCloseOptions): Promise<void>;
 
 | 文件 | 变更 |
 |---|---|
-| `packages/server/src/chat/chat-channel.ts` | 状态机、lazy `ensureReady` 单飞、lease、`close(reason)` 后置条件、await 后继重检、`releaseSession` 替换 `destroySession`、日志 |
+| `packages/server/src/chat/chat-channel.ts` | 状态机、lazy `ensureReady` 单飞、lease、`close(reason)` 后置条件、await 后继重检、`releaseSession` 替换 `destroySession`、日志（快照与重放拆至下列新模块） |
+| `packages/server/src/chat/chat-run-snapshot.ts` | **新增**（实现后按职责拆分）：`RunSnapshot` in-flight 快照压缩 |
+| `packages/server/src/chat/chat-replay.ts` | **新增**（实现后按职责拆分）：`detectOpenTurn` / `replayHandshake` 纯函数 |
 | `packages/server/src/chat/chat-session-hub.ts` | runtime 身份 key、`closedRuntimes` + hub latch、`closeRuntime` / `close`、admission |
 | `packages/server/src/chat/ws-chat.ts` | `hub.attach` 同步 try/catch（error frame + close 1000）、registry miss 显式 close code、attachment ready 门改造 |
 | `packages/server/src/routes/sessions.ts` | 调用签名去掉 projectId |
