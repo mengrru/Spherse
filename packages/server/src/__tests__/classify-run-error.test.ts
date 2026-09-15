@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ModelNotConfiguredError, ConflictError, ValidationError } from "@spherse/core";
 import { ErrorEventCode } from "@spherse/contracts";
 import { classifyRunError } from "../chat/classify-run-error.js";
+import { ChannelClosedError, RuntimeClosedError } from "../errors.js";
 
 describe("classifyRunError", () => {
   it("classifies ModelNotConfiguredError", () => {
@@ -50,6 +51,11 @@ describe("classifyRunError", () => {
   it("reads statusCode alias", () => {
     const err = Object.assign(new Error("rate limited"), { statusCode: 429 });
     expect(classifyRunError(err)).toBe(ErrorEventCode.Transient);
+  });
+
+  it("classifies server HttpError subclasses by statusCode", () => {
+    expect(classifyRunError(new ChannelClosedError())).toBe(ErrorEventCode.Permanent);
+    expect(classifyRunError(new RuntimeClosedError())).toBe(ErrorEventCode.Permanent);
   });
 });
 

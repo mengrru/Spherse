@@ -337,6 +337,10 @@ export class AgentRunner {
     };
   }
 
+  isBusy(): boolean {
+    return this.inFlight;
+  }
+
   getStatus(): SessionStatus {
     return {
       currentTokens: readCurrentTokens(this.agent.state.messages, this.agent.state.systemPrompt),

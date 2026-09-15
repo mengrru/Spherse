@@ -6,6 +6,7 @@ import {
   parseChatServerEvent,
 } from "@spherse/contracts";
 import { classifyRunError } from "./classify-run-error.js";
+import type { ChatSessionAttachment } from "./chat-channel.js";
 import type { ProjectRegistry } from "../registry.js";
 import type { ChatSessionHub } from "./chat-session-hub.js";
 
@@ -31,7 +32,8 @@ export function handleChatWebSocket(
     (socket, req) => {
       const ctx = registry.get(req.params.projectId);
       if (!ctx) {
-        socket.close();
+        fastify.log.warn({ projectId: req.params.projectId }, "chat ws project not found");
+        socket.close(1000, "project not found");
         return;
       }
       const { agentId, sessionId } = req.params;
@@ -51,22 +53,33 @@ export function handleChatWebSocket(
       };
       fastify.log.info({ sessionId, agentId }, "chat ws connected");
 
-      const attachment = hub.attach(
-        req.params.projectId,
-        ctx.sessionRuntime,
-        agentId,
-        sessionId,
-        send,
-        since !== undefined ? { since } : undefined,
-      );
-      const ready = attachment.ready
-        .catch((err) => {
+      let attachment: ChatSessionAttachment;
+      try {
+        attachment = hub.attach(
+          ctx.sessionRuntime,
+          agentId,
+          sessionId,
+          send,
+          since !== undefined ? { since } : undefined,
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "request failed";
+        fastify.log.warn({ err, sessionId, agentId }, "chat ws attach rejected");
+        send({ type: "error", message });
+        socket.close(1000, message);
+        return;
+      }
+      const ready = attachment.ready.then(
+        () => true,
+        (err) => {
+          if (closed) return false;
           const message = err instanceof Error ? err.message : "request failed";
           const code = toCloseCode(err);
           send({ type: "error", message });
           socket.close(code, message);
           return false;
-        });
+        },
+      );
 
       socket.on("message", async (raw: Buffer) => {
         let msg: ReturnType<typeof parseChatClientMessage>;

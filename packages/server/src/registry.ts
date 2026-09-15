@@ -29,6 +29,8 @@ export class ProjectRegistry {
   private projects = new Map<string, ProjectContextCompat>();
   private pending = new Map<string, Promise<ProjectContextCompat>>();
   private lastOpenedMap = new Map<string, string>();
+  private readonly removing = new Map<string, Promise<void>>();
+  private readonly onRuntimeRemoved?: (runtime: SessionManager) => void;
   private logger: Logger;
   private defaultModel?: string;
   private sampling?: SamplingParams;
@@ -42,17 +44,27 @@ export class ProjectRegistry {
 
   constructor(
     logger: Logger,
-    options?: { defaultModel?: string; sampling?: SamplingParams; thinkingLevel?: ThinkingLevel; modelCatalog?: ModelCatalog },
+    options?: {
+      defaultModel?: string;
+      sampling?: SamplingParams;
+      thinkingLevel?: ThinkingLevel;
+      modelCatalog?: ModelCatalog;
+      onRuntimeRemoved?: (runtime: SessionManager) => void;
+    },
   ) {
     this.logger = logger;
     this.defaultModel = options?.defaultModel;
     this.sampling = options?.sampling;
     this.thinkingLevel = options?.thinkingLevel;
     this.modelCatalog = options?.modelCatalog ?? new ModelCatalog();
+    this.onRuntimeRemoved = options?.onRuntimeRemoved;
   }
 
   async register(projectRoot: string, options?: RegisterOptions): Promise<ProjectContextCompat> {
     const resolvedRoot = path.resolve(projectRoot);
+
+    const removal = this.removing.get(resolvedRoot);
+    if (removal) await removal;
 
     for (const ctx of this.projects.values()) {
       if (ctx.runtime.projectManager.getRootPath() === resolvedRoot) {
@@ -159,9 +171,27 @@ export class ProjectRegistry {
   async remove(projectId: string): Promise<void> {
     const ctx = this.projects.get(projectId);
     if (!ctx) return;
-    await ctx.runtime.shutdown();
+    const root = ctx.runtime.projectManager.getRootPath();
+    const promise = this.doRemove(projectId, ctx);
+    this.removing.set(root, promise);
+    try {
+      await promise;
+    } finally {
+      if (this.removing.get(root) === promise) {
+        this.removing.delete(root);
+      }
+    }
+  }
+
+  private async doRemove(projectId: string, ctx: ProjectContextCompat): Promise<void> {
     this.projects.delete(projectId);
     this.lastOpenedMap.delete(projectId);
+    try {
+      this.onRuntimeRemoved?.(ctx.sessionRuntime);
+    } catch (err) {
+      this.logger.error({ err, projectId }, "runtime removal observer failed");
+    }
+    await ctx.runtime.shutdown();
   }
 
   async removeAll(): Promise<void> {

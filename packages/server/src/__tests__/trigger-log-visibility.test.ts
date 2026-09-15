@@ -78,7 +78,7 @@ describe("direct trigger run is visible through the session event log (log-deriv
 
     const hub = new ChatSessionHub(silentLogger as never);
     const events: any[] = [];
-    const attachment = hub.attach("p1", runtime.sessionRuntime, agentId, sessionId, (event) =>
+    const attachment = hub.attach(runtime.sessionRuntime, agentId, sessionId, (event) =>
       events.push(event),
     );
     await attachment.ready;
@@ -194,7 +194,7 @@ describe("direct trigger run is visible through the session event log (log-deriv
     await vi.waitFor(() => expect(dispatch).toBeDefined());
 
     const lateEvents: any[] = [];
-    const attachment = hub.attach("p1", runtime.sessionRuntime, agentId, sessionId, (event) =>
+    const attachment = hub.attach(runtime.sessionRuntime, agentId, sessionId, (event) =>
       lateEvents.push(event),
     );
     await attachment.ready;
@@ -205,7 +205,7 @@ describe("direct trigger run is visible through the session event log (log-deriv
     expect(runtime.sessionRuntime.sessions.get(sessionId)).toBeDefined();
 
     const reattached: any[] = [];
-    const reattachment = hub.attach("p1", runtime.sessionRuntime, agentId, sessionId, (event) =>
+    const reattachment = hub.attach(runtime.sessionRuntime, agentId, sessionId, (event) =>
       reattached.push(event),
     );
     await reattachment.ready;

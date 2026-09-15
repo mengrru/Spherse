@@ -3,6 +3,7 @@ import Fastify from "fastify";
 import { NotFoundError, ConflictError } from "@spherse/core";
 import { registerSessionRoutes } from "../routes/sessions.js";
 import { ChatSessionHub } from "../chat/chat-session-hub.js";
+import { HttpError } from "../errors.js";
 import type { FastifyRequest } from "fastify";
 import type { ProjectRegistry } from "../registry.js";
 
@@ -30,7 +31,7 @@ function createRuntime() {
     ),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
-    destroySession: vi.fn(),
+    releaseSession: vi.fn(() => true),
     subscribeSessionEvents: vi.fn((_sessionId: string, listener: (event: any) => void) => {
       logListener = listener;
       return () => {
@@ -70,6 +71,7 @@ describe("POST .../sessions/:id/messages route", () => {
     app.setErrorHandler((err, _req, reply) => {
       if (err instanceof NotFoundError) return reply.code(404).send({ error: err.message });
       if (err instanceof ConflictError) return reply.code(409).send({ error: err.message });
+      if (err instanceof HttpError) return reply.code(err.statusCode).send({ error: err.message });
       reply.code(500).send({ error: err.message });
     });
     registerSessionRoutes(app, {} as ProjectRegistry, hub);
@@ -90,12 +92,12 @@ describe("POST .../sessions/:id/messages route", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ ok: true });
     expect(mock.runtime.sendMessage).toHaveBeenCalledWith("s1", "hi", [], expect.any(Function));
-    expect(mock.runtime.destroySession).not.toHaveBeenCalled();
+    expect(mock.runtime.releaseSession).not.toHaveBeenCalled();
 
     mock.emit({ type: "agent_end", messages: [] });
     mock.appendLog({ type: "turn/end", seq: 1, time: 1, data: { reason: "completed" } });
     mock.finish();
-    await vi.waitFor(() => expect(mock.runtime.destroySession).toHaveBeenCalledWith("s1"));
+    await vi.waitFor(() => expect(mock.runtime.releaseSession).toHaveBeenCalledWith("s1"));
   });
 
   it("responds 409 when the session is already running", async () => {
@@ -133,7 +135,7 @@ describe("POST .../sessions/:id/messages route", () => {
 
   it("shares the channel with ws subscribers — events fan out to an attached listener", async () => {
     const events: any[] = [];
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await attachment.ready;
@@ -153,5 +155,19 @@ describe("POST .../sessions/:id/messages route", () => {
     await vi.waitFor(() => expect(events).toContainEqual({ type: "run_status", active: false }));
     expect(mock.runtime.restoreSession).toHaveBeenCalledTimes(1);
     attachment.close();
+  });
+
+  it("responds 404 when the project runtime was closed", async () => {
+    hub.closeRuntime(mock.runtime as never);
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/projects/p1/agents/a1/sessions/s1/messages",
+      payload: { content: "hi" },
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json()).toEqual({ error: "Project runtime is not available" });
+    expect(mock.runtime.sendMessage).not.toHaveBeenCalled();
   });
 });

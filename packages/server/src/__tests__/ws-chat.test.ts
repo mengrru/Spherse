@@ -65,7 +65,7 @@ function createMockRegistry() {
     }),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
-    destroySession: vi.fn(),
+    releaseSession: vi.fn(() => true),
     subscribeSessionEvents: vi.fn((_sessionId: string, listener: (event: unknown) => void) => {
       logListener = listener;
       return () => {
@@ -301,10 +301,10 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     );
   });
 
-  it("destroys an idle restored session after the socket closes", async () => {
+  it("releases an idle restored session after the socket closes", async () => {
     socket.simulateClose();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(sessionRuntime.destroySession).toHaveBeenCalledWith("s1");
+    expect(sessionRuntime.releaseSession).toHaveBeenCalledWith("s1");
   });
 
   it("forwards runtime events through the server chat hub", async () => {
@@ -340,7 +340,7 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     handleChatWebSocket(mockFastify as never, mock.registry as never, new ChatSessionHub(hubLogger));
     const unknownSocket = createMockSocket();
     routeHandler!(unknownSocket, req({ projectId: "missing", agentId: "a1", sessionId: "s1" }));
-    expect(unknownSocket.close).toHaveBeenCalled();
+    expect(unknownSocket.close).toHaveBeenCalledWith(1000, "project not found");
   });
 
   it("closes with SESSION_UNRECOVERABLE when restoreSession rejects NotFoundError", async () => {
@@ -422,5 +422,43 @@ describe("ws-chat /ws/projects/:p/chat/:a/:s handler", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sentObjects(socket)).toContainEqual({ type: "error", message: "oops", code: "TRANSIENT" });
     expect(socket.close).not.toHaveBeenCalled();
+  });
+
+  it("rejects the connection with an error frame and close 1000 when the hub closed the runtime", () => {
+    routeHandler = null;
+    const mock = createMockRegistry();
+    const hub = new ChatSessionHub(hubLogger);
+    hub.closeRuntime(mock.sessionRuntime as never);
+    handleChatWebSocket(mockFastify as never, mock.registry as never, hub);
+    const closedSocket = createMockSocket();
+    routeHandler!(closedSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
+
+    expect(sentObjects(closedSocket)).toContainEqual({
+      type: "error",
+      message: "Project runtime is not available",
+    });
+    expect(closedSocket.close).toHaveBeenCalledWith(1000, "Project runtime is not available");
+    expect(mock.sessionRuntime.restoreSession).not.toHaveBeenCalled();
+  });
+
+  it("sends a PERMANENT error when a message hits a channel whose runtime was closed", async () => {
+    routeHandler = null;
+    const mock = createMockRegistry();
+    const hub = new ChatSessionHub(hubLogger);
+    handleChatWebSocket(mockFastify as never, mock.registry as never, hub);
+    const closedSocket = createMockSocket();
+    routeHandler!(closedSocket, req({ projectId: "p1", agentId: "a1", sessionId: "s1" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    hub.closeRuntime(mock.sessionRuntime as never);
+    closedSocket.simulateMessage(Buffer.from(JSON.stringify({ type: "message", content: "hi" })));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sentObjects(closedSocket)).toContainEqual({
+      type: "error",
+      message: 'Chat channel for session "s1" is closed',
+      code: "PERMANENT",
+    });
+    expect(mock.sessionRuntime.sendMessage).not.toHaveBeenCalled();
   });
 });

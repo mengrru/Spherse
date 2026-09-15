@@ -3,7 +3,6 @@ import { app } from "electron";
 import { createMultiProjectServer } from "@spherse/server";
 import type { ProjectRegistry, MultiProjectServer } from "@spherse/server";
 import type { SamplingParams, ThinkingLevel } from "@spherse/core";
-import { settleWithin } from "@spherse/core";
 import { getSettings, getMobileAccess, getServerToken } from "./settings.js";
 import { getAppModelCatalog } from "./model-catalog.js";
 import { getTunnelManager } from "./tunnel/manager.js";
@@ -25,11 +24,9 @@ function logStageOutcome(stage: string, outcome: "timeout" | "error", detail?: u
 }
 
 async function closeServerHandle(handle: ServerHandle): Promise<void> {
-  await settleWithin(handle.registry.removeAll(), SERVER_STAGE_TIMEOUT_MS, (outcome, detail) => {
-    logStageOutcome("registry.removeAll", outcome, detail);
-  });
-  await settleWithin(handle.fastify.close(), SERVER_STAGE_TIMEOUT_MS, (outcome, detail) => {
-    logStageOutcome("fastify.close", outcome, detail);
+  await handle.server.close({
+    stageTimeoutMs: SERVER_STAGE_TIMEOUT_MS,
+    onStageOutcome: logStageOutcome,
   });
 }
 

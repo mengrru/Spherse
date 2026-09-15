@@ -31,7 +31,7 @@ describe("createMultiProjectServer port binding", () => {
   afterEach(async () => {
     while (servers.length > 0) {
       const s = servers.pop()!;
-      await s.fastify.close();
+      await s.close();
     }
   });
 
@@ -66,5 +66,15 @@ describe("createMultiProjectServer port binding", () => {
     } finally {
       await closeNet(blocker);
     }
+  });
+
+  it("close is idempotent and concurrent calls share one teardown", async () => {
+    const port = await getFreePort();
+    const server = await createMultiProjectServer({ port });
+    servers.push(server);
+
+    await Promise.all([server.close(), server.close()]);
+
+    expect(server.fastify.server.listening).toBe(false);
   });
 });

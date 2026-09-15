@@ -68,7 +68,6 @@ describe("chat hub ↔ real SessionManager contract", () => {
     const hub = new ChatSessionHub(silentLogger as never);
     const events: any[] = [];
     const attachment = hub.attach(
-      "p1",
       runtime.sessionRuntime,
       agentId,
       sessionId,
@@ -154,7 +153,6 @@ describe("chat hub ↔ real SessionManager contract", () => {
 
     const replayEvents: any[] = [];
     const replayAttachment = hub.attach(
-      "p1",
       runtime.sessionRuntime,
       agentId,
       sessionId,
@@ -171,5 +169,22 @@ describe("chat hub ↔ real SessionManager contract", () => {
 
     replayAttachment.close();
     attachment.close();
+  });
+
+  it("releases the real runner only after the last attachment closes", async () => {
+    const hub = new ChatSessionHub(silentLogger as never);
+    await runtime.sessionRuntime.restoreSession(agentId, sessionId);
+    expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(true);
+
+    const first = hub.attach(runtime.sessionRuntime, agentId, sessionId, () => {});
+    const second = hub.attach(runtime.sessionRuntime, agentId, sessionId, () => {});
+    await first.ready;
+    await second.ready;
+
+    first.close();
+    expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(true);
+
+    second.close();
+    expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(false);
   });
 });

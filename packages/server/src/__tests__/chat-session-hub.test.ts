@@ -34,7 +34,7 @@ function createRuntime() {
     }),
     abortSession: vi.fn(),
     resolveControlRequest: vi.fn(),
-    destroySession: vi.fn(),
+    releaseSession: vi.fn(() => true),
     subscribeSessionEvents: vi.fn(
       (_sessionId: string, listener: (event: any) => void) => {
         logListener = listener;
@@ -72,7 +72,6 @@ describe("ChatSessionHub", () => {
     const hub = new ChatSessionHub(logger);
     const firstEvents: any[] = [];
     const first = hub.attach(
-      "p1",
       mock.runtime as never,
       "a1",
       "s1",
@@ -92,11 +91,10 @@ describe("ChatSessionHub", () => {
     });
     first.close();
 
-    expect(mock.runtime.destroySession).not.toHaveBeenCalled();
+    expect(mock.runtime.releaseSession).not.toHaveBeenCalled();
 
     const replayed: any[] = [];
     const second = hub.attach(
-      "p1",
       mock.runtime as never,
       "a1",
       "s1",
@@ -120,7 +118,7 @@ describe("ChatSessionHub", () => {
     await run;
     second.close();
 
-    expect(mock.runtime.destroySession).toHaveBeenCalledWith("s1");
+    expect(mock.runtime.releaseSession).toHaveBeenCalledWith("s1");
   });
 
   it("routes retryLastTurn to the runtime and emits run_status", async () => {
@@ -128,7 +126,6 @@ describe("ChatSessionHub", () => {
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
     const attachment = hub.attach(
-      "p1",
       mock.runtime as never,
       "a1",
       "s1",
@@ -162,7 +159,6 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const attachment = hub.attach(
-      "p1",
       mock.runtime as never,
       "a1",
       "s1",
@@ -183,7 +179,7 @@ describe("ChatSessionHub", () => {
   it("shrinks the run snapshot to in-flight state once messages complete", async () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
-    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    const first = hub.attach(mock.runtime as never, "a1", "s1", () => {});
     await first.ready;
 
     const run = first.sendMessage("hi");
@@ -220,7 +216,7 @@ describe("ChatSessionHub", () => {
     first.close();
 
     const replayed: any[] = [];
-    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const second = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       replayed.push(event),
     );
     await second.ready;
@@ -255,7 +251,7 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await attachment.ready;
@@ -271,7 +267,7 @@ describe("ChatSessionHub", () => {
   it("rejects withdrawLastTurn with ConflictError when a run is already active", async () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", () => {});
     await attachment.ready;
 
     const run = attachment.sendMessage("hi");
@@ -288,7 +284,6 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const attachment = hub.attach(
-      "p1",
       mock.runtime as never,
       "a1",
       "s1",
@@ -309,17 +304,17 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await attachment.ready;
     events.length = 0;
 
-    await hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi");
+    await hub.startDetachedRun(mock.runtime as never, "a1", "s1", "hi");
 
     expect(mock.runtime.sendMessage).toHaveBeenCalledWith("s1", "hi", [], expect.any(Function));
     expect(events).toContainEqual({ type: "run_status", active: true });
-    expect(mock.runtime.destroySession).not.toHaveBeenCalled();
+    expect(mock.runtime.releaseSession).not.toHaveBeenCalled();
 
     mock.appendLog({ type: "turn/end", seq: 99, time: 1, data: { reason: "completed" } });
     mock.emit({ type: "agent_end", messages: [] });
@@ -334,14 +329,14 @@ describe("ChatSessionHub", () => {
   it("startDetachedRun rejects with ConflictError when a run is already active", async () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", () => {});
     await attachment.ready;
 
     const run = attachment.sendMessage("hi");
     await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
 
     await expect(
-      hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "again"),
+      hub.startDetachedRun(mock.runtime as never, "a1", "s1", "again"),
     ).rejects.toThrow(/already running/);
 
     mock.finish();
@@ -354,14 +349,14 @@ describe("ChatSessionHub", () => {
     mock.runtime.sendMessage.mockRejectedValue(new Error("provider down"));
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await attachment.ready;
     events.length = 0;
 
     await expect(
-      hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi"),
+      hub.startDetachedRun(mock.runtime as never, "a1", "s1", "hi"),
     ).resolves.toBeUndefined();
 
     await vi.waitFor(() =>
@@ -381,7 +376,7 @@ describe("ChatSessionHub", () => {
     const hub = new ChatSessionHub(logger);
 
     await expect(
-      hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi"),
+      hub.startDetachedRun(mock.runtime as never, "a1", "s1", "hi"),
     ).rejects.toThrow("no such session");
   });
 
@@ -395,7 +390,6 @@ describe("ChatSessionHub", () => {
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
     const attachment = hub.attach(
-      "p1",
       mock.runtime as never,
       "a1",
       "s1",
@@ -426,7 +420,7 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await attachment.ready;
@@ -449,7 +443,6 @@ describe("ChatSessionHub", () => {
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
     const attachment = hub.attach(
-      "p1",
       mock.runtime as never,
       "a1",
       "s1",
@@ -469,10 +462,10 @@ describe("ChatSessionHub", () => {
     const hub = new ChatSessionHub(logger);
     const eventsA: any[] = [];
     const eventsB: any[] = [];
-    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const first = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       eventsA.push(event),
     );
-    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const second = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       eventsB.push(event),
     );
     await first.ready;
@@ -515,13 +508,13 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await attachment.ready;
     events.length = 0;
 
-    await hub.startDetachedRun("p1", mock.runtime as never, "a1", "s1", "hi");
+    await hub.startDetachedRun(mock.runtime as never, "a1", "s1", "hi");
     mock.appendLog({
       type: "user/message",
       seq: 3,
@@ -548,7 +541,7 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
-    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const first = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await first.ready;
@@ -556,7 +549,7 @@ describe("ChatSessionHub", () => {
     const run = first.sendMessage("hi");
     await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
 
-    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    const second = hub.attach(mock.runtime as never, "a1", "s1", () => {});
     await second.ready;
     await expect(second.sendMessage("again", [], "client-b")).rejects.toThrow(
       /already running/,
@@ -586,7 +579,7 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await attachment.ready;
@@ -617,7 +610,7 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await attachment.ready;
@@ -663,7 +656,7 @@ describe("ChatSessionHub", () => {
     const mock = createRuntime();
     const hub = new ChatSessionHub(logger);
     const events: any[] = [];
-    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const first = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       events.push(event),
     );
     await first.ready;
@@ -671,7 +664,7 @@ describe("ChatSessionHub", () => {
     const run = first.sendMessage("hi", [], "client-a");
     await vi.waitFor(() => expect(mock.runtime.sendMessage).toHaveBeenCalled());
 
-    const second = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    const second = hub.attach(mock.runtime as never, "a1", "s1", () => {});
     await second.ready;
     await expect(second.sendMessage("again", [], "client-b")).rejects.toThrow(
       /already running/,
@@ -706,7 +699,7 @@ describe("ChatSessionHub", () => {
     ]);
     const hub = new ChatSessionHub(logger);
     const liveEvents: any[] = [];
-    const first = hub.attach("p1", mock.runtime as never, "a1", "s1", (event) =>
+    const first = hub.attach(mock.runtime as never, "a1", "s1", (event) =>
       liveEvents.push(event),
     );
     await first.ready;
@@ -719,7 +712,6 @@ describe("ChatSessionHub", () => {
 
     const replayEvents: any[] = [];
     const second = hub.attach(
-      "p1",
       mock.runtime as never,
       "a1",
       "s1",
@@ -747,7 +739,7 @@ describe("ChatSessionHub", () => {
     const unsubscribe = vi.fn();
     mock.runtime.subscribeSessionEvents.mockReturnValue(unsubscribe);
     const hub = new ChatSessionHub(logger);
-    const attachment = hub.attach("p1", mock.runtime as never, "a1", "s1", () => {});
+    const attachment = hub.attach(mock.runtime as never, "a1", "s1", () => {});
     await attachment.ready;
     expect(mock.runtime.subscribeSessionEvents).toHaveBeenCalledWith(
       "s1",
@@ -756,7 +748,41 @@ describe("ChatSessionHub", () => {
 
     attachment.close();
 
-    expect(mock.runtime.destroySession).toHaveBeenCalledWith("s1");
+    expect(mock.runtime.releaseSession).toHaveBeenCalledWith("s1");
     expect(unsubscribe).toHaveBeenCalled();
+  });
+
+  it("closeRuntime rejects later attaches and keeps other runtimes independent", async () => {
+    const first = createRuntime();
+    const second = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    const attachment = hub.attach(first.runtime as never, "a1", "s1", () => {});
+    await attachment.ready;
+
+    hub.closeRuntime(first.runtime as never);
+
+    expect(() => hub.attach(first.runtime as never, "a1", "s1", () => {})).toThrow(
+      /not available/,
+    );
+    await expect(
+      hub.startDetachedRun(first.runtime as never, "a1", "s1", "hi"),
+    ).rejects.toThrow(/not available/);
+
+    const next = hub.attach(second.runtime as never, "a1", "s1", () => {});
+    await next.ready;
+    expect(second.runtime.restoreSession).toHaveBeenCalledTimes(1);
+    next.close();
+  });
+
+  it("close latches admission even for runtimes that never created a channel", async () => {
+    const mock = createRuntime();
+    const hub = new ChatSessionHub(logger);
+    hub.close();
+    hub.close();
+
+    expect(() => hub.attach(mock.runtime as never, "a1", "s1", () => {})).toThrow(
+      /shutting down/,
+    );
+    expect(mock.runtime.restoreSession).not.toHaveBeenCalled();
   });
 });

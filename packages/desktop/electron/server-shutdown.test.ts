@@ -1,9 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createServerMock, fastifyClose, registryRemoveAll, registryListInfo } = vi.hoisted(() => ({
+interface CloseCall {
+  stageTimeoutMs?: number;
+  onStageOutcome?: (stage: string, outcome: string, detail: unknown) => void;
+}
+
+const { createServerMock, serverClose, registryListInfo } = vi.hoisted(() => ({
   createServerMock: vi.fn(),
-  fastifyClose: vi.fn(),
-  registryRemoveAll: vi.fn(),
+  serverClose: vi.fn(async (_options?: CloseCall) => undefined),
   registryListInfo: vi.fn(() => []),
 }));
 
@@ -16,6 +20,7 @@ vi.mock("./settings.js", () => ({
   getServerToken: () => "shutdown-test-token",
 }));
 vi.mock("./model-catalog.js", () => ({
+  getAppCatalog: () => undefined,
   getAppModelCatalog: () => undefined,
 }));
 vi.mock("@spherse/server", () => ({
@@ -25,84 +30,49 @@ vi.mock("@spherse/server", () => ({
 import { ensureServer, stopServer, restartServer } from "./server.js";
 
 function mockHandle(): void {
-  fastifyClose.mockResolvedValue(undefined);
-  registryRemoveAll.mockResolvedValue(undefined);
+  serverClose.mockResolvedValue(undefined);
   registryListInfo.mockReturnValue([]);
   createServerMock.mockResolvedValue({
-    fastify: { close: fastifyClose },
-    registry: { removeAll: registryRemoveAll, listInfo: registryListInfo },
+    fastify: { server: { address: () => ({ port: 1 }) } },
+    registry: { register: async () => ({}), listInfo: registryListInfo, removeAll: async () => undefined },
+    logger: { info: () => undefined, warn: () => undefined },
+    addAllowedHosts: () => undefined,
+    removeAllowedHosts: () => undefined,
+    close: serverClose,
   });
 }
 
-describe("stopServer staged shutdown", () => {
-  let consoleError: ReturnType<typeof vi.spyOn>;
-
+describe("desktop server shutdown delegation", () => {
   beforeEach(async () => {
     mockHandle();
-    consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     await ensureServer();
   });
 
   afterEach(async () => {
-    vi.useRealTimers();
     await stopServer();
-    consoleError.mockRestore();
     vi.clearAllMocks();
   });
 
-  it("times out a hanging registry.removeAll and still closes fastify", async () => {
-    registryRemoveAll.mockImplementation(() => new Promise(() => {}));
-    vi.useFakeTimers();
-    let resolved = false;
-    void stopServer().then(() => {
-      resolved = true;
-    });
-    await vi.advanceTimersByTimeAsync(9_999);
-    expect(resolved).toBe(false);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(resolved).toBe(true);
-    expect(fastifyClose).toHaveBeenCalledTimes(1);
-    expect(consoleError).toHaveBeenCalledWith(
-      expect.stringContaining('"registry.removeAll"'),
-    );
-  });
-
-  it("times out a hanging fastify.close and still resolves", async () => {
-    fastifyClose.mockImplementation(() => new Promise(() => {}));
-    vi.useFakeTimers();
-    let resolved = false;
-    void stopServer().then(() => {
-      resolved = true;
-    });
-    await vi.advanceTimersByTimeAsync(9_999);
-    expect(resolved).toBe(false);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(resolved).toBe(true);
-    expect(consoleError).toHaveBeenCalledWith(
-      expect.stringContaining('"fastify.close"'),
-    );
-  });
-
-  it("logs and continues when a stage rejects", async () => {
-    registryRemoveAll.mockRejectedValue(new Error("boom"));
+  it("delegates stopServer to server.close with the staged timeout policy", async () => {
     await stopServer();
-    expect(fastifyClose).toHaveBeenCalledTimes(1);
-    expect(consoleError).toHaveBeenCalledWith(
-      '[server] shutdown stage "registry.removeAll" failed:',
-      expect.objectContaining({ message: "boom" }),
-    );
+
+    expect(serverClose).toHaveBeenCalledTimes(1);
+    const options = serverClose.mock.calls[0]![0]!;
+    expect(options.stageTimeoutMs).toBe(10_000);
+    expect(typeof options.onStageOutcome).toBe("function");
   });
 
   it("is a no-op when the server is already stopped", async () => {
     await stopServer();
-    expect(registryRemoveAll).toHaveBeenCalledTimes(1);
     await stopServer();
-    expect(registryRemoveAll).toHaveBeenCalledTimes(1);
+
+    expect(serverClose).toHaveBeenCalledTimes(1);
   });
 
-  it("routes restartServer through the same staged close", async () => {
+  it("routes restartServer through the same close", async () => {
     await restartServer();
-    expect(registryRemoveAll).toHaveBeenCalledTimes(1);
-    expect(fastifyClose).toHaveBeenCalledTimes(1);
+
+    expect(serverClose).toHaveBeenCalledTimes(1);
+    expect(registryListInfo).toHaveBeenCalled();
   });
 });

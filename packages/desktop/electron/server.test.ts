@@ -28,6 +28,7 @@ vi.mock("@spherse/server", () => ({
       fastify: { server: { address: () => ({ port: 1 }) }, close: async () => undefined },
       registry: { register: async () => ({}), listInfo: () => [], removeAll: async () => undefined },
       logger: { info: () => undefined, warn: () => undefined },
+      close: async () => undefined,
       addAllowedHosts: (hosts: string[]) => {
         addedHosts.push(...hosts);
         for (const host of hosts) currentHosts.add(host);

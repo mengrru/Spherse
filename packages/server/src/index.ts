@@ -20,8 +20,13 @@ import { setAppVersion } from "./server-info.js";
 import { ChatSessionHub } from "./chat/index.js";
 import { handleChatWebSocket } from "./chat/index.js";
 import { handleBusWebSocket } from "./bus/index.js";
+import {
+  closeMultiProjectServer,
+  type ServerCloseOptions,
+} from "./shutdown.js";
 
 export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type ProjectInfo, type RegisterOptions } from "./registry.js";
+export type { ServerCloseOptions, ServerCloseOutcome, ServerCloseStage } from "./shutdown.js";
 
 export const DEFAULT_SERVER_PORT = 53972;
 
@@ -31,6 +36,7 @@ export interface MultiProjectServer {
   logger: Logger;
   addAllowedHosts: (hosts: string[]) => void;
   removeAllowedHosts: (hosts: string[]) => void;
+  close: (options?: ServerCloseOptions) => Promise<void>;
 }
 
 export interface CreateServerOptions {
@@ -106,14 +112,15 @@ export async function createMultiProjectServer(
     reply.code(404).send({ error: "Route not found" });
   });
 
+  const chatHub = new ChatSessionHub(logger);
+
   const registry = new ProjectRegistry(logger, {
     defaultModel: options?.defaultModel,
     sampling: options?.sampling,
     thinkingLevel: options?.thinkingLevel,
     modelCatalog: options?.modelCatalog,
+    onRuntimeRemoved: (runtime) => chatHub.closeRuntime(runtime),
   });
-
-  const chatHub = new ChatSessionHub(logger);
 
   registerAuthHook(fastify, options?.auth ?? {});
   registerAllRoutes(fastify, registry, {
@@ -141,11 +148,20 @@ export async function createMultiProjectServer(
   const address = fastify.server.address() as AddressInfo;
   logger.info({ port: address.port }, "server listening");
 
+  let closePromise: Promise<void> | undefined;
+
   return {
     fastify,
     registry,
     logger,
     addAllowedHosts: hostGuard.addAllowedHosts,
     removeAllowedHosts: hostGuard.removeAllowedHosts,
+    close: (closeOptions?: ServerCloseOptions) => {
+      closePromise ??= closeMultiProjectServer(
+        { hub: chatHub, registry, fastify, logger },
+        closeOptions,
+      );
+      return closePromise;
+    },
   };
 }

@@ -262,3 +262,102 @@ describe("ProjectRegistry lastOpened", () => {
     expect(registry.listInfo()).toEqual([]);
   });
 });
+
+describe("ProjectRegistry runtime removal lifecycle", () => {
+  beforeEach(() => {
+    createProjectMock.mockReset();
+  });
+
+  it("unregisters and notifies the observer before shutting the runtime down", async () => {
+    const order: string[] = [];
+    const runtime = createRuntime("p1", "/proj/p1");
+    runtime.shutdown.mockImplementation(async () => {
+      order.push("shutdown");
+    });
+    createProjectMock.mockResolvedValue(runtime);
+    const registry = new ProjectRegistry(createLogger(), {
+      onRuntimeRemoved: () => {
+        order.push("observer");
+      },
+    });
+
+    await registry.register("/proj/p1");
+    await registry.remove("p1");
+
+    expect(order).toEqual(["observer", "shutdown"]);
+    expect(registry.get("p1")).toBeUndefined();
+  });
+
+  it("observer runs after the project is gone from the registry", async () => {
+    const runtime = createRuntime("p1", "/proj/p1");
+    createProjectMock.mockResolvedValue(runtime);
+    let visibleDuringObserver: boolean | undefined;
+    const registry = new ProjectRegistry(createLogger(), {
+      onRuntimeRemoved: () => {
+        visibleDuringObserver = registry.has("p1");
+      },
+    });
+
+    await registry.register("/proj/p1");
+    await registry.remove("p1");
+
+    expect(visibleDuringObserver).toBe(false);
+  });
+
+  it("keeps removal going when the observer throws", async () => {
+    const runtime = createRuntime("p1", "/proj/p1");
+    createProjectMock.mockResolvedValue(runtime);
+    const registry = new ProjectRegistry(createLogger(), {
+      onRuntimeRemoved: () => {
+        throw new Error("observer boom");
+      },
+    });
+
+    await registry.register("/proj/p1");
+    await expect(registry.remove("p1")).resolves.toBeUndefined();
+
+    expect(runtime.shutdown).toHaveBeenCalledTimes(1);
+    expect(registry.get("p1")).toBeUndefined();
+  });
+
+  it("waits for an in-flight removal before registering the same root again", async () => {
+    let resolveShutdown: (() => void) | undefined;
+    const first = createRuntime("p1", "/proj/p1");
+    first.shutdown.mockImplementation(
+      () => new Promise<void>((resolve) => { resolveShutdown = resolve; }),
+    );
+    const second = createRuntime("p2", "/proj/p1");
+    createProjectMock.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    const registry = new ProjectRegistry(createLogger());
+
+    await registry.register("/proj/p1");
+    const removal = registry.remove("p1");
+    const registering = registry.register("/proj/p1");
+    await Promise.resolve();
+
+    expect(createProjectMock).toHaveBeenCalledTimes(1);
+
+    resolveShutdown!();
+    await removal;
+    const ctx = await registering;
+
+    expect(ctx.projectId).toBe("p2");
+    expect(createProjectMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves the project unregistered when shutdown fails and clears the barrier", async () => {
+    const runtime = createRuntime("p1", "/proj/p1");
+    runtime.shutdown.mockRejectedValue(new Error("shutdown boom"));
+    createProjectMock.mockResolvedValue(runtime);
+    const registry = new ProjectRegistry(createLogger());
+
+    await registry.register("/proj/p1");
+    await expect(registry.remove("p1")).rejects.toThrow("shutdown boom");
+    expect(registry.get("p1")).toBeUndefined();
+
+    const fresh = createRuntime("p3", "/proj/p1");
+    createProjectMock.mockResolvedValue(fresh);
+    const ctx = await registry.register("/proj/p1");
+    expect(ctx.projectId).toBe("p3");
+  });
+});

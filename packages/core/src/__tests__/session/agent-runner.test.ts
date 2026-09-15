@@ -1143,6 +1143,30 @@ describe("AgentRunner in-flight ownership", () => {
     await expect(runner.sendMessage("ok", [], () => {})).resolves.toBeUndefined();
   });
 
+  it("isBusy reflects in-flight ownership across a gated run", async () => {
+    let releaseFirst!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    deps.createTurnHooks = () => ({
+      beforeTurn: async () => {
+        await gate;
+      },
+    });
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    stubAgentLoop(runner);
+
+    expect(runner.isBusy()).toBe(false);
+    const run = runner.sendMessage("first", [], () => {});
+    expect(runner.isBusy()).toBe(true);
+
+    releaseFirst();
+    await run;
+    expect(runner.isBusy()).toBe(false);
+  });
+
   it("rejects retryLastTurn while a send owns preflight, without abandoning the failed turn", async () => {
     let releaseSend!: () => void;
     const gate = new Promise<void>((resolve) => {

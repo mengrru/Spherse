@@ -41,7 +41,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await server.fastify.close();
+  await server.close();
 });
 
 describe("host validation", () => {
