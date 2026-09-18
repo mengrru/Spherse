@@ -12,7 +12,9 @@ interface HeaderProps {
 }
 
 function basename(path: string): string {
-  return path.split("/").filter(Boolean).pop() ?? path;
+  const name = path.split("/").filter(Boolean).pop() ?? path;
+  const match = name.match(/^(.+)\.[^.]+$/);
+  return match ? match[1] : name;
 }
 
 export function Header({ agent, quickLinks, activeQuickLink, onQuickLink, onClose }: HeaderProps) {

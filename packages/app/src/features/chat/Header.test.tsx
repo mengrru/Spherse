@@ -34,8 +34,8 @@ describe("Chat Header", () => {
       />,
     );
     expect(document.querySelector("[data-chat-quick-links]")).not.toBeNull();
-    expect(screen.getByRole("button", { name: "world.md" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "hero.md" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "world" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "hero" })).toBeInTheDocument();
   });
 
   it("calls onQuickLink with the full path on click", async () => {
@@ -45,7 +45,7 @@ describe("Chat Header", () => {
       <Header agent={agent} quickLinks={["notes/world.md"]} onQuickLink={onQuickLink} />,
     );
 
-    await user.click(screen.getByRole("button", { name: "world.md" }));
+    await user.click(screen.getByRole("button", { name: "world" }));
     expect(onQuickLink).toHaveBeenCalledWith("notes/world.md");
   });
 
@@ -59,8 +59,8 @@ describe("Chat Header", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "world.md" }).className).toContain("bg-secondary");
-    expect(screen.getByRole("button", { name: "hero.md" }).className).not.toContain("bg-secondary");
+    expect(screen.getByRole("button", { name: "world" }).className).toContain("bg-secondary");
+    expect(screen.getByRole("button", { name: "hero" }).className).not.toContain("bg-secondary");
   });
 
   it("renders no quick links container when the list is empty", () => {
@@ -72,11 +72,17 @@ describe("Chat Header", () => {
     renderWithProviders(
       <Header agent={agent} quickLinks={["notes/world.md", "notes/world.md"]} />,
     );
-    expect(screen.getAllByRole("button", { name: "world.md" })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "world" })).toHaveLength(1);
   });
 
   it("falls back to the full path when the basename is empty", () => {
     renderWithProviders(<Header agent={agent} quickLinks={["notes/"]} />);
     expect(screen.getByTitle("notes/")).toBeInTheDocument();
+  });
+
+  it("keeps extension-less and dotfile basenames intact", () => {
+    renderWithProviders(<Header agent={agent} quickLinks={["Makefile", ".gitignore"]} />);
+    expect(screen.getByRole("button", { name: "Makefile" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: ".gitignore" })).toBeInTheDocument();
   });
 });

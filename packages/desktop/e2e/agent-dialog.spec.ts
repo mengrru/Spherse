@@ -180,7 +180,7 @@ test("quick link configured in personalization tab shows as chat header button o
     const sessionId = await createSessionViaApi(page, project.projectId, created!.id);
     await page.goto(`file://${rendererEntry}?e2e=${Date.now()}#/project/${project.projectId}/chat/${sessionId}`);
 
-    const headerButton = page.locator("[data-chat-quick-links] button", { hasText: "characters.md" });
+    const headerButton = page.locator("[data-chat-quick-links] button", { hasText: /^characters$/ });
     await expect(headerButton).toBeVisible({ timeout: 5000 });
 
     await headerButton.click();

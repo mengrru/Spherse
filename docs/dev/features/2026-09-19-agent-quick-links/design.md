@@ -16,7 +16,7 @@
 
 ## 已确认的产品决策
 
-1. 数据模型：纯文件路径数组 `quickLinks: string[]`，按钮文本自动显示文件名（basename），无自定义名称
+1. 数据模型：纯文件路径数组 `quickLinks: string[]`，按钮文本自动显示文件名（basename 去扩展名，无扩展名/点文件保持原样；悬浮 title 仍为全路径），无自定义名称
 2. 桌面端复用现有 floating-content-browser store（`openFloat` 幂等、沿用其 localStorage 持久化行为）
 3. 移动端面板轻量复用：ContentView + useContentFile，面板顶部加细 header（文件名 + 关闭按钮）
 4. 浮窗聊天（floating chat，hideHeader）不显示快捷链接按钮，仅普通聊天窗口

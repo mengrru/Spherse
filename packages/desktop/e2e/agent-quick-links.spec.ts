@@ -45,7 +45,7 @@ test("chat header quick link opens floating content window that survives chat cl
     await navigateToSession(page, project.projectId, sessionId);
     await page.waitForSelector("[data-chat-header]");
 
-    const quickLink = page.locator("[data-chat-quick-links] button", { hasText: "characters.md" });
+    const quickLink = page.locator("[data-chat-quick-links] button", { hasText: /^characters$/ });
     await expect(quickLink).toBeVisible({ timeout: 5000 });
 
     await quickLink.click();
@@ -73,7 +73,7 @@ test("mobile viewport slides quick link panel out below the header and toggles c
     await navigateToSession(page, project.projectId, sessionId);
     await page.waitForSelector("[data-chat-header]");
 
-    const quickLink = page.locator("[data-chat-quick-links] button", { hasText: "characters.md" });
+    const quickLink = page.locator("[data-chat-quick-links] button", { hasText: /^characters$/ });
     await expect(quickLink).toBeVisible({ timeout: 5000 });
 
     await quickLink.click();
