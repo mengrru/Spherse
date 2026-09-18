@@ -31,7 +31,7 @@ export function QuickLinkPanel({ projectId, path }: QuickLinkPanelProps) {
   return (
     <div
       data-chat-quick-link-panel
-      className="absolute inset-x-0 top-full z-30 flex h-[35dvh] animate-in slide-in-from-top duration-200 flex-col border-b border-border bg-background shadow-lg"
+      className="absolute inset-x-0 top-full z-30 flex h-[35dvh] animate-[quick-link-unfold_200ms_ease-out] motion-reduce:animate-none flex-col border-b border-border bg-background shadow-lg"
     >
       <ContentView
         filePath={path}

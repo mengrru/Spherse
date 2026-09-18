@@ -190,6 +190,15 @@
   }
 }
 
+@keyframes quick-link-unfold {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
 /*
  * The `::highlight(sp-find-current)` rule is injected at runtime by
  * `find-engine.ts` (see `ensureHighlightStyle`), because lightningcss (used by
