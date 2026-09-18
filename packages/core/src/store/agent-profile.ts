@@ -125,6 +125,9 @@ export class AgentProfileStore {
         thinkingLevel: parseThinkingLevel(data.thinkingLevel),
         tools: data.tools,
         context: data.context,
+        quickLinks: Array.isArray(data.quickLinks)
+          ? data.quickLinks.filter((p): p is string => typeof p === "string")
+          : undefined,
         output: data.output,
         timePerception: parseTimePerception(data.timePerception),
         yolo: data.yolo === true || undefined,

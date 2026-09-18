@@ -392,8 +392,14 @@ export const zhCN = {
   "agent-dialog.loadFailed": "读取失败",
   // Agent dialog "基本" 标签页标题
   "agent-dialog.tabBasic": "基本",
-  // Agent dialog "主题" 标签页标题
-  "agent-dialog.tabTheme": "主题",
+  // Agent dialog "个性化" 标签页标题（收入主题与快捷链接）
+  "agent-dialog.tabPersonalization": "个性化",
+  // Agent 快捷链接字段标签
+  "agent-dialog.quickLinksLabel": "快捷链接",
+  // Agent 快捷链接字段 tooltip：说明快捷链接的展示位置与作用
+  "agent-dialog.quickLinksHint": "显示为聊天窗口顶部的按钮，点击可快速打开该文件",
+  // Agent 快捷链接路径输入框占位提示
+  "agent-dialog.quickLinksPlaceholder": "添加文件…",
   // Agent dialog 提示词模板行标签（预留，当前 UI 未强制展示）
   "agent-dialog.templateLabel": "模板",
   // 提示词下方预设模板按钮组的前缀文案

@@ -43,6 +43,8 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 | Chat 根级颜色变量 | 在 `[data-chat-root] { ... }` 内声明 `--sp-*` 变量 |
 | Chat 根级渐变/图片背景 | 在 `[data-chat-root] { ... }` 内写 `background:` / `background-image:` |
 | Header | `[data-chat-header]` |
+| Header 快捷链接按钮 | `[data-chat-quick-links]`（按钮行）/ `[data-chat-quick-links] button`（单个按钮） |
+| 移动端快捷链接滑出面板 | `[data-chat-quick-link-panel]` |
 | 消息外层行 | `[data-chat-message][data-role="user"]` 或 `[data-role="assistant"]` |
 | 消息气泡 | `[data-chat-bubble]` |
 | Trigger 对话轮折叠摘要条 | `[data-chat-turn-collapse]` |
@@ -65,6 +67,8 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 |------|---------|
 | `data-chat-root` | 聊天窗口根容器（最外层包裹） |
 | `data-chat-header` | 顶部 header |
+| `data-chat-quick-links` | Header 快捷链接按钮行 |
+| `data-chat-quick-link-panel` | 移动端快捷链接滑出面板 |
 | `data-chat-messages` | 消息列表区 |
 | `data-chat-message` + `data-role="user"`/`"assistant"` | 单条消息外层 |
 | `data-chat-bubble` | 消息气泡（内容容器） |

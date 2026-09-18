@@ -26,6 +26,7 @@ const agentProfile = Type.Object({
   schedule: Type.Optional(Type.Boolean()),
   tools: Type.Optional(Type.Array(Type.String())),
   context: Type.Optional(Type.Array(Type.String())),
+  quickLinks: Type.Optional(Type.Array(Type.String())),
   output: Type.Optional(
     Type.Object({
       path: Type.String(),

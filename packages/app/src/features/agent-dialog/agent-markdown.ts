@@ -32,6 +32,7 @@ export interface AgentFormData {
   thinkingLevel?: ThinkingLevel;
   tools: string[];
   context: string[];
+  quickLinks: string[];
   systemPrompt: string;
   timePerception?: TimePerceptionFormData;
   yolo: boolean;
@@ -53,6 +54,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
         thinkingLevel: undefined,
         tools: [],
         context: [],
+        quickLinks: [],
         systemPrompt: raw.trim(),
         yolo: false,
       },
@@ -64,7 +66,7 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
   const body = raw.slice(match[0].length).trim();
   const frontmatter = yaml.load(frontmatterRaw) as Record<string, unknown>;
 
-  const { name, alias, model, thinkingLevel, tools, context, timePerception, yolo, ...extra } = frontmatter;
+  const { name, alias, model, thinkingLevel, tools, context, quickLinks, timePerception, yolo, ...extra } = frontmatter;
 
   return {
     formData: {
@@ -77,6 +79,9 @@ export function parseAgentMarkdown(raw: string): ParsedAgent {
         : [],
       context: Array.isArray(context)
         ? context.filter((c): c is string => typeof c === "string")
+        : [],
+      quickLinks: Array.isArray(quickLinks)
+        ? quickLinks.filter((c): c is string => typeof c === "string")
         : [],
       systemPrompt: body,
       timePerception: parseTimePerception(timePerception),
@@ -107,6 +112,9 @@ export function buildAgentMarkdown(
   }
   if (formData.context.length > 0) {
     frontmatter.context = formData.context;
+  }
+  if (formData.quickLinks.length > 0) {
+    frontmatter.quickLinks = formData.quickLinks;
   }
   if (formData.timePerception?.enabled) {
     frontmatter.timePerception = {

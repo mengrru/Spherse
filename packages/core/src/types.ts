@@ -26,6 +26,7 @@ export interface AgentProfile {
   thinkingLevel?: ThinkingLevel;
   tools?: string[];
   context?: string[];
+  quickLinks?: string[];
   output?: {
     path: string;
     naming: string;

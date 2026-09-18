@@ -10,6 +10,7 @@ export {
   getCachedAgents,
   refreshProjectAgents,
   updateProjectAgent,
+  useProjectAgentProfile,
   useProjectAgents,
 } from "./agents";
 export {

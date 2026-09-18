@@ -24,4 +24,47 @@ describe("Chat Header", () => {
     await user.click(screen.getByRole("button", { name: "关闭" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it("renders quick link buttons with basename labels and theme hook", () => {
+    renderWithProviders(
+      <Header
+        agent={agent}
+        quickLinks={["notes/world.md", "chars/hero.md"]}
+        onQuickLink={vi.fn()}
+      />,
+    );
+    expect(document.querySelector("[data-chat-quick-links]")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "world.md" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "hero.md" })).toBeInTheDocument();
+  });
+
+  it("calls onQuickLink with the full path on click", async () => {
+    const user = userEvent.setup();
+    const onQuickLink = vi.fn();
+    renderWithProviders(
+      <Header agent={agent} quickLinks={["notes/world.md"]} onQuickLink={onQuickLink} />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "world.md" }));
+    expect(onQuickLink).toHaveBeenCalledWith("notes/world.md");
+  });
+
+  it("marks the active quick link button", () => {
+    renderWithProviders(
+      <Header
+        agent={agent}
+        quickLinks={["notes/world.md", "chars/hero.md"]}
+        activeQuickLink="notes/world.md"
+        onQuickLink={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "world.md" }).className).toContain("bg-secondary");
+    expect(screen.getByRole("button", { name: "hero.md" }).className).not.toContain("bg-secondary");
+  });
+
+  it("renders no quick links container when the list is empty", () => {
+    renderWithProviders(<Header agent={agent} quickLinks={[]} />);
+    expect(document.querySelector("[data-chat-quick-links]")).toBeNull();
+  });
 });

@@ -1,13 +1,19 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AgentSummary } from "../../lib/types";
+import { useNavigate } from "react-router";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient, useConnection } from "../../lib/use-connection";
+import { useFeature } from "../../lib/use-feature";
+import { useIsMobile } from "../../hooks/use-mobile";
+import { useProjectAgentProfile } from "../../queries/project";
+import { useFloatingContentBrowserStore } from "../floating-content-browser/store";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import { Composer } from "./Composer";
 import { Header } from "./Header";
 import { MessageList } from "./MessageList";
 import { ConnectionBanner } from "./ConnectionBanner";
+import { QuickLinkPanel, resolveQuickLinkAction } from "./QuickLinkPanel";
 import { ChatAgentProvider } from "./chat-agent-context";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
@@ -27,6 +33,13 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
   const client = useApiClient(projectId);
   const { baseUrl, accessToken } = useConnection();
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const floatEnabled = useFeature("floating-content-browser");
+  const openFloat = useFloatingContentBrowserStore((s) => s.openFloat);
+  const profileQuery = useProjectAgentProfile(projectId, client, agent.id, !hideHeader);
+  const quickLinks = useMemo(() => profileQuery.data?.quickLinks ?? [], [profileQuery.data?.quickLinks]);
+  const [activeQuickLink, setActiveQuickLink] = useState<string | null>(null);
   const {
     entries,
     groups,
@@ -78,11 +91,47 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
 
   const agentScope = useMemo(() => ({ sessionId, agentId: agent.id }), [sessionId, agent.id]);
 
+  useEffect(() => {
+    if (activeQuickLink !== null && !quickLinks.includes(activeQuickLink)) {
+      setActiveQuickLink(null);
+    }
+  }, [quickLinks, activeQuickLink]);
+
+  const handleQuickLink = (path: string) => {
+    const action = resolveQuickLinkAction(isMobile, floatEnabled);
+    if (action === "panel") {
+      setActiveQuickLink((current) => (current === path ? null : path));
+      return;
+    }
+    if (action === "float") {
+      openFloat(projectId, path);
+      return;
+    }
+    navigate(`/project/${projectId}/content?path=${encodeURIComponent(path)}`);
+  };
+
   return (
     <ChatAgentProvider agent={agentScope}>
       <div className="flex flex-col h-full" data-chat-root>
         {themeHref && <link rel="stylesheet" href={themeHref} />}
-        {!hideHeader && <Header agent={agent} onClose={onClose ? handleClose : undefined} />}
+        {!hideHeader && (
+          <div className="relative shrink-0">
+            <Header
+              agent={agent}
+              quickLinks={quickLinks.length > 0 ? quickLinks : undefined}
+              activeQuickLink={isMobile ? activeQuickLink : null}
+              onQuickLink={handleQuickLink}
+              onClose={onClose ? handleClose : undefined}
+            />
+            {isMobile && activeQuickLink !== null && (
+              <QuickLinkPanel
+                projectId={projectId}
+                path={activeQuickLink}
+                onClose={() => setActiveQuickLink(null)}
+              />
+            )}
+          </div>
+        )}
         <ConnectionBanner
           state={connection.state}
           historyError={historyError}

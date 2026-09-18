@@ -96,6 +96,44 @@ You are a world building assistant.`;
     expect(profile!.model).toBeUndefined();
   });
 
+  it("parses quickLinks from frontmatter", async () => {
+    await writeProfile(
+      "---\nname: Agent\nquickLinks:\n  - notes/world.md\n  - chars/hero.md\n---\n\nprompt",
+    );
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.quickLinks).toEqual(["notes/world.md", "chars/hero.md"]);
+  });
+
+  it("returns undefined quickLinks when frontmatter omits it", async () => {
+    await writeProfile(VALID_PROFILE);
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.quickLinks).toBeUndefined();
+  });
+
+  it("filters non-string quickLinks entries", async () => {
+    await writeProfile(
+      "---\nname: Agent\nquickLinks:\n  - notes/world.md\n  - 42\n  - ok.md\n---\n\nprompt",
+    );
+    const profile = await store.read();
+    expect(profile).not.toBeNull();
+    expect(profile!.quickLinks).toEqual(["notes/world.md", "ok.md"]);
+  });
+
+  it("round-trips quickLinks through save", async () => {
+    await store.save(VALID_PROFILE);
+    const withLinks = VALID_PROFILE.replace(
+      "tools:\n",
+      "quickLinks:\n  - notes/world.md\ntools:\n",
+    );
+    const saved = await store.save(withLinks);
+    expect(saved.quickLinks).toEqual(["notes/world.md"]);
+    expect(await store.read()).toMatchObject({
+      quickLinks: ["notes/world.md"],
+    });
+  });
+
   it("returns null when profile.md does not exist", async () => {
     const profile = await store.read();
     expect(profile).toBeNull();

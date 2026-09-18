@@ -20,6 +20,7 @@ const FULL_PROFILE = {
   schedule: true,
   tools: ["read_file"],
   context: ["docs/"],
+  quickLinks: ["notes/world.md"],
   output: { path: "out", naming: "flat", frontmatter: { tag: "x" } },
   timePerception: { enabled: false, epochMs: 0, startMs: 0, flowRate: 1 },
   yolo: true,
@@ -69,5 +70,6 @@ describe("GET /api/projects/:projectId/agents route", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().systemPrompt).toBe(FULL_PROFILE.systemPrompt);
     expect(res.json().tools).toEqual(["read_file"]);
+    expect(res.json().quickLinks).toEqual(["notes/world.md"]);
   });
 });

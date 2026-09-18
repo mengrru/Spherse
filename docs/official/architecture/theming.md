@@ -45,6 +45,7 @@
 | `data-app-root` | `App.tsx` / GlobalErrorBoundary | 整窗根，全局装饰锚点 |
 | `data-chat-root` | `features/chat/index.tsx` | 聊天窗口根（agent theme 作用域） |
 | `data-chat-header` / `-messages` / `-message[data-role]` / `-bubble` | Header / MessageList / MessageItem | 聊天结构四层 |
+| `data-chat-quick-links` / `data-chat-quick-link-panel` | Header / QuickLinkPanel | header 快捷链接按钮行与移动端滑出面板 |
 | `data-chat-turn-collapse` | TriggerTurnGroup | trigger 对话轮折叠摘要条（按钮） |
 | `data-chat-composer` / `-composer-input` | Composer | 输入区外层与外框 |
 | `data-chat-float-root` / `-titlebar` / `-close` | FloatingFrame（动态 `data-{prefix}-float-*`） | 浮窗 chrome，前缀 chat / browser / content 三实例 |
@@ -59,7 +60,7 @@
 ## 主题设置 UI
 
 - **项目主题**：项目头像右键 → ThemeSettingsDialog 编辑 CSS 文本；GET / PUT `settings/theme`（缺失返回空串）→ 写盘 → fs-watch 双路生效（`<link>` 重挂 + dialog 缓存失效）
-- **agent 主题**：Agent Dialog 主题 tab；create / update 携 `themeContent`（仅显式提供才写文件）
+- **agent 主题**：Agent Dialog 个性化 tab；create / update 携 `themeContent`（仅显式提供才写文件）
 
 ## toast 主题化（特例）
 

@@ -20,6 +20,19 @@ export function useProjectAgents(projectId: string, client: ApiClient | null) {
   };
 }
 
+export function useProjectAgentProfile(
+  projectId: string,
+  client: ApiClient | null,
+  agentId: string | undefined,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: projectQueryKeys.agent(projectId, agentId ?? ""),
+    queryFn: () => client!.getAgent(agentId!),
+    enabled: Boolean(enabled && projectId && client && agentId),
+  });
+}
+
 export function getCachedAgents(projectId: string): AgentSummary[] {
   return queryClient.getQueryData(projectQueryKeys.agents(projectId)) ?? EMPTY_AGENTS;
 }
@@ -56,6 +69,9 @@ export async function updateProjectAgent(
 ): Promise<void> {
   await client.updateAgent(agentId, content, themeContent);
   await refreshProjectAgents(projectId);
+  await queryClient.invalidateQueries({
+    queryKey: projectQueryKeys.agent(projectId, agentId),
+  });
 }
 
 export async function deleteProjectAgent(

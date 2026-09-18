@@ -31,6 +31,22 @@
   /*   border-color: rgba(201, 160, 74, 0.12); */
   /* } */
 
+  /* === Header 快捷链接按钮（agent「个性化」中配置） === */
+  /* [data-chat-quick-links] button { */
+  /*   color: #9a9184; */
+  /* } */
+  /* [data-chat-quick-links] button:hover { */
+  /*   color: #e2ddd4; */
+  /*   background: rgba(201, 160, 74, 0.12); */
+  /* } */
+
+  /* === 移动端快捷链接滑出面板（从 header 下方划出的文件面板） === */
+  /* [data-chat-quick-link-panel] { */
+  /*   background: rgba(12, 11, 18, 0.97); */
+  /*   border-color: rgba(201, 160, 74, 0.12); */
+  /* } */
+
+
   /* === 助手头像（纯 CSS 伪元素） === */
   /* [data-chat-message][data-role="assistant"] { */
   /*   position: relative; */

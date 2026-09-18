@@ -1,6 +1,8 @@
 export const projectQueryKeys = {
   all: (projectId: string) => ["projects", projectId] as const,
   agents: (projectId: string) => ["projects", projectId, "agents"] as const,
+  agent: (projectId: string, agentId: string) =>
+    ["projects", projectId, "agent", agentId] as const,
   sessions: (projectId: string) => ["projects", projectId, "sessions"] as const,
   session: (projectId: string, sessionId: string) =>
     ["projects", projectId, "session", sessionId] as const,

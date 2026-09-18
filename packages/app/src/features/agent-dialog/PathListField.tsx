@@ -1,4 +1,3 @@
-import { useI18n } from "@spherse/i18n/react";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Field } from "../../components/ui/field";
@@ -6,22 +5,27 @@ import { SearchFileField } from "./SearchFileField";
 import { HintLabel } from "./HintLabel";
 import { XIcon } from "lucide-react";
 
-export function ContextPathField({
-  contextPaths,
+export function PathListField({
+  paths,
   onAdd,
   onRemove,
+  label,
+  hint,
+  placeholder,
 }: {
-  contextPaths: string[];
+  paths: string[];
   onAdd: (path: string) => void;
   onRemove: (path: string) => void;
+  label: string;
+  hint: string;
+  placeholder: string;
 }) {
-  const { t } = useI18n();
   return (
     <Field>
-      <HintLabel hint={t("agent-dialog.refsHint")}>{t("agent-dialog.refsLabel")}</HintLabel>
-      {contextPaths.length > 0 && (
+      <HintLabel hint={hint}>{label}</HintLabel>
+      {paths.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-2">
-          {contextPaths.map((path) => (
+          {paths.map((path) => (
             <Badge key={path} variant="secondary" className="gap-1">
               {path}
               <Button
@@ -38,9 +42,9 @@ export function ContextPathField({
         </div>
       )}
       <SearchFileField
-        exclude={contextPaths}
+        exclude={paths}
         onSelect={onAdd}
-        placeholder={t("agent-dialog.refsPlaceholder")}
+        placeholder={placeholder}
       />
     </Field>
   );
