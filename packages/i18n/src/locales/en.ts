@@ -205,6 +205,7 @@ export const en: Record<TranslationKey, string> = {
   "agent-dialog.templateConfirmDesc": "This will replace the current prompt. Continue?",
   "agent-dialog.templateConfirmApply": "Apply",
   "agent-dialog.templateConfirmCancel": "Cancel",
+  "agent-dialog.themeLabel": "Theme",
   "agent-dialog.themeScopeHint": "Applies only to this agent's chat window (bubbles, input, Markdown, etc.).",
   "agent-dialog.themePlaceholder": "Chat with the agent to generate a theme, or paste theme CSS here",
   "agent-dialog.timePerceptionLabel": "Time Perception",

@@ -236,16 +236,16 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
               hint={t("agent-dialog.quickLinksHint")}
               placeholder={t("agent-dialog.quickLinksPlaceholder")}
             />
-            <p className="mb-2 text-sm text-muted-foreground">
-              {t("agent-dialog.themeScopeHint")}
-            </p>
-            <Textarea
-              className="flex-1 min-h-40 resize-none font-mono text-xs"
-              value={themeContent}
-              onChange={(e) => setThemeContent(e.target.value)}
-              placeholder={t("agent-dialog.themePlaceholder")}
-              spellCheck={false}
-            />
+            <Field className="min-h-0 flex-1">
+              <HintLabel hint={t("agent-dialog.themeScopeHint")}>{t("agent-dialog.themeLabel")}</HintLabel>
+              <Textarea
+                className="flex-1 min-h-40 resize-none font-mono text-xs"
+                value={themeContent}
+                onChange={(e) => setThemeContent(e.target.value)}
+                placeholder={t("agent-dialog.themePlaceholder")}
+                spellCheck={false}
+              />
+            </Field>
           </FieldGroup>
         </TabsContent>
       </Tabs>

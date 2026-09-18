@@ -205,6 +205,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "agent-dialog.templateConfirmDesc": "套用範本將覆蓋目前提示詞內容，是否繼續？",
   "agent-dialog.templateConfirmApply": "套用",
   "agent-dialog.templateConfirmCancel": "取消",
+  "agent-dialog.themeLabel": "主題",
   "agent-dialog.themeScopeHint": "僅作用於該智能體的聊天視窗（氣泡、輸入框、Markdown 等）。",
   "agent-dialog.themePlaceholder": "與智能體對話來生成主題，或將主題 CSS 貼上到這裡",
   "agent-dialog.timePerceptionLabel": "時間感知",
