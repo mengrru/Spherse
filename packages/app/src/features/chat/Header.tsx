@@ -2,6 +2,7 @@ import type { AgentSummary } from "../../lib/types";
 import { Button } from "../../components/ui/button";
 import { XIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
+import { cn } from "../../lib/utils";
 
 interface HeaderProps {
   agent: AgentSummary;
@@ -35,7 +36,11 @@ export function Header({ agent, quickLinks, activeQuickLink, onQuickLink, onClos
                 key={path}
                 variant={active ? "secondary" : "ghost"}
                 size="sm"
-                className="h-6 shrink-0 px-2 text-[11px]"
+                className={cn(
+                  "h-6 shrink-0 px-2 text-[11px]",
+                  active &&
+                    "hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_12%)]",
+                )}
                 onClick={() => onQuickLink?.(path)}
                 title={path}
               >
