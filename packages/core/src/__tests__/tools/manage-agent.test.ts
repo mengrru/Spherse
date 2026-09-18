@@ -114,6 +114,7 @@ describe("createManageAgentTool", () => {
         alias: "CR",
         tools: ["read_file", "read_file"],
         context: ["notes/outline.md"],
+        quick_links: ["world/characters.md"],
       },
       undefined as any,
     );
@@ -124,6 +125,7 @@ describe("createManageAgentTool", () => {
     expect(profile.alias).toBe("CR");
     expect(profile.tools).toEqual(["read_file"]);
     expect(profile.context).toEqual(["notes/outline.md"]);
+    expect(profile.quickLinks).toEqual(["world/characters.md"]);
     expect(profile.systemPrompt).toBe("Review chapters.");
     expect(profile.slug).toMatch(/^chapter-reviewer-[0-9a-f]{6}$/);
   });
@@ -194,6 +196,54 @@ describe("createManageAgentTool", () => {
     const updated = store.getAgent(profile.id)!.getProfile();
     expect(updated.alias).toBeUndefined();
     expect(updated.model).toBeUndefined();
+  });
+
+  it("replaces quick links on update and clears them with an empty array", async () => {
+    const profile = await seedProfileContent(
+      `---\nname: World Builder\nquickLinks:\n  - notes/a.md\n  - notes/b.md\n---\n\nYou are a world building assistant.`,
+    );
+    await makeTool().execute(
+      "tc",
+      { action: "update", agent_id: profile.id, quick_links: ["world/characters.md"] },
+      undefined as any,
+    );
+    expect(store.getAgent(profile.id)!.getProfile().quickLinks).toEqual(["world/characters.md"]);
+
+    await makeTool().execute(
+      "tc",
+      { action: "update", agent_id: profile.id, quick_links: [] },
+      undefined as any,
+    );
+    expect(store.getAgent(profile.id)!.getProfile().quickLinks).toBeUndefined();
+    expect((await readFrontmatter(profile.id)).quickLinks).toBeUndefined();
+  });
+
+  it("keeps quick links untouched on update when the param is omitted", async () => {
+    const profile = await seedProfileContent(
+      `---\nname: World Builder\nquickLinks:\n  - notes/a.md\n---\n\nYou are a world building assistant.`,
+    );
+    await makeTool().execute(
+      "tc",
+      { action: "update", agent_id: profile.id, name: "Renamed" },
+      undefined as any,
+    );
+    const updated = store.getAgent(profile.id)!.getProfile();
+    expect(updated.name).toBe("Renamed");
+    expect(updated.quickLinks).toEqual(["notes/a.md"]);
+  });
+
+  it("surfaces quick links in list and get output", async () => {
+    const profile = await seedProfileContent(
+      `---\nname: World Builder\nquickLinks:\n  - world/characters.md\n---\n\nYou are a world building assistant.`,
+    );
+    const listed = await makeTool().execute("tc", { action: "list" }, undefined as any);
+    expect(listed.content[0].text).toContain("world/characters.md");
+    const got = await makeTool().execute(
+      "tc",
+      { action: "get", agent_id: profile.id },
+      undefined as any,
+    );
+    expect(got.content[0].text).toContain("world/characters.md");
   });
 
   it("reports a missing agent id", async () => {
