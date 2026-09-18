@@ -93,6 +93,7 @@ frontmatter 字段：
 | `thinkingLevel` | 否 | 覆盖全局思考强度，取值 `off` / `low` / `medium` / `high`；非法值忽略、未设回退全局设置 |
 | `tools` | 否 | 允许的工具名列表；缺省不分配任何工具 |
 | `context` | 否 | 项目根内相对路径列表，构建 system prompt 时预读注入；access policy 不可读的路径静默跳过 |
+| `quickLinks` | 否 | 项目根内相对路径列表，渲染为聊天窗口 header 快捷链接按钮（桌面开文件浮窗、移动端 header 下方滑出面板）；仅 Agent Dialog 可改 |
 | `yolo` | 否 | 自动放行：true 时危险工具跳过审批门，文件访问策略不受影响；仅 Agent Dialog 可改，`manage_agent` 不管理 |
 | `timePerception` | 否 | 时间感知配置，见下 |
 | `output` | 否 | 预留字段，当前无消费方 |
@@ -104,7 +105,7 @@ frontmatter 字段：
 - `manage_agent` 只切换 `enabled`：首次开启固化 `epochMs = startMs = 写入时刻, flowRate = 1` 的默认配置（防锚点漂移），关闭即删除整个 key
 - 锚点、起点、流速、时区仅 Agent Dialog 可调
 
-`theme.css`（同目录，可选）：Agent Dialog「主题」页编辑，新建初始为空白，presets 模板仅作参考物料；缺失读取为空串、聊天窗口用全局默认样式。
+`theme.css`（同目录，可选）：Agent Dialog「个性化」页编辑，新建初始为空白，presets 模板仅作参考物料；缺失读取为空串、聊天窗口用全局默认样式。
 
 ### mcp.json
 

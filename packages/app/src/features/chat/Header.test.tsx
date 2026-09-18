@@ -67,4 +67,16 @@ describe("Chat Header", () => {
     renderWithProviders(<Header agent={agent} quickLinks={[]} />);
     expect(document.querySelector("[data-chat-quick-links]")).toBeNull();
   });
+
+  it("deduplicates repeated quick link paths", () => {
+    renderWithProviders(
+      <Header agent={agent} quickLinks={["notes/world.md", "notes/world.md"]} />,
+    );
+    expect(screen.getAllByRole("button", { name: "world.md" })).toHaveLength(1);
+  });
+
+  it("falls back to the full path when the basename is empty", () => {
+    renderWithProviders(<Header agent={agent} quickLinks={["notes/"]} />);
+    expect(screen.getByTitle("notes/")).toBeInTheDocument();
+  });
 });

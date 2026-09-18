@@ -32,7 +32,7 @@ export function QuickLinkPanel({ projectId, path, onClose }: QuickLinkPanelProps
   }, [dataUpdatedAt, path]);
 
   const { isMarkdown, isHtml, isImage } = classifyFileKind(path);
-  const fileName = path.split("/").pop() ?? path;
+  const fileName = path.split("/").filter(Boolean).pop() ?? path;
 
   return (
     <div

@@ -339,6 +339,7 @@ spherse/
 │   │       │   ├── chat.ts           # Chat E2E 测试辅助（mock agent 项目、WS mock、会话 API）
 │   │       │   └── chat-history.ts   # Chat history E2E 辅助（event log fixture + sessions.db 播种）
 │   │       ├── agent-dialog.spec.ts  # Agent 对话框搜索文件 E2E 测试
+│   │       ├── agent-quick-links.spec.ts # 快捷链接 E2E 测试（桌面浮窗存活 / 移动端滑出面板 toggle）
 │   │       ├── app-launch.spec.ts    # App 启动验证 smoke test
 │   │       ├── packaged-smoke.spec.ts # 打包产物冒烟测试（SPHERSE_SMOKE=1 门控：启动 electron-builder unpacked 二进制，验证 renderer 挂载 + server /health + 版本号；release CI 在 arch 匹配的 matrix job 上必跑）
 │   │       ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock

@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { closeApp } from "./helpers/electron";
+import { createSessionViaApi, authHeaders, getServerPort } from "./helpers/chat";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -138,6 +139,53 @@ test("enter key manually adds typed path in agent dialog", async () => {
 
     const badge = page.locator("[data-slot='badge']").filter({ hasText: "world/history/timeline.md" });
     await expect(badge).toBeVisible({ timeout: 3000 });
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test("quick link configured in personalization tab shows as chat header button opening a float", async () => {
+  const project = await createAgentDialogProject();
+  const { app, page } = await launchApp(project);
+
+  try {
+    await navigateToProject(page, project.projectId);
+    await openAgentDialog(page);
+
+    await page.locator("[placeholder='名称']").fill("Quick Linker");
+    await page.getByRole("tab", { name: "个性化" }).click();
+
+    const quickLinkInput = page.locator("[placeholder='添加文件…']");
+    await quickLinkInput.waitFor({ timeout: 5000 });
+    await quickLinkInput.fill("characters");
+
+    const suggestion = page.getByText("world/characters.md");
+    await expect(suggestion).toBeVisible({ timeout: 5000 });
+    await suggestion.click();
+
+    const badge = page.locator("[data-slot='badge']").filter({ hasText: "world/characters.md" });
+    await expect(badge).toBeVisible({ timeout: 3000 });
+
+    await page.getByRole("button", { name: "创建", exact: true }).click();
+    await expect(page.locator("[data-slot='dialog-content']")).toHaveCount(0, { timeout: 5000 });
+
+    const port = await getServerPort(page);
+    const agentsRes = await fetch(`http://localhost:${port}/api/projects/${project.projectId}/agents`, {
+      headers: await authHeaders(page),
+    });
+    const agents = await agentsRes.json() as Array<{ id: string; name: string }>;
+    const created = agents.find((a) => a.name === "Quick Linker");
+    expect(created).toBeDefined();
+
+    const sessionId = await createSessionViaApi(page, project.projectId, created!.id);
+    await page.goto(`file://${rendererEntry}?e2e=${Date.now()}#/project/${project.projectId}/chat/${sessionId}`);
+
+    const headerButton = page.locator("[data-chat-quick-links] button", { hasText: "characters.md" });
+    await expect(headerButton).toBeVisible({ timeout: 5000 });
+
+    await headerButton.click();
+    await expect(page.locator("[data-content-float-root]")).toBeVisible({ timeout: 5000 });
+    await expect(page.locator("[data-content-float-root] [data-content-doc]")).toBeVisible({ timeout: 5000 });
   } finally {
     await closeApp(app);
   }

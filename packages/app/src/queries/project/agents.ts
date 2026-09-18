@@ -81,5 +81,7 @@ export async function deleteProjectAgent(
 ): Promise<void> {
   await client.deleteAgent(agentId);
   await refreshProjectAgents(projectId);
-  await refreshProjectSessions(projectId);
+  await queryClient.invalidateQueries({
+    queryKey: projectQueryKeys.agent(projectId, agentId),
+  });
 }

@@ -12,20 +12,21 @@ interface HeaderProps {
 }
 
 function basename(path: string): string {
-  return path.split("/").pop() ?? path;
+  return path.split("/").filter(Boolean).pop() ?? path;
 }
 
 export function Header({ agent, quickLinks, activeQuickLink, onQuickLink, onClose }: HeaderProps) {
   const { t } = useI18n();
+  const links = quickLinks?.filter((p, i, arr) => arr.indexOf(p) === i) ?? [];
   return (
     <div className="flex items-center gap-2 border-b border-border bg-background px-4 py-3" data-chat-header>
       <span className="font-semibold text-[15px]">{agent.name}</span>
-      {quickLinks && quickLinks.length > 0 && (
+      {links.length > 0 && (
         <div
           className="ml-1 flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
           data-chat-quick-links
         >
-          {quickLinks.map((path) => {
+          {links.map((path) => {
             const active = path === activeQuickLink;
             return (
               <Button
@@ -46,7 +47,7 @@ export function Header({ agent, quickLinks, activeQuickLink, onQuickLink, onClos
         <Button
           variant="ghost"
           size="icon-sm"
-          className={quickLinks && quickLinks.length > 0 ? "" : "ml-auto"}
+          className={links.length > 0 ? "" : "ml-auto"}
           onClick={onClose}
           title={t("chat.close")}
         >
