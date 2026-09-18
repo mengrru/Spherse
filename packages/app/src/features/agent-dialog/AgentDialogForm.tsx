@@ -168,15 +168,6 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
                 placeholder={t("agent-dialog.namePlaceholder")}
               />
             </Field>
-            <Field>
-              <HintLabel hint={t("agent-dialog.aliasHint")}>{t("agent-dialog.aliasLabel")}</HintLabel>
-              <Input
-                type="text"
-                value={formData.alias ?? ""}
-                onChange={(e) => setFormData((prev) => ({ ...prev, alias: e.target.value }))}
-                placeholder={t("agent-dialog.aliasPlaceholder")}
-              />
-            </Field>
             <ModelConfigField
               providers={providers ?? {}}
               apiKeys={apiKeys}
@@ -228,6 +219,15 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
         </TabsContent>
         <TabsContent value="personalization" className="flex-1 min-h-0 flex flex-col px-4">
           <FieldGroup className="flex-1 min-h-0 flex flex-col">
+            <Field>
+              <HintLabel hint={t("agent-dialog.aliasHint")}>{t("agent-dialog.aliasLabel")}</HintLabel>
+              <Input
+                type="text"
+                value={formData.alias ?? ""}
+                onChange={(e) => setFormData((prev) => ({ ...prev, alias: e.target.value }))}
+                placeholder={t("agent-dialog.aliasPlaceholder")}
+              />
+            </Field>
             <PathListField
               paths={formData.quickLinks}
               onAdd={addQuickLink}
