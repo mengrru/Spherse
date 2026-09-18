@@ -38,8 +38,7 @@ export function Header({ agent, quickLinks, activeQuickLink, onQuickLink, onClos
                 size="sm"
                 className={cn(
                   "h-6 shrink-0 px-2 text-[11px]",
-                  active &&
-                    "hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_12%)]",
+                  active && "hover:bg-input",
                 )}
                 onClick={() => onQuickLink?.(path)}
                 title={path}
