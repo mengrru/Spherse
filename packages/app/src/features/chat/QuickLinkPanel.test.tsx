@@ -1,5 +1,4 @@
 import { screen } from "@testing-library/react";
-import { userEvent } from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../test/render";
 import { createMockHostBridge } from "../../test/host-bridge";
@@ -17,14 +16,6 @@ vi.mock("../content-browser/hooks/useContentFile", () => ({
 
 const bridge = createMockHostBridge();
 
-function renderPanel(props: { path?: string; onClose?: () => void } = {}) {
-  const { path = "notes/world.md", onClose = vi.fn() } = props;
-  return renderWithProviders(
-    <QuickLinkPanel projectId="p1" path={path} onClose={onClose} />,
-    { bridge },
-  );
-}
-
 describe("resolveQuickLinkAction", () => {
   it("opens the slide-out panel on mobile", () => {
     expect(resolveQuickLinkAction(true, true)).toBe("panel");
@@ -41,18 +32,9 @@ describe("resolveQuickLinkAction", () => {
 });
 
 describe("QuickLinkPanel", () => {
-  it("exposes the data-chat-quick-link-panel theme hook and the file name", () => {
-    renderPanel();
+  it("exposes the data-chat-quick-link-panel theme hook and renders the file content", () => {
+    renderWithProviders(<QuickLinkPanel projectId="p1" path="notes/world.md" />, { bridge });
     expect(document.querySelector("[data-chat-quick-link-panel]")).not.toBeNull();
-    expect(screen.getByText("world.md")).toBeInTheDocument();
-  });
-
-  it("invokes onClose when the close button is clicked", async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    renderPanel({ onClose });
-
-    await user.click(screen.getByRole("button", { name: "关闭" }));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("hello")).toBeInTheDocument();
   });
 });

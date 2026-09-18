@@ -124,11 +124,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
               onClose={onClose ? handleClose : undefined}
             />
             {isMobile && activeQuickLink !== null && (
-              <QuickLinkPanel
-                projectId={projectId}
-                path={activeQuickLink}
-                onClose={() => setActiveQuickLink(null)}
-              />
+              <QuickLinkPanel projectId={projectId} path={activeQuickLink} />
             )}
           </div>
         )}
