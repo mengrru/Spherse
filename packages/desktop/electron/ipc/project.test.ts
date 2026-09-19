@@ -112,6 +112,7 @@ beforeEach(() => {
   settingsMock.openProjects = [];
   translateMock.mockClear();
   delete process.env.SPHERSE_E2E_DIALOG_RESPONSE;
+  delete process.env.SPHERSE_E2E_SELECT_DIRECTORY;
   (globalThis as { __spherseTestDialogs?: unknown }).__spherseTestDialogs = undefined;
   registerProjectIpc(() => win);
 });
@@ -322,5 +323,24 @@ describe("forced dialog seam (SPHERSE_E2E_DIALOG_RESPONSE)", () => {
     expect(recordedDialogs()).toEqual([
       { kind: "startupUnsafeWarning", detail: "project.unsafeLocation.startupMessage:p1" },
     ]);
+  });
+});
+
+describe("select directory seam (SPHERSE_E2E_SELECT_DIRECTORY)", () => {
+  it("returns the injected directory without showing a dialog", async () => {
+    process.env.SPHERSE_E2E_SELECT_DIRECTORY = "/tmp/e2e-dest";
+    await expect(invoke("select-directory")).resolves.toBe("/tmp/e2e-dest");
+    expect(dialogMock.showOpenDialog).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the native dialog when the env is unset", async () => {
+    dialogMock.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ["/tmp/native"] });
+    await expect(invoke("select-directory")).resolves.toBe("/tmp/native");
+    expect(dialogMock.showOpenDialog).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns null when the native dialog is canceled", async () => {
+    dialogMock.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+    await expect(invoke("select-directory")).resolves.toBeNull();
   });
 });

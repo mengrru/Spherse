@@ -13,7 +13,7 @@
 - [x] 7. spherse-assets：`projects/` + `scripts/lib/` 共享模块 + `publish-projects.mjs` + dry-run 单测 + workflow + README
 - [x] 8. 验证：`npm run verify`（lint + build + typecheck + test）全绿；E2E project-marketplace.spec 通过；spherse-assets `npm test` 25 用例通过
 - [x] 9. 文档同步（加载 doc-sync skill）：project-structure、architecture/server+frontend、data-conventions、backlog
-- [ ] 10. commit + code-review skill 派 sub agent 审查 + 处理反馈
+- [x] 10. commit + code-review skill 派 sub agent 审查 + 处理反馈（详见 PR 描述的 review report）
 
 ## 顺序依赖
 

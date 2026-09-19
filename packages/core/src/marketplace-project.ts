@@ -36,10 +36,9 @@ function assertValidFolderName(name: string): void {
 }
 
 async function resolveTargetDir(destDir: string, folderName: string): Promise<string> {
-  let candidate = path.join(destDir, folderName);
-  for (let i = 2; i <= MAX_TARGET_ATTEMPTS; i += 1) {
+  for (let i = 1; i <= MAX_TARGET_ATTEMPTS; i += 1) {
+    const candidate = path.join(destDir, i === 1 ? folderName : `${folderName}-${i}`);
     if (!(await pathExists(candidate))) return candidate;
-    candidate = path.join(destDir, `${folderName}-${i}`);
   }
   throw new ConflictError(
     `unable to find a free target name for "${folderName}" under ${destDir}`,

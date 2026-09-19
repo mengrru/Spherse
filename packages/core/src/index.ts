@@ -30,7 +30,6 @@ export type { TriggerEventPayload } from "./trigger/trigger-manager.js";
 export type { TimerService } from "./trigger/timer-service.js";
 export { createProject } from "./factory.js";
 export { installMarketplaceProjectZip } from "./marketplace-project.js";
-export type { MarketplaceProjectInstallResult } from "./marketplace-project.js";
 export type { DataStore, DataChangeEvent, OutlineResult, ReadResult, QueryResult, MutateResult, WriteResult } from "./capabilities/data/index.js";
 export { createDataStore } from "./capabilities/data/index.js";
 export { FileWriteMutex } from "./utils/file-write-mutex.js";
