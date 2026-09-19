@@ -42,7 +42,7 @@
 
 ## 路由
 
-16 个域文件由 `routes/index.ts` 聚合注册；项目级路由统一 `/api/projects/:projectId/...`，全局 preHandler 从 registry 解析并注入 `req.projectCtx`（miss 抛 404）：
+17 个域文件由 `routes/index.ts` 聚合注册；项目级路由统一 `/api/projects/:projectId/...`，全局 preHandler 从 registry 解析并注入 `req.projectCtx`（miss 抛 404）；全局路由不带 projectId、不经过该 preHandler（鉴权仍由 auth onRequest hook 覆盖）：
 
 | 域 | 端点概要 |
 |---|---|
@@ -55,6 +55,7 @@
 | settings | 全局：文本与图片 provider 目录；项目级：ai-access / welcome-page / theme |
 | preview | 预览文件服务（见下节） |
 | skills / marketplace | skill 列表/详情/创建/zip 安装；市场 manifest 代理与远程安装 |
+| project-marketplace | 全局：项目市场 manifest 代理与安装（下载 zip → 解压落盘到用户选定目录，返回 projectRoot，注册复用 open-project IPC） |
 | file-tree | UI 用文件树（过滤 dotfile / node_modules / .git / .spherse） |
 | trigger | CRUD、手动触发、reset-binding、运行日志 |
 | debug | turn-context 导出 |
@@ -65,7 +66,7 @@
 - core 错误：`NotFoundError`→404、`ValidationError`→400、`AccessDeniedError`→403、`ConflictError`→409
 - Fastify schema 校验失败→400；兜底 500；未知路由 404
 - data 域本地映射：VersionConflict→409（带 currentVersion）、DataFileCorrupted→422 等
-- marketplace 网络失败统一 502
+- marketplace 网络失败统一 502（skills 与 projects 两个 service 单例共用同一实现，仅 manifest schema / zip 上限 / 超时 / tmp 前缀不同）
 
 ## contracts 机制
 

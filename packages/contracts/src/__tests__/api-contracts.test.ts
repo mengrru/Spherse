@@ -299,6 +299,55 @@ describe("api contracts", () => {
     );
   });
 
+  it("validates project marketplace manifest and install contracts", () => {
+    const entry = {
+      name: "demo-world",
+      description: "Demo project",
+      version: "1.0.0",
+      category: "游戏",
+      zipUrl: "https://marketplace.test/spherse/projects/demo-world/1.0.0/demo-world-1.0.0.zip",
+      size: 2048,
+      updatedAt: "2026-09-19T00:00:00Z",
+    };
+    const manifest = { schemaVersion: 1, generatedAt: "2026-09-19T00:00:00Z", projects: [entry] };
+    expect(parseApiResponse(schemas.marketplaceProjectManifestResponse, manifest)).toEqual(manifest);
+    expect(parseApiResponse(schemas.marketplaceProjectManifestResponse, { ...manifest, projects: [] })).toEqual({
+      ...manifest,
+      projects: [],
+    });
+    expect(() =>
+      parseApiResponse(schemas.marketplaceProjectManifestResponse, {
+        schemaVersion: 1,
+        generatedAt: "x",
+        projects: [{}],
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.marketplaceProjectManifestResponse, { schemaVersion: 1, generatedAt: "x" }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.marketplaceProjectManifestResponse, {
+        schemaVersion: 1,
+        generatedAt: "x",
+        projects: [{ ...entry, category: 1 }],
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(
+      parseApiResponse(schemas.projectMarketplaceInstallRequest, {
+        name: "demo-world",
+        version: "1.0.0",
+        destDir: "/Users/demo/Documents",
+      }),
+    ).toEqual({ name: "demo-world", version: "1.0.0", destDir: "/Users/demo/Documents" });
+    expect(() => parseApiResponse(schemas.projectMarketplaceInstallRequest, { name: "demo-world" })).toThrow(
+      /Invalid payload/,
+    );
+    expect(
+      parseApiResponse(schemas.projectMarketplaceInstallResponse, { projectRoot: "/Users/demo/Documents/demo-world" }),
+    ).toEqual({ projectRoot: "/Users/demo/Documents/demo-world" });
+    expect(() => parseApiResponse(schemas.projectMarketplaceInstallResponse, {})).toThrow(/Invalid payload/);
+  });
+
   it("accepts optional version on skill definitions", () => {
     const skill = {
       name: "n",
