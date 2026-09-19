@@ -1,7 +1,11 @@
 import fs from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
 import { schemas, parseContract } from "@spherse/contracts";
-import type { SkillMarketplaceInstallRequest } from "@spherse/contracts";
+import type {
+  SkillMarketplaceInstallRequest,
+  MarketplaceManifestResponse,
+  MarketplaceSkillEntry,
+} from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound, conflict } from "../errors.js";
 import { marketplaceService, type MarketplaceService } from "../marketplace.js";
@@ -9,7 +13,9 @@ import { marketplaceService, type MarketplaceService } from "../marketplace.js";
 export function registerMarketplaceRoutes(
   fastify: FastifyInstance,
   _registry: ProjectRegistry,
-  options?: { marketplace?: MarketplaceService },
+  options?: {
+    marketplace?: MarketplaceService<MarketplaceManifestResponse, MarketplaceSkillEntry>;
+  },
 ): void {
   const marketplace = options?.marketplace ?? marketplaceService;
 
@@ -39,7 +45,7 @@ export function registerMarketplaceRoutes(
           throw conflict("Marketplace manifest has been updated, please refresh and retry");
         }
 
-        const zipPath = await marketplace.downloadSkillZip(entry);
+        const zipPath = await marketplace.downloadZip(entry);
         try {
           const skill = await req.projectCtx!.projectManager.installSkill(zipPath, { overwrite: true });
           return parseContract(schemas.skillDefinition, skill);

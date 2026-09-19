@@ -5,6 +5,12 @@ import { useProjectActions } from "./use-project-actions";
 import { ProjectAvatar } from "./ProjectAvatar";
 import { Button } from "../../components/ui/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../components/ui/dropdown-menu";
+import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
@@ -13,13 +19,14 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
-import { PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import { FolderOpenIcon, GlobeIcon, PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { DebugTools } from "../debug-tools";
 import { WelcomePageSettingsDialog } from "../project-settings/welcome-page-settings";
 import { ThemeSettingsDialog } from "../project-settings/theme-settings";
+import { ProjectMarketDialog } from "../project-market/ProjectMarketDialog";
 import { useFeature } from "../../lib/use-feature";
 import { useHostBridge } from "../../context/host-bridge-context";
-import { useApiClient } from "../../lib/use-connection";
+import { useApiClient, useGlobalApiClient } from "../../lib/use-connection";
 import { useI18n } from "@spherse/i18n/react";
 
 interface PinToggle {
@@ -47,6 +54,8 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
   const [themeSettingsProjectId, setThemeSettingsProjectId] = useState<string | null>(null);
   const themeSettingsProject = themeSettingsProjectId ? projects.get(themeSettingsProjectId) : null;
   const themeClient = useApiClient(themeSettingsProjectId);
+  const [marketOpen, setMarketOpen] = useState(false);
+  const globalClient = useGlobalApiClient();
 
   return (
     <div className="h-full w-[52px] shrink-0">
@@ -123,15 +132,30 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
             </Button>
           )}
           {openProjectEnabled && (
-            <Button
-              variant="outline"
-              size="icon-lg"
-              className="border-dashed"
-              onClick={handleAddProject}
-              title={t("activity-bar.addProjectTooltip")}
-            >
-              <PlusIcon />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="icon-lg"
+                    className="border-dashed"
+                    title={t("activity-bar.addProjectTooltip")}
+                  />
+                }
+              >
+                <PlusIcon />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" side="right">
+                <DropdownMenuItem onClick={() => setMarketOpen(true)}>
+                  <GlobeIcon />
+                  {t("activity-bar.openProjectMenu.market")}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleAddProject}>
+                  <FolderOpenIcon />
+                  {t("activity-bar.openProjectMenu.local")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
         </div>
         {settingsProject && settingsClient && settingsProjectId && (
@@ -150,6 +174,13 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
             client={themeClient}
             open={true}
             onOpenChange={(open) => { if (!open) setThemeSettingsProjectId(null); }}
+          />
+        )}
+        {globalClient && (
+          <ProjectMarketDialog
+            open={marketOpen}
+            onOpenChange={setMarketOpen}
+            client={globalClient}
           />
         )}
       </div>

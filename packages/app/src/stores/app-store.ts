@@ -24,6 +24,7 @@ interface AppStore {
   refreshProjects: (bridge: HostBridge) => Promise<void>;
   refreshConnection: (bridge: HostBridge) => Promise<void>;
   openProject: (bridge: HostBridge) => Promise<string | null>;
+  openProjectAtPath: (bridge: HostBridge, projectRoot: string) => Promise<string | null>;
   openSampleProject: (bridge: HostBridge, sampleId: string) => Promise<{ projectId: string | null; error?: string }>;
   closeProject: (bridge: HostBridge, projectId: string) => Promise<string | null>;
   openProjectFolder: (bridge: HostBridge, projectId: string) => Promise<void>;
@@ -174,17 +175,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
   async openProject(bridge) {
     const dir = (await bridge.project?.selectDirectory()) ?? null;
     if (!dir) return null;
+    return get().openProjectAtPath(bridge, dir);
+  },
 
-    const existing = findProjectIdByPath(get().projects, dir);
+  async openProjectAtPath(bridge, projectRoot) {
+    const existing = findProjectIdByPath(get().projects, projectRoot);
     if (existing) {
       await get().setActiveProject(bridge, existing);
       return existing;
     }
 
-    const result = await bridge.project?.openProject(dir);
+    const result = await bridge.project?.openProject(projectRoot);
     if (!result) return null;
     const { projectId } = result;
-    await registerProject(set, get, bridge, projectId, dir);
+    await registerProject(set, get, bridge, projectId, projectRoot);
     return projectId;
   },
 

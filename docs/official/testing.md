@@ -41,7 +41,7 @@
 
 ### E2E（packages/desktop）
 
-- 覆盖 Electron 启动、项目恢复、路由、store、server API、文件树、content browser、chat/session、文本选择发起会话、UI SDK bridge、浮窗等跨面板集成；改动涉及上述面或 native dependency、E2E helper 时优先运行对应 spec。
+- 覆盖 Electron 启动、项目恢复、路由、store、server API、文件树、content browser、chat/session、文本选择发起会话、UI SDK bridge、浮窗、项目市场安装链路（stub manifest server + 目录选择 seam）等跨面板集成；改动涉及上述面或 native dependency、E2E helper 时优先运行对应 spec。
 - **按变更影响面选择受影响的 spec 运行，不要求全量**；单 spec：`npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts`，或追加 `-g "<case 名>"` 过滤。合并/发布前跑 `npm run verify:e2e`。
 - 涉及打包链（electron-builder 配置、asar/外置 node_modules、native dependency 重编、安装包产物）时，跑 `npm run pack -w @spherse/desktop && SPHERSE_SMOKE=1 npm run test:smoke -w @spherse/desktop` 验证产物本身；release CI 会在 arch 匹配的 job 上自动执行该 smoke。
 
