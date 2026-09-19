@@ -334,6 +334,10 @@ export const zhCN = {
   "activity-bar.autoCollapseSidePanelTooltip": "自动收起项目面板",
   // 左侧活动栏收起图标悬停提示：点击后将项目面板固定显示
   "activity-bar.pinSidePanelTooltip": "固定项目面板",
+  // 添加项目菜单：市场（打开项目市场弹窗）
+  "activity-bar.openProjectMenu.market": "市场",
+  // 添加项目菜单：本地（弹出系统文件管理器选择本地项目目录）
+  "activity-bar.openProjectMenu.local": "本地",
   // 移动端（窄屏）左下角浮动按钮的悬停提示与无障碍标签：点击后项目面板从左侧滑出
   "side-panel.openTooltip": "打开项目面板",
 
@@ -956,6 +960,34 @@ export const zhCN = {
   "skill-panel.marketplace.updatedAt": "更新于 {date}",
   // 技能市场弹窗底部说明文案（技能来源与安装位置）
   "skill-panel.marketplace.note": "技能来自官方市场，安装到当前项目",
+
+  // --- Project Market ---
+  // 项目市场弹窗标题
+  "project-market.title": "项目市场",
+  // 项目市场顶部分类菜单的「全部」选项（不按分类过滤）
+  "project-market.categoryAll": "全部",
+  // 项目市场加载清单时的提示
+  "project-market.loading": "正在加载市场项目…",
+  // 项目市场清单加载失败时的提示
+  "project-market.loadFailed": "市场项目加载失败",
+  // 项目市场加载失败后的「重试」按钮
+  "project-market.retry": "重试",
+  // 项目市场没有任何项目时的空状态提示
+  "project-market.empty": "市场中暂无项目",
+  // 市场项目卡片上的「下载」按钮
+  "project-market.download": "下载",
+  // 市场项目下载中按钮文案
+  "project-market.downloading": "下载中…",
+  // 市场项目下载失败提示，{name} 为项目名，{message} 为错误信息
+  "project-market.downloadFailed": "项目「{name}」下载失败：{message}",
+  // 下载时市场清单已发生变化（版本对不上）的提示，界面会自动刷新清单
+  "project-market.manifestChanged": "市场清单已更新，请重试",
+  // 项目已下载落盘但打开失败（如取消了不安全位置确认）的提示，{name} 为项目名
+  "project-market.openFailed": "项目「{name}」已保存，但打开失败，可稍后从项目列表打开",
+  // 市场项目卡片上的发布时间，{date} 为格式化后的日期
+  "project-market.updatedAt": "更新于 {date}",
+  // 项目市场弹窗底部说明文案（项目来源与保存位置）
+  "project-market.footerNote": "项目来自官方市场，下载后保存到本地",
 
   // --- Text Selection Session ---
   // 文本选择会话的角色下拉框占位提示

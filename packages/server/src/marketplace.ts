@@ -4,10 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { nanoid } from "nanoid";
+import type { Static, TSchema } from "@sinclair/typebox";
 import { schemas, parseContract } from "@spherse/contracts";
 import type {
   MarketplaceManifestResponse,
   MarketplaceSkillEntry,
+  MarketplaceProjectManifestResponse,
+  MarketplaceProjectEntry,
 } from "@spherse/contracts";
 import { getAppVersion } from "./server-info.js";
 import { HttpError } from "./errors.js";
@@ -19,10 +22,16 @@ export const MARKETPLACE_MANIFEST_URL =
   process.env.SPHERSE_MARKETPLACE_MANIFEST_URL ??
   `${OSS_BUCKET_BASE_URL}/skills/manifest.json`;
 
+export const PROJECT_MARKETPLACE_MANIFEST_URL =
+  process.env.SPHERSE_PROJECT_MARKETPLACE_MANIFEST_URL ??
+  `${OSS_BUCKET_BASE_URL}/projects/manifest.json`;
+
 const MANIFEST_CACHE_TTL_MS = 30_000;
 const MANIFEST_FETCH_TIMEOUT_MS = 10_000;
-const ZIP_DOWNLOAD_TIMEOUT_MS = 60_000;
+const SKILL_ZIP_DOWNLOAD_TIMEOUT_MS = 60_000;
+const PROJECT_ZIP_DOWNLOAD_TIMEOUT_MS = 300_000;
 const MAX_SKILL_ZIP_BYTES = 50 * 1024 * 1024;
+const MAX_PROJECT_ZIP_BYTES = 100 * 1024 * 1024;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 
 export function marketplaceUserAgent(): string {
@@ -32,23 +41,36 @@ export function marketplaceUserAgent(): string {
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
-export interface MarketplaceService {
-  getManifest(): Promise<MarketplaceManifestResponse>;
-  downloadSkillZip(entry: MarketplaceSkillEntry): Promise<string>;
+interface MarketplaceZipEntry {
+  name: string;
+  zipUrl: string;
 }
 
-export function createMarketplaceService(options?: {
-  fetchFn?: FetchLike;
-  manifestUrl?: string;
-  cacheTtlMs?: number;
-}): MarketplaceService {
-  const fetchFn = options?.fetchFn ?? ((url, init) => fetch(url, init));
-  const manifestUrl = options?.manifestUrl ?? MARKETPLACE_MANIFEST_URL;
-  const cacheTtlMs = options?.cacheTtlMs ?? MANIFEST_CACHE_TTL_MS;
-  let cache: { manifest: MarketplaceManifestResponse; expiresAt: number } | null = null;
-  let inFlight: Promise<MarketplaceManifestResponse> | null = null;
+export interface MarketplaceService<TManifest, TEntry extends MarketplaceZipEntry> {
+  getManifest(): Promise<TManifest>;
+  downloadZip(entry: TEntry): Promise<string>;
+}
 
-  function getManifest(): Promise<MarketplaceManifestResponse> {
+interface MarketplaceServiceImplOptions<T extends TSchema> {
+  fetchFn?: FetchLike;
+  manifestUrl: string;
+  manifestResponseSchema: T;
+  maxZipBytes: number;
+  zipDownloadTimeoutMs: number;
+  tmpPrefix: string;
+  cacheTtlMs?: number;
+}
+
+function createMarketplaceServiceImpl<T extends TSchema, TEntry extends MarketplaceZipEntry>(
+  options: MarketplaceServiceImplOptions<T>,
+): MarketplaceService<Static<T>, TEntry> {
+  const fetchFn = options.fetchFn ?? ((url, init) => fetch(url, init));
+  const manifestUrl = options.manifestUrl;
+  const cacheTtlMs = options.cacheTtlMs ?? MANIFEST_CACHE_TTL_MS;
+  let cache: { manifest: Static<T>; expiresAt: number } | null = null;
+  let inFlight: Promise<Static<T>> | null = null;
+
+  function getManifest(): Promise<Static<T>> {
     if (cache && cache.expiresAt > Date.now()) return Promise.resolve(cache.manifest);
     if (inFlight) return inFlight;
     inFlight = fetchManifest().finally(() => {
@@ -57,7 +79,7 @@ export function createMarketplaceService(options?: {
     return inFlight;
   }
 
-  async function fetchManifest(): Promise<MarketplaceManifestResponse> {
+  async function fetchManifest(): Promise<Static<T>> {
     let res: Response;
     try {
       res = await fetchFn(manifestUrl, {
@@ -82,7 +104,7 @@ export function createMarketplaceService(options?: {
       throw new HttpError(502, `Marketplace manifest is not valid JSON: ${err instanceof Error ? err.message : String(err)}`);
     }
     try {
-      const manifest = parseContract(schemas.marketplaceManifestResponse, data);
+      const manifest = parseContract(options.manifestResponseSchema, data);
       cache = { manifest, expiresAt: Date.now() + cacheTtlMs };
       return manifest;
     } catch (err: unknown) {
@@ -93,39 +115,39 @@ export function createMarketplaceService(options?: {
   return {
     getManifest,
 
-    async downloadSkillZip(entry: MarketplaceSkillEntry): Promise<string> {
+    async downloadZip(entry: TEntry): Promise<string> {
       let entryUrl: URL;
       try {
         entryUrl = new URL(entry.zipUrl);
       } catch {
-        throw new HttpError(502, `Marketplace skill zip URL is invalid: ${entry.zipUrl}`);
+        throw new HttpError(502, `Marketplace zip URL is invalid: ${entry.zipUrl}`);
       }
       const allowedOrigin = new URL(manifestUrl).origin;
       if (entryUrl.origin !== allowedOrigin) {
-        throw new HttpError(502, `Marketplace skill zip URL origin mismatch: ${entryUrl.origin}`);
+        throw new HttpError(502, `Marketplace zip URL origin mismatch: ${entryUrl.origin}`);
       }
 
       let res: Response;
       try {
         res = await fetchFn(entry.zipUrl, {
-          signal: AbortSignal.timeout(ZIP_DOWNLOAD_TIMEOUT_MS),
+          signal: AbortSignal.timeout(options.zipDownloadTimeoutMs),
           redirect: "error",
           headers: { "User-Agent": marketplaceUserAgent() },
         });
       } catch (err: unknown) {
-        throw new HttpError(502, `Marketplace skill zip download failed: ${err instanceof Error ? err.message : String(err)}`);
+        throw new HttpError(502, `Marketplace zip download failed: ${err instanceof Error ? err.message : String(err)}`);
       }
       if (!res.ok) {
-        throw new HttpError(502, `Marketplace skill zip download failed: HTTP ${res.status}`);
+        throw new HttpError(502, `Marketplace zip download failed: HTTP ${res.status}`);
       }
       const declaredLength = Number(res.headers.get("content-length") ?? "");
-      if (Number.isFinite(declaredLength) && declaredLength > MAX_SKILL_ZIP_BYTES) {
-        throw new HttpError(502, `Marketplace skill zip exceeds size limit: ${entry.name}`);
+      if (Number.isFinite(declaredLength) && declaredLength > options.maxZipBytes) {
+        throw new HttpError(502, `Marketplace zip exceeds size limit: ${entry.name}`);
       }
       if (!res.body) {
-        throw new HttpError(502, `Marketplace skill zip download returned no body: ${entry.name}`);
+        throw new HttpError(502, `Marketplace zip download returned no body: ${entry.name}`);
       }
-      const zipPath = path.join(os.tmpdir(), `marketplace-skill-${nanoid()}.zip`);
+      const zipPath = path.join(os.tmpdir(), `${options.tmpPrefix}-${nanoid()}.zip`);
       try {
         await pipeline(
           res.body,
@@ -133,13 +155,13 @@ export function createMarketplaceService(options?: {
             let received = 0;
             for await (const chunk of source) {
               received += chunk.length;
-              if (received > MAX_SKILL_ZIP_BYTES) {
-                throw new HttpError(502, `Marketplace skill zip exceeds size limit: ${entry.name}`);
+              if (received > options.maxZipBytes) {
+                throw new HttpError(502, `Marketplace zip exceeds size limit: ${entry.name}`);
               }
               yield chunk;
             }
             if (received === 0) {
-              throw new HttpError(502, `Marketplace skill zip is empty: ${entry.name}`);
+              throw new HttpError(502, `Marketplace zip is empty: ${entry.name}`);
             }
           },
           fs.createWriteStream(zipPath),
@@ -147,11 +169,52 @@ export function createMarketplaceService(options?: {
       } catch (err: unknown) {
         await fsp.rm(zipPath, { force: true }).catch(() => {});
         if (err instanceof HttpError) throw err;
-        throw new HttpError(502, `Marketplace skill zip download failed: ${err instanceof Error ? err.message : String(err)}`);
+        throw new HttpError(502, `Marketplace zip download failed: ${err instanceof Error ? err.message : String(err)}`);
       }
       return zipPath;
     },
   };
 }
 
-export const marketplaceService: MarketplaceService = createMarketplaceService();
+export function createMarketplaceService(options?: {
+  fetchFn?: FetchLike;
+  manifestUrl?: string;
+  cacheTtlMs?: number;
+}): MarketplaceService<MarketplaceManifestResponse, MarketplaceSkillEntry> {
+  return createMarketplaceServiceImpl<typeof schemas.marketplaceManifestResponse, MarketplaceSkillEntry>({
+    fetchFn: options?.fetchFn,
+    manifestUrl: options?.manifestUrl ?? MARKETPLACE_MANIFEST_URL,
+    manifestResponseSchema: schemas.marketplaceManifestResponse,
+    maxZipBytes: MAX_SKILL_ZIP_BYTES,
+    zipDownloadTimeoutMs: SKILL_ZIP_DOWNLOAD_TIMEOUT_MS,
+    tmpPrefix: "marketplace-skill",
+    cacheTtlMs: options?.cacheTtlMs,
+  });
+}
+
+export function createProjectMarketplaceService(options?: {
+  fetchFn?: FetchLike;
+  manifestUrl?: string;
+  cacheTtlMs?: number;
+}): MarketplaceService<MarketplaceProjectManifestResponse, MarketplaceProjectEntry> {
+  return createMarketplaceServiceImpl<
+    typeof schemas.marketplaceProjectManifestResponse,
+    MarketplaceProjectEntry
+  >({
+    fetchFn: options?.fetchFn,
+    manifestUrl: options?.manifestUrl ?? PROJECT_MARKETPLACE_MANIFEST_URL,
+    manifestResponseSchema: schemas.marketplaceProjectManifestResponse,
+    maxZipBytes: MAX_PROJECT_ZIP_BYTES,
+    zipDownloadTimeoutMs: PROJECT_ZIP_DOWNLOAD_TIMEOUT_MS,
+    tmpPrefix: "marketplace-project",
+    cacheTtlMs: options?.cacheTtlMs,
+  });
+}
+
+export const marketplaceService: MarketplaceService<MarketplaceManifestResponse, MarketplaceSkillEntry> =
+  createMarketplaceService();
+
+export const projectMarketplaceService: MarketplaceService<
+  MarketplaceProjectManifestResponse,
+  MarketplaceProjectEntry
+> = createProjectMarketplaceService();

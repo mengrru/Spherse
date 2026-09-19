@@ -115,6 +115,8 @@ export function registerProjectIpc(
   }
 
   ipcMain.handle("select-directory", async () => {
+    const forcedDir = process.env.SPHERSE_E2E_SELECT_DIRECTORY;
+    if (forcedDir) return forcedDir;
     const win = getWindow();
     if (!win) return null;
     const result = await dialog.showOpenDialog(win, {

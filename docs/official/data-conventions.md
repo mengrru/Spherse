@@ -213,6 +213,15 @@ frontmatter 必需字段 `name`、`description`，可选 `version`。`SkillDefin
 - **本地 zip 安装**：`POST .../skills/install`（body：zipPath 绝对路径）；zip 顶层有且仅有一个技能文件夹、内含合法 `SKILL.md`、frontmatter name 与文件夹名一致、含 zip-slip 防护；同名冲突返回 409、不覆盖
 - **市场安装**：`GET .../marketplace/skills` 拉取远端 manifest（30s 缓存），`POST .../skills/marketplace-install`（body：name / version，版本不匹配 409）；强制 overwrite——备份后原子替换、失败回滚
 
+## 项目市场
+
+项目市场（Project Marketplace）的浏览与安装走**全局路由**（无 `:projectId` 前缀，零项目时可用）：
+
+- `GET /api/marketplace/projects` 拉取远端 manifest（`spherse/projects/manifest.json`，30s 缓存；发布侧为独立仓库 spherse-assets 的 `projects/` 目录，项目源根 `meta.json` 定义 name/description/version/category，打包 zip 时排除顶层 meta.json）
+- `POST /api/marketplace/projects/install`（body：name / version / destDir；版本不匹配 409、destDir 非绝对路径或非目录 400）：server 下载 zip（同源 SSRF 校验、100MB 上限）→ core `installMarketplaceProjectZip` 校验（单一顶层目录、zip-slip、顶层名规则）→ tmp 解压 → destDir 下同名自动重命名（`{name}`、`{name}-2`…）→ 原子移入，返回 `{ projectRoot }`
+- 项目注册不在 install 路由内完成：renderer 拿到 projectRoot 后复用 `open-project` IPC（含易失区确认）注册并打开
+- 落盘后的项目与手动打开的本地项目无区别（无市场来源标记，v1 不做已安装/更新判断）
+
 ```markdown
 ---
 name: my-skill
