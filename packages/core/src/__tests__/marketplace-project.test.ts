@@ -94,6 +94,19 @@ describe("installMarketplaceProjectZip", () => {
     expect(await listDir(destDir)).toEqual(["my-world", "my-world-2", "my-world-3"]);
   });
 
+  it("picks {name}-100 when {name} and -2..-99 are all taken", async () => {
+    const zipPath = projectZip("my-world");
+    cleanup.push(zipPath);
+    await fs.mkdir(path.join(destDir, "my-world"));
+    for (let i = 2; i <= 99; i += 1) {
+      await fs.mkdir(path.join(destDir, `my-world-${i}`));
+    }
+
+    const result = await installMarketplaceProjectZip(zipPath, destDir);
+
+    expect(result.projectRoot).toBe(path.join(destDir, "my-world-100"));
+  });
+
   it("throws ConflictError when rename attempts are exhausted", async () => {
     const zipPath = projectZip("my-world");
     cleanup.push(zipPath);

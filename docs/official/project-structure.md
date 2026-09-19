@@ -7,7 +7,7 @@ spherse/
 │   │   └── src/
 │   │       ├── types.ts              # 共享类型与 provider catalog / settings 类型定义
 │   │       ├── logger.ts             # pino Logger 类型与 createSilentLogger 内部兜底工厂
-│   │       │   ├── factory.ts            # assembleProject() 唯一装配点（defaultCapabilities 列表、Capability.init 接线；createProject 兼容导出）——新增能力 = 此处一行
+│   │       ├── factory.ts            # assembleProject() 唯一装配点（defaultCapabilities 列表、Capability.init 接线；createProject 兼容导出）——新增能力 = 此处一行
 │   │       ├── marketplace-project.ts # installMarketplaceProjectZip(zipPath, destDir)：市场项目 zip 校验（单一顶层目录/zip-slip/顶层名规则）+ tmp 解压 + 目标自动重命名（{name}-{n} 从 2 起）+ 原子移入，返回 {projectRoot, folderName}
 │   │       ├── presets.ts            # initPresets()：新项目预置 agent 注入（core 内唯一 presets import）
 │   │       ├── project-manager.ts    # ProjectManager：数据访问门面（server 不得见 store 实例）+ 写入门面（writeFile/writeBinaryFile/createEntry/deletePath/copyFileWithin = resolve+policy+per-path mutex）
@@ -169,7 +169,7 @@ spherse/
 │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove（removal barrier + onRuntimeRemoved 观察者）
     │   │       ├── shutdown.ts           # closeMultiProjectServer()：hub → registry → fastify 关停顺序、阶段超时与失败隔离
-    │   │       ├── marketplace.ts        # 市场域 service 工厂（createMarketplaceServiceImpl 参数化 manifest schema / zip 上限 / 超时 / tmp 前缀）：skills 单例（OSS spherse/skills/manifest.json，env SPHERSE_MARKETPLACE_MANIFEST_URL 覆盖，50MB）+ projects 单例（spherse/projects/manifest.json，env SPHERSE_PROJECT_MARKETPLACE_MANIFEST_URL 覆盖，100MB/300s）；均含 30s 内存缓存 + zip 下载（同源 SSRF 校验、流内计数）
+│   │       ├── marketplace.ts        # 市场域 service 工厂（createMarketplaceServiceImpl 参数化 manifest schema / zip 上限 / 超时 / tmp 前缀）：skills 单例（OSS spherse/skills/manifest.json，env SPHERSE_MARKETPLACE_MANIFEST_URL 覆盖，50MB）+ projects 单例（spherse/projects/manifest.json，env SPHERSE_PROJECT_MARKETPLACE_MANIFEST_URL 覆盖，100MB/300s）；均含 30s 内存缓存 + zip 下载（同源 SSRF 校验、流内计数）
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
@@ -180,7 +180,7 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
-     │   │       │   ├── marketplace.ts    # 技能市场路由（GET /marketplace/skills 代理 manifest；POST /skills/marketplace-install 按 {name, version} 下载 zip 并覆盖安装）
+│   │       │   ├── marketplace.ts    # 技能市场路由（GET /marketplace/skills 代理 manifest；POST /skills/marketplace-install 按 {name, version} 下载 zip 并覆盖安装）
 │   │       │   ├── project-marketplace.ts # 项目市场全局路由（无 projectId 前缀，零项目可用）：GET /api/marketplace/projects 代理 manifest；POST /api/marketplace/projects/install 按 {name, version, destDir} 下载 zip → core installMarketplaceProjectZip 解压落盘 → 返回 {projectRoot}（注册仍走 renderer 的 open-project IPC）
 │   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）

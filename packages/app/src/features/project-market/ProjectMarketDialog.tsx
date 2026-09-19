@@ -62,16 +62,9 @@ export function ProjectMarketDialog({
     const destDir = (await bridge.project?.selectDirectory()) ?? null;
     if (!destDir) return;
     setStatus(name, "downloading");
+    let projectRoot: string;
     try {
-      const { projectRoot } = await client.installMarketplaceProject({ name, version, destDir });
-      const projectId = await openProjectAtPath(bridge, projectRoot);
-      if (projectId) {
-        const project = useAppStore.getState().projects.get(projectId);
-        navigate(buildProjectRoute(projectId, project?.lastRoute));
-        onOpenChange(false);
-      } else {
-        toast.error(t("project-market.openFailed", { name }));
-      }
+      ({ projectRoot } = await client.installMarketplaceProject({ name, version, destDir }));
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         toast.error(t("project-market.manifestChanged"));
@@ -83,6 +76,22 @@ export function ProjectMarketDialog({
       toast.error(
         t("project-market.downloadFailed", { name, message: (err as Error).message ?? "" }),
       );
+      return;
+    }
+    try {
+      const projectId = await openProjectAtPath(bridge, projectRoot);
+      if (projectId) {
+        const project = useAppStore.getState().projects.get(projectId);
+        navigate(buildProjectRoute(projectId, project?.lastRoute));
+        onOpenChange(false);
+      } else {
+        toast.error(t("project-market.openFailed", { name }));
+      }
+    } catch (err) {
+      console.error("[project-market] failed to open installed project:", err);
+      toast.error(t("project-market.openFailed", { name }));
+    } finally {
+      setStatus(name, "idle");
     }
   };
 
