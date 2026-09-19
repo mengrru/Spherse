@@ -4,6 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "main": "dist/main/index.js",
+  "author": "Spherse <noreply@spherse.app>",
+  "homepage": "https://github.com/mengrru/Spherse",
   "scripts": {
     "build": "electron-vite build",
     "dev": "electron-vite dev",
@@ -19,6 +21,7 @@
     "dist": "electron-builder",
     "dist:mac": "npm run dist -- --mac",
     "dist:win": "npm run dist -- --win",
+    "dist:linux": "npm run dist -- --linux",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

@@ -1,5 +1,10 @@
 appId: com.spherse.app
 productName: Spherse
+# 三平台统一可执行文件名。必须与 productName 一致（Spherse）：顶层 executableName 会
+# 覆盖所有平台的 productFilename（app-builder-lib AppInfo），改成别的值会连带改变
+# mac 的 .app bundle 名与 win 的 exe 名，打断 packaged-smoke 与已装机用户的覆盖升级；
+# Linux 默认取 scoped 包名（@spherse/desktop → @ 开头的非法二进制名），故需显式声明。
+executableName: Spherse
 directories:
   buildResources: build
   output: release
@@ -34,3 +39,12 @@ win:
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+linux:
+  icon: build/spherse-icon.png
+  category: Utility
+  maintainer: Spherse <noreply@spherse.app>
+  vendor: Spherse
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  target:
+    - AppImage
+    - deb

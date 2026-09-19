@@ -72,6 +72,7 @@
 
 ## 基础设施
 
+- [ ] **Linux 发行打磨（条件触发：出现 Linux 用户实际诉求时）**：当前 Linux 发布为 x64 AppImage + deb（CI linux matrix job，executableName 三平台统一 `Spherse`）。潜在跟进：arm64 构建、rpm/snap 等格式、Ubuntu 23.10+（AppArmor 限制 unprivileged userns）下 Electron SUID sandbox 启动失败的更优解（现为 README/下载页 sysctl workaround）。
 - [ ] **限制 skill ZIP 安装资源消耗**：`adm-zip 0.6.0` 可关闭 forged uncompressed-size OOM 漏洞，但 `SkillStore.installSkill()` 仍会无上限读取 entry table、`SKILL.md` 并解压完整外部 ZIP。增加压缩包字节数、entry 数、单 entry 展开大小、总展开大小/磁盘预算约束，超限在解压前拒绝，并补 zip bomb / 大量 entry / 超大合法 archive 测试。参见 `docs/dev/investigation/2026-08-28-dependency-security/README.md`
 - [ ] **Turborepo 编排评估（条件触发：包数增长或 CI 时长成痛点时）**：root 已用显式拓扑序 workspaces 列表让 `npm run build --workspaces` 满足构建顺序（2026-08-28），但仍是全量串行、无缓存、`dev` 无法并行 watch。turbo 可提供 `build dependsOn ^build` 自动拓扑 + 远程缓存 + `--filter` 增量 + `turbo dev --parallel`；评估安装成本与 CI 适配后决定是否引入。参见 `docs/dev/infra/2026-08-28-build-commands-package-boundaries/design.md`
 - [ ] **React DOM 组件测试工具链**：为 `packages/app` 引入组件级测试基础设施（如 Testing Library + user-event + jsdom/happy-dom），用于测试 React 组件渲染、ARIA 状态、用户交互和菜单/折叠等局部 UI 行为，补足当前 Vitest 单测与 Playwright E2E 之间的测试层级。

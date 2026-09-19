@@ -53,6 +53,13 @@ async function discoverExecutable(): Promise<string> {
     }
     return binary;
   }
+  if (process.platform === "linux") {
+    const binary = path.join(releaseDir, "linux-unpacked", "Spherse");
+    if (!existsSync(binary)) {
+      throw new Error(`packaged binary not found: ${binary}`);
+    }
+    return binary;
+  }
   throw new Error(`packaged smoke test does not support platform ${process.platform}`);
 }
 
@@ -64,7 +71,10 @@ test("packaged app launches, mounts renderer and serves /health", async () => {
   try {
     app = await electron.launch({
       executablePath: executable,
-      args: [`--user-data-dir=${userDataDir}`],
+      args: [
+        `--user-data-dir=${userDataDir}`,
+        ...(process.platform === "linux" ? ["--no-sandbox"] : []),
+      ],
       timeout: 60_000,
       env: {
         ...process.env,

@@ -51,8 +51,10 @@ export function InstallTip({ platform, t }: InstallTipProps) {
               </button>
             </div>
           </>
-        ) : (
+        ) : platform === "win" ? (
           <p className="text-sm text-muted-foreground">{t("hero.windowsTip")}</p>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("hero.linuxTip")}</p>
         )}
       </div>
     </div>

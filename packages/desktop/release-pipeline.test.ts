@@ -92,6 +92,27 @@ describe("build-and-release.yml: publish-changelog job", () => {
   });
 });
 
+describe("build-and-release.yml: publish-oss job 的 linux 资产（可选键语义）", () => {
+  const publishOss = release.jobs["publish-oss"];
+  const discover = publishOss.steps.find((s: any) => s.name === "Discover asset filenames");
+  const generate = publishOss.steps.find((s: any) => s.name === "Generate and upload latest.json");
+
+  it("AppImage 发现容错缺失（2>/dev/null || true），不得设为硬性必需", () => {
+    // workflow_dispatch 重发 pre-Linux 时代的旧 tag 时 release 里没有 AppImage，
+    // 硬失败会让重发布流程挂掉（与 win_arm64_exe 同语义，缺失时省略 linux 键）
+    expect(discover).toBeDefined();
+    expect(String(discover.run)).toMatch(/linux_appimage=.*2>\/dev\/null \|\| true/s);
+    expect(String(discover.run)).not.toContain("Required Linux AppImage");
+  });
+
+  it("latest.json 的 linux.x64 按存在与否增量合并（可选键）", () => {
+    expect(generate).toBeDefined();
+    const run: string = generate.run;
+    expect(run).toContain("LINUX_APPIMAGE_NAME");
+    expect(run).toContain("'.linux = {x64:$url}'");
+  });
+});
+
 describe("deploy-pages.yml: dispatch 目标可达", () => {
   it("声明了 workflow_dispatch 触发器，可被发版流水线触发", () => {
     // js-yaml v4 遵循 YAML 1.2 core schema，`on` 保持字符串 key

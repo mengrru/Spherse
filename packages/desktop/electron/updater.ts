@@ -15,12 +15,14 @@ const OSS_UPDATE_MANIFEST_URL = `${OSS_BUCKET_BASE_URL}/latest.json`;
 
 /**
  * OSS latest.json 清单结构（与 landing `resolveDownloadUrl` / CI `publish-oss`
- * 生成端对齐；`win.setup` 为旧版清单键名，保留兼容回退）。
+ * 生成端对齐；`win.setup` 为旧版清单键名，保留兼容回退；`linux.x64` 与 `win.arm64`
+ * 为可选键——旧版本 release 缺失时 CI 省略，读取端回退）。
  */
 export interface OssUpdateManifest {
   version: string;
   mac?: { arm64?: string; intel?: string };
   win?: { x64?: string; arm64?: string; setup?: string };
+  linux?: { x64?: string };
 }
 
 export function resolveDownloadUrlFromManifest(
@@ -40,6 +42,9 @@ export function resolveDownloadUrlFromManifest(
       return manifest.win?.arm64 ?? manifest.win?.x64 ?? manifest.win?.setup;
     }
     return manifest.win?.x64 ?? manifest.win?.setup;
+  }
+  if (platform === "linux") {
+    return manifest.linux?.x64;
   }
   return undefined;
 }
@@ -186,20 +191,20 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
     },
 
     async downloadUpdate(): Promise<void> {
-      if (process.platform === "darwin") return;
+      if (process.platform !== "win32") return;
       currentState = { status: "downloading" };
       activeCancellationToken = new CancellationToken();
       await autoUpdater.downloadUpdate(activeCancellationToken);
     },
 
     installUpdate(): Promise<void> {
-      if (process.platform === "darwin") return Promise.resolve();
+      if (process.platform !== "win32") return Promise.resolve();
       autoUpdater.quitAndInstall();
       return Promise.resolve();
     },
 
     async cancelUpdate(): Promise<void> {
-      if (process.platform === "darwin") return;
+      if (process.platform !== "win32") return;
       activeCancellationToken?.cancel();
       activeCancellationToken = null;
       currentState = { status: "idle" };

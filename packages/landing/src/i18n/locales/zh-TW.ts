@@ -6,6 +6,9 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "hero.tagline": "在這裡搭建故事世界、創造角色、記錄生活，讓散落的想法慢慢長成一個會回應你、不斷生長的世界",
   "hero.downloadMac": "下載 macOS",
   "hero.downloadWin": "下載 Windows",
+  "hero.downloadLinux": "下載 Linux",
+  // 首頁 Hero 點擊「下載 Linux」後在按鈕下方出現的提示：AppImage 需先賦予可執行權限；Ubuntu 23.10+ 預設限制 unprivileged userns，Electron sandbox 啟動失敗時給出 sysctl workaround。
+  "hero.linuxTip": "Linux 版為 AppImage 格式，下載後需先賦予可執行權限再執行（終端機執行 chmod +x Spherse-*.AppImage，或在檔案管理員屬性中勾選「允許作為程式執行」）。Ubuntu 23.10 及以上版本若啟動時報 SUID sandbox 錯誤，請先執行 sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 後重試；deb 安裝包可前往 GitHub Releases 下載。",
   // 首頁 Hero 點擊「下載 macOS」後在按鈕下方出現的提示：macOS Gatekeeper 首次開啟未簽章應用會攔截，引導使用者在終端機執行 xattr 指令解除隔離屬性。
   "hero.macosTip": "首次開啟時如果出現「已損毀」或「無法驗證開發者」提示，請在終端機執行以下指令即可開啟：",
   // 首頁 Hero 點擊「下載 Windows」後在按鈕下方出現的提示：未簽章 exe 會觸發瀏覽器下載警告（預設刪除）和 SmartScreen，引導使用者主動選擇保留並放行執行。
@@ -54,6 +57,7 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "download.macIntel": "macOS（Intel）",
   "download.winX64": "Windows（x64）",
   "download.winArm64": "Windows（ARM64）",
+  "download.linuxX64": "Linux（x64 · AppImage）",
   "download.hint": "安裝包直鏈下載",
   "download.download": "下載",
   "download.fallback": "前往 GitHub Releases 下載",
