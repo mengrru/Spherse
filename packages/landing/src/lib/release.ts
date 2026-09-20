@@ -2,9 +2,11 @@ import { GITHUB_RELEASES_LATEST_URL } from "./urls";
 
 const MANIFEST_URL: string | undefined = import.meta.env.VITE_OSS_MANIFEST_URL;
 
-export type Platform = "mac" | "win";
+export type Platform = "mac" | "win" | "linux";
 
 export function detectPlatform(): Platform {
+  // Android 的 UA / navigator.platform 都含 "Linux"，但它不是桌面 Linux 发布目标
+  const isAndroid = /android/i.test(navigator.userAgent);
   try {
     const uaData = (
       navigator as Navigator & { userAgentData?: { platform?: string } }
@@ -12,10 +14,12 @@ export function detectPlatform(): Platform {
     const platform = (uaData?.platform ?? navigator.platform ?? "").toLowerCase();
     if (platform.includes("win")) return "win";
     if (platform.includes("mac")) return "mac";
+    if (platform.includes("linux") && !isAndroid) return "linux";
   } catch {
     // ignore — fall through to userAgent check
   }
   if (/win(?:dows)?/i.test(navigator.userAgent)) return "win";
+  if (!isAndroid && /linux/i.test(navigator.userAgent)) return "linux";
   return "mac";
 }
 
@@ -23,6 +27,8 @@ export interface Manifest {
   version: string;
   mac: { arm64: string; intel: string };
   win: { x64?: string; arm64?: string; setup?: string };
+  // 可选键：pre-Linux 时代的旧 manifest / workflow_dispatch 重发旧 tag 时缺失
+  linux?: { x64?: string };
 }
 
 export async function fetchLatestManifest(): Promise<Manifest> {
@@ -77,6 +83,8 @@ export async function resolveDownloadUrl(platform: Platform): Promise<string> {
       if (arch === "arm64" && manifest.win?.arm64) return manifest.win.arm64;
       if (manifest.win?.x64) return manifest.win.x64;
       if (manifest.win?.setup) return manifest.win.setup;
+    } else if (platform === "linux") {
+      if (manifest.linux?.x64) return manifest.linux.x64;
     } else {
       const arch = detectMacArch();
       const url = manifest.mac?.[arch];

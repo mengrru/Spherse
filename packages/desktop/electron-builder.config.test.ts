@@ -26,9 +26,14 @@ interface BuilderTargetSpec {
 }
 
 interface BuilderConfig {
+  productName?: string;
+  executableName?: string;
   win?: {
     artifactName?: string;
     target?: Array<string | BuilderTargetSpec>;
+  };
+  linux?: {
+    target?: string[];
   };
 }
 
@@ -86,6 +91,30 @@ describe("electron-builder win 配置（发版三包/404 回归）", () => {
 
   it("win.artifactName 带 ${arch}（各 arch 产物命名唯一）", () => {
     expect(config.win?.artifactName).toContain("${arch}");
+  });
+});
+
+describe("electron-builder 可执行文件名 / linux 配置（Linux 发版）", () => {
+  const config = loadYaml<BuilderConfig>("./electron-builder.yml");
+
+  it("顶层 executableName 必须与 productName 一致", () => {
+    // 顶层 executableName 会覆盖所有平台的 productFilename（app-builder-lib AppInfo），
+    // 与 productName 不同时会连带改变 mac 的 .app bundle 名与 win 的 exe 名，打断
+    // packaged-smoke 的硬编码路径与已装机用户的覆盖升级；Linux 默认取 scoped 包名
+    // （@spherse/desktop → @ 开头的非法二进制名），因此必须显式声明且值恰为 Spherse
+    expect(config.executableName).toBe(config.productName);
+  });
+
+  it("linux.target 含 AppImage（publish-oss 的 latest.json linux.x64 与 landing Linux 下载依赖它）", () => {
+    expect(config.linux?.target).toContain("AppImage");
+  });
+
+  it("packaged-smoke 的 linux 二进制路径与 executableName 一致", () => {
+    const spec = readFileSync(
+      fileURLToPath(new URL("./e2e/packaged-smoke.spec.ts", import.meta.url)),
+      "utf8",
+    );
+    expect(spec).toContain(`"linux-unpacked", "${config.executableName}"`);
   });
 });
 

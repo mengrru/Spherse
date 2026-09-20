@@ -76,6 +76,11 @@ jobs:
             artifact: exe
             arch-label: ""
             target-arch: arm64
+          - os: ubuntu-latest
+            build-args: --linux --x64
+            artifact: linux
+            arch-label: ""
+            target-arch: x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
@@ -119,17 +124,27 @@ jobs:
             npx electron-builder ${{ matrix.build-args }} --publish never
           fi
 
+      - name: Install Xvfb (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+
       - name: Smoke test packaged app
-        # 只在 runner 架构与目标架构一致的 matrix job 上执行（mac arm64 / win x64）：
+        # 只在 runner 架构与目标架构一致的 matrix job 上执行（mac arm64 / win x64 / linux x64）：
         # mac intel 交叉构建需 Rosetta、win arm64 无法在 x64 runner 上运行，均跳过
         if: >-
           (runner.os == 'macOS' && matrix.target-arch == 'arm64') ||
-          (runner.os == 'Windows' && matrix.target-arch == 'x64')
+          (runner.os == 'Windows' && matrix.target-arch == 'x64') ||
+          (runner.os == 'Linux' && matrix.target-arch == 'x64')
         working-directory: packages/desktop
         shell: bash
         env:
           SPHERSE_SMOKE: "1"
-        run: SPHERSE_SMOKE_VERSION="${GITHUB_REF_NAME#v}" npx playwright test -c playwright.config.ts e2e/packaged-smoke.spec.ts
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            xvfb-run -a bash -c 'SPHERSE_SMOKE_VERSION="${GITHUB_REF_NAME#v}" npx playwright test -c playwright.config.ts e2e/packaged-smoke.spec.ts'
+          else
+            SPHERSE_SMOKE_VERSION="${GITHUB_REF_NAME#v}" npx playwright test -c playwright.config.ts e2e/packaged-smoke.spec.ts
+          fi
 
       - name: Upload macOS dmg
         if: runner.os == 'macOS'
@@ -149,6 +164,13 @@ jobs:
         # 只上传本 job arch 后缀的安装包：x64/arm64 两个 matrix job 并发运行，
         # 若按 release/*.exe 全量上传，双 arch 时产物同名会并发 --clobber 互踩（曾致 HTTP 404）
         run: gh release upload "${GITHUB_REF_NAME}" "release/*-${{ matrix.target-arch }}.exe" --clobber
+
+      - name: Upload Linux packages
+        if: runner.os == 'Linux'
+        working-directory: packages/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" release/*.AppImage release/*.deb --clobber
 
   publish-oss:
     needs: build
@@ -178,7 +200,7 @@ jobs:
         run: |
           mkdir -p ./oss-out
           gh release download "${RELEASE_TAG}" -D ./oss-out \
-            --pattern '*.dmg' --pattern '*.exe' --clobber
+            --pattern '*.dmg' --pattern '*.exe' --pattern '*.AppImage' --clobber
 
       - name: Discover asset filenames
         id: assets
@@ -187,6 +209,7 @@ jobs:
           intel_dmg=$(basename "$(ls ./oss-out/*intel*.dmg | head -n1)")
           win_exe=$(basename "$(ls ./oss-out/*.exe | grep -v 'arm64' | head -n1)")
           win_arm64_exe=$(basename "$(ls ./oss-out/*arm64*.exe 2>/dev/null | head -n1)" 2>/dev/null || true)
+          linux_appimage=$(basename "$(ls ./oss-out/*.AppImage 2>/dev/null | head -n1)" 2>/dev/null || true)
           if [[ -z "$arm64_dmg" || -z "$intel_dmg" ]]; then
             echo "::error::Required macOS dmg assets not found in release (arm64/intel)"
             exit 1
@@ -195,11 +218,15 @@ jobs:
             echo "::error::Required x64 Windows installer not found in release assets"
             exit 1
           fi
+          # linux_appimage 与 win_arm64_exe 同为可选：workflow_dispatch 重发旧 tag 时，
+          # pre-Linux 时代的 release 没有 AppImage，缺失时省略 latest.json 的 linux 键
+          # 而非硬失败（读取端对缺失键有回退）。
           {
             echo "arm64_dmg=${arm64_dmg}"
             echo "intel_dmg=${intel_dmg}"
             echo "win_exe=${win_exe}"
             echo "win_arm64_exe=${win_arm64_exe}"
+            echo "linux_appimage=${linux_appimage}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Upload installers to OSS (versioned path)
@@ -227,27 +254,24 @@ jobs:
         run: |
           VER="${{ steps.ver.outputs.version }}"
           BASE="${OSS_PUBLIC_BASE_URL}/spherse/releases/${VER}"
-          ARM64="${BASE}/${{ steps.assets.outputs.arm64_dmg }}"
-          INTEL="${BASE}/${{ steps.assets.outputs.intel_dmg }}"
-          WIN="${BASE}/${{ steps.assets.outputs.win_exe }}"
           WIN_ARM64_NAME="${{ steps.assets.outputs.win_arm64_exe }}"
+          LINUX_APPIMAGE_NAME="${{ steps.assets.outputs.linux_appimage }}"
+          # 基础清单只含必需键，可选键（win.arm64 / linux.x64）按存在与否增量合并，
+          # 避免 arm64 × linux 的组合分支膨胀
+          jq -n \
+            --arg version "$VER" \
+            --arg arm64 "${BASE}/${{ steps.assets.outputs.arm64_dmg }}" \
+            --arg intel "${BASE}/${{ steps.assets.outputs.intel_dmg }}" \
+            --arg x64 "${BASE}/${{ steps.assets.outputs.win_exe }}" \
+            '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{x64:$x64}}' \
+            > /tmp/latest.json
           if [[ -n "$WIN_ARM64_NAME" ]]; then
-            jq -n \
-              --arg version "$VER" \
-              --arg arm64 "$ARM64" \
-              --arg intel "$INTEL" \
-              --arg x64 "$WIN" \
-              --arg winArm64 "${BASE}/${WIN_ARM64_NAME}" \
-              '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{x64:$x64, arm64:$winArm64}}' \
-              > /tmp/latest.json
-          else
-            jq -n \
-              --arg version "$VER" \
-              --arg arm64 "$ARM64" \
-              --arg intel "$INTEL" \
-              --arg x64 "$WIN" \
-              '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{x64:$x64}}' \
-              > /tmp/latest.json
+            jq --arg url "${BASE}/${WIN_ARM64_NAME}" '.win.arm64 = $url' \
+              /tmp/latest.json > /tmp/latest.json.tmp && mv /tmp/latest.json.tmp /tmp/latest.json
+          fi
+          if [[ -n "$LINUX_APPIMAGE_NAME" ]]; then
+            jq --arg url "${BASE}/${LINUX_APPIMAGE_NAME}" '.linux = {x64:$url}' \
+              /tmp/latest.json > /tmp/latest.json.tmp && mv /tmp/latest.json.tmp /tmp/latest.json
           fi
           jq empty /tmp/latest.json
           /tmp/ossutil cp /tmp/latest.json "oss://${OSS_BUCKET}/spherse/latest.json" \

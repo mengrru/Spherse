@@ -61,6 +61,9 @@ const manifest: OssUpdateManifest = {
     x64: "https://oss/spherse/releases/0.2.0/Spherse-Setup-0.2.0-x64.exe",
     arm64: "https://oss/spherse/releases/0.2.0/Spherse-Setup-0.2.0-arm64.exe",
   },
+  linux: {
+    x64: "https://oss/spherse/releases/0.2.0/Spherse-0.2.0-x64.AppImage",
+  },
 };
 
 const fetchMock = vi.fn();
@@ -221,9 +224,18 @@ describe("resolveDownloadUrlFromManifest", () => {
     );
   });
 
-  it("returns undefined on unknown platform", () => {
+  it("linux x64 selects linux.x64 and returns undefined when section is missing (legacy manifest)", () => {
     expect(
       resolveDownloadUrlFromManifest(manifest, "linux", "x64"),
+    ).toBe(manifest.linux?.x64);
+    expect(
+      resolveDownloadUrlFromManifest({ version: "0.2.0" }, "linux", "x64"),
+    ).toBeUndefined();
+  });
+
+  it("returns undefined on unknown platform", () => {
+    expect(
+      resolveDownloadUrlFromManifest(manifest, "freebsd", "x64"),
     ).toBeUndefined();
   });
 });
@@ -383,6 +395,16 @@ describe("createUpdater", () => {
     expect(typeof u.installUpdate).toBe("function");
     expect(typeof u.cancelUpdate).toBe("function");
     expect(typeof u.getState).toBe("function");
+  });
+
+  it("linux 与 darwin 一样对 in-app 下载/安装 no-op（不走已废弃的 electron-updater feed）", async () => {
+    const { u } = createTestUpdater();
+    await withProcess("linux", "x64", async () => {
+      await expect(u.downloadUpdate()).resolves.toBeUndefined();
+      await expect(u.installUpdate()).resolves.toBeUndefined();
+      await expect(u.cancelUpdate()).resolves.toBeUndefined();
+    });
+    expect(u.getState()).toEqual({ status: "idle" });
   });
 });
 

@@ -7,6 +7,7 @@ const fullManifest = {
   version: "1.2.3",
   mac: { arm64: "https://m/mac-arm64.dmg", intel: "https://m/mac-intel.dmg" },
   win: { x64: "https://m/win-x64.exe", arm64: "https://m/win-arm64.exe" },
+  linux: { x64: "https://m/spherse-x64.AppImage" },
 };
 
 function stubManifest(manifest: unknown) {
@@ -153,5 +154,68 @@ describe("resolveDownloadUrl (fallbacks)", () => {
     stubManifest(fullManifest);
     const { resolveDownloadUrl } = await loadReleaseModule();
     await expect(resolveDownloadUrl("mac")).resolves.toBe("https://m/mac-arm64.dmg");
+  });
+});
+
+describe("resolveDownloadUrl (linux)", () => {
+  it("returns the linux.x64 AppImage url when manifest provides it", async () => {
+    stubManifest(fullManifest);
+    const { resolveDownloadUrl } = await loadReleaseModule();
+    await expect(resolveDownloadUrl("linux")).resolves.toBe("https://m/spherse-x64.AppImage");
+  });
+
+  it("falls back to the GitHub releases page for legacy manifests without a linux section", async () => {
+    const { linux: _linux, ...legacyManifest } = fullManifest;
+    stubManifest(legacyManifest);
+    const { resolveDownloadUrl } = await loadReleaseModule();
+    await expect(resolveDownloadUrl("linux")).resolves.toBe(FALLBACK_URL);
+  });
+});
+
+describe("detectPlatform", () => {
+  function stubNavigatorProps(props: { platform?: string; userAgent?: string }) {
+    const originals = Object.entries(props).map(([key, value]) => {
+      const desc = Object.getOwnPropertyDescriptor(window.navigator, key);
+      Object.defineProperty(window.navigator, key, { value, configurable: true });
+      return [key, desc] as const;
+    });
+    return () => {
+      for (const [key, desc] of originals) {
+        if (desc) {
+          Object.defineProperty(window.navigator, key, desc);
+        } else {
+          Reflect.deleteProperty(window.navigator, key);
+        }
+      }
+    };
+  }
+
+  it("detects linux via userAgentData platform", async () => {
+    stubUserAgentData({ platform: "Linux" });
+    const { detectPlatform } = await loadReleaseModule();
+    expect(detectPlatform()).toBe("linux");
+  });
+
+  it("detects linux via the userAgent fallback when userAgentData is unavailable", async () => {
+    stubUserAgentData(undefined);
+    const restore = stubNavigatorProps({
+      platform: "Linux x86_64",
+      userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+    });
+    const { detectPlatform } = await loadReleaseModule();
+    expect(detectPlatform()).toBe("linux");
+    restore();
+  });
+
+  it("does not classify Android as linux", async () => {
+    stubUserAgentData(undefined);
+    const restore = stubNavigatorProps({
+      platform: "Linux armv8l",
+      userAgent:
+        "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36",
+    });
+    const { detectPlatform } = await loadReleaseModule();
+    expect(detectPlatform()).not.toBe("linux");
+    restore();
   });
 });

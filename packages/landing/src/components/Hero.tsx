@@ -25,15 +25,15 @@ export function Hero({ t }: HeroProps) {
   const downloadLabelKey: Record<Platform, TranslationKey> = {
     mac: "hero.downloadMac",
     win: "hero.downloadWin",
+    linux: "hero.downloadLinux",
   };
 
   const downloadButtons = useMemo(() => {
     const primary = detectPlatform();
-    const secondary: Platform = primary === "mac" ? "win" : "mac";
-    return [
-      { platform: primary, variant: "default" as const },
-      { platform: secondary, variant: "outline" as const },
-    ];
+    const others = (["mac", "win", "linux"] as const)
+      .filter((platform) => platform !== primary)
+      .map((platform) => ({ platform, variant: "outline" as const }));
+    return [{ platform: primary, variant: "default" as const }, ...others];
   }, []);
 
   const handleDownload = async (platform: Platform) => {

@@ -46,12 +46,20 @@ Download the latest build from [Releases](https://github.com/mengrru/Spherse/rel
 
 - **macOS:** Download the `.dmg` for your architecture and drag Spherse into Applications
 - **Windows:** Download and run the `.exe` installer
+- **Linux:** Download the `.AppImage` (mark it executable and run) or the `.deb` package
 
 > [!NOTE]
 > The macOS build is not yet signed with an Apple Developer certificate. If macOS reports that the app is damaged or cannot verify the developer, run:
 >
 > ```bash
 > xattr -cr /Applications/Spherse.app
+> ```
+
+> [!NOTE]
+> Ubuntu 23.10 and newer restrict unprivileged user namespaces by default. If the Linux build reports a SUID sandbox error on first launch, run the following command first and try again:
+>
+> ```bash
+> sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 > ```
 
 After installation, configure an API key for a supported LLM provider, then create your first project and agent.
@@ -108,7 +116,7 @@ Spherse treats the project folder as a complete distribution unit. Copy or share
 
 ### Desktop runtime, mobile access
 
-Spherse ships as a macOS and Windows desktop app. A token-protected Web client can connect mobile devices to the desktop runtime. Quick Tunnel mode can establish a Cloudflare Tunnel automatically, while manual public endpoints are also supported.
+Spherse ships as a macOS, Windows, and Linux desktop app. A token-protected Web client can connect mobile devices to the desktop runtime. Quick Tunnel mode can establish a Cloudflare Tunnel automatically, while manual public endpoints are also supported.
 
 ## Local development
 

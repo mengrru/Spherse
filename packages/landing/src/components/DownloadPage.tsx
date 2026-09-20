@@ -57,6 +57,12 @@ function platformCards(manifest: Manifest): PlatformCard[] {
       labelKey: "download.winArm64",
       url: manifest.win?.arm64 ?? "",
     },
+    {
+      key: "linux-x64",
+      platform: "linux",
+      labelKey: "download.linuxX64",
+      url: manifest.linux?.x64 ?? "",
+    },
   ];
   return cards.filter((card) => card.url.length > 0);
 }
@@ -144,6 +150,7 @@ export function DownloadPage({ t }: DownloadPageProps) {
             onClick={() => {
               revealTip("mac");
               revealTip("win");
+              revealTip("linux");
             }}
             className="flex items-center justify-center rounded-xl border border-border bg-card px-4 py-4 text-sm text-foreground transition-colors hover:border-foreground/30"
           >
@@ -155,6 +162,7 @@ export function DownloadPage({ t }: DownloadPageProps) {
           <div className="mt-4 flex flex-col gap-3">
             {tipPlatforms.includes("mac") && <InstallTip platform="mac" t={t} />}
             {tipPlatforms.includes("win") && <InstallTip platform="win" t={t} />}
+            {tipPlatforms.includes("linux") && <InstallTip platform="linux" t={t} />}
           </div>
         )}
       </section>
