@@ -279,7 +279,7 @@ spherse/
 │   │       │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 running 运行态 feature store 与 TriggerEventBridge（trigger 域唯一事件接线：查询失效 + 运行态 + 通知）
 │   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
 │   │       │   ├── chat/                 # 对话 feature；model/ 放 Entry 归约、历史合并、MessageGroup 组装与卡片投影，runtime/ 放 session store、link/recovery/lifecycle/queue 等运行时模块，hooks/ 放 UI hooks，lib/ 放 diff/format-time 纯函数，utils/ 放图片压缩（compress-image）；根目录保留页面组件、气泡组件（UserBubble/AssistantBubble/ToolItemView）、runtime context、chat 专属类型与附件 UI（AttachmentBar/MessageAttachments）
-│   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑（useLeaveGuard：useBlocker 未保存离开守卫）、复制路径/刷新、冲突提示，ContentQueryBridge 集中处理 fs-watch/reconnect 缓存失效；二进制文件拦截渲染占位卡 UnsupportedFileCard（桌面端经 HostCapabilities.openFileExternal 提供「用默认应用打开」按钮）
+│   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑（useLeaveGuard：useBlocker 未保存离开守卫）、复制路径/刷新、冲突提示，ContentQueryBridge 集中处理 fs-watch/reconnect 缓存失效；二进制文件拦截渲染占位卡 UnsupportedFileCard（桌面端经 HostCapabilities.openFileExternal 提供「用默认应用打开」按钮）；ReadOnlyContentBrowser 供分窗只读复用（与 ContentBrowser 共用 Header / ContentBody / useContentViewState），find-scope + FindScopeRoot 限定 Cmd+F 作用域
 │   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
 │   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、主题隔离），复用 components/floating-frame；含 useFloatingSessionId
 │   │       │   ├── floating-content-browser/ # 浮窗内容浏览器（多窗口、复用 ContentView 只读渲染 + components/floating-frame），含 useFloatedFilePaths；从文件树右键「浮窗」触发
@@ -287,6 +287,7 @@ spherse/
 │   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
+│   │       │   ├── split-pane/           # 内容区分窗：store.ts（每项目 { filePath, ratio }，localStorage spherse:content-split）、SplitLayout（左栏恒在 + 分隔条 + 右栏）、SplitPaneView（ReadOnlyContentBrowser）、SplitRouteBridge（「移动」导航到达后提交）、useOpenSplit 等命令 hook
 │   │       │   ├── tabs/                 # 内容区标签栏：store.ts（每项目 tab 列表，localStorage spherse:tabs）、TabBar（欢迎页固定首 tab、拖拽排序移动端禁用）、TabRouteBridge（路由派生 upsert / 关闭 / 替换）、useCloseActiveTab / useCloseDeletedFileTabs
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
 │   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 含默认模型 + 思考强度选择 ThinkingLevelField、高级采样参数，支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、设置 store、类型与测试
@@ -294,7 +295,7 @@ spherse/
 │   │       │   ├── project-settings/     # 项目设置弹窗集合
 │   │       │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
 │   │       │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗 + ThemeQueryBridge（fs-watch/reconnect → theme-settings 查询失效，ProjectRuntimeBridges 挂载）
-│   │       │   └── text-selection-session/ # 划选文本后发起会话
+│   │       │   └── text-selection-session/ # 划选文本后发起会话；useSelectionSessionHandlers 自取 agents 与可发送的当前会话（左栏 chat 路由 + 浮窗会话）
 │   │       ├── pages/
 │   │       │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat
 │   │       │   ├── ContentBrowserPage.tsx # Content 路由 page，从 ?path= 查询参数渲染 ContentBrowser
@@ -355,6 +356,7 @@ spherse/
 │   │       ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │   │       ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
 │   │       ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）
+│   │       ├── content-split-pane.spec.ts       # 内容区分窗 E2E 测试（header / 右键分窗、拖动比例、重载与切项目恢复、删除结束、分窗划词发送至左栏会话）
 │   │       ├── text-selection-session.spec.ts  # 划选会话 E2E 测试
 │   │       ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
 │   │       ├── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试

@@ -2,6 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
+import { CONTENT_ERROR_CODES } from "@spherse/contracts";
 import { ApiError, type ApiClient } from "../../../lib/api";
 import { createTestQueryClient } from "../../../test/render";
 import { useContentFile } from "./useContentFile";
@@ -23,11 +24,17 @@ describe("useContentFile", () => {
     expect(result.current.notFound).toBe(false);
   });
 
-  it("flags notFound only for 404 responses", async () => {
-    const { result } = setup(vi.fn().mockRejectedValue(new ApiError("Not found", 404)));
+  it("flags notFound only for the file-not-found error code", async () => {
+    const { result } = setup(vi.fn().mockRejectedValue(new ApiError("Not found", 404, CONTENT_ERROR_CODES.FILE_NOT_FOUND)));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.notFound).toBe(true);
     expect(result.current.error).toBe("File not found");
+  });
+
+  it("does not flag notFound for project-level 404s", async () => {
+    const { result } = setup(vi.fn().mockRejectedValue(new ApiError("Unknown project", 404)));
+    await waitFor(() => expect(result.current.loading).toBe(false), { timeout: 3000 });
+    expect(result.current.notFound).toBe(false);
   });
 
   it("does not flag notFound for server or network errors", async () => {

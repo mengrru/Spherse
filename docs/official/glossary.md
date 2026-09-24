@@ -97,6 +97,7 @@
 | UI SDK（`@spherse/sdk`） | 注入 iframe 的浏览器运行时，暴露 `window.spherse` API | [architecture/ui-sdk.md](architecture/ui-sdk.md) |
 | HostBridge | renderer 对宿主能力的抽象接口，desktop / web 各有实现 | [architecture/frontend.md](architecture/frontend.md) |
 | HostCapabilities | 宿主能力开关声明，renderer 据此条件渲染宿主专属 UI | [architecture/frontend.md](architecture/frontend.md) |
+| 内容区分窗（split pane） | 内容区右侧固定显示一个文件的只读窗格，与左栏路由 / 标签页解耦，按项目持久化文件与宽度比例；与浮窗（floating content browser）相互独立 | [architecture/frontend.md](architecture/frontend.md) |
 | 内容区标签页（tab） | 右侧内容区顶部标签栏的一项，由当前 chat / file / browser 路由派生，按项目持久化，非活跃 tab 不渲染；与设置弹窗等组件内的 Tabs 控件无关 | [architecture/frontend.md](architecture/frontend.md) |
 | chat session store | chat 的 Zustand store（`useChatSessionStore`），持有 Entry 状态、连接投影、分页与 actions | [architecture/chat.md](architecture/chat.md) |
 | timePerception | agent 时间感知配置：感知时间 = 真实时间经锚点 / 流速变换 | [data-conventions.md](data-conventions.md) |

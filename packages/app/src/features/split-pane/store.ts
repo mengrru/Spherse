@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { isPathAtOrUnder } from "../../lib/tab-target";
+import { isPathAtOrUnder, normalizeTabTarget } from "../../lib/tab-target";
 import { SPLIT_DEFAULT_RATIO, isValidRatio } from "./layout";
 
 export interface SplitPaneState {
@@ -66,7 +66,10 @@ export const useSplitPaneStore = create<SplitPaneStore>((set) => {
   return {
     byProject: loadFromStorage(),
 
-    openSplit(projectId, filePath) {
+    openSplit(projectId, rawPath) {
+      if (!rawPath) return;
+      const target = normalizeTabTarget({ kind: "file", path: rawPath });
+      const filePath = target.kind === "file" ? target.path : rawPath;
       if (!filePath) return;
       set((s) => {
         const current = s.byProject[projectId];

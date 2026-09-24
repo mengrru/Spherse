@@ -39,6 +39,12 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
   - 失效清理：会话缺失 / 所属 agent 已删 → chat tab 自动移除；文件树删除 → `useCloseDeletedFileTabs` 按路径段匹配移除并跳邻居
   - 文件 tab 名为去扩展名的文件名（`lib/file-name.ts`，与 chat 快捷链接按钮同规则），`title` 为全路径
   - 移动端 + 标签页开启 + HTML 文件：ContentBrowser 隐藏 header，纵向空间留给预览，切换 / 关闭由 tab 承担
+- **内容区分窗**（`features/split-pane/`，Electron only，移动端宽度不渲染）：`ProjectScope` 的 `<main>` 内容由 `SplitLayout` 包裹——左栏 `data-split-main`（TabBar + `<Outlet/>`）恒定存在，开关分窗只增减其后的分隔条与右栏，避免左侧页面重挂载；右栏为一个只读文件（`ReadOnlyContentBrowser`：无返回 / 编辑，md 内链替换右栏文件），与路由解耦
+  - 状态：feature-local store（每项目 `{ filePath, ratio }`），外部只经 `useOpenSplit` / `useCloseSplit` / `useSplitFilePath` / `useCloseDeletedSplit` / `useSplitPaneAvailable` 访问
+  - 「移动」语义：分窗的正是左侧当前文件时，走关闭当前 tab 的导航并附 `state.openSplit`，导航实际到达后由 `SplitRouteBridge` 提交，离开守卫取消时分窗不打开
+  - 失效：文件树删除按路径段匹配结束分窗；读取返回 `file_not_found` 错误码（仅文件不存在，不含项目级 404）时自动结束，其他错误保留
+  - 分隔条 pointer capture 拖拽 / 方向键 / 双击复位，渲染时按左右最小宽度 clamp
+- **Cmd+F 作用域**：`ContentView` 的查找快捷键只由最近交互（pointerdown / focusin）的 content 容器（`FindScopeRoot`：主内容区、分窗、浮窗）响应；焦点在所有容器之外时不响应
 - **离开守卫**：ContentBrowser 有未保存编辑时经 `useBlocker` 拦截任意 pathname / search 变化并复用放弃确认框；非 POP 导航带 `state.skipLeaveGuard` 可放行（项目关闭、删除当前文件）
 - **lastRoute**：项目内子页面路由持久化在 localStorage（`spherse:last-route:<projectId>`）
   - 启动仅 hash 为 `/` 时恢复（deep-link 优先）；项目切换/关闭后恢复下一项目的 lastRoute；closeProject 时清理
@@ -51,11 +57,11 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | settings-store | locale / theme / debugTools / tabsEnabled（`loaded` 标记区分未加载与默认值） | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
 | TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / triggers / welcome-page / theme-settings | 内存 cache，项目关闭清除 |
 | project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
-| feature stores | 折叠、浮窗、内容区 tab 列表、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
+| feature stores | 折叠、浮窗、内容区 tab 列表、分窗、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
 
 - side panel 偏好在 `side-panel-store`（localStorage `spherse:side-panel:pinned`），不在 app-store
 - feature store 持久化分布：
-  - localStorage：floating-chat（`spherse:floating-chat:<projectId>`）、floating-content-browser、browser 与 tabs（`spherse:tabs`，均为全局单 key；tabs 按 projectId 分组，只存 target 与顺序，加载时逐项校验）
+  - localStorage：floating-chat（`spherse:floating-chat:<projectId>`）、floating-content-browser、browser、tabs（`spherse:tabs`）与 split-pane（`spherse:content-split`）（后四者均为全局单 key；tabs / split-pane 按 projectId 分组，加载时逐项校验）
   - 纯内存（关项目即清）：agent-session-list 折叠、agent-trigger 运行态
 - **query key 一律 `["projects", projectId, ...]`**（`queries/keys.ts` factory）；文件内容 query 定义在 `features/content-browser/hooks/useContentFile.ts`——域 key 统一，定义位置按消费方就近
 - **项目关闭清缓存**：`clearProjectQueries` 三步——generation++ → cancelQueries → removeQueries；generation 递增使迟到异步结果拒绝写入已清缓存
@@ -72,7 +78,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | useAgentBusRefresh（hook） | agent | agent_updated 刷 agents；created / deleted 加刷 sessions |
 | UiSdkBridge（event 桥） | fs-watch | 变更事件 debounce 后定向转发给订阅的 iframe（见 [ui-sdk.md](ui-sdk.md)） |
 
-- 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 6 个 bridge）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 chat session store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
+- 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 7 个 bridge，其中 SplitRouteBridge 经 FeatureGate）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 chat session store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
 - **重连补偿**：bus 重连置 `resumedAt`，各桥经 `useReconnectedSync` 批量失效缓存——错过的事件不重放，靠失效重拉对齐
 - App 级补偿：重连后 refreshProjects；路由指向已消失项目时重定向
 
@@ -85,9 +91,9 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 
 ## feature 组织
 
-- `features/` 按业务域组织，当前 21 个，按组：
+- `features/` 按业务域组织，当前 22 个，按组：
   - 工作区：side-panel、activity-bar、project-panel、user-file-panel、skill-panel、agent-session-list、agent-dialog、agent-mcp、agent-trigger
-  - 内容与浏览：content-browser、browser、welcome-page、text-selection-session、tabs
+  - 内容与浏览：content-browser、browser、welcome-page、text-selection-session、tabs、split-pane
   - 会话：chat、floating-chat、floating-content-browser
   - 应用级：settings、project-settings、onboarding、debug-tools
 - `layouts/`：`ProjectScope`（项目工作区 layout route）+ `ProjectRuntimeBridges`（项目级桥挂载）+ `project-lifecycle.ts`（项目关闭级联清理）；跨 feature 编排放 layout 或自治 bridge

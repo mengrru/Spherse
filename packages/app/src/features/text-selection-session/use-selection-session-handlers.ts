@@ -5,7 +5,7 @@ import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import type { ActiveSessionInfo, AgentSummary, SessionInfo } from "../../lib/types";
 import { createProjectSession, useProjectCatalog } from "../../queries/project";
-import { useFloatingSessionId } from "../floating-chat/use-floating-session-id";
+import { useFloatingSessionId } from "../floating-chat";
 
 type Translate = ReturnType<typeof useI18n>["t"];
 

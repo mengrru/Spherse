@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CONTENT_ERROR_CODES } from "@spherse/contracts";
 import { ApiError, type ApiClient } from "../../../lib/api";
+import { DEFAULT_QUERY_RETRIES } from "../../../queries/client";
 import { projectQueryKeys } from "../../../queries/keys";
 import type { ContentResponse } from "../../../lib/types";
-
-const MAX_RETRIES = 1;
 
 class ContentNotFoundError extends Error {
   constructor() {
@@ -20,11 +20,11 @@ export function useContentFile(projectId: string, client: ApiClient, filePath: s
       try {
         return await client.readContent(filePath);
       } catch (err) {
-        if (err instanceof ApiError && err.status === 404) throw new ContentNotFoundError();
+        if (err instanceof ApiError && err.code === CONTENT_ERROR_CODES.FILE_NOT_FOUND) throw new ContentNotFoundError();
         throw err;
       }
     },
-    retry: (failureCount, err) => !(err instanceof ContentNotFoundError) && failureCount < MAX_RETRIES,
+    retry: (failureCount, err) => !(err instanceof ContentNotFoundError) && failureCount < DEFAULT_QUERY_RETRIES,
   });
 
   return {

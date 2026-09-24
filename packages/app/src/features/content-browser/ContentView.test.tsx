@@ -123,6 +123,22 @@ describe("ContentView find scope", () => {
     expect(screen.getByTestId("right")).toContainElement(screen.getByPlaceholderText("查找"));
   });
 
+  it("does not open find after interacting outside every scope", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <>
+        <TwoViews />
+        <textarea aria-label="composer" />
+      </>,
+      { bridge: createMockHostBridge() },
+    );
+
+    await user.click(screen.getByRole("button", { name: "right-header" }));
+    await user.click(screen.getByRole("textbox", { name: "composer" }));
+    await user.keyboard("{Control>}f{/Control}");
+    expect(screen.queryByPlaceholderText("查找")).toBeNull();
+  });
+
   it("falls back to a remaining scope after the active one unmounts", async () => {
     const user = userEvent.setup();
     const view = renderWithProviders(<TwoViews />, { bridge: createMockHostBridge() });

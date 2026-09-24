@@ -17,8 +17,8 @@ export function forbidden(message: string): HttpError {
   return new HttpError(403, message);
 }
 
-export function notFound(message: string): HttpError {
-  return new HttpError(404, message);
+export function notFound(message: string, code?: string): HttpError {
+  return new HttpError(404, message, code ? { error: message, code } : undefined);
 }
 
 export function conflict(message: string): HttpError {

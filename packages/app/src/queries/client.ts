@@ -1,10 +1,12 @@
 import { QueryClient } from "@tanstack/react-query";
 
+export const DEFAULT_QUERY_RETRIES = 1;
+
 function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
       queries: {
-        retry: 1,
+        retry: DEFAULT_QUERY_RETRIES,
         staleTime: Number.POSITIVE_INFINITY,
       },
     },

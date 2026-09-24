@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Outlet, RouterProvider, createMemoryRouter, useBlocker, useLocation, useParams, useSearchParams } from "react-router";
 import { HostBridgeProvider } from "../../context/host-bridge-context";
 import { ProjectProvider } from "../../context/project-context";
+import { CONTENT_ERROR_CODES } from "@spherse/contracts";
 import { ApiError } from "../../lib/api";
 import { createMockHostBridge } from "../../test/host-bridge";
 import { projectQueryKeys } from "../../queries/keys";
@@ -17,6 +18,7 @@ import { SplitLayout } from "./SplitLayout";
 import { SplitRouteBridge } from "./SplitRouteBridge";
 import { useOpenSplit } from "./hooks";
 import { useSplitPaneStore } from "./store";
+import { getProjectNavStack, recordProjectNavLocation, clearProjectNavHistory } from "../../lib/use-project-navigation";
 
 const readContent = vi.fn();
 
@@ -66,6 +68,7 @@ function BlockingPage() {
       <p data-testid="blocker">{blocker.state}</p>
       <button type="button" onClick={() => openSplit("a.md")}>split-current</button>
       {blocker.state === "blocked" && <button type="button" onClick={() => blocker.reset()}>stay</button>}
+      {blocker.state === "blocked" && <button type="button" onClick={() => blocker.proceed()}>leave</button>}
     </div>
   );
 }
@@ -155,10 +158,23 @@ describe("SplitLayout", () => {
   });
 
   it("ends the split when the file no longer exists", async () => {
-    readContent.mockRejectedValue(new ApiError("Not found", 404));
+    readContent.mockRejectedValue(new ApiError("Not found", 404, CONTENT_ERROR_CODES.FILE_NOT_FOUND));
     setup();
     act(() => useSplitPaneStore.getState().openSplit("p1", "gone.md"));
     await waitFor(() => expect(split()).toBeUndefined());
+  });
+
+  it("does not render the split on mobile widths", () => {
+    const original = window.innerWidth;
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 500 });
+    try {
+      setup();
+      act(() => useSplitPaneStore.getState().openSplit("p1", "a.md"));
+      expect(document.querySelector("[data-split-pane]")).toBeNull();
+      expect(split()).toBeDefined();
+    } finally {
+      Object.defineProperty(window, "innerWidth", { configurable: true, value: original });
+    }
   });
 
   it("keeps the split on non-404 errors", async () => {
@@ -172,6 +188,7 @@ describe("SplitLayout", () => {
 
 describe("useOpenSplit", () => {
   beforeEach(() => {
+    clearProjectNavHistory("p1");
     localStorage.clear();
     readContent.mockReset();
     readContent.mockImplementation(async (path: string) => ({ path, content: `# ${path}`, binary: false }));
@@ -201,11 +218,14 @@ describe("useOpenSplit", () => {
   it("moves the current file to the welcome page when tabs are disabled", async () => {
     useSettingsStore.setState({ loaded: true, tabsEnabled: false });
     const { router } = setup("/project/p1/content?path=a.md");
+    recordProjectNavLocation("p1", "/project/p1/chat/s1");
+    recordProjectNavLocation("p1", "/project/p1/content?path=a.md");
     await userEvent.click(screen.getByRole("button", { name: "split-current" }));
 
     await waitFor(() => expect(split()?.filePath).toBe("a.md"));
     expect(screen.getByTestId("page")).toHaveTextContent("welcome:/project/p1");
     await waitFor(() => expect(router.state.location.state).toBeNull());
+    expect(getProjectNavStack("p1")).toEqual(["/project/p1/chat/s1"]);
   });
 
   it("does not open the split when leaving is blocked", async () => {
@@ -214,5 +234,13 @@ describe("useOpenSplit", () => {
     expect(screen.getByTestId("blocker")).toHaveTextContent("blocked");
     await userEvent.click(screen.getByRole("button", { name: "stay" }));
     expect(split()).toBeUndefined();
+  });
+
+  it("opens the split once leaving is confirmed", async () => {
+    setup("/project/p1/content?path=a.md", <BlockingPage />);
+    await userEvent.click(screen.getByRole("button", { name: "split-current" }));
+    await userEvent.click(screen.getByRole("button", { name: "leave" }));
+    await waitFor(() => expect(split()?.filePath).toBe("a.md"));
+    expect(screen.getByTestId("page")).toHaveTextContent("welcome:/project/p1");
   });
 });

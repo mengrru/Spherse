@@ -33,7 +33,12 @@ export function useSplitDivider({ containerRef, ratio, containerWidth, onCommit 
     if (!container || event.button !== 0) return;
     event.preventDefault();
     const target = event.currentTarget;
-    target.setPointerCapture(event.pointerId);
+    const pointerId = event.pointerId;
+    try {
+      target.setPointerCapture(pointerId);
+    } catch {
+      return;
+    }
     updateDrag(ratioFromPointer(container, event.clientX));
 
     const onMove = (e: globalThis.PointerEvent) => updateDrag(ratioFromPointer(container, e.clientX));
@@ -41,6 +46,8 @@ export function useSplitDivider({ containerRef, ratio, containerWidth, onCommit 
       target.removeEventListener("pointermove", onMove);
       target.removeEventListener("pointerup", onEnd);
       target.removeEventListener("pointercancel", onEnd);
+      target.removeEventListener("lostpointercapture", onEnd);
+      if (target.hasPointerCapture(pointerId)) target.releasePointerCapture(pointerId);
       const final = dragRatioRef.current;
       updateDrag(null);
       if (final !== null) onCommit(final);
@@ -48,6 +55,7 @@ export function useSplitDivider({ containerRef, ratio, containerWidth, onCommit 
     target.addEventListener("pointermove", onMove);
     target.addEventListener("pointerup", onEnd);
     target.addEventListener("pointercancel", onEnd);
+    target.addEventListener("lostpointercapture", onEnd);
   }, [containerRef, onCommit]);
 
   const onKeyDown = useCallback((event: KeyboardEvent<HTMLElement>) => {

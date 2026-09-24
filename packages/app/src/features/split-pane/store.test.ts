@@ -49,6 +49,12 @@ describe("useSplitPaneStore", () => {
     expect(useSplitPaneStore.getState().byProject.p1).toEqual({ filePath: "b.md", ratio: 0.3 });
   });
 
+  it("normalizes file paths", async () => {
+    const { useSplitPaneStore } = await loadStore();
+    useSplitPaneStore.getState().openSplit("p1", "./docs\\a.md");
+    expect(useSplitPaneStore.getState().byProject.p1.filePath).toBe("docs/a.md");
+  });
+
   it("isolates projects", async () => {
     const { useSplitPaneStore } = await loadStore();
     const s = useSplitPaneStore.getState();
