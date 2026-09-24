@@ -117,17 +117,29 @@ export function applyThemeSource(theme: AppSettings["theme"]): void {
   nativeTheme.themeSource = theme ?? "system";
 }
 
+const envOverrides = new Map<string, string | undefined>();
+
+function applyProviderKeysToEnv(settings: AppSettings): void {
+  const textCatalog = getAppModelCatalog().getSupportedProviders();
+  const applied = new Set<string>();
+  for (const [id, creds] of Object.entries(settings.models?.text?.providers ?? {})) {
+    const envName = textCatalog[id]?.auth.envKeys[0];
+    if (!creds?.apiKey || !envName) continue;
+    if (!envOverrides.has(envName)) envOverrides.set(envName, process.env[envName]);
+    process.env[envName] = creds.apiKey;
+    applied.add(envName);
+  }
+  for (const [envName, original] of envOverrides) {
+    if (applied.has(envName)) continue;
+    if (original === undefined) delete process.env[envName];
+    else process.env[envName] = original;
+    envOverrides.delete(envName);
+  }
+}
+
 function applySettingsToEnv(settings: AppSettings): void {
   applyThemeSource(settings.theme);
-  const textCatalog = getAppModelCatalog().getSupportedProviders();
-  for (const [id, creds] of Object.entries(settings.models?.text?.providers ?? {})) {
-    if (creds?.apiKey) {
-      const item = textCatalog[id];
-      if (item?.auth.envKeys[0]) {
-        process.env[item.auth.envKeys[0]] = creds.apiKey;
-      }
-    }
-  }
+  applyProviderKeysToEnv(settings);
 
   const imageGroup = settings.models?.image;
   if (imageGroup?.defaultModel) {

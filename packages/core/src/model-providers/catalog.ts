@@ -81,6 +81,10 @@ const PROVIDER_ENV_KEYS: Record<string, string[]> = {
   "opencode-go": ["OPENCODE_API_KEY"],
 };
 
+export function providerEnvKey(provider: string): string | undefined {
+  return PROVIDER_ENV_KEYS[provider]?.[0];
+}
+
 const IMAGE_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openrouter: "OpenRouter",
   zhipu: "智谱",

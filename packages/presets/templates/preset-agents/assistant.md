@@ -9,6 +9,7 @@ tools:
   - move_file
   - copy_file
   - generate_image
+  - web_search
   - read_data
   - query_data
   - mutate_data

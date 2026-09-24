@@ -1064,6 +1064,10 @@ export const zhCN = {
   "tool.generate_image": "生成图片",
   // 独立工具 tooltip：生成图片的作用说明
   "tool.generate_image_hint": "允许智能体根据文字描述生成图片",
+  // 独立工具标签：网页搜索（通过 DeepSeek API 的内置搜索能力）
+  "tool.web_search": "网页搜索",
+  // 独立工具 tooltip：网页搜索的作用说明与前置条件
+  "tool.web_search_hint": "允许智能体联网搜索最新信息。需在设置中配置 DeepSeek API Key；搜索词会发送给 DeepSeek 并产生额外 token 费用（与智能体所用模型无关）",
   // 独立工具标签：触发事件（emit trigger event，agent 在对话中调用，触发其它 agent 的事件触发器）
   "tool.emit_trigger_event": "触发事件",
   // 独立工具 tooltip：触发事件的作用说明

@@ -8,6 +8,7 @@ import { agentMgmtCapability } from "./agent-mgmt/index.js";
 import { interactionCapability } from "./interaction/index.js";
 import { projectConfigCapability } from "./project-config/index.js";
 import { dataCapability } from "./data/index.js";
+import { webSearchCapability } from "./web-search/index.js";
 
 export function builtinToolCapabilities(sharedDataStore?: DataStore): Capability[] {
   return [
@@ -19,5 +20,6 @@ export function builtinToolCapabilities(sharedDataStore?: DataStore): Capability
     interactionCapability(),
     projectConfigCapability(),
     dataCapability(sharedDataStore),
+    webSearchCapability(),
   ];
 }

@@ -71,6 +71,7 @@ describe("builtin tool capabilities via real assembly path", () => {
       "run_command",
       "ask_user",
       "manage_agent",
+      "web_search",
     ];
     const tools = await assembleWith(wanted);
     expect(tools.map((t) => t.name).sort()).toEqual([...wanted].sort());
