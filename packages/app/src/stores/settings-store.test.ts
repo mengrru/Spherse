@@ -14,7 +14,7 @@ function createApi(overrides: Partial<SettingsApi> = {}): SettingsApi {
 
 describe("useSettingsStore", () => {
   beforeEach(() => {
-    useSettingsStore.setState({ locale: "zh-CN", debugToolsEnabled: false, theme: "system" });
+    useSettingsStore.setState({ loaded: false, locale: "zh-CN", debugToolsEnabled: false, tabsEnabled: true, theme: "system" });
   });
 
   it("loads locale from settings", async () => {
@@ -52,6 +52,7 @@ describe("useSettingsStore", () => {
       locale: "en",
       models,
       debugToolsEnabled: false,
+      tabsEnabled: true,
       theme: "system",
     });
   });
@@ -87,6 +88,7 @@ describe("useSettingsStore", () => {
       locale: "zh-CN",
       models: undefined,
       debugToolsEnabled: true,
+      tabsEnabled: true,
       theme: "system",
     });
   });
@@ -122,6 +124,7 @@ describe("useSettingsStore", () => {
       locale: "zh-CN",
       models: undefined,
       debugToolsEnabled: false,
+      tabsEnabled: true,
       theme: "dark",
     });
   });
@@ -138,7 +141,51 @@ describe("useSettingsStore", () => {
       locale: "en",
       models: undefined,
       debugToolsEnabled: true,
+      tabsEnabled: true,
       theme: "light",
     });
+  });
+
+  it("defaults tabsEnabled to true and marks loaded", async () => {
+    await useSettingsStore.getState().loadLocale(createApi());
+
+    expect(useSettingsStore.getState().tabsEnabled).toBe(true);
+    expect(useSettingsStore.getState().loaded).toBe(true);
+  });
+
+  it("loads tabsEnabled from settings", async () => {
+    await useSettingsStore.getState().loadLocale(createApi({
+      getSettings: vi.fn().mockResolvedValue({ tabsEnabled: false }),
+    }));
+
+    expect(useSettingsStore.getState().tabsEnabled).toBe(false);
+  });
+
+  it("setTabsEnabled updates state and persists all known fields", async () => {
+    useSettingsStore.setState({ debugToolsEnabled: true, theme: "dark" });
+    const api = createApi({
+      getSettings: vi.fn().mockResolvedValue({ locale: "en", models: undefined }),
+    });
+
+    const ok = await useSettingsStore.getState().setTabsEnabled(api, false);
+
+    expect(ok).toBe(true);
+    expect(useSettingsStore.getState().tabsEnabled).toBe(false);
+    expect(api.saveSettings).toHaveBeenCalledWith({
+      locale: "en",
+      models: undefined,
+      debugToolsEnabled: true,
+      tabsEnabled: false,
+      theme: "dark",
+    });
+  });
+
+  it("other setters preserve tabsEnabled", async () => {
+    useSettingsStore.setState({ tabsEnabled: false });
+    const api = createApi();
+
+    await useSettingsStore.getState().setTheme(api, "light");
+
+    expect(api.saveSettings).toHaveBeenCalledWith(expect.objectContaining({ tabsEnabled: false }));
   });
 });

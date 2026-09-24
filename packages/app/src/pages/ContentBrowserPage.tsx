@@ -1,6 +1,7 @@
 import { useNavigate, useSearchParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { ContentBrowser } from "../features/content-browser";
+import { useCloseActiveTab } from "../features/tabs";
 import { useProjectCtx } from "../context/project-context";
 import { useApiClient } from "../lib/use-connection";
 import { useProjectNavigation } from "../lib/use-project-navigation";
@@ -17,6 +18,7 @@ export function ContentBrowserPage() {
   const { t } = useI18n();
   const { agents, sessions } = useProjectCatalog(projectId, client);
   const floatingSessionId = useFloatingSessionId(projectId);
+  const closeActiveTab = useCloseActiveTab();
 
   const filePath = searchParams.get("path");
 
@@ -60,7 +62,7 @@ export function ContentBrowserPage() {
       key={filePath}
       filePath={filePath}
       onBack={back}
-      onClose={() => navigate(`/project/${projectId}`, { replace: true })}
+      onClose={() => closeActiveTab(() => navigate(`/project/${projectId}`, { replace: true }))}
       agents={agents}
       activeSessions={activeSessions}
       onStartSession={handleStartSession}

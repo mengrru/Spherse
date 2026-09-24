@@ -179,6 +179,28 @@ describe("theme persistence", () => {
   });
 });
 
+describe("tabsEnabled persistence", () => {
+  const models = { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } };
+
+  it("getMaskedSettings defaults tabsEnabled to true when absent", () => {
+    settingsStore.set("settings", { locale: "zh-CN", models });
+    expect(getMaskedSettings()?.tabsEnabled).toBe(true);
+  });
+
+  it("saveSettings defaults tabsEnabled to true when not provided and no previous value", () => {
+    settingsStore.set("settings", undefined);
+    saveSettings({ locale: "zh-CN", models });
+    expect(settingsStore.get("settings")?.tabsEnabled).toBe(true);
+  });
+
+  it("saveSettings preserves previous tabsEnabled when incoming omits it", () => {
+    settingsStore.set("settings", { locale: "zh-CN", tabsEnabled: false, models });
+    saveSettings({ locale: "zh-CN", models });
+    expect(settingsStore.get("settings")?.tabsEnabled).toBe(false);
+    expect(getMaskedSettings()?.tabsEnabled).toBe(false);
+  });
+});
+
 describe("customProviders persistence", () => {
   const customDef = {
     id: "my-openai",

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useProjectCtx } from "../context/project-context";
 
 const projectNavStacks = new Map<string, string[]>();
+const pendingBackTargets = new Map<string, string>();
 
 function isKeyInProject(key: string, projectId: string): boolean {
   const prefix = `/project/${projectId}`;
@@ -16,23 +17,44 @@ export function projectBackTarget(stack: string[], projectId: string): string {
   return `/project/${projectId}`;
 }
 
+export function recordProjectNavLocation(projectId: string, key: string): void {
+  let stack = projectNavStacks.get(projectId);
+  if (!stack) {
+    stack = [];
+    projectNavStacks.set(projectId, stack);
+  }
+  const pendingBack = pendingBackTargets.get(projectId);
+  pendingBackTargets.delete(projectId);
+  if (pendingBack === key && stack.length > 0 && stack[stack.length - 1] !== key) {
+    stack.pop();
+  }
+  if (stack[stack.length - 1] !== key) {
+    stack.push(key);
+  }
+}
+
 export function useProjectNavHistory(projectId: string): void {
   const location = useLocation();
   useEffect(() => {
-    const key = location.pathname + location.search;
-    let stack = projectNavStacks.get(projectId);
-    if (!stack) {
-      stack = [];
-      projectNavStacks.set(projectId, stack);
-    }
-    if (stack[stack.length - 1] !== key) {
-      stack.push(key);
-    }
+    recordProjectNavLocation(projectId, location.pathname + location.search);
   }, [location.pathname, location.search, projectId]);
+}
+
+export function getProjectNavStack(projectId: string): readonly string[] {
+  return projectNavStacks.get(projectId) ?? [];
+}
+
+export function dropFromProjectNavHistory(projectId: string, key: string): void {
+  const stack = projectNavStacks.get(projectId);
+  if (!stack) return;
+  const next = stack.filter((item) => item !== key);
+  const deduped = next.filter((item, i) => i === 0 || next[i - 1] !== item);
+  projectNavStacks.set(projectId, deduped);
 }
 
 export function clearProjectNavHistory(projectId: string): void {
   projectNavStacks.delete(projectId);
+  pendingBackTargets.delete(projectId);
 }
 
 export function useProjectNavigation(): { back: () => void } {
@@ -46,7 +68,7 @@ export function useProjectNavigation(): { back: () => void } {
       return;
     }
     const target = projectBackTarget(stack, projectId);
-    stack.pop();
+    pendingBackTargets.set(projectId, target);
     navigate(target);
   }, [navigate, projectId]);
 

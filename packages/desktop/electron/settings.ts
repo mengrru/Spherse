@@ -61,6 +61,7 @@ export function getMaskedSettings(): AppSettings | null {
     },
     customProviders: settings.customProviders ?? [],
     debugToolsEnabled: settings.debugToolsEnabled ?? false,
+    tabsEnabled: settings.tabsEnabled ?? true,
     theme: settings.theme ?? "system",
   };
 }
@@ -98,6 +99,7 @@ export function saveSettings(incoming: AppSettings): void {
     },
     customProviders: incoming.customProviders ?? prev?.customProviders ?? [],
     debugToolsEnabled: incoming.debugToolsEnabled ?? prev?.debugToolsEnabled ?? false,
+    tabsEnabled: incoming.tabsEnabled ?? prev?.tabsEnabled ?? true,
     theme: incoming.theme ?? prev?.theme ?? "system",
     mobileAccess: prev?.mobileAccess,
   };

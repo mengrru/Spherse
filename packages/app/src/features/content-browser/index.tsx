@@ -13,6 +13,7 @@ import { classifyFileKind } from "./file-kind";
 import { TextSelectionSession } from "../text-selection-session";
 import { useContentEditor } from "./hooks/useContentEditor";
 import { useContentFile } from "./hooks/useContentFile";
+import { useLeaveGuard } from "./hooks/useLeaveGuard";
 
 export interface ContentBrowserProps {
   filePath: string;
@@ -47,6 +48,7 @@ export function ContentBrowser({
     content,
     setContent,
   });
+  const leaveGuard = useLeaveGuard(editor.isDirty);
 
   const handleRefresh = useCallback(() => {
     reloadContent();
@@ -72,8 +74,8 @@ export function ContentBrowser({
         htmlView={htmlView}
         saving={editor.saving}
         findable={findable}
-        onBack={() => editor.requestLeave(onBack)}
-        onClose={() => editor.requestLeave(onClose)}
+        onBack={onBack}
+        onClose={onClose}
         onEnterEdit={editor.enterEdit}
         onCancelEdit={editor.cancelEdit}
         onSave={() => void editor.save()}
@@ -142,11 +144,11 @@ export function ContentBrowser({
         />
       )}
       <ConfirmDialogs
-        showLeaveConfirm={editor.showLeaveConfirm}
+        showLeaveConfirm={leaveGuard.open}
         showCancelConfirm={editor.showCancelConfirm}
-        onLeaveOpenChange={editor.setShowLeaveConfirm}
+        onLeaveOpenChange={leaveGuard.onOpenChange}
         onCancelOpenChange={editor.setShowCancelConfirm}
-        onConfirmLeave={editor.confirmLeave}
+        onConfirmLeave={leaveGuard.confirm}
         onConfirmCancel={editor.confirmCancel}
       />
     </div>

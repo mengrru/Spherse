@@ -23,18 +23,14 @@ export function useContentEditor({
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
-  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const pendingLeaveRef = useRef<(() => void) | null>(null);
   const isDirty = isEditing && editedContent !== editBaseline;
 
   useEffect(() => {
     setIsEditing(false);
     setConflict(false);
     setSaveError(null);
-    setShowLeaveConfirm(false);
     setShowCancelConfirm(false);
-    pendingLeaveRef.current = null;
   }, [filePath]);
 
   const enterEdit = () => {
@@ -60,23 +56,6 @@ export function useContentEditor({
     setIsEditing(false);
     setSaveError(null);
     setConflict(false);
-  };
-
-  const requestLeave = (onLeave: () => void) => {
-    if (isDirty) {
-      pendingLeaveRef.current = onLeave;
-      setShowLeaveConfirm(true);
-    } else {
-      onLeave();
-    }
-  };
-
-  const confirmLeave = () => {
-    const cb = pendingLeaveRef.current;
-    pendingLeaveRef.current = null;
-    setShowLeaveConfirm(false);
-    setIsEditing(false);
-    cb?.();
   };
 
   const save = useCallback(async () => {
@@ -143,16 +122,12 @@ export function useContentEditor({
     saveError,
     conflict,
     setConflict,
-    showLeaveConfirm,
-    setShowLeaveConfirm,
     showCancelConfirm,
     setShowCancelConfirm,
     isDirty,
     enterEdit,
     cancelEdit,
     confirmCancel,
-    requestLeave,
-    confirmLeave,
     save,
     reloadFromDisk,
   };

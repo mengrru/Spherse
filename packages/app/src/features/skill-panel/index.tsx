@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "../../components/ui/dropdown-menu";
 import { useProjectCtx } from "../../context/project-context";
+import { useCloseDeletedFileTabs } from "../tabs";
 import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { CreateSkillDialog } from "./CreateSkillDialog";
@@ -38,11 +39,7 @@ export function SkillPanel() {
     navigate(`/project/${projectId}/content?path=${encodeURIComponent(filePath)}`);
   };
 
-  const handleFileDeleted = (deletedPath: string) => {
-    if (contentPath && (contentPath === deletedPath || contentPath.startsWith(`${deletedPath}/`))) {
-      if (projectId) navigate(`/project/${projectId}`);
-    }
-  };
+  const handleFileDeleted = useCloseDeletedFileTabs();
 
   const handleInstallClick = async () => {
     const zipPath = await bridge.project?.selectSkillZip();

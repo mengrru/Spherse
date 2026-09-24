@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { Chat } from "../features/chat";
+import { useCloseActiveTab } from "../features/tabs";
 import { useProjectDataStore } from "../stores/project-data-store";
 import { useProjectCtx } from "../context/project-context";
 import { useApiClient } from "../lib/use-connection";
@@ -17,6 +18,7 @@ export function ChatPage() {
   const sessionQuery = useProjectSession(projectId, client, sessionId);
   const projectData = useProjectDataStore((s) => s.projects[projectId]);
   const consumeInitialMessage = useProjectDataStore((s) => s.consumeInitialMessage);
+  const closeActiveTab = useCloseActiveTab();
 
   const session = sessionQuery.data ?? null;
   const agent = session ? agents.find((a) => a.id === session.agentId) ?? null : null;
@@ -49,7 +51,7 @@ export function ChatPage() {
       agent={agent}
       onNavigateToPath={(path) => navigate(`/project/${projectId}/content?path=${encodeURIComponent(path)}`)}
       initialMessage={initialMessage}
-      onClose={() => navigate(`/project/${projectId}`)}
+      onClose={() => closeActiveTab(() => navigate(`/project/${projectId}`))}
     />
   );
 }

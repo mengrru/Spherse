@@ -126,6 +126,7 @@ export interface AppSettings {
   };
   customProviders?: CustomProviderDef[];
   debugToolsEnabled?: boolean;
+  tabsEnabled?: boolean;
   theme?: ThemeMode;
   mobileAccess?: MobileAccessSettings;
 }

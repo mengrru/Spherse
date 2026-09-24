@@ -63,6 +63,7 @@ export interface HostSettings {
   };
   customProviders?: CustomProviderDef[];
   debugToolsEnabled?: boolean;
+  tabsEnabled?: boolean;
   theme?: ThemeMode;
 }
 
