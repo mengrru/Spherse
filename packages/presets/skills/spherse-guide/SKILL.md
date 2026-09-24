@@ -94,6 +94,7 @@ Content Browser 支持：
 | 文件修改 | `write_file`、`edit_file`、`move_file`、`copy_file` |
 | 结构化数据 | `read_data`、`query_data`、`mutate_data` |
 | 交互与展示 | `ask_user`、`render_card`、`generate_image` |
+| 网页搜索 | `web_search`（需在设置中配置 DeepSeek API Key，搜索词发送给 DeepSeek 并额外计费；未配置时该工具对模型不可见） |
 | 项目协作 | `append_changelog`、`load_skill`、`emit_trigger_event` |
 | 记忆 | `memory_save`、`memory_recall` |
 | 高级操作 | `run_command`、`manage_agent`、`manage_trigger`、`manage_project_config`（Agent 配置界面中三个 `manage_*` 合并为单一「管理项目」选项，勾选即同时启用） |
@@ -202,6 +203,10 @@ HTML 可以：
 - `generate_image`：Agent 调用图片 Provider 创建新图片，需要在设置中配置图片模型和 API Key。
 
 生成图片会保存到 `.spherse/generated-images/` 并显示为聊天卡片，桌面端可将其导出到项目目录。
+
+### 网页搜索
+
+`web_search` 通过 DeepSeek API 的内置搜索能力联网查询，返回搜索总结与来源链接。与 Agent 使用哪个文本模型无关，只要设置中配置了 DeepSeek API Key 即可用；每次搜索会额外消耗 DeepSeek token。未配置 Key 时该工具不会出现在模型可用工具中。已有项目的 Agent 需在配置界面手动勾选「网页搜索」。
 
 ### 移动端 Web
 

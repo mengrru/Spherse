@@ -514,6 +514,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "tool.render_card_hint": "允許智能體在對話中渲染 HTML 卡片（如網頁、圖表、樣式文件等）",
   "tool.generate_image": "生成圖片",
   "tool.generate_image_hint": "允許智能體根據文字描述生成圖片並儲存到專案中",
+  "tool.web_search": "網頁搜尋",
+  "tool.web_search_hint": "允許智能體聯網搜尋最新資訊。需在設定中配置 DeepSeek API Key；搜尋詞會傳送給 DeepSeek 並產生額外 token 費用（與智能體所用模型無關）",
   "tool.emit_trigger_event": "觸發事件",
   "tool.emit_trigger_event_hint": "允許智能體發出自訂事件，觸發本專案內其它智能體的事件觸發器，使其自動執行預設任務",
   "tool.run_command": "執行命令",

@@ -65,6 +65,7 @@ describe("initPresets", () => {
       "memory_save",
       "memory_recall",
       "manage_project_config",
+      "web_search",
     ]) {
       expect(profile!.tools).toContain(expected);
     }

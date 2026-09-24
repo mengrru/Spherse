@@ -39,7 +39,7 @@
 - **API key 掩码与合并**：显示前 4 + `****` + 后 4；保存时空串跳过、含 `****` 保留旧值
   - `saveSettings` 强制保留 `mobileAccess` 旧值，防 renderer 覆写
 - `applySettingsToEnv`（保存后立即执行）：
-  - `applyThemeSource` → 文本 provider key 按 `PROVIDER_ENV_KEYS` 映射 env → 图片写 `SPHERSE_IMAGE_MODEL` / `SPHERSE_IMAGE_API_KEY`
+  - `applyThemeSource` → 文本 provider key 按 `PROVIDER_ENV_KEYS` 映射 env（记录首次覆写前的原值；key 从设置中移除后恢复原值或删除 env，共享 env 名的 provider 仍有 key 时保留）→ 图片写 `SPHERSE_IMAGE_MODEL` / `SPHERSE_IMAGE_API_KEY`
   - 末尾 `syncCustomProviders`（core 删除消失项 + `setProvider` 重建，原样使用 def.id；`custom-` 前缀由 renderer 创建供应商时生成）
 - 启动时 `restoreEnvFromSettings` 在 `ensureServer` 之前——custom provider 注册先于 server 捕获同一 catalog 单例
 

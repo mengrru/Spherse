@@ -514,6 +514,8 @@ export const en: Record<TranslationKey, string> = {
   "tool.render_card_hint": "Allows the agent to render HTML cards in the chat (e.g. web pages, charts, styled documents)",
   "tool.generate_image": "Generate Image",
   "tool.generate_image_hint": "Allows the agent to generate images from text descriptions and save them to the project",
+  "tool.web_search": "Web Search",
+  "tool.web_search_hint": "Allows the agent to search the web for up-to-date information. Requires a DeepSeek API Key in settings; search queries are sent to DeepSeek and incur extra token costs (regardless of the agent's model)",
   "tool.emit_trigger_event": "Emit Event",
   "tool.emit_trigger_event_hint": "Allows the agent to emit a custom event that triggers other agents' event triggers in this project, making them run their preset tasks automatically",
   "tool.run_command": "Run Command",

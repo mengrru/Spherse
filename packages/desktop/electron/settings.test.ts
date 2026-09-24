@@ -390,3 +390,42 @@ describe("serverToken", () => {
     expect(generateAccessToken()).not.toBe(generateAccessToken());
   });
 });
+
+describe("provider API keys in process env", () => {
+  const empty = { defaultModel: "", providers: {} };
+
+  function saveTextKeys(providers: Record<string, { apiKey: string }>) {
+    saveSettings({ locale: "zh-CN", models: { text: { defaultModel: "", providers }, image: empty } });
+  }
+
+  it("clears a provider env key after it is removed from settings", () => {
+    settingsStore.set("settings", undefined);
+    delete process.env.DEEPSEEK_API_KEY;
+    saveTextKeys({ deepseek: { apiKey: "sk-live" } });
+    expect(process.env.DEEPSEEK_API_KEY).toBe("sk-live");
+
+    saveTextKeys({ deepseek: { apiKey: "" } });
+    expect(process.env.DEEPSEEK_API_KEY).toBeUndefined();
+  });
+
+  it("restores a pre-existing shell env value when the settings key is removed", () => {
+    settingsStore.set("settings", undefined);
+    process.env.DEEPSEEK_API_KEY = "sk-from-shell";
+    saveTextKeys({ deepseek: { apiKey: "sk-settings" } });
+    expect(process.env.DEEPSEEK_API_KEY).toBe("sk-settings");
+
+    saveTextKeys({});
+    expect(process.env.DEEPSEEK_API_KEY).toBe("sk-from-shell");
+    delete process.env.DEEPSEEK_API_KEY;
+  });
+
+  it("keeps a shared env key while another provider still sets it", () => {
+    settingsStore.set("settings", undefined);
+    delete process.env.MOONSHOT_API_KEY;
+    saveTextKeys({ moonshotai: { apiKey: "sk-a" }, "moonshotai-cn": { apiKey: "sk-b" } });
+    saveTextKeys({ moonshotai: { apiKey: "" }, "moonshotai-cn": { apiKey: "sk-b****" } });
+    expect(process.env.MOONSHOT_API_KEY).toBe("sk-b");
+    saveTextKeys({});
+    expect(process.env.MOONSHOT_API_KEY).toBeUndefined();
+  });
+});
