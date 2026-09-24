@@ -1015,6 +1015,10 @@ export const zhCN = {
   "settings.contentTabs": "多标签页",
   // 设置 > 通用：多标签页开关下方的说明文案
   "settings.contentTabsDesc": "在内容区顶部以标签页形式保留已打开的会话、文件和网页",
+  // 设置 > 通用：关闭至托盘开关的标题（仅桌面端显示）
+  "settings.closeToTray": "关闭至托盘",
+  // 设置 > 通用：关闭至托盘开关下方的说明文案
+  "settings.closeToTrayDesc": "关闭窗口时保持 Spherse 在后台运行，可通过托盘图标重新打开",
   // 图片生成设置中默认模型下拉框的标签
   "settings.image.defaultModel": "默认生图模型",
 
@@ -1296,6 +1300,10 @@ export const zhCN = {
   "contextMenu.paste": "粘贴",
   // 文本框右键菜单「全选」
   "contextMenu.selectAll": "全选",
+  // 系统托盘右键菜单：显示主窗口
+  "tray.show": "打开 Spherse",
+  // 系统托盘右键菜单：退出应用
+  "tray.quit": "退出",
 
   // --- UI SDK ---
   // sendMessage action 收到失效/未知 sessionId 时弹出的 toast 提示

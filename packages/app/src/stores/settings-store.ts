@@ -9,15 +9,17 @@ interface SettingsStore {
   locale: Locale;
   debugToolsEnabled: boolean;
   tabsEnabled: boolean;
+  closeToTray: boolean;
   theme: ThemeMode;
   loadLocale: (api: SettingsStoreApi) => Promise<void>;
   changeLocale: (api: SettingsStoreApi, locale: Locale) => Promise<boolean>;
   setDebugToolsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
   setTabsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
+  setCloseToTray: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
   setTheme: (api: SettingsStoreApi, theme: ThemeMode) => Promise<boolean>;
 }
 
-type UiSettings = Pick<SettingsStore, "debugToolsEnabled" | "tabsEnabled" | "theme">;
+type UiSettings = Pick<SettingsStore, "debugToolsEnabled" | "tabsEnabled" | "closeToTray" | "theme">;
 
 export const useSettingsStore = create<SettingsStore>((set, get) => {
   async function persist(api: SettingsStoreApi, patch: Partial<UiSettings> & { locale?: Locale }) {
@@ -27,6 +29,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
       models: settings?.models,
       debugToolsEnabled: get().debugToolsEnabled,
       tabsEnabled: get().tabsEnabled,
+      closeToTray: get().closeToTray,
       theme: get().theme,
       ...patch,
     };
@@ -39,6 +42,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     locale: "zh-CN",
     debugToolsEnabled: false,
     tabsEnabled: true,
+    closeToTray: true,
     theme: "system",
 
     async loadLocale(api) {
@@ -51,6 +55,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
         locale: normalizeLocale(settings?.locale),
         debugToolsEnabled: settings?.debugToolsEnabled ?? false,
         tabsEnabled: settings?.tabsEnabled ?? true,
+        closeToTray: settings?.closeToTray ?? true,
         theme: settings?.theme ?? "system",
       });
     },
@@ -68,6 +73,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     async setTabsEnabled(api, enabled) {
       set({ tabsEnabled: enabled });
       return persist(api, { tabsEnabled: enabled });
+    },
+
+    async setCloseToTray(api, enabled) {
+      set({ closeToTray: enabled });
+      return persist(api, { closeToTray: enabled });
     },
 
     async setTheme(api, theme) {

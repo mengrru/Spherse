@@ -16,7 +16,7 @@ vi.mock("electron", () => ({
   nativeTheme: { themeSource: "system" },
 }));
 
-import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore, getMobileAccess, setMobileAccess, getServerToken, setServerToken, generateAccessToken } from "./settings.js";
+import { maskModelGroup, mergeModelGroup, getMaskedSettings, saveSettings, settingsStore, getCloseToTray, getMobileAccess, setMobileAccess, getServerToken, setServerToken, generateAccessToken } from "./settings.js";
 import { getAppModelCatalog } from "./model-catalog.js";
 
 describe("mergeModelGroup sampling passthrough", () => {
@@ -198,6 +198,35 @@ describe("tabsEnabled persistence", () => {
     saveSettings({ locale: "zh-CN", models });
     expect(settingsStore.get("settings")?.tabsEnabled).toBe(false);
     expect(getMaskedSettings()?.tabsEnabled).toBe(false);
+  });
+});
+
+describe("closeToTray persistence", () => {
+  const models = { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } };
+
+  it("defaults closeToTray to true when absent", () => {
+    settingsStore.set("settings", { locale: "zh-CN", models });
+    expect(getMaskedSettings()?.closeToTray).toBe(true);
+    expect(getCloseToTray()).toBe(true);
+  });
+
+  it("getCloseToTray defaults to true on fresh install", () => {
+    settingsStore.set("settings", undefined);
+    expect(getCloseToTray()).toBe(true);
+  });
+
+  it("saveSettings defaults closeToTray to true when not provided and no previous value", () => {
+    settingsStore.set("settings", undefined);
+    saveSettings({ locale: "zh-CN", models });
+    expect(settingsStore.get("settings")?.closeToTray).toBe(true);
+  });
+
+  it("saveSettings preserves previous closeToTray when incoming omits it", () => {
+    settingsStore.set("settings", { locale: "zh-CN", closeToTray: false, models });
+    saveSettings({ locale: "zh-CN", models });
+    expect(settingsStore.get("settings")?.closeToTray).toBe(false);
+    expect(getMaskedSettings()?.closeToTray).toBe(false);
+    expect(getCloseToTray()).toBe(false);
   });
 });
 

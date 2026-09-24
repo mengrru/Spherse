@@ -13,6 +13,7 @@ export function createMockHostBridge(overrides: HostBridgeOverrides = {}): HostB
       filePicker: true,
       mobileAccess: false,
       openFileExternal: true,
+      tray: false,
       content: { editable: true },
       ...capabilities,
     },

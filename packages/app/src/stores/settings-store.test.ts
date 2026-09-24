@@ -14,7 +14,7 @@ function createApi(overrides: Partial<SettingsApi> = {}): SettingsApi {
 
 describe("useSettingsStore", () => {
   beforeEach(() => {
-    useSettingsStore.setState({ loaded: false, locale: "zh-CN", debugToolsEnabled: false, tabsEnabled: true, theme: "system" });
+    useSettingsStore.setState({ loaded: false, locale: "zh-CN", debugToolsEnabled: false, tabsEnabled: true, closeToTray: true, theme: "system" });
   });
 
   it("loads locale from settings", async () => {
@@ -53,6 +53,7 @@ describe("useSettingsStore", () => {
       models,
       debugToolsEnabled: false,
       tabsEnabled: true,
+      closeToTray: true,
       theme: "system",
     });
   });
@@ -89,6 +90,7 @@ describe("useSettingsStore", () => {
       models: undefined,
       debugToolsEnabled: true,
       tabsEnabled: true,
+      closeToTray: true,
       theme: "system",
     });
   });
@@ -125,6 +127,7 @@ describe("useSettingsStore", () => {
       models: undefined,
       debugToolsEnabled: false,
       tabsEnabled: true,
+      closeToTray: true,
       theme: "dark",
     });
   });
@@ -142,6 +145,7 @@ describe("useSettingsStore", () => {
       models: undefined,
       debugToolsEnabled: true,
       tabsEnabled: true,
+      closeToTray: true,
       theme: "light",
     });
   });
@@ -176,6 +180,7 @@ describe("useSettingsStore", () => {
       models: undefined,
       debugToolsEnabled: true,
       tabsEnabled: false,
+      closeToTray: true,
       theme: "dark",
     });
   });
@@ -187,5 +192,34 @@ describe("useSettingsStore", () => {
     await useSettingsStore.getState().setTheme(api, "light");
 
     expect(api.saveSettings).toHaveBeenCalledWith(expect.objectContaining({ tabsEnabled: false }));
+  });
+
+  it("defaults closeToTray to true and loads it from settings", async () => {
+    await useSettingsStore.getState().loadLocale(createApi());
+    expect(useSettingsStore.getState().closeToTray).toBe(true);
+
+    await useSettingsStore.getState().loadLocale(createApi({
+      getSettings: vi.fn().mockResolvedValue({ closeToTray: false }),
+    }));
+    expect(useSettingsStore.getState().closeToTray).toBe(false);
+  });
+
+  it("setCloseToTray updates state and persists", async () => {
+    const api = createApi();
+
+    const ok = await useSettingsStore.getState().setCloseToTray(api, false);
+
+    expect(ok).toBe(true);
+    expect(useSettingsStore.getState().closeToTray).toBe(false);
+    expect(api.saveSettings).toHaveBeenCalledWith(expect.objectContaining({ closeToTray: false, tabsEnabled: true }));
+  });
+
+  it("other setters preserve closeToTray", async () => {
+    useSettingsStore.setState({ closeToTray: false });
+    const api = createApi();
+
+    await useSettingsStore.getState().setTabsEnabled(api, false);
+
+    expect(api.saveSettings).toHaveBeenCalledWith(expect.objectContaining({ closeToTray: false }));
   });
 });

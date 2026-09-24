@@ -211,7 +211,10 @@ function SettingsTabs() {
   const setDebugToolsEnabled = useSettingsStore((s) => s.setDebugToolsEnabled);
   const tabsEnabled = useSettingsStore((s) => s.tabsEnabled);
   const setTabsEnabled = useSettingsStore((s) => s.setTabsEnabled);
+  const closeToTray = useSettingsStore((s) => s.closeToTray);
+  const setCloseToTray = useSettingsStore((s) => s.setCloseToTray);
   const mobileAccessEnabled = bridge.capabilities.mobileAccess;
+  const trayEnabled = bridge.capabilities.tray;
   const settingsApi = useMemo<SettingsApi>(() => ({
     getSettings: bridge.getSettings,
     saveSettings: bridge.saveSettings,
@@ -284,6 +287,21 @@ function SettingsTabs() {
               />
             </div>
           </FieldGroup>
+          {trayEnabled && (
+            <FieldGroup className="mt-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium leading-none">{t("settings.closeToTray")}</span>
+                  <span className="text-xs text-muted-foreground">{t("settings.closeToTrayDesc")}</span>
+                </div>
+                <Switch
+                  checked={closeToTray}
+                  aria-label={t("settings.closeToTray")}
+                  onCheckedChange={(checked) => { void setCloseToTray(settingsApi, checked); }}
+                />
+              </div>
+            </FieldGroup>
+          )}
         </TabsContent>
 
         {mobileAccessEnabled && (
