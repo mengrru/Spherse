@@ -809,6 +809,16 @@ export const zhCN = {
   "content-browser.split": "分窗",
   // 点击 markdown 内部链接指向的文件不存在时的 toast 错误提示，{path} 为目标文件相对项目根的路径
   "content-browser.linkNotFound": "找不到文件：{path}",
+  // 内容浏览器（主内容区 / 分窗 / 浮窗 / 快捷链接面板）读取文件失败时内容区显示的错误：文件已不存在
+  "content-browser.loadError.notFound": "文件不存在",
+  // 读取文件失败：该路径受访问策略限制（HTTP 403）
+  "content-browser.loadError.accessDenied": "无权访问该文件",
+  // 读取文件失败：项目暂不可用（项目未注册或运行时已关闭等项目级 404），通常重连后可恢复
+  "content-browser.loadError.unavailable": "项目暂不可用，请稍后刷新",
+  // 读取文件失败：无法连接到本地服务
+  "content-browser.loadError.network": "无法连接服务，请稍后刷新",
+  // 读取文件失败：其他服务端错误或响应异常
+  "content-browser.loadError.failed": "读取文件失败",
   // 打开无法在应用内预览的二进制文件（如 PDF / Word / 音视频 / 压缩包）时，占位卡的主标题
   "content-browser.unsupported.title": "此文件类型无法在 Spherse 内预览",
   // 占位卡说明文案，解释为何不能预览（二进制文件）以及可改用系统默认应用打开

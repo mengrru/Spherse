@@ -181,7 +181,7 @@ describe("SplitLayout", () => {
     readContent.mockRejectedValue(new ApiError("boom", 500));
     setup();
     act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "a.md" }));
-    expect(await screen.findByText("boom", undefined, { timeout: 3000 })).toBeInTheDocument();
+    expect(await screen.findByText("Failed to load file", undefined, { timeout: 3000 })).toBeInTheDocument();
     expect(split()).toEqual({ target: { kind: "file", path: "a.md" }, ratio: 0.5 });
   });
 });

@@ -39,7 +39,7 @@
 | 打开分窗 API | `useOpenSplit(): (filePath) => void`，`projectId` 取自 `useProjectCtx`。「当前路由即该文件」用 `useMatch` content 路由 + `useSearchParams` 判定（不手写解析） |
 | 移动语义 | 目标不是左侧当前文件 → 直接 `openSplit`。目标是左侧当前文件 → **不先写 store**，改为走关闭当前 tab 的导航并在 nav state 附带 `openSplit: path`；由 `SplitRouteBridge`（挂 `ProjectRuntimeBridges`）在 location 实际到达后提交 `openSplit` 并以 `replace` 清 state（同 `TabRouteBridge` 处理 `closeTab` 的时序）。这样左侧有未保存编辑（右键菜单入口不受 header 编辑态隐藏保护）时，blocker 取消 → 分窗不会打开，不会出现左右同文件且右侧过期。tabs 关闭时 fallback 为回欢迎页（同 header X），并 `dropFromProjectNavHistory` 该 URL，避免 Back 把文件重开到左侧。需要 `use-tab-actions` 的关闭动作支持附加 nav state，由 tabs 导出窄命令 hook |
 | 文件失效 | 两条路径：① 侧栏删除：`UserFilePanel` 的 `onDeleted` 组合 tabs 的 `useCloseDeletedFileTabs` 与 split-pane 的 `useCloseDeletedSplit`（`isPathAtOrUnder`，删父目录同样关闭）；② 外部删除 / 重启时文件已不存在：`useContentFile` 暴露 `notFound`（仅 HTTP 404），右栏 `notFound` 时自动结束分窗。**其他错误（5xx、401、网络、服务端重连中）不关闭**，保留错误 + 刷新按钮，避免误删用户刻意保留的布局。注意 TanStack Query refetch 失败时保留旧 `data`，故判定不依赖 `content === null` |
-| 404 判定 | content GET 在文件不存在时返回 `{ error, code: "file_not_found" }`（`CONTENT_ERROR_CODES`，`@spherse/contracts`；server `notFound(message, code)`），与项目级 404（`Unknown project`、`RuntimeClosedError`）区分。`ApiClient` 新增 `readContent(path)`：非 ok 时抛 `ApiError(status, code)`；`useContentFile` 改用它，仅该 code 映射为原 `"File not found"` 文案并置 `notFound`（不重试）。既有 `getContent`（null 语义）不变，UI SDK `content.get`、链接存在检查、`reloadFromDisk` 不受影响 |
+| 404 判定 | content GET 在文件不存在时返回 `{ error, code: "file_not_found" }`（`CONTENT_ERROR_CODES`，`@spherse/contracts`；server `notFound(message, code)`），与项目级 404（`Unknown project`、`RuntimeClosedError`）区分。`ApiClient` 新增 `readContent(path)`：非 ok 时抛 `ApiError(status, code)`；`useContentFile` 改用它，仅该 code 置 `notFound`（不重试）。既有 `getContent`（null 语义）不变，UI SDK `content.get`、链接存在检查、`reloadFromDisk` 不受影响 |
 | 分隔条 | 新 hook `useSplitDivider`：pointer capture 拖拽（写法参考 `components/floating-frame/use-resize.ts`），拖动中更新本地 ratio，pointerup 提交 store；`projectId` 变化时重置本地 ratio。双击恢复 0.5。键盘：`role="separator"`、`tabIndex=0`、`aria-orientation="vertical"`、`aria-valuemin/max/now`（0-100）、`aria-controls` 指向右栏，方向键按 5% 步进；RTL 下拖拽方向与方向键翻转 |
 | 最小宽度 | 渲染时也 clamp，不只在拖拽中：`ResizeObserver` 取容器宽度，纯函数 `clampRatio(ratio, containerWidth)` 保证左栏 ≥ `SPLIT_MIN_MAIN_WIDTH`（400px，左栏承载 chat）、右栏 ≥ `SPLIT_MIN_PANE_WIDTH`（320px）；容器过窄时回落 0.5。两栏均 `min-w-0`。窗口缩放、side panel pin/unpin 都会触发重算 |
 | 拖动与 iframe | pointer capture 保证拖动事件路由到分隔条；拖动期间额外渲染全屏透明遮罩（`fixed inset-0`）兜底，覆盖两栏 iframe，分隔条带 `data-dragging`；捕获丢失（`lostpointercapture`）同样结束拖动 |
@@ -189,7 +189,7 @@ type Persisted = Record<string /* projectId */, SplitPaneState>;
 | m2 | minor | 分隔条 `setPointerCapture` 无 try/catch、无 `lostpointercapture` | 已修 |
 | m3 | minor | 分窗路径未归一化，右键菜单比较可能失配 | 已修：store `openSplit` 归一化 |
 | m4 | minor | `useContentFile` 重复硬编码重试次数 | 已修：共享 `DEFAULT_QUERY_RETRIES` |
-| m5 | minor | 非 404 错误显示服务端原始英文 | 未修：`"File not found"` 本就未 i18n，入 backlog「content 读取错误文案 i18n」 |
+| m5 | minor | 非 404 错误显示服务端原始英文 | 已修（后续调整 2） |
 | m6 | minor | Header 157 行略超软阈值 | 接受：已抽 `EditControls` |
 | m7 | minor | 深层 import `floating-chat/use-floating-session-id` | 已修：floating-chat index 导出，本次新增调用方改用；既有调用方不动 |
 | 疑点 2 | — | 分页外老会话不出现「发送至当前会话」 | 接受：与 tab 标题同源限制，见 backlog「批量解析分页外会话的 tab 标题」 |
@@ -203,3 +203,4 @@ type Persisted = Record<string /* projectId */, SplitPaneState>;
    - `useOpenSplit(target)`：「是否左侧当前页」改为 `tabKey(useRouteTabTarget()) === tabKey(target)`（tabs 导出 `useRouteTabTarget`）；nav state `openSplit` 为 `TabTarget`
    - `SplitPaneView` 按 kind 分发；`useSplitFilePath` 改为 `useSplitTarget`
    - 扩展新 kind 需：`target.ts` 加入 kind、`SplitPaneView` 加渲染分支、对应入口调用 `useOpenSplit`；chat 需另定同 session 左右并存、`onNavigateToPath` 去向、划词当前会话候选等规则
+2. **content 读取错误文案 i18n**：`useContentFile` 按错误类型映射到 `content-browser.loadError.*`——`file_not_found` → notFound、403 → accessDenied、其余 404（项目级）→ unavailable、`TypeError`（fetch 网络失败）→ network、其他 → failed；消费方（主内容区 / 分窗 / 浮窗 / 快捷链接面板）无需改动
