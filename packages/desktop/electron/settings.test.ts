@@ -13,6 +13,7 @@ vi.mock("electron-store", () => ({
 }));
 
 vi.mock("electron", () => ({
+  app: { isPackaged: false },
   nativeTheme: { themeSource: "system" },
 }));
 
@@ -219,6 +220,29 @@ describe("closeToTray persistence", () => {
     settingsStore.set("settings", undefined);
     saveSettings({ locale: "zh-CN", models });
     expect(settingsStore.get("settings")?.closeToTray).toBe(true);
+  });
+
+  it("defaults closeToTray to false in an unpackaged dev run", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    try {
+      settingsStore.set("settings", undefined);
+      expect(getCloseToTray()).toBe(false);
+      saveSettings({ locale: "zh-CN", models });
+      expect(settingsStore.get("settings")?.closeToTray).toBe(false);
+      expect(getMaskedSettings()?.closeToTray).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("keeps an explicit closeToTray choice in an unpackaged dev run", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    try {
+      settingsStore.set("settings", { locale: "zh-CN", closeToTray: true, models });
+      expect(getCloseToTray()).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("saveSettings preserves previous closeToTray when incoming omits it", () => {

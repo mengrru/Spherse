@@ -140,3 +140,24 @@ test("mobile hides the content browser header for html files while tabs are enab
     await closeApp(app);
   }
 });
+
+test("page below the tab bar fits the content area even when its content is long", async () => {
+  const project = await createFileTreeProject();
+  const lines = Array.from({ length: 400 }, (_, i) => `Line ${i + 1}\n`).join("\n");
+  await writeFile(path.join(project.root, "long.md"), `# Long\n\n${lines}`);
+  const { app, page } = await launchFileTreeApp(project);
+
+  try {
+    await treeButton(page, "long.md").click();
+    await expect(tabs(page)).toHaveText(["欢迎页", "README", "long"]);
+    await expect(page.locator("[data-content-browser]")).toContainText("Line 400");
+
+    const mainBox = (await page.locator("main").boundingBox())!;
+    const tabBarBox = (await tabBar(page).boundingBox())!;
+    const browserBox = (await page.locator("[data-content-browser]").boundingBox())!;
+    expect(Math.abs(browserBox.y - (tabBarBox.y + tabBarBox.height))).toBeLessThan(1);
+    expect(browserBox.y + browserBox.height).toBeLessThanOrEqual(mainBox.y + mainBox.height + 0.5);
+  } finally {
+    await closeApp(app);
+  }
+});
