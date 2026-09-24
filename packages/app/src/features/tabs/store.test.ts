@@ -22,7 +22,7 @@ async function loadStore(initial: Record<string, string> = {}) {
   const storage = createLocalStorageMock(initial);
   vi.stubGlobal("localStorage", storage);
   vi.resetModules();
-  const { useTabsStore } = await import("./tabs-store");
+  const { useTabsStore } = await import("./store");
   return { useTabsStore, storage };
 }
 

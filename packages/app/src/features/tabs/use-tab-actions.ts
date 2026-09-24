@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useProjectCtx } from "../../context/project-context";
-import { useTabsStore } from "../../stores/tabs-store";
+import { useTabsStore } from "./store";
 import type { NavState } from "../../lib/nav-state";
 import {
   isPathAtOrUnder,

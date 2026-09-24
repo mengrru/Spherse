@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useProjectCtx } from "../../context/project-context";
-import { useTabsStore } from "../../stores/tabs-store";
+import { useTabsStore } from "./store";
 import { dropFromProjectNavHistory } from "../../lib/use-project-navigation";
 import { hasTabNavState, readNavState } from "../../lib/nav-state";
 import { tabKey } from "../../lib/tab-target";

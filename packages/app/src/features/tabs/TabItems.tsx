@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { FileIcon, GlobeIcon, HouseIcon, MessageSquareIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
-import { useTabsStore } from "../../stores/tabs-store";
+import { useTabsStore } from "./store";
 import type { TabTarget } from "../../lib/tab-target";
 import { fileDisplayName } from "../../lib/file-name";
 import { TabShell, type TabDragProps } from "./TabShell";

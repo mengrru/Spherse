@@ -32,7 +32,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 - Settings 不是路由——是 App shell 级全局 modal（app-ui-store 控制开关与 tab 定位）
 - **remount 下放 page 级**：ProjectScope 作为 layout 不因项目/路由切换重挂；需要重建的视图由各 page 自持 key——`<Chat key={sessionId}>`、ContentBrowser 按 path、WelcomePage 按 projectId
 - `pages/` 是薄 route adapter：参数解析与缺参重定向，不承载业务逻辑
-- **内容区标签页**（`features/tabs/`，全局设置 `tabsEnabled` 开关，默认开）：tab 由路由派生——`TabRouteBridge` 把当前 chat / content / browser 路由 upsert 进 `tabs-store`，打开入口只管 `navigate`；非活跃 tab 不渲染，点击即导航到其 URL
+- **内容区标签页**（`features/tabs/`，全局设置 `tabsEnabled` 开关，默认开）：tab 由路由派生——`TabRouteBridge` 把当前 chat / content / browser 路由 upsert 进 feature-local store（`features/tabs/store.ts`，外部只经 `useCloseActiveTab` / `useCloseDeletedFileTabs` / `useTabsEnabled` 访问），打开入口只管 `navigate`；非活跃 tab 不渲染，点击即导航到其 URL
   - 欢迎页为虚拟首 tab（不入存储、不可关闭）；活跃 tab 不存储，由当前路由计算
   - 关闭活跃 tab = `navigate(邻居, { replace, state: { closeTab, closedUrl } })`，导航实际发生后 bridge 才移除 tab 并清出 nav 栈，被离开守卫拦截时 tab 不丢；bridge 处理后以 replace 清空 state
   - 浏览器页内导航带 `replaceTab` 原位替换；浮窗 session、被 BrowserPage 拒绝的 url 不建 tab
@@ -51,12 +51,11 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | settings-store | locale / theme / debugTools / tabsEnabled（`loaded` 标记区分未加载与默认值） | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
 | TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / triggers / welcome-page / theme-settings | 内存 cache，项目关闭清除 |
 | project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
-| tabs-store | 每项目内容区 tab 列表（仅 target 与顺序，标题读 Query） | localStorage `spherse:tabs`（全局单 key，按 projectId 分组，加载时逐项校验） |
-| feature stores | 折叠、浮窗、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
+| feature stores | 折叠、浮窗、内容区 tab 列表、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
 
 - side panel 偏好在 `side-panel-store`（localStorage `spherse:side-panel:pinned`），不在 app-store
 - feature store 持久化分布：
-  - localStorage：floating-chat（`spherse:floating-chat:<projectId>`）、floating-content-browser 与 browser（全局单 key）
+  - localStorage：floating-chat（`spherse:floating-chat:<projectId>`）、floating-content-browser、browser 与 tabs（`spherse:tabs`，均为全局单 key；tabs 按 projectId 分组，只存 target 与顺序，加载时逐项校验）
   - 纯内存（关项目即清）：agent-session-list 折叠、agent-trigger 运行态
 - **query key 一律 `["projects", projectId, ...]`**（`queries/keys.ts` factory）；文件内容 query 定义在 `features/content-browser/hooks/useContentFile.ts`——域 key 统一，定义位置按消费方就近
 - **项目关闭清缓存**：`clearProjectQueries` 三步——generation++ → cancelQueries → removeQueries；generation 递增使迟到异步结果拒绝写入已清缓存
@@ -79,7 +78,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 
 ## 项目生命周期
 
-- 项目关闭级联清理单一入口 `closeProjectCascade`（`layouts/project-lifecycle.ts`，调用方 `use-project-actions.ts` 只保留导航/toast）：app-store `closeProject`（host 侧关闭，失败即抛、本地不动）→ chat session store `disconnectProject`（断开该项目全部 chat 连接与 TTL 清理）→ `clearProjectQueries` → 各 feature store 与 tabs-store `clearProject` → `clearProjectData` → `clearProjectNavHistory` → `clearLastRoute`
+- 项目关闭级联清理单一入口 `closeProjectCascade`（`layouts/project-lifecycle.ts`，调用方 `use-project-actions.ts` 只保留导航/toast）：app-store `closeProject`（host 侧关闭，失败即抛、本地不动）→ chat session store `disconnectProject`（断开该项目全部 chat 连接与 TTL 清理）→ `clearProjectQueries` → 各 feature store `clearProject` → `clearProjectData` → `clearProjectNavHistory` → `clearLastRoute`
 - 清理面为显式清单，`project-lifecycle.structure.test.ts` 递归扫描全部定义 `clearProject` action 的 store 强制其出现在 cascade 中——新增 per-project store 必须定义 `clearProject` 并纳入清单；不做注册表/事件总线
 - projectId 全链路一致：URL param → ProjectContext（`useProjectCtx`）→ query key → localStorage key 后缀 → bus 订阅 key
 - 依赖注入：`ProjectContext` 注入稳定只读的 projectId / projectRoot；`useConnection()` 返回 connection 本体，`useApiClient(projectId)` 从 connection 派生 ApiClient

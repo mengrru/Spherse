@@ -234,7 +234,6 @@ spherse/
 │   │       │   ├── project-data-store.ts # 前端运行时投影（当前仅 initialMessage 交接）
 │   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗 open 状态等）
 │   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools/tabsEnabled 等持久化设置（与设置文件同步）
-│   │       │   ├── tabs-store.ts         # 每项目内容区 tab 列表（localStorage spherse:tabs，closeProjectCascade 清理）
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │   │       ├── layouts/
@@ -287,7 +286,7 @@ spherse/
 │   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
-│   │       │   ├── tabs/                 # 内容区标签栏：TabBar（欢迎页固定首 tab、拖拽排序移动端禁用）、TabRouteBridge（路由派生 upsert / 关闭 / 替换）、useCloseActiveTab / useCloseDeletedFileTabs
+│   │       │   ├── tabs/                 # 内容区标签栏：store.ts（每项目 tab 列表，localStorage spherse:tabs）、TabBar（欢迎页固定首 tab、拖拽排序移动端禁用）、TabRouteBridge（路由派生 upsert / 关闭 / 替换）、useCloseActiveTab / useCloseDeletedFileTabs
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
 │   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 含默认模型 + 思考强度选择 ThinkingLevelField、高级采样参数，支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、设置 store、类型与测试
 │   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）+ WelcomePageQueryBridge（project.yaml fs-watch/reconnect → welcome-page 查询失效，ProjectRuntimeBridges 挂载）

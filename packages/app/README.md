@@ -92,6 +92,7 @@ src/
 - `side-panel-store` 管理 pinned、hover、mobileOpen 等跨层 UI 状态。
 - 只被单个 feature 使用的状态放 `features/<name>/store.ts`。feature-local store 不应被其他 feature 或全局 store import。
 - 其他 feature 需要该状态的投影时，由拥有者 feature 导出窄 selector hook（唯一公共出口，如 chat 的 `runtime/selectors.ts` 的 `useSessionStreaming`），不得直接 import 对方的 store 或内部模块。
+- 归属按落地后的实际访问方判定，不按设计时预想的写入方：其他 feature 只经拥有者导出的 hook（含命令型 hook，如 tabs 的 `useCloseActiveTab`）读写时仍是 feature-local；只有多个 feature 必须直接操作同一份状态时才上提 `stores/`。因为上提会暴露绕过拥有者编排（导航时序、守卫等）的直接写入口。`layouts/project-lifecycle.ts` 清理 feature store 不算跨 feature 访问。
 - 全局 store 不得依赖 feature-local store。
 - store 呿名为 `use{SemanticName}Store`，作用域由文件位置表达。
 - 关闭项目时由 `layouts/project-lifecycle.ts` 的 `closeProjectCascade` 显式清理所有 per-project store 和 query cache：新增 per-project store 必须定义 `clearProject` action 并加入该清单，`project-lifecycle.structure.test.ts` 会强制检查。

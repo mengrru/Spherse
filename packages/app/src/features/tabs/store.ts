@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { isPathAtOrUnder, isTabTarget, normalizeTabTarget, tabKey, type TabTarget } from "../lib/tab-target";
+import { isPathAtOrUnder, isTabTarget, normalizeTabTarget, tabKey, type TabTarget } from "../../lib/tab-target";
 
 type TabsByProject = Record<string, TabTarget[]>;
 

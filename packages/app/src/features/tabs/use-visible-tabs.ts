@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { useProjectCtx } from "../../context/project-context";
 import { useFeature } from "../../lib/use-feature";
 import type { TabTarget } from "../../lib/tab-target";
-import { useTabsStore } from "../../stores/tabs-store";
+import { useTabsStore } from "./store";
 
 const EMPTY_TABS: TabTarget[] = [];
 

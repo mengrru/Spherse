@@ -9,7 +9,7 @@ import { ProjectProvider } from "../../context/project-context";
 import { createMockHostBridge } from "../../test/host-bridge";
 import { projectQueryKeys } from "../../queries/keys";
 import { useSettingsStore } from "../../stores/settings-store";
-import { useTabsStore } from "../../stores/tabs-store";
+import { useTabsStore } from "./store";
 import { useFloatingChatStore } from "../floating-chat/store";
 import { TabBar } from "./TabBar";
 import { TabRouteBridge } from "./TabRouteBridge";

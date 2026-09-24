@@ -4,7 +4,7 @@ import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useIsMobile } from "../../hooks/use-mobile";
 import { projectHomeUrl, tabKey, tabUrl } from "../../lib/tab-target";
-import { useTabsStore } from "../../stores/tabs-store";
+import { useTabsStore } from "./store";
 import { TargetTab, WelcomeTab } from "./TabItems";
 import type { TabDragProps } from "./TabShell";
 import { useIsWelcomeRoute } from "./use-route-tab";

@@ -10,7 +10,7 @@ import { useTriggerStore } from "../features/agent-trigger/store";
 import { useFloatingChatStore } from "../features/floating-chat/store";
 import { useFloatingContentBrowserStore } from "../features/floating-content-browser/store";
 import { useBrowserStore } from "../features/browser/store";
-import { useTabsStore } from "../stores/tabs-store";
+import { useTabsStore } from "../features/tabs/store";
 
 export async function closeProjectCascade(
   bridge: HostBridge,
