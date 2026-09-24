@@ -91,6 +91,17 @@ export function Header({
             <SearchIcon />
           </Button>
         )}
+        {onSplit && !isEditing && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onSplit}
+            title={t("content-browser.split")}
+            aria-label={t("content-browser.split")}
+          >
+            <Columns2Icon />
+          </Button>
+        )}
         {isHtml && !isEditing && (
           <ToggleGroup
             variant="outline"
@@ -111,17 +122,6 @@ export function Header({
               {t("content-browser.source")}
             </ToggleGroupItem>
           </ToggleGroup>
-        )}
-        {onSplit && !isEditing && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onSplit}
-            title={t("content-browser.split")}
-            aria-label={t("content-browser.split")}
-          >
-            <Columns2Icon />
-          </Button>
         )}
         {editing && <EditControls editing={editing} />}
         {!isEditing && (

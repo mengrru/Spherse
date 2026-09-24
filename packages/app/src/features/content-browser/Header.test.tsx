@@ -52,6 +52,18 @@ describe("content-browser Header", () => {
     expect(onSplit).toHaveBeenCalled();
   });
 
+  it("places split before all text buttons for html files", () => {
+    renderWithProviders(
+      <Header {...baseProps({ isHtml: true, onSplit: vi.fn(), editing: editing() })} />,
+      { locale: "en" },
+    );
+    const split = screen.getByRole("button", { name: "Split" });
+    for (const name of ["Preview", "Source", "Edit"]) {
+      const other = screen.getByRole("button", { name });
+      expect(split.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
   it("hides split and close while editing", () => {
     renderWithProviders(
       <Header {...baseProps({ onSplit: vi.fn(), editing: editing({ isEditing: true, isDirty: true }) })} />,
