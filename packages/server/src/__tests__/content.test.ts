@@ -5,6 +5,7 @@ import path from "node:path";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import { registerContentRoutes } from "../routes/content.js";
 import type { ProjectRegistry } from "../registry.js";
+import { HttpError } from "../errors.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -29,6 +30,10 @@ describe("content route", () => {
     app.addHook("preHandler", async (req: FastifyRequest) => {
       req.projectCtx = { projectManager: { getRootPath: () => tmpDir } };
     });
+    app.setErrorHandler((err, _req, reply) => {
+      if (err instanceof HttpError) return reply.code(err.statusCode).send(err.body ?? { error: err.message });
+      return reply.send(err);
+    });
     registerContentRoutes(app, {} as ProjectRegistry);
     await app.ready();
   });
@@ -52,6 +57,12 @@ describe("content route", () => {
     const body = JSON.parse(res.body);
     expect(body.content).toBe("");
     expect(body.binary).toBe(true);
+  });
+
+  it("returns 404 with the file_not_found code for a missing file", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/content/missing.md" });
+    expect(res.statusCode).toBe(404);
+    expect(JSON.parse(res.body)).toEqual({ error: "Not found", code: "file_not_found" });
   });
 
   it("returns binary:false (not undefined) for an empty text file", async () => {

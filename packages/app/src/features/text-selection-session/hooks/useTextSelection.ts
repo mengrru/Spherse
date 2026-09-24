@@ -80,7 +80,10 @@ export function useTextSelection({
       if (!contentEl || selection.rangeCount === 0) return;
 
       const range = selection.getRangeAt(0);
-      if (!contentEl.contains(range.commonAncestorContainer)) return;
+      if (!contentEl.contains(range.commonAncestorContainer)) {
+        setSelectionState(null);
+        return;
+      }
 
       const text = selection.toString().trim();
       const highlightRects = getHighlightRects(range);
@@ -113,8 +116,7 @@ export function useTextSelection({
       // Native copy inside editable targets (e.g. the start-session popover
       // comment box) must keep working untouched.
       if (isEditableTarget(event.target)) return;
-      // A fresh native selection can coexist with the snapshot (Ctrl+A, or
-      // dragging outside the content area, which skips the mouseup clear) —
+      // A fresh native selection can coexist with the snapshot (e.g. Ctrl+A) —
       // let the native copy win instead of stale snapshot text.
       const nativeSelection = window.getSelection();
       if (nativeSelection && !nativeSelection.isCollapsed && nativeSelection.toString().trim()) return;

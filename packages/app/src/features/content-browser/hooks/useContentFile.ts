@@ -1,18 +1,40 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ApiClient } from "../../../lib/api";
+import { CONTENT_ERROR_CODES } from "@spherse/contracts";
+import type { TranslationKey } from "@spherse/i18n";
+import { useI18n } from "@spherse/i18n/react";
+import { ApiError, type ApiClient } from "../../../lib/api";
+import { DEFAULT_QUERY_RETRIES } from "../../../queries/client";
 import { projectQueryKeys } from "../../../queries/keys";
 import type { ContentResponse } from "../../../lib/types";
 
+class ContentNotFoundError extends Error {}
+
+function contentErrorKey(err: unknown): TranslationKey {
+  if (err instanceof ContentNotFoundError) return "content-browser.loadError.notFound";
+  if (err instanceof ApiError) {
+    if (err.status === 403) return "content-browser.loadError.accessDenied";
+    if (err.status === 404) return "content-browser.loadError.unavailable";
+    return "content-browser.loadError.failed";
+  }
+  if (err instanceof TypeError) return "content-browser.loadError.network";
+  return "content-browser.loadError.failed";
+}
+
 export function useContentFile(projectId: string, client: ApiClient, filePath: string) {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const queryKey = projectQueryKeys.content(projectId, filePath);
   const query = useQuery({
     queryKey,
     queryFn: async () => {
-      const data = await client.getContent(filePath);
-      if (!data) throw new Error("File not found");
-      return data;
+      try {
+        return await client.readContent(filePath);
+      } catch (err) {
+        if (err instanceof ApiError && err.code === CONTENT_ERROR_CODES.FILE_NOT_FOUND) throw new ContentNotFoundError();
+        throw err;
+      }
     },
+    retry: (failureCount, err) => !(err instanceof ContentNotFoundError) && failureCount < DEFAULT_QUERY_RETRIES,
   });
 
   return {
@@ -26,7 +48,8 @@ export function useContentFile(projectId: string, client: ApiClient, filePath: s
     },
     binary: query.data?.binary ?? false,
     loading: query.isPending,
-    error: query.error instanceof Error ? query.error.message : null,
+    error: query.error ? t(contentErrorKey(query.error)) : null,
+    notFound: query.error instanceof ContentNotFoundError,
     dataUpdatedAt: query.dataUpdatedAt,
     reload: () => {
       void query.refetch();

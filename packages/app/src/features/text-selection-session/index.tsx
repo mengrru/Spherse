@@ -1,29 +1,24 @@
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
-import type { AgentSummary, ActiveSessionInfo } from "../../lib/types";
+import { useProjectCtx } from "../../context/project-context";
 import { SelectionHighlightOverlay } from "./SelectionHighlightOverlay";
 import { TextSelectionToolbar } from "./TextSelectionToolbar";
 import { StartSessionPopover } from "./StartSessionPopover";
 import { useTextSelection } from "./hooks/useTextSelection";
+import { useSelectionSessionHandlers } from "./use-selection-session-handlers";
 
 export interface TextSelectionSessionProps {
   children: (contentRef: RefObject<HTMLDivElement | null>) => ReactNode;
   disabled: boolean;
   sourcePath: string;
-  agents: AgentSummary[];
-  projectId: string;
-  activeSessions?: ActiveSessionInfo[];
-  onStartSession?: (agentId: string, selectedText: string, sourcePath: string, comment?: string) => void;
 }
 
 export function TextSelectionSession({
   children,
   disabled,
   sourcePath,
-  agents,
-  projectId,
-  activeSessions,
-  onStartSession,
 }: TextSelectionSessionProps) {
+  const { projectId } = useProjectCtx();
+  const { agents, activeSessions, onStartSession } = useSelectionSessionHandlers();
   const [showStartPopover, setShowStartPopover] = useState(false);
   const { contentRef, selectionState, setSelectionState } = useTextSelection({
     disabled: disabled || showStartPopover,
@@ -61,7 +56,7 @@ export function TextSelectionSession({
           projectId={projectId}
           activeSessions={activeSessions}
           onSubmit={(agentId, comment) => {
-            onStartSession?.(agentId, selectionState.text, sourcePath, comment);
+            void onStartSession(agentId, selectionState.text, sourcePath, comment);
             setShowStartPopover(false);
             clearSelection();
           }}

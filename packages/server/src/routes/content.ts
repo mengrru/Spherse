@@ -8,7 +8,7 @@ import {
   isBinaryBuffer,
   BINARY_SAMPLE_SIZE,
 } from "@spherse/core";
-import { schemas, parseContract } from "@spherse/contracts";
+import { CONTENT_ERROR_CODES, schemas, parseContract } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { forbidden, notFound, badRequest, conflict } from "../errors.js";
 
@@ -77,7 +77,7 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
       try {
         stat = await fs.stat(absolutePath);
       } catch {
-        throw notFound("Not found");
+        throw notFound("Not found", CONTENT_ERROR_CODES.FILE_NOT_FOUND);
       }
 
       if (stat.isDirectory()) {

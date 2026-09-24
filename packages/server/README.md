@@ -55,7 +55,7 @@ Fastify API 层，为 Spherse 桌面应用提供多项目 HTTP + WebSocket 服�
 
 ### 错误处理规范
 
-route handler **统一通过 throw 表达错误**，不手写 `reply.code(xxx).send({ error })`。全局 `setErrorHandler`（`index.ts`）按 error 类型自动映射 HTTP 状态码，保证响应体始终为 `{ error: string }`。
+route handler **统一通过 throw 表达错误**，不手写 `reply.code(xxx).send({ error })`。全局 `setErrorHandler`（`index.ts`）按 error 类型自动映射 HTTP 状态码，保证响应体始终为 `{ error: string }`。客户端需要区分同一状态码下的不同语义时（如 content 路由「文件不存在」与项目级 404），`HttpError` 可带 `code`（`notFound(message, code)` → `{ error, code }`），code 常量属 wire 词汇，定义在 `@spherse/contracts`（如 `CONTENT_ERROR_CODES`）。
 
 错误来源：server `errors.ts` 的 `HttpError`（自带状态码）、`@spherse/core` 的语义错误（`NotFoundError`/`ValidationError`/`AccessDeniedError`）、Fastify schema 校验失败、兜底 500。具体映射见 `index.ts` 的 `setErrorHandler`。
 

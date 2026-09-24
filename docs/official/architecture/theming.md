@@ -52,7 +52,8 @@
 | `data-md-code` / `data-md-code-inline` / `data-md-quote` / `data-md-img` | CodeBlock / MarkdownContent | Markdown 元素（chat 与 document 视图共用，作用域由主题作者用父选择器表达） |
 | `data-content-doc` | ContentView | 文档视图容器 |
 | `data-project-panel` / `data-content-browser` | project-panel / content-browser | 两大面板区域 |
-| `data-tab-bar` / `data-tab`（值为 kind，+ `data-active`） / `data-tab-drop-indicator` | TabBar / TabShell | 内容区顶部标签栏、单个标签与拖拽插入指示条（独立元素，不占用标签伪元素） |
+| `data-tab-bar` / `data-tab`（值为 kind，+ `data-active`） / `data-tab-drop-indicator` | TabBar / TabShell | 内容区左栏顶部标签栏、单个标签与拖拽插入指示条（独立元素，不占用标签伪元素） |
+| `data-split-layout` / `data-split-main` / `data-split-divider`（拖动中 + `data-dragging`） / `data-split-pane` | SplitLayout | 内容区横向容器、左栏（恒在）、分隔条与右侧分窗（右栏内容区根仍为 `data-content-browser`） |
 | `data-toast-root` | `components/ui/sonner.tsx` | 全局 toast 视口锚点 |
 | `data-project-avatar`（+ `data-active`） | ProjectAvatar | activity bar 项目头像 |
 

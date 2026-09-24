@@ -53,6 +53,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    readonly code?: string,
   ) {
     super(message);
   }
@@ -61,7 +62,7 @@ export class ApiError extends Error {
 async function assertOk(res: Response): Promise<void> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: "request failed" }));
-    throw new ApiError(err.error ?? "request failed", res.status);
+    throw new ApiError(err.error ?? "request failed", res.status, typeof err.code === "string" ? err.code : undefined);
   }
 }
 
@@ -251,6 +252,12 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
     async getContent(filePath: string): Promise<ContentResponse | null> {
       const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(filePath)}`);
       if (!res.ok) return null;
+      return parseJsonResponse<ContentResponse>(res, schemas.contentResponse);
+    },
+
+    async readContent(filePath: string): Promise<ContentResponse> {
+      const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(filePath)}`);
+      await assertOk(res);
       return parseJsonResponse<ContentResponse>(res, schemas.contentResponse);
     },
 

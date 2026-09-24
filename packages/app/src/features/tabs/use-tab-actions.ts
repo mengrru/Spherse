@@ -38,18 +38,18 @@ export function useTabActions() {
   const activeKey = routeTarget ? tabKey(routeTarget) : null;
   const currentUrl = location.pathname + location.search;
 
-  const closeTab = useCallback((key: string) => {
+  const closeTab = useCallback((key: string, extraState?: NavState) => {
     if (key !== activeKey) {
       useTabsStore.getState().closeTab(projectId, key);
       return;
     }
     const target = neighborUrl(projectId, visibleTabs, pickNeighborKey(visibleTabs.map(tabKey), key));
-    const state: NavState = { closeTab: key, closedUrl: currentUrl };
+    const state: NavState = { ...extraState, closeTab: key, closedUrl: currentUrl };
     navigate(target, { replace: true, state });
   }, [activeKey, currentUrl, navigate, projectId, visibleTabs]);
 
-  const closeActiveTab = useCallback((fallback: () => void) => {
-    if (enabled && activeKey) closeTab(activeKey);
+  const closeActiveTab = useCallback((fallback: () => void, extraState?: NavState) => {
+    if (enabled && activeKey) closeTab(activeKey, extraState);
     else fallback();
   }, [activeKey, closeTab, enabled]);
 
@@ -76,7 +76,7 @@ export function useTabActions() {
   return { activeKey, closeTab, closeActiveTab, closeDeletedFileTabs };
 }
 
-export function useCloseActiveTab(): (fallback: () => void) => void {
+export function useCloseActiveTab(): (fallback: () => void, extraState?: NavState) => void {
   return useTabActions().closeActiveTab;
 }
 

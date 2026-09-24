@@ -14,6 +14,7 @@ import { UnsupportedFileCard } from "./UnsupportedFileCard";
 import { resolveMarkdownImagePath } from "./image-path";
 import { resolveMarkdownLink } from "./markdown-link";
 import { parseFrontmatter } from "./frontmatter";
+import { useFindScope } from "./find-scope";
 
 interface ContentViewProps {
   filePath: string;
@@ -32,6 +33,7 @@ interface ContentViewProps {
   refreshKey: number;
   findOpen?: boolean;
   onFindOpenChange?: (open: boolean) => void;
+  onOpenFile?: (path: string) => void;
 }
 
 export function ContentView({
@@ -51,12 +53,19 @@ export function ContentView({
   refreshKey,
   findOpen: findOpenProp,
   onFindOpenChange,
+  onOpenFile,
 }: ContentViewProps) {
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const openLink = useOpenExternalLink();
   const navigate = useNavigate();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const { isActive: isActiveFindScope, setOwnRoot: setFindScopeRoot } = useFindScope();
+  const scrollAreaRef = useMemo(
+    () => mergeRefs(contentRef, scrollRef, setFindScopeRoot),
+    [contentRef, setFindScopeRoot],
+  );
   const { frontmatter, body } = useMemo(
     () => (isMarkdown && content ? parseFrontmatter(content) : { frontmatter: null, body: content ?? "" }),
     [isMarkdown, content],
@@ -79,7 +88,7 @@ export function ContentView({
       if (resolved.kind === "anchor") {
         event.preventDefault();
         if (resolved.anchor) {
-          document.getElementById(resolved.anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+          findAnchor(scrollRef.current, resolved.anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
         }
         return;
       }
@@ -90,9 +99,10 @@ export function ContentView({
         toast.error(t("content-browser.linkNotFound", { path: resolved.path }));
         return;
       }
-      navigate(`/project/${projectId}/content?path=${encodeURIComponent(resolved.path)}`);
+      if (onOpenFile) onOpenFile(resolved.path);
+      else navigate(`/project/${projectId}/content?path=${encodeURIComponent(resolved.path)}`);
     },
-    [filePath, client, projectId, navigate, t, openLink],
+    [filePath, client, projectId, navigate, t, openLink, onOpenFile],
   );
 
   const findEnabled =
@@ -104,7 +114,6 @@ export function ContentView({
     !isImage &&
     !(isHtml && htmlView === "preview");
 
-  const scrollRef = useRef<HTMLDivElement | null>(null);
   const [internalFindOpen, setInternalFindOpen] = useState(false);
   const findOpen = (findOpenProp ?? internalFindOpen) && findEnabled;
   const setFindOpen = onFindOpenChange ?? setInternalFindOpen;
@@ -117,13 +126,14 @@ export function ContentView({
     if (!findEnabled) return;
     const handler = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        if (!isActiveFindScope()) return;
         event.preventDefault();
         setFindOpen(true);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [findEnabled, setFindOpen]);
+  }, [findEnabled, setFindOpen, isActiveFindScope]);
 
   if (isHtml && htmlView === "preview" && !isEditing && !loading && !error) {
     return (
@@ -169,7 +179,7 @@ export function ContentView({
           onClose={() => setFindOpen(false)}
         />
       )}
-      <div ref={mergeRefs(contentRef, scrollRef)} className="flex-1 overflow-y-auto p-4">
+      <div ref={scrollAreaRef} className="flex-1 overflow-y-auto p-4">
         {loading && <p className="p-8 text-center text-muted-foreground">{t("common.loading")}</p>}
         {error && <p className="p-8 text-center text-destructive">{error}</p>}
         {!loading && !error && binary && <UnsupportedFileCard filePath={filePath} />}
@@ -186,4 +196,9 @@ export function ContentView({
       </div>
     </div>
   );
+}
+
+function findAnchor(root: HTMLElement | null, id: string): Element | undefined {
+  if (!root) return undefined;
+  return Array.from(root.querySelectorAll("[id]")).find((el) => el.id === id);
 }

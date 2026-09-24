@@ -28,6 +28,8 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
     requestDelete,
     onFloatFile,
     floatedFilePaths,
+    onSplitFile,
+    splitFilePath,
     readOnly,
   } = useFileTreeCtx();
 
@@ -53,6 +55,8 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
       onDelete={() => requestDelete(item)}
       onFloatFile={onFloatFile}
       floatedFilePaths={floatedFilePaths}
+      onSplitFile={onSplitFile}
+      splitFilePath={splitFilePath}
     >
       {row}
     </FileTreeContextMenu>

@@ -153,6 +153,7 @@ npm run build:landing   # 构建 landing page（含 @spherse/i18n 依赖构建�
 - **路径安全**：项目内路径解析必须用 `@spherse/core` 的 `resolveProjectPath` / `assertInsideProject` / `isPathInside`，禁止 `startsWith` 前缀判断
 - **API contract**：边界 schema 统一在独立包 `@spherse/contracts` 并复用同一套 parser，规则见 [server README](packages/server/README.md) 与 [contracts README](packages/contracts/README.md)
 - **契约测试（跨层接缝）**：对 core 的 PM 写入门面与 `SessionPort` 方法，消费方包（server/desktop）至少各有一条不 mock 被测方法本身的契约测试——层间解耦越彻底，mock 拼接缝的盲区越大
+- **持久化格式兼容只针对已发布数据**：项目文件、sessions.db、localStorage、electron settings 等格式变更，只为已随 release 发布、可能存在于用户环境中的格式写迁移 / 兼容读取；尚未发布的格式直接改、不留兼容分支，因为没有用户数据需要迁移，兼容代码只增加长期维护面
 - **不添加注释**：除非用户明确要求
 - **Lint**：ESLint 9 flat config 在 root `eslint.config.js`；pre-commit 钩子自动执行 `npm run lint`
 - **Git**：commit message 用 `feat:` / `fix:` / `chore:` 前缀

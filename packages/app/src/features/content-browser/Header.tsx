@@ -2,22 +2,27 @@ import { useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
-import { ArrowLeftIcon, CheckIcon, CopyIcon, RefreshCwIcon, SearchIcon, XIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckIcon, Columns2Icon, CopyIcon, RefreshCwIcon, SearchIcon, XIcon } from "lucide-react";
 
-interface HeaderProps {
-  filePath: string;
+export interface HeaderEditing {
   isDirty: boolean;
   isEditing: boolean;
   isEditable: boolean;
+  saving: boolean;
+  onEnter: () => void;
+  onCancel: () => void;
+  onSave: () => void;
+}
+
+interface HeaderProps {
+  filePath: string;
   isHtml: boolean;
   htmlView: "preview" | "source";
-  saving: boolean;
   findable: boolean;
-  onBack: () => void;
+  editing?: HeaderEditing;
+  onBack?: () => void;
+  onSplit?: () => void;
   onClose: () => void;
-  onEnterEdit: () => void;
-  onCancelEdit: () => void;
-  onSave: () => void;
   onHtmlViewChange: (view: "preview" | "source") => void;
   onRefresh: () => void;
   onFindToggle: () => void;
@@ -25,35 +30,33 @@ interface HeaderProps {
 
 export function Header({
   filePath,
-  isDirty,
-  isEditing,
-  isEditable,
   isHtml,
   htmlView,
-  saving,
   findable,
+  editing,
   onBack,
+  onSplit,
   onClose,
-  onEnterEdit,
-  onCancelEdit,
-  onSave,
   onHtmlViewChange,
   onRefresh,
   onFindToggle,
 }: HeaderProps) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
+  const isEditing = editing?.isEditing ?? false;
   return (
     <div className="flex items-center gap-3 border-b border-border bg-background px-4 py-3">
-      <div className="flex shrink-0 items-center gap-1">
-        <Button variant="outline" size="sm" onClick={onBack} title={t("common.back")}>
-          <ArrowLeftIcon />
-          {t("common.back")}
-        </Button>
-      </div>
+      {onBack && (
+        <div className="flex shrink-0 items-center gap-1">
+          <Button variant="outline" size="sm" onClick={onBack} title={t("common.back")}>
+            <ArrowLeftIcon />
+            {t("common.back")}
+          </Button>
+        </div>
+      )}
       <div className="group/header flex min-w-0 flex-1 items-center gap-0">
         <span className="me-1 truncate font-mono text-sm text-muted-foreground">
-          {isDirty && <span className="me-1 text-primary">●</span>}
+          {editing?.isDirty && <span className="me-1 text-primary">●</span>}
           {filePath}
         </span>
         <Button
@@ -109,24 +112,18 @@ export function Header({
             </ToggleGroupItem>
           </ToggleGroup>
         )}
-        {isEditing ? (
-          <>
-            <Button variant="outline" size="sm" onClick={onCancelEdit}>
-              {t("common.cancel")}
-            </Button>
-            <Button
-              size="sm"
-              onClick={onSave}
-              disabled={!isDirty || saving}
-            >
-              {saving ? t("common.saving") : t("common.save")}
-            </Button>
-          </>
-        ) : isEditable ? (
-          <Button variant="outline" size="sm" onClick={onEnterEdit}>
-            {t("common.edit")}
+        {onSplit && !isEditing && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onSplit}
+            title={t("content-browser.split")}
+            aria-label={t("content-browser.split")}
+          >
+            <Columns2Icon />
           </Button>
-        ) : null}
+        )}
+        {editing && <EditControls editing={editing} />}
         {!isEditing && (
           <Button variant="ghost" size="icon-sm" onClick={onClose} title={t("common.close")} aria-label={t("common.close")}>
             <XIcon className="size-3.5" />
@@ -134,5 +131,27 @@ export function Header({
         )}
       </div>
     </div>
+  );
+}
+
+function EditControls({ editing }: { editing: HeaderEditing }) {
+  const { t } = useI18n();
+  if (editing.isEditing) {
+    return (
+      <>
+        <Button variant="outline" size="sm" onClick={editing.onCancel}>
+          {t("common.cancel")}
+        </Button>
+        <Button size="sm" onClick={editing.onSave} disabled={!editing.isDirty || editing.saving}>
+          {editing.saving ? t("common.saving") : t("common.save")}
+        </Button>
+      </>
+    );
+  }
+  if (!editing.isEditable) return null;
+  return (
+    <Button variant="outline" size="sm" onClick={editing.onEnter}>
+      {t("common.edit")}
+    </Button>
   );
 }

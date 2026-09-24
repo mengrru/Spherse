@@ -16,6 +16,8 @@ export function FileTreeContextMenu({
   onDelete,
   onFloatFile,
   floatedFilePaths,
+  onSplitFile,
+  splitFilePath,
 }: {
   node: TreeItem;
   children: React.ReactNode;
@@ -23,21 +25,29 @@ export function FileTreeContextMenu({
   onDelete: () => void;
   onFloatFile?: (filePath: string) => void;
   floatedFilePaths?: Set<string>;
+  onSplitFile?: (filePath: string) => void;
+  splitFilePath?: string | null;
 }) {
   const { t } = useI18n();
   const isFloated = floatedFilePaths?.has(node.path) ?? false;
+  const isSplit = splitFilePath === node.path;
+  const isFile = node.type === "file";
+  const hasViewItems = isFile && (onFloatFile || onSplitFile);
   return (
     <ContextMenu>
       <ContextMenuTrigger>{children}</ContextMenuTrigger>
       <ContextMenuContent>
-        {onFloatFile && node.type === "file" && (
-          <>
-            <ContextMenuItem onClick={() => onFloatFile(node.path)}>
-              {isFloated ? t("file-tree.cancelFloat") : t("file-tree.float")}
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-          </>
+        {isFile && onFloatFile && (
+          <ContextMenuItem onClick={() => onFloatFile(node.path)}>
+            {isFloated ? t("file-tree.cancelFloat") : t("file-tree.float")}
+          </ContextMenuItem>
         )}
+        {isFile && onSplitFile && (
+          <ContextMenuItem onClick={() => onSplitFile(node.path)}>
+            {isSplit ? t("file-tree.cancelSplit") : t("file-tree.split")}
+          </ContextMenuItem>
+        )}
+        {hasViewItems && <ContextMenuSeparator />}
         <ContextMenuItem onClick={() => onCreate("new-file")}>
           {t("file-tree.newFile")}
         </ContextMenuItem>

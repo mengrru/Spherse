@@ -1,5 +1,9 @@
 import { Type, type Static } from "@sinclair/typebox";
 
+export const CONTENT_ERROR_CODES = {
+  FILE_NOT_FOUND: "file_not_found",
+} as const;
+
 const fileEntry = Type.Object({
   name: Type.String(),
   type: Type.Union([Type.Literal("file"), Type.Literal("directory")]),

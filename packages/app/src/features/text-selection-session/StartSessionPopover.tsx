@@ -9,6 +9,7 @@ import { useDismissable } from "../../hooks/useDismissable";
 import { dispatchAction } from "../../ui-sdk";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useApiClient } from "../../lib/use-connection";
+import { buildSelectionPrompt } from "./use-selection-session-handlers";
 
 interface StartSessionPopoverProps {
   selectedText: string;
@@ -77,11 +78,8 @@ export function StartSessionPopover({
   const trimmedComment = comment.trim();
 
   const handleSendToSession = (sessionId: string) => {
-    const quotedText = selectedText.split("\n").map((line) => `> ${line}`).join("\n");
-    const parts = [t("text-selection.promptPrefix", { path: sourcePath, text: quotedText })];
-    if (trimmedComment) parts.push(`\n\n${trimmedComment}`);
-    const message = parts.join("");
-    dispatchAction("sendMessage", { sessionId, message }, { navigate, projectId, hostKind, client, openExternal });
+    const message = buildSelectionPrompt(t, selectedText, sourcePath, trimmedComment || undefined);
+    dispatchAction("sendMessage", { sessionId, message, open: false }, { navigate, projectId, hostKind, client, openExternal });
     onClose();
   };
 

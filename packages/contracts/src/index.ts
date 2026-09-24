@@ -59,6 +59,7 @@ export type {
   SessionStatusResponse,
 } from "./sessions.js";
 
+export { CONTENT_ERROR_CODES } from "./content.js";
 export type {
   FileEntryContract,
   FileEntriesResponse,

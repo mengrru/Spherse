@@ -12,6 +12,7 @@ describe("feature-registry", () => {
         "agent-mcp",
         "agent-trigger",
         "browser",
+        "content-split-pane",
         "floating-chat",
         "floating-content-browser",
         "open-project",

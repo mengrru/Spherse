@@ -246,9 +246,13 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 |------|---------|
 | `data-project-panel` | 项目侧边面板（agent/session 列表 + 文件树的容器，默认 `--sp-sidebar` 背景） |
 | `data-content-browser` | 内容浏览器（文档/代码查看区根容器，包含 header 与内容滚动区） |
-| `data-tab-bar` | 内容区顶部标签栏（位于右侧内容区最上方，用户可在设置中关闭；默认 `bg-muted/40` + 底边框） |
+| `data-tab-bar` | 内容区标签栏（位于内容区左栏最上方，开启分窗时不跨越右侧分窗；用户可在设置中关闭；默认 `bg-muted/40` + 底边框） |
 | `data-tab`（值为 `welcome` / `chat` / `file` / `browser`，活跃项带 `data-active="true"`） | 标签栏中的单个标签（活跃标签默认 `--sp-background` 背景） |
 | `data-tab-drop-indicator` | 拖拽排序时插入位置的竖线指示条（仅拖拽悬停时存在，默认 `--sp-primary` 色、贴标签起始边） |
+| `data-split-layout` | 内容区横向容器（包住左栏、分隔条与右侧分窗） |
+| `data-split-main` | 内容区左栏（标签栏 + 当前页面；无分窗时占满内容区） |
+| `data-split-divider` | 左右分窗之间的可拖拽分隔条（默认 1px `--sp-border`，拖动中带 `data-dragging`） |
+| `data-split-pane` | 右侧分窗（内部内容浏览器根仍为 `data-content-browser`，对 `[data-content-browser]` 的定制同样生效；可用 `[data-split-pane] [data-content-browser]` 单独定制分窗） |
 
 示例：
 

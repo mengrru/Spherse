@@ -46,6 +46,7 @@ describe("closeProjectCascade structure", () => {
       "useFloatingContentBrowserStore",
       "useBrowserStore",
       "useTabsStore",
+      "useSplitPaneStore",
     ]));
 
     for (const store of stores) {

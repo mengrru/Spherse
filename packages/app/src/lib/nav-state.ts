@@ -1,8 +1,11 @@
+import { isTabTarget, type TabTarget } from "./tab-target";
+
 export interface NavState {
   closeTab?: string;
   closedUrl?: string;
   replaceTab?: string;
   skipLeaveGuard?: boolean;
+  openSplit?: TabTarget;
 }
 
 export function readNavState(state: unknown): NavState {
@@ -13,6 +16,7 @@ export function readNavState(state: unknown): NavState {
   if (typeof s.closedUrl === "string") result.closedUrl = s.closedUrl;
   if (typeof s.replaceTab === "string") result.replaceTab = s.replaceTab;
   if (s.skipLeaveGuard === true) result.skipLeaveGuard = true;
+  if (isTabTarget(s.openSplit)) result.openSplit = s.openSplit;
   return result;
 }
 
