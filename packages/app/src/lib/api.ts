@@ -29,6 +29,9 @@ import type {
   SessionStatusResponse,
   DataReadResponseContract as DataReadResponse,
   MarketplaceManifestResponse,
+  MarketplaceProjectManifestResponse,
+  ProjectMarketplaceInstallRequest,
+  ProjectMarketplaceInstallResponse,
 } from "@spherse/contracts";
 import { parseApiResponse, schemas } from "@spherse/contracts";
 import { Type } from "@sinclair/typebox";
@@ -73,20 +76,23 @@ async function parseJsonResponse<T>(
   return parseApiResponse(schema, await res.json()) as T;
 }
 
-export function createApiClient(baseUrl: string, projectId: string, accessToken?: string | null) {
-  const apiBase = `${baseUrl}/api/projects/${projectId}`;
+function createAuthedFetch(accessToken?: string | null) {
   const authHeaders: Record<string, string> | undefined = accessToken
     ? { Authorization: `Bearer ${accessToken}` }
     : undefined;
-
-  function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  return function authedFetch(url: string, init: RequestInit = {}): Promise<Response> {
     if (!authHeaders) return fetch(url, init);
     const userHeaders = init.headers as Record<string, string> | undefined;
     return fetch(url, {
       ...init,
       headers: userHeaders ? { ...authHeaders, ...userHeaders } : authHeaders,
     });
-  }
+  };
+}
+
+export function createApiClient(baseUrl: string, projectId: string, accessToken?: string | null) {
+  const apiBase = `${baseUrl}/api/projects/${projectId}`;
+  const authedFetch = createAuthedFetch(accessToken);
 
   return {
     baseUrl,
@@ -627,6 +633,38 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
 }
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+export function createGlobalApiClient(baseUrl: string, accessToken?: string | null) {
+  const authedFetch = createAuthedFetch(accessToken);
+
+  return {
+    async listMarketplaceProjects(): Promise<MarketplaceProjectManifestResponse> {
+      const res = await authedFetch(`${baseUrl}/api/marketplace/projects`);
+      await assertOk(res);
+      return parseJsonResponse<MarketplaceProjectManifestResponse>(
+        res,
+        schemas.marketplaceProjectManifestResponse,
+      );
+    },
+
+    async installMarketplaceProject(
+      req: ProjectMarketplaceInstallRequest,
+    ): Promise<ProjectMarketplaceInstallResponse> {
+      const res = await authedFetch(`${baseUrl}/api/marketplace/projects/install`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req),
+      });
+      await assertOk(res);
+      return parseJsonResponse<ProjectMarketplaceInstallResponse>(
+        res,
+        schemas.projectMarketplaceInstallResponse,
+      );
+    },
+  };
+}
+
+export type GlobalApiClient = ReturnType<typeof createGlobalApiClient>;
 
 export function buildWsUrl(baseUrl: string, path: string, accessToken?: string | null): string {
   const wsBase = baseUrl.replace(/^http/, "ws");

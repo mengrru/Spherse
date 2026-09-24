@@ -8,6 +8,7 @@ spherse/
 │   │       ├── types.ts              # 共享类型与 provider catalog / settings 类型定义
 │   │       ├── logger.ts             # pino Logger 类型与 createSilentLogger 内部兜底工厂
 │   │       ├── factory.ts            # assembleProject() 唯一装配点（defaultCapabilities 列表、Capability.init 接线；createProject 兼容导出）——新增能力 = 此处一行
+│   │       ├── marketplace-project.ts # installMarketplaceProjectZip(zipPath, destDir)：市场项目 zip 校验（单一顶层目录/zip-slip/顶层名规则）+ tmp 解压 + 目标自动重命名（{name}-{n} 从 2 起）+ 原子移入，返回 {projectRoot, folderName}
 │   │       ├── presets.ts            # initPresets()：新项目预置 agent 注入（core 内唯一 presets import）
 │   │       ├── project-manager.ts    # ProjectManager：数据访问门面（server 不得见 store 实例）+ 写入门面（writeFile/writeBinaryFile/createEntry/deletePath/copyFileWithin = resolve+policy+per-path mutex）
 │   │       ├── project-runtime.ts    # ProjectRuntime：轻量协调层（capability 生命周期遍历：onAgentDeleted/invalidateAgent/shutdown；triggerManager/timerService 为 derived getter）
@@ -63,7 +64,7 @@ spherse/
 │   │       ├── attachments/          # 附件域：AttachmentProcessor 端口 + image-processor + sanitizer（base64 卫生不变量）+ strip/sanitize
 │   │       ├── mcp/                  # mcp-client（连接与工具适配）/ mcp-connection-manager / config / types / json-schema-to-typebox
 │   │       ├── model-providers/      # ModelCatalog 类（per-runtime 实例，所有权在组合根）+ zhipu/openai images + index（仅 images 静态目录导出）
-│   │       ├── utils/                # file-write-mutex（全链路唯一实例）/ fs-walk / path-safety / binary-detect / xml-escape / settle-within（shutdown 等待有界化）
+│   │       ├── utils/                # file-write-mutex（全链路唯一实例）/ fs-walk / path-safety / binary-detect / xml-escape / settle-within（shutdown 等待有界化）/ fs-move（moveDirAtomic：rename + EXDEV cp/rm 兜底，skill 安装与市场项目安装共用）
 │   │       ├── __tests__/            # Vitest 单元测试（kernel/capabilities/session/access/tools 分组）
 │   │       └── index.ts              # 公开导出（显式清单，按外部消费面收紧）
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
@@ -154,6 +155,7 @@ spherse/
 │   │       ├── trigger.ts            # TriggerEntry、TriggerCreate/Update 请求、List/Log Response
 │   │       ├── skills.ts             # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
 │   │       ├── marketplace.ts        # MarketplaceSkillEntry、MarketplaceManifestResponse、SkillMarketplaceInstallRequest（{name, version}）
+│   │       ├── project-marketplace.ts # MarketplaceProjectEntry（含 category）、MarketplaceProjectManifestResponse、ProjectMarketplaceInstallRequest（{name, version, destDir}）与 InstallResponse（{projectRoot}）
 │   │       ├── debug.ts              # TurnContextSnapshot
 │   │       ├── websocket.ts          # ChatClientMessage/ChatServerEvent/ChatReplayEvent（协议 v2：session_ready/replay_events/user_message/turn_retried、close code 族）+ parser
 │   │       └── __tests__/            # 契约测试（正向通过 / 负向抛 Invalid payload + Fastify coercion 兼容）
@@ -167,7 +169,7 @@ spherse/
 │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove（removal barrier + onRuntimeRemoved 观察者）
     │   │       ├── shutdown.ts           # closeMultiProjectServer()：hub → registry → fastify 关停顺序、阶段超时与失败隔离
-    │   │       ├── marketplace.ts        # 技能市场 service：OSS manifest 代理（30s 内存缓存，env SPHERSE_MARKETPLACE_MANIFEST_URL 可覆盖 URL）+ zip 下载（同源 SSRF 校验、50MB 上限）
+│   │       ├── marketplace.ts        # 市场域 service 工厂（createMarketplaceServiceImpl 参数化 manifest schema / zip 上限 / 超时 / tmp 前缀）：skills 单例（OSS spherse/skills/manifest.json，env SPHERSE_MARKETPLACE_MANIFEST_URL 覆盖，50MB）+ projects 单例（spherse/projects/manifest.json，env SPHERSE_PROJECT_MARKETPLACE_MANIFEST_URL 覆盖，100MB/300s）；均含 30s 内存缓存 + zip 下载（同源 SSRF 校验、流内计数）
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
@@ -178,7 +180,8 @@ spherse/
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
 │   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
-    │   │       │   ├── marketplace.ts    # 技能市场路由（GET /marketplace/skills 代理 manifest；POST /skills/marketplace-install 按 {name, version} 下载 zip 并覆盖安装）
+│   │       │   ├── marketplace.ts    # 技能市场路由（GET /marketplace/skills 代理 manifest；POST /skills/marketplace-install 按 {name, version} 下载 zip 并覆盖安装）
+│   │       │   ├── project-marketplace.ts # 项目市场全局路由（无 projectId 前缀，零项目可用）：GET /api/marketplace/projects 代理 manifest；POST /api/marketplace/projects/install 按 {name, version, destDir} 下载 zip → core installMarketplaceProjectZip 解压落盘 → 返回 {projectRoot}（注册仍走 renderer 的 open-project IPC）
 │   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
@@ -221,7 +224,7 @@ spherse/
 │   │       │   ├── nav-state.ts      # 路由 location.state 约定（closeTab/closedUrl/replaceTab/skipLeaveGuard）解析
 │   │       │   ├── file-name.ts      # 文件显示名（basename / 去扩展名，点文件与无扩展名保持原样），tab 与 chat 快捷链接共用
 │   │       │   ├── session-title.ts  # 会话显示标题（title 缺省回落 updatedAt 本地时间），侧栏与 tab 共用
-│   │       │   ├── use-connection.ts  # useApiClient(projectId) / useConnection() — 基于 app-store connection 派生 ApiClient
+│   │       │   ├── use-connection.ts  # useApiClient(projectId) / useGlobalApiClient()（无 projectId 的全局 client，项目市场用）/ useConnection() — 基于 app-store connection 派生 ApiClient
 │   │       │   ├── urls.ts            # 官网域派生的集中 URL 常量（WEB_APP_URL/DOCS_URL/EXPLORE_URL/DOWNLOAD_PAGE_URL）
 │   │       │   ├── ws/                # 通用 WS 连接抽象：ws-connection.ts（WsConnection 状态机——idle/connecting/open/waiting-backoff/failed/fatal/closed、心跳 awaitingPongSince、退避重试、probe；bus 与 chat（PR3 起）共用）
 │   │       │   ├── utils.ts          # shadcn/ui cn() 工具
@@ -229,7 +232,7 @@ spherse/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
 │   │       ├── context/
 │   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（projectId/projectRoot）
-│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory、project/content/skills/welcome-page/theme-settings/triggers 服务端状态
+│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory（projectQueryKeys 项目级 + marketplaceQueryKeys 全局）、project/content/skills/marketplace-projects/welcome-page/theme-settings/triggers 服务端状态
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 前端运行时投影（当前仅 initialMessage 交接）
@@ -275,7 +278,7 @@ spherse/
 │   │       │       ├── data.ts           # data.get/set/delete key-value 持久化
 │   │       │       └── api.ts            # api.call 只读 HTTP bridge（op 白名单转发 ApiClient，agents/sessions/content/fileTree）
 │   │       ├── features/
-│   │       │   ├── activity-bar/         # 自治型 Activity Bar（项目头像轨、设置/添加按钮），内部读 app-store/app-ui-store 与 useProjectActions；pin 按钮通过 pinToggle prop 可选注入
+│   │       │   ├── activity-bar/         # 自治型 Activity Bar（项目头像轨、设置按钮、添加项目下拉菜单「市场/本地」，内部读 app-store/app-ui-store 与 useProjectActions，挂 ProjectMarketDialog；pin 按钮通过 pinToggle prop 可选注入）
 │   │       │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 running 运行态 feature store 与 TriggerEventBridge（trigger 域唯一事件接线：查询失效 + 运行态 + 通知）
 │   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
 │   │       │   ├── chat/                 # 对话 feature；model/ 放 Entry 归约、历史合并、MessageGroup 组装与卡片投影，runtime/ 放 session store、link/recovery/lifecycle/queue 等运行时模块，hooks/ 放 UI hooks，lib/ 放 diff/format-time 纯函数，utils/ 放图片压缩（compress-image）；根目录保留页面组件、气泡组件（UserBubble/AssistantBubble/ToolItemView）、runtime context、chat 专属类型与附件 UI（AttachmentBar/MessageAttachments）
@@ -285,6 +288,7 @@ spherse/
 │   │       │   ├── floating-content-browser/ # 浮窗内容浏览器（多窗口、复用 ContentView 只读渲染 + components/floating-frame），含 useFloatedFilePaths；从文件树右键「浮窗」触发
 │   │       │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
 │   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child
+│   │       │   ├── project-market/       # 项目市场 Dialog（顶部分类 chips「全部」+ 动态归并 + 卡片网格；下载 = selectDirectory → 全局 install API → openProjectAtPath → 导航打开）+ categories 归并/过滤纯函数
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │   │       │   ├── split-pane/           # 内容区分窗：target.ts（复用 TabTarget，声明可支持的 kind，当前仅 file）、store.ts（每项目 { target, ratio }，localStorage spherse:content-split）、SplitLayout（左栏恒在 + 分隔条 + 右栏）、SplitPaneView（按 kind 分发，file → ReadOnlyContentBrowser）、SplitRouteBridge（「移动」导航到达后提交）、useOpenSplit 等命令 hook
@@ -324,9 +328,9 @@ spherse/
 │   │   │   ├── updater.ts            # 更新检测：OSS latest.json 清单 + compareVersions + 平台 downloadUrl 解析（electron-updater 仅保留 Windows in-app 下载 API，feed 已废弃）、silent 检测不改写交互状态、startAutoUpdateChecks 调度（启动 5s + 每小时 tick，≥24h 且用户活动时静默检测）
 │   │   │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）
 │   │   │   ├── unsafe-location.ts    # 项目路径「易失区」判定：getUnsafeZoneRoot 计算更新时会被覆盖清空的目录（win32 = dirname(process.execPath)，NSIS 卸载器 RMDir /r $INSTDIR 作用域；darwin = .app bundle 目录；dev/linux 无，dev 下 SPHERSE_UNSAFE_ZONE env 可覆盖供 E2E 指定），isInsideUnsafeZone 经 @spherse/core 的 isPathInside 判断（打开/示例项目 IPC 弹警告框用）
-│   │   │   ├── ipc/                  # IPC handler 注册，按业务域拆分
-│   │   │   │   ├── index.ts          # registerAllIpc 聚合
-│   │   │   │   ├── project.ts        # 项目选择、server 启停、打开项目持久化、打开示例项目、打开项目文件夹（shell.openPath）、用默认应用打开文件（openFileExternal）；confirmUnsafeLocation 对安装目录内路径弹警告框（默认取消），restore-projects 恢复后对存量易失区项目每会话弹一次迁移警告
+│   │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
+│   │       │   │   ├── index.ts          # registerAllIpc 聚合
+│   │       │   │   ├── project.ts        # 项目选择（SPHERSE_E2E_SELECT_DIRECTORY seam 可注入测试目录）、server 启停、打开项目持久化、打开示例项目、打开项目文件夹（shell.openPath）、用默认应用打开文件（openFileExternal）；confirmUnsafeLocation 对安装目录内路径弹警告框（默认取消），restore-projects 恢复后对存量易失区项目每会话弹一次迁移警告
 │   │   │   │   ├── open-file-path.ts # isInsideAnyOpenProject 路径校验辅助（openFileExternal handler 使用，校验路径在已打开项目内）
 │   │   │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
 │   │   │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）
@@ -358,6 +362,7 @@ spherse/
 │   │       ├── chat-history-render.spec.ts # Chat history 渲染 E2E 测试（全事件类型 fixture + retried/withdrawn 淘汰语义）
 │   │       ├── project-close.spec.ts # 项目关闭 E2E 测试（streaming 中关闭断连 runtime、重启后干净重开）
 │   │       ├── unsafe-location-guard.spec.ts # 易失区拦截 E2E 测试（SPHERSE_UNSAFE_ZONE + SPHERSE_E2E_DIALOG_RESPONSE seam：拒绝/确认 open-project、存量项目启动警告）
+│   │       ├── project-marketplace.spec.ts # 项目市场 E2E 测试（stub manifest server + SPHERSE_PROJECT_MARKETPLACE_MANIFEST_URL + SPHERSE_E2E_SELECT_DIRECTORY seam：菜单 → 市场 → 下载 → 项目打开）
 │   │       ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │   │       ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
 │   │       ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）

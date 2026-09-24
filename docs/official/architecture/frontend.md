@@ -10,7 +10,7 @@
 - desktop 壳注入 `createElectronHostBridge()`；web 壳注入 `createWebHostBridge()` 外加恢复探针与版本守卫——renderer 代码单份复用，宿主差异全部收敛在 bridge
 - 壳只经 `@spherse/app` package.json `exports` 白名单入口导入（决策见 [ADR-0009](../../dev/decisions/0009-app-exports-whitelist.md)）；ESLint 禁止壳源码经 `@/` alias 深度导入 app 内部模块
 - web 壳首启的连接引导：index 路由经 `bridge.renderConnectPage()` 渲染连接页，连接信息（baseUrl / token）存 localStorage `spherse:connection`，`getServerBaseUrl` / token 从它读取
-- TanStack Query 全局配置（`queries/client.ts`）：`staleTime: Infinity`、`retry: 1`，模块级单例；个别域显式覆盖 gcTime，marketplace-skills 是唯一 `staleTime: 0` 的域
+- TanStack Query 全局配置（`queries/client.ts`）：`staleTime: Infinity`、`retry: 1`，模块级单例；个别域显式覆盖 gcTime，marketplace-skills 与 marketplace-projects 是仅有的两个 `staleTime: 0` 域（每次打开市场拉新）；marketplace-projects 挂全局 key `["marketplace", "projects"]`（非 project-scoped，零项目可用）
 
 ## HostBridge 抽象
 
@@ -56,7 +56,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 |---|---|---|
 | app-store | connection、打开项目集合、activeProjectId | 项目集合与 lastActive 经 bridge.project 子 API（desktop 落 electron settings，web 走 HTTP + localStorage）；lastRoute 在 localStorage |
 | settings-store | locale / theme / debugTools / tabsEnabled / closeToTray（`loaded` 标记区分未加载与默认值） | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
-| TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / triggers / welcome-page / theme-settings | 内存 cache，项目关闭清除 |
+| TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / marketplace-projects（全局 key，不随项目关闭清理）/ triggers / welcome-page / theme-settings | 内存 cache，项目关闭清除 |
 | project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
 | feature stores | 折叠、浮窗、内容区 tab 列表、分窗、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
 

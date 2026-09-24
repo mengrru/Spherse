@@ -283,6 +283,104 @@ describe("useAppStore openSampleProject", () => {
   });
 });
 
+describe("useAppStore openProjectAtPath", () => {
+  beforeEach(() => {
+    setupStoreTest(false);
+  });
+
+  it("registers the project and returns its id", async () => {
+    const addOpenProject = vi.fn();
+    const setLastActiveProject = vi.fn();
+    const bridge = createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject: vi.fn().mockResolvedValue({ projectId: "market-1" }),
+        restoreProjects: vi.fn(),
+        addOpenProject,
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        openFileExternal: vi.fn(),
+        setLastActiveProject,
+        getLastActiveProject: vi.fn(),
+        openSampleProject: vi.fn(),
+        getSampleManifest: vi.fn(),
+      },
+    });
+    const projectId = await useAppStore.getState().openProjectAtPath(bridge, "/tmp/market-world");
+
+    expect(projectId).toBe("market-1");
+    expect(bridge.project?.openProject).toHaveBeenCalledWith("/tmp/market-world");
+    expect(useAppStore.getState().projects.get("market-1")).toMatchObject({
+      id: "market-1",
+      path: "/tmp/market-world",
+      name: "market-world",
+    });
+    expect(useAppStore.getState().activeProjectId).toBe("market-1");
+    expect(addOpenProject).toHaveBeenCalledWith("market-1", "/tmp/market-world");
+    expect(setLastActiveProject).toHaveBeenCalledWith("market-1");
+  });
+
+  it("switches to the existing project when the path is already open (defensive branch)", async () => {
+    useAppStore.setState({
+      projects: new Map([["project-a", projectState()]]),
+      activeProjectId: null,
+      initializing: false,
+    });
+    const openProject = vi.fn();
+    const setLastActiveProject = vi.fn();
+    const bridge = createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject,
+        restoreProjects: vi.fn(),
+        addOpenProject: vi.fn(),
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        openFileExternal: vi.fn(),
+        setLastActiveProject,
+        getLastActiveProject: vi.fn(),
+        openSampleProject: vi.fn(),
+        getSampleManifest: vi.fn(),
+      },
+    });
+
+    const projectId = await useAppStore.getState().openProjectAtPath(bridge, "/tmp/project-a");
+
+    expect(projectId).toBe("project-a");
+    expect(openProject).not.toHaveBeenCalled();
+    expect(useAppStore.getState().activeProjectId).toBe("project-a");
+    expect(setLastActiveProject).toHaveBeenCalledWith("project-a");
+  });
+
+  it("returns null and writes nothing when the host declines opening", async () => {
+    const addOpenProject = vi.fn();
+    const bridge = createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject: vi.fn().mockResolvedValue(null),
+        restoreProjects: vi.fn(),
+        addOpenProject,
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        openFileExternal: vi.fn(),
+        setLastActiveProject: vi.fn(),
+        getLastActiveProject: vi.fn(),
+        openSampleProject: vi.fn(),
+        getSampleManifest: vi.fn(),
+      },
+    });
+
+    const projectId = await useAppStore.getState().openProjectAtPath(bridge, "/tmp/declined");
+
+    expect(projectId).toBeNull();
+    expect(useAppStore.getState().projects.size).toBe(0);
+    expect(addOpenProject).not.toHaveBeenCalled();
+  });
+});
+
 describe("useAppStore closeProject", () => {
   beforeEach(() => {
     setupStoreTest(false);
