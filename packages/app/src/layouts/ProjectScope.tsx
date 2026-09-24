@@ -65,7 +65,11 @@ export function ProjectScope() {
         >
           <SplitLayout>
             <TabBar />
-            <Outlet />
+            {/* 页面根用 h-full；若直接与 TabBar 并列，内容较长时 flex 的 min-height: auto 会阻止收缩，页面被撑出一个标签栏高度、底部被裁。
+                包一层 flex-1 min-h-0 容器，让 h-full 解析为标签栏下方的剩余高度 */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <Outlet />
+            </div>
           </SplitLayout>
         </main>
         <ProjectRuntimeBridges />
