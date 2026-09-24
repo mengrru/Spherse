@@ -3,6 +3,7 @@ import { Button } from "../../components/ui/button";
 import { XIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "../../lib/utils";
+import { fileDisplayName } from "../../lib/file-name";
 
 interface HeaderProps {
   agent: AgentSummary;
@@ -10,12 +11,6 @@ interface HeaderProps {
   activeQuickLink?: string | null;
   onQuickLink?: (path: string) => void;
   onClose?: () => void;
-}
-
-function basename(path: string): string {
-  const name = path.split("/").filter(Boolean).pop() ?? path;
-  const match = name.match(/^(.+)\.[^.]+$/);
-  return match ? match[1] : name;
 }
 
 export function Header({ agent, quickLinks, activeQuickLink, onQuickLink, onClose }: HeaderProps) {
@@ -43,7 +38,7 @@ export function Header({ agent, quickLinks, activeQuickLink, onQuickLink, onClos
                 onClick={() => onQuickLink?.(path)}
                 title={path}
               >
-                {basename(path)}
+                {fileDisplayName(path)}
               </Button>
             );
           })}

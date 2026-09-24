@@ -5,6 +5,8 @@ import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useFeature } from "../../lib/use-feature";
+import { useIsMobile } from "../../hooks/use-mobile";
+import { useTabsEnabled } from "../tabs";
 import { ConflictBanner } from "./ConflictBanner";
 import { ConfirmDialogs } from "./ConfirmDialogs";
 import { ContentView } from "./ContentView";
@@ -37,6 +39,8 @@ export function ContentBrowser({
   const client = useApiClient(projectId);
   const bridge = useHostBridge();
   const textSelectionEnabled = useFeature("text-selection-session");
+  const isMobile = useIsMobile();
+  const tabsEnabled = useTabsEnabled();
   const [htmlView, setHtmlView] = useState<"preview" | "source">("preview");
   const [refreshKey, setRefreshKey] = useState(0);
   const [findOpen, setFindOpen] = useState(false);
@@ -62,27 +66,32 @@ export function ContentBrowser({
   const { isMarkdown, isHtml, isImage } = classifyFileKind(filePath);
   const isEditable = !isImage && !binary && !loading && bridge.capabilities.content.editable;
   const findable = !loading && !error && !binary && !isImage && !(isHtml && htmlView === "preview");
+  // 移动端屏幕高度有限：HTML 文件多为自带完整界面的页面，开启标签页时由 tab 承担切换/关闭，
+  // 因此隐藏 content browser header，把纵向空间全部留给 HTML 预览。
+  const hideHeader = isMobile && tabsEnabled && isHtml;
 
   return (
     <div data-content-browser className="flex flex-col h-full">
-      <Header
-        filePath={filePath}
-        isDirty={editor.isDirty}
-        isEditing={editor.isEditing}
-        isEditable={isEditable}
-        isHtml={isHtml}
-        htmlView={htmlView}
-        saving={editor.saving}
-        findable={findable}
-        onBack={onBack}
-        onClose={onClose}
-        onEnterEdit={editor.enterEdit}
-        onCancelEdit={editor.cancelEdit}
-        onSave={() => void editor.save()}
-        onHtmlViewChange={setHtmlView}
-        onRefresh={handleRefresh}
-        onFindToggle={() => setFindOpen((v) => !v)}
-      />
+      {!hideHeader && (
+        <Header
+          filePath={filePath}
+          isDirty={editor.isDirty}
+          isEditing={editor.isEditing}
+          isEditable={isEditable}
+          isHtml={isHtml}
+          htmlView={htmlView}
+          saving={editor.saving}
+          findable={findable}
+          onBack={onBack}
+          onClose={onClose}
+          onEnterEdit={editor.enterEdit}
+          onCancelEdit={editor.cancelEdit}
+          onSave={() => void editor.save()}
+          onHtmlViewChange={setHtmlView}
+          onRefresh={handleRefresh}
+          onFindToggle={() => setFindOpen((v) => !v)}
+        />
+      )}
       {editor.conflict && editor.isEditing && (
         <ConflictBanner
           onKeep={() => editor.setConflict(false)}

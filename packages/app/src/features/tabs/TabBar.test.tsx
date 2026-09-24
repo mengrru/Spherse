@@ -110,7 +110,7 @@ describe("TabBar", () => {
     await go("/project/p1/browser?url=http%3A%2F%2Flocalhost%3A3000%2F");
     await go("/project/p1/chat/s1");
 
-    expect(tabNames()).toEqual(["Welcome", "First chat", "a.md", "localhost:3000"]);
+    expect(tabNames()).toEqual(["Welcome", "First chat", "a", "localhost:3000"]);
     expect(screen.getByRole("tab", { name: "First chat" })).toHaveAttribute("aria-selected", "true");
   });
 
@@ -134,10 +134,10 @@ describe("TabBar", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Close First chat" }));
     expect(screen.getByTestId("page")).toHaveTextContent("chat:/project/p1/chat/s2");
-    expect(tabNames()).toEqual(["Welcome", "Second chat", "a.md"]);
+    expect(tabNames()).toEqual(["Welcome", "Second chat", "a"]);
 
-    await userEvent.click(screen.getByRole("tab", { name: "a.md" }));
-    await userEvent.click(screen.getByRole("button", { name: "Close a.md" }));
+    await userEvent.click(screen.getByRole("tab", { name: "a" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close a" }));
     expect(screen.getByTestId("page")).toHaveTextContent("chat:/project/p1/chat/s2");
 
     await userEvent.click(screen.getByRole("button", { name: "Close Second chat" }));
@@ -190,7 +190,7 @@ describe("TabBar", () => {
       },
     });
     setup("/project/p1/chat/s1", createMockHostBridge({ kind: "web" }));
-    expect(tabNames()).toEqual(["Welcome", "First chat", "a.md"]);
+    expect(tabNames()).toEqual(["Welcome", "First chat", "a"]);
 
     await userEvent.click(screen.getByRole("button", { name: "Close First chat" }));
     expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=a.md");
@@ -213,9 +213,9 @@ describe("TabBar", () => {
       },
     });
     const { go } = setup();
-    expect(tabNames()).toEqual(["Welcome", "a.md"]);
+    expect(tabNames()).toEqual(["Welcome", "a"]);
     await go("/project/p2");
-    expect(tabNames()).toEqual(["Welcome", "b.md"]);
+    expect(tabNames()).toEqual(["Welcome", "b"]);
   });
 
   it("drops chat tabs whose session is gone", async () => {
@@ -240,7 +240,7 @@ describe("TabBar", () => {
     expect(useTabsStore.getState().byProject.p1).toEqual([{ kind: "file", path: "a.md" }]);
 
     act(() => useSettingsStore.setState({ tabsEnabled: true }));
-    expect(tabNames()).toEqual(["Welcome", "a.md", "First chat"]);
+    expect(tabNames()).toEqual(["Welcome", "a", "First chat"]);
   });
 
   it("waits for settings to load before recording", async () => {
@@ -259,11 +259,11 @@ describe("TabBar", () => {
     await go("/project/p1/content?path=notes%2Fa.md");
     await go("/project/p1/content?path=notes%2Fb.md");
     await go("/project/p1/content?path=other.md");
-    await userEvent.click(screen.getByRole("tab", { name: "a.md" }));
+    await userEvent.click(screen.getByRole("tab", { name: "a" }));
 
     await userEvent.click(screen.getByRole("button", { name: "delete-notes" }));
 
-    expect(tabNames()).toEqual(["Welcome", "First chat", "other.md"]);
+    expect(tabNames()).toEqual(["Welcome", "First chat", "other"]);
     expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=other.md");
     expect(getProjectNavStack("p1").some((url) => url.includes("notes%2F"))).toBe(false);
   });

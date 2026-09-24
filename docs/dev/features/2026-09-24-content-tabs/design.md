@@ -40,7 +40,7 @@
 | 功能关闭 | `TabBar` 返回 null、bridge 不 upsert / 不处理 state；header X 回到原行为（回欢迎页） |
 | chat 标签名 | 优先读 session catalog（`useProjectSessions`，与侧栏同源，自动标题 / 改名即时同步）；catalog 无此 session（分页外的旧会话）时才启用 `useProjectSession` 查询，避免 N 个 tab 各自触发 probe。无标题时 fallback 与 `SessionRow` 相同（`updatedAt` 本地时间串），抽共享函数 `sessionDisplayTitle` 到 `lib/` |
 | chat tab 失效 | catalog 无且 session 查询成功返回 `null` → 该 tab 自动移除（覆盖侧栏删除会话、删除智能体后的会话） |
-| 文件标签名 | basename，`title` 为全路径 |
+| 文件标签名 | 去扩展名的 basename（`lib/file-name.ts` `fileDisplayName`，与 chat 快捷链接按钮共用；点文件 / 无扩展名保持原样），`title` 为全路径 |
 | 文件 tab 失效 | 侧栏文件树删除时（`UserFilePanel` / `SkillPanel` `handleFileDeleted`）调用 store `closeFileTabs(projectId, path)`，按「相等或 `path + "/"` 前缀」匹配（同现有 handleFileDeleted 规则，均为项目相对路径字符串，不涉及文件系统解析）。外部删除不追踪，打开时由内容页显示错误 |
 | 浏览器标签名 | `host + pathname`，`title` 为完整 url |
 | icon | lucide：welcome `HouseIcon`、chat `MessageSquareIcon`、文件 `FileIcon`、浏览器 `GlobeIcon` |
@@ -176,3 +176,8 @@ clearProject(projectId)
 | m-6 | minor | settings 加载失败时功能被静默关闭 | 已修：失败也置 `loaded` |
 | m-7 | minor | E2E 未覆盖 chat tab / 真重启 | 未修：chat tab 由组件测试覆盖；reload 已重建 store 模块，与重启的 localStorage 路径一致 |
 | m-8 | minor | bridge effect 依赖整个 `location` | 未修：effect 幂等，location 每次导航本就更新 |
+
+## 后续调整（用户反馈）
+
+1. 文件 tab 不显示扩展名：抽 `lib/file-name.ts`（`fileBasename` / `fileDisplayName`），chat Header 快捷链接按钮同步改用
+2. 移动端 + 标签页开启 + HTML 文件时隐藏 ContentBrowser header（HTML 多为自带完整界面的页面，移动端纵向空间有限，切换 / 关闭交给 tab）；判定在 `features/content-browser/index.tsx` 内，按用户要求加注释说明。副作用：该场景下无编辑 / 源码切换入口（移动端 web 本就只读）

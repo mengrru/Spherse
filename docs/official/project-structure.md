@@ -218,6 +218,7 @@ spherse/
 │   │       │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界，模块级 per-project 历史栈，pending back + dropFromProjectNavHistory）
 │   │       │   ├── tab-target.ts     # 内容区 tab target 纯函数（key/url/规范化/持久化校验/路径段匹配/邻居选择）
 │   │       │   ├── nav-state.ts      # 路由 location.state 约定（closeTab/closedUrl/replaceTab/skipLeaveGuard）解析
+│   │       │   ├── file-name.ts      # 文件显示名（basename / 去扩展名，点文件与无扩展名保持原样），tab 与 chat 快捷链接共用
 │   │       │   ├── session-title.ts  # 会话显示标题（title 缺省回落 updatedAt 本地时间），侧栏与 tab 共用
 │   │       │   ├── use-connection.ts  # useApiClient(projectId) / useConnection() — 基于 app-store connection 派生 ApiClient
 │   │       │   ├── urls.ts            # 官网域派生的集中 URL 常量（WEB_APP_URL/DOCS_URL/EXPLORE_URL/DOWNLOAD_PAGE_URL）

@@ -4,6 +4,7 @@ import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useTabsStore } from "../../stores/tabs-store";
 import type { TabTarget } from "../../lib/tab-target";
+import { fileDisplayName } from "../../lib/file-name";
 import { TabShell, type TabDragProps } from "./TabShell";
 import { useChatTabInfo } from "./use-chat-tab-info";
 
@@ -44,10 +45,6 @@ function ChatTab({ sessionId, ...props }: CommonProps & { sessionId: string }) {
   return <TabShell {...props} kind="chat" icon={<MessageSquareIcon />} label={label} title={title} />;
 }
 
-function basename(path: string): string {
-  return path.split("/").filter(Boolean).pop() ?? path;
-}
-
 function browserLabel(url: string): string {
   try {
     const parsed = new URL(url);
@@ -63,7 +60,7 @@ export function TargetTab({ target, ...props }: CommonProps & { target: TabTarge
     case "chat":
       return <ChatTab {...props} sessionId={target.sessionId} />;
     case "file":
-      return <TabShell {...props} kind="file" icon={<FileIcon />} label={basename(target.path)} title={target.path} />;
+      return <TabShell {...props} kind="file" icon={<FileIcon />} label={fileDisplayName(target.path)} title={target.path} />;
     case "browser":
       return <TabShell {...props} kind="browser" icon={<GlobeIcon />} label={browserLabel(target.url)} title={target.url} />;
   }

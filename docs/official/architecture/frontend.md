@@ -37,6 +37,8 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
   - 关闭活跃 tab = `navigate(邻居, { replace, state: { closeTab, closedUrl } })`，导航实际发生后 bridge 才移除 tab 并清出 nav 栈，被离开守卫拦截时 tab 不丢；bridge 处理后以 replace 清空 state
   - 浏览器页内导航带 `replaceTab` 原位替换；浮窗 session、被 BrowserPage 拒绝的 url 不建 tab
   - 失效清理：会话缺失 / 所属 agent 已删 → chat tab 自动移除；文件树删除 → `useCloseDeletedFileTabs` 按路径段匹配移除并跳邻居
+  - 文件 tab 名为去扩展名的文件名（`lib/file-name.ts`，与 chat 快捷链接按钮同规则），`title` 为全路径
+  - 移动端 + 标签页开启 + HTML 文件：ContentBrowser 隐藏 header，纵向空间留给预览，切换 / 关闭由 tab 承担
 - **离开守卫**：ContentBrowser 有未保存编辑时经 `useBlocker` 拦截任意 pathname / search 变化并复用放弃确认框；非 POP 导航带 `state.skipLeaveGuard` 可放行（项目关闭、删除当前文件）
 - **lastRoute**：项目内子页面路由持久化在 localStorage（`spherse:last-route:<projectId>`）
   - 启动仅 hash 为 `/` 时恢复（deep-link 优先）；项目切换/关闭后恢复下一项目的 lastRoute；closeProject 时清理
