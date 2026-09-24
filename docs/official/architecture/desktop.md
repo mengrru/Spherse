@@ -17,7 +17,7 @@
 
 ## 关闭至托盘
 
-`electron/tray.ts`，由 `AppSettings.closeToTray`（缺省 true）控制：
+`electron/tray.ts`，由 `AppSettings.closeToTray`（缺省 true；未打包且非 `NODE_ENV=test` 的 dev 运行缺省 false）控制：
 
 - 托盘在开关启用期间常驻，启动与每次 `save-settings` 后 `syncTray()` 创建 / 销毁并按 locale 重建菜单（「打开 Spherse」「退出」）；左键 `click` 唤回窗口；macOS 用 `right-click` → `popUpContextMenu`（避免左键也弹菜单），Windows / Linux 用 `setContextMenu`
 - 主窗口 `close`：`isQuitting()` 放行；已收至托盘的窗口再收到 close（安装器 `taskkill` 等非用户操作）→ `app.quit()` 优雅退出；开关启用 → 阻止并隐藏（全屏先退出全屏），macOS 同时 `app.dock.hide()`；开关关闭 → 放行，走 `window-all-closed` 退出（含 macOS）
@@ -44,7 +44,7 @@
 
 - electron-store 落 userData 下 `settings.json`；`AppSettings` schema：
   - `locale` + `models: { text, image }`——每 group 含 `defaultModel`、per-provider `apiKey`，text 另含可选 `sampling` 与 `thinkingLevel`（off/low/medium/high，缺省 medium）
-  - 可选 `customProviders` / `debugToolsEnabled` / `tabsEnabled`（缺省 true） / `closeToTray`（缺省 true） / `theme` / `mobileAccess`
+  - 可选 `customProviders` / `debugToolsEnabled` / `tabsEnabled`（缺省 true） / `closeToTray`（缺省 true，dev 运行 false） / `theme` / `mobileAccess`
 - **serverToken 是 settingsStore 顶层 key，不是 AppSettings 字段**（`saveSettings` 会从零重建 AppSettings）。`getServerToken()` 迁移链：`serverToken` → legacy `mobileAccess.token` → 生成并持久化；它是 server 鉴权唯一凭据来源（见 [server.md](server.md)「鉴权模型」）
 - **API key 掩码与合并**：显示前 4 + `****` + 后 4；保存时空串跳过、含 `****` 保留旧值
   - `saveSettings` 强制保留 `mobileAccess` 旧值，防 renderer 覆写

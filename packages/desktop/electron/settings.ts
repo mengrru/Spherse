@@ -1,6 +1,6 @@
 import path from "node:path";
 import crypto from "node:crypto";
-import { nativeTheme } from "electron";
+import { app, nativeTheme } from "electron";
 import Store from "electron-store";
 import type { AppSettings, ModelGroupSettings, ProviderCredentials, MobileAccessSettings } from "@spherse/core";
 import { getAppModelCatalog } from "./model-catalog.js";
@@ -62,7 +62,7 @@ export function getMaskedSettings(): AppSettings | null {
     customProviders: settings.customProviders ?? [],
     debugToolsEnabled: settings.debugToolsEnabled ?? false,
     tabsEnabled: settings.tabsEnabled ?? true,
-    closeToTray: settings.closeToTray ?? true,
+    closeToTray: settings.closeToTray ?? defaultCloseToTray(),
     theme: settings.theme ?? "system",
   };
 }
@@ -101,7 +101,7 @@ export function saveSettings(incoming: AppSettings): void {
     customProviders: incoming.customProviders ?? prev?.customProviders ?? [],
     debugToolsEnabled: incoming.debugToolsEnabled ?? prev?.debugToolsEnabled ?? false,
     tabsEnabled: incoming.tabsEnabled ?? prev?.tabsEnabled ?? true,
-    closeToTray: incoming.closeToTray ?? prev?.closeToTray ?? true,
+    closeToTray: incoming.closeToTray ?? prev?.closeToTray ?? defaultCloseToTray(),
     theme: incoming.theme ?? prev?.theme ?? "system",
     mobileAccess: prev?.mobileAccess,
   };
@@ -226,8 +226,12 @@ export function setLastActiveProject(projectPath: string | null): void {
   settingsStore.set("lastActiveProject", projectPath);
 }
 
+function defaultCloseToTray(): boolean {
+  return app.isPackaged || process.env.NODE_ENV === "test";
+}
+
 export function getCloseToTray(): boolean {
-  return settingsStore.get("settings")?.closeToTray ?? true;
+  return settingsStore.get("settings")?.closeToTray ?? defaultCloseToTray();
 }
 
 export function getLocale(): string {
