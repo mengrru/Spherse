@@ -1,9 +1,10 @@
 import { create } from "zustand";
-import { isPathAtOrUnder, normalizeTabTarget } from "../../lib/tab-target";
+import { isPathAtOrUnder, tabKey } from "../../lib/tab-target";
 import { SPLIT_DEFAULT_RATIO, isValidRatio } from "./layout";
+import { toSplitTarget, type SplitTarget } from "./target";
 
 export interface SplitPaneState {
-  filePath: string;
+  target: SplitTarget;
   ratio: number;
 }
 
@@ -11,7 +12,7 @@ type SplitByProject = Record<string, SplitPaneState>;
 
 interface SplitPaneStore {
   byProject: SplitByProject;
-  openSplit: (projectId: string, filePath: string) => void;
+  openSplit: (projectId: string, target: SplitTarget) => void;
   closeSplit: (projectId: string) => void;
   closeDeletedSplit: (projectId: string, path: string) => void;
   setRatio: (projectId: string, ratio: number) => void;
@@ -20,10 +21,13 @@ interface SplitPaneStore {
 
 const STORAGE_KEY = "spherse:content-split";
 
-function isSplitPaneState(value: unknown): value is SplitPaneState {
-  if (!value || typeof value !== "object") return false;
-  const { filePath, ratio } = value as Record<string, unknown>;
-  return typeof filePath === "string" && filePath.length > 0 && isValidRatio(ratio);
+function parseEntry(value: unknown): SplitPaneState | null {
+  if (!value || typeof value !== "object") return null;
+  const entry = value as Record<string, unknown>;
+  if (!isValidRatio(entry.ratio)) return null;
+  const target = toSplitTarget(entry.target)
+    ?? (typeof entry.filePath === "string" ? toSplitTarget({ kind: "file", path: entry.filePath }) : null);
+  return target ? { target, ratio: entry.ratio } : null;
 }
 
 function loadFromStorage(): SplitByProject {
@@ -34,8 +38,9 @@ function loadFromStorage(): SplitByProject {
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
     const result: SplitByProject = {};
-    for (const [projectId, entry] of Object.entries(parsed as Record<string, unknown>)) {
-      if (isSplitPaneState(entry)) result[projectId] = { filePath: entry.filePath, ratio: entry.ratio };
+    for (const [projectId, value] of Object.entries(parsed as Record<string, unknown>)) {
+      const entry = parseEntry(value);
+      if (entry) result[projectId] = entry;
     }
     return result;
   } catch {
@@ -66,16 +71,14 @@ export const useSplitPaneStore = create<SplitPaneStore>((set) => {
   return {
     byProject: loadFromStorage(),
 
-    openSplit(projectId, rawPath) {
-      if (!rawPath) return;
-      const target = normalizeTabTarget({ kind: "file", path: rawPath });
-      const filePath = target.kind === "file" ? target.path : rawPath;
-      if (!filePath) return;
+    openSplit(projectId, rawTarget) {
+      const target = toSplitTarget(rawTarget);
+      if (!target) return;
       set((s) => {
         const current = s.byProject[projectId];
-        if (current?.filePath === filePath) return s;
+        if (current && tabKey(current.target) === tabKey(target)) return s;
         const ratio = current?.ratio ?? SPLIT_DEFAULT_RATIO;
-        return commit({ ...s.byProject, [projectId]: { filePath, ratio } });
+        return commit({ ...s.byProject, [projectId]: { target, ratio } });
       });
     },
 
@@ -85,8 +88,8 @@ export const useSplitPaneStore = create<SplitPaneStore>((set) => {
 
     closeDeletedSplit(projectId, path) {
       set((s) => {
-        const current = s.byProject[projectId];
-        if (!current || !isPathAtOrUnder(current.filePath, path)) return s;
+        const target = s.byProject[projectId]?.target;
+        if (target?.kind !== "file" || !isPathAtOrUnder(target.path, path)) return s;
         return commit(without(s.byProject, projectId));
       });
     },

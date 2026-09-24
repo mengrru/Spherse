@@ -4,6 +4,7 @@ export {
   useCloseDeletedSplit,
   useCloseSplit,
   useOpenSplit,
-  useSplitFilePath,
+  useSplitTarget,
   useSplitPaneAvailable,
 } from "./hooks";
+export type { SplitTarget } from "./target";

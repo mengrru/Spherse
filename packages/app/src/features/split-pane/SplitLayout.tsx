@@ -67,7 +67,7 @@ function SplitRegion({ projectId, split, containerRef }: SplitRegionProps) {
         className="flex min-w-0 shrink-0 flex-col overflow-hidden"
         style={{ flexBasis: `${ratio * 100}%` }}
       >
-        <SplitPaneView filePath={split.filePath} />
+        <SplitPaneView target={split.target} />
       </aside>
     </>
   );

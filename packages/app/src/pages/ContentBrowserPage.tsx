@@ -27,7 +27,7 @@ export function ContentBrowserPage() {
       filePath={filePath}
       onBack={back}
       onClose={() => closeActiveTab(() => navigate(`/project/${projectId}`, { replace: true }))}
-      onSplit={splitAvailable ? () => openSplit(filePath) : undefined}
+      onSplit={splitAvailable ? () => openSplit({ kind: "file", path: filePath }) : undefined}
     />
   );
 }

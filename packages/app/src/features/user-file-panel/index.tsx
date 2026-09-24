@@ -16,7 +16,7 @@ import { useCloseDeletedFileTabs } from "../tabs";
 import { useFeature } from "../../lib/use-feature";
 import { dispatchAction } from "../../ui-sdk";
 import { useFloatedFilePaths } from "../floating-content-browser";
-import { useCloseDeletedSplit, useCloseSplit, useOpenSplit, useSplitFilePath, useSplitPaneAvailable } from "../split-pane";
+import { useCloseDeletedSplit, useCloseSplit, useOpenSplit, useSplitPaneAvailable, useSplitTarget } from "../split-pane";
 
 export function UserFilePanel() {
   const { projectId } = useProjectCtx();
@@ -38,7 +38,8 @@ export function UserFilePanel() {
   const closeDeletedFileTabs = useCloseDeletedFileTabs();
   const closeDeletedSplit = useCloseDeletedSplit();
   const splitAvailable = useSplitPaneAvailable();
-  const splitFilePath = useSplitFilePath();
+  const splitTarget = useSplitTarget();
+  const splitFilePath = splitTarget?.kind === "file" ? splitTarget.path : null;
   const openSplit = useOpenSplit();
   const closeSplit = useCloseSplit();
 
@@ -49,7 +50,7 @@ export function UserFilePanel() {
 
   const handleSplitFile = (path: string) => {
     if (splitFilePath === path) closeSplit();
-    else openSplit(path);
+    else openSplit({ kind: "file", path });
   };
 
   return (

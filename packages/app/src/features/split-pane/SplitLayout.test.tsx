@@ -54,8 +54,8 @@ function Page({ name }: { name: string }) {
     <div>
       <p data-testid="page">{name}:{location.pathname}{location.search}</p>
       <button type="button" onClick={() => setCount((c) => c + 1)}>count:{count}</button>
-      <button type="button" onClick={() => openSplit(searchParams.get("path") ?? "")}>split-current</button>
-      <button type="button" onClick={() => openSplit("other.md")}>split-other</button>
+      <button type="button" onClick={() => openSplit({ kind: "file", path: searchParams.get("path") ?? "" })}>split-current</button>
+      <button type="button" onClick={() => openSplit({ kind: "file", path: "other.md" })}>split-other</button>
     </div>
   );
 }
@@ -66,7 +66,7 @@ function BlockingPage() {
   return (
     <div>
       <p data-testid="blocker">{blocker.state}</p>
-      <button type="button" onClick={() => openSplit("a.md")}>split-current</button>
+      <button type="button" onClick={() => openSplit({ kind: "file", path: "a.md" })}>split-current</button>
       {blocker.state === "blocked" && <button type="button" onClick={() => blocker.reset()}>stay</button>}
       {blocker.state === "blocked" && <button type="button" onClick={() => blocker.proceed()}>leave</button>}
     </div>
@@ -127,7 +127,7 @@ describe("SplitLayout", () => {
   it("shows the split file read-only without back / edit buttons and keeps the main page mounted", async () => {
     setup();
     await userEvent.click(screen.getByRole("button", { name: "count:0" }));
-    act(() => useSplitPaneStore.getState().openSplit("p1", "docs/a.md"));
+    act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "docs/a.md" }));
 
     const pane = document.querySelector("[data-split-pane]") as HTMLElement;
     expect(pane).not.toBeNull();
@@ -146,7 +146,7 @@ describe("SplitLayout", () => {
 
   it("adjusts the ratio with arrow keys", async () => {
     setup();
-    act(() => useSplitPaneStore.getState().openSplit("p1", "a.md"));
+    act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "a.md" }));
     const separator = screen.getByRole("separator");
     separator.focus();
     await userEvent.keyboard("{ArrowLeft}");
@@ -160,7 +160,7 @@ describe("SplitLayout", () => {
   it("ends the split when the file no longer exists", async () => {
     readContent.mockRejectedValue(new ApiError("Not found", 404, CONTENT_ERROR_CODES.FILE_NOT_FOUND));
     setup();
-    act(() => useSplitPaneStore.getState().openSplit("p1", "gone.md"));
+    act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "gone.md" }));
     await waitFor(() => expect(split()).toBeUndefined());
   });
 
@@ -169,7 +169,7 @@ describe("SplitLayout", () => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: 500 });
     try {
       setup();
-      act(() => useSplitPaneStore.getState().openSplit("p1", "a.md"));
+      act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "a.md" }));
       expect(document.querySelector("[data-split-pane]")).toBeNull();
       expect(split()).toBeDefined();
     } finally {
@@ -180,9 +180,9 @@ describe("SplitLayout", () => {
   it("keeps the split on non-404 errors", async () => {
     readContent.mockRejectedValue(new ApiError("boom", 500));
     setup();
-    act(() => useSplitPaneStore.getState().openSplit("p1", "a.md"));
+    act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "a.md" }));
     expect(await screen.findByText("boom", undefined, { timeout: 3000 })).toBeInTheDocument();
-    expect(split()).toEqual({ filePath: "a.md", ratio: 0.5 });
+    expect(split()).toEqual({ target: { kind: "file", path: "a.md" }, ratio: 0.5 });
   });
 });
 
@@ -200,7 +200,7 @@ describe("useOpenSplit", () => {
   it("opens another file without leaving the current page", async () => {
     setup("/project/p1/content?path=a.md");
     await userEvent.click(screen.getByRole("button", { name: "split-other" }));
-    expect(split()?.filePath).toBe("other.md");
+    expect(split()?.target).toEqual({ kind: "file", path: "other.md" });
     expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=a.md");
   });
 
@@ -209,7 +209,7 @@ describe("useOpenSplit", () => {
     await act(() => router.navigate("/project/p1/content?path=a.md"));
     await userEvent.click(screen.getByRole("button", { name: "split-current" }));
 
-    await waitFor(() => expect(split()?.filePath).toBe("a.md"));
+    await waitFor(() => expect(split()?.target).toEqual({ kind: "file", path: "a.md" }));
     expect(screen.getByTestId("page")).toHaveTextContent("chat:/project/p1/chat/s1");
     expect(useTabsStore.getState().byProject.p1).toEqual([{ kind: "chat", sessionId: "s1" }]);
     await waitFor(() => expect(router.state.location.state).toBeNull());
@@ -222,7 +222,7 @@ describe("useOpenSplit", () => {
     recordProjectNavLocation("p1", "/project/p1/content?path=a.md");
     await userEvent.click(screen.getByRole("button", { name: "split-current" }));
 
-    await waitFor(() => expect(split()?.filePath).toBe("a.md"));
+    await waitFor(() => expect(split()?.target).toEqual({ kind: "file", path: "a.md" }));
     expect(screen.getByTestId("page")).toHaveTextContent("welcome:/project/p1");
     await waitFor(() => expect(router.state.location.state).toBeNull());
     expect(getProjectNavStack("p1")).toEqual(["/project/p1/chat/s1"]);
@@ -240,7 +240,7 @@ describe("useOpenSplit", () => {
     setup("/project/p1/content?path=a.md", <BlockingPage />);
     await userEvent.click(screen.getByRole("button", { name: "split-current" }));
     await userEvent.click(screen.getByRole("button", { name: "leave" }));
-    await waitFor(() => expect(split()?.filePath).toBe("a.md"));
+    await waitFor(() => expect(split()?.target).toEqual({ kind: "file", path: "a.md" }));
     expect(screen.getByTestId("page")).toHaveTextContent("welcome:/project/p1");
   });
 });

@@ -194,3 +194,12 @@ type Persisted = Record<string /* projectId */, SplitPaneState>;
 | m7 | minor | 深层 import `floating-chat/use-floating-session-id` | 已修：floating-chat index 导出，本次新增调用方改用；既有调用方不动 |
 | 疑点 2 | — | 分页外老会话不出现「发送至当前会话」 | 接受：与 tab 标题同源限制，见 backlog「批量解析分页外会话的 tab 标题」 |
 | 疑点 4 | — | 先删后写的保存方式可能恰好 404 关闭分窗 | 接受：概率低，用户可重新分窗 |
+
+## 后续调整（用户反馈）
+
+1. **分窗 target 泛化**：为后续扩展到 browser / chat，store 由 `{ filePath, ratio }` 改为 `{ target: TabTarget, ratio }`，复用内容区 tab 的 target 词汇（`tabKey` / 归一化 / `isTabTarget`）
+   - 可支持的 kind 集中在 `features/split-pane/target.ts`（当前仅 `file`）；store 的 `openSplit` 与加载校验都经它过滤，不支持的 kind 不入存储
+   - 加载时兼容旧 `{ filePath }` 条目并迁移为 `{ target: { kind: "file", path } }`
+   - `useOpenSplit(target)`：「是否左侧当前页」改为 `tabKey(useRouteTabTarget()) === tabKey(target)`（tabs 导出 `useRouteTabTarget`）；nav state `openSplit` 为 `TabTarget`
+   - `SplitPaneView` 按 kind 分发；`useSplitFilePath` 改为 `useSplitTarget`
+   - 扩展新 kind 需：`target.ts` 加入 kind、`SplitPaneView` 加渲染分支、对应入口调用 `useOpenSplit`；chat 需另定同 session 左右并存、`onNavigateToPath` 去向、划词当前会话候选等规则
