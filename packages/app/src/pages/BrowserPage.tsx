@@ -4,6 +4,7 @@ import { useProjectNavigation } from "../lib/use-project-navigation";
 import { useFeature } from "../lib/use-feature";
 import { BrowserPageView } from "../features/browser/BrowserPageView";
 import { isLoopbackUrl } from "../features/browser/open-external-url";
+import { useCloseActiveTab } from "../features/tabs";
 
 export function BrowserPage() {
   const { projectId } = useProjectCtx();
@@ -11,6 +12,7 @@ export function BrowserPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { back } = useProjectNavigation();
+  const closeActiveTab = useCloseActiveTab();
 
   const url = searchParams.get("url");
 
@@ -19,5 +21,12 @@ export function BrowserPage() {
     return null;
   }
 
-  return <BrowserPageView projectId={projectId} url={url} onBack={back} />;
+  return (
+    <BrowserPageView
+      projectId={projectId}
+      url={url}
+      onBack={back}
+      onDetach={() => closeActiveTab(back)}
+    />
+  );
 }

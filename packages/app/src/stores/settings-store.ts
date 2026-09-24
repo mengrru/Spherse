@@ -1,66 +1,78 @@
 import { create } from "zustand";
 import { normalizeLocale, type Locale } from "@spherse/i18n";
-import type { HostBridge, ThemeMode } from "../lib/host-bridge";
+import type { HostBridge, HostSettings, ThemeMode } from "../lib/host-bridge";
 
 export type SettingsStoreApi = Pick<HostBridge, "getSettings" | "saveSettings">;
 
 interface SettingsStore {
+  loaded: boolean;
   locale: Locale;
   debugToolsEnabled: boolean;
+  tabsEnabled: boolean;
   theme: ThemeMode;
   loadLocale: (api: SettingsStoreApi) => Promise<void>;
   changeLocale: (api: SettingsStoreApi, locale: Locale) => Promise<boolean>;
   setDebugToolsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
+  setTabsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
   setTheme: (api: SettingsStoreApi, theme: ThemeMode) => Promise<boolean>;
 }
 
-export const useSettingsStore = create<SettingsStore>((set, get) => ({
-  locale: "zh-CN",
-  debugToolsEnabled: false,
-  theme: "system",
+type UiSettings = Pick<SettingsStore, "debugToolsEnabled" | "tabsEnabled" | "theme">;
 
-  async loadLocale(api) {
+export const useSettingsStore = create<SettingsStore>((set, get) => {
+  async function persist(api: SettingsStoreApi, patch: Partial<UiSettings> & { locale?: Locale }) {
     const settings = await api.getSettings();
-    set({
-      locale: normalizeLocale(settings?.locale),
-      debugToolsEnabled: settings?.debugToolsEnabled ?? false,
-      theme: settings?.theme ?? "system",
-    });
-  },
-
-  async changeLocale(api, locale) {
-    set({ locale });
-    const settings = await api.getSettings();
-    await api.saveSettings({
-      locale,
+    const next: HostSettings = {
+      locale: patch.locale ?? settings?.locale ?? get().locale,
       models: settings?.models,
       debugToolsEnabled: get().debugToolsEnabled,
+      tabsEnabled: get().tabsEnabled,
       theme: get().theme,
-    });
+      ...patch,
+    };
+    await api.saveSettings(next);
     return true;
-  },
+  }
 
-  async setDebugToolsEnabled(api, enabled) {
-    set({ debugToolsEnabled: enabled });
-    const settings = await api.getSettings();
-    await api.saveSettings({
-      locale: settings?.locale ?? get().locale,
-      models: settings?.models,
-      debugToolsEnabled: enabled,
-      theme: get().theme,
-    });
-    return true;
-  },
+  return {
+    loaded: false,
+    locale: "zh-CN",
+    debugToolsEnabled: false,
+    tabsEnabled: true,
+    theme: "system",
 
-  async setTheme(api, theme) {
-    set({ theme });
-    const settings = await api.getSettings();
-    await api.saveSettings({
-      locale: settings?.locale ?? get().locale,
-      models: settings?.models,
-      debugToolsEnabled: get().debugToolsEnabled,
-      theme,
-    });
-    return true;
-  },
-}));
+    async loadLocale(api) {
+      const settings = await api.getSettings().catch((err: unknown) => {
+        set({ loaded: true });
+        throw err;
+      });
+      set({
+        loaded: true,
+        locale: normalizeLocale(settings?.locale),
+        debugToolsEnabled: settings?.debugToolsEnabled ?? false,
+        tabsEnabled: settings?.tabsEnabled ?? true,
+        theme: settings?.theme ?? "system",
+      });
+    },
+
+    async changeLocale(api, locale) {
+      set({ locale });
+      return persist(api, { locale });
+    },
+
+    async setDebugToolsEnabled(api, enabled) {
+      set({ debugToolsEnabled: enabled });
+      return persist(api, { debugToolsEnabled: enabled });
+    },
+
+    async setTabsEnabled(api, enabled) {
+      set({ tabsEnabled: enabled });
+      return persist(api, { tabsEnabled: enabled });
+    },
+
+    async setTheme(api, theme) {
+      set({ theme });
+      return persist(api, { theme });
+    },
+  };
+});

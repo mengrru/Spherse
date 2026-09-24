@@ -16,15 +16,12 @@ import { useI18n } from "@spherse/i18n/react";
 import { useSessionStreaming } from "../chat/runtime/selectors";
 import { useFeature } from "../../lib/use-feature";
 import { useAgentSessionActions } from "./actions-context";
+import { sessionFallbackTitle } from "../../lib/session-title";
 
 interface SessionRowProps {
   session: SessionInfo;
   active: boolean;
   floating: boolean;
-}
-
-function getFallbackTitle(session: SessionInfo) {
-  return new Date(session.updatedAt).toLocaleString();
 }
 
 type RenameState =
@@ -66,7 +63,7 @@ export function SessionRow({ session, active, floating }: SessionRowProps) {
   const [state, dispatch] = useReducer(renameReducer, { mode: "idle" } satisfies RenameState);
   const inputRef = useRef<HTMLInputElement>(null);
   const skipBlurRef = useRef(false);
-  const fallbackTitle = getFallbackTitle(session);
+  const fallbackTitle = sessionFallbackTitle(session);
   const streaming = useSessionStreaming(session.id);
   const isStreaming = !active && streaming;
 

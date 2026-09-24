@@ -246,6 +246,9 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 |------|---------|
 | `data-project-panel` | 项目侧边面板（agent/session 列表 + 文件树的容器，默认 `--sp-sidebar` 背景） |
 | `data-content-browser` | 内容浏览器（文档/代码查看区根容器，包含 header 与内容滚动区） |
+| `data-tab-bar` | 内容区顶部标签栏（位于右侧内容区最上方，用户可在设置中关闭；默认 `bg-muted/40` + 底边框） |
+| `data-tab`（值为 `welcome` / `chat` / `file` / `browser`，活跃项带 `data-active="true"`） | 标签栏中的单个标签（活跃标签默认 `--sp-background` 背景） |
+| `data-tab-drop-indicator` | 拖拽排序时插入位置的竖线指示条（仅拖拽悬停时存在，默认 `--sp-primary` 色、贴标签起始边） |
 
 示例：
 
@@ -259,9 +262,64 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 [data-content-browser] {
   background: url('https://example.com/paper-texture.png') repeat;
 }
+
+/* 标签栏与活跃标签 */
+[data-tab-bar] {
+  background: #16213e;
+}
+[data-tab][data-active="true"] {
+  background: #1a1a2e;
+  color: #f4d35e;
+}
 ```
 
  > 项目面板内部使用 shadcn/ui sidebar 组件（`--sp-sidebar` 系列变量控制纯色背景）。设 `background` / `background-image` 可覆盖纯色实现图片/渐变背景。
+
+### 标签栏定制
+
+标签默认是直角矩形，仅靠右侧边框分隔；形状、间距、活跃态都可在 `.spherse/theme.css` 中改写。项目主题以无层（unlayered）CSS 注入，普通选择器即可覆盖应用内置的 Tailwind 样式，无需 `!important`。
+
+```css
+/* 圆角「胶囊」标签 + 活跃态渐变与下划线 */
+[data-tab-bar] {
+  gap: 4px;
+  padding: 4px 6px 0;
+  border-bottom: none;
+}
+[data-tab] {
+  border: none;
+  border-radius: 8px 8px 0 0;
+}
+[data-tab][data-active="true"] {
+  background: linear-gradient(180deg, #ffffff, #f3e8ff);
+  box-shadow: inset 0 -2px 0 #a855f7;
+}
+[data-tab]::after {
+  content: "";
+  position: absolute;
+  inset: auto 8px 0;
+  height: 2px;
+  border-radius: 1px;
+  background: transparent;
+  transition: background 0.2s;
+}
+[data-tab]:hover::after { background: #d8b4fe; }
+
+/* 按类别区分颜色 */
+[data-tab="chat"] { color: #2563eb; }
+[data-tab="file"] { color: #059669; }
+
+/* 拖拽指示条 */
+[data-tab-drop-indicator] { width: 3px; border-radius: 2px; background: #a855f7; }
+```
+
+注意事项：
+
+- **纵向会被裁剪**：标签栏固定高度（约 36px）且纵向 `overflow: hidden`（横向可滚动）。向外的投影、`transform: translateY` 上浮等超出标签栏上下边界的效果会被裁掉——优先用 inset 阴影、内边距；确需外溢时同时覆盖 `[data-tab-bar]` 的 `height` / `padding`
+- **伪元素可自由使用**：`[data-tab]` 自身是定位上下文（`position: relative`），`::before` / `::after` 均未被占用，装饰伪元素记得写 `position: absolute`，避免挤压标签内容
+- **标签内部元素无专属钩子**：文字按钮与关闭按钮暂未暴露 `data-*` 钩子，如需微调只能用 `[data-tab] > button` 之类的结构选择器，应用更新时可能失效，尽量只在 `[data-tab]` 层定制
+- **欢迎页标签**：`[data-tab="welcome"]` 固定在首位且无关闭按钮，可用该选择器单独设计
+- 标签栏在聊天窗口之外，**agent 主题不影响它**，只能在项目级 `.spherse/theme.css` 定制
 
 ## 浮窗内容浏览器
 

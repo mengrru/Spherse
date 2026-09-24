@@ -4,6 +4,7 @@ import { useI18n } from "@spherse/i18n/react";
 import { useAppStore } from "../../stores/app-store";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { closeProjectCascade } from "../../layouts/project-lifecycle";
+import type { NavState } from "../../lib/nav-state";
 
 export function buildProjectRoute(projectId: string, lastRoute?: string): string {
   const suffix = lastRoute?.startsWith("/") ? lastRoute : "";
@@ -16,7 +17,6 @@ export function useProjectActions() {
   const bridge = useHostBridge();
   const openProject = useAppStore((s) => s.openProject);
   const openProjectFolder = useAppStore((s) => s.openProjectFolder);
-  const setActiveProject = useAppStore((s) => s.setActiveProject);
 
   const handleAddProject = async () => {
     try {
@@ -32,18 +32,18 @@ export function useProjectActions() {
   };
 
   const handleSelectProject = async (projectId: string) => {
-    await setActiveProject(bridge, projectId);
     const project = useAppStore.getState().projects.get(projectId);
     navigate(buildProjectRoute(projectId, project?.lastRoute));
   };
 
   const handleCloseProject = async (projectId: string) => {
     const nextProjectId = await closeProjectCascade(bridge, projectId);
+    const state: NavState = { skipLeaveGuard: true };
     if (nextProjectId) {
       const project = useAppStore.getState().projects.get(nextProjectId);
-      navigate(buildProjectRoute(nextProjectId, project?.lastRoute));
+      navigate(buildProjectRoute(nextProjectId, project?.lastRoute), { state });
     } else {
-      navigate("/");
+      navigate("/", { state });
     }
   };
 

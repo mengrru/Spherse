@@ -1011,6 +1011,10 @@ export const zhCN = {
   "settings.debugTools": "调试工具",
   // 设置 > 通用：调试工具开关下方的说明文案
   "settings.debugToolsDesc": "在侧边栏显示调试菜单入口",
+  // 设置 > 通用：多标签页开关的标题（开启后内容区顶部显示标签栏）
+  "settings.contentTabs": "多标签页",
+  // 设置 > 通用：多标签页开关下方的说明文案
+  "settings.contentTabsDesc": "在内容区顶部以标签页形式保留已打开的会话、文件和网页",
   // 图片生成设置中默认模型下拉框的标签
   "settings.image.defaultModel": "默认生图模型",
 
@@ -1169,6 +1173,14 @@ export const zhCN = {
   "welcome-page.loadFailed": "欢迎页加载失败",
   // 项目欢迎页未配置自定义内容时的空状态提示文案
   "welcome-page.emptyState": "Spherse",
+  // 内容区标签栏：固定的欢迎页标签名（不可关闭）
+  "tabs.welcome": "欢迎页",
+  // 内容区标签栏：单个标签上关闭按钮的提示，{name} 为标签名
+  "tabs.close": "关闭 {name}",
+  // 内容区标签栏：会话标签在标题加载完成前的占位文字
+  "tabs.loading": "加载中…",
+  // 内容区标签栏：整个标签栏的无障碍名称
+  "tabs.label": "已打开的标签页",
 
   // --- Error ---
   // 通用请求失败提示

@@ -36,6 +36,7 @@ describe("ProjectRuntimeBridges structure", () => {
       "ContentQueryBridge",
       "ThemeQueryBridge",
       "WelcomePageQueryBridge",
+      "TabRouteBridge",
     ]) {
       expect(source).toContain(`<${mount} />`);
     }

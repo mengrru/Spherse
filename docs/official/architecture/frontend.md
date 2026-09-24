@@ -32,6 +32,14 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 - Settings 不是路由——是 App shell 级全局 modal（app-ui-store 控制开关与 tab 定位）
 - **remount 下放 page 级**：ProjectScope 作为 layout 不因项目/路由切换重挂；需要重建的视图由各 page 自持 key——`<Chat key={sessionId}>`、ContentBrowser 按 path、WelcomePage 按 projectId
 - `pages/` 是薄 route adapter：参数解析与缺参重定向，不承载业务逻辑
+- **内容区标签页**（`features/tabs/`，全局设置 `tabsEnabled` 开关，默认开）：tab 由路由派生——`TabRouteBridge` 把当前 chat / content / browser 路由 upsert 进 feature-local store（`features/tabs/store.ts`，外部只经 `useCloseActiveTab` / `useCloseDeletedFileTabs` / `useTabsEnabled` 访问），打开入口只管 `navigate`；非活跃 tab 不渲染，点击即导航到其 URL
+  - 欢迎页为虚拟首 tab（不入存储、不可关闭）；活跃 tab 不存储，由当前路由计算
+  - 关闭活跃 tab = `navigate(邻居, { replace, state: { closeTab, closedUrl } })`，导航实际发生后 bridge 才移除 tab 并清出 nav 栈，被离开守卫拦截时 tab 不丢；bridge 处理后以 replace 清空 state
+  - 浏览器页内导航带 `replaceTab` 原位替换；浮窗 session、被 BrowserPage 拒绝的 url 不建 tab
+  - 失效清理：会话缺失 / 所属 agent 已删 → chat tab 自动移除；文件树删除 → `useCloseDeletedFileTabs` 按路径段匹配移除并跳邻居
+  - 文件 tab 名为去扩展名的文件名（`lib/file-name.ts`，与 chat 快捷链接按钮同规则），`title` 为全路径
+  - 移动端 + 标签页开启 + HTML 文件：ContentBrowser 隐藏 header，纵向空间留给预览，切换 / 关闭由 tab 承担
+- **离开守卫**：ContentBrowser 有未保存编辑时经 `useBlocker` 拦截任意 pathname / search 变化并复用放弃确认框；非 POP 导航带 `state.skipLeaveGuard` 可放行（项目关闭、删除当前文件）
 - **lastRoute**：项目内子页面路由持久化在 localStorage（`spherse:last-route:<projectId>`）
   - 启动仅 hash 为 `/` 时恢复（deep-link 优先）；项目切换/关闭后恢复下一项目的 lastRoute；closeProject 时清理
 
@@ -40,14 +48,14 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | 层 | 内容 | 持久化 |
 |---|---|---|
 | app-store | connection、打开项目集合、activeProjectId | 项目集合与 lastActive 经 bridge.project 子 API（desktop 落 electron settings，web 走 HTTP + localStorage）；lastRoute 在 localStorage |
-| settings-store | locale / theme / debugTools | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
+| settings-store | locale / theme / debugTools / tabsEnabled（`loaded` 标记区分未加载与默认值） | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
 | TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / triggers / welcome-page / theme-settings | 内存 cache，项目关闭清除 |
 | project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
-| feature stores | 折叠、浮窗、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
+| feature stores | 折叠、浮窗、内容区 tab 列表、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
 
 - side panel 偏好在 `side-panel-store`（localStorage `spherse:side-panel:pinned`），不在 app-store
 - feature store 持久化分布：
-  - localStorage：floating-chat（`spherse:floating-chat:<projectId>`）、floating-content-browser 与 browser（全局单 key）
+  - localStorage：floating-chat（`spherse:floating-chat:<projectId>`）、floating-content-browser、browser 与 tabs（`spherse:tabs`，均为全局单 key；tabs 按 projectId 分组，只存 target 与顺序，加载时逐项校验）
   - 纯内存（关项目即清）：agent-session-list 折叠、agent-trigger 运行态
 - **query key 一律 `["projects", projectId, ...]`**（`queries/keys.ts` factory）；文件内容 query 定义在 `features/content-browser/hooks/useContentFile.ts`——域 key 统一，定义位置按消费方就近
 - **项目关闭清缓存**：`clearProjectQueries` 三步——generation++ → cancelQueries → removeQueries；generation 递增使迟到异步结果拒绝写入已清缓存
@@ -64,7 +72,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | useAgentBusRefresh（hook） | agent | agent_updated 刷 agents；created / deleted 加刷 sessions |
 | UiSdkBridge（event 桥） | fs-watch | 变更事件 debounce 后定向转发给订阅的 iframe（见 [ui-sdk.md](ui-sdk.md)） |
 
-- 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 5 个 bridge）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 chat session store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
+- 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 6 个 bridge）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 chat session store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
 - **重连补偿**：bus 重连置 `resumedAt`，各桥经 `useReconnectedSync` 批量失效缓存——错过的事件不重放，靠失效重拉对齐
 - App 级补偿：重连后 refreshProjects；路由指向已消失项目时重定向
 
@@ -77,9 +85,9 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 
 ## feature 组织
 
-- `features/` 按业务域组织，当前 20 个，按组：
+- `features/` 按业务域组织，当前 21 个，按组：
   - 工作区：side-panel、activity-bar、project-panel、user-file-panel、skill-panel、agent-session-list、agent-dialog、agent-mcp、agent-trigger
-  - 内容与浏览：content-browser、browser、welcome-page、text-selection-session
+  - 内容与浏览：content-browser、browser、welcome-page、text-selection-session、tabs
   - 会话：chat、floating-chat、floating-content-browser
   - 应用级：settings、project-settings、onboarding、debug-tools
 - `layouts/`：`ProjectScope`（项目工作区 layout route）+ `ProjectRuntimeBridges`（项目级桥挂载）+ `project-lifecycle.ts`（项目关闭级联清理）；跨 feature 编排放 layout 或自治 bridge
@@ -91,4 +99,4 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 ## 杂项机制
 
 - Composer 草稿按 session 缓存：`spherse:draft:<sessionId>`，300ms 防抖写、卸载 flush、发送成功清除
-- 项目内 back 是内存导航栈（`useProjectNavHistory`），不进 router history
+- 项目内 back 是内存导航栈（`useProjectNavHistory`），不进 router history；`back()` 只记录 pending 目标，location 实际到达后才出栈（被守卫拦截取消不失步）；关闭 tab / 删除文件时对应 URL 经 `dropFromProjectNavHistory` 清出

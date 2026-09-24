@@ -12,6 +12,7 @@ import {
 } from "../../components/ui/sidebar";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useProjectCtx } from "../../context/project-context";
+import { useCloseDeletedFileTabs } from "../tabs";
 import { useFeature } from "../../lib/use-feature";
 import { dispatchAction } from "../../ui-sdk";
 import { useFloatedFilePaths } from "../floating-content-browser";
@@ -33,11 +34,7 @@ export function UserFilePanel() {
     navigate(`/project/${projectId}/content?path=${encodeURIComponent(filePath)}`);
   };
 
-  const handleFileDeleted = (deletedPath: string) => {
-    if (contentPath && (contentPath === deletedPath || contentPath.startsWith(`${deletedPath}/`))) {
-      if (projectId) navigate(`/project/${projectId}`);
-    }
-  };
+  const handleFileDeleted = useCloseDeletedFileTabs();
 
   return (
     <>

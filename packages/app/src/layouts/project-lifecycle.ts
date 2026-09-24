@@ -10,6 +10,7 @@ import { useTriggerStore } from "../features/agent-trigger/store";
 import { useFloatingChatStore } from "../features/floating-chat/store";
 import { useFloatingContentBrowserStore } from "../features/floating-content-browser/store";
 import { useBrowserStore } from "../features/browser/store";
+import { useTabsStore } from "../features/tabs/store";
 
 export async function closeProjectCascade(
   bridge: HostBridge,
@@ -23,6 +24,7 @@ export async function closeProjectCascade(
   useFloatingChatStore.getState().clearProject(projectId);
   useFloatingContentBrowserStore.getState().clearProject(projectId);
   useBrowserStore.getState().clearProject(projectId);
+  useTabsStore.getState().clearProject(projectId);
   useProjectDataStore.getState().clearProjectData(projectId);
   clearProjectNavHistory(projectId);
   clearLastRoute(projectId);

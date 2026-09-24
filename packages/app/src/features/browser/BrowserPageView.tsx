@@ -1,20 +1,24 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useBrowserStore } from "./store";
 import { BrowserToolbar } from "./BrowserToolbar";
 import { BrowserView } from "./BrowserView";
+import { tabKey } from "../../lib/tab-target";
+import type { NavState } from "../../lib/nav-state";
 
 interface BrowserPageViewProps {
   projectId: string;
   url: string;
   onBack: () => void;
+  onDetach: () => void;
 }
 
-export function BrowserPageView({ projectId, url, onBack }: BrowserPageViewProps) {
+export function BrowserPageView({ projectId, url, onBack, onDetach }: BrowserPageViewProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const bridge = useHostBridge();
   const [refreshKey, setRefreshKey] = useState(0);
   const openFloat = useBrowserStore((s) => s.openFloat);
@@ -30,13 +34,19 @@ export function BrowserPageView({ projectId, url, onBack }: BrowserPageViewProps
           </Button>
         }
         onNavigate={(newUrl) =>
-          navigate(`/project/${projectId}/browser?url=${encodeURIComponent(newUrl)}`)
+          navigate(`/project/${projectId}/browser?url=${encodeURIComponent(newUrl)}`, {
+            replace: true,
+            state: {
+              replaceTab: tabKey({ kind: "browser", url }),
+              closedUrl: location.pathname + location.search,
+            } satisfies NavState,
+          })
         }
         onRefresh={() => setRefreshKey((k) => k + 1)}
         onOpenInSystem={() => void bridge.openExternal(url)}
         onToggleMode={() => {
           openFloat(projectId, url);
-          onBack();
+          onDetach();
         }}
       />
       <div className="min-h-0 flex-1">

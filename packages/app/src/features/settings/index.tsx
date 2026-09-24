@@ -209,6 +209,8 @@ function SettingsTabs() {
   const setTheme = useSettingsStore((s) => s.setTheme);
   const debugToolsEnabled = useSettingsStore((s) => s.debugToolsEnabled);
   const setDebugToolsEnabled = useSettingsStore((s) => s.setDebugToolsEnabled);
+  const tabsEnabled = useSettingsStore((s) => s.tabsEnabled);
+  const setTabsEnabled = useSettingsStore((s) => s.setTabsEnabled);
   const mobileAccessEnabled = bridge.capabilities.mobileAccess;
   const settingsApi = useMemo<SettingsApi>(() => ({
     getSettings: bridge.getSettings,
@@ -266,6 +268,19 @@ function SettingsTabs() {
               <Switch
                 checked={debugToolsEnabled}
                 onCheckedChange={(checked) => { void setDebugToolsEnabled(settingsApi, checked); }}
+              />
+            </div>
+          </FieldGroup>
+          <FieldGroup className="mt-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium leading-none">{t("settings.contentTabs")}</span>
+                <span className="text-xs text-muted-foreground">{t("settings.contentTabsDesc")}</span>
+              </div>
+              <Switch
+                checked={tabsEnabled}
+                aria-label={t("settings.contentTabs")}
+                onCheckedChange={(checked) => { void setTabsEnabled(settingsApi, checked); }}
               />
             </div>
           </FieldGroup>
