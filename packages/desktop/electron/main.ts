@@ -18,8 +18,8 @@ app.whenReady().then(async () => {
   const mainWindow = createWindow();
   setupContextMenu(mainWindow);
   attachCloseToTray(mainWindow);
-  syncTray();
   registerAllIpc(getMainWindow);
+  syncTray();
   startAutoUpdateChecks();
 
   const mobile = getMobileAccess();

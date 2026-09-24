@@ -50,7 +50,7 @@ vi.mock("electron", () => {
     app: appMock,
     Tray: MockTray,
     Menu: { buildFromTemplate: (template: unknown) => ({ template }) },
-    nativeImage: { createFromPath: (p: string) => ({ path: p }) },
+    nativeImage: { createFromPath: (p: string) => ({ path: p, isEmpty: () => false }) },
   };
 });
 
@@ -258,18 +258,30 @@ describe("attachCloseToTray", () => {
     expect(emitClose(win).prevented).toBe(false);
   });
 
-  it("treats close on an already hidden window as a quit request", () => {
+  it("treats close on a window already hidden to tray as a quit request", () => {
+    setPlatform("win32");
     const win = new FakeWindow();
-    win.visible = false;
     attachCloseToTray(win as never);
+    emitClose(win);
+    expect(appMock.quit).not.toHaveBeenCalled();
     expect(emitClose(win).prevented).toBe(true);
     expect(appMock.quit).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides again after the window is shown", () => {
+    setPlatform("win32");
+    const win = new FakeWindow();
+    attachCloseToTray(win as never);
+    emitClose(win);
+    win.emit("show");
+    expect(emitClose(win).prevented).toBe(true);
+    expect(appMock.quit).not.toHaveBeenCalled();
+    expect(win.hide).toHaveBeenCalledTimes(2);
   });
 
   it("hides a minimized window instead of quitting", () => {
     setPlatform("win32");
     const win = new FakeWindow();
-    win.visible = false;
     win.minimized = true;
     attachCloseToTray(win as never);
     expect(emitClose(win).prevented).toBe(true);

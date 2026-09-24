@@ -1,6 +1,7 @@
 import { app, Menu, Tray, nativeImage } from "electron";
 import type { BrowserWindow, MenuItemConstructorOptions } from "electron";
 import path from "node:path";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { normalizeLocale, translate, type Locale } from "@spherse/i18n";
 import { getCloseToTray, getLocale } from "./settings.js";
@@ -10,7 +11,7 @@ import { getMainWindow } from "./window.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export interface TrayMenuHandlers {
+interface TrayMenuHandlers {
   onShow: () => void;
   onQuit: () => void;
 }
@@ -26,15 +27,42 @@ export function buildTrayMenuTemplate(
   ];
 }
 
+function findDevTrayDir(): string {
+  let dir = __dirname;
+  for (;;) {
+    const candidate = path.join(dir, "resources", "tray");
+    if (existsSync(candidate)) return candidate;
+    const parent = path.dirname(dir);
+    if (parent === dir) return candidate;
+    dir = parent;
+  }
+}
+
 function trayIconPath(): string {
-  const dir = app.isPackaged
-    ? path.join(process.resourcesPath, "tray")
-    : path.join(__dirname, "../../resources/tray");
+  const dir = app.isPackaged ? path.join(process.resourcesPath, "tray") : findDevTrayDir();
   return path.join(dir, process.platform === "darwin" ? "trayTemplate.png" : "tray.png");
+}
+
+function createTray(): Tray {
+  const iconPath = trayIconPath();
+  const icon = nativeImage.createFromPath(iconPath);
+  if (icon.isEmpty()) console.error("[tray] tray icon not found:", iconPath);
+  const created = new Tray(icon);
+  created.setToolTip("Spherse");
+  created.on("click", () => {
+    void showMainWindow();
+  });
+  if (process.platform === "darwin") {
+    created.on("right-click", () => {
+      if (trayMenu) created.popUpContextMenu(trayMenu);
+    });
+  }
+  return created;
 }
 
 let tray: Tray | null = null;
 let trayMenu: Menu | null = null;
+let hiddenToTray = false;
 
 export async function showMainWindow(): Promise<void> {
   const win = getMainWindow();
@@ -53,13 +81,18 @@ function hideToTray(win: BrowserWindow): void {
     return;
   }
   win.hide();
+  hiddenToTray = true;
   if (process.platform === "darwin") app.dock?.hide();
 }
 
 export function attachCloseToTray(win: BrowserWindow): void {
+  hiddenToTray = false;
+  win.on("show", () => {
+    hiddenToTray = false;
+  });
   win.on("close", (event) => {
     if (isQuitting()) return;
-    if (!win.isVisible() && !win.isMinimized()) {
+    if (hiddenToTray) {
       event.preventDefault();
       app.quit();
       return;
@@ -75,28 +108,20 @@ export function syncTray(): void {
     destroyTray();
     return;
   }
-  if (!tray || tray.isDestroyed()) {
-    const created = new Tray(nativeImage.createFromPath(trayIconPath()));
-    created.setToolTip("Spherse");
-    created.on("click", () => {
-      void showMainWindow();
-    });
-    if (process.platform === "darwin") {
-      created.on("right-click", () => {
-        if (trayMenu) created.popUpContextMenu(trayMenu);
-      });
-    }
-    tray = created;
+  try {
+    if (!tray || tray.isDestroyed()) tray = createTray();
+    trayMenu = Menu.buildFromTemplate(
+      buildTrayMenuTemplate(normalizeLocale(getLocale()), {
+        onShow: () => {
+          void showMainWindow();
+        },
+        onQuit: () => app.quit(),
+      }),
+    );
+    if (process.platform !== "darwin") tray.setContextMenu(trayMenu);
+  } catch (err) {
+    console.error("[tray] failed to sync tray:", err);
   }
-  trayMenu = Menu.buildFromTemplate(
-    buildTrayMenuTemplate(normalizeLocale(getLocale()), {
-      onShow: () => {
-        void showMainWindow();
-      },
-      onQuit: () => app.quit(),
-    }),
-  );
-  if (process.platform !== "darwin") tray.setContextMenu(trayMenu);
 }
 
 export function destroyTray(): void {
