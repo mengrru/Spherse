@@ -3,9 +3,9 @@ import { useBlocker, type BlockerFunction } from "react-router";
 import { readNavState } from "../../../lib/nav-state";
 
 export function useLeaveGuard(isDirty: boolean) {
-  const shouldBlock = useCallback<BlockerFunction>(({ currentLocation, nextLocation }) => {
+  const shouldBlock = useCallback<BlockerFunction>(({ currentLocation, nextLocation, historyAction }) => {
     if (!isDirty) return false;
-    if (readNavState(nextLocation.state).skipLeaveGuard) return false;
+    if (historyAction !== "POP" && readNavState(nextLocation.state).skipLeaveGuard) return false;
     return currentLocation.pathname !== nextLocation.pathname
       || currentLocation.search !== nextLocation.search;
   }, [isDirty]);

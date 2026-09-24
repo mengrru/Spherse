@@ -17,5 +17,5 @@ export function readNavState(state: unknown): NavState {
 }
 
 export function hasTabNavState(state: NavState): boolean {
-  return state.closeTab !== undefined || state.replaceTab !== undefined;
+  return state.closeTab !== undefined || state.replaceTab !== undefined || state.closedUrl !== undefined;
 }

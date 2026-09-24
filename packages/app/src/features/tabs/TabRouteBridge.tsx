@@ -21,10 +21,8 @@ export function TabRouteBridge() {
     if (!enabled) return;
     const store = useTabsStore.getState();
     const nav = readNavState(location.state);
-    if (nav.closeTab) {
-      store.closeTab(projectId, nav.closeTab);
-      if (nav.closedUrl) dropFromProjectNavHistory(projectId, nav.closedUrl);
-    }
+    if (nav.closeTab) store.closeTab(projectId, nav.closeTab);
+    if (nav.closedUrl) dropFromProjectNavHistory(projectId, nav.closedUrl);
     if (target && !(target.kind === "chat" && target.sessionId === floatingSessionId)) {
       if (nav.replaceTab) store.replaceTab(projectId, nav.replaceTab, target);
       else store.openTab(projectId, target);

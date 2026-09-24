@@ -64,6 +64,20 @@ describe("useLeaveGuard", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
+  it("still guards history POPs onto entries that carried the opt-out state", async () => {
+    const { router } = renderWithDataRouter(<Guarded dirty />, {
+      initialEntries: [
+        { pathname: "/project/p1/chat/s1", state: { skipLeaveGuard: true } },
+        "/project/p1/content?path=a.md",
+      ],
+      routePath: "/project/:projectId/content",
+      extraRoutes: [{ path: "/project/:projectId/chat/:sessionId", element: <Other /> }],
+    });
+    await act(() => router.navigate(-1));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByTestId("loc")).toHaveTextContent("/project/p1/content?path=a.md");
+  });
+
   it("skips the guard when the navigation opts out", async () => {
     const { router } = setup(true);
     await act(() => router.navigate("/project/p1/chat/s1", { state: { skipLeaveGuard: true } }));

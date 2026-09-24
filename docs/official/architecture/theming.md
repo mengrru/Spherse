@@ -52,6 +52,7 @@
 | `data-md-code` / `data-md-code-inline` / `data-md-quote` / `data-md-img` | CodeBlock / MarkdownContent | Markdown 元素（chat 与 document 视图共用，作用域由主题作者用父选择器表达） |
 | `data-content-doc` | ContentView | 文档视图容器 |
 | `data-project-panel` / `data-content-browser` | project-panel / content-browser | 两大面板区域 |
+| `data-tab-bar` / `data-tab`（值为 kind，+ `data-active`） | TabBar / TabShell | 内容区顶部标签栏与单个标签 |
 | `data-toast-root` | `components/ui/sonner.tsx` | 全局 toast 视口锚点 |
 | `data-project-avatar`（+ `data-active`） | ProjectAvatar | activity bar 项目头像 |
 

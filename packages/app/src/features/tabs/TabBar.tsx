@@ -3,16 +3,14 @@ import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useIsMobile } from "../../hooks/use-mobile";
-import { useFeature } from "../../lib/use-feature";
-import { projectHomeUrl, tabKey, tabUrl, type TabTarget } from "../../lib/tab-target";
+import { projectHomeUrl, tabKey, tabUrl } from "../../lib/tab-target";
 import { useTabsStore } from "../../stores/tabs-store";
 import { TargetTab, WelcomeTab } from "./TabItems";
 import type { TabDragProps } from "./TabShell";
 import { useIsWelcomeRoute } from "./use-route-tab";
 import { useTabActions } from "./use-tab-actions";
 import { useTabsEnabled } from "./use-tabs-enabled";
-
-const EMPTY_TABS: TabTarget[] = [];
+import { useVisibleTabs } from "./use-visible-tabs";
 
 function useTabDrag(projectId: string, enabled: boolean) {
   const moveTab = useTabsStore((s) => s.moveTab);
@@ -53,22 +51,19 @@ export function TabBar() {
   const navigate = useNavigate();
   const enabled = useTabsEnabled();
   const isMobile = useIsMobile();
-  const browserEnabled = useFeature("browser");
-  const tabs = useTabsStore((s) => s.byProject[projectId] ?? EMPTY_TABS);
+  const visible = useVisibleTabs();
   const isWelcome = useIsWelcomeRoute();
   const { activeKey, closeTab } = useTabActions();
   const dragProps = useTabDrag(projectId, !isMobile);
 
   if (!enabled) return null;
 
-  const visible = browserEnabled ? tabs : tabs.filter((tab) => tab.kind !== "browser");
-
   return (
     <div
       data-tab-bar
       role="tablist"
       aria-label={t("tabs.label")}
-      className="flex h-9 shrink-0 items-stretch overflow-x-auto overflow-y-hidden border-b border-border bg-muted/40 [scrollbar-width:none]"
+      className="flex h-9 shrink-0 items-stretch overflow-x-auto overflow-y-hidden border-b border-border bg-muted/40"
     >
       <WelcomeTab
         active={isWelcome}

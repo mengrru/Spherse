@@ -35,7 +35,7 @@
 | tab 身份 | `chat:<sessionId>` / `file:<path>` / `browser:<url>`；welcome 为虚拟 tab，不入存储，恒在首位 |
 | 新 tab 位置 | 追加到末尾 |
 | 关闭非活跃 tab | 直接从 store 移除 |
-| 关闭活跃 tab | 选邻居（右侧优先，否则左侧，否则 welcome）→ `navigate(neighborUrl, { state: { closeTab: key } })`；bridge 在导航**实际发生后**看到 `state.closeTab` 才移除。这样未保存编辑的 blocker 取消导航时 tab 不会被误删。bridge 用已处理 `location.key` 集合防止前进/后退回到同一 history entry 时重复处理 |
+| 关闭活跃 tab | 选邻居（右侧优先，否则左侧，否则 welcome）→ `navigate(neighborUrl, { state: { closeTab: key } })`；bridge 在导航**实际发生后**看到 `state.closeTab` 才移除。这样未保存编辑的 blocker 取消导航时 tab 不会被误删。bridge 处理后以 `replace` 导航清空该 entry 的 state，防止前进/后退回到同一 entry 时重复处理 |
 | 浏览器页内导航 | `BrowserPageView.onNavigate` 带 `state: { replaceTab: true }`；bridge 若见该标记且上一路由 tab 为 browser tab，则原位替换（新 url 已有 tab 时删除旧的、激活已有） |
 | 功能关闭 | `TabBar` 返回 null、bridge 不 upsert / 不处理 state；header X 回到原行为（回欢迎页） |
 | chat 标签名 | 优先读 session catalog（`useProjectSessions`，与侧栏同源，自动标题 / 改名即时同步）；catalog 无此 session（分页外的旧会话）时才启用 `useProjectSession` 查询，避免 N 个 tab 各自触发 probe。无标题时 fallback 与 `SessionRow` 相同（`updatedAt` 本地时间串），抽共享函数 `sessionDisplayTitle` 到 `lib/` |
@@ -99,9 +99,10 @@ clearProject(projectId)
 - `TabRouteBridge.tsx`：`useMatch` 解析 chat / content / browser 路由 + `useSearchParams` → 当前 target；处理 `state.closeTab` / `state.replaceTab`；功能关闭时不执行
 - `use-route-tab.ts`：`useRouteTabTarget()` 返回当前路由 target（bridge 与 bar 共用）
 - `TabBar.tsx`：welcome tab + 列表；拖拽；滚动到活跃项；功能关闭返回 null
-- `TabItem.tsx`：按 kind 渲染 icon + label + 关闭按钮（`aria-label` / `title`），`role="tab"`、`aria-selected`
-- `use-tab-label.ts`：chat 标题解析与失效移除
-- `use-close-active-tab.ts`：`useCloseActiveTab(fallback)`
+- `TabShell.tsx` / `TabItems.tsx`：按 kind 渲染 icon + label + 关闭按钮（`aria-label` / `title`），`role="tab"`、`aria-selected`
+- `use-chat-tab-info.ts`：chat 标题解析与失效判定（ChatTab 内移除）
+- `use-tab-actions.ts`：`closeTab` / `useCloseActiveTab(fallback)` / `useCloseDeletedFileTabs`
+- `use-visible-tabs.ts`：bar 与邻居选择共用的可见列表（browser feature 关闭时过滤）
 - `index.ts`：导出 `TabBar`、`TabRouteBridge`、`useCloseActiveTab`
 
 ### 接入点
@@ -142,7 +143,7 @@ clearProject(projectId)
 | 5 | important | 关闭 / 切换项目时 blocker 拦截导致悬空 | blocker 对 `state.skipLeaveGuard` 放行，关闭项目导航携带；`handleSelectProject` 不再预先 `setActiveProject`（ProjectScope effect 已按 URL 同步） |
 | 6 | medium | 关闭 tab 后 Back 又重开 | 关闭导航用 `replace: true`，并从 project nav stack 移除该 URL |
 | 7 | medium | `back()` 先 pop 后导航，被拦截取消后 stack 失步 | 改为记录 pending back target，location 实际到达后再 pop |
-| 8 | medium | `replaceTab` 依赖 ref，前进后退重复应用 | state 显式携带 `replaceTab: oldKey`；已处理 `location.key` 集合覆盖所有 tab state |
+| 8 | medium | `replaceTab` 依赖 ref，前进后退重复应用 | state 显式携带 `replaceTab: oldKey`；bridge 处理后 replace 清空 state |
 | 9 | medium | 浏览器页转浮窗后 tab 残留 | 转浮窗走关闭当前 tab |
 | 10 | medium | `useBlocker` 在 `MemoryRouter` 测试中抛错 | `renderWithProviders` 增加 data router 选项；新增 `useLeaveGuard` 测试 |
 | 11 | medium | settings 加载前默认 true 导致关闭态也被记录 | settings-store 增加 `loaded`，bridge / bar 在 loaded 后才生效 |
@@ -156,3 +157,22 @@ clearProject(projectId)
 | 19 | minor | 缺失 session 短暂出现伪 tab | 接受：label hook 返回 null 后自动移除 |
 | 20 | minor | 文档说明 | 关闭项目同 `lastRoute` 一起清除 tab；E2E 回归补 `floating-chat` / `floating-content-browser` |
 | 21 | minor | `isLoopbackUrl` 从 browser feature index 导入 | 采纳 |
+
+## Code review 处理
+
+| # | 级别 | 问题 | 处理 |
+|---|---|---|---|
+| I-1 | important | official 文档 / theme skill 未同步 | 已修：frontend.md、project-structure.md、theming.md、desktop.md、glossary.md、`spherse-create-ui-theme` skill |
+| M-1 | medium | 删除打开中的文件后 Back 回到已删文件并重建 tab | 已修：`closeDeletedFileTabs` 以路径段匹配把受影响 content URL 清出 nav 栈 |
+| M-2 | medium | `skipLeaveGuard` 滞留 history entry，POP 时绕过守卫 | 已修：守卫仅对非 POP 导航认该标记 |
+| M-3 | medium | 浏览器页内导航后 Back 追加重复旧 url tab | 已修：页内导航改 `replace` 并携带 `closedUrl`，bridge 清出 nav 栈 |
+| M-4 | medium | browser feature 关闭时邻居可能选中隐藏 tab | 已修：`useVisibleTabs` 供 bar 与邻居选择共用 |
+| M-5 | medium | 分页外旧会话 tab 各自拉全量列表 | 未修：入 backlog「批量解析分页外会话的 tab 标题」 |
+| m-1 | minor | design 文本与实现不一致 | 已修（本文） |
+| m-2 | minor | tabs-store 注释 | 已修 |
+| m-3 | minor | 未使用导出 | 已修 |
+| m-4 | minor | 拖拽指示条物理方向 / arbitrary value | 已修：`before:start-0` 逻辑属性 |
+| m-5 | minor | a11y：tablist 内关闭按钮、隐藏滚动条 | 部分修：恢复滚动条；关闭按钮保持为 tab 兄弟节点（主流编辑器同款），暂不做方向键 roving |
+| m-6 | minor | settings 加载失败时功能被静默关闭 | 已修：失败也置 `loaded` |
+| m-7 | minor | E2E 未覆盖 chat tab / 真重启 | 未修：chat tab 由组件测试覆盖；reload 已重建 store 模块，与重启的 localStorage 路径一致 |
+| m-8 | minor | bridge effect 依赖整个 `location` | 未修：effect 幂等，location 每次导航本就更新 |

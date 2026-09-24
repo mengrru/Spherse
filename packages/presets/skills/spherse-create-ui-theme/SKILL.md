@@ -246,6 +246,8 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 |------|---------|
 | `data-project-panel` | 项目侧边面板（agent/session 列表 + 文件树的容器，默认 `--sp-sidebar` 背景） |
 | `data-content-browser` | 内容浏览器（文档/代码查看区根容器，包含 header 与内容滚动区） |
+| `data-tab-bar` | 内容区顶部标签栏（位于右侧内容区最上方，用户可在设置中关闭；默认 `bg-muted/40` + 底边框） |
+| `data-tab`（值为 `welcome` / `chat` / `file` / `browser`，活跃项带 `data-active="true"`） | 标签栏中的单个标签（活跃标签默认 `--sp-background` 背景） |
 
 示例：
 
@@ -258,6 +260,15 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 /* 内容浏览器背景 */
 [data-content-browser] {
   background: url('https://example.com/paper-texture.png') repeat;
+}
+
+/* 标签栏与活跃标签 */
+[data-tab-bar] {
+  background: #16213e;
+}
+[data-tab][data-active="true"] {
+  background: #1a1a2e;
+  color: #f4d35e;
 }
 ```
 

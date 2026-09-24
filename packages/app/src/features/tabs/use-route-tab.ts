@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useMatch, useSearchParams } from "react-router";
 import { useFeature } from "../../lib/use-feature";
-import { tabKey, type TabTarget } from "../../lib/tab-target";
+import type { TabTarget } from "../../lib/tab-target";
 import { isLoopbackUrl } from "../browser";
 
 export function useRouteTabTarget(): TabTarget | null {
@@ -25,9 +25,4 @@ export function useRouteTabTarget(): TabTarget | null {
 
 export function useIsWelcomeRoute(): boolean {
   return useMatch("/project/:projectId") !== null;
-}
-
-export function useRouteTabKey(): string | null {
-  const target = useRouteTabTarget();
-  return target ? tabKey(target) : null;
 }

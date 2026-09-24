@@ -44,10 +44,14 @@ export function getProjectNavStack(projectId: string): readonly string[] {
   return projectNavStacks.get(projectId) ?? [];
 }
 
-export function dropFromProjectNavHistory(projectId: string, key: string): void {
+export function dropFromProjectNavHistory(
+  projectId: string,
+  match: string | ((key: string) => boolean),
+): void {
   const stack = projectNavStacks.get(projectId);
   if (!stack) return;
-  const next = stack.filter((item) => item !== key);
+  const shouldDrop = typeof match === "string" ? (item: string) => item === match : match;
+  const next = stack.filter((item) => !shouldDrop(item));
   const deduped = next.filter((item, i) => i === 0 || next[i - 1] !== item);
   projectNavStacks.set(projectId, deduped);
 }

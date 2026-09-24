@@ -14,6 +14,11 @@ import { useFloatingChatStore } from "../floating-chat/store";
 import { TabBar } from "./TabBar";
 import { TabRouteBridge } from "./TabRouteBridge";
 import { useCloseActiveTab, useCloseDeletedFileTabs } from "./use-tab-actions";
+import {
+  clearProjectNavHistory,
+  getProjectNavStack,
+  recordProjectNavLocation,
+} from "../../lib/use-project-navigation";
 
 function Layout() {
   const { projectId = "" } = useParams();
@@ -39,7 +44,7 @@ function Page({ name }: { name: string }) {
   );
 }
 
-function setup(initial = "/project/p1") {
+function setup(initial = "/project/p1", bridge = createMockHostBridge()) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Number.POSITIVE_INFINITY } },
   });
@@ -68,7 +73,7 @@ function setup(initial = "/project/p1") {
   );
   render(
     <I18nProvider locale="en">
-      <HostBridgeProvider bridge={createMockHostBridge()}>
+      <HostBridgeProvider bridge={bridge}>
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={router} />
         </QueryClientProvider>
@@ -160,13 +165,35 @@ describe("TabBar", () => {
     expect(tabNames()).toEqual(["Welcome", "First chat"]);
   });
 
-  it("replaces the current browser tab on in-page navigation", async () => {
-    const { router } = setup("/project/p1/browser?url=http%3A%2F%2Flocalhost%3A1%2F");
+  it("replaces the current browser tab on in-page navigation and forgets the old url", async () => {
+    clearProjectNavHistory("p1");
+    const oldUrl = "/project/p1/browser?url=http%3A%2F%2Flocalhost%3A1%2F";
+    recordProjectNavLocation("p1", oldUrl);
+    const { router } = setup(oldUrl);
     await act(() => router.navigate("/project/p1/browser?url=http%3A%2F%2Flocalhost%3A2%2F", {
-      state: { replaceTab: "browser:http://localhost:1/" },
+      replace: true,
+      state: { replaceTab: "browser:http://localhost:1/", closedUrl: oldUrl },
     }));
 
     expect(tabNames()).toEqual(["Welcome", "localhost:2"]);
+    expect(getProjectNavStack("p1")).not.toContain(oldUrl);
+  });
+
+  it("skips hidden browser tabs when picking the neighbor of a closed tab", async () => {
+    useTabsStore.setState({
+      byProject: {
+        p1: [
+          { kind: "chat", sessionId: "s1" },
+          { kind: "browser", url: "http://localhost:1/" },
+          { kind: "file", path: "a.md" },
+        ],
+      },
+    });
+    setup("/project/p1/chat/s1", createMockHostBridge({ kind: "web" }));
+    expect(tabNames()).toEqual(["Welcome", "First chat", "a.md"]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Close First chat" }));
+    expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=a.md");
   });
 
   it("does not create tabs for rejected browser urls or floating sessions", async () => {
@@ -223,6 +250,10 @@ describe("TabBar", () => {
   });
 
   it("closes tabs of deleted files and moves off a deleted active file to a surviving neighbor", async () => {
+    clearProjectNavHistory("p1");
+    for (const url of ["/project/p1/content?path=notes%2Fa.md", "/project/p1/content?path=notes%2Fb.md"]) {
+      recordProjectNavLocation("p1", url);
+    }
     const { go } = setup();
     await go("/project/p1/chat/s1");
     await go("/project/p1/content?path=notes%2Fa.md");
@@ -234,5 +265,6 @@ describe("TabBar", () => {
 
     expect(tabNames()).toEqual(["Welcome", "First chat", "other.md"]);
     expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=other.md");
+    expect(getProjectNavStack("p1").some((url) => url.includes("notes%2F"))).toBe(false);
   });
 });

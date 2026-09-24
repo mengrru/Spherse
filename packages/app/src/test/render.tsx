@@ -3,7 +3,7 @@ import { I18nProvider } from "@spherse/i18n/react";
 import type { Locale } from "@spherse/i18n";
 import { render, type RenderOptions } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
-import { MemoryRouter, RouterProvider, createMemoryRouter } from "react-router";
+import { MemoryRouter, RouterProvider, createMemoryRouter, type InitialEntry } from "react-router";
 import { HostBridgeProvider } from "../context/host-bridge-context";
 import { ProjectProvider } from "../context/project-context";
 import type { HostBridge } from "../lib/host-bridge";
@@ -29,6 +29,7 @@ export interface RenderWithProvidersOptions extends Omit<RenderOptions, "wrapper
 
 export interface RenderWithDataRouterOptions extends RenderWithProvidersOptions {
   routePath: string;
+  initialEntries?: InitialEntry[];
   extraRoutes?: { path: string; element: ReactNode }[];
 }
 
@@ -84,6 +85,7 @@ export function renderWithDataRouter(ui: ReactElement, options: RenderWithDataRo
     locale = "zh-CN",
     wrapper,
     routePath,
+    initialEntries,
     extraRoutes = [],
     ...renderOptions
   } = options;
@@ -95,7 +97,7 @@ export function renderWithDataRouter(ui: ReactElement, options: RenderWithDataRo
       { path: routePath, element: withProject(ui) },
       ...extraRoutes.map((r) => ({ path: r.path, element: withProject(r.element) })),
     ],
-    { initialEntries: [route] },
+    initialEntries ? { initialEntries, initialIndex: initialEntries.length - 1 } : { initialEntries: [route] },
   );
   const result = render(
     <I18nProvider locale={locale}>

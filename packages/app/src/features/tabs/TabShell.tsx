@@ -44,7 +44,7 @@ export function TabShell({ tabKey, kind, icon, label, title, active, onSelect, o
         active
           ? "bg-background text-foreground"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        drag?.dropTarget && "shadow-[inset_2px_0_0_var(--primary)]",
+        drag?.dropTarget && "before:absolute before:inset-y-0 before:start-0 before:w-0.5 before:bg-primary",
       )}
       draggable={drag?.draggable ?? false}
       onDragStart={drag?.onDragStart}

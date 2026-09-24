@@ -3,15 +3,11 @@ export type TabTarget =
   | { kind: "file"; path: string }
   | { kind: "browser"; url: string };
 
-export type TabKind = TabTarget["kind"];
-
-export const WELCOME_TAB_KEY = "welcome";
-
-export function normalizeFilePath(path: string): string {
+function normalizeFilePath(path: string): string {
   return path.replace(/\\/g, "/").replace(/^(\.\/)+/, "");
 }
 
-export function normalizeBrowserUrl(url: string): string {
+function normalizeBrowserUrl(url: string): string {
   try {
     return new URL(url).href;
   } catch {

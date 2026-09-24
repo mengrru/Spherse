@@ -51,7 +51,7 @@ function persist(byProject: TabsByProject) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(byProject));
   } catch {
-    // storage full or unavailable — non-fatal
+    return;
   }
 }
 

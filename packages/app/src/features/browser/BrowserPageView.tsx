@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { useHostBridge } from "../../context/host-bridge-context";
@@ -18,6 +18,7 @@ interface BrowserPageViewProps {
 
 export function BrowserPageView({ projectId, url, onBack, onDetach }: BrowserPageViewProps) {
   const navigate = useNavigate();
+  const location = useLocation();
   const bridge = useHostBridge();
   const [refreshKey, setRefreshKey] = useState(0);
   const openFloat = useBrowserStore((s) => s.openFloat);
@@ -34,7 +35,11 @@ export function BrowserPageView({ projectId, url, onBack, onDetach }: BrowserPag
         }
         onNavigate={(newUrl) =>
           navigate(`/project/${projectId}/browser?url=${encodeURIComponent(newUrl)}`, {
-            state: { replaceTab: tabKey({ kind: "browser", url }) } satisfies NavState,
+            replace: true,
+            state: {
+              replaceTab: tabKey({ kind: "browser", url }),
+              closedUrl: location.pathname + location.search,
+            } satisfies NavState,
           })
         }
         onRefresh={() => setRefreshKey((k) => k + 1)}

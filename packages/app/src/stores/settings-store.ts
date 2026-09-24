@@ -42,7 +42,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     theme: "system",
 
     async loadLocale(api) {
-      const settings = await api.getSettings();
+      const settings = await api.getSettings().catch((err: unknown) => {
+        set({ loaded: true });
+        throw err;
+      });
       set({
         loaded: true,
         locale: normalizeLocale(settings?.locale),
