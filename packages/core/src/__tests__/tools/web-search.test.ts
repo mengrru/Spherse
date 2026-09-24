@@ -95,6 +95,24 @@ describe("formatWebSearchResult", () => {
     const text = formatWebSearchResult(parseWebSearchResponse(FIXTURE));
     expect(text).toContain("The latest LTS is Node.js 24.");
     expect(text).toContain("Sources:\n- [Node.js 22.23.3 (LTS)](https://nodejs.org/en/blog/release/v22.23.3)");
+    expect(text).not.toContain("no web search was actually performed");
+  });
+
+  it("flags answers produced without any search", () => {
+    const text = formatWebSearchResult({ summary: "From memory.", queries: [], sources: [], errors: [], searchCount: 0 });
+    expect(text.startsWith("Note: no web search was actually performed")).toBe(true);
+    expect(text).toContain("From memory.");
+  });
+
+  it("escapes titles and urls that would break markdown links", () => {
+    const text = formatWebSearchResult({
+      summary: "",
+      queries: [],
+      sources: [{ title: "a [b]\nc", url: "https://x.test/p_(1) q" }],
+      errors: [],
+      searchCount: 1,
+    });
+    expect(text).toContain("- [a \\[b\\] c](https://x.test/p_%281%29%20q)");
   });
 });
 
@@ -114,10 +132,10 @@ describe("readDeepSeekApiKey", () => {
     delete process.env.DEEPSEEK_API_KEY;
   });
 
-  it("reads DEEPSEEK_API_KEY and ignores blank values", () => {
+  it("reads DEEPSEEK_API_KEY, trims it and ignores blank values", () => {
     process.env.DEEPSEEK_API_KEY = "  ";
     expect(readDeepSeekApiKey()).toBeUndefined();
-    process.env.DEEPSEEK_API_KEY = "sk-abc";
+    process.env.DEEPSEEK_API_KEY = " sk-abc\n";
     expect(readDeepSeekApiKey()).toBe("sk-abc");
   });
 });
@@ -161,6 +179,31 @@ describe("createWebSearchTool", () => {
     expect((error as Error).message).toContain("HTTP 401");
     expect((error as Error).message).toContain("Authentication Fails");
     expect((error as Error).message).not.toContain(KEY);
+  });
+
+  it("scrubs the key before truncating long error bodies", async () => {
+    const body = `${"x".repeat(495)}${KEY}${"y".repeat(100)}`;
+    const fetchMock = vi.fn(async () => new Response(body, { status: 500 }));
+    const tool = createWebSearchTool({ fetch: fetchMock as unknown as typeof fetch, getApiKey: () => KEY });
+    const error = (await tool.execute("tc1", { query: "x y" }).catch((err: Error) => err)) as Error;
+    expect(error.message).toContain("HTTP 500");
+    expect(error.message).not.toContain(KEY.slice(0, 5));
+  });
+
+  it("scrubs the key from network errors", async () => {
+    const fetchMock = vi.fn(async () => {
+      throw new Error(`connect failed for ${KEY}`);
+    });
+    const tool = createWebSearchTool({ fetch: fetchMock as unknown as typeof fetch, getApiKey: () => KEY });
+    const error = (await tool.execute("tc1", { query: "x y" }).catch((err: Error) => err)) as Error;
+    expect(error.message).toContain("Web search request failed");
+    expect(error.message).not.toContain(KEY);
+  });
+
+  it("reports invalid JSON bodies", async () => {
+    const fetchMock = vi.fn(async () => new Response("not json", { status: 200 }));
+    const tool = createWebSearchTool({ fetch: fetchMock as unknown as typeof fetch, getApiKey: () => KEY });
+    await expect(tool.execute("tc1", { query: "x y" })).rejects.toThrow(/invalid JSON/);
   });
 
   it("throws when the response carries no results", async () => {

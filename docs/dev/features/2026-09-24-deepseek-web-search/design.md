@@ -1,7 +1,7 @@
 # DeepSeek 网页搜索工具（web_search）设计
 
 - 日期：2026-09-24
-- 状态：已商定，待实施
+- 状态：已实施
 
 ## 背景与目标
 
@@ -111,6 +111,8 @@ details: { query, queries, sources, searchCount }
 ```
 
 - sources 为空且 summary 为空 → 抛错 `Web search returned no results`
+- **实施调整**：`searchCount === 0` 且无 sources（DeepSeek 未实际搜索、凭模型知识作答）时，结果文本前置 `Note: no web search was actually performed ...`，避免主模型把可能过时的内容当搜索结果引用
+- 来源 markdown 链接对 title 中 `[]`/换行、url 中 `()`/空白转义；key 先擦除再截断；key 长度 < 8 不擦除（避免误填短值打碎错误信息）
 - 只有 errors 无结果 → 抛错并带 error_code
 - HTTP 非 2xx → 抛错，信息含 status 与响应中的 `error.message`（截断到 500 字符）
 - 安全：所有错误信息落 session 日志，抛出前对 message 做 key 字符串擦除；不记录请求 headers / init；网络错误不透传 `err.cause`

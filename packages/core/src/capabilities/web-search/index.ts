@@ -3,7 +3,7 @@ import type { Capability, StreamDecorator } from "../../kernel/capability.js";
 import { WEB_SEARCH_TOOL_NAME, createWebSearchTool, readDeepSeekApiKey } from "../../tools/web-search.js";
 import type { WebSearchDeps } from "../../tools/web-search.js";
 
-export function hideWebSearchWithoutKey(base: StreamFn, getApiKey: () => string | undefined): StreamFn {
+function hideWebSearchWithoutKey(base: StreamFn, getApiKey: () => string | undefined): StreamFn {
   return (model, context, options) => {
     if (getApiKey() || !context.tools?.some((tool) => tool.name === WEB_SEARCH_TOOL_NAME)) {
       return base(model, context, options);

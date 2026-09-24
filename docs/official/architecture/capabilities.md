@@ -18,6 +18,7 @@
 | `interaction` | `run_command`（逐次审批）、`ask_user`（问答门） |
 | `project-config` | `manage_project_config` 工具 |
 | `data` | `read_data` / `query_data` / `mutate_data` 工具（`*.data.json`） |
+| `web-search` | `web_search` 工具（调用 DeepSeek Anthropic 兼容端点的 server web_search）+ streamDecorator：无 DeepSeek key 时从出站请求 `tools` 中过滤（`state.tools` 不变，toolCatalog 稳定） |
 | `trigger` | `emit_trigger_event` / `manage_trigger` 工具 + `TriggerManager` / `TimerService` 调度（time 型 10 分钟墙钟对齐轮询、event 型即时；磁盘为唯一真相源，每 tick 重读） |
 | `mcp` | MCP server 连接、工具运行时合并、`<mcp-context>` 注入 |
 | `attachments` | 图片等附件处理器 |

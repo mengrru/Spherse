@@ -94,5 +94,6 @@
 
 - **`.spherse` 下未分类文件 LLM 可读**（`spherseOther` 在 LLM read 白名单内，有测试钉住）、仅写被拒——与「避免内部数据泄漏」的最初意图存在差距，是否收紧待决策
 - **不经 access policy 的工具**：`memory_save` / `memory_recall` 直连 MemoryStore（deny `.spherse` 拦不住 memory 持久化）；`generate_image` 写入路径由构造固定（时间戳文件名），仅做穿越校验
+- **`web_search` 向第三方发送查询**：搜索词（由对话派生）发送给 DeepSeek 并计费，与 agent 主模型是否为 DeepSeek 无关；工具 hint 已向用户说明
 - `list_files` / `search_content` 递归降噪：dotfile、`node_modules`、`.git` 跳过；`.spherse` 默认拒绝，需 `include_meta` 显式开启
 - `manage_project_config` 的 `update_welcome_page` 是写操作但**未包审批**（风险与 write_file 同级的取舍）

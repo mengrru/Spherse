@@ -45,7 +45,8 @@ export interface WebSearchDeps {
 export function readDeepSeekApiKey(): string | undefined {
   const envName = providerEnvKey("deepseek");
   const value = envName ? process.env[envName] : undefined;
-  return value && value.trim().length > 0 ? value : undefined;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -91,11 +92,25 @@ export function parseWebSearchResponse(body: unknown): WebSearchResult {
   return result;
 }
 
+const NO_SEARCH_NOTE =
+  "Note: no web search was actually performed; the following comes from the search model's own knowledge and may be outdated.";
+
+function escapeLinkText(text: string): string {
+  return text.replace(/\s+/g, " ").replace(/[[\]]/g, "\\$&");
+}
+
+function escapeLinkUrl(url: string): string {
+  return url.replace(/[()\s]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
+}
+
 export function formatWebSearchResult(result: WebSearchResult): string {
   const parts: string[] = [];
+  if (result.searchCount === 0 && result.sources.length === 0) parts.push(NO_SEARCH_NOTE);
   if (result.summary) parts.push(result.summary);
   if (result.sources.length > 0) {
-    const lines = result.sources.map((source) => `- [${source.title}](${source.url})`);
+    const lines = result.sources.map(
+      (source) => `- [${escapeLinkText(source.title)}](${escapeLinkUrl(source.url)})`,
+    );
     parts.push(`Sources:\n${lines.join("\n")}`);
   }
   return parts.join("\n\n");
@@ -106,18 +121,21 @@ function localDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+const MIN_SCRUB_LENGTH = 8;
+
 function scrub(text: string, apiKey: string): string {
+  if (apiKey.length < MIN_SCRUB_LENGTH) return text;
   return text.split(apiKey).join("[redacted]");
 }
 
-async function readErrorMessage(response: Response): Promise<string> {
+async function readErrorMessage(response: Response, apiKey: string): Promise<string> {
   let raw = "";
   try {
     raw = await response.text();
   } catch {
     return "";
   }
-  return (extractErrorMessage(raw) ?? raw).slice(0, ERROR_BODY_LIMIT);
+  return scrub(extractErrorMessage(raw) ?? raw, apiKey).slice(0, ERROR_BODY_LIMIT);
 }
 
 function extractErrorMessage(raw: string): string | undefined {
@@ -166,6 +184,13 @@ export function createWebSearchTool(deps: WebSearchDeps = {}): AgentTool<typeof 
       const timeoutSignal = AbortSignal.timeout(timeoutMs);
       const combined = AbortSignal.any(signal ? [timeoutSignal, signal] : [timeoutSignal]);
 
+      const fail = (err: unknown, prefix: string): Error => {
+        if (signal?.aborted) return new Error("Web search was aborted.");
+        if (timeoutSignal.aborted) return new Error(`Web search timed out after ${Math.round(timeoutMs / 1000)}s.`);
+        const message = err instanceof Error ? err.message : String(err);
+        return new Error(scrub(`${prefix}: ${message}`, apiKey));
+      };
+
       let response: Response;
       try {
         response = await doFetch(DEEPSEEK_MESSAGES_URL, {
@@ -179,22 +204,19 @@ export function createWebSearchTool(deps: WebSearchDeps = {}): AgentTool<typeof 
           signal: combined,
         });
       } catch (err) {
-        if (signal?.aborted) throw new Error("Web search was aborted.");
-        if (timeoutSignal.aborted) throw new Error(`Web search timed out after ${Math.round(timeoutMs / 1000)}s.`);
-        const message = err instanceof Error ? err.message : String(err);
-        throw new Error(scrub(`Web search request failed: ${message}`, apiKey));
+        throw fail(err, "Web search request failed");
       }
 
       if (!response.ok) {
-        const detail = await readErrorMessage(response);
-        throw new Error(scrub(`Web search failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`, apiKey));
+        const detail = await readErrorMessage(response, apiKey);
+        throw new Error(`Web search failed (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
       }
 
       let body: unknown;
       try {
         body = await response.json();
-      } catch {
-        throw new Error("Web search failed: invalid JSON response.");
+      } catch (err) {
+        throw fail(err, "Web search failed: invalid JSON response");
       }
 
       const result = parseWebSearchResponse(body);
