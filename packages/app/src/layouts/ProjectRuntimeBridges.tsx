@@ -8,6 +8,7 @@ import { ContentQueryBridge } from "../features/content-browser/ContentQueryBrid
 import { ThemeQueryBridge } from "../features/project-settings/theme-settings/ThemeQueryBridge";
 import { WelcomePageQueryBridge } from "../features/welcome-page/WelcomePageQueryBridge";
 import { TabRouteBridge } from "../features/tabs";
+import { SplitRouteBridge } from "../features/split-pane";
 
 export function ProjectRuntimeBridges() {
   return (
@@ -27,6 +28,9 @@ export function ProjectRuntimeBridges() {
       <ThemeQueryBridge />
       <WelcomePageQueryBridge />
       <TabRouteBridge />
+      <FeatureGate feature="content-split-pane">
+        <SplitRouteBridge />
+      </FeatureGate>
     </>
   );
 }

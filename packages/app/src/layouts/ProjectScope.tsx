@@ -3,6 +3,7 @@ import { Outlet, useLocation, useParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { SidePanel } from "../features/side-panel";
 import { TabBar } from "../features/tabs";
+import { SplitLayout } from "../features/split-pane";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useAgentBusRefresh } from "../hooks/useAgentBusRefresh";
 import { useSidePanel } from "../hooks/use-side-panel";
@@ -62,8 +63,10 @@ export function ProjectScope() {
           className="flex-1 overflow-hidden flex flex-col"
           {...clickAwayProps}
         >
-          <TabBar />
-          <Outlet />
+          <SplitLayout>
+            <TabBar />
+            <Outlet />
+          </SplitLayout>
         </main>
         <ProjectRuntimeBridges />
       </div>

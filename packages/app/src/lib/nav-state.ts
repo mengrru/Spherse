@@ -3,6 +3,7 @@ export interface NavState {
   closedUrl?: string;
   replaceTab?: string;
   skipLeaveGuard?: boolean;
+  openSplit?: string;
 }
 
 export function readNavState(state: unknown): NavState {
@@ -13,6 +14,7 @@ export function readNavState(state: unknown): NavState {
   if (typeof s.closedUrl === "string") result.closedUrl = s.closedUrl;
   if (typeof s.replaceTab === "string") result.replaceTab = s.replaceTab;
   if (s.skipLeaveGuard === true) result.skipLeaveGuard = true;
+  if (typeof s.openSplit === "string" && s.openSplit) result.openSplit = s.openSplit;
   return result;
 }
 

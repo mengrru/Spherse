@@ -254,6 +254,12 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return parseJsonResponse<ContentResponse>(res, schemas.contentResponse);
     },
 
+    async readContent(filePath: string): Promise<ContentResponse> {
+      const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(filePath)}`);
+      await assertOk(res);
+      return parseJsonResponse<ContentResponse>(res, schemas.contentResponse);
+    },
+
     async saveContent(filePath: string, content: string): Promise<{ ok: boolean }> {
       const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(filePath)}`, {
         method: "PUT",

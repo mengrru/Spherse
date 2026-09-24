@@ -1,7 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ApiClient } from "../../../lib/api";
+import { ApiError, type ApiClient } from "../../../lib/api";
 import { projectQueryKeys } from "../../../queries/keys";
 import type { ContentResponse } from "../../../lib/types";
+
+const MAX_RETRIES = 1;
+
+class ContentNotFoundError extends Error {
+  constructor() {
+    super("File not found");
+  }
+}
 
 export function useContentFile(projectId: string, client: ApiClient, filePath: string) {
   const queryClient = useQueryClient();
@@ -9,10 +17,14 @@ export function useContentFile(projectId: string, client: ApiClient, filePath: s
   const query = useQuery({
     queryKey,
     queryFn: async () => {
-      const data = await client.getContent(filePath);
-      if (!data) throw new Error("File not found");
-      return data;
+      try {
+        return await client.readContent(filePath);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 404) throw new ContentNotFoundError();
+        throw err;
+      }
     },
+    retry: (failureCount, err) => !(err instanceof ContentNotFoundError) && failureCount < MAX_RETRIES,
   });
 
   return {
@@ -27,6 +39,7 @@ export function useContentFile(projectId: string, client: ApiClient, filePath: s
     binary: query.data?.binary ?? false,
     loading: query.isPending,
     error: query.error instanceof Error ? query.error.message : null,
+    notFound: query.error instanceof ContentNotFoundError,
     dataUpdatedAt: query.dataUpdatedAt,
     reload: () => {
       void query.refetch();

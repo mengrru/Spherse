@@ -16,12 +16,25 @@ export interface FileTreeProps {
   onDeleted?: (path: string) => void;
   onFloatFile?: (filePath: string) => void;
   floatedFilePaths?: Set<string>;
+  onSplitFile?: (filePath: string) => void;
+  splitFilePath?: string | null;
   rootPath?: string;
   emptyLabel?: string;
   readOnly?: boolean;
 }
 
-export function FileTree({ selectedFilePath, onSelectFile, onDeleted, onFloatFile, floatedFilePaths, rootPath, emptyLabel, readOnly }: FileTreeProps) {
+export function FileTree({
+  selectedFilePath,
+  onSelectFile,
+  onDeleted,
+  onFloatFile,
+  floatedFilePaths,
+  onSplitFile,
+  splitFilePath,
+  rootPath,
+  emptyLabel,
+  readOnly,
+}: FileTreeProps) {
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
@@ -47,6 +60,8 @@ export function FileTree({ selectedFilePath, onSelectFile, onDeleted, onFloatFil
     requestDelete: ctrl.requestDelete,
     onFloatFile,
     floatedFilePaths,
+    onSplitFile,
+    splitFilePath,
     readOnly,
   };
 

@@ -28,5 +28,6 @@ describe("ProjectScope structure", () => {
     expect(source).not.toContain("FloatingChatManager");
     expect(source).not.toContain("FloatingContentBrowserManager");
     expect(source).not.toContain("BrowserManager");
+    expect(source).not.toContain("SplitRouteBridge");
   });
 });

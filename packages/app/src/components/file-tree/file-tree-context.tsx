@@ -17,6 +17,8 @@ export interface FileTreeContextValue {
   requestDelete: (item: TreeItem) => void;
   onFloatFile?: (filePath: string) => void;
   floatedFilePaths?: Set<string>;
+  onSplitFile?: (filePath: string) => void;
+  splitFilePath?: string | null;
   readOnly?: boolean;
 }
 

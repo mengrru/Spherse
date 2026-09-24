@@ -805,6 +805,8 @@ export const zhCN = {
   "content-browser.pathCopied": "路径已复制",
   // 刷新按钮（content browser Header，图标按钮 title/aria-label）
   "content-browser.refresh": "刷新",
+  // 分窗按钮（content browser Header 编辑按钮旁，图标按钮 title/aria-label）：将当前文件移到内容区右侧分窗中显示
+  "content-browser.split": "分窗",
   // 点击 markdown 内部链接指向的文件不存在时的 toast 错误提示，{path} 为目标文件相对项目根的路径
   "content-browser.linkNotFound": "找不到文件：{path}",
   // 打开无法在应用内预览的二进制文件（如 PDF / Word / 音视频 / 压缩包）时，占位卡的主标题
@@ -835,6 +837,10 @@ export const zhCN = {
   "file-tree.float": "浮窗",
   // 文件树右键菜单（仅文件）：该文件已在浮窗中打开，点击关闭其浮窗
   "file-tree.cancelFloat": "取消浮窗",
+  // 文件树右键菜单（仅文件）：将文件在内容区右侧分窗中打开
+  "file-tree.split": "分窗",
+  // 文件树右键菜单（仅文件）：该文件已在右侧分窗中打开，点击结束分窗
+  "file-tree.cancelSplit": "取消分窗",
   // 复制路径成功提示
   "file-tree.pathCopied": "路径已复制",
   // 文件树没有文件时的空状态提示
@@ -1185,6 +1191,8 @@ export const zhCN = {
   "tabs.loading": "加载中…",
   // 内容区标签栏：整个标签栏的无障碍名称
   "tabs.label": "已打开的标签页",
+  // 内容区左右分窗之间的分隔条（可拖拽 / 方向键调整宽度）的无障碍名称
+  "split-pane.resize": "调整分窗宽度",
 
   // --- Error ---
   // 通用请求失败提示
