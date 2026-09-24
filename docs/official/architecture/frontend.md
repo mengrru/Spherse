@@ -41,7 +41,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
   - 移动端 + 标签页开启 + HTML 文件：ContentBrowser 隐藏 header，纵向空间留给预览，切换 / 关闭由 tab 承担
 - **内容区分窗**（`features/split-pane/`，Electron only，移动端宽度不渲染）：`ProjectScope` 的 `<main>` 内容由 `SplitLayout` 包裹——左栏 `data-split-main`（TabBar + `<Outlet/>`）恒定存在，开关分窗只增减其后的分隔条与右栏，避免左侧页面重挂载；右栏与路由解耦，显示一个 target
   - target 复用内容区 tab 词汇 `TabTarget`（`lib/tab-target.ts`，同一套 key / 归一化 / 校验）；当前只支持 `file`（`ReadOnlyContentBrowser`：无返回 / 编辑，md 内链替换右栏文件），可支持的 kind 集中在 `features/split-pane/target.ts`，`SplitPaneView` 按 kind 分发渲染
-  - 状态：feature-local store（每项目 `{ target, ratio }`，加载时兼容旧 `{ filePath }`），外部只经 `useOpenSplit` / `useCloseSplit` / `useSplitTarget` / `useCloseDeletedSplit` / `useSplitPaneAvailable` 访问
+  - 状态：feature-local store（每项目 `{ target, ratio }`），外部只经 `useOpenSplit` / `useCloseSplit` / `useSplitTarget` / `useCloseDeletedSplit` / `useSplitPaneAvailable` 访问
   - 「移动」语义：分窗的 target 正是左侧当前路由 target（按 `tabKey` 比较）时，走关闭当前 tab 的导航并附 `state.openSplit`，导航实际到达后由 `SplitRouteBridge` 提交，离开守卫取消时分窗不打开
   - 失效：文件树删除按路径段匹配结束分窗；读取返回 `file_not_found` 错误码（仅文件不存在，不含项目级 404）时自动结束，其他错误保留
   - 分隔条 pointer capture 拖拽 / 方向键 / 双击复位，渲染时按左右最小宽度 clamp

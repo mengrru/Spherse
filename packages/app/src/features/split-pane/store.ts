@@ -25,8 +25,7 @@ function parseEntry(value: unknown): SplitPaneState | null {
   if (!value || typeof value !== "object") return null;
   const entry = value as Record<string, unknown>;
   if (!isValidRatio(entry.ratio)) return null;
-  const target = toSplitTarget(entry.target)
-    ?? (typeof entry.filePath === "string" ? toSplitTarget({ kind: "file", path: entry.filePath }) : null);
+  const target = toSplitTarget(entry.target);
   return target ? { target, ratio: entry.ratio } : null;
 }
 

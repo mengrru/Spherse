@@ -104,13 +104,6 @@ describe("useSplitPaneStore", () => {
     expect(useSplitPaneStore.getState().byProject).toEqual({ ok: { target: file("a.md"), ratio: 0.4 } });
   });
 
-  it("migrates legacy filePath entries", async () => {
-    const { useSplitPaneStore } = await loadStore({
-      [KEY]: JSON.stringify({ p1: { filePath: "./docs/a.md", ratio: 0.4 } }),
-    });
-    expect(useSplitPaneStore.getState().byProject).toEqual({ p1: { target: file("docs/a.md"), ratio: 0.4 } });
-  });
-
   it("rejects target kinds the split pane cannot show yet", async () => {
     const { useSplitPaneStore } = await loadStore();
     useSplitPaneStore.getState().openSplit("p1", { kind: "browser", url: "http://localhost:3000/" });

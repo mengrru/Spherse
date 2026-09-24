@@ -199,7 +199,7 @@ type Persisted = Record<string /* projectId */, SplitPaneState>;
 
 1. **分窗 target 泛化**：为后续扩展到 browser / chat，store 由 `{ filePath, ratio }` 改为 `{ target: TabTarget, ratio }`，复用内容区 tab 的 target 词汇（`tabKey` / 归一化 / `isTabTarget`）
    - 可支持的 kind 集中在 `features/split-pane/target.ts`（当前仅 `file`）；store 的 `openSplit` 与加载校验都经它过滤，不支持的 kind 不入存储
-   - 加载时兼容旧 `{ filePath }` 条目并迁移为 `{ target: { kind: "file", path } }`
+   - 不兼容旧 `{ filePath }` 格式：feature 尚未发布，不存在需迁移的用户数据
    - `useOpenSplit(target)`：「是否左侧当前页」改为 `tabKey(useRouteTabTarget()) === tabKey(target)`（tabs 导出 `useRouteTabTarget`）；nav state `openSplit` 为 `TabTarget`
    - `SplitPaneView` 按 kind 分发；`useSplitFilePath` 改为 `useSplitTarget`
    - 扩展新 kind 需：`target.ts` 加入 kind、`SplitPaneView` 加渲染分支、对应入口调用 `useOpenSplit`；chat 需另定同 session 左右并存、`onNavigateToPath` 去向、划词当前会话候选等规则
