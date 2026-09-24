@@ -8,14 +8,18 @@ import { startAutoUpdateChecks } from "./updater.js";
 import { setupContextMenu } from "./ipc/context-menu.js";
 import { getTunnelManager } from "./tunnel/manager.js";
 import { settleWithin } from "@spherse/core";
+import { beginQuit, isQuitting } from "./lifecycle.js";
+import { attachCloseToTray, destroyTray, showMainWindow, syncTray } from "./tray.js";
 
 app.whenReady().then(async () => {
   await fixPath();
   restoreEnvFromSettings();
   await ensureServer();
-  createWindow();
-  setupContextMenu(getMainWindow()!);
+  const mainWindow = createWindow();
+  setupContextMenu(mainWindow);
+  attachCloseToTray(mainWindow);
   registerAllIpc(getMainWindow);
+  syncTray();
   startAutoUpdateChecks();
 
   const mobile = getMobileAccess();
@@ -31,10 +35,8 @@ app.whenReady().then(async () => {
 const TUNNEL_STOP_TIMEOUT_MS = 5_000;
 const GRACEFUL_SHUTDOWN_HARD_EXIT_MS = 30_000;
 
-let quitting = false;
 async function gracefulShutdown(): Promise<void> {
-  if (quitting) return;
-  quitting = true;
+  if (!beginQuit()) return;
   setTimeout(() => {
     console.error("[main] graceful shutdown timed out, forcing app exit");
     app.exit(1);
@@ -55,8 +57,20 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", (event) => {
-  if (!quitting) {
+  if (!isQuitting()) {
     event.preventDefault();
     void gracefulShutdown();
   }
+});
+
+app.on("will-quit", () => {
+  destroyTray();
+});
+
+app.on("activate", () => {
+  void showMainWindow();
+});
+
+app.on("second-instance", () => {
+  void showMainWindow();
 });

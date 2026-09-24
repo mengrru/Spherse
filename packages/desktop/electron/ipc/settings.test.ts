@@ -10,9 +10,10 @@ vi.mock("electron", () => ({
   },
 }));
 
-const { saveSettingsMock, updateDefaultModelMock, updateSamplingMock, updateThinkingLevelMock } =
+const { saveSettingsMock, updateDefaultModelMock, updateSamplingMock, updateThinkingLevelMock, syncTrayMock } =
   vi.hoisted(() => ({
     saveSettingsMock: vi.fn(),
+    syncTrayMock: vi.fn(),
     updateDefaultModelMock: vi.fn(),
     updateSamplingMock: vi.fn(),
     updateThinkingLevelMock: vi.fn(),
@@ -26,6 +27,9 @@ vi.mock("../server.js", () => ({
   updateDefaultModel: updateDefaultModelMock,
   updateSampling: updateSamplingMock,
   updateThinkingLevel: updateThinkingLevelMock,
+}));
+vi.mock("../tray.js", () => ({
+  syncTray: syncTrayMock,
 }));
 vi.mock("../model-catalog.js", () => ({
   getAppModelCatalog: vi.fn(() => ({ getSupportedProviders: () => ({}) })),
@@ -91,5 +95,17 @@ describe("save-settings ipc propagation", () => {
     expect(updateDefaultModelMock).toHaveBeenCalledWith("p/m");
     expect(updateSamplingMock).toHaveBeenCalledWith({ temperature: 0.5 });
     expect(updateThinkingLevelMock).toHaveBeenCalledWith("low");
+  });
+
+  it("syncs tray after persisting settings", () => {
+    saveSettingsHandler()({
+      locale: "zh-CN",
+      models: { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } },
+      closeToTray: false,
+    });
+
+    expect(saveSettingsMock).toHaveBeenCalledTimes(1);
+    expect(syncTrayMock).toHaveBeenCalledTimes(1);
+    expect(saveSettingsMock.mock.invocationCallOrder[0]).toBeLessThan(syncTrayMock.mock.invocationCallOrder[0]);
   });
 });

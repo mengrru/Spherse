@@ -501,6 +501,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.debugToolsDesc": "在側邊欄顯示除錯選單入口",
   "settings.contentTabs": "多分頁",
   "settings.contentTabsDesc": "在內容區頂部以分頁形式保留已開啟的對話、檔案和網頁",
+  "settings.closeToTray": "關閉至系統匣",
+  "settings.closeToTrayDesc": "關閉視窗時讓 Spherse 保持在背景執行，可透過系統匣圖示重新開啟",
   "settings.image.defaultModel": "預設生圖模型",
   "welcome-page-settings.title": "設定歡迎頁",
   "welcome-page-settings.description": "選擇專案內 HTML 檔案或圖片作為專案歡迎頁。",
@@ -632,6 +634,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "contextMenu.copy": "複製",
   "contextMenu.paste": "貼上",
   "contextMenu.selectAll": "全選",
+  "tray.show": "開啟 Spherse",
+  "tray.quit": "結束",
 
   "ui-sdk.sessionNotFound": "找不到該對話，可能已被刪除",
 };

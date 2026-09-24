@@ -11,6 +11,7 @@ const ELECTRON_CAPABILITIES: HostCapabilities = {
   filePicker: true,
   mobileAccess: true,
   openFileExternal: true,
+  tray: true,
   content: { editable: true },
 };
 

@@ -1,6 +1,6 @@
 # Desktop（Electron）层架构
 
-> 覆盖：main 进程结构与启动、IPC 面、settings 持久化与模型/采样配置传播、mobile access / tunnel、app 更新与 debug 工具。
+> 覆盖：main 进程结构与启动、关闭至托盘、IPC 面、settings 持久化与模型/采样配置传播、mobile access / tunnel、app 更新与 debug 工具。
 > server 生命周期（ensureServer / registry）见 [server.md](server.md)；HostBridge 抽象与 renderer 消费见 [frontend.md](frontend.md)。
 > 打包与 CI 细节见 `.github/workflows/build-and-release.yml` 与 `electron-builder.yml`，本文只述要点。
 
@@ -9,10 +9,20 @@
 - 入口 `electron/bootstrap.ts`：dev（`!app.isPackaged` 且非 test）将 userData 重定向 `Spherse-Dev/`
   - dev 与 prod 的 electron-store / localStorage 完全隔离，可同时运行
   - E2E 由 Playwright 传 `--user-data-dir` + `NODE_ENV=test` 跳过重定向
-- `app.whenReady` 顺序：`fixPath` → `restoreEnvFromSettings` → `ensureServer()`（恒带 server token）→ 创建窗口与右键菜单 → 注册全部 IPC → quick 模式启动 tunnel；更新检查另以 `setTimeout` 5s 调度，与 tunnel 无先后依赖
+  - 随后 `requestSingleInstanceLock()`（按 userData 区分，须在重定向之后）：未拿到锁 `app.exit(0)` 且不加载 main；主实例 `second-instance` 唤回主窗口
+- `app.whenReady` 顺序：`fixPath` → `restoreEnvFromSettings` → `ensureServer()`（恒带 server token）→ 创建窗口与右键菜单、挂关闭至托盘拦截 → 注册全部 IPC → `syncTray()` → quick 模式启动 tunnel；更新检查另以 `setTimeout` 5s 调度，与 tunnel 无先后依赖
 - BrowserWindow：1200×800、`contextIsolation: true`、`nodeIntegration: false`、preload 白名单桥
 - `fixPath` 仅 packaged + darwin/linux：spawn 登录 shell 取 `$PATH` 去重合并，保证 GUI 启动拿到 CLI 环境
-- 优雅退出：`window-all-closed` / `before-quit`（幂等标记）→ tunnel stop → `stopServer()` → quit；`stopServer` / `restartServer` 委托 `MultiProjectServer.close()`（注入 10s 阶段超时与日志回调），不再手工编排 registry/fastify 顺序
+- 优雅退出：`window-all-closed` / `before-quit` → tunnel stop → `stopServer()` → quit；唯一退出标志在 `electron/lifecycle.ts`（`gracefulShutdown` 首个 await 前 `beginQuit()` 置位，`before-quit` / 窗口 close 拦截读 `isQuitting()`），`will-quit` 销毁托盘；`stopServer` / `restartServer` 委托 `MultiProjectServer.close()`（注入 10s 阶段超时与日志回调），不再手工编排 registry/fastify 顺序
+
+## 关闭至托盘
+
+`electron/tray.ts`，由 `AppSettings.closeToTray`（缺省 true）控制：
+
+- 托盘在开关启用期间常驻，启动与每次 `save-settings` 后 `syncTray()` 创建 / 销毁并按 locale 重建菜单（「打开 Spherse」「退出」）；左键 `click` 唤回窗口；macOS 用 `right-click` → `popUpContextMenu`（避免左键也弹菜单），Windows / Linux 用 `setContextMenu`
+- 主窗口 `close`：`isQuitting()` 放行；已收至托盘的窗口再收到 close（安装器 `taskkill` 等非用户操作）→ `app.quit()` 优雅退出；开关启用 → 阻止并隐藏（全屏先退出全屏），macOS 同时 `app.dock.hide()`；开关关闭 → 放行，走 `window-all-closed` 退出（含 macOS）
+- 唤回（托盘 / macOS `activate` / `second-instance`）：macOS 先 `await app.dock.show()`，再 restore / show / focus；退出中或窗口已销毁时 no-op
+- 图标 `resources/tray/`（macOS `trayTemplate*.png` 模板图，其余 `tray*.png`），打包经 `extraResources` 落 `process.resourcesPath/tray`
 
 ## IPC 面
 
@@ -21,7 +31,7 @@
 | 域 | channel 概要 |
 |---|---|
 | project | 目录选择、项目打开/关闭/恢复（`restore-projects` 重注册已打开项目）、lastActive、`get-server-port`、`open-project-folder`、`open-file`（校验在已打开项目内）、`open-external`（仅 http/https/mailto/tel）、save dialog、示例项目 |
-| settings | get/save、文本与图片 provider 目录 |
+| settings | get/save（save 后 `syncTray()`）、文本与图片 provider 目录 |
 | debug | is-dev、DevTools 开关、electron-store 查看、reload renderer、reset app data |
 | skill | zip 文件选择（本地安装用） |
 | updater | check / download / install / cancel / get-state / get-version |
@@ -34,7 +44,7 @@
 
 - electron-store 落 userData 下 `settings.json`；`AppSettings` schema：
   - `locale` + `models: { text, image }`——每 group 含 `defaultModel`、per-provider `apiKey`，text 另含可选 `sampling` 与 `thinkingLevel`（off/low/medium/high，缺省 medium）
-  - 可选 `customProviders` / `debugToolsEnabled` / `tabsEnabled`（缺省 true） / `theme` / `mobileAccess`
+  - 可选 `customProviders` / `debugToolsEnabled` / `tabsEnabled`（缺省 true） / `closeToTray`（缺省 true） / `theme` / `mobileAccess`
 - **serverToken 是 settingsStore 顶层 key，不是 AppSettings 字段**（`saveSettings` 会从零重建 AppSettings）。`getServerToken()` 迁移链：`serverToken` → legacy `mobileAccess.token` → 生成并持久化；它是 server 鉴权唯一凭据来源（见 [server.md](server.md)「鉴权模型」）
 - **API key 掩码与合并**：显示前 4 + `****` + 后 4；保存时空串跳过、含 `****` 保留旧值
   - `saveSettings` 强制保留 `mobileAccess` 旧值，防 renderer 覆写

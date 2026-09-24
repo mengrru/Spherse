@@ -234,7 +234,7 @@ spherse/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 前端运行时投影（当前仅 initialMessage 交接）
 │   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗 open 状态等）
-│   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools/tabsEnabled 等持久化设置（与设置文件同步）
+│   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools/tabsEnabled/closeToTray 等持久化设置（与设置文件同步）
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │   │       ├── layouts/
@@ -312,10 +312,12 @@ spherse/
 │   │   ├── electron-builder.yml      # electron-builder 打包配置（appId、DMG、NSIS、extraResources、publish GitHub Releases）
 │   │   ├── playwright.config.ts      # Playwright E2E 测试配置
 │   │   ├── vitest.config.ts          # Vitest 单元测试配置（排除 e2e 目录）
+│   │   ├── resources/
+│   │   │   └── tray/                 # 托盘图标（trayTemplate*.png macOS 模板图、tray*.png Windows/Linux，含源 SVG；打包经 extraResources 只取 PNG）
 │   │   ├── shared/
 │   │   │   └── electron-api.ts       # Electron IPC 类型契约（renderer 与 main 共享，renderer 经 tsconfig @shared 别名引用）
  │   │   ├── electron/
-│   │   │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData 后加载 main
+│   │   │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData，拿到单实例锁后加载 main（否则退出）
 │   │   │   ├── main.ts               # Electron 主进程：启动时 fixPath（打包版 PATH 修复）→ restoreEnvFromSettings → 组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
 │   │   │   ├── fix-path.ts           # 打包版 PATH 修复：仅 packaged + darwin/linux，spawn 用户登录 shell（$SHELL -lic 'echo $PATH'，TERM=dumb，3s 超时）拉取登录 shell 的 PATH，剥离 ANSI/控制字节后按去重保序前置合并进 process.env.PATH（dev/test/win32 no-op，失败保留原 PATH 不阻断启动）；修复 GUI 进程不继承 shell PATH 导致 stdio MCP server（uvx/npx/python）找不到可执行文件
 │   │   │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
@@ -337,6 +339,8 @@ spherse/
 │   │   │   │   ├── cloudflare-provider.ts # Cloudflare Quick Tunnel 实现：spawn cloudflared tunnel --url、stdout 抓取 *.trycloudflare.com URL、packaged 二进制路径解析
 │   │   │   │   └── manager.ts         # TunnelManager 单例：start/stop/restart 状态机 + onStateChange 事件订阅
 │   │   │   ├── window.ts             # BrowserWindow 创建与管理
+│   │   │   ├── lifecycle.ts          # 唯一退出标志（beginQuit/isQuitting），供优雅退出与关闭拦截共用
+│   │   │   ├── tray.ts               # 关闭至托盘：托盘创建/销毁与菜单（syncTray）、主窗口 close 拦截、showMainWindow（含 macOS Dock 显隐）
 │   │   │   ├── server.ts             # server 实例管理（ensure/restart/stop，恒带 serverToken 鉴权）+ 动态 host 重放（syncAllowedHosts）+ defaultModel 更新
 │   │   │   └── settings.ts           # electron-store 封装 + env 管理（含 syncCustomProviders）+ openProjects/locale/mobileAccess 持久化 + serverToken（顶层 key，getServerToken 迁移链）+ generateAccessToken
 │   │   └── e2e/                      # Playwright E2E 测试
@@ -348,6 +352,7 @@ spherse/
 │   │       ├── agent-dialog.spec.ts  # Agent 对话框搜索文件 E2E 测试
 │   │       ├── agent-quick-links.spec.ts # 快捷链接 E2E 测试（桌面浮窗存活 / 移动端滑出面板 toggle）
 │   │       ├── app-launch.spec.ts    # App 启动验证 smoke test
+│   │       ├── close-to-tray.spec.ts # 关闭至托盘 E2E（默认隐藏不退出、单实例二次启动唤回、关闭开关后关窗退出）
 │   │       ├── packaged-smoke.spec.ts # 打包产物冒烟测试（SPHERSE_SMOKE=1 门控：启动 electron-builder unpacked 二进制，验证 renderer 挂载 + server /health + 版本号；release CI 在 arch 匹配的 matrix job 上必跑）
 │   │       ├── chat-streaming-resilience.spec.ts # Chat streaming 切换 session/后台流式/E2E WebSocket mock
 │   │       ├── chat-history-render.spec.ts # Chat history 渲染 E2E 测试（全事件类型 fixture + retried/withdrawn 淘汰语义）

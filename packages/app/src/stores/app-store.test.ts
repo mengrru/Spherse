@@ -9,6 +9,7 @@ function createMockHostBridge(overrides: Partial<HostBridge> = {}): HostBridge {
       filePicker: true,
       mobileAccess: false,
       openFileExternal: false,
+      tray: false,
       content: { editable: true },
     },
     getServerBaseUrl: vi.fn().mockResolvedValue("http://localhost:5173"),

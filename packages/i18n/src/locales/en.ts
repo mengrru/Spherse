@@ -501,6 +501,8 @@ export const en: Record<TranslationKey, string> = {
   "settings.debugToolsDesc": "Show the debug menu entry in the side panel",
   "settings.contentTabs": "Tabs",
   "settings.contentTabsDesc": "Keep opened chats, files and web pages as tabs at the top of the content area",
+  "settings.closeToTray": "Close to tray",
+  "settings.closeToTrayDesc": "Keep Spherse running in the background when the window is closed; reopen it from the tray icon",
   "settings.image.defaultModel": "Default Image Model",
   "welcome-page-settings.title": "Set Welcome Page",
   "welcome-page-settings.description": "Select an HTML file or image in the project as the welcome page.",
@@ -632,6 +634,8 @@ export const en: Record<TranslationKey, string> = {
   "contextMenu.copy": "Copy",
   "contextMenu.paste": "Paste",
   "contextMenu.selectAll": "Select All",
+  "tray.show": "Open Spherse",
+  "tray.quit": "Quit",
 
   "ui-sdk.sessionNotFound": "Session not found. It may have been deleted.",
 };

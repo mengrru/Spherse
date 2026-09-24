@@ -6,4 +6,8 @@ if (!app.isPackaged && process.env.NODE_ENV !== "test") {
   app.setPath("userData", path.join(path.dirname(defaultUserData), "Spherse-Dev"));
 }
 
-import("./main.js");
+if (app.requestSingleInstanceLock()) {
+  import("./main.js");
+} else {
+  app.exit(0);
+}

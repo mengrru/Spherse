@@ -64,6 +64,7 @@ export interface HostSettings {
   customProviders?: CustomProviderDef[];
   debugToolsEnabled?: boolean;
   tabsEnabled?: boolean;
+  closeToTray?: boolean;
   theme?: ThemeMode;
 }
 
@@ -107,6 +108,7 @@ export interface HostCapabilities {
   filePicker: boolean;
   mobileAccess: boolean;
   openFileExternal: boolean;
+  tray: boolean;
   content: { editable: boolean };
 }
 
