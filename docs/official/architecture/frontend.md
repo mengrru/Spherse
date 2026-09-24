@@ -18,7 +18,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 
 - 接口定义宿主能力：server 连接信息、settings 读写（`getSettings` / `saveSettings`）、`openExternal`，可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile`
 - `HostCapabilities` 声明能力**程度**（同功能在各宿主的差异，如可编辑与否），renderer 据此条件渲染；feature 级整块开关不在这里，走 feature-registry。字段清单由 `host-capabilities.structure.test.ts` 钉住：**声明即必须被消费**（加字段必须带消费点，零消费字段删除）
-  - 布尔项：`filePicker` / `mobileAccess` / `openFileExternal`
+  - 布尔项：`filePicker` / `mobileAccess` / `openFileExternal` / `tray`（设置 > 通用「关闭至托盘」开关）
   - 对象项：`content.editable`
 - desktop 实现全开；web 实现 `content` 只读、其余 false，project API 走 HTTP
 - 消费经 `useHostBridge()`；feature 可见性经 `useFeature` + `FeatureGate` 按 hostKind 查 `feature-registry.ts` 矩阵（改动需同步 `feature-registry.test.ts`）
@@ -48,7 +48,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | 层 | 内容 | 持久化 |
 |---|---|---|
 | app-store | connection、打开项目集合、activeProjectId | 项目集合与 lastActive 经 bridge.project 子 API（desktop 落 electron settings，web 走 HTTP + localStorage）；lastRoute 在 localStorage |
-| settings-store | locale / theme / debugTools / tabsEnabled（`loaded` 标记区分未加载与默认值） | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
+| settings-store | locale / theme / debugTools / tabsEnabled / closeToTray（`loaded` 标记区分未加载与默认值） | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
 | TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / triggers / welcome-page / theme-settings | 内存 cache，项目关闭清除 |
 | project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
 | feature stores | 折叠、浮窗、内容区 tab 列表、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |

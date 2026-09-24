@@ -6,6 +6,7 @@
 
 ## 验证补全
 
+- [ ] **真机验证关闭至托盘三平台表现**：自动化只覆盖 macOS 下的隐藏 / 单实例唤回 / 关闭开关后退出（`close-to-tray.spec.ts`），缺真机回归：① Windows 托盘左键唤回、右键菜单、NSIS 覆盖安装时对已收起实例的优雅退出；② Linux（KDE / 带 AppIndicator 扩展的 GNOME）托盘显示与菜单；③ macOS Dock 隐藏后 Finder / Launchpad 再次打开能否派发 `activate`；④ 打包版 `process.resourcesPath/tray` 图标加载。参见 `docs/dev/features/2026-09-25-close-to-tray/design.md`
 - [ ] **手动验证 server 浏览器安全边界加固的真实隧道链路**：`2026-08-28-server-browser-security` 已合入 always-on token + 认证制 CORS + Host 校验，自动化已覆盖 server/desktop 语义（`browser-security.test.ts` / `server.test.ts`），但缺真机回归：① cloudflared 转发到 `http://localhost:{port}` 时的实际 Host 头形态（决定 quick 模式是否依赖动态 host 注册）；② quick tunnel 全流程（含 PWA WS 连接）；③ manual domain 反代访问与 regenerate 后域名仍可访问；④ prod 打包 renderer（file:// origin）API/WS。参见 `docs/dev/features/2026-08-28-server-browser-security/plan.md` 验证节。
 
 ## Bug
@@ -22,6 +23,7 @@
 - [ ] **BrowserPage render 期 navigate 重定向疑似失效**：`pages/BrowserPage.tsx` 在 render 期间调用 `navigate(...)`（React Router 反模式）。组件测试迁移（2026-08-29）中用 MemoryRouter 验证发现该调用不会完成导航，仅返回 null——web 壳访问 `/project/:id/browser` 时可能停在空白路由而非回到项目首页。修复方向：改为 `useEffect` 内导航或 `<Navigate replace />`；修复后可在 `save-export-degradation.test.tsx` 补真正的路由断言。
 - [ ] **desktop 契约测试缺位**：AGENTS.md 红线要求「core 的 PM 写入门面与 `SessionPort` 方法，消费方包（server/desktop）至少各有一条不 mock 被测方法本身的契约测试」；server 侧已有（`write-facade-contract.test.ts`），desktop 侧现有 `electron/ipc/project.test.ts`、`electron/server.test.ts` 均 vi.mock 了 server/门面，不满足红线。需补一条走真实门面（或真实 IPC 边界）的契约测试。
 - [ ] **补齐 dialog/sheet 关闭按钮 sr-only 文案 i18n**：`packages/app/src/components/ui/dialog.tsx:73` 与 `sheet.tsx:73` 的 `<span className="sr-only">Close</span>` 硬编码英文，屏幕阅读器可读的用户可见文案未走 `@spherse/i18n`（违反仓库红线）；替换为已有 `common.close` 键的 `t()` 即可（2026-08-30 关闭按钮尺寸调整 review 顺带发现）。
+- [ ] **打包版主窗口 icon 路径失效**：`packages/desktop/electron/window.ts` 的 `path.join(__dirname, "../../build/spherse-icon.png")` 在 main 被拆到 `dist/main/chunks/` 后指向 `dist/build/`，且 `build/` 不进打包 `files`，Linux 窗口图标可能缺失（mac/win 用 bundle 图标不受影响）。方向：同托盘图标走 `extraResources` 或删掉该选项改由 electron-builder 平台图标决定。2026-09-25 close-to-tray review 顺带发现（pre-existing）。
 - [ ] **chat WS close reason 截断到 123 字节**：`ws-chat.ts` 的 `socket.close(code, message)` 使用任意 core 错误消息；`ws` 对 >123 字节 reason 抛 `RangeError`，且抛出点在 `setCloseTimer` 之前、会派生 unhandled rejection，close 事件可能不触发导致 attachment lease 无法归还、channel 无法收口。方向：reason 截断（或只传 code），补超长错误消息用例。2026-09-15 hub review 发现（pre-existing）。
 
 ## 技术债（重构与收敛）
@@ -59,6 +61,7 @@
 
 ## 功能增强
 
+- [ ] **首次收至托盘时提示用户**：「关闭至托盘」默认启用，首次关闭窗口后用户可能误以为已退出；方向：首次隐藏时发一次系统通知（Windows balloon / `Notification`），说明可从托盘图标打开或在设置 > 通用关闭。参见 `docs/dev/features/2026-09-25-close-to-tray/design.md`
 - [ ] **web_search 来源专用卡片**：当前 chat 以通用 ToolItemView 展示 `web_search → query`，结果 `details.sources`（title/url）未可视化；方向：参照 generate_image 的 cardType 投影做来源列表卡片（可点击外链）。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md`
 - [ ] **web_search 搜索后端扩展**：搜索模型固定 `deepseek-v4-flash`、仅支持 DeepSeek key；方向：模型可配置，并接入 Anthropic 原生 `web_search` server tool 等其他后端（按已配置 key 选择）。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md`
 - [ ] **会话分支（Session Event Log PR2 剩余）**：分支引用父 log 前缀，子物理日志保持本地 seq 从 0 连续并在 fold 时映射虚拟 seq（消息撤回部分已完成落地）。参见 `docs/dev/features/2026-08-21-session-event-log/plan-pr2.md`
