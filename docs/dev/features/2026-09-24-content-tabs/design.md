@@ -181,3 +181,4 @@ clearProject(projectId)
 
 1. 文件 tab 不显示扩展名：抽 `lib/file-name.ts`（`fileBasename` / `fileDisplayName`），chat Header 快捷链接按钮同步改用
 2. 移动端 + 标签页开启 + HTML 文件时隐藏 ContentBrowser header（HTML 多为自带完整界面的页面，移动端纵向空间有限，切换 / 关闭交给 tab）；判定在 `features/content-browser/index.tsx` 内，按用户要求加注释说明。副作用：该场景下无编辑 / 源码切换入口（移动端 web 本就只读）
+3. 拖拽插入指示条由 tab 的 `::before` 改为独立元素 `data-tab-drop-indicator`，`[data-tab]` 的 `::before` / `::after` 全部留给主题作者；`spherse-create-ui-theme` skill 补「标签栏定制」一节（覆盖方式、纵向裁剪、伪元素可用、内部元素暂无钩子）。文字按钮 / 关闭按钮暂不加钩子

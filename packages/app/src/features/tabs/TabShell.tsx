@@ -44,7 +44,6 @@ export function TabShell({ tabKey, kind, icon, label, title, active, onSelect, o
         active
           ? "bg-background text-foreground"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        drag?.dropTarget && "before:absolute before:inset-y-0 before:start-0 before:w-0.5 before:bg-primary",
       )}
       draggable={drag?.draggable ?? false}
       onDragStart={drag?.onDragStart}
@@ -53,6 +52,13 @@ export function TabShell({ tabKey, kind, icon, label, title, active, onSelect, o
       onDrop={drag?.onDrop}
       onDragEnd={drag?.onDragEnd}
     >
+      {drag?.dropTarget && (
+        <span
+          aria-hidden
+          data-tab-drop-indicator
+          className="pointer-events-none absolute inset-y-0 start-0 w-0.5 bg-primary"
+        />
+      )}
       <button
         type="button"
         role="tab"

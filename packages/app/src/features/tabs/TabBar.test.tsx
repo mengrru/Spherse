@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "@spherse/i18n/react";
@@ -266,5 +266,23 @@ describe("TabBar", () => {
     expect(tabNames()).toEqual(["Welcome", "First chat", "other"]);
     expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=other.md");
     expect(getProjectNavStack("p1").some((url) => url.includes("notes%2F"))).toBe(false);
+  });
+
+  it("shows a standalone drop indicator while dragging and reorders on drop", async () => {
+    const { go } = setup();
+    await go("/project/p1/chat/s1");
+    await go("/project/p1/chat/s2");
+    const tabOf = (name: string) => screen.getByRole("tab", { name }).parentElement as HTMLElement;
+    const dataTransfer = { setData: () => {}, effectAllowed: "", dropEffect: "" };
+
+    fireEvent.dragStart(tabOf("Second chat"), { dataTransfer });
+    fireEvent.dragOver(tabOf("First chat"), { dataTransfer });
+    const indicator = tabOf("First chat").querySelector("[data-tab-drop-indicator]");
+    expect(indicator).not.toBeNull();
+    expect(indicator).toHaveAttribute("aria-hidden");
+
+    fireEvent.drop(tabOf("First chat"), { dataTransfer });
+    expect(tabNames()).toEqual(["Welcome", "Second chat", "First chat"]);
+    expect(document.querySelector("[data-tab-drop-indicator]")).toBeNull();
   });
 });
