@@ -44,7 +44,8 @@
 |---|---|---|
 | `data-app-root` | `App.tsx` / GlobalErrorBoundary | 整窗根，全局装饰锚点 |
 | `data-chat-root` | `features/chat/index.tsx` | 聊天窗口根（agent theme 作用域） |
-| `data-chat-header` / `-messages` / `-message[data-role]` / `-bubble` | Header / MessageList / MessageItem | 聊天结构四层 |
+| `data-chat-header` / `-messages` / `-message[data-role]` / `-bubble` | Header / MessageList / UserBubble·AssistantBubble | 聊天结构四层 |
+| `data-chat-tool-process` | ToolProcessSection | assistant 气泡内无卡片工具的「执行过程」折叠区 |
 | `data-chat-quick-links` / `data-chat-quick-link-panel` | Header / QuickLinkPanel | header 快捷链接按钮行与移动端滑出面板 |
 | `data-chat-turn-collapse` | TriggerTurnGroup | trigger 对话轮折叠摘要条（按钮） |
 | `data-chat-composer` / `-composer-input` | Composer | 输入区外层与外框 |

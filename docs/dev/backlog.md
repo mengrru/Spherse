@@ -65,7 +65,7 @@
 
 - [ ] **全局搜索 v2 扩展**：搜索结果命中词高亮；tool 调用参数/结果参与聊天搜索（可加开关）；legacy 会话（未迁移 messages 表）纳入搜索范围；查询词含 JSON 转义字符（`"` / `\` / 换行）时 LIKE 预取漏召回的归一化处理。参见 `docs/dev/features/2026-09-26-global-search/design.md`「不做 / 已知边界」
 - [ ] **首次收至托盘时提示用户**：「关闭至托盘」默认启用，首次关闭窗口后用户可能误以为已退出；方向：首次隐藏时发一次系统通知（Windows balloon / `Notification`），说明可从托盘图标打开或在设置 > 通用关闭。参见 `docs/dev/features/2026-09-25-close-to-tray/design.md`
-- [ ] **web_search 来源专用卡片**：当前 chat 以通用 ToolItemView 展示 `web_search → query`，结果 `details.sources`（title/url）未可视化；方向：参照 generate_image 的 cardType 投影做来源列表卡片（可点击外链）。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md`
+- [ ] **web_search 来源专用卡片**：当前 `web_search` 只以「执行过程」折叠区内通用工具行展示（结果 `details.sources`（title/url）未可视化）；方向：参照 generate_image 的 cardType 投影做来源列表卡片（可点击外链），投影出卡片后自动脱离折叠区。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md` 与 `2026-09-27-chat-tool-process-collapse/design.md`
 - [ ] **web_search 搜索后端扩展**：搜索模型固定 `deepseek-v4-flash`、仅支持 DeepSeek key；方向：模型可配置，并接入 Anthropic 原生 `web_search` server tool 等其他后端（按已配置 key 选择）。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md`
 - [ ] **会话分支（Session Event Log PR2 剩余）**：分支引用父 log 前缀，子物理日志保持本地 seq 从 0 连续并在 fold 时映射虚拟 seq（消息撤回部分已完成落地）。参见 `docs/dev/features/2026-08-21-session-event-log/plan-pr2.md`
 - [ ] **run_command 后台执行模式**：`background: true` 立即返回 job id、agent 轮询输出，长任务不再阻塞 agent 回合（超时放宽的根治方向）；per-agent 超时配置与 CommandCard 运行时长展示视后续诉求跟进。参见 `docs/dev/features/2026-08-15-run-command-timeout-relaxation/design.md`「未来演进」
@@ -79,6 +79,7 @@
 - [ ] **GitHub Copilot OAuth 登录**：当前 GitHub Copilot 走 apiKey 路径（用户手动粘贴 `COPILOT_GITHUB_TOKEN`）。pi-ai 的 `githubCopilotProvider()` 同时声明了 `lazyOAuth` device-flow；接入需 electron 层调用 pi-ai OAuth helper + 持久化 refresh token + 前端「用 GitHub 登录」按钮，实现免粘贴 token。
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试
 - [ ] **思考强度 composer 会话级覆盖（二期）**：全局默认已落地（settings → RunConfig 传播链）；二期在聊天输入框加快捷档位切换，仅当前会话生效。要点：chat WS `message` payload 加 `thinkingLevel?` 字段（contracts + 契约测试）、`AgentRunner.sendMessage` turn 前一次性覆盖 `agent.state.thinkingLevel`、composer 按 sessionId sticky 状态（同 draft 键控模式）、档位按当前生效模型 `getSupportedThinkingLevels` 动态显示。参见 `docs/dev/features/2026-08-28-model-thinking-intensity/design.md` 二期草图
+- [ ] **渲染 ThinkingContent 到执行过程折叠区**：chat 目前完全丢弃 `ThinkingContent` part（`chat-tool-projection.ts` 的 `extractMessageText`/`extractToolCalls` 只取 text 与 toolCall，live 与 history 两条入口相同）；工具调用折叠区（`ToolProcessSection`）落地后，可把 thinking part 提取为 assistant entry 的一等内容渲染进同一折叠区。需动 `entry-reducer`/`history-entries` 两条入口与 `AssistantEntry` 结构。参见 `docs/dev/features/2026-09-27-chat-tool-process-collapse/design.md`
 - [ ] **Presets i18n**：为 `@spherse/presets` 内置模板和预置内容增加多语言支持，作为 i18n 基础设施完成后的独立任务
 
 ## 基础设施
