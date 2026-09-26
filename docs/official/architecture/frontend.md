@@ -29,7 +29,8 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
   - `/` → App shell（errorElement 为全局错误边界），index → OnboardingPage
   - `project/:projectId` → `ProjectScope`（layout route，经 `<Outlet />` 渲染子页面）
     - index → 欢迎页；`chat/:sessionId` → ChatPage；`content` → ContentBrowserPage；`browser` → BrowserPage
-- Settings 不是路由——是 App shell 级全局 modal（app-ui-store 控制开关与 tab 定位）
+- Settings 不是路由——是 App shell 级全局 modal（app-ui-store 控制开关与 tab 定位）；全局搜索（`features/global-search/`）同为 app-ui-store 控制的浮层 modal，但渲染挂 ProjectScope（项目级能力，Cmd/Ctrl+P 与 project panel 空白处右键唤出）
+- chat 路由 `?messageId=<seq>` 为消息定位参数：ChatPage 解析后交 `useLocateMessage` 自动加载历史至目标 seq 并滚动高亮，完成后 replace 清参；nav 栈与 lastRoute 记录统一经 `lib/route-params.ts` 剥离该参数，避免 back 循环
 - **remount 下放 page 级**：ProjectScope 作为 layout 不因项目/路由切换重挂；需要重建的视图由各 page 自持 key——`<Chat key={sessionId}>`、ContentBrowser 按 path、WelcomePage 按 projectId
 - `pages/` 是薄 route adapter：参数解析与缺参重定向，不承载业务逻辑
 - **内容区标签页**（`features/tabs/`，全局设置 `tabsEnabled` 开关，默认开）：tab 由路由派生——`TabRouteBridge` 把当前 chat / content / browser 路由 upsert 进 feature-local store（`features/tabs/store.ts`，外部只经 `useCloseActiveTab` / `useCloseDeletedFileTabs` / `useTabsEnabled` 访问），打开入口只管 `navigate`；非活跃 tab 不渲染，点击即导航到其 URL

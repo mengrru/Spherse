@@ -18,18 +18,39 @@ function group(overrides: Partial<MessageGroup> = {}): MessageGroup {
   };
 }
 
-function renderGroup(props: { triggerName?: string; hasError?: boolean; running?: boolean } = {}) {
-  renderWithProviders(
+function renderGroup(
+  props: {
+    triggerName?: string;
+    hasError?: boolean;
+    running?: boolean;
+    forceOpen?: boolean;
+  } = {},
+) {
+  const view = renderWithProviders(
     <TriggerTurnGroup
       group={group({
         ...(props.triggerName !== undefined ? { triggerName: props.triggerName } : {}),
         hasError: props.hasError ?? false,
       })}
       running={props.running ?? false}
+      forceOpen={props.forceOpen ?? false}
       renderUser={() => null}
       renderBubble={(_bubble, index) => <div>rendered-{index}</div>}
     />,
   );
+  return {
+    ...view,
+    rerenderWith: (next: { forceOpen?: boolean }) =>
+      view.rerender(
+        <TriggerTurnGroup
+          group={group({ triggerName: "daily" })}
+          running={false}
+          forceOpen={next.forceOpen ?? false}
+          renderUser={() => null}
+          renderBubble={(_bubble, index) => <div>rendered-{index}</div>}
+        />,
+      ),
+  };
 }
 
 describe("TriggerTurnGroup", () => {
@@ -68,5 +89,23 @@ describe("TriggerTurnGroup", () => {
   it("exposes the data-chat-turn-collapse theme hook on the summary bar", () => {
     renderGroup();
     expect(document.querySelector("[data-chat-turn-collapse]")).not.toBeNull();
+  });
+
+  it("renders items immediately when forceOpen is set", () => {
+    renderGroup({ triggerName: "daily", forceOpen: true });
+    expect(screen.getByText("rendered-0")).toBeInTheDocument();
+    expect(screen.getByText("rendered-1")).toBeInTheDocument();
+  });
+
+  it("stays expanded after forceOpen is withdrawn", async () => {
+    const user = userEvent.setup();
+    const { rerenderWith } = renderGroup({ triggerName: "daily", forceOpen: true });
+    expect(screen.getByText("rendered-0")).toBeInTheDocument();
+
+    rerenderWith({ forceOpen: false });
+    expect(screen.getByText("rendered-0")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /触发器「daily」触发的对话轮/ }));
+    expect(screen.queryByText("rendered-0")).not.toBeInTheDocument();
   });
 });

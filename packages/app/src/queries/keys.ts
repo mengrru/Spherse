@@ -6,6 +6,8 @@ export const projectQueryKeys = {
   sessions: (projectId: string) => ["projects", projectId, "sessions"] as const,
   session: (projectId: string, sessionId: string) =>
     ["projects", projectId, "session", sessionId] as const,
+  sessionSearch: (projectId: string, q: string) =>
+    ["projects", projectId, "session-search", q] as const,
   content: (projectId: string, filePath: string) =>
     ["projects", projectId, "content", filePath] as const,
   directories: (projectId: string) => ["projects", projectId, "directories"] as const,

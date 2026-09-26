@@ -18,6 +18,7 @@ import { ChatAgentProvider } from "./chat-agent-context";
 import { useAgentTheme } from "./hooks/useAgentTheme";
 import { useChatScroll } from "./hooks/useChatScroll";
 import { useChatSession } from "./hooks/useChatSession";
+import { useLocateMessage } from "./hooks/useLocateMessage";
 
 export interface ChatProps {
   sessionId: string;
@@ -26,9 +27,11 @@ export interface ChatProps {
   initialMessage?: string;
   onClose?: () => void;
   hideHeader?: boolean;
+  locateSeq?: number | null;
+  onLocated?: () => void;
 }
 
-export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClose, hideHeader }: ChatProps) {
+export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClose, hideHeader, locateSeq = null, onLocated }: ChatProps) {
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const { baseUrl, accessToken } = useConnection();
@@ -72,6 +75,14 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     accessToken,
   });
   const { containerRef, isAtBottom, scrollToBottom } = useChatScroll(entries, sessionId, loadingMore);
+  useLocateMessage({
+    containerRef,
+    client,
+    sessionId,
+    agentId: agent.id,
+    locateSeq,
+    onLocated: onLocated ?? (() => {}),
+  });
   const themeHref = useAgentTheme(client, agent.id, agent.slug, projectId);
 
   const handleClose = () => {
@@ -153,6 +164,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           hasMore={hasMore}
           loadingMore={loadingMore}
           onLoadMore={loadMore}
+          locateSeq={locateSeq}
         />
         <Composer
           streaming={streaming}

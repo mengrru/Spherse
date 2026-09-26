@@ -14,6 +14,7 @@ interface UserBubbleProps {
   sendFailed?: boolean;
   timestamp?: number;
   showTime?: boolean;
+  entrySeq?: number;
   onWithdraw?: () => void;
   onRetry?: () => void;
 }
@@ -24,6 +25,7 @@ export function UserBubble({
   sendFailed,
   timestamp,
   showTime,
+  entrySeq,
   onWithdraw,
   onRetry,
 }: UserBubbleProps) {
@@ -49,6 +51,7 @@ export function UserBubble({
       className="group max-w-[90%] min-w-0 flex items-start gap-1.5 self-end flex-row-reverse"
       data-chat-message
       data-role="user"
+      data-entry-seq={entrySeq}
     >
       <div className="flex min-w-0 flex-col gap-1 items-end md:flex-row-reverse md:items-end md:gap-1.5">
         <div

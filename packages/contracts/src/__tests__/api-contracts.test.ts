@@ -208,6 +208,52 @@ describe("api contracts", () => {
     ).toThrow(/Invalid payload/);
   });
 
+  it("validates session search response", () => {
+    const hit = {
+      agentId: "a1",
+      sessionId: "s1",
+      sessionTitle: "session",
+      seq: 7,
+      role: "user",
+      snippet: "…needle…",
+      time: 1000,
+    };
+    expect(parseApiResponse(schemas.sessionSearchResponse, { results: [hit] })).toEqual({
+      results: [hit],
+    });
+    expect(
+      parseApiResponse(schemas.sessionSearchResponse, {
+        results: [{ agentId: "a1", sessionId: "s1", seq: 0, role: "assistant", snippet: "x", time: 1 }],
+      }),
+    ).toEqual({
+      results: [{ agentId: "a1", sessionId: "s1", seq: 0, role: "assistant", snippet: "x", time: 1 }],
+    });
+  });
+
+  it("rejects malformed session search hits", () => {
+    expect(() =>
+      parseApiResponse(schemas.sessionSearchResponse, {
+        results: [
+          { agentId: "a1", sessionId: "s1", sessionTitle: null, seq: 1, role: "user", snippet: "x", time: 1 },
+        ],
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionSearchResponse, {
+        results: [
+          { agentId: "a1", sessionId: "s1", seq: 1, role: "toolResult", snippet: "x", time: 1 },
+        ],
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionSearchResponse, {
+        results: [
+          { agentId: "a1", sessionId: "s1", seq: "7", role: "user", snippet: "x", time: 1 },
+        ],
+      }),
+    ).toThrow(/Invalid payload/);
+  });
+
   it("validates trigger list response with nextTriggerAt", () => {
     const entry = {
       id: "t1",

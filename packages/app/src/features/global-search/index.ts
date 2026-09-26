@@ -1,0 +1,1 @@
+export { GlobalSearchDialog } from "./GlobalSearchDialog";

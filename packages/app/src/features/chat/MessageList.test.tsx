@@ -60,6 +60,56 @@ describe("MessageList", () => {
     expect(texts[2]).toContain("first");
   });
 
+  it("marks persisted messages with data-entry-seq anchors", () => {
+    renderList([
+      {
+        id: "g1",
+        kind: "turn",
+        user: { kind: "user", id: "e0", seq: 0, text: "question" },
+        hasError: false,
+        bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", text: "answer", tools: [] }],
+      },
+      {
+        id: "g2",
+        kind: "turn",
+        hasError: false,
+        bubbles: [{ kind: "tool-result", id: "b2", entryId: "s2", tool: { toolCallId: "tc1", toolName: "read_file", args: {}, status: "completed" } }],
+      },
+    ]);
+
+    const anchors = [...document.querySelectorAll("[data-entry-seq]")].map(
+      (node) => node.getAttribute("data-entry-seq"),
+    );
+    expect(anchors).toEqual(["1", "0"]);
+  });
+
+  it("expands the trigger turn containing the locate target", () => {
+    const triggerGroup: MessageGroup = {
+      id: "g1",
+      kind: "trigger-turn",
+      triggerName: "daily",
+      hasError: false,
+      user: { kind: "user", id: "e0", seq: 0, text: "go", triggered: true },
+      bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", seq: 1, text: "done", tools: [] }],
+    };
+    renderList([triggerGroup], { locateSeq: 1 });
+    expect(document.querySelector('[data-entry-seq="1"]')).not.toBeNull();
+    expect(document.querySelector('[data-entry-seq="0"]')).not.toBeNull();
+  });
+
+  it("keeps the trigger turn collapsed when the locate target is elsewhere", () => {
+    const triggerGroup: MessageGroup = {
+      id: "g1",
+      kind: "trigger-turn",
+      triggerName: "daily",
+      hasError: false,
+      user: { kind: "user", id: "e0", seq: 0, text: "go", triggered: true },
+      bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", seq: 1, text: "done", tools: [] }],
+    };
+    renderList([triggerGroup], { locateSeq: 9 });
+    expect(document.querySelector('[data-entry-seq="1"]')).toBeNull();
+  });
+
   it("renders an orphan tool result bubble instead of dropping it", () => {
     renderList([
       {

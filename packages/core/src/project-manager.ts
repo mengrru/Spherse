@@ -8,10 +8,12 @@ import { serverAccessPolicy } from "./access/access-policy.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { ConflictError, NotFoundError, ValidationError } from "./errors.js";
 import { deriveHistoryEntries, type DerivedMessageEntry } from "./session/fold.js";
+import type { ProjectMessageSearchHit } from "./session/search.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
 const HISTORY_CACHE_LIMIT = 32;
+const SEARCH_PREFETCH_LIMIT = 400;
 
 interface HistoryCacheEntry {
   version: number;
@@ -257,6 +259,19 @@ export class ProjectManager {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) return;
     agentStore.sessions.archiveSession(sessionId);
+  }
+
+  searchProjectMessages(query: string, limit: number): ProjectMessageSearchHit[] {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+    const hits: ProjectMessageSearchHit[] = [];
+    for (const [agentId, agentStore] of this.projectStore.agents) {
+      for (const hit of agentStore.sessions.searchMessages(trimmed, SEARCH_PREFETCH_LIMIT)) {
+        hits.push({ ...hit, agentId });
+      }
+    }
+    hits.sort((a, b) => b.time - a.time || b.seq - a.seq);
+    return hits.slice(0, limit);
   }
 
   async listSkills(): Promise<SkillDefinition[]> {

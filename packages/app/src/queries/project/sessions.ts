@@ -151,6 +151,19 @@ export function useProjectSession(
   });
 }
 
+export function useSessionSearch(
+  projectId: string,
+  client: ApiClient,
+  q: string,
+  options?: { limit?: number },
+) {
+  return useQuery({
+    queryKey: [...projectQueryKeys.sessionSearch(projectId, q), options?.limit ?? null],
+    queryFn: () => client.searchSessions(q, options),
+    enabled: Boolean(projectId && client && q.trim()),
+  });
+}
+
 export async function ensureProjectSession(
   projectId: string,
   client: ApiClient | null,
