@@ -57,11 +57,11 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 |---|---|---|
 | app-store | connection、打开项目集合、activeProjectId | 项目集合与 lastActive 经 bridge.project 子 API（desktop 落 electron settings，web 走 HTTP + localStorage）；lastRoute 在 localStorage |
 | settings-store | locale / theme / debugTools / tabsEnabled / closeToTray（`loaded` 标记区分未加载与默认值） | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
-| TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / marketplace-projects（全局 key，不随项目关闭清理）/ triggers / welcome-page / theme-settings | 内存 cache，项目关闭清除 |
+| TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / marketplace-projects（全局 key，不随项目关闭清理）/ triggers / welcome-page / custom-side-panel / theme-settings | 内存 cache，项目关闭清除 |
 | project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
 | feature stores | 折叠、浮窗、内容区 tab 列表、分窗、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
 
-- side panel 偏好在 `side-panel-store`（localStorage `spherse:side-panel:pinned`），不在 app-store
+- side panel 偏好在 `side-panel-store`（localStorage `spherse:side-panel:pinned`），不在 app-store；自定义侧边面板激活态在 `custom-side-panel-store`（localStorage `spherse:custom-side-panel:active-by-project`，per-project）
 - feature store 持久化分布：
   - localStorage：floating-chat（`spherse:floating-chat:<projectId>`）、floating-content-browser、browser、tabs（`spherse:tabs`）与 split-pane（`spherse:content-split`）（后四者均为全局单 key；tabs / split-pane 按 projectId 分组，加载时逐项校验）
   - 纯内存（关项目即清）：agent-session-list 折叠、agent-trigger 运行态
@@ -76,11 +76,12 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | ContentQueryBridge | fs-watch | content 按 changedPath 精准失效；directories / fileTree 全量失效；300ms 防抖；重连全量失效 |
 | ThemeQueryBridge | fs-watch | theme.css 变更失效 theme-settings |
 | WelcomePageQueryBridge | fs-watch | project.yaml 变更失效 welcome-page |
+| CustomSidePanelQueryBridge | fs-watch | project.yaml 变更失效 custom-side-panel |
 | TriggerEventBridge | trigger | updated / completed / failed 失效 triggers 并增删 running；completed 通知 + 刷新会话历史 |
 | useAgentBusRefresh（hook） | agent | agent_updated 刷 agents；created / deleted 加刷 sessions |
 | UiSdkBridge（event 桥） | fs-watch | 变更事件 debounce 后定向转发给订阅的 iframe（见 [ui-sdk.md](ui-sdk.md)） |
 
-- 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 7 个 bridge，其中 SplitRouteBridge 经 FeatureGate）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 chat session store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
+- 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 8 个 bridge，其中 SplitRouteBridge 经 FeatureGate）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 chat session store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
 - **重连补偿**：bus 重连置 `resumedAt`，各桥经 `useReconnectedSync` 批量失效缓存——错过的事件不重放，靠失效重拉对齐
 - App 级补偿：重连后 refreshProjects；路由指向已消失项目时重定向
 
@@ -93,8 +94,8 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 
 ## feature 组织
 
-- `features/` 按业务域组织，当前 22 个，按组：
-  - 工作区：side-panel、activity-bar、project-panel、user-file-panel、skill-panel、agent-session-list、agent-dialog、agent-mcp、agent-trigger
+- `features/` 按业务域组织，当前 23 个，按组：
+  - 工作区：side-panel、activity-bar、project-panel、custom-side-panel、user-file-panel、skill-panel、agent-session-list、agent-dialog、agent-mcp、agent-trigger
   - 内容与浏览：content-browser、browser、welcome-page、text-selection-session、tabs、split-pane
   - 会话：chat、floating-chat、floating-content-browser
   - 应用级：settings、project-settings、onboarding、debug-tools

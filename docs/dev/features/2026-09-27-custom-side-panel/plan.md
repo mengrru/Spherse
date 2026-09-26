@@ -13,4 +13,4 @@
 - [x] 9. app：ActivityBar 菜单项 + dialog 挂载；ProjectRuntimeBridges 挂 bridge；project-lifecycle 级联 `clearProject`；结构/级联测试更新
 - [x] 10. i18n：三 locale 新 key（已加载 i18n skill，check:i18n 通过）
 - [x] 11. lint + typecheck + 相关包测试全绿（core presets.test.ts 失败为基线既有，与本改动无关）
-- [ ] 12. 文档同步（doc-sync skill）：data-conventions / project-structure / frontend.md
+- [x] 12. 文档同步（doc-sync skill）：data-conventions / project-structure / frontend.md / glossary / backlog
