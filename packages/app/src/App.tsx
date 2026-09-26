@@ -90,6 +90,7 @@ export function App() {
         <div data-app-root className="relative flex h-dvh overflow-hidden bg-background text-foreground">
           <>
             {!inProject && bridge.kind !== "web" && <ActivityBar />}
+            {bridge.renderNotificationSetup?.()}
             <Outlet />
             {settingsModalOpen && settingsEnabled && (
               <SettingsModal onClose={() => setSettingsModalOpen(false)} />

@@ -12,7 +12,10 @@ const { createServerMock, serverClose, registryListInfo } = vi.hoisted(() => ({
 }));
 
 vi.mock("electron", () => ({
-  app: { getVersion: () => "0.0.0-test" },
+  app: {
+    getVersion: () => "0.0.0-test",
+    getPath: (name: string) => `/tmp/spherse-test-${name}`,
+  },
 }));
 vi.mock("./settings.js", () => ({
   getSettings: () => undefined,

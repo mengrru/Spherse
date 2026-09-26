@@ -202,6 +202,28 @@ describe("tabsEnabled persistence", () => {
   });
 });
 
+describe("systemNotifications persistence", () => {
+  const models = { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } };
+
+  it("defaults systemNotifications to true when absent", () => {
+    settingsStore.set("settings", { locale: "zh-CN", models });
+    expect(getMaskedSettings()?.systemNotifications).toBe(true);
+  });
+
+  it("persists systemNotifications through saveSettings and masked read", () => {
+    settingsStore.set("settings", undefined);
+    saveSettings({ locale: "zh-CN", models, systemNotifications: false });
+    expect(settingsStore.get("settings")?.systemNotifications).toBe(false);
+    expect(getMaskedSettings()?.systemNotifications).toBe(false);
+  });
+
+  it("keeps previous systemNotifications when incoming omits it", () => {
+    settingsStore.set("settings", { locale: "zh-CN", models, systemNotifications: false });
+    saveSettings({ locale: "zh-CN", models });
+    expect(settingsStore.get("settings")?.systemNotifications).toBe(false);
+  });
+});
+
 describe("closeToTray persistence", () => {
   const models = { text: { defaultModel: "", providers: {} }, image: { defaultModel: "", providers: {} } };
 

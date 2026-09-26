@@ -31,6 +31,7 @@ export class ProjectRegistry {
   private lastOpenedMap = new Map<string, string>();
   private readonly removing = new Map<string, Promise<void>>();
   private readonly onRuntimeRemoved?: (runtime: SessionManager) => void;
+  private readonly onRuntimeAdded?: (ctx: ProjectContextCompat) => void;
   private logger: Logger;
   private defaultModel?: string;
   private sampling?: SamplingParams;
@@ -50,6 +51,7 @@ export class ProjectRegistry {
       thinkingLevel?: ThinkingLevel;
       modelCatalog?: ModelCatalog;
       onRuntimeRemoved?: (runtime: SessionManager) => void;
+      onRuntimeAdded?: (ctx: ProjectContextCompat) => void;
     },
   ) {
     this.logger = logger;
@@ -58,6 +60,7 @@ export class ProjectRegistry {
     this.thinkingLevel = options?.thinkingLevel;
     this.modelCatalog = options?.modelCatalog ?? new ModelCatalog();
     this.onRuntimeRemoved = options?.onRuntimeRemoved;
+    this.onRuntimeAdded = options?.onRuntimeAdded;
   }
 
   async register(projectRoot: string, options?: RegisterOptions): Promise<ProjectContextCompat> {
@@ -124,6 +127,11 @@ export class ProjectRegistry {
     this.projects.set(projectId, ctx);
     if (options?.lastOpened) {
       this.lastOpenedMap.set(projectId, options.lastOpened);
+    }
+    try {
+      this.onRuntimeAdded?.(ctx);
+    } catch (err) {
+      this.logger.error({ err, projectId }, "runtime added observer failed");
     }
     return ctx;
   }

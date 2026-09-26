@@ -128,6 +128,7 @@ export interface AppSettings {
   debugToolsEnabled?: boolean;
   tabsEnabled?: boolean;
   closeToTray?: boolean;
+  systemNotifications?: boolean;
   theme?: ThemeMode;
   mobileAccess?: MobileAccessSettings;
 }

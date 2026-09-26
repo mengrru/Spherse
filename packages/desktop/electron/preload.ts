@@ -77,4 +77,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on(MOBILE_EVENT_CHANNEL, handler);
     return () => ipcRenderer.removeListener(MOBILE_EVENT_CHANNEL, handler);
   },
+  showNotification: (request: { title: string; body: string }) =>
+    ipcRenderer.invoke("notifications:show", request),
 } satisfies ElectronAPI);
