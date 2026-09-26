@@ -1,7 +1,7 @@
 # 项目内全局搜索（聊天 + 文件名）设计
 
 - 日期：2026-09-26
-- 状态：已确认，待实施
+- 状态：已实施（code review 修复见文末 review 记录）
 
 ## 背景与目标
 
@@ -207,3 +207,5 @@ global-search.initialHint      输入关键词搜索当前项目的聊天记录�
 ## review 记录
 
 2026-09-26 sub agent review：无 critical。important 3 项已落入设计（返回栈剥离 messageId、useLocateMessage 放弃分支补全、sessionTitle NULL→undefined 映射）；medium/minor 中 sr-only DialogTitle、`userAgentData.platform` 判定平台已采纳，其余以「已知边界」标注。
+
+2026-09-26 code review（实现后）：无 critical。important 3 项已修（同 seq 二次定位重置、Enter 过滤 IME 组合态、contracts 补正/负样本契约测试）；medium 5 项已修（Bubble 透传 seq 锚点、搜索失败态与无结果区分、无标题 fallback 对齐 SessionRow、route-params 纯函数测试、limit 截断语义）；minor 4 项已修（Shift+P 不拦截、文件树 pending 不闪无结果、中文标点风格、parseMessageIdParam 严格十进制）。

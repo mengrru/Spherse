@@ -49,7 +49,7 @@
 | connection | 全局：连接信息、项目列表；项目级：项目 info |
 | agents / agent-write | agent 列表/详情/raw/theme；创建、更新、删除 |
 | agent-mcp | agent 的 MCP 连接器配置读写 |
-| sessions | 项目级批量会话目录、agent 级列表、创建、详情、messages GET/POST、status、rename、删除 |
+| sessions | 项目级批量会话目录、agent 级列表、创建、详情、messages GET/POST、status、rename、删除、消息搜索（GET /sessions/search?q=，core 层 LIKE 预取 + JS 精确匹配） |
 | content | stat、文件/目录的读写删建 |
 | data | `/data/read` `/mutate` `/raw-set` `/raw-delete` |
 | settings | 全局：文本与图片 provider 目录；项目级：ai-access / welcome-page / theme |

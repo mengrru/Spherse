@@ -46,6 +46,7 @@ spherse/
 │   │       │   ├── model-resolver.ts # resolveFor / resolveOrThrow（catalog 注入）
 │   │       │   ├── events.ts / event-log.ts # SessionEvent 词汇表 + append-only SessionEventLog 门面
 │   │       │   ├── fold.ts           # events → AgentMessage 投影 + open-turn repair
+│   │       │   ├── search.ts         # 消息搜索纯函数（文本抽取 / snippet / LIKE 转义 / 命中类型）
 │   │       │   ├── legacy-migrate.ts # messages/compactions → events 按会话幂等迁移
 │   │       │   ├── read-context-files.ts # profile 声明 context 文件读取（注入 systemPrompt 的 preloaded block；access policy 过滤）
 │   │       │   ├── event-middlewares.ts # log/persist（session 层不变量）
@@ -54,7 +55,7 @@ spherse/
 │   │       ├── store/                # 存储层抽象（不持有运行时状态；磁盘真相）
 │   │       │   ├── project.ts        # ProjectStore 聚合根（EventEmitter；agents Map；AGENTS.md/CHANGELOG.md）
 │   │       │   ├── agent-store.ts    # per-agent 聚合（profile/sessions/triggers/skills/mcp lazy getter）
-│   │       │   ├── session.ts        # SQLite session 持久化（events 主写；messages/compactions legacy 只读）
+│   │       │   ├── session.ts        # SQLite session 持久化（events 主写；messages/compactions legacy 只读；searchMessages 趈息搜索）
 │   │       │   ├── trigger.ts / skill.ts / mcp-config.ts / memory.ts / agent-profile.ts / agent-slug.ts / project-config.ts
 │   │       ├── tools/                # AgentTool 实现体（capability 的实现层，无注册表）
 │   │       │   ├── read/write/edit/list/search/move/copy-file.ts、run-command.ts、ask-user.ts、manage-agent.ts、manage-trigger.ts、manage-project-config.ts、emit-trigger-event.ts、load-skill.ts、render-card.ts、generate-image.ts、web-search.ts（经 DeepSeek Anthropic 端点 server web_search）、append-changelog.ts、memory-save.ts、memory-recall.ts、with-approval.ts、json-check.ts
@@ -148,7 +149,7 @@ spherse/
 │   │       ├── index.ts              # 聚合 schemas 与类型 re-export，包唯一入口
 │   │       ├── common.ts             # okResponse/errorResponse、parseContract/parseApiResponse
 │   │       ├── agents.ts             # AgentProfile、AgentCreate/Update、MCP（mcpServerConfig/AgentMcpResponse/AgentMcpUpdateRequest）Request/Response
-│   │       ├── sessions.ts           # SessionInfo、SessionList/Messages Response、SessionMessagesPage（分页信封）、rename 请求
+│   │       ├── sessions.ts           # SessionInfo、SessionList/Messages Response、SessionMessagesPage（分页信封）、SessionSearch（消息搜索命中）、rename 请求
 │   │       ├── content.ts            # FileEntry、ContentResponse、create/save 请求
 │   │       ├── file-tree.ts          # FileTreeResponse
 │   │       ├── settings.ts           # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
@@ -175,7 +176,7 @@ spherse/
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
     │   │       │   ├── agent-write.ts    # Agent 创建/更新/删除
     │   │       │   ├── agent-mcp.ts      # Agent MCP 连接器配置读写（GET/PUT /api/projects/:projectId/agents/:id/mcp）
-│       │       │   ├── sessions.ts       # Session 创建/查询/重命名/删除与消息读取
+│       │       │   ├── sessions.ts       # Session 创建/查询/重命名/删除、消息读取与消息搜索（GET /sessions/search）
 │   │       │   ├── content.ts        # 内容浏览、读取、保存、删除、新建文件/目录
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
@@ -219,7 +220,8 @@ spherse/
 │   │       │   ├── tool-registry.ts  # 前端权限分组元数据（TOOL_GROUPS：读取文件/写入文件/独立工具）
 │   │       │   ├── types.ts          # 前端类型
 │   │       │   ├── electron-api.ts   # 全局 Window.electronAPI 类型声明（类型来自 @shared/electron-api）
-│   │       │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界，模块级 per-project 历史栈，pending back + dropFromProjectNavHistory）
+│   │       │   ├── use-project-navigation.ts # 项目级导航 hook（back 不跨项目边界，模块级 per-project 历史栈，pending back + dropFromProjectNavHistory；栈 key 剥离 ?messageId 定位参数）
+│   │       │   ├── route-params.ts    # 聊天定位路由参数（?messageId=<seq>）解析与剥离纯函数
 │   │       │   ├── tab-target.ts     # 内容区 tab target 纯函数（key/url/规范化/持久化校验/路径段匹配/邻居选择）
 │   │       │   ├── nav-state.ts      # 路由 location.state 约定（closeTab/closedUrl/replaceTab/skipLeaveGuard）解析
 │   │       │   ├── file-name.ts      # 文件显示名（basename / 去扩展名，点文件与无扩展名保持原样），tab 与 chat 快捷链接共用
@@ -236,12 +238,12 @@ spherse/
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 前端运行时投影（当前仅 initialMessage 交接）
-│   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗 open 状态等）
+│   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗、全局搜索弹窗 open 状态）
 │   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools/tabsEnabled/closeToTray 等持久化设置（与设置文件同步）
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │   │       ├── layouts/
-│   │       │   ├── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet 与项目级 hook
+│   │       │   ├── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet 与项目级 hook；注册 Cmd/Ctrl+P 全局搜索快捷键并渲染 GlobalSearchDialog
 │   │       │   ├── ProjectRuntimeBridges.tsx # 项目级桥纯挂载 fragment（FeatureGate manager + 各自治 bridge）
 │   │       │   └── project-lifecycle.ts  # closeProjectCascade：项目关闭级联清理单一入口（structure test 强制清理面完整）
 │   │       ├── hooks/
@@ -286,8 +288,9 @@ spherse/
 │   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
 │   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、主题隔离），复用 components/floating-frame；含 useFloatingSessionId
 │   │       │   ├── floating-content-browser/ # 浮窗内容浏览器（多窗口、复用 ContentView 只读渲染 + components/floating-frame），含 useFloatedFilePaths；从文件树右键「浮窗」触发
+│   │       │   ├── global-search/     # 项目内全局搜索弹窗（command palette 风格 Dialog，聊天/文件两组结果；Cmd/Ctrl+P 与 project panel 空白处右键唤出；聊天命中跳转 chat 路由 ?messageId= 定位）
 │   │       │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
-│   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child
+│   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child；空白处右键唤出全局搜索
 │   │       │   ├── project-market/       # 项目市场 Dialog（顶部分类 chips「全部」+ 动态归并 + 卡片网格；下载 = selectDirectory → 全局 install API → openProjectAtPath → 导航打开）+ categories 归并/过滤纯函数
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
@@ -301,7 +304,7 @@ spherse/
 │   │       │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗 + ThemeQueryBridge（fs-watch/reconnect → theme-settings 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   └── text-selection-session/ # 划选文本后发起会话；useSelectionSessionHandlers 自取 agents 与可发送的当前会话（左栏 chat 路由 + 浮窗会话）
 │   │       ├── pages/
-│   │       │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat
+│   │       │   ├── ChatPage.tsx          # Chat 路由 page，从 URL :sessionId 解析 session/agent 后渲染 Chat；?messageId=<seq> 驱动消息定位（useLocateMessage 自动加载+滚动高亮后清参）
 │   │       │   ├── ContentBrowserPage.tsx # Content 路由 page，从 ?path= 查询参数渲染 ContentBrowser
 │   │       │   ├── OnboardingPage.tsx    # App index 路由 page，re-export onboarding 引导页（无项目时显示）
 │   │       │   └── WelcomePagePage.tsx   # Project index 路由 page，渲染 WelcomePage 空状态
