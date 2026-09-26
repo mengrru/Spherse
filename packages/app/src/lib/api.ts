@@ -15,6 +15,7 @@ import type {
   AgentUpdateResponse,
   AiAccessSettingsResponse,
   WelcomePageSettingsResponse,
+  SidePanelSettingsResponse,
   ThemeSettingsResponse,
   AgentMcpConfig,
   McpServerConfig,
@@ -537,6 +538,22 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       });
       await assertOk(res);
       return parseJsonResponse<WelcomePageSettingsResponse>(res, schemas.welcomePageSettingsResponse);
+    },
+
+    async getSidePanelSettings(): Promise<SidePanelSettingsResponse> {
+      const res = await authedFetch(`${apiBase}/settings/side-panel`);
+      if (!res.ok) return { ok: false, path: null };
+      return parseJsonResponse<SidePanelSettingsResponse>(res, schemas.sidePanelSettingsResponse);
+    },
+
+    async updateSidePanelSettings(path: string | null): Promise<SidePanelSettingsResponse> {
+      const res = await authedFetch(`${apiBase}/settings/side-panel`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path }),
+      });
+      await assertOk(res);
+      return parseJsonResponse<SidePanelSettingsResponse>(res, schemas.sidePanelSettingsResponse);
     },
 
     async getThemeSettings(): Promise<ThemeSettingsResponse> {

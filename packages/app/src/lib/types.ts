@@ -17,6 +17,7 @@ export type {
   AgentCreateResponse,
   AiAccessSettingsResponse,
   WelcomePageSettingsResponse,
+  SidePanelSettingsResponse,
   ThemeSettingsResponse,
   McpServerConfigContract as McpServerConfig,
   AgentMcpResponse as AgentMcpConfig,

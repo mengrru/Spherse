@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { closeProjectCascade } from "./project-lifecycle";
 import { useAppStore, type ProjectState } from "../stores/app-store";
 import { useProjectDataStore } from "../stores/project-data-store";
+import { useCustomSidePanelStore } from "../stores/custom-side-panel-store";
 import { useChatSessionStore } from "../features/chat/runtime/session-store";
 import { createSessionState } from "../features/chat/runtime/session-state";
 import { useAgentSessionListUiStore } from "../features/agent-session-list/store";
@@ -75,6 +76,7 @@ describe("closeProjectCascade", () => {
   it("clears every per-project surface and returns the next project id", async () => {
     seedClosedProject();
     const bridge = createBridge();
+    useCustomSidePanelStore.getState().setActive("p1", true);
 
     const nextProjectId = await closeProjectCascade(bridge, "p1");
 
@@ -89,6 +91,7 @@ describe("closeProjectCascade", () => {
     expect(useProjectDataStore.getState().projects.p1).toBeUndefined();
     expect(getLastRoute("p1")).toBeNull();
     expect(clearProjectNavHistory).toHaveBeenCalledWith("p1");
+    expect(useCustomSidePanelStore.getState().isActive("p1")).toBe(false);
   });
 
   it("leaves local state untouched when the host close fails", async () => {

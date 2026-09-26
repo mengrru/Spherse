@@ -23,10 +23,13 @@ import { FolderOpenIcon, GlobeIcon, PanelLeftCloseIcon, PinIcon, PlusIcon, Setti
 import { DebugTools } from "../debug-tools";
 import { WelcomePageSettingsDialog } from "../project-settings/welcome-page-settings";
 import { ThemeSettingsDialog } from "../project-settings/theme-settings";
+import { SidePanelSettingsDialog } from "../project-settings/side-panel-settings";
 import { ProjectMarketDialog } from "../project-market/ProjectMarketDialog";
 import { useFeature } from "../../lib/use-feature";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useApiClient, useGlobalApiClient } from "../../lib/use-connection";
+import { useCustomSidePanel } from "../../queries/custom-side-panel";
+import { useCustomSidePanelStore } from "../../stores/custom-side-panel-store";
 import { useI18n } from "@spherse/i18n/react";
 
 interface PinToggle {
@@ -54,8 +57,21 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
   const [themeSettingsProjectId, setThemeSettingsProjectId] = useState<string | null>(null);
   const themeSettingsProject = themeSettingsProjectId ? projects.get(themeSettingsProjectId) : null;
   const themeClient = useApiClient(themeSettingsProjectId);
+  const [sidePanelSettingsProjectId, setSidePanelSettingsProjectId] = useState<string | null>(null);
+  const sidePanelSettingsProject = sidePanelSettingsProjectId ? projects.get(sidePanelSettingsProjectId) : null;
+  const sidePanelSettingsClient = useApiClient(sidePanelSettingsProjectId);
   const [marketOpen, setMarketOpen] = useState(false);
   const globalClient = useGlobalApiClient();
+  const activeProjectClient = useApiClient(activeProjectId);
+  const { data: customSidePanelData, isError: customSidePanelError } = useCustomSidePanel(
+    activeProjectId,
+    activeProjectClient,
+  );
+  const customSidePanelPath = customSidePanelError ? null : customSidePanelData?.path;
+  const customSidePanelActive = useCustomSidePanelStore(
+    (state) => activeProjectId != null && state.isActive(activeProjectId),
+  );
+  const toggleCustomSidePanel = useCustomSidePanelStore((state) => state.toggle);
 
   return (
     <div className="h-full w-[52px] shrink-0">
@@ -78,6 +94,16 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
                 />
               </ContextMenuTrigger>
               <ContextMenuContent>
+                {projectId === activeProjectId && (
+                  <ContextMenuItem
+                    disabled={customSidePanelPath == null}
+                    onClick={() => toggleCustomSidePanel(projectId)}
+                  >
+                    {customSidePanelActive && customSidePanelPath != null
+                      ? t("activity-bar.hideCustomSidePanel")
+                      : t("activity-bar.showCustomSidePanel")}
+                  </ContextMenuItem>
+                )}
                 {canEditProject && projectId === activeProjectId && (
                   <ContextMenuSub>
                     <ContextMenuSubTrigger>
@@ -89,6 +115,9 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
                       </ContextMenuItem>
                       <ContextMenuItem onClick={() => setThemeSettingsProjectId(projectId)}>
                         {t("activity-bar.settings.theme")}
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => setSidePanelSettingsProjectId(projectId)}>
+                        {t("activity-bar.settings.sidePanel")}
                       </ContextMenuItem>
                     </ContextMenuSubContent>
                   </ContextMenuSub>
@@ -174,6 +203,15 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
             client={themeClient}
             open={true}
             onOpenChange={(open) => { if (!open) setThemeSettingsProjectId(null); }}
+          />
+        )}
+        {sidePanelSettingsProject && sidePanelSettingsClient && sidePanelSettingsProjectId && (
+          <SidePanelSettingsDialog
+            key={sidePanelSettingsProjectId}
+            projectId={sidePanelSettingsProjectId}
+            client={sidePanelSettingsClient}
+            open={true}
+            onOpenChange={(open) => { if (!open) setSidePanelSettingsProjectId(null); }}
           />
         )}
         {globalClient && (

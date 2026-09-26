@@ -12,6 +12,7 @@ import { useFloatingContentBrowserStore } from "../features/floating-content-bro
 import { useBrowserStore } from "../features/browser/store";
 import { useTabsStore } from "../features/tabs/store";
 import { useSplitPaneStore } from "../features/split-pane/store";
+import { useCustomSidePanelStore } from "../stores/custom-side-panel-store";
 
 export async function closeProjectCascade(
   bridge: HostBridge,
@@ -27,6 +28,7 @@ export async function closeProjectCascade(
   useBrowserStore.getState().clearProject(projectId);
   useTabsStore.getState().clearProject(projectId);
   useSplitPaneStore.getState().clearProject(projectId);
+  useCustomSidePanelStore.getState().clearProject(projectId);
   useProjectDataStore.getState().clearProjectData(projectId);
   clearProjectNavHistory(projectId);
   clearLastRoute(projectId);

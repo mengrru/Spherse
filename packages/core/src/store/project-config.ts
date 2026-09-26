@@ -12,6 +12,7 @@ import { ValidationError, ProjectConfigNotFoundError, ProjectConfigParseError } 
 import { categorizePath } from "../access/path-category.js";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
+const SIDE_PANEL_EXTENSIONS = new Set(["html", "htm"]);
 
 function normalizeWelcomePagePath(input: string): string | null {
   const trimmed = input.trim().replace(/\\/g, "/");
@@ -21,6 +22,17 @@ function normalizeWelcomePagePath(input: string): string | null {
   if (categorizePath(normalized) !== "userFiles") return null;
   const ext = normalized.split(".").pop()?.toLowerCase();
   if (!ext || !WELCOME_PAGE_EXTENSIONS.has(ext)) return null;
+  return normalized;
+}
+
+function normalizeSidePanelPath(input: string): string | null {
+  const trimmed = input.trim().replace(/\\/g, "/");
+  if (!trimmed || trimmed === "." || trimmed.startsWith("/") || trimmed.includes("..")) return null;
+  const normalized = trimmed.replace(/^\.\//, "").replace(/\/+/g, "/");
+  if (!normalized) return null;
+  if (categorizePath(normalized) !== "userFiles") return null;
+  const ext = normalized.split(".").pop()?.toLowerCase();
+  if (!ext || !SIDE_PANEL_EXTENSIONS.has(ext)) return null;
   return normalized;
 }
 
@@ -117,6 +129,27 @@ export class ProjectConfigStore {
     }
 
     const { welcomePage: _, ...rest } = this.get();
+    await this.write(rest as ProjectConfig);
+    return { path: null };
+  }
+
+  getSidePanelSettings(): { path: string | null } {
+    return { path: this.get().sidePanel?.path ?? null };
+  }
+
+  async updateSidePanelSettings(
+    sidePanelPath: string | null,
+  ): Promise<{ path: string | null }> {
+    if (sidePanelPath !== null) {
+      const normalized = normalizeSidePanelPath(sidePanelPath);
+      if (!normalized) {
+        throw new ValidationError(`Invalid side panel path: ${sidePanelPath}`);
+      }
+      await this.write({ ...this.get(), sidePanel: { path: normalized } });
+      return { path: normalized };
+    }
+
+    const { sidePanel: _, ...rest } = this.get();
     await this.write(rest as ProjectConfig);
     return { path: null };
   }

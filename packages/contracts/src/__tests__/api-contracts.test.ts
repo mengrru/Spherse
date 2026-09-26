@@ -487,6 +487,40 @@ describe("api contracts", () => {
     }
   });
 
+  it("preserves null side-panel path through Fastify body coercion", async () => {
+    const app = Fastify();
+    app.put<{ Body: { path: string | null } }>(
+      "/side-panel",
+      {
+        schema: {
+          body: schemas.sidePanelSettingsRequest,
+          response: { 200: schemas.sidePanelSettingsResponse },
+        },
+      },
+      async (req) => ({ ok: true, path: req.body.path }),
+    );
+
+    try {
+      const cleared = await app.inject({
+        method: "PUT",
+        url: "/side-panel",
+        payload: { path: null },
+      });
+      expect(cleared.statusCode).toBe(200);
+      expect(cleared.json()).toEqual({ ok: true, path: null });
+
+      const set = await app.inject({
+        method: "PUT",
+        url: "/side-panel",
+        payload: { path: "panel/index.html" },
+      });
+      expect(set.statusCode).toBe(200);
+      expect(set.json()).toEqual({ ok: true, path: "panel/index.html" });
+    } finally {
+      await app.close();
+    }
+  });
+
   it("validates turn context snapshot", () => {
     const snapshot = {
       sessionId: "s1",

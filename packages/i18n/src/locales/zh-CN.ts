@@ -330,6 +330,12 @@ export const zhCN = {
   "activity-bar.settings.welcomePage": "欢迎页",
   // 项目右键菜单 → 设置 → 主题（二级菜单项，打开主题 CSS 编辑弹窗）
   "activity-bar.settings.theme": "主题",
+  // 项目右键菜单 → 设置 → 侧边面板（二级菜单项，打开侧边面板设置弹窗）
+  "activity-bar.settings.sidePanel": "侧边面板",
+  // 项目右键菜单：显示自定义侧边面板（未配置路径时置灰）
+  "activity-bar.showCustomSidePanel": "显示侧边面板",
+  // 项目右键菜单：隐藏自定义侧边面板，恢复默认项目面板
+  "activity-bar.hideCustomSidePanel": "隐藏侧边面板",
   // 左侧活动栏固定图标悬停提示：点击后将项目面板切换为鼠标移出后自动收起
   "activity-bar.autoCollapseSidePanelTooltip": "自动收起项目面板",
   // 左侧活动栏收起图标悬停提示：点击后将项目面板固定显示
@@ -1097,6 +1103,32 @@ export const zhCN = {
   "welcome-page-settings.saveFailed": "保存失败：{message}",
   // 读取欢迎页设置失败提示，{message} 为错误信息
   "welcome-page-settings.loadFailed": "读取欢迎页设置失败：{message}",
+
+  // --- Side Panel Settings ---
+  // 侧边面板设置弹窗标题
+  "side-panel-settings.title": "设置侧边面板",
+  // 侧边面板设置弹窗的说明文案
+  "side-panel-settings.description": "选择项目内 HTML 文件作为侧边面板，在项目面板中显示。",
+  // 文件路径输入框标签
+  "side-panel-settings.pathLabel": "文件路径",
+  // 文件路径输入框占位提示
+  "side-panel-settings.pathPlaceholder": "例如 panel/index.html",
+  // 清除侧边面板路径按钮
+  "side-panel-settings.clear": "清除",
+  // 路径校验失败提示
+  "side-panel-settings.invalidPath": "路径无效，请使用项目内相对路径并确保文件扩展名为 HTML 格式",
+  // 侧边面板保存成功提示
+  "side-panel-settings.saved": "侧边面板已保存",
+  // 侧边面板保存失败提示，{message} 为错误信息
+  "side-panel-settings.saveFailed": "保存失败：{message}",
+  // 读取侧边面板设置失败提示，{message} 为错误信息
+  "side-panel-settings.loadFailed": "读取侧边面板设置失败：{message}",
+  // 侧边面板 iframe 的无障碍标题
+  "custom-side-panel.title": "侧边面板",
+  // 侧边面板页面加载失败占位文案
+  "custom-side-panel.loadFailed": "侧边面板加载失败",
+  // 侧边面板右上角退出按钮提示：切回默认项目面板
+  "custom-side-panel.exitTooltip": "显示默认面板",
 
   // --- Pages ---
   // 项目不存在时的提示文案
