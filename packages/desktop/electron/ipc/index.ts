@@ -5,6 +5,7 @@ import { registerDebugIpc } from "./debug.js";
 import { registerSkillIpc } from "./skill.js";
 import { registerUpdaterIpc } from "./updater.js";
 import { registerMobileAccessIpc } from "./mobile.js";
+import { registerNotificationsIpc } from "./notifications.js";
 
 export function registerAllIpc(getWindow: () => BrowserWindow | null): void {
   registerProjectIpc(getWindow);
@@ -13,4 +14,5 @@ export function registerAllIpc(getWindow: () => BrowserWindow | null): void {
   registerSkillIpc(getWindow);
   registerUpdaterIpc(getWindow);
   registerMobileAccessIpc(getWindow);
+  registerNotificationsIpc();
 }

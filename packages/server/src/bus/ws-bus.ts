@@ -39,6 +39,7 @@ function buildTriggerPayload(type: TriggerEventType, payload: TriggerEventPayloa
       return {
         agentId: payload.agentId,
         triggerId: payload.triggerId,
+        sessionId: payload.sessionId,
         error: payload.error!,
       };
     case "trigger_updated":

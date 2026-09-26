@@ -145,6 +145,23 @@ frontmatter 字段：
 
 调度语义：`time` 型由 TimerService 每 10 分钟轮询 cron 命中（实际执行可延迟数分钟），`event` 型收到用户事件即时触发；磁盘是唯一真相源，每 tick / 事件都重新读取配置。机制见 `architecture/capabilities.md`。
 
+## Server 级数据（push-storage.json）
+
+Web Push 订阅与 VAPID 密钥是 **server 实例级**数据，不属于任何项目 `.spherse/` 树；由宿主经 `createMultiProjectServer({ pushStoragePath })` 注入路径（desktop 为 userData 下 `push-storage.json`），未注入时 push 功能整体禁用。
+
+```json
+{
+  "vapid": { "publicKey": "…", "privateKey": "…" },
+  "subscriptions": [{ "endpoint": "https://…", "keys": { "p256dh": "…", "auth": "…" }, "locale": "zh-CN", "createdAt": 1760000000000 }]
+}
+```
+
+- VAPID 密钥首次访问惰性生成后持久化；写入 tmp+rename 原子落盘、权限 0600；persist 经串行链排队，server 关停时 `flush()` 落盘
+- 订阅按 endpoint 幂等 upsert（locale/keys 随订阅更新，用于 server 端渲染通知文案）；`locale` 取订阅时客户端语言
+- endpoint 仅接受 `https://` URL（schema 层校验）；推送投递 404/410 时删除对应订阅
+- 私钥只落盘：不进日志、不进任何 API 响应；`connection/info` 仅暴露 `publicKey`
+- 文件损坏（非 JSON）按空态读取并重建，不影响 server 启动
+
 ## Session 数据（sessions.db）
 
 每个 agent 一个 SQLite 文件（WAL 模式），位于 agent 目录下。

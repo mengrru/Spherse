@@ -20,6 +20,8 @@ import { setAppVersion } from "./server-info.js";
 import { ChatSessionHub } from "./chat/index.js";
 import { handleChatWebSocket } from "./chat/index.js";
 import { handleBusWebSocket } from "./bus/index.js";
+import { PushNotifier } from "./push/push-notifier.js";
+import { PushStore } from "./push/push-store.js";
 import {
   closeMultiProjectServer,
   type ServerCloseOptions,
@@ -47,6 +49,7 @@ export interface CreateServerOptions {
   port?: number;
   modelCatalog?: ModelCatalog;
   appVersion?: string;
+  pushStoragePath?: string;
 }
 
 export async function createMultiProjectServer(
@@ -114,18 +117,30 @@ export async function createMultiProjectServer(
 
   const chatHub = new ChatSessionHub(logger);
 
+  const pushStore = options?.pushStoragePath
+    ? new PushStore(options.pushStoragePath, (err) =>
+        logger.warn({ err }, "push storage persist failed"),
+      )
+    : undefined;
+  const pushNotifier = pushStore ? new PushNotifier({ store: pushStore, logger }) : undefined;
+
   const registry = new ProjectRegistry(logger, {
     defaultModel: options?.defaultModel,
     sampling: options?.sampling,
     thinkingLevel: options?.thinkingLevel,
     modelCatalog: options?.modelCatalog,
-    onRuntimeRemoved: (runtime) => chatHub.closeRuntime(runtime),
+    onRuntimeRemoved: (runtime) => {
+      chatHub.closeRuntime(runtime);
+      pushNotifier?.detachProject(runtime);
+    },
+    onRuntimeAdded: (ctx) => pushNotifier?.attachProject(ctx),
   });
 
   registerAuthHook(fastify, options?.auth ?? {});
   registerAllRoutes(fastify, registry, {
     authRequired: Boolean(options?.auth?.accessToken),
     hub: chatHub,
+    pushStore,
   });
   handleChatWebSocket(fastify, registry, chatHub);
   handleBusWebSocket(fastify, registry);
@@ -158,7 +173,7 @@ export async function createMultiProjectServer(
     removeAllowedHosts: hostGuard.removeAllowedHosts,
     close: (closeOptions?: ServerCloseOptions) => {
       closePromise ??= closeMultiProjectServer(
-        { hub: chatHub, registry, fastify, logger },
+        { hub: chatHub, registry, fastify, logger, pushNotifier, pushStore },
         closeOptions,
       );
       return closePromise;

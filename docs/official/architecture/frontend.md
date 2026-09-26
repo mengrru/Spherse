@@ -16,12 +16,20 @@
 
 renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](../../dev/decisions/0006-host-bridge-shells.md)。
 
-- 接口定义宿主能力：server 连接信息、settings 读写（`getSettings` / `saveSettings`）、`openExternal`，可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile`
+- 接口定义宿主能力：server 连接信息、settings 读写（`getSettings` / `saveSettings`）、`openExternal`，可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile` / `notifications` / `renderConnectPage` / `renderNotificationSetup`
 - `HostCapabilities` 声明能力**程度**（同功能在各宿主的差异，如可编辑与否），renderer 据此条件渲染；feature 级整块开关不在这里，走 feature-registry。字段清单由 `host-capabilities.structure.test.ts` 钉住：**声明即必须被消费**（加字段必须带消费点，零消费字段删除）
-  - 布尔项：`filePicker` / `mobileAccess` / `openFileExternal` / `tray`（设置 > 通用「关闭至托盘」开关）
+  - 布尔项：`filePicker` / `mobileAccess` / `openFileExternal` / `tray`（设置 > 通用「关闭至托盘」开关）/ `systemNotifications`（设置 > 通用「系统通知」开关）
   - 对象项：`content.editable`
 - desktop 实现全开；web 实现 `content` 只读、其余 false，project API 走 HTTP
 - 消费经 `useHostBridge()`；feature 可见性经 `useFeature` + `FeatureGate` 按 hostKind 查 `feature-registry.ts` 矩阵（改动需同步 `feature-registry.test.ts`）
+
+## 系统通知（双通道）
+
+approval（含 question）与 trigger 完成/失败接系统通知，两宿主通道独立、互补不重叠：
+
+- **desktop（本地通道）**：`ApprovalNoticeBridge` / `TriggerEventBridge` 在既有 in-app toast 逻辑处并行调 `bridge.notifications?.show()` → IPC → 主进程 `Notification`（click 聚焦主窗）。弹出条件：settings 总开关 `systemNotifications`（默认开）开启 + 窗口非聚焦（`document.hasFocus() === false`）+ approval 非当前活跃 session / trigger `entry.notify`
+- **web PWA（server 推送通道）**：server 端 PushNotifier 主动推（不依赖 WS attach，见 [server.md](server.md)「Web Push」），SW 收到恒展示（tag 去重，无前台抑制）；PWA 端无 UI 开关，跟随浏览器通知权限——`notification-setup.tsx`（经 `bridge.renderNotificationSetup` 挂载）在 permission 为 default 时显示引导 banner，granted 时 ensureSubscription（本地订阅缺失或 VAPID key 不匹配则退订重订并上报，上报失败回滚本地订阅待下次自愈）；决策纯函数在 `@spherse/app/lib/notification-push`（web 壳无测试设施，沿用 web-resume-probe 模式）
+- 文案 server/desktop 各自渲染：desktop 走 renderer i18n（复用 toast key + `push.*`）；push 由 server 按订阅 locale 渲染（key 同源 `push.*`）
 
 ## 路由模型
 

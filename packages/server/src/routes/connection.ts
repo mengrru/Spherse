@@ -3,12 +3,14 @@ import { schemas } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
 import { getAppVersion } from "../server-info.js";
+import type { PushStore } from "../push/push-store.js";
 
 const SERVER_VERSION = "0.1.0";
 const API_VERSION = "1";
 
 export interface ConnectionRouteOptions {
   authRequired: boolean;
+  pushStore?: PushStore;
 }
 
 export function registerConnectionRoutes(
@@ -24,6 +26,7 @@ export function registerConnectionRoutes(
         authRequired: options.authRequired,
         apiVersion: API_VERSION,
         appVersion: getAppVersion() ?? null,
+        ...(options.pushStore ? { push: { publicKey: options.pushStore.getVapid().publicKey } } : {}),
       };
     },
   });

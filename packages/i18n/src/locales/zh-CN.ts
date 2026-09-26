@@ -763,6 +763,32 @@ export const zhCN = {
   "chat.questionAnswerLabel": "你的回答",
   // QuestionCard 等待超时、未收到用户回答时的状态标签
   "chat.questionTimeoutLabel": "未回答（等待超时）",
+
+  // --- System Notifications (push) ---
+  // 系统通知：agent 请求批准工具调用时的通知标题（无法解析到 agent 名时的泛化兜底）
+  "push.approvalTitle": "一个 Agent 正在等待你的确认",
+  // 系统通知：agent 请求批准时的通知标题，{name} 为 agent 名称
+  "push.approvalTitleWithName": "「{name}」正在等待你的确认",
+  // 系统通知：agent 请求批准时的通知正文，{tool} 为工具名
+  "push.approvalBody": "工具调用：{tool}",
+  // 系统通知：agent 提问时的通知标题（泛化兜底）
+  "push.questionTitle": "一个 Agent 正在等待你的回答",
+  // 系统通知：agent 提问时的通知标题，{name} 为 agent 名称
+  "push.questionTitleWithName": "「{name}」正在等待你的回答",
+  // 系统通知：agent 提问时的通知正文，{tool} 为工具名
+  "push.questionBody": "问题来自：{tool}",
+  // 系统通知：触发器完成时的通知标题，{name} 为触发器名称
+  "push.triggerCompletedTitle": "「{name}」已完成",
+  // 系统通知：触发器完成时的通知正文（触发器未设置自定义消息时的默认文案）
+  "push.triggerCompletedBody": "触发器执行完成",
+  // 系统通知：触发器失败时的通知标题，{name} 为触发器名称
+  "push.triggerFailedTitle": "「{name}」执行失败",
+  // 系统通知：触发器失败时的通知正文
+  "push.triggerFailedBody": "触发器执行失败，请查看运行日志",
+  // Web PWA 顶部「开启系统通知」引导条的按钮文案
+  "web.enableNotifications": "开启系统通知",
+  // Web PWA 引导条的说明文案
+  "web.enableNotificationsHint": "Agent 等待确认或触发器完成时通知你",
   // 用户提交的回答因连接断开未能送达时显示的 toast 提示
   "chat.questionNotDelivered": "回答未送达，请检查连接后重试",
   // 某会话的 agent 向用户提问等待回答、且用户当前未停留在该会话时弹出的 toast 文案（无法解析到 agent 名时的泛化兜底）
@@ -1075,6 +1101,10 @@ export const zhCN = {
   "settings.closeToTray": "关闭至托盘",
   // 设置 > 通用：关闭至托盘开关下方的说明文案
   "settings.closeToTrayDesc": "关闭窗口时保持 Spherse 在后台运行，可通过托盘图标重新打开",
+  // 设置 > 通用：系统通知开关的标题（仅桌面端显示）
+  "settings.systemNotifications": "系统通知",
+  // 设置 > 通用：系统通知开关下方的说明文案
+  "settings.systemNotificationsDesc": "Agent 等待确认或触发器完成、失败时发送系统通知",
   // 图片生成设置中默认模型下拉框的标签
   "settings.image.defaultModel": "默认生图模型",
 

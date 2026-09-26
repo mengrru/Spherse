@@ -13,6 +13,7 @@ import * as debug from "./debug.js";
 import * as bus from "./bus.js";
 import * as websocket from "./websocket.js";
 import * as connection from "./connection.js";
+import * as push from "./push.js";
 
 export const schemas = {
   ...common.schemas,
@@ -30,6 +31,7 @@ export const schemas = {
   ...bus.schemas,
   ...websocket.schemas,
   ...connection.schemas,
+  ...push.schemas,
 } as const;
 
 export { parseContract, parseApiResponse } from "./common.js";
@@ -140,3 +142,14 @@ export type {
   AgentUpdatedEvent,
   FsWatchChangeEvent,
 } from "./bus.js";
+
+export {
+  parsePushSubscribeRequest,
+  parsePushUnsubscribeRequest,
+} from "./push.js";
+export type {
+  PushSubscribeRequest,
+  PushUnsubscribeRequest,
+  PushNotificationPayload,
+  PushAvailability,
+} from "./push.js";

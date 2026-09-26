@@ -10,16 +10,18 @@ interface SettingsStore {
   debugToolsEnabled: boolean;
   tabsEnabled: boolean;
   closeToTray: boolean;
+  systemNotifications: boolean;
   theme: ThemeMode;
   loadLocale: (api: SettingsStoreApi) => Promise<void>;
   changeLocale: (api: SettingsStoreApi, locale: Locale) => Promise<boolean>;
   setDebugToolsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
   setTabsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
   setCloseToTray: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
+  setSystemNotifications: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
   setTheme: (api: SettingsStoreApi, theme: ThemeMode) => Promise<boolean>;
 }
 
-type UiSettings = Pick<SettingsStore, "debugToolsEnabled" | "tabsEnabled" | "closeToTray" | "theme">;
+type UiSettings = Pick<SettingsStore, "debugToolsEnabled" | "tabsEnabled" | "closeToTray" | "systemNotifications" | "theme">;
 
 export const useSettingsStore = create<SettingsStore>((set, get) => {
   async function persist(api: SettingsStoreApi, patch: Partial<UiSettings> & { locale?: Locale }) {
@@ -30,6 +32,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
       debugToolsEnabled: get().debugToolsEnabled,
       tabsEnabled: get().tabsEnabled,
       closeToTray: get().closeToTray,
+      systemNotifications: get().systemNotifications,
       theme: get().theme,
       ...patch,
     };
@@ -43,6 +46,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     debugToolsEnabled: false,
     tabsEnabled: true,
     closeToTray: true,
+    systemNotifications: true,
     theme: "system",
 
     async loadLocale(api) {
@@ -56,6 +60,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
         debugToolsEnabled: settings?.debugToolsEnabled ?? false,
         tabsEnabled: settings?.tabsEnabled ?? true,
         closeToTray: settings?.closeToTray ?? true,
+        systemNotifications: settings?.systemNotifications ?? true,
         theme: settings?.theme ?? "system",
       });
     },
@@ -78,6 +83,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     async setCloseToTray(api, enabled) {
       set({ closeToTray: enabled });
       return persist(api, { closeToTray: enabled });
+    },
+
+    async setSystemNotifications(api, enabled) {
+      set({ systemNotifications: enabled });
+      return persist(api, { systemNotifications: enabled });
     },
 
     async setTheme(api, theme) {

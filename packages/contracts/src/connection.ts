@@ -1,4 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
+import { pushAvailability } from "./push.js";
 
 const projectListEntry = Type.Object({
   id: Type.String(),
@@ -18,6 +19,7 @@ const connectionInfoResponse = Type.Object({
   authRequired: Type.Boolean(),
   apiVersion: Type.String(),
   appVersion: Type.Union([Type.String(), Type.Null()]),
+  push: Type.Optional(pushAvailability),
 });
 
 export const schemas = {

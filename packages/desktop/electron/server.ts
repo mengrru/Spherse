@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import path from "node:path";
 import { app } from "electron";
 import { createMultiProjectServer } from "@spherse/server";
 import type { ProjectRegistry, MultiProjectServer } from "@spherse/server";
@@ -62,6 +63,7 @@ export async function ensureServer(): Promise<void> {
     auth: { accessToken: getServerToken() },
     modelCatalog: getAppModelCatalog(),
     appVersion: app.getVersion(),
+    pushStoragePath: path.join(app.getPath("userData"), "push-storage.json"),
   });
   serverHandle = { server: result, fastify: result.fastify, registry: result.registry };
   appliedHosts = [];
