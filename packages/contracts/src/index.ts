@@ -49,6 +49,11 @@ export type {
   McpServerConfigContract,
   AgentMcpResponse,
   AgentMcpUpdateRequest,
+  AgentMemoryEntryContract,
+  AgentMemoryResponse,
+  AgentMemoryUpdateRequest,
+  AgentMemoryEntriesResponse,
+  AgentMemoryEntryUpdateRequest,
 } from "./agents.js";
 
 export type {

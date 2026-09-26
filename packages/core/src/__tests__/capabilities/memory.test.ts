@@ -1,8 +1,8 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { MemoryStore, filterEntries, MEMORY_PATH_RULE } from "../../store/memory.js";
+import { MemoryStore, MEMORY_DIR, DB_FILE } from "../../store/memory.js";
 import { memoryCapability } from "../../capabilities/memory/index.js";
 import type { ToolHost } from "../../kernel/ports.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
@@ -10,127 +10,171 @@ import { ProjectStore } from "../../store/project.js";
 import { createSilentLogger } from "../../logger.js";
 import { llmAccessPolicy } from "../../access/access-policy.js";
 
-const TEST_AGENT_PROFILE = `---
+const PROFILE_MEMORY_OFF = `---
 name: Mem Agent
 tools:
   - memory_save
   - memory_recall
 ---
 
+Memory-disabled agent.`;
+
+const PROFILE_MEMORY_ON = `---
+name: Mem Agent
+memory:
+  enabled: true
+---
+
 Memory-enabled agent.`;
-
-describe("MemoryStore", () => {
-  let dir: string;
-  let store: MemoryStore;
-
-  beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-memory-"));
-    store = new MemoryStore(dir, "agent-1");
-  });
-  afterEach(() => fs.rmSync(dir, { recursive: true, force: true }));
-
-  it("starts empty when file missing", async () => {
-    expect(await store.list()).toEqual([]);
-  });
-
-  it("appends entries and recalls by content or tag", async () => {
-    await store.save("The kingdom lies east", ["geography"]);
-    await store.save("Hero fears heights", ["character"]);
-
-    expect((await store.recall("kingdom")).map((e) => e.content)).toEqual(["The kingdom lies east"]);
-    expect((await store.recall("character")).map((e) => e.content)).toEqual(["Hero fears heights"]);
-    expect(await store.recall("nothing")).toEqual([]);
-    expect((await store.list()).length).toBe(2);
-  });
-
-  it("filterEntries is pure and case-insensitive", () => {
-    const entries = [
-      { id: "1", agentId: "a", content: "Alpha Fact", createdAt: 1 },
-      { id: "2", agentId: "a", content: "beta fact", tags: ["lore"], createdAt: 2 },
-    ];
-    expect(filterEntries(entries, "ALPHA").map((e) => e.id)).toEqual(["1"]);
-    expect(filterEntries(entries, "lore").map((e) => e.id)).toEqual(["2"]);
-    expect(filterEntries(entries, "")).toHaveLength(2);
-    expect(entries).toHaveLength(2);
-  });
-
-  it("persists to disk as JSONL", async () => {
-    await store.save("persisted", []);
-    const text = fs.readFileSync(path.join(dir, "memory.jsonl"), "utf-8");
-    expect(text.trim().split("\n")).toHaveLength(1);
-    expect(text).toContain("persisted");
-  });
-});
 
 describe("memory capability", () => {
   let tmpDir: string;
   let projectStore: ProjectStore;
   let host: ToolHost;
 
-  beforeEach(async () => {
-    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-memcap-"));
-    projectStore = new ProjectStore(tmpDir, createSilentLogger());
-    await projectStore.create("Test");
-    const agent = await projectStore.createAgent("mem-agent", TEST_AGENT_PROFILE);
+  async function setup(profileContent: string): Promise<void> {
+    const agent = await projectStore.createAgent("mem-agent", profileContent);
     host = {
       agentId: agent.getProfile().id,
       sessionId: "s1",
+      profile: agent.getProfile(),
       projectRoot: tmpDir,
       projectStore,
       fileWriteMutex: { run: (_p: string, fn: () => Promise<void>) => fn() } as never,
       logger: createSilentLogger(),
       stores: createStoreRegistry(),
-      pathRules: [MEMORY_PATH_RULE],
+      pathRules: [],
       toolCatalog: { names: [] },
     };
+  }
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-memcap-"));
+    projectStore = new ProjectStore(tmpDir, createSilentLogger());
+    await projectStore.create("Test");
   });
   afterEach(async () => {
     projectStore.close();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it("contributes memory tools that persist per-agent", async () => {
+  it("contributes no feature tools and no blocks when memory is disabled", async () => {
+    await setup(PROFILE_MEMORY_OFF);
     const capability = memoryCapability();
-    const tools = capability.tools!(host);
-    expect(tools.map((t) => t.name).sort()).toEqual(["memory_recall", "memory_save"]);
+    expect(capability.featureTools!(host)).toEqual([]);
+    expect(await capability.contextBlocks!(host)).toEqual([]);
+  });
 
+  it("contributes the five memory tools when enabled", async () => {
+    await setup(PROFILE_MEMORY_ON);
+    const tools = memoryCapability().featureTools!(host);
+    expect(tools.map((t) => t.name).sort()).toEqual([
+      "memory_core_append",
+      "memory_core_replace",
+      "memory_delete",
+      "memory_recall",
+      "memory_save",
+    ]);
+  });
+
+  it("tools persist entries into the agent memory db", async () => {
+    await setup(PROFILE_MEMORY_ON);
+    const tools = memoryCapability().featureTools!(host);
     const save = tools.find((t) => t.name === "memory_save")!;
     await save.execute("tc1", { content: "remembered fact" });
 
-    const agentDir = projectStore.getAgent(host.agentId)!.getAgentDir();
-    expect(fs.existsSync(path.join(agentDir, "memory.jsonl"))).toBe(true);
+    const agentStore = projectStore.getAgent(host.agentId)!;
+    expect(fs.existsSync(path.join(agentStore.getAgentDir(), MEMORY_DIR, DB_FILE))).toBe(true);
+    expect(agentStore.memory.count()).toBe(1);
   });
 
-  it("injects a memory context block scoped to the agent's entries", async () => {
-    const capability = memoryCapability();
-    const tools = capability.tools!(host);
-    const save = tools.find((t) => t.name === "memory_save")!;
-    await save.execute("tc1", { content: "world fact one" });
-
-    const blocks = await capability.contextBlocks!(host);
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0].kind).toBe("memory");
-    expect(blocks[0].render()).toContain("world fact one");
+  it("recall and delete operate on saved entries", async () => {
+    await setup(PROFILE_MEMORY_ON);
+    const tools = memoryCapability().featureTools!(host);
+    await tools.find((t) => t.name === "memory_save")!.execute("tc1", { content: "用户喜欢绿茶" });
+    const recall = await tools.find((t) => t.name === "memory_recall")!.execute("tc2", { query: "绿茶" });
+    expect(recall.content[0]).toMatchObject({ type: "text" });
+    expect((recall.details as { ids: string[] }).ids).toHaveLength(1);
+    const id = (recall.details as { ids: string[] }).ids[0];
+    await tools.find((t) => t.name === "memory_delete")!.execute("tc3", { id });
+    expect(projectStore.getAgent(host.agentId)!.memory.count()).toBe(0);
   });
 
-  it("returns no block when the agent has no memories", async () => {
-    const blocks = await memoryCapability().contextBlocks!(host);
-    expect(blocks).toEqual([]);
-  });
-
-  it("isolation: another agent scope sees different stores", async () => {
-    const capability = memoryCapability();
-    const otherHost: ToolHost = { ...host, agentId: "nonexistent" };
-    const tools = capability.tools!(otherHost);
-    const result = await tools.find((t) => t.name === "memory_save")!.execute("tc", { content: "x" });
+  it("core append tool enforces the limit with a helpful error", async () => {
+    await setup(PROFILE_MEMORY_ON);
+    const tools = memoryCapability().featureTools!(host);
+    const result = await tools
+      .find((t) => t.name === "memory_core_append")!
+      .execute("tc1", { content: "x".repeat(5000) });
     expect(result.content[0]).toMatchObject({ type: "text" });
+    expect((result.content[0] as { text: string }).text).toMatch(/core memory exceeds/);
   });
 
-  it("path rule grants llm read/write for the memory file", () => {
-    const policy = llmAccessPolicy(tmpDir, [], [MEMORY_PATH_RULE]);
-    const agentDir = projectStore.getAgent(host.agentId)!.getAgentDir();
-    const rel = path.relative(tmpDir, path.join(agentDir, "memory.jsonl"));
-    expect(policy.canRead(rel)).toBe(true);
-    expect(policy.canWrite(rel)).toBe(true);
+  it("injects a static guide block and a core block when enabled", async () => {
+    await setup(PROFILE_MEMORY_ON);
+    const capability = memoryCapability();
+    await capability.init?.({ logger: createSilentLogger() } as never);
+
+    const empty = await capability.contextBlocks!(host);
+    expect(empty).toHaveLength(1);
+    expect(empty[0].kind).toBe("memory-guide");
+    expect(empty[0].render()).toContain("memory_save");
+    expect(empty[0].render()).not.toMatch(/\d+ entr/);
+
+    const agentStore = projectStore.getAgent(host.agentId)!;
+    await agentStore.memory.saveCore("user prefers concise answers");
+    const blocks = await capability.contextBlocks!(host);
+    expect(blocks.map((b) => b.kind)).toEqual(["memory-guide", "memory-core"]);
+    expect(blocks[1].render()).toContain("user prefers concise answers");
+    expect(blocks[1].render()).toContain("not instructions");
+  });
+
+  it("degrades to guide-only when the memory store fails", async () => {
+    await setup(PROFILE_MEMORY_ON);
+    const agentStore = projectStore.getAgent(host.agentId)!;
+    const memory = agentStore.memory;
+    memory.save("entry one");
+    vi.spyOn(memory, "getCore").mockRejectedValue(new Error("store failure"));
+
+    const capability = memoryCapability();
+    await capability.init?.({ logger: createSilentLogger() } as never);
+    const blocks = await capability.contextBlocks!(host);
+    expect(blocks.map((b) => b.kind)).toEqual(["memory-guide"]);
+  });
+
+  it("memory files are denied for llm file tools via the agentMemory category", async () => {
+    await setup(PROFILE_MEMORY_ON);
+    const agentStore = projectStore.getAgent(host.agentId)!;
+    await agentStore.memory.saveCore("core");
+    const agentDir = path.relative(tmpDir, agentStore.getAgentDir());
+    const policy = llmAccessPolicy(tmpDir, []);
+    expect(policy.canRead(path.join(agentDir, MEMORY_DIR, "core.md"))).toBe(false);
+    expect(policy.canWrite(path.join(agentDir, MEMORY_DIR, "core.md"))).toBe(false);
+    expect(policy.canRead(path.join(agentDir, MEMORY_DIR, DB_FILE))).toBe(false);
+  });
+
+  it("closing the agent store closes the memory db", async () => {
+    await setup(PROFILE_MEMORY_ON);
+    const agentStore = projectStore.getAgent(host.agentId)!;
+    agentStore.memory.save("persisted");
+    const dbPath = path.join(agentStore.getAgentDir(), MEMORY_DIR, DB_FILE);
+    agentStore.close();
+    expect(() => fs.rmSync(dbPath)).not.toThrow();
+  });
+});
+
+describe("MemoryStore reopening within agent dir", () => {
+  it("shares one connection per AgentStore instance", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-memshare-"));
+    const store = new MemoryStore(dir);
+    const store2 = new MemoryStore(dir);
+    try {
+      store.save("shared wal write");
+      expect(store2.list().map((e) => e.content)).toEqual(["shared wal write"]);
+    } finally {
+      store.close();
+      store2.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

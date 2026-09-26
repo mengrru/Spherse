@@ -29,6 +29,7 @@ export interface Capability extends TurnMiddlewareSource {
   readonly id: string;
   init?(ctx: KernelServices): Promise<void>;
   tools?(host: ToolHost): AgentTool[];
+  featureTools?(host: ToolHost): AgentTool[];
   contextBlocks?(view: SessionView): Promise<ContextBlock[]>;
   turnHooks?: TurnHooksFactory;
   streamDecorators?: ReadonlyArray<StreamDecorator>;

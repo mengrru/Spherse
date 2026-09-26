@@ -35,6 +35,7 @@ const agentProfile = Type.Object({
     }),
   ),
   timePerception: Type.Optional(timePerceptionConfig),
+  memory: Type.Optional(Type.Object({ enabled: Type.Boolean() })),
   yolo: Type.Optional(Type.Boolean()),
   systemPrompt: Type.String(),
   filePath: Type.String(),
@@ -68,6 +69,14 @@ const mcpServerConfig = Type.Union([
     headers: Type.Optional(Type.Record(Type.String(), Type.String())),
   }),
 ]);
+
+const agentMemoryEntry = Type.Object({
+  id: Type.String(),
+  content: Type.String(),
+  tags: Type.Optional(Type.Array(Type.String())),
+  createdAt: Type.Number(),
+  updatedAt: Type.Number(),
+});
 
 const agentSummary = Type.Object(
   {
@@ -103,6 +112,23 @@ export const schemas = {
   agentMcpUpdateRequest: Type.Object({
     servers: Type.Array(mcpServerConfig),
   }),
+  agentMemoryResponse: Type.Object({
+    enabled: Type.Boolean(),
+    core: Type.String(),
+    coreLimit: Type.Number(),
+  }),
+  agentMemoryUpdateRequest: Type.Object({
+    enabled: Type.Optional(Type.Boolean()),
+    core: Type.Optional(Type.String()),
+  }),
+  agentMemoryEntry,
+  agentMemoryEntriesResponse: Type.Object({
+    entries: Type.Array(agentMemoryEntry),
+  }),
+  agentMemoryEntryUpdateRequest: Type.Object({
+    content: Type.Optional(Type.String()),
+    tags: Type.Optional(Type.Array(Type.String())),
+  }),
 } as const;
 
 export type AgentProfileContract = Static<typeof agentProfile>;
@@ -116,3 +142,8 @@ export type AgentUpdateResponse = Static<typeof schemas.agentUpdateResponse>;
 export type McpServerConfigContract = Static<typeof schemas.mcpServerConfig>;
 export type AgentMcpResponse = Static<typeof schemas.agentMcpResponse>;
 export type AgentMcpUpdateRequest = Static<typeof schemas.agentMcpUpdateRequest>;
+export type AgentMemoryEntryContract = Static<typeof agentMemoryEntry>;
+export type AgentMemoryResponse = Static<typeof schemas.agentMemoryResponse>;
+export type AgentMemoryUpdateRequest = Static<typeof schemas.agentMemoryUpdateRequest>;
+export type AgentMemoryEntriesResponse = Static<typeof schemas.agentMemoryEntriesResponse>;
+export type AgentMemoryEntryUpdateRequest = Static<typeof schemas.agentMemoryEntryUpdateRequest>;

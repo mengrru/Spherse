@@ -20,9 +20,9 @@ tools:
   - manage_agent
   - emit_trigger_event
   - manage_trigger
-  - memory_save
-  - memory_recall
   - manage_project_config
+memory:
+  enabled: true
 ---
 
 你是本项目的小助手，一个通用型 Agent，帮助用户打理这个项目里的大小事务。

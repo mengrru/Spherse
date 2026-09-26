@@ -7,6 +7,7 @@ export interface AgentSessionActions {
   newSession: (agent: AgentSummary) => void;
   triggerAgent: (agent: AgentSummary) => void;
   mcpAgent: (agent: AgentSummary) => void;
+  memoryAgent: (agent: AgentSummary) => void;
   editAgent: (agent: AgentSummary) => void;
   deleteAgent: (agent: AgentSummary) => void;
   selectSession: (session: SessionInfo) => void;

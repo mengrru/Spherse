@@ -56,19 +56,19 @@ describe("initPresets", () => {
     expect(profile!.tools).not.toContain("run_command");
     for (const tool of profile!.tools ?? []) {
       expect(tool).not.toMatch(/^mcp__/);
+      expect(tool).not.toMatch(/^memory_/);
     }
     for (const expected of [
       "read_file",
       "write_file",
       "manage_agent",
       "manage_trigger",
-      "memory_save",
-      "memory_recall",
       "manage_project_config",
       "web_search",
     ]) {
       expect(profile!.tools).toContain(expected);
     }
+    expect(profile!.memory).toEqual({ enabled: true });
   });
 
   it("does not throw when called on empty project", async () => {

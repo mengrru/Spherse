@@ -17,6 +17,10 @@ export interface TimePerceptionConfig {
   timeZone?: string;
 }
 
+export interface AgentMemoryConfig {
+  enabled: boolean;
+}
+
 export interface AgentProfile {
   id: string;
   name: string;
@@ -34,6 +38,7 @@ export interface AgentProfile {
     frontmatter?: Record<string, string>;
   };
   timePerception?: TimePerceptionConfig;
+  memory?: AgentMemoryConfig;
   yolo?: boolean;
   systemPrompt: string;
   filePath: string;
