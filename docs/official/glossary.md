@@ -102,4 +102,4 @@
 | 自定义侧边面板（custom side panel） | ProjectPanel 的可切换视图：按项目配置的 HTML（`project.yaml` 的 `sidePanel.path`）经透明 iframe 占满项目面板；与指整个左侧栏的 side panel（ActivityBar + ProjectPanel）无关 | [data-conventions.md](data-conventions.md) |
 | chat session store | chat 的 Zustand store（`useChatSessionStore`），持有 Entry 状态、连接投影、分页与 actions | [architecture/chat.md](architecture/chat.md) |
 | timePerception | agent 时间感知配置：感知时间 = 真实时间经锚点 / 流速变换 | [data-conventions.md](data-conventions.md) |
-| memory（memory.jsonl） | per-agent 记忆持久化，`memory_save` / `memory_recall` 读写，`<memory>` block 注入 | [architecture/capabilities.md](architecture/capabilities.md) |
+| memory | per-agent 跨会话记忆：核心记忆（core.md 常驻注入）+ 长期记忆（memory.db，FTS5 词法检索），`memory.*` 工具读写，`profile.md` 的 `memory.enabled` 门控 | [architecture/capabilities.md](architecture/capabilities.md) |
