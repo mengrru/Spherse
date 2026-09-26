@@ -60,6 +60,29 @@ describe("MessageList", () => {
     expect(texts[2]).toContain("first");
   });
 
+  it("marks persisted messages with data-entry-seq anchors", () => {
+    renderList([
+      {
+        id: "g1",
+        kind: "turn",
+        user: { kind: "user", id: "e0", seq: 0, text: "question" },
+        hasError: false,
+        bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", text: "answer", tools: [] }],
+      },
+      {
+        id: "g2",
+        kind: "turn",
+        hasError: false,
+        bubbles: [{ kind: "tool-result", id: "b2", entryId: "s2", tool: { toolCallId: "tc1", toolName: "read_file", args: {}, status: "completed" } }],
+      },
+    ]);
+
+    const anchors = [...document.querySelectorAll("[data-entry-seq]")].map(
+      (node) => node.getAttribute("data-entry-seq"),
+    );
+    expect(anchors).toEqual(["1", "0"]);
+  });
+
   it("renders an orphan tool result bubble instead of dropping it", () => {
     renderList([
       {

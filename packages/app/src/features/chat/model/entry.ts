@@ -85,6 +85,11 @@ export function persistedEntryId(seq: number): EntryId {
   return `e${seq}`;
 }
 
+export function seqFromPersistedEntryId(id: EntryId): number | undefined {
+  const match = /^e(\d+)$/.exec(id);
+  return match ? Number(match[1]) : undefined;
+}
+
 export function toolResultEntryId(toolCallId: string): EntryId {
   return `t:${toolCallId}`;
 }

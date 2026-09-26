@@ -10,6 +10,16 @@ const sessionInfo = Type.Object({
   source: Type.Optional(Type.Union([Type.Literal("manual"), Type.Literal("triggered")])),
 });
 
+const sessionSearchHit = Type.Object({
+  agentId: Type.String(),
+  sessionId: Type.String(),
+  sessionTitle: Type.Optional(Type.String()),
+  seq: Type.Integer(),
+  role: Type.Union([Type.Literal("user"), Type.Literal("assistant")]),
+  snippet: Type.String(),
+  time: Type.Number(),
+});
+
 export const schemas = {
   sessionInfo,
   sessionListResponse: Type.Array(sessionInfo),
@@ -52,6 +62,9 @@ export const schemas = {
     currentTokens: Type.Number(),
     contextWindowLimit: Type.Union([Type.Number(), Type.Null()]),
   }),
+  sessionSearchResponse: Type.Object({
+    results: Type.Array(sessionSearchHit),
+  }),
 } as const;
 
 export type SessionInfoContract = Static<typeof sessionInfo>;
@@ -66,3 +79,5 @@ export type SendMessageOkResponse = Static<typeof schemas.sendMessageOkResponse>
 export type SessionMessagesResponse = Static<typeof schemas.sessionMessagesResponse>;
 export type SessionMessagesPageResponse = Static<typeof schemas.sessionMessagesPageResponse>;
 export type SessionStatusResponse = Static<typeof schemas.sessionStatus>;
+export type SessionSearchHit = Static<typeof sessionSearchHit>;
+export type SessionSearchResponse = Static<typeof schemas.sessionSearchResponse>;

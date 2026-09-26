@@ -24,6 +24,25 @@ export function registerSessionRoutes(
     },
   );
 
+  fastify.get<{ Params: { projectId: string }; Querystring: { q?: string; limit?: string } }>(
+    "/api/projects/:projectId/sessions/search",
+    {
+      schema: { response: { 200: schemas.sessionSearchResponse } },
+    },
+    async (req) => {
+      const q = (req.query.q ?? "").trim();
+      if (!q) {
+        return parseContract(schemas.sessionSearchResponse, { results: [] });
+      }
+      const requested = parseInt(req.query.limit ?? "", 10);
+      const limit = Number.isNaN(requested)
+        ? 50
+        : Math.min(100, Math.max(1, requested));
+      const results = req.projectCtx!.projectManager.searchProjectMessages(q, limit);
+      return parseContract(schemas.sessionSearchResponse, { results });
+    },
+  );
+
   fastify.get<{
     Params: { projectId: string; agentId: string };
     Querystring: { limit?: string; offset?: string };

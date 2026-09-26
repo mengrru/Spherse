@@ -903,6 +903,13 @@ export const zhCN = {
   "project-panel.files": "文件",
   // 技能面板的分组标签（project panel 中「文件」下方的「技能」section 标题）
   "project-panel.skills": "技能",
+  "global-search.search": "搜索",
+  "global-search.placeholder": "搜索聊天与文件...",
+  "global-search.initialHint": "输入关键词,搜索当前项目的聊天记录与文件名",
+  "global-search.searching": "搜索中...",
+  "global-search.noResults": "没有找到结果",
+  "global-search.chatResults": "聊天",
+  "global-search.fileResults": "文件",
 
   // --- Skill Panel ---
   // 技能面板右上角三点菜单的「创建技能」项

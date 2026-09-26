@@ -4,6 +4,8 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { SessionInfo } from "../types.js";
 import type { SessionEvent } from "../session/events.js";
 import { EVENT_SCHEMA_VERSION } from "../session/events.js";
+import { collectAbandonedSeqs } from "../session/fold.js";
+import { escapeLikePattern, matchMessageData, type MessageSearchHit } from "../session/search.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 
 interface PragmaColumnInfo {
@@ -285,6 +287,63 @@ export class SessionStore {
       )
       .get(sessionId);
     return row?.maxSeq ?? null;
+  }
+
+  searchMessages(query: string, prefetchLimit: number): MessageSearchHit[] {
+    const trimmed = query.trim();
+    if (!trimmed || prefetchLimit <= 0) return [];
+    interface SearchRow {
+      session_id: string;
+      seq: number;
+      type: string;
+      data: string;
+      time: number;
+      schema_version: number;
+      session_title: string | null;
+    }
+    const rows = this.db
+      .prepare<[string, number], SearchRow>(
+        `SELECT e.session_id, e.seq, e.type, e.data, e.time, e.schema_version, s.title AS session_title
+         FROM events e JOIN sessions s ON s.id = e.session_id
+         WHERE e.type IN ('user/message', 'assistant/message')
+           AND s.status = 'active'
+           AND e.data LIKE ? ESCAPE '\\'
+         ORDER BY e.time DESC, e.seq DESC
+         LIMIT ?`,
+      )
+      .all(`%${escapeLikePattern(trimmed)}%`, prefetchLimit);
+    if (rows.length === 0) return [];
+
+    const hits: MessageSearchHit[] = [];
+    const sessionsWithHits = new Set<string>();
+    for (const row of rows) {
+      const match = matchMessageData(trimmed, row.data);
+      if (!match) continue;
+      hits.push({
+        sessionId: row.session_id,
+        ...(row.session_title != null ? { sessionTitle: row.session_title } : {}),
+        seq: row.seq,
+        role: match.role,
+        snippet: match.snippet,
+        time: row.time,
+      });
+      sessionsWithHits.add(row.session_id);
+    }
+    if (hits.length === 0) return [];
+
+    const abandonedBySession = this.readAbandonedSeqs([...sessionsWithHits]);
+    return hits.filter((hit) => !abandonedBySession.get(hit.sessionId)?.has(hit.seq));
+  }
+
+  private readAbandonedSeqs(sessionIds: string[]): Map<string, Set<number>> {
+    const result = new Map<string, Set<number>>();
+    const stmt = this.db.prepare<[string], EventRow>(
+      "SELECT * FROM events WHERE session_id = ? AND type IN ('turn/retried', 'turn/withdrawn')",
+    );
+    for (const sessionId of sessionIds) {
+      result.set(sessionId, collectAbandonedSeqs(SessionStore.rowsToEvents(stmt.all(sessionId))));
+    }
+    return result;
   }
 
   migrateEvents(

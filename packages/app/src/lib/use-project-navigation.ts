@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useProjectCtx } from "../context/project-context";
+import { stripMessageId } from "./route-params";
 
 const projectNavStacks = new Map<string, string[]>();
 const pendingBackTargets = new Map<string, string>();
@@ -36,7 +37,7 @@ export function recordProjectNavLocation(projectId: string, key: string): void {
 export function useProjectNavHistory(projectId: string): void {
   const location = useLocation();
   useEffect(() => {
-    recordProjectNavLocation(projectId, location.pathname + location.search);
+    recordProjectNavLocation(projectId, stripMessageId(location.pathname, location.search));
   }, [location.pathname, location.search, projectId]);
 }
 

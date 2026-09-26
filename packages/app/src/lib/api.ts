@@ -27,6 +27,7 @@ import type {
   SessionMessagesPageResponse,
   SessionListPageResponse,
   SessionStatusResponse,
+  SessionSearchResponse,
   DataReadResponseContract as DataReadResponse,
   MarketplaceManifestResponse,
   MarketplaceProjectManifestResponse,
@@ -167,6 +168,14 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       const res = await authedFetch(url);
       await assertOk(res);
       return parseJsonResponse<ProjectSessionListResponse>(res, schemas.projectSessionListResponse);
+    },
+
+    async searchSessions(q: string, opts?: { limit?: number }): Promise<SessionSearchResponse> {
+      const params = new URLSearchParams({ q });
+      if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+      const res = await authedFetch(`${apiBase}/sessions/search?${params.toString()}`);
+      await assertOk(res);
+      return parseJsonResponse<SessionSearchResponse>(res, schemas.sessionSearchResponse);
     },
 
     async getSessionMessages(agentId: string, id: string): Promise<SessionMessagesResponse> {
