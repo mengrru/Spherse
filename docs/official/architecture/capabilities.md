@@ -24,7 +24,7 @@
 | `attachments` | 图片等附件处理器 |
 | `compaction` | 上下文压缩（afterTurn 计划、`compaction/applied` 重启点） |
 | `time-perception` | `<time>` 感知前缀（streamDecorator） |
-| `memory` | `memory_save` / `memory_recall` + `<memory>` block（per-agent JSONL） |
+| `memory` | 两层记忆：`featureTools` 挂载 5 工具（core append/replace + save/recall/delete，`memory.enabled` 门控，不过 `tools` 白名单）+ `<memory-guide>` / `<memory-core>` block；存储为 agent 目录 `memory/`（core.md + sqlite FTS5） |
 
 ## 贡献点（Capability 接口）
 
@@ -35,6 +35,7 @@
 | `id` | 标识；ProjectRuntime 按 id 查找能力（如 trigger）、日志上下文 | — |
 | `init(services)` | 装配时调用一次，接收 `KernelServices` | 接线：保存 port / 注册全局 store |
 | `tools(host)` | 会话装配时调用，聚合进 `toolMap` | 贡献 AgentTool |
+| `featureTools(host)` | 会话装配时在白名单过滤**之后**追加，**不进** `toolCatalog`，与已挂载工具同名时跳过并告警 | feature 门控工具（自带开关，如 `memory.enabled`） |
 | `contextBlocks(view)` | 构建 system prompt 时调用 | 注入知识块（`ContextBlock { kind, render() }`） |
 | `turnHooks` | turn 生命周期回调（beforeTurn / afterTurn / onReload） | turn 级行为、事件追加、systemPrompt 追加 |
 | `streamDecorators` | 包装出站请求流，洋葱组合（后注册者最外层） | 改写发给 LLM 的消息 |
@@ -62,6 +63,7 @@
 - **工具**：会话装配时（`session/agent-assembly.ts`）遍历能力聚合 `toolMap`，再按 `profile.tools` 过滤——未声明的 agent 拿不到该工具
   - 同名工具后注册者静默覆盖先注册者；contextBlocks 合并序、turnHooks 链序、eventMiddlewares 序同样由注册顺序决定——**注册顺序是全局载荷语义**
   - `toolCatalog` 回填全量工具名（未过滤），`manage_agent` 的工具名校验消费它，新能力的工具自动被认识
+  - `featureTools` 是白名单之外的门控通道：工具由 capability 自身的配置门控（如 `memory.enabled`）而非 `profile.tools`，因此不进 toolCatalog、对 `manage_agent` 与工具勾选 UI 不可见（memory 是有意如此；为什么见 [ADR-0013](../../dev/decisions/0013-feature-gated-tools.md)）
 - **危险工具**：经 `tools/with-approval.ts` 的 `withApproval` 包装（`run_command`、`manage_agent` / `manage_trigger` 写 action）：
   - execute 前经 `ApprovalGate` 请求人工确认
   - yolo agent（`profile.yolo`）的 approvalGate 为 undefined，审批静默跳过

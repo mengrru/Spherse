@@ -32,7 +32,7 @@ spherse/
 │   │       │   ├── attachments/      # image processor 贡献 + contextProjector（convertToLlm 前剥 _attachments/空 image block）
 │   │       │   ├── compaction/       # maybeCompactLog 纯变换（transform.ts）+ capability
 │   │       │   ├── time-perception/ # streamDecorators 贡献（<time> 前缀注入）+ previewTransforms（debug snapshot 重放）+ 提示 block；感知时间数学在 time-perception.ts
-│   │       │   ├── memory/           # memory capability（memory_save/recall 工具接线 + <memory> block；MemoryStore 在 store/memory.ts）
+│   │       │   ├── memory/           # memory capability（featureTools 5 工具 + memory-guide/core block；MemoryStore 在 store/memory.ts）
 │   │       │   ├── web-search/       # web_search 工具接线 + streamDecorator（无 DeepSeek key 时从出站请求 tools 中隐藏）
 │   │       │   ├── shared/           # llmPolicyOf 等跨能力共享工具
 │   │       │   └── builtin.ts        # builtinToolCapabilities()：纯工具类 capability 集合
@@ -58,7 +58,7 @@ spherse/
 │   │       │   ├── session.ts        # SQLite session 持久化（events 主写；messages/compactions legacy 只读；searchMessages 趈息搜索）
 │   │       │   ├── trigger.ts / skill.ts / mcp-config.ts / memory.ts / agent-profile.ts / agent-slug.ts / project-config.ts
 │   │       ├── tools/                # AgentTool 实现体（capability 的实现层，无注册表）
-│   │       │   ├── read/write/edit/list/search/move/copy-file.ts、run-command.ts、ask-user.ts、manage-agent.ts、manage-trigger.ts、manage-project-config.ts、emit-trigger-event.ts、load-skill.ts、render-card.ts、generate-image.ts、web-search.ts（经 DeepSeek Anthropic 端点 server web_search）、append-changelog.ts、memory-save.ts、memory-recall.ts、with-approval.ts、json-check.ts
+│   │       │   ├── read/write/edit/list/search/move/copy-file.ts、run-command.ts、ask-user.ts、manage-agent.ts、manage-trigger.ts、manage-project-config.ts、emit-trigger-event.ts、load-skill.ts、render-card.ts、generate-image.ts、web-search.ts（经 DeepSeek Anthropic 端点 server web_search）、append-changelog.ts、memory-core-append.ts、memory-core-replace.ts、memory-save.ts、memory-recall.ts、memory-delete.ts、with-approval.ts、json-check.ts
 │   │       ├── trigger/              # TriggerManager（门面：CRUD+事件+委派）/ scheduler（时间调度状态）/ executor（fire 执行+日志）/ TimerService / template / validation
 │   │       ├── access/               # path-category（内置 PATH_PATTERNS + PathRule 类型 + 注册规则优先）/ access-policy（llm/server 工厂，裁决优先级 deniedPaths > pathRules > 白名单）/ denied-paths
 │   │       ├── context/              # context window 管理域（跨层共享纯函数）：compaction（planCompaction/sanitizeToolCallPairs）/ token-estimate
@@ -176,6 +176,7 @@ spherse/
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
     │   │       │   ├── agent-write.ts    # Agent 创建/更新/删除
     │   │       │   ├── agent-mcp.ts      # Agent MCP 连接器配置读写（GET/PUT /api/projects/:projectId/agents/:id/mcp）
+│   │       │   ├── agent-memory.ts   # Agent 记忆配置与长期记忆条目 CRUD（GET/PUT /agents/:id/memory、GET/PUT/DELETE /agents/:id/memory/entries）
 │       │       │   ├── sessions.ts       # Session 创建/查询/重命名/删除、消息读取与消息搜索（GET /sessions/search）
 │   │       │   ├── content.ts        # 内容浏览、读取、保存、删除、新建文件/目录
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
@@ -282,6 +283,7 @@ spherse/
 │   │       ├── features/
 │   │       │   ├── activity-bar/         # 自治型 Activity Bar（项目头像轨、设置按钮、添加项目下拉菜单「市场/本地」，内部读 app-store/app-ui-store 与 useProjectActions，挂 ProjectMarketDialog；pin 按钮通过 pinToggle prop 可选注入）
 │   │       │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 running 运行态 feature store 与 TriggerEventBridge（trigger 域唯一事件接线：查询失效 + 运行态 + 通知）
+│   │       │   ├── agent-memory/         # Agent 记忆弹窗（开关 + 核心记忆编辑 + 长期条目搜索/编辑/删除，右键菜单入口）
 │   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
 │   │       │   ├── chat/                 # 对话 feature；model/ 放 Entry 归约、历史合并、MessageGroup 组装与卡片投影，runtime/ 放 session store、link/recovery/lifecycle/queue 等运行时模块，hooks/ 放 UI hooks，lib/ 放 diff/format-time 纯函数，utils/ 放图片压缩（compress-image）；根目录保留页面组件、气泡组件（UserBubble/AssistantBubble/ToolItemView）、runtime context、chat 专属类型与附件 UI（AttachmentBar/MessageAttachments）
 │   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑（useLeaveGuard：useBlocker 未保存离开守卫）、复制路径/刷新、冲突提示，ContentQueryBridge 集中处理 fs-watch/reconnect 缓存失效；二进制文件拦截渲染占位卡 UnsupportedFileCard（桌面端经 HostCapabilities.openFileExternal 提供「用默认应用打开」按钮）；ReadOnlyContentBrowser 供分窗只读复用（与 ContentBrowser 共用 Header / ContentBody / useContentViewState），find-scope + FindScopeRoot 限定 Cmd+F 作用域
