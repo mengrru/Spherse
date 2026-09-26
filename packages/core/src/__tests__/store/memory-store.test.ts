@@ -125,6 +125,11 @@ describe("MemoryStore", () => {
       expect(store.search("0_")).toEqual([]);
     });
 
+    it("matches case-insensitively via fts trigram", () => {
+      expect(store.search("HERO").map((e) => e.content)).toEqual(["Hero fears heights"]);
+      expect(store.search("hERO FEARS").map((e) => e.content)).toEqual(["Hero fears heights"]);
+    });
+
     it("empty query lists by recency", () => {
       expect(store.search("  ")).toHaveLength(4);
     });

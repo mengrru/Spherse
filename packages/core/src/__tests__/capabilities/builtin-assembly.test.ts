@@ -1,9 +1,12 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { Type } from "@sinclair/typebox";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { ProjectStore } from "../../store/project.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
+import { memoryCapability } from "../../capabilities/memory/index.js";
+import type { Capability } from "../../kernel/capability.js";
 import { RunConfigHolder, createRuntimeDeps } from "../../session/runtime.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
 import { buildPromptAndTools, composeStreamFn, streamDecoratorsFor } from "../../session/agent-assembly.js";
@@ -86,6 +89,84 @@ describe("builtin tool capabilities via real assembly path", () => {
   it("unknown tool names resolve to nothing (profile filter drops them)", async () => {
     const tools = await assembleWith(["no_such_tool"]);
     expect(tools).toEqual([]);
+  });
+
+  describe("featureTools seam (memory capability)", () => {
+    const MEMORY_TOOLS = [
+      "memory_core_append",
+      "memory_core_replace",
+      "memory_save",
+      "memory_recall",
+      "memory_delete",
+    ];
+
+    async function assembleMemory(tools: string[], memoryEnabled: boolean) {
+      const deps = createRuntimeDeps({
+        projectStore: store,
+        logger: createSilentLogger(),
+        fileWriteMutex: new FileWriteMutex(),
+        capabilities: [...builtinToolCapabilities(), memoryCapability()],
+        stores: createStoreRegistry(),
+        runConfig: new RunConfigHolder(),
+      });
+      const profile = {
+        ...PROFILE,
+        tools,
+        memory: { enabled: memoryEnabled },
+      };
+      return buildPromptAndTools(deps, profile, "s1", undefined, undefined, undefined);
+    }
+
+    it("mounts memory tools after whitelist filtering when enabled", async () => {
+      const { tools, toolCatalog } = await assembleMemory([], true);
+      const names = tools.map((t) => t.name);
+      for (const name of MEMORY_TOOLS) {
+        expect(names).toContain(name);
+      }
+      for (const name of MEMORY_TOOLS) {
+        expect(toolCatalog.names).not.toContain(name);
+      }
+    });
+
+    it("mounts nothing when memory is disabled, legacy whitelist names are harmless", async () => {
+      const { tools, toolCatalog } = await assembleMemory(["memory_save", "memory_recall"], false);
+      expect(tools).toEqual([]);
+      expect(toolCatalog.names).not.toContain("memory_save");
+    });
+
+    it("skips feature tools whose name is already mounted", async () => {
+      const shadow: Capability = {
+        id: "shadow",
+        featureTools: () => [
+          {
+            name: "read_file",
+            label: "Shadow",
+            description: "shadow duplicate",
+            parameters: Type.Object({}),
+            async execute() {
+              throw new Error("never");
+            },
+          },
+        ],
+      };
+      const deps = createRuntimeDeps({
+        projectStore: store,
+        logger: createSilentLogger(),
+        fileWriteMutex: new FileWriteMutex(),
+        capabilities: [...builtinToolCapabilities(), memoryCapability(), shadow],
+        stores: createStoreRegistry(),
+        runConfig: new RunConfigHolder(),
+      });
+      const { tools } = await buildPromptAndTools(
+        deps,
+        { ...PROFILE, tools: ["read_file"], memory: { enabled: true } },
+        "s1",
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(tools.filter((t) => t.name === "read_file")).toHaveLength(1);
+    });
   });
 
   describe("web_search visibility follows the DeepSeek key", () => {

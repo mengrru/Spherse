@@ -2,7 +2,6 @@ import type { AgentProfile, SessionInfo, SkillDefinition } from "./types.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
 import type { MemoryEntry, MemoryEntryPatch } from "./store/memory.js";
 import { MAX_CORE_CHARS, LIST_LIMIT, SEARCH_LIMIT } from "./store/memory.js";
-import matter from "gray-matter";
 import { ProjectStore } from "./store/project.js";
 import type { ChangelogEntry, AgentChangePayload } from "./store/project.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
@@ -159,24 +158,25 @@ export class ProjectManager {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
 
-    if (input.core !== undefined) {
-      await agentStore.memory.saveCore(input.core);
+    if (input.core !== undefined && input.core.length > MAX_CORE_CHARS) {
+      throw new ValidationError(`core memory exceeds ${MAX_CORE_CHARS} characters`);
     }
 
     if (input.enabled !== undefined) {
       const current = agentStore.getProfile().memory?.enabled === true;
       if (input.enabled !== current) {
-        const raw = await agentStore.profile.getRawContent();
-        const parsed = matter(raw);
-        const data = parsed.data as Record<string, unknown>;
-        const existing =
-          data.memory && typeof data.memory === "object" && !Array.isArray(data.memory)
-            ? (data.memory as Record<string, unknown>)
-            : {};
-        data.memory = { ...existing, enabled: input.enabled };
-        const serialized = matter.stringify(parsed.content, data);
-        await this.projectStore.updateAgent(agentId, serialized);
+        await this.projectStore.updateAgentFrontmatter(agentId, (data) => {
+          const existing =
+            data.memory && typeof data.memory === "object" && !Array.isArray(data.memory)
+              ? (data.memory as Record<string, unknown>)
+              : {};
+          data.memory = { ...existing, enabled: input.enabled };
+        });
       }
+    }
+
+    if (input.core !== undefined) {
+      await agentStore.memory.saveCore(input.core);
     }
 
     return this.getAgentMemory(agentId);

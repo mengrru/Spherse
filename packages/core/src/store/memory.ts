@@ -154,8 +154,10 @@ export class MemoryStore {
       try {
         fs.renameSync(this.dbPath, backup);
       } catch {
-        // nothing more we can do; the retry below will surface the error
+        fs.rmSync(this.dbPath, { force: true });
       }
+      fs.rmSync(`${this.dbPath}-wal`, { force: true });
+      fs.rmSync(`${this.dbPath}-shm`, { force: true });
       this.logger.warn({ err, dbPath: this.dbPath, backup }, "memory db unreadable, isolated and recreated");
       return this.openAndMigrate();
     }
@@ -242,6 +244,9 @@ export class MemoryStore {
   }
 
   update(id: string, patch: MemoryEntryPatch): MemoryEntry {
+    if (patch.content === undefined && patch.tags === undefined) {
+      throw new ValidationError("memory entry patch must set content or tags");
+    }
     const row = this.db.prepare("SELECT * FROM entries WHERE id = ?").get(id) as EntryRow | undefined;
     if (!row) throw new NotFoundError(`memory entry "${id}" not found`);
     const content = patch.content !== undefined ? patch.content : row.content;
