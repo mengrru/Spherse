@@ -3,6 +3,7 @@ import type { SessionManager } from "./session/session-manager.js";
 import type { TriggerManager } from "./trigger/trigger-manager.js";
 import type { TimerService } from "./trigger/timer-service.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
+import type { MemoryEntry, MemoryEntryPatch } from "./store/memory.js";
 import type { TriggerCapability } from "./capabilities/trigger/index.js";
 import type { DataStore } from "./capabilities/data/index.js";
 import type { AgentConfigChangeKind, Capability } from "./kernel/capability.js";
@@ -90,6 +91,29 @@ export class ProjectRuntime {
     const result = await this.projectManager.updateAgentMcp(agentId, config);
     await this.dispatchAgentConfigChanged(agentId, "mcp");
     return result;
+  }
+
+  async getAgentMemory(agentId: string): Promise<{ enabled: boolean; core: string; coreLimit: number }> {
+    return this.projectManager.getAgentMemory(agentId);
+  }
+
+  async updateAgentMemory(
+    agentId: string,
+    input: { enabled?: boolean; core?: string },
+  ): Promise<{ enabled: boolean; core: string; coreLimit: number }> {
+    return this.projectManager.updateAgentMemory(agentId, input);
+  }
+
+  listAgentMemoryEntries(agentId: string, query?: string): MemoryEntry[] {
+    return this.projectManager.listAgentMemoryEntries(agentId, query);
+  }
+
+  updateAgentMemoryEntry(agentId: string, entryId: string, patch: MemoryEntryPatch): MemoryEntry {
+    return this.projectManager.updateAgentMemoryEntry(agentId, entryId, patch);
+  }
+
+  deleteAgentMemoryEntry(agentId: string, entryId: string): void {
+    this.projectManager.deleteAgentMemoryEntry(agentId, entryId);
   }
 
   async updateAgent(agentId: string, content: string, themeContent?: string): Promise<AgentProfile> {

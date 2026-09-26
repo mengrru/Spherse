@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { FEATURE_HOST_MATRIX, isFeatureEnabled } from "./feature-registry";
 
-const WEB_ENABLED_FEATURES = ["agent-dialog", "agent-mcp", "agent-trigger"] as const;
+const WEB_ENABLED_FEATURES = ["agent-dialog", "agent-mcp", "agent-memory", "agent-trigger"] as const;
 
 describe("feature-registry", () => {
   it("declares the full gated feature set in the current matrix", () => {
@@ -10,6 +10,7 @@ describe("feature-registry", () => {
       [
         "agent-dialog",
         "agent-mcp",
+        "agent-memory",
         "agent-trigger",
         "browser",
         "content-split-pane",

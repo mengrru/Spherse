@@ -5,6 +5,7 @@ import { SessionStore } from "./session.js";
 import { TriggerStore } from "./trigger.js";
 import { SkillStore } from "./skill.js";
 import { McpConfigStore } from "./mcp-config.js";
+import { MemoryStore } from "./memory.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 
@@ -17,6 +18,7 @@ export class AgentStore {
   private _triggerStore: TriggerStore;
   private _skillStore: SkillStore | null = null;
   private _mcpStore: McpConfigStore | null = null;
+  private _memoryStore: MemoryStore | null = null;
   private logger: Logger;
 
   constructor(agentDir: string, agentId: string, logger?: Logger, fileWriteMutex?: FileWriteMutex) {
@@ -94,7 +96,15 @@ export class AgentStore {
     return this._mcpStore;
   }
 
+  get memory(): MemoryStore {
+    if (!this._memoryStore) {
+      this._memoryStore = new MemoryStore(this.agentDir, this.logger);
+    }
+    return this._memoryStore;
+  }
+
   close(): void {
     this._sessionStore?.close();
+    this._memoryStore?.close();
   }
 }

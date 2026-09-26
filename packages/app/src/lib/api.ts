@@ -18,6 +18,8 @@ import type {
   ThemeSettingsResponse,
   AgentMcpConfig,
   McpServerConfig,
+  AgentMemoryConfig,
+  AgentMemoryEntry,
   ProjectSessionListResponse,
 } from "./types";
 import type {
@@ -403,6 +405,64 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       });
       await assertOk(res);
       return parseJsonResponse<AgentMcpConfig>(res, schemas.agentMcpResponse);
+    },
+
+    async getAgentMemory(id: string): Promise<AgentMemoryConfig> {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(id)}/memory`);
+      await assertOk(res);
+      return parseJsonResponse<AgentMemoryConfig>(res, schemas.agentMemoryResponse);
+    },
+
+    async updateAgentMemory(
+      id: string,
+      config: { enabled?: boolean; core?: string },
+    ): Promise<AgentMemoryConfig> {
+      const res = await authedFetch(`${apiBase}/agents/${encodeURIComponent(id)}/memory`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
+      await assertOk(res);
+      return parseJsonResponse<AgentMemoryConfig>(res, schemas.agentMemoryResponse);
+    },
+
+    async listAgentMemoryEntries(id: string, query?: string): Promise<AgentMemoryEntry[]> {
+      const suffix = query && query.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
+      const res = await authedFetch(
+        `${apiBase}/agents/${encodeURIComponent(id)}/memory/entries${suffix}`,
+      );
+      await assertOk(res);
+      const parsed = await parseJsonResponse<{ entries: AgentMemoryEntry[] }>(
+        res,
+        schemas.agentMemoryEntriesResponse,
+      );
+      return parsed.entries;
+    },
+
+    async updateAgentMemoryEntry(
+      id: string,
+      entryId: string,
+      patch: { content?: string; tags?: string[] },
+    ): Promise<AgentMemoryEntry> {
+      const res = await authedFetch(
+        `${apiBase}/agents/${encodeURIComponent(id)}/memory/entries/${encodeURIComponent(entryId)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        },
+      );
+      await assertOk(res);
+      return parseJsonResponse<AgentMemoryEntry>(res, schemas.agentMemoryEntry);
+    },
+
+    async deleteAgentMemoryEntry(id: string, entryId: string): Promise<{ ok: boolean }> {
+      const res = await authedFetch(
+        `${apiBase}/agents/${encodeURIComponent(id)}/memory/entries/${encodeURIComponent(entryId)}`,
+        { method: "DELETE" },
+      );
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
     async deleteAgent(id: string): Promise<{ ok: boolean }> {

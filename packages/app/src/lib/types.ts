@@ -20,6 +20,8 @@ export type {
   ThemeSettingsResponse,
   McpServerConfigContract as McpServerConfig,
   AgentMcpResponse as AgentMcpConfig,
+  AgentMemoryEntryContract as AgentMemoryEntry,
+  AgentMemoryResponse as AgentMemoryConfig,
 } from "@spherse/contracts";
 
 export type { McpTransportType } from "@spherse/core";

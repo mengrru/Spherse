@@ -5,6 +5,7 @@ export type FeatureName =
   | "agent-dialog"
   | "agent-trigger"
   | "agent-mcp"
+  | "agent-memory"
   | "floating-chat"
   | "floating-content-browser"
   | "content-split-pane"
@@ -20,6 +21,7 @@ export const FEATURE_HOST_MATRIX: Record<FeatureName, ReadonlySet<HostKind>> = {
   "agent-dialog": ALL_HOSTS,
   "agent-trigger": ALL_HOSTS,
   "agent-mcp": ALL_HOSTS,
+  "agent-memory": ALL_HOSTS,
   "floating-chat": ELECTRON_ONLY,
   "floating-content-browser": ELECTRON_ONLY,
   "content-split-pane": ELECTRON_ONLY,

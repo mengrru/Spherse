@@ -96,7 +96,7 @@ Content Browser 支持：
 | 交互与展示 | `ask_user`、`render_card`、`generate_image` |
 | 网页搜索 | `web_search`（需在设置中配置 DeepSeek API Key，搜索词发送给 DeepSeek 并额外计费；未配置时该工具对模型不可见） |
 | 项目协作 | `append_changelog`、`load_skill`、`emit_trigger_event` |
-| 记忆 | `memory_save`、`memory_recall` |
+| 记忆 | `memory_save`、`memory_recall`、`memory_delete`、`memory_core_append`、`memory_core_replace`（在 Agent 右键菜单「记忆」中开启后自动获得，无需在工具列表勾选） |
 | 高级操作 | `run_command`、`manage_agent`、`manage_trigger`、`manage_project_config`（Agent 配置界面中三个 `manage_*` 合并为单一「管理项目」选项，勾选即同时启用） |
 
 `run_command` 以及 `manage_agent` / `manage_trigger` 的写操作通常需要用户审批。`run_command` 以当前系统用户权限执行，没有 OS 级沙箱，文件访问限制也不约束其子进程；只应批准可信命令。YOLO 模式会跳过逐次审批，应谨慎启用。
@@ -151,11 +151,12 @@ MCP Server 可能执行本地程序或接收敏感 headers/env，只配置可信
 
 ### 记忆
 
-每个 Agent 拥有跨会话的持久记忆，适合保存用户偏好、约定和长期上下文：
+每个 Agent 拥有跨会话的持久记忆（在 Agent 右键菜单「记忆」中开启），分两层：
 
-- Agent 用 `memory_save` 追加、`memory_recall` 检索记忆
-- 最近的记忆会自动注入后续会话，无需每次重读
-- 记忆是 Agent 私有的，保存在该 Agent 自己的目录下
+- **核心记忆**：常驻注入的稳定事实（用户身份、偏好、长期约定），Agent 用 `memory_core_append` 追加、`memory_core_replace` 修剪；用户也可在记忆对话框中直接编辑
+- **长期记忆**：条目化事实，Agent 用 `memory_save` 保存、`memory_recall` 关键词检索（支持中文）、`memory_delete` 清理错误条目
+
+记忆是 Agent 私有的，保存在该 Agent 自己目录的 `memory/` 下；记忆内容是数据而非指令。
 
 ### HTML Workspace 与 UI SDK
 
@@ -227,7 +228,7 @@ Debug Tools（开发模式直接可用，生产版从设置开启）提供 DevTo
 | 让 Agent 阅读和维护现有资料 | 打开资料目录 → 创建 Agent → 配置 Prompt、文件工具和上下文文件 → 新建会话 |
 | 建立不同职责的协作团队 | 创建多个 Agent → 分别配置职责、工具和 Skill → 让它们围绕同一项目文件工作 |
 | 固化重复工作方法 | 创建 project 或 agent-level Skill → 为相关 Agent 启用 `load_skill` |
-| 让 Agent 记住用户偏好或长期约定 | 为 Agent 启用 `memory_save` / `memory_recall` → 让它在会话中保存与检索记忆 |
+| 让 Agent 记住用户偏好或长期约定 | Agent 右键菜单 →「记忆」→ 开启 → 让它在会话中保存与检索记忆 |
 | 接入外部系统或工具 | 从 Agent 右键菜单配置可信 MCP Server |
 | 定时执行或响应页面事件 | 创建时间/事件触发器 → 选择会话策略 → 查看运行日志 |
 | 创建项目首页或交互卡片 | 加载 `spherse-write-html` 和 `spherse-use-ui-sdk` |
