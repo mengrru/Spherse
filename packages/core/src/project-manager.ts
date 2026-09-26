@@ -1,5 +1,7 @@
 import type { AgentProfile, SessionInfo, SkillDefinition } from "./types.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
+import type { MemoryEntry, MemoryEntryPatch } from "./store/memory.js";
+import { MAX_CORE_CHARS, LIST_LIMIT, SEARCH_LIMIT } from "./store/memory.js";
 import { ProjectStore } from "./store/project.js";
 import type { ChangelogEntry, AgentChangePayload } from "./store/project.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
@@ -137,6 +139,66 @@ export class ProjectManager {
     const agentStore = this.projectStore.getAgent(agentId);
     if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
     return agentStore.mcp.saveConfig(config);
+  }
+
+  async getAgentMemory(agentId: string): Promise<{ enabled: boolean; core: string; coreLimit: number }> {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    return {
+      enabled: agentStore.getProfile().memory?.enabled === true,
+      core: await agentStore.memory.getCore(),
+      coreLimit: MAX_CORE_CHARS,
+    };
+  }
+
+  async updateAgentMemory(
+    agentId: string,
+    input: { enabled?: boolean; core?: string },
+  ): Promise<{ enabled: boolean; core: string; coreLimit: number }> {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+
+    if (input.core !== undefined && input.core.length > MAX_CORE_CHARS) {
+      throw new ValidationError(`core memory exceeds ${MAX_CORE_CHARS} characters`);
+    }
+
+    if (input.enabled !== undefined) {
+      const current = agentStore.getProfile().memory?.enabled === true;
+      if (input.enabled !== current) {
+        await this.projectStore.updateAgentFrontmatter(agentId, (data) => {
+          const existing =
+            data.memory && typeof data.memory === "object" && !Array.isArray(data.memory)
+              ? (data.memory as Record<string, unknown>)
+              : {};
+          data.memory = { ...existing, enabled: input.enabled };
+        });
+      }
+    }
+
+    if (input.core !== undefined) {
+      await agentStore.memory.saveCore(input.core);
+    }
+
+    return this.getAgentMemory(agentId);
+  }
+
+  listAgentMemoryEntries(agentId: string, query?: string): MemoryEntry[] {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    const q = query?.trim();
+    return q ? agentStore.memory.search(q, SEARCH_LIMIT) : agentStore.memory.list(LIST_LIMIT);
+  }
+
+  updateAgentMemoryEntry(agentId: string, entryId: string, patch: MemoryEntryPatch): MemoryEntry {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    return agentStore.memory.update(entryId, patch);
+  }
+
+  deleteAgentMemoryEntry(agentId: string, entryId: string): void {
+    const agentStore = this.projectStore.getAgent(agentId);
+    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
+    agentStore.memory.deleteEntry(entryId);
   }
 
   getSession(agentId: string, sessionId: string): SessionInfo | null {

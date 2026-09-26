@@ -33,6 +33,7 @@ export function AgentRow({ agent, active }: AgentRowProps) {
   const agentDialogEnabled = useFeature("agent-dialog");
   const triggerEnabled = useFeature("agent-trigger");
   const mcpEnabled = useFeature("agent-mcp");
+  const memoryEnabled = useFeature("agent-memory");
   const hasEnabled = useAgentHasEnabledTrigger(projectId, client, agent.id);
   return (
     <div className="group/agent-row relative" data-agent-id={agent.id}>
@@ -75,6 +76,11 @@ export function AgentRow({ agent, active }: AgentRowProps) {
           {mcpEnabled && (
             <ContextMenuItem onClick={() => actions.mcpAgent(agent)}>
               {t("agent-mcp.menuItem")}
+            </ContextMenuItem>
+          )}
+          {memoryEnabled && (
+            <ContextMenuItem onClick={() => actions.memoryAgent(agent)}>
+              {t("agent-memory.menuItem")}
             </ContextMenuItem>
           )}
           <ContextMenuSeparator />

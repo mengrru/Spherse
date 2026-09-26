@@ -52,6 +52,7 @@
 1. **先问归属**：它是「能力」（可选、可组合、贡献工具/知识）还是「不变量」（安全、持久化语义）？后者不要做成 capability（见哲学第 6 条）。
 2. **新目录 `capabilities/<name>/`**，工厂函数返回 `Capability`。一切经接口贡献：
    - `tools(host)`：工具在 `(host)` 时**闭包捕获 host**，禁止模块级可变状态存 host；
+   - `featureTools(host)`：feature 门控工具——白名单过滤**之后**追加、不进 `toolCatalog`（对 `manage_agent` 与工具勾选 UI 不可见）、与已挂载工具同名时跳过并 warn；适用于自带开关的能力工具（如 `memory.enabled`），配置变化频率低、走 agent_updated 静态重装配即可，不要用于需 per-turn 动态合并的场景（那用 MCP 的 beforeTurn 模式）；
    - `contextBlocks(view)`：注入 system prompt 的知识块（`ContextBlock { kind, render() }`，kind 自由字符串）；
    - `turnHooks`：turn 生命周期行为（`beforeTurn(agent)` / `afterTurn(agent, TurnEventAppender)` / `onReload`）——afterTurn 只能通过窄 appender 读取/追加 session events；注意 Runner 对你零感知，只能通过这些时机点行为；
    - `streamDecorators`：改写 LLM 请求流的装饰器（`StreamDecorator = (view) => (base: StreamFn) => StreamFn | undefined`，洋葱组合——后注册者最外层；time-perception 为首个实例）；

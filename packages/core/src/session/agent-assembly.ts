@@ -125,7 +125,7 @@ export async function buildPromptAndTools(
   sessionId: string,
   approvalGate: ApprovalGate | undefined,
   askGate: AskGate | undefined,
-): Promise<{ systemPrompt: string; tools: AgentTool[] }> {
+): Promise<{ systemPrompt: string; tools: AgentTool[]; toolCatalog: { names: string[] } }> {
   const pathRules = deps.capabilities.flatMap((c) => c.pathRules ?? []);
   const toolCatalog = { names: [] as string[] };
   const host: ToolHost = {
@@ -155,6 +155,29 @@ export async function buildPromptAndTools(
     .map((name) => toolMap.get(name))
     .filter((t): t is AgentTool => Boolean(t));
 
+  const mounted = new Set(tools.map((t) => t.name));
+  for (const capability of deps.capabilities) {
+    if (!capability.featureTools) continue;
+    let contributed: AgentTool[];
+    try {
+      contributed = capability.featureTools(host);
+    } catch (err) {
+      deps.logger.warn({ err, capability: capability.id }, "capability feature tools failed");
+      continue;
+    }
+    for (const tool of contributed) {
+      if (mounted.has(tool.name)) {
+        deps.logger.warn(
+          { capability: capability.id, tool: tool.name },
+          "feature tool name already mounted, skipping",
+        );
+        continue;
+      }
+      mounted.add(tool.name);
+      tools.push(tool);
+    }
+  }
+
   const agentsMd = await deps.projectStore.readIndex();
   const blocks: Array<ContextBlock | null> = [];
   blocks.push(buildProjectInstructions(agentsMd));
@@ -182,7 +205,7 @@ export async function buildPromptAndTools(
   }
 
   const systemPrompt = serializeBlocks(blocks);
-  return { systemPrompt, tools };
+  return { systemPrompt, tools, toolCatalog };
 }
 
 export async function buildAgent(

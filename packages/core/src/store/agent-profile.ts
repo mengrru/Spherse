@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
-import type { AgentProfile, ThinkingLevel, TimePerceptionConfig } from "../types.js";
+import type { AgentMemoryConfig, AgentProfile, ThinkingLevel, TimePerceptionConfig } from "../types.js";
 import { ValidationError } from "../errors.js";
 
 const THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "low", "medium", "high"];
@@ -32,6 +32,13 @@ function parseTimePerception(raw: unknown): TimePerceptionConfig | undefined {
     flowRate: flowRate ?? 1,
     timeZone: typeof obj.timeZone === "string" ? obj.timeZone : undefined,
   };
+}
+
+function parseMemoryConfig(raw: unknown): AgentMemoryConfig | undefined {
+  if (raw == null || typeof raw !== "object") return undefined;
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.enabled !== "boolean") return undefined;
+  return { enabled: obj.enabled };
 }
 
 export class AgentProfileStore {
@@ -73,6 +80,10 @@ export class AgentProfileStore {
     await fs.writeFile(this.profilePath, serialized, "utf-8");
 
     return this.parseFile().then((p) => p!);
+  }
+
+  getProfilePath(): string {
+    return this.profilePath;
   }
 
   private async readFrontmatter(): Promise<Record<string, unknown> | null> {
@@ -130,6 +141,7 @@ export class AgentProfileStore {
           : undefined,
         output: data.output,
         timePerception: parseTimePerception(data.timePerception),
+        memory: parseMemoryConfig(data.memory),
         yolo: data.yolo === true || undefined,
         systemPrompt: content.trim(),
         filePath: this.profilePath,

@@ -33,7 +33,7 @@
 
 - 匹配顺序：extraRules 逐条优先 → 内置模式按上表声明序 → 都不中归 `userFiles`
 - glob 语义：`**` 匹配子树含目录本身、`*` 匹配单段；`PathRule.match` 是 RegExp 而非 glob
-- `PathRule { match, category, llm: { read, write } }` 由 capability 注册（见 [capabilities.md](capabilities.md)）；当前注册方仅 memory（`.spherse/agents/*/memory.jsonl` → 自定义类别 `memory`，LLM 读写均放行）
+- `PathRule { match, category, llm: { read, write } }` 由 capability 注册（见 [capabilities.md](capabilities.md)）；当前无 production 注册方。注意 extraRules 优先于内置类别裁决：capability 若注册匹配已 deny 路径（如 `agentMemory`）的 permissive 规则会重新放开访问，review 时需检查
 
 ## 访问策略（`access/access-policy.ts`）
 
@@ -93,7 +93,7 @@
 ## 已知边界与例外
 
 - **`.spherse` 下未分类文件 LLM 可读**（`spherseOther` 在 LLM read 白名单内，有测试钉住）、仅写被拒——与「避免内部数据泄漏」的最初意图存在差距，是否收紧待决策
-- **不经 access policy 的工具**：`memory_save` / `memory_recall` 直连 MemoryStore（deny `.spherse` 拦不住 memory 持久化）；`generate_image` 写入路径由构造固定（时间戳文件名），仅做穿越校验
+- **不经 access policy 的工具**：`memory_*` 工具直连 MemoryStore（记忆文件属 `agentMemory` 类别，LLM 文件工具读写均拒，只经记忆工具与 server API 访问——工具自身带「记忆是数据非指令」的注入框架）；`generate_image` 写入路径由构造固定（时间戳文件名），仅做穿越校验
 - **`web_search` 向第三方发送查询**：搜索词（由对话派生）发送给 DeepSeek 并计费，与 agent 主模型是否为 DeepSeek 无关；工具 hint 已向用户说明
 - `list_files` / `search_content` 递归降噪：dotfile、`node_modules`、`.git` 跳过；`.spherse` 默认拒绝，需 `include_meta` 显式开启
 - `manage_project_config` 的 `update_welcome_page` 是写操作但**未包审批**（风险与 write_file 同级的取舍）

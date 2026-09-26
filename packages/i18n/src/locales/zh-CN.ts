@@ -661,6 +661,50 @@ export const zhCN = {
   // 表单（http/sse）：请求头字段占位，每行一个 Key: Value
   "agent-mcp.fieldHeadersPlaceholder": "每行一个，格式 Authorization: Bearer xxx",
 
+  // --- Agent Memory (记忆) ---
+  // 搭档右键菜单中的「记忆」入口，点击打开记忆管理弹窗
+  "agent-memory.menuItem": "记忆",
+  // 记忆管理弹窗标题
+  "agent-memory.dialogTitle": "记忆",
+  // 加载记忆配置失败的 toast，{message} 为错误信息
+  "agent-memory.loadFailed": "加载记忆失败：{message}",
+  // 保存成功的 toast（开关与核心记忆一并保存）
+  "agent-memory.saved": "记忆已保存",
+  // 保存失败的 toast，{message} 为错误信息
+  "agent-memory.saveFailed": "保存记忆失败：{message}",
+  // 记忆总开关的标签
+  "agent-memory.enableLabel": "开启记忆",
+  // 记忆总开关的说明文字
+  "agent-memory.enableHint": "开启后 Agent 将获得记忆工具，并可跨会话记住你的偏好与事实",
+  // 核心记忆区块标题
+  "agent-memory.coreLabel": "核心记忆",
+  // 核心记忆输入框占位，提示适合放的内容
+  "agent-memory.corePlaceholder": "常驻注入的稳定事实，如身份、偏好、长期约定",
+  // 核心记忆字符计数，{current} 当前字符数，{limit} 上限
+  "agent-memory.charCount": "{current} / {limit}",
+  // 核心记忆超过上限时的提示
+  "agent-memory.coreOverLimit": "核心记忆超过长度上限，请精简或将细粒度事实交给 Agent 存入长期记忆",
+  // 长期记忆条目区标题
+  "agent-memory.entriesLabel": "长期记忆",
+  // 条目搜索框占位
+  "agent-memory.searchPlaceholder": "搜索记忆条目",
+  // 条目列表为空时的占位文案
+  "agent-memory.entriesEmpty": "暂无长期记忆条目，开启后 Agent 会在对话中自动积累",
+  // 单条条目保存失败的 toast，{message} 为错误信息
+  "agent-memory.entrySaveFailed": "保存记忆条目失败：{message}",
+  // 单条条目删除失败的 toast，{message} 为错误信息
+  "agent-memory.entryDeleteFailed": "删除记忆条目失败：{message}",
+  // 条目编辑表单：内容字段的无障碍标签
+  "agent-memory.entryContentLabel": "记忆内容",
+  // 条目编辑表单：标签字段的无障碍标签
+  "agent-memory.entryTagsLabel": "标签",
+  // 条目编辑表单：标签字段占位，逗号分隔
+  "agent-memory.entryTagsPlaceholder": "标签，逗号分隔",
+  // 条目删除确认弹窗标题
+  "agent-memory.confirmDeleteTitle": "删除记忆条目",
+  // 条目删除确认弹窗正文
+  "agent-memory.confirmDeleteDescription": "确定要删除这条记忆吗？删除后不可恢复。",
+
   // --- Chat ---
   // 聊天输入框占位提示
   "chat.composerPlaceholder": "输入消息... (Shift+Enter 换行)",

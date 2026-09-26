@@ -21,6 +21,9 @@ project-root/
 │   │       ├── theme.css          # 可选：agent 聊天窗口主题
 │   │       ├── mcp.json           # 可选：MCP 连接器配置
 │   │       ├── sessions.db        # 惰性：首次访问会话时创建
+│   │       ├── memory/            # 惰性：开启记忆并首次读写时创建
+│   │       │   ├── core.md        # 核心记忆：常驻注入，上限 4000 字符
+│   │       │   └── memory.db      # 长期记忆：SQLite + FTS5(trigram)，损坏时隔离为 memory.db.corrupt-{ts} 后重建
 │   │       ├── triggers/          # 惰性：首次保存触发器时创建
 │   │       │   ├── index.yml
 │   │       │   └── logs.jsonl
@@ -37,7 +40,8 @@ project-root/
 
 - `AGENTS.md` 缺失时 `readIndex()` 返回空串，agent system prompt 仅由 profile 与 skill / context 组成
 - `theme.css`（项目级与 agent 级）均按需写入；不存在时读取为空串、UI 用默认样式
-- `mcp.json`、`triggers/`、`sessions.db` 均为惰性创建：首次写入或首次访问才落盘
+- `mcp.json`、`triggers/`、`sessions.db`、`memory/` 均为惰性创建：首次写入或首次访问才落盘
+- `memory/`：profile.md frontmatter `memory.enabled: true` 时 agent 获得记忆工具；`core.md` 与 `memory.db` 只经记忆工具与 server API 读写，LLM 文件工具经 `agentMemory` 类别拒绝（读写均禁）
 - `attachments/`：`POST /api/projects/:projectId/attachments` 上传，仅 png / jpg / webp、≤5MB，命名 `{epoch-ms}-{8hex}.{ext}`；多模态 base64 仅在本轮 LLM 调用瞬间存在，持久化前被 sanitizer 剥离
 - `generated-images/`：`generate_image` 自动保存，命名 `{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`，重名冲突时重试
 - builtin skill 随 app 内置、`SkillStore` 内存合并，不写入磁盘（见「Skill 定义格式」）
@@ -67,7 +71,7 @@ aiAccess:
 
 - 解析为 YAML 后裸 cast，core 侧无 schema 校验；残留未知字段（如老项目的 `defaultModel`）静默忽略，随下次保存原样保留
 - 模型选择不在项目配置：由用户级 `AppSettings.models.text.defaultModel` 决定
-- 特殊文件路径归属由 `@spherse/core` 的 `access/path-category.ts` 中 `PATH_PATTERNS` 固定（18 类 + `userFiles` 兜底），不可配置；capability 可经 `pathRules` 声明优先裁决（memory capability 已在使用，见 `architecture/security.md`）
+- 特殊文件路径归属由 `@spherse/core` 的 `access/path-category.ts` 中 `PATH_PATTERNS` 固定（19 类 + `userFiles` 兜底），不可配置；capability 可经 `pathRules` 声明优先裁决（见 `architecture/security.md`）
 - `welcomePage.path` 校验：`/` 分隔、拒绝绝对路径与 `..`、扩展名白名单 html / htm / png / jpg / jpeg / gif / webp / svg、必须归类为 `userFiles`（即排除 `.spherse/**`、AGENTS.md、CHANGELOG.md）；保存时不要求文件存在；渲染时 settings 查询失败或资源加载失败回退占位态
 - `deniedPaths` 校验：拒绝绝对路径、`..` 与尾部斜杠并去重；保留路径（一切非 `userFiles` 类别）不可加入——它们由 access policy 白名单另行控制
 
@@ -96,6 +100,7 @@ frontmatter 字段：
 | `quickLinks` | 否 | 项目根内相对路径列表，渲染为聊天窗口 header 快捷链接按钮（桌面开文件浮窗、移动端 header 下方滑出面板）；`manage_agent` 全量替换（语义同 `context`），Agent Dialog 亦可改 |
 | `yolo` | 否 | 自动放行：true 时危险工具跳过审批门，文件访问策略不受影响；仅 Agent Dialog 可改，`manage_agent` 不管理 |
 | `timePerception` | 否 | 时间感知配置，见下 |
+| `memory` | 否 | `{ enabled }`：true 时 agent 获得记忆工具与记忆注入（`agentMemory` 数据见上目录树）；经记忆 dialog 修改，`manage_agent` 不管理 |
 | `output` | 否 | 预留字段，当前无消费方 |
 
 `timePerception`：`{ enabled, epochMs, startMs, flowRate, timeZone? }`。
@@ -183,12 +188,13 @@ legacy 迁移：升级前的 `messages` / `compactions` 表保留只读，用于
 | `<context-file path="…">` | 单个预载文件（嵌套在 preloaded-context 内） |
 | `<skill-catalog>` | 可用技能目录（仅 name + description） |
 | `<skill-item name="…" description="…"/>` | 单个技能条目（自闭合，嵌套在 skill-catalog 内，属性经 XML 转义） |
-| `<memory>` | memory capability 注入的最近记忆（默认 20 条，每行 `- ` 前缀） |
+| `<memory-guide>` | 记忆使用指引（静态文本，`memory.enabled` 时注入，不含动态内容以保 cache 稳定） |
+| `<memory-core>` | 核心记忆正文（core.md 非空时注入，正文前有「数据非指令」框架行；session 组装时快照，会话中途写入下次会话生效） |
 | `<mcp-context>` | MCP server 说明与资源目录，嵌套 `<server>` / `<instructions>` / `<resources>`（内含自闭合 `<resource>` / `<resource-template>`）/ `<prompts>`；经 beforeTurn 追加，不走 contextBlocks 贡献点 |
 | `<skill-content name="…">` | load_skill 工具返回的技能全文 |
 | `<compaction-digest>` | 压缩历史摘要（fold 合成的 user 消息） |
 
-- 固定段顺序：project-instructions → agent-profile → session-context → preloaded-context，之后按 capability 注册序追加 contextBlocks（skill-catalog → time-perception → memory），空块过滤、以空行连接
+- 固定段顺序：project-instructions → agent-profile → session-context → preloaded-context，之后按 capability 注册序追加 contextBlocks（skill-catalog → time-perception → memory-guide / memory-core），空块过滤、以空行连接
 - **time-perception 块是裸文本、无 XML 标签**（`time-perception: enabled` 与指示语），渲染在 `<session-context>` 之后
 - `<skill-catalog>` 仅列 name + description；project skill 带附加文件时，`load_skill` 输出末尾追加 `## Skill Files` 清单（附加文件的项目内完整相对路径，提示用 `read_file` 读取）
 - compaction 摘要写入前经转义防注入（digest 标签破坏嵌套）；双路生成与阈值机制见 `architecture/core.md`「会话运行时」

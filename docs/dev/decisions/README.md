@@ -26,3 +26,4 @@
 | [0010](0010-server-auth-model.md) | 本地 server 鉴权模型：always-on token + 认证制 CORS + Host 校验 | accepted |
 | [0011](0011-chat-wire-cursor-replay.md) | chat wire 协议携带 seq，重连恢复以游标重放取代 HTTP 对账 | accepted |
 | [0012](0012-chat-hub-lifecycle-ownership.md) | chat hub 生命周期与所有权收口（runtime 身份索引、channel 状态机、release 权归 core、server 单点关停） | accepted |
+| [0013](0013-feature-gated-tools.md) | feature 门控工具通道（`featureTools`：白名单后追加、不进 toolCatalog） | accepted |
