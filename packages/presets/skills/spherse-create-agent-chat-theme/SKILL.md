@@ -47,6 +47,7 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 | 移动端快捷链接滑出面板 | `[data-chat-quick-link-panel]` |
 | 消息外层行 | `[data-chat-message][data-role="user"]` 或 `[data-role="assistant"]` |
 | 消息气泡 | `[data-chat-bubble]` |
+| 执行过程折叠区 | `[data-chat-tool-process]`（assistant 气泡内无卡片工具调用的折叠容器，含摘要行与展开后的工具行） |
 | Trigger 对话轮折叠摘要条 | `[data-chat-turn-collapse]` |
 | 助手头像 | `[data-chat-message][data-role="assistant"]::before` |
 | Composer 外层 | `[data-chat-composer]` |
@@ -72,6 +73,7 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 | `data-chat-messages` | 消息列表区 |
 | `data-chat-message` + `data-role="user"`/`"assistant"` | 单条消息外层 |
 | `data-chat-bubble` | 消息气泡（内容容器） |
+| `data-chat-tool-process` | assistant 气泡内「执行过程」折叠区（无卡片工具调用） |
 | `data-chat-turn-collapse` | Trigger 对话轮折叠摘要条（按钮） |
 | `data-chat-composer` | 输入区外层 |
 | `data-chat-composer-input` | 输入框外框 |

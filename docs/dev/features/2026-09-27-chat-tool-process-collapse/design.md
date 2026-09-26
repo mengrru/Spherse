@@ -124,4 +124,11 @@ interface ToolProcessSectionProps {
 
 ## Code review 处理
 
-（待 review 后填写）
+| # | 级别 | 问题 | 处理 |
+|---|---|---|---|
+| M-1 | medium | design doc「文档同步」四项（theming.md 入口表、project-structure.md、theme skills、backlog 条目）均未落 | 采纳：收尾 doc-sync 阶段补齐（见后续 commit） |
+| m-1 | minor | design doc 决策表 `useState(false)` 与实现节 `useState(hasRunning)` 自相矛盾（实现为 false） | 已修：design.md 实现节改为 `useState(false)` |
+| m-2 | minor | 折叠触发 `onOpenChange` + 显式 `onClick` 双通道冗余（仓库模式二选一） | 已修：删 `onClick`，保留受控 `onOpenChange={setUserOpen}`（4037f70e） |
+| m-3 | minor | ToolProcessSection.test 的 `use-connection` mock 为复制残留（组件导入链无该依赖） | 已修：删除，测试全过（4037f70e） |
+| 疑点 1 | — | E2E 未运行 | 不成立：提交前已实跑 `chat-history-render`（1 passed）+ `ui-sdk-html-card` / `chat-v2-replay` / `chat-streaming-resilience`（7 passed） |
+| 疑点 3 | — | 仅跑 packages/app 的 lint/typecheck | 不成立：已跑全仓 `npm run lint` / `npm run build` / `npm run typecheck` 均通过 |
