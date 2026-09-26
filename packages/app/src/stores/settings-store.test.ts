@@ -14,7 +14,7 @@ function createApi(overrides: Partial<SettingsApi> = {}): SettingsApi {
 
 describe("useSettingsStore", () => {
   beforeEach(() => {
-    useSettingsStore.setState({ loaded: false, locale: "zh-CN", debugToolsEnabled: false, tabsEnabled: true, closeToTray: true, theme: "system" });
+    useSettingsStore.setState({ loaded: false, locale: "zh-CN", debugToolsEnabled: false, tabsEnabled: true, closeToTray: true, systemNotifications: true, theme: "system" });
   });
 
   it("loads locale from settings", async () => {
@@ -54,6 +54,7 @@ describe("useSettingsStore", () => {
       debugToolsEnabled: false,
       tabsEnabled: true,
       closeToTray: true,
+      systemNotifications: true,
       theme: "system",
     });
   });
@@ -66,6 +67,28 @@ describe("useSettingsStore", () => {
     await useSettingsStore.getState().loadLocale(api);
 
     expect(useSettingsStore.getState().debugToolsEnabled).toBe(true);
+  });
+
+  it("defaults systemNotifications to true when absent", async () => {
+    const api = createApi();
+
+    await useSettingsStore.getState().loadLocale(api);
+
+    expect(useSettingsStore.getState().systemNotifications).toBe(true);
+  });
+
+  it("setSystemNotifications updates state and persists", async () => {
+    const api = createApi({
+      getSettings: vi.fn().mockResolvedValue({ locale: "zh-CN" }),
+    });
+
+    const ok = await useSettingsStore.getState().setSystemNotifications(api, false);
+
+    expect(ok).toBe(true);
+    expect(useSettingsStore.getState().systemNotifications).toBe(false);
+    expect(api.saveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ systemNotifications: false }),
+    );
   });
 
   it("defaults debugToolsEnabled to false when absent", async () => {
@@ -91,6 +114,7 @@ describe("useSettingsStore", () => {
       debugToolsEnabled: true,
       tabsEnabled: true,
       closeToTray: true,
+      systemNotifications: true,
       theme: "system",
     });
   });
@@ -128,6 +152,7 @@ describe("useSettingsStore", () => {
       debugToolsEnabled: false,
       tabsEnabled: true,
       closeToTray: true,
+      systemNotifications: true,
       theme: "dark",
     });
   });
@@ -146,6 +171,7 @@ describe("useSettingsStore", () => {
       debugToolsEnabled: true,
       tabsEnabled: true,
       closeToTray: true,
+      systemNotifications: true,
       theme: "light",
     });
   });
@@ -181,6 +207,7 @@ describe("useSettingsStore", () => {
       debugToolsEnabled: true,
       tabsEnabled: false,
       closeToTray: true,
+      systemNotifications: true,
       theme: "dark",
     });
   });

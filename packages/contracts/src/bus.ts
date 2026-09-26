@@ -20,6 +20,7 @@ const triggerCompletedPayload = Type.Object({
 const triggerFailedPayload = Type.Object({
   agentId: Type.String(),
   triggerId: Type.String(),
+  sessionId: Type.Optional(Type.String()),
   error: Type.String(),
 });
 

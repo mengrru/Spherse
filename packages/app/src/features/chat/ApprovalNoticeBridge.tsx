@@ -7,6 +7,8 @@ import { assembleGroups } from "./model/message-group";
 import { collectPendingControls } from "./model/group-derivations";
 import type { ChatSessionState } from "./runtime/session-state";
 import { getCachedAgents, getCachedSession } from "../../queries/project";
+import { useSettingsStore } from "../../stores/settings-store";
+import { useHostBridge } from "../../context/host-bridge-context";
 
 interface PendingApproval {
   kind: "approval" | "question";
@@ -36,6 +38,7 @@ function collectPendingApprovals(
 export function ApprovalNoticeBridge() {
   const navigate = useNavigate();
   const { t } = useI18n();
+  const bridge = useHostBridge();
   const match = useMatch("/project/:projectId/chat/:sessionId");
   const activeSessionId = match?.params.sessionId ?? null;
 
@@ -47,7 +50,11 @@ export function ApprovalNoticeBridge() {
 
   useEffect(() => {
     const check = () => {
-      const pending = collectPendingApprovals(useChatSessionStore.getState().sessions);
+      const state = useChatSessionStore.getState().sessions;
+      const settings = useSettingsStore.getState();
+      const systemNoticeAllowed =
+        settings.systemNotifications && !document.hasFocus() && Boolean(bridge.notifications);
+      const pending = collectPendingApprovals(state);
       const pendingIds = new Set(pending.map((item) => item.requestId));
       notifiedRef.current = new Set([...notifiedRef.current].filter((id) => pendingIds.has(id)));
       for (const item of pending) {
@@ -72,12 +79,18 @@ export function ApprovalNoticeBridge() {
             onClick: () => navigate(`/project/${item.projectId}/chat/${item.sessionId}`),
           },
         });
+        if (systemNoticeAllowed) {
+          bridge.notifications?.show({
+            title,
+            body: tRef.current("push.approvalBody", { tool: item.toolName }),
+          });
+        }
       }
     };
     check();
     const unsubscribe = useChatSessionStore.subscribe(check);
     return unsubscribe;
-  }, [navigate, activeSessionId]);
+  }, [navigate, activeSessionId, bridge]);
 
   return null;
 }

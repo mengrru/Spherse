@@ -11,8 +11,17 @@ import type { Attachment } from "../attachments/index.js";
 import { RunConfigHolder, type RuntimeDeps } from "./runtime.js";
 import { migrateLegacySession } from "./legacy-migrate.js";
 
+export interface SessionEventContext {
+  agentId: string;
+  sessionId: string;
+}
+
+export type SessionEventListener = (event: SessionEvent, ctx: SessionEventContext) => void;
+
 export class SessionManager {
   private readonly sessions = new Map<string, AgentRunner>();
+  private readonly sessionEventListeners = new Set<SessionEventListener>();
+  private readonly sessionEventUnsubscribers = new Map<AgentRunner, () => void>();
   private readonly deps: RuntimeDeps;
   private readonly runConfigHolder: RunConfigHolder;
 
@@ -46,6 +55,7 @@ export class SessionManager {
     const eventLog = SessionEventLog.open(agentStore.sessions, sessionId);
     const session = await AgentRunner.init(this.deps, agentId, sessionId, { eventLog });
     this.sessions.set(sessionId, session);
+    this.trackRunner(session, sessionId);
     this.deps.logger.info({ sessionId, agentId }, "session created");
     return sessionId;
   }
@@ -65,6 +75,7 @@ export class SessionManager {
     }
     this.assertRestorable(agentId, sessionId);
     this.sessions.set(sessionId, session);
+    this.trackRunner(session, sessionId);
     this.deps.logger.info({ sessionId }, "session restored");
     return sessionId;
   }
@@ -187,12 +198,15 @@ export class SessionManager {
   }
 
   destroySession(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (session) this.untrackRunner(session);
     this.sessions.delete(sessionId);
   }
 
   releaseSession(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
     if (!session || session.isBusy()) return false;
+    this.untrackRunner(session);
     this.sessions.delete(sessionId);
     return true;
   }
@@ -210,13 +224,44 @@ export class SessionManager {
   evictAgent(agentId: string): void {
     for (const [sessionId, session] of this.sessions) {
       if (session.getAgentId() === agentId) {
+        this.untrackRunner(session);
         this.sessions.delete(sessionId);
       }
     }
   }
 
   async closeAll(): Promise<void> {
+    for (const session of this.sessions.values()) {
+      this.untrackRunner(session);
+    }
     this.sessions.clear();
+  }
+
+  onSessionEvent(listener: SessionEventListener): () => void {
+    this.sessionEventListeners.add(listener);
+    for (const [sessionId, runner] of this.sessions) {
+      this.trackRunner(runner, sessionId);
+    }
+    return () => {
+      this.sessionEventListeners.delete(listener);
+    };
+  }
+
+  private trackRunner(runner: AgentRunner, sessionId: string): void {
+    if (this.sessionEventUnsubscribers.has(runner)) return;
+    const unsubscribe = runner.subscribeEvents((event) => {
+      for (const listener of this.sessionEventListeners) {
+        listener(event, { agentId: runner.getAgentId(), sessionId });
+      }
+    });
+    if (unsubscribe) {
+      this.sessionEventUnsubscribers.set(runner, unsubscribe);
+    }
+  }
+
+  private untrackRunner(runner: AgentRunner): void {
+    this.sessionEventUnsubscribers.get(runner)?.();
+    this.sessionEventUnsubscribers.delete(runner);
   }
 
   setDefaultModel(model: string | undefined): void {

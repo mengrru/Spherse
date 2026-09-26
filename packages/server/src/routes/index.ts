@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { ProjectRegistry, ProjectContextCompat } from "../registry.js";
 import type { ChatSessionHub } from "../chat/index.js";
+import type { PushStore } from "../push/push-store.js";
 import { notFound } from "../errors.js";
 import { registerAgentRoutes } from "./agents.js";
 import { registerAgentWriteRoutes } from "./agent-write.js";
@@ -21,6 +22,7 @@ import { registerImagesRoutes } from "./images.js";
 import { registerAttachmentsRoutes } from "./attachments.js";
 import { registerUploadRoutes } from "./upload.js";
 import { registerConnectionRoutes } from "./connection.js";
+import { registerPushRoutes } from "./push.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -31,6 +33,7 @@ declare module "fastify" {
 export interface RouteOptions {
   authRequired?: boolean;
   hub: ChatSessionHub;
+  pushStore?: PushStore;
 }
 
 export function registerAllRoutes(
@@ -46,7 +49,10 @@ export function registerAllRoutes(
     req.projectCtx = ctx;
   });
 
-  registerConnectionRoutes(fastify, registry, { authRequired: options?.authRequired ?? false });
+  registerConnectionRoutes(fastify, registry, {
+    authRequired: options?.authRequired ?? false,
+    pushStore: options.pushStore,
+  });
   registerAgentRoutes(fastify, registry);
   registerAgentWriteRoutes(fastify, registry);
   registerAgentMcpRoutes(fastify, registry);
@@ -65,4 +71,5 @@ export function registerAllRoutes(
   registerImagesRoutes(fastify, registry);
   registerAttachmentsRoutes(fastify, registry);
   registerUploadRoutes(fastify, registry);
+  registerPushRoutes(fastify, { store: options.pushStore });
 }

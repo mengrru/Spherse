@@ -35,6 +35,9 @@ export default defineConfig({
     tailwindcss(),
     devDeployPlugin(),
     VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.ts",
       registerType: "autoUpdate",
       injectRegister: "inline",
       includeAssets: [

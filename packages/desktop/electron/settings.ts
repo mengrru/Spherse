@@ -63,6 +63,7 @@ export function getMaskedSettings(): AppSettings | null {
     debugToolsEnabled: settings.debugToolsEnabled ?? false,
     tabsEnabled: settings.tabsEnabled ?? true,
     closeToTray: settings.closeToTray ?? defaultCloseToTray(),
+    systemNotifications: settings.systemNotifications ?? true,
     theme: settings.theme ?? "system",
   };
 }
@@ -102,6 +103,7 @@ export function saveSettings(incoming: AppSettings): void {
     debugToolsEnabled: incoming.debugToolsEnabled ?? prev?.debugToolsEnabled ?? false,
     tabsEnabled: incoming.tabsEnabled ?? prev?.tabsEnabled ?? true,
     closeToTray: incoming.closeToTray ?? prev?.closeToTray ?? defaultCloseToTray(),
+    systemNotifications: incoming.systemNotifications ?? prev?.systemNotifications ?? true,
     theme: incoming.theme ?? prev?.theme ?? "system",
     mobileAccess: prev?.mobileAccess,
   };

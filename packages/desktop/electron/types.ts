@@ -6,6 +6,7 @@ import type {
   MobileTunnelMode,
   RestoredProject,
   SaveDialogOptions,
+  SystemNotificationRequest,
   ThemeMode,
   UpdateEvent,
   UpdateState,
@@ -17,6 +18,7 @@ export type {
   MobileTunnelMode,
   RestoredProject,
   SaveDialogOptions,
+  SystemNotificationRequest,
   ThemeMode,
   UpdateEvent,
   UpdateState,
@@ -61,4 +63,5 @@ export interface ElectronAPI {
   setMobileMode: (mode: MobileTunnelMode) => Promise<MobileAccessState>;
   setPublicDomain: (domain: string) => Promise<MobileAccessState>;
   onMobileAccessEvent: (callback: (event: MobileAccessEvent) => void) => () => void;
+  showNotification: (request: SystemNotificationRequest) => Promise<void>;
 }

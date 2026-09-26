@@ -12,6 +12,7 @@ const ELECTRON_CAPABILITIES: HostCapabilities = {
   mobileAccess: true,
   openFileExternal: true,
   tray: true,
+  systemNotifications: true,
   content: { editable: true },
 };
 
@@ -82,5 +83,10 @@ export function createElectronHostBridge(): HostBridge {
     updater,
     devTools,
     mobile,
+    notifications: {
+      show: (request) => {
+        void api.showNotification(request);
+      },
+    },
   };
 }
