@@ -56,6 +56,64 @@ const CORPUS: SeedEntry[] = [
   { content: "User's git commit style is conventional commits", tags: ["tech", "work"] },
   { content: "User hates pop-up notifications and keeps Do Not Disturb on", tags: ["preference"] },
   { content: "用户跑步用的鞋是特步的马拉松系列", tags: ["运动", "装备"] },
+  { content: "User's sister is a nurse working night shifts in Suzhou", tags: ["family"] },
+  { content: "User prefers Vim keybindings in every editor possible", tags: ["preference", "tech"] },
+  { content: "User's desk setup includes a 27-inch 4K monitor on an arm mount", tags: ["hardware"] },
+  { content: "User listens to lo-fi music while coding but silence while writing", tags: ["music", "preference"] },
+  { content: "User's favorite programming language is TypeScript, second is Rust", tags: ["tech", "preference"] },
+  { content: "User drinks mostly water, about 2 liters per day", tags: ["health"] },
+  { content: "User's passport expires in 2029", tags: ["admin"] },
+  { content: "User volunteers at a local dog shelter once a month", tags: ["hobby"] },
+  { content: "User's home server runs Ubuntu with Docker containers", tags: ["hardware", "tech"] },
+  { content: "User prefers video calls over voice calls for work meetings", tags: ["work", "preference"] },
+  { content: "User's bicycle is a fixed-gear built from scratch", tags: ["hobby", "hardware"] },
+  { content: "User takes notes with a Pilot Custom 74 fountain pen", tags: ["tools", "stationery"] },
+  { content: "User's favorite season is autumn in Hangzhou", tags: ["preference"] },
+  { content: "User completed a half marathon in 2 hours 5 minutes last year", tags: ["health", "sport"] },
+  { content: "User's emergency contact is sister Li Wei", tags: ["family", "admin"] },
+  { content: "User archives old projects into a folder named 'graveyard'", tags: ["work", "habit"] },
+  { content: "User's reading goal this year is 24 books, currently at 17", tags: ["hobby", "goal"] },
+  { content: "User avoids social media except a private Mastodon account", tags: ["preference"] },
+  { content: "User's apartment faces north with a view of the canal", tags: ["location"] },
+  { content: "User swaps keyboard switches yearly, currently on tactile silent", tags: ["hardware"] },
+  { content: "User's blood type is O positive", tags: ["health"] },
+  { content: "User's workplace gives every second Friday off", tags: ["work"] },
+  { content: "User keeps a bonsai tree named老头 on the balcony", tags: ["hobby"] },
+  { content: "User's photography gear is a Fujifilm X-T5 with two prime lenses", tags: ["hobby", "hardware"] },
+  { content: "User backs up photos to both the NAS and a cold storage drive", tags: ["hardware", "habit"] },
+  { content: "User's favorite noodle dish is 片儿川, a Hangzhou specialty", tags: ["food"] },
+  { content: "用户的女儿在读小学三年级，喜欢画画", tags: ["家庭"] },
+  { content: "用户每年春节会回成都陪母亲过节", tags: ["家庭", "习惯"] },
+  { content: "用户对芒果也轻微过敏，但不像花生那么严重", tags: ["健康", "饮食"] },
+  { content: "用户的公司每年组织一次团建，去年去了千岛湖", tags: ["工作"] },
+  { content: "用户正在装修新房，风格是极简原木风", tags: ["生活", "目标"] },
+  { content: "用户喜欢收集机械键盘键帽，已经有三十多套", tags: ["爱好", "装备"] },
+  { content: "用户的驾驶证是 C1，开车很谨慎从不出险", tags: ["生活"] },
+  { content: "用户每周日晚上会做下一周的膳食准备", tags: ["习惯", "饮食"] },
+  { content: "用户的姐姐李薇在苏州当护士，上夜班", tags: ["家庭"] },
+  { content: "用户的老家在浙江温州，大学才来杭州", tags: ["家庭", "位置"] },
+  { content: "用户喜欢在长途火车上看书，不喜欢坐飞机", tags: ["偏好", "出行"] },
+  { content: "用户的办公椅是赫曼米勒的，去年双十一买的", tags: ["装备"] },
+  { content: "用户会给开源项目提 PR，去年贡献了四个仓库", tags: ["技术", "爱好"] },
+  { content: "用户的手机铃声永远是静音振动", tags: ["偏好"] },
+  { content: "用户每年体检一次，上次胆固醇略高", tags: ["健康"] },
+  { content: "用户的家里有空气净化器，全年开着", tags: ["生活"] },
+  { content: "用户对花粉过敏，春天出门会戴口罩", tags: ["健康"] },
+  { content: "用户周末喜欢去西湖边上的咖啡馆写代码", tags: ["爱好", "工作"] },
+  { content: "用户的毕业论文写的是分布式一致性算法", tags: ["学业"] },
+  { content: "用户喜欢吃日料，尤其是三文鱼刺身", tags: ["饮食", "偏好"] },
+  { content: "用户的运动手表是佳明的，睡眠数据每天同步", tags: ["装备", "健康"] },
+  { content: "用户的公司用的是飞书，个人更喜欢 Telegram", tags: ["工具", "偏好"] },
+  { content: "用户养的绿萝已经五年了，搬到哪都带着", tags: ["生活"] },
+  { content: "用户会弹一点尤克里里，比吉他简单", tags: ["乐器", "爱好"] },
+  { content: "用户的邮政快递都放丰巢，家里没人签收", tags: ["生活"] },
+  { content: "用户每个季度会整理一次 Obsidian 笔记库", tags: ["工具", "习惯"] },
+  { content: "用户的目标是四十岁前完成一次全程马拉松", tags: ["目标", "运动"] },
+  { content: "用户不喜欢喝碳酸饮料，只喝无糖茶", tags: ["饮食", "偏好"] },
+  { content: "用户的团队每两周做一次代码回顾会", tags: ["工作"] },
+  { content: "用户冬天手脚冰凉，办公室常备一条毯子", tags: ["健康", "生活"] },
+  { content: "User's favorite podcast is about ancient history", tags: ["hobby"] },
+  { content: "User keeps a spreadsheet of every book read since 2018", tags: ["habit", "book"] },
 ];
 
 interface LabeledQuery {
@@ -112,8 +170,11 @@ function reciprocalRank(results: string[], query: LabeledQuery): number {
 }
 
 function substringBaseline(contents: string[], query: string): string[] {
-  const q = query.toLowerCase();
-  return contents.filter((c) => c.toLowerCase().includes(q));
+  const terms = query.toLowerCase().split(/\s+/);
+  return contents.filter((c) => {
+    const lower = c.toLowerCase();
+    return terms.every((term) => lower.includes(term));
+  });
 }
 
 describe("memory retrieval eval", () => {

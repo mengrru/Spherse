@@ -1,4 +1,5 @@
 import path from "node:path";
+import matter from "gray-matter";
 import type { AgentProfile } from "../types.js";
 import { AgentProfileStore } from "./agent-profile.js";
 import { SessionStore } from "./session.js";
@@ -49,6 +50,27 @@ export class AgentStore {
    * would return the stale pre-edit profile.
    */
   async saveProfile(content: string): Promise<AgentProfile> {
+    return this.runProfileLocked(() => this.saveProfileUnlocked(content));
+  }
+
+  async mutateProfileFrontmatter(
+    mutate: (data: Record<string, unknown>) => void,
+  ): Promise<AgentProfile> {
+    return this.runProfileLocked(async () => {
+      const raw = await this._profileStore.getRawContent();
+      const parsed = matter(raw);
+      mutate(parsed.data as Record<string, unknown>);
+      const serialized = matter.stringify(parsed.content, parsed.data);
+      return this.saveProfileUnlocked(serialized);
+    });
+  }
+
+  private async runProfileLocked<T>(fn: () => Promise<T>): Promise<T> {
+    if (!this.fileWriteMutex) return fn();
+    return this.fileWriteMutex.run(this._profileStore.getProfilePath(), fn);
+  }
+
+  private async saveProfileUnlocked(content: string): Promise<AgentProfile> {
     const profile = await this._profileStore.save(content);
     this._profile = profile;
     return profile;

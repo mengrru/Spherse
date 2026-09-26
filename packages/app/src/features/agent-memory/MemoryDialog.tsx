@@ -70,6 +70,7 @@ export function MemoryDialog({ open, onOpenChange, agentId, projectId }: MemoryD
   const [entryDraft, setEntryDraft] = useState<EntryDraft>({ content: "", tags: "" });
   const [deleteTarget, setDeleteTarget] = useState<AgentMemoryEntry | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchSeqRef = useRef(0);
 
   useEffect(() => {
     if (!open) return;
@@ -92,12 +93,19 @@ export function MemoryDialog({ open, onOpenChange, agentId, projectId }: MemoryD
 
   useEffect(() => {
     if (!open) return;
+    const seq = ++searchSeqRef.current;
     setEntriesLoading(true);
     client
       .listAgentMemoryEntries(agentId, search)
-      .then((list: AgentMemoryEntry[]) => setEntries(list))
-      .catch(() => setEntries([]))
-      .finally(() => setEntriesLoading(false));
+      .then((list: AgentMemoryEntry[]) => {
+        if (seq === searchSeqRef.current) setEntries(list);
+      })
+      .catch(() => {
+        if (seq === searchSeqRef.current) setEntries([]);
+      })
+      .finally(() => {
+        if (seq === searchSeqRef.current) setEntriesLoading(false);
+      });
   }, [client, open, agentId, search]);
 
   function handleSearchChange(value: string) {

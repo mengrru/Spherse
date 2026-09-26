@@ -125,7 +125,7 @@ export async function buildPromptAndTools(
   sessionId: string,
   approvalGate: ApprovalGate | undefined,
   askGate: AskGate | undefined,
-): Promise<{ systemPrompt: string; tools: AgentTool[] }> {
+): Promise<{ systemPrompt: string; tools: AgentTool[]; toolCatalog: { names: string[] } }> {
   const pathRules = deps.capabilities.flatMap((c) => c.pathRules ?? []);
   const toolCatalog = { names: [] as string[] };
   const host: ToolHost = {
@@ -205,7 +205,7 @@ export async function buildPromptAndTools(
   }
 
   const systemPrompt = serializeBlocks(blocks);
-  return { systemPrompt, tools };
+  return { systemPrompt, tools, toolCatalog };
 }
 
 export async function buildAgent(

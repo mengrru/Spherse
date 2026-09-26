@@ -3,6 +3,16 @@ import { schemas } from "@spherse/contracts";
 import type { AgentMemoryEntryUpdateRequest, AgentMemoryUpdateRequest } from "@spherse/contracts";
 import { badRequest, notFound } from "../errors.js";
 
+function mapMemoryError(err: unknown): Error {
+  if (err instanceof Error && err.name === "ValidationError") {
+    return badRequest(err.message);
+  }
+  if (err instanceof Error && err.name === "NotFoundError") {
+    return notFound("Agent or memory entry not found");
+  }
+  return err instanceof Error ? err : new Error(String(err));
+}
+
 export function registerAgentMemoryRoutes(fastify: FastifyInstance): void {
   fastify.get<{ Params: { projectId: string; id: string } }>(
     "/api/projects/:projectId/agents/:id/memory",
@@ -11,8 +21,8 @@ export function registerAgentMemoryRoutes(fastify: FastifyInstance): void {
       async handler(req) {
         try {
           return await req.projectCtx!.runtime.getAgentMemory(req.params.id);
-        } catch {
-          throw notFound("Agent not found");
+        } catch (err) {
+          throw mapMemoryError(err);
         }
       },
     },
@@ -30,10 +40,7 @@ export function registerAgentMemoryRoutes(fastify: FastifyInstance): void {
       try {
         return await req.projectCtx!.runtime.updateAgentMemory(req.params.id, req.body);
       } catch (err) {
-        if (err instanceof Error && err.name === "ValidationError") {
-          throw badRequest(err.message);
-        }
-        throw notFound("Agent not found");
+        throw mapMemoryError(err);
       }
     },
   );
@@ -46,8 +53,8 @@ export function registerAgentMemoryRoutes(fastify: FastifyInstance): void {
         try {
           const entries = req.projectCtx!.runtime.listAgentMemoryEntries(req.params.id, req.query?.q);
           return { entries };
-        } catch {
-          throw notFound("Agent not found");
+        } catch (err) {
+          throw mapMemoryError(err);
         }
       },
     },
@@ -65,10 +72,7 @@ export function registerAgentMemoryRoutes(fastify: FastifyInstance): void {
       try {
         return req.projectCtx!.runtime.updateAgentMemoryEntry(req.params.id, req.params.eid, req.body);
       } catch (err) {
-        if (err instanceof Error && err.name === "ValidationError") {
-          throw badRequest(err.message);
-        }
-        throw notFound("Memory entry not found");
+        throw mapMemoryError(err);
       }
     },
   });
@@ -81,8 +85,8 @@ export function registerAgentMemoryRoutes(fastify: FastifyInstance): void {
         try {
           req.projectCtx!.runtime.deleteAgentMemoryEntry(req.params.id, req.params.eid);
           return { ok: true };
-        } catch {
-          throw notFound("Memory entry not found");
+        } catch (err) {
+          throw mapMemoryError(err);
         }
       },
     },

@@ -82,6 +82,10 @@ export class AgentProfileStore {
     return this.parseFile().then((p) => p!);
   }
 
+  getProfilePath(): string {
+    return this.profilePath;
+  }
+
   private async readFrontmatter(): Promise<Record<string, unknown> | null> {
     try {
       const raw = await fs.readFile(this.profilePath, "utf-8");

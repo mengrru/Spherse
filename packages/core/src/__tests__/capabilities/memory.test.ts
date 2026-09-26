@@ -161,6 +161,36 @@ describe("memory capability", () => {
     agentStore.close();
     expect(() => fs.rmSync(dbPath)).not.toThrow();
   });
+
+  it("toggling enabled via ProjectManager emits agent_updated and persists frontmatter", async () => {
+    await setup(PROFILE_MEMORY_OFF);
+    const { ProjectManager } = await import("../../project-manager.js");
+    const { FileWriteMutex } = await import("../../utils/file-write-mutex.js");
+    const manager = new ProjectManager(projectStore, createSilentLogger(), new FileWriteMutex());
+
+    const events: Array<{ agentId: string; action: string }> = [];
+    projectStore.on("agent_updated", (payload) => events.push(payload));
+
+    const before = await manager.getAgentMemory(host.agentId);
+    expect(before.enabled).toBe(false);
+
+    const after = await manager.updateAgentMemory(host.agentId, { enabled: true, core: "core fact" });
+    expect(after.enabled).toBe(true);
+    expect(after.core).toBe("core fact");
+
+    expect(events).toEqual([{ agentId: host.agentId, action: "updated" }]);
+    const profile = projectStore.getAgent(host.agentId)!.getProfile();
+    expect(profile.memory).toEqual({ enabled: true });
+    expect(profile.systemPrompt).toBe("Memory-disabled agent.");
+    expect(manager.getAgentProfile(host.agentId)!.memory).toEqual({ enabled: true });
+
+    await manager.updateAgentMemory(host.agentId, { enabled: true });
+    expect(events).toHaveLength(1);
+
+    await expect(manager.updateAgentMemory(host.agentId, { core: "x".repeat(4001) })).rejects.toThrow(
+      /exceeds/,
+    );
+  });
 });
 
 describe("MemoryStore reopening within agent dir", () => {

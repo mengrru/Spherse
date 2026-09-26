@@ -187,3 +187,28 @@ DELETE /api/projects/:projectId/agents/:id/memory/entries/:eid
 | minor | react-query 缓存失效表述与 McpDialog 实际模式不符 | 已采纳：改为本地 state + useEffect 表述 |
 | minor | presets dist 为生成物需重跑 build | 已采纳：写入实施注意 |
 | minor | manage_agent 看不到记忆状态 | 已采纳：写入产品决策 7，标注有意为之 |
+
+## 实施偏离记录
+1. **deny 机制**：未在 capability 注册 pathRule，改为 `PATH_PATTERNS` 静态类别 `agentMemory`（不在 LLM_READ/LLM_WRITE 集合即拒绝）。功能等效且不受 capability 卸载影响；注意既有语义——任何 capability 若注册匹配 memory 路径的 permissive extraRule 仍会优先生效（extraRules 先于类别判定），需在 security.md 提示
+2. **profile 并发保护落点**：设计原文「由 PM 写入门面的 per-path FileWriteMutex 保护」实施为 `AgentStore.saveProfile` / `mutateProfileFrontmatter`（锁内 read-modify-write，走无锁内部 save 避免重入死锁；FileWriteMutex 不可重入），PM 经 `ProjectStore.updateAgentFrontmatter` 复用并 emit
+3. **`MemoryStore` 从 core index 导出**：唯一外部消费者为 server/desktop 契约测试（播种与断言），与 `createDataStore` 导出先例一致
+4. **desktop 契约测试**：desktop 无 memory 直接消费面（嵌入 @spherse/server，HTTP 契约由 server 侧真实 runtime 契约测试覆盖）
+
+## Code review 记录（2026-09-27，commit c33b0a42）
+
+| 等级 | 意见 | 处理 |
+|---|---|---|
+| important | profile.md 并发保护未实现：updateAgentMemory RMW 与 saveProfile 均裸写 | 已修：saveProfile/mutateProfileFrontmatter 锁内执行（同单例 per-path），updateAgentFrontmatter 统一链路 |
+| important | featureTools 装配 seam 零测试 | 已修：builtin-assembly 新增 4 条断言（enabled 挂载/catalog 排除/disabled+旧白名单无害/重名跳过）；buildPromptAndTools 返回 toolCatalog 供断言 |
+| medium | deny 实现与设计表述偏离未记录 | 已采纳：记入「实施偏离记录」1 |
+| medium | enabled 热重载 emit 无测试 | 已修：PM 级测试断言 agent_updated 单次发射 + frontmatter/systemPrompt 保持 |
+| medium | updateAgentMemory 部分失败不回滚（core 先写、profile 后失败） | 已修：core 超限前置校验，顺序改为校验 → enabled RMW → core 写 |
+| minor | server catch-all 把基础设施错误映射为 404 | 已修：mapMemoryError 区分 Validation/NotFound/透传 |
+| minor | 搜索防抖无 in-flight 顺序保护 | 已修：seq 守卫 |
+| minor | 空 patch 只 bump updated_at | 已修：store 拒绝空 patch |
+| minor | MemoryStore 导出面弱消费 | 保留：契约测试为正当消费者，记入偏离记录 3 |
+| minor | 新增注释违反红线 | 已删 |
+| minor | eval 语料 45 条偏小、基线非 term-AND | 已修：语料扩至 108 条，基线改 term-AND |
+| 疑点 | 隔离重建不清理 WAL 边车 | 已修：rename/rm 后清 -wal/-shm |
+| 疑点 | trigram 大小写依赖默认值 | 已修：新增大小写变体单测锁定行为 |
+
