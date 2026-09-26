@@ -1,19 +1,24 @@
 import { Type, type Static } from "@sinclair/typebox";
 import { parseContract } from "./common.js";
 
+const pushEndpoint = Type.String({
+  minLength: "https://x".length,
+  pattern: "^https://.+",
+});
+
 const pushSubscriptionKeys = Type.Object({
   p256dh: Type.String({ minLength: 1 }),
   auth: Type.String({ minLength: 1 }),
 });
 
 export const pushSubscribeRequest = Type.Object({
-  endpoint: Type.String({ minLength: 1 }),
+  endpoint: pushEndpoint,
   keys: pushSubscriptionKeys,
   locale: Type.String({ minLength: 1 }),
 });
 
 export const pushUnsubscribeRequest = Type.Object({
-  endpoint: Type.String({ minLength: 1 }),
+  endpoint: pushEndpoint,
 });
 
 const pushNotificationKind = Type.Union([
@@ -55,8 +60,4 @@ export function parsePushSubscribeRequest(payload: unknown): PushSubscribeReques
 
 export function parsePushUnsubscribeRequest(payload: unknown): PushUnsubscribeRequest {
   return parseContract(pushUnsubscribeRequest, payload);
-}
-
-export function parsePushNotificationPayload(payload: unknown): PushNotificationPayload {
-  return parseContract(pushNotificationPayload, payload);
 }

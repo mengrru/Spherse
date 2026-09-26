@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  parsePushNotificationPayload,
   parsePushSubscribeRequest,
   parsePushUnsubscribeRequest,
 } from "../index.js";
@@ -44,34 +43,21 @@ describe("push contract", () => {
     expect(() => parsePushUnsubscribeRequest({ endpoint: "" })).toThrow(/Invalid payload/);
   });
 
-  it("accepts notification payload with optional sessionId", () => {
-    const payload = {
-      title: "t",
-      body: "b",
-      tag: "approval:req-1",
-      data: { kind: "approval", projectId: "p1", sessionId: "s1" },
-    };
-    expect(parsePushNotificationPayload(payload)).toEqual(payload);
-  });
-
-  it("accepts notification payload without sessionId", () => {
-    const payload = {
-      title: "t",
-      body: "b",
-      tag: "trigger:t1:123",
-      data: { kind: "trigger_failed", projectId: "p1" },
-    };
-    expect(parsePushNotificationPayload(payload)).toEqual(payload);
-  });
-
-  it("rejects notification payload with unknown kind", () => {
+  it("rejects non-https endpoints", () => {
     expect(() =>
-      parsePushNotificationPayload({
-        title: "t",
-        body: "b",
-        tag: "x",
-        data: { kind: "unknown", projectId: "p1" },
+      parsePushSubscribeRequest({
+        endpoint: "http://fcm.googleapis.com/fcm/send/abc",
+        keys: { p256dh: "k", auth: "k" },
+        locale: "zh-CN",
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parsePushSubscribeRequest({
+        endpoint: "file:///etc/passwd",
+        keys: { p256dh: "k", auth: "k" },
+        locale: "zh-CN",
       }),
     ).toThrow(/Invalid payload/);
   });
+
 });

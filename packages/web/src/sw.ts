@@ -29,12 +29,11 @@ self.addEventListener("push", (event: PushEvent) => {
     return;
   }
   if (typeof payload.title !== "string" || typeof payload.body !== "string") return;
-  event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      tag: payload.tag,
-    }),
-  );
+  const options: NotificationOptions = { body: payload.body };
+  if (typeof payload.tag === "string" && payload.tag.length > 0) {
+    options.tag = payload.tag;
+  }
+  event.waitUntil(self.registration.showNotification(payload.title, options));
 });
 
 self.addEventListener("notificationclick", (event: NotificationEvent) => {
