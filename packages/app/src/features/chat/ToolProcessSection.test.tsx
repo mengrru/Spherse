@@ -5,13 +5,6 @@ import { renderWithProviders } from "../../test/render";
 import { ToolProcessSection } from "./ToolProcessSection";
 import type { ToolItem } from "./model/tool-item";
 
-vi.mock("../../lib/use-connection", () => ({
-  useApiClient: () => ({
-    getPreviewUrl: (path: string) => `http://localhost:5173/api/projects/p1/preview/${path}`,
-  }),
-  useConnection: () => ({ baseUrl: "http://localhost:5173", accessToken: null }),
-}));
-
 function tool(overrides: Partial<ToolItem> = {}): ToolItem {
   return { toolCallId: "tc1", toolName: "read_file", args: { path: "a.ts" }, status: "completed", ...overrides };
 }

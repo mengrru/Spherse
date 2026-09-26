@@ -59,7 +59,7 @@ interface ToolProcessSectionProps {
 ### `features/chat/`
 
 - `ToolProcessSection.tsx`（新）：
-  - hooks（全部在 early return 之前）：`const [userOpen, setUserOpen] = useState<boolean | null>(null)`、`const [delayedHasRunning, setDelayedHasRunning] = useState(hasRunning)` + 上述延迟 effect
+  - hooks（全部在 early return 之前）：`const [userOpen, setUserOpen] = useState<boolean | null>(null)`、`const [delayedHasRunning, setDelayedHasRunning] = useState(false)` + 上述延迟 effect
   - `if (tools.length === 0) return null`
   - `const open = userOpen ?? delayedHasRunning`
   - `const errorCount = tools.filter(t => t.status === "error").length`

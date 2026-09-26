@@ -41,7 +41,6 @@ export function ToolProcessSection({ tools, onNavigateToPath }: ToolProcessSecti
       <Collapsible open={open} onOpenChange={setUserOpen}>
         <CollapsibleTrigger
           render={<Button variant="ghost" className="-mx-1 h-auto w-full justify-start gap-1.5 px-1 py-0.5 text-xs font-normal text-muted-foreground" />}
-          onClick={() => setUserOpen(!open)}
         >
           <span
             className="inline-flex size-3 items-center justify-center transition-transform"
