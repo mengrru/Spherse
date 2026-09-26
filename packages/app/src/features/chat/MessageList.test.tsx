@@ -83,6 +83,33 @@ describe("MessageList", () => {
     expect(anchors).toEqual(["1", "0"]);
   });
 
+  it("expands the trigger turn containing the locate target", () => {
+    const triggerGroup: MessageGroup = {
+      id: "g1",
+      kind: "trigger-turn",
+      triggerName: "daily",
+      hasError: false,
+      user: { kind: "user", id: "e0", seq: 0, text: "go", triggered: true },
+      bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", seq: 1, text: "done", tools: [] }],
+    };
+    renderList([triggerGroup], { locateSeq: 1 });
+    expect(document.querySelector('[data-entry-seq="1"]')).not.toBeNull();
+    expect(document.querySelector('[data-entry-seq="0"]')).not.toBeNull();
+  });
+
+  it("keeps the trigger turn collapsed when the locate target is elsewhere", () => {
+    const triggerGroup: MessageGroup = {
+      id: "g1",
+      kind: "trigger-turn",
+      triggerName: "daily",
+      hasError: false,
+      user: { kind: "user", id: "e0", seq: 0, text: "go", triggered: true },
+      bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", seq: 1, text: "done", tools: [] }],
+    };
+    renderList([triggerGroup], { locateSeq: 9 });
+    expect(document.querySelector('[data-entry-seq="1"]')).toBeNull();
+  });
+
   it("renders an orphan tool result bubble instead of dropping it", () => {
     renderList([
       {

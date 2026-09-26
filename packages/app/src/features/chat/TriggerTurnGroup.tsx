@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useState, type ReactNode } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import type { Bubble, MessageGroup } from "./model/message-group";
 import type { UserEntry } from "./model/entry";
@@ -10,17 +10,27 @@ import { AlertTriangleIcon, ChevronRightIcon, LoaderCircleIcon } from "lucide-re
 interface TriggerTurnGroupProps {
   group: MessageGroup;
   running?: boolean;
+  forceOpen?: boolean;
   renderUser: (user: UserEntry) => ReactNode;
   renderBubble: (bubble: Bubble, index: number) => ReactNode;
 }
 
-export function TriggerTurnGroup({ group, running = false, renderUser, renderBubble }: TriggerTurnGroupProps) {
+export function TriggerTurnGroup({ group, running = false, forceOpen = false, renderUser, renderBubble }: TriggerTurnGroupProps) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false);
+  const [userOpen, setUserOpen] = useState(false);
+
+  useEffect(() => {
+    if (!forceOpen) return;
+    return () => {
+      setUserOpen(true);
+    };
+  }, [forceOpen]);
+
+  const open = forceOpen || userOpen;
 
   return (
     <div className="flex w-full flex-col">
-      <Collapsible open={open} onOpenChange={setOpen}>
+      <Collapsible open={open} onOpenChange={setUserOpen}>
         <CollapsibleTrigger
           render={
             <Button

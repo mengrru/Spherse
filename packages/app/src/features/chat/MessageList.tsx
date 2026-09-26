@@ -29,6 +29,13 @@ interface MessageListProps {
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  locateSeq?: number | null;
+}
+
+function groupContainsSeq(group: MessageGroup, seq: number | null): boolean {
+  if (seq === null) return false;
+  if (group.user?.seq === seq) return true;
+  return group.bubbles.some((bubble) => bubble.seq === seq);
 }
 
 export function MessageList({
@@ -50,6 +57,7 @@ export function MessageList({
   hasMore,
   loadingMore,
   onLoadMore,
+  locateSeq = null,
 }: MessageListProps) {
   const { t } = useI18n();
 
@@ -156,6 +164,7 @@ export function MessageList({
               key={group.id}
               group={group}
               running={group.id === runningGroupId}
+              forceOpen={groupContainsSeq(group, locateSeq)}
               renderUser={(user) => renderUser(group, user)}
               renderBubble={(bubble, index) => renderBubble(group, bubble, index)}
             />

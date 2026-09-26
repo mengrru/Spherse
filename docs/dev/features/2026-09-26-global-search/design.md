@@ -167,6 +167,7 @@ searchProjectMessages(query: string, limit: number): MessageSearchHit[]
   - `locateSeq` 变化时重置「已定位」标记
   - 已知边界：目标会话正在流式输出时 `useChatScroll` 的「新用户消息置底」分支可能在定位后抢占视口，概率低，v1 接受
 - `UserBubble` / `AssistantBubble`：新增可选 `entrySeq?: number` prop，根元素输出 `data-entry-seq={entrySeq}`；`MessageList` 的 `renderUser` / `renderBubble` 传入（bubble 从 `entryId` 解析 `/^e(\d+)$/`）
+- **折叠 turn 展开**：trigger turn（`TriggerTurnGroup`）默认收起且 base-ui Collapsible `keepMounted=false`，收起时锚点不在 DOM。定位目标 seq 落在某 trigger turn（user 或任一 bubble 的 seq）时，`MessageList`（接收 `locateSeq` prop）对该 group 传 `forceOpen`，`open={forceOpen || userOpen}` 同帧展开保证锚点在 rAF 查询前 mount；定位完成 `forceOpen` 撤销时将 `userOpen` 置 true（展开后保持，用户仍可手动收起）
 - `lib/route-params.ts`（新增）：`stripMessageId(pathname, search)` 剥离定位参数；`use-project-navigation.ts` 记录栈 key、`ProjectScope` 记录 lastRoute 两处统一使用
 
 ### i18n（en / zh-CN / zh-TW）
@@ -209,3 +210,5 @@ global-search.initialHint      输入关键词搜索当前项目的聊天记录�
 2026-09-26 sub agent review：无 critical。important 3 项已落入设计（返回栈剥离 messageId、useLocateMessage 放弃分支补全、sessionTitle NULL→undefined 映射）；medium/minor 中 sr-only DialogTitle、`userAgentData.platform` 判定平台已采纳，其余以「已知边界」标注。
 
 2026-09-26 code review（实现后）：无 critical。important 3 项已修（同 seq 二次定位重置、Enter 过滤 IME 组合态、contracts 补正/负样本契约测试）；medium 5 项已修（Bubble 透传 seq 锚点、搜索失败态与无结果区分、无标题 fallback 对齐 SessionRow、route-params 纯函数测试、limit 截断语义）；minor 4 项已修（Shift+P 不拦截、文件树 pending 不闪无结果、中文标点风格、parseMessageIdParam 严格十进制）。
+
+2026-09-26 追加：trigger turn 折叠导致定位锚点不在 DOM（Collapsible keepMounted=false，静默失败）——`TriggerTurnGroup` 加 `forceOpen` 受控展开（撤销后保持展开），`MessageList` 接收 `locateSeq` 计算命中，`useLocateMessage` 零改动。

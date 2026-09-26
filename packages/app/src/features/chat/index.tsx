@@ -164,6 +164,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           hasMore={hasMore}
           loadingMore={loadingMore}
           onLoadMore={loadMore}
+          locateSeq={locateSeq}
         />
         <Composer
           streaming={streaming}
