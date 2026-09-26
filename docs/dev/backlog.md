@@ -63,6 +63,7 @@
 
 ## 功能增强
 
+- [ ] **系统通知后续优化**：三项跟进：① 通知点击 deep link 到对应 project/session（现为仅聚焦窗口 / openWindow scope 根）；② SW 前台抑制协调（SW ↔ page postMessage，用户正看该 session 时不弹）；③ `pushsubscriptionchange` 处理（endpoint 轮换即时上报，现为下次启动 ensureSubscription 兜底）。参见 `docs/dev/features/2026-09-26-system-notifications/design.md`「平台约束与已知限制」
 - [ ] **全局搜索 v2 扩展**：搜索结果命中词高亮；tool 调用参数/结果参与聊天搜索（可加开关）；legacy 会话（未迁移 messages 表）纳入搜索范围；查询词含 JSON 转义字符（`"` / `\` / 换行）时 LIKE 预取漏召回的归一化处理。参见 `docs/dev/features/2026-09-26-global-search/design.md`「不做 / 已知边界」
 - [ ] **首次收至托盘时提示用户**：「关闭至托盘」默认启用，首次关闭窗口后用户可能误以为已退出；方向：首次隐藏时发一次系统通知（Windows balloon / `Notification`），说明可从托盘图标打开或在设置 > 通用关闭。参见 `docs/dev/features/2026-09-25-close-to-tray/design.md`
 - [ ] **web_search 来源专用卡片**：当前 chat 以通用 ToolItemView 展示 `web_search → query`，结果 `details.sources`（title/url）未可视化；方向：参照 generate_image 的 cardType 投影做来源列表卡片（可点击外链）。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md`

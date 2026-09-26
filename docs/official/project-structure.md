@@ -154,6 +154,7 @@ spherse/
 │   │       ├── file-tree.ts          # FileTreeResponse
 │   │       ├── settings.ts           # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
 │   │       ├── trigger.ts            # TriggerEntry、TriggerCreate/Update 请求、List/Log Response
+│   │       ├── push.ts               # Web Push 契约：subscribe/unsubscribe 请求（endpoint 强制 https）、PushNotificationPayload（server→SW 共享词汇）、pushAvailability（connection/info 可选字段）
 │   │       ├── skills.ts             # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
 │   │       ├── marketplace.ts        # MarketplaceSkillEntry、MarketplaceManifestResponse、SkillMarketplaceInstallRequest（{name, version}）
 │   │       ├── project-marketplace.ts # MarketplaceProjectEntry（含 category）、MarketplaceProjectManifestResponse、ProjectMarketplaceInstallRequest（{name, version, destDir}）与 InstallResponse（{projectRoot}）
@@ -187,8 +188,12 @@ spherse/
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
 │       │       │   ├── trigger.ts         # 触发器 CRUD 与手动触发（/triggers、/trigger-logs、/run）
+│       │       │   ├── push.ts            # Web Push 订阅管理（POST /api/push/subscribe|unsubscribe，Bearer 认证；pushStoragePath 未配置时不注册）
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
-│   │       ├── chat/                  # chat 域（对外仅经 index.ts 导出 handleChatWebSocket + ChatSessionHub）
+│       │       ├── push/                  # Web Push 域（对外不导出；由 createMultiProjectServer 经 pushStoragePath 装配）
+│       │       │   ├── push-store.ts      # push-storage.json 读写：VAPID 密钥惰性生成、订阅 upsert/remove、tmp+rename 原子写（0600）、串行 persist 链 + flush()
+│       │       │   └── push-notifier.ts   # PushNotifier：经 registry onRuntimeAdded 挂 per-project 监听（SessionManager.onSessionEvent 的 control_request + TriggerManager 完成/失败事件），按订阅 locale 渲染文案后 web-push 发送，404/410 清理订阅
+│       │       ├── chat/                  # chat 域（对外仅经 index.ts 导出 handleChatWebSocket + ChatSessionHub）
 │   │       │   ├── index.ts            # 域门面
 │   │       │   ├── chat-session-hub.ts # ChatSessionHub：channel 注册表（按 SessionManager 身份 × sessionId），closeRuntime/close 收口 + admission
 │   │       │   ├── chat-channel.ts     # ChatChannel：单 session 生命周期（opening/open/closed 状态机、lazy restore 单飞、lease、run 序列化、fanout、空闲 release）
@@ -339,8 +344,9 @@ spherse/
 │   │   │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）
 │   │   │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
 │   │   │   │   ├── context-menu.ts   # 文本框原生右键菜单：webContents 'context-menu' 事件（isEditable 门控，editFlags 控制 enable，i18n 本地化 undo/redo/cut/copy/paste/selectAll）
-│   │   │   │   ├── debug.ts          # 开发模式 debug 动作
-│   │   │   │   └── mobile.ts         # 移动端访问 IPC（get/enable/disable/regenerate-token/restart-tunnel/set-mode/set-public-domain）+ tunnel 状态推送；quick 模式自动启动 cloudflared，manual 模式仅暴露端口 + 用户自填域名
+│   │       │   │   ├── debug.ts          # 开发模式 debug 动作
+│   │       │   │   ├── notifications.ts # 系统通知 IPC（notifications:show → Electron Notification，isSupported guard，click 聚焦主窗）
+│   │       │   │   └── mobile.ts         # 移动端访问 IPC（get/enable/disable/regenerate-token/restart-tunnel/set-mode/set-public-domain）+ tunnel 状态推送；quick 模式自动启动 cloudflared，manual 模式仅暴露端口 + 用户自填域名
 │   │   │   ├── tunnel/                # Cloudflare Quick Tunnel 集成（移动端远程访问中继，仅 quick 模式使用）
 │   │   │   │   ├── provider.ts        # TunnelProvider / TunnelSession 抽象接口（预留未来扩展）
 │   │   │   │   ├── cloudflare-provider.ts # Cloudflare Quick Tunnel 实现：spawn cloudflared tunnel --url、stdout 抓取 *.trycloudflare.com URL、packaged 二进制路径解析
@@ -383,7 +389,9 @@ spherse/
 │   │   ├── pages-assets/404.html     # GitHub Pages SPA fallback（/web → /web/，其余 → /）
 │   │   └── src/                      # Web 版本专属源码
 │   │       ├── main.tsx              # 注入 WebHostBridge 调 createAppRoot
-│   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集、token 探活、disconnect）
+│   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集、token 探活、disconnect；renderNotificationSetup 挂订阅引导 banner）
+│   │       ├── sw.ts                 # Service Worker 源（vite-plugin-pwa injectManifest 编译为 sw.js：skipWaiting/clientsClaim、precache、push → showNotification（tag 去重）、notificationclick 聚焦/openWindow）
+│   │       ├── notification-setup.tsx # Web Push 订阅引导 banner（permission 状态机 + ensureSubscription：本地订阅缺失或 VAPID key 不匹配时退订重订并上报；上报失败回滚本地订阅）
 │   │       └── pages/MobileConnectPage.tsx # 扫码/手动输入连接页
 │   ├── landing/                      # @spherse/landing — GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）
 │   │   ├── vite.config.ts            # 标准 Vite 构建配置（base: "/"，自定义域名根路径部署）

@@ -1,12 +1,12 @@
 # Server 层架构
 
-> 覆盖：Fastify 组合根与生命周期、鉴权模型（always-on token / 认证制 CORS / Host 校验）、路由域与错误映射、WebSocket（chat 挂载 + 全局 bus）、preview、data 路由与日志。
+> 覆盖：Fastify 组合根与生命周期、鉴权模型（always-on token / 认证制 CORS / Host 校验）、路由域与错误映射、WebSocket（chat 挂载 + 全局 bus）、Web Push（PushNotifier）、preview、data 路由与日志。
 > core 侧机制见 [core.md](core.md)；chat WS 协议与会话链路见 [chat.md](chat.md)；contract 文件组织与绑定规范见 `packages/server/README.md`。
 > desktop 侧的启动与 token 重建链见 [desktop.md](desktop.md)。
 
 ## 组合根与生命周期
 
-- `createMultiProjectServer({ defaultModel?, sampling?, thinkingLevel?, auth?, port?, modelCatalog?, appVersion? })` 创建单实例，返回 `{ fastify, registry, logger, addAllowedHosts, removeAllowedHosts, close }`
+- `createMultiProjectServer({ defaultModel?, sampling?, thinkingLevel?, auth?, port?, modelCatalog?, appVersion?, pushStoragePath? })` 创建单实例，返回 `{ fastify, registry, logger, addAllowedHosts, removeAllowedHosts, close }`
 - 初始化顺序：logger → appVersion → Fastify（debug 级 + query redact）→ **Host 校验 hook → 认证制 CORS hook** → websocket → multipart（5MB）→ 错误处理器
   - 之后：ProjectRegistry → ChatSessionHub → auth hook → 全部路由 → chat / bus WS handler
   - onRequest hook 顺序固定 Host → CORS → auth；CORS hook 对 OPTIONS 直接 204 短路
@@ -15,13 +15,13 @@
 - desktop 启动链：`app.whenReady` → `ensureServer()`（恒传 `auth.accessToken = getServerToken()`）→ 重放已注册项目 → 重放动态 host
   - `ensureServer` 以 settings 的 model/sampling/thinkingLevel、server token、`getAppModelCatalog()` 单例与 app 版本建服务
   - server 重建（regenerate token）后由 `syncAllowedHosts()` 按当前 mobileAccess 状态重放动态 host
-- shutdown：tunnel stop → `server.close(options?)`（唯一关停入口，幂等共享 Promise；顺序 `chatHub.close()` → `registry.removeAll()`（allSettled）→ `fastify.close()`，阶段各自 `settleWithin` 超时/失败隔离，缺省 10s 与 logger 上报；desktop 只注入超时与日志策略，见 [ADR-0012](../../dev/decisions/0012-chat-hub-lifecycle-ownership.md)）
+- shutdown：tunnel stop → `server.close(options?)`（唯一关停入口，幂等共享 Promise；顺序 `chatHub.close()` → pushNotifier 收口 → `registry.removeAll()`（allSettled）→ `fastify.close()` → `pushStore.flush()`，阶段各自 `settleWithin` 超时/失败隔离，缺省 10s 与 logger 上报；desktop 只注入超时与日志策略，见 [ADR-0012](../../dev/decisions/0012-chat-hub-lifecycle-ownership.md)）
 
 ## ProjectRegistry
 
 - 维护 `Map<projectId, ProjectContext>`；ctx 为 `Object.freeze` + getter——`runtime`、`projectId`，转发 `projectManager` / `sessionRuntime` / `triggerManager`
-- `register` 按 resolved root 去重复用已有 ctx，pending Promise 去重防并发注册
-- `remove` 顺序：先从 map 摘除（新请求 404）→ 通知 `onRuntimeRemoved`（hub 收口 channel）→ `await runtime.shutdown()`；removal barrier 让同 root 的并发 `register` 等待旧 runtime 关闭后才新建（避免同目录双开 SQLite）
+- `register` 按 resolved root 去重复用已有 ctx，pending Promise 去重防并发注册；注册成功后触发 `onRuntimeAdded` 观察者（PushNotifier 挂 per-project 监听；observer 异常吞掉不阻断注册）
+- `remove` 顺序：先从 map 摘除（新请求 404）→ 通知 `onRuntimeRemoved`（hub 收口 channel + PushNotifier 卸载监听）→ `await runtime.shutdown()`；removal barrier 让同 root 的并发 `register` 等待旧 runtime 关闭后才新建（避免同目录双开 SQLite）
 - projectId 冲突（复制目录）时改写副本的 `project.yaml`（log warn，不中断；重新生成 8 位 nanoid）
 - `setDefaultModel` / `setSampling` 向所有已注册项目 fan-out
 - modelCatalog 注入链：desktop main 单例 → `CreateServerOptions` → registry → 每项目 `createProject`；未注入时 registry 兜底自建（desktop 链路不会走到兜底）
@@ -42,7 +42,7 @@
 
 ## 路由
 
-17 个域文件由 `routes/index.ts` 聚合注册；项目级路由统一 `/api/projects/:projectId/...`，全局 preHandler 从 registry 解析并注入 `req.projectCtx`（miss 抛 404）；全局路由不带 projectId、不经过该 preHandler（鉴权仍由 auth onRequest hook 覆盖）：
+18 个域文件由 `routes/index.ts` 聚合注册；项目级路由统一 `/api/projects/:projectId/...`，全局 preHandler 从 registry 解析并注入 `req.projectCtx`（miss 抛 404）；全局路由不带 projectId、不经过该 preHandler（鉴权仍由 auth onRequest hook 覆盖）：
 
 | 域 | 端点概要 |
 |---|---|
@@ -60,6 +60,7 @@
 | trigger | CRUD、手动触发、reset-binding、运行日志 |
 | debug | turn-context 导出 |
 | images / attachments | 生成图片导出；附件上传（png/jpeg/webp，5MB）与删除 |
+| push | 全局：`POST /api/push/subscribe` / `unsubscribe`（Bearer 认证；endpoint 强制 https，按 endpoint 幂等 upsert；`pushStoragePath` 未配置时路由不注册）；`connection/info` 响应含可选 `push.publicKey` 供 PWA 探测 |
 
 **错误映射**（全局 errorHandler）：
 
@@ -87,6 +88,16 @@
   - 过滤决策基于 core `categorizePath` 的 watched-category 集合：userFiles / rootIndex / changelog / projectConfig / projectTheme / agentTheme / skills
   - `node_modules` / `.git` 任意路径段降噪
 - **chat（`/ws/projects/:projectId/chat/:agentId/:sessionId`）**：server 侧只做挂载、registry miss 关闭、hub attach 与出入站 contract 校验——协议与生命周期见 [chat.md](chat.md)
+
+## Web Push（PushNotifier）
+
+面向 web PWA 的系统通知通道（desktop 走本地 Electron 通知，不经此路径）。事件源与 WS 相同（approval 的 `control_request`、trigger 完成/失败），但**不依赖任何 WS attach**——无人在线也能推。
+
+- **装配**：`createMultiProjectServer({ pushStoragePath })` 注入存储路径时启用；`PushStore` 持有 VAPID 密钥与订阅（文件格式见 [data-conventions](../data-conventions.md)），`PushNotifier` 经 registry 的 `onRuntimeAdded`/`onRuntimeRemoved` 挂/卸 per-project 监听
+- **事件挂点**：`SessionManager.onSessionEvent`（core 提供的跨 session 聚合订阅，过滤 `control/requested`，覆盖 approval 与 question）+ `TriggerManager` 的 `trigger_completed` / `trigger_failed`（`entry.notify` 才推；trigger 已被删除则不推）
+- **发送**：`web-push` 库加密 POST 到厂商 push service（Apple/Google），payload 为已渲染文案 `{title, body, tag, data}`（≤4KB）；文案按订阅记录的 `locale` 在 server 端渲染（`@spherse/i18n`），SW 端只展示
+- **投递失败治理**：404/410 删除订阅（权限被撤/订阅过期）；其余失败记 warn 日志（仅 endpoint origin，不落完整 URL）；逐订阅 fire-and-forget 不阻塞事件流
+- SW 侧行为（web 壳）：收到 push 恒 `showNotification`（tag 去重），不做前台抑制——SW 无从得知 renderer 内哪个 session 活跃，approval 时效性（5 分钟超时）优先
 
 ## preview 路由
 
