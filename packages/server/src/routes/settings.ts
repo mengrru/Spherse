@@ -72,6 +72,32 @@ export function registerSettingsRoutes(fastify: FastifyInstance, registry: Proje
   );
 
   fastify.get<{ Params: { projectId: string } }>(
+    "/api/projects/:projectId/settings/side-panel",
+    {
+      schema: { response: { 200: schemas.sidePanelSettingsResponse } },
+      async handler(req) {
+        return { ok: true, ...req.projectCtx!.projectManager.getSidePanelSettings() };
+      },
+    },
+  );
+
+  fastify.put<{ Params: { projectId: string }; Body: { path: string | null } }>(
+    "/api/projects/:projectId/settings/side-panel",
+    {
+      schema: {
+        body: schemas.sidePanelSettingsRequest,
+        response: {
+          200: schemas.sidePanelSettingsResponse,
+        },
+      },
+    },
+    async (req) => {
+      const settings = await req.projectCtx!.projectManager.updateSidePanelSettings(req.body.path);
+      return { ok: true, ...settings };
+    },
+  );
+
+  fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/settings/theme",
     {
       schema: { response: { 200: schemas.themeSettingsResponse } },

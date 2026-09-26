@@ -7,6 +7,7 @@ import { UiSdkBridge } from "../ui-sdk";
 import { ContentQueryBridge } from "../features/content-browser/ContentQueryBridge";
 import { ThemeQueryBridge } from "../features/project-settings/theme-settings/ThemeQueryBridge";
 import { WelcomePageQueryBridge } from "../features/welcome-page/WelcomePageQueryBridge";
+import { CustomSidePanelQueryBridge } from "../features/custom-side-panel/CustomSidePanelQueryBridge";
 import { TabRouteBridge } from "../features/tabs";
 import { SplitRouteBridge } from "../features/split-pane";
 
@@ -27,6 +28,7 @@ export function ProjectRuntimeBridges() {
       <ContentQueryBridge />
       <ThemeQueryBridge />
       <WelcomePageQueryBridge />
+      <CustomSidePanelQueryBridge />
       <TabRouteBridge />
       <FeatureGate feature="content-split-pane">
         <SplitRouteBridge />

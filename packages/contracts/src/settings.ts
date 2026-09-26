@@ -41,6 +41,13 @@ export const schemas = {
     ok: Type.Boolean(),
     path: Type.Union([Type.Null(), Type.String()]),
   }),
+  sidePanelSettingsRequest: Type.Object({
+    path: Type.Union([Type.Null(), Type.String()]),
+  }),
+  sidePanelSettingsResponse: Type.Object({
+    ok: Type.Boolean(),
+    path: Type.Union([Type.Null(), Type.String()]),
+  }),
   themeSettingsRequest: Type.Object({
     content: Type.String(),
   }),
@@ -56,5 +63,7 @@ export type AiAccessSettingsRequest = Static<typeof schemas.aiAccessSettingsRequ
 export type AiAccessSettingsResponse = Static<typeof schemas.aiAccessSettingsResponse>;
 export type WelcomePageSettingsRequest = Static<typeof schemas.welcomePageSettingsRequest>;
 export type WelcomePageSettingsResponse = Static<typeof schemas.welcomePageSettingsResponse>;
+export type SidePanelSettingsRequest = Static<typeof schemas.sidePanelSettingsRequest>;
+export type SidePanelSettingsResponse = Static<typeof schemas.sidePanelSettingsResponse>;
 export type ThemeSettingsRequest = Static<typeof schemas.themeSettingsRequest>;
 export type ThemeSettingsResponse = Static<typeof schemas.themeSettingsResponse>;

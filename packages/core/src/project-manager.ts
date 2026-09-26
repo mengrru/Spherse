@@ -306,6 +306,14 @@ export class ProjectManager {
     return this.projectStore.config.updateWelcomePageSettings(path);
   }
 
+  getSidePanelSettings(): { path: string | null } {
+    return this.projectStore.config.getSidePanelSettings();
+  }
+
+  async updateSidePanelSettings(path: string | null): Promise<{ path: string | null }> {
+    return this.projectStore.config.updateSidePanelSettings(path);
+  }
+
   async readIndex(): Promise<string> {
     return this.projectStore.readIndex();
   }

@@ -234,13 +234,14 @@ spherse/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
 │   │       ├── context/
 │   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（projectId/projectRoot）
-│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory（projectQueryKeys 项目级 + marketplaceQueryKeys 全局）、project/content/skills/marketplace-projects/welcome-page/theme-settings/triggers 服务端状态
+│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory（projectQueryKeys 项目级 + marketplaceQueryKeys 全局）、project/content/skills/marketplace-projects/welcome-page/custom-side-panel/theme-settings/triggers 服务端状态
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 前端运行时投影（当前仅 initialMessage 交接）
 │   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗、全局搜索弹窗 open 状态）
 │   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools/tabsEnabled/closeToTray 等持久化设置（与设置文件同步）
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
+│   │       │   ├── custom-side-panel-store.ts # 自定义侧边面板激活态（per-project，localStorage spherse:custom-side-panel:active-by-project）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │   │       ├── layouts/
 │   │       │   ├── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet 与项目级 hook；注册 Cmd/Ctrl+P 全局搜索快捷键并渲染 GlobalSearchDialog
@@ -290,7 +291,7 @@ spherse/
 │   │       │   ├── floating-content-browser/ # 浮窗内容浏览器（多窗口、复用 ContentView 只读渲染 + components/floating-frame），含 useFloatedFilePaths；从文件树右键「浮窗」触发
 │   │       │   ├── global-search/     # 项目内全局搜索弹窗（command palette 风格 Dialog，聊天/文件两组结果；Cmd/Ctrl+P 与 project panel 空白处右键唤出；聊天命中跳转 chat 路由 ?messageId= 定位）
 │   │       │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
-│   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child；空白处右键唤出全局搜索
+│   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child；激活自定义侧边面板时整体替换为 CustomSidePanel（iframe）；空白处右键唤出全局搜索
 │   │       │   ├── project-market/       # 项目市场 Dialog（顶部分类 chips「全部」+ 动态归并 + 卡片网格；下载 = selectDirectory → 全局 install API → openProjectAtPath → 导航打开）+ categories 归并/过滤纯函数
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
@@ -299,8 +300,10 @@ spherse/
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
 │   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 含默认模型 + 思考强度选择 ThinkingLevelField、高级采样参数，支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、设置 store、类型与测试
 │   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）+ WelcomePageQueryBridge（project.yaml fs-watch/reconnect → welcome-page 查询失效，ProjectRuntimeBridges 挂载）
+│   │       │   ├── custom-side-panel/    # 自定义侧边面板：透明 iframe 占满 ProjectPanel（preview 路由 + fs-watch 防抖刷新 + 角落退出按钮）+ CustomSidePanelQueryBridge（project.yaml fs-watch/reconnect → custom-side-panel 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   ├── project-settings/     # 项目设置弹窗集合
 │   │       │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
+│   │       │   │   ├── side-panel-settings/   # 自定义侧边面板路径设置弹窗
 │   │       │   │   └── theme-settings/        # 项目主题 CSS 编辑弹窗 + ThemeQueryBridge（fs-watch/reconnect → theme-settings 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   └── text-selection-session/ # 划选文本后发起会话；useSelectionSessionHandlers 自取 agents 与可发送的当前会话（左栏 chat 路由 + 浮窗会话）
 │   │       ├── pages/

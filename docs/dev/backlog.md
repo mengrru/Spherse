@@ -25,6 +25,7 @@
 - [ ] **补齐 dialog/sheet 关闭按钮 sr-only 文案 i18n**：`packages/app/src/components/ui/dialog.tsx:73` 与 `sheet.tsx:73` 的 `<span className="sr-only">Close</span>` 硬编码英文，屏幕阅读器可读的用户可见文案未走 `@spherse/i18n`（违反仓库红线）；替换为已有 `common.close` 键的 `t()` 即可（2026-08-30 关闭按钮尺寸调整 review 顺带发现）。
 - [ ] **打包版主窗口 icon 路径失效**：`packages/desktop/electron/window.ts` 的 `path.join(__dirname, "../../build/spherse-icon.png")` 在 main 被拆到 `dist/main/chunks/` 后指向 `dist/build/`，且 `build/` 不进打包 `files`，Linux 窗口图标可能缺失（mac/win 用 bundle 图标不受影响）。方向：同托盘图标走 `extraResources` 或删掉该选项改由 electron-builder 平台图标决定。2026-09-25 close-to-tray review 顺带发现（pre-existing）。
 - [ ] **chat WS close reason 截断到 123 字节**：`ws-chat.ts` 的 `socket.close(code, message)` 使用任意 core 错误消息；`ws` 对 >123 字节 reason 抛 `RangeError`，且抛出点在 `setCloseTimer` 之前、会派生 unhandled rejection，close 事件可能不触发导致 attachment lease 无法归还、channel 无法收口。方向：reason 截断（或只传 code），补超长错误消息用例。2026-09-15 hub review 发现（pre-existing）。
+- [ ] **iframe 页面（欢迎页 / 自定义侧边面板）资源失效不回落**：浏览器对 iframe 的 HTTP 失败不派发元素 error 事件，`onError` 兜底分支不可达；配置的 HTML 文件被删除后 iframe 内显示 preview 404 而非占位 / 默认面板。方向：reload 后探活 fetch，不可达则回落（两个 feature 一起修）。参见 `docs/dev/features/2026-09-27-custom-side-panel/design.md` 已知限制。
 
 ## 技术债（重构与收敛）
 

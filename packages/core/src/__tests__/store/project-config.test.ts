@@ -191,4 +191,47 @@ describe("ProjectConfigStore", () => {
       );
     });
   });
+
+  describe("Side panel settings", () => {
+    beforeEach(async () => {
+      await store.write(VALID_CONFIG);
+    });
+
+    it("has null side panel by default", () => {
+      expect(store.getSidePanelSettings()).toEqual({ path: null });
+    });
+
+    it("sets and persists side panel", async () => {
+      const result = await store.updateSidePanelSettings("panel/index.htm");
+      expect(result).toEqual({ path: "panel/index.htm" });
+      expect(store.getSidePanelSettings()).toEqual({ path: "panel/index.htm" });
+
+      const store2 = new ProjectConfigStore(configPath, createSilentLogger());
+      await store2.read();
+      expect(store2.getSidePanelSettings()).toEqual({ path: "panel/index.htm" });
+    });
+
+    it("clears side panel with null", async () => {
+      await store.updateSidePanelSettings("panel.html");
+      const result = await store.updateSidePanelSettings(null);
+      expect(result).toEqual({ path: null });
+      expect(store.getSidePanelSettings()).toEqual({ path: null });
+    });
+
+    it("rejects invalid paths", async () => {
+      for (const invalidPath of ["", ".", "../evil.html", "/absolute.html", ".spherse/x.html"]) {
+        await expect(store.updateSidePanelSettings(invalidPath)).rejects.toThrow(
+          `Invalid side panel path: ${invalidPath}`,
+        );
+      }
+    });
+
+    it("rejects non-html extensions", async () => {
+      for (const invalidPath of ["poster.png", "page.md", "noext"]) {
+        await expect(store.updateSidePanelSettings(invalidPath)).rejects.toThrow(
+          `Invalid side panel path: ${invalidPath}`,
+        );
+      }
+    });
+  });
 });

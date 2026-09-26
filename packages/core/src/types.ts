@@ -6,6 +6,7 @@ export interface ProjectConfig {
   created: number;
   aiAccess?: { deniedPaths: string[] };
   welcomePage?: { path: string };
+  sidePanel?: { path: string };
 }
 
 export interface TimePerceptionConfig {
