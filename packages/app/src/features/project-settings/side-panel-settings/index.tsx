@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useState } from "react";import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
 import type { ApiClient } from "../../../lib/api";
 import { Button } from "../../../components/ui/button";
@@ -40,13 +39,11 @@ export function SidePanelSettingsDialog({
 }) {
   const [path, setPath] = useState("");
   const [savedPath, setSavedPath] = useState<string | null>(null);
-  const [_loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const { t } = useI18n();
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
     client
       .getSidePanelSettings()
       .then((settings) => {
@@ -55,8 +52,7 @@ export function SidePanelSettingsDialog({
       })
       .catch((err: unknown) =>
         toast.error(t("side-panel-settings.loadFailed", { message: (err as Error).message })),
-      )
-      .finally(() => setLoading(false));
+      );
   }, [client, open, t]);
 
   const handleSave = async () => {

@@ -24,7 +24,15 @@ export function customSidePanelQueryOptions(projectId: string, client: ApiClient
 }
 
 export function useCustomSidePanel(projectId: string | null, client: ApiClient | null) {
-  return useQuery(customSidePanelQueryOptions(projectId ?? "", client as ApiClient, projectId != null && client != null));
+  return useQuery({
+    queryKey: projectQueryKeys.customSidePanel(projectId ?? ""),
+    queryFn: () => {
+      if (!client) throw new Error("API client unavailable");
+      return resolveCustomSidePanel(client);
+    },
+    gcTime: Number.POSITIVE_INFINITY,
+    enabled: projectId != null && client != null,
+  });
 }
 
 export async function invalidateCustomSidePanel(projectId: string): Promise<void> {
