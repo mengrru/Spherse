@@ -77,7 +77,7 @@ const registry = new ProjectRegistry(logger, {
 - `ctx.sessionRuntime.onSessionEvent`：`control_request` → 构造 approval/question 通知
 - `ctx.triggerManager.on("trigger_completed" | "trigger_failed")`：entry 取 `payload.trigger ?? ctx.triggerManager.get(agentId, triggerId)`（`TriggerEventPayload.trigger?` 已预留，`trigger-manager.ts:18`；executor emit 未带时 fallback 查询，**查询为 null（trigger 已被删除）→ 不推，预期行为**），`entry?.notify === true` 才推
 
-**agentName**：approval 通知 title 需要发起 agent 的名字——`ctx.projectManager.getAgentProfile(agentId)`（异步，与 agents 路由同源）。
+**agentName**：approval 通知 title 需要发起 agent 的名字——`ctx.projectManager.getAgentProfile(agentId)`（同步，与 agents 路由同源）。
 
 **文案**（i18n key 见 D8）：approval title 复用 `chat.approvalToastMessage(WithName)` 语义新增 push 专用 key（含 toolName 的 body：`push.approvalBody`）；trigger title 用 trigger name（`entry.name || cron/eventName`，同 executor 取名逻辑）。
 
