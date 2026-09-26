@@ -146,7 +146,6 @@ export type {
 export {
   parsePushSubscribeRequest,
   parsePushUnsubscribeRequest,
-  parsePushNotificationPayload,
 } from "./push.js";
 export type {
   PushSubscribeRequest,

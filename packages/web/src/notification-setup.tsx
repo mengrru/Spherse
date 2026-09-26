@@ -8,6 +8,7 @@ import {
 import { readWebConnection } from "./host-bridge-web";
 
 const DISMISS_KEY = "spherse:push-banner-dismissed";
+const FETCH_TIMEOUT_MS = 10_000;
 
 function isPushSupported(): boolean {
   return (
@@ -26,17 +27,26 @@ function subscriptionKeyBytes(subscription: PushSubscription): Uint8Array | null
   return new Uint8Array(key instanceof Uint8Array ? key : new Uint8Array(key as ArrayBuffer));
 }
 
-async function fetchPushPublicKey(baseUrl: string, token: string): Promise<string | null> {
+async function fetchJson(url: string, init?: RequestInit): Promise<unknown | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${baseUrl}/api/connection/info`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const res = await fetch(url, { ...init, signal: controller.signal });
     if (!res.ok) return null;
-    const body = (await res.json()) as { push?: { publicKey?: string } };
-    return body.push?.publicKey ?? null;
+    return await res.json();
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
+}
+
+async function fetchPushPublicKey(baseUrl: string, token: string): Promise<string | null> {
+  const body = (await fetchJson(`${baseUrl}/api/connection/info`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })) as { push?: { publicKey?: unknown } } | null;
+  const publicKey = body?.push?.publicKey;
+  return typeof publicKey === "string" && publicKey.length > 0 ? publicKey : null;
 }
 
 async function subscribeAndReport(publicKeyBase64: string, locale: string): Promise<void> {
@@ -61,7 +71,7 @@ async function subscribeAndReport(publicKeyBase64: string, locale: string): Prom
     userVisibleOnly: true,
     applicationServerKey: expectedKeyBytes,
   });
-  await fetch(`${baseUrl}/api/push/subscribe`, {
+  const reported = await fetchJson(`${baseUrl}/api/push/subscribe`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${conn.token}`,
@@ -69,6 +79,9 @@ async function subscribeAndReport(publicKeyBase64: string, locale: string): Prom
     },
     body: JSON.stringify({ ...subscription.toJSON(), locale }),
   });
+  if (reported === null) {
+    await subscription.unsubscribe();
+  }
 }
 
 export function NotificationSetupBanner() {
@@ -119,6 +132,7 @@ export function NotificationSetupBanner() {
     if (!publicKey) return;
     await subscribeAndReport(publicKey, locale);
   };
+
   const dismiss = () => {
     localStorage.setItem(DISMISS_KEY, "1");
     setPromptable(false);
@@ -140,7 +154,7 @@ export function NotificationSetupBanner() {
         </button>
         <button
           type="button"
-          aria-label="dismiss"
+          aria-label={t("common.close")}
           className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
           onClick={dismiss}
         >

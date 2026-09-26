@@ -58,7 +58,7 @@ export function TriggerEventBridge() {
     toast.success(title, {
       action: {
         label: tRef.current("agent-trigger.openSession"),
-        onClick: () => navigate(`/project/${projectId}/chat/${sessionId ?? ""}`),
+        onClick: () => navigate(`/project/${projectId}/chat/${sessionId}`),
       },
     });
     showSystemNotice(

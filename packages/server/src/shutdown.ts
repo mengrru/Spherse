@@ -3,10 +3,11 @@ import { settleWithin, type Logger } from "@spherse/core";
 import type { ChatSessionHub } from "./chat/index.js";
 import type { ProjectRegistry } from "./registry.js";
 import type { PushNotifier } from "./push/push-notifier.js";
+import type { PushStore } from "./push/push-store.js";
 
 export const DEFAULT_SERVER_CLOSE_STAGE_TIMEOUT_MS = 10_000;
 
-export type ServerCloseStage = "registry.removeAll" | "fastify.close";
+export type ServerCloseStage = "registry.removeAll" | "fastify.close" | "pushStore.flush";
 export type ServerCloseOutcome = "timeout" | "error";
 
 export interface ServerCloseOptions {
@@ -24,6 +25,7 @@ export interface ServerCloseDeps {
   fastify: FastifyInstance;
   logger: Logger;
   pushNotifier?: PushNotifier;
+  pushStore?: PushStore;
 }
 
 export async function closeMultiProjectServer(
@@ -58,4 +60,9 @@ export async function closeMultiProjectServer(
   await settleWithin(deps.fastify.close(), stageTimeoutMs, (outcome, detail) => {
     onStageOutcome("fastify.close", outcome, detail);
   });
+  if (deps.pushStore) {
+    await settleWithin(deps.pushStore.flush(), stageTimeoutMs, (outcome, detail) => {
+      onStageOutcome("pushStore.flush", outcome, detail);
+    });
+  }
 }

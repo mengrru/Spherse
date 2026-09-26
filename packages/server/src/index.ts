@@ -28,8 +28,6 @@ import {
 } from "./shutdown.js";
 
 export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type ProjectInfo, type RegisterOptions } from "./registry.js";
-export { PushStore, type PushSubscriptionRecord } from "./push/push-store.js";
-export { PushNotifier } from "./push/push-notifier.js";
 export type { ServerCloseOptions } from "./shutdown.js";
 
 export const DEFAULT_SERVER_PORT = 53972;
@@ -175,7 +173,7 @@ export async function createMultiProjectServer(
     removeAllowedHosts: hostGuard.removeAllowedHosts,
     close: (closeOptions?: ServerCloseOptions) => {
       closePromise ??= closeMultiProjectServer(
-        { hub: chatHub, registry, fastify, logger, pushNotifier },
+        { hub: chatHub, registry, fastify, logger, pushNotifier, pushStore },
         closeOptions,
       );
       return closePromise;
