@@ -8,7 +8,7 @@ import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
 import { FileViewerCard } from "./FileViewerCard";
 import { ThinkingIndicator } from "./ThinkingIndicator";
-import { ToolItemView } from "./ToolItemView";
+import { ToolProcessSection } from "./ToolProcessSection";
 import { HtmlCardRenderer } from "./HtmlCard";
 import { ImageCardRenderer } from "./ImageCard";
 import { CommandCardRenderer } from "./CommandCard";
@@ -68,6 +68,7 @@ export function AssistantBubble({
   );
 
   const cards = tools.filter((tool) => tool.card);
+  const plainTools = tools.filter((tool) => !tool.card);
 
   return (
     <div
@@ -94,17 +95,7 @@ export function AssistantBubble({
               </>
             )}
           </div>
-          {tools.length > 0 && (
-            <div className="mt-2 border-t border-dashed border-border pt-2">
-              {tools.map((tool) => (
-                <ToolItemView
-                  key={tool.toolCallId}
-                  tool={tool}
-                  onNavigateToPath={onNavigateToPath}
-                />
-              ))}
-            </div>
-          )}
+          <ToolProcessSection tools={plainTools} onNavigateToPath={onNavigateToPath} />
           {error && (
             <ErrorMessageSection
               error={error.message}

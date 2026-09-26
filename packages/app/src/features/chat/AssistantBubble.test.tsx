@@ -53,12 +53,32 @@ describe("AssistantBubble", () => {
     expect(screen.queryByTitle("复制")).not.toBeInTheDocument();
   });
 
-  it("renders tool rows", () => {
+  it("renders plain tool calls inside the collapsed tool process section", async () => {
+    const user = userEvent.setup();
     renderBubble({
       tools: [{ toolCallId: "tc1", toolName: "read_file", args: { path: "a.ts" }, status: "completed" }],
     });
+    expect(screen.getByText("执行过程")).toBeInTheDocument();
+    expect(screen.queryByText("read_file")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /执行过程/ }));
     expect(screen.getByText("read_file")).toBeInTheDocument();
     expect(screen.getByText("→ a.ts")).toBeInTheDocument();
+  });
+
+  it("renders card tools as cards only, without duplicate tool rows", () => {
+    renderBubble({
+      tools: [{
+        toolCallId: "tc-img",
+        toolName: "generate_image",
+        args: { prompt: "一只猫" },
+        status: "completed",
+        card: { type: "image", status: "done", path: "uploads/cat.png", prompt: "一只猫", mimeType: "image/png" },
+      }],
+    });
+    expect(document.querySelector("[data-chat-tool-process]")).toBeNull();
+    expect(screen.getByAltText("一只猫")).toBeInTheDocument();
+    expect(screen.queryByText("generate_image")).not.toBeInTheDocument();
   });
 
   it("offers a retry action for errors and hides it when retry is suppressed", async () => {

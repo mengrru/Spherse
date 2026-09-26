@@ -680,6 +680,12 @@ export const zhCN = {
   "chat.triggerTurnErrorBadge": "运行失败",
   // trigger 轮正在运行时，折叠摘要条上的状态徽标文案
   "chat.triggerTurnRunningBadge": "运行中",
+  // assistant 气泡内工具调用折叠区（执行过程）的摘要行标题
+  "chat.toolProcess": "执行过程",
+  // 执行过程摘要行的调用计数，{count} 为工具调用次数
+  "chat.toolProcessCount": "{count} 次调用",
+  // 执行过程摘要行的失败计数徽标，{count} 为失败的工具调用数
+  "chat.toolProcessErrorCount": "{count} 个失败",
   // HtmlCard 通过 file_path 渲染时，前端拉取文件内容期间的占位提示
   "chat.loading": "加载中...",
   // 聊天保存成功提示

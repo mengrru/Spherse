@@ -110,7 +110,8 @@ describe("MessageList", () => {
     expect(document.querySelector('[data-entry-seq="1"]')).toBeNull();
   });
 
-  it("renders an orphan tool result bubble instead of dropping it", () => {
+  it("renders an orphan tool result bubble instead of dropping it", async () => {
+    const user = userEvent.setup();
     renderList([
       {
         id: "g1",
@@ -124,6 +125,8 @@ describe("MessageList", () => {
         }],
       },
     ]);
+    expect(screen.getByText("执行过程")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /执行过程/ }));
     expect(screen.getByText("read_file")).toBeInTheDocument();
   });
 

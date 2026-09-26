@@ -84,6 +84,8 @@ export function buildHistoryFixture(sessionId: string): HistoryFixture {
 
   startTurn();
   user("执行一组工具");
+  assistant([toolCall("tc-read", "read_file", { path: "notes.md" })]);
+  toolResult("tc-read", "read_file", undefined);
   assistant([toolCall("tc-command", "run_command", { command: "printf history-ok" })]);
   toolResult("tc-command", "run_command", {
     cardType: "command",
