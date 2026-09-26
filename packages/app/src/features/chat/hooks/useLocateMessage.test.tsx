@@ -127,4 +127,17 @@ describe("useLocateMessage", () => {
     rerender();
     await waitFor(() => expect(onLocated).toHaveBeenCalledTimes(2));
   });
+
+  it("re-locates the same seq after the param was cleared and set again", async () => {
+    seedSession({}, [0, 1, 2]);
+    const { onLocated, container, locateRef, rerender } = setup(1);
+    mountAnchor(1, container);
+    await waitFor(() => expect(onLocated).toHaveBeenCalledTimes(1));
+
+    locateRef.current = null;
+    rerender();
+    locateRef.current = 1;
+    rerender();
+    await waitFor(() => expect(onLocated).toHaveBeenCalledTimes(2));
+  });
 });

@@ -46,7 +46,12 @@ export function ProjectScope() {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "p") {
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === "p"
+      ) {
         event.preventDefault();
         setGlobalSearchOpen(true);
       }

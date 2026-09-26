@@ -47,14 +47,14 @@ describe("GlobalSearchDialog", () => {
 
   it("shows the initial hint before typing", () => {
     renderDialog();
-    expect(screen.getByText("输入关键词,搜索当前项目的聊天记录与文件名")).toBeInTheDocument();
+    expect(screen.getByText("输入关键词，搜索当前项目的聊天记录与文件名")).toBeInTheDocument();
   });
 
   it("renders chat and file groups after the debounced query", async () => {
     const user = userEvent.setup();
     renderDialog();
 
-    await user.type(screen.getByPlaceholderText("搜索聊天与文件..."), "needle");
+    await user.type(screen.getByPlaceholderText("搜索聊天与文件…"), "needle");
     await waitFor(
       () => {
         expect(screen.getByText("聊天")).toBeInTheDocument();
@@ -71,7 +71,7 @@ describe("GlobalSearchDialog", () => {
     const user = userEvent.setup();
     const { router } = renderDialog();
 
-    await user.type(screen.getByPlaceholderText("搜索聊天与文件..."), "needle");
+    await user.type(screen.getByPlaceholderText("搜索聊天与文件…"), "needle");
     await waitFor(() => expect(screen.getByText("needle session")).toBeInTheDocument(), {
       timeout: 2000,
     });
@@ -90,7 +90,7 @@ describe("GlobalSearchDialog", () => {
     const user = userEvent.setup();
     const { router } = renderDialog();
 
-    await user.type(screen.getByPlaceholderText("搜索聊天与文件..."), "main.ts");
+    await user.type(screen.getByPlaceholderText("搜索聊天与文件…"), "main.ts");
     await waitFor(() => expect(screen.getByText("src/main.ts")).toBeInTheDocument(), {
       timeout: 2000,
     });

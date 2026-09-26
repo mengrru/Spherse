@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogTitle } from "../../components/ui/dialog";
 import { Input } from "../../components/ui/input";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
+import { sessionFallbackTitle } from "../../lib/session-title";
 import { useProjectFileTree } from "../../queries/content";
-import { useProjectAgents, useSessionSearch } from "../../queries/project";
+import { useSessionSearch } from "../../queries/project";
 import { useAppUiStore } from "../../stores/app-ui-store";
 import { formatMessageTime } from "../chat/lib/format-time";
 
@@ -45,7 +46,6 @@ export function GlobalSearchDialog() {
 
   const chatQuery = useSessionSearch(projectId, client, query);
   const fileTreeQuery = useProjectFileTree(projectId, client);
-  const { agents } = useProjectAgents(projectId, client);
 
   const chatHits = useMemo<SessionSearchHit[]>(
     () => (query ? chatQuery.data?.results.slice(0, CHAT_RESULTS_LIMIT) ?? [] : []),
@@ -60,8 +60,10 @@ export function GlobalSearchDialog() {
 
   const chatLoading = Boolean(query) && chatQuery.isPending;
   const hasResults = chatHits.length > 0 || fileHits.length > 0;
-  const showSearching = Boolean(query) && chatLoading && !hasResults;
-  const showNoResults = Boolean(query) && !chatLoading && !hasResults;
+  const stillLoading = chatLoading || (Boolean(query) && fileTreeQuery.isPending);
+  const showSearchFailed = Boolean(query) && chatQuery.isError && !hasResults;
+  const showSearching = Boolean(query) && stillLoading && !hasResults;
+  const showNoResults = Boolean(query) && !stillLoading && !chatQuery.isError && !hasResults;
 
   const openChatHit = (hit: SessionSearchHit) => {
     setOpen(false);
@@ -98,6 +100,7 @@ export function GlobalSearchDialog() {
     }
     if (event.key === "Enter") {
       event.preventDefault();
+      if (event.nativeEvent.isComposing) return;
       if (activeIndex < chatHits.length) {
         openChatHit(chatHits[activeIndex]);
       } else {
@@ -106,12 +109,6 @@ export function GlobalSearchDialog() {
       }
     }
   };
-
-  const agentNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const agent of agents) map.set(agent.id, agent.name);
-    return map;
-  }, [agents]);
 
   const renderItemClass = (active: boolean) =>
     cn(
@@ -150,6 +147,11 @@ export function GlobalSearchDialog() {
               {t("global-search.searching")}
             </div>
           )}
+          {showSearchFailed && (
+            <div className="px-2 py-6 text-center text-xs text-muted-foreground">
+              {t("global-search.searchFailed")}
+            </div>
+          )}
           {showNoResults && (
             <div className="px-2 py-6 text-center text-xs text-muted-foreground">
               {t("global-search.noResults")}
@@ -172,14 +174,14 @@ export function GlobalSearchDialog() {
                   <MessageSquareIcon className="size-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs font-medium">
-                      {hit.sessionTitle ?? formatMessageTime(hit.time)}
+                      {hit.sessionTitle ?? sessionFallbackTitle({ updatedAt: hit.time })}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
                       {hit.snippet}
                     </span>
                   </span>
                   <span className="shrink-0 text-[11px] text-muted-foreground">
-                    {agentNameById.get(hit.agentId) ?? ""}
+                    {formatMessageTime(hit.time)}
                   </span>
                 </button>
               ))}

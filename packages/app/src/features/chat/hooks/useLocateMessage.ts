@@ -37,6 +37,10 @@ export function useLocateMessage({
   const entries = session?.entries ?? NO_ENTRIES;
   const history = session?.history;
 
+  useEffect(() => {
+    if (locateSeq === null) handledSeqRef.current = null;
+  }, [locateSeq]);
+
   const targetLoaded =
     locateSeq !== null && entries.some((entry) => entry.seq === locateSeq);
 

@@ -445,6 +445,7 @@ export const en: Record<TranslationKey, string> = {
   "global-search.initialHint": "Enter keywords to search chats and file names in this project",
   "global-search.searching": "Searching...",
   "global-search.noResults": "No results",
+  "global-search.searchFailed": "Search failed, please try again",
   "global-search.chatResults": "Chats",
   "global-search.fileResults": "Files",
   "skill-panel.create": "Create skill",

@@ -271,7 +271,7 @@ export class ProjectManager {
       }
     }
     hits.sort((a, b) => b.time - a.time || b.seq - a.seq);
-    return hits.slice(0, Math.max(1, limit));
+    return hits.slice(0, limit);
   }
 
   async listSkills(): Promise<SkillDefinition[]> {

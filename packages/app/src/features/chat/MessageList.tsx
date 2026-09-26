@@ -90,7 +90,7 @@ export function MessageList({
   const renderBubble = (group: MessageGroup, bubble: Bubble, index: number) => {
     const showTime = index === group.bubbles.length - 1;
     const isRetryTarget = bubble.id === lastBubble?.id;
-    const entrySeq = seqFromPersistedEntryId(bubble.entryId);
+    const entrySeq = bubble.seq ?? seqFromPersistedEntryId(bubble.entryId);
     if (bubble.kind === "tool-result") {
       return (
         <AssistantBubble
