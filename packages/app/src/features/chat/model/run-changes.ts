@@ -7,12 +7,15 @@ const FILE_CHANGE_TOOLS = new Set(["write_file", "edit_file"]);
 export function applyRunChanges(group: MessageGroup): void {
   const opsByPath = new Map<string, FileChangeOp[]>();
   const order: string[] = [];
+  const seenToolCallIds = new Set<string>();
   const tools: ToolItem[] = [];
   for (const bubble of group.bubbles) {
     if (bubble.kind === "thought" || bubble.kind === "cards") tools.push(...bubble.tools);
     else if (bubble.kind === "tool-result") tools.push(bubble.tool);
   }
   for (const tool of tools) {
+    if (seenToolCallIds.has(tool.toolCallId)) continue;
+    seenToolCallIds.add(tool.toolCallId);
     if (tool.status !== "completed") continue;
     if (!FILE_CHANGE_TOOLS.has(tool.toolName)) continue;
     const path = tool.args.path;

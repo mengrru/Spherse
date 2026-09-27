@@ -78,7 +78,8 @@ describe("message groups", () => {
       }),
     ]);
     const thought = thoughtBubbleOf(groups[0]);
-    expect(thought.tools).toHaveLength(0);
+    expect(thought.tools).toHaveLength(1);
+    expect(thought.tools[0].status).toBe("running");
     const cards = groups[0].bubbles.find((bubble) => bubble.kind === "cards");
     expect(cards).toMatchObject({ kind: "cards", entryId: "a1" });
     if (!cards || cards.kind !== "cards") return;
@@ -125,6 +126,8 @@ describe("message groups", () => {
       bubble.kind === "cards" ? `cards:${bubble.entryId}` : bubble.kind === "assistant" ? `text:${bubble.entryId}` : bubble.kind,
     );
     expect(kinds).toEqual(["thought", "text:a1", "cards:a1", "text:a3", "cards:a4"]);
+    const thought = thoughtBubbleOf(groups[0]);
+    expect(thought.tools.map((tool) => tool.toolCallId)).toEqual(["tc1", "tc2"]);
   });
 
   it("merges a result without ownerId via in-turn toolCallId fallback", () => {

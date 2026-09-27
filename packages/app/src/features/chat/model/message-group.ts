@@ -163,7 +163,6 @@ function assembleBubbles(group: MessageGroup, entries: ChatEntry[]): Bubble[] {
     if (group) group.push(tool);
     else cardsByEntryIndex.set(ownerIndex, [tool]);
   }
-  const plainTools = tools.filter((tool) => !tool.card);
 
   if (assistantEntries.length > 0) {
     const anchor = assistantEntries[0];
@@ -175,7 +174,7 @@ function assembleBubbles(group: MessageGroup, entries: ChatEntry[]): Bubble[] {
       id: `b:thought:${anchor.id}`,
       entryId: anchor.id,
       ...(anchor.seq !== undefined ? { seq: anchor.seq } : {}),
-      tools: plainTools,
+      tools,
       ...(awaiting ? { awaiting: true } : {}),
       ...(anchor.time !== undefined ? { timestamp: anchor.time } : {}),
     });
