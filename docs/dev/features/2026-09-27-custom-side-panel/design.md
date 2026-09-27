@@ -9,7 +9,7 @@
 
 - 项目设置新增「侧边面板」dialog：配置项目内 HTML 相对路径，可清除
 - 激活时 iframe 宽高占满 ProjectPanel；背景透明（不加 `bg-*`，透出 app 主题背景 `--sp-background`；页面自身 html/body 若设背景则以页面为准）
-- 切换入口：项目头像右键菜单（设置项 + 显示/隐藏切换项）
+- 切换入口：项目头像右键菜单（设置项 + 显示默认/自定义切换项）
 - 侧边面板内的页面自动获得注入的 `window.spherse`（UI SDK，无会话上下文，与欢迎页一致）
 
 ## 已确认的产品决策
@@ -32,10 +32,10 @@
 | 渲染切换 | `ProjectPanel` 顶部读 store 激活态 + query 解析结果：`active && resolvedPath` → 渲染 `<CustomSidePanel key={projectId} path={path} />` **替换**默认三段内容；否则渲染既有默认内容（AgentSessionList + UserFilePanel + SkillPanel）。path 被清除/不可达时自动回落默认内容，激活态保留（休眠，重新配置后自动恢复显示）。激活时 `aside` 改 `overflow-hidden`（iframe 自管滚动，防双重滚动条）。`key={projectId}`：ProjectPanel 不随项目切换重挂（WelcomePage 的干净切换依赖页面级 key，见 `WelcomePagePage.tsx` 注释），须在组件上补 key 防旧项目的 reloadKey/pathRef/iframe 残留（同 iframe 换 src 是导航而非重挂）。外层 ContextMenu 与 `aside` 骨架不变 |
 | iframe | `src = client.getPreviewUrl(path)`（复用现有构造，含 `__auth` 段；**不带** `?v=` 版本参数——刷新机制是 `key={reloadKey}` 整体重挂，与欢迎页一致）；`sandbox="allow-scripts allow-same-origin"`；`className="h-full w-full border-0"` 不加 `bg-*`（透明）；fs-watch 防抖 300ms 后 `setReloadKey(k=>k+1)` 强制重挂载刷新，比较归一化路径 === 当前 path，逻辑照搬 `WelcomePage` |
 | 角落退出按钮 | 不做（最初方案为 iframe 右上角 hover 浮现退出按钮，应用户要求移除）；退出侧边面板的唯一入口是头像右键菜单切换项 |
-| 右键菜单 | `ActivityBar` 头像右键菜单：① Settings 子菜单追加「侧边面板」→ 打开 `SidePanelSettingsDialog`（第三组 dialog state + 挂载，完全照现有两组模式）；该子菜单整体维持既有 `canEditProject && projectId === activeProjectId` 门控。② 切换项「显示/隐藏侧边面板」与 Settings 子菜单同级、Settings 子菜单**之外**，门控仅 `projectId === activeProjectId`——激活是本地视图状态、不写项目数据，web host（`editable: false`，无设置入口）也能切换（path 可来自桌面配置或手改 project.yaml 后同步）；label 基于有效显示态（`active && resolvedPath`）而非裸激活态，休眠时显示「显示侧边面板」；`disabled = resolvedPath == null`（含 query 加载期，`== null` 同时覆盖 undefined）。ActivityBar 内部 `useCustomSidePanel(activeProjectId, client)` 取解析结果（内部 hooks 不经 props，合规）。注意：iframe 激活时会吞掉 ProjectPanel 区域的右键事件，菜单入口在 ActivityBar 头像上不受影响 |
+| 右键菜单 | `ActivityBar` 头像右键菜单：① Settings 子菜单追加「侧边面板」→ 打开 `SidePanelSettingsDialog`（第三组 dialog state + 挂载，完全照现有两组模式）；该子菜单整体维持既有 `canEditProject && projectId === activeProjectId` 门控。② 切换项「显示默认侧边面板 / 显示自定义侧边面板」与 Settings 子菜单同级、Settings 子菜单**之外**，门控仅 `projectId === activeProjectId`——激活是本地视图状态、不写项目数据，web host（`editable: false`，无设置入口）也能切换（path 可来自桌面配置或手改 project.yaml 后同步）；label 基于有效显示态（`active && resolvedPath`）而非裸激活态——自定义面板正在显示时为「显示默认侧边面板」，否则（含休眠）为「显示自定义侧边面板」；`disabled = resolvedPath == null`（含 query 加载期，`== null` 同时覆盖 undefined）。ActivityBar 内部 `useCustomSidePanel(activeProjectId, client)` 取解析结果（内部 hooks 不经 props，合规）。注意：iframe 激活时会吞掉 ProjectPanel 区域的右键事件，菜单入口在 ActivityBar 头像上不受影响 |
 | QueryBridge | 新建 `CustomSidePanelQueryBridge`（fs-watch `.spherse/project.yaml` 变更 → invalidate custom-side-panel query；重连补偿 → 同上），挂 `ProjectRuntimeBridges`。独立于 `WelcomePageQueryBridge` 不合并——两个订阅者互不冲突，等出现第三个 project.yaml 消费者时再统一收敛 |
 | 加载失败态 | iframe `onError` → 面板内占位文案（`custom-side-panel.loadFailed`）；query `isError` 视同 `path: null` 回落默认内容，同欢迎页处理 |
-| i18n | 新 key（zh-CN / zh-TW / en，实现时加载 i18n skill）：`side-panel-settings.{title,description,pathLabel,pathPlaceholder,saved,saveFailed,loadFailed,invalidPath,clear}`、`activity-bar.settings.sidePanel`、`activity-bar.showCustomSidePanel` / `activity-bar.hideCustomSidePanel`（带 Custom 前缀避免与 `activity-bar.pinSidePanelTooltip` 的「项目面板 = 整个左栏」语义混淆）、`custom-side-panel.{title,loadFailed}` |
+| i18n | 新 key（zh-CN / zh-TW / en，实现时加载 i18n skill）：`side-panel-settings.{title,description,pathLabel,pathPlaceholder,saved,saveFailed,loadFailed,invalidPath,clear}`、`activity-bar.settings.sidePanel`、`activity-bar.showCustomSidePanel` / `activity-bar.showDefaultSidePanel`（带 Custom 前缀避免与 `activity-bar.pinSidePanelTooltip` 的「项目面板 = 整个左栏」语义混淆）、`custom-side-panel.{title,loadFailed}` |
 | Agent 工具 | 本期不给 `manage-project-config` 加 `update_side_panel` action；如需 agent 代配置后续单独补（与 UI 走同一 PM 门面，成本极低） |
 
 ## 契约

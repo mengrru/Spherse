@@ -100,7 +100,7 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
                     onClick={() => toggleCustomSidePanel(projectId)}
                   >
                     {customSidePanelActive && customSidePanelPath != null
-                      ? t("activity-bar.hideCustomSidePanel")
+                      ? t("activity-bar.showDefaultSidePanel")
                       : t("activity-bar.showCustomSidePanel")}
                   </ContextMenuItem>
                 )}

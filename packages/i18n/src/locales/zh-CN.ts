@@ -333,9 +333,9 @@ export const zhCN = {
   // 项目右键菜单 → 设置 → 侧边面板（二级菜单项，打开侧边面板设置弹窗）
   "activity-bar.settings.sidePanel": "侧边面板",
   // 项目右键菜单：显示自定义侧边面板（未配置路径时置灰）
-  "activity-bar.showCustomSidePanel": "显示侧边面板",
-  // 项目右键菜单：隐藏自定义侧边面板，恢复默认项目面板
-  "activity-bar.hideCustomSidePanel": "隐藏侧边面板",
+  "activity-bar.showCustomSidePanel": "显示自定义侧边面板",
+  // 项目右键菜单：切回默认项目面板
+  "activity-bar.showDefaultSidePanel": "显示默认侧边面板",
   // 左侧活动栏固定图标悬停提示：点击后将项目面板切换为鼠标移出后自动收起
   "activity-bar.autoCollapseSidePanelTooltip": "自动收起项目面板",
   // 左侧活动栏收起图标悬停提示：点击后将项目面板固定显示
