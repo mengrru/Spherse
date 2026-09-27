@@ -674,6 +674,8 @@ export const zhCN = {
   "agent-memory.menuItem": "记忆",
   // 记忆管理弹窗标题
   "agent-memory.dialogTitle": "记忆",
+  // agent 列表项上的 Brain icon tooltip：该 agent 已开启记忆
+  "agent-memory.indicatorTooltip": "已开启记忆",
   // 加载记忆配置失败的 toast，{message} 为错误信息
   "agent-memory.loadFailed": "加载记忆失败：{message}",
   // 保存成功的 toast（开关与核心记忆一并保存）

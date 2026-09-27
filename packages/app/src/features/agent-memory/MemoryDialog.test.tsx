@@ -13,7 +13,9 @@ const entries: AgentMemoryEntry[] = [
 ];
 
 const client = {
-  listAgents: vi.fn(async () => [{ id: "a1", name: "Mem Agent", slug: "mem-agent" }]),
+  listAgents: vi.fn(async () => [
+    { id: "a1", name: "Mem Agent", slug: "mem-agent", memoryEnabled: false },
+  ]),
   getAgentMemory: vi.fn(async () => ({ enabled: false, core: "", coreLimit: 4000 })),
   updateAgentMemory: vi.fn(async () => ({ enabled: true, core: "core", coreLimit: 4000 })),
   listAgentMemoryEntries: vi.fn(async () => entries),

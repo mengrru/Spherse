@@ -23,6 +23,7 @@ const FULL_PROFILE = {
   quickLinks: ["notes/world.md"],
   output: { path: "out", naming: "flat", frontmatter: { tag: "x" } },
   timePerception: { enabled: false, epochMs: 0, startMs: 0, flowRate: 1 },
+  memory: { enabled: true },
   yolo: true,
   systemPrompt: "# long system prompt\n".repeat(500),
   filePath: "/tmp/p/.spherse/agents/demo/agent.md",
@@ -60,6 +61,7 @@ describe("GET /api/projects/:projectId/agents route", () => {
         alias: "D",
         slug: "demo",
         createdAt: 1234567890,
+        memoryEnabled: true,
       },
     ]);
   });

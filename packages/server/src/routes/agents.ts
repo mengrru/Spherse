@@ -9,12 +9,13 @@ export function registerAgentRoutes(fastify: FastifyInstance, _registry: Project
     async handler(req) {
       const agents = await req.projectCtx!.projectManager.listAgents();
       // 列表只下发摘要；完整配置由单条端点 / raw 内容按需加载
-      return agents.map(({ id, name, alias, slug, createdAt }) => ({
+      return agents.map(({ id, name, alias, slug, createdAt, memory }) => ({
         id,
         name,
         ...(alias !== undefined ? { alias } : {}),
         slug,
         ...(createdAt !== undefined ? { createdAt } : {}),
+        memoryEnabled: memory?.enabled === true,
       }));
     },
   });

@@ -330,6 +330,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "agent-mcp.fieldHeadersPlaceholder": "每行一個，格式 Authorization: Bearer xxx",
   "agent-memory.menuItem": "記憶",
   "agent-memory.dialogTitle": "記憶",
+  "agent-memory.indicatorTooltip": "已開啟記憶",
   "agent-memory.loadFailed": "載入記憶失敗：{message}",
   "agent-memory.saved": "記憶已儲存",
   "agent-memory.saveFailed": "儲存記憶失敗：{message}",

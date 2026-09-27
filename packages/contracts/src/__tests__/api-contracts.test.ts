@@ -135,7 +135,7 @@ describe("api contracts", () => {
     expect(() => parseApiResponse(schemas.agentProfile, { ...profile, quickLinks: ["a", 1] })).toThrow(/Invalid payload/);
     expect(() => parseApiResponse(schemas.agentProfile, { id: "a1" })).toThrow(/Invalid payload/);
 
-    const summary = { id: "a1", name: "Agent", slug: "agent", createdAt: 1 };
+    const summary = { id: "a1", name: "Agent", slug: "agent", createdAt: 1, memoryEnabled: false };
     expect(parseApiResponse(schemas.agentListResponse, [summary])).toEqual([summary]);
     expect(() =>
       parseApiResponse(schemas.agentListResponse, [{ ...summary, systemPrompt: "p" }]),

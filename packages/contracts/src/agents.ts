@@ -85,6 +85,7 @@ const agentSummary = Type.Object(
     alias: Type.Optional(Type.String()),
     slug: Type.String(),
     createdAt: Type.Optional(Type.Number()),
+    memoryEnabled: Type.Boolean(),
   },
   { additionalProperties: false },
 );

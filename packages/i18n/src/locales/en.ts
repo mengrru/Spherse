@@ -330,6 +330,7 @@ export const en: Record<TranslationKey, string> = {
   "agent-mcp.fieldHeadersPlaceholder": "One per line, format Authorization: Bearer xxx",
   "agent-memory.menuItem": "Memory",
   "agent-memory.dialogTitle": "Memory",
+  "agent-memory.indicatorTooltip": "Memory enabled",
   "agent-memory.loadFailed": "Failed to load memory: {message}",
   "agent-memory.saved": "Memory saved",
   "agent-memory.saveFailed": "Failed to save memory: {message}",
