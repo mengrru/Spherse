@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <clipPath id="iconClip">
+      <rect width="512" height="512"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#iconClip)">
+    <rect width="512" height="512" fill="#FFFFFF"/>
+
+    <circle cx="256" cy="256" r="120" fill="none" stroke="#303030" stroke-width="22" opacity="0.78"/>
+
+    <circle cx="420" cy="125" r="32" fill="#303030" opacity="0.55"/>
+    <circle cx="400" cy="395" r="20" fill="#303030" opacity="0.55"/>
+    <circle cx="256" cy="460" r="18" fill="#303030" opacity="0.55"/>
+    <circle cx="90"  cy="365" r="26" fill="#303030" opacity="0.55"/>
+    <circle cx="112" cy="100" r="18" fill="#303030" opacity="0.55"/>
+    <circle cx="325" cy="58"  r="16" fill="#303030" opacity="0.55"/>
+  </g>
+</svg>
