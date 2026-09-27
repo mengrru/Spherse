@@ -36,13 +36,14 @@ export const useCustomSidePanelStore = create<CustomSidePanelStore>((set, get) =
   activeByProject: readActiveMap(),
 
   isActive(projectId) {
-    return get().activeByProject[projectId] === true;
+    const stored = get().activeByProject[projectId];
+    return stored === undefined ? true : stored;
   },
 
   setActive(projectId, active) {
     const next = { ...get().activeByProject };
-    if (active) next[projectId] = true;
-    else delete next[projectId];
+    if (active) delete next[projectId];
+    else next[projectId] = false;
     writeActiveMap(next);
     set({ activeByProject: next });
   },

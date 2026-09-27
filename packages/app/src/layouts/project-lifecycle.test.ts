@@ -76,7 +76,7 @@ describe("closeProjectCascade", () => {
   it("clears every per-project surface and returns the next project id", async () => {
     seedClosedProject();
     const bridge = createBridge();
-    useCustomSidePanelStore.getState().setActive("p1", true);
+    useCustomSidePanelStore.getState().setActive("p1", false);
 
     const nextProjectId = await closeProjectCascade(bridge, "p1");
 
@@ -91,7 +91,7 @@ describe("closeProjectCascade", () => {
     expect(useProjectDataStore.getState().projects.p1).toBeUndefined();
     expect(getLastRoute("p1")).toBeNull();
     expect(clearProjectNavHistory).toHaveBeenCalledWith("p1");
-    expect(useCustomSidePanelStore.getState().isActive("p1")).toBe(false);
+    expect(useCustomSidePanelStore.getState().activeByProject.p1).toBeUndefined();
   });
 
   it("leaves local state untouched when the host close fails", async () => {

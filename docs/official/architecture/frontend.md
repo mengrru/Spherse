@@ -61,7 +61,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
 | feature stores | 折叠、浮窗、内容区 tab 列表、分窗、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |
 
-- side panel 偏好在 `side-panel-store`（localStorage `spherse:side-panel:pinned`），不在 app-store；自定义侧边面板激活态在 `custom-side-panel-store`（localStorage `spherse:custom-side-panel:active-by-project`，per-project）
+- side panel 偏好在 `side-panel-store`（localStorage `spherse:side-panel:pinned`），不在 app-store；自定义侧边面板激活态在 `custom-side-panel-store`（localStorage `spherse:custom-side-panel:active-by-project`，per-project，缺省显示、仅存显式关闭）
 - feature store 持久化分布：
   - localStorage：floating-chat（`spherse:floating-chat:<projectId>`）、floating-content-browser、browser、tabs（`spherse:tabs`）与 split-pane（`spherse:content-split`）（后四者均为全局单 key；tabs / split-pane 按 projectId 分组，加载时逐项校验）
   - 纯内存（关项目即清）：agent-session-list 折叠、agent-trigger 运行态

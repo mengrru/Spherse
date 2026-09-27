@@ -16,7 +16,7 @@
 
 1. `path` 仅允许 html / htm（不支持图片）
 2. 切换入口仅头像右键菜单（最初设计含 iframe 角落退出按钮，应用户要求移除，保持 iframe 视图无叠加 UI）
-3. 激活状态（是否正在显示侧边面板）持久化到 localStorage，per-project
+3. 激活状态持久化到 localStorage，per-project：**配置了 path 即默认展示**；localStorage 仅有显式条目时跟随条目值（实际只存显式关闭 `false`，显式开启等于缺省、条目删除，map 保持最小）
 4. 未配置 `path`（或配置了但文件不可达、query 加载中）时，切换菜单项置灰；设置项不置灰（但仍在既有的 Settings 子菜单门控内，见「右键菜单」）
 
 ## 决策
@@ -28,7 +28,7 @@
 | 校验 | `normalizeSidePanelPath`：与 `normalizeWelcomePagePath` 同规则（trim、`\`→`/`、拒绝绝对路径 / `..` / 非 `userFiles` 类别即排除 `.spherse/**` 等），差异仅在扩展名白名单只含 `html` / `htm`；保存时不要求文件存在；server 与 dialog 各自再校验一遍（双层，同欢迎页） |
 | API | contracts 新增 `sidePanelSettingsRequest { path: string \| null }` / `sidePanelSettingsResponse { ok, path }`；server `routes/settings.ts` 新增 `GET/PUT /api/projects/:projectId/settings/side-panel`，handler 直接委托 PM 门面 |
 | query 解析 | `queries/custom-side-panel.ts`：`resolveCustomSidePanel` = settings 查询 → 无 `path` 返回 `{ path: null }`；有则 `fetch(getPreviewUrl(path))` 验证可达，不可达返回 `{ path: null }`。**不做** 欢迎页的根 `index.html` fallback（侧边面板是显式配置项）。`gcTime: Infinity` 同欢迎页；query key `["projects", id, "custom-side-panel"]` |
-| 视图切换状态 | 新 store `stores/custom-side-panel-store.ts`：`activeByProject: Record<string, boolean>` + `isActive(projectId)` / `setActive` / `toggle` / `clearProject`；localStorage key `spherse:custom-side-panel:active-by-project`（JSON map，读写模式仿 `side-panel-store.ts` 手写 read/write）。关闭清理：`closeProjectCascade` 调用 `useCustomSidePanelStore.getState().clearProject(id)`——`project-lifecycle.structure.test.ts` 会自动发现一切定义 `clearProject` 的 store 并强制其进入级联，该机制钉死挂点不遗漏 |
+| 视图切换状态 | 新 store `stores/custom-side-panel-store.ts`：`activeByProject: Record<string, boolean>` + `isActive(projectId)` / `setActive` / `toggle` / `clearProject`；localStorage key `spherse:custom-side-panel:active-by-project`（JSON map，读写模式仿 `side-panel-store.ts` 手写 read/write）。语义：**缺省即显示**——`isActive` 对无条目项目返回 true（ProjectPanel 侧再由 resolvedPath 把关），`setActive(id, false)` 写入显式关闭，`setActive(id, true)` 删除条目回到缺省（不存冗余 true）。关闭清理：`closeProjectCascade` 调用 `useCustomSidePanelStore.getState().clearProject(id)`——`project-lifecycle.structure.test.ts` 会自动发现一切定义 `clearProject` 的 store 并强制其进入级联，该机制钉死挂点不遗漏 |
 | 渲染切换 | `ProjectPanel` 顶部读 store 激活态 + query 解析结果：`active && resolvedPath` → 渲染 `<CustomSidePanel key={projectId} path={path} />` **替换**默认三段内容；否则渲染既有默认内容（AgentSessionList + UserFilePanel + SkillPanel）。path 被清除/不可达时自动回落默认内容，激活态保留（休眠，重新配置后自动恢复显示）。激活时 `aside` 改 `overflow-hidden`（iframe 自管滚动，防双重滚动条）。`key={projectId}`：ProjectPanel 不随项目切换重挂（WelcomePage 的干净切换依赖页面级 key，见 `WelcomePagePage.tsx` 注释），须在组件上补 key 防旧项目的 reloadKey/pathRef/iframe 残留（同 iframe 换 src 是导航而非重挂）。外层 ContextMenu 与 `aside` 骨架不变 |
 | iframe | `src = client.getPreviewUrl(path)`（复用现有构造，含 `__auth` 段；**不带** `?v=` 版本参数——刷新机制是 `key={reloadKey}` 整体重挂，与欢迎页一致）；`sandbox="allow-scripts allow-same-origin"`；`className="h-full w-full border-0"` 不加 `bg-*`（透明）；fs-watch 防抖 300ms 后 `setReloadKey(k=>k+1)` 强制重挂载刷新，比较归一化路径 === 当前 path，逻辑照搬 `WelcomePage` |
 | 角落退出按钮 | 不做（最初方案为 iframe 右上角 hover 浮现退出按钮，应用户要求移除）；退出侧边面板的唯一入口是头像右键菜单切换项 |
@@ -75,7 +75,7 @@ PUT /api/projects/:projectId/settings/side-panel  body { path } → { ok, path }
 - core `__tests__/store/project-config.test.ts`：新增 sidePanel 用例——合法 html/htm 规范化写入、拒绝图片扩展名 / 绝对路径 / `..` / `.spherse/**`、`null` 清除字段、YAML 往返持久化
 - contracts `__tests__/api-contracts.test.ts`：side-panel null path 过 Fastify body coercion 平价用例（仿 welcome-page 既有用例，防 Union([Null, String]) 被 coercion 吞掉）
 - server `__tests__/settings-side-panel.test.ts`（新）：真实 `assembleProject`（临时目录 + silent logger）+ fastify inject，GET 默认 null、PUT 合法路径落盘 project.yaml、PUT 非法路径 4xx、PUT null 清除——不 mock 被测门面（契约红线）
-- app `stores/custom-side-panel-store.test.ts`：默认未激活、toggle、per-project 隔离、localStorage 持久化与初始化读取、`clearProject`
+- app `stores/custom-side-panel-store.test.ts`：缺省显示、显式关闭与回落缺省、toggle、per-project 隔离、localStorage 持久化与初始化读取、`clearProject`
 - app `features/custom-side-panel/CustomSidePanel.test.tsx`：iframe 渲染（src 构造、透明无 bg）、fs-watch 防抖 reload（仿 `WelcomePage.test.tsx`）、path 为 null 时由 ProjectPanel 负责不渲染（组件自身不处理）
 - app `CustomSidePanelQueryBridge.test.tsx`：project.yaml 变更触发 invalidate（仿 `WelcomePageQueryBridge.test.tsx`）
 - app 既有结构测试的联动更新：`ProjectRuntimeBridges.structure.test.ts` 挂载清单追加 `CustomSidePanelQueryBridge`；`project-lifecycle.test.ts` 级联断言补 `useCustomSidePanelStore`（`project-lifecycle.structure.test.ts` 的自动发现机制会强制新增 store 进入级联）
@@ -87,4 +87,4 @@ PUT /api/projects/:projectId/settings/side-panel  body { path } → { ok, path }
 - iframe 激活时 ProjectPanel 整区被页面占据，面板自身的右键菜单（全局搜索）在该状态下实际不可达（iframe 吞事件）；退出仅依赖头像右键菜单切换项（角落按钮方案已移除，右键菜单为唯一切换入口）
 - web host 无设置入口（`content.editable: false`，Settings 子菜单不渲染），仅能切换显示；窄视口（`useIsMobile` 为视口断点，非仅移动设备）抽屉中 iframe 视图同样生效，260px 宽度下体验未专门优化
 - iframe 沙箱允许 `allow-same-origin`（preview 路由同源、SDK 需要），页面 JS 可发起对本地 server 的已认证请求——与欢迎页风险面一致，不新增
-- 激活态按 projectId 记忆在 localStorage（per-device）；项目目录被复制到新 id 后需重新激活；非正常退出（无关闭级联）时已关闭项目的 stale 条目会残留在 map 中（体积极小，无害）
+- 激活态按 projectId 记忆在 localStorage（per-device，缺省显示）；项目目录被复制到新 id 后同样默认显示，仅显式关闭需重设；非正常退出（无关闭级联）时已关闭项目的 stale 条目会残留在 map 中（体积极小，无害）

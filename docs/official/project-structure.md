@@ -241,7 +241,7 @@ spherse/
 │   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗、全局搜索弹窗 open 状态）
 │   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools/tabsEnabled/closeToTray 等持久化设置（与设置文件同步）
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
-│   │       │   ├── custom-side-panel-store.ts # 自定义侧边面板激活态（per-project，localStorage spherse:custom-side-panel:active-by-project）
+│   │       │   ├── custom-side-panel-store.ts # 自定义侧边面板激活态（per-project，缺省显示，localStorage spherse:custom-side-panel:active-by-project 仅存显式关闭）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
 │   │       ├── layouts/
 │   │       │   ├── ProjectScope.tsx      # 项目工作区 layout route（真嵌套路由），挂 ProjectProvider + Outlet 与项目级 hook；注册 Cmd/Ctrl+P 全局搜索快捷键并渲染 GlobalSearchDialog
