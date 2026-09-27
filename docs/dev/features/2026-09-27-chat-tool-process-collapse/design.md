@@ -217,3 +217,35 @@ interface ToolProcessSectionProps {
 | m-4 | minor | superseded 用例缺失 | 已修：补 `defaultCollapsed` iframe 计数断言 |
 | m-5 | minor | 孤儿分支不传 supersededToolCallIds（计算与渲染不对称，pre-existing） | 已修：孤儿分支透传 |
 | 疑点 | — | E2E / 全仓 verify 未跑 | 不成立：提交前已实跑（chat-history-render / ui-sdk-html-card / chat-v2-replay / chat-streaming-resilience / global-search / chat-retry / chat-withdraw 全过；lint / build / typecheck / check:i18n 全过） |
+
+## 迭代 3：卡片按 entry 时序渲染
+
+日期：2026-09-27（用户反馈迭代）
+
+### 背景与产品决策
+
+迭代 2 把卡片渲染在 thought 块内部（块位于 turn 开头），导致 turn 内所有卡片集中堆在「思考块与第一个文本气泡之间」，丢失了卡片与文本的时间顺序（如「先生成图 A → 说一句话 → 再生成图 B」中，A、B 都跑到了那句话之前）。用户反馈：卡片应与气泡按顺序渲染。已确认：**卡片按其所属 assistant entry 的时序位置渲染**，与文本气泡交错。
+
+### 决策
+
+| 决策点 | 结论 |
+|---|---|
+| 数据结构 | 新增 `CardsBubble`：`{ kind: "cards"; id: b:cards:{entryId}; entryId; seq?; tools: ToolItem[] }`——按 entry 分组的卡片工具（通常一个 entry 一个卡片工具，多 toolCall 时同组） |
+| 组装 | `assembleBubbles` 对每个 assistant entry：无 card 的 toolCalls 收集进 thought 块（turn 开头，纯过程折叠）；有 card 的 toolCalls 生成 cards bubble **在该 entry 的位置**。同 entry 内顺序：文本气泡在前、cards bubble 在后（延续旧形态：正文先于产出物）。thought 块只剩 plain tools + awaiting 态；turn 内全是卡片工具时 thought 不渲染（tools 空） |
+| 组件 | `ThoughtBlock` 删除卡片区（保留折叠块 / runChanges / timestamp / 开合状态机，简化回纯过程块）；新增 `ToolCards.tsx` 渲染卡片列表（五类卡片分派迁入，根节点 `data-chat-cards`），props 含 superseded / 审批回调 |
+| 孤儿 tool-result | 数据保持 `{ kind: "tool-result" }` bubble；渲染层拆分：tool 带 card → `ToolCards`（卡片可见），否则 → `ThoughtBlock`（折叠行） |
+| 派生函数 | `bubbleTools` 加 cards 分支（superseded / pendingControls 自动覆盖） |
+| 主题钩子 | 新增 `data-chat-cards`（theming.md / chat theme skill / project-structure.md 同步） |
+| runChanges | 不变：挂 turn 最后一个 assistant 气泡，无文本气泡时挂 thought 块 |
+
+### 测试
+
+- `message-group.test.ts`：卡片工具按 entry 位置生成 cards bubble、与文本气泡交错顺序；plain 工具仍全进 thought；同 entry 文本在前卡片在后；纯卡片轮无 thought DOM（tools 空）
+- `ThoughtBlock.test.tsx`：删除卡片相关用例（迁出）
+- `ToolCards.test.tsx`（新）：卡片渲染 / superseded 折叠 / 审批回调透传
+- `MessageList.test.tsx`：cards 分支渲染与孤儿拆分（带卡孤儿 → 卡片可见；无卡孤儿 → 折叠块）
+- E2E：`ui-sdk-html-card` selector 改 `[data-chat-cards] iframe`；`chat-history-render` 卡片断言位置变化但存在性不变
+
+### 迭代 3 code review 处理
+
+（待 review 后填写）

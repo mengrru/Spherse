@@ -9,6 +9,7 @@ import { AssistantBubble } from "./AssistantBubble";
 import { UserBubble } from "./UserBubble";
 import { TriggerTurnGroup } from "./TriggerTurnGroup";
 import { ThoughtBlock } from "./ThoughtBlock";
+import { ToolCards } from "./ToolCards";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 interface MessageListProps {
@@ -113,23 +114,39 @@ export function MessageList({
           timestamp={bubble.timestamp}
           showTime={showTime}
           runChanges={bubble.runChanges}
-          supersededToolCallIds={supersededToolCallIds}
           onNavigateToPath={onNavigateToPath}
+        />
+      );
+    }
+    if (bubble.kind === "cards") {
+      return (
+        <ToolCards
+          key={bubble.id}
+          tools={bubble.tools}
+          supersededToolCallIds={supersededToolCallIds}
           onRespondApproval={onRespondApproval}
           onRespondQuestion={onRespondQuestion}
         />
       );
     }
     if (bubble.kind === "tool-result") {
+      if (bubble.tool.card) {
+        return (
+          <ToolCards
+            key={bubble.id}
+            tools={[bubble.tool]}
+            supersededToolCallIds={supersededToolCallIds}
+            onRespondApproval={onRespondApproval}
+            onRespondQuestion={onRespondQuestion}
+          />
+        );
+      }
       return (
         <ThoughtBlock
           key={bubble.id}
           tools={[bubble.tool]}
           showTime={showTime}
-          supersededToolCallIds={supersededToolCallIds}
           onNavigateToPath={onNavigateToPath}
-          onRespondApproval={onRespondApproval}
-          onRespondQuestion={onRespondQuestion}
         />
       );
     }

@@ -37,6 +37,7 @@ export type ThoughtBubble = {
 export type Bubble =
   | AssistantBubble
   | ThoughtBubble
+  | { kind: "cards"; id: string; entryId: EntryId; seq?: number; tools: ToolItem[] }
   | { kind: "tool-result"; id: string; entryId: EntryId; seq?: number; tool: ToolItem }
   | { kind: "error"; id: string; entryId: EntryId; seq?: number; error: EntryError; timestamp?: number };
 
@@ -123,60 +124,93 @@ function assembleBubbles(group: MessageGroup, entries: ChatEntry[]): Bubble[] {
 
   const bubbles: Bubble[] = [];
 
-  let thought: ThoughtBubble | undefined;
-  if (assistantEntries.length > 0) {
-    const anchor = assistantEntries[0];
-    const tools: ToolItem[] = assistantEntries.flatMap((entry) =>
-      entry.toolCalls.map((toolCall) => ({
+  const ownerIndexByToolCallId = new Map<string, number>();
+  const tools: ToolItem[] = [];
+  assistantEntries.forEach((entry, entryIndex) => {
+    for (const toolCall of entry.toolCalls) {
+      ownerIndexByToolCallId.set(toolCall.toolCallId, entryIndex);
+      tools.push({
         toolCallId: toolCall.toolCallId,
         toolName: toolCall.toolName,
         args: toolCall.args,
         status: entry.seq !== undefined ? ("completed" as const) : ("running" as const),
-      })),
-    );
+      });
+    }
+  });
+
+  const assistantEntryIds = new Set(assistantEntries.map((entry) => entry.id));
+  const orphanResults: ToolResultEntry[] = [];
+  for (const result of toolResults) {
+    const owned =
+      (result.ownerId !== undefined && assistantEntryIds.has(result.ownerId)) ||
+      ownerIndexByToolCallId.has(result.toolCallId);
+    if (!owned) {
+      orphanResults.push(result);
+      continue;
+    }
+    if (!ownerIndexByToolCallId.has(result.toolCallId)) {
+      const ownerIndex = assistantEntries.findIndex((entry) => entry.id === result.ownerId);
+      ownerIndexByToolCallId.set(result.toolCallId, ownerIndex >= 0 ? ownerIndex : 0);
+    }
+    mergeToolResult(tools, result);
+  }
+
+  const cardsByEntryIndex = new Map<number, ToolItem[]>();
+  for (const tool of tools) {
+    if (!tool.card) continue;
+    const ownerIndex = ownerIndexByToolCallId.get(tool.toolCallId) ?? 0;
+    const group = cardsByEntryIndex.get(ownerIndex);
+    if (group) group.push(tool);
+    else cardsByEntryIndex.set(ownerIndex, [tool]);
+  }
+  const plainTools = tools.filter((tool) => !tool.card);
+
+  if (assistantEntries.length > 0) {
+    const anchor = assistantEntries[0];
     const awaiting = assistantEntries.some(
       (entry) => entry.streaming === true && entry.text === "" && entry.toolCalls.length === 0,
     );
-    thought = {
+    bubbles.push({
       kind: "thought",
       id: `b:thought:${anchor.id}`,
       entryId: anchor.id,
       ...(anchor.seq !== undefined ? { seq: anchor.seq } : {}),
-      tools,
+      tools: plainTools,
       ...(awaiting ? { awaiting: true } : {}),
       ...(anchor.time !== undefined ? { timestamp: anchor.time } : {}),
-    };
-    bubbles.push(thought);
-  }
-
-  for (const entry of assistantEntries) {
-    const interrupted = entry.id === interruptedEntryId;
-    const error = entry.error ?? (interrupted ? interruptedError : undefined);
-    if (entry.text === "" && error === undefined) continue;
-    if (error !== undefined) group.hasError = true;
-    const streaming = entry.streaming === true && !interrupted;
-    bubbles.push({
-      kind: "assistant",
-      id: `b:${entry.id}`,
-      entryId: entry.id,
-      ...(entry.seq !== undefined ? { seq: entry.seq } : {}),
-      text: entry.text,
-      ...(streaming ? { streaming: true } : {}),
-      ...(error !== undefined ? { error } : {}),
-      ...(entry.time !== undefined ? { timestamp: entry.time } : {}),
     });
   }
 
-  const assistantEntryIds = new Set(assistantEntries.map((entry) => entry.id));
-  for (const result of toolResults) {
-    const owned =
-      thought !== undefined &&
-      ((result.ownerId !== undefined && assistantEntryIds.has(result.ownerId)) ||
-        thought.tools.some((tool) => tool.toolCallId === result.toolCallId));
-    if (thought && owned) {
-      mergeToolResult(thought.tools, result);
-      continue;
+  assistantEntries.forEach((entry, entryIndex) => {
+    const interrupted = entry.id === interruptedEntryId;
+    const error = entry.error ?? (interrupted ? interruptedError : undefined);
+    if (entry.text !== "" || error !== undefined) {
+      if (error !== undefined) group.hasError = true;
+      const streaming = entry.streaming === true && !interrupted;
+      bubbles.push({
+        kind: "assistant",
+        id: `b:${entry.id}`,
+        entryId: entry.id,
+        ...(entry.seq !== undefined ? { seq: entry.seq } : {}),
+        text: entry.text,
+        ...(streaming ? { streaming: true } : {}),
+        ...(error !== undefined ? { error } : {}),
+        ...(entry.time !== undefined ? { timestamp: entry.time } : {}),
+      });
     }
+    const entryCards = cardsByEntryIndex.get(entryIndex);
+    if (entryCards && entryCards.length > 0) {
+      bubbles.push({
+        kind: "cards",
+        id: `b:cards:${entry.id}`,
+        entryId: entry.id,
+        ...(entry.seq !== undefined ? { seq: entry.seq } : {}),
+        tools: entryCards,
+      });
+    }
+  });
+
+  for (const result of orphanResults) {
     bubbles.push({
       kind: "tool-result",
       id: `b:${result.id}`,

@@ -78,8 +78,52 @@ describe("message groups", () => {
       }),
     ]);
     const thought = thoughtBubbleOf(groups[0]);
-    expect(thought.tools[0].status).toBe("running");
-    expect(thought.tools[0].card).toMatchObject({ type: "command", status: "running" });
+    expect(thought.tools).toHaveLength(0);
+    const cards = groups[0].bubbles.find((bubble) => bubble.kind === "cards");
+    expect(cards).toMatchObject({ kind: "cards", entryId: "a1" });
+    if (!cards || cards.kind !== "cards") return;
+    expect(cards.tools[0].status).toBe("running");
+    expect(cards.tools[0].card).toMatchObject({ type: "command", status: "running" });
+  });
+
+  it("interleaves cards with text bubbles by their owning entry order", () => {
+    const groups = assembleGroups([
+      user(),
+      assistant({
+        id: "a1",
+        toolCalls: [{ toolCallId: "tc1", toolName: "generate_image", args: { prompt: "猫" } }],
+      }),
+      toolResult({
+        id: "e2",
+        seq: 2,
+        ownerId: "a1",
+        toolCallId: "tc1",
+        toolName: "generate_image",
+        result: "ok",
+        isError: false,
+        details: { cardType: "image", status: "done", path: "cat.png", prompt: "猫", mimeType: "image/png" },
+      }),
+      assistant({ id: "a3", seq: 3, text: "再看这张" }),
+      assistant({
+        id: "a4",
+        seq: 4,
+        toolCalls: [{ toolCallId: "tc2", toolName: "generate_image", args: { prompt: "狗" } }],
+      }),
+      toolResult({
+        id: "e5",
+        seq: 5,
+        ownerId: "a4",
+        toolCallId: "tc2",
+        toolName: "generate_image",
+        result: "ok",
+        isError: false,
+        details: { cardType: "image", status: "done", path: "dog.png", prompt: "狗", mimeType: "image/png" },
+      }),
+    ]);
+    const kinds = groups[0].bubbles.map((bubble) =>
+      bubble.kind === "cards" ? `cards:${bubble.entryId}` : bubble.kind === "assistant" ? `text:${bubble.entryId}` : bubble.kind,
+    );
+    expect(kinds).toEqual(["thought", "cards:a1", "text:a3", "cards:a4"]);
   });
 
   it("merges a result without ownerId via in-turn toolCallId fallback", () => {

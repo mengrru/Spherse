@@ -8,11 +8,6 @@ import type { FileChangeCard } from "./types";
 import type { ToolItem } from "./model/tool-item";
 import { ToolItemView } from "./ToolItemView";
 import { FileViewerCard } from "./FileViewerCard";
-import { HtmlCardRenderer } from "./HtmlCard";
-import { ImageCardRenderer } from "./ImageCard";
-import { CommandCardRenderer } from "./CommandCard";
-import { ApprovalCardRenderer } from "./ApprovalCard";
-import { QuestionCardRenderer } from "./QuestionCard";
 import { formatMessageTime } from "./lib/format-time";
 
 const AUTO_EXPAND_DELAY_MS = 250;
@@ -24,10 +19,7 @@ interface ThoughtBlockProps {
   timestamp?: number;
   showTime?: boolean;
   runChanges?: FileChangeCard[];
-  supersededToolCallIds?: Set<string>;
   onNavigateToPath?: (path: string) => void;
-  onRespondApproval?: (requestId: string, approved: boolean) => void;
-  onRespondQuestion?: (requestId: string, answer: string) => boolean | void;
 }
 
 export function ThoughtBlock({
@@ -37,10 +29,7 @@ export function ThoughtBlock({
   timestamp,
   showTime,
   runChanges,
-  supersededToolCallIds,
   onNavigateToPath,
-  onRespondApproval,
-  onRespondQuestion,
 }: ThoughtBlockProps) {
   const { t } = useI18n();
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
@@ -64,7 +53,6 @@ export function ThoughtBlock({
   const errorCount = tools.filter((tool) => tool.status === "error").length;
   const open = userOpen ?? delayedOpen;
   const busy = active || awaiting;
-  const cards = tools.filter((tool) => tool.card);
 
   return (
     <div className="flex w-full min-w-0 flex-col gap-1" data-chat-thought>
@@ -110,31 +98,6 @@ export function ThoughtBlock({
           </time>
         )}
       </div>
-      {cards.map((tool) => {
-        const card = tool.card!;
-        if (card.type === "html") {
-          return (
-            <HtmlCardRenderer
-              key={tool.toolCallId}
-              card={card}
-              defaultCollapsed={supersededToolCallIds?.has(tool.toolCallId) ?? false}
-            />
-          );
-        }
-        if (card.type === "command") {
-          return <CommandCardRenderer key={tool.toolCallId} card={card} onRespondApproval={onRespondApproval} />;
-        }
-        if (card.type === "approval") {
-          return <ApprovalCardRenderer key={tool.toolCallId} card={card} onRespondApproval={onRespondApproval} />;
-        }
-        if (card.type === "image") {
-          return <ImageCardRenderer key={tool.toolCallId} card={card} />;
-        }
-        if (card.type === "question") {
-          return <QuestionCardRenderer key={tool.toolCallId} card={card} onRespondQuestion={onRespondQuestion} />;
-        }
-        return null;
-      })}
       {runChanges && runChanges.length > 0 && (
         <div className="mt-1">
           {runChanges.map((change) => (

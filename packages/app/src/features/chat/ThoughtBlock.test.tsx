@@ -142,42 +142,6 @@ describe("ThoughtBlock", () => {
     expect(screen.queryByText("read_file")).not.toBeInTheDocument();
   });
 
-  it("renders card tools below the summary while plain tools stay folded", () => {
-    renderBlock({
-      tools: [
-        tool(),
-        tool({
-          toolCallId: "tc-img",
-          toolName: "generate_image",
-          args: { prompt: "一只猫" },
-          card: { type: "image", status: "done", path: "uploads/cat.png", prompt: "一只猫", mimeType: "image/png" },
-        }),
-      ],
-      active: false,
-    });
-    expect(screen.getByAltText("一只猫")).toBeInTheDocument();
-    expect(screen.queryByText("generate_image")).not.toBeInTheDocument();
-  });
-
-  it("collapses superseded html cards by their tool call id", () => {
-    renderBlock({
-      tools: [
-        tool({
-          toolCallId: "tc-old",
-          card: { type: "html", html: "<p>old</p>" },
-        }),
-        tool({
-          toolCallId: "tc-new",
-          card: { type: "html", html: "<p>new</p>" },
-        }),
-      ],
-      active: false,
-      supersededToolCallIds: new Set(["tc-old"]),
-    });
-    const frames = document.querySelectorAll("iframe");
-    expect(frames).toHaveLength(1);
-  });
-
   it("renders run change cards", () => {
     renderBlock({
       tools: [tool()],
