@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
-import { normalizeSidePanelPath } from "@spherse/core";
+import { normalizeSidePanelPath } from "../../../lib/project-page-paths";
 import type { ApiClient } from "../../../lib/api";
 import { Button } from "../../../components/ui/button";
 import {

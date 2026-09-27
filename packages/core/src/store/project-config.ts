@@ -25,13 +25,8 @@ function normalizeProjectPagePath(input: string, extensions: ReadonlySet<string>
   return normalized;
 }
 
-export function normalizeWelcomePagePath(input: string): string | null {
-  return normalizeProjectPagePath(input, WELCOME_PAGE_EXTENSIONS);
-}
-
-export function normalizeSidePanelPath(input: string): string | null {
-  return normalizeProjectPagePath(input, SIDE_PANEL_EXTENSIONS);
-}
+const normalizeWelcomePagePath = (input: string) => normalizeProjectPagePath(input, WELCOME_PAGE_EXTENSIONS);
+const normalizeSidePanelPath = (input: string) => normalizeProjectPagePath(input, SIDE_PANEL_EXTENSIONS);
 
 export class ProjectConfigStore {
   private configPath: string;
