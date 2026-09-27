@@ -10,7 +10,7 @@ import {
 } from "../../components/ui/collapsible";
 import { TreeRow } from "../../components/ui/tree-row";
 import { useProjectDirectory } from "../../queries/content";
-import { buildTreeItems, type TreeItem } from "./tree-model";
+import { buildTreeItems, parentDirPath, type TreeItem } from "./tree-model";
 import { hasFileDrag, extractDroppedFiles } from "./dnd";
 import { FileTreeContextMenu } from "./FileTreeContextMenu";
 import { InlineNameInput } from "./InlineNameInput";
@@ -34,12 +34,46 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
     onSplitFile,
     splitFilePath,
     readOnly,
+    dropFiles,
   } = useFileTreeCtx();
 
   const isSelected = item.path === selectedFilePath;
+  const [dropActive, setDropActive] = useState(false);
+
+  const dragHandlers = dropFiles
+    ? {
+        onDragOver: (e: DragEvent) => {
+          if (!hasFileDrag(e.dataTransfer)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "copy";
+          setDropActive(true);
+        },
+        onDragLeave: (e: DragEvent) => {
+          if (!hasFileDrag(e.dataTransfer)) return;
+          e.stopPropagation();
+          const related = e.relatedTarget;
+          if (related instanceof Node && e.currentTarget.contains(related)) return;
+          setDropActive(false);
+        },
+        onDrop: (e: DragEvent) => {
+          if (!hasFileDrag(e.dataTransfer)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          setDropActive(false);
+          dropFiles(parentDirPath(item.path), extractDroppedFiles(e.dataTransfer));
+        },
+      }
+    : {};
 
   const row = (
-    <TreeRow depth={depth} selected={isSelected} onClick={() => selectFile(item.path)}>
+    <TreeRow
+      depth={depth}
+      selected={isSelected}
+      className={dropActive ? "bg-sidebar-accent ring-1 ring-sidebar-ring" : undefined}
+      onClick={() => selectFile(item.path)}
+      {...dragHandlers}
+    >
       <FileIcon className="size-4 shrink-0 text-sidebar-foreground/70" />
       <span className="overflow-hidden text-ellipsis whitespace-nowrap">
         {item.name}

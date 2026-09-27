@@ -860,6 +860,7 @@ export const zhCN = {
   // 删除失败提示，{message} 为错误信息
   "file-tree.deleteFailed": "删除失败：{message}",
   "file-tree.uploadFailed": "上传失败：{message}",
+  "file-tree.uploadNoFiles": "仅支持拖入文件，文件夹将被忽略",
   "file-tree.uploadedCount": "已上传 {count} 个文件",
   "file-tree.uploadedRenamed": "同名文件已自动重命名：{names}",
   // 文件树右键菜单：复制路径

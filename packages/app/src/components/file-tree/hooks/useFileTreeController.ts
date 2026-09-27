@@ -132,7 +132,10 @@ export function useFileTreeController(
 
   const uploadFiles = useCallback(
     async (dirPath: string, files: File[]) => {
-      if (files.length === 0) return;
+      if (files.length === 0) {
+        toast.info(t("file-tree.uploadNoFiles"));
+        return;
+      }
       const uploadedPaths: string[] = [];
       const renamedPaths: string[] = [];
       for (const file of files) {
@@ -147,7 +150,9 @@ export function useFileTreeController(
       if (uploadedPaths.length === 0) return;
       toast.success(t("file-tree.uploadedCount", { count: uploadedPaths.length }));
       if (renamedPaths.length > 0) {
-        toast.info(t("file-tree.uploadedRenamed", { names: renamedPaths.join(", ") }));
+        const visible = renamedPaths.slice(0, 5).join(", ");
+        const suffix = renamedPaths.length > 5 ? "…" : "";
+        toast.info(t("file-tree.uploadedRenamed", { names: `${visible}${suffix}` }));
       }
       expandDir(dirPath);
       await Promise.all(

@@ -19,7 +19,7 @@ function makeFile(name: string): File {
 }
 
 function setup() {
-  const uploadFile = vi.fn<[string, File], Promise<{ path: string; bytes: number; renamed: boolean }>>();
+  const uploadFile = vi.fn<(dir: string, file: File) => Promise<{ path: string; bytes: number; renamed: boolean }>>();
   const client = { uploadFile } as unknown as ApiClient;
   const utils = renderHook(() => useFileTreeController(client, undefined, "p1"), {
     wrapper: ({ children }) => <I18nProvider locale="zh-CN">{children}</I18nProvider>,
@@ -81,12 +81,13 @@ describe("useFileTreeController uploadFiles", () => {
     await waitFor(() => expect(result.current.expandedPaths.has("docs")).toBe(true));
   });
 
-  it("does nothing for an empty file list", async () => {
+  it("shows a hint and does nothing else for an empty file list", async () => {
     const { result, uploadFile } = setup();
     await act(async () => {
       await result.current.uploadFiles("docs", []);
     });
     expect(uploadFile).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.info).toHaveBeenCalledWith("仅支持拖入文件，文件夹将被忽略");
   });
 });

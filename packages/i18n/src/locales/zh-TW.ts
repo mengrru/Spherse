@@ -422,6 +422,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "file-tree.createFailed": "建立失敗：{message}",
   "file-tree.deleteFailed": "刪除失敗：{message}",
   "file-tree.uploadFailed": "上傳失敗：{message}",
+  "file-tree.uploadNoFiles": "僅支援拖入檔案，資料夾將被忽略",
   "file-tree.uploadedCount": "已上傳 {count} 個檔案",
   "file-tree.uploadedRenamed": "同名檔案已自動重新命名：{names}",
   "file-tree.copyPath": "複製路徑",

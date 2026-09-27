@@ -194,4 +194,20 @@ describe("upload routes (real ProjectManager)", () => {
     expect(res.statusCode).toBe(403);
     expect(fs.existsSync(path.join(tmpDir, ".spherse/x.txt"))).toBe(false);
   });
+
+  it("accepts files larger than the global 5MB multipart limit via per-route limits", async () => {
+    const big = Buffer.alloc(6 * 1024 * 1024, 7);
+    const res = await injectUpload("", "big.bin", big);
+    expect(res.statusCode).toBe(200);
+    expect((res.json() as { bytes: number }).bytes).toBe(big.byteLength);
+    expect(fs.statSync(path.join(tmpDir, "big.bin")).size).toBe(big.byteLength);
+  });
+
+  it("rejects files above the 100MB upload limit", async () => {
+    const tooBig = Buffer.alloc(100 * 1024 * 1024 + 1, 1);
+    const res = await injectUpload("", "too-big.bin", tooBig);
+    expect(res.statusCode).toBe(400);
+    expect(res.json()).toMatchObject({ message: "File too large" });
+    expect(fs.existsSync(path.join(tmpDir, "too-big.bin"))).toBe(false);
+  });
 });

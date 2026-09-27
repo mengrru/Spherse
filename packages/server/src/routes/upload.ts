@@ -81,7 +81,12 @@ export function registerUploadRoutes(
         throw badRequest("File too large");
       }
 
-      const entries = await fs.readdir(dirAbs);
+      let entries: string[];
+      try {
+        entries = await fs.readdir(dirAbs);
+      } catch {
+        throw notFound("Target directory not found");
+      }
       const finalName = dedupeFileName(new Set(entries), safeName);
       const relPath = dirPath ? `${dirPath}/${finalName}` : finalName;
 

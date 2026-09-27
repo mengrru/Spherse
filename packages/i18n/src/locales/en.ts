@@ -422,6 +422,7 @@ export const en: Record<TranslationKey, string> = {
   "file-tree.createFailed": "Create failed: {message}",
   "file-tree.deleteFailed": "Delete failed: {message}",
   "file-tree.uploadFailed": "Upload failed: {message}",
+  "file-tree.uploadNoFiles": "Only files can be dropped; folders are ignored",
   "file-tree.uploadedCount": "Uploaded {count} file(s)",
   "file-tree.uploadedRenamed": "Renamed due to name conflict: {names}",
   "file-tree.copyPath": "Copy Path",
