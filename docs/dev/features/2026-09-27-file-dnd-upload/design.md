@@ -28,7 +28,7 @@ File panel（用户文件树）目前只能通过右键菜单新建文件/文件
 | 去重逻辑 | 纯函数 `dedupeFileName(existing: ReadonlySet<string>, filename: string): string` 定义并导出于 server route 文件（`name.ext` → `name (1).ext`，无扩展名 → `name (1)`）。冲突比较**大小写不敏感**（existing 名小写化建集合）：macOS APFS 默认大小写不敏感，大小写敏感比较会静默覆盖 `Foo.txt`/`foo.txt`；代价是 Linux 上仅大小写不同的两个文件会被多余重命名，可接受（防数据丢失优先），保留拖入名原始大小写。route 内 `fs.readdir` 目标目录一次取现有名集合计算候选名，实际写入走 `pm.writeBinaryFile`（自带 access policy 断言 + 写互斥 + 自动建父目录）。并发上传理论上有 TOCTOU 窗口，本地单用户场景接受（客户端同批顺序上传） |
 | 目标目录校验 | route 先 `fs.stat` 确认目标存在且为目录，不存在 → 404，非目录 → 400（`readdir` 阶段目录被并发删除同样映射 404）；写入被 access policy 拒绝的路径（如 `.spherse` 顶层、`spherseOther` 类别）→ `AccessDeniedError` 映射 403。注：policy 的 `SRV_WRITE` 实际允许 `skills`/`attachments` 等类别写入 `.spherse` 子树，但本功能不在这些位置暴露入口（见下条） |
 | DnD 能力注入 | `FileTree` 新增可选布尔 prop `uploadsEnabled`（实现时由设计初稿的 `onDropFiles` 回调简化而来：回调形态与控制器内部编排重复，布尔开关效果等价且更简单），context 下发 `dropFiles: ctrl.uploadFiles | undefined`；**只有 UserFilePanel 传入**。skill panel 等其他 FileTree 消费方不传 → 完全无拖拽行为（`.spherse/skills` 树不获得上传入口）。`readOnly` 时不挂任何 drag handler（web 端天然不可用）。根空白 drop 的目标目录 = FileTree 的 `basePath`（`rootPath ?? ""`），对 UserFilePanel 即项目根 |
-| 文件行落点 | 拖到**文件行**上 = 上传到该文件所在目录（`parentDirPath`），与直觉一致（文件落在所悬停文件旁边）；行为与文件夹行/空白处统一高亮 |
+| 文件行落点 | 拖到**文件行**上 = 上传到该文件所在目录（`parentDirPath`），与直觉一致（文件落在所悬停文件旁边）；**高亮聚焦其所在文件夹行**（`dropTargetDir = parentDirPath`），文件行自身不高亮——高亮始终指向实际上传目标；根级文件聚焦面板空白区（根目录） |
 | Contract | 新域文件 `packages/contracts/src/upload.ts`：`uploadResponse` schema + `Static` 类型，`index.ts` 聚合导出。multipart body 不绑 Fastify schema（attachments 先例；其响应 schema 现居 client 本地，本功能按 AGENTS.md 契约红线放进 contracts） |
 | API client | `api.ts` 新增 `uploadFile(dirPath: string, file: File)`：FormData append `file`，POST `${apiBase}/upload/${encodeURIComponent(dirPath)}`，`authedFetch` 不手设 Content-Type，响应过 `uploadResponse` parser |
 | 上传编排 | `useFileTreeController` 新增 `uploadFiles(dirPath, files)`：顺序逐个 `client.uploadFile`（避免本地磁盘写竞争），单文件失败 toast 并继续，结束后对每个成功 path `invalidateProjectFileQueries` + `expandDir(dirPath)` 让结果立即可见 |
@@ -64,8 +64,8 @@ POST /api/projects/:projectId/upload/*        (multipart/form-data, field "file"
   - per-route 限流回归：6MB（超全局 5MB）成功；100MB+1 字节 → 400
 - contracts `api-contracts.test.ts`：`uploadResponse` 正/负样本
 - app `useFileTreeController` 测试（新增 hooks 测试基线）：上传成功路径 invalidate 与 expandDir 调用、失败 toast、重命名名单 toast、空列表提示
-- app `dnd.test.ts`：`hasFileDrag` / `extractDroppedFiles`（目录条目过滤、entry API 缺失 fallback）
-- app `drag-highlight.test.tsx`：拖放高亮状态机（根容器激活 → 行接管不残留、行 drop 后全清、拖离面板清除、容器内移动保持、空白 drop 上传根目录）
+- app `dnd.test.ts`：`hasFileDrag` / `extractDroppedFiles`（目录条目过滤、entry API 缺失 fallback）；`dnd.ts` 另导出 `dropTargetHandlers`（行级三事件 handler 工厂，FileRow 与 DirectoryNode 共用）
+- app `drag-highlight.test.tsx`：拖放高亮状态机（根容器激活 → 行接管不残留、行 drop 后全清、拖离面板清除、容器内移动保持、空白 drop 上传根目录、**文件行聚焦所在文件夹而非自身**）
 - 手工验证：桌面端拖单文件/多文件/文件夹（忽略）到文件夹行、文件行与空白处、web 端 readOnly 不响应、skill panel 无拖拽行为
 
 ## 已知限制

@@ -76,6 +76,24 @@ describe("FileTree drag highlight state", () => {
     expect(uploadFile).toHaveBeenCalledWith("docs", fileDragWithFile.files[0]);
   });
 
+  it("focuses the containing folder when hovering a file row, not the file itself", () => {
+    const { rootEl } = setup();
+    const fileRow = screen.getByText("a.md").closest("button") as HTMLElement;
+    const dirRow = screen.getByText("docs").closest("button") as HTMLElement;
+
+    fireEvent.dragOver(fileRow, { dataTransfer: fileDrag });
+    expect(fileRow).not.toHaveClass("ring-sidebar-ring");
+    expect(rootEl).toHaveClass("ring-sidebar-ring");
+
+    fireEvent.dragOver(dirRow, { dataTransfer: fileDrag });
+    expect(dirRow).toHaveClass("ring-sidebar-ring");
+    expect(rootEl).not.toHaveClass("ring-sidebar-ring");
+
+    fireEvent.drop(fileRow, { dataTransfer: fileDragWithFile });
+    expect(uploadFile).toHaveBeenCalledWith("", fileDragWithFile.files[0]);
+    expect(dirRow).not.toHaveClass("ring-sidebar-ring");
+  });
+
   it("clears the root zone when the drag leaves the panel", () => {
     const { rootEl } = setup();
     fireEvent.dragOver(rootEl, { dataTransfer: fileDrag });
