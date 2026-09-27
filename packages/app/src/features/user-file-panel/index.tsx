@@ -87,6 +87,7 @@ export function UserFilePanel() {
               onSplitFile={splitAvailable ? handleSplitFile : undefined}
               splitFilePath={splitAvailable ? splitFilePath : undefined}
               readOnly={!canMutate}
+              uploadsEnabled={canMutate}
             />
           </SidebarGroupContent>
         </SidebarGroup>

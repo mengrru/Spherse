@@ -4,6 +4,7 @@ import * as sessions from "./sessions.js";
 import * as content from "./content.js";
 import * as data from "./data.js";
 import * as fileTree from "./file-tree.js";
+import * as upload from "./upload.js";
 import * as settings from "./settings.js";
 import * as schedules from "./trigger.js";
 import * as skills from "./skills.js";
@@ -21,6 +22,7 @@ export const schemas = {
   ...content.schemas,
   ...data.schemas,
   ...fileTree.schemas,
+  ...upload.schemas,
   ...settings.schemas,
   ...schedules.schemas,
   ...skills.schemas,
@@ -76,6 +78,7 @@ export type {
 export type { DataReadResponseContract } from "./data.js";
 
 export type { FileTreeResponse } from "./file-tree.js";
+export type { UploadResponse } from "./upload.js";
 
 export type {
   ProviderCatalogItemContract,

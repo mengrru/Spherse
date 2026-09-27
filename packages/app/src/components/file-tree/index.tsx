@@ -1,10 +1,13 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import type { DragEvent } from "react";
 import { useI18n } from "@spherse/i18n/react";
+import { cn } from "@/lib/utils";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useProjectDirectory } from "../../queries/content";
 import { useFileTreeController } from "./hooks/useFileTreeController";
 import { buildTreeItems } from "./tree-model";
+import { hasFileDrag, extractDroppedFiles } from "./dnd";
 import { FileTreeItem } from "./FileTreeNode";
 import { FileTreeProvider } from "./file-tree-context";
 import { InlineNameInput } from "./InlineNameInput";
@@ -21,6 +24,7 @@ export interface FileTreeProps {
   rootPath?: string;
   emptyLabel?: string;
   readOnly?: boolean;
+  uploadsEnabled?: boolean;
 }
 
 export function FileTree({
@@ -34,6 +38,7 @@ export function FileTree({
   rootPath,
   emptyLabel,
   readOnly,
+  uploadsEnabled,
 }: FileTreeProps) {
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
@@ -45,6 +50,32 @@ export function FileTree({
     () => (rootQuery.data ? buildTreeItems(rootQuery.data, basePath) : []),
     [rootQuery.data, basePath],
   );
+
+  const dropFiles = uploadsEnabled && !readOnly ? ctrl.uploadFiles : undefined;
+
+  const [rootDropActive, setRootDropActive] = useState(false);
+  const rootDragHandlers = dropFiles
+    ? {
+        onDragOver: (e: DragEvent) => {
+          if (!hasFileDrag(e.dataTransfer)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          setRootDropActive(true);
+        },
+        onDragLeave: (e: DragEvent) => {
+          if (!hasFileDrag(e.dataTransfer)) return;
+          const related = e.relatedTarget;
+          if (related instanceof Node && e.currentTarget.contains(related)) return;
+          setRootDropActive(false);
+        },
+        onDrop: (e: DragEvent) => {
+          if (!hasFileDrag(e.dataTransfer)) return;
+          e.preventDefault();
+          setRootDropActive(false);
+          dropFiles(basePath, extractDroppedFiles(e.dataTransfer));
+        },
+      }
+    : {};
 
   const ctxValue = {
     projectId,
@@ -63,10 +94,17 @@ export function FileTree({
     onSplitFile,
     splitFilePath,
     readOnly,
+    dropFiles,
   };
 
   return (
-    <div className="flex flex-col gap-px text-xs">
+    <div
+      className={cn(
+        "flex flex-col gap-px text-xs",
+        rootDropActive && "rounded-sm bg-sidebar-accent ring-1 ring-sidebar-ring",
+      )}
+      {...rootDragHandlers}
+    >
       {rootQuery.isPending ? (
         <p className="px-2 text-xs text-sidebar-foreground/70">{t("common.loading")}</p>
       ) : items.length === 0 ? (

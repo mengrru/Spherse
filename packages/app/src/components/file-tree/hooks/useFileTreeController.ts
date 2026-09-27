@@ -24,6 +24,7 @@ export interface FileTreeController {
   requestDelete: (item: TreeItem) => void;
   confirmDelete: () => void;
   cancelDelete: () => void;
+  uploadFiles: (dirPath: string, files: File[]) => Promise<void>;
 }
 
 export function useFileTreeController(
@@ -129,6 +130,33 @@ export function useFileTreeController(
 
   const cancelDelete = useCallback(() => setDeleteTarget(null), []);
 
+  const uploadFiles = useCallback(
+    async (dirPath: string, files: File[]) => {
+      if (files.length === 0) return;
+      const uploadedPaths: string[] = [];
+      const renamedPaths: string[] = [];
+      for (const file of files) {
+        try {
+          const res = await client.uploadFile(dirPath, file);
+          uploadedPaths.push(res.path);
+          if (res.renamed) renamedPaths.push(res.path);
+        } catch (err) {
+          toast.error(t("file-tree.uploadFailed", { message: (err as Error).message }));
+        }
+      }
+      if (uploadedPaths.length === 0) return;
+      toast.success(t("file-tree.uploadedCount", { count: uploadedPaths.length }));
+      if (renamedPaths.length > 0) {
+        toast.info(t("file-tree.uploadedRenamed", { names: renamedPaths.join(", ") }));
+      }
+      expandDir(dirPath);
+      await Promise.all(
+        uploadedPaths.map((p) => invalidateProjectFileQueries(projectId, p)),
+      );
+    },
+    [client, projectId, t, expandDir],
+  );
+
   return {
     expandedPaths,
     creating,
@@ -140,5 +168,6 @@ export function useFileTreeController(
     requestDelete,
     confirmDelete,
     cancelDelete,
+    uploadFiles,
   };
 }

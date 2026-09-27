@@ -106,6 +106,16 @@ describe("api contracts", () => {
     expect(() => parseApiResponse(schemas.okResponse, { ok: "true" })).toThrow(/Invalid payload/);
   });
 
+  it("validates upload responses", () => {
+    expect(parseApiResponse(schemas.uploadResponse, { path: "docs/a.txt", bytes: 3, renamed: false })).toEqual({
+      path: "docs/a.txt",
+      bytes: 3,
+      renamed: false,
+    });
+    expect(() => parseApiResponse(schemas.uploadResponse, { path: "docs/a.txt", bytes: 3 })).toThrow(/Invalid payload/);
+    expect(() => parseApiResponse(schemas.uploadResponse, { path: 1, bytes: 3, renamed: false })).toThrow(/Invalid payload/);
+  });
+
   it("validates agent profile, create, and update payloads", () => {
     const profile = {
       id: "a1",

@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import type { DragEvent } from "react";
 import { ChevronRightIcon, FileIcon, FolderIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
+import { cn } from "@/lib/utils";
 import {
   Collapsible,
   CollapsibleContent,
@@ -9,6 +11,7 @@ import {
 import { TreeRow } from "../../components/ui/tree-row";
 import { useProjectDirectory } from "../../queries/content";
 import { buildTreeItems, type TreeItem } from "./tree-model";
+import { hasFileDrag, extractDroppedFiles } from "./dnd";
 import { FileTreeContextMenu } from "./FileTreeContextMenu";
 import { InlineNameInput } from "./InlineNameInput";
 import { useFileTreeCtx } from "./file-tree-context";
@@ -76,6 +79,7 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
     cancelCreate,
     requestDelete,
     readOnly,
+    dropFiles,
   } = useFileTreeCtx();
 
   const expanded = expandedPaths.has(item.path);
@@ -85,9 +89,44 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
     [query.data, item.path],
   );
   const isCreatingInThisDir = creating && creating.parentPath === item.path;
+  const [dropActive, setDropActive] = useState(false);
+
+  const dragHandlers = dropFiles
+    ? {
+        onDragOver: (e: DragEvent) => {
+          if (!hasFileDrag(e.dataTransfer)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "copy";
+          setDropActive(true);
+        },
+        onDragLeave: (e: DragEvent) => {
+          if (!hasFileDrag(e.dataTransfer)) return;
+          e.stopPropagation();
+          const related = e.relatedTarget;
+          if (related instanceof Node && e.currentTarget.contains(related)) return;
+          setDropActive(false);
+        },
+        onDrop: (e: DragEvent) => {
+          if (!hasFileDrag(e.dataTransfer)) return;
+          e.preventDefault();
+          e.stopPropagation();
+          setDropActive(false);
+          dropFiles(item.path, extractDroppedFiles(e.dataTransfer));
+        },
+      }
+    : {};
 
   const trigger = (
-    <CollapsibleTrigger render={<TreeRow depth={depth} className="group" />}>
+    <CollapsibleTrigger
+      render={
+        <TreeRow
+          depth={depth}
+          className={cn("group", dropActive && "bg-sidebar-accent ring-1 ring-sidebar-ring")}
+          {...dragHandlers}
+        />
+      }
+    >
       <ChevronRightIcon className="size-4 shrink-0 text-sidebar-foreground/70 transition-transform group-data-[panel-open]:rotate-90" />
       <FolderIcon className="size-4 shrink-0 text-sidebar-foreground/70" />
       <span className="overflow-hidden text-ellipsis whitespace-nowrap">

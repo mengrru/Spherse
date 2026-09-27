@@ -859,6 +859,9 @@ export const zhCN = {
   "file-tree.createFailed": "创建失败：{message}",
   // 删除失败提示，{message} 为错误信息
   "file-tree.deleteFailed": "删除失败：{message}",
+  "file-tree.uploadFailed": "上传失败：{message}",
+  "file-tree.uploadedCount": "已上传 {count} 个文件",
+  "file-tree.uploadedRenamed": "同名文件已自动重命名：{names}",
   // 文件树右键菜单：复制路径
   "file-tree.copyPath": "复制路径",
   // 文件树右键菜单（仅文件）：将文件在浮窗中打开

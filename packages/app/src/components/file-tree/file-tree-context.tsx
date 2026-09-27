@@ -20,6 +20,7 @@ export interface FileTreeContextValue {
   onSplitFile?: (filePath: string) => void;
   splitFilePath?: string | null;
   readOnly?: boolean;
+  dropFiles?: (dirPath: string, files: File[]) => void;
 }
 
 const FileTreeContext = createContext<FileTreeContextValue | null>(null);
