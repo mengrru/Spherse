@@ -77,7 +77,7 @@
 - 二进制解析三级：packaged 先找 `resources/cloudflared/<platform-arch>/`，再各平台常见安装位置，最后 PATH 裸命令（spawn env 附带常见 PATH 目录）——**安装包未内置 cloudflared**，缺失时给安装引导
 - token：`randomBytes(32)` hex，即 server 鉴权的 always-on token（存 settingsStore 顶层 `serverToken`）；仅 regenerate 轮换（`setServerToken` → `restartServer` 重建 server 并重放项目与动态 host）；enable / set-mode 不生成或轮换 token
 - 动态 host：`syncAllowedHosts()` 按当前 mobileAccess 状态计算期望集（enabled + quick → tunnel publicUrl；manual → publicDomain）重放到 server 实例；每次 `ensureServer()` 后必重放，tunnel `onStateChange` 与 mobile 各 handler 增量同步
-- renderer 侧 MobileAccessPanel 提供 deeplink + 二维码（`.../web/#/?base=<url>&token=<t>`）
+- renderer 侧 MobileAccessPanel 提供 deeplink + 二维码（`.../web/#/?base=<url>&token=<t>`）；本地 dev 客户端（electron-vite dev，`import.meta.env.MODE === "development"`）指向 dev 环境 `.../dev/web/#/?...`，打包构建恒指 prod
 
 ## App 更新机制
 

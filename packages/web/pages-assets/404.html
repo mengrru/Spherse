@@ -6,8 +6,10 @@
   <script>
     (function () {
       var path = location.pathname;
-      if (path === '/web' || path === '/web/') {
-        location.replace('/web/' + location.search + location.hash);
+      var match = /^\/(dev\/)?web\/?$/.exec(path);
+      if (match) {
+        var base = path.replace(/\/?$/, '/');
+        location.replace(base + location.search + location.hash);
         return;
       }
       // Landing client-side route (e.g. /cases): preserve the intended path so

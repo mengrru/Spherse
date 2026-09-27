@@ -9,6 +9,18 @@ const webVersion = JSON.parse(
   readFileSync(resolve(__dirname, "package.json"), "utf-8"),
 ).version as string;
 
+const isDevDeploy = process.env.WEB_ENV === "dev";
+
+function devDeployPlugin() {
+  if (!isDevDeploy) return;
+  return {
+    name: "spherse-web-dev-deploy",
+    transformIndexHtml(html: string) {
+      return html.replace("<title>Spherse</title>", "<title>Spherse Dev</title>");
+    },
+  };
+}
+
 export default defineConfig({
   define: {
     __SPHERSE_WEB_VERSION__: JSON.stringify(webVersion),
@@ -16,6 +28,7 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    devDeployPlugin(),
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "inline",
@@ -25,9 +38,11 @@ export default defineConfig({
         "icons/pwa-192x192.png",
       ],
       manifest: {
-        name: "Spherse",
-        short_name: "Spherse",
-        description: "AI 辅助文字创作与演绎的桌面工具 — 移动端",
+        name: isDevDeploy ? "Spherse Dev" : "Spherse",
+        short_name: isDevDeploy ? "Spherse Dev" : "Spherse",
+        description: isDevDeploy
+          ? "AI 辅助文字创作与演绎的桌面工具 — 移动端(dev 分支构建)"
+          : "AI 辅助文字创作与演绎的桌面工具 — 移动端",
         display: "standalone",
         orientation: "portrait",
         background_color: "#fafafa",

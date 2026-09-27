@@ -16,9 +16,15 @@ const WEB_CAPABILITIES: HostCapabilities = {
   content: { editable: false },
 };
 
-const SETTINGS_STORAGE_KEY = "spherse:settings";
-export const WEB_CONNECTION_STORAGE_KEY = "spherse:connection";
-const LAST_ACTIVE_PROJECT_KEY = "spherse:last-active-project";
+const IS_DEV_DEPLOY = window.location.pathname.startsWith("/dev/web");
+
+function scopedStorageKey(key: string): string {
+  return IS_DEV_DEPLOY ? `${key}:dev` : key;
+}
+
+const SETTINGS_STORAGE_KEY = scopedStorageKey("spherse:settings");
+export const WEB_CONNECTION_STORAGE_KEY = scopedStorageKey("spherse:connection");
+const LAST_ACTIVE_PROJECT_KEY = scopedStorageKey("spherse:last-active-project");
 
 const PLACEHOLDER_LAST_OPENED = new Date(0).toISOString();
 

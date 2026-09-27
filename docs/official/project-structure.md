@@ -379,13 +379,13 @@ spherse/
 │   │       ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
 │   │       ├── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
 │   │       └── ui-sdk-bridge.spec.ts   # 注入式 @spherse/sdk 桥接 E2E 测试（window.spherse.* 暴露面 / fire 导航 / call 往返 / api.* HTTP 桥接 resolve+reject）
-│   ├── web/                          # @spherse/web — Web 版本壳 / 移动端 PWA（GitHub Pages 部署到 /web/）
+│   ├── web/                          # @spherse/web — Web 版本壳 / 移动端 PWA（GitHub Pages：prod 部署到 /web/ 随发版，dev 分支部署到 /dev/web/；构建产物路径无关，`WEB_ENV=dev` 注入 manifest/title Dev 标识）
 │   │   ├── vite.config.ts            # Vite + vite-plugin-pwa（manifest + generateSW app shell precache）+ manualChunks（vendor-react/vendor-markdown）
 │   │   ├── index.html                # 入口 HTML（theme-color / apple-mobile-web-app / viewport-fit=cover 元数据）
 │   │   ├── public/                   # PWA 静态资源
 │   │   │   ├── favicon.svg
 │   │   │   └── icons/                # PWA 图标（pwa-192/512、maskable-512、apple-touch-icon，从 desktop/build 派生）
-│   │   ├── pages-assets/404.html     # GitHub Pages SPA fallback（/web → /web/，其余 → /）
+│   │   ├── pages-assets/404.html     # GitHub Pages SPA fallback（/web、/dev/web → 补尾斜杠，其余 → /）
 │   │   └── src/                      # Web 版本专属源码
 │   │       ├── main.tsx              # 注入 WebHostBridge 调 createAppRoot
 │   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集、token 探活、disconnect）
@@ -441,7 +441,8 @@ spherse/
 │       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win/linux 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + publish-changelog 生成上传 changelog.json + 末尾 dispatch deploy-pages 联动 web 部署
 │       ├── pr-build.yml              # PR 触发的 CI：checkout + npm ci + npm run verify（lint/build/typecheck/单测/i18n check）
 │       ├── e2e.yml                   # PR 触发的 CI：macOS runner 跑 Electron E2E 全套（非 required，结果仅供参考；docs-only 跳过）
-│       └── deploy-pages.yml          # main 分支 landing/web/i18n 变更或发版流水线 workflow_dispatch 触发的 CI：构建并部署到 GitHub Pages
+│       ├── deploy-pages.yml          # main 分支 landing/web/i18n 变更或发版流水线 workflow_dispatch 触发的 CI：构建并部署到 GitHub Pages（include_web 全量部署前从 gh-pages 恢复 dev/web）
+│       └── deploy-web-dev.yml        # dev 分支 push / 手动触发：构建 web（WEB_ENV=dev）增量部署到 GitHub Pages 的 dev/web/；与 deploy-pages 共享 concurrency 串行写 gh-pages
 ├── .husky/
 │   └── pre-commit                    # Husky pre-commit 钩子（执行 npm run lint）
 ├── AGENTS.md                         # agent/新成员入口：文档地图 + 命令 + 红线（细节单一权威来源 + 链接）

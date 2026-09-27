@@ -1,0 +1,46 @@
+name: Deploy Web Dev
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.19
+
+      - run: npm ci
+
+      - name: Build web app (dev deploy)
+        env:
+          WEB_ENV: dev
+        run: npm run build:web
+
+      # dev 部署只更新 gh-pages 的 dev/web（增量，保留 landing 与 /web/——
+      # prod web 仅随发版由 deploy-pages.yml include_web 全量部署）
+      - name: Stage Pages content
+        run: |
+          set -e
+          mkdir -p ./pages-out/dev/web
+          cp -r packages/web/dist/. ./pages-out/dev/web/
+          cp packages/web/pages-assets/404.html ./pages-out/404.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./pages-out
+          keep_files: true
