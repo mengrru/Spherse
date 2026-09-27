@@ -6,7 +6,6 @@ import { MarkdownContent } from "../../components/markdown-content/MarkdownConte
 import { CopyButton } from "./CopyButton";
 import { ErrorMessageSection } from "./ErrorMessageSection";
 import { FileViewerCard } from "./FileViewerCard";
-import { ThinkingIndicator } from "./ThinkingIndicator";
 import { formatMessageTime } from "./lib/format-time";
 import { useOpenExternalLink } from "../browser/open-external-url";
 
@@ -68,14 +67,8 @@ export function AssistantBubble({
             {agent.alias || agent.name}
           </div>
           <div className="text-sm">
-            {streaming && text === "" ? (
-              <ThinkingIndicator />
-            ) : (
-              <>
-                <MarkdownContent variant="chat" linkClassName="text-inherit" onLinkClick={handleLinkClick}>{text}</MarkdownContent>
-                {streaming && text && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
-              </>
-            )}
+            <MarkdownContent variant="chat" linkClassName="text-inherit" onLinkClick={handleLinkClick}>{text}</MarkdownContent>
+            {streaming && text && <span className="animate-[blink_1s_step-end_infinite]">|</span>}
           </div>
           {error && (
             <ErrorMessageSection

@@ -1,7 +1,7 @@
 # 聊天工具调用折叠（卡片即白名单）设计
 
 - 日期：2026-09-27
-- 状态：迭代 1 已实施；迭代 2 设计中
+- 状态：迭代 1、迭代 2 均已实施
 
 > **迭代 2（用户反馈）**：迭代 1 只把工具调用折叠在 assistant 气泡内部，用户预期是**纯工具调用的 assistant message 不渲染气泡**，整轮工具调用统一收进一个「思考过程」折叠块（执行中显示「正在思考…」）。已确认方案：**一轮统一思考块**——turn 内所有工具调用（含与文本混发的）收进 turn 开头一个块，文本气泡变为纯文本。详见文末「迭代 2：turn 级思考块」。
 
@@ -157,8 +157,8 @@ interface ToolProcessSectionProps {
 | 块的挂载与渲染条件 | turn 内存在任一 assistant entry 即挂块。渲染层：`tools.length > 0` → 渲染；`tools` 为空时仅 `awaiting` 渲染（「正在思考…」，覆盖 turn 开场与**中段新 entry 等待首 token**——纯 turn 级 `!hasText` 会丢中段指示）；其余（如纯文本 turn 已有正文）不渲染。text 空变非空的退场与文本气泡出现出自同一次 `assembleGroups` 重算，原子切换无闪烁 |
 | 块开合状态机（turn 级） | `open = userOpen ?? delayedOpen`，三态用户意图沿用迭代 1。**触发与收起分离**：自动展开触发 = `tools.some(running)` 持续 250ms（空 tools 的等待态只 spinner，不触发展开）；自动收起 = 块 `active` 变 false 时统一收起（而非 hasRunning 归 false——工具批次间隙 `message_end` 已到、下一 entry 首 token 未到，`hasRunning` 短暂 false，若即时收起会同块反复手风琴、推动下方文本气泡）。`active` 由渲染层传入：`streaming && 块所在 group 是最后一个 group`（MessageList 新增 session 级 `streaming` prop）。turn 结束：active false → 立即收起 |
 | 卡片与 runChanges | 块内带 card 的工具卡片渲染在块（摘要行/展开区）**下方**，顺序与 tools 数组一致——卡片是即时产出，跟过程块保持时间序；`runChanges` 是 turn 级汇总（diff 总结性质），挂 turn 最后一个 assistant 气泡，无文本气泡时挂到 thought 块自身（分裂两处是自觉决策）。`supersededToolCallIds` / `onRespondApproval` / `onRespondQuestion` 回调从 AssistantBubble 移至 ThoughtBlock。`applyRunChanges` 收集源扩为 assistant + thought 气泡 |
-| 时间戳 | ThoughtBlock props 加 `timestamp?` / `showTime?`（纯工具 turn 的 lastBubble 是块，时间戳展示责任随迁）；`isRetryTarget` 落在块上忽略（retry 挂点实际由 error 气泡 / user 气泡承担） |
-| 孤儿 tool-result | 仍产生 `{ kind: "tool-result" }` bubble，渲染改走 ThoughtBlock（`tools=[tool]`），与正常块形态一致；孤儿上的卡片同样跟块渲染 |
+| 时间戳 | ThoughtBlock props 加 `timestamp?` / `showTime?`（纯工具 turn 的 lastBubble 是块，时间戳展示责任随迁），取值锚定 turn 首 assistant entry 的 `time`（turn 开始时间，对 turn 级块语义自然）；`isRetryTarget` 落在块上忽略（retry 挂点实际由 error 气泡 / user 气泡承担） |
+| 孤儿 tool-result | 仍产生 `{ kind: "tool-result" }` bubble，渲染改走 ThoughtBlock（`tools=[tool]`，与正常块形态一致；`supersededToolCallIds` 一并透传）。与旧实现的三处自觉偏移：① 渲染位置统一在 turn 文本气泡之后（旧为 entry 内联序，孤儿是兜底路径，形态统一优先）；② 不传 `active`（孤儿 turn 无 assistant entry，running 卡死本身是中断异常，不自动展开）；③ 无 `data-entry-seq` 锚点（搜索只索引文本，已核实无影响） |
 | 派生函数 | `group-derivations.ts` 的 `bubbleTools` 加 thought 分支（superseded 计算、pendingControls 收集自动覆盖） |
 | 文案（i18n） | 迭代 1 的 `chat.toolProcess*` 三 key 未发布，直接更名替换：`chat.thoughtThinking`（zh「正在思考…」/ en `Thinking...`）、`chat.thoughtProcess`（zh「思考过程」/ en `Thought process`）、`chat.thoughtProcessCount`（`{count} 次调用` / `Calls: {count}`）、`chat.thoughtProcessErrorCount`（`{count} 个失败` / `Failed: {count}`）。摘要行标题：awaiting / active 时用 `thoughtThinking`，定态用 `thoughtProcess` |
 | 主题钩子 | `data-chat-tool-process` 更名为 `data-chat-thought`（未发布），登记同步 theming.md / chat theme skill / project-structure.md |
@@ -206,4 +206,14 @@ interface ToolProcessSectionProps {
 
 ### 迭代 2 code review 处理
 
-（待 review 后填写）
+| # | 级别 | 问题 | 处理 |
+|---|---|---|---|
+| I-1 | important | design 承诺的主题钩子文档同步未执行（theming.md / project-structure.md / chat theme skill / generated preset-skills） | 已修：doc-sync 阶段四处全部更新并重建 presets |
+| M-1 | medium | AssistantBubble 空文本 ThinkingIndicator 分支死代码（组装层过滤 + applyError 强制 streaming false，状态不可达），测试固守不可达状态 | 已修：删除分支与用例（「正在思考」由 thought 块 awaiting 承担） |
+| M-2 | medium | 孤儿三处语义偏移与 design「现状不变」表述矛盾（位置 / active / data-entry-seq） | 已修（文档）：决策表补记三处为自觉决策，不改代码 |
+| m-1 | minor | 多 error entry + streaming target 时除最后一个外静默丢弃，违背错误可见性红线 | 已修：其余 error entry 走 standalone error 气泡 |
+| m-2 | minor | standalone error 位置从内联序变为 turn 末尾 | 接受：错误后同 turn 续跑文本极罕见，保序复杂度不值 |
+| m-3 | minor | 块时间戳取 anchor time（turn 首entry）语义未写明 | 已修（文档）：决策表补记锚定语义 |
+| m-4 | minor | superseded 用例缺失 | 已修：补 `defaultCollapsed` iframe 计数断言 |
+| m-5 | minor | 孤儿分支不传 supersededToolCallIds（计算与渲染不对称，pre-existing） | 已修：孤儿分支透传 |
+| 疑点 | — | E2E / 全仓 verify 未跑 | 不成立：提交前已实跑（chat-history-render / ui-sdk-html-card / chat-v2-replay / chat-streaming-resilience / global-search / chat-retry / chat-withdraw 全过；lint / build / typecheck / check:i18n 全过） |

@@ -114,6 +114,7 @@ function assembleBubbles(group: MessageGroup, entries: ChatEntry[]): Bubble[] {
     if (streamingTarget) {
       interruptedEntryId = streamingTarget.id;
       interruptedError = entryError(errorEntries[errorEntries.length - 1]);
+      standaloneErrors.push(...errorEntries.slice(0, -1));
     } else {
       standaloneErrors.push(...errorEntries);
     }

@@ -126,6 +126,7 @@ export function MessageList({
           key={bubble.id}
           tools={[bubble.tool]}
           showTime={showTime}
+          supersededToolCallIds={supersededToolCallIds}
           onNavigateToPath={onNavigateToPath}
           onRespondApproval={onRespondApproval}
           onRespondQuestion={onRespondQuestion}

@@ -47,9 +47,8 @@ describe("AssistantBubble", () => {
     expect(openExternal).not.toHaveBeenCalled();
   });
 
-  it("shows the thinking indicator and hides the footer while streaming", () => {
-    renderBubble({ text: "", streaming: true });
-    expect(document.querySelector(".animate-bounce")).not.toBeNull();
+  it("hides the footer while streaming", () => {
+    renderBubble({ streaming: true });
     expect(screen.queryByTitle("复制")).not.toBeInTheDocument();
   });
 
