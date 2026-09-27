@@ -42,7 +42,7 @@
 
 ## 路由
 
-17 个域文件由 `routes/index.ts` 聚合注册；项目级路由统一 `/api/projects/:projectId/...`，全局 preHandler 从 registry 解析并注入 `req.projectCtx`（miss 抛 404）；全局路由不带 projectId、不经过该 preHandler（鉴权仍由 auth onRequest hook 覆盖）：
+18 个域文件由 `routes/index.ts` 聚合注册；项目级路由统一 `/api/projects/:projectId/...`，全局 preHandler 从 registry 解析并注入 `req.projectCtx`（miss 抛 404）；全局路由不带 projectId、不经过该 preHandler（鉴权仍由 auth onRequest hook 覆盖）：
 
 | 域 | 端点概要 |
 |---|---|
@@ -60,6 +60,7 @@
 | trigger | CRUD、手动触发、reset-binding、运行日志 |
 | debug | turn-context 导出 |
 | images / attachments | 生成图片导出；附件上传（png/jpeg/webp，5MB）与删除 |
+| upload | 通用文件上传（multipart → 目标目录，per-route 100MB 限流，同名大小写不敏感自动重命名，落盘走 PM `writeBinaryFile`） |
 
 **错误映射**（全局 errorHandler）：
 

@@ -6,6 +6,8 @@
 
 ## 验证补全
 
+- [ ] **真机验证 file panel 拖拽上传的浏览器 DnD 行为**：自动化覆盖 server route（真 PM 契约测试）与 controller/dnd 纯逻辑单测，但缺真机回归：① Electron/Chromium 实际拖拽中 `webkitGetAsEntry` 对跨应用拖拽（如从 Finder 拖代理图标）返回 null 时的 fallback 表现；② 拖入纯文件夹时的提示 toast；③ 大文件（数十 MB）上传期间 UI 手感（无进度条）；④ web 端 readOnly 无拖拽响应。参见 `docs/dev/features/2026-09-27-file-dnd-upload/design.md`
+
 - [ ] **真机验证关闭至托盘三平台表现**：自动化只覆盖 macOS 下的隐藏 / 单实例唤回 / 关闭开关后退出（`close-to-tray.spec.ts`），缺真机回归：① Windows 托盘左键唤回、右键菜单、NSIS 覆盖安装时对已收起实例的优雅退出；② Linux（KDE / 带 AppIndicator 扩展的 GNOME）托盘显示与菜单；③ macOS Dock 隐藏后 Finder / Launchpad 再次打开能否派发 `activate`；④ 打包版 `process.resourcesPath/tray` 图标加载。参见 `docs/dev/features/2026-09-25-close-to-tray/design.md`
 - [ ] **手动验证 server 浏览器安全边界加固的真实隧道链路**：`2026-08-28-server-browser-security` 已合入 always-on token + 认证制 CORS + Host 校验，自动化已覆盖 server/desktop 语义（`browser-security.test.ts` / `server.test.ts`），但缺真机回归：① cloudflared 转发到 `http://localhost:{port}` 时的实际 Host 头形态（决定 quick 模式是否依赖动态 host 注册）；② quick tunnel 全流程（含 PWA WS 连接）；③ manual domain 反代访问与 regenerate 后域名仍可访问；④ prod 打包 renderer（file:// origin）API/WS。参见 `docs/dev/features/2026-08-28-server-browser-security/plan.md` 验证节。
 
@@ -63,6 +65,8 @@
 - [ ] **shutdown 生命周期统一契约（条件触发：chat session runtime 生命周期重构或 capability 拆分立项时）**：当前 shutdown 正确性靠调用点手工防御（`ProjectRuntime.shutdown` 手工顺序 + `settleWithin` 逐 capability 包裹、desktop `closeServerHandle` 分段超时、main.ts 硬兜底，见 `docs/dev/bugfix/2026-08-29-e2e-app-close-hang/design.md`），组件 close 语义异构（`closeAll` 同步清 map 且不 abort 在跑 turn、sqlite/fs-watch 同步、MCP close 异步无界），且无 cancellation 传播——超时即放弃，底层工作泄漏至 `app.exit` 强杀。方向：统一 lifecycle 端口（`stop(signal)` 按启动逆序）、AbortSignal 两阶段升级（graceful → 取消 → 才放弃）、声明式 phase 注册（超时/隔离/逆序由结构保证，与「PM 写入门面声明式校验组合」「架构契约可测试化」同哲学）。与「refreshProjects 路径不回收 chat session runtime」「Capability 接口拆分调研」同属生命周期归属问题，触发时合并设计。
 
 ## 功能增强
+
+- [ ] **file panel 拖拽上传 v2**：① 文件夹拖入（递归展开上传，需处理层级名冲突与大量文件进度反馈）；② 大文件上传进度条（需换 XHR 或流式 fetch 上传进度 API）；③ dotfile 上传后树内不可见的提示或白名单。参见 `docs/dev/features/2026-09-27-file-dnd-upload/design.md`「已知限制」
 
 - [ ] **全局搜索 v2 扩展**：搜索结果命中词高亮；tool 调用参数/结果参与聊天搜索（可加开关）；legacy 会话（未迁移 messages 表）纳入搜索范围；查询词含 JSON 转义字符（`"` / `\` / 换行）时 LIKE 预取漏召回的归一化处理。参见 `docs/dev/features/2026-09-26-global-search/design.md`「不做 / 已知边界」
 - [ ] **首次收至托盘时提示用户**：「关闭至托盘」默认启用，首次关闭窗口后用户可能误以为已退出；方向：首次隐藏时发一次系统通知（Windows balloon / `Notification`），说明可从托盘图标打开或在设置 > 通用关闭。参见 `docs/dev/features/2026-09-25-close-to-tray/design.md`

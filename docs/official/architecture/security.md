@@ -14,7 +14,7 @@
 
 - `isPathInside(root, target)`：双方 resolve 后取 `path.relative`，空串（root 自身）或不含 `..` 前缀且非绝对路径才算在内——同时拒绝逃逸与 Windows 跨盘绝对路径
 - `resolveProjectPath` / `assertInsideProject`：resolve + 边界断言，越界抛 `AccessDeniedError`
-- 消费面：全部文件类 LLM 工具、PM 写入门面五方法、server content / preview / attachments / theme 路由、desktop `open-file` IPC 等
+- 消费面：全部文件类 LLM 工具、PM 写入门面五方法、server content / preview / attachments / upload / theme 路由、desktop `open-file` IPC 等
 
 ## 路径分类（`access/path-category.ts`）
 

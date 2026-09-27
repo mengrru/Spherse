@@ -152,6 +152,7 @@ spherse/
 │   │       ├── sessions.ts           # SessionInfo、SessionList/Messages Response、SessionMessagesPage（分页信封）、SessionSearch（消息搜索命中）、rename 请求
 │   │       ├── content.ts            # FileEntry、ContentResponse、create/save 请求
 │   │       ├── file-tree.ts          # FileTreeResponse
+│   │       ├── upload.ts             # UploadResponse（{ path, bytes, renamed }）
 │   │       ├── settings.ts           # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
 │   │       ├── trigger.ts            # TriggerEntry、TriggerCreate/Update 请求、List/Log Response
 │   │       ├── skills.ts             # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
@@ -186,6 +187,7 @@ spherse/
 │   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
+│   │       │   ├── upload.ts         # 通用文件上传 API（POST /api/projects/:projectId/upload/*，multipart 单文件 → 目标目录，per-route 100MB 上限，同名大小写不敏感自动重命名，落盘走 PM writeBinaryFile）
 │       │       │   ├── trigger.ts         # 触发器 CRUD 与手动触发（/triggers、/trigger-logs、/run）
 │       │       │   └── debug.ts         # Debug turn context 导出（dev only）
 │   │       ├── chat/                  # chat 域（对外仅经 index.ts 导出 handleChatWebSocket + ChatSessionHub）
@@ -313,7 +315,7 @@ spherse/
 │   │       │   └── WelcomePagePage.tsx   # Project index 路由 page，渲染 WelcomePage 空状态
 │   │       ├── components/
 │   │       │   ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
-│   │       │   ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel/onFloatFile/floatedFilePaths，被 user-file-panel 与 skill-panel 共用
+│   │       │   ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel/onFloatFile/floatedFilePaths/uploadsEnabled（拖拽上传，目录行/文件行/空白区三处落点，dnd.ts 同步快照与文件夹过滤），被 user-file-panel 与 skill-panel 共用
 │   │       │   ├── floating-frame/       # 通用浮动窗口 chrome（拖拽/调整大小、titlebar、close），由 floating-chat 与 floating-content-browser 复用；hookPrefix 参数生成各自 data-*-float-* 主题钩子
 │   │       │   └── markdown-content/     # Markdown 渲染域：MarkdownContent（统一渲染组件，plain 模式用于用户消息）、CodeBlock、markdown-code-text（代码块文本抽取）、remark-plain-structure（plain 模式 remark 插件：list/table/thematicBreak 还原为带字面标记的文本行，保序号/行结构）
 │   │       └── test/                    # 组件测试共享工具：render.tsx（renderWithProviders + createTestQueryClient）、host-bridge.ts（createMockHostBridge）、mock-web-socket.ts（createMockWebSocket：readyState/closeSpy/instances 收集）、bus.ts（MockWebSocket bus harness：connectMockBus/emitBusEvent/bumpBusResumedAt）、jest-dom.d.ts（vitest matcher 类型入口）
