@@ -1127,8 +1127,6 @@ export const zhCN = {
   "custom-side-panel.title": "侧边面板",
   // 侧边面板页面加载失败占位文案
   "custom-side-panel.loadFailed": "侧边面板加载失败",
-  // 侧边面板右上角退出按钮提示：切回默认项目面板
-  "custom-side-panel.exitTooltip": "显示默认面板",
 
   // --- Pages ---
   // 项目不存在时的提示文案

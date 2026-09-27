@@ -300,7 +300,7 @@ spherse/
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
 │   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 含默认模型 + 思考强度选择 ThinkingLevelField、高级采样参数，支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、设置 store、类型与测试
 │   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）+ WelcomePageQueryBridge（project.yaml fs-watch/reconnect → welcome-page 查询失效，ProjectRuntimeBridges 挂载）
-│   │       │   ├── custom-side-panel/    # 自定义侧边面板：透明 iframe 占满 ProjectPanel（preview 路由 + fs-watch 防抖刷新 + 角落退出按钮）+ CustomSidePanelQueryBridge（project.yaml fs-watch/reconnect → custom-side-panel 查询失效，ProjectRuntimeBridges 挂载）
+│   │       │   ├── custom-side-panel/    # 自定义侧边面板：透明 iframe 占满 ProjectPanel（preview 路由 + fs-watch 防抖刷新）+ CustomSidePanelQueryBridge（project.yaml fs-watch/reconnect → custom-side-panel 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   ├── project-settings/     # 项目设置弹窗集合
 │   │       │   │   ├── welcome-page-settings/ # 项目欢迎页路径设置弹窗
 │   │       │   │   ├── side-panel-settings/   # 自定义侧边面板路径设置弹窗

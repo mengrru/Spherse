@@ -550,7 +550,6 @@ export const en: Record<TranslationKey, string> = {
   "side-panel-settings.loadFailed": "Failed to load side panel settings: {message}",
   "custom-side-panel.title": "Side Panel",
   "custom-side-panel.loadFailed": "Failed to load side panel",
-  "custom-side-panel.exitTooltip": "Show default panel",
   "pages.projectNotFound": "Project not found",
 "tool.data_access": "Data File Access",
   "tool.data_access_hint": "Allows the agent to read and write page data files (*.data.json) entry-wise: inspect the structure outline, query and mutate via named entries, and interact with page data without loading whole files",

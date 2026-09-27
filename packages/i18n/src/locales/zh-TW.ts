@@ -550,7 +550,6 @@ export const zhTW: Record<TranslationKey, string> = {
   "side-panel-settings.loadFailed": "讀取側邊面板設定失敗：{message}",
   "custom-side-panel.title": "側邊面板",
   "custom-side-panel.loadFailed": "側邊面板載入失敗",
-  "custom-side-panel.exitTooltip": "顯示預設面板",
   "pages.projectNotFound": "專案不存在",
 "tool.data_access": "資料檔案讀寫",
   "tool.data_access_hint": "允許智慧代理人按入口讀寫頁面資料檔案（*.data.json）：查看結構大綱、按業務入口查詢與變更，與頁面資料連動而無需讀取整個檔案",

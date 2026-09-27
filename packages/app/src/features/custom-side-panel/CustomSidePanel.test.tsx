@@ -2,7 +2,6 @@ import { act, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { connectMockBus, emitBusEvent, stubMockBusSocket, teardownMockBus } from "../../test/bus";
 import { renderWithProviders } from "../../test/render";
-import { useCustomSidePanelStore } from "../../stores/custom-side-panel-store";
 import { CustomSidePanel } from "./index";
 
 vi.mock("../../lib/use-connection", () => ({
@@ -15,7 +14,6 @@ vi.mock("../../lib/use-connection", () => ({
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   stubMockBusSocket();
-  useCustomSidePanelStore.setState({ activeByProject: {} });
 });
 
 afterEach(() => {
@@ -87,17 +85,5 @@ describe("CustomSidePanel", () => {
 
     unmount();
     expect(vi.getTimerCount()).toBe(before);
-  });
-
-  it("deactivates the view via the corner exit button", async () => {
-    useCustomSidePanelStore.getState().setActive("p1", true);
-    const view = renderWithProviders(<CustomSidePanel path="panel/index.html" />);
-    await connectMockBus();
-
-    act(() => {
-      screen.getByRole("button", { name: "显示默认面板" }).click();
-    });
-    expect(useCustomSidePanelStore.getState().isActive("p1")).toBe(false);
-    view.unmount();
   });
 });
