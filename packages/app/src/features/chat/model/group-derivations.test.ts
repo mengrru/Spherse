@@ -28,7 +28,7 @@ function groupWithTools(tools: ToolItem[], id = "g1"): MessageGroup {
     id,
     kind: "turn",
     hasError: false,
-    bubbles: [{ kind: "assistant", id: `b:${id}`, entryId: id, text: "", tools }],
+    bubbles: [{ kind: "thought", id: `b:thought:${id}`, entryId: id, tools }],
   };
 }
 

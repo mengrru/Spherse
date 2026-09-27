@@ -1,7 +1,9 @@
 # 聊天工具调用折叠（卡片即白名单）设计
 
 - 日期：2026-09-27
-- 状态：待实施
+- 状态：迭代 1 已实施；迭代 2 设计中
+
+> **迭代 2（用户反馈）**：迭代 1 只把工具调用折叠在 assistant 气泡内部，用户预期是**纯工具调用的 assistant message 不渲染气泡**，整轮工具调用统一收进一个「思考过程」折叠块（执行中显示「正在思考…」）。已确认方案：**一轮统一思考块**——turn 内所有工具调用（含与文本混发的）收进 turn 开头一个块，文本气泡变为纯文本。详见文末「迭代 2：turn 级思考块」。
 
 ## 背景与目标
 
@@ -132,3 +134,76 @@ interface ToolProcessSectionProps {
 | m-3 | minor | ToolProcessSection.test 的 `use-connection` mock 为复制残留（组件导入链无该依赖） | 已修：删除，测试全过（4037f70e） |
 | 疑点 1 | — | E2E 未运行 | 不成立：提交前已实跑 `chat-history-render`（1 passed）+ `ui-sdk-html-card` / `chat-v2-replay` / `chat-streaming-resilience`（7 passed） |
 | 疑点 3 | — | 仅跑 packages/app 的 lint/typecheck | 不成立：已跑全仓 `npm run lint` / `npm run build` / `npm run typecheck` 均通过 |
+
+## 迭代 2：turn 级思考块
+
+日期：2026-09-27（用户反馈迭代）
+
+### 背景与产品决策
+
+迭代 1 折叠发生在 assistant 气泡内部，纯工具调用的中间 message 仍各自渲染一个空气泡。用户预期：一轮（user message 到 turn 结束）内**所有工具调用**统一收进 turn 开头的一个「思考过程」折叠块，执行中显示「正在思考…」，文本气泡变为纯文本。已确认：
+
+1. **一轮统一思考块**：turn 内所有 assistant entry 的 toolCalls（含与文本混发的）合并进一个块；带文本的 message 只渲染文本（不再有气泡内「执行过程」折叠区）
+2. 卡片即白名单语义不变：块内工具的卡片（html / image / command / approval / question）渲染在块下方，保持可见
+3. 迭代 1 的 `ToolProcessSection`（气泡内折叠区）被本方案完全取代，删除
+
+### 决策
+
+| 决策点 | 结论 |
+|---|---|
+| 数据结构 | `message-group.ts` 新增 `ThoughtBubble`：`{ kind: "thought"; id; entryId; seq?; tools: ToolItem[]; awaiting?: true; runChanges? }`。**锚点取 turn 内第一个 assistant entry（无论是否含工具）**，`id = b:thought:{entryId}`、`entryId` / `seq` 同源——锚点在首个工具到达前后不变，避免 React key 翻转打破恒挂载（entry id 在会话内稳定：transient id 不随 seq 替换，`history-entries.ts` 合并保留现有 id）。`awaiting` = 存在 `streaming` 且 `text===""` 且 `toolCalls` 为空的 entry（等待首 token，含 turn 中段新 entry 开场）。`AssistantBubble.tools` 字段删除，文本气泡纯文本 |
+| 组装（assembleGroups） | 每个 turn 收集：① 所有 assistant entry 的 toolCalls 展开为 ToolItem（流式态 `status: "running"`，同现状 `assistantBubble()` 构造）；② tool-result 合并三步（对齐现状语义）：`ownerId` 命中本 turn 任一 assistant entry → 合并进块内 tools；ownerId 缺失/未命中 → **按 toolCallId 匹配块内已收集 tools 兜底**（loadMore 跨页时 owner 与 result 分属两页、`pairToolResultOwners` 只做单页配对，兜底是唯一合并路径）；仍不中 → 孤儿气泡（现状不变）。`mergeToolResult` 复用（含 push-if-not-found）。块位置：turn 内第一个 bubble（user 之后、所有文本气泡之前） |
+| 文本气泡 | assistant entry `text` 非空 → 文本气泡（无 tools）；`text` 为空且无 error → 不产生气泡（其工具已在块内）。**`text` 为空但有 `error` → 仍渲染 error 气泡**（错误可见性；现状 `data-chat-error` 断言与 retry 定位依赖它） |
+| 块的挂载与渲染条件 | turn 内存在任一 assistant entry 即挂块。渲染层：`tools.length > 0` → 渲染；`tools` 为空时仅 `awaiting` 渲染（「正在思考…」，覆盖 turn 开场与**中段新 entry 等待首 token**——纯 turn 级 `!hasText` 会丢中段指示）；其余（如纯文本 turn 已有正文）不渲染。text 空变非空的退场与文本气泡出现出自同一次 `assembleGroups` 重算，原子切换无闪烁 |
+| 块开合状态机（turn 级） | `open = userOpen ?? delayedOpen`，三态用户意图沿用迭代 1。**触发与收起分离**：自动展开触发 = `tools.some(running)` 持续 250ms（空 tools 的等待态只 spinner，不触发展开）；自动收起 = 块 `active` 变 false 时统一收起（而非 hasRunning 归 false——工具批次间隙 `message_end` 已到、下一 entry 首 token 未到，`hasRunning` 短暂 false，若即时收起会同块反复手风琴、推动下方文本气泡）。`active` 由渲染层传入：`streaming && 块所在 group 是最后一个 group`（MessageList 新增 session 级 `streaming` prop）。turn 结束：active false → 立即收起 |
+| 卡片与 runChanges | 块内带 card 的工具卡片渲染在块（摘要行/展开区）**下方**，顺序与 tools 数组一致——卡片是即时产出，跟过程块保持时间序；`runChanges` 是 turn 级汇总（diff 总结性质），挂 turn 最后一个 assistant 气泡，无文本气泡时挂到 thought 块自身（分裂两处是自觉决策）。`supersededToolCallIds` / `onRespondApproval` / `onRespondQuestion` 回调从 AssistantBubble 移至 ThoughtBlock。`applyRunChanges` 收集源扩为 assistant + thought 气泡 |
+| 时间戳 | ThoughtBlock props 加 `timestamp?` / `showTime?`（纯工具 turn 的 lastBubble 是块，时间戳展示责任随迁）；`isRetryTarget` 落在块上忽略（retry 挂点实际由 error 气泡 / user 气泡承担） |
+| 孤儿 tool-result | 仍产生 `{ kind: "tool-result" }` bubble，渲染改走 ThoughtBlock（`tools=[tool]`），与正常块形态一致；孤儿上的卡片同样跟块渲染 |
+| 派生函数 | `group-derivations.ts` 的 `bubbleTools` 加 thought 分支（superseded 计算、pendingControls 收集自动覆盖） |
+| 文案（i18n） | 迭代 1 的 `chat.toolProcess*` 三 key 未发布，直接更名替换：`chat.thoughtThinking`（zh「正在思考…」/ en `Thinking...`）、`chat.thoughtProcess`（zh「思考过程」/ en `Thought process`）、`chat.thoughtProcessCount`（`{count} 次调用` / `Calls: {count}`）、`chat.thoughtProcessErrorCount`（`{count} 个失败` / `Failed: {count}`）。摘要行标题：awaiting / active 时用 `thoughtThinking`，定态用 `thoughtProcess` |
+| 主题钩子 | `data-chat-tool-process` 更名为 `data-chat-thought`（未发布），登记同步 theming.md / chat theme skill / project-structure.md |
+
+### 各层实现
+
+- `model/message-group.ts`：`ThoughtBubble` 类型 + `assembleGroups` 重构（turn 级收集，见决策表）
+- `model/run-changes.ts`：收集源与挂载点扩展
+- `model/group-derivations.ts`：`bubbleTools` 加 thought 分支
+- `ThoughtBlock.tsx`（新，替代并删除 `ToolProcessSection.tsx`）：props `{ tools: ToolItem[]; awaiting?; active?; timestamp?; showTime?; runChanges?; supersededToolCallIds?; onNavigateToPath?; onRespondApproval?; onRespondQuestion? }`；渲染：摘要行（chevron + 标题 + 计数 + spinner + error 徽章）→ 展开区（ToolItemView 列表）→ 卡片区（五类卡片分派，迁自 AssistantBubble）→ runChanges（FileViewerCard）
+- `AssistantBubble.tsx`：纯文本化，删除 tools / cards / supersededToolCallIds / onRespondApproval / onRespondQuestion props 与卡片区；error 区保留
+- `MessageList.tsx`：新增 session 级 `streaming` prop（`active = streaming && group 是最后一个 group`）；`renderBubble` 加 thought 分支 → ThoughtBlock；孤儿 tool-result 分支改走 ThoughtBlock；回调透传调整
+- i18n：三 locale key 更名
+
+### 测试
+
+- `model/message-group.test.ts`：纯工具轮 → 单 thought 块 + 无文本气泡；混发轮（文本+工具 entry）→ 块含全部工具 + 文本气泡纯文本；空 text + error → error 气泡保留；块位置在文本气泡前；孤儿不受影响；**ownerId 缺失时组内 toolCallId 兜底合并（跨页场景）**；runChanges 挂载（有/无文本气泡两种）；awaiting 标记（streaming 空 entry）；块锚点 = turn 第一个 assistant entry（纯文本 entry 开场、工具后到时 id 不变）
+- `ThoughtBlock.test.tsx`（由 ToolProcessSection.test.tsx 演化）：迭代 1 全部开合/延迟/意图用例迁移；新增：awaiting「正在思考…」态（tools 空）；**工具批次间隙（active true、tools 无 running）不收起**；**active false（turn 结束）统一收起**；空 tools 等待态不触发自动展开（250ms 后仍收起）；卡片区渲染与 superseded；runChanges 渲染；时间戳
+- `AssistantBubble.test.tsx`：删除工具相关用例，保留文本/streaming/error 用例
+- `MessageList.test.tsx`：孤儿气泡断言改 ThoughtBlock 选择器；顺序断言确认块在文本气泡前
+- E2E `chat-history-render.spec.ts`：工具轮断言改 `[data-chat-thought]`（展开交互保留）；卡片断言（iframe / image / question / command 文本）不变（卡片跟块渲染仍在 DOM）；「工具总结文本」文本气泡不变
+- 回归：`chat-streaming-resilience`（streaming 中块形态）、`chat-v2-replay`、`ui-sdk-html-card`、`global-search`（定位锚点 seq 保留在文本气泡）
+
+### 风险
+
+- `AssistantBubble` props 收窄是破坏性内部接口变更：MessageList 为唯一消费方，同步改
+- 定位（`locateSeq`）：块聚合多 entry，seq 取首个来源 entry；文本消息定位不受影响（搜索只索引文本）
+- 消息数量类断言（`data-chat-message` 计数）：纯工具 entry 不再是气泡，相关测试与 E2E 需核对
+
+### 迭代 2 design review 处理
+
+| # | 级别 | 问题 | 处理 |
+|---|---|---|---|
+| I-1 | important | turn 级 `!hasText` 丢中段等待指示（entry 1 文本完成后，entry 2 等 首 token 时无任何活动显示） | 采纳：`awaiting` 改为 entry 级判定（存在 streaming 且 text 空 toolCalls 空的 entry），覆盖开场与中段 |
+| I-2 | important | 单块跨工具批次：批次间隙 hasRunning 短暂 false，250ms 状态机反复收起/展开（手风琴），推动下方文本气泡 | 采纳：触发与收起分离——展开由 `tools.some(running)` 触发；收起由块 `active` 变 false（turn 结束）统一执行，批次间隙保持 |
+| I-3 | important | 块锚点取「第一个含工具 entry」会在首个工具到达时翻转 id → React key 变化重挂载，丢 userOpen | 采纳：锚点 = turn 第一个 assistant entry（无论是否含工具）；已核实 entry id 会话内稳定 |
+| I-4 | important | 设计吞掉了组内 toolCallId 兜底合并（`findToolOwnerBubble` 对应逻辑），loadMore 跨页时同 turn 工具会退化为孤儿、diff 丢失 | 采纳：三步合并（ownerId → 组内 toolCallId → 孤儿）写入决策表与测试计划 |
+| M-1 | medium | 纯工具 turn 的 lastBubble 是块，时间戳消失 | 采纳：ThoughtBlock 加 timestamp/showTime props |
+| M-2 | medium | streaming 扩入 hasRunning 会让空 tools 等待态延迟展开成空展开区 | 采纳：自动展开条件仍用 `tools.some(running)`，等待态只 spinner |
+| M-3 | medium | 测试缺中段等待、批次间隙、锚点稳定、跨页兜底、withdraw 重组装 | 采纳：补前四类；withdraw 走 removeSeqs 整 turn 删除（块随之消失），补一条 model 用例确认重组装即可 |
+| m-1 | minor | `b:t:` 前缀与孤儿 bubble id `b:t1` 形近 | 采纳：改 `b:thought:{entryId}` |
+| m-2 | minor | 卡片与 runChanges 分裂两处缺理由 | 采纳：决策表补「即时产出跟过程块 / turn 级汇总挂尾部」 |
+| 1a | — | text 空变非空的帧级闪烁疑虑 | 核实不成立：块退场与文本气泡出现同一次 assembleGroups 重算，原子切换 |
+| 2/3 | — | retry / global-search 定位依赖被删气泡 | 核实不成立：planRetry 基于 entries；搜索只索引文本，seq 锚点保留在文本气泡 |
+
+### 迭代 2 code review 处理
+
+（待 review 后填写）

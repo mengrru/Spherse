@@ -149,6 +149,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
           groups={groups}
           agent={agent}
           thinking={thinking}
+          streaming={streaming}
           runningGroupId={runningGroupId}
           withdrawableUserId={withdrawableUserId}
           supersededToolCallIds={supersededToolCallIds}

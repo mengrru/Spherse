@@ -162,7 +162,7 @@ async function assertCardReceivesRuntime(
     await textarea.fill("show card");
     await textarea.press("Enter");
 
-    const frame = page.frameLocator("[data-chat-message] iframe").first();
+    const frame = page.frameLocator("[data-chat-thought] iframe").first();
     await expect(frame.locator("#out")).toHaveText(`sid:${sessionId}`, { timeout: 15_000 });
   } finally {
     await closeApp(app);

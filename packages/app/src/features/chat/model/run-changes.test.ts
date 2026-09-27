@@ -15,7 +15,7 @@ function toolResult(overrides: Partial<ToolResultEntry> = {}): ToolResultEntry {
 }
 
 describe("run changes", () => {
-  it("aggregates file operations by path on the last assistant bubble", () => {
+  it("aggregates file operations by path on the thought bubble of a tool-only turn", () => {
     const groups = assembleGroups([
       user(),
       assistant({
@@ -34,11 +34,12 @@ describe("run changes", () => {
       toolResult({ id: "e3", ownerId: "a2", toolCallId: "tc3", toolName: "write_file", args: { path: "b.ts" }, result: "ok", isError: false }),
     ]);
 
-    const last = groups[0].bubbles[1];
-    expect(last.kind).toBe("assistant");
-    if (last.kind !== "assistant") return;
-    expect(last.runChanges?.map((change) => change.path)).toEqual(["a.ts", "b.ts"]);
-    expect(last.runChanges?.[0].ops.map((op) => op.toolCallId)).toEqual(["tc1", "tc2"]);
+    const only = groups[0].bubbles[0];
+    expect(only.kind).toBe("thought");
+    if (only.kind !== "thought") return;
+    expect(only.tools).toHaveLength(3);
+    expect(only.runChanges?.map((change) => change.path)).toEqual(["a.ts", "b.ts"]);
+    expect(only.runChanges?.[0].ops.map((op) => op.toolCallId)).toEqual(["tc1", "tc2"]);
   });
 
   it("does not attach run changes before a file operation completes", () => {
@@ -58,7 +59,7 @@ describe("run changes", () => {
       }),
     ]);
     const bubble = groups[0].bubbles[0];
-    if (bubble.kind !== "assistant") return;
+    if (bubble.kind !== "thought") return;
     expect(bubble.runChanges).toBeUndefined();
   });
 
@@ -77,7 +78,7 @@ describe("run changes", () => {
     ]);
 
     const bubble = groups[0].bubbles[0];
-    if (bubble.kind !== "assistant") return;
+    if (bubble.kind !== "thought") return;
     expect(bubble.runChanges).toBeUndefined();
   });
 });

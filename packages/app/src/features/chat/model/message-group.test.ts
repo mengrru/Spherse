@@ -14,39 +14,55 @@ function toolResult(overrides: Partial<ToolResultEntry> = {}): ToolResultEntry {
   return { kind: "tool-result", id: "tr1", toolCallId: "tc1", ...overrides };
 }
 
+function thoughtBubbleOf(group: { bubbles: ReturnType<typeof assembleGroups>[number]["bubbles"] }) {
+  const thought = group.bubbles.find((bubble) => bubble.kind === "thought");
+  expect(thought).toBeDefined();
+  return thought as Extract<typeof thought, { kind: "thought" }>;
+}
+
 describe("message groups", () => {
-  it("joins a tool call and its result into one assistant bubble", () => {
+  it("collects tool calls from all entries into one thought bubble and merges results", () => {
     const groups = assembleGroups([
       user(),
       assistant({
         id: "a1",
         seq: 2,
-        toolCalls: [{ toolCallId: "tc1", toolName: "read_file", args: { path: "a" } }],
+        toolCalls: [
+          { toolCallId: "tc1", toolName: "read_file", args: { path: "a" } },
+          { toolCallId: "tc2", toolName: "search_content", args: { query: "x" } },
+        ],
       }),
       toolResult({
         id: "e3",
         seq: 3,
         ownerId: "a1",
+        toolCallId: "tc1",
         toolName: "read_file",
         result: "data",
         isError: false,
       }),
+      assistant({ id: "a2", seq: 4, text: "done" }),
     ]);
 
     expect(groups).toHaveLength(1);
-    const bubble = groups[0].bubbles[0];
-    expect(bubble.kind).toBe("assistant");
-    if (bubble.kind !== "assistant") return;
-    expect(bubble.tools).toHaveLength(1);
-    expect(bubble.tools[0]).toMatchObject({
+    const bubbles = groups[0].bubbles;
+    expect(bubbles).toHaveLength(2);
+    expect(bubbles[0].kind).toBe("thought");
+    expect(bubbles[1]).toMatchObject({ kind: "assistant", entryId: "a2", text: "done" });
+
+    const thought = thoughtBubbleOf(groups[0]);
+    expect(thought.tools).toHaveLength(2);
+    expect(thought.tools[0]).toMatchObject({
       toolCallId: "tc1",
       toolName: "read_file",
       status: "completed",
       result: "data",
     });
+    expect(thought.tools[1]).toMatchObject({ toolCallId: "tc2", status: "completed" });
+    expect(thought.awaiting).toBeUndefined();
   });
 
-  it("keeps a tool running until a terminal result arrives", () => {
+  it("keeps live tool calls running and merges streamed cards", () => {
     const groups = assembleGroups([
       user(),
       assistant({
@@ -61,11 +77,24 @@ describe("message groups", () => {
         partialResult: { details: { cardType: "command", command: "ls", stdout: "", status: "running" } },
       }),
     ]);
-    const bubble = groups[0].bubbles[0];
-    expect(bubble.kind).toBe("assistant");
-    if (bubble.kind !== "assistant") return;
-    expect(bubble.tools[0].status).toBe("running");
-    expect(bubble.tools[0].card).toMatchObject({ type: "command", status: "running" });
+    const thought = thoughtBubbleOf(groups[0]);
+    expect(thought.tools[0].status).toBe("running");
+    expect(thought.tools[0].card).toMatchObject({ type: "command", status: "running" });
+  });
+
+  it("merges a result without ownerId via in-turn toolCallId fallback", () => {
+    const groups = assembleGroups([
+      user(),
+      assistant({
+        id: "a1",
+        toolCalls: [{ toolCallId: "tc1", toolName: "read_file", args: { path: "a" } }],
+      }),
+      toolResult({ id: "tr1", toolCallId: "tc1", toolName: "read_file", result: "data", isError: false }),
+    ]);
+    const bubbles = groups[0].bubbles;
+    expect(bubbles).toHaveLength(1);
+    const thought = thoughtBubbleOf(groups[0]);
+    expect(thought.tools[0]).toMatchObject({ toolCallId: "tc1", status: "completed", result: "data" });
   });
 
   it("keeps an unowned tool result as its own bubble instead of dropping it", () => {
@@ -79,6 +108,43 @@ describe("message groups", () => {
     expect(bubble.tool).toMatchObject({ toolCallId: "tc9", status: "completed" });
   });
 
+  it("marks the thought bubble awaiting while a streaming entry has neither text nor tool calls", () => {
+    const groups = assembleGroups([user(), assistant({ id: "a1", streaming: true })]);
+    const thought = thoughtBubbleOf(groups[0]);
+    expect(thought.awaiting).toBe(true);
+    expect(thought.tools).toHaveLength(0);
+    expect(groups[0].bubbles).toHaveLength(1);
+  });
+
+  it("anchors the thought bubble to the first assistant entry even when tools arrive later", () => {
+    const groups = assembleGroups([
+      user(),
+      assistant({ id: "a1", text: "let me check" }),
+      assistant({
+        id: "a2",
+        toolCalls: [{ toolCallId: "tc1", toolName: "read_file", args: { path: "a" } }],
+      }),
+    ]);
+    const thought = thoughtBubbleOf(groups[0]);
+    expect(thought.id).toBe("b:thought:a1");
+    expect(thought.entryId).toBe("a1");
+    expect(thought.tools).toHaveLength(1);
+    const textBubbles = groups[0].bubbles.filter((bubble) => bubble.kind === "assistant");
+    expect(textBubbles).toHaveLength(1);
+    expect(textBubbles[0]).toMatchObject({ entryId: "a1", text: "let me check" });
+  });
+
+  it("keeps an empty-text errored assistant entry as a visible error bubble", () => {
+    const groups = assembleGroups([
+      user(),
+      assistant({ id: "a1", error: { message: "boom" } }),
+    ]);
+    const bubbles = groups[0].bubbles;
+    expect(bubbles).toHaveLength(2);
+    expect(bubbles[1]).toMatchObject({ kind: "assistant", entryId: "a1", error: { message: "boom" } });
+    expect(groups[0].hasError).toBe(true);
+  });
+
   it("wraps trigger turns until the next user entry", () => {
     const groups = assembleGroups([
       user({ id: "u1", triggered: true, triggerName: "cron" }),
@@ -90,39 +156,121 @@ describe("message groups", () => {
 
     expect(groups).toHaveLength(2);
     expect(groups[0]).toMatchObject({ kind: "trigger-turn", triggerName: "cron" });
-    expect(groups[0].bubbles).toHaveLength(2);
     expect(groups[1]).toMatchObject({ kind: "turn" });
-    expect(groups[1].bubbles).toHaveLength(1);
   });
 
   it("creates a headless turn for assistant entries without a preceding user", () => {
     const groups = assembleGroups([assistant({ id: "a1", text: "triggered run" })]);
     expect(groups).toHaveLength(1);
     expect(groups[0].user).toBeUndefined();
-    expect(groups[0].bubbles).toHaveLength(1);
+    expect(groups[0].bubbles).toHaveLength(2);
+    expect(groups[0].bubbles[0].kind).toBe("thought");
   });
 
-  it("merges an error entry into a streaming assistant bubble", () => {
+  it("merges an error entry into a streaming assistant entry", () => {
+    const error: ErrorEntry = { kind: "error", id: "x1", message: "boom" };
+    const groups = assembleGroups([user(), assistant({ id: "a1", text: "partial", streaming: true }), error]);
+    const bubbles = groups[0].bubbles;
+    expect(bubbles).toHaveLength(2);
+    expect(bubbles[1]).toMatchObject({
+      kind: "assistant",
+      entryId: "a1",
+      text: "partial",
+      error: { message: "boom" },
+    });
+    if (bubbles[1].kind !== "assistant") return;
+    expect(bubbles[1].streaming).toBeUndefined();
+    expect(groups[0].hasError).toBe(true);
+  });
+
+  it("surfaces an error bubble when an interrupted streaming entry has no text", () => {
     const error: ErrorEntry = { kind: "error", id: "x1", message: "boom" };
     const groups = assembleGroups([user(), assistant({ id: "a1", streaming: true }), error]);
-    const bubble = groups[0].bubbles[0];
-    expect(bubble.kind).toBe("assistant");
-    if (bubble.kind !== "assistant") return;
-    expect(bubble.streaming).toBe(false);
-    expect(bubble.error).toEqual({ message: "boom" });
+    const bubbles = groups[0].bubbles;
+    expect(bubbles).toHaveLength(2);
+    expect(bubbles[1]).toMatchObject({
+      kind: "assistant",
+      entryId: "a1",
+      text: "",
+      error: { message: "boom" },
+    });
     expect(groups[0].hasError).toBe(true);
   });
 
   it("appends a standalone error bubble when no assistant is streaming", () => {
     const error: ErrorEntry = { kind: "error", id: "x1", message: "boom", time: 7 };
     const groups = assembleGroups([user(), assistant({ id: "a1", text: "done" }), error]);
-    const bubble = groups[0].bubbles[1];
+    const bubble = groups[0].bubbles.find((candidate) => candidate.kind === "error");
     expect(bubble).toMatchObject({
       kind: "error",
       entryId: "x1",
       error: { message: "boom" },
       timestamp: 7,
     });
+  });
+
+  it("attaches run changes to the last text bubble when one exists", () => {
+    const groups = assembleGroups([
+      user(),
+      assistant({
+        id: "a1",
+        seq: 2,
+        toolCalls: [{ toolCallId: "tc1", toolName: "write_file", args: { path: "a.ts" } }],
+      }),
+      toolResult({
+        id: "e3",
+        seq: 3,
+        ownerId: "a1",
+        toolCallId: "tc1",
+        toolName: "write_file",
+        result: "ok",
+        isError: false,
+      }),
+      assistant({ id: "a4", seq: 4, text: "saved" }),
+    ]);
+    const thought = thoughtBubbleOf(groups[0]);
+    expect(thought.runChanges).toBeUndefined();
+    const last = groups[0].bubbles[groups[0].bubbles.length - 1];
+    expect(last).toMatchObject({ kind: "assistant", entryId: "a4" });
+    if (last.kind !== "assistant") return;
+    expect(last.runChanges).toHaveLength(1);
+  });
+
+  it("attaches run changes to the thought bubble for a tool-only turn", () => {
+    const groups = assembleGroups([
+      user(),
+      assistant({
+        id: "a1",
+        seq: 2,
+        toolCalls: [{ toolCallId: "tc1", toolName: "edit_file", args: { path: "a.ts" } }],
+      }),
+      toolResult({
+        id: "e3",
+        seq: 3,
+        ownerId: "a1",
+        toolCallId: "tc1",
+        toolName: "edit_file",
+        result: "ok",
+        isError: false,
+      }),
+    ]);
+    const thought = thoughtBubbleOf(groups[0]);
+    expect(thought.runChanges).toHaveLength(1);
+  });
+
+  it("reassembles cleanly after entries are removed (withdrawn turn)", () => {
+    const entries: ChatEntry[] = [
+      user({ id: "u1" }),
+      assistant({ id: "a1", toolCalls: [{ toolCallId: "tc1", toolName: "read_file", args: {} }] }),
+      user({ id: "u2" }),
+      assistant({ id: "a2", text: "kept" }),
+    ];
+    const withdrawn = entries.filter((entry) => entry.id !== "u1" && entry.id !== "a1");
+    const groups = assembleGroups(withdrawn);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].user?.id).toBe("u2");
+    const textBubbles = groups[0].bubbles.filter((bubble) => bubble.kind === "assistant");
+    expect(textBubbles).toHaveLength(1);
   });
 
   it("consumes every entry exactly once across randomized sequences", () => {
@@ -154,7 +302,9 @@ describe("message groups", () => {
             toolName: "read_file",
             args: { path: `p${toolIndex}` },
           }));
-          entries.push(assistant({ id, text: `a${id}`, toolCalls }));
+          const text = random() < 0.5 ? `a${id}` : "";
+          const error = text === "" && random() < 0.2 ? { message: `err-${id}` } : undefined;
+          entries.push(assistant({ id, text, toolCalls, ...(error ? { error } : {}) }));
           for (const call of toolCalls) {
             if (random() < 0.8) {
               entries.push(toolResult({
@@ -184,13 +334,20 @@ describe("message groups", () => {
           continue;
         }
         if (entry.kind === "assistant") {
-          expect(bubbles.filter((bubble) => bubble.kind === "assistant" && bubble.entryId === entry.id)).toHaveLength(1);
+          const matching = bubbles.filter(
+            (bubble) => bubble.kind === "assistant" && bubble.entryId === entry.id,
+          );
+          if (entry.text !== "" || entry.error) {
+            expect(matching).toHaveLength(1);
+          } else {
+            expect(matching).toHaveLength(0);
+          }
           continue;
         }
         if (entry.kind === "tool-result") {
           const orphan = bubbles.filter((bubble) => bubble.kind === "tool-result" && bubble.entryId === entry.id);
           const joined = bubbles.filter(
-            (bubble) => bubble.kind === "assistant" && bubble.tools.some((tool) => tool.toolCallId === entry.toolCallId),
+            (bubble) => bubble.kind === "thought" && bubble.tools.some((tool) => tool.toolCallId === entry.toolCallId),
           );
           expect(orphan.length + joined.length).toBeGreaterThan(0);
           expect(joined.length).toBeLessThanOrEqual(1);

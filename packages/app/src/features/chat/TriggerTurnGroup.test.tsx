@@ -11,8 +11,8 @@ function group(overrides: Partial<MessageGroup> = {}): MessageGroup {
     kind: "trigger-turn",
     hasError: false,
     bubbles: [
-      { kind: "assistant", id: "b1", entryId: "a1", text: "one", tools: [] },
-      { kind: "assistant", id: "b2", entryId: "a2", text: "two", tools: [] },
+      { kind: "assistant", id: "b1", entryId: "a1", text: "one" },
+      { kind: "assistant", id: "b2", entryId: "a2", text: "two" },
     ],
     ...overrides,
   };

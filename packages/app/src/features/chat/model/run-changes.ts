@@ -7,7 +7,7 @@ export function applyRunChanges(group: MessageGroup): void {
   const opsByPath = new Map<string, FileChangeOp[]>();
   const order: string[] = [];
   for (const bubble of group.bubbles) {
-    if (bubble.kind !== "assistant") continue;
+    if (bubble.kind !== "thought") continue;
     for (const tool of bubble.tools) {
       if (tool.status !== "completed") continue;
       if (!FILE_CHANGE_TOOLS.has(tool.toolName)) continue;
@@ -31,7 +31,7 @@ export function applyRunChanges(group: MessageGroup): void {
   const changes: FileChangeCard[] = order.map((path) => ({ path, ops: opsByPath.get(path)! }));
   for (let index = group.bubbles.length - 1; index >= 0; index--) {
     const bubble = group.bubbles[index];
-    if (bubble.kind === "assistant") {
+    if (bubble.kind === "assistant" || bubble.kind === "thought") {
       group.bubbles[index] = { ...bubble, runChanges: changes };
       return;
     }

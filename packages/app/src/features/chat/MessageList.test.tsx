@@ -42,7 +42,7 @@ describe("MessageList", () => {
         kind: "turn",
         user: { kind: "user", id: "u1", text: "first" },
         hasError: false,
-        bubbles: [{ kind: "assistant", id: "b1", entryId: "a1", text: "one", tools: [] }],
+        bubbles: [{ kind: "assistant", id: "b1", entryId: "a1", text: "one" }],
       },
       {
         id: "g2",
@@ -67,7 +67,7 @@ describe("MessageList", () => {
         kind: "turn",
         user: { kind: "user", id: "e0", seq: 0, text: "question" },
         hasError: false,
-        bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", text: "answer", tools: [] }],
+        bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", text: "answer" }],
       },
       {
         id: "g2",
@@ -90,7 +90,7 @@ describe("MessageList", () => {
       triggerName: "daily",
       hasError: false,
       user: { kind: "user", id: "e0", seq: 0, text: "go", triggered: true },
-      bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", seq: 1, text: "done", tools: [] }],
+      bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", seq: 1, text: "done" }],
     };
     renderList([triggerGroup], { locateSeq: 1 });
     expect(document.querySelector('[data-entry-seq="1"]')).not.toBeNull();
@@ -104,7 +104,7 @@ describe("MessageList", () => {
       triggerName: "daily",
       hasError: false,
       user: { kind: "user", id: "e0", seq: 0, text: "go", triggered: true },
-      bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", seq: 1, text: "done", tools: [] }],
+      bubbles: [{ kind: "assistant", id: "b1", entryId: "e1", seq: 1, text: "done" }],
     };
     renderList([triggerGroup], { locateSeq: 9 });
     expect(document.querySelector('[data-entry-seq="1"]')).toBeNull();
@@ -125,9 +125,35 @@ describe("MessageList", () => {
         }],
       },
     ]);
-    expect(screen.getByText("执行过程")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /执行过程/ }));
+    expect(screen.getByText("思考过程")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /思考过程/ }));
     expect(screen.getByText("read_file")).toBeInTheDocument();
+  });
+
+  it("renders a thought bubble ahead of text bubbles and passes turn activity", () => {
+    renderList([
+      {
+        id: "g1",
+        kind: "turn",
+        user: { kind: "user", id: "u1", text: "go" },
+        hasError: false,
+        bubbles: [
+          {
+            kind: "thought",
+            id: "b:thought:a1",
+            entryId: "a1",
+            tools: [{ toolCallId: "tc1", toolName: "read_file", args: {}, status: "running" }],
+          },
+          { kind: "assistant", id: "b:a2", entryId: "a2", text: "partial" },
+        ],
+      },
+    ], { streaming: true });
+    expect(document.querySelector("[data-chat-thought]")).not.toBeNull();
+    expect(screen.getByText("正在思考…")).toBeInTheDocument();
+    const messages = [...document.querySelectorAll("[data-chat-message]")];
+    expect(messages).toHaveLength(2);
+    expect(messages[0]?.textContent).toContain("partial");
+    expect(messages[1]?.textContent).toContain("go");
   });
 
   it("shows the thinking indicator when waiting for the first token", () => {

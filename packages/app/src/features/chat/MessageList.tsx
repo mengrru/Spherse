@@ -8,12 +8,14 @@ import { seqFromPersistedEntryId, type UserEntry } from "./model/entry";
 import { AssistantBubble } from "./AssistantBubble";
 import { UserBubble } from "./UserBubble";
 import { TriggerTurnGroup } from "./TriggerTurnGroup";
+import { ThoughtBlock } from "./ThoughtBlock";
 import { ThinkingIndicator } from "./ThinkingIndicator";
 
 interface MessageListProps {
   groups: MessageGroup[];
   agent: AgentSummary;
   thinking: boolean;
+  streaming?: boolean;
   runningGroupId?: string | null;
   withdrawableUserId: string | null;
   supersededToolCallIds: Set<string>;
@@ -42,6 +44,7 @@ export function MessageList({
   groups,
   agent,
   thinking,
+  streaming = false,
   runningGroupId,
   withdrawableUserId,
   supersededToolCallIds,
@@ -99,15 +102,30 @@ export function MessageList({
     const showTime = index === group.bubbles.length - 1;
     const isRetryTarget = bubble.id === lastBubble?.id;
     const entrySeq = bubble.seq ?? seqFromPersistedEntryId(bubble.entryId);
+    const isActiveGroup = streaming && group.id === lastGroup?.id;
+    if (bubble.kind === "thought") {
+      return (
+        <ThoughtBlock
+          key={bubble.id}
+          tools={bubble.tools}
+          awaiting={bubble.awaiting}
+          active={isActiveGroup}
+          timestamp={bubble.timestamp}
+          showTime={showTime}
+          runChanges={bubble.runChanges}
+          supersededToolCallIds={supersededToolCallIds}
+          onNavigateToPath={onNavigateToPath}
+          onRespondApproval={onRespondApproval}
+          onRespondQuestion={onRespondQuestion}
+        />
+      );
+    }
     if (bubble.kind === "tool-result") {
       return (
-        <AssistantBubble
+        <ThoughtBlock
           key={bubble.id}
-          agent={agent}
-          text=""
           tools={[bubble.tool]}
           showTime={showTime}
-          entrySeq={entrySeq}
           onNavigateToPath={onNavigateToPath}
           onRespondApproval={onRespondApproval}
           onRespondQuestion={onRespondQuestion}
@@ -120,7 +138,6 @@ export function MessageList({
           key={bubble.id}
           agent={agent}
           text=""
-          tools={[]}
           error={bubble.error}
           timestamp={bubble.timestamp}
           showTime={showTime}
@@ -134,17 +151,13 @@ export function MessageList({
         key={bubble.id}
         agent={agent}
         text={bubble.text}
-        tools={bubble.tools}
         streaming={bubble.streaming}
         error={bubble.error}
         timestamp={bubble.timestamp}
         runChanges={bubble.runChanges}
         showTime={showTime}
         entrySeq={entrySeq}
-        supersededToolCallIds={supersededToolCallIds}
         onNavigateToPath={onNavigateToPath}
-        onRespondApproval={onRespondApproval}
-        onRespondQuestion={onRespondQuestion}
         onRetry={isRetryTarget ? onRetry : undefined}
       />
     );
