@@ -43,6 +43,7 @@ export {
 } from "./capabilities/data/index.js";
 export { resolveProjectPath, isProjectMetaPath, assertInsideProject, isPathInside } from "./utils/path-safety.js";
 export { categorizePath } from "./access/path-category.js";
+export { normalizeWelcomePagePath, normalizeSidePanelPath } from "./store/project-config.js";
 export type { PathCategory } from "./access/path-category.js";
 export { serverAccessPolicy } from "./access/access-policy.js";
 export type { AccessPolicy, Decision } from "./access/access-policy.js";

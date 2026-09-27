@@ -5,8 +5,6 @@ import { projectQueryKeys } from "./keys";
 
 export type CustomSidePanelResolution = { path: string | null };
 
-export const PROJECT_CONFIG_PATH = ".spherse/project.yaml";
-
 async function resolveCustomSidePanel(client: ApiClient): Promise<CustomSidePanelResolution> {
   const settings = await client.getSidePanelSettings();
   if (!settings.path) return { path: null };

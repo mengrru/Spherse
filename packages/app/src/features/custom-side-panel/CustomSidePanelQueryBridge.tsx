@@ -1,7 +1,9 @@
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { useReconnectedSync } from "../../hooks/useReconnectedSync";
 import { useProjectCtx } from "../../context/project-context";
-import { invalidateCustomSidePanel, PROJECT_CONFIG_PATH } from "../../queries/custom-side-panel";
+import { invalidateCustomSidePanel } from "../../queries/custom-side-panel";
+
+export const PROJECT_CONFIG_PATH = ".spherse/project.yaml";
 
 export function CustomSidePanelQueryBridge() {
   const { projectId } = useProjectCtx();

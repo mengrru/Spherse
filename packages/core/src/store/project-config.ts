@@ -14,26 +14,23 @@ import { categorizePath } from "../access/path-category.js";
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
 const SIDE_PANEL_EXTENSIONS = new Set(["html", "htm"]);
 
-function normalizeWelcomePagePath(input: string): string | null {
+function normalizeProjectPagePath(input: string, extensions: ReadonlySet<string>): string | null {
   const trimmed = input.trim().replace(/\\/g, "/");
   if (!trimmed || trimmed === "." || trimmed.startsWith("/") || trimmed.includes("..")) return null;
   const normalized = trimmed.replace(/^\.\//, "").replace(/\/+/g, "/");
   if (!normalized) return null;
   if (categorizePath(normalized) !== "userFiles") return null;
   const ext = normalized.split(".").pop()?.toLowerCase();
-  if (!ext || !WELCOME_PAGE_EXTENSIONS.has(ext)) return null;
+  if (!ext || !extensions.has(ext)) return null;
   return normalized;
 }
 
-function normalizeSidePanelPath(input: string): string | null {
-  const trimmed = input.trim().replace(/\\/g, "/");
-  if (!trimmed || trimmed === "." || trimmed.startsWith("/") || trimmed.includes("..")) return null;
-  const normalized = trimmed.replace(/^\.\//, "").replace(/\/+/g, "/");
-  if (!normalized) return null;
-  if (categorizePath(normalized) !== "userFiles") return null;
-  const ext = normalized.split(".").pop()?.toLowerCase();
-  if (!ext || !SIDE_PANEL_EXTENSIONS.has(ext)) return null;
-  return normalized;
+export function normalizeWelcomePagePath(input: string): string | null {
+  return normalizeProjectPagePath(input, WELCOME_PAGE_EXTENSIONS);
+}
+
+export function normalizeSidePanelPath(input: string): string | null {
+  return normalizeProjectPagePath(input, SIDE_PANEL_EXTENSIONS);
 }
 
 export class ProjectConfigStore {

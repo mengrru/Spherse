@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";import { toast } from "sonner";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
+import { normalizeSidePanelPath } from "@spherse/core";
 import type { ApiClient } from "../../../lib/api";
 import { Button } from "../../../components/ui/button";
 import {
@@ -12,19 +14,6 @@ import {
 import { Input } from "../../../components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "../../../components/ui/field";
 import { updateCustomSidePanelSettings } from "../../../queries/custom-side-panel";
-
-const SIDE_PANEL_EXTENSIONS = new Set(["html", "htm"]);
-
-function normalizeSidePanelPath(input: string): string | null {
-  const trimmed = input.trim().replace(/\\/g, "/");
-  if (!trimmed || trimmed === "." || trimmed.startsWith("/") || trimmed.includes("..")) return null;
-  const normalized = trimmed.replace(/^\.\//, "").replace(/\/+/g, "/");
-  if (!normalized) return null;
-  if (normalized === ".spherse" || normalized.startsWith(".spherse/")) return null;
-  const ext = normalized.split(".").pop()?.toLowerCase();
-  if (!ext || !SIDE_PANEL_EXTENSIONS.has(ext)) return null;
-  return normalized;
-}
 
 export function SidePanelSettingsDialog({
   projectId,

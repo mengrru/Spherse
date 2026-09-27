@@ -3,12 +3,26 @@ import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
+import { useCustomSidePanelStore } from "../../stores/custom-side-panel-store";
+import { useCustomSidePanel } from "../../queries/custom-side-panel";
+
+export function CustomSidePanel({ children }: { children: React.ReactNode }) {
+  const { projectId } = useProjectCtx();
+  const client = useApiClient(projectId);
+  const active = useCustomSidePanelStore((state) => state.isActive(projectId));
+  const { data, isError } = useCustomSidePanel(projectId, client);
+
+  const resolvedPath = isError ? null : data?.path;
+  if (!(active && resolvedPath != null)) return <>{children}</>;
+
+  return <CustomSidePanelFrame key={projectId} path={resolvedPath} />;
+}
 
 function normalizePath(p: string): string {
   return p.replace(/\\/g, "/");
 }
 
-export function CustomSidePanel({ path }: { path: string }) {
+function CustomSidePanelFrame({ path }: { path: string }) {
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);

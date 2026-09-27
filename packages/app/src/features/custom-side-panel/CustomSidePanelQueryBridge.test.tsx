@@ -1,11 +1,10 @@
 import { vi } from "vitest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { CustomSidePanelQueryBridge } from "./CustomSidePanelQueryBridge";
 import { bumpBusResumedAt, connectMockBus, emitBusEvent, stubMockBusSocket, teardownMockBus } from "../../test/bus";
 import { renderWithProviders } from "../../test/render";
 import { queryClient as globalQueryClient } from "../../queries/client";
 import { projectQueryKeys } from "../../queries/keys";
-import { PROJECT_CONFIG_PATH } from "../../queries/custom-side-panel";
+import { CustomSidePanelQueryBridge, PROJECT_CONFIG_PATH } from "./CustomSidePanelQueryBridge";
 
 beforeEach(() => {
   stubMockBusSocket();

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useI18n } from "@spherse/i18n/react";
+import { normalizeWelcomePagePath } from "@spherse/core";
 import type { ApiClient } from "../../../lib/api";
 import { Button } from "../../../components/ui/button";
 import {
@@ -13,19 +14,6 @@ import {
 import { Input } from "../../../components/ui/input";
 import { Field, FieldGroup, FieldLabel } from "../../../components/ui/field";
 import { updateWelcomePageSettings } from "../../../queries/welcome-page";
-
-const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
-
-function normalizeWelcomePagePath(input: string): string | null {
-  const trimmed = input.trim().replace(/\\/g, "/");
-  if (!trimmed || trimmed === "." || trimmed.startsWith("/") || trimmed.includes("..")) return null;
-  const normalized = trimmed.replace(/^\.\//, "").replace(/\/+/g, "/");
-  if (!normalized) return null;
-  if (normalized === ".spherse" || normalized.startsWith(".spherse/")) return null;
-  const ext = normalized.split(".").pop()?.toLowerCase();
-  if (!ext || !WELCOME_PAGE_EXTENSIONS.has(ext)) return null;
-  return normalized;
-}
 
 export function WelcomePageSettingsDialog({
   projectId,

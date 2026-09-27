@@ -1,8 +1,14 @@
 import { act, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useCustomSidePanel } from "../../queries/custom-side-panel";
 import { connectMockBus, emitBusEvent, stubMockBusSocket, teardownMockBus } from "../../test/bus";
 import { renderWithProviders } from "../../test/render";
+import { useCustomSidePanelStore } from "../../stores/custom-side-panel-store";
 import { CustomSidePanel } from "./index";
+
+vi.mock("../../queries/custom-side-panel", () => ({
+  useCustomSidePanel: vi.fn(),
+}));
 
 vi.mock("../../lib/use-connection", () => ({
   useApiClient: () => ({
@@ -14,6 +20,11 @@ vi.mock("../../lib/use-connection", () => ({
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   stubMockBusSocket();
+  useCustomSidePanelStore.setState({ activeByProject: {} });
+  vi.mocked(useCustomSidePanel).mockReturnValue({
+    data: { path: "panel/index.html" },
+    isError: false,
+  } as never);
 });
 
 afterEach(() => {
@@ -30,11 +41,16 @@ function emitFsWatch(path: string) {
   });
 }
 
-describe("CustomSidePanel", () => {
-  it("renders a transparent borderless iframe pointing at the preview route", async () => {
-    const view = renderWithProviders(<CustomSidePanel path="panel/index.html" />);
+describe("CustomSidePanel view switch", () => {
+  it("replaces the default content with a transparent borderless iframe when active and configured", async () => {
+    const view = renderWithProviders(
+      <CustomSidePanel>
+        <div>default panel content</div>
+      </CustomSidePanel>,
+    );
     await connectMockBus();
 
+    expect(screen.queryByText("default panel content")).not.toBeInTheDocument();
     const iframe = screen.getByTitle("侧边面板");
     expect(iframe).toHaveAttribute(
       "src",
@@ -44,8 +60,45 @@ describe("CustomSidePanel", () => {
     view.unmount();
   });
 
+  it("falls back to the default content when no path is configured", async () => {
+    vi.mocked(useCustomSidePanel).mockReturnValue({
+      data: { path: null },
+      isError: false,
+    } as never);
+    const view = renderWithProviders(
+      <CustomSidePanel>
+        <div>default panel content</div>
+      </CustomSidePanel>,
+    );
+    await connectMockBus();
+
+    expect(screen.getByText("default panel content")).toBeInTheDocument();
+    expect(screen.queryByTitle("侧边面板")).not.toBeInTheDocument();
+    view.unmount();
+  });
+
+  it("falls back to the default content when explicitly hidden", async () => {
+    useCustomSidePanelStore.getState().setActive("p1", false);
+    const view = renderWithProviders(
+      <CustomSidePanel>
+        <div>default panel content</div>
+      </CustomSidePanel>,
+    );
+    await connectMockBus();
+
+    expect(screen.getByText("default panel content")).toBeInTheDocument();
+    expect(screen.queryByTitle("侧边面板")).not.toBeInTheDocument();
+    view.unmount();
+  });
+});
+
+describe("CustomSidePanel iframe reload", () => {
   it("debounces rapid save bursts into a single forced reload via the React key", async () => {
-    const view = renderWithProviders(<CustomSidePanel path="panel/index.html" />);
+    const view = renderWithProviders(
+      <CustomSidePanel>
+        <div>default panel content</div>
+      </CustomSidePanel>,
+    );
     await connectMockBus();
 
     const iframeBefore = screen.getByTitle("侧边面板");
@@ -65,7 +118,11 @@ describe("CustomSidePanel", () => {
   });
 
   it("ignores fs-watch events for other paths", async () => {
-    const view = renderWithProviders(<CustomSidePanel path="panel/index.html" />);
+    const view = renderWithProviders(
+      <CustomSidePanel>
+        <div>default panel content</div>
+      </CustomSidePanel>,
+    );
     await connectMockBus();
 
     const iframeBefore = screen.getByTitle("侧边面板");
@@ -76,7 +133,11 @@ describe("CustomSidePanel", () => {
   });
 
   it("clears the debounce timer on unmount", async () => {
-    const { unmount } = renderWithProviders(<CustomSidePanel path="panel/index.html" />);
+    const { unmount } = renderWithProviders(
+      <CustomSidePanel>
+        <div>default panel content</div>
+      </CustomSidePanel>,
+    );
     await connectMockBus();
     const before = vi.getTimerCount();
 
