@@ -91,6 +91,7 @@ describe("message groups", () => {
       user(),
       assistant({
         id: "a1",
+        text: "先看猫",
         toolCalls: [{ toolCallId: "tc1", toolName: "generate_image", args: { prompt: "猫" } }],
       }),
       toolResult({
@@ -123,7 +124,7 @@ describe("message groups", () => {
     const kinds = groups[0].bubbles.map((bubble) =>
       bubble.kind === "cards" ? `cards:${bubble.entryId}` : bubble.kind === "assistant" ? `text:${bubble.entryId}` : bubble.kind,
     );
-    expect(kinds).toEqual(["thought", "cards:a1", "text:a3", "cards:a4"]);
+    expect(kinds).toEqual(["thought", "text:a1", "cards:a1", "text:a3", "cards:a4"]);
   });
 
   it("merges a result without ownerId via in-turn toolCallId fallback", () => {
@@ -391,7 +392,9 @@ describe("message groups", () => {
         if (entry.kind === "tool-result") {
           const orphan = bubbles.filter((bubble) => bubble.kind === "tool-result" && bubble.entryId === entry.id);
           const joined = bubbles.filter(
-            (bubble) => bubble.kind === "thought" && bubble.tools.some((tool) => tool.toolCallId === entry.toolCallId),
+            (bubble) =>
+              (bubble.kind === "thought" || bubble.kind === "cards") &&
+              bubble.tools.some((tool) => tool.toolCallId === entry.toolCallId),
           );
           expect(orphan.length + joined.length).toBeGreaterThan(0);
           expect(joined.length).toBeLessThanOrEqual(1);

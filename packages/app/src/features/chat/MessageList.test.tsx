@@ -156,6 +156,78 @@ describe("MessageList", () => {
     expect(messages[1]?.textContent).toContain("go");
   });
 
+  it("renders cards bubbles in entry order between text bubbles", () => {
+    renderList([
+      {
+        id: "g1",
+        kind: "turn",
+        user: { kind: "user", id: "u1", text: "画两张图" },
+        hasError: false,
+        bubbles: [
+          { kind: "thought", id: "b:thought:a1", entryId: "a1", tools: [] },
+          {
+            kind: "cards",
+            id: "b:cards:a1",
+            entryId: "a1",
+            tools: [{
+              toolCallId: "tc1",
+              toolName: "generate_image",
+              args: { prompt: "猫" },
+              status: "completed",
+              card: { type: "image", status: "done", path: "cat.png", prompt: "猫", mimeType: "image/png" },
+            }],
+          },
+          { kind: "assistant", id: "b:a2", entryId: "a2", text: "中间说明" },
+          {
+            kind: "cards",
+            id: "b:cards:a3",
+            entryId: "a3",
+            tools: [{
+              toolCallId: "tc2",
+              toolName: "generate_image",
+              args: { prompt: "狗" },
+              status: "completed",
+              card: { type: "image", status: "done", path: "dog.png", prompt: "狗", mimeType: "image/png" },
+            }],
+          },
+        ],
+      },
+    ]);
+    const cards = document.querySelector("[data-chat-cards]");
+    expect(cards).not.toBeNull();
+    expect(screen.getByAltText("猫")).toBeInTheDocument();
+    expect(screen.getByAltText("狗")).toBeInTheDocument();
+    const messages = [...document.querySelectorAll("[data-chat-message]")];
+    expect(messages.map((node) => node.textContent)).toEqual(
+      expect.arrayContaining([expect.stringContaining("画两张图"), expect.stringContaining("中间说明")]),
+    );
+  });
+
+  it("renders an orphan tool result with a card as visible cards", () => {
+    renderList([
+      {
+        id: "g1",
+        kind: "turn",
+        hasError: false,
+        bubbles: [{
+          kind: "tool-result",
+          id: "b:t1",
+          entryId: "t1",
+          tool: {
+            toolCallId: "tc1",
+            toolName: "generate_image",
+            args: { prompt: "猫" },
+            status: "completed",
+            card: { type: "image", status: "done", path: "cat.png", prompt: "猫", mimeType: "image/png" },
+          },
+        }],
+      },
+    ]);
+    expect(screen.getByAltText("猫")).toBeInTheDocument();
+    expect(document.querySelector("[data-chat-cards]")).not.toBeNull();
+    expect(document.querySelector("[data-chat-thought]")).toBeNull();
+  });
+
   it("shows the thinking indicator when waiting for the first token", () => {
     renderList(
       [{

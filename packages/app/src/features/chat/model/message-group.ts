@@ -37,7 +37,7 @@ export type ThoughtBubble = {
 export type Bubble =
   | AssistantBubble
   | ThoughtBubble
-  | { kind: "cards"; id: string; entryId: EntryId; seq?: number; tools: ToolItem[] }
+  | { kind: "cards"; id: string; entryId: EntryId; seq?: number; timestamp?: number; tools: ToolItem[] }
   | { kind: "tool-result"; id: string; entryId: EntryId; seq?: number; tool: ToolItem }
   | { kind: "error"; id: string; entryId: EntryId; seq?: number; error: EntryError; timestamp?: number };
 
@@ -205,6 +205,7 @@ function assembleBubbles(group: MessageGroup, entries: ChatEntry[]): Bubble[] {
         id: `b:cards:${entry.id}`,
         entryId: entry.id,
         ...(entry.seq !== undefined ? { seq: entry.seq } : {}),
+        ...(entry.time !== undefined ? { timestamp: entry.time } : {}),
         tools: entryCards,
       });
     }

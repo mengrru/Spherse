@@ -47,7 +47,8 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 | 移动端快捷链接滑出面板 | `[data-chat-quick-link-panel]` |
 | 消息外层行 | `[data-chat-message][data-role="user"]` 或 `[data-role="assistant"]` |
 | 消息气泡 | `[data-chat-bubble]` |
-| 思考过程折叠块 | `[data-chat-thought]`（turn 级「思考过程」折叠块：整轮工具调用收于块内折叠区，卡片渲染在块下方，位于文本气泡之前） |
+| 思考过程折叠块 | `[data-chat-thought]`（turn 级「思考过程」折叠块：无卡片工具调用收于块内折叠区，位于文本气泡之前） |
+| 卡片组容器 | `[data-chat-cards]`（html/image/command 等卡片，按所属消息时序与气泡交错） |
 | Trigger 对话轮折叠摘要条 | `[data-chat-turn-collapse]` |
 | 助手头像 | `[data-chat-message][data-role="assistant"]::before` |
 | Composer 外层 | `[data-chat-composer]` |
@@ -73,7 +74,8 @@ Agent chat themes live in the agent directory as `theme.css` (`.spherse/agents/{
 | `data-chat-messages` | 消息列表区 |
 | `data-chat-message` + `data-role="user"`/`"assistant"` | 单条消息外层 |
 | `data-chat-bubble` | 消息气泡（内容容器） |
-| `data-chat-thought` | turn 级「思考过程」折叠块（整轮工具调用 + 卡片） |
+| `data-chat-thought` | turn 级「思考过程」折叠块（无卡片工具调用） |
+| `data-chat-cards` | 卡片组容器（按所属消息时序与气泡交错） |
 | `data-chat-turn-collapse` | Trigger 对话轮折叠摘要条（按钮） |
 | `data-chat-composer` | 输入区外层 |
 | `data-chat-composer-input` | 输入框外框 |

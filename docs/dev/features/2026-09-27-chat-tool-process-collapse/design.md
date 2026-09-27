@@ -248,4 +248,13 @@ interface ToolProcessSectionProps {
 
 ### 迭代 3 code review 处理
 
-（待 review 后填写）
+| # | 级别 | 问题 | 处理 |
+|---|---|---|---|
+| I-1 | important | 主题钩子文档同步声称已做实际未做（theming / skill / project-structure 缺 `data-chat-cards`，`data-chat-thought` 描述过时） | 已修：三处更新并重建 presets |
+| I-2 | important | design 声称的 MessageList cards/孤儿拆分测试未写 | 已修：补 cards 交错渲染、带卡孤儿 → ToolCards、无卡孤儿 → 折叠块（原有）用例 |
+| M-3 | medium | property test 的 joined 只扫 thought，cards 分拣丢工具不可发现 | 已修：joined 覆盖 thought + cards |
+| M-4 | medium | runChanges 只扫 thought，依赖「write/edit 不产卡」的跨包隐式不变量，未来文件工具挂审批会静默丢 diff | 已修：收集源扩为全部 bubbles 的 tools（thought + cards + 孤儿），FILE_CHANGE_TOOLS 过滤天然排除卡片工具 |
+| m-5 | minor | ownerIndex 兜底 `: 0` 分支不可达且静默 | 接受：防御性兜底，记录 |
+| m-6 | minor | 纯卡片轮 settle 后时间戳丢失（thought 空渲染 null，末位 cards 无时间通道） | 已修：cards bubble 加 timestamp（entry time），ToolCards 支持 showTime |
+| m-7 | minor | 「同 entry 文本在前卡片在后」无直接断言 | 已修：interleave 用例 a1 补文本，断言 `text:a1` 在 `cards:a1` 前 |
+| m-8 | minor | ToolCards 回调只测 command | 已修：补 question 卡回调用例 |

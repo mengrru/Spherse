@@ -123,6 +123,8 @@ export function MessageList({
         <ToolCards
           key={bubble.id}
           tools={bubble.tools}
+          timestamp={bubble.timestamp}
+          showTime={showTime}
           supersededToolCallIds={supersededToolCallIds}
           onRespondApproval={onRespondApproval}
           onRespondQuestion={onRespondQuestion}

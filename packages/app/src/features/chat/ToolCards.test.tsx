@@ -79,4 +79,19 @@ describe("ToolCards", () => {
     await user.click(screen.getByRole("button", { name: /批准|Approve/ }));
     expect(onRespondApproval).toHaveBeenCalledWith("req-1", true);
   });
+
+  it("forwards answer callbacks to question cards", async () => {
+    const onRespondQuestion = vi.fn();
+    const user = userEvent.setup();
+    renderCards([
+      cardTool({
+        toolCallId: "tc-q",
+        toolName: "ask_user",
+        args: {},
+        card: { type: "question", status: "pending", question: "继续吗？", options: ["继续", "停止"], requestId: "req-2" },
+      }),
+    ], { onRespondQuestion });
+    await user.click(screen.getByRole("button", { name: "继续" }));
+    expect(onRespondQuestion).toHaveBeenCalledWith("req-2", "继续");
+  });
 });
