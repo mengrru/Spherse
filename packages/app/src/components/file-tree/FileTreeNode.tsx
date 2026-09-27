@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { DragEvent } from "react";
 import { ChevronRightIcon, FileIcon, FolderIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
@@ -35,10 +35,11 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
     splitFilePath,
     readOnly,
     dropFiles,
+    dropTargetDir,
+    setDropTargetDir,
   } = useFileTreeCtx();
 
   const isSelected = item.path === selectedFilePath;
-  const [dropActive, setDropActive] = useState(false);
 
   const dragHandlers = dropFiles
     ? {
@@ -47,20 +48,20 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
           e.preventDefault();
           e.stopPropagation();
           e.dataTransfer.dropEffect = "copy";
-          setDropActive(true);
+          setDropTargetDir(item.path);
         },
         onDragLeave: (e: DragEvent) => {
           if (!hasFileDrag(e.dataTransfer)) return;
           e.stopPropagation();
           const related = e.relatedTarget;
           if (related instanceof Node && e.currentTarget.contains(related)) return;
-          setDropActive(false);
+          setDropTargetDir((prev) => (prev === item.path ? null : prev));
         },
         onDrop: (e: DragEvent) => {
           if (!hasFileDrag(e.dataTransfer)) return;
           e.preventDefault();
           e.stopPropagation();
-          setDropActive(false);
+          setDropTargetDir(null);
           dropFiles(parentDirPath(item.path), extractDroppedFiles(e.dataTransfer));
         },
       }
@@ -70,7 +71,7 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
     <TreeRow
       depth={depth}
       selected={isSelected}
-      className={dropActive ? "bg-sidebar-accent ring-1 ring-sidebar-ring" : undefined}
+      className={dropTargetDir === item.path ? "bg-sidebar-accent ring-1 ring-sidebar-ring" : undefined}
       onClick={() => selectFile(item.path)}
       {...dragHandlers}
     >
@@ -114,6 +115,8 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
     requestDelete,
     readOnly,
     dropFiles,
+    dropTargetDir,
+    setDropTargetDir,
   } = useFileTreeCtx();
 
   const expanded = expandedPaths.has(item.path);
@@ -123,7 +126,6 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
     [query.data, item.path],
   );
   const isCreatingInThisDir = creating && creating.parentPath === item.path;
-  const [dropActive, setDropActive] = useState(false);
 
   const dragHandlers = dropFiles
     ? {
@@ -132,20 +134,20 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
           e.preventDefault();
           e.stopPropagation();
           e.dataTransfer.dropEffect = "copy";
-          setDropActive(true);
+          setDropTargetDir(item.path);
         },
         onDragLeave: (e: DragEvent) => {
           if (!hasFileDrag(e.dataTransfer)) return;
           e.stopPropagation();
           const related = e.relatedTarget;
           if (related instanceof Node && e.currentTarget.contains(related)) return;
-          setDropActive(false);
+          setDropTargetDir((prev) => (prev === item.path ? null : prev));
         },
         onDrop: (e: DragEvent) => {
           if (!hasFileDrag(e.dataTransfer)) return;
           e.preventDefault();
           e.stopPropagation();
-          setDropActive(false);
+          setDropTargetDir(null);
           dropFiles(item.path, extractDroppedFiles(e.dataTransfer));
         },
       }
@@ -156,7 +158,10 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
       render={
         <TreeRow
           depth={depth}
-          className={cn("group", dropActive && "bg-sidebar-accent ring-1 ring-sidebar-ring")}
+          className={cn(
+            "group",
+            dropTargetDir === item.path && "bg-sidebar-accent ring-1 ring-sidebar-ring",
+          )}
           {...dragHandlers}
         />
       }

@@ -32,8 +32,8 @@ File panel（用户文件树）目前只能通过右键菜单新建文件/文件
 | Contract | 新域文件 `packages/contracts/src/upload.ts`：`uploadResponse` schema + `Static` 类型，`index.ts` 聚合导出。multipart body 不绑 Fastify schema（attachments 先例；其响应 schema 现居 client 本地，本功能按 AGENTS.md 契约红线放进 contracts） |
 | API client | `api.ts` 新增 `uploadFile(dirPath: string, file: File)`：FormData append `file`，POST `${apiBase}/upload/${encodeURIComponent(dirPath)}`，`authedFetch` 不手设 Content-Type，响应过 `uploadResponse` parser |
 | 上传编排 | `useFileTreeController` 新增 `uploadFiles(dirPath, files)`：顺序逐个 `client.uploadFile`（避免本地磁盘写竞争），单文件失败 toast 并继续，结束后对每个成功 path `invalidateProjectFileQueries` + `expandDir(dirPath)` 让结果立即可见 |
-| 拖放 UI | `DirectoryNode` 的 `CollapsibleTrigger`（TreeRow）与 `FileTree` 根容器（空白处，仅当传入 `onDropFiles`）挂 `onDragOver`/`onDragLeave`/`onDrop`：`dataTransfer.types` 含 `Files` 才响应，`preventDefault()` + `dropEffect = "copy"`，dragover 时高亮（行：`bg-sidebar-accent ring-1 ring-sidebar-ring`；根容器同理），drop/dragleave 清除 |
-| 事件包含关系 | 目录行 handler 对 `dragover`/`drop`/`dragleave` 一律 `stopPropagation()`：行是根容器后代，不阻断则一次 drop 冒泡到根容器导致同一批文件上传两次（目标目录 + 根目录）、两级高亮同闪。dragleave 用 `e.relatedTarget` 不在 `e.currentTarget` 内才清除高亮，避免行内子元素移动误清 |
+| 拖放 UI | `DirectoryNode` 的 `CollapsibleTrigger`（TreeRow）、`FileRow`（TreeRow）与 `FileTree` 根容器（空白处，仅当传入 `uploadsEnabled`）挂 `onDragOver`/`onDragLeave`/`onDrop`：`dataTransfer.types` 含 `Files` 才响应，`preventDefault()` + `dropEffect = "copy"`；高亮态为 FileTree 根组件持有的**单一共享状态** `dropTargetDir: string \| null`（经 context 下发，行高亮 = `dropTargetDir === item.path`，根容器 = `=== basePath`），任一时刻至多一个激活目标，从根上杜绝「激活态残留」 |
+| 事件包含关系 | 目录/文件行 handler 对 `dragover`/`drop`/`dragleave` 一律 `stopPropagation()`：行是根容器后代，不阻断则一次 drop 冒泡到根容器导致同一批文件上传两次（目标目录 + 根目录）。行 `dragover` 置 `dropTargetDir = item.path`（覆盖根容器值），行 `dragleave` 仅在 `prev === item.path` 时自清（防相邻行切换的事件乱序误清），根容器 `dragleave` 在 `relatedTarget` 离开容器时无条件清空（兜底行 stopPropagation 后根容器收不到 dragleave 的路径）。最初实现的三个局部布尔 state 存在「根容器激活后在行上 drop → 根容器高亮永久残留」缺陷，改为共享单一状态修复 |
 | 文件夹过滤 | drop handler **同步**快照 `dataTransfer.items` 的 `webkitGetAsEntry()` 结果（items 在让出事件循环后失效，须先取后 await）：`entry.isDirectory` 条目忽略；entry API 不可用时 fallback `dataTransfer.files` |
 | 窗口级兜底 | app 共享入口（desktop 与 web 均生效）挂 window `dragover`/`drop` `preventDefault()`（仅当 `types` 含 `Files`）：防止拖到无 handler 区域时 Electron 窗口导航到 `file://` 白屏；web 端此门控下无副作用 |
 | 上传反馈 | 成功 toast `file-tree.uploadedCount` {count}；任一文件被服务端重命名时追加 info toast `file-tree.uploadedRenamed` {names}（逗号连接，超过 5 个截断加 `…`）；失败 toast `file-tree.uploadFailed` {message}（沿用 `createFailed`/`deleteFailed` 模式）；拖入内容全部为文件夹（无可上传文件）时 info toast `file-tree.uploadNoFiles`。zh-CN / zh-TW / en |
@@ -65,6 +65,7 @@ POST /api/projects/:projectId/upload/*        (multipart/form-data, field "file"
 - contracts `api-contracts.test.ts`：`uploadResponse` 正/负样本
 - app `useFileTreeController` 测试（新增 hooks 测试基线）：上传成功路径 invalidate 与 expandDir 调用、失败 toast、重命名名单 toast、空列表提示
 - app `dnd.test.ts`：`hasFileDrag` / `extractDroppedFiles`（目录条目过滤、entry API 缺失 fallback）
+- app `drag-highlight.test.tsx`：拖放高亮状态机（根容器激活 → 行接管不残留、行 drop 后全清、拖离面板清除、容器内移动保持、空白 drop 上传根目录）
 - 手工验证：桌面端拖单文件/多文件/文件夹（忽略）到文件夹行、文件行与空白处、web 端 readOnly 不响应、skill panel 无拖拽行为
 
 ## 已知限制

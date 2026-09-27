@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { ReactNode } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import type { ApiClient } from "../../lib/api";
 import type { CreatingState, CreateAction, TreeItem } from "./tree-model";
 
@@ -21,6 +21,8 @@ export interface FileTreeContextValue {
   splitFilePath?: string | null;
   readOnly?: boolean;
   dropFiles?: (dirPath: string, files: File[]) => void;
+  dropTargetDir: string | null;
+  setDropTargetDir: Dispatch<SetStateAction<string | null>>;
 }
 
 const FileTreeContext = createContext<FileTreeContextValue | null>(null);

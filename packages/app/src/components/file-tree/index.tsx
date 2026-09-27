@@ -53,25 +53,25 @@ export function FileTree({
 
   const dropFiles = uploadsEnabled && !readOnly ? ctrl.uploadFiles : undefined;
 
-  const [rootDropActive, setRootDropActive] = useState(false);
+  const [dropTargetDir, setDropTargetDir] = useState<string | null>(null);
   const rootDragHandlers = dropFiles
     ? {
         onDragOver: (e: DragEvent) => {
           if (!hasFileDrag(e.dataTransfer)) return;
           e.preventDefault();
           e.dataTransfer.dropEffect = "copy";
-          setRootDropActive(true);
+          setDropTargetDir(basePath);
         },
         onDragLeave: (e: DragEvent) => {
           if (!hasFileDrag(e.dataTransfer)) return;
           const related = e.relatedTarget;
           if (related instanceof Node && e.currentTarget.contains(related)) return;
-          setRootDropActive(false);
+          setDropTargetDir(null);
         },
         onDrop: (e: DragEvent) => {
           if (!hasFileDrag(e.dataTransfer)) return;
           e.preventDefault();
-          setRootDropActive(false);
+          setDropTargetDir(null);
           dropFiles(basePath, extractDroppedFiles(e.dataTransfer));
         },
       }
@@ -95,13 +95,15 @@ export function FileTree({
     splitFilePath,
     readOnly,
     dropFiles,
+    dropTargetDir,
+    setDropTargetDir,
   };
 
   return (
     <div
       className={cn(
         "flex flex-col gap-px text-xs",
-        rootDropActive && "rounded-sm bg-sidebar-accent ring-1 ring-sidebar-ring",
+        dropTargetDir === basePath && "rounded-sm bg-sidebar-accent ring-1 ring-sidebar-ring",
       )}
       {...rootDragHandlers}
     >
