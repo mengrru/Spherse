@@ -68,7 +68,7 @@ jobs:
             mkdir -p ./pages-out/web
             cp -r packages/web/dist/. ./pages-out/web/
             cp packages/web/pages-assets/404.html ./pages-out/404.html
-            git fetch origin gh-pages
+            git fetch origin gh-pages || true
             if git cat-file -e origin/gh-pages:dev/web 2>/dev/null; then
               git archive origin/gh-pages dev/web | tar -x -C ./pages-out
             else

@@ -50,10 +50,12 @@ if (path === '/web' || path === '/web/' || path === '/dev/web' || path === '/dev
 
 - `packages/app/src/lib/urls.ts`:`WEB_APP_URL` 按 `import.meta.env.MODE === "development"` 切换 —— development(electron-vite dev server,即 `npm run dev` 的本地 dev 客户端)→ `${SITE_ORIGIN}/dev/web/`;production(打包发版、web 壳构建)与 test(vitest `MODE=test`)→ `${SITE_ORIGIN}/web/`。不用 `import.meta.env.DEV`:vitest 默认环境下 `DEV` 实测为 `true`,会挂掉现存 prod URL 断言。
 - 唯一消费方是 `MobileAccessPanel.tsx` 的 `buildDeeplink`(quick/manual 两模式共用),web 壳 `capabilities.mobileAccess: false` 不会消费该常量,切换无副作用。
-- **类型声明内联在 `urls.ts`**(`interface ImportMeta { env: ImportMetaEnv }` + `interface ImportMetaEnv { MODE: string }`),不新建 `vite-env.d.ts`:packages/app 的 exports 直指源码,`packages/web` 与 `packages/desktop` 的 typecheck program(include 各自仅 `src`)会经 import 图加载 `urls.ts`,独立 d.ts 文件不在对方 include 中会被跳过,导致 `import.meta.env` TS2339;内联声明随模块对所有 program 可见。
+- **类型声明以 `declare global` 内联在 `urls.ts`**(合并全局 `ImportMeta`),不新建 `vite-env.d.ts`:packages/app 的 exports 直指源码,`packages/web` 与 `packages/desktop` 的 typecheck program(include 各自仅 `src`)会经 import 图加载 `urls.ts`,独立 d.ts 文件不在对方 include 中会被跳过,导致 `import.meta.env` TS2339;`declare global` 随模块对所有 program 可见。注意:模块内裸 `interface ImportMeta` 是模块局部类型、不与全局合并,必须包在 `declare global` 中。
 - `urls.test.ts`:默认(MODE=test)断言 prod URL;`vi.stubEnv("MODE", "development")` + `vi.resetModules()` 动态 re-import 断言 dev URL(常量在模块加载时求值,stubEnv 单独不生效)。
 
-不采用 bridge 运行时下发(主进程 `app.isPackaged`):需扩 IPC contract 与 `MobileAccessState`,而「本地 dev 客户端」在本仓库的运行形态就是 electron-vite dev,构建期判定已准确覆盖,改动面最小。### D4. web 壳 localStorage 隔离
+不采用 bridge 运行时下发(主进程 `app.isPackaged`):需扩 IPC contract 与 `MobileAccessState`,而「本地 dev 客户端」在本仓库的运行形态就是 electron-vite dev,构建期判定已准确覆盖,改动面最小。
+
+### D4. web 壳 localStorage 隔离
 
 `/web/` 与 `/dev/web/` 同 origin(`https://spherse.mengru.work`),localStorage 按 origin 共享。若不隔离:
 
@@ -69,7 +71,7 @@ if (path === '/web' || path === '/web/' || path === '/dev/web' || path === '/dev
 
 dev 构建的 manifest `name`/`short_name`/`description` 加 "Dev" 标识,手机桌面可区分:
 
-- `packages/web/vite.config.ts` 读 `process.env.WEB_ENV === "dev"`(vite config 运行于 Node,无需 define 中转),命中时 manifest 字段加后缀(如 `Spherse Dev` / `Spherse Dev (dev branch build)`),并经 `transformIndexHtml` 把 `<title>` 改为带 Dev 标识——iOS Safari 添加到主屏的标签取 HTML title / `apple-mobile-web-app-title`,不吃 manifest name,只改 manifest 时 iOS 桌面无法区分。
+- `packages/web/vite.config.ts` 读 `process.env.WEB_ENV === "dev"`(vite config 运行于 Node,无需 define 中转),命中时 manifest 字段加后缀(如 `Spherse Dev` / `Spherse Dev (dev branch build)`),并经 `transformIndexHtml` 同时替换 `<title>` 与 `apple-mobile-web-app-title` meta 为 Dev 标识——iOS Safari 添加到主屏的标签在 meta 存在时**覆盖** `<title>`,只改 title 时 iOS 桌面无法区分;Android/Chrome 走 manifest short_name。
 - 仅 `deploy-web-dev.yml` 注入 `WEB_ENV=dev`;`deploy-pages.yml` 的 prod 构建不注入,行为不变。
 - manifest `id`/`start_url`/`scope` 由相对路径解析(`/dev/web/`),与 prod PWA 天然是两个安装项;图标不变(以名称区分,避免新增图标资产);`manifest.webmanifest` 不在 workbox precache globPatterns 内,改 manifest 不触碰 SW。
 

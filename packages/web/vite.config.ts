@@ -16,7 +16,12 @@ function devDeployPlugin() {
   return {
     name: "spherse-web-dev-deploy",
     transformIndexHtml(html: string) {
-      return html.replace("<title>Spherse</title>", "<title>Spherse Dev</title>");
+      return html
+        .replace("<title>Spherse</title>", "<title>Spherse Dev</title>")
+        .replace(
+          '<meta name="apple-mobile-web-app-title" content="Spherse" />',
+          '<meta name="apple-mobile-web-app-title" content="Spherse Dev" />',
+        );
     },
   };
 }

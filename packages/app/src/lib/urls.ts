@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unused-vars -- declaration merging for import.meta.env */
-interface ImportMetaEnv {
-  readonly MODE: string;
+declare global {
+  interface ImportMeta {
+    readonly env: {
+      readonly MODE: string;
+    };
+  }
 }
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
-/* eslint-enable @typescript-eslint/no-unused-vars */
 
 const SITE_ORIGIN = "https://spherse.mengru.work";
 

@@ -16,7 +16,8 @@ const WEB_CAPABILITIES: HostCapabilities = {
   content: { editable: false },
 };
 
-const IS_DEV_DEPLOY = window.location.pathname.startsWith("/dev/web");
+const IS_DEV_DEPLOY =
+  window.location.pathname.startsWith("/dev/web/") || window.location.pathname === "/dev/web";
 
 function scopedStorageKey(key: string): string {
   return IS_DEV_DEPLOY ? `${key}:dev` : key;
