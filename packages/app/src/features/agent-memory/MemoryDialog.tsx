@@ -269,7 +269,7 @@ export function MemoryDialog({ open, onOpenChange, agentId, projectId }: MemoryD
                         ) : (
                           <div className="flex items-start gap-2">
                             <div className="min-w-0 flex-1">
-                              <p className="whitespace-pre-wrap break-words text-sm">
+                              <p className="whitespace-pre-wrap break-words text-xs">
                                 {entry.content}
                               </p>
                               <div className="mt-1 flex flex-wrap items-center gap-1">
