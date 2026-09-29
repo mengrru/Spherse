@@ -147,7 +147,7 @@ npm run dist        # 构建当前平台的安装包
 | `@spherse/app` | 桌面端与 Web 端共享的 React Renderer |
 | `@spherse/desktop` | Electron 主进程、Preload、IPC 与桌面基础设施 |
 | `@spherse/web` | 移动端 Web/PWA 宿主 |
-| `@spherse/presets` | 内置模板、Skill 与示例内容 |
+| `@spherse/presets` | 内置模板与 Skill |
 | `@spherse/i18n` | 国际化基础设施与翻译资源 |
 
 详细架构与数据约定见 [`docs/official/`](docs/official/)，开发规范见 [`AGENTS.md`](AGENTS.md)。

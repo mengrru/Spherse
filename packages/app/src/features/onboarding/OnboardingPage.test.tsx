@@ -98,4 +98,13 @@ describe("OnboardingPage project market", () => {
     renderOnboarding();
     expect(screen.queryByText(/探索更多/)).not.toBeInTheDocument();
   });
+
+  it("hides the market card when there is no server connection", () => {
+    useAppStore.setState({
+      connection: { baseUrl: "", accessToken: null },
+    } as never);
+    renderOnboarding();
+    expect(screen.queryByRole("button", { name: /打开项目市场/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /打开或创建项目/ })).toBeInTheDocument();
+  });
 });

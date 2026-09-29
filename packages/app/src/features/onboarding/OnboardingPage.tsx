@@ -41,11 +41,13 @@ export function OnboardingPage() {
           desc={t("onboarding.desc.openOrCreate")}
           onClick={handleOpenOrCreate}
         />
-        <ActionCard
-          title={t("onboarding.action.openMarket")}
-          desc={t("onboarding.desc.openMarket")}
-          onClick={() => setMarketOpen(true)}
-        />
+        {globalClient && (
+          <ActionCard
+            title={t("onboarding.action.openMarket")}
+            desc={t("onboarding.desc.openMarket")}
+            onClick={() => setMarketOpen(true)}
+          />
+        )}
       </div>
       {globalClient && (
         <ProjectMarketDialog

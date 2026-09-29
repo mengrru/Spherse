@@ -147,7 +147,7 @@ The repository uses npm workspaces:
 | `@spherse/app` | Shared React renderer for desktop and Web |
 | `@spherse/desktop` | Electron main process, preload, IPC, and desktop infrastructure |
 | `@spherse/web` | Mobile Web/PWA host |
-| `@spherse/presets` | Built-in templates, skills, and sample content |
+| `@spherse/presets` | Built-in templates and skills |
 | `@spherse/i18n` | Internationalization infrastructure and translations |
 
 See [`docs/official/`](docs/official/) for architecture and data conventions, and [`AGENTS.md`](AGENTS.md) for development guidelines.
