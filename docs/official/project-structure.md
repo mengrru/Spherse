@@ -77,9 +77,6 @@ spherse/
 │   │   │   ├── agents-index-template.md # 新项目 AGENTS.md 模板源文件
 │   │   │   ├── preset-agents/        # 预置 agent 模板源文件（<dir>.md 完整 profile，由 presets.json 的 presetAgents 声明）
 │   │   │   └── prompt-templates/     # 预置 prompt template 源文件（<id>.md，由 presets.json 的 presetPromptTemplates 声明）
-│   │   ├── sample-projects/          # 内置示例项目源（新用户引导页「打开示例项目」拷贝到用户选定位置；manifest.json + 各示例完整项目树）
-│   │   │   ├── manifest.json         # 示例清单（[{ id, displayName, dirName }]）
-│   │   │   └── harry-potter/         # Harry Potter 示例项目（完整项目树，含 .spherse/project.yaml、agents、文档）
 │   │   ├── skills/                   # 内置 skill 源（app 内置只读，通过 SkillStore 内存合并；新项目不再注入到 .spherse/skills/）
 │   │   │   ├── spherse-guide/        # Spherse 功能介绍、快速上手、目标导向使用引导与常见问题
 │   │   │   │   └── SKILL.md
@@ -230,7 +227,7 @@ spherse/
 │   │       │   ├── session-title.ts  # 会话显示标题（title 缺省回落 updatedAt 本地时间），侧栏与 tab 共用
 │   │       │   ├── use-connection.ts  # useApiClient(projectId) / useGlobalApiClient()（无 projectId 的全局 client，项目市场用）/ useConnection() — 基于 app-store connection 派生 ApiClient
 │   │       │   ├── connect-payload.ts # 连接 payload 编解码（桌面端 buildConnectUrl 生成 QR 链接 ↔ web 端 parseConnectPayload 解析 base/token/targetPath）
-│   │       │   ├── urls.ts            # 官网域派生的集中 URL 常量（WEB_APP_URL/DOCS_URL/EXPLORE_URL/DOWNLOAD_PAGE_URL）
+│   │       │   ├── urls.ts            # 官网域派生的集中 URL 常量（WEB_APP_URL/DOCS_URL/DOWNLOAD_PAGE_URL）
 │   │       │   ├── ws/                # 通用 WS 连接抽象：ws-connection.ts（WsConnection 状态机——idle/connecting/open/waiting-backoff/failed/fatal/closed、心跳 awaitingPongSince、退避重试、probe；bus 与 chat（PR3 起）共用）
 │   │       │   ├── utils.ts          # shadcn/ui cn() 工具
 │   │       │   └── localstorage/
@@ -293,7 +290,7 @@ spherse/
 │   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、主题隔离），复用 components/floating-frame；含 useFloatingSessionId
 │   │       │   ├── floating-content-browser/ # 浮窗内容浏览器（多窗口、复用 ContentView 只读渲染 + components/floating-frame），含 useFloatedFilePaths；从文件树右键「浮窗」触发
 │   │       │   ├── global-search/     # 项目内全局搜索弹窗（command palette 风格 Dialog，聊天/文件两组结果；Cmd/Ctrl+P 与 project panel 空白处右键唤出；聊天命中跳转 chat 路由 ?messageId= 定位）
-│   │       │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开示例项目
+│   │       │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开项目市场（复用 project-market Dialog）
 │   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child；激活自定义侧边面板时整体替换为 CustomSidePanel（iframe）；空白处右键唤出全局搜索
 │   │       │   ├── project-market/       # 项目市场 Dialog（顶部分类 chips「全部」+ 动态归并 + 卡片网格；下载 = selectDirectory → 全局 install API → openProjectAtPath → 导航打开）+ categories 归并/过滤纯函数
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
@@ -336,11 +333,10 @@ spherse/
 │   │   │   ├── fix-path.ts           # 打包版 PATH 修复：仅 packaged + darwin/linux，spawn 用户登录 shell（$SHELL -lic 'echo $PATH'，TERM=dumb，3s 超时）拉取登录 shell 的 PATH，剥离 ANSI/控制字节后按去重保序前置合并进 process.env.PATH（dev/test/win32 no-op，失败保留原 PATH 不阻断启动）；修复 GUI 进程不继承 shell PATH 导致 stdio MCP server（uvx/npx/python）找不到可执行文件
 │   │   │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
 │   │   │   ├── updater.ts            # 更新检测：OSS latest.json 清单 + compareVersions + 平台 downloadUrl 解析（electron-updater 仅保留 Windows in-app 下载 API，feed 已废弃）、silent 检测不改写交互状态、startAutoUpdateChecks 调度（启动 5s + 每小时 tick，≥24h 且用户活动时静默检测）
-│   │   │   ├── sample-projects.ts    # 内置示例项目资源路径解析（dev/packaged）+ manifest 读取（供 onboarding「打开示例项目」）
-│   │   │   ├── unsafe-location.ts    # 项目路径「易失区」判定：getUnsafeZoneRoot 计算更新时会被覆盖清空的目录（win32 = dirname(process.execPath)，NSIS 卸载器 RMDir /r $INSTDIR 作用域；darwin = .app bundle 目录；dev/linux 无，dev 下 SPHERSE_UNSAFE_ZONE env 可覆盖供 E2E 指定），isInsideUnsafeZone 经 @spherse/core 的 isPathInside 判断（打开/示例项目 IPC 弹警告框用）
+│   │   │   ├── unsafe-location.ts    # 项目路径「易失区」判定：getUnsafeZoneRoot 计算更新时会被覆盖清空的目录（win32 = dirname(process.execPath)，NSIS 卸载器 RMDir /r $INSTDIR 作用域；darwin = .app bundle 目录；dev/linux 无，dev 下 SPHERSE_UNSAFE_ZONE env 可覆盖供 E2E 指定），isInsideUnsafeZone 经 @spherse/core 的 isPathInside 判断（打开项目 IPC 弹警告框用）
 │   │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │   │       │   │   ├── index.ts          # registerAllIpc 聚合
-│   │       │   │   ├── project.ts        # 项目选择（SPHERSE_E2E_SELECT_DIRECTORY seam 可注入测试目录）、server 启停、打开项目持久化、打开示例项目、打开项目文件夹（shell.openPath）、用默认应用打开文件（openFileExternal）；confirmUnsafeLocation 对安装目录内路径弹警告框（默认取消），restore-projects 恢复后对存量易失区项目每会话弹一次迁移警告
+│   │       │   │   ├── project.ts        # 项目选择（SPHERSE_E2E_SELECT_DIRECTORY seam 可注入测试目录）、server 启停、打开项目持久化、打开项目文件夹（shell.openPath）、用默认应用打开文件（openFileExternal）；confirmUnsafeLocation 对安装目录内路径弹警告框（默认取消），restore-projects 恢复后对存量易失区项目每会话弹一次迁移警告
 │   │   │   │   ├── open-file-path.ts # isInsideAnyOpenProject 路径校验辅助（openFileExternal handler 使用，校验路径在已打开项目内）
 │   │   │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
 │   │   │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）

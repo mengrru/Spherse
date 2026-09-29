@@ -1324,26 +1324,14 @@ export const zhCN = {
   "onboarding.subtitle": "搭建属于你自己的世界",
   // 引导卡片1按钮：打开已有项目或新建项目（合并入口，点击后弹出目录选择器，可选择已有文件夹，也可在其中新建文件夹）
   "onboarding.action.openOrCreate": "打开或创建项目",
-  // 引导卡片2按钮：打开示例项目，{name} 为示例项目名称
-  "onboarding.action.openSample": "打开示例项目：{name}",
+  // 引导卡片2按钮：打开项目市场（弹窗浏览并下载市场项目）
+  "onboarding.action.openMarket": "打开项目市场",
   // 引导卡片1描述：说明该入口同时支持打开已有项目文件夹与新建空项目文件夹
   "onboarding.desc.openOrCreate": "选择已有项目文件夹，或新建一个文件夹从空项目开始",
-  // 引导卡片2描述
-  "onboarding.desc.openSample": "将内置示例项目拷贝到选定位置并打开",
-  // 引导页两卡片下方的「探索更多示例」文字链接：点击在系统浏览器打开 landing /explore 示例画廊
-  "onboarding.action.explore": "探索更多示例",
-  // 引导卡片2（打开示例项目）的 tooltip：说明示例项目的搭建方式与用途，鼠标悬浮于卡片时展示
-  "onboarding.tooltip.openSample": "该示例项目在 Spherse 中从零开始搭建，使用的模型为 DeepSeek V4 Flash。通过该项目熟悉 Spherse 的使用方式，从而搭建完全属于你自己的世界。",
-  // 拷贝示例项目失败时的错误提示
-  "onboarding.error.copyFailed": "拷贝示例项目失败，请重试",
-  // 示例项目拷贝成功但注册/打开失败时的错误提示（区分于拷贝失败）
-  "onboarding.error.openFailed": "打开示例项目失败，请重试",
-  // 引导页操作（打开/创建/示例）发生未预期异常时的通用错误提示
+  // 引导卡片2描述：说明市场项目的获取方式
+  "onboarding.desc.openMarket": "浏览市场中的项目，下载到本地并打开",
+  // 引导页操作（打开/创建）发生未预期异常时的通用错误提示
   "onboarding.error.unexpected": "操作失败，请重试",
-  // 内置示例资源缺失时的错误提示
-  "onboarding.error.sampleNotFound": "找不到内置示例，请重新安装应用",
-  // 打开示例项目时，选择示例项目拷贝目标位置的对话框标题（Electron 原生对话框）
-  "onboarding.dialog.sampleLocation": "选择示例项目的保存位置",
 
   // --- 移动端连接页（MobileConnectPage） ---
   // 移动端未连接 server 时显示的连接页主标题

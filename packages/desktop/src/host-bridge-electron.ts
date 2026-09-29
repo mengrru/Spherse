@@ -29,8 +29,6 @@ export function createElectronHostBridge(): HostBridge {
     openFileExternal: api.openFile,
     setLastActiveProject: api.setLastActiveProject,
     getLastActiveProject: api.getLastActiveProject,
-    openSampleProject: api.openSampleProject,
-    getSampleManifest: api.getSampleManifest,
   };
 
   const updater: UpdaterHostApi = {

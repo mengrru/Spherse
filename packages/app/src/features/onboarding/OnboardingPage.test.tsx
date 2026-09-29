@@ -1,28 +1,29 @@
 import { screen } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockHostBridge } from "../../test/host-bridge";
-import { renderWithProviders } from "../../test/render";
+import { createTestQueryClient, renderWithProviders } from "../../test/render";
 import { useAppStore } from "../../stores/app-store";
 import { OnboardingPage } from "./OnboardingPage";
 
 let openProject: ReturnType<typeof vi.fn>;
-let openSampleProject: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   openProject = vi.fn();
-  openSampleProject = vi.fn();
   useAppStore.setState({
     openProject,
-    openSampleProject,
+    connection: { baseUrl: "http://localhost:4567", accessToken: null },
   } as never);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 function renderOnboarding() {
   renderWithProviders(<OnboardingPage />, {
-    bridge: createMockHostBridge({
-      project: { getSampleManifest: vi.fn(async () => [{ id: "s1", displayName: "Example", dirName: "example" }]) } as never,
-    }),
+    bridge: createMockHostBridge(),
+    queryClient: createTestQueryClient(),
   });
 }
 
@@ -46,25 +47,6 @@ describe("OnboardingPage re-entry guard", () => {
     expect(openProject).toHaveBeenCalledTimes(2);
   });
 
-  it("guards open-sample against re-entry while another action is busy", async () => {
-    let release!: (value: string | null) => void;
-    openProject.mockImplementation(
-      () => new Promise((resolve) => (release = resolve)),
-    );
-    openSampleProject.mockResolvedValue({ projectId: null, error: "sampleNotFound" });
-    const user = userEvent.setup();
-    renderOnboarding();
-
-    await user.click(screen.getByRole("button", { name: /打开或创建项目/ }));
-    const sampleCard = await screen.findByRole("button", { name: /Example/ });
-    await user.click(sampleCard);
-    expect(openSampleProject).not.toHaveBeenCalled();
-
-    release(null);
-    await user.click(sampleCard);
-    expect(openSampleProject).toHaveBeenCalledTimes(1);
-  });
-
   it("recovers the guard after a failed open", async () => {
     openProject.mockRejectedValue(new Error("boom"));
     const user = userEvent.setup();
@@ -76,5 +58,44 @@ describe("OnboardingPage re-entry guard", () => {
 
     await user.click(card);
     expect(openProject).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("OnboardingPage project market", () => {
+  it("opens the project market dialog from the market card", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            schemaVersion: 1,
+            generatedAt: "2026-01-01T00:00:00.000Z",
+            projects: [
+              {
+                name: "harry-potter",
+                description: "A sample world",
+                version: "1.0.0",
+                category: "示例",
+                zipUrl: "https://example.com/harry-potter.zip",
+                size: 1024,
+                updatedAt: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderOnboarding();
+
+    expect(screen.queryByText("项目市场")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /打开项目市场/ }));
+    expect(await screen.findByText("harry-potter")).toBeInTheDocument();
+  });
+
+  it("does not render an explore-more link", () => {
+    renderOnboarding();
+    expect(screen.queryByText(/探索更多/)).not.toBeInTheDocument();
   });
 });

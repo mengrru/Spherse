@@ -6,7 +6,6 @@ import type {
   MobileTunnelMode,
   RestoredProject,
   SaveDialogOptions,
-  SampleManifestEntry,
   ThemeMode,
   UpdateEvent,
   UpdateState,
@@ -18,7 +17,6 @@ export type {
   MobileTunnelMode,
   RestoredProject,
   SaveDialogOptions,
-  SampleManifestEntry,
   ThemeMode,
   UpdateEvent,
   UpdateState,
@@ -48,8 +46,6 @@ export interface ElectronAPI {
   reloadRenderer: () => Promise<void>;
   resetAppData: () => Promise<void>;
   showSaveDialog: (options: SaveDialogOptions) => Promise<string | null>;
-  openSampleProject: (opts: { sampleId: string }) => Promise<{ projectId: string; path: string } | { error: string } | null>;
-  getSampleManifest: () => Promise<SampleManifestEntry[]>;
   checkForUpdates: (opts: { silent: boolean }) => Promise<void>;
   downloadUpdate: () => Promise<void>;
   installUpdate: () => Promise<void>;

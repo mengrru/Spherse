@@ -18,12 +18,6 @@ export interface SaveDialogOptions {
   filters?: SaveDialogFilter[];
 }
 
-export interface SampleManifestEntry {
-  id: string;
-  displayName: string;
-  dirName: string;
-}
-
 export type ThemeMode = "light" | "dark" | "system";
 
 export type UpdateStatus =
@@ -123,8 +117,6 @@ export interface ProjectHostApi {
   openFileExternal(absolutePath: string): Promise<void>;
   setLastActiveProject(projectId: string): Promise<void>;
   getLastActiveProject(): Promise<string | null>;
-  openSampleProject(opts: { sampleId: string }): Promise<{ projectId: string; path: string } | { error: string } | null>;
-  getSampleManifest(): Promise<SampleManifestEntry[]>;
 }
 
 export interface UpdaterHostApi {

@@ -16,9 +16,6 @@ files:
   - dist/**/*
   - package.json
 extraResources:
-  - from: ../presets/sample-projects
-    to: sample-projects
-    filter: ["**/*"]
   - from: resources/tray
     to: tray
     filter: ["*.png"]

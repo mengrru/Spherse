@@ -30,7 +30,7 @@
 
 | 域 | channel 概要 |
 |---|---|
-| project | 目录选择、项目打开/关闭/恢复（`restore-projects` 重注册已打开项目）、lastActive、`get-server-port`、`open-project-folder`、`open-file`（校验在已打开项目内）、`open-external`（仅 http/https/mailto/tel）、save dialog、示例项目 |
+| project | 目录选择、项目打开/关闭/恢复（`restore-projects` 重注册已打开项目）、lastActive、`get-server-port`、`open-project-folder`、`open-file`（校验在已打开项目内）、`open-external`（仅 http/https/mailto/tel）、save dialog |
 | settings | get/save（save 后 `syncTray()`）、文本与图片 provider 目录 |
 | debug | is-dev、DevTools 开关、electron-store 查看、reload renderer、reset app data |
 | skill | zip 文件选择（本地安装用） |

@@ -1,7 +1,6 @@
 import { ipcMain, dialog, shell } from "electron";
 import type { BrowserWindow } from "electron";
 import path from "node:path";
-import { existsSync, mkdirSync, cpSync } from "node:fs";
 import { isInsideAnyOpenProject } from "./open-file-path.js";
 import { isInsideUnsafeZone } from "../unsafe-location.js";
 import { translate, normalizeLocale } from "@spherse/i18n";
@@ -15,7 +14,6 @@ import {
   getLocale,
   bumpLastOpenedById,
 } from "../settings.js";
-import { readSampleManifest, resolveSampleSrcDir } from "../sample-projects.js";
 
 type TestDialogEntry = {
   kind: "confirmUnsafeLocation" | "startupUnsafeWarning";
@@ -211,45 +209,5 @@ export function registerProjectIpc(
       ...(options.filters ? { filters: options.filters } : {}),
     });
     return result.canceled ? null : result.filePath;
-  });
-
-  ipcMain.handle("open-sample-project", async (_event, opts: { sampleId: string }) => {
-    let targetDir: string;
-    try {
-      const manifest = await readSampleManifest();
-      const entry = manifest.find((e) => e.id === opts.sampleId);
-      if (!entry) return { error: "sampleNotFound" };
-      const srcDir = resolveSampleSrcDir(entry);
-      if (!existsSync(srcDir)) return { error: "sampleNotFound" };
-      const win = getWindow();
-      if (!win) return null;
-      const title = translate(normalizeLocale(getLocale()), "onboarding.dialog.sampleLocation");
-      const result = await dialog.showOpenDialog(win, { properties: ["openDirectory"], title });
-      if (result.canceled || result.filePaths.length === 0) return null;
-      const parentDir = result.filePaths[0];
-      if (!(await confirmUnsafeLocation(parentDir, win))) return null;
-      targetDir = path.join(parentDir, entry.displayName);
-      let counter = 2;
-      while (existsSync(targetDir)) {
-        targetDir = path.join(parentDir, `${entry.displayName}-${counter}`);
-        counter++;
-      }
-      mkdirSync(targetDir, { recursive: true });
-      cpSync(srcDir, targetDir, { recursive: true });
-    } catch (err) {
-      console.error("[open-sample-project] copy failed:", err);
-      return { error: "copyFailed" };
-    }
-    try {
-      const { projectId } = await registerProject(targetDir, { lastOpened: new Date().toISOString() });
-      return { projectId, path: targetDir };
-    } catch (err) {
-      console.error("[open-sample-project] register failed:", err);
-      return { error: "openFailed" };
-    }
-  });
-
-  ipcMain.handle("get-sample-manifest", async () => {
-    return readSampleManifest();
   });
 }

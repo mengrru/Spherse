@@ -1,52 +1,20 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
-import type { TranslationKey } from "@spherse/i18n";
 import { toast } from "sonner";
-import type { SampleManifestEntry } from "../../lib/host-bridge";
 import { useAppStore } from "../../stores/app-store";
 import { useHostBridge } from "../../context/host-bridge-context";
-import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
-import { EXPLORE_URL } from "../../lib/urls";
-
-const ERROR_KEYS: Record<string, TranslationKey> = {
-  copyFailed: "onboarding.error.copyFailed",
-  openFailed: "onboarding.error.openFailed",
-  sampleNotFound: "onboarding.error.sampleNotFound",
-};
-
-function reportError(
-  t: (key: TranslationKey) => string,
-  code: string | undefined,
-): void {
-  if (!code) return;
-  const key = ERROR_KEYS[code];
-  if (key) toast.error(t(key));
-  else console.warn("[onboarding] unknown error code:", code);
-}
+import { useGlobalApiClient } from "../../lib/use-connection";
+import { ProjectMarketDialog } from "../project-market/ProjectMarketDialog";
 
 export function OnboardingPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const bridge = useHostBridge();
   const openProject = useAppStore((state) => state.openProject);
-  const openSampleProject = useAppStore((state) => state.openSampleProject);
-  const [samples, setSamples] = useState<SampleManifestEntry[]>([]);
+  const globalClient = useGlobalApiClient();
+  const [marketOpen, setMarketOpen] = useState(false);
   const busyRef = useRef(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    void bridge.project?.getSampleManifest()
-      ?.then((entries) => {
-        if (!cancelled) setSamples(entries);
-      })
-      ?.catch(() => {
-        console.warn("[onboarding] failed to load sample manifest");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const handleOpenOrCreate = async () => {
     if (busyRef.current) return;
@@ -54,23 +22,6 @@ export function OnboardingPage() {
     try {
       const projectId = await openProject(bridge);
       if (projectId) navigate(`/project/${projectId}`);
-    } catch {
-      toast.error(t("onboarding.error.unexpected"));
-    } finally {
-      busyRef.current = false;
-    }
-  };
-
-  const handleOpenSample = async (sampleId: string) => {
-    if (busyRef.current) return;
-    busyRef.current = true;
-    try {
-      const { projectId, error } = await openSampleProject(bridge, sampleId);
-      if (projectId) {
-        navigate(`/project/${projectId}`);
-      } else {
-        reportError(t, error);
-      }
     } catch {
       toast.error(t("onboarding.error.unexpected"));
     } finally {
@@ -90,26 +41,19 @@ export function OnboardingPage() {
           desc={t("onboarding.desc.openOrCreate")}
           onClick={handleOpenOrCreate}
         />
-        {samples.map((sample) => (
-          <ActionCard
-            key={sample.id}
-            title={`🪄✨ ${t("onboarding.action.openSample", { name: sample.displayName })}`}
-            desc={t("onboarding.desc.openSample")}
-            tooltip={t("onboarding.tooltip.openSample")}
-            onClick={() => handleOpenSample(sample.id)}
-          />
-        ))}
+        <ActionCard
+          title={t("onboarding.action.openMarket")}
+          desc={t("onboarding.desc.openMarket")}
+          onClick={() => setMarketOpen(true)}
+        />
       </div>
-      <a
-        href={EXPLORE_URL}
-        onClick={(e) => {
-          e.preventDefault();
-          void bridge.openExternal(EXPLORE_URL);
-        }}
-        className="mt-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        {t("onboarding.action.explore")} →
-      </a>
+      {globalClient && (
+        <ProjectMarketDialog
+          open={marketOpen}
+          onOpenChange={setMarketOpen}
+          client={globalClient}
+        />
+      )}
     </div>
   );
 }
@@ -117,15 +61,13 @@ export function OnboardingPage() {
 function ActionCard({
   title,
   desc,
-  tooltip,
   onClick,
 }: {
   title: string;
   desc: string;
-  tooltip?: string;
   onClick: () => void;
 }) {
-  const card = (
+  return (
     <button
       type="button"
       onClick={onClick}
@@ -134,16 +76,5 @@ function ActionCard({
       <span className="font-medium text-foreground">{title}</span>
       <span className="text-sm text-muted-foreground">{desc}</span>
     </button>
-  );
-
-  if (!tooltip) return card;
-
-  return (
-    <Tooltip>
-      <TooltipTrigger render={card} />
-      <TooltipContent side="bottom" className="max-w-sm">
-        {tooltip}
-      </TooltipContent>
-    </Tooltip>
   );
 }

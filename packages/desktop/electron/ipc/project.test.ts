@@ -1,15 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BrowserWindow } from "electron";
 
-const { dialogMock, fsMock, unsafeMock, serverMock, translateMock, settingsMock } = vi.hoisted(() => {
+const { dialogMock, unsafeMock, serverMock, translateMock, settingsMock } = vi.hoisted(() => {
   const dialogMock = {
     showMessageBox: vi.fn(),
     showOpenDialog: vi.fn(),
-  };
-  const fsMock = {
-    existsSync: vi.fn(),
-    mkdirSync: vi.fn(),
-    cpSync: vi.fn(),
   };
   const unsafeMock = {
     isInsideUnsafeZone: vi.fn(),
@@ -29,7 +24,7 @@ const { dialogMock, fsMock, unsafeMock, serverMock, translateMock, settingsMock 
   const settingsMock = {
     openProjects: [] as Array<{ id: string; path: string; name: string; lastOpened: string }>,
   };
-  return { dialogMock, fsMock, unsafeMock, serverMock, translateMock, settingsMock };
+  return { dialogMock, unsafeMock, serverMock, translateMock, settingsMock };
 });
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
@@ -47,16 +42,6 @@ vi.mock("electron", () => ({
   },
 }));
 
-vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs")>();
-  return {
-    ...actual,
-    existsSync: fsMock.existsSync,
-    mkdirSync: fsMock.mkdirSync,
-    cpSync: fsMock.cpSync,
-  };
-});
-
 vi.mock("../unsafe-location.js", () => unsafeMock);
 
 vi.mock("../server.js", () => serverMock);
@@ -69,13 +54,6 @@ vi.mock("../settings.js", () => ({
   getLastActiveProject: () => null,
   getLocale: () => "zh-CN",
   bumpLastOpenedById: () => null,
-}));
-
-vi.mock("../sample-projects.js", () => ({
-  readSampleManifest: async () => [
-    { id: "sample", displayName: "Demo", dirName: "demo" },
-  ],
-  resolveSampleSrcDir: () => "/src/demo",
 }));
 
 vi.mock("./open-file-path.js", () => ({
@@ -103,9 +81,6 @@ beforeEach(() => {
   handlers.clear();
   dialogMock.showMessageBox.mockReset();
   dialogMock.showOpenDialog.mockReset();
-  fsMock.existsSync.mockReset();
-  fsMock.mkdirSync.mockReset();
-  fsMock.cpSync.mockReset();
   unsafeMock.isInsideUnsafeZone.mockReset();
   unsafeMock.isInsideUnsafeZone.mockReturnValue(false);
   serverMock.registerProject.mockReset();
@@ -171,33 +146,6 @@ describe("open-project guard", () => {
     serverMock.registerProject.mockResolvedValue({ projectId: "pid-1" });
     await expect(invoke("open-project", "/unsafe/proj")).resolves.toEqual({ projectId: "pid-1" });
     expect(serverMock.registerProject).toHaveBeenCalledWith("/unsafe/proj", { lastOpened: expect.any(String) });
-  });
-});
-
-describe("open-sample-project guard", () => {
-  beforeEach(() => {
-    dialogMock.showOpenDialog.mockResolvedValue({ canceled: false, filePaths: ["/parent"] });
-    fsMock.existsSync.mockImplementation((p: unknown) => p === "/src/demo");
-    serverMock.registerProject.mockResolvedValue({ projectId: "pid-1" });
-  });
-
-  it("copies and registers when the parent directory is safe", async () => {
-    await expect(invoke("open-sample-project", { sampleId: "sample" })).resolves.toEqual({
-      projectId: "pid-1",
-      path: "/parent/Demo",
-    });
-    expect(fsMock.mkdirSync).toHaveBeenCalledWith("/parent/Demo", { recursive: true });
-    expect(fsMock.cpSync).toHaveBeenCalledWith("/src/demo", "/parent/Demo", { recursive: true });
-    expect(serverMock.registerProject).toHaveBeenCalledWith("/parent/Demo", { lastOpened: expect.any(String) });
-  });
-
-  it("returns null without copying when the user declines the unsafe location", async () => {
-    unsafeMock.isInsideUnsafeZone.mockReturnValue(true);
-    dialogMock.showMessageBox.mockResolvedValue({ response: 1 });
-    await expect(invoke("open-sample-project", { sampleId: "sample" })).resolves.toBeNull();
-    expect(fsMock.mkdirSync).not.toHaveBeenCalled();
-    expect(fsMock.cpSync).not.toHaveBeenCalled();
-    expect(serverMock.registerProject).not.toHaveBeenCalled();
   });
 });
 
