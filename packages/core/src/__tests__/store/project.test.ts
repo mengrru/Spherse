@@ -180,6 +180,26 @@ describe("ProjectStore — agent management", () => {
     expect(store.getAgent("nonexistent")).toBeUndefined();
   });
 
+  it("updateAgentMcp persists config and emits agent_updated", async () => {
+    const created = await store.createAgent("world-builder", VALID_PROFILE);
+    const id = created.getProfile().id;
+
+    const seen: Array<{ agentId: string; action: string }> = [];
+    const listener = (payload: { agentId: string; action: string }): void => {
+      seen.push({ agentId: payload.agentId, action: payload.action });
+    };
+    store.on("agent_updated", listener);
+
+    const saved = await store.updateAgentMcp(id, {
+      servers: [{ id: "s1", name: "fs", enabled: true, transport: "stdio", command: "npx" }],
+    });
+    store.off("agent_updated", listener);
+
+    expect(saved.servers).toHaveLength(1);
+    expect(await created.mcp.getConfig()).toEqual(saved);
+    expect(seen).toEqual([{ agentId: id, action: "updated" }]);
+  });
+
   it("loads agents on open", async () => {
     await store.createAgent("world-builder", VALID_PROFILE);
     await store.createAgent("lore-keeper", VALID_PROFILE.replace("World Builder", "Lore Keeper"));

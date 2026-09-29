@@ -670,9 +670,10 @@ Agent with time perception.`,
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
     runConfig.update({ defaultModel: "provider/model" });
-    const runner = await AgentRunner.init(deps, agentId, sessionId);
     const onReload = vi.fn();
-    deps.createTurnHooks = () => ({ onReload });
+    const beforeTurn = vi.fn();
+    deps.createTurnHooks = () => ({ onReload, beforeTurn });
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
     runner.markReloadPending();
 
     seedEvents(runner, [
@@ -684,6 +685,8 @@ Agent with time perception.`,
     await runner.retryLastTurn(() => {});
 
     expect(agentOf(runner).continue).toHaveBeenCalledTimes(1);
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(beforeTurn).toHaveBeenCalledTimes(1);
   });
 
   it("markReloadPending defers reload until the next sendMessage", async () => {

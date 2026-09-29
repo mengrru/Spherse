@@ -198,6 +198,7 @@ export class AgentRunner {
       if (this.pendingReload) {
         this.pendingReload = false;
         await this.applyReload();
+        await this.turnHooks.beforeTurn?.(this.agent);
       }
       const lastEvent = [...this.eventLog!.events]
         .reverse()

@@ -31,7 +31,6 @@
 
 ## 技术债（重构与收敛）
 
-- [ ] **`retryLastTurn` 经 `applyReload` 后不执行 `beforeTurn`**：retry 路径若命中 pendingReload 会按 profile 重建 `state.tools`，但不调 `turnHooks.beforeTurn`，MCP 工具与 `<mcp-context>` 在该轮丢失（pre-existing）。方向：retry 与 sendMessage 共用同一 turn 前置序列。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md` design review
 - [ ] **debug turn-context 快照的 tools 与实际请求不一致**：streamDecorator 可改写出站 `context.tools`（如 web_search 无 key 时隐藏），但 debug 快照直接列 `state.tools`；`previewTransforms` 只覆盖 messages。方向：kernel 增加 tools 维度的 preview 贡献点。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md`
 - [ ] **UI SDK 增加分窗 action**：现有 `floatContent` / `unfloatContent` / `openFile{float}` 可在浮窗打开文件，分窗没有对应入口。方向：`splitContent` / `unsplitContent`（或 `openFile{split}`），feature 关闭 / 移动端回落为导航；需同步 `packages/sdk` 类型与 `docs/official/architecture/ui-sdk.md`。参见 `docs/dev/features/2026-09-24-content-split-pane/design.md`（review m8）
 - [ ] **修复 text-selection E2E compact viewport 用例 flake**：`text-selection-session.spec.ts` 的「keeps long agent list scrollable in a compact viewport」在紧随「keyboard copy does not hijack editable targets」运行时约 2/3 概率失败（toolbar 点击超时或不可见），`origin/dev` 上同样复现，单独运行稳定。方向：排查前一用例遗留状态（剪贴板 / 选区 / 视口）或用例自身时序。

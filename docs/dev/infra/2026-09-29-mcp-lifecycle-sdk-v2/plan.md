@@ -42,9 +42,14 @@
 
 ## 收尾：verify + doc-sync
 
-- [ ] `npm run verify`
-- [ ] `docs/official/architecture/capabilities.md` MCP 章节更新（revision 自愈、per-server 缓存退避、20s 预算、v2 SDK、`mcp__` 保留前缀）
-- [ ] `docs/official/data-conventions.md`：sse 条目非法说明
-- [ ] `docs/dev/decisions/`：ADR（SDK v2 + 协议跟进 + sse 移除）
-- [ ] `packages/core/README.md` 检查同步
-- [ ] backlog 复核（新增 stdio 探测开销评估条目如需）
+- [x] `npm run verify`（全绿）
+- [x] doc-sync（capabilities.md / data-conventions.md / ADR-0014 / backlog）
+- [x] code review sub agent + 反馈处理（见 design「Code review 处理」）
+- [ ] PR
+
+## 实现过程的关键偏差记录（供 review 参考）
+
+1. **v2 `connect` 的 signal 不覆盖 era probe**：`auto` 模式对 stdio 先 spawn 探测进程，probe 只吃 `timeout` 选项不吃 signal（实测挂死）。最终方案：connect 传 `{ timeout: 15s, signal }` + 自建 abortGuard race 整个 connect+list 阶段，manager 侧 20s AbortSignal 兜底。
+2. **capability 自愈合并并入 commit 2**：review 后发现 revision 语义与 append-only 合并不兼容（bump 会造成重复追加），提前实现 strip+re-merge。
+3. **`node -e script --flag` 会被 node 解析为自身选项**：测试 fixture 改用环境变量传模式。
+4. **连接即死竞态**：server 在 connect 成功与缓存之间断开时 onclose 已消费，补 `closed` getter 在缓存与聚合两层校验。

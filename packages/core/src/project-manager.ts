@@ -136,9 +136,7 @@ export class ProjectManager {
     agentId: string,
     config: { servers: ReadonlyArray<Record<string, unknown>> },
   ): Promise<AgentMcpConfig> {
-    const agentStore = this.projectStore.getAgent(agentId);
-    if (!agentStore) throw new NotFoundError(`Agent "${agentId}" not found`);
-    return agentStore.mcp.saveConfig(config);
+    return this.projectStore.updateAgentMcp(agentId, config);
   }
 
   async getAgentMemory(agentId: string): Promise<{ enabled: boolean; core: string; coreLimit: number }> {
