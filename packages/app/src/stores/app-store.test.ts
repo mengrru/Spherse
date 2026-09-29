@@ -520,8 +520,6 @@ describe("useAppStore restoreProjects initialGate", () => {
         openFileExternal: vi.fn(),
         setLastActiveProject: vi.fn(),
         getLastActiveProject: vi.fn().mockResolvedValue("project-a"),
-        openSampleProject: vi.fn(),
-        getSampleManifest: vi.fn(),
       },
     });
   }
