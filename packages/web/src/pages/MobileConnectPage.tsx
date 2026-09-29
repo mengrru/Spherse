@@ -31,6 +31,8 @@ export function MobileConnectPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<Mode>("menu");
   const [submitting, setSubmitting] = useState(false);
+  const [manualBaseUrl, setManualBaseUrl] = useState("");
+  const [manualToken, setManualToken] = useState("");
   const [hasSavedConnection] = useState(() => Boolean(readWebConnection()?.baseUrl));
 
   const handleConnect = async (conn: ConnectPayload, targetPath?: string) => {
@@ -110,7 +112,11 @@ export function MobileConnectPage() {
         />
       ) : (
         <ManualPanel
+          baseUrl={manualBaseUrl}
+          token={manualToken}
           submitting={submitting}
+          onBaseUrlChange={setManualBaseUrl}
+          onTokenChange={setManualToken}
           onBack={() => setMode("menu")}
           onSubmit={handleConnect}
         />

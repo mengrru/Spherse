@@ -312,6 +312,8 @@ export const zhCN = {
   "common.add": "添加",
   // 通用发送按钮
   "common.send": "发送",
+  // 通用「清除输入框内容」按钮的无障碍标签（输入框尾部叉号）
+  "common.clear": "清除",
 
   // --- Activity Bar ---
   // 左侧活动栏设置图标悬停提示
