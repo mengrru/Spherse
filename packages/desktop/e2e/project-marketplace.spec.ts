@@ -92,7 +92,7 @@ test("marketplace download installs and opens the project", async () => {
 
     await page.locator("div[data-activity-bar] button[title='添加项目']").click();
     await page.getByRole("menuitem", { name: "市场" }).click();
-    await expect(page.getByText("项目市场")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "项目市场" })).toBeVisible({ timeout: 15_000 });
 
     const card = page.locator("[data-market-project='e2e-world']");
     await expect(card).toBeVisible({ timeout: 15_000 });
