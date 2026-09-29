@@ -19,6 +19,7 @@ const CLIENT_INFO = { name: "spherse", version: "1.0.0" } as const;
 
 export interface McpConnection {
   readonly serverName: string;
+  readonly closed: boolean;
   close(): Promise<void>;
 }
 
@@ -58,6 +59,18 @@ interface McpGetPromptResult {
 }
 
 const IMAGE_MIME_RE = /^image\//;
+const CONNECT_TIMEOUT_MS = 15_000;
+
+function abortError(serverName: string): Error {
+  return new Error(`mcp server connect budget exceeded for "${serverName}"`);
+}
+
+function abortGuard(signal: AbortSignal | undefined, serverName: string): Promise<never> {
+  return new Promise((_resolve, reject) => {
+    if (signal?.aborted) reject(abortError(serverName));
+    else signal?.addEventListener("abort", () => reject(abortError(serverName)), { once: true });
+  });
+}
 
 function mapMcpContent(content: unknown, isError: boolean): (TextContent | ImageContent)[] {
   if (!Array.isArray(content)) {
@@ -298,14 +311,21 @@ async function tryList<T>(
   }
 }
 
+function listOptions(signal: AbortSignal | undefined): { signal: AbortSignal } | undefined {
+  return signal ? { signal } : undefined;
+}
+
 async function tryListTools(
   client: McpClient,
   serverName: string,
   log: Logger,
+  signal?: AbortSignal,
 ): Promise<McpToolDescriptor[]> {
   return tryList(
     async () => {
-      const response = (await client.listTools()) as { tools?: McpToolDescriptor[] };
+      const response = (await client.listTools(undefined, listOptions(signal))) as {
+        tools?: McpToolDescriptor[];
+      };
       return Array.isArray(response.tools) ? response.tools : [];
     },
     serverName,
@@ -318,10 +338,11 @@ async function tryListResources(
   client: McpClient,
   serverName: string,
   log: Logger,
+  signal?: AbortSignal,
 ): Promise<{ resources: McpResourceDescriptor[]; resourceTemplates: McpResourceTemplateDescriptor[] }> {
   const resources = await tryList(
     async () => {
-      const res = (await client.listResources()) as {
+      const res = (await client.listResources(undefined, listOptions(signal))) as {
         resources?: McpResourceDescriptor[];
       };
       return Array.isArray(res.resources) ? res.resources : [];
@@ -332,7 +353,7 @@ async function tryListResources(
   );
   const resourceTemplates = await tryList(
     async () => {
-      const res = (await client.listResourceTemplates()) as {
+      const res = (await client.listResourceTemplates(undefined, listOptions(signal))) as {
         resourceTemplates?: McpResourceTemplateDescriptor[];
       };
       return Array.isArray(res.resourceTemplates) ? res.resourceTemplates : [];
@@ -348,10 +369,11 @@ async function tryListPrompts(
   client: McpClient,
   serverName: string,
   log: Logger,
+  signal?: AbortSignal,
 ): Promise<McpPromptDescriptor[]> {
   return tryList(
     async () => {
-      const res = (await client.listPrompts()) as {
+      const res = (await client.listPrompts(undefined, listOptions(signal))) as {
         prompts?: McpPromptDescriptor[];
       };
       return Array.isArray(res.prompts) ? res.prompts : [];
@@ -362,9 +384,27 @@ async function tryListPrompts(
   );
 }
 
+export interface ConnectServerOptions {
+  signal?: AbortSignal;
+  onDisconnect?: () => void;
+}
+
+const STDERR_BUFFER_LIMIT = 8 * 1024;
+const CLOSE_TIMEOUT_MS = 5_000;
+
+function closeQuietly(client: McpClient, serverName: string, log: Logger): Promise<void> {
+  return Promise.race([
+    client.close().catch((err) => {
+      log.warn({ err, server: serverName }, "mcp server close failed");
+    }),
+    new Promise<void>((resolve) => setTimeout(resolve, CLOSE_TIMEOUT_MS)),
+  ]);
+}
+
 export async function connectMcpServer(
   config: McpServerConfig,
   logger?: Logger,
+  opts?: ConnectServerOptions,
 ): Promise<ConnectResult> {
   const log = logger ?? createSilentLogger();
   const transport = buildTransport(config);
@@ -372,16 +412,31 @@ export async function connectMcpServer(
     capabilities: {},
     versionNegotiation: { mode: "auto" },
   });
+  let closedByUs = false;
 
   let stderrBuffer = "";
+  const onStderrData = (chunk: Buffer | string) => {
+    stderrBuffer += typeof chunk === "string" ? chunk : chunk.toString();
+    if (stderrBuffer.length > STDERR_BUFFER_LIMIT) {
+      stderrBuffer = stderrBuffer.slice(-STDERR_BUFFER_LIMIT);
+    }
+  };
   if (transport instanceof StdioClientTransport) {
-    transport.stderr?.on("data", (chunk: Buffer | string) => {
-      stderrBuffer += typeof chunk === "string" ? chunk : chunk.toString();
-    });
+    transport.stderr?.on("data", onStderrData);
   }
+  const unbindStderr = () => {
+    if (transport instanceof StdioClientTransport) {
+      transport.stderr?.off("data", onStderrData);
+    }
+  };
 
+  const signal = opts?.signal;
+  const guard = abortGuard(signal, config.name);
   try {
-    await client.connect(transport);
+    await Promise.race([
+      client.connect(transport, { timeout: CONNECT_TIMEOUT_MS, ...(signal ? { signal } : {}) }),
+      guard,
+    ]);
   } catch (err) {
     const stderr = stderrBuffer.trim();
     if (stderr) {
@@ -392,13 +447,17 @@ export async function connectMcpServer(
     } else {
       log.error({ err, server: config.name }, "mcp stdio server failed to start");
     }
-    try {
-      await client.close();
-    } catch {
-      // best-effort cleanup of any partially-spawned transport
-    }
+    closedByUs = true;
+    await closeQuietly(client, config.name, log);
     throw err;
   }
+  unbindStderr();
+  stderrBuffer = "";
+  let oncloseFired = false;
+  client.onclose = () => {
+    oncloseFired = true;
+    if (!closedByUs) opts?.onDisconnect?.();
+  };
   log.info({ server: config.name, transport: config.transport }, "mcp server connected");
 
   const instructions = client.getInstructions();
@@ -408,60 +467,73 @@ export async function connectMcpServer(
     prompts: !!serverCaps?.prompts,
   };
 
-  const toolDescriptors = await tryListTools(client, config.name, log);
-  const tools: AgentTool[] = toolDescriptors.map((tool) =>
-    adaptMcpTool(config.name, config.id, tool, (params, signal) =>
-      client.callTool(params, signal ? { signal } : undefined) as Promise<McpCallToolResult>,
-    ),
-  );
+  try {
+    const collect = async () => {
+      const toolDescriptors = await tryListTools(client, config.name, log, signal);
+      const tools: AgentTool[] = toolDescriptors.map((tool) =>
+        adaptMcpTool(config.name, config.id, tool, (params, toolSignal) =>
+          client.callTool(params, toolSignal ? { signal: toolSignal } : undefined) as Promise<McpCallToolResult>,
+        ),
+      );
 
-  let resources: McpResourceDescriptor[] = [];
-  let resourceTemplates: McpResourceTemplateDescriptor[] = [];
-  // Synthetic read_resource / get_prompt tools share the mcp__{server}_{shortid}__ namespace.
-  // If a server exposes a real tool named "read_resource" or "get_prompt", dedupeToolNames
-  // (live-session.ts) will suffix the later one with __2 — no crash, but the model may see
-  // both. Extremely unlikely in practice; documented here for awareness.
-  if (caps.resources) {
-    ({ resources, resourceTemplates } = await tryListResources(client, config.name, log));
-    tools.push(
-      adaptMcpReadResourceTool(config.name, config.id, (uri, signal) =>
-        client.readResource({ uri }, signal ? { signal } : undefined) as Promise<McpReadResourceResult>,
-      ),
-    );
-  }
+      let resources: McpResourceDescriptor[] = [];
+      let resourceTemplates: McpResourceTemplateDescriptor[] = [];
+      // Synthetic read_resource / get_prompt tools share the mcp__{server}_{shortid}__ namespace.
+      // If a server exposes a real tool named "read_resource" or "get_prompt", dedupeToolNames
+      // (capabilities/mcp/index.ts) will suffix the later one with __2 — no crash, but the model
+      // may see both. Extremely unlikely in practice; documented here for awareness.
+      if (caps.resources) {
+        ({ resources, resourceTemplates } = await tryListResources(client, config.name, log, signal));
+        tools.push(
+          adaptMcpReadResourceTool(config.name, config.id, (uri, toolSignal) =>
+            client.readResource({ uri }, toolSignal ? { signal: toolSignal } : undefined) as Promise<McpReadResourceResult>,
+          ),
+        );
+      }
 
-  let prompts: McpPromptDescriptor[] = [];
-  if (caps.prompts) {
-    prompts = await tryListPrompts(client, config.name, log);
-    tools.push(
-      adaptMcpGetPromptTool(config.name, config.id, (params, signal) =>
-        client.getPrompt(params, signal ? { signal } : undefined) as Promise<McpGetPromptResult>,
-      ),
-    );
-  }
+      let prompts: McpPromptDescriptor[] = [];
+      if (caps.prompts) {
+        prompts = await tryListPrompts(client, config.name, log, signal);
+        tools.push(
+          adaptMcpGetPromptTool(config.name, config.id, (params, toolSignal) =>
+            client.getPrompt(params, toolSignal ? { signal: toolSignal } : undefined) as Promise<McpGetPromptResult>,
+          ),
+        );
+      }
 
-  return {
-    connection: {
-      get serverName() {
-        return config.name;
+      return { tools, resources, resourceTemplates, prompts };
+    };
+
+    const collected = await Promise.race([collect(), guard]);
+    const { tools, resources, resourceTemplates, prompts } = collected;
+
+    return {
+      connection: {
+        get serverName() {
+          return config.name;
+        },
+        get closed() {
+          return closedByUs || oncloseFired;
+        },
+        async close() {
+          closedByUs = true;
+          await closeQuietly(client, config.name, log);
+        },
       },
-      async close() {
-        try {
-          await client.close();
-        } catch (err) {
-          log.warn({ err, server: config.name }, "mcp server close failed");
-        }
+      tools,
+      info: {
+        serverName: config.name,
+        serverId: config.id,
+        instructions,
+        capabilities: caps,
+        resources,
+        resourceTemplates,
+        prompts,
       },
-    },
-    tools,
-    info: {
-      serverName: config.name,
-      serverId: config.id,
-      instructions,
-      capabilities: caps,
-      resources,
-      resourceTemplates,
-      prompts,
-    },
-  };
+    };
+  } catch (err) {
+    closedByUs = true;
+    await closeQuietly(client, config.name, log);
+    throw err;
+  }
 }

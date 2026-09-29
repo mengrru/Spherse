@@ -115,6 +115,8 @@ export function normalizeMcpConfig(raw: unknown): AgentMcpConfig {
 
 const TOOL_NAME_INVALID_CHARS = /[^a-zA-Z0-9_]/g;
 
+export const MCP_TOOL_NAME_PREFIX = "mcp__";
+
 export function sanitizeMcpToolSegment(name: string): string {
   const trimmed = name.trim().toLowerCase();
   const cleaned = trimmed.replace(TOOL_NAME_INVALID_CHARS, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
@@ -130,5 +132,5 @@ export function makeMcpToolName(
   const shortId = serverId.replace(/-/g, "").slice(0, 8);
   const server = readable ? `${readable}_${shortId}` : shortId;
   const tool = sanitizeMcpToolSegment(toolName) || "tool";
-  return `mcp__${server}__${tool}`;
+  return `${MCP_TOOL_NAME_PREFIX}${server}__${tool}`;
 }

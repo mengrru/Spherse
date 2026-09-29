@@ -35,7 +35,8 @@ describe("mcpContextBlock", () => {
     ]);
     expect(block).not.toBeNull();
     expect(block!.render()).toBe(
-      `<mcp-context>\n` +
+      `<!-- spherse:mcp-context:start -->\n` +
+        `<mcp-context>\n` +
         `<server name="FS" capabilities="resources,prompts">\n` +
         `<instructions>\nUse URIs starting with file://\n</instructions>\n` +
         `<resources>\n` +
@@ -48,7 +49,8 @@ describe("mcpContextBlock", () => {
         `</prompt>\n` +
         `</prompts>\n` +
         `</server>\n` +
-        `</mcp-context>`,
+        `</mcp-context>\n` +
+        `<!-- spherse:mcp-context:end -->`,
     );
   });
 

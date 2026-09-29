@@ -1,11 +1,14 @@
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { McpConnectionManager } from "../../mcp/mcp-connection-manager.js";
+import { MCP_TOOL_NAME_PREFIX } from "../../mcp/config.js";
 import type { Capability } from "../../kernel/capability.js";
 import type { KernelServices } from "../../kernel/ports.js";
 import type { TurnHooksFactory } from "../../kernel/turn-hooks.js";
 import type { ProjectStore } from "../../store/project.js";
 import type { Logger } from "../../logger.js";
 import { mcpContextBlock } from "./block.js";
+
+const MCP_CONTEXT_BLOCK_RE = /\n*<!-- spherse:mcp-context:start -->[\s\S]*?<!-- spherse:mcp-context:end -->/g;
 
 function dedupeToolNames(existing: AgentTool[], incoming: AgentTool[]): AgentTool[] {
   const used = new Set<string>();
@@ -64,18 +67,19 @@ export function createMcpCapability(deps: McpCapabilityDeps): McpCapability {
   };
 
   const turnHooks: TurnHooksFactory = (agentId, sessionId) => {
-    let mergedAtVersion: number | null = null;
+    let mergedAtRevision: number | null = null;
     return {
       async beforeTurn(agent) {
-        const version = ensure().configVersion(agentId);
-        if (mergedAtVersion === version) return;
-        mergedAtVersion = version;
         try {
-          const { tools: mcpTools, info } = await ensure().load(agentId);
-          if (mcpTools.length > 0) {
-            const current = agent.state.tools;
-            agent.state.tools = [...current, ...dedupeToolNames(current, mcpTools)];
-          }
+          const { tools: mcpTools, info, revision } = await ensure().load(agentId);
+          if (mergedAtRevision === revision) return;
+          mergedAtRevision = revision;
+
+          const baseTools = agent.state.tools.filter((t) => !t.name.startsWith(MCP_TOOL_NAME_PREFIX));
+          const nextTools = [...baseTools, ...dedupeToolNames(baseTools, mcpTools)];
+          agent.state.tools = nextTools;
+
+          agent.state.systemPrompt = agent.state.systemPrompt.replace(MCP_CONTEXT_BLOCK_RE, "");
           const block = mcpContextBlock(info);
           if (block) {
             agent.state.systemPrompt += "\n\n" + block.render();
@@ -85,7 +89,7 @@ export function createMcpCapability(deps: McpCapabilityDeps): McpCapability {
         }
       },
       onReload() {
-        mergedAtVersion = null;
+        mergedAtRevision = null;
       },
     };
   };

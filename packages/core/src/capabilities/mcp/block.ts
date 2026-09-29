@@ -13,7 +13,8 @@ export function mcpContextBlock(servers: McpServerInfo[]): ContextBlock | null {
   if (meaningful.length === 0) return null;
   return {
     kind: "mcp-context",
-    render: () => renderMcpServers(meaningful),
+    render: () =>
+      `<!-- spherse:mcp-context:start -->\n${renderMcpServers(meaningful)}\n<!-- spherse:mcp-context:end -->`,
   };
 }
 

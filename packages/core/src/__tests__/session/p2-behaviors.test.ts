@@ -25,13 +25,13 @@ describe("runner in-flight guard (#3)", () => {
   });
 });
 
-describe("mcp config version memo (#9)", () => {
+describe("mcp revision memo (#9)", () => {
   function fakeStore(): ProjectStore {
     return { getAgent: () => undefined } as unknown as ProjectStore;
   }
   const logger: Logger = createSilentLogger();
 
-  it("configVersion bumps on invalidate and the hook memo re-merges", async () => {
+  it("revision bumps on invalidate and the hook memo re-merges", async () => {
     const capability = createMcpCapability({ projectStore: fakeStore(), logger });
     await capability.init({
       projectRoot: "/tmp",
@@ -45,11 +45,11 @@ describe("mcp config version memo (#9)", () => {
     const hooks = capability.turnHooks!("agent-1", "session-1");
     const agent = { state: { tools: [], systemPrompt: "", model: undefined } } as never;
 
-    const v0 = capability.manager.configVersion("agent-1");
+    const v0 = capability.manager.revision("agent-1");
     await hooks.beforeTurn!(agent);
 
     await capability.onAgentConfigChanged!("agent-1", "mcp");
-    const v1 = capability.manager.configVersion("agent-1");
+    const v1 = capability.manager.revision("agent-1");
     expect(v1).toBe(v0 + 1);
 
     await hooks.beforeTurn!(agent);
