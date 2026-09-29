@@ -90,8 +90,8 @@
   /* } */
 
 
-  /* === 输入框（背景/边框写在 [data-chat-composer-input]，桌面与移动端悬浮卡片两种布局都生效；
-        [data-chat-composer] 在移动端是透明容器，对它设置 background/border-top 会破坏悬浮样式，
+  /* === 输入框（背景/边框写在 [data-chat-composer-input]，桌面与移动端圆角卡片两种布局都生效；
+        [data-chat-composer] 在移动端是透明容器，对它设置 background/border-top 会把它重新渲染成实心条，
         仅桌面通栏需要时再包 @media (min-width: 768px)） === */
   /* [data-chat-composer-input] { */
   /*   background: rgba(255, 255, 255, 0.03); */
