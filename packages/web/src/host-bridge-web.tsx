@@ -177,6 +177,9 @@ export function createWebHostBridge(): HostBridge {
       const conn = readWebConnection();
       return conn?.token ?? null;
     },
+    clearConnection: async () => {
+      localStorage.removeItem(WEB_CONNECTION_STORAGE_KEY);
+    },
     getSettings: loadSettings,
     saveSettings: persistSettings,
     openExternal: async (url: string) => {

@@ -18,17 +18,9 @@ import { useAppStore } from "../../stores/app-store";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
 import { useLocation } from "react-router";
 import { Copy, RefreshCw } from "lucide-react";
-import { WEB_APP_URL } from "../../lib/urls";
+import { buildConnectUrl } from "../../lib/connect-payload";
 
 const CLOUDFLARE_DOCS_URL = "https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/";
-
-function buildDeeplink(publicUrl: string, token: string, targetPath?: string): string {
-  const params = new URLSearchParams({ base: publicUrl, token });
-  if (targetPath) {
-    params.set("targetPath", targetPath);
-  }
-  return `${WEB_APP_URL}#/?${params.toString()}`;
-}
 
 function statusTranslationKey(status: TunnelStatus): TranslationKey {
   switch (status) {
@@ -113,7 +105,7 @@ export function MobileAccessPanel() {
   const showQR = mode === "manual"
     ? Boolean(publicUrl && token)
     : Boolean(enabled && publicUrl && token);
-  const deeplink = showQR && publicUrl && token ? buildDeeplink(publicUrl, token, targetPath) : null;
+  const deeplink = showQR && publicUrl && token ? buildConnectUrl({ baseUrl: publicUrl, token, targetPath }) : null;
 
   function selectMode(next: MobileTunnelMode): void {
     if (next === mode || working !== null) return;

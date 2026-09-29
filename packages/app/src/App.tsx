@@ -57,15 +57,24 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
-    restoreProjects(bridge).then((projectId) => {
-      if (cancelled || !projectId) return;
-      // Only auto-navigate when starting from the root path; if the URL already
-      // points to a specific route (deep link, E2E direct entry), respect it.
-      const hash = window.location.hash.replace(/^#/, "") || "/";
-      if (hash !== "/") return;
-      const project = useAppStore.getState().projects.get(projectId);
-      navigate(buildProjectRoute(projectId, project?.lastRoute), { replace: true });
-    });
+    restoreProjects(bridge)
+      .then((projectId) => {
+        if (cancelled || !projectId) return;
+        // Only auto-navigate when starting from the root path; if the URL already
+        // points to a specific route (deep link, E2E direct entry), respect it.
+        const hash = window.location.hash.replace(/^#/, "") || "/";
+        if (hash !== "/") return;
+        const project = useAppStore.getState().projects.get(projectId);
+        navigate(buildProjectRoute(projectId, project?.lastRoute), { replace: true });
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        console.warn("[app] startup project restore failed:", err);
+        if (bridge.kind === "web") {
+          const locale = useSettingsStore.getState().locale ?? DEFAULT_LOCALE;
+          toast.error(translate(locale, "mobile-connect.connectFailed", { error: (err as Error).message }));
+        }
+      });
     void useBusStore.getState().init(bridge);
     return () => {
       cancelled = true;

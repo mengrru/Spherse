@@ -612,3 +612,85 @@ describe("useAppStore refreshProjects", () => {
     expect(bridge.project?.restoreProjects).not.toHaveBeenCalled();
   });
 });
+
+describe("useAppStore restoreProjects initialGate", () => {
+  function createRestoringBridge(
+    restoreImpl?: () => Promise<Array<{ id: string; path: string; name: string; lastOpened: string }>>,
+  ): HostBridge {
+    return createMockHostBridge({
+      project: {
+        selectDirectory: vi.fn(),
+        selectSkillZip: vi.fn(),
+        openProject: vi.fn(),
+        restoreProjects: vi.fn().mockImplementation(
+          restoreImpl ??
+            (async () => [
+              {
+                id: "project-a",
+                path: "/tmp/project-a",
+                name: "project-a",
+                lastOpened: "2026-01-01T00:00:00.000Z",
+              },
+            ]),
+        ),
+        addOpenProject: vi.fn(),
+        closeProject: vi.fn(),
+        openProjectFolder: vi.fn(),
+        openFileExternal: vi.fn(),
+        setLastActiveProject: vi.fn(),
+        getLastActiveProject: vi.fn().mockResolvedValue("project-a"),
+        openSampleProject: vi.fn(),
+        getSampleManifest: vi.fn(),
+      },
+    });
+  }
+
+  function deferred(): { promise: Promise<void>; resolve: () => void } {
+    let resolve!: () => void;
+    const promise = new Promise<void>((res) => {
+      resolve = res;
+    });
+    return { promise, resolve };
+  }
+
+  beforeEach(() => {
+    setupStoreTest(false);
+  });
+
+  it("holds initializing true during a default restore and clears it after", async () => {
+    const gate = deferred();
+    const bridge = createRestoringBridge(async () => {
+      await gate.promise;
+      return [{ id: "project-a", path: "/tmp/project-a", name: "project-a", lastOpened: "2026-01-01T00:00:00.000Z" }];
+    });
+    const pending = useAppStore.getState().restoreProjects(bridge);
+    expect(useAppStore.getState().initializing).toBe(true);
+    gate.resolve();
+    await pending;
+    expect(useAppStore.getState().initializing).toBe(false);
+  });
+
+  it("resets initializing to false even when restore throws (default gate)", async () => {
+    const bridge = createRestoringBridge(async () => {
+      throw new Error("network down");
+    });
+    await expect(useAppStore.getState().restoreProjects(bridge)).rejects.toThrow("network down");
+    expect(useAppStore.getState().initializing).toBe(false);
+  });
+
+  it("never touches initializing when initialGate is false", async () => {
+    const gate = deferred();
+    const bridge = createRestoringBridge(async () => {
+      await gate.promise;
+      return [{ id: "project-a", path: "/tmp/project-a", name: "project-a", lastOpened: "2026-01-01T00:00:00.000Z" }];
+    });
+    const pending = useAppStore.getState().restoreProjects(bridge, { initialGate: false });
+    expect(useAppStore.getState().initializing).toBe(false);
+    gate.resolve();
+    const nextActiveId = await pending;
+    expect(nextActiveId).toBe("project-a");
+    expect(useAppStore.getState().initializing).toBe(false);
+    expect(useAppStore.getState().projects.get("project-a")).toBeDefined();
+    expect(useAppStore.getState().activeProjectId).toBe("project-a");
+  });
+});

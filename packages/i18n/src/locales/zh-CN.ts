@@ -1370,8 +1370,18 @@ export const zhCN = {
   "mobile-connect.connected": "已连接",
   // 移动端连接失败（fetch /api/projects 报错或 token 无效）时的错误提示，{error} 为详细错误
   "mobile-connect.connectFailed": "连接失败：{error}",
-  // 移动端扫到的 QR 不是合法的 spherse://connect 链接时的提示
+  // 移动端扫到的 QR 不是合法的连接链接（缺 base/token 或非 http(s)）时的提示
   "mobile-connect.invalidQr": "无效的二维码，请扫描 Spherse 桌面端生成的二维码",
+  // 移动端连接页提交连接后的过渡状态文案（等待项目列表恢复与版本校验）
+  "mobile-connect.connecting": "正在连接…",
+  // 移动端连接页「识别二维码图片」按钮（拍照或从相册选图后解码，摄像头不可用时的兜底）
+  "mobile-connect.decodeFromImage": "识别二维码图片",
+  // web 端侧边栏 ActivityBar 底部「断开连接」按钮（清除已存连接并回到连接页）
+  "mobile-connect.disconnect": "断开连接",
+  // web 端断开连接确认弹窗标题
+  "mobile-connect.disconnectTitle": "断开连接？",
+  // web 端断开连接确认弹窗正文
+  "mobile-connect.disconnectDescription": "将清除已保存的连接信息并返回连接页",
   // web 端检测到桌面端版本与 web 端主/次版本不一致时的硬拦截全屏页标题
   "web-version.incompatibleTitle": "桌面端版本不兼容",
   // 硬拦截全屏页正文，{appVersion} 为桌面端版本号，{webVersion} 为 web 端版本号；网页可能因缓存过旧，桌面端也可能待升级，故同时给出两个动作
