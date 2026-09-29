@@ -24,7 +24,7 @@
   "dependencies": {
     "@earendil-works/pi-agent-core": "0.85.1",
     "@earendil-works/pi-ai": "0.85.1",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/client": "^2.2.0",
     "@sinclair/typebox": "^0.34.0",
     "@spherse/presets": "^0.1.0",
     "adm-zip": "^0.6.0",

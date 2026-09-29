@@ -1,7 +1,5 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { Client, StreamableHTTPClientTransport, SSEClientTransport } from "@modelcontextprotocol/client";
+import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { TextContent, ImageContent } from "@earendil-works/pi-ai";
@@ -60,7 +58,6 @@ interface McpGetPromptResult {
 }
 
 const IMAGE_MIME_RE = /^image\//;
-const MAX_PAGES = 50;
 
 function mapMcpContent(content: unknown, isError: boolean): (TextContent | ImageContent)[] {
   if (!Array.isArray(content)) {
@@ -287,42 +284,34 @@ export interface ConnectResult {
 
 type McpClient = InstanceType<typeof Client>;
 
+async function tryList<T>(
+  fetch: () => Promise<T[]>,
+  serverName: string,
+  label: string,
+  log: Logger,
+): Promise<T[]> {
+  try {
+    return await fetch();
+  } catch (err) {
+    log.warn({ err, server: serverName }, `mcp server ${label} failed`);
+    return [];
+  }
+}
+
 async function tryListTools(
   client: McpClient,
   serverName: string,
   log: Logger,
 ): Promise<McpToolDescriptor[]> {
-  try {
-    const response = (await client.listTools()) as { tools?: McpToolDescriptor[] };
-    return Array.isArray(response.tools) ? response.tools : [];
-  } catch (err) {
-    log.warn({ err, server: serverName }, "mcp server listTools failed");
-    return [];
-  }
-}
-
-async function paginate<T>(
-  fetchPage: (cursor: string | undefined) => Promise<{ items: T[]; nextCursor?: string }>,
-  serverName: string,
-  label: string,
-  log: Logger,
-): Promise<T[]> {
-  const items: T[] = [];
-  try {
-    let cursor: string | undefined;
-    for (let page = 0; page < MAX_PAGES; page++) {
-      const res = await fetchPage(cursor);
-      items.push(...res.items);
-      cursor = res.nextCursor;
-      if (!cursor) break;
-      if (page === MAX_PAGES - 1) {
-        log.warn({ server: serverName, pages: MAX_PAGES }, `mcp ${label} hit page limit, results may be truncated`);
-      }
-    }
-  } catch (err) {
-    log.warn({ err, server: serverName }, `mcp server ${label} failed`);
-  }
-  return items;
+  return tryList(
+    async () => {
+      const response = (await client.listTools()) as { tools?: McpToolDescriptor[] };
+      return Array.isArray(response.tools) ? response.tools : [];
+    },
+    serverName,
+    "listTools",
+    log,
+  );
 }
 
 async function tryListResources(
@@ -330,25 +319,23 @@ async function tryListResources(
   serverName: string,
   log: Logger,
 ): Promise<{ resources: McpResourceDescriptor[]; resourceTemplates: McpResourceTemplateDescriptor[] }> {
-  const resources = await paginate(
-    async (cursor) => {
-      const res = (await client.listResources(cursor ? { cursor } : undefined)) as {
+  const resources = await tryList(
+    async () => {
+      const res = (await client.listResources()) as {
         resources?: McpResourceDescriptor[];
-        nextCursor?: string;
       };
-      return { items: Array.isArray(res.resources) ? res.resources : [], nextCursor: res.nextCursor };
+      return Array.isArray(res.resources) ? res.resources : [];
     },
     serverName,
     "listResources",
     log,
   );
-  const resourceTemplates = await paginate(
-    async (cursor) => {
-      const res = (await client.listResourceTemplates(cursor ? { cursor } : undefined)) as {
+  const resourceTemplates = await tryList(
+    async () => {
+      const res = (await client.listResourceTemplates()) as {
         resourceTemplates?: McpResourceTemplateDescriptor[];
-        nextCursor?: string;
       };
-      return { items: Array.isArray(res.resourceTemplates) ? res.resourceTemplates : [], nextCursor: res.nextCursor };
+      return Array.isArray(res.resourceTemplates) ? res.resourceTemplates : [];
     },
     serverName,
     "listResourceTemplates",
@@ -362,13 +349,12 @@ async function tryListPrompts(
   serverName: string,
   log: Logger,
 ): Promise<McpPromptDescriptor[]> {
-  return paginate(
-    async (cursor) => {
-      const res = (await client.listPrompts(cursor ? { cursor } : undefined)) as {
+  return tryList(
+    async () => {
+      const res = (await client.listPrompts()) as {
         prompts?: McpPromptDescriptor[];
-        nextCursor?: string;
       };
-      return { items: Array.isArray(res.prompts) ? res.prompts : [], nextCursor: res.nextCursor };
+      return Array.isArray(res.prompts) ? res.prompts : [];
     },
     serverName,
     "listPrompts",
@@ -382,7 +368,10 @@ export async function connectMcpServer(
 ): Promise<ConnectResult> {
   const log = logger ?? createSilentLogger();
   const transport = buildTransport(config);
-  const client = new Client(CLIENT_INFO, { capabilities: {} });
+  const client = new Client(CLIENT_INFO, {
+    capabilities: {},
+    versionNegotiation: { mode: "auto" },
+  });
 
   let stderrBuffer = "";
   if (transport instanceof StdioClientTransport) {
@@ -422,7 +411,7 @@ export async function connectMcpServer(
   const toolDescriptors = await tryListTools(client, config.name, log);
   const tools: AgentTool[] = toolDescriptors.map((tool) =>
     adaptMcpTool(config.name, config.id, tool, (params, signal) =>
-      client.callTool(params, undefined, signal ? { signal } : undefined) as Promise<McpCallToolResult>,
+      client.callTool(params, signal ? { signal } : undefined) as Promise<McpCallToolResult>,
     ),
   );
 
