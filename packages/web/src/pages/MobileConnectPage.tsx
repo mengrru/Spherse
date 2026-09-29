@@ -3,16 +3,26 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { toast } from "sonner";
 import jsQR from "jsqr";
-import { ArrowLeftIcon, CameraIcon, ImageIcon, KeyboardIcon, Loader2Icon } from "lucide-react";
+import { ArrowLeftIcon, CameraIcon, ImageIcon, KeyboardIcon, Loader2Icon, LogOutIcon } from "lucide-react";
 import { Button } from "@spherse/app/ui/button";
 import { Input } from "@spherse/app/ui/input";
 import { Field, FieldLabel } from "@spherse/app/ui/field";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@spherse/app/ui/alert-dialog";
 import { parseConnectPayload, type ConnectPayload } from "@spherse/app/connect-payload";
 import { useHostBridge } from "@spherse/app/host-bridge-context";
 import { useAppStore } from "@spherse/app/stores/app";
 import { useBusStore } from "@spherse/app/stores/bus";
 import { runWebVersionGuard } from "../version-guard";
-import { WEB_CONNECTION_STORAGE_KEY } from "../host-bridge-web";
+import { readWebConnection, WEB_CONNECTION_STORAGE_KEY } from "../host-bridge-web";
 
 const SCAN_FALLBACK_INTERVAL_MS = 300;
 const VIDEO_MAX_DIM = 960;
@@ -119,13 +129,18 @@ export function MobileConnectPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<Mode>("menu");
   const [submitting, setSubmitting] = useState(false);
+  const [disconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
+  const [hasSavedConnection] = useState(() => Boolean(readWebConnection()?.baseUrl));
+
+  const handleDisconnect = () => {
+    localStorage.removeItem(WEB_CONNECTION_STORAGE_KEY);
+    window.location.reload();
+  };
 
   const handleConnect = async (conn: ConnectPayload, targetPath?: string) => {
     setSubmitting(true);
     try {
       persistConnection(conn);
-      // The guard overlay's 「暂不升级」 dismiss fires finishConnect later;
-      // bind it lazily so firstProjectId is always resolved by then.
       let finish: (() => void) | undefined;
       const [firstProjectId, compatibility] = await Promise.all([
         restoreProjects(bridge, { initialGate: false }),
@@ -187,6 +202,34 @@ export function MobileConnectPage() {
             <KeyboardIcon className="size-4" />
             {t("mobile-connect.manual")}
           </Button>
+          {hasSavedConnection && (
+            <>
+              <Button
+                variant="ghost"
+                className="mt-4 w-full justify-start gap-2 text-muted-foreground"
+                onClick={() => setDisconnectConfirmOpen(true)}
+              >
+                <LogOutIcon className="size-4" />
+                {t("mobile-connect.disconnect")}
+              </Button>
+              <AlertDialog open={disconnectConfirmOpen} onOpenChange={setDisconnectConfirmOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t("mobile-connect.disconnectTitle")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("mobile-connect.disconnectDescription")}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDisconnect}>
+                      {t("mobile-connect.disconnect")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
         </div>
       ) : mode === "scan" ? (
         <ScanPanel
@@ -277,6 +320,7 @@ function ScanPanel({
         if (payload) {
           const conn = parseConnectPayload(payload);
           if (conn) {
+            if (detectedRef.current) return;
             detectedRef.current = true;
             void onDetectedRef.current(conn);
             return;
@@ -355,6 +399,7 @@ function ScanPanel({
       const payload = await decodeImageFile(file);
       const conn = payload ? parseConnectPayload(payload) : null;
       if (conn) {
+        if (detectedRef.current) return;
         detectedRef.current = true;
         void onDetectedRef.current(conn);
       } else {

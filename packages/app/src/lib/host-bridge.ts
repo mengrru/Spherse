@@ -150,7 +150,6 @@ export interface HostBridge {
   readonly kind: HostKind;
   getServerBaseUrl(): Promise<string>;
   getServerAccessToken?(): Promise<string | null>;
-  /** Forget the persisted connection (web shell's saved base/token). */
   clearConnection?(): Promise<void>;
   readonly capabilities: HostCapabilities;
   getSettings(): Promise<HostSettings | null>;

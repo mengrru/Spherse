@@ -63,9 +63,11 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
   const [disconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
 
   const handleDisconnect = () => {
-    void bridge.clearConnection?.().then(() => {
-      window.location.reload();
-    });
+    void Promise.resolve(bridge.clearConnection?.())
+      .catch(() => undefined)
+      .then(() => {
+        window.location.reload();
+      });
   };
   const { handleAddProject, handleSelectProject, handleCloseProject, handleOpenProjectFolder } =
     useProjectActions();

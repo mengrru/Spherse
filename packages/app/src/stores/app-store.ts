@@ -16,12 +16,6 @@ export interface ProjectState {
 }
 
 interface RestoreProjectsOptions {
-  /**
-   * Flip the store-wide `initializing` gate while restoring. The gate drives
-   * App's full-screen loading state; callers that restore an already-mounted
-   * UI (web connect page re-connecting) pass false so the tree is not swapped
-   * out from under them. Defaults to true (cold-start behavior).
-   */
   initialGate?: boolean;
 }
 

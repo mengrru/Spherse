@@ -71,7 +71,7 @@ export function parseConnectPayload(text: string): ParsedConnectPayload | null
 - `MobileConnectPage.handleConnect`：
   - `restoreProjects(bridge, { initialGate: false })` 与 `runWebVersionGuard()` **并行**（`Promise.all`，省一个串行隧道 RTT）；版本不兼容时维持现状（挂 overlay、不 navigate、`finishConnect` 经 `pendingOnDismiss` 在用户「暂不升级」后补执行）。onDismiss 回调用 late binding（`runWebVersionGuard(() => finishRef.current?.())`，`finishRef` 在 `Promise.all` 之后赋值），避免闭包引用尚未就绪的 `firstProjectId`；overlay dismiss 需人手点击，时序上必然晚于赋值。边角情况：restore 失败 + 版本不兼容并存时 toast 与 overlay 同时出现，可接受；
   - `submitting` 期间连接页主体（menu/scan/manual 面板位置）渲染「连接中」态：旋转 loader 图标 + `mobile-connect.connecting`，表单不再闪现；
-  - 连接成功后 `void useBusStore.getState().init(bridge)` 重新拉起全局 bus（`init` 内 `isActive` 守卫 + 旧连接 close 重建，空 URL 的 idle 残留连接会被正确替换），修复首连后 bus 通道不工作的问题。
+  - 连接成功后 `void useBusStore.getState().init(bridge)` 重新拉起全局 bus（`init` 内 `isActive` 守卫 + 旧连接 close 重建，空 URL 的 idle 残留连接会被正确替换），修复首连后 bus 通道不工作的问题。放在版本兼容判断**之前**：版本不兼容被 overlay 拦住时连接本身已建立，用户「暂不升级」进入后 bus 应已就绪。
 - **App 冷启动 restore 失败兜底（仅 web）**：`App.tsx` mount effect 的 `restoreProjects` 增加 catch，`bridge.kind === "web"` 时 toast `mobile-connect.connectFailed`（`{error}` 传 `err.message`，即 web bridge fetchJson 的 `/api/projects: …` 原文）；死连接保留在 localStorage 不清除（隧道可能只是暂时挂了，重试无害），桌面行为不变。
 
 ### D4. 断开连接按钮
@@ -85,6 +85,7 @@ export function parseConnectPayload(text: string): ParsedConnectPayload | null
   - 现成先例：版本墙 overlay 的「重新连接」按钮（`version-block-overlay.tsx:32-40`）就是 removeItem + reload；
   - 代价仅一次 PWA 白屏，对移动端完全可接受。
 - 不需要 app-store `resetForDisconnect`、bus teardown、queryClient.clear（reload 全覆盖）；不 toast「已断开」（reload 后无意义）。
+- **零项目连接态的断开出口**：连接成功但桌面端项目列表为空时用户落在连接页（无 ActivityBar 可挂断开按钮），因此连接页 menu 模式在 localStorage 已存连接时（含死隧道冷启动、连接后项目被全部关闭等场景）额外渲染一个次级「断开连接」按钮，确认弹窗与断开流程同上（web 页内直接 `removeItem(WEB_CONNECTION_STORAGE_KEY)` + reload，与其直接写 key 的 `persistConnection` 对称）。
 - `spherse:last-active-project` 与 `spherse:settings` 保留：重连同桌面可恢复上次项目；跨桌面连接时 id 不存在 → `restoreProjects` 已有 fallback 到第一个项目的逻辑。
 
 ### D5. i18n
