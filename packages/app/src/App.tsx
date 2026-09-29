@@ -59,10 +59,20 @@ export function App() {
     let cancelled = false;
     restoreProjects(bridge)
       .then((projectId) => {
-        if (cancelled || !projectId) return;
+        if (cancelled) return;
+        const hash = window.location.hash.replace(/^#/, "") || "/";
+        if (!projectId) {
+          // Web without any restored project (no saved connection, or the
+          // desktop has zero open projects) has nothing to show on a project
+          // route — e.g. right after disconnect reload — so fall back to the
+          // connect page instead of stranding on "project not found".
+          if (bridge.kind === "web" && hash !== "/") {
+            navigate("/", { replace: true });
+          }
+          return;
+        }
         // Only auto-navigate when starting from the root path; if the URL already
         // points to a specific route (deep link, E2E direct entry), respect it.
-        const hash = window.location.hash.replace(/^#/, "") || "/";
         if (hash !== "/") return;
         const project = useAppStore.getState().projects.get(projectId);
         navigate(buildProjectRoute(projectId, project?.lastRoute), { replace: true });
