@@ -55,6 +55,15 @@ describe("QuestionCard", () => {
     expect(screen.queryAllByRole("button").map((button) => button.textContent)).toEqual(["发送"]);
   });
 
+  it("renders option buttons that wrap long labels instead of overflowing", () => {
+    const longOption = "这是一个非常长的选项文本，需要在窄屏下换行显示而不是被遮挡";
+    renderCard(pendingCard({ options: [longOption, "停止"] }));
+    const button = optionButton(longOption);
+    expect(button.className).toContain("whitespace-normal");
+    expect(button.className).toContain("max-w-full");
+    expect(button.className).toContain("h-auto");
+  });
+
   it("calls onRespondQuestion with (requestId, optionText) when an option is clicked", async () => {
     const user = userEvent.setup();
     const onRespondQuestion = vi.fn();

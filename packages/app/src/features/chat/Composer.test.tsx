@@ -89,6 +89,20 @@ function mockPointerCoarse(matches: boolean) {
   })) as unknown as typeof window.matchMedia);
 }
 
+function mockMobileViewport(mobile: boolean) {
+  vi.stubGlobal("innerWidth", mobile ? 375 : 1024);
+  vi.spyOn(window, "matchMedia").mockImplementation(((query: string) => ({
+    matches: mobile && query.includes("max-width"),
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })) as unknown as typeof window.matchMedia);
+}
+
 describe("Composer input availability", () => {
   it("keeps the textarea enabled while the agent is streaming", () => {
     renderComposer({ streaming: true });
@@ -164,6 +178,46 @@ describe("Composer enter key behavior", () => {
     await user.type(screen.getByRole("textbox"), "touch draft");
     await user.click(screen.getByRole("button", { name: "发送" }));
     expect(onSend).toHaveBeenCalledWith("touch draft", undefined);
+  });
+});
+
+describe("Composer mobile layout", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("renders a compact floating composer with inline actions on mobile", async () => {
+    mockMobileViewport(true);
+    const renderComposerResult = renderComposer({ streaming: false });
+
+    const composer = document.querySelector("[data-chat-composer]");
+    expect(composer?.className).toContain("bg-transparent");
+
+    const inputFrame = document.querySelector("[data-chat-composer-input]");
+    expect(inputFrame?.className).toContain("rounded-2xl");
+    expect(inputFrame?.className).toContain("shadow-lg");
+
+    expect(screen.getByRole("textbox")).toHaveStyle({ height: "36px" });
+    expect(screen.getByRole("button", { name: "附加图片" })).toBeInTheDocument();
+
+    const { onSend } = renderComposerResult;
+    await user.type(screen.getByRole("textbox"), "移动端输入");
+    await user.click(screen.getByRole("button", { name: "发送" }));
+    expect(onSend).toHaveBeenCalledWith("移动端输入", undefined);
+  });
+
+  it("keeps the desktop layout on wide viewports", () => {
+    mockMobileViewport(false);
+    renderComposer({ streaming: false });
+
+    const composer = document.querySelector("[data-chat-composer]");
+    expect(composer?.className).toContain("bg-background");
+    expect(composer?.className).not.toContain("bg-transparent");
+
+    const inputFrame = document.querySelector("[data-chat-composer-input]");
+    expect(inputFrame?.className).not.toContain("rounded-2xl");
+
+    expect(screen.getByRole("textbox")).toHaveStyle({ height: "56px" });
   });
 });
 
