@@ -473,13 +473,9 @@ export async function connectMcpServer(
         ),
       );
 
-      let resources: McpResourceDescriptor[] = [];
-      let resourceTemplates: McpResourceTemplateDescriptor[] = [];
-      // Synthetic read_resource / get_prompt tools share the mcp__{server}_{shortid}__ namespace.
-      // If a server exposes a real tool named "read_resource" or "get_prompt", dedupeToolNames
-      // (capabilities/mcp/index.ts) will suffix the later one with __2 — no crash, but the model
-      // may see both. Extremely unlikely in practice; documented here for awareness.
-      if (caps.resources) {
+    let resources: McpResourceDescriptor[] = [];
+    let resourceTemplates: McpResourceTemplateDescriptor[] = [];
+    if (caps.resources) {
         ({ resources, resourceTemplates } = await tryListResources(client, config.name, log, signal));
         tools.push(
           adaptMcpReadResourceTool(config.name, config.id, (uri, toolSignal) =>

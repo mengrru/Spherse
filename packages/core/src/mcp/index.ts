@@ -13,7 +13,6 @@ export {
   normalizeMcpServer,
   makeMcpToolName,
   isMcpTransportType,
-  type McpNormalizeWarnFn,
 } from "./config.js";
 export { jsonSchemaToTypebox } from "./json-schema-to-typebox.js";
 export { adaptMcpTool, connectMcpServer } from "./mcp-client.js";

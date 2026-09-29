@@ -145,6 +145,19 @@ describe("McpConnectionManager (per-server cache + lifecycle)", () => {
     expect(connect).toHaveBeenCalledTimes(2);
   });
 
+  it("invalidate tolerates a connection whose close rejects", async () => {
+    loadServers.mockResolvedValue([ENABLED]);
+    const broken = okResult("fs", "t");
+    broken.connection.close = vi.fn(async () => {
+      throw new Error("close failed");
+    });
+    connect.mockResolvedValueOnce(broken);
+    await manager.load("agent-1");
+
+    await expect(manager.invalidate("agent-1")).resolves.toBeUndefined();
+    expect(broken.connection.close).toHaveBeenCalledTimes(1);
+  });
+
   it("closeAll closes every agent's connections; further loads return empty", async () => {
     const configB: McpServerConfig = { ...ENABLED, id: "s9", name: "b" };
     loadServers.mockImplementation(async (agentId) => (agentId === "agent-a" ? [ENABLED] : [configB]));
@@ -252,11 +265,37 @@ describe("McpConnectionManager (per-server cache + lifecycle)", () => {
       await manager.load("agent-1");
       const revisionBefore = manager.revision("agent-1");
 
+      result.connection.simulateDisconnect();
       onDisconnect!();
 
       expect(manager.revision("agent-1")).toBe(revisionBefore + 1);
       const after = await manager.load("agent-1");
       expect(after.tools).toEqual([]);
+    });
+
+    it("a late onclose from a replaced connection does not drop the new entry", async () => {
+      loadServers.mockResolvedValue([ENABLED]);
+      const old = okResult("fs", "mcp__fs__old");
+      let oldDisconnect: (() => void) | undefined;
+      connect.mockImplementationOnce(async (_server, _logger, opts: ConnectServerOptions) => {
+        oldDisconnect = opts.onDisconnect;
+        return old;
+      });
+      await manager.load("agent-1");
+
+      await manager.invalidate("agent-1");
+      const fresh = okResult("fs", "mcp__fs__new");
+      connect.mockImplementationOnce(async (_server, _logger, opts: ConnectServerOptions) => {
+        void opts;
+        return fresh;
+      });
+      await manager.load("agent-1");
+
+      old.connection.simulateDisconnect();
+      oldDisconnect!();
+
+      const after = await manager.load("agent-1");
+      expect(after.tools.map((t) => t.name)).toEqual(["mcp__fs__new"]);
     });
 
     it("disconnect of one server while another pass is in flight keeps the pass result", async () => {

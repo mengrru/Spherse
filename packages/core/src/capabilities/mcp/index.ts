@@ -8,7 +8,7 @@ import type { ProjectStore } from "../../store/project.js";
 import type { Logger } from "../../logger.js";
 import { mcpContextBlock } from "./block.js";
 
-const MCP_CONTEXT_BLOCK_RE = /\n*<!-- spherse:mcp-context:start -->[\s\S]*?<!-- spherse:mcp-context:end -->/g;
+const MCP_CONTEXT_BLOCK_RE = /\n*<!-- spherse:mcp-context:start -->[\s\S]*<!-- spherse:mcp-context:end -->/g;
 
 function dedupeToolNames(existing: AgentTool[], incoming: AgentTool[]): AgentTool[] {
   const used = new Set<string>();

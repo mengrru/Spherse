@@ -180,3 +180,20 @@ block 渲染结果包裹：`\n\n<!-- spherse:mcp-context:start -->\n${...}\n<!--
 | m5a | minor | 缺 onDisconnect 与 in-flight 重连并发的测试场景 | 采纳：加入 manager 测试清单 |
 | m5b | minor | 多 session 共享 entry 的并发调用测试 | 不加：属验证性用例，SDK Client 并发 JSON-RPC 安全已有保证，测试矩阵保持克制 |
 | 疑点 | — | desktop 打包对 v2 ESM/CJS 的兼容 | 无发现：externalizeDepsPlugin 运行时解析 + 双格式，实现时确认 ./stdio 子路径解析即可 |
+
+## Code review 处理
+
+| # | 级别 | 问题 | 处理 |
+|---|---|---|---|
+| I1 | important | server 消费方对 `updateAgentMcp` 写入门面零契约测试（仓库红线） | 已修：新增 `agent-mcp-contract.test.ts`（真实 runtime 经真实路由：PUT 落盘 + `agent_updated` 广播 + sse 400 + 404 映射） |
+| M1a | medium | design 承诺「onDisconnect 与同 server in-flight 重连并发」用例缺失；且迟到 onclose 可能误删同 serverId 新 entry | 已修：`handleDisconnect` 增加「当前 entry 连接已死才删除」守卫；补「迟到 onclose 不删新 entry」用例 |
+| M1b | medium | 「主动 close（含 close 抛错）不 bump」的 close 抛错变体无覆盖 | 已修：manager 测试补 `invalidate tolerates a connection whose close rejects` |
+| M1c | medium | retry 路径三层各自有测试、接缝无端到端断言 | 已修：新增 `retry-mcp-integration.test.ts`（真实 runtime + mock 连接层：updateAgentMcp → markReloadPending → retryLastTurn 后 tools 含 mcp__ 工具 + block 正确） |
+| M2 | medium | guard race 的「握手成功但 tools/list 挂起」路径无用例 | 已修：fixture 增 `FIXTURE_HANG_TOOLS_LIST` 变体，signal 预算内 reject |
+| m1 | minor | 迁移保留的 4 行 synthetic tools 注释违反「不添加注释」红线 | 已修：删除 |
+| m2 | minor | `McpNormalizeWarnFn` 无外部消费者却从 index 导出 | 已修：撤下导出 |
+| m3 | minor | retry 的 beforeTurn 在「无 failed turn」校验之前执行（与 sendMessage 顺序不一致） | 已修：移到校验与 ensureModel 之后 |
+| m4 | minor | sentinel 剥离 regex 非贪婪，server 文本含伪造 end 标记时截断累积 | 已修：贪婪化（至最后一个 end），prompt 卫生残余风险接受（MCP server 半可信） |
+| m5 | minor | server PUT /mcp catch-all 把非 NotFound 错误误报 404 | 不修：pre-existing 行为，本分支未扩大，记录 |
+| 疑点1 | — | v2 onclose 在 connect resolve 与赋值之间的丢失窗口 | 核实不成立：赋值与 connect resolve 在同一同步段，事件不会插入 |
+| 疑点2 | — | closeQuietly 兜底输掉后的孤儿进程 | 接受：backlog 已有「MCP close 异步无界」既有条目覆盖 |

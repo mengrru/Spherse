@@ -198,7 +198,6 @@ export class AgentRunner {
       if (this.pendingReload) {
         this.pendingReload = false;
         await this.applyReload();
-        await this.turnHooks.beforeTurn?.(this.agent);
       }
       const lastEvent = [...this.eventLog!.events]
         .reverse()
@@ -217,6 +216,7 @@ export class AgentRunner {
       }
 
       this.ensureModel();
+      await this.turnHooks.beforeTurn?.(this.agent);
       this.eventLog!.appendBatch([
         { type: "turn/retried", data: { abandonedSeqs: [lastEvent.seq] } },
         { type: "turn/start", data: {} },

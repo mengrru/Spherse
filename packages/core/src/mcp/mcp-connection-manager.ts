@@ -118,11 +118,10 @@ export class McpConnectionManager {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), CONNECT_BUDGET_MS);
         try {
-          const result = await this.connect(config, this.logger, {
+          return await this.connect(config, this.logger, {
             signal: controller.signal,
             onDisconnect: () => this.handleDisconnect(agentId, config.id),
           });
-          return result;
         } finally {
           clearTimeout(timer);
         }
@@ -210,6 +209,7 @@ export class McpConnectionManager {
     const servers = this.entries.get(agentId);
     const entry = servers?.get(serverId);
     if (!servers || !entry) return;
+    if (entry.connection && !entry.connection.closed) return;
     servers.delete(serverId);
     this.bumpRevision(agentId);
     this.logger.warn(

@@ -23,6 +23,7 @@ const readline = require("readline");
 const rl = readline.createInterface({ input: process.stdin });
 function send(obj) { process.stdout.write(JSON.stringify(obj) + "\\n"); }
 const exitAfterList = process.env.FIXTURE_EXIT_AFTER_LIST === "1";
+const hangToolsList = process.env.FIXTURE_HANG_TOOLS_LIST === "1";
 rl.on("line", (line) => {
   let msg;
   try { msg = JSON.parse(line); } catch { return; }
@@ -31,6 +32,7 @@ rl.on("line", (line) => {
   } else if (msg.method === "server/discover") {
     send({ jsonrpc: "2.0", id: msg.id, result: { resultType: "complete", supportedVersions: ["2025-11-25"], capabilities: { tools: {} }, _meta: { "io.modelcontextprotocol/serverInfo": { name: "fixture", version: "1.0.0" } } } });
   } else if (msg.method === "tools/list") {
+    if (hangToolsList) return;
     send({ jsonrpc: "2.0", id: msg.id, result: { tools: [{ name: "echo", description: "echo input", inputSchema: { type: "object", properties: { text: { type: "string" } } } }] } });
     if (exitAfterList) setTimeout(() => process.exit(0), 300);
   }
@@ -99,6 +101,16 @@ describe("connectMcpServer (connection lifecycle)", () => {
     await expect(
       connectMcpServer(config, undefined, { signal: AbortSignal.timeout(300) }),
     ).rejects.toThrow();
+  });
+
+  it("rejects within the signal budget when the handshake succeeds but tools/list hangs", async () => {
+    const config: McpServerConfig = {
+      ...stdioConfig("hanglist", "fixture"),
+      env: { FIXTURE_HANG_TOOLS_LIST: "1" },
+    };
+    await expect(
+      connectMcpServer(config, undefined, { signal: AbortSignal.timeout(800) }),
+    ).rejects.toThrow("connect budget exceeded");
   });
 
   it("caps the stderr capture buffer at 8KB keeping the tail", async () => {
