@@ -79,7 +79,7 @@ function ClearableField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           type="text"
-          className="h-11 pe-9 text-lg md:text-lg"
+          className="h-11 pe-9 text-[17px] md:text-[17px]"
           autoCapitalize="off"
           autoCorrect="off"
           spellCheck={false}
