@@ -90,7 +90,7 @@ describe("OnboardingPage project market", () => {
     renderOnboarding();
 
     expect(screen.queryByText("项目市场")).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /打开项目市场/ }));
+    await user.click(screen.getByRole("button", { name: /逛逛项目市场/ }));
     expect(await screen.findByText("harry-potter")).toBeInTheDocument();
   });
 
@@ -104,7 +104,7 @@ describe("OnboardingPage project market", () => {
       connection: { baseUrl: "", accessToken: null },
     } as never);
     renderOnboarding();
-    expect(screen.queryByRole("button", { name: /打开项目市场/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /逛逛项目市场/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /打开或创建项目/ })).toBeInTheDocument();
   });
 });

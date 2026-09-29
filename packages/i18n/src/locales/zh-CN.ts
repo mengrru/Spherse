@@ -1320,16 +1320,16 @@ export const zhCN = {
   // --- Onboarding ---
   // 引导页（无项目打开时）主标题
   "onboarding.title": "Spherse",
-  // 引导页副标题
-  "onboarding.subtitle": "搭建属于你自己的世界",
+  // 引导页副标题：邀请式开场，引导新用户从这里迈出第一步
+  "onboarding.subtitle": "从这里开始，搭建属于你自己的世界",
   // 引导卡片1按钮：打开已有项目或新建项目（合并入口，点击后弹出目录选择器，可选择已有文件夹，也可在其中新建文件夹）
   "onboarding.action.openOrCreate": "打开或创建项目",
-  // 引导卡片2按钮：打开项目市场（弹窗浏览并下载市场项目）
-  "onboarding.action.openMarket": "打开项目市场",
-  // 引导卡片1描述：说明该入口同时支持打开已有项目文件夹与新建空项目文件夹
-  "onboarding.desc.openOrCreate": "选择已有项目文件夹，或新建一个文件夹从空项目开始",
-  // 引导卡片2描述：说明市场项目的获取方式
-  "onboarding.desc.openMarket": "浏览市场中的项目，下载到本地并打开",
+  // 引导卡片2按钮：打开项目市场（弹窗浏览并下载市场项目），口语化邀请 + emoji，引导新用户优先尝试
+  "onboarding.action.openMarket": "🛍️ 逛逛项目市场",
+  // 引导卡片1描述：以提问区分两类用户（已有项目 / 从零开始）
+  "onboarding.desc.openOrCreate": "手头已有项目文件夹？直接打开它；或新建一个文件夹，从零开始搭建",
+  // 引导卡片2描述：面向不知从何下手的新用户，强调下载即玩
+  "onboarding.desc.openMarket": "不知道从哪儿开始？挑一个现成的世界，下载打开就能玩",
   // 引导页操作（打开/创建）发生未预期异常时的通用错误提示
   "onboarding.error.unexpected": "操作失败，请重试",
 
