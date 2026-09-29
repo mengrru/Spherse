@@ -19,6 +19,7 @@ const MIN_HEIGHT = 2 * LINE_HEIGHT + PADDING_Y;
 const MOBILE_MIN_HEIGHT = LINE_HEIGHT + PADDING_Y;
 const MOBILE_EXPAND_THRESHOLD = 3 * LINE_HEIGHT + PADDING_Y + 4;
 const MID_HEIGHT = 10 * LINE_HEIGHT + PADDING_Y;
+const MOBILE_MID_HEIGHT = 5 * LINE_HEIGHT + PADDING_Y;
 const MAX_HEIGHT = 20 * LINE_HEIGHT + PADDING_Y;
 const MOBILE_MAX_HEIGHT = 12 * LINE_HEIGHT + PADDING_Y;
 
@@ -37,6 +38,7 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
   const isTouchKeyboard = useIsCoarsePointer();
   const isMobile = useIsMobile();
   const minHeight = isMobile ? MOBILE_MIN_HEIGHT : MIN_HEIGHT;
+  const midHeight = isMobile ? MOBILE_MID_HEIGHT : MID_HEIGHT;
   const maxHeight = isMobile ? MOBILE_MAX_HEIGHT : MAX_HEIGHT;
   const expandThreshold = isMobile ? MOBILE_EXPAND_THRESHOLD : MIN_HEIGHT + 4;
   const draftKey = `spherse:draft:${sessionId}`;
@@ -71,12 +73,12 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
       textarea.style.height = `${maxHeight}px`;
       textarea.style.overflowY = natural > maxHeight ? "auto" : "hidden";
     } else {
-      const targetHeight = Math.max(minHeight, Math.min(natural, MID_HEIGHT));
+      const targetHeight = Math.max(minHeight, Math.min(natural, midHeight));
       textarea.style.height = `${targetHeight}px`;
-      textarea.style.overflowY = natural > MID_HEIGHT ? "auto" : "hidden";
+      textarea.style.overflowY = natural > midHeight ? "auto" : "hidden";
     }
     textarea.scrollTop = prevScrollTop; // prevent scroll-to-top after height change
-  }, [input, manualExpanded, minHeight, maxHeight, expandThreshold]);
+  }, [input, manualExpanded, minHeight, midHeight, maxHeight, expandThreshold]);
 
   useEffect(() => {
     if (input) {
@@ -169,7 +171,10 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
       >
         <Textarea
           ref={textareaRef}
-          className="min-h-0 w-full flex-1 min-w-0 resize-none border-none bg-transparent py-2 ps-3 pe-8 text-sm md:text-sm leading-5 shadow-none focus-visible:ring-0"
+          className={cn(
+            "min-h-0 w-full flex-1 min-w-0 resize-none border-none bg-transparent py-2 ps-3 pe-8 text-sm md:text-sm leading-5 shadow-none focus-visible:ring-0",
+            isMobile && "pe-2",
+          )}
           style={{ height: `${minHeight}px`, overflowY: "hidden" }}
           value={input}
           onChange={(event) => setInput(event.target.value)}

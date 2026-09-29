@@ -76,7 +76,7 @@ export function QuestionCardRenderer({ card, onRespondQuestion }: QuestionCardRe
               key={`${index}:${option}`}
               size="sm"
               variant="outline"
-              className="h-auto min-w-0 max-w-full justify-start whitespace-normal py-1 text-start"
+              className="h-auto min-h-6 min-w-0 max-w-full justify-start whitespace-normal py-0.5 text-start"
               disabled={submitted}
               onClick={() => submit(option)}
             >
