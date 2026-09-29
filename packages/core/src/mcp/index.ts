@@ -4,7 +4,6 @@ export type {
   McpServerConfigBase,
   McpStdioServerConfig,
   McpHttpServerConfig,
-  McpSseServerConfig,
   AgentMcpConfig,
 } from "./types.js";
 export { EMPTY_MCP_CONFIG } from "./types.js";
@@ -14,6 +13,7 @@ export {
   normalizeMcpServer,
   makeMcpToolName,
   isMcpTransportType,
+  type McpNormalizeWarnFn,
 } from "./config.js";
 export { jsonSchemaToTypebox } from "./json-schema-to-typebox.js";
 export { adaptMcpTool, connectMcpServer } from "./mcp-client.js";

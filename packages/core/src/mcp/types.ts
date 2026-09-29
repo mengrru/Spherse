@@ -1,4 +1,4 @@
-export type McpTransportType = "stdio" | "http" | "sse";
+export type McpTransportType = "stdio" | "http";
 
 export interface McpServerConfigBase {
   id: string;
@@ -20,16 +20,7 @@ export interface McpHttpServerConfig extends McpServerConfigBase {
   headers?: Record<string, string>;
 }
 
-export interface McpSseServerConfig extends McpServerConfigBase {
-  transport: "sse";
-  url: string;
-  headers?: Record<string, string>;
-}
-
-export type McpServerConfig =
-  | McpStdioServerConfig
-  | McpHttpServerConfig
-  | McpSseServerConfig;
+export type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig;
 
 export interface AgentMcpConfig {
   servers: McpServerConfig[];

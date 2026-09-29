@@ -315,7 +315,6 @@ export const zhTW: Record<TranslationKey, string> = {
   "agent-mcp.fieldTransport": "傳輸方式",
   "agent-mcp.transport-stdio": "本地處理程序",
   "agent-mcp.transport-http": "HTTP",
-  "agent-mcp.transport-sse": "SSE",
   "agent-mcp.fieldCommand": "指令",
   "agent-mcp.fieldCommandPlaceholder": "如 npx -y @modelcontextprotocol/server-filesystem",
   "agent-mcp.fieldArgs": "啟動參數",

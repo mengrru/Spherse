@@ -1,4 +1,4 @@
-import { Client, StreamableHTTPClientTransport, SSEClientTransport } from "@modelcontextprotocol/client";
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
@@ -264,7 +264,7 @@ function cleanEnv(env: Record<string, string | undefined>): Record<string, strin
   return out;
 }
 
-function buildTransport(config: McpServerConfig): StdioClientTransport | StreamableHTTPClientTransport | SSEClientTransport {
+function buildTransport(config: McpServerConfig): StdioClientTransport | StreamableHTTPClientTransport {
   if (config.transport === "stdio") {
     return new StdioClientTransport({
       command: config.command,
@@ -283,10 +283,7 @@ function buildTransport(config: McpServerConfig): StdioClientTransport | Streama
   const requestInit: RequestInit = config.headers
     ? { headers: config.headers }
     : {};
-  if (config.transport === "http") {
-    return new StreamableHTTPClientTransport(url, { requestInit });
-  }
-  return new SSEClientTransport(url, { requestInit });
+  return new StreamableHTTPClientTransport(url, { requestInit });
 }
 
 export interface ConnectResult {

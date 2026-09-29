@@ -588,4 +588,26 @@ describe("api contracts", () => {
 
     await app.close();
   });
+
+  it("rejects the removed sse transport variant", async () => {
+    const app = Fastify();
+    app.put<{ Params: { id: string } }>(
+      "/agents/:id/mcp",
+      { schema: { body: schemas.agentMcpUpdateRequest } },
+      async () => ({ ok: true }),
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/agents/a/mcp",
+      payload: {
+        servers: [
+          { id: "s1", name: "old", enabled: true, transport: "sse", url: "http://localhost/sse" },
+        ],
+      },
+    });
+    expect(res.statusCode).toBe(400);
+
+    await app.close();
+  });
 });

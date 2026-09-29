@@ -3,7 +3,6 @@ import type {
   AgentMcpConfig,
   McpServerConfig,
   McpServerConfigBase,
-  McpSseServerConfig,
   McpHttpServerConfig,
   McpStdioServerConfig,
   McpTransportType,
@@ -12,8 +11,9 @@ import type {
 const SUPPORTED_TRANSPORTS: ReadonlySet<McpTransportType> = new Set([
   "stdio",
   "http",
-  "sse",
 ]);
+
+export type McpNormalizeWarnFn = (entry: unknown, reason: string) => void;
 
 export function generateMcpServerId(): string {
   return crypto.randomUUID();
@@ -92,12 +92,10 @@ export function normalizeMcpServer(raw: unknown): McpServerConfig | null {
     return cfg;
   }
 
-  const cfg: McpSseServerConfig = { ...base, transport: "sse", url };
-  if (headers) cfg.headers = headers;
-  return cfg;
+  return null;
 }
 
-export function normalizeMcpConfig(raw: unknown): AgentMcpConfig {
+export function normalizeMcpConfig(raw: unknown, onWarn?: McpNormalizeWarnFn): AgentMcpConfig {
   if (!isRecord(raw) || !Array.isArray(raw.servers)) {
     return { servers: [] };
   }
@@ -105,7 +103,12 @@ export function normalizeMcpConfig(raw: unknown): AgentMcpConfig {
   const servers: McpServerConfig[] = [];
   for (const entry of raw.servers) {
     const normalized = normalizeMcpServer(entry);
-    if (!normalized) continue;
+    if (!normalized) {
+      if (isRecord(entry) && entry.transport === "sse") {
+        onWarn?.(entry, "sse transport was removed; dropping server (migrate the server to streamable http)");
+      }
+      continue;
+    }
     if (seenIds.has(normalized.id)) continue;
     seenIds.add(normalized.id);
     servers.push(normalized);

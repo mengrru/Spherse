@@ -113,7 +113,7 @@ export class AgentStore {
 
   get mcp(): McpConfigStore {
     if (!this._mcpStore) {
-      this._mcpStore = new McpConfigStore(this.agentDir);
+      this._mcpStore = new McpConfigStore(this.agentDir, this.logger);
     }
     return this._mcpStore;
   }

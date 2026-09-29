@@ -14,7 +14,7 @@ export interface McpServerDraft {
   headers: string;
 }
 
-export const TRANSPORT_OPTIONS: McpTransportType[] = ["stdio", "http", "sse"];
+export const TRANSPORT_OPTIONS: McpTransportType[] = ["stdio", "http"];
 
 export function emptyMcpDraft(): McpServerDraft {
   return {

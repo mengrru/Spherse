@@ -11,10 +11,10 @@ describe("isMcpTransportType", () => {
   it("accepts supported transports", () => {
     expect(isMcpTransportType("stdio")).toBe(true);
     expect(isMcpTransportType("http")).toBe(true);
-    expect(isMcpTransportType("sse")).toBe(true);
   });
 
   it("rejects unsupported values", () => {
+    expect(isMcpTransportType("sse")).toBe(false);
     expect(isMcpTransportType("ws")).toBe(false);
     expect(isMcpTransportType(undefined)).toBe(false);
     expect(isMcpTransportType(123)).toBe(false);
@@ -169,6 +169,22 @@ describe("normalizeMcpConfig", () => {
     expect(normalizeMcpConfig(null).servers).toEqual([]);
     expect(normalizeMcpConfig({}).servers).toEqual([]);
     expect(normalizeMcpConfig({ servers: "nope" }).servers).toEqual([]);
+  });
+
+  it("drops removed sse transport entries and reports them via onWarn", () => {
+    const warnings: Array<{ entry: unknown; reason: string }> = [];
+    const result = normalizeMcpConfig(
+      {
+        servers: [
+          { id: "sse1", name: "legacy-sse", enabled: true, transport: "sse", url: "http://localhost/sse" },
+          { id: "ok", name: "fs", transport: "stdio", command: "npx" },
+        ],
+      },
+      (entry, reason) => warnings.push({ entry, reason }),
+    );
+    expect(result.servers.map((s) => s.id)).toEqual(["ok"]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].reason).toContain("sse transport was removed");
   });
 });
 

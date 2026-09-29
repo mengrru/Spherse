@@ -315,7 +315,6 @@ export const en: Record<TranslationKey, string> = {
   "agent-mcp.fieldTransport": "Transport",
   "agent-mcp.transport-stdio": "Local process",
   "agent-mcp.transport-http": "HTTP",
-  "agent-mcp.transport-sse": "SSE",
   "agent-mcp.fieldCommand": "Command",
   "agent-mcp.fieldCommandPlaceholder": "e.g. npx -y @modelcontextprotocol/server-filesystem",
   "agent-mcp.fieldArgs": "Arguments",

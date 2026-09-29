@@ -642,8 +642,6 @@ export const zhCN = {
   "agent-mcp.transport-stdio": "本地进程",
   // 传输方式：http（Streamable HTTP）
   "agent-mcp.transport-http": "HTTP",
-  // 传输方式：sse（Server-Sent Events）
-  "agent-mcp.transport-sse": "SSE",
   // 表单（stdio）：可执行命令字段标签
   "agent-mcp.fieldCommand": "命令",
   // 表单（stdio）：可执行命令字段占位
@@ -660,13 +658,13 @@ export const zhCN = {
   "agent-mcp.fieldCwd": "工作目录",
   // 表单（stdio）：工作目录字段占位，建议绝对路径；留空则用应用进程的 cwd
   "agent-mcp.fieldCwdPlaceholder": "可选，建议绝对路径，如 /Users/me/work",
-  // 表单（http/sse）：服务地址字段标签
+  // 表单（http）：服务地址字段标签
   "agent-mcp.fieldUrl": "服务地址",
-  // 表单（http/sse）：服务地址字段占位
+  // 表单（http）：服务地址字段占位
   "agent-mcp.fieldUrlPlaceholder": "如 http://localhost:3000/mcp",
-  // 表单（http/sse）：请求头字段标签
+  // 表单（http）：请求头字段标签
   "agent-mcp.fieldHeaders": "请求头",
-  // 表单（http/sse）：请求头字段占位，每行一个 Key: Value
+  // 表单（http）：请求头字段占位，每行一个 Key: Value
   "agent-mcp.fieldHeadersPlaceholder": "每行一个，格式 Authorization: Bearer xxx",
 
   // --- Agent Memory (记忆) ---
