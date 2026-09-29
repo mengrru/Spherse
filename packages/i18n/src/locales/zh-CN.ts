@@ -1320,8 +1320,8 @@ export const zhCN = {
   // --- Onboarding ---
   // 引导页（无项目打开时）主标题
   "onboarding.title": "Spherse",
-  // 引导页副标题：邀请式开场，引导新用户从这里迈出第一步
-  "onboarding.subtitle": "从这里开始，搭建属于你自己的世界",
+  // 引导页副标题
+  "onboarding.subtitle": "搭建属于你自己的世界",
   // 引导卡片1按钮：打开已有项目或新建项目（合并入口，点击后弹出目录选择器，可选择已有文件夹，也可在其中新建文件夹）
   "onboarding.action.openOrCreate": "打开或创建项目",
   // 引导卡片2按钮：打开项目市场（弹窗浏览并下载市场项目），口语化邀请 + emoji，引导新用户优先尝试

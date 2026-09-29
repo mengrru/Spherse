@@ -639,7 +639,7 @@ export const en: Record<TranslationKey, string> = {
   "theme-settings.saveFailed": "Save failed: {message}",
   "theme-settings.saved": "Theme saved",
   "onboarding.title": "Spherse",
-  "onboarding.subtitle": "Start here — build a world of your own",
+  "onboarding.subtitle": "Build your own world",
   "onboarding.action.openOrCreate": "Open or create project",
   "onboarding.action.openMarket": "🛍️ Browse the project market",
   "onboarding.desc.openOrCreate": "Already have a project folder? Open it right away, or create a new folder and build from scratch",

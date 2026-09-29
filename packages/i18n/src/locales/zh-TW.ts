@@ -639,7 +639,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "theme-settings.saveFailed": "儲存失敗：{message}",
   "theme-settings.saved": "主題已儲存",
   "onboarding.title": "Spherse",
-  "onboarding.subtitle": "從這裡開始，搭建屬於你自己的世界",
+  "onboarding.subtitle": "搭建屬於你自己的世界",
   "onboarding.action.openOrCreate": "開啟或建立專案",
   "onboarding.action.openMarket": "🛍️ 逛逛專案市場",
   "onboarding.desc.openOrCreate": "手邊已有專案資料夾？直接開啟它；或新建一個資料夾，從零開始搭建",
