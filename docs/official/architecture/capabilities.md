@@ -63,16 +63,17 @@
 - **工具**：会话装配时（`session/agent-assembly.ts`）遍历能力聚合 `toolMap`，再按 `profile.tools` 过滤——未声明的 agent 拿不到该工具
   - 同名工具后注册者静默覆盖先注册者；contextBlocks 合并序、turnHooks 链序、eventMiddlewares 序同样由注册顺序决定——**注册顺序是全局载荷语义**
   - `toolCatalog` 回填全量工具名（未过滤），`manage_agent` 的工具名校验消费它，新能力的工具自动被认识
-  - `featureTools` 是白名单之外的门控通道：工具由 capability 自身的配置门控（如 `memory.enabled`）而非 `profile.tools`，因此不进 toolCatalog、对 `manage_agent` 与工具勾选 UI 不可见（memory 是有意如此；为什么见 [ADR-0013](../../dev/decisions/0013-feature-gated-tools.md)）
+  - `featureTools` 是白名单之外的门控通道：工具由 capability 自身的配置门控（如 `memory.enabled`）而非 `profile.tools`，因此不进 toolCatalog、对 `manage_agent` 与工具勾选 UI 不可见（memory 是有意如此；为什么见 [ADR-0014](../../dev/decisions/0013-feature-gated-tools.md)）
 - **危险工具**：经 `tools/with-approval.ts` 的 `withApproval` 包装（`run_command`、`manage_agent` / `manage_trigger` 写 action）：
   - execute 前经 `ApprovalGate` 请求人工确认
   - yolo agent（`profile.yolo`）的 approvalGate 为 undefined，审批静默跳过
-- **MCP 是静态 toolMap 的唯一例外**：mcp capability 的 turnHooks 按**配置版本** memo，配置变更后下一 turn 自动重合并
-  - 首 turn 前按 agent 连接 enabled 的 MCP server，发现的工具以 `mcp__{server}_{shortid}__{tool}` 命名追加进 `agent.state.tools`
-  - 连接按 agent 缓存、跨会话共享（含 inflight 去重）；单个 server 连接失败降级为告警，不阻断会话
+- **MCP 是静态 toolMap 的唯一例外**：mcp capability 的 turnHooks 按管理器 **revision** memo，revision 变化（配置变更、server 意外断线、server 状态迁移）后下一 turn 自动重合并（自愈：剥离旧 `mcp__` 工具与旧 block 后重新合并）
+  - 首 turn 前按 agent 连接 enabled 的 MCP server，发现的工具以 `mcp__{server}_{shortid}__{tool}` 命名合并进 `agent.state.tools`；**`mcp__` 前缀为保留命名空间**，其他能力/工具不得使用
+  - 连接按 agent **per-server** 缓存、跨会话共享（同 agent load pass 串行化去重）；单个 server 连接失败进指数退避重试（30s 起 ×2 封顶 10min），不阻断会话；单次连接尝试总预算 20s
   - 声明 `resources` / `prompts` capability 的 server 额外合成 `read_resource` / `get_prompt` 工具，与发现工具共用命名空间
-  - 同时经 beforeTurn 向 systemPrompt 追加 `<mcp-context>` block（不走 contextBlocks 贡献点）
-  - 配置变更经 `onAgentConfigChanged(agentId, "mcp")` bump 版本使 memo 失效
+  - 同时经 beforeTurn 向 systemPrompt 追加 `<mcp-context>` block（不走 contextBlocks 贡献点），block 由 sentinel 注释对包裹以便剥离
+  - 配置变更经 `onAgentConfigChanged(agentId, "mcp")` 失效缓存并 bump revision；`mcp.json` 保存同时 emit `agent_updated` 触发活跃会话 reload，retry 路径与 sendMessage 共用 beforeTurn 前置
+  - 协议层基于 `@modelcontextprotocol/client` v2，era 自动协商（兼容 2026-07-28 无状态协议与 legacy server）；sse transport 已移除（见 [ADR-0014](../../dev/decisions/0014-mcp-sdk-v2-stateless-protocol.md)）
 
 ## 新增能力的接入面
 

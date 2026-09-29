@@ -31,6 +31,7 @@
 
 ## 技术债（重构与收敛）
 
+- [ ] **评估 MCP stdio era 探测进程的实际开销与降级开关**：`versionNegotiation: auto` 对 stdio server 每次连接多 spawn 一次性探测进程；若实测个别 server 探测异常（side effect 进程、启动慢导致 20s 预算内探测+握手双开销），需要按 server 配置降级 `legacy` 模式或 pin 版本。参见 `docs/dev/decisions/0014-mcp-sdk-v2-stateless-protocol.md`
 - [ ] **debug turn-context 快照的 tools 与实际请求不一致**：streamDecorator 可改写出站 `context.tools`（如 web_search 无 key 时隐藏），但 debug 快照直接列 `state.tools`；`previewTransforms` 只覆盖 messages。方向：kernel 增加 tools 维度的 preview 贡献点。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md`
 - [ ] **UI SDK 增加分窗 action**：现有 `floatContent` / `unfloatContent` / `openFile{float}` 可在浮窗打开文件，分窗没有对应入口。方向：`splitContent` / `unsplitContent`（或 `openFile{split}`），feature 关闭 / 移动端回落为导航；需同步 `packages/sdk` 类型与 `docs/official/architecture/ui-sdk.md`。参见 `docs/dev/features/2026-09-24-content-split-pane/design.md`（review m8）
 - [ ] **修复 text-selection E2E compact viewport 用例 flake**：`text-selection-session.spec.ts` 的「keeps long agent list scrollable in a compact viewport」在紧随「keyboard copy does not hijack editable targets」运行时约 2/3 概率失败（toolbar 点击超时或不可见），`origin/dev` 上同样复现，单独运行稳定。方向：排查前一用例遗留状态（剪贴板 / 选区 / 视口）或用例自身时序。

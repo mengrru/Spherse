@@ -124,8 +124,8 @@ frontmatter 字段：
 { "id": "uuid", "name": "search", "enabled": true, "transport": "http", "url": "https://…" }
 ```
 
-- base 字段：`id` / `name` / `enabled`（缺省 true）；stdio 型带 `command` 与可选 `args` / `env` / `cwd`，http 与 sse 型带 `url` 与可选 `headers`
-- 由 agent 右键「连接器（MCP）」对话框管理；非法项与重复 id 静默丢弃，文件不存在视为无连接器
+- base 字段：`id` / `name` / `enabled`（缺省 true）；stdio 型带 `command` 与可选 `args` / `env` / `cwd`，http 型带 `url` 与可选 `headers`
+- 由 agent 右键「连接器（MCP）」对话框管理；非法项与重复 id 静默丢弃，文件不存在视为无连接器；`transport: "sse"` 条目为已移除的非法项——读取时丢弃并记 warn，下次整表保存后从文件消失
 - 可能含 `headers` / `env` 敏感信息：`agentMcp` category 对 LLM 工具不可读写
 - 连接生命周期、工具合并与命名见 `architecture/capabilities.md`「聚合与过滤」
 
