@@ -13,7 +13,7 @@ design doc：`design.md`
 - [x] 7. ActivityBar web 断开按钮 + AlertDialog 确认 → `clearConnection` + `reload`；连接页 menu 在已存连接时补断开出口（零项目连接态，review I1）
 - [x] 8. i18n：zh-CN/zh-TW/en 三 locale 键新增与注释修正（加载 i18n skill）
 - [x] 9. `npm run lint` + `npm run build` + `npm run typecheck` + `npm test -w @spherse/app -w @spherse/i18n` 通过
-- [ ] 10. doc-sync：`docs/official/project-structure.md`、`docs/dev/backlog.md`、architecture 检查
+- [x] 10. doc-sync：`docs/official/project-structure.md`、`docs/official/architecture/frontend.md`、`docs/dev/backlog.md` 已同步
 - [ ] 11. 手动验证清单：
   - 桌面开移动端访问 → 手机 Safari 打开 web → 扫码连接成功直达项目页，全程无登录页闪回
   - iOS 真机：扫码检出（BarcodeDetector 路径，iOS 17.4+）；拒绝摄像头权限 → 「识别二维码图片」拍照/选图可连

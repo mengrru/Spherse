@@ -229,6 +229,7 @@ spherse/
 │   │       │   ├── file-name.ts      # 文件显示名（basename / 去扩展名，点文件与无扩展名保持原样），tab 与 chat 快捷链接共用
 │   │       │   ├── session-title.ts  # 会话显示标题（title 缺省回落 updatedAt 本地时间），侧栏与 tab 共用
 │   │       │   ├── use-connection.ts  # useApiClient(projectId) / useGlobalApiClient()（无 projectId 的全局 client，项目市场用）/ useConnection() — 基于 app-store connection 派生 ApiClient
+│   │       │   ├── connect-payload.ts # 连接 payload 编解码（桌面端 buildConnectUrl 生成 QR 链接 ↔ web 端 parseConnectPayload 解析 base/token/targetPath）
 │   │       │   ├── urls.ts            # 官网域派生的集中 URL 常量（WEB_APP_URL/DOCS_URL/EXPLORE_URL/DOWNLOAD_PAGE_URL）
 │   │       │   ├── ws/                # 通用 WS 连接抽象：ws-connection.ts（WsConnection 状态机——idle/connecting/open/waiting-backoff/failed/fatal/closed、心跳 awaitingPongSince、退避重试、probe；bus 与 chat（PR3 起）共用）
 │   │       │   ├── utils.ts          # shadcn/ui cn() 工具
@@ -388,8 +389,8 @@ spherse/
 │   │   ├── pages-assets/404.html     # GitHub Pages SPA fallback（/web、/dev/web → 补尾斜杠，其余 → /）
 │   │   └── src/                      # Web 版本专属源码
 │   │       ├── main.tsx              # 注入 WebHostBridge 调 createAppRoot
-│   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集、token 探活、disconnect）
-│   │       └── pages/MobileConnectPage.tsx # 扫码/手动输入连接页
+│   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集、token 探活、clearConnection 断开清理）
+│   │       └── pages/MobileConnectPage.tsx # 连接页（应用内扫码 + 二维码图片识别 + 手动输入；已存连接时提供断开出口）
 │   ├── landing/                      # @spherse/landing — GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）
 │   │   ├── vite.config.ts            # 标准 Vite 构建配置（base: "/"，自定义域名根路径部署）
 │   │   ├── vitest.config.ts          # 单测配置（jsdom 环境，release.ts 下载链接解析逻辑）
