@@ -19,18 +19,9 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "../../components/ui/context-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../../components/ui/alert-dialog";
-import { FolderOpenIcon, GlobeIcon, LogOutIcon, PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-react";
+import { FolderOpenIcon, GlobeIcon, PanelLeftCloseIcon, PinIcon, PlusIcon, SettingsIcon } from "lucide-react";
 import { DebugTools } from "../debug-tools";
+import { WebDisconnectButton } from "../web-disconnect";
 import { WelcomePageSettingsDialog } from "../project-settings/welcome-page-settings";
 import { ThemeSettingsDialog } from "../project-settings/theme-settings";
 import { SidePanelSettingsDialog } from "../project-settings/side-panel-settings";
@@ -60,15 +51,6 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
   const openSettings = useAppUiStore((s) => s.openSettings);
   const bridge = useHostBridge();
   const canEditProject = bridge.capabilities.content.editable;
-  const [disconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
-
-  const handleDisconnect = () => {
-    void Promise.resolve(bridge.clearConnection?.())
-      .catch(() => undefined)
-      .then(() => {
-        window.location.reload();
-      });
-  };
   const { handleAddProject, handleSelectProject, handleCloseProject, handleOpenProjectFolder } =
     useProjectActions();
   const [settingsProjectId, setSettingsProjectId] = useState<string | null>(null);
@@ -155,35 +137,7 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
         </div>
         <div className="mt-auto flex flex-col items-center gap-2 pb-3">
           <DebugTools />
-          {bridge.kind === "web" && (
-            <>
-              <Button
-                variant="ghost"
-                size="icon-lg"
-                onClick={() => setDisconnectConfirmOpen(true)}
-                title={t("mobile-connect.disconnect")}
-                aria-label={t("mobile-connect.disconnect")}
-              >
-                <LogOutIcon />
-              </Button>
-              <AlertDialog open={disconnectConfirmOpen} onOpenChange={setDisconnectConfirmOpen}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t("mobile-connect.disconnectTitle")}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t("mobile-connect.disconnectDescription")}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDisconnect}>
-                      {t("mobile-connect.disconnect")}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </>
-          )}
+          <WebDisconnectButton variant="icon" />
           {pinToggle && (
             <Button
               variant="ghost"

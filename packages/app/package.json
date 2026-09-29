@@ -9,6 +9,7 @@
     "./web-resume-probe": "./src/lib/web-resume-probe.ts",
     "./version-compat": "./src/lib/version-compat.ts",
     "./connect-payload": "./src/lib/connect-payload.ts",
+    "./web-disconnect": "./src/features/web-disconnect/index.tsx",
     "./stores/app": "./src/stores/app-store.ts",
     "./stores/bus": "./src/stores/bus-store.ts",
     "./stores/settings": "./src/stores/settings-store.ts",

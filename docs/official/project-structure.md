@@ -298,6 +298,7 @@ spherse/
 │   │       │   ├── project-market/       # 项目市场 Dialog（顶部分类 chips「全部」+ 动态归并 + 卡片网格；下载 = selectDirectory → 全局 install API → openProjectAtPath → 导航打开）+ categories 归并/过滤纯函数
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
+│   │       │   ├── web-disconnect/       # web 断开连接按钮（icon/panel 两种形态 + AlertDialog 确认；内部按 bridge.kind==="web" 自 gating，断开 = clearConnection + reload；ActivityBar 底部与 web 壳连接页经 `@spherse/app/web-disconnect` 复用）
 │   │       │   ├── split-pane/           # 内容区分窗：target.ts（复用 TabTarget，声明可支持的 kind，当前仅 file）、store.ts（每项目 { target, ratio }，localStorage spherse:content-split）、SplitLayout（左栏恒在 + 分隔条 + 右栏）、SplitPaneView（按 kind 分发，file → ReadOnlyContentBrowser）、SplitRouteBridge（「移动」导航到达后提交）、useOpenSplit 等命令 hook
 │   │       │   ├── tabs/                 # 内容区标签栏：store.ts（每项目 tab 列表，localStorage spherse:tabs）、TabBar（欢迎页固定首 tab、拖拽排序移动端禁用）、TabRouteBridge（路由派生 upsert / 关闭 / 替换）、useCloseActiveTab / useCloseDeletedFileTabs
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
@@ -390,7 +391,9 @@ spherse/
 │   │   └── src/                      # Web 版本专属源码
 │   │       ├── main.tsx              # 注入 WebHostBridge 调 createAppRoot
 │   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集、token 探活、clearConnection 断开清理）
-│   │       └── pages/MobileConnectPage.tsx # 连接页（应用内扫码 + 二维码图片识别 + 手动输入；已存连接时提供断开出口）
+│   │       └── pages/
+│   │           ├── MobileConnectPage.tsx # 连接页 shell（模式切换、连接流程、URL 参数自动连接、connecting 态）
+│   │           └── connect/          # 连接页子模块：ScanPanel（应用内扫码 + 二维码图片识别兜底）、ManualPanel（手动输入表单）、qr-decode.ts（BarcodeDetector/jsQR 解码纯函数）
 │   ├── landing/                      # @spherse/landing — GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）
 │   │   ├── vite.config.ts            # 标准 Vite 构建配置（base: "/"，自定义域名根路径部署）
 │   │   ├── vitest.config.ts          # 单测配置（jsdom 环境，release.ts 下载链接解析逻辑）
