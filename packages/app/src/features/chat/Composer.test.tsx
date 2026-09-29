@@ -185,6 +185,8 @@ describe("Composer mobile layout", () => {
 
     const composer = document.querySelector("[data-chat-composer]");
     expect(composer?.className).toContain("bg-transparent");
+    expect(composer?.className).toContain("safe-area-inset-bottom");
+    expect(composer?.className).toContain("safe-area-inset-left");
 
     const inputFrame = document.querySelector("[data-chat-composer-input]");
     expect(inputFrame?.className).toContain("rounded-2xl");

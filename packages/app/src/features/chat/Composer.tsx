@@ -154,7 +154,7 @@ export function Composer({ streaming, loading = false, sessionId, onSend, onAbor
       className={cn(
         "border-t border-border bg-background p-3",
         isMobile &&
-          "border-t-0 bg-transparent px-2.5 pt-1.5 pb-[calc(0.625rem+env(safe-area-inset-bottom))]",
+          "border-t-0 bg-transparent ps-[calc(0.625rem+env(safe-area-inset-left))] pe-[calc(0.625rem+env(safe-area-inset-right))] pt-1.5 pb-[calc(1rem+env(safe-area-inset-bottom))]",
       )}
       data-chat-composer
     >
