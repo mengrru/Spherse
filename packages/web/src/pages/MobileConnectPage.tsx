@@ -90,14 +90,16 @@ export function MobileConnectPage() {
         </div>
       ) : mode === "menu" ? (
         <div className="flex w-full max-w-sm flex-col gap-3">
-          <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setMode("scan")}>
-            <CameraIcon className="size-4" />
-            {t("mobile-connect.scan")}
-          </Button>
-          <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setMode("manual")}>
-            <KeyboardIcon className="size-4" />
-            {t("mobile-connect.manual")}
-          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => setMode("scan")}>
+              <CameraIcon className="size-7" />
+              {t("mobile-connect.scan")}
+            </Button>
+            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => setMode("manual")}>
+              <KeyboardIcon className="size-7" />
+              {t("mobile-connect.manual")}
+            </Button>
+          </div>
           {hasSavedConnection && <WebDisconnectButton variant="panel" className="mt-4" />}
         </div>
       ) : mode === "scan" ? (
