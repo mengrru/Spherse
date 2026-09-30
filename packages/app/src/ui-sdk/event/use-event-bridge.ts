@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
+import { useLocation } from "react-router";
 import type { ApiClient } from "../../lib/api";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
 import { isAllowedOrigin } from "../use-spherse-message-listener";
 import { FileUpdateDebouncer, parseFileUpdate } from "./file-update";
+import { deriveNavigateEvent } from "./navigate";
 import { EventSubscriptionRegistry } from "./subscription-registry";
 import type { EventControlMessage, EventSourceWindow } from "./types";
 
@@ -16,6 +18,7 @@ export function useEventBridge(
 ): void {
   const registryRef = useRef(new EventSubscriptionRegistry());
   const debouncerRef = useRef(new FileUpdateDebouncer());
+  const location = useLocation();
 
   useBusSubscription(projectId, "fs-watch", (type, payload) => {
     if (type !== "change") return;
@@ -25,6 +28,12 @@ export function useEventBridge(
       registryRef.current.dispatchFileUpdate(nextEvent);
     });
   });
+
+  useEffect(() => {
+    registryRef.current.setNavigateCurrent(
+      deriveNavigateEvent(location.pathname, location.search),
+    );
+  }, [location.pathname, location.search, client]);
 
   useEffect(() => {
     if (!client) return;

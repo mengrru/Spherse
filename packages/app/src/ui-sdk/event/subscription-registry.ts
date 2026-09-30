@@ -2,14 +2,39 @@ import type { FsWatchChangeEvent } from "@spherse/contracts";
 import { normalizeEventPath } from "./file-update";
 import type {
   EventSourceWindow,
+  EventSubscription,
   FileUpdatePushMessage,
-  FileUpdateSubscription,
+  NavigatePushMessage,
+  SdkNavigateEvent,
 } from "./types";
 
 export const MAX_EVENT_SUBSCRIPTIONS_PER_SOURCE = 100;
 
+function sameNavigate(a: SdkNavigateEvent | null, b: SdkNavigateEvent): boolean {
+  if (!a || a.kind !== b.kind) return false;
+  if (a.kind === "file" && b.kind === "file") return a.path === b.path;
+  if (a.kind === "chat" && b.kind === "chat") return a.sessionId === b.sessionId;
+  if (a.kind === "browser" && b.kind === "browser") return a.url === b.url;
+  return true;
+}
+
+function pushNavigate(
+  source: EventSourceWindow,
+  subscriptionId: string,
+  payload: SdkNavigateEvent,
+): void {
+  const message: NavigatePushMessage = {
+    type: "spherse:event",
+    event: "navigate",
+    subscriptionId,
+    payload,
+  };
+  source.postMessage(message, "*");
+}
+
 export class EventSubscriptionRegistry {
-  private readonly bySource = new Map<EventSourceWindow, Map<string, FileUpdateSubscription>>();
+  private readonly bySource = new Map<EventSourceWindow, Map<string, EventSubscription>>();
+  private currentNavigate: SdkNavigateEvent | null = null;
 
   subscribe(
     source: EventSourceWindow,
@@ -17,11 +42,21 @@ export class EventSubscriptionRegistry {
     event: string,
     filter: unknown,
   ): boolean {
-    if (event !== "file:update" || !subscriptionId) return false;
-    const pathValue = (filter as { path?: unknown } | null)?.path;
-    if (typeof pathValue !== "string") return false;
-    const path = normalizeEventPath(pathValue);
-    if (!path) return false;
+    if (!subscriptionId) return false;
+
+    let subscription: EventSubscription;
+    if (event === "file:update") {
+      const pathValue = (filter as { path?: unknown } | null | undefined)?.path;
+      if (typeof pathValue !== "string") return false;
+      const path = normalizeEventPath(pathValue);
+      if (!path) return false;
+      subscription = { event, path };
+    } else if (event === "navigate") {
+      if (filter !== undefined && filter !== null) return false;
+      subscription = { event };
+    } else {
+      return false;
+    }
 
     let subscriptions = this.bySource.get(source);
     if (!subscriptions) {
@@ -34,7 +69,10 @@ export class EventSubscriptionRegistry {
     ) {
       return false;
     }
-    subscriptions.set(subscriptionId, { event, path });
+    subscriptions.set(subscriptionId, subscription);
+    if (subscription.event === "navigate" && this.currentNavigate) {
+      pushNavigate(source, subscriptionId, this.currentNavigate);
+    }
     return true;
   }
 
@@ -50,7 +88,7 @@ export class EventSubscriptionRegistry {
     if (!path) return;
     for (const [source, subscriptions] of this.bySource) {
       for (const [subscriptionId, subscription] of subscriptions) {
-        if (subscription.path !== path) continue;
+        if (subscription.event !== "file:update" || subscription.path !== path) continue;
         const message: FileUpdatePushMessage = {
           type: "spherse:event",
           event: subscription.event,
@@ -62,7 +100,23 @@ export class EventSubscriptionRegistry {
     }
   }
 
+  setNavigateCurrent(payload: SdkNavigateEvent | null): void {
+    if (!payload) {
+      this.currentNavigate = null;
+      return;
+    }
+    if (sameNavigate(this.currentNavigate, payload)) return;
+    this.currentNavigate = payload;
+    for (const [source, subscriptions] of this.bySource) {
+      for (const [subscriptionId, subscription] of subscriptions) {
+        if (subscription.event !== "navigate") continue;
+        pushNavigate(source, subscriptionId, payload);
+      }
+    }
+  }
+
   clear(): void {
     this.bySource.clear();
+    this.currentNavigate = null;
   }
 }

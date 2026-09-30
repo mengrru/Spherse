@@ -1,23 +1,42 @@
+/* eslint-disable no-redeclare */
 import { SDK_VERSION } from "../meta.js";
 
 export interface FileUpdateEvent {
   path: string;
 }
 
-type EventHandler = (payload: FileUpdateEvent) => void | Promise<void>;
+export type NavigateEvent =
+  | { kind: "welcome" }
+  | { kind: "chat"; sessionId: string }
+  | { kind: "file"; path: string }
+  | { kind: "browser"; url: string };
 
-interface Subscription {
+interface FileUpdateSubscription {
   event: "file:update";
   filter: { path: string };
-  handler: EventHandler;
+  handler: (payload: FileUpdateEvent) => void | Promise<void>;
 }
 
-interface EventMessage {
-  type: "spherse:event";
-  event: "file:update";
-  subscriptionId: string;
-  payload: FileUpdateEvent;
+interface NavigateSubscription {
+  event: "navigate";
+  handler: (payload: NavigateEvent) => void | Promise<void>;
 }
+
+type Subscription = FileUpdateSubscription | NavigateSubscription;
+
+type EventMessage =
+  | {
+      type: "spherse:event";
+      event: "file:update";
+      subscriptionId: string;
+      payload: FileUpdateEvent;
+    }
+  | {
+      type: "spherse:event";
+      event: "navigate";
+      subscriptionId: string;
+      payload: NavigateEvent;
+    };
 
 const subscriptions = new Map<string, Subscription>();
 
@@ -65,32 +84,15 @@ function postControl(
       type,
       subscriptionId,
       event: subscription?.event,
-      filter: subscription?.filter,
+      filter: subscription?.event === "file:update" ? subscription.filter : undefined,
       sdk: SDK_VERSION,
     },
     "*",
   );
 }
 
-function on(
-  event: "file:update",
-  filter: { path: string },
-  handler: EventHandler,
-): () => void {
-  if (event !== "file:update") throw new Error("spherse:unsupported_event");
-  if (!filter || typeof filter.path !== "string" || !filter.path.trim()) {
-    throw new Error("spherse:invalid_event_filter");
-  }
-  if (typeof handler !== "function") throw new Error("spherse:invalid_event_handler");
-  const path = resolveEventPath(filter.path, document.baseURI);
-  if (!path) throw new Error("spherse:invalid_event_filter");
-
+function registerSubscription(subscription: Subscription): () => void {
   const subscriptionId = genId();
-  const subscription: Subscription = {
-    event,
-    filter: { path },
-    handler,
-  };
   subscriptions.set(subscriptionId, subscription);
   postControl("spherse:event-subscribe", subscriptionId, subscription);
 
@@ -103,14 +105,64 @@ function on(
   };
 }
 
+export function on(
+  event: "file:update",
+  filter: { path: string },
+  handler: (payload: FileUpdateEvent) => void | Promise<void>,
+): () => void;
+export function on(
+  event: "navigate",
+  handler: (payload: NavigateEvent) => void | Promise<void>,
+): () => void;
+export function on(
+  event: string,
+  filterOrHandler: unknown,
+  maybeHandler?: unknown,
+): () => void {
+  if (event === "file:update") {
+    const filter = filterOrHandler as { path?: unknown } | null | undefined;
+    if (!filter || typeof filter.path !== "string" || !filter.path.trim()) {
+      throw new Error("spherse:invalid_event_filter");
+    }
+    if (typeof maybeHandler !== "function") throw new Error("spherse:invalid_event_handler");
+    const path = resolveEventPath(filter.path, document.baseURI);
+    if (!path) throw new Error("spherse:invalid_event_filter");
+    return registerSubscription({
+      event,
+      filter: { path },
+      handler: maybeHandler as (payload: FileUpdateEvent) => void | Promise<void>,
+    });
+  }
+
+  if (event === "navigate") {
+    if (typeof filterOrHandler !== "function") throw new Error("spherse:invalid_event_handler");
+    return registerSubscription({
+      event,
+      handler: filterOrHandler as (payload: NavigateEvent) => void | Promise<void>,
+    });
+  }
+
+  throw new Error("spherse:unsupported_event");
+}
+
 export function installEventListener(): void {
   window.addEventListener("message", (event: MessageEvent) => {
     const data = event.data as EventMessage | null;
-    if (!data || data.type !== "spherse:event" || data.event !== "file:update") return;
+    if (
+      !data
+      || data.type !== "spherse:event"
+      || (data.event !== "file:update" && data.event !== "navigate")
+    ) {
+      return;
+    }
     const subscription = subscriptions.get(data.subscriptionId);
-    if (!subscription || subscription.event !== data.event) return;
+    if (!subscription) return;
+    if (subscription.event !== data.event) return;
+    const handler = subscription.handler as (
+      payload: FileUpdateEvent | NavigateEvent,
+    ) => void | Promise<void>;
     try {
-      void Promise.resolve(subscription.handler(data.payload)).catch(() => undefined);
+      void Promise.resolve(handler(data.payload)).catch(() => undefined);
     } catch {
       return;
     }

@@ -147,3 +147,39 @@ test("double-click title bar opens file in content browser and closes float", as
     await closeApp(app);
   }
 });
+
+const NAV_HTML = [
+  "<!DOCTYPE html>",
+  '<html><head><meta charset="utf-8"></head><body>',
+  '<div id="status">waiting</div>',
+  "<script>",
+  "function show(e){document.getElementById('status').textContent=JSON.stringify(e);}",
+  "window.spherse.events.on('navigate',show);",
+  "</script></body></html>",
+].join("\n");
+
+test("floating HTML iframe receives navigate events across main view changes", async () => {
+  const project = await createFileTreeProject();
+  await writeFile(`${project.root}/nav.html`, NAV_HTML);
+  const { app, page } = await launchFileTreeApp(project);
+
+  try {
+    await floatFile(page, "nav.html");
+    const frame = page.frameLocator("[data-content-float-root] iframe");
+    await expect(frame.locator("#status")).toHaveText(
+      JSON.stringify({ kind: "file", path: "README.md" }),
+      { timeout: 10_000 },
+    );
+
+    await page.evaluate((id) => {
+      window.location.hash = `#/project/${id}`;
+    }, project.projectId);
+
+    await expect(frame.locator("#status")).toHaveText(
+      JSON.stringify({ kind: "welcome" }),
+      { timeout: 10_000 },
+    );
+  } finally {
+    await closeApp(app);
+  }
+});

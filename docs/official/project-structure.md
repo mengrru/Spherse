@@ -135,12 +135,12 @@ spherse/
 │   │       │   ├── actions.ts        # 触发型便捷方法（openFile/createSession/float* 等）
 │   │       │   ├── data.ts           # data.get/set/delete 键值存储
 │   │       │   ├── api.ts            # api.* 只读 HTTP bridge（api.call + agents/sessions/content/... 子命名空间）
-│   │       │   └── events.ts         # events.on 订阅 API + spherse:event 消息分发与 pagehide 清理
+│   │       │   └── events.ts         # events.on 订阅 API（file:update / navigate）+ spherse:event 消息分发与 pagehide 清理
 │   │       └── __tests__/
 │   │           ├── inject-head-script.test.ts # injectHeadScript + 打包产物（SDK_SOURCE）断言
 │   │           ├── messaging.test.ts          # postAction/fire/call（resolve/reject/超时/并发 requestId 匹配）
 │   │           ├── context.test.ts            # 运行时种子化（window.__SPHERSE__ 同步 + spherse:runtime 异步 + waiter 队列）
-│   │           └── events.test.ts             # 文件事件订阅、定向分发与幂等取消
+│   │           └── events.test.ts             # 文件/导航事件订阅、定向分发与幂等取消
 │   ├── contracts/                   # @spherse/contracts — 跨进程边界 wire 协议（HTTP/WS schema + parser）
 │   │   └── src/
 │   │       ├── index.ts              # 聚合 schemas 与类型 re-export，包唯一入口
@@ -265,8 +265,9 @@ spherse/
 │   │       │   ├── respond.ts            # request-response 回复工具（requestId → spherse:response postMessage）
 │   │       │   ├── use-spherse-message-listener.ts # postMessage → dispatchAction 桥梁
 │   │       │   ├── event/
-│   │       │   │   ├── use-event-bridge.ts      # event control listener + fs-watch 路由
-│   │       │   │   ├── subscription-registry.ts # iframe 订阅、过滤与定向投递
+│   │       │   │   ├── use-event-bridge.ts      # event control listener + fs-watch 路由 + navigate 路由喂送
+│   │       │   │   ├── subscription-registry.ts # iframe 订阅、过滤与定向投递（含 navigate 订阅即回放）
+│   │       │   │   ├── navigate.ts              # 路由 → navigate payload 派生（welcome/chat/file/browser，瞬态返回 null）
 │   │       │   │   ├── types.ts                 # subscribe/unsubscribe/push 协议类型
 │   │       │   │   └── file-update.ts           # 文件路径规范化、payload 校验与 300ms 去抖
 │   │       │   ├── index.ts              # barrel export + handler side-effect import
@@ -378,7 +379,7 @@ spherse/
 │   │       ├── text-selection-session.spec.ts  # 划选会话 E2E 测试
 │   │       ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
 │   │       ├── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
-│   │       └── ui-sdk-bridge.spec.ts   # 注入式 @spherse/sdk 桥接 E2E 测试（window.spherse.* 暴露面 / fire 导航 / call 往返 / api.* HTTP 桥接 resolve+reject）
+│   │       └── ui-sdk-bridge.spec.ts   # 注入式 @spherse/sdk 桥接 E2E 测试（window.spherse.* 暴露面 / fire 导航 / call 往返 / api.* HTTP 桥接 resolve+reject / navigate 订阅回放）
 │   ├── web/                          # @spherse/web — Web 版本壳 / 移动端 PWA（GitHub Pages：prod 部署到 /web/ 随发版，dev 分支部署到 /dev/web/；构建产物路径无关，`WEB_ENV=dev` 注入 manifest/title Dev 标识）
 │   │   ├── vite.config.ts            # Vite + vite-plugin-pwa（manifest + generateSW app shell precache）+ manualChunks（vendor-react/vendor-markdown）
 │   │   ├── index.html                # 入口 HTML（theme-color / apple-mobile-web-app / viewport-fit=cover 元数据）

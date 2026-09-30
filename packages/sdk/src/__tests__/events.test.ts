@@ -6,7 +6,7 @@ interface PostedMessage {
   type: string;
   subscriptionId: string;
   event?: string;
-  filter?: { path: string };
+  filter?: { path: string } | undefined;
 }
 
 let messages: PostedMessage[];
@@ -81,6 +81,69 @@ describe("events.on", () => {
     expect(() => events.on("file:update", { path: "" }, vi.fn())).toThrow(
       "spherse:invalid_event_filter",
     );
+  });
+});
+
+describe("events.on (navigate)", () => {
+  it("registers an unfiltered navigate subscription and returns an idempotent cleanup", async () => {
+    const { events } = await useEvents();
+    const cleanup = events.on("navigate", vi.fn());
+
+    expect(messages[0]).toMatchObject({
+      type: "spherse:event-subscribe",
+      event: "navigate",
+    });
+    expect(messages[0].filter).toBeUndefined();
+
+    cleanup();
+    cleanup();
+    expect(messages.filter((message) => message.type === "spherse:event-unsubscribe")).toHaveLength(1);
+    expect(messages[1].subscriptionId).toBe(messages[0].subscriptionId);
+  });
+
+  it("rejects non-function handlers and unsupported events", async () => {
+    const { events } = await useEvents();
+    expect(() => events.on("navigate", undefined as unknown as () => void)).toThrow(
+      "spherse:invalid_event_handler",
+    );
+    expect(() =>
+      events.on("session:update", vi.fn() as unknown as () => void),
+    ).toThrow("spherse:unsupported_event");
+  });
+
+  it("delivers navigate payloads only to the matching subscription", async () => {
+    const { events } = await useEvents();
+    const handler = vi.fn();
+    events.on("navigate", handler);
+    const subscriptionId = messages[0].subscriptionId;
+
+    window.dispatchEvent(new MessageEvent("message", {
+      data: {
+        type: "spherse:event",
+        event: "file:update",
+        subscriptionId,
+        payload: { path: "world/data.json" },
+      },
+    }));
+    window.dispatchEvent(new MessageEvent("message", {
+      data: {
+        type: "spherse:event",
+        event: "navigate",
+        subscriptionId: "other",
+        payload: { kind: "welcome" },
+      },
+    }));
+    window.dispatchEvent(new MessageEvent("message", {
+      data: {
+        type: "spherse:event",
+        event: "navigate",
+        subscriptionId,
+        payload: { kind: "file", path: "todo/事务簿.html" },
+      },
+    }));
+
+    expect(handler).toHaveBeenCalledOnce();
+    expect(handler).toHaveBeenCalledWith({ kind: "file", path: "todo/事务簿.html" });
   });
 });
 

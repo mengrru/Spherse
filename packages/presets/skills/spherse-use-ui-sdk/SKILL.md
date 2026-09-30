@@ -34,6 +34,7 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 | 请求型（Promise） | `data.get` / `data.set` / `data.delete` / `data.keys` / `data.entries` / `data.mutate` | key-value 持久化 + manifest 结构性变更 |
 | 请求型（Promise） | `api.call(op, args)` 及 `api.*` 命名方法 | 只读查询项目信息（agents / sessions / content / fileTree） |
 | 事件型 | `events.on("file:update", filter, handler)` | 订阅指定项目文件的变化信号 |
+| 事件型 | `events.on("navigate", handler)` | 感知宿主主视图跳转（订阅即回放当前页面） |
 | 运行时 | `spherse.runtime`（同步读）/ `spherse.getRuntime()`（Promise） | 获取当前会话上下文（仅 HtmlCard 有值） |
 
 所有请求型方法都返回 Promise，内部已处理 `requestId` 匹配与 10 秒超时，失败时 reject。
@@ -318,6 +319,31 @@ handler 收到的事件结构：
 handler 中的 `path` 始终是归一化后的项目根目录相对路径，即使订阅时传入的是 `./atlas.data.json`。
 
 `file:update` 的语义是“该文件可能已经变化”。handler 应重新读取目标文件并处理读取失败；短时间内同一路径的连续变化会被合并。操作系统底层的文件事件类型不会暴露给用户 HTML，因为它无法可靠区分创建、删除和编辑器的原子替换。
+
+## 事件订阅 — 宿主导航
+
+### `spherse.events.on("navigate", handler)` → `unsubscribe`
+
+感知宿主 App 主视图的跳转。**订阅成功时立即收到一条当前页面状态**（无需等待下次跳转），之后每次主视图变化再推送；返回的 `unsubscribe()` 同样幂等。
+
+handler 收到的 payload 按当前页面类型带不同字段：
+
+| 当前主视图 | payload |
+|---|---|
+| 欢迎页 | `{ kind: "welcome" }` |
+| 聊天 | `{ kind: "chat", sessionId }` |
+| 文件预览（Content Browser） | `{ kind: "file", path }`（`path` 为项目相对路径） |
+| 内置浏览器 | `{ kind: "browser", url }` |
+
+```javascript
+spherse.events.on("navigate", (e) => {
+  if (e.kind === "file" && e.path === "todo/事务簿.html") {
+    highlightTodoTab();
+  }
+});
+```
+
+注意 `kind: "file"` 指文件预览视图，与 `file:update`（文件内容变化信号）语义不同。聊天内定位消息（`?messageId=`）、应用内浮窗、split pane 的开关与切换不构成导航，不会推送事件。
 
 ## 请求型 Action — 只读项目信息（HTTP bridge）
 

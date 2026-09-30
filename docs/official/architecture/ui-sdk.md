@@ -22,7 +22,7 @@ SDK 由两半组成，仅以 postMessage 协议耦合：
   - 请求型：createSession（resolve `{sessionId}`）/ sendMessage
   - 数据：`data.get / set / delete / keys / entries / mutate`
   - 只读 HTTP bridge：`api.call(op, args)` 及 agents / sessions / content / fileTree 快捷方法
-  - 订阅：`events.on("file:update", { path }, handler)` 返回取消函数
+  - 订阅：`events.on("file:update", { path }, handler)` 返回取消函数；`events.on("navigate", handler)` 感知主视图跳转（无 filter，订阅即回放当前页面）
   - 上下文：`runtime` 同步 getter 与 `getRuntime()` Promise
   - 其它：`version`
 
@@ -68,7 +68,13 @@ SDK 由两半组成，仅以 postMessage 协议耦合：
 - 订阅协议：iframe post `spherse:event-subscribe / unsubscribe`（携 subscriptionId、event、filter）
 - SDK 侧 `resolveEventPath` 基于 `document.baseURI` 解析 `./`、`../` 相对路径（跳过 `__auth/<token>` 段）；非相对输入透传，由 host 侧归一化兜底拒绝绝对路径
 - host 侧：bus fs-watch change 事件经 300ms 按 path 去抖后，按 `MessageEvent.source` 定向 postMessage（精确 path 相等匹配，非前缀）
-- 每 iframe 订阅上限 100；SDK 在 `pagehide` 批量 unsubscribe
+- 每 iframe 订阅上限 100（全部事件类型合计）；SDK 在 `pagehide` 批量 unsubscribe
+
+`navigate` 事件（事件源在 renderer 本地，不走 bus）：
+
+- `useEventBridge` 内 `useLocation()` → 纯函数 `deriveNavigateEvent(pathname, search)` 派生 payload：welcome / `{ kind: "chat", sessionId }` / `{ kind: "file", path }` / `{ kind: "browser", url }`；非项目路由与瞬态路由（content 缺 `?path=`、browser 缺 `?url=`，均会立即 replace 回 welcome）返回 null 不推送
+- registry 持有 `currentNavigate`：payload 恒等比较（只比较派生字段，天然忽略 `?messageId=` 等无关 query）去重后广播；订阅成功即回放当前状态（sticky）
+- navigate 订阅拒绝携带 filter（absent 与 `undefined` 等价为无）；浮窗 / split pane 不改变主路由，不产生事件；payload 不含 projectId，跨项目隔离由 registry 随 client 重建 `clear()`（重置订阅表与 `currentNavigate`）保证
 
 ## 运行时上下文注入
 

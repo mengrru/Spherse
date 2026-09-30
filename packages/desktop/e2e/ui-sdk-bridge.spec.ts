@@ -34,6 +34,7 @@ const BRIDGE_HTML = [
   '<button id="btn-filetree">File tree</button>',
   '<button id="btn-unknown">Unknown op</button>',
   '<button id="btn-watch">Watch file</button>',
+  '<button id="btn-nav">Watch navigate</button>',
   "<script>",
   "function show(text){document.getElementById('status').textContent=text;}",
   "document.getElementById('btn-surface').onclick=function(){",
@@ -64,6 +65,9 @@ const BRIDGE_HTML = [
   "document.getElementById('btn-watch').onclick=function(){",
   "  window.spherse.events.on('file:update',{path:'./sdk-watch.json'},function(e){show('event:'+e.path);});",
   "  show('watching');",
+  "};",
+  "document.getElementById('btn-nav').onclick=function(){",
+  "  window.spherse.events.on('navigate',function(e){show(JSON.stringify(e));});",
   "};",
   "document.body.dataset.bridgeReady='true';",
   "</script></body></html>",
@@ -253,6 +257,23 @@ test("spherse.events.on() receives filtered file:update events", async () => {
 
     await expect(frame.locator("#status")).toHaveText(
       "event:pages/sdk-watch.json",
+      { timeout: 10_000 },
+    );
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test("spherse.events.on('navigate') replays the current navigation state on subscribe", async () => {
+  const project = await createBridgeProject();
+  const { app, page } = await launchApp(project);
+
+  try {
+    const frame = await openBridge(page, project);
+    await frame.locator("#btn-nav").click();
+
+    await expect(frame.locator("#status")).toHaveText(
+      JSON.stringify({ kind: "file", path: "pages/sdk-bridge.html" }),
       { timeout: 10_000 },
     );
   } finally {
