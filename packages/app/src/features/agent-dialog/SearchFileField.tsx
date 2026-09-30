@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type KeyboardEvent } from "react";
+import { useState, useRef, useEffect, useMemo, type KeyboardEvent } from "react";
 import { Input } from "../../components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
 import { useProjectCtx } from "../../context/project-context";
@@ -6,8 +6,6 @@ import { useApiClient } from "../../lib/use-connection";
 import { useProjectFileTree } from "../../queries/content";
 
 const FILE_TREE_EXCLUDE = new Set(["AGENTS.md", "CHANGELOG.md", "changelog.md"]);
-
-type FileSuggestion = { name: string; fullPath: string };
 
 function fuzzyMatch(filePath: string, query: string): boolean {
   const lower = filePath.toLowerCase();
@@ -25,13 +23,24 @@ export function SearchFileField({ exclude = [], onSelect, placeholder }: SearchF
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const [input, setInput] = useState("");
+  const [query, setQuery] = useState("");
+  const [dismissedQuery, setDismissedQuery] = useState<string | null>(null);
   const fileTreeQuery = useProjectFileTree(projectId, client);
   const fileTree = (fileTreeQuery.data ?? []).filter(
     (file) => !FILE_TREE_EXCLUDE.has(file.split("/").pop() ?? ""),
   );
-  const [suggestions, setSuggestions] = useState<FileSuggestion[]>([]);
-  const [open, setOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const suggestions = useMemo(() => {
+    if (!query.trim()) return [];
+    return fileTree
+      .filter((f) => fuzzyMatch(f, query))
+      .filter((f) => !exclude.includes(f))
+      .map((f) => ({ name: f.split("/").pop() ?? f, fullPath: f }))
+      .slice(0, 8);
+  }, [fileTree, query, exclude]);
+
+  const open = suggestions.length > 0 && dismissedQuery !== query;
 
   useEffect(() => {
     return () => {
@@ -42,28 +51,14 @@ export function SearchFileField({ exclude = [], onSelect, placeholder }: SearchF
   function selectPath(path: string) {
     onSelect(path);
     setInput("");
-    setSuggestions([]);
-    setOpen(false);
-  }
-
-  function matchFiles(query: string) {
-    if (!query.trim()) {
-      setSuggestions([]);
-      setOpen(false);
-      return;
-    }
-    const matched = fileTree
-      .filter((f) => fuzzyMatch(f, query))
-      .filter((f) => !exclude.includes(f))
-      .map((f) => ({ name: f.split("/").pop() ?? f, fullPath: f }));
-    setSuggestions(matched.slice(0, 8));
-    setOpen(matched.length > 0);
+    setQuery("");
+    setDismissedQuery(null);
   }
 
   function handleInputChange(value: string) {
     setInput(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => matchFiles(value), 200);
+    debounceRef.current = setTimeout(() => setQuery(value), 200);
   }
 
   function handleInputKeyDown(e: KeyboardEvent) {
@@ -77,7 +72,10 @@ export function SearchFileField({ exclude = [], onSelect, placeholder }: SearchF
   }
 
   return (
-    <Popover open={open} onOpenChange={(next) => { if (!next) { setOpen(false); setSuggestions([]); } }}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => { if (!next) setDismissedQuery(query); }}
+    >
       <PopoverTrigger render={<div />} onClick={(e) => e.preventDefault()}>
         <Input
           type="text"
