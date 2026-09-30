@@ -116,6 +116,16 @@ describe("syncAllowedHosts", () => {
     expect(currentDynamicHosts()).toEqual([]);
   });
 
+  it("replaces manual domain when publicDomain changes", () => {
+    mobileStore.mode = "manual";
+    mobileStore.publicDomain = "https://old.example.com";
+    syncAllowedHosts();
+    mobileStore.publicDomain = "https://new.example.com";
+    syncAllowedHosts();
+    expect(removedHosts).toEqual(["https://old.example.com"]);
+    expect(currentDynamicHosts()).toEqual(["https://new.example.com"]);
+  });
+
   it("replaces previous hosts when tunnel url changes", () => {
     tunnelState = { status: "running", publicUrl: "https://old.trycloudflare.com", startedAt: null, error: null };
     mobileStore.enabled = true;
