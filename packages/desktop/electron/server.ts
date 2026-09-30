@@ -36,10 +36,10 @@ let appliedHosts: string[] = [];
 
 function desiredHosts(): string[] {
   const mobile = getMobileAccess();
-  if (!mobile.enabled) return [];
   if (mobile.mode === "manual") {
     return mobile.publicDomain?.trim() ? [mobile.publicDomain.trim()] : [];
   }
+  if (!mobile.enabled) return [];
   const publicUrl = getTunnelManager().getState().publicUrl;
   return publicUrl ? [publicUrl] : [];
 }
