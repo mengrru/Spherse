@@ -1,3 +1,4 @@
+import { isLoopbackUrl } from "../../features/browser/open-external-url";
 import type { SdkNavigateEvent } from "./types";
 
 const PROJECT_ROUTE_PATTERN = /^\/project\/[^/]+(?:\/(.*))?$/;
@@ -17,7 +18,7 @@ export function deriveNavigateEvent(pathname: string, search: string): SdkNaviga
 
   if (subRoute === "browser") {
     const url = new URLSearchParams(search).get("url");
-    return url ? { kind: "browser", url } : null;
+    return url && isLoopbackUrl(url) ? { kind: "browser", url } : null;
   }
 
   const chatMatch = CHAT_ROUTE_PATTERN.exec(subRoute);

@@ -35,8 +35,11 @@ describe("deriveNavigateEvent", () => {
     });
   });
 
-  it("returns null for transient browser routes without a url", () => {
+  it("returns null for transient browser routes without a url or with a non-loopback url", () => {
     expect(deriveNavigateEvent("/project/p1/browser", "")).toBeNull();
+    expect(
+      deriveNavigateEvent("/project/p1/browser", "?url=https%3A%2F%2Fexample.com%2F"),
+    ).toBeNull();
   });
 
   it("ignores unrelated query params like messageId", () => {

@@ -72,7 +72,7 @@ SDK 由两半组成，仅以 postMessage 协议耦合：
 
 `navigate` 事件（事件源在 renderer 本地，不走 bus）：
 
-- `useEventBridge` 内 `useLocation()` → 纯函数 `deriveNavigateEvent(pathname, search)` 派生 payload：welcome / `{ kind: "chat", sessionId }` / `{ kind: "file", path }` / `{ kind: "browser", url }`；非项目路由与瞬态路由（content 缺 `?path=`、browser 缺 `?url=`，均会立即 replace 回 welcome）返回 null 不推送
+- `useEventBridge` 内 `useLocation()` → 纯函数 `deriveNavigateEvent(pathname, search)` 派生 payload：welcome / `{ kind: "chat", sessionId }` / `{ kind: "file", path }` / `{ kind: "browser", url }`；非项目路由与瞬态路由（content 缺 `?path=`、browser 缺 `?url=` 或 url 非 loopback，均会立即 replace 回 welcome）返回 null 不推送
 - registry 持有 `currentNavigate`：payload 恒等比较（只比较派生字段，天然忽略 `?messageId=` 等无关 query）去重后广播；订阅成功即回放当前状态（sticky）
 - navigate 订阅拒绝携带 filter（absent 与 `undefined` 等价为无）；浮窗 / split pane 不改变主路由，不产生事件；payload 不含 projectId，跨项目隔离由 registry 随 client 重建 `clear()`（重置订阅表与 `currentNavigate`）保证
 

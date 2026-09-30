@@ -158,6 +158,18 @@ const NAV_HTML = [
   "</script></body></html>",
 ].join("\n");
 
+async function createSessionViaApi(page: import("@playwright/test").Page, projectId: string): Promise<string> {
+  const port: number = await page.evaluate(() => window.electronAPI.getServerPort());
+  const token = (await page.evaluate(() => window.electronAPI.getMobileAccessState())).token ?? null;
+  const res = await fetch(
+    `http://localhost:${port}/api/projects/${projectId}/agents/assistant/sessions`,
+    { method: "POST", headers: token ? { Authorization: `Bearer ${token}` } : {} },
+  );
+  const body = await res.json() as Record<string, unknown>;
+  if (!res.ok) throw new Error(`createSession ${res.status}: ${JSON.stringify(body)}`);
+  return (body as { sessionId: string }).sessionId;
+}
+
 test("floating HTML iframe receives navigate events across main view changes", async () => {
   const project = await createFileTreeProject();
   await writeFile(`${project.root}/nav.html`, NAV_HTML);
@@ -177,6 +189,16 @@ test("floating HTML iframe receives navigate events across main view changes", a
 
     await expect(frame.locator("#status")).toHaveText(
       JSON.stringify({ kind: "welcome" }),
+      { timeout: 10_000 },
+    );
+
+    const sessionId = await createSessionViaApi(page, project.projectId);
+    await page.evaluate(({ id, sid }) => {
+      window.location.hash = `#/project/${id}/chat/${sid}`;
+    }, { id: project.projectId, sid: sessionId });
+
+    await expect(frame.locator("#status")).toHaveText(
+      JSON.stringify({ kind: "chat", sessionId }),
       { timeout: 10_000 },
     );
   } finally {

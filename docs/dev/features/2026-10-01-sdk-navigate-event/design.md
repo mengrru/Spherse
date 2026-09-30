@@ -84,7 +84,7 @@ flowchart LR
   - `deriveNavigateEvent` 全路由映射、瞬态路由返回 null、无关 query（messageId）不影响恒等；
   - registry navigate 订阅 / 订阅即回放 / 恒等去重 / 携带 filter 拒绝 / 与 file:update 混合订阅上限；
   - `clear()` 重置 `currentNavigate`、client 重建后重新 seed 与回放。
-- E2E：srcDoc 聊天卡片订阅 navigate（验证订阅即回放 + 各视图跳转收到对应 payload）；preview 直开 HTML 形态至少手动过一遍（两种 iframe 形态 origin 校验路径一致）。
+- E2E：content 视图 preview iframe 订阅即回放（ui-sdk-bridge.spec）；浮动内容浏览器 preview iframe 跨主视图跳转（file → welcome → chat）实时推送（floating-content-browser.spec）——浮窗是唯一跨视图存活的 iframe 形态。srcDoc 聊天卡片形态与 preview 形态 origin 校验路径一致（与 file:update 前例同构），未单独出 E2E，留手动验证。
 
 ## 文档同步
 
