@@ -100,7 +100,7 @@ export function TurnContextDialog({ projectId, client, sessionId, onClose }: Tur
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="flex h-[85vh] flex-col gap-3 sm:max-w-3xl">
-        <DialogHeader className="flex-row items-center justify-between gap-2">
+        <DialogHeader className="flex-row items-center justify-between gap-2 pe-8">
           <DialogTitle>{t("debug.turnContext")}</DialogTitle>
           <Button size="sm" onClick={handleDownload} disabled={downloading}>
             <DownloadIcon />
