@@ -16,7 +16,10 @@ const removedHosts: string[] = [];
 let currentHosts = new Set<string>();
 
 vi.mock("electron", () => ({
-  app: { getVersion: () => "0.0.0-test" },
+  app: {
+    getVersion: () => "0.0.0-test",
+    getPath: (name: string) => `/tmp/spherse-test-${name}`,
+  },
 }));
 
 vi.mock("@spherse/server", () => ({
@@ -72,6 +75,17 @@ describe("syncAllowedHosts", () => {
     await ensureServer();
     addedHosts.length = 0;
     removedHosts.length = 0;
+  });
+
+  it("passes a push storage path under userData when creating the server", async () => {
+    await restartServer();
+    const { createMultiProjectServer } = await import("@spherse/server");
+    await ensureServer();
+    expect(createMultiProjectServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pushStoragePath: "/tmp/spherse-test-userData/push-storage.json",
+      }),
+    );
   });
 
   it("registers nothing when mobile access is disabled", () => {

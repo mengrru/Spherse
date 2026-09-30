@@ -6,12 +6,14 @@ import type {
   RestoredProject,
 } from "@spherse/app/host-bridge";
 import { MobileConnectPage } from "./pages/MobileConnectPage";
+import { NotificationSetupBanner } from "./notification-setup";
 
 const WEB_CAPABILITIES: HostCapabilities = {
   filePicker: false,
   mobileAccess: false,
   openFileExternal: false,
   tray: false,
+  systemNotifications: false,
   content: { editable: false },
 };
 
@@ -193,6 +195,7 @@ export function createWebHostBridge(): HostBridge {
       () => bridge.getServerAccessToken?.() ?? Promise.resolve(null),
     ),
     renderConnectPage: () => <MobileConnectPage />,
+    renderNotificationSetup: () => <NotificationSetupBanner />,
   };
   return bridge;
 }

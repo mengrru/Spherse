@@ -59,6 +59,7 @@ export interface HostSettings {
   debugToolsEnabled?: boolean;
   tabsEnabled?: boolean;
   closeToTray?: boolean;
+  systemNotifications?: boolean;
   theme?: ThemeMode;
 }
 
@@ -103,7 +104,17 @@ export interface HostCapabilities {
   mobileAccess: boolean;
   openFileExternal: boolean;
   tray: boolean;
+  systemNotifications: boolean;
   content: { editable: boolean };
+}
+
+export interface SystemNotificationRequest {
+  title: string;
+  body: string;
+}
+
+export interface NotificationsHostApi {
+  show(request: SystemNotificationRequest): void;
 }
 
 export interface ProjectHostApi {
@@ -155,5 +166,7 @@ export interface HostBridge {
   readonly updater?: UpdaterHostApi;
   readonly devTools?: DevToolsHostApi;
   readonly mobile?: MobileAccessHostApi;
+  readonly notifications?: NotificationsHostApi;
   readonly renderConnectPage?: () => ReactNode;
+  readonly renderNotificationSetup?: () => ReactNode;
 }

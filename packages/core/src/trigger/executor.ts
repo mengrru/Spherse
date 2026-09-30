@@ -159,6 +159,7 @@ export class TriggerExecutor extends EventEmitter {
       this.emit("trigger_failed", {
         agentId,
         triggerId: entry.id,
+        sessionId: logEntry.sessionId,
         error: String(err),
       });
     } finally {

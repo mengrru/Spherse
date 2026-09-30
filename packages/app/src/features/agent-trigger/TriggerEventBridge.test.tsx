@@ -2,6 +2,8 @@ import { vi } from "vitest";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { TriggerEventBridge } from "./TriggerEventBridge";
 import { useTriggerStore } from "./store";
+import { useSettingsStore } from "../../stores/settings-store";
+import type { HostBridge } from "../../lib/host-bridge";
 import { bumpBusResumedAt, connectMockBus, emitBusEvent, stubMockBusSocket, teardownMockBus } from "../../test/bus";
 import { renderWithProviders } from "../../test/render";
 import { queryClient as globalQueryClient } from "../../queries/client";
@@ -10,6 +12,8 @@ import { projectQueryKeys } from "../../queries/keys";
 beforeEach(() => {
   useTriggerStore.setState({ byProject: {} });
   stubMockBusSocket();
+  useSettingsStore.setState({ systemNotifications: true });
+  document.hasFocus = vi.fn(() => false);
 });
 
 afterEach(() => {
@@ -17,8 +21,32 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function renderBridge() {
-  renderWithProviders(<TriggerEventBridge />);
+function createBridgeWithNotifications(show: (request: { title: string; body: string }) => void): HostBridge {
+  return {
+    kind: "electron",
+    capabilities: {
+      filePicker: true,
+      mobileAccess: false,
+      openFileExternal: false,
+      tray: true,
+      systemNotifications: true,
+      content: { editable: true },
+    },
+    getServerBaseUrl: async () => "http://localhost:1",
+    getSettings: async () => ({}),
+    saveSettings: async () => ({ success: true }),
+    openExternal: async () => {},
+    notifications: { show },
+  };
+}
+
+const PLAIN_BRIDGE: HostBridge = {
+  ...createBridgeWithNotifications(vi.fn()),
+  notifications: undefined,
+};
+
+function renderBridge(bridge?: HostBridge) {
+  renderWithProviders(<TriggerEventBridge />, { bridge: bridge ?? PLAIN_BRIDGE, projectId: "p1" });
 }
 
 function emitTrigger(type: string, payload: object) {
@@ -99,5 +127,95 @@ describe("TriggerEventBridge", () => {
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: projectQueryKeys.triggers("p1") });
     expect(useTriggerStore.getState().byProject["p1"]?.runningTriggerIdsByAgent).toEqual({});
+  });
+
+  it("shows a system notification on trigger_completed when unfocused", async () => {
+    const show = vi.fn<(request: { title: string; body: string }) => void>();
+    renderBridge(createBridgeWithNotifications(show));
+    await connectMockBus();
+    globalQueryClient.setQueryData(projectQueryKeys.triggers("p1"), {
+      triggers: [
+        {
+          agentId: "a1",
+          id: "t1",
+          enabled: true,
+          notify: true,
+          name: "Daily",
+          notificationMessage: "done!",
+          type: "time",
+          mode: "new_session",
+          message: "m",
+          createdAt: 1,
+          updatedAt: 1,
+          nextTriggerAt: null,
+        },
+      ],
+    });
+    emitTrigger("trigger_completed", { agentId: "a1", triggerId: "t1", sessionId: "s1", status: "success" });
+
+    await vi.waitFor(() => {
+      expect(show).toHaveBeenCalledWith(
+        expect.objectContaining({ title: expect.stringContaining("Daily") }),
+      );
+    });
+  });
+
+  it("shows an error toast and system notification on trigger_failed with notify", async () => {
+    const show = vi.fn<(request: { title: string; body: string }) => void>();
+    const toastError = await import("sonner").then((m) => vi.spyOn(m.toast, "error"));
+    renderBridge(createBridgeWithNotifications(show));
+    await connectMockBus();
+    globalQueryClient.setQueryData(projectQueryKeys.triggers("p1"), {
+      triggers: [
+        {
+          agentId: "a1",
+          id: "t1",
+          enabled: true,
+          notify: true,
+          name: "Daily",
+          type: "time",
+          mode: "new_session",
+          message: "m",
+          createdAt: 1,
+          updatedAt: 1,
+          nextTriggerAt: null,
+        },
+      ],
+    });
+    emitTrigger("trigger_failed", { agentId: "a1", triggerId: "t1", sessionId: "s1", error: "boom" });
+
+    await vi.waitFor(() => {
+      expect(toastError).toHaveBeenCalled();
+      expect(show).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("does not show a system notification when the setting is off", async () => {
+    useSettingsStore.setState({ systemNotifications: false });
+    const show = vi.fn<(request: { title: string; body: string }) => void>();
+    renderBridge(createBridgeWithNotifications(show));
+    await connectMockBus();
+    globalQueryClient.setQueryData(projectQueryKeys.triggers("p1"), {
+      triggers: [
+        {
+          agentId: "a1",
+          id: "t1",
+          enabled: true,
+          notify: true,
+          name: "Daily",
+          type: "time",
+          mode: "new_session",
+          message: "m",
+          createdAt: 1,
+          updatedAt: 1,
+          nextTriggerAt: null,
+        },
+      ],
+    });
+    emitTrigger("trigger_failed", { agentId: "a1", triggerId: "t1", sessionId: "s1", error: "boom" });
+
+    await vi.waitFor(() => {
+      expect(show).not.toHaveBeenCalled();
+    });
   });
 });

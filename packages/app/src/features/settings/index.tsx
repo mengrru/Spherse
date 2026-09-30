@@ -213,8 +213,11 @@ function SettingsTabs() {
   const setTabsEnabled = useSettingsStore((s) => s.setTabsEnabled);
   const closeToTray = useSettingsStore((s) => s.closeToTray);
   const setCloseToTray = useSettingsStore((s) => s.setCloseToTray);
+  const systemNotifications = useSettingsStore((s) => s.systemNotifications);
+  const setSystemNotifications = useSettingsStore((s) => s.setSystemNotifications);
   const mobileAccessEnabled = bridge.capabilities.mobileAccess;
   const trayEnabled = bridge.capabilities.tray;
+  const systemNotificationsEnabled = bridge.capabilities.systemNotifications;
   const settingsApi = useMemo<SettingsApi>(() => ({
     getSettings: bridge.getSettings,
     saveSettings: bridge.saveSettings,
@@ -298,6 +301,21 @@ function SettingsTabs() {
                   checked={closeToTray}
                   aria-label={t("settings.closeToTray")}
                   onCheckedChange={(checked) => { void setCloseToTray(settingsApi, checked); }}
+                />
+              </div>
+            </FieldGroup>
+          )}
+          {systemNotificationsEnabled && (
+            <FieldGroup className="mt-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium leading-none">{t("settings.systemNotifications")}</span>
+                  <span className="text-xs text-muted-foreground">{t("settings.systemNotificationsDesc")}</span>
+                </div>
+                <Switch
+                  checked={systemNotifications}
+                  aria-label={t("settings.systemNotifications")}
+                  onCheckedChange={(checked) => { void setSystemNotifications(settingsApi, checked); }}
                 />
               </div>
             </FieldGroup>

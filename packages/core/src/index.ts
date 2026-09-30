@@ -27,6 +27,7 @@ export type { SessionEvent } from "./session/events.js";
 export type { SessionControlEvent } from "./session/types.js";
 export type { TriggerManager } from "./trigger/trigger-manager.js";
 export type { TriggerEventPayload } from "./trigger/trigger-manager.js";
+export type { TriggerEntry } from "./types.js";
 export type { TimerService } from "./trigger/timer-service.js";
 export { createProject } from "./factory.js";
 export { installMarketplaceProjectZip } from "./marketplace-project.js";
