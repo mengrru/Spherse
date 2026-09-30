@@ -15,7 +15,7 @@
 - **库**：`@sinclair/typebox` 的 `Type.*` 构造器。所有 schema 为 `Type.Object` / `Type.Array` / `Type.Union` 等纯数据描述，可同时用于运行时校验和类型推导（`Static<typeof schema>`）。
 - **命名**：资源 + 操作风格，无 HTTP 动词前缀。例如 `agentCreateRequest`、`agentCreateResponse`、`sessionListResponse`、`scheduleUpdateRequest`。`Request` 后缀表示入站 body，`Response` 后缀表示出站 payload，列表用 `*ListResponse`。
 - **可选字段**：frontmatter 透传字段（如 `createdAt`、`model`）一律 `Type.Optional(...)`，因 core 的 store 不会保证所有文件都写出该字段。
-- **`Type.Unknown()` 使用约束**：仅用于承接 pi-ai/pi-agent-core 复杂嵌套对象（chat 事件的 `message`/`args`/`result`、debug 的 `messages`/`parameters`、session messages）。这类字段只做结构校验，不强行 schema 化。逐步精确化的优化项见 `docs/dev/backlog.md`。
+- **`Type.Unknown()` 使用约束**：仅用于承接 pi-ai/pi-agent-core 复杂嵌套对象（chat 事件的 `message`/`args`/`result`、debug 的 `messages`/`parameters`/事件日志 `events[].data`、session messages）。这类字段只做结构校验，不强行 schema 化。逐步精确化的优化项见 `docs/dev/backlog.md`。
 - **导出**：每个 contract 文件导出 `schemas` 对象（runtime schema 集合）+ `Static<>` 派生类型。`index.ts` 负责 re-export。
 
 ## 导出面规则（仓库「只导出被消费符号」红线的本包例外）

@@ -148,6 +148,7 @@ export function DebugMenu() {
 
       {overlay === "turnContext" && sessionId && activeProjectId && (
         <TurnContextDialog
+          key={sessionId}
           projectId={activeProjectId}
           client={client}
           sessionId={sessionId}

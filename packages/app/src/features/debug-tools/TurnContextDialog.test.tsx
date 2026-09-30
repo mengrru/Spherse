@@ -135,4 +135,25 @@ describe("TurnContextDialog", () => {
     await user.click(refreshButtons[1]);
     await vi.waitFor(() => expect(getSessionEvents).toHaveBeenCalledTimes(2));
   });
+
+  it("keeps the loaded log when a refresh fails", async () => {
+    const getSessionEvents = vi
+      .fn()
+      .mockResolvedValueOnce({ sessionId, events })
+      .mockRejectedValueOnce(new Error("boom"));
+    renderWithProviders(
+      <TurnContextDialog
+        projectId="p1"
+        client={createClient({ getSessionEvents })}
+        sessionId={sessionId}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText("user/message")).toBeInTheDocument();
+    await user.click(screen.getByTitle("Refresh"));
+    await vi.waitFor(() => expect(getSessionEvents).toHaveBeenCalledTimes(2));
+    expect(screen.getByText("user/message")).toBeInTheDocument();
+    expect(screen.getByText("4 events")).toBeInTheDocument();
+    expect(screen.queryByText("Failed to load event log")).not.toBeInTheDocument();
+  });
 });

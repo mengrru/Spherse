@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DownloadIcon, RefreshCwIcon, SearchIcon } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { toast } from "sonner";
@@ -30,6 +30,11 @@ export function TurnContextDialog({ projectId, client, sessionId, onClose }: Tur
   const [reloadToken, setReloadToken] = useState(0);
   const [query, setQuery] = useState("");
   const [downloading, setDownloading] = useState(false);
+  const hasDataRef = useRef(false);
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,12 +50,16 @@ export function TurnContextDialog({ projectId, client, sessionId, onClose }: Tur
         if (!session) throw new Error("session not found");
         const log = await client.getSessionEvents(session.agentId, sessionId);
         if (cancelled) return;
+        hasDataRef.current = true;
         setEvents(log.events);
       })
       .catch(() => {
         if (cancelled) return;
-        setEvents(null);
-        setLoadFailed(true);
+        if (hasDataRef.current) {
+          toast.error(tRef.current("debug.eventLogLoadFailed"));
+        } else {
+          setLoadFailed(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -124,7 +133,7 @@ export function TurnContextDialog({ projectId, client, sessionId, onClose }: Tur
         <div className="flex-1 overflow-auto rounded-md border border-border">
           {loading ? (
             <div className="p-4 text-xs text-muted-foreground">{t("common.loading")}</div>
-          ) : loadFailed ? (
+          ) : loadFailed && !events ? (
             <div className="flex flex-col items-center gap-2 p-4 text-xs text-muted-foreground">
               {t("debug.eventLogLoadFailed")}
               <Button variant="outline" size="sm" onClick={() => setReloadToken((n) => n + 1)}>

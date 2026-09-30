@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { CheckIcon, ChevronRightIcon, CopyIcon } from "lucide-react";
 import type { DebugSessionEventContract } from "@spherse/contracts";
 import { useI18n } from "@spherse/i18n/react";
@@ -15,22 +15,25 @@ interface EventLogRowProps {
   event: DebugSessionEventContract;
 }
 
-export function EventLogRow({ event }: EventLogRowProps) {
+export const EventLogRow = memo(function EventLogRow({ event }: EventLogRowProps) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const json = JSON.stringify(event, null, 2);
-  const time = new Date(event.time).toLocaleString();
+  const json = useMemo(
+    () => (open ? JSON.stringify(event, null, 2) : null),
+    [event, open],
+  );
+  const time = useMemo(() => new Date(event.time).toLocaleString(), [event.time]);
 
-  const handleCopy = () => {
+  const handleCopy = useCallback(() => {
     navigator.clipboard
-      .writeText(json)
+      .writeText(JSON.stringify(event, null, 2))
       .then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       })
       .catch(() => {});
-  };
+  }, [event]);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -60,11 +63,13 @@ export function EventLogRow({ event }: EventLogRowProps) {
           </Button>
         </div>
         <CollapsibleContent>
-          <pre className="mx-2 mb-2 max-h-64 overflow-auto rounded-md bg-muted/50 p-3 font-mono text-xs">
-            {json}
-          </pre>
+          {json !== null && (
+            <pre className="mx-2 mb-2 max-h-64 overflow-auto rounded-md bg-muted/50 p-3 font-mono text-xs">
+              {json}
+            </pre>
+          )}
         </CollapsibleContent>
       </div>
     </Collapsible>
   );
-}
+});
