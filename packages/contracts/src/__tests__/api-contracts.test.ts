@@ -543,6 +543,20 @@ describe("api contracts", () => {
     expect(() => parseApiResponse(schemas.turnContextSnapshot, { sessionId: "s1" })).toThrow(/Invalid payload/);
   });
 
+  it("validates session event log", () => {
+    const log = {
+      sessionId: "s1",
+      events: [
+        { seq: 0, type: "user/message", time: 1, data: { message: { role: "user" } } },
+        { seq: 1, type: "turn/start", time: 1, data: {} },
+      ],
+    };
+    expect(parseApiResponse(schemas.sessionEventLog, log)).toEqual(log);
+    expect(() =>
+      parseApiResponse(schemas.sessionEventLog, { sessionId: "s1", events: [{ seq: 0, type: "x" }] }),
+    ).toThrow(/Invalid payload/);
+  });
+
   it("serializes the mcp discriminated-union response without dropping variant fields", async () => {
     const app = Fastify();
     app.get<{ Params: { id: string } }>(

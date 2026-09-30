@@ -1318,6 +1318,20 @@ export const zhCN = {
   "debug.downloadTurnContextNoSession": "No active session",
   // 调试菜单：下载 turn 上下文失败时的 toast 提示（服务端返回错误）
   "debug.downloadTurnContextFailed": "Failed to download turn context",
+  // 调试菜单 / Turn Context 弹窗标题：打开 turn context 查看器（完整事件日志 + 下载当前 context）
+  "debug.turnContext": "Turn Context",
+  // Turn Context 弹窗：事件类型搜索框占位符
+  "debug.eventLogSearchPlaceholder": "Filter by event type…",
+  // Turn Context 弹窗：刷新事件日志按钮
+  "debug.eventLogRefresh": "Refresh",
+  // Turn Context 弹窗：事件条数统计，{count} 为筛选后的事件数
+  "debug.eventLogCount": "{count} events",
+  // Turn Context 弹窗：事件日志为空时的空状态
+  "debug.eventLogEmpty": "No events",
+  // Turn Context 弹窗：事件日志加载失败的错误提示
+  "debug.eventLogLoadFailed": "Failed to load event log",
+  // Turn Context 弹窗：单条事件一键复制按钮的提示
+  "debug.eventLogCopy": "Copy",
 
   // 欢迎页文件缺失时的错误提示，{path} 为文件路径
   "welcome-page.fileMissing": "欢迎页文件不存在：{path}",

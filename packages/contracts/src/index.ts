@@ -121,7 +121,11 @@ export type {
   ProjectMarketplaceInstallRequest,
   ProjectMarketplaceInstallResponse,
 } from "./project-marketplace.js";
-export type { TurnContextSnapshotContract } from "./debug.js";
+export type {
+  TurnContextSnapshotContract,
+  DebugSessionEventContract,
+  SessionEventLogContract,
+} from "./debug.js";
 export type {
   ProjectListEntry,
   ProjectListResponse,

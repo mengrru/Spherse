@@ -92,6 +92,7 @@
 ## debug 工具
 
 - 入口门控 `isDev || debugToolsEnabled`（activity bar Bug 图标，生产用户在设置开启）
-- 菜单项：DevTools / Reload / App Data（store JSON 弹窗）/ Streaming Log / Turn Context 下载 / Reset
+- 菜单项：DevTools / Reload / App Data（store JSON 弹窗）/ Streaming Log / Turn Context（弹窗查看器）/ Reset
 - Streaming Log 经统一 bus 的 `debug` 通道订阅（1000 行环形缓冲，支持暂停/清空/自动滚动）
-- Turn Context 导出的是 **LLM 投影后的真实请求上下文**（`convertToLlm` + `previewTransforms`），非原始消息 buffer
+- Turn Context 弹窗展示完整 session 事件日志（每条标注类型、可展开完整 JSON、一键复制、按类型搜索、可刷新），头部按钮下载**当前 turn 的 context**
+- Turn Context 导出的是 **LLM 投影后的真实请求上下文**（`convertToLlm` + `previewTransforms`，即 fold 之后下次会喂给模型的内容），非原始消息 buffer

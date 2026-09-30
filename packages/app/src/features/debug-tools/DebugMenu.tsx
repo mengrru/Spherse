@@ -25,18 +25,17 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
-import { BugIcon, RefreshCwIcon, DatabaseIcon, TrashIcon, CodeIcon, ScrollTextIcon, DownloadIcon } from "lucide-react";
-import { toast } from "sonner";
+import { BugIcon, RefreshCwIcon, DatabaseIcon, TrashIcon, CodeIcon, ScrollTextIcon, FileJsonIcon } from "lucide-react";
 import { useAppStore } from "../../stores/app-store";
 import { useApiClient } from "../../lib/use-connection";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { LogPanel } from "./LogPanel";
+import { TurnContextDialog } from "./TurnContextDialog";
 
 export function DebugMenu() {
   const bridge = useHostBridge();
-  const [overlay, setOverlay] = useState<null | "store" | "reset" | "logs">(null);
+  const [overlay, setOverlay] = useState<null | "store" | "reset" | "logs" | "turnContext">(null);
   const [storeData, setStoreData] = useState<string>("");
-  const [downloading, setDownloading] = useState(false);
   const { t } = useI18n();
   const chatMatch = useMatch("/project/:projectId/chat/:sessionId");
 
@@ -64,30 +63,6 @@ export function DebugMenu() {
 
   const handleReset = () => {
     void bridge.devTools?.resetAppData();
-  };
-
-  const handleDownloadTurnContext = async () => {
-    if (!client || !sessionId) {
-      toast.error(t("debug.downloadTurnContextNoSession"));
-      return;
-    }
-    setDownloading(true);
-    try {
-      const data = await client.getTurnContext(sessionId);
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `turn-context-${sessionId.slice(0, 8)}-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (_) {
-      toast.error(t("debug.downloadTurnContextFailed"));
-    } finally {
-      setDownloading(false);
-    }
   };
 
   return (
@@ -122,11 +97,11 @@ export function DebugMenu() {
             Streaming Log
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={handleDownloadTurnContext}
-            disabled={!sessionId || downloading}
+            onClick={() => setOverlay("turnContext")}
+            disabled={!sessionId}
           >
-            <DownloadIcon />
-            {t("debug.downloadTurnContext")}
+            <FileJsonIcon />
+            {t("debug.turnContext")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -169,6 +144,15 @@ export function DebugMenu() {
 
       {overlay === "logs" && activeProject && (
         <LogPanel onClose={() => setOverlay(null)} />
+      )}
+
+      {overlay === "turnContext" && sessionId && activeProjectId && (
+        <TurnContextDialog
+          projectId={activeProjectId}
+          client={client}
+          sessionId={sessionId}
+          onClose={() => setOverlay(null)}
+        />
       )}
     </>
   );

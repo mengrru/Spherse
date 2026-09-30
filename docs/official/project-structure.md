@@ -155,7 +155,7 @@ spherse/
 │   │       ├── skills.ts             # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
 │   │       ├── marketplace.ts        # MarketplaceSkillEntry、MarketplaceManifestResponse、SkillMarketplaceInstallRequest（{name, version}）
 │   │       ├── project-marketplace.ts # MarketplaceProjectEntry（含 category）、MarketplaceProjectManifestResponse、ProjectMarketplaceInstallRequest（{name, version, destDir}）与 InstallResponse（{projectRoot}）
-│   │       ├── debug.ts              # TurnContextSnapshot
+│   │       ├── debug.ts              # TurnContextSnapshot、SessionEventLog（session 事件日志导出）
 │   │       ├── websocket.ts          # ChatClientMessage/ChatServerEvent/ChatReplayEvent（协议 v2：session_ready/replay_events/user_message/turn_retried、close code 族）+ parser
 │   │       └── __tests__/            # 契约测试（正向通过 / 负向抛 Invalid payload + Fastify coercion 兼容）
 │   ├── server/                       # @spherse/server — Fastify API 层
@@ -187,7 +187,7 @@ spherse/
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
 │   │       │   ├── upload.ts         # 通用文件上传 API（POST /api/projects/:projectId/upload/*，multipart 单文件 → 目标目录，per-route 100MB 上限，同名大小写不敏感自动重命名，落盘走 PM writeBinaryFile）
 │       │       │   ├── trigger.ts         # 触发器 CRUD 与手动触发（/triggers、/trigger-logs、/run）
-│       │       │   └── debug.ts         # Debug turn context 导出（dev only）
+│       │       │   └── debug.ts         # Debug 路由（dev only）：turn-context 导出 + session 事件日志读取（?agentId=）
 │   │       ├── chat/                  # chat 域（对外仅经 index.ts 导出 handleChatWebSocket + ChatSessionHub）
 │   │       │   ├── index.ts            # 域门面
 │   │       │   ├── chat-session-hub.ts # ChatSessionHub：channel 注册表（按 SessionManager 身份 × sessionId），closeRuntime/close 收口 + admission
@@ -288,7 +288,7 @@ spherse/
 │   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
 │   │       │   ├── chat/                 # 对话 feature；model/ 放 Entry 归约、历史合并、MessageGroup 组装与卡片投影，runtime/ 放 session store、link/recovery/lifecycle/queue 等运行时模块，hooks/ 放 UI hooks，lib/ 放 diff/format-time 纯函数，utils/ 放图片压缩（compress-image）；根目录保留页面组件、气泡组件（UserBubble/AssistantBubble/ToolItemView/ThoughtBlock/ToolCards）、runtime context、chat 专属类型与附件 UI（AttachmentBar/MessageAttachments）
 │   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑（useLeaveGuard：useBlocker 未保存离开守卫）、复制路径/刷新、冲突提示，ContentQueryBridge 集中处理 fs-watch/reconnect 缓存失效；二进制文件拦截渲染占位卡 UnsupportedFileCard（桌面端经 HostCapabilities.openFileExternal 提供「用默认应用打开」按钮）；ReadOnlyContentBrowser 供分窗只读复用（与 ContentBrowser 共用 Header / ContentBody / useContentViewState），find-scope + FindScopeRoot 限定 Cmd+F 作用域
-│   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板
+│   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板 + TurnContextDialog（session 事件日志查看器：类型搜索/展开/复制，附当前 turn context 下载）
 │   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、主题隔离），复用 components/floating-frame；含 useFloatingSessionId
 │   │       │   ├── floating-content-browser/ # 浮窗内容浏览器（多窗口、复用 ContentView 只读渲染 + components/floating-frame），含 useFloatedFilePaths；从文件树右键「浮窗」触发
 │   │       │   ├── global-search/     # 项目内全局搜索弹窗（command palette 风格 Dialog，聊天/文件两组结果；Cmd/Ctrl+P 与 project panel 空白处右键唤出；聊天命中跳转 chat 路由 ?messageId= 定位）

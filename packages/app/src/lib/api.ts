@@ -26,6 +26,7 @@ import type {
 import type {
   ProviderCatalogContract,
   TurnContextSnapshotContract,
+  SessionEventLogContract,
   SessionMessagesResponse,
   SessionMessagesPageResponse,
   SessionListPageResponse,
@@ -513,6 +514,17 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       );
       await assertOk(res);
       return parseJsonResponse<TurnContextSnapshotContract>(res, schemas.turnContextSnapshot);
+    },
+
+    async getSessionEvents(
+      agentId: string,
+      sessionId: string,
+    ): Promise<SessionEventLogContract> {
+      const res = await authedFetch(
+        `${apiBase}/debug/sessions/${encodeURIComponent(sessionId)}/events?agentId=${encodeURIComponent(agentId)}`,
+      );
+      await assertOk(res);
+      return parseJsonResponse<SessionEventLogContract>(res, schemas.sessionEventLog);
     },
 
     getPreviewUrl(filePath: string, version?: number): string {

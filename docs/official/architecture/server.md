@@ -58,7 +58,7 @@
 | project-marketplace | 全局：项目市场 manifest 代理与安装（下载 zip → 解压落盘到用户选定目录，返回 projectRoot，注册复用 open-project IPC） |
 | file-tree | UI 用文件树（过滤 dotfile / node_modules / .git / .spherse） |
 | trigger | CRUD、手动触发、reset-binding、运行日志 |
-| debug | turn-context 导出 |
+| debug | turn-context 导出、session 事件日志读取（`?agentId=`，供 debug 工具的事件日志查看器） |
 | images / attachments | 生成图片导出；附件上传（png/jpeg/webp，5MB）与删除 |
 | upload | 通用文件上传（multipart → 目标目录，per-route 100MB 限流，同名大小写不敏感自动重命名，落盘走 PM `writeBinaryFile`） |
 

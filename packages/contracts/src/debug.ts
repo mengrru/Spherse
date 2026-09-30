@@ -14,8 +14,23 @@ const turnContextSnapshot = Type.Object({
   ),
 });
 
+const debugSessionEvent = Type.Object({
+  seq: Type.Integer(),
+  type: Type.String(),
+  time: Type.Integer(),
+  data: Type.Unknown(),
+});
+
+const sessionEventLog = Type.Object({
+  sessionId: Type.String(),
+  events: Type.Array(debugSessionEvent),
+});
+
 export const schemas = {
   turnContextSnapshot,
+  sessionEventLog,
 } as const;
 
 export type TurnContextSnapshotContract = Static<typeof turnContextSnapshot>;
+export type DebugSessionEventContract = Static<typeof debugSessionEvent>;
+export type SessionEventLogContract = Static<typeof sessionEventLog>;
