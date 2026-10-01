@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing release tag to re-publish to OSS (e.g. v1.2.3)"
+        description: "Existing release tag to re-publish to OSS; old tags lacking ARM64/Linux also require historical_assets=true"
         required: true
         type: string
+      historical_assets:
+        description: "ONLY for old releases lacking Windows ARM64/Linux installers; never for incomplete current releases"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -178,16 +182,21 @@ jobs:
       always() &&
       (needs.build.result == 'success' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    concurrency:
+      group: oss-stable-publication
+      cancel-in-progress: false
+      queue: max
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      HISTORICAL_ASSETS: ${{ inputs.historical_assets == true }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
-      - name: Resolve version
-        id: ver
-        run: echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.19
 
       - name: Install ossutil
         run: |
@@ -200,84 +209,16 @@ jobs:
         run: |
           mkdir -p ./oss-out
           gh release download "${RELEASE_TAG}" -D ./oss-out \
-            --pattern '*.dmg' --pattern '*.exe' --pattern '*.AppImage' --clobber
+            --pattern '*.dmg' --pattern '*.exe' --pattern '*.AppImage' --pattern '*.deb' --clobber
 
-      - name: Discover asset filenames
-        id: assets
-        run: |
-          arm64_dmg=$(basename "$(ls ./oss-out/*arm64*.dmg | head -n1)")
-          intel_dmg=$(basename "$(ls ./oss-out/*intel*.dmg | head -n1)")
-          win_exe=$(basename "$(ls ./oss-out/*.exe | grep -v 'arm64' | head -n1)")
-          win_arm64_exe=$(basename "$(ls ./oss-out/*arm64*.exe 2>/dev/null | head -n1)" 2>/dev/null || true)
-          linux_appimage=$(basename "$(ls ./oss-out/*.AppImage 2>/dev/null | head -n1)" 2>/dev/null || true)
-          if [[ -z "$arm64_dmg" || -z "$intel_dmg" ]]; then
-            echo "::error::Required macOS dmg assets not found in release (arm64/intel)"
-            exit 1
-          fi
-          if [[ -z "$win_exe" ]]; then
-            echo "::error::Required x64 Windows installer not found in release assets"
-            exit 1
-          fi
-          # linux_appimage 与 win_arm64_exe 同为可选：workflow_dispatch 重发旧 tag 时，
-          # pre-Linux 时代的 release 没有 AppImage，缺失时省略 latest.json 的 linux 键
-          # 而非硬失败（读取端对缺失键有回退）。
-          {
-            echo "arm64_dmg=${arm64_dmg}"
-            echo "intel_dmg=${intel_dmg}"
-            echo "win_exe=${win_exe}"
-            echo "win_arm64_exe=${win_arm64_exe}"
-            echo "linux_appimage=${linux_appimage}"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Upload installers to OSS (versioned path)
-        env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
-          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
-        run: |
-          VER="${{ steps.ver.outputs.version }}"
-          for f in ./oss-out/*; do
-            /tmp/ossutil cp "$f" "oss://${OSS_BUCKET}/spherse/releases/${VER}/$(basename "$f")" \
-              -e "$OSS_ENDPOINT" \
-              -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET" \
-              --force -u
-          done
-
-      - name: Generate and upload latest.json
+      - name: Upload all installers, then generate and publish stable manifests
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
           OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
           OSS_PUBLIC_BASE_URL: ${{ vars.OSS_PUBLIC_BASE_URL }}
-        run: |
-          VER="${{ steps.ver.outputs.version }}"
-          BASE="${OSS_PUBLIC_BASE_URL}/spherse/releases/${VER}"
-          WIN_ARM64_NAME="${{ steps.assets.outputs.win_arm64_exe }}"
-          LINUX_APPIMAGE_NAME="${{ steps.assets.outputs.linux_appimage }}"
-          # 基础清单只含必需键，可选键（win.arm64 / linux.x64）按存在与否增量合并，
-          # 避免 arm64 × linux 的组合分支膨胀
-          jq -n \
-            --arg version "$VER" \
-            --arg arm64 "${BASE}/${{ steps.assets.outputs.arm64_dmg }}" \
-            --arg intel "${BASE}/${{ steps.assets.outputs.intel_dmg }}" \
-            --arg x64 "${BASE}/${{ steps.assets.outputs.win_exe }}" \
-            '{version:$version, mac:{arm64:$arm64, intel:$intel}, win:{x64:$x64}}' \
-            > /tmp/latest.json
-          if [[ -n "$WIN_ARM64_NAME" ]]; then
-            jq --arg url "${BASE}/${WIN_ARM64_NAME}" '.win.arm64 = $url' \
-              /tmp/latest.json > /tmp/latest.json.tmp && mv /tmp/latest.json.tmp /tmp/latest.json
-          fi
-          if [[ -n "$LINUX_APPIMAGE_NAME" ]]; then
-            jq --arg url "${BASE}/${LINUX_APPIMAGE_NAME}" '.linux = {x64:$url}' \
-              /tmp/latest.json > /tmp/latest.json.tmp && mv /tmp/latest.json.tmp /tmp/latest.json
-          fi
-          jq empty /tmp/latest.json
-          /tmp/ossutil cp /tmp/latest.json "oss://${OSS_BUCKET}/spherse/latest.json" \
-            -e "$OSS_ENDPOINT" \
-            -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET" \
-            --force -u
+        run: node scripts/publish-release.mjs
 
   # 全量重建 changelog：拉取全部 GitHub release notes，筛掉 docs/chore/infra 条目并
   # 结构化后上传 OSS spherse/changelog.json。串行在 publish-oss 之后而非与 build 并行：

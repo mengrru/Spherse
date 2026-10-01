@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BrowserWindow } from "electron";
+import { constants } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { createShutdownCoordinator, type ShutdownCoordinator } from "./lifecycle.js";
 
 const { appMock, events, autoUpdaterMock, powerMonitorMock } = vi.hoisted(() => {
   const appMock = {
@@ -9,8 +12,14 @@ const { appMock, events, autoUpdaterMock, powerMonitorMock } = vi.hoisted(() => 
   const events: Array<Record<string, unknown>> = [];
   const autoUpdaterMock = {
     autoDownload: false,
+    autoInstallOnAppQuit: true,
+    disableDifferentialDownload: false,
     on: vi.fn(),
+    setFeedURL: vi.fn(),
     checkForUpdates: vi.fn(),
+    downloadUpdate: vi.fn(),
+    quitAndInstall: vi.fn(),
+    installerPath: "installer.exe" as string | null,
   };
   const powerMonitorMock = {
     getSystemIdleTime: vi.fn<() => number>(() => 0),
@@ -18,14 +27,23 @@ const { appMock, events, autoUpdaterMock, powerMonitorMock } = vi.hoisted(() => 
   return { appMock, events, autoUpdaterMock, powerMonitorMock };
 });
 
+const { accessMock } = vi.hoisted(() => ({ accessMock: vi.fn() }));
+vi.mock("node:fs", async (importOriginal) => ({
+  ...await importOriginal<typeof import("node:fs")>(),
+  accessSync: accessMock,
+}));
+
 vi.mock("electron", () => ({
   app: appMock,
   powerMonitor: powerMonitorMock,
+  BrowserWindow: {
+    getAllWindows: () => [{ webContents: { send: (_type: string, event: Record<string, unknown>) => { events.push(event); } } }],
+  },
 }));
 vi.mock("electron-updater", () => ({
   default: {
     autoUpdater: autoUpdaterMock,
-    CancellationToken: class {},
+    CancellationToken: class { cancel = vi.fn(); },
   },
 }));
 vi.mock("./window.js", () => ({
@@ -73,6 +91,12 @@ beforeEach(() => {
   appMock.isPackaged = true;
   appMock.getVersion = () => "0.1.0";
   autoUpdaterMock.checkForUpdates.mockReset();
+  autoUpdaterMock.downloadUpdate.mockReset();
+  autoUpdaterMock.quitAndInstall.mockReset();
+  autoUpdaterMock.installerPath = "installer.exe";
+  accessMock.mockReset();
+  autoUpdaterMock.on.mockClear();
+  autoUpdaterMock.setFeedURL.mockClear();
   powerMonitorMock.getSystemIdleTime.mockReturnValue(0);
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockReset();
@@ -90,7 +114,7 @@ function mockManifestResponse(body: unknown, ok = true, status = 200): void {
   });
 }
 
-function createTestUpdater(): {
+function createTestUpdater(coordinator?: ShutdownCoordinator): {
   u: Updater;
   localEvents: Array<Record<string, unknown>>;
 } {
@@ -102,7 +126,7 @@ function createTestUpdater(): {
       },
     },
   } as unknown as BrowserWindow;
-  return { u: createUpdater(() => fakeWindow), localEvents };
+  return { u: createUpdater(() => fakeWindow, () => coordinator), localEvents };
 }
 
 /** 临时切换 process.platform/arch（测试后还原，避免跨用例污染） */
@@ -247,7 +271,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
     await u.checkForUpdates({ silent: false });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(localEvents).toEqual([{ type: "update-not-available" }]);
-    expect(u.getState()).toEqual({ status: "upToDate" });
+    expect(u.getState()).toEqual({ status: "upToDate", updateMode: "external" });
   });
 
   it("dev mode silent check emits nothing and leaves state untouched", async () => {
@@ -256,7 +280,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
     await u.checkForUpdates({ silent: true });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(localEvents).toEqual([]);
-    expect(u.getState()).toEqual({ status: "idle" });
+    expect(u.getState()).toEqual({ status: "idle", updateMode: "external" });
   });
 
   it("darwin: newer manifest version emits update-available with OSS downloadUrl", async () => {
@@ -272,6 +296,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
         releaseNotes: "",
         downloadUrl: manifest.mac?.arm64,
         silent: false,
+        updateMode: "external",
       },
     ]);
     expect(updater.getState()).toEqual({
@@ -279,30 +304,15 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
       version: "0.2.0",
       releaseNotes: "",
       downloadUrl: manifest.mac?.arm64,
+      updateMode: "external",
     });
-  });
-
-  it("win32 x64: emits update-available with x64 installer URL", async () => {
-    mockManifestResponse(manifest);
-    await withProcess("win32", "x64", () =>
-      updater.checkForUpdates({ silent: false }),
-    );
-    expect(events).toEqual([
-      {
-        type: "update-available",
-        version: "0.2.0",
-        releaseNotes: "",
-        downloadUrl: manifest.win?.x64,
-        silent: false,
-      },
-    ]);
   });
 
   it("equal or older manifest version emits update-not-available", async () => {
     mockManifestResponse({ ...manifest, version: "0.1.0" });
     await updater.checkForUpdates({ silent: false });
     expect(events).toEqual([{ type: "update-not-available" }]);
-    expect(updater.getState()).toEqual({ status: "upToDate" });
+    expect(updater.getState()).toEqual({ status: "upToDate", updateMode: "external" });
   });
 
   it("manifest missing version degrades safely to update-not-available", async () => {
@@ -320,6 +330,8 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
     expect(updater.getState()).toEqual({
       status: "error",
       errorMessage: "OSS manifest responded 503",
+      errorPhase: "check",
+      updateMode: "external",
     });
   });
 
@@ -350,20 +362,21 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
         releaseNotes: "",
         downloadUrl: manifest.mac?.arm64,
         silent: true,
+        updateMode: "external",
       },
     ]);
-    expect(u.getState()).toEqual({ status: "idle" });
+    expect(u.getState()).toEqual({ status: "idle", updateMode: "external" });
 
     localEvents.length = 0;
     mockManifestResponse({ ...manifest, version: "0.1.0" });
     await u.checkForUpdates({ silent: true });
     expect(localEvents).toEqual([]);
-    expect(u.getState()).toEqual({ status: "idle" });
+    expect(u.getState()).toEqual({ status: "idle", updateMode: "external" });
 
     mockManifestResponse(null, false, 500);
     await u.checkForUpdates({ silent: true });
     expect(localEvents).toEqual([]);
-    expect(u.getState()).toEqual({ status: "idle" });
+    expect(u.getState()).toEqual({ status: "idle", updateMode: "external" });
   });
 
   it("silent check never overwrites an in-flight interactive state", async () => {
@@ -384,6 +397,22 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
     mockManifestResponse(manifest);
     await updater.checkForUpdates({ silent: false });
     expect(autoUpdaterMock.checkForUpdates).not.toHaveBeenCalled();
+  });
+
+  it("Linux preserves external manifest downloads without configuring electron-updater", async () => {
+    await withProcess("linux", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      mockManifestResponse(manifest);
+      await u.checkForUpdates({ silent: false });
+      expect(u.getState()).toMatchObject({ status: "available", updateMode: "external", downloadUrl: manifest.linux?.x64 });
+      expect(localEvents).toEqual([{ type: "update-available", version: "0.2.0", releaseNotes: "", downloadUrl: manifest.linux?.x64, updateMode: "external", silent: false }]);
+      expect(autoUpdaterMock.setFeedURL).not.toHaveBeenCalled();
+      expect(autoUpdaterMock.on).not.toHaveBeenCalled();
+      await u.downloadUpdate();
+      await u.installUpdate();
+      expect(autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
+      expect(autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled();
+    });
   });
 });
 
@@ -477,6 +506,11 @@ describe("manual external update changelog", () => {
       const { u } = createTestUpdater();
       mockManifestResponse({ ...manifest, version: mode === "current" ? "0.1.0" : "0.2.0" });
       await u.checkForUpdates({ silent: mode === "silent" });
+      if (mode === "windows") {
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(autoUpdaterMock.checkForUpdates).toHaveBeenCalledTimes(1);
+        return;
+      }
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(fetchMock).toHaveBeenCalledWith(MANIFEST_URL);
     });
@@ -494,7 +528,7 @@ describe("manual external update changelog", () => {
       await u.checkForUpdates({ silent: false });
       resolveNotes({ releases: [{ version: "0.2.0", notes: [{ text: "Too late" }] }] });
       await first;
-      expect(u.getState()).toEqual({ status: "upToDate" });
+      expect(u.getState()).toEqual({ status: "upToDate", updateMode: "external" });
       expect(localEvents).toEqual([{ type: "update-not-available" }]);
     });
   });
@@ -560,7 +594,287 @@ describe("createUpdater", () => {
       await expect(u.installUpdate()).resolves.toBeUndefined();
       await expect(u.cancelUpdate()).resolves.toBeUndefined();
     });
-    expect(u.getState()).toEqual({ status: "idle" });
+    expect(u.getState()).toEqual({ status: "idle", updateMode: "external" });
+  });
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (error: unknown) => void;
+  const promise = new Promise<T>((done, fail) => { resolve = done; reject = fail; });
+  return { promise, resolve, reject };
+}
+
+function emit(type: string, value: unknown): void {
+  for (const [name, listener] of autoUpdaterMock.on.mock.calls) {
+    if (name === type) listener(value);
+  }
+}
+
+const availableResult = {
+  isUpdateAvailable: true,
+  updateInfo: { version: "0.2.0", releaseNotes: "New release" },
+};
+
+describe("Windows in-app updates", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    autoUpdaterMock.checkForUpdates.mockResolvedValue(availableResult);
+    autoUpdaterMock.downloadUpdate.mockResolvedValue(["installer.exe"]);
+  });
+  afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); });
+
+  it.each(["x64", "arm64"])("configures the %s generic feed and disables automatic/differential installation", async (arch) => {
+    await withProcess("win32", arch, async () => {
+      const { u, localEvents } = createTestUpdater();
+      expect(autoUpdaterMock.setFeedURL).toHaveBeenCalledExactlyOnceWith({
+        provider: "generic", url: `https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse/win/${arch}/`,
+      });
+      expect(autoUpdaterMock.autoDownload).toBe(false);
+      expect(autoUpdaterMock.autoInstallOnAppQuit).toBe(false);
+      expect(autoUpdaterMock.disableDifferentialDownload).toBe(true);
+      await u.checkForUpdates({ silent: true });
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(u.getState()).toEqual({ status: "available", updateMode: "inApp", version: "0.2.0", releaseNotes: "New release" });
+      expect(localEvents).toEqual([
+        { type: "update-state", state: u.getState() },
+        { type: "update-available", version: "0.2.0", releaseNotes: "New release", updateMode: "inApp", silent: true },
+      ]);
+    });
+  });
+
+  it.each(["available", "current", "error"])("promotes an overlapping silent check to manual (%s)", async (result) => {
+    await withProcess("win32", "x64", async () => {
+      const pending = deferred<unknown>();
+      autoUpdaterMock.checkForUpdates.mockReturnValue(pending.promise);
+      const { u, localEvents } = createTestUpdater();
+      const silent = u.checkForUpdates({ silent: true });
+      const manual = u.checkForUpdates({ silent: false });
+      expect(manual).toBe(silent);
+      expect(u.getState().status).toBe("checking");
+      await Promise.resolve();
+      if (result === "error") {
+        emit("error", new Error("offline"));
+        pending.reject(new Error("offline"));
+      } else pending.resolve(result === "available" ? availableResult : { isUpdateAvailable: false });
+      await Promise.all([manual, silent]);
+      expect(autoUpdaterMock.checkForUpdates).toHaveBeenCalledTimes(1);
+      expect(u.getState().status).toBe(result === "available" ? "available" : result === "error" ? "error" : "upToDate");
+      if (result === "available") expect(localEvents.at(-1)).toMatchObject({ type: "update-available", silent: false });
+      if (result === "error") {
+        expect(u.getState()).toMatchObject({ errorPhase: "check", errorMessage: "offline", updateMode: "inApp" });
+        expect(localEvents.filter((e) => (e.state as { status?: string })?.status === "error")).toHaveLength(1);
+      }
+      expect(localEvents.every((e) => ["update-state", "update-available"].includes(e.type as string))).toBe(true);
+    });
+  });
+
+  it("silent no-update/error results leave state and notifications untouched", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      autoUpdaterMock.checkForUpdates.mockResolvedValueOnce({ isUpdateAvailable: false });
+      await u.checkForUpdates({ silent: true });
+      autoUpdaterMock.checkForUpdates.mockImplementationOnce(async () => {
+        emit("error", new Error("offline"));
+        throw new Error("offline");
+      });
+      await u.checkForUpdates({ silent: true });
+      expect(localEvents).toEqual([]);
+      expect(u.getState()).toEqual({ status: "idle", updateMode: "inApp" });
+    });
+  });
+
+  it("a silent overlap never demotes a manual check", async () => {
+    await withProcess("win32", "x64", async () => {
+      const pending = deferred<unknown>();
+      autoUpdaterMock.checkForUpdates.mockReturnValue(pending.promise);
+      const { u, localEvents } = createTestUpdater();
+      const manual = u.checkForUpdates({ silent: false });
+      expect(u.checkForUpdates({ silent: true })).toBe(manual);
+      pending.resolve(availableResult);
+      await manual;
+      expect(localEvents.at(-1)).toMatchObject({ type: "update-available", silent: false });
+    });
+  });
+
+  it("cancellation before the deferred download starts avoids the network entirely", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u } = createTestUpdater();
+      await u.checkForUpdates({ silent: true });
+      const task = u.downloadUpdate();
+      await u.cancelUpdate();
+      await task;
+      expect(autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
+      expect(u.getState().status).toBe("available");
+    });
+  });
+
+  it("broadcasts immediately to every window and completes cached downloads without progress", async () => {
+    await withProcess("win32", "x64", async () => {
+      const sends = [vi.fn(), vi.fn()];
+      const u = createUpdater(() => sends.map((send) => ({ webContents: { send } }) as unknown as BrowserWindow));
+      await u.checkForUpdates({ silent: false });
+      const task = u.downloadUpdate();
+      expect(u.downloadUpdate()).toBe(task);
+      for (const send of sends) expect(send).toHaveBeenLastCalledWith("update-state", { type: "update-state", state: {
+        status: "downloading", percent: 0, version: "0.2.0", releaseNotes: "New release", updateMode: "inApp",
+      } });
+      await task;
+      expect(u.getState()).toEqual({ status: "downloaded", version: "0.2.0", releaseNotes: "New release", updateMode: "inApp" });
+      const snapshot = u.getState();
+      snapshot.status = "idle";
+      await u.checkForUpdates({ silent: false });
+      await u.downloadUpdate();
+      await u.cancelUpdate();
+      expect(u.getState().status).toBe("downloaded");
+      expect(autoUpdaterMock.checkForUpdates).toHaveBeenCalledTimes(1);
+      expect(autoUpdaterMock.downloadUpdate).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it.each(["resolve", "reject"])("waits for cancellation to settle, ignores late events and permits retry (%s)", async (completion) => {
+    await withProcess("win32", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      await u.checkForUpdates({ silent: false });
+      const pending = deferred<string[]>();
+      autoUpdaterMock.downloadUpdate.mockReturnValueOnce(pending.promise);
+      const task = u.downloadUpdate();
+      await Promise.resolve();
+      emit("download-progress", { percent: 23.8 });
+      expect(u.getState().percent).toBe(24);
+      const cancel = u.cancelUpdate();
+      expect(autoUpdaterMock.downloadUpdate.mock.calls[0][0].cancel).toHaveBeenCalledTimes(1);
+      expect(u.downloadUpdate()).toBe(task);
+      await u.checkForUpdates({ silent: false });
+      const state = u.getState();
+      emit("download-progress", { percent: 100 });
+      emit("update-downloaded", {});
+      emit("error", new Error("cancelled"));
+      expect(u.getState()).toEqual(state);
+      if (completion === "resolve") pending.resolve(["installer.exe"]);
+      else pending.reject(new Error("cancelled"));
+      await Promise.all([cancel, task]);
+      expect(u.getState()).toEqual({ status: "available", version: "0.2.0", releaseNotes: "New release", updateMode: "inApp" });
+      expect(localEvents.some((e) => (e.state as { status?: string })?.status === "error")).toBe(false);
+      emit("download-progress", { percent: 90 });
+      emit("update-downloaded", {});
+      expect(u.getState().status).toBe("available");
+      await u.downloadUpdate();
+      expect(autoUpdaterMock.downloadUpdate).toHaveBeenCalledTimes(2);
+      expect(autoUpdaterMock.checkForUpdates).toHaveBeenCalledTimes(1);
+      expect(u.getState().status).toBe("downloaded");
+    });
+  });
+
+  it("turns emitted error plus rejection into one metadata-preserving download error and retries", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      await u.checkForUpdates({ silent: false });
+      autoUpdaterMock.downloadUpdate.mockImplementationOnce(async () => {
+        emit("error", new Error("network"));
+        throw new Error("network");
+      });
+      await expect(u.downloadUpdate()).resolves.toBeUndefined();
+      expect(u.getState()).toMatchObject({ status: "error", version: "0.2.0", releaseNotes: "New release", updateMode: "inApp", errorPhase: "download", errorMessage: "network" });
+      expect(localEvents.filter((e) => (e.state as { status?: string })?.status === "error")).toHaveLength(1);
+      expect(localEvents.every((e) => ["update-state", "update-available"].includes(e.type as string))).toBe(true);
+      await u.downloadUpdate();
+      expect(u.getState()).toEqual({ status: "downloaded", version: "0.2.0", releaseNotes: "New release", updateMode: "inApp" });
+    });
+  });
+
+  it("rejects downloads in idle, checking, and check-error states", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u } = createTestUpdater();
+      await u.downloadUpdate();
+      autoUpdaterMock.checkForUpdates.mockRejectedValue(new Error("check"));
+      const check = u.checkForUpdates({ silent: false });
+      await u.downloadUpdate();
+      await check;
+      await u.downloadUpdate();
+      await u.installUpdate();
+      expect(autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
+      expect(autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled();
+    });
+  });
+
+  it.each(["missing", "unreadable", "no-path", "readable"])("checks the current installer after cleanup and recovers on failure (%s)", async (result) => {
+    const fs = await vi.importActual<typeof import("node:fs")>("node:fs");
+    await withProcess("win32", "x64", async () => {
+      const pending = deferred<void>();
+      const actions = { cleanup: vi.fn(() => pending.promise), quit: vi.fn(), relaunch: vi.fn(), exit: vi.fn() };
+      const coordinator = createShutdownCoordinator(actions);
+      const { u, localEvents } = createTestUpdater(coordinator);
+      await u.checkForUpdates({ silent: true });
+      await u.downloadUpdate();
+      const task = u.installUpdate();
+      await Promise.resolve();
+      expect(actions.cleanup).toHaveBeenCalledTimes(1);
+      expect(accessMock).not.toHaveBeenCalled();
+      expect(autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled();
+      const path = fileURLToPath(import.meta.url) + (result === "missing" ? ".missing-installer.exe" : "");
+      autoUpdaterMock.installerPath = result === "no-path" ? null : path;
+      accessMock.mockImplementation((file, mode) => {
+        if (result === "unreadable") throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+        fs.accessSync(file, mode);
+      });
+      autoUpdaterMock.quitAndInstall.mockImplementation(() => {
+        expect(accessMock).toHaveBeenCalledExactlyOnceWith(path, constants.R_OK);
+      });
+      pending.resolve();
+      await task;
+      if (result === "readable") {
+        expect(autoUpdaterMock.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
+        expect(actions.relaunch).not.toHaveBeenCalled();
+        return;
+      }
+      expect(autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled();
+      expect(u.getState()).toMatchObject({ status: "error", errorPhase: "install", updateMode: "inApp", version: "0.2.0" });
+      expect(u.getState().errorMessage).toContain(result === "missing" ? "ENOENT" : result === "unreadable" ? "EACCES" : "unavailable");
+      expect(localEvents.filter((e) => (e.state as { status?: string })?.status === "error")).toHaveLength(1);
+      expect(actions.relaunch).toHaveBeenCalledTimes(1);
+      expect(actions.quit).toHaveBeenCalledTimes(1);
+      expect(coordinator.canExit()).toBe(true);
+    });
+  });
+
+  it.each(["success", "throw", "event", "late-event", "cleanup", "quit-first"])("coordinates install and shutdown (%s)", async (result) => {
+    await withProcess("win32", "x64", async () => {
+      const pending = deferred<void>();
+      const actions = { cleanup: vi.fn(() => pending.promise), quit: vi.fn(), relaunch: vi.fn(), exit: vi.fn() };
+      const coordinator = createShutdownCoordinator(actions);
+      const { u, localEvents } = createTestUpdater(coordinator);
+      await u.checkForUpdates({ silent: false });
+      await u.downloadUpdate();
+      autoUpdaterMock.quitAndInstall.mockImplementation(() => {
+        if (result === "throw") throw new Error("install");
+        if (result === "event") emit("error", new Error("install"));
+      });
+      if (result === "quit-first") void coordinator.quit();
+      const install = u.installUpdate();
+      const quit = coordinator.quit();
+      await u.installUpdate();
+      await u.downloadUpdate();
+      await u.checkForUpdates({ silent: false });
+      expect(autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled();
+      expect(coordinator.canExit()).toBe(false);
+      if (result === "cleanup") pending.reject(new Error("install"));
+      else pending.resolve();
+      await Promise.all([install, quit]);
+      expect(actions.cleanup).toHaveBeenCalledTimes(1);
+      if (result === "quit-first" || result === "cleanup") expect(autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled();
+      else expect(autoUpdaterMock.quitAndInstall).toHaveBeenCalledExactlyOnceWith(true, true);
+      if (result === "late-event") emit("error", new Error("install"));
+      if (["throw", "event", "late-event", "cleanup"].includes(result)) {
+        expect(u.getState()).toMatchObject({ status: "error", errorPhase: "install", errorMessage: "install", version: "0.2.0", updateMode: "inApp" });
+        expect(actions.relaunch).toHaveBeenCalledTimes(1);
+        expect(actions.quit).toHaveBeenCalledTimes(1);
+        expect(localEvents.filter((e) => (e.state as { status?: string })?.status === "error")).toHaveLength(1);
+      } else if (result === "success") {
+        expect(u.getState().status).toBe("installing");
+        expect(actions.quit).not.toHaveBeenCalled();
+      }
+    });
   });
 });
 

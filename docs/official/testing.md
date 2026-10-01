@@ -44,6 +44,7 @@
 - 覆盖 Electron 启动、项目恢复、路由、store、server API、文件树、content browser、chat/session、文本选择发起会话、UI SDK bridge、浮窗、项目市场安装链路（stub manifest server + 目录选择 seam）、全局搜索（panel 右键 + Cmd/Ctrl+P 唤出 → 分组结果 → 聊天定位/文件打开）等跨面板集成；改动涉及上述面或 native dependency、E2E helper 时优先运行对应 spec。
 - **按变更影响面选择受影响的 spec 运行，不要求全量**；单 spec：`npm run test:e2e --workspace=packages/desktop -- e2e/file-tree.spec.ts`，或追加 `-g "<case 名>"` 过滤。合并/发布前跑 `npm run verify:e2e`。
 - 涉及打包链（electron-builder 配置、asar/外置 node_modules、native dependency 重编、安装包产物）时，跑 `npm run pack -w @spherse/desktop && SPHERSE_SMOKE=1 npm run test:smoke -w @spherse/desktop` 验证产物本身；release CI 会在 arch 匹配的 job 上自动执行该 smoke。
+- Windows 更新发布前必须在 Windows 机器/VM 验证已安装 A → feed B → 两种入口后台下载 → 安装并重启为 B；覆盖 x64/arm64、自定义安装目录、托盘、UAC 取消/失败、缓存 EXE 丢失、用户数据保留。publisher/updater/preload/hook/组件单测不能代替 NSIS 实机验收；修改退出链同时运行 `e2e/close-to-tray.spec.ts`。
 
 ### i18n 一致性
 

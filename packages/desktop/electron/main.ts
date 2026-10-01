@@ -8,7 +8,7 @@ import { startAutoUpdateChecks } from "./updater.js";
 import { setupContextMenu } from "./ipc/context-menu.js";
 import { getTunnelManager } from "./tunnel/manager.js";
 import { settleWithin } from "@spherse/core";
-import { beginQuit, isQuitting } from "./lifecycle.js";
+import { configureShutdown } from "./lifecycle.js";
 import { attachCloseToTray, destroyTray, showMainWindow, syncTray } from "./tray.js";
 
 app.whenReady().then(async () => {
@@ -33,33 +33,29 @@ app.whenReady().then(async () => {
 });
 
 const TUNNEL_STOP_TIMEOUT_MS = 5_000;
-const GRACEFUL_SHUTDOWN_HARD_EXIT_MS = 30_000;
-
-async function gracefulShutdown(): Promise<void> {
-  if (!beginQuit()) return;
-  setTimeout(() => {
-    console.error("[main] graceful shutdown timed out, forcing app exit");
-    app.exit(1);
-  }, GRACEFUL_SHUTDOWN_HARD_EXIT_MS).unref();
-  await settleWithin(getTunnelManager().stop(), TUNNEL_STOP_TIMEOUT_MS, (outcome, detail) => {
-    if (outcome === "error") {
-      console.error("[main] tunnel stop failed:", detail);
-    } else {
-      console.error(`[main] tunnel stop timed out after ${TUNNEL_STOP_TIMEOUT_MS}ms, continuing`);
-    }
-  });
-  await stopServer();
-  app.quit();
-}
+const shutdown = configureShutdown({
+  async cleanup() {
+    let tunnelFailure: Error | undefined;
+    await settleWithin(Promise.resolve().then(() => getTunnelManager().stop()), TUNNEL_STOP_TIMEOUT_MS, (outcome, detail) => {
+      tunnelFailure = new Error(`Tunnel stop ${outcome}`, { cause: detail });
+      console.error("[main] tunnel stop failed:", tunnelFailure);
+    });
+    await stopServer();
+    if (tunnelFailure) throw tunnelFailure;
+  },
+  quit: () => app.quit(),
+  relaunch: () => app.relaunch(),
+  exit: (code) => app.exit(code),
+});
 
 app.on("window-all-closed", () => {
-  void gracefulShutdown();
+  void shutdown.quit();
 });
 
 app.on("before-quit", (event) => {
-  if (!isQuitting()) {
+  if (!shutdown.canExit()) {
     event.preventDefault();
-    void gracefulShutdown();
+    void shutdown.quit();
   }
 });
 

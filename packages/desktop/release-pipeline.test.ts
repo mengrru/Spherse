@@ -92,24 +92,48 @@ describe("build-and-release.yml: publish-changelog job", () => {
   });
 });
 
-describe("build-and-release.yml: publish-oss job 的 linux 资产（可选键语义）", () => {
+describe("build-and-release.yml: stable publication", () => {
   const publishOss = release.jobs["publish-oss"];
-  const discover = publishOss.steps.find((s: any) => s.name === "Discover asset filenames");
-  const generate = publishOss.steps.find((s: any) => s.name === "Generate and upload latest.json");
+  const publishIndex = publishOss.steps.findIndex((s: any) => s.run === "node scripts/publish-release.mjs");
 
-  it("AppImage 发现容错缺失（2>/dev/null || true），不得设为硬性必需", () => {
-    // workflow_dispatch 重发 pre-Linux 时代的旧 tag 时 release 里没有 AppImage，
-    // 硬失败会让重发布流程挂掉（与 win_arm64_exe 同语义，缺失时省略 linux 键）
-    expect(discover).toBeDefined();
-    expect(String(discover.run)).toMatch(/linux_appimage=.*2>\/dev\/null \|\| true/s);
-    expect(String(discover.run)).not.toContain("Required Linux AppImage");
+  it("waits for the entire build matrix, with only dispatch allowed to skip builds", () => {
+    expect(publishOss.needs).toBe("build");
+    expect(publishOss.if.replace(/\s+/g, " ").trim()).toBe(
+      "always() && (needs.build.result == 'success' || github.event_name == 'workflow_dispatch')",
+    );
+    expect(release.jobs.build.strategy["fail-fast"]).toBe(false);
+    expect(release.jobs.build.steps.some((s: any) => s.run?.includes("release/*.AppImage release/*.deb"))).toBe(true);
+    expect(release.jobs.build["continue-on-error"]).toBeUndefined();
+    for (const step of release.jobs.build.steps) expect(step["continue-on-error"]).toBeUndefined();
   });
 
-  it("latest.json 的 linux.x64 按存在与否增量合并（可选键）", () => {
-    expect(generate).toBeDefined();
-    const run: string = generate.run;
-    expect(run).toContain("LINUX_APPIMAGE_NAME");
-    expect(run).toContain("'.linux = {x64:$url}'");
+  it("serializes tag and dispatch publication with the maximum bounded pending queue", () => {
+    expect(publishOss.concurrency).toEqual({ group: "oss-stable-publication", "cancel-in-progress": false, queue: "max" });
+  });
+
+  it("requires explicit default-off historical artifact compatibility for old release dispatches", () => {
+    const inputs = release.on.workflow_dispatch.inputs;
+    expect(inputs.historical_assets.type).toBe("boolean");
+    expect(inputs.historical_assets.default).toBe(false);
+    expect(inputs.historical_assets.description).toContain("ONLY for old releases");
+    expect(inputs.tag.description).toContain("historical_assets=true");
+    expect(publishOss.env.HISTORICAL_ASSETS).toBe("${{ inputs.historical_assets == true }}");
+  });
+
+  it("downloads DMG, EXE, AppImage and DEB before running the fail-closed publisher", () => {
+    const downloadIndex = publishOss.steps.findIndex((s: any) => s.run?.includes("gh release download"));
+    expect(downloadIndex).toBeGreaterThan(-1);
+    expect(publishIndex).toBeGreaterThan(downloadIndex);
+    for (const extension of ["dmg", "exe", "AppImage", "deb"]) {
+      expect(publishOss.steps[downloadIndex].run).toContain(`--pattern '*.${extension}'`);
+    }
+    expect(publishOss.env.RELEASE_TAG).toBe("${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}");
+    expect(publishOss.steps[publishIndex].env.OSS_PUBLIC_BASE_URL).toBe("${{ vars.OSS_PUBLIC_BASE_URL }}");
+    expect(publishOss.steps.some((s: any) => s.uses === "actions/setup-node@v7")).toBe(true);
+    for (const step of publishOss.steps) {
+      expect(step["continue-on-error"]).toBeUndefined();
+      expect(step.if).toBeUndefined();
+    }
   });
 });
 

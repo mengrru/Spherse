@@ -101,7 +101,7 @@ describe("UpdateChecker", () => {
     expect(cancelDownload).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the update dialog with auto download when a version is available", async () => {
+  it("uses the external download page when a legacy version has no download URL", async () => {
     mockHookState({ status: "available", version: "9.9.9", releaseNotes: "bug fixes" });
     renderUpdateChecker();
 
@@ -110,8 +110,9 @@ describe("UpdateChecker", () => {
     expect(screen.getByText("bug fixes")).toBeInTheDocument();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "立即更新" }));
-    expect(acceptDownload).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole("button", { name: "前往下载" }));
+    expect(openExternal).toHaveBeenCalledWith(DOWNLOAD_PAGE_URL);
+    expect(acceptDownload).not.toHaveBeenCalled();
   });
 
   it("falls back to manual download via openExternal when only a downloadUrl exists", async () => {
@@ -151,5 +152,52 @@ describe("UpdateChecker", () => {
     expect(openExternal).toHaveBeenCalledWith("https://example.com");
     await userEvent.setup().click(screen.getByRole("button", { name: "前往下载" }));
     expect(openExternal).toHaveBeenCalledWith("https://dl.example/app.dmg");
+  });
+
+  it("offers inline Windows background download even when a download URL is present", async () => {
+    mockHookState({ status: "available", updateMode: "inApp", version: "2.0.0", downloadUrl: "https://dl.example" });
+    renderUpdateChecker();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "后台下载" }));
+    expect(acceptDownload).toHaveBeenCalledOnce();
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
+  it("offers inline Windows installation without a blocking dialog", async () => {
+    mockHookState({ status: "downloaded", updateMode: "inApp" });
+    renderUpdateChecker();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "安装并重启" }));
+    expect(acceptRestart).toHaveBeenCalledOnce();
+    expect(dismissRestart).not.toHaveBeenCalled();
+  });
+
+  it("disables installation while handing off to the installer", () => {
+    mockHookState({ status: "installing", updateMode: "inApp" });
+    renderUpdateChecker();
+    expect(screen.getByRole("button", { name: "正在安装并重启..." })).toBeDisabled();
+  });
+
+  it("retries a Windows download failure without checking again", async () => {
+    mockHookState({ status: "error", updateMode: "inApp", errorPhase: "download" });
+    renderUpdateChecker();
+    expect(screen.getByText("下载失败")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("button", { name: "重试" }));
+    expect(acceptDownload).toHaveBeenCalledOnce();
+    expect(check).not.toHaveBeenCalled();
+  });
+
+  it("distinguishes installation failures from check failures", () => {
+    mockHookState({ status: "error", updateMode: "inApp", errorPhase: "install" });
+    renderUpdateChecker();
+    expect(screen.getByText("安装失败")).toBeInTheDocument();
+  });
+
+  it("preserves the installation action when the IPC transport fails", async () => {
+    mockHookState({ status: "downloaded", updateMode: "inApp", errorPhase: "install", errorMessage: "IPC unavailable" });
+    renderUpdateChecker();
+    expect(screen.getByRole("alert")).toHaveTextContent("安装失败");
+    await userEvent.setup().click(screen.getByRole("button", { name: "安装并重启" }));
+    expect(acceptRestart).toHaveBeenCalledOnce();
   });
 });

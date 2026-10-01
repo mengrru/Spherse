@@ -335,7 +335,9 @@ spherse/
 │   │   │   ├── main.ts               # Electron 主进程：启动时 fixPath（打包版 PATH 修复）→ restoreEnvFromSettings → 组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
 │   │   │   ├── fix-path.ts           # 打包版 PATH 修复：仅 packaged + darwin/linux，spawn 用户登录 shell（$SHELL -lic 'echo $PATH'，TERM=dumb，3s 超时）拉取登录 shell 的 PATH，剥离 ANSI/控制字节后按去重保序前置合并进 process.env.PATH（dev/test/win32 no-op，失败保留原 PATH 不阻断启动）；修复 GUI 进程不继承 shell PATH 导致 stdio MCP server（uvx/npx/python）找不到可执行文件
 │   │   │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
-│   │   │   ├── updater.ts            # 更新检测：OSS latest.json 清单 + compareVersions + 平台 downloadUrl 解析（electron-updater 仅保留 Windows in-app 下载 API，feed 已废弃）、silent 检测不改写交互状态、startAutoUpdateChecks 调度（启动 5s + 每小时 tick，≥24h 且用户活动时静默检测）
+│   │   │   ├── updater.ts            # Windows 架构隔离 OSS generic feed + 后台下载/安装状态；macOS/Linux latest.json 外链下载；延迟与周期静默检查
+│   │   │   ├── main.test.ts          # 启停接线、重复退出与更新清理顺序测试
+│   │   │   ├── preload.test.ts       # 更新事件白名单、订阅清理与 IPC 转发测试
 │   │   │   ├── unsafe-location.ts    # 项目路径「易失区」判定：getUnsafeZoneRoot 计算更新时会被覆盖清空的目录（win32 = dirname(process.execPath)，NSIS 卸载器 RMDir /r $INSTDIR 作用域；darwin = .app bundle 目录；dev/linux 无，dev 下 SPHERSE_UNSAFE_ZONE env 可覆盖供 E2E 指定），isInsideUnsafeZone 经 @spherse/core 的 isPathInside 判断（打开项目 IPC 弹警告框用）
 │   │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │   │       │   │   ├── index.ts          # registerAllIpc 聚合
@@ -352,10 +354,11 @@ spherse/
 │   │   │   │   ├── cloudflare-provider.ts # Cloudflare Quick Tunnel 实现：spawn cloudflared tunnel --url、stdout 抓取 *.trycloudflare.com URL、packaged 二进制路径解析
 │   │   │   │   └── manager.ts         # TunnelManager 单例：start/stop/restart 状态机 + onStateChange 事件订阅
 │   │   │   ├── window.ts             # BrowserWindow 创建与管理
-│   │   │   ├── lifecycle.ts          # 唯一退出标志（beginQuit/isQuitting），供优雅退出与关闭拦截共用
+│   │   │   ├── lifecycle.ts          # 退出协调器：普通退出/更新安装唯一终结动作、共享清理、超时和重启恢复
 │   │   │   ├── tray.ts               # 关闭至托盘：托盘创建/销毁与菜单（syncTray）、主窗口 close 拦截、showMainWindow（含 macOS Dock 显隐）
 │   │   │   ├── server.ts             # server 实例管理（ensure/restart/stop，恒带 serverToken 鉴权）+ 动态 host 重放（syncAllowedHosts）+ defaultModel 更新
 │   │   │   └── settings.ts           # electron-store 封装 + env 管理（含 syncCustomProviders）+ openProjects/locale/mobileAccess 持久化 + serverToken（顶层 key，getServerToken 迁移链）+ generateAccessToken
+│   │   ├── release-publisher.test.ts # OSS 发布行为、上传失败门禁、版本/哈希保护与真实 generic provider 解析测试
 │   │   └── e2e/                      # Playwright E2E 测试
 │   │       ├── helpers/
 │   │       │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
@@ -412,7 +415,8 @@ spherse/
 │   │       └── data/                # 轮播与 feature 配置数据
 ├── scripts/
 │   ├── rebuild-native.mjs            # Electron native dependency rebuild
-│   └── build-changelog.mjs           # 发版 CI 用：GitHub releases 全量拉取 → 筛选/结构化 → changelog.json（纯函数导出供 desktop 测试）
+│   ├── build-changelog.mjs           # 发版 CI 用：GitHub releases 全量拉取 → 筛选/结构化 → changelog.json（纯函数导出供 desktop 测试）
+│   └── publish-release.mjs           # 全安装包上传后生成/发布 Windows feeds 与 latest.json，版本和既有 EXE 完整性保护
 ├── docs/
 │   ├── official/                     # 正式项目文档（始终与代码同步；索引与写作规范见 README.md）
 │   │   ├── README.md                 # 按任务路由的索引 + official 写作规范
@@ -433,15 +437,15 @@ spherse/
 │   │   ├── glossary.md               # 术语表：一词一行 + 权威文档指针
 │   │   └── project-structure.md      # 本文件：完整目录索引
 │   └── dev/                          # 开发过程文档（容易过时）
-│       ├── decisions/                # ADR 决策记录（编号、只追加；索引与规则见 README.md）
-│       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan；2026-10-01-update-dialog-changelog/design.md 记录外部更新弹窗日志设计与验证
+│       ├── decisions/                # ADR 决策记录（编号、只追加；含 0015-windows-oss-updates.md，索引与规则见 README.md）
+│       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan；2026-10-01-windows-in-app-update/ 含设计/计划/验证，2026-10-01-update-dialog-changelog/design.md 记录外部更新日志设计与验证
 │       ├── infra/                    # {yyyy-MM-dd-name}/ 下放基础设施 design + plan
 │       ├── bugfix/                   # bugfix 分析与修复思路
 │       ├── investigation/            # 调研文档（{yyyy-MM-dd-name}/ 或单文件）
 │       └── backlog.md                # 待办事项
 ├── .github/
 │   └── workflows/
-│       ├── build-and-release.yml     # Git tag 触发的 CI：mac/win/linux 并行构建 + GitHub Releases 发布 + OSS 镜像/latest.json + publish-changelog 生成上传 changelog.json + 末尾 dispatch deploy-pages 联动 web 部署
+│       ├── build-and-release.yml     # Git tag 并行构建 + Releases + 排队发布 OSS 安装包/Windows feeds/latest.json + changelog + dispatch web 部署
 │       ├── pr-build.yml              # PR 触发的 CI：checkout + npm ci + npm run verify（lint/build/typecheck/单测/i18n check）
 │       ├── e2e.yml                   # PR 触发的 CI：macOS runner 跑 Electron E2E 全套（非 required，结果仅供参考；docs-only 跳过）
 │       ├── deploy-pages.yml          # main 分支 landing/web/i18n 变更或发版流水线 workflow_dispatch 触发的 CI：构建并部署到 GitHub Pages（include_web 全量部署前从 gh-pages 恢复 dev/web）

@@ -1,14 +1,11 @@
-import { app, powerMonitor } from "electron";
-import type { BrowserWindow } from "electron";
+import { app, BrowserWindow, powerMonitor } from "electron";
+import { accessSync, constants } from "node:fs";
 import electronUpdater from "electron-updater";
 const { autoUpdater, CancellationToken } = electronUpdater;
 type CancellationTokenType = electronUpdater.CancellationToken;
 import type { UpdateState, UpdateEvent } from "./types.js";
-import { getMainWindow } from "./window.js";
+import { shutdown, type ShutdownCoordinator } from "./lifecycle.js";
 
-// 更新检测源：CI publish-oss job 每次发版自动维护的 OSS 清单（国内可达，
-// 与 landing page 下载按钮同源）。替代此前 GitHub API / electron-updater
-// GitHub feed（后者 latest.yml 自 ba8c049 起不再上传，检测必然 404）。
 const OSS_BUCKET_BASE_URL =
   "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse";
 const OSS_UPDATE_MANIFEST_URL = `${OSS_BUCKET_BASE_URL}/latest.json`;
@@ -77,9 +74,6 @@ export function resolveDownloadUrlFromManifest(
   return undefined;
 }
 
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = false;
-
 export interface Updater {
   checkForUpdates(opts: { silent: boolean }): Promise<void>;
   downloadUpdate(): Promise<void>;
@@ -108,61 +102,59 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
-export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
-  let currentState: UpdateState = { status: "idle" };
-  let activeCancellationToken: CancellationTokenType | null = null;
+export function createUpdater(
+  getWindows: () => BrowserWindow | BrowserWindow[] | null,
+  getShutdown: () => ShutdownCoordinator | undefined = () => shutdown,
+): Updater {
+  const inApp = process.platform === "win32";
+  const updateMode = inApp ? "inApp" : "external";
+  let currentState: UpdateState = { status: "idle", updateMode };
+  let check: { manual: boolean; task: Promise<void>; error?: unknown } | null = null;
+  let download: { token: CancellationTokenType; cancelled: boolean; task: Promise<void>; error?: unknown } | null = null;
   let manualCheckId = 0;
 
   function sendEvent(event: UpdateEvent): void {
-    getWindow()?.webContents.send(event.type, event);
+    const windows = getWindows();
+    for (const win of Array.isArray(windows) ? windows : windows ? [windows] : []) {
+      try {
+        win.webContents.send(event.type, event);
+      } catch (error) {
+        console.error("[updater] failed to send event:", error);
+      }
+    }
   }
 
-  autoUpdater.on("update-available", (info) => {
-    const releaseNotes =
-      typeof info.releaseNotes === "string" ? info.releaseNotes : "";
-    currentState = {
-      status: "available",
-      version: info.version,
-      releaseNotes,
-    };
-    sendEvent({
-      type: "update-available",
-      version: info.version,
-      releaseNotes,
-      silent: false,
+  function setState(state: UpdateState): void {
+    currentState = { ...state, updateMode };
+    if (inApp) sendEvent({ type: "update-state", state: { ...currentState } });
+  }
+
+  function setError(error: unknown, errorPhase: "check" | "download" | "install"): void {
+    const errorMessage = error instanceof Error ? error.message : String(error ?? "");
+    setState({ ...currentState, status: "error", errorMessage, errorPhase });
+    if (!inApp) sendEvent({ type: "update-error", message: errorMessage });
+  }
+
+  if (inApp) {
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = false;
+    autoUpdater.disableDifferentialDownload = true;
+    autoUpdater.setFeedURL({ provider: "generic", url: `${OSS_BUCKET_BASE_URL}/win/${process.arch}/` });
+    autoUpdater.on("download-progress", (progress) => {
+      if (!download || download.cancelled || currentState.status !== "downloading") return;
+      const percent = Math.max(0, Math.min(100, Math.round(progress.percent)));
+      if (Number.isFinite(percent)) setState({ ...currentState, percent });
     });
-  });
-
-  autoUpdater.on("update-not-available", () => {
-    currentState = { status: "upToDate" };
-    sendEvent({ type: "update-not-available" });
-  });
-
-  autoUpdater.on("download-progress", (progress) => {
-    const percent = Math.round(progress.percent);
-    currentState = { ...currentState, status: "downloading", percent };
-    sendEvent({ type: "download-progress", percent });
-  });
-
-  autoUpdater.on("update-downloaded", () => {
-    currentState = {
-      status: "downloaded",
-      version: currentState.version,
-      releaseNotes: currentState.releaseNotes,
-    };
-    sendEvent({ type: "update-downloaded" });
-  });
-
-  autoUpdater.on("error", (err: unknown) => {
-    const errorMessage =
-      err instanceof Error ? err.message : String(err ?? "");
-    currentState = { status: "error", errorMessage };
-    sendEvent({ type: "update-error", message: errorMessage });
-  });
+    autoUpdater.on("error", (error: unknown) => {
+      if (download) download.error = error;
+      else if (check) check.error = error;
+      else if (currentState.status === "installing") getShutdown()?.failInstall(error);
+    });
+  }
 
   async function checkForUpdatesViaOss(silent: boolean): Promise<void> {
     const checkId = silent ? manualCheckId : ++manualCheckId;
-    if (!silent) currentState = { status: "checking" };
+    if (!silent) setState({ status: "checking" });
     try {
       const res = await fetch(OSS_UPDATE_MANIFEST_URL);
       if (!res.ok) {
@@ -180,66 +172,125 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
           : "";
         if (!silent && checkId !== manualCheckId) return;
         if (!silent) {
-          currentState = {
+          setState({
             status: "available",
             version,
             releaseNotes,
             downloadUrl,
-          };
+          });
         }
         sendEvent({
           type: "update-available",
           version,
           releaseNotes,
           downloadUrl,
+          updateMode,
           silent,
         });
       } else {
         if (silent || checkId !== manualCheckId) return;
-        currentState = { status: "upToDate" };
+        setState({ status: "upToDate" });
         sendEvent({ type: "update-not-available" });
       }
     } catch (err: unknown) {
       if (silent || checkId !== manualCheckId) return;
-      const errorMessage =
-        err instanceof Error ? err.message : String(err ?? "");
-      currentState = { status: "error", errorMessage };
-      sendEvent({ type: "update-error", message: errorMessage });
+      setError(err, "check");
     }
   }
 
   return {
-    async checkForUpdates(opts: { silent: boolean }): Promise<void> {
+    checkForUpdates(opts: { silent: boolean }): Promise<void> {
+      if (download || currentState.status === "downloaded" || currentState.status === "installing" || getShutdown()?.isQuitting()) return Promise.resolve();
+      if (check) {
+        if (!opts.silent && !check.manual) {
+          check.manual = true;
+          setState({ status: "checking" });
+        }
+        return check.task;
+      }
       if (!app.isPackaged) {
-        if (opts.silent) return;
-        currentState = { status: "upToDate" };
-        sendEvent({ type: "update-not-available" });
+        if (!opts.silent) {
+          setState({ status: "upToDate" });
+          if (!inApp) sendEvent({ type: "update-not-available" });
+        }
+        return Promise.resolve();
+      }
+      if (!inApp) return checkForUpdatesViaOss(opts.silent);
+      check = { manual: !opts.silent, task: Promise.resolve() };
+      if (check.manual) setState({ status: "checking" });
+      check.task = Promise.resolve().then(async () => {
+        try {
+          const result = await autoUpdater.checkForUpdates();
+          if (check?.error) throw check.error;
+          if (result?.isUpdateAvailable) {
+            const { version, releaseNotes: notes } = result.updateInfo;
+            const releaseNotes = typeof notes === "string" ? notes : "";
+            setState({ status: "available", version, releaseNotes });
+            sendEvent({ type: "update-available", version, releaseNotes, updateMode, silent: !check?.manual });
+          } else if (check?.manual) {
+            setState({ status: "upToDate" });
+          }
+        } catch (error) {
+          if (check?.manual) setError(error, "check");
+        } finally {
+          check = null;
+        }
+      });
+      return check.task;
+    },
+
+    downloadUpdate(): Promise<void> {
+      if (!inApp || check || getShutdown()?.isQuitting()) return Promise.resolve();
+      if (download) return download.task;
+      if (currentState.status !== "available" && !(currentState.status === "error" && currentState.errorPhase === "download")) return Promise.resolve();
+      const metadata = { version: currentState.version, releaseNotes: currentState.releaseNotes };
+      const active = { token: new CancellationToken(), cancelled: false, task: Promise.resolve(), error: undefined as unknown };
+      download = active;
+      setState({ ...metadata, status: "downloading", percent: 0 });
+      active.task = Promise.resolve().then(async () => {
+        try {
+          if (!active.cancelled) {
+            await autoUpdater.downloadUpdate(active.token);
+            if (active.error) throw active.error;
+            if (!active.cancelled) setState({ ...metadata, status: "downloaded" });
+          }
+        } catch (error) {
+          if (!active.cancelled) setError(error, "download");
+        } finally {
+          download = null;
+          if (active.cancelled) setState({ ...metadata, status: "available" });
+        }
+      });
+      return active.task;
+    },
+
+    async installUpdate(): Promise<void> {
+      if (!inApp || download || currentState.status !== "downloaded") return;
+      const coordinator = getShutdown();
+      if (!coordinator) {
+        setError(new Error("Shutdown coordinator is unavailable"), "install");
         return;
       }
-      // mac/win 统一走 OSS 清单检测 + 引导浏览器下载（前往下载）。
-      // electron-updater 的 GitHub feed 自 ba8c049 起无 latest.yml，不再使用；
-      // 其 in-app 下载 API 保留给未来恢复 feed（backlog #149）。
-      await checkForUpdatesViaOss(opts.silent);
-    },
-
-    async downloadUpdate(): Promise<void> {
-      if (process.platform !== "win32") return;
-      currentState = { status: "downloading" };
-      activeCancellationToken = new CancellationToken();
-      await autoUpdater.downloadUpdate(activeCancellationToken);
-    },
-
-    installUpdate(): Promise<void> {
-      if (process.platform !== "win32") return Promise.resolve();
-      autoUpdater.quitAndInstall();
-      return Promise.resolve();
+      if (coordinator.isQuitting()) return;
+      setState({ ...currentState, status: "installing" });
+      await coordinator.install(
+        () => {
+          const installerPath = "installerPath" in autoUpdater ? autoUpdater.installerPath : null;
+          if (typeof installerPath !== "string" || !installerPath) {
+            throw new Error("Downloaded update installer is unavailable");
+          }
+          accessSync(installerPath, constants.R_OK);
+          autoUpdater.quitAndInstall(true, true);
+        },
+        (error) => setError(error, "install"),
+      );
     },
 
     async cancelUpdate(): Promise<void> {
-      if (process.platform !== "win32") return;
-      activeCancellationToken?.cancel();
-      activeCancellationToken = null;
-      currentState = { status: "idle" };
+      if (!inApp || !download) return;
+      download.cancelled = true;
+      download.token.cancel();
+      await download.task;
     },
 
     getState(): UpdateState {
@@ -248,7 +299,7 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
   };
 }
 
-export const updater = createUpdater(() => getMainWindow());
+export const updater = createUpdater(() => BrowserWindow.getAllWindows());
 
 const AUTO_CHECK_STARTUP_DELAY_MS = 5_000;
 const AUTO_CHECK_TICK_MS = 60 * 60 * 1000;

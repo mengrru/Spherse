@@ -28,3 +28,4 @@
 | [0012](0012-chat-hub-lifecycle-ownership.md) | chat hub 生命周期与所有权收口（runtime 身份索引、channel 状态机、release 权归 core、server 单点关停） | accepted |
 | [0013](0013-feature-gated-tools.md) | feature 门控工具通道（`featureTools`：白名单后追加、不进 toolCatalog） | accepted |
 | [0014](0014-mcp-sdk-v2-stateless-protocol.md) | MCP 升级 SDK v2（2026-07-28 无状态协议）并移除 sse transport | accepted |
+| [0015](0015-windows-oss-updates.md) | Windows 架构隔离 OSS feed、后台下载与清理后重启安装 | accepted |

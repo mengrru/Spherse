@@ -3,6 +3,7 @@ import type { ElectronAPI, UpdateEvent } from "./types.js";
 import type { MobileAccessEvent } from "@spherse/app/host-bridge";
 
 const UPDATE_EVENT_CHANNELS = [
+  "update-state",
   "update-available",
   "update-not-available",
   "download-progress",

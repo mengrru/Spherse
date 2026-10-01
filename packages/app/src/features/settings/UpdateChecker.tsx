@@ -28,10 +28,15 @@ export function UpdateChecker() {
     dismissRestart,
   } = useUpdateChecker();
   const [appVersion, setAppVersion] = useState("");
+  const inApp = state.updateMode === "inApp";
 
   useEffect(() => {
-    void bridge.updater?.getAppVersion()?.then(setAppVersion);
-  }, []);
+    let active = true;
+    void bridge.updater?.getAppVersion().then((version) => {
+      if (active) setAppVersion(version);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [bridge]);
 
   return (
     <FieldGroup>
@@ -39,6 +44,26 @@ export function UpdateChecker() {
       <p className="text-sm text-muted-foreground">v{appVersion}</p>
 
       <div className="mt-1">
+        {inApp && state.errorMessage && (state.status === "downloaded" || state.status === "downloading") && (
+          <p role="alert" className="mb-2 text-sm text-destructive">
+            {t(state.errorPhase === "install" ? "settings.update.installError" : "settings.update.downloadError")}
+          </p>
+        )}
+        {inApp && state.status === "available" && (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm">{t("settings.update.newVersion", { version: state.version ?? "" })}</p>
+            {state.releaseNotes && <MarkdownContent variant="chat">{state.releaseNotes}</MarkdownContent>}
+            <Button className="w-fit" onClick={acceptDownload}>
+              {t("settings.update.backgroundDownload")}
+            </Button>
+          </div>
+        )}
+        {inApp && state.status === "downloaded" && (
+          <Button onClick={acceptRestart}>{t("settings.update.installAndRestart")}</Button>
+        )}
+        {state.status === "installing" && (
+          <Button disabled>{t("settings.update.installing")}</Button>
+        )}
         {state.status === "idle" && (
           <Button onClick={() => void check()}>
             {t("settings.about.checkUpdate")}
@@ -57,10 +82,12 @@ export function UpdateChecker() {
             <p className="text-sm text-destructive">
               {state.errorPhase === "download"
                 ? t("settings.update.downloadError")
-                : t("settings.about.checkFailed")}
+                : state.errorPhase === "install"
+                  ? t("settings.update.installError")
+                  : t("settings.about.checkFailed")}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" onClick={() => void check()}>
+              <Button variant="outline" onClick={inApp && state.errorPhase === "download" ? acceptDownload : check}>
                 {t("settings.about.retry")}
               </Button>
               <Button
@@ -81,7 +108,14 @@ export function UpdateChecker() {
                 percent: state.percent ?? 0,
               })}
             </p>
-            <div className="h-2 w-full rounded-full bg-muted">
+            <div
+              role="progressbar"
+              aria-label={t("settings.update.downloading", { percent: state.percent ?? 0 })}
+              aria-valuenow={state.percent ?? 0}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="h-2 w-full rounded-full bg-muted"
+            >
               <div
                 className="h-2 rounded-full bg-primary transition-all"
                 style={{ width: `${state.percent ?? 0}%` }}
@@ -100,7 +134,7 @@ export function UpdateChecker() {
       </div>
 
       <Dialog
-        open={state.status === "available"}
+        open={!inApp && state.status === "available"}
         onOpenChange={(open) => {
           if (!open) dismissUpdate();
         }}
@@ -128,26 +162,20 @@ export function UpdateChecker() {
             <Button variant="outline" onClick={dismissUpdate}>
               {t("settings.update.later")}
             </Button>
-            {state.downloadUrl ? (
-              <Button
-                onClick={() => {
-                  void bridge.openExternal(state.downloadUrl!);
-                  dismissUpdate();
-                }}
-              >
-                {t("settings.update.gotoDownload")}
-              </Button>
-            ) : (
-              <Button onClick={acceptDownload}>
-                {t("settings.update.download")}
-              </Button>
-            )}
+            <Button
+              onClick={() => {
+                void bridge.openExternal(state.downloadUrl ?? DOWNLOAD_PAGE_URL);
+                dismissUpdate();
+              }}
+            >
+              {t("settings.update.gotoDownload")}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
       <Dialog
-        open={state.status === "downloaded"}
+        open={!inApp && state.status === "downloaded"}
         onOpenChange={(open) => {
           if (!open) dismissRestart();
         }}

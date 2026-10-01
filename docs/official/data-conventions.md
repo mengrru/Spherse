@@ -4,6 +4,14 @@
 > 运行机制（事件投影、compaction、MCP 连接生命周期、触发器调度）见 `architecture/` 对应域文件；本文只记录「什么数据、放在哪、什么格式、什么不变量」。
 > 预置模板与 presets.json 见 `packages/presets/README.md`；访问控制 category 语义见 `architecture/security.md`。
 
+## 发布更新清单
+
+发布数据存于 OSS，不写入用户项目目录；发布顺序与客户端行为见 [Desktop 更新机制](architecture/desktop.md#app-更新机制)。
+
+- `spherse/releases/<version>/`：DMG、各架构 EXE、AppImage、DEB 安装包。
+- `spherse/latest.json`：`{version, mac:{arm64,intel}, win:{x64,arm64?}, linux?:{x64}}`，值为安装包 HTTPS URL，兼容历史缺少 ARM64/Linux 的清单。
+- `spherse/win/{x64,arm64}/latest.yml`：electron-updater `UpdateInfo`，使用 JSON 形式的合法 YAML 编码；字段 `version`、`releaseDate`、`files:[{url,sha512,size}]`，每份只含对应架构 EXE。`url` 为版本目录绝对 HTTPS URL，`sha512` 是实际安装包字节的 SHA-512/Base64，`size` 为字节数。发布脚本的 stable 读取器与生成器使用相同 JSON 编码，不手工改写为其他 YAML 表达。
+
 ## 项目目录布局
 
 项目是独立文件夹：`.spherse/`（系统数据）+ 用户自定义内容目录。

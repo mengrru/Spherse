@@ -22,16 +22,17 @@ export type ThemeMode = "light" | "dark" | "system";
 
 export type UpdateStatus =
   | "idle" | "checking" | "upToDate"
-  | "available" | "downloading" | "downloaded" | "error";
+  | "available" | "downloading" | "downloaded" | "installing" | "error";
 
 export interface UpdateState {
   status: UpdateStatus;
   version?: string;
   releaseNotes?: string;
   downloadUrl?: string;
+  updateMode?: "inApp" | "external";
   percent?: number;
   errorMessage?: string;
-  errorPhase?: "check" | "download";
+  errorPhase?: "check" | "download" | "install";
 }
 
 export type UpdateEvent =
@@ -40,8 +41,10 @@ export type UpdateEvent =
       version: string;
       releaseNotes: string;
       downloadUrl?: string;
+      updateMode?: "inApp" | "external";
       silent: boolean;
     }
+  | { type: "update-state"; state: UpdateState }
   | { type: "update-not-available" }
   | { type: "download-progress"; percent: number }
   | { type: "update-downloaded" }

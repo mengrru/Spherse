@@ -278,6 +278,16 @@ export const zhCN = {
   "settings.update.gotoDownload": "前往下载",
   // 自动检测发现新版本 → 右下角 toast 的「去更新」按钮，打开平台对应下载链接
   "settings.update.goUpdate": "去更新",
+  // Windows 关于页及自动更新 toast → 用户主动开始后台下载
+  "settings.update.backgroundDownload": "后台下载",
+  // Windows 全局 toast → 安装包下载完成，可稍后安装
+  "settings.update.downloadSuccess": "下载成功",
+  // Windows 关于页及下载完成 toast → 安装已下载的更新并重启
+  "settings.update.installAndRestart": "安装并重启",
+  // Windows 关于页 → 正在交接安装器，禁用重复安装操作
+  "settings.update.installing": "正在安装并重启...",
+  // Windows 关于页及全局 toast → 启动安装失败
+  "settings.update.installError": "安装失败",
 
   // --- Project ---
   // 打开/创建项目时选中了位于 Spherse 应用目录内（更新会被覆盖清空）的文件夹 → 警告框标题

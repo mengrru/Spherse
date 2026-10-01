@@ -13,7 +13,7 @@
 - `app.whenReady` 顺序：`fixPath` → `restoreEnvFromSettings` → `ensureServer()`（恒带 server token）→ 创建窗口与右键菜单、挂关闭至托盘拦截 → 注册全部 IPC → `syncTray()` → quick 模式启动 tunnel；更新检查另以 `setTimeout` 5s 调度，与 tunnel 无先后依赖
 - BrowserWindow：1200×800、`contextIsolation: true`、`nodeIntegration: false`、preload 白名单桥
 - `fixPath` 仅 packaged + darwin/linux：spawn 登录 shell 取 `$PATH` 去重合并，保证 GUI 启动拿到 CLI 环境
-- 优雅退出：`window-all-closed` / `before-quit` → tunnel stop → `stopServer()` → quit；唯一退出标志在 `electron/lifecycle.ts`（`gracefulShutdown` 首个 await 前 `beginQuit()` 置位，`before-quit` / 窗口 close 拦截读 `isQuitting()`），`will-quit` 销毁托盘；`stopServer` / `restartServer` 委托 `MultiProjectServer.close()`（注入 10s 阶段超时与日志回调），不再手工编排 registry/fastify 顺序
+- 优雅退出：`electron/lifecycle.ts` 协调普通退出与更新安装，首个请求独占终结动作，其余请求共享清理 Promise；tunnel stop → `stopServer()` 完成前 `before-quit` 始终阻止退出，窗口关闭与唤回用 `isQuitting()` 判断。清理后普通退出调用 quit，安装路径先检查缓存安装包可读，再启动安装器；清理或可检测的交接失败走普通重启恢复。30s watchdog 兜底，`will-quit` 销毁托盘；`stopServer` / `restartServer` 委托 `MultiProjectServer.close()`（注入 10s 阶段超时与日志回调）
 
 ## 关闭至托盘
 
@@ -26,7 +26,7 @@
 
 ## IPC 面
 
-`electron/ipc/` 六域全为 `ipcMain.handle` invoke 模式；事件流仅两条（updater 五事件、`mobile-access:event`）；context-menu 不走 IPC，是 main 监听 `webContents` 的 context-menu 事件后在可编辑目标弹 `Menu.popup`：
+`electron/ipc/` 六域全为 `ipcMain.handle` invoke 模式；事件流为 updater（含 `update-state` 快照）与 `mobile-access:event`；context-menu 不走 IPC，是 main 监听 `webContents` 的 context-menu 事件后在可编辑目标弹 `Menu.popup`：
 
 | 域 | channel 概要 |
 |---|---|
@@ -81,13 +81,14 @@
 
 ## App 更新机制
 
-- **检测源统一为 OSS 清单**（mac/win/linux 同路径）：`latest.json` 的 `compareVersions` 版本比较，downloadUrl 随事件下发、经 `openExternal` 引导浏览器下载。macOS/Linux 手动检查发现新版后读取同源 `changelog.json`，精确匹配目标版本（trim 与可选 v 前缀归一），将 notes.text 转义为列表并同时写入状态与事件的 releaseNotes；3 秒超时覆盖请求和响应体，失败/无匹配/空日志隐藏日志区，不影响下载。静默、Windows、无新版不请求日志；过期手动结果不得覆盖较新的手动检查。更新弹窗的日志链接通过 host bridge 在系统浏览器打开。
-- `autoDownload` / `autoInstallOnAppQuit` 均关闭，全程用户主动；`startAutoUpdateChecks` 调度自动检测：启动 5s 后首查，之后每小时 tick、距上次 ≥24h 且系统空闲 <5min（用户活动期间）才静默检测；silent 检测不改写主进程交互状态（不污染 settings 挂载恢复），`update-available` 事件携带 `silent` 标志且不被抑制，`update-not-available` / `error` 静默吞掉
-- in-app 下载/安装仅 Windows 保留（CancellationToken 完整流程），darwin / linux 直接 no-op（更新引导走 `openExternal` 下载页）；dev 模式直接 upToDate
-- IPC 契约以事件流为唯一真相源：invoke 返回 void / state，`webContents.send` 推 5 个事件
-  - renderer `useUpdateChecker` 用 `useReducer` 状态机：idle / checking / upToDate / available / downloading / downloaded / error（`errorPhase` 区分检查与下载失败）；挂载恢复只保留 available/downloading/downloaded，终态归位 idle（重开 settings 按钮恢复可点击）；忽略 silent `update-available`（避免与 toast 双弹）
-  - 全局 `UpdateNoticeBridge`（App 根挂载）消费 silent `update-available`：右下角 toast「去更新」→ `openExternal` 平台下载链接（缺失回退官网），至多每天一条
-- CI：git tag 触发，mac（arm64/x64）、win（x64/arm64 交叉）与 linux（x64，AppImage + deb；smoke test 需 xvfb 虚拟显示 + `--no-sandbox`）并行 `--publish never` 构建。三平台可执行文件名统一 `executableName: Spherse`（Linux 默认取 scoped 包名 `@spherse/desktop`，产生 `@` 开头的非法二进制名；顶层配置须与 productName 一致，否则连带改变 mac .app / win exe 名）。`gh release upload` 后 `publish-oss` 汇总上传并生成 `latest.json`（`win.arm64` / `linux.x64` 为可选键，旧 release 缺失时省略，读取端回退），随后 `publish-changelog`（`scripts/build-changelog.mjs`）全量重建 `changelog.json` 上传 OSS（串行在 `publish-oss` 之后，避免与 `latest.json` 版本不一致窗口；landing `/download` 页消费），末尾联动部署 web 版
+- **Windows** 使用 electron-updater generic provider，按应用 `process.arch` 读取 OSS `spherse/win/x64/latest.yml` 或 `spherse/win/arm64/latest.yml`。`autoDownload` / `autoInstallOnAppQuit` 关闭，禁用差量下载；用户点击「后台下载」才下载全量 NSIS 包，完成后点击「安装并重启」执行 `quitAndInstall(true, true)`。选择与取舍见 [ADR-0015](../../dev/decisions/0015-windows-oss-updates.md)。
+- **macOS/Linux** 保留 OSS `latest.json` + `compareVersions` 检测，事件携带 `downloadUrl`，经 `openExternal` 浏览器下载；没有链接时回退官网，不使用应用内安装。手动检查发现新版后读取同源 `changelog.json`，精确匹配目标版本（trim 与可选 v 前缀归一），将 notes.text 转义为列表并同时写入状态与事件的 releaseNotes；3 秒超时覆盖请求和响应体，失败/无匹配/空日志隐藏日志区，不影响下载。静默、Windows、无新版不请求日志；过期手动结果不得覆盖较新的手动检查。日志链接通过 host bridge 在系统浏览器打开。
+- 自动检测：启动 5s 后首查，之后每小时 tick、距上次 ≥24h 且系统空闲 ≤5min 时检查。静默检查无新版/失败不通知；Windows 发现新版保存 available 状态并发通知，非 Windows 静默检测不改交互状态。Windows 并发检查合并，手动请求提升通知优先级；外部更新保留独立请求及手动请求序号保护，静默检查不使待完成的手动日志失效。下载、已下载与安装期间不再检查覆盖状态；dev 模式手动检查直接 upToDate。
+- Windows `update-state` 是主进程权威状态快照，广播到窗口；`update-available` 只表达发现新版通知。状态为 idle / checking / upToDate / available / downloading / downloaded / installing / error，`updateMode` 区分 inApp/external，`errorPhase` 区分 check/download/install。下载单飞，取消等待任务结束后恢复 available；失败保留重试信息；安装只接受 downloaded。
+- 全局 `UpdateNoticeBridge` 的 Windows 自动提醒操作为「后台下载」，下载完成 toast 为「下载成功」+「安装并重启」；关于页提供同一下载/进度/取消/安装操作，不弹下载完成模态框。状态属于主进程，关设置页不取消下载；重新挂载恢复状态，迟到快照不得覆盖新事件。非 Windows 保留发现新版弹窗与外链 toast。
+- CI 并行构建 mac（arm64/x64）、win（x64/arm64）与 Linux（x64 AppImage + deb），统一 `--publish never`，三平台可执行文件名固定为 `Spherse`。所有 GitHub 安装包上传结束后，`publish-oss` 调用 `scripts/publish-release.mjs` 上传全部安装包，随后才统一生成两份 YAML 与 JSON；先发布 YAML，最后 JSON。存储格式见 [数据约定](../data-conventions.md#发布更新清单)。多个清单对象不承诺原子切换，但引用的包必须已上传成功。
+- stable 发布任务共用 concurrency 队列（最多 100 个等待任务），检查三份线上元数据拒绝版本倒退；同版本重试不得改变已有 feed 引用的 EXE 哈希/大小。正常 tag 与手动重发均要求完整产物；只有历史 release 可显式启用 `historical_assets`，省略缺失 ARM64/Linux，且不发布缺失架构的 feed。不得用历史模式绕过仍在构建的新 release 完整性检查。
+- `publish-changelog` 在 OSS 清单更新成功后全量重建 `changelog.json`，末尾联动 web 部署。旧版客户端需先手动安装一次支持此协议的版本；真实 Windows NSIS 升级验收要求见 [测试体系](../testing.md)。
 
 ## debug 工具
 
