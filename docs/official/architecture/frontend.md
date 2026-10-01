@@ -107,5 +107,5 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 
 ## 杂项机制
 
-- Composer 草稿按 session 缓存：`spherse:draft:<sessionId>`，300ms 防抖写、卸载 flush、发送成功清除
+- Composer 草稿按 session 缓存：`spherse:draft:<sessionId>`，300ms 防抖写、卸载 flush、发送成功清除；重新挂载恢复草稿时将光标置于文本末尾，后续 loading / streaming 状态变化不重置用户的光标或选区
 - 项目内 back 是内存导航栈（`useProjectNavHistory`），不进 router history；`back()` 只记录 pending 目标，location 实际到达后才出栈（被守卫拦截取消不失步）；关闭 tab / 删除文件时对应 URL 经 `dropFromProjectNavHistory` 清出

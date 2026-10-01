@@ -151,6 +151,51 @@ describe("Composer input availability", () => {
   });
 });
 
+describe("Composer draft caret", () => {
+  it("restores the draft with the caret at the end after leaving and returning", async () => {
+    const draft = "First line\nSecond line";
+    const { view } = renderComposer({});
+    await user.type(screen.getByRole("textbox"), "First line{Shift>}{Enter}{/Shift}Second line");
+    view.unmount();
+
+    renderComposer({});
+    const textarea = screen.getByRole<HTMLTextAreaElement>("textbox");
+    expect(textarea).toHaveValue(draft);
+    expect(textarea).toHaveFocus();
+    expect(textarea.selectionStart).toBe(draft.length);
+    expect(textarea.selectionEnd).toBe(draft.length);
+
+    await user.keyboard(" appended");
+    expect(textarea).toHaveValue(`${draft} appended`);
+  });
+
+  it.each([{ loading: true }, { streaming: true }])(
+    "keeps the restored caret at the end when autofocus is delayed by %o",
+    (props) => {
+      const draft = "Saved draft";
+      localStorage.setItem("spherse:draft:session-1", draft);
+      const { view, onSend, onAbort } = renderComposer(props);
+
+      rerenderComposer(view, {}, onSend, onAbort);
+      const textarea = screen.getByRole<HTMLTextAreaElement>("textbox");
+      expect(textarea).toHaveFocus();
+      expect(textarea.selectionStart).toBe(draft.length);
+      expect(textarea.selectionEnd).toBe(draft.length);
+    },
+  );
+
+  it("preserves the user's selection when streaming ends", async () => {
+    const { view, onSend, onAbort } = renderComposer({ streaming: true });
+    const textarea = screen.getByRole<HTMLTextAreaElement>("textbox");
+    await user.type(textarea, "Editing a draft");
+    textarea.setSelectionRange(2, 5);
+
+    rerenderComposer(view, {}, onSend, onAbort);
+    expect(textarea.selectionStart).toBe(2);
+    expect(textarea.selectionEnd).toBe(5);
+  });
+});
+
 describe("Composer enter key behavior", () => {
   it("sends the draft on Enter with a fine pointer", async () => {
     mockPointerCoarse(false);

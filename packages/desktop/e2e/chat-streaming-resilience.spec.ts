@@ -81,6 +81,36 @@ test("streaming continues after switching away and back", async () => {
   }
 });
 
+test("returning to a session restores the draft caret at the end", async () => {
+  const project = await createChatProject();
+  const { app, page } = await launchChatApp(project);
+
+  try {
+    const sessionA = await createSessionViaApi(page, project.projectId, "assistant-1");
+    const sessionB = await createSessionViaApi(page, project.projectId, "assistant-1");
+    await navigateToSession(page, project.projectId, sessionA);
+
+    const textarea = page.locator("[data-chat-composer] textarea");
+    const draft = "First line\nSecond line";
+    await textarea.fill(draft);
+
+    await navigateToSession(page, project.projectId, sessionB);
+    await expect(textarea).toHaveValue("");
+    await textarea.fill("Other session draft");
+    await navigateToSession(page, project.projectId, sessionA);
+
+    await expect(textarea).toHaveValue(draft);
+    await expect(textarea).toBeFocused();
+    await expect.poll(() => textarea.evaluate((element: HTMLTextAreaElement) => [
+      element.selectionStart, element.selectionEnd,
+    ])).toEqual([draft.length, draft.length]);
+    await page.keyboard.type(" appended");
+    await expect(textarea).toHaveValue(`${draft} appended`);
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test("sidebar shows streaming indicator on background session", async () => {
   const project = await createChatProject();
   const { app, page } = await launchChatApp(project);
