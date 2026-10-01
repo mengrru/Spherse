@@ -104,12 +104,16 @@ export const CUSTOM_PROVIDER_DEFAULTS = {
   maxTokens: 131072,
 } as const;
 
-function customAuth(apiKey: string | undefined, keyless: boolean): ApiKeyAuth {
+function customAuth(
+  apiKey: string | undefined,
+  keyless: boolean,
+  headers?: Record<string, string>,
+): ApiKeyAuth {
   return {
     name: "API Key",
     resolve: async () => {
-      if (apiKey) return { auth: { apiKey }, source: "API Key" };
-      if (keyless) return { auth: { apiKey: KEYLESS_PLACEHOLDER }, source: "Keyless" };
+      if (apiKey) return { auth: { apiKey, headers }, source: "API Key" };
+      if (keyless) return { auth: { apiKey: KEYLESS_PLACEHOLDER, headers }, source: "Keyless" };
       return undefined;
     },
   };
@@ -151,7 +155,7 @@ function buildCustomProvider(def: CustomProviderDef, apiKey: string | undefined)
     id: def.id,
     name: def.name,
     baseUrl: def.baseUrl,
-    auth: { apiKey: customAuth(apiKey, def.keyless) },
+    auth: { apiKey: customAuth(apiKey, def.keyless, def.headers) },
     models: modelList,
     api: suppressUserAgent(openAICompletionsApi()),
   });

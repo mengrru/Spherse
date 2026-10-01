@@ -52,6 +52,25 @@ function parsePositiveInt(value: string): number | undefined {
   return parsed > 0 ? parsed : NaN;
 }
 
+const HEADER_NAME_PATTERN = /^[!#$%&'*+.^_|~0-9A-Za-z-]+$/;
+
+function parseHeaders(text: string): Record<string, string> | null | undefined {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (lines.length === 0) return undefined;
+  const headers: Record<string, string> = {};
+  for (const line of lines) {
+    const colonIdx = line.indexOf(":");
+    const name = colonIdx > 0 ? line.slice(0, colonIdx).trim() : "";
+    const value = colonIdx >= 0 ? line.slice(colonIdx + 1).trim() : "";
+    if (!HEADER_NAME_PATTERN.test(name) || value.length === 0) return null;
+    headers[name] = value;
+  }
+  return headers;
+}
+
 export function CustomProviderDialog({
   open,
   onClose,
@@ -66,6 +85,7 @@ export function CustomProviderDialog({
   const [keyless, setKeyless] = useState(false);
   const [contextWindowText, setContextWindowText] = useState("");
   const [maxTokensText, setMaxTokensText] = useState("");
+  const [headersText, setHeadersText] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -75,6 +95,9 @@ export function CustomProviderDialog({
     setKeyless(initial?.keyless ?? false);
     setContextWindowText(initial?.contextWindow != null ? String(initial.contextWindow) : "");
     setMaxTokensText(initial?.maxTokens != null ? String(initial.maxTokens) : "");
+    setHeadersText(
+      initial?.headers ? Object.entries(initial.headers).map(([n, v]) => `${n}: ${v}`).join("\n") : "",
+    );
   }, [open, initial]);
 
   const parsedModels = parseModelIds(modelsText);
@@ -82,6 +105,7 @@ export function CustomProviderDialog({
   const trimmedBaseUrl = baseUrl.trim();
   const contextWindow = parsePositiveInt(contextWindowText);
   const maxTokens = parsePositiveInt(maxTokensText);
+  const parsedHeaders = parseHeaders(headersText);
 
   const nameError =
     trimmedName.length === 0
@@ -105,9 +129,11 @@ export function CustomProviderDialog({
     maxTokensText.trim().length === 0 || !Number.isNaN(maxTokens)
       ? ""
       : t("settings.provider.dialog.errLimitInvalid");
+  const headersError =
+    parsedHeaders === null ? t("settings.provider.dialog.errHeadersInvalid") : "";
 
   const hasErrors = Boolean(
-    nameError || baseUrlError || modelsError || contextWindowError || maxTokensError,
+    nameError || baseUrlError || modelsError || contextWindowError || maxTokensError || headersError,
   );
 
   const handleSubmit = () => {
@@ -122,6 +148,7 @@ export function CustomProviderDialog({
         ? { contextWindow }
         : {}),
       ...(maxTokens !== undefined && !Number.isNaN(maxTokens) ? { maxTokens } : {}),
+      ...(parsedHeaders != null ? { headers: parsedHeaders } : {}),
     });
     onClose();
   };
@@ -225,6 +252,23 @@ export function CustomProviderDialog({
           <p className="text-xs text-muted-foreground">
             {t("settings.provider.dialog.limitsHint")}
           </p>
+          <Field>
+            <FieldLabel htmlFor="custom-provider-headers">
+              {t("settings.provider.dialog.headers")}
+            </FieldLabel>
+            <Textarea
+              id="custom-provider-headers"
+              value={headersText}
+              onChange={(event) => setHeadersText(event.target.value)}
+              placeholder={t("settings.provider.dialog.headersPlaceholder")}
+              aria-invalid={Boolean(headersError)}
+              rows={2}
+            />
+            <FieldDescription>
+              {t("settings.provider.dialog.headersHint")}
+            </FieldDescription>
+            {headersError ? <FieldError>{headersError}</FieldError> : null}
+          </Field>
           <div className="flex items-center justify-between gap-3">
             <div className="flex flex-col gap-1">
               <span className="text-sm font-medium leading-none">

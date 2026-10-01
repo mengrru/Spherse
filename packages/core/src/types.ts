@@ -172,4 +172,5 @@ export interface CustomProviderDef {
   keyless: boolean;
   contextWindow?: number;
   maxTokens?: number;
+  headers?: Record<string, string>;
 }

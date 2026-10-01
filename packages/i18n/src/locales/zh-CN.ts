@@ -126,6 +126,14 @@ export const zhCN = {
   "settings.provider.dialog.maxTokensPlaceholder": "默认 {value}",
   // 上下文长度 / 最大输出长度两个字段下方的辅助说明
   "settings.provider.dialog.limitsHint": "单位为 token，留空使用默认值；应用于该供应商的全部模型",
+  // 自定义供应商对话框「自定义 Header」字段标签
+  "settings.provider.dialog.headers": "自定义 Header",
+  // 自定义 Header 输入框 placeholder（每行一个 Name: Value）
+  "settings.provider.dialog.headersPlaceholder": "X-Title: My App",
+  // 自定义 Header 字段下方辅助说明
+  "settings.provider.dialog.headersHint": "每行一个，格式 Name: Value，随该供应商的全部请求发送",
+  // 校验错误：自定义 Header 存在格式非法的行
+  "settings.provider.dialog.errHeadersInvalid": "Header 格式非法：每行需为非空的 Name: Value",
   // 校验错误：上下文长度或最大输出长度填写后不是正整数
   "settings.provider.dialog.errLimitInvalid": "请输入正整数",
   // 自定义供应商对话框保存按钮
