@@ -60,7 +60,7 @@ export function ThemeSettingsDialog({
         <DialogHeader>
           <DialogTitle>{t("theme-settings.title")}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <p className="text-sm text-muted-foreground">
             {t("theme-settings.description")}
           </p>
@@ -69,7 +69,8 @@ export function ThemeSettingsDialog({
             onChange={(e) => setDraft(e.target.value)}
             placeholder={t("theme-settings.placeholder")}
             disabled={isPending}
-            className="h-[55vh] font-mono text-xs"
+            wrap="off"
+            className="h-[55vh] field-sizing-fixed overflow-x-auto font-mono text-xs"
           />
         </div>
         <DialogFooter>

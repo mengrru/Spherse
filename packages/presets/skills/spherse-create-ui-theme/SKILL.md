@@ -154,13 +154,19 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 }
 ```
 
+## 钩子与作用域
+
+- 共享交互组件使用 Base UI，不是 Radix。
+- 以语义 `data-*` 钩子和 `data-slot` 为样式入口，具体对象与状态见各节，可自由组合 CSS 定制外观。
+- Portal 浮层位于触发位置的 DOM 层级之外，用自身钩子定制；全局配色放在 `:root`，便于主布局与浮层共同继承。
+
 ## 应用根容器 / 全局装饰
 
-`data-app-root` 是整个应用窗口的最外层容器，铺满视口（`100vh`，已 `position: relative` 且 `overflow: hidden`）。它是 activity bar、项目面板、主内容区、聊天窗口、浮动窗、设置弹窗、toast 等**所有可见 UI 的共同祖先**，适合用 `::before` / `::after` 或 `position: fixed` 在窗口任意位置叠加装饰层（全局背景、噪点纹理、边角装饰、水印、角标等）。
+`data-app-root` 是应用主布局的根容器，铺满视口（`100vh`，已 `position: relative` 且 `overflow: hidden`），包含 activity bar、项目面板、主内容区与内嵌聊天窗口。它适合用 `::before` / `::after` 叠加全局背景、噪点纹理、边角装饰等，但**不是所有可见 UI 的 DOM 共同祖先**：通过 Portal 渲染的对话框、菜单、提示与聊天浮窗等位于其外部，需用各自的钩子定制。
 
 | 钩子 | 作用对象 |
 |------|---------|
-| `data-app-root` | 整个应用窗口的最外层容器（铺满视口，`position: relative`） |
+| `data-app-root` | 应用主布局根容器（铺满视口，`position: relative`；不包含外部 Portal 浮层） |
 
 示例：
 
@@ -195,7 +201,7 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
   pointer-events: none;
 }
 
-/* 覆盖在所有内容之上的固定层（如水印），需要显式抬高 z-index */
+/* 主布局内的固定装饰层（如水印），层级仍受祖先堆叠上下文约束 */
 [data-app-root] > .my-watermark {
   position: fixed;
   inset: 0;
@@ -206,7 +212,20 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 
 > - `[data-app-root]` 已是定位上下文，`::before` / `::after` 默认已被应用设为 `position: absolute; pointer-events: none`（相对整窗定位、不挡交互），因此**只需写装饰属性即可**，漏写也不会进入 flex 流导致整窗偏移；如需固定层（`position: fixed`）或可交互叠层（`pointer-events: auto`），显式覆盖即可。`overflow: hidden` 会自动裁剪超出窗口的部分。
 > - 装饰默认处于内容之下：内容区的背景多为半透明或 `--sp-background`，叠在最外层根容器上的装饰会从内容半透明处透出。若要让装饰**盖在内容之上**，给伪元素或固定层显式设较高的 `z-index` 并加 `pointer-events: none`，避免遮挡交互。
+> - 根容器内的高 `z-index` 不保证盖过外部 Portal 浮层；不要通过改变应用根的 `transform` / `filter` 等属性来假设所有浮层会一起定位或装饰。
 > - 本地图片用相对路径（`url('./assets/x.png')` 基于项目 `.spherse/` 目录解析），或远程 URL（项目主题同样以 `<link>` 从 preview 路由载入，相对 `url()` 解析到项目文件）。
+
+## 侧边区域
+
+| 钩子 | 作用对象 |
+|------|---------|
+| `data-activity-bar` | 项目切换栏。定制背景、边框与内部间距 |
+| `data-side-panel` | 桌面侧边区域，包含项目切换栏与项目面板 |
+| `data-side-panel-drawer` | 移动端侧边抽屉，包含项目切换栏与项目面板 |
+
+桌面容器与移动端抽屉是不同渲染分支，不是嵌套关系；抽屉遮罩是独立的兄弟元素，不在 `data-side-panel-drawer` 内。面板隐藏通过 `inert` 与位移处理，没有专用的 `data-open` / `data-pinned` 属性，定制时保留定位与收起动画。
+
+`data-activity-bar` 的外层还独立保留了 52px 宽度，只修改该钩子的宽度不会同步改变布局占位。侧边区域内部各面板有自己的背景，修改外层背景不一定可见。
 
 ## Activity Bar 项目头像
 
@@ -325,6 +344,82 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 - **欢迎页标签**：`[data-tab="welcome"]` 固定在首位且无关闭按钮，可用该选择器单独设计
 - 标签栏在聊天窗口之外，**agent 主题不影响它**，只能在项目级 `.spherse/theme.css` 定制
 
+## 设置页签（Tabs）
+
+设置与 Agent 编辑表单使用共享 Tabs 组件，与上文文档/会话标签栏的 `[data-tab]` 不是同一套钩子。
+
+| 选择器 | 作用对象 |
+|--------|---------|
+| `[data-slot="tabs"]` | 页签组根容器 |
+| `[data-slot="tabs-list"]` | 页签按钮列表 |
+| `[data-slot="tabs-trigger"]` | 单个页签按钮 |
+| `[data-slot="tabs-trigger"][data-active]` | 当前选中的页签按钮 |
+| `[data-slot="tabs-content"]` | 页签内容面板 |
+
+选中态使用 `[data-active]`，不是 `[data-active="true"]` 或 `[data-state="active"]`。列表的 `data-variant="line"` 变体使用按钮的 `::after` 作为指示线，定制伪元素时避免覆盖它。
+
+## 对话框（Dialog）
+
+使用共享 Dialog 组件的对话框通过 `data-slot` 暴露样式入口，没有额外的 `data-dialog-*` 钩子。可在项目级 `.spherse/theme.css` 中用以下选择器统一定制：
+
+| 选择器 | 作用对象 |
+|--------|---------|
+| `[data-slot="dialog-content"]` | 弹窗主体。定制 background、text color、border-radius、box-shadow |
+| `[data-slot="dialog-overlay"]` | 背景遮罩。定制 background、backdrop-filter |
+| `[data-slot="dialog-header"]` | 头部。定制间距与布局 |
+| `[data-slot="dialog-title"]` | 标题。定制字体与颜色 |
+| `[data-slot="dialog-description"]` | 描述文字。定制字体与颜色 |
+| `[data-slot="dialog-footer"]` | 底部操作区。定制间距与布局 |
+| `[data-slot="dialog-close"]` | 关闭按钮。定制图标颜色、hover 态 |
+| `[data-slot="dialog-trigger"]` | 使用 DialogTrigger 的打开弹窗触发元素 |
+
+弹窗主体默认使用 `--sp-popover` / `--sp-popover-foreground` 配色（见「弹出层」变量表）。这些选择器会匹配所有使用对应组件的对话框，不仅是主题设置弹窗。
+
+Dialog 的主体与遮罩通过 Portal 渲染，不保留触发位置的 DOM 祖先关系。请直接使用上述选择器，不要依赖 `[data-chat-root]` 或触发按钮所在面板作为祖先；遮罩也不在 `[data-slot="dialog-content"]` 内，需单独选择。
+
+## 确认弹窗（AlertDialog）
+
+删除确认等使用独立的 AlertDialog 组件，`dialog-*` 选择器不会匹配它。
+
+| 选择器 | 作用对象 |
+|--------|---------|
+| `[data-slot="alert-dialog-content"]` | 确认弹窗主体 |
+| `[data-slot="alert-dialog-overlay"]` | 背景遮罩 |
+| `[data-slot="alert-dialog-header"]` | 头部 |
+| `[data-slot="alert-dialog-title"]` | 标题 |
+| `[data-slot="alert-dialog-description"]` | 描述文字 |
+| `[data-slot="alert-dialog-footer"]` | 底部操作区 |
+| `[data-slot="alert-dialog-action"]` | 确认按钮 |
+| `[data-slot="alert-dialog-cancel"]` | 取消按钮 |
+
+主体默认使用 `--sp-popover` / `--sp-popover-foreground`，并带有 `data-size="default"` 或 `data-size="sm"`。主体与遮罩通过 Portal 渲染，遮罩不在主体内部，需单独选择。
+
+## 提示与气泡（Tooltip / Popover）
+
+| 选择器 | 作用对象 |
+|--------|---------|
+| `[data-slot="tooltip-trigger"]` | Tooltip 提示的触发元素 |
+| `[data-slot="tooltip-content"]` | Tooltip 提示内容 |
+| `[data-slot="popover-trigger"]` | Popover 气泡的触发元素，不一定是按钮 |
+| `[data-slot="popover-content"]` | Popover 气泡内容，如 Agent 编辑中的文件建议列表 |
+
+两类内容都通过 Portal 渲染；内容的开关状态用 `[data-open]` / `[data-closed]`，方向可用 `[data-side="top"]` 等属性，触发元素打开时带 `[data-popup-open]`。不要使用 `data-state="delayed-open"` 等其他组件库的状态约定。
+
+Popover 默认使用 `--sp-popover` / `--sp-popover-foreground`；Tooltip 则使用 `--sp-foreground` 背景与 `--sp-background` 文字。Tooltip 箭头单独使用 foreground 配色且没有专用 `data-slot`，只改内容背景不会同步改变箭头颜色。
+
+这些入口仅覆盖共享 Tooltip / Popover 组件，不覆盖原生 `title` 提示或自定义浮层（如文本选择后的发起会话面板）。保留浮层定位所需的尺寸约束与 `--anchor-width` 等变量。
+
+## 搜索入口
+
+| 钩子 | 作用对象 |
+|------|---------|
+| `data-global-search-dialog` | 全局搜索弹窗主体，可单独定制而不影响其他 Dialog |
+| `data-content-findbar` | 文档内查找工具栏，可定制背景、边框与间距 |
+
+`data-global-search-dialog` 与 `data-slot="dialog-content"` 位于同一元素，不是祖先与后代。它遵循 Dialog 的 Portal 规则，遮罩没有此钩子；搜索结果目前没有专用的选中态主题钩子，不要把内部 `data-search-index` 当作选中状态。
+
+查找工具栏仅在支持查找的内容视图打开查找时出现，位于内容滚动区上方、`data-content-doc` 之外。可用 `[data-content-browser] [data-content-findbar]` 限定作用域；它只控制工具栏，不控制正文中的匹配高亮。
+
 ## 浮窗内容浏览器
 
 从文件树右键「浮窗」打开的浮动内容窗口暴露了 `data-content-float-*` 钩子，可在 `.spherse/theme.css` 中定制窗口外观。
@@ -382,6 +477,20 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
   color: white;
 }
 ```
+
+## 聊天浮窗
+
+聊天浮窗暴露了 `data-chat-float-*` 钩子，可在项目级 `.spherse/theme.css` 中统一定制所有聊天浮窗的外框、标题栏与关闭按钮。
+
+| 钩子 | 作用对象 |
+|------|---------|
+| `data-chat-float-root` | 浮窗根容器（`position: fixed`）。定制 border、border-radius、box-shadow、background、backdrop-filter |
+| `data-chat-float-titlebar` | 可拖动标题栏。定制 background、text color、padding |
+| `data-chat-float-close` | 关闭按钮。定制图标颜色、hover 态 |
+
+浮窗内的聊天内容位于 `[data-chat-root]` 中，但外框、标题栏与关闭按钮在它之外。因此浮窗外观规则必须在文件**顶层**以 `[data-chat-float-root]` 为作用域，不要嵌套在 `[data-chat-root]` 内。
+
+聊天内容的全局默认样式见下一节；agent 主题中的浮窗写法见 `spherse-create-agent-chat-theme` skill 的「浮动窗口（Floating Chat）」章节。
 
 ## 全局聊天窗口默认样式
 

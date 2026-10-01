@@ -64,4 +64,5 @@
 
 - `skills/` 下的 SKILL.md 是 LLM-facing 内容（会进入 agent 的 skill catalog 与 `load_skill` 全文），修改措辞等同于修改产品行为，需谨慎评审
 - 主题类 skill（`spherse-create-ui-theme` / `spherse-create-agent-chat-theme`）与 design system、聊天 DOM / CSS token 强耦合——改 `packages/app` 相关实现时必须检查两者是否需要同步
+- 主题类 skill 优先说明可用钩子与必要的 DOM / 作用域事实，限制性说明只保留影响正确性的重点，避免重复罗列禁止项挤占上下文与设计空间。
 - presets.json 声明与磁盘内容的一致性由构建期校验兜底，新增条目直接改 json + 放文件即可
