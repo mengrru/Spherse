@@ -387,6 +387,162 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
   });
 });
 
+describe("manual external update changelog", () => {
+  const changelogUrl = "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse/changelog.json";
+
+  it.each(["darwin", "linux"] as const)("%s selects only the exact target version and keeps download metadata", async (platform) => {
+    await withProcess(platform, "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      mockManifestResponse(manifest);
+      mockManifestResponse({ releases: [
+        { version: "0.3.0", notes: [{ text: "Wrong release" }] },
+        { version: " v0.2.0 ", notes: [{ type: "feat", text: "New feature" }, { type: null, text: "  Fixed\n issue  " }] },
+      ] });
+      await u.checkForUpdates({ silent: false });
+      const releaseNotes = "- New feature\n- Fixed issue";
+      expect(u.getState()).toMatchObject({ status: "available", version: "0.2.0", releaseNotes,
+        downloadUrl: platform === "darwin" ? manifest.mac?.intel : manifest.linux?.x64 });
+      expect(localEvents).toEqual([expect.objectContaining({ type: "update-available", releaseNotes, silent: false })]);
+      expect(fetchMock).toHaveBeenLastCalledWith(changelogUrl, { signal: expect.any(AbortSignal) });
+    });
+  });
+
+  it("escapes explicit Markdown and HTML while preserving plain text", async () => {
+    await withProcess("darwin", "arm64", async () => {
+      const { u } = createTestUpdater();
+      mockManifestResponse({ ...manifest, version: "v0.2.0" });
+      mockManifestResponse({ releases: [{ version: "0.2.0", notes: [
+        { text: "![image](https://example.com) <b>hi</b> **bold** user@example.com" },
+      ] }] });
+      await u.checkForUpdates({ silent: false });
+      expect(u.getState().releaseNotes).toBe(String.raw`- \!\[image\]\(https\:\/\/example\.com\) \<b\>hi\<\/b\> \*\*bold\*\* user\@example\.com`);
+    });
+  });
+
+  it.each([
+    null, {}, { releases: null }, { releases: [null, {}] },
+    { releases: [{ version: "0.2.0-beta", notes: [{ text: "Wrong version" }] }] },
+    { releases: [{ version: "0.2.0", notes: [] }] },
+    { releases: [{ version: "0.2.0", notes: [{ text: " " }] }] },
+    { releases: [{ version: "0.2.0", notes: [{ text: 42 }] }] },
+  ])("keeps the update downloadable when changelog has no valid target notes (%j)", async (data) => {
+    await withProcess("linux", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      mockManifestResponse(manifest);
+      mockManifestResponse(data);
+      await u.checkForUpdates({ silent: false });
+      expect(u.getState()).toMatchObject({ status: "available", releaseNotes: "", downloadUrl: manifest.linux?.x64 });
+      expect(localEvents).toHaveLength(1);
+      expect(localEvents[0].type).toBe("update-available");
+    });
+  });
+
+  it.each(["http", "network", "json"])("ignores optional changelog %s failures", async (failure) => {
+    await withProcess("darwin", "arm64", async () => {
+      const { u } = createTestUpdater();
+      mockManifestResponse(manifest);
+      if (failure === "network") fetchMock.mockRejectedValueOnce(new Error("offline"));
+      else if (failure === "json") fetchMock.mockResolvedValueOnce({ ok: true, json: async () => { throw new Error("bad JSON"); } });
+      else mockManifestResponse(null, false, 503);
+      await u.checkForUpdates({ silent: false });
+      expect(u.getState()).toMatchObject({ status: "available", releaseNotes: "", downloadUrl: manifest.mac?.arm64 });
+    });
+  });
+
+  it.each(["headers", "body"])("bounds changelog %s waiting to three seconds", async (phase) => {
+    vi.useFakeTimers();
+    try {
+      await withProcess("darwin", "arm64", async () => {
+        const { u } = createTestUpdater();
+        mockManifestResponse(manifest);
+        fetchMock.mockImplementationOnce((_url, { signal }: { signal: AbortSignal }) => {
+          const stalled = new Promise<never>((_resolve, reject) => {
+            signal.addEventListener("abort", () => reject(new Error("aborted")), { once: true });
+          });
+          return phase === "headers" ? stalled : Promise.resolve({ ok: true, json: () => stalled });
+        });
+        const task = u.checkForUpdates({ silent: false });
+        await vi.advanceTimersByTimeAsync(2_999);
+        expect(u.getState().status).toBe("checking");
+        await vi.advanceTimersByTimeAsync(1);
+        await task;
+        expect(u.getState()).toMatchObject({ status: "available", releaseNotes: "" });
+        expect(vi.getTimerCount()).toBe(0);
+      });
+    } finally { vi.useRealTimers(); }
+  });
+
+  it.each(["silent", "windows", "current"])("does not fetch changelog for %s checks", async (mode) => {
+    await withProcess(mode === "windows" ? "win32" : "darwin", "x64", async () => {
+      const { u } = createTestUpdater();
+      mockManifestResponse({ ...manifest, version: mode === "current" ? "0.1.0" : "0.2.0" });
+      await u.checkForUpdates({ silent: mode === "silent" });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith(MANIFEST_URL);
+    });
+  });
+
+  it("does not let delayed notes overwrite a newer manual check", async () => {
+    await withProcess("darwin", "arm64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      let resolveNotes!: (value: unknown) => void;
+      mockManifestResponse(manifest);
+      fetchMock.mockResolvedValueOnce({ ok: true, json: () => new Promise((resolve) => { resolveNotes = resolve; }) });
+      const first = u.checkForUpdates({ silent: false });
+      await vi.waitFor(() => expect(resolveNotes).toBeDefined());
+      mockManifestResponse({ ...manifest, version: "0.1.0" });
+      await u.checkForUpdates({ silent: false });
+      resolveNotes({ releases: [{ version: "0.2.0", notes: [{ text: "Too late" }] }] });
+      await first;
+      expect(u.getState()).toEqual({ status: "upToDate" });
+      expect(localEvents).toEqual([{ type: "update-not-available" }]);
+    });
+  });
+
+  it("keeps pending manual notes valid when a silent check completes", async () => {
+    await withProcess("darwin", "arm64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      let resolveNotes!: (value: unknown) => void;
+      mockManifestResponse(manifest);
+      fetchMock.mockResolvedValueOnce({ ok: true, json: () => new Promise((resolve) => { resolveNotes = resolve; }) });
+      const manual = u.checkForUpdates({ silent: false });
+      await vi.waitFor(() => expect(resolveNotes).toBeDefined());
+      mockManifestResponse(manifest);
+      await u.checkForUpdates({ silent: true });
+      resolveNotes({ releases: [{ version: "0.2.0", notes: [{ text: "Manual notes" }] }] });
+      await manual;
+      expect(u.getState()).toMatchObject({ status: "available", releaseNotes: "- Manual notes" });
+      expect(localEvents).toEqual([
+        expect.objectContaining({ silent: true, releaseNotes: "" }),
+        expect.objectContaining({ silent: false, releaseNotes: "- Manual notes" }),
+      ]);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  it.each(["current", "error"])("ignores an older manifest %s result after a newer check", async (result) => {
+    await withProcess("linux", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      let resolveManifest!: (value: unknown) => void;
+      let rejectManifest!: (error: Error) => void;
+      fetchMock.mockImplementationOnce(() => new Promise((resolve, reject) => {
+        resolveManifest = resolve;
+        rejectManifest = reject;
+      }));
+      const first = u.checkForUpdates({ silent: false });
+      mockManifestResponse(manifest);
+      mockManifestResponse({ releases: [{ version: "0.2.0", notes: [{ text: "Current notes" }] }] });
+      await u.checkForUpdates({ silent: false });
+      if (result === "error") rejectManifest(new Error("Old request failed"));
+      else resolveManifest({ ok: true, json: async () => ({ ...manifest, version: "0.1.0" }) });
+      await first;
+      expect(u.getState()).toMatchObject({ status: "available", releaseNotes: "- Current notes" });
+      expect(localEvents).toHaveLength(1);
+      expect(localEvents[0].type).toBe("update-available");
+    });
+  });
+});
+
 describe("createUpdater", () => {
   it("exposes the full Updater interface", () => {
     const u = createUpdater(() => null);

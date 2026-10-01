@@ -135,4 +135,21 @@ describe("UpdateChecker", () => {
     expect(acceptRestart).toHaveBeenCalledTimes(1);
     expect(dismissRestart).not.toHaveBeenCalled();
   });
+
+  it("shows external update notes as literal list entries while preserving download", async () => {
+    mockHookState({
+      status: "available", version: "0.2.0", downloadUrl: "https://dl.example/app.dmg",
+      releaseNotes: String.raw`- \!\[image\]\(https\:\/\/example\.com\) \<b\>hi\<\/b\> \*\*bold\*\* user\@example\.com
+- https\:\/\/example\.com www\.example\.com`,
+    });
+    renderUpdateChecker();
+    expect(await screen.findByText("更新内容")).toBeInTheDocument();
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+    expect(screen.getAllByRole("listitem")[0]).toHaveTextContent("![image](https://example.com) <b>hi</b> **bold** user@example.com");
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getAllByRole("link", { name: "https://example.com" })[0]);
+    expect(openExternal).toHaveBeenCalledWith("https://example.com");
+    await userEvent.setup().click(screen.getByRole("button", { name: "前往下载" }));
+    expect(openExternal).toHaveBeenCalledWith("https://dl.example/app.dmg");
+  });
 });

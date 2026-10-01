@@ -81,7 +81,7 @@
 
 ## App 更新机制
 
-- **检测源统一为 OSS 清单**（mac/win/linux 同路径）：`latest.json` 的 `compareVersions` 版本比较，downloadUrl 随事件下发、经 `openExternal` 引导浏览器下载；release notes 恒空由 UI 隐藏
+- **检测源统一为 OSS 清单**（mac/win/linux 同路径）：`latest.json` 的 `compareVersions` 版本比较，downloadUrl 随事件下发、经 `openExternal` 引导浏览器下载。macOS/Linux 手动检查发现新版后读取同源 `changelog.json`，精确匹配目标版本（trim 与可选 v 前缀归一），将 notes.text 转义为列表并同时写入状态与事件的 releaseNotes；3 秒超时覆盖请求和响应体，失败/无匹配/空日志隐藏日志区，不影响下载。静默、Windows、无新版不请求日志；过期手动结果不得覆盖较新的手动检查。更新弹窗的日志链接通过 host bridge 在系统浏览器打开。
 - `autoDownload` / `autoInstallOnAppQuit` 均关闭，全程用户主动；`startAutoUpdateChecks` 调度自动检测：启动 5s 后首查，之后每小时 tick、距上次 ≥24h 且系统空闲 <5min（用户活动期间）才静默检测；silent 检测不改写主进程交互状态（不污染 settings 挂载恢复），`update-available` 事件携带 `silent` 标志且不被抑制，`update-not-available` / `error` 静默吞掉
 - in-app 下载/安装仅 Windows 保留（CancellationToken 完整流程），darwin / linux 直接 no-op（更新引导走 `openExternal` 下载页）；dev 模式直接 upToDate
 - IPC 契约以事件流为唯一真相源：invoke 返回 void / state，`webContents.send` 推 5 个事件

@@ -118,7 +118,10 @@ export function UpdateChecker() {
               <p className="mb-2 text-sm font-medium">
                 {t("settings.update.releaseNotes")}
               </p>
-              <MarkdownContent variant="chat">{state.releaseNotes}</MarkdownContent>
+              <MarkdownContent variant="chat" onLinkClick={(href, event) => {
+                event.preventDefault();
+                void bridge.openExternal(href).catch(() => {});
+              }}>{state.releaseNotes}</MarkdownContent>
             </div>
           )}
           <div className="flex justify-end gap-2">

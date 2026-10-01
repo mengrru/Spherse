@@ -13,6 +13,34 @@ const OSS_BUCKET_BASE_URL =
   "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse";
 const OSS_UPDATE_MANIFEST_URL = `${OSS_BUCKET_BASE_URL}/latest.json`;
 
+async function fetchReleaseNotes(version: string): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 3_000);
+  try {
+    const response = await fetch(`${OSS_BUCKET_BASE_URL}/changelog.json`, { signal: controller.signal });
+    if (!response.ok) return "";
+    const data: unknown = await response.json();
+    if (!data || typeof data !== "object" || !("releases" in data) || !Array.isArray(data.releases)) return "";
+    const target = version.trim().replace(/^v/, "");
+    const release: unknown = data.releases.find((entry: unknown) =>
+      entry !== null && typeof entry === "object" && "version" in entry &&
+      typeof entry.version === "string" && entry.version.trim().replace(/^v/, "") === target,
+    );
+    if (!release || typeof release !== "object" || !("notes" in release) || !Array.isArray(release.notes)) return "";
+    const notes: string[] = [];
+    for (const note of release.notes as unknown[]) {
+      if (!note || typeof note !== "object" || !("text" in note) || typeof note.text !== "string") return "";
+      const text = note.text.replace(/\s+/g, " ").trim();
+      if (text) notes.push(`- ${text.replace(/[!-/:-@[-`{-~]/g, "\\$&")}`);
+    }
+    return notes.join("\n");
+  } catch {
+    return "";
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * OSS latest.json 清单结构（与 landing `resolveDownloadUrl` / CI `publish-oss`
  * 生成端对齐；`win.setup` 为旧版清单键名，保留兼容回退；`linux.x64` 与 `win.arm64`
@@ -83,6 +111,7 @@ export function compareVersions(a: string, b: string): number {
 export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
   let currentState: UpdateState = { status: "idle" };
   let activeCancellationToken: CancellationTokenType | null = null;
+  let manualCheckId = 0;
 
   function sendEvent(event: UpdateEvent): void {
     getWindow()?.webContents.send(event.type, event);
@@ -132,6 +161,7 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
   });
 
   async function checkForUpdatesViaOss(silent: boolean): Promise<void> {
+    const checkId = silent ? manualCheckId : ++manualCheckId;
     if (!silent) currentState = { status: "checking" };
     try {
       const res = await fetch(OSS_UPDATE_MANIFEST_URL);
@@ -145,8 +175,10 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
         const downloadUrl = resolveDownloadUrlFromManifest(
           data as OssUpdateManifest,
         );
-        // OSS 清单无 release notes，留空由 UI 自动隐藏
-        const releaseNotes = "";
+        const releaseNotes = !silent && (process.platform === "darwin" || process.platform === "linux")
+          ? await fetchReleaseNotes(version)
+          : "";
+        if (!silent && checkId !== manualCheckId) return;
         if (!silent) {
           currentState = {
             status: "available",
@@ -163,12 +195,12 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
           silent,
         });
       } else {
-        if (silent) return;
+        if (silent || checkId !== manualCheckId) return;
         currentState = { status: "upToDate" };
         sendEvent({ type: "update-not-available" });
       }
     } catch (err: unknown) {
-      if (silent) return;
+      if (silent || checkId !== manualCheckId) return;
       const errorMessage =
         err instanceof Error ? err.message : String(err ?? "");
       currentState = { status: "error", errorMessage };

@@ -434,7 +434,7 @@ spherse/
 │   │   └── project-structure.md      # 本文件：完整目录索引
 │   └── dev/                          # 开发过程文档（容易过时）
 │       ├── decisions/                # ADR 决策记录（编号、只追加；索引与规则见 README.md）
-│       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan
+│       ├── features/                 # {yyyy-MM-dd-feature-name}/ 下放 spec + plan；2026-10-01-update-dialog-changelog/design.md 记录外部更新弹窗日志设计与验证
 │       ├── infra/                    # {yyyy-MM-dd-name}/ 下放基础设施 design + plan
 │       ├── bugfix/                   # bugfix 分析与修复思路
 │       ├── investigation/            # 调研文档（{yyyy-MM-dd-name}/ 或单文件）
