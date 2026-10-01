@@ -132,8 +132,8 @@ export const zhCN = {
   "settings.provider.dialog.headersPlaceholder": "X-Title: My App",
   // 自定义 Header 字段下方辅助说明
   "settings.provider.dialog.headersHint": "每行一个，格式 Name: Value，随该供应商的全部请求发送",
-  // 校验错误：自定义 Header 存在格式非法的行
-  "settings.provider.dialog.errHeadersInvalid": "Header 格式非法：每行需为非空的 Name: Value",
+  // 校验错误：自定义 Header 存在格式非法的行，{line} 为行号
+  "settings.provider.dialog.errHeadersInvalid": "第 {line} 行 Header 格式非法：需为非空的 Name: Value",
   // 校验错误：上下文长度或最大输出长度填写后不是正整数
   "settings.provider.dialog.errLimitInvalid": "请输入正整数",
   // 自定义供应商对话框保存按钮

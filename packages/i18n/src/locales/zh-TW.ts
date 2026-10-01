@@ -68,7 +68,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.provider.dialog.headers": "自訂 Header",
   "settings.provider.dialog.headersPlaceholder": "X-Title: My App",
   "settings.provider.dialog.headersHint": "每行一個，格式 Name: Value，隨該供應商的全部請求傳送",
-  "settings.provider.dialog.errHeadersInvalid": "Header 格式無效：每行需為非空白的 Name: Value",
+  "settings.provider.dialog.errHeadersInvalid": "第 {line} 行 Header 格式無效：需為非空白的 Name: Value",
   "settings.provider.dialog.errLimitInvalid": "請輸入正整數",
   "settings.provider.dialog.save": "儲存",
   "settings.provider.dialog.cancel": "取消",

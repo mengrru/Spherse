@@ -68,7 +68,7 @@ export const en: Record<TranslationKey, string> = {
   "settings.provider.dialog.headers": "Custom Headers",
   "settings.provider.dialog.headersPlaceholder": "X-Title: My App",
   "settings.provider.dialog.headersHint": "One per line in Name: Value format, sent with every request to this provider",
-  "settings.provider.dialog.errHeadersInvalid": "Invalid header format: each line must be a non-empty Name: Value",
+  "settings.provider.dialog.errHeadersInvalid": "Invalid header format on line {line}: must be a non-empty Name: Value",
   "settings.provider.dialog.errLimitInvalid": "Enter a positive integer",
   "settings.provider.dialog.save": "Save",
   "settings.provider.dialog.cancel": "Cancel",

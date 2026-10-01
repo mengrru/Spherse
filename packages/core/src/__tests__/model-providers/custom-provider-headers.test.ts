@@ -83,6 +83,14 @@ describe("custom provider headers", () => {
     expect(requestHeaders[0].get("x-custom")).toBe("abc");
   });
 
+  it("lets a keyless provider override the placeholder auth via a custom Authorization header", async () => {
+    const model = registerCustomProvider({ Authorization: "Bearer real-token" }, true);
+
+    const requestHeaders = await captureRequestHeaders(model);
+
+    expect(requestHeaders[0].get("authorization")).toBe("Bearer real-token");
+  });
+
   it("still suppresses user-agent when not configured as a custom header", async () => {
     const model = registerCustomProvider({ "X-Custom": "abc" });
 

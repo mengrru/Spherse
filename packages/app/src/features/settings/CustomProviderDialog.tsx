@@ -52,23 +52,30 @@ function parsePositiveInt(value: string): number | undefined {
   return parsed > 0 ? parsed : NaN;
 }
 
-const HEADER_NAME_PATTERN = /^[!#$%&'*+.^_|~0-9A-Za-z-]+$/;
+const HEADER_NAME_PATTERN = /^[!#$%&'*+.^_|~`0-9A-Za-z-]+$/;
+// eslint-disable-next-line no-control-regex
+const HEADER_VALUE_FORBIDDEN_PATTERN = /[\x00-\x1f\x7f]/;
 
-function parseHeaders(text: string): Record<string, string> | null | undefined {
+function parseHeaders(text: string): { headers: Record<string, string> } | { invalidLine: number } | undefined {
   const lines = text
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
   if (lines.length === 0) return undefined;
   const headers: Record<string, string> = {};
-  for (const line of lines) {
+  for (const [index, line] of lines.entries()) {
     const colonIdx = line.indexOf(":");
     const name = colonIdx > 0 ? line.slice(0, colonIdx).trim() : "";
     const value = colonIdx >= 0 ? line.slice(colonIdx + 1).trim() : "";
-    if (!HEADER_NAME_PATTERN.test(name) || value.length === 0) return null;
+    if (!HEADER_NAME_PATTERN.test(name) || value.length === 0) {
+      return { invalidLine: index + 1 };
+    }
+    if (HEADER_VALUE_FORBIDDEN_PATTERN.test(value)) {
+      return { invalidLine: index + 1 };
+    }
     headers[name] = value;
   }
-  return headers;
+  return { headers };
 }
 
 export function CustomProviderDialog({
@@ -106,6 +113,7 @@ export function CustomProviderDialog({
   const contextWindow = parsePositiveInt(contextWindowText);
   const maxTokens = parsePositiveInt(maxTokensText);
   const parsedHeaders = parseHeaders(headersText);
+  const headersValue = parsedHeaders && "headers" in parsedHeaders ? parsedHeaders.headers : undefined;
 
   const nameError =
     trimmedName.length === 0
@@ -130,7 +138,9 @@ export function CustomProviderDialog({
       ? ""
       : t("settings.provider.dialog.errLimitInvalid");
   const headersError =
-    parsedHeaders === null ? t("settings.provider.dialog.errHeadersInvalid") : "";
+    parsedHeaders && "invalidLine" in parsedHeaders
+      ? t("settings.provider.dialog.errHeadersInvalid", { line: parsedHeaders.invalidLine })
+      : "";
 
   const hasErrors = Boolean(
     nameError || baseUrlError || modelsError || contextWindowError || maxTokensError || headersError,
@@ -148,7 +158,7 @@ export function CustomProviderDialog({
         ? { contextWindow }
         : {}),
       ...(maxTokens !== undefined && !Number.isNaN(maxTokens) ? { maxTokens } : {}),
-      ...(parsedHeaders != null ? { headers: parsedHeaders } : {}),
+      ...(headersValue ? { headers: headersValue } : {}),
     });
     onClose();
   };
