@@ -5,12 +5,12 @@ import { useHostBridge } from "../../context/host-bridge-context";
 export type Action =
   | { type: "CHECK" }
   | { type: "SET_STATE"; state: UpdateState }
-  | { type: "UPDATE_AVAILABLE"; version: string; releaseNotes: string; downloadUrl?: string }
+  | { type: "UPDATE_AVAILABLE"; version: string; releaseNotes: string; downloadUrl?: string; inAppUpdate?: boolean }
   | { type: "UP_TO_DATE" }
   | { type: "DOWNLOADING" }
   | { type: "PROGRESS"; percent: number }
   | { type: "DOWNLOADED" }
-  | { type: "ERROR"; message: string }
+  | { type: "ERROR"; message: string; phase?: "check" | "download" }
   | { type: "RESET" };
 
 export const initialState: UpdateState = { status: "idle" };
@@ -35,6 +35,7 @@ export function reducer(state: UpdateState, action: Action): UpdateState {
         version: action.version,
         releaseNotes: action.releaseNotes,
         downloadUrl: action.downloadUrl,
+        inAppUpdate: action.inAppUpdate,
       };
     case "UP_TO_DATE":
       return { status: "upToDate" };
@@ -48,7 +49,7 @@ export function reducer(state: UpdateState, action: Action): UpdateState {
       return {
         status: "error",
         errorMessage: action.message,
-        errorPhase: state.status === "downloading" ? "download" : "check",
+        errorPhase: action.phase ?? (state.status === "downloading" ? "download" : "check"),
       };
     case "RESET":
       return { status: "idle" };
@@ -79,6 +80,7 @@ export function useUpdateChecker() {
             version: event.version,
             releaseNotes: event.releaseNotes,
             downloadUrl: event.downloadUrl,
+            inAppUpdate: event.inAppUpdate,
           });
           break;
         case "update-not-available":
@@ -91,7 +93,7 @@ export function useUpdateChecker() {
           dispatch({ type: "DOWNLOADED" });
           break;
         case "update-error":
-          dispatch({ type: "ERROR", message: event.message });
+          dispatch({ type: "ERROR", message: event.message, phase: event.phase });
           break;
         default:
           break;
@@ -115,9 +117,14 @@ export function useUpdateChecker() {
     dispatch({ type: "RESET" });
   }, []);
 
-  const cancelDownload = useCallback(() => {
-    void bridge.updater?.cancelUpdate();
-    dispatch({ type: "RESET" });
+  const cancelDownload = useCallback(async () => {
+    // 主进程取消后回到 available（保留版本信息），回填主进程状态而非本地 RESET，
+    // 避免与 getUpdateState 不一致
+    await bridge.updater?.cancelUpdate();
+    const current = await bridge.updater?.getUpdateState();
+    if (current) {
+      dispatch({ type: "SET_STATE", state: restoreMountedState(current) });
+    }
   }, [bridge]);
 
   const acceptRestart = useCallback(() => {

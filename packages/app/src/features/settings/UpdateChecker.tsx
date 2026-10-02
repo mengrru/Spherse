@@ -91,7 +91,7 @@ export function UpdateChecker() {
               variant="outline"
               size="sm"
               className="w-fit"
-              onClick={cancelDownload}
+              onClick={() => void cancelDownload()}
             >
               {t("settings.update.cancel")}
             </Button>
@@ -128,7 +128,11 @@ export function UpdateChecker() {
             <Button variant="outline" onClick={dismissUpdate}>
               {t("settings.update.later")}
             </Button>
-            {state.downloadUrl ? (
+            {state.inAppUpdate ? (
+              <Button onClick={acceptDownload}>
+                {t("settings.update.backgroundDownload")}
+              </Button>
+            ) : state.downloadUrl ? (
               <Button
                 onClick={() => {
                   void bridge.openExternal(state.downloadUrl!);
@@ -164,7 +168,7 @@ export function UpdateChecker() {
               {t("settings.update.restartLater")}
             </Button>
             <Button onClick={acceptRestart}>
-              {t("settings.update.restartNow")}
+              {t("settings.update.installAndRestart")}
             </Button>
           </div>
         </DialogContent>

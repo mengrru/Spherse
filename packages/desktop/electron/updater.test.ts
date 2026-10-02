@@ -1,21 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BrowserWindow } from "electron";
 
-const { appMock, events, autoUpdaterMock, powerMonitorMock } = vi.hoisted(() => {
+const { appMock, events, autoUpdaterMock, autoUpdaterListeners, powerMonitorMock } = vi.hoisted(() => {
   const appMock = {
     isPackaged: false,
     getVersion: () => "0.1.0",
   };
   const events: Array<Record<string, unknown>> = [];
+  const autoUpdaterListeners = new Map<string, Array<(...args: unknown[]) => void>>();
   const autoUpdaterMock = {
     autoDownload: false,
-    on: vi.fn(),
+    autoInstallOnAppQuit: false,
+    channel: null as string | null,
+    allowDowngrade: false,
+    on: vi.fn((name: string, handler: (...args: unknown[]) => void) => {
+      const list = autoUpdaterListeners.get(name) ?? [];
+      list.push(handler);
+      autoUpdaterListeners.set(name, list);
+    }),
+    setFeedURL: vi.fn(),
     checkForUpdates: vi.fn(),
+    downloadUpdate: vi.fn(),
+    quitAndInstall: vi.fn(),
   };
   const powerMonitorMock = {
     getSystemIdleTime: vi.fn<() => number>(() => 0),
   };
-  return { appMock, events, autoUpdaterMock, powerMonitorMock };
+  return { appMock, events, autoUpdaterMock, autoUpdaterListeners, powerMonitorMock };
 });
 
 vi.mock("electron", () => ({
@@ -25,7 +36,9 @@ vi.mock("electron", () => ({
 vi.mock("electron-updater", () => ({
   default: {
     autoUpdater: autoUpdaterMock,
-    CancellationToken: class {},
+    CancellationToken: class {
+      cancel = vi.fn();
+    },
   },
 }));
 vi.mock("./window.js", () => ({
@@ -41,6 +54,7 @@ vi.mock("./window.js", () => ({
 import {
   compareVersions,
   createUpdater,
+  deriveFeedBaseUrl,
   resolveDownloadUrlFromManifest,
   startAutoUpdateChecks,
   updater,
@@ -73,6 +87,12 @@ beforeEach(() => {
   appMock.isPackaged = true;
   appMock.getVersion = () => "0.1.0";
   autoUpdaterMock.checkForUpdates.mockReset();
+  autoUpdaterMock.downloadUpdate.mockReset();
+  autoUpdaterMock.quitAndInstall.mockReset();
+  autoUpdaterMock.setFeedURL.mockReset();
+  autoUpdaterMock.channel = null;
+  autoUpdaterMock.allowDowngrade = false;
+  autoUpdaterListeners.clear();
   powerMonitorMock.getSystemIdleTime.mockReturnValue(0);
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockReset();
@@ -88,6 +108,13 @@ function mockManifestResponse(body: unknown, ok = true, status = 200): void {
     status,
     json: () => Promise.resolve(body),
   });
+}
+
+/** 模拟 electron-updater 内部事件（绕过被测的转发裁剪逻辑直接触发监听器） */
+function emitAutoUpdater(name: string, ...args: unknown[]): void {
+  for (const handler of autoUpdaterListeners.get(name) ?? []) {
+    handler(...args);
+  }
 }
 
 function createTestUpdater(): {
@@ -121,6 +148,17 @@ async function withProcess(
     Object.defineProperty(process, "platform", { value: origPlatform });
     Object.defineProperty(process, "arch", { value: origArch });
   }
+}
+
+/** 将主进程状态驱动到 downloading（走完真实 downloadUpdate 链路） */
+async function driveToDownloading(u: Updater): Promise<void> {
+  mockManifestResponse(manifest);
+  autoUpdaterMock.checkForUpdates.mockResolvedValue({
+    isUpdateAvailable: true,
+    updateInfo: { version: "0.2.0" },
+  });
+  autoUpdaterMock.downloadUpdate.mockResolvedValue([]);
+  await u.downloadUpdate();
 }
 
 describe("compareVersions", () => {
@@ -240,6 +278,20 @@ describe("resolveDownloadUrlFromManifest", () => {
   });
 });
 
+describe("deriveFeedBaseUrl", () => {
+  it("strips the installer filename and keeps the versioned directory", () => {
+    expect(
+      deriveFeedBaseUrl("https://oss/spherse/releases/0.2.0/Spherse-Setup-0.2.0-x64.exe"),
+    ).toBe("https://oss/spherse/releases/0.2.0/");
+  });
+
+  it("drops query and hash from the download url", () => {
+    expect(
+      deriveFeedBaseUrl("https://oss/spherse/releases/0.2.0/x.exe?x=1#frag"),
+    ).toBe("https://oss/spherse/releases/0.2.0/");
+  });
+});
+
 describe("updater.checkForUpdates (OSS manifest source)", () => {
   it("dev mode short-circuits to upToDate without fetching", async () => {
     appMock.isPackaged = false;
@@ -259,7 +311,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
     expect(u.getState()).toEqual({ status: "idle" });
   });
 
-  it("darwin: newer manifest version emits update-available with OSS downloadUrl", async () => {
+  it("darwin: newer manifest version emits update-available with OSS downloadUrl and inAppUpdate=false", async () => {
     mockManifestResponse(manifest);
     await withProcess("darwin", "arm64", () =>
       updater.checkForUpdates({ silent: false }),
@@ -272,6 +324,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
         releaseNotes: "",
         downloadUrl: manifest.mac?.arm64,
         silent: false,
+        inAppUpdate: false,
       },
     ]);
     expect(updater.getState()).toEqual({
@@ -279,10 +332,11 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
       version: "0.2.0",
       releaseNotes: "",
       downloadUrl: manifest.mac?.arm64,
+      inAppUpdate: false,
     });
   });
 
-  it("win32 x64: emits update-available with x64 installer URL", async () => {
+  it("win32 x64: emits update-available with x64 installer URL and inAppUpdate=true", async () => {
     mockManifestResponse(manifest);
     await withProcess("win32", "x64", () =>
       updater.checkForUpdates({ silent: false }),
@@ -294,6 +348,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
         releaseNotes: "",
         downloadUrl: manifest.win?.x64,
         silent: false,
+        inAppUpdate: true,
       },
     ]);
   });
@@ -311,19 +366,20 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
     expect(events).toEqual([{ type: "update-not-available" }]);
   });
 
-  it("non-200 manifest response emits update-error", async () => {
+  it("non-200 manifest response emits update-error (check phase)", async () => {
     mockManifestResponse(null, false, 503);
     await updater.checkForUpdates({ silent: false });
     expect(events).toEqual([
-      { type: "update-error", message: "OSS manifest responded 503" },
+      { type: "update-error", message: "OSS manifest responded 503", phase: "check" },
     ]);
     expect(updater.getState()).toEqual({
       status: "error",
       errorMessage: "OSS manifest responded 503",
+      errorPhase: "check",
     });
   });
 
-  it("invalid JSON emits update-error", async () => {
+  it("invalid JSON emits update-error (check phase)", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -331,7 +387,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
     });
     await updater.checkForUpdates({ silent: false });
     expect(events).toEqual([
-      { type: "update-error", message: "Unexpected token <" },
+      { type: "update-error", message: "Unexpected token <", phase: "check" },
     ]);
   });
 
@@ -350,6 +406,7 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
         releaseNotes: "",
         downloadUrl: manifest.mac?.arm64,
         silent: true,
+        inAppUpdate: false,
       },
     ]);
     expect(u.getState()).toEqual({ status: "idle" });
@@ -380,18 +437,43 @@ describe("updater.checkForUpdates (OSS manifest source)", () => {
     expect(u.getState().status).toBe("available");
   });
 
-  it("never calls electron-updater's GitHub feed (regression guard)", async () => {
+  it("silent check suppresses update-available while downloading or downloaded", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      await driveToDownloading(u);
+      emitAutoUpdater("download-progress", { percent: 42.3 });
+      expect(u.getState().status).toBe("downloading");
+      localEvents.length = 0;
+
+      mockManifestResponse(manifest);
+      await u.checkForUpdates({ silent: true });
+      expect(localEvents).toEqual([]);
+      expect(u.getState().status).toBe("downloading");
+
+      emitAutoUpdater("update-downloaded");
+      expect(u.getState().status).toBe("downloaded");
+      localEvents.length = 0;
+
+      mockManifestResponse(manifest);
+      await u.checkForUpdates({ silent: true });
+      expect(localEvents).toEqual([]);
+      expect(u.getState().status).toBe("downloaded");
+    });
+  });
+
+  it("OSS check never touches electron-updater (regression guard)", async () => {
     mockManifestResponse(manifest);
     await updater.checkForUpdates({ silent: false });
     expect(autoUpdaterMock.checkForUpdates).not.toHaveBeenCalled();
+    expect(autoUpdaterMock.setFeedURL).not.toHaveBeenCalled();
   });
 });
 
 describe("manual external update changelog", () => {
   const changelogUrl = "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse/changelog.json";
 
-  it.each(["darwin", "linux"] as const)("%s selects only the exact target version and keeps download metadata", async (platform) => {
-    await withProcess(platform, "x64", async () => {
+  it.each(["darwin", "linux", "win32"] as const)("%s manual check selects only the exact target version and keeps download metadata", async (platform) => {
+    await withProcess(platform, platform === "darwin" ? "arm64" : "x64", async () => {
       const { u, localEvents } = createTestUpdater();
       mockManifestResponse(manifest);
       mockManifestResponse({ releases: [
@@ -400,8 +482,12 @@ describe("manual external update changelog", () => {
       ] });
       await u.checkForUpdates({ silent: false });
       const releaseNotes = "- New feature\n- Fixed issue";
+      const expectedUrl =
+        platform === "darwin" ? manifest.mac?.arm64
+          : platform === "linux" ? manifest.linux?.x64
+            : manifest.win?.x64;
       expect(u.getState()).toMatchObject({ status: "available", version: "0.2.0", releaseNotes,
-        downloadUrl: platform === "darwin" ? manifest.mac?.intel : manifest.linux?.x64 });
+        downloadUrl: expectedUrl });
       expect(localEvents).toEqual([expect.objectContaining({ type: "update-available", releaseNotes, silent: false })]);
       expect(fetchMock).toHaveBeenLastCalledWith(changelogUrl, { signal: expect.any(AbortSignal) });
     });
@@ -472,8 +558,8 @@ describe("manual external update changelog", () => {
     } finally { vi.useRealTimers(); }
   });
 
-  it.each(["silent", "windows", "current"])("does not fetch changelog for %s checks", async (mode) => {
-    await withProcess(mode === "windows" ? "win32" : "darwin", "x64", async () => {
+  it.each(["silent", "current"])("does not fetch changelog for %s checks", async (mode) => {
+    await withProcess("darwin", "x64", async () => {
       const { u } = createTestUpdater();
       mockManifestResponse({ ...manifest, version: mode === "current" ? "0.1.0" : "0.2.0" });
       await u.checkForUpdates({ silent: mode === "silent" });
@@ -543,6 +629,280 @@ describe("manual external update changelog", () => {
   });
 });
 
+describe("updater.downloadUpdate (Windows in-app)", () => {
+  it("darwin/linux still no-op (browser-download flow unchanged)", async () => {
+    const { u } = createTestUpdater();
+    for (const platform of ["darwin", "linux"] as const) {
+      await withProcess(platform, "x64", async () => {
+        mockManifestResponse(manifest);
+        await u.downloadUpdate();
+      });
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(autoUpdaterMock.setFeedURL).not.toHaveBeenCalled();
+    expect(u.getState()).toEqual({ status: "idle" });
+  });
+
+  it("dev mode no-op (avoid dev-app-update.yml resolution errors)", async () => {
+    appMock.isPackaged = false;
+    const { u } = createTestUpdater();
+    await withProcess("win32", "x64", async () => {
+      await u.downloadUpdate();
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(autoUpdaterMock.setFeedURL).not.toHaveBeenCalled();
+  });
+
+  it("x64: derives generic feed base from manifest URL and downloads", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      await driveToDownloading(u);
+      expect(fetchMock).toHaveBeenCalledWith(MANIFEST_URL);
+      expect(autoUpdaterMock.setFeedURL).toHaveBeenCalledWith({
+        provider: "generic",
+        url: "https://oss/spherse/releases/0.2.0/",
+      });
+      expect(autoUpdaterMock.channel).toBeNull();
+      expect(autoUpdaterMock.checkForUpdates).toHaveBeenCalledTimes(1);
+      expect(autoUpdaterMock.downloadUpdate).toHaveBeenCalledTimes(1);
+      expect(u.getState()).toEqual({
+        status: "downloading",
+        version: "0.2.0",
+        downloadUrl: manifest.win?.x64,
+        inAppUpdate: true,
+      });
+      expect(localEvents).toEqual([]);
+    });
+  });
+
+  it("arm64: switches channel to latest-arm64 and resets allowDowngrade", async () => {
+    await withProcess("win32", "arm64", async () => {
+      const { u } = createTestUpdater();
+      await driveToDownloading(u);
+      expect(autoUpdaterMock.channel).toBe("latest-arm64");
+      expect(autoUpdaterMock.allowDowngrade).toBe(false);
+      expect(autoUpdaterMock.setFeedURL).toHaveBeenCalledWith({
+        provider: "generic",
+        url: "https://oss/spherse/releases/0.2.0/",
+      });
+      expect(u.getState()).toMatchObject({
+        status: "downloading",
+        downloadUrl: manifest.win?.arm64,
+        inAppUpdate: true,
+      });
+    });
+  });
+
+  it("arm64 without win.arm64 key falls back to x64 URL for the feed base", async () => {
+    await withProcess("win32", "arm64", async () => {
+      const { u } = createTestUpdater();
+      mockManifestResponse({ ...manifest, win: { x64: manifest.win?.x64 } });
+      autoUpdaterMock.checkForUpdates.mockResolvedValue({
+        isUpdateAvailable: true,
+        updateInfo: { version: "0.2.0" },
+      });
+      autoUpdaterMock.downloadUpdate.mockResolvedValue([]);
+      await u.downloadUpdate();
+      expect(autoUpdaterMock.setFeedURL).toHaveBeenCalledWith({
+        provider: "generic",
+        url: "https://oss/spherse/releases/0.2.0/",
+      });
+    });
+  });
+
+  it("reports a readable download error when manifest fetch fails", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      mockManifestResponse(null, false, 500);
+      await u.downloadUpdate();
+      expect(u.getState()).toEqual({
+        status: "error",
+        errorMessage: "OSS manifest responded 500",
+        errorPhase: "download",
+      });
+      expect(localEvents).toEqual([
+        { type: "update-error", message: "OSS manifest responded 500", phase: "download" },
+      ]);
+      expect(autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  it("reports a download error when manifest no longer offers a newer version", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u } = createTestUpdater();
+      mockManifestResponse({ ...manifest, version: "0.1.0" });
+      await u.downloadUpdate();
+      expect(u.getState()).toMatchObject({
+        status: "error",
+        errorPhase: "download",
+        errorMessage: expect.stringContaining("no newer update"),
+      });
+      expect(autoUpdaterMock.setFeedURL).not.toHaveBeenCalled();
+    });
+  });
+
+  it("reports a download error when the feed has no newer version", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u } = createTestUpdater();
+      mockManifestResponse(manifest);
+      autoUpdaterMock.checkForUpdates.mockResolvedValue({
+        isUpdateAvailable: false,
+        updateInfo: { version: "0.1.0" },
+      });
+      await u.downloadUpdate();
+      expect(u.getState()).toMatchObject({
+        status: "error",
+        errorPhase: "download",
+        errorMessage: expect.stringContaining("no newer version"),
+      });
+      expect(autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  it("reports a download error on feed/manifest version mismatch (partial upload guard)", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u } = createTestUpdater();
+      mockManifestResponse(manifest);
+      autoUpdaterMock.checkForUpdates.mockResolvedValue({
+        isUpdateAvailable: true,
+        updateInfo: { version: "0.1.9" },
+      });
+      await u.downloadUpdate();
+      expect(u.getState()).toMatchObject({
+        status: "error",
+        errorPhase: "download",
+        errorMessage: expect.stringContaining("does not match"),
+      });
+      expect(autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
+    });
+  });
+
+  it("swallows library errors from checkForUpdates (already dispatched as error events)", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      mockManifestResponse(manifest);
+      autoUpdaterMock.checkForUpdates.mockRejectedValue(
+        new Error("ERR_UPDATER_CHANNEL_FILE_NOT_FOUND"),
+      );
+      await u.downloadUpdate();
+      expect(u.getState()).toEqual({ status: "idle" });
+      expect(localEvents).toEqual([]);
+    });
+  });
+
+  it("no-ops when already downloading or downloaded", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u } = createTestUpdater();
+      await driveToDownloading(u);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await u.downloadUpdate();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      emitAutoUpdater("update-downloaded");
+      await u.downloadUpdate();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(u.getState().status).toBe("downloaded");
+    });
+  });
+});
+
+describe("electron-updater event forwarding", () => {
+  it("does not forward update-available from the internal feed check", async () => {
+    const { u, localEvents } = createTestUpdater();
+    emitAutoUpdater("update-available", { version: "9.9.9", releaseNotes: "" });
+    expect(localEvents).toEqual([]);
+    expect(u.getState()).toEqual({ status: "idle" });
+  });
+
+  it("does not forward update-not-available from the internal feed check", async () => {
+    const { u, localEvents } = createTestUpdater();
+    emitAutoUpdater("update-not-available", { version: "0.1.0" });
+    expect(localEvents).toEqual([]);
+    expect(u.getState()).toEqual({ status: "idle" });
+  });
+
+  it("forwards download-progress and rounds percent", async () => {
+    const { u, localEvents } = createTestUpdater();
+    emitAutoUpdater("download-progress", { percent: 42.6 });
+    expect(u.getState()).toEqual({ status: "downloading", percent: 43 });
+    expect(localEvents).toEqual([{ type: "download-progress", percent: 43 }]);
+  });
+
+  it("forwards update-downloaded preserving version metadata", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u, localEvents } = createTestUpdater();
+      mockManifestResponse(manifest);
+      mockManifestResponse({ releases: [{ version: "0.2.0", notes: [{ text: "Note" }] }] });
+      await u.checkForUpdates({ silent: false });
+      await driveToDownloading(u);
+      emitAutoUpdater("download-progress", { percent: 10 });
+      emitAutoUpdater("update-downloaded");
+      expect(u.getState()).toEqual({
+        status: "downloaded",
+        version: "0.2.0",
+        releaseNotes: "- Note",
+        downloadUrl: manifest.win?.x64,
+        inAppUpdate: true,
+      });
+      expect(localEvents).toContainEqual({ type: "update-downloaded" });
+    });
+  });
+
+  it("forwards error events as download-phase errors", async () => {
+    const { u, localEvents } = createTestUpdater();
+    emitAutoUpdater("error", new Error("sha512 checksum mismatch"));
+    expect(u.getState()).toEqual({
+      status: "error",
+      errorMessage: "sha512 checksum mismatch",
+      errorPhase: "download",
+    });
+    expect(localEvents).toEqual([
+      { type: "update-error", message: "sha512 checksum mismatch", phase: "download" },
+    ]);
+  });
+});
+
+describe("updater.installUpdate / cancelUpdate (Windows in-app)", () => {
+  it("installUpdate no-ops unless state is downloaded", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u } = createTestUpdater();
+      await u.installUpdate();
+      expect(autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled();
+
+      emitAutoUpdater("update-downloaded");
+      await u.installUpdate();
+      expect(autoUpdaterMock.quitAndInstall).toHaveBeenCalledWith(true, true);
+    });
+  });
+
+  it("installUpdate no-ops on non-win32 platforms", async () => {
+    await withProcess("darwin", "arm64", async () => {
+      const { u } = createTestUpdater();
+      emitAutoUpdater("update-downloaded");
+      await u.installUpdate();
+    });
+    expect(autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled();
+  });
+
+  it("cancelUpdate cancels the active token and returns to available with metadata", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u } = createTestUpdater();
+      await driveToDownloading(u);
+      emitAutoUpdater("download-progress", { percent: 50 });
+      const token = autoUpdaterMock.downloadUpdate.mock.calls[0][0] as { cancel: () => void };
+
+      await u.cancelUpdate();
+      expect(token.cancel).toHaveBeenCalled();
+      expect(u.getState()).toEqual({
+        status: "available",
+        version: "0.2.0",
+        downloadUrl: manifest.win?.x64,
+        inAppUpdate: true,
+      });
+    });
+  });
+});
+
 describe("createUpdater", () => {
   it("exposes the full Updater interface", () => {
     const u = createUpdater(() => null);
@@ -551,16 +911,6 @@ describe("createUpdater", () => {
     expect(typeof u.installUpdate).toBe("function");
     expect(typeof u.cancelUpdate).toBe("function");
     expect(typeof u.getState).toBe("function");
-  });
-
-  it("linux 与 darwin 一样对 in-app 下载/安装 no-op（不走已废弃的 electron-updater feed）", async () => {
-    const { u } = createTestUpdater();
-    await withProcess("linux", "x64", async () => {
-      await expect(u.downloadUpdate()).resolves.toBeUndefined();
-      await expect(u.installUpdate()).resolves.toBeUndefined();
-      await expect(u.cancelUpdate()).resolves.toBeUndefined();
-    });
-    expect(u.getState()).toEqual({ status: "idle" });
   });
 });
 

@@ -113,6 +113,50 @@ describe("build-and-release.yml: publish-oss job 的 linux 资产（可选键语
   });
 });
 
+describe("build-and-release.yml: publish-oss 的 Windows 更新 feed 上传顺序", () => {
+  const publishOss = release.jobs["publish-oss"];
+  const steps = publishOss.steps as Array<{ name?: string; run?: string }>;
+  const download = steps.find((s) => s.name === "Download release assets");
+  const uploadInstallers = steps.find((s) => s.name === "Upload installers to OSS (versioned path)");
+  const uploadFeeds = steps.find((s) => s.name === "Upload update feed files to OSS (versioned path)");
+  const generate = steps.find((s) => s.name === "Generate and upload latest.json");
+
+  it("下载步骤包含 yml 与 blockmap pattern（可选资产，旧 tag 容错）", () => {
+    expect(download).toBeDefined();
+    const run: string = download.run;
+    expect(run).toContain("'latest.yml'");
+    expect(run).toContain("'latest-arm64.yml'");
+    expect(run).toContain("'*.exe.blockmap'");
+  });
+
+  it("三段上传顺序：安装包+blockmap → latest.yml/latest-arm64.yml → latest.json", () => {
+    // yml 与 json 都必须在所有安装包之后上传：latest.json 是版本发现闸门（最后翻转），
+    // yml 是 Windows in-app 更新 feed（其指向的 exe 必须已就位）
+    expect(uploadInstallers).toBeDefined();
+    expect(uploadFeeds).toBeDefined();
+    expect(generate).toBeDefined();
+    const order = [uploadInstallers, uploadFeeds, generate].map((s) =>
+      steps.indexOf(s),
+    );
+    expect(order[0]).toBeLessThan(order[1]);
+    expect(order[1]).toBeLessThan(order[2]);
+  });
+
+  it("安装包上传不含 yml（yml 必须走独立后置步骤）", () => {
+    const run: string = uploadInstallers.run;
+    expect(run).not.toContain("latest.yml");
+    expect(run).not.toContain("latest-arm64.yml");
+  });
+
+  it("yml 上传到 versioned 路径且 nullglob 容错缺失", () => {
+    const run: string = uploadFeeds.run;
+    expect(run).toContain("./oss-out/latest.yml");
+    expect(run).toContain("./oss-out/latest-arm64.yml");
+    expect(run).toContain("nullglob");
+    expect(run).toContain("releases/${VER}");
+  });
+});
+
 describe("deploy-pages.yml: dispatch 目标可达", () => {
   it("声明了 workflow_dispatch 触发器，可被发版流水线触发", () => {
     // js-yaml v4 遵循 YAML 1.2 core schema，`on` 保持字符串 key

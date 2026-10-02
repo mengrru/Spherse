@@ -114,6 +114,22 @@ describe("UpdateChecker", () => {
     expect(acceptDownload).toHaveBeenCalledTimes(1);
   });
 
+  it("offers in-app background download on Windows (inAppUpdate) even with a downloadUrl", async () => {
+    mockHookState({
+      status: "available",
+      version: "9.9.9",
+      downloadUrl: "https://dl.example/Spherse-Setup-9.9.9-x64.exe",
+      inAppUpdate: true,
+    });
+    renderUpdateChecker();
+
+    const user = userEvent.setup();
+    expect(await screen.findByText("发现新版本 v9.9.9")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "后台下载" }));
+    expect(acceptDownload).toHaveBeenCalledTimes(1);
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
   it("falls back to manual download via openExternal when only a downloadUrl exists", async () => {
     mockHookState({ status: "available", version: "9.9.9", downloadUrl: "https://dl.example" });
     renderUpdateChecker();
@@ -124,14 +140,14 @@ describe("UpdateChecker", () => {
     expect(dismissUpdate).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the downloaded dialog with restart actions", async () => {
+  it("shows the downloaded dialog with install-and-restart action", async () => {
     mockHookState({ status: "downloaded" });
     renderUpdateChecker();
 
     expect(await screen.findByText("更新已下载完成")).toBeInTheDocument();
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "立即重启" }));
+    await user.click(screen.getByRole("button", { name: "安装并重启" }));
     expect(acceptRestart).toHaveBeenCalledTimes(1);
     expect(dismissRestart).not.toHaveBeenCalled();
   });

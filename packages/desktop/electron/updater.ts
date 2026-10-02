@@ -108,6 +108,46 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
+function inAppUpdateSupported(): boolean {
+  return process.platform === "win32" && app.isPackaged;
+}
+
+/**
+ * 从 manifest 下载 URL 派生 electron-updater generic feed 基址：
+ * CI 将 latest.yml / latest-arm64.yml 与安装包上传到同一 `releases/{ver}/` 目录，
+ * yml 内相对文件名以该基址解析。导出仅供测试。
+ */
+export function deriveFeedBaseUrl(downloadUrl: string): string {
+  const url = new URL(downloadUrl);
+  const lastSlash = url.pathname.lastIndexOf("/");
+  url.pathname = lastSlash >= 0 ? url.pathname.slice(0, lastSlash + 1) : "/";
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+interface OssManifestUpdate {
+  version: string;
+  downloadUrl: string;
+}
+
+/**
+ * 裸拉最新 manifest（不派发任何事件）。downloadUpdate 每次现拉：
+ * 点击「后台下载」可能距检测间隔数小时，manifest 可能已指向更新版本。
+ */
+export async function fetchOssManifestUpdate(): Promise<OssManifestUpdate | null> {
+  const res = await fetch(OSS_UPDATE_MANIFEST_URL);
+  if (!res.ok) {
+    throw new Error(`OSS manifest responded ${res.status}`);
+  }
+  const data = (await res.json()) as Partial<OssUpdateManifest>;
+  const version = typeof data.version === "string" ? data.version : "";
+  if (!version || compareVersions(version, app.getVersion()) <= 0) return null;
+  const downloadUrl = resolveDownloadUrlFromManifest(data as OssUpdateManifest);
+  if (!downloadUrl) return null;
+  return { version, downloadUrl };
+}
+
 export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
   let currentState: UpdateState = { status: "idle" };
   let activeCancellationToken: CancellationTokenType | null = null;
@@ -117,27 +157,16 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
     getWindow()?.webContents.send(event.type, event);
   }
 
-  autoUpdater.on("update-available", (info) => {
-    const releaseNotes =
-      typeof info.releaseNotes === "string" ? info.releaseNotes : "";
-    currentState = {
-      status: "available",
-      version: info.version,
-      releaseNotes,
-    };
-    sendEvent({
-      type: "update-available",
-      version: info.version,
-      releaseNotes,
-      silent: false,
-    });
-  });
+  function reportDownloadError(err: unknown): void {
+    const errorMessage =
+      err instanceof Error ? err.message : String(err ?? "");
+    currentState = { status: "error", errorMessage, errorPhase: "download" };
+    sendEvent({ type: "update-error", message: errorMessage, phase: "download" });
+  }
 
-  autoUpdater.on("update-not-available", () => {
-    currentState = { status: "upToDate" };
-    sendEvent({ type: "update-not-available" });
-  });
-
+  // 仅转发下载生命周期事件。electron-updater 的 update-available /
+  // update-not-available 是 downloadUpdate 内部 generic feed check 的产物，
+  // 版本发现权归 OSS 检测（checkForUpdatesViaOss），转发会与弹窗/toast 冲突。
   autoUpdater.on("download-progress", (progress) => {
     const percent = Math.round(progress.percent);
     currentState = { ...currentState, status: "downloading", percent };
@@ -149,6 +178,8 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
       status: "downloaded",
       version: currentState.version,
       releaseNotes: currentState.releaseNotes,
+      downloadUrl: currentState.downloadUrl,
+      inAppUpdate: currentState.inAppUpdate,
     };
     sendEvent({ type: "update-downloaded" });
   });
@@ -156,8 +187,8 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
   autoUpdater.on("error", (err: unknown) => {
     const errorMessage =
       err instanceof Error ? err.message : String(err ?? "");
-    currentState = { status: "error", errorMessage };
-    sendEvent({ type: "update-error", message: errorMessage });
+    currentState = { status: "error", errorMessage, errorPhase: "download" };
+    sendEvent({ type: "update-error", message: errorMessage, phase: "download" });
   });
 
   async function checkForUpdatesViaOss(silent: boolean): Promise<void> {
@@ -172,19 +203,23 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
       const version = typeof data.version === "string" ? data.version : "";
       const current = app.getVersion();
       if (compareVersions(version, current) > 0) {
+        // 下载进行中/已完成时不再重复发静默提醒（避免下载期间又弹「发现新版本」toast）
+        if (silent && (currentState.status === "downloading" || currentState.status === "downloaded")) {
+          return;
+        }
         const downloadUrl = resolveDownloadUrlFromManifest(
           data as OssUpdateManifest,
         );
-        const releaseNotes = !silent && (process.platform === "darwin" || process.platform === "linux")
-          ? await fetchReleaseNotes(version)
-          : "";
+        const releaseNotes = !silent ? await fetchReleaseNotes(version) : "";
         if (!silent && checkId !== manualCheckId) return;
+        const inAppUpdate = inAppUpdateSupported();
         if (!silent) {
           currentState = {
             status: "available",
             version,
             releaseNotes,
             downloadUrl,
+            inAppUpdate,
           };
         }
         sendEvent({
@@ -193,6 +228,7 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
           releaseNotes,
           downloadUrl,
           silent,
+          inAppUpdate,
         });
       } else {
         if (silent || checkId !== manualCheckId) return;
@@ -203,8 +239,8 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
       if (silent || checkId !== manualCheckId) return;
       const errorMessage =
         err instanceof Error ? err.message : String(err ?? "");
-      currentState = { status: "error", errorMessage };
-      sendEvent({ type: "update-error", message: errorMessage });
+      currentState = { status: "error", errorMessage, errorPhase: "check" };
+      sendEvent({ type: "update-error", message: errorMessage, phase: "check" });
     }
   }
 
@@ -216,30 +252,93 @@ export function createUpdater(getWindow: () => BrowserWindow | null): Updater {
         sendEvent({ type: "update-not-available" });
         return;
       }
-      // mac/win 统一走 OSS 清单检测 + 引导浏览器下载（前往下载）。
-      // electron-updater 的 GitHub feed 自 ba8c049 起无 latest.yml，不再使用；
-      // 其 in-app 下载 API 保留给未来恢复 feed（backlog #149）。
+      // 三平台统一 OSS 清单检测；Windows 在此之上额外提供 in-app
+      // 后台下载（generic feed 指向 releases/{ver}/latest.yml），
+      // macOS/Linux 仍引导浏览器下载。
       await checkForUpdatesViaOss(opts.silent);
     },
 
     async downloadUpdate(): Promise<void> {
-      if (process.platform !== "win32") return;
-      currentState = { status: "downloading" };
-      activeCancellationToken = new CancellationToken();
-      await autoUpdater.downloadUpdate(activeCancellationToken);
+      if (!inAppUpdateSupported()) return;
+      if (currentState.status === "downloading" || currentState.status === "downloaded") return;
+
+      let manifest: OssManifestUpdate | null;
+      try {
+        manifest = await fetchOssManifestUpdate();
+      } catch (err: unknown) {
+        reportDownloadError(err);
+        return;
+      }
+      if (!manifest) {
+        reportDownloadError(new Error("no newer update available in OSS manifest"));
+        return;
+      }
+
+      try {
+        const feedUrl = deriveFeedBaseUrl(manifest.downloadUrl);
+        if (process.arch === "arm64") {
+          // Windows 端 channel 文件名恒为 ${channel}.yml；arm64 应用读 latest-arm64.yml。
+          // channel setter 会强制 allowDowngrade=true，需显式复位。
+          autoUpdater.channel = "latest-arm64";
+          autoUpdater.allowDowngrade = false;
+        }
+        autoUpdater.setFeedURL({ provider: "generic", url: feedUrl });
+
+        // downloadUpdate 内部依赖 checkForUpdates 填充的 updateInfoAndProvider；
+        // 其网络/解析异常由 electron-updater 自行 emit "error"（上方监听已转发），此处不重复上报。
+        const result = await autoUpdater.checkForUpdates();
+        const feedVersion = result?.updateInfo?.version?.trim().replace(/^v/, "") ?? "";
+        const manifestVersion = manifest.version.trim().replace(/^v/, "");
+        if (!result?.isUpdateAvailable) {
+          reportDownloadError(new Error(
+            `update feed has no newer version (expected ${manifestVersion})`,
+          ));
+          return;
+        }
+        if (feedVersion !== manifestVersion) {
+          reportDownloadError(new Error(
+            `update feed version ${feedVersion} does not match manifest version ${manifestVersion}`,
+          ));
+          return;
+        }
+
+        currentState = {
+          status: "downloading",
+          version: manifest.version,
+          releaseNotes: currentState.releaseNotes,
+          downloadUrl: manifest.downloadUrl,
+          inAppUpdate: true,
+        };
+        activeCancellationToken = new CancellationToken();
+        await autoUpdater.downloadUpdate(activeCancellationToken);
+      } catch {
+        // 已由 electron-updater 的 "error" 事件转发；CancellationError 不派发事件，静默即可
+      }
     },
 
     installUpdate(): Promise<void> {
-      if (process.platform !== "win32") return Promise.resolve();
-      autoUpdater.quitAndInstall();
+      if (!inAppUpdateSupported() || currentState.status !== "downloaded") {
+        return Promise.resolve();
+      }
+      // 静默安装到原目录（/S）并在完成后自动启动新版本（--force-run）
+      autoUpdater.quitAndInstall(true, true);
       return Promise.resolve();
     },
 
     async cancelUpdate(): Promise<void> {
-      if (process.platform !== "win32") return;
+      if (!inAppUpdateSupported()) return;
       activeCancellationToken?.cancel();
       activeCancellationToken = null;
-      currentState = { status: "idle" };
+      if (currentState.status === "downloading") {
+        // 取消后回到 available，保留版本信息，用户可再次发起
+        currentState = {
+          status: "available",
+          version: currentState.version,
+          releaseNotes: currentState.releaseNotes,
+          downloadUrl: currentState.downloadUrl,
+          inAppUpdate: currentState.inAppUpdate,
+        };
+      }
     },
 
     getState(): UpdateState {

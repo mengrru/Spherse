@@ -28,6 +28,7 @@ interface BuilderTargetSpec {
 interface BuilderConfig {
   productName?: string;
   executableName?: string;
+  publish?: { provider?: string } | Array<{ provider?: string }>;
   win?: {
     artifactName?: string;
     target?: Array<string | BuilderTargetSpec>;
@@ -91,6 +92,17 @@ describe("electron-builder win 配置（发版三包/404 回归）", () => {
 
   it("win.artifactName 带 ${arch}（各 arch 产物命名唯一）", () => {
     expect(config.win?.artifactName).toContain("${arch}");
+  });
+
+  it("publish 配置必须保留（app-update.yml 的 updaterCacheDirName 隐式依赖）", () => {
+    // electron-updater 运行时虽然 setFeedURL 覆盖 generic feed，但仍从打包内置的
+    // app-update.yml 懒加载 updaterCacheDirName（缺失则 downloadUpdate reject）；
+    // 该文件只在存在 publish 配置时写入
+    const publish = config.publish;
+    const providers = Array.isArray(publish)
+      ? publish.map((p) => p.provider)
+      : [publish?.provider];
+    expect(providers.some((p) => typeof p === "string" && p.length > 0)).toBe(true);
   });
 });
 
@@ -159,5 +171,22 @@ describe("build-and-release.yml windows matrix（发版三包/404 回归）", ()
       run.includes("release/*.exe"),
       "不得全量 glob 上传 release/*.exe：多 win job 并发时同名资产 --clobber 互踩会 404",
     ).toBe(false);
+  });
+
+  it("上传步骤包含 blockmap（electron-updater 增量下载）且按 arch 限定", () => {
+    const uploadStep = workflow.jobs?.build?.steps?.find(
+      (step) => step.name === "Upload Windows installer",
+    );
+    const run = uploadStep?.run ?? "";
+    expect(run).toContain("*-${{ matrix.target-arch }}.exe.blockmap");
+  });
+
+  it("arm64 job 的 latest.yml 重命名为 latest-arm64.yml（双 arch feed 防同名互踩）", () => {
+    const uploadStep = workflow.jobs?.build?.steps?.find(
+      (step) => step.name === "Upload Windows installer",
+    );
+    const run = uploadStep?.run ?? "";
+    expect(run).toContain("latest-arm64.yml");
+    expect(run).toContain("latest.yml");
   });
 });

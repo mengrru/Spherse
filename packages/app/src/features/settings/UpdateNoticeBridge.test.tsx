@@ -21,6 +21,8 @@ function lastToastCall(mock: { mock: { calls: unknown[][] } }): ToastSuccessCall
 
 let listeners: UpdateEventListener[] = [];
 let openExternal: ReturnType<typeof vi.fn>;
+let downloadUpdate: ReturnType<typeof vi.fn>;
+let installUpdate: ReturnType<typeof vi.fn>;
 
 function createBridge(withUpdater: boolean): HostBridge {
   const bridge = createMockHostBridge({ openExternal: openExternal as never });
@@ -32,6 +34,8 @@ function createBridge(withUpdater: boolean): HostBridge {
         listeners.push(callback);
         return () => {};
       },
+      downloadUpdate,
+      installUpdate,
     } as never,
   };
 }
@@ -55,6 +59,8 @@ function emit(event: UpdateEvent) {
 beforeEach(() => {
   listeners = [];
   openExternal = vi.fn(async () => {});
+  downloadUpdate = vi.fn(async () => {});
+  installUpdate = vi.fn(async () => {});
 });
 
 afterEach(() => {
@@ -94,6 +100,59 @@ describe("UpdateNoticeBridge", () => {
     expect(toastMock).toHaveBeenCalledTimes(1);
     lastToastCall(toastMock)[1]?.action?.onClick();
     expect(openExternal).toHaveBeenCalledWith(DOWNLOAD_PAGE_URL);
+  });
+
+  it("toasts a background-download action for silent in-app updates (Windows)", async () => {
+    renderBridge(createBridge(true));
+    const toastMock = await import("sonner").then((m) => vi.spyOn(m.toast, "success"));
+
+    emit({
+      type: "update-available",
+      version: "0.2.0",
+      releaseNotes: "",
+      downloadUrl: "https://oss/spherse/releases/0.2.0/Spherse-Setup-0.2.0-x64.exe",
+      silent: true,
+      inAppUpdate: true,
+    });
+
+    expect(toastMock).toHaveBeenCalledTimes(1);
+    const [title, options] = lastToastCall(toastMock);
+    expect(title).toContain("0.2.0");
+    expect(options?.action?.label).toEqual("后台下载");
+    options?.action?.onClick();
+    expect(downloadUpdate).toHaveBeenCalledTimes(1);
+    expect(openExternal).not.toHaveBeenCalled();
+  });
+
+  it("toasts an install-and-restart action when the update finishes downloading", async () => {
+    renderBridge(createBridge(true));
+    const toastMock = await import("sonner").then((m) => vi.spyOn(m.toast, "success"));
+
+    emit({ type: "update-downloaded" });
+
+    expect(toastMock).toHaveBeenCalledTimes(1);
+    const [title, options] = lastToastCall(toastMock);
+    expect(title).toContain("更新已下载完成");
+    expect(options?.action?.label).toEqual("安装并重启");
+    options?.action?.onClick();
+    expect(installUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("toasts a download failure for download-phase errors only", async () => {
+    renderBridge(createBridge(true));
+    const toastSuccessMock = await import("sonner").then((m) => vi.spyOn(m.toast, "success"));
+    const toastErrorMock = await import("sonner").then((m) => vi.spyOn(m.toast, "error"));
+
+    emit({ type: "update-error", message: "boom" });
+    emit({ type: "update-error", message: "sha512 mismatch", phase: "check" });
+    expect(toastErrorMock).not.toHaveBeenCalled();
+
+    emit({ type: "update-error", message: "network down", phase: "download" });
+    expect(toastErrorMock).toHaveBeenCalledTimes(1);
+    const [title, options] = toastErrorMock.mock.calls[0] as [string, { action?: unknown }];
+    expect(title).toContain("下载失败");
+    expect(options?.action).toBeUndefined();
+    expect(toastSuccessMock).not.toHaveBeenCalled();
   });
 
   it("ignores manual update-available events and non-available events", async () => {

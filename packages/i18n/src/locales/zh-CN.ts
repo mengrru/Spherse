@@ -258,6 +258,8 @@ export const zhCN = {
   "settings.update.releaseNotes": "更新内容",
   // 更新确认弹窗 → 同意下载按钮
   "settings.update.download": "立即更新",
+  // 更新确认弹窗 / 更新提醒 toast → Windows 后台下载按钮（应用内下载，不阻塞使用）
+  "settings.update.backgroundDownload": "后台下载",
   // 更新确认弹窗 → 稍后按钮（关闭弹窗）
   "settings.update.later": "稍后",
   // 下载进度文案，{percent} 为百分比数字
@@ -270,8 +272,8 @@ export const zhCN = {
   "settings.update.downloaded": "更新已下载完成",
   // 下载完成弹窗描述（提示需要重启才能完成安装）
   "settings.update.downloadedDesc": "重启应用以完成安装",
-  // 下载完成弹窗 → 立即重启按钮
-  "settings.update.restartNow": "立即重启",
+  // 下载完成弹窗 / toast → Windows 安装并重启按钮（静默安装新版本后自动重启）
+  "settings.update.installAndRestart": "安装并重启",
   // 下载完成弹窗 → 稍后重启按钮
   "settings.update.restartLater": "稍后重启",
   // macOS 通知模式 → 打开 GitHub Releases 下载页的按钮

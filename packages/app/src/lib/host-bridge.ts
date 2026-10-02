@@ -29,6 +29,7 @@ export interface UpdateState {
   version?: string;
   releaseNotes?: string;
   downloadUrl?: string;
+  inAppUpdate?: boolean;
   percent?: number;
   errorMessage?: string;
   errorPhase?: "check" | "download";
@@ -41,11 +42,12 @@ export type UpdateEvent =
       releaseNotes: string;
       downloadUrl?: string;
       silent: boolean;
+      inAppUpdate?: boolean;
     }
   | { type: "update-not-available" }
   | { type: "download-progress"; percent: number }
   | { type: "update-downloaded" }
-  | { type: "update-error"; message: string };
+  | { type: "update-error"; message: string; phase?: "check" | "download" };
 
 export type HostKind = "electron" | "web";
 

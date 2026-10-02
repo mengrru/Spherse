@@ -10,11 +10,13 @@ type UpdateEventListener = (event: UpdateEvent) => void;
 let listeners: UpdateEventListener[] = [];
 let getUpdateStateResult: UpdateState = { status: "idle" };
 let checkedWith: { silent: boolean } | null = null;
+let cancelled = false;
 
 beforeEach(() => {
   listeners = [];
   getUpdateStateResult = { status: "idle" };
   checkedWith = null;
+  cancelled = false;
 });
 
 function renderUpdateChecker() {
@@ -23,6 +25,15 @@ function renderUpdateChecker() {
       getUpdateState: async () => getUpdateStateResult,
       checkForUpdates: async (opts: { silent: boolean }) => {
         checkedWith = opts;
+      },
+      cancelUpdate: async () => {
+        cancelled = true;
+        getUpdateStateResult = {
+          status: "available",
+          version: "0.2.0",
+          downloadUrl: "https://oss/x.exe",
+          inAppUpdate: true,
+        };
       },
       onUpdateEvent: (callback: UpdateEventListener) => {
         listeners.push(callback);
@@ -99,5 +110,23 @@ describe("useUpdateChecker behavior", () => {
     });
     expect(checkedWith).toEqual({ silent: false });
     expect(result.current.state).toEqual({ status: "checking" });
+  });
+
+  it("cancelDownload refills the host state instead of resetting to idle", async () => {
+    getUpdateStateResult = { status: "downloading", percent: 50, inAppUpdate: true };
+    const { result } = renderUpdateChecker();
+    await flushMount();
+    expect(result.current.state).toEqual({ status: "downloading", percent: 50, inAppUpdate: true });
+
+    await act(async () => {
+      await result.current.cancelDownload();
+    });
+    expect(cancelled).toBe(true);
+    expect(result.current.state).toEqual({
+      status: "available",
+      version: "0.2.0",
+      downloadUrl: "https://oss/x.exe",
+      inAppUpdate: true,
+    });
   });
 });

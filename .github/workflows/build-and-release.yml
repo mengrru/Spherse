@@ -162,8 +162,24 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # 只上传本 job arch 后缀的安装包：x64/arm64 两个 matrix job 并发运行，
-        # 若按 release/*.exe 全量上传，双 arch 时产物同名会并发 --clobber 互踩（曾致 HTTP 404）
-        run: gh release upload "${GITHUB_REF_NAME}" "release/*-${{ matrix.target-arch }}.exe" --clobber
+        # 若按 release/*.exe 全量上传，双 arch 时产物同名会并发 --clobber 互踩（曾致 HTTP 404）。
+        # 同时上传 blockmap（electron-updater 增量下载）与 latest.yml（in-app 更新 feed）：
+        # electron-updater 在 Windows 上 channel 文件名恒为 ${channel}.yml，双 arch feed 需两个文件，
+        # arm64 job 的 yml 重命名为 latest-arm64.yml 避免与 x64 job 的 latest.yml 同名互踩。
+        run: |
+          shopt -s nullglob
+          exes=(release/*-${{ matrix.target-arch }}.exe)
+          blockmaps=(release/*-${{ matrix.target-arch }}.exe.blockmap)
+          ymls=()
+          if [[ -f release/latest.yml ]]; then
+            if [[ "${{ matrix.target-arch }}" == "arm64" ]]; then
+              mv release/latest.yml release/latest-arm64.yml
+              ymls=(release/latest-arm64.yml)
+            else
+              ymls=(release/latest.yml)
+            fi
+          fi
+          gh release upload "${GITHUB_REF_NAME}" "${exes[@]}" "${blockmaps[@]}" "${ymls[@]}" --clobber
 
       - name: Upload Linux packages
         if: runner.os == 'Linux'
@@ -199,8 +215,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p ./oss-out
+          # yml / blockmap 为可选资产：workflow_dispatch 重发旧 tag 时 release 里没有，
+          # gh release download 只要有任一 pattern 命中即成功（与 linux 资产同容错语义）
           gh release download "${RELEASE_TAG}" -D ./oss-out \
-            --pattern '*.dmg' --pattern '*.exe' --pattern '*.AppImage' --clobber
+            --pattern '*.dmg' --pattern '*.exe' --pattern '*.AppImage' \
+            --pattern '*.exe.blockmap' \
+            --pattern 'latest.yml' --pattern 'latest-arm64.yml' --clobber
 
       - name: Discover asset filenames
         id: assets
@@ -235,9 +255,30 @@ jobs:
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
           OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
           OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+        # 显式列出安装包与 blockmap（不含 yml）：yml 必须在所有安装包之后单独上传
         run: |
           VER="${{ steps.ver.outputs.version }}"
-          for f in ./oss-out/*; do
+          shopt -s nullglob
+          for f in ./oss-out/*.dmg ./oss-out/*.exe ./oss-out/*.AppImage ./oss-out/*.exe.blockmap; do
+            /tmp/ossutil cp "$f" "oss://${OSS_BUCKET}/spherse/releases/${VER}/$(basename "$f")" \
+              -e "$OSS_ENDPOINT" \
+              -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET" \
+              --force -u
+          done
+
+      - name: Upload update feed files to OSS (versioned path)
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+        # latest.yml / latest-arm64.yml 在所有安装包上传完毕后再上传（Windows in-app
+        # 更新 feed，与 exe 同目录供 electron-updater 相对解析）。旧 tag 重发布时
+        # release 无 yml 资产则跳过，不硬失败（与 linux 资产可选语义一致）
+        run: |
+          VER="${{ steps.ver.outputs.version }}"
+          shopt -s nullglob
+          for f in ./oss-out/latest.yml ./oss-out/latest-arm64.yml; do
             /tmp/ossutil cp "$f" "oss://${OSS_BUCKET}/spherse/releases/${VER}/$(basename "$f")" \
               -e "$OSS_ENDPOINT" \
               -i "$OSS_ACCESS_KEY_ID" -k "$OSS_ACCESS_KEY_SECRET" \

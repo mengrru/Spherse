@@ -36,6 +36,24 @@ describe("update checker reducer", () => {
     });
   });
 
+  it("passes inAppUpdate through on UPDATE_AVAILABLE", () => {
+    expect(
+      reducer(initialState, {
+        type: "UPDATE_AVAILABLE",
+        version: "1.2.0",
+        releaseNotes: "fixes",
+        downloadUrl: "https://example.com/release",
+        inAppUpdate: true,
+      }),
+    ).toEqual({
+      status: "available",
+      version: "1.2.0",
+      releaseNotes: "fixes",
+      downloadUrl: "https://example.com/release",
+      inAppUpdate: true,
+    });
+  });
+
   it("supports UPDATE_AVAILABLE without a downloadUrl", () => {
     expect(
       reducer(initialState, {
@@ -75,6 +93,16 @@ describe("update checker reducer", () => {
     expect(
       reducer(downloading, { type: "ERROR", message: "download interrupted" }),
     ).toEqual({ status: "error", errorMessage: "download interrupted", errorPhase: "download" });
+  });
+
+  it("prefers the explicit phase on ERROR regardless of current status", () => {
+    const downloading = reducer(initialState, { type: "PROGRESS", percent: 50 });
+    expect(
+      reducer(downloading, { type: "ERROR", message: "manifest fetch failed", phase: "check" }),
+    ).toEqual({ status: "error", errorMessage: "manifest fetch failed", errorPhase: "check" });
+    expect(
+      reducer(initialState, { type: "ERROR", message: "sha512 mismatch", phase: "download" }),
+    ).toEqual({ status: "error", errorMessage: "sha512 mismatch", errorPhase: "download" });
   });
 
   it("clears all fields back to idle on RESET", () => {
