@@ -16,10 +16,10 @@ SDK 由两半组成，仅以 postMessage 协议耦合：
 - esbuild 打包为单文件 IIFE（`dist/browser.js`，target es2019，**不压缩**——注入的 HTML 可直接人读调试）；`dist/source.js` 把 bundle 全文转义为 `SDK_SOURCE` 字符串常量
 - 三个子入口：`.`（`SDK_FILENAME` / `SDK_MARK` / `SDK_VERSION` 常量 + `injectHeadScript` 工具，零依赖）、`./source`（`SDK_SOURCE`）、`./browser`（原始 bundle）
 - 常量：文件名 `__spherse-sdk.js`、幂等标记 `data-spherse-sdk`；双载守卫 + 别名 `window.Spherse`
-- 两种调用模式：`call(action, params)` 携 requestId 走请求-响应（默认 10s 超时）；`fire(action, params)` 单向触发
+- 两种调用模式：`call(action, params)` 携 requestId 走请求-响应（默认 10s 超时，`uploadFile` 为 60s）；`fire(action, params)` 单向触发
 - `window.spherse` API 面：
   - 触发型：openFile / openExternalLink / openSession / floatSession / unfloatSession / floatContent / unfloatContent / emitAgentTriggerEvent / toast
-  - 请求型：createSession（resolve `{sessionId}`）/ sendMessage
+  - 请求型：createSession（resolve `{sessionId}`）/ sendMessage / uploadFile（resolve `{ path, bytes, renamed }`，见「uploadFile handler」）
   - 数据：`data.get / set / delete / keys / entries / mutate`
   - 只读 HTTP bridge：`api.call(op, args)` 及 agents / sessions / content / fileTree 快捷方法
   - 订阅：`events.on("file:update", { path }, handler)` 返回取消函数；`events.on("navigate", handler)` 感知主视图跳转（无 filter，订阅即回放当前页面）
@@ -38,7 +38,7 @@ SDK 由两半组成，仅以 postMessage 协议耦合：
 - 入站校验：`type === "spherse:action"` 且 origin 在白名单——renderer origin、server origin，以及 `"null"`（防御性放行，当前无实际产生场景）
 - **rate limit**：外部调用 30 次 / 60s，超限静默丢弃；白名单 `{ data.get, data.keys, data.entries, data.mutate }` 不计数（`data.set` / `data.delete` / `api.call` 不在白名单）
   - 配额为模块级单数组，跨全部 iframe 共享——高频写页面会耗尽配额
-  - 对 call 型 action，静默丢弃在 SDK 侧表现为 10s 超时而非错误返回；参数校验失败的早退路径同样不 respond
+  - 对 call 型 action，静默丢弃在 SDK 侧表现为超时（默认 10s，`uploadFile` 为 60s）而非错误返回；参数校验失败的早退路径同样不 respond
 - `registry` 是 `Map<action, handler>`，handlers 文件以 import 副作用注册；新增 action = `handlers/` 新文件 + `registerAction` + 在 `ui-sdk/index.ts` barrel 补 import（无自动发现）
 - handler 一览（经 `ActionContext` 获得 navigate / projectId / client / hostKind / requestId / source / openExternal）：
 
@@ -47,6 +47,7 @@ SDK 由两半组成，仅以 postMessage 协议耦合：
 | 导航 | openFile（可 float 浮窗）、openExternalLink（loopback 且 browser feature 开启时走内置浏览器，否则 openExternal）、floatContent / unfloatContent |
 | 会话 | createSession、sendMessage、openSession（仅打开不发消息）、floatSession / unfloatSession |
 | 数据 | data.get / set / delete / keys / entries / mutate（见下节） |
+| 文件 | uploadFile（卡片内 Blob 落盘项目目录，见「uploadFile handler」） |
 | 其它 | showToast（sonner variant 分派）、api.call（只读白名单）、emitAgentTriggerEvent（经 bus WS） |
 
 - 请求-响应：`respond` 仅在 ctx 带 requestId 与 source 时回 `spherse:response`；触发型 action 无 requestId，respond 短路为 no-op
@@ -55,7 +56,13 @@ SDK 由两半组成，仅以 postMessage 协议耦合：
 
 - 9 个只读 op：agents.list / agents.get、sessions.list / sessions.messages / sessions.status、content.get / content.listDir / content.stat、fileTree
 - 错误码：缺 client 或 op 非法 → `bad_request`；白名单外 → `unknown_op`；handler 异常 → `request_failed`
-- 设计约束：无写 / 管理端点——变更一律走专用 action（createSession / sendMessage / data.mutate）
+- 设计约束：无写 / 管理端点——变更一律走专用 action（createSession / sendMessage / data.mutate / uploadFile）
+
+## uploadFile handler
+
+- 专用写 action：把卡片 postMessage 结构化克隆传来的 `Blob` / `File` 经 `client.uploadFile` 落盘既有 upload 路由（server / core 零改动），成功后 `invalidateProjectFileQueries` 刷新文件树
+- host 侧约束（server 约束之上的收窄）：扩展名白名单（图片 / 音频 / 视频 / txt·json·md，大小写不敏感）；`name` 为 reject 语义（trim 后非空且不含 `/` `\` `:`，显式 `name` 优先于 `File.name` 并以之为最终上传名）；`dirPath` 禁绝对路径 / 反斜杠 / `..`·`.` 段并大小写不敏感拒绝 `.spherse` 子树（server 端 `SRV_WRITE` 含 skills 等类别，需 host 自行封死）；预检 100MB；仅 electron 宿主（web `content.editable = false` 产品边界的 SDK 侧对应）
+- 错误码：`bad_request` / `unsupported_type` / `file_too_large` / `forbidden` / `upload_failed`
 
 ## data handler 与 `$manifest`
 

@@ -32,12 +32,13 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 | 请求型（Promise） | `createSession(params)` → `Promise<{ sessionId }>` | 创建会话，返回新会话 ID |
 | 请求型（Promise） | `sendMessage(params)` → `Promise` | 等待发送结果 |
 | 请求型（Promise） | `data.get` / `data.set` / `data.delete` / `data.keys` / `data.entries` / `data.mutate` | key-value 持久化 + manifest 结构性变更 |
+| 请求型（Promise） | `uploadFile(params)` → `Promise<{ path, bytes, renamed }>` | 把 Blob/File 上传到项目目录 |
 | 请求型（Promise） | `api.call(op, args)` 及 `api.*` 命名方法 | 只读查询项目信息（agents / sessions / content / fileTree） |
 | 事件型 | `events.on("file:update", filter, handler)` | 订阅指定项目文件的变化信号 |
 | 事件型 | `events.on("navigate", handler)` | 感知宿主主视图跳转（订阅即回放当前页面） |
 | 运行时 | `spherse.runtime`（同步读）/ `spherse.getRuntime()`（Promise） | 获取当前会话上下文（仅 HtmlCard 有值） |
 
-所有请求型方法都返回 Promise，内部已处理 `requestId` 匹配与 10 秒超时，失败时 reject。
+所有请求型方法都返回 Promise，内部已处理 `requestId` 匹配与超时（默认 10 秒，`uploadFile` 为 60 秒），失败时 reject。
 
 ## 运行时上下文（聊天 HtmlCard 专属）
 
@@ -344,6 +345,37 @@ spherse.events.on("navigate", (e) => {
 ```
 
 注意 `kind: "file"` 指文件预览视图，与 `file:update`（文件内容变化信号）语义不同。聊天内定位消息（`?messageId=`）、应用内浮窗、split pane 的开关与切换不构成导航，不会推送事件。
+
+## 请求型 Action — 上传文件
+
+### `spherse.uploadFile(params)` → `Promise<{ path, bytes, renamed }>`
+
+把页面内的 `Blob` / `File` 上传到项目目录（与文件面板拖拽上传同路径：单文件上限 100MB，同名自动重命名 `name (1).ext`）。
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| data | `Blob \| File` | 是 | 待上传内容；`File` 自带文件名时可省 `name` |
+| name | string | Blob 时必填 | 最终落盘文件名（显式给出时优先于 `File.name`） |
+| dirPath | string | 否 | 目标目录（项目根相对路径），省略 = 项目根 |
+
+```javascript
+// 用户在页面里选了张图
+const file = document.querySelector("input[type=file]").files[0];
+const res = await spherse.uploadFile({ dirPath: "media", data: file });
+// res → { path: "media/photo.png", bytes: 20480, renamed: false }
+
+// 页面内生成的 Blob（如 canvas 导出）
+const blob = await canvas.convertToBlob({ type: "image/png" });
+await spherse.uploadFile({ dirPath: "media", name: "chart.png", data: blob });
+```
+
+约束：
+
+- **扩展名白名单**（大小写不敏感）：图片 `png jpg jpeg gif webp svg bmp avif ico` · 音频 `mp3 wav ogg m4a flac aac opus` · 视频 `mp4 webm mov avi mkv` · 文本 `txt json md`。之外的类型 reject `unsupported_type`
+- `dirPath` 不允许指向 `.spherse/` 内部目录，不允许 `..` / 绝对路径 / 反斜杠
+- 仅 desktop 宿主可用（web 端 reject `forbidden`）
+- 错误码：`bad_request`（参数非法）/ `unsupported_type` / `file_too_large`（>100MB）/ `forbidden` / `upload_failed`（目标目录不存在等）
+- 上传成功后文件面板自动刷新；其它页面可通过 `events.on("file:update")` 感知新文件
 
 ## 请求型 Action — 只读项目信息（HTTP bridge）
 

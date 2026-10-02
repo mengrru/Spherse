@@ -16,9 +16,21 @@ export type SendMessageParams = Params & {
   open?: boolean;
   float?: boolean;
 };
+export type UploadFileParams = Params & {
+  dirPath?: string;
+  name?: string;
+  data: Blob | File;
+};
 export interface CreateSessionResult {
   sessionId: string;
 }
+export interface UploadFileResult {
+  path: string;
+  bytes: number;
+  renamed: boolean;
+}
+
+const UPLOAD_TIMEOUT_MS = 60_000;
 
 const asPath = (value: PathLike): Params => (typeof value === "string" ? { path: value } : value);
 const asUrl = (value: PathLike): Params => (typeof value === "string" ? { url: value } : value);
@@ -34,6 +46,8 @@ export const actions = {
   createSession: (params: CreateSessionParams): Promise<CreateSessionResult> =>
     call<CreateSessionResult>("createSession", params),
   sendMessage: (params: SendMessageParams): Promise<void> => call<void>("sendMessage", params),
+  uploadFile: (params: UploadFileParams): Promise<UploadFileResult> =>
+    call<UploadFileResult>("uploadFile", params, UPLOAD_TIMEOUT_MS),
   openFile: (value: PathLike): void => fire("openFile", asPath(value)),
   openExternalLink: (value: PathLike): void => fire("openExternalLink", asUrl(value)),
   openSession: (value: PathLike): void => fire("openSession", asSession(value)),

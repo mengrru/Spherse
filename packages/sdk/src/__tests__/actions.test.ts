@@ -37,6 +37,18 @@ describe("actions surface", () => {
     expect(mockCall).toHaveBeenCalledWith("sendMessage", { sessionId: "s", message: "m" });
   });
 
+  it("uploadFile passes Blob params through with an extended timeout", async () => {
+    mockCall.mockResolvedValue({ path: "docs/a.png", bytes: 3, renamed: false });
+    const blob = new Blob(["abc"], { type: "image/png" });
+    const result = actions.uploadFile({ dirPath: "docs", name: "a.png", data: blob });
+    await expect(result).resolves.toEqual({ path: "docs/a.png", bytes: 3, renamed: false });
+    expect(mockCall).toHaveBeenCalledWith(
+      "uploadFile",
+      { dirPath: "docs", name: "a.png", data: blob },
+      60_000,
+    );
+  });
+
   it("openFile accepts a plain string path", () => {
     actions.openFile("world/x.md");
     expect(mockFire).toHaveBeenCalledWith("openFile", { path: "world/x.md" });
