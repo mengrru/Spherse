@@ -14,11 +14,11 @@ Windows 恢复 electron-updater in-app 更新链路（backlog #149，即 2026-08
 
 评审后补充的决策：
 
-- **更新退行走快路径**（评审 I-2）：`quitAndInstall` 的 `app.quit()` 会命中 main.ts `before-quit` 的 preventDefault + gracefulShutdown（隧道 ≤5s + server 分阶段关闭，最长 30s 看门狗），而 NSIS `--updated` 安装器约 1s 后即开始杀进程、约 3.3s 强杀，慢路径必然被截断。处理：监听 electron-updater 专有的 `before-quit-for-update` 事件，置 lifecycle 退出标记并走快路径——隧道停止收敛到 1s 内、跳过 server 优雅关闭（better-sqlite3 WAL 崩溃安全，靠下次打开恢复）、不启动 30s 看门狗，随后立即退出。被 taskkill 截断的残余风险（隧道子进程偶发残留）接受。
+- **更新退行走快路径**（评审 I-2）：`quitAndInstall` 的 `app.quit()` 会命中 `before-quit` 的 preventDefault + gracefulShutdown（隧道 ≤5s + server 分阶段关闭，最长 30s 看门狗），而 NSIS `--updated` 安装器约 1s 后即开始杀进程、约 3.3s 强杀，慢路径必然被截断。处理：监听 `before-quit-for-update`（emit 于 Electron 内置 autoUpdater 模块，见「已验证的关键技术事实」），置 lifecycle 退出标记并走快路径——隧道停止收敛到 1s 内、跳过 server 优雅关闭（better-sqlite3 WAL 崩溃安全，靠下次打开恢复）、不启动 30s 看门狗，销毁托盘后 `app.exit(0)` 收尾。被 taskkill 截断的残余风险（隧道子进程偶发残留）接受。
 - **per-machine 安装的 UAC**（评审 I-1）：assisted 安装器允许用户选「所有用户」（HKLM）。构建为 per-user 默认，`latest.yml` 不含 `isAdminRightsRequired`，electron-updater 不会预提权；对 per-machine 安装执行静默更新时 NSIS 运行时会弹 UAC，用户拒绝则安装器退出而应用已被关闭（无错误反馈，重新打开仍旧版）。接受该边界（默认安装路径为 per-user，触发面小），列入发版真机验证清单。
 - **downloadUpdate 内部拉 manifest 不派发事件**（评审 I-3）：不复用 silent 检测路径（会发 `update-available` 事件造成「点了后台下载又弹一条发现新版本 toast」），改用裸 fetch helper；且**每次** downloadUpdate 都现拉最新 manifest（而非仅缓存缺失时）——点击离检测间隔数小时时manifest 可能已指向更新版本，现拉语义更正确。
 
-## 已验证的关键技术事实（electron-updater 6.3.9 / app-builder-lib 26 源码）
+## 已验证的关键技术事实（electron-updater 6.8.9（lockfile 实际锁定版本，声明为 ^6.3.9）/ app-builder-lib 26 源码）
 
 - `downloadUpdate()` 前必须先 `checkForUpdates()`（`AppUpdater.js:437` 对 `updateInfoAndProvider` 判空，否则 reject「Please check update first」并 dispatch error）。
 - Windows 端 channel 文件名恒为 `${channel}.yml`，无 arch 后缀（`util.js getChannelFilename`；`updateInfoBuilder.js getArchPrefixForUpdateFile` 仅 Linux 加前缀）。arm64 应用通过 `autoUpdater.channel = "latest-arm64"` 取 arm64 feed；channel setter 会强制 `allowDowngrade = true`（`AppUpdater.js:44`），需显式复位为 `false`。
@@ -26,7 +26,7 @@ Windows 恢复 electron-updater in-app 更新链路（backlog #149，即 2026-08
 - `setFeedURL` 只替换 clientPromise，此后 feed 请求不再读盘；但打包内置的 `app-update.yml` 仍被两处隐式依赖：`updaterCacheDirName`（缺失则 downloadUpdate reject，`AppUpdater.js:545`）与 `publisherName`（无签名时跳过校验）。因此 electron-builder.yml 的 `publish` 配置**必须保留**（评审 M-1，加回归测试钉住）。
 - yml 内文件名为 basename，GenericProvider 以 feed 基址做相对解析（`new URL(pathname, baseUrl)`）；yml 与 exe 同目录（`releases/{ver}/`）即无需改写内容。
 - 取消下载：`CancellationError` 不 dispatch error 事件（`AppUpdater.js downloadUpdate` 的 errorHandler），取消后无残留错误态。
-- `quitAndInstall(isSilent, isForceRunAfter)` → NsisUpdater `doInstall` 追加 `/S` 与 `--force-run` 参数。
+- `quitAndInstall(isSilent, isForceRunAfter)` → NsisUpdater `doInstall` 追加 `/S` 与 `--force-run` 参数；其退出前置事件 `before-quit-for-update` 由 electron-updater 对 **Electron 内置 `autoUpdater` 模块** emit（`BaseUpdater.js` 中 `require("electron").autoUpdater.emit(...)`），不在 `app` 上，Electron 类型定义亦未收录（实现评审 C-1 曾因监听错 emitter 而失效，需 `import { autoUpdater } from "electron"` 监听并做类型断言）。
 
 ## 实现
 
@@ -45,9 +45,9 @@ Windows 恢复 electron-updater in-app 更新链路（backlog #149，即 2026-08
 - 状态机补充：`downloading`/`downloaded` 状态保留 `version` / `releaseNotes` / `downloadUrl` / `inAppUpdate`；取消下载后状态回到 `available`（保留上述字段），用户可再次发起。
 - 保持 electron-updater 默认 console logger 不置 null（评审 m-5 不采纳）：dev 与终端启动时可诊断更新问题，GUI 启动的打包版 stdout 本就不落盘，无噪声成本。
 
-### 主进程 `packages/desktop/electron/main.ts`
+### 主进程 `packages/desktop/electron/quit-handlers.ts`（自 main.ts 抽出以便测试）
 
-- 监听 `before-quit-for-update`（electron-updater 在 `quitAndInstall` 前发出）：置 lifecycle 退出标记 + 走快路径退出（见「评审后补充的决策」）——隧道停止收敛 1s 内，跳过 server 优雅关闭与 30s 看门狗。
+- 监听 `before-quit-for-update`（electron-updater 在 `quitAndInstall` 前对 Electron 内置 autoUpdater 模块 emit）：置 lifecycle 退出标记 + 走快路径退出（见「评审后补充的决策」）——隧道停止收敛 1s 内，跳过 server 优雅关闭与 30s 看门狗，销毁托盘后 `app.exit(0)` 收尾；快路径期间 `before-quit` 一律 preventDefault。
 
 ### renderer `packages/app`
 
@@ -92,7 +92,7 @@ Windows 恢复 electron-updater in-app 更新链路（backlog #149，即 2026-08
 ## 验证
 
 - `packages/desktop/electron/updater.test.ts`：feed 基址派生（x64/arm64/回退矩阵）、`setFeedURL` generic 参数、arm64 channel 切换与 `allowDowngrade` 复位、feed 版本不一致/无更新分别报可读下载错误、electron-updater `update-available`/`update-not-available` 不转发、progress/downloaded/error 转发及 phase 标记、重复 `downloadUpdate` no-op、非 downloaded 状态 `installUpdate` no-op、`installUpdate` → `quitAndInstall(true, true)`、mac/linux no-op 维持、silent 检测在 downloading/downloaded 下抑制、win32 非 silent 检查拉 releaseNotes（**翻转现有「windows checks 不拉 changelog」用例**，评审 m-2）、取消后回到 available、「never calls electron-updater's GitHub feed」守卫改为「下载前显式 setFeedURL generic OSS」语义。
-- `packages/desktop/electron/main 退出快路径`：`before-quit-for-update` 置退出标记且 `before-quit` 不再走慢路径（跳过 tunnel/server 优雅关闭）。
+- `packages/desktop/electron/quit-handlers.test.ts`：`before-quit-for-update`（按真实 emit 目标——Electron 内置 autoUpdater——触发）走快路径（跳过 tunnel/server 优雅关闭、销毁托盘、`app.exit(0)` 收尾）、快路径期间 `before-quit` 被阻断、重复触发只执行一次；常规 `before-quit` / `window-all-closed` 走优雅关闭。
 - `packages/desktop/release-pipeline.test.ts`：assets download pattern、三段上传顺序（安装包+blockmap → yml → latest.json）、arm64 yml 重命名上传、旧 tag 无 yml 容错。
 - `packages/desktop/electron-builder.config.test.ts`：win 上传步骤 blockmap/yml 的 arch 限定断言；`publish` 配置存在性断言（app-update.yml 的 updaterCacheDirName 隐式依赖，评审 M-1）。
 - `packages/app`：`UpdateChecker.test.tsx`（in-app 分支按钮与 downloaded 文案、非 in-app 维持）、`UpdateNoticeBridge.test.tsx`（后台下载/安装并重启/下载失败 toast、mac 去更新维持）、`use-update-checker` 透传与取消回填。
@@ -103,3 +103,12 @@ Windows 恢复 electron-updater in-app 更新链路（backlog #149，即 2026-08
 - `docs/official/architecture/desktop.md`：更新机制段落改写（Windows in-app 恢复、feed 布局、上传顺序）。
 - `docs/dev/backlog.md`：删除「恢复 Windows 自动更新 feed（latest.yml，双 arch）」条目（历史文档中的 backlog #149 即指此条）。
 - `.agents/skills/release-new-version/SKILL.md`：CI 步骤描述补 latest.yml/blockmap 上传。
+
+## 实施结果
+
+- 设计评审（无 critical；important 3 条全部落决策：更新退出快路径、per-machine UAC 接受为边界、downloadUpdate 裸拉 manifest）后实现。
+- 实现评审发现 1 critical：`before-quit-for-update` 实际由 electron-updater 对 Electron **内置 autoUpdater 模块** emit（非 `app`），初版监听在 `app` 上是死代码——已改为监听内置 autoUpdater，退出编排抽为独立模块 `quit-handlers.ts` 并补接线测试（按真实 emit 目标触发）；其余修复：downloadUpdate 异步窗口双触发致取消能力失效（同步 in-flight 标志）、`fetchOssManifestUpdate` 死导出与无超时（改为模块私有 + 10s AbortController）、design doc 版本引用勘误（lockfile 实际 6.8.9）。
+- 未采纳（记录理由）：评审 m-4「安装期错误被标为下载失败」——install/spawn 失败时应用已在退出边缘，区分安装/下载阶段文案无实际触达面，接受；评审 m-5（console logger）维持默认便于诊断。
+- `npm run verify` 通过（lint 0 错误、17 条基线告警；全 workspace 测试与 i18n 校验通过）；desktop 新增 quit-handlers 接线测试与 updater 并发窗口回归测试。
+- 未运行真实升级 E2E（无 Windows CI 环境）；发版后首个版本真机验证清单：后台下载→静默安装链路、per-machine（所有用户）安装实例的 UAC 行为、更新退出时隧道子进程收敛。
+- doc-sync：desktop.md 更新机制段、project-structure.md（updater.ts 描述 + quit-handlers.ts 新条目）、backlog #149 条目删除、release-new-version SKILL CI 步骤均已同步；无数据格式 / 词汇表 / package README / ADR 触点（更新机制的历史决策与理由沉淀在本目录 design doc，与 2026-08-17 同类先例一致，不另立 ADR）。

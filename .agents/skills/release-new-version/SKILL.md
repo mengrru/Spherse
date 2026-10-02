@@ -55,8 +55,8 @@ description: Use when the user says "发新版本", "release", "publish a new ve
    - 创建 GitHub Release（`--generate-notes` 自动生成 release notes）
    - 构建 macOS arm64/intel DMG + Windows x64/arm64 EXE
    - 打包产物冒烟验证（`e2e/packaged-smoke.spec.ts`，仅在 arch 匹配的 job 上执行：mac arm64 / win x64；启动 unpacked 二进制验证 renderer 挂载 + server `/health` + 版本号同步）
-   - 上传到 GitHub Release
-   - 上传到阿里云 OSS 镜像 + 更新 `latest.json`
+   - 上传到 GitHub Release（win job 同时上传本 arch 的 `latest.yml`——arm64 job 重命名为 `latest-arm64.yml`——与 `.exe.blockmap`，按 arch 限定防同名互踩）
+   - 三段顺序上传到阿里云 OSS 镜像：安装包 + blockmap → `latest.yml` / `latest-arm64.yml`（Windows in-app 更新 feed，与 exe 同目录）→ `latest.json`（版本发现闸门最后翻转）
    - 全量重建 changelog 并上传 OSS `spherse/changelog.json`（landing `/download` 页消费）
 
 ## Key Knowledge

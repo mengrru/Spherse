@@ -330,13 +330,13 @@ spherse/
 │   │   │   └── tray/                 # 托盘图标（trayTemplate*.png macOS 模板图、tray*.png Windows/Linux，含源 SVG；打包经 extraResources 只取 PNG）
 │   │   ├── shared/
 │   │   │   └── electron-api.ts       # Electron IPC 类型契约（renderer 与 main 共享，renderer 经 tsconfig @shared 别名引用）
- │   │   ├── electron/
-│   │   │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData，拿到单实例锁后加载 main（否则退出）
-│   │   │   ├── main.ts               # Electron 主进程：启动时 fixPath（打包版 PATH 修复）→ restoreEnvFromSettings → 组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
-│   │   │   ├── fix-path.ts           # 打包版 PATH 修复：仅 packaged + darwin/linux，spawn 用户登录 shell（$SHELL -lic 'echo $PATH'，TERM=dumb，3s 超时）拉取登录 shell 的 PATH，剥离 ANSI/控制字节后按去重保序前置合并进 process.env.PATH（dev/test/win32 no-op，失败保留原 PATH 不阻断启动）；修复 GUI 进程不继承 shell PATH 导致 stdio MCP server（uvx/npx/python）找不到可执行文件
-│   │   │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
-│   │   │   ├── updater.ts            # 更新检测：OSS latest.json 清单 + compareVersions + 平台 downloadUrl 解析（electron-updater 仅保留 Windows in-app 下载 API，feed 已废弃）、silent 检测不改写交互状态、startAutoUpdateChecks 调度（启动 5s + 每小时 tick，≥24h 且用户活动时静默检测）
-│   │   │   ├── unsafe-location.ts    # 项目路径「易失区」判定：getUnsafeZoneRoot 计算更新时会被覆盖清空的目录（win32 = dirname(process.execPath)，NSIS 卸载器 RMDir /r $INSTDIR 作用域；darwin = .app bundle 目录；dev/linux 无，dev 下 SPHERSE_UNSAFE_ZONE env 可覆盖供 E2E 指定），isInsideUnsafeZone 经 @spherse/core 的 isPathInside 判断（打开项目 IPC 弹警告框用）
+  │   │   ├── electron/
+  │   │   │   ├── bootstrap.ts          # Electron 入口引导：dev 环境重定向 userData，拿到单实例锁后加载 main（否则退出）
+  │   │   │   ├── main.ts               # Electron 主进程：启动时 fixPath（打包版 PATH 修复）→ restoreEnvFromSettings → 组装窗口、IPC、项目 server 管理、启动延迟静默更新检查
+  │   │   │   ├── fix-path.ts           # 打包版 PATH 修复：仅 packaged + darwin/linux，spawn 用户登录 shell（$SHELL -lic 'echo $PATH'，TERM=dumb，3s 超时）拉取登录 shell 的 PATH，剥离 ANSI/控制字节后按去重保序前置合并进 process.env.PATH（dev/test/win32 no-op，失败保留原 PATH 不阻断启动）；修复 GUI 进程不继承 shell PATH 导致 stdio MCP server（uvx/npx/python）找不到可执行文件
+  │   │   │   ├── preload.ts            # contextBridge，IPC 白名单（含更新检查 main→renderer 事件订阅）
+  │   │   │   ├── updater.ts            # 更新检测：OSS latest.json 清单 + compareVersions + 平台 downloadUrl 解析（三平台统一检测源）；Windows in-app 后台下载：从 manifest URL 派生 generic feed（setFeedURL，arm64 走 latest-arm64.yml channel）→ checkForUpdates → downloadUpdate（CancellationToken），installUpdate 静默安装重启；electron-updater 事件仅转发下载生命周期（progress/downloaded/error）；silent 检测不改写交互状态、downloading/downloaded 期间抑制；startAutoUpdateChecks 调度（启动 5s + 每小时 tick，≥24h 且用户活动时静默检测）
+  │   │   │   ├── unsafe-location.ts    # 项目路径「易失区」判定：getUnsafeZoneRoot 计算更新时会被覆盖清空的目录（win32 = dirname(process.execPath)，NSIS 卸载器 RMDir /r $INSTDIR 作用域；darwin = .app bundle 目录；dev/linux 无，dev 下 SPHERSE_UNSAFE_ZONE env 可覆盖供 E2E 指定），isInsideUnsafeZone 经 @spherse/core 的 isPathInside 判断（打开项目 IPC 弹警告框用）
 │   │       │   ├── ipc/                  # IPC handler 注册，按业务域拆分
 │   │       │   │   ├── index.ts          # registerAllIpc 聚合
 │   │       │   │   ├── project.ts        # 项目选择（SPHERSE_E2E_SELECT_DIRECTORY seam 可注入测试目录）、server 启停、打开项目持久化、打开项目文件夹（shell.openPath）、用默认应用打开文件（openFileExternal）；confirmUnsafeLocation 对安装目录内路径弹警告框（默认取消），restore-projects 恢复后对存量易失区项目每会话弹一次迁移警告
@@ -351,8 +351,9 @@ spherse/
 │   │   │   │   ├── provider.ts        # TunnelProvider / TunnelSession 抽象接口（预留未来扩展）
 │   │   │   │   ├── cloudflare-provider.ts # Cloudflare Quick Tunnel 实现：spawn cloudflared tunnel --url、stdout 抓取 *.trycloudflare.com URL、packaged 二进制路径解析
 │   │   │   │   └── manager.ts         # TunnelManager 单例：start/stop/restart 状态机 + onStateChange 事件订阅
-│   │   │   ├── window.ts             # BrowserWindow 创建与管理
-│   │   │   ├── lifecycle.ts          # 唯一退出标志（beginQuit/isQuitting），供优雅退出与关闭拦截共用
+  │   │   │   ├── window.ts             # BrowserWindow 创建与管理
+  │   │   │   ├── quit-handlers.ts      # 退出编排：常规优雅关闭（隧道 5s + server 分阶段 + 30s 看门狗）与更新安装快路径（before-quit-for-update——electron-updater 对 Electron 内置 autoUpdater emit——隧道 1s、跳过 server 优雅关闭、app.exit(0) 收尾）双路径
+  │   │   │   ├── lifecycle.ts          # 唯一退出标志（beginQuit/isQuitting + 更新专用 beginUpdateQuit/isUpdateQuit），供优雅退出与关闭拦截共用
 │   │   │   ├── tray.ts               # 关闭至托盘：托盘创建/销毁与菜单（syncTray）、主窗口 close 拦截、showMainWindow（含 macOS Dock 显隐）
 │   │   │   ├── server.ts             # server 实例管理（ensure/restart/stop，恒带 serverToken 鉴权）+ 动态 host 重放（syncAllowedHosts）+ defaultModel 更新
 │   │   │   └── settings.ts           # electron-store 封装 + env 管理（含 syncCustomProviders）+ openProjects/locale/mobileAccess 持久化 + serverToken（顶层 key，getServerToken 迁移链）+ generateAccessToken

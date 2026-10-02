@@ -657,7 +657,7 @@ describe("updater.downloadUpdate (Windows in-app)", () => {
     await withProcess("win32", "x64", async () => {
       const { u, localEvents } = createTestUpdater();
       await driveToDownloading(u);
-      expect(fetchMock).toHaveBeenCalledWith(MANIFEST_URL);
+      expect(fetchMock).toHaveBeenCalledWith(MANIFEST_URL, { signal: expect.any(AbortSignal) });
       expect(autoUpdaterMock.setFeedURL).toHaveBeenCalledWith({
         provider: "generic",
         url: "https://oss/spherse/releases/0.2.0/",
@@ -802,6 +802,24 @@ describe("updater.downloadUpdate (Windows in-app)", () => {
       await u.downloadUpdate();
       expect(fetchMock).toHaveBeenCalledTimes(1);
       expect(u.getState().status).toBe("downloaded");
+    });
+  });
+
+  it("no-ops on concurrent triggers during the async manifest/feed-check window", async () => {
+    await withProcess("win32", "x64", async () => {
+      const { u } = createTestUpdater();
+      let resolveManifest!: (value: unknown) => void;
+      fetchMock.mockImplementationOnce(() => new Promise((resolve) => { resolveManifest = resolve; }));
+
+      const first = u.downloadUpdate();
+      const second = u.downloadUpdate();
+      expect(second).not.toBe(first);
+      resolveManifest({ ok: true, status: 200, json: async () => manifest });
+      await first;
+      await second;
+
+      // 异步窗口内的第二次触发被同步标志拦截，只有一次 manifest 拉取
+      expect(fetchMock).toHaveBeenCalledTimes(1);
     });
   });
 });
