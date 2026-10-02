@@ -5,7 +5,7 @@ import { SDK_VERSION } from "../meta.js";
  *
  * The iframe is the sender; the host (renderer) is the listener that owns the real
  * ApiClient. `call()` tags a request with an id and resolves when the matching
- * `spherse:response` message arrives (or rejects on the 10s timeout).
+ * `spherse:response` message arrives (or rejects on the timeout, default 10s).
  */
 
 type Resolver = (ok: boolean, data: unknown) => void;

@@ -67,7 +67,7 @@ registerAction("uploadFile", async (params, ctx) => {
   if (!dir.ok) return fail(dir.forbidden ? "forbidden" : "bad_request");
 
   const fallbackName = data instanceof File ? data.name : "";
-  const rawName = typeof name === "string" && name.trim() ? name : fallbackName;
+  const rawName = typeof name === "string" ? name : fallbackName;
   const finalName = rawName.trim();
   if (!finalName || finalName === "." || finalName === ".." || INVALID_NAME_RE.test(finalName)) {
     return fail("bad_request");
@@ -75,7 +75,10 @@ registerAction("uploadFile", async (params, ctx) => {
   if (!ALLOWED_UPLOAD_EXTENSIONS.has(extensionOf(finalName))) return fail("unsupported_type");
   if (data.size > MAX_UPLOAD_BYTES) return fail("file_too_large");
 
-  const file = data instanceof File && data.name === finalName ? data : new File([data], finalName);
+  const file =
+    data instanceof File && data.name === finalName
+      ? data
+      : new File([data], finalName, { type: data.type });
   let res;
   try {
     res = await ctx.client.uploadFile(dir.dirPath, file);

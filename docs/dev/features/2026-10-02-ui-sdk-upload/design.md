@@ -24,7 +24,7 @@
 | 格式白名单 | host handler 强制（权威边界），SDK 侧不重复校验避免清单漂移。大小写不敏感比较扩展名：图片 `png jpg jpeg gif webp svg bmp avif ico`；音频 `mp3 wav ogg m4a flac aac opus`；视频 `mp4 webm mov avi mkv`；文本 `txt json md`。未命中 → `unsupported_type`。svg 放行：聊天卡片与 Content Browser 均按 `<img>` 渲染 svg（脚本不执行），且文件树 DnD 上传本无文件名白名单，server 面无增量 |
 | dirPath 校验 | **先严格校验再比较**，不做 basename/normalize 改写：(a) trim 后空串 = 根；(b) 拒绝以 `/` 开头（绝对路径）与含 `\` 的 `dirPath`；(c) 按 `/` 拆段，任一段为 `..` 或 `.` → 拒绝（封死 `foo/../.spherse/skills` 逃逸——server 端 `SRV_WRITE` 含 skills/agentSkills/attachments，归一化后不兜底）；(d) 大小写不敏感比较首段：lowercase 为 `.spherse` → `forbidden`（macOS APFS 大小写不敏感，`.Spherse` 实际落到 `.spherse`）。非法形态（b）（c）→ `bad_request`。SDK 入口不暴露内部状态目录，尽管 server 路由本身允许写这些位置 |
 | 文件名安全 | host 侧预检 `name`（reject 而非 rewrite）：trim → 非空、不含 `/` `\` `:`（复用 `tree-model.ts:24` 导出的 `INVALID_NAME_RE`，同包直引）→ 否则 `bad_request`；扩展名白名单校验的对象**永远是最终上传的文件名**（见下条），杜绝 `name: "ok.png"` + `File("evil.html")` 的校验脱钩；server 侧 sanitize 与去重不变（权威） |
-| Blob→File 衔接 | `resolvedName = trim(params.name ?? (data instanceof File ? data.name : ""))`；校验通过后 `file = data instanceof File && data.name === resolvedName ? data : new File([data], resolvedName)`（File 构造器持 Blob 引用不复制底层数据），传 `ctx.client.uploadFile(dirPath, file)`（`api.ts:584` 既有签名收 `File`，`api.ts` 零改动） |
+| Blob→File 衔接 | `resolvedName = trim(typeof name === "string" ? name : File.name)`——显式字符串 `name` 一律生效（空白 → `bad_request`，不静默回退），非字符串/缺省回退 `File.name`（Blob 回退空 → `bad_request`）；校验通过后 `file = data instanceof File && data.name === resolvedName ? data : new File([data], resolvedName, { type: data.type })`（File 构造器持 Blob 引用不复制底层数据，透传 MIME），传 `ctx.client.uploadFile(dirPath, file)`（`api.ts:584` 既有签名收 `File`，`api.ts` 零改动） |
 | 大小限制 | host 侧预检 `data.size > 100MB` → `file_too_large`（快速失败，免传整包后才被 server 拒）；server 100MB 上限不变 |
 | 宿主边界 | web 宿主（`ctx.hostKind !== "electron"`）→ `forbidden`：web 端 `capabilities.content.editable = false`，文件树上传以 `uploadsEnabled={canMutate}` 关闭，SDK 入口不绕过该产品边界（判 `hostKind` 是 float 降级的既有模式；若未来 desktop 出现 readOnly 模式需改判 capability，记入已知限制） |
 | 错误码 | `bad_request`（参数缺失/类型错/dirPath 非法形态/文件名非法/缺 client）、`unsupported_type`、`file_too_large`、`forbidden`（`.spherse` 子树或 web 宿主）、`upload_failed`（server 4xx/5xx 兜底，含目标目录不存在等）。成功 resolve `uploadResponse` 契约形状 |
@@ -89,3 +89,5 @@ host → iframe:  { type: "spherse:response", requestId, ok: true,
 - **important**：Blob→`client.uploadFile` 衔接未指定（FormData 对裸 Blob 默认 filename `"blob"`）→ 明确 `new File([data], resolvedName)` 包装与 name 脱钩防护；web 宿主绕过 `content.editable` 边界 → `hostKind` 判定拒绝；文档同步缺 project-structure.md → 补
 - **medium**：磁盘填充面显式评估并接受；限流 × 超时交互（120s→60s 并记录）；name 校验 reject/rewrite 矛盾 → 统一 reject
 - **minor**：`INVALID_NAME_RE` 同包直引不复制；name 预检补 trim 对齐 server
+
+2026-10-02 code review（sub agent，实现后）：无 critical / important / medium；minor 修订——空白 `name` 由静默回退 `File.name` 改为 reject（对齐 `??` 语义）；`new File` 包装补 `{ type: data.type }` 透传 MIME；sdk `messaging.ts` 头注释超时表述随参数化更新；`.spherse` 硬编码维持包内惯例不改

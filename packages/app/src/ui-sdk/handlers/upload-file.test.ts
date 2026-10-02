@@ -104,6 +104,15 @@ describe("uploadFile action", () => {
     expect(lastResponse(ctx)).toMatchObject({ ok: false, data: { error: "bad_request" } });
   });
 
+  it("rejects an explicitly blank name instead of falling back to File.name", async () => {
+    const client = makeClient();
+    const ctx = makeCtx(client);
+    const file = new File(["abc"], "a.png", { type: "image/png" });
+    await dispatchAction("uploadFile", { name: "  ", data: file }, ctx);
+    expect(client.uploadFile).not.toHaveBeenCalled();
+    expect(lastResponse(ctx)).toMatchObject({ ok: false, data: { error: "bad_request" } });
+  });
+
   it("rejects unsupported extensions", async () => {
     const ctx = makeCtx(makeClient());
     await dispatchAction(
