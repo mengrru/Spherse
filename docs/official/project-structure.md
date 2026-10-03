@@ -281,7 +281,7 @@ spherse/
 │   │       │       ├── unfloat-content.ts # 关闭指定文件的浮窗
 │   │       │       ├── unfloat-session.ts # 取消浮窗
 │   │       │       ├── data.ts           # data.get/set/delete key-value 持久化
-│   │       │       ├── upload-file.ts    # uploadFile：卡片 Blob 落盘项目目录（扩展名白名单、.spherse 拒绝、仅 electron）
+│   │       │       ├── upload-file.ts    # uploadFile：卡片 Blob 落盘项目目录（扩展名白名单、.spherse 拒绝、全部宿主可用）
 │   │       │       └── api.ts            # api.call 只读 HTTP bridge（op 白名单转发 ApiClient，agents/sessions/content/fileTree）
 │   │       ├── features/
 │   │       │   ├── activity-bar/         # 自治型 Activity Bar（项目头像轨、设置按钮、添加项目下拉菜单「市场/本地」，内部读 app-store/app-ui-store 与 useProjectActions，挂 ProjectMarketDialog；pin 按钮通过 pinToggle prop 可选注入）
