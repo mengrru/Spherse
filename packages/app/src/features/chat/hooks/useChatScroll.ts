@@ -14,7 +14,12 @@ export function computeAnchorAdjustment(scrollTop: number, heightDelta: number, 
   return -heightDelta;
 }
 
-export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMore: boolean = false) {
+export function useChatScroll(
+  entries: ChatEntry[],
+  sessionId: string,
+  loadingMore: boolean = false,
+  thinking: boolean = false,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isAtBottom, setIsAtBottom] = useState(true);
@@ -33,6 +38,25 @@ export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMo
     if (programmaticScrollTimerRef.current) {
       clearTimeout(programmaticScrollTimerRef.current);
       programmaticScrollTimerRef.current = null;
+    }
+  }, []);
+
+  const captureHeightDelta = useCallback((container: HTMLDivElement): number => {
+    const delta =
+      prevScrollHeightRef.current === null ? 0 : container.scrollHeight - prevScrollHeightRef.current;
+    prevScrollHeightRef.current = container.scrollHeight;
+    return delta;
+  }, []);
+
+  const applyAnchorCompensation = useCallback((container: HTMLDivElement, heightDelta: number) => {
+    const adjustment = computeAnchorAdjustment(
+      container.scrollTop,
+      heightDelta,
+      programmaticScrollRef.current,
+    );
+    if (adjustment !== 0) {
+      container.scrollTop += adjustment;
+      scrollTopRef.current = container.scrollTop;
     }
   }, []);
 
@@ -81,7 +105,9 @@ export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMo
     prevCountRef.current = 0;
     pendingLoadingMoreRef.current = false;
     preLoadMoreScrollTopRef.current = null;
-  }, [sessionId]);
+    prevScrollHeightRef.current = null;
+    clearProgrammaticScroll();
+  }, [sessionId, clearProgrammaticScroll]);
 
   useEffect(() => {
     if (loadingMore) {
@@ -99,9 +125,7 @@ export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMo
     const container = containerRef.current;
     if (!container || entries.length === 0) return;
 
-    const heightDelta =
-      prevScrollHeightRef.current === null ? 0 : container.scrollHeight - prevScrollHeightRef.current;
-    prevScrollHeightRef.current = container.scrollHeight;
+    const heightDelta = captureHeightDelta(container);
 
     if (!restoredScrollRef.current) {
       restoredScrollRef.current = true;
@@ -137,25 +161,21 @@ export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMo
       return;
     }
 
-    const adjustment = computeAnchorAdjustment(
-      container.scrollTop,
-      heightDelta,
-      programmaticScrollRef.current,
-    );
-    if (adjustment !== 0) {
-      container.scrollTop += adjustment;
-      scrollTopRef.current = container.scrollTop;
-    }
-  }, [entries, sessionId, scrollToBottom, syncBottomState]);
+    applyAnchorCompensation(container, heightDelta);
+  }, [entries, sessionId, scrollToBottom, syncBottomState, captureHeightDelta, applyAnchorCompensation]);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container || !thinking) return;
+    applyAnchorCompensation(container, captureHeightDelta(container));
+  }, [thinking, captureHeightDelta, applyAnchorCompensation]);
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
     return () => {
       useChatSessionStore.getState().setScrollPosition(sessionId, scrollTopRef.current);
-      if (programmaticScrollTimerRef.current) clearTimeout(programmaticScrollTimerRef.current);
+      clearProgrammaticScroll();
     };
-  }, [sessionId]);
+  }, [sessionId, clearProgrammaticScroll]);
 
   return { containerRef, isAtBottom, scrollToBottom };
 }

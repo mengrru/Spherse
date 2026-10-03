@@ -74,7 +74,7 @@ export function Chat({ sessionId, agent, onNavigateToPath, initialMessage, onClo
     initialMessage,
     accessToken,
   });
-  const { containerRef, isAtBottom, scrollToBottom } = useChatScroll(entries, sessionId, loadingMore);
+  const { containerRef, isAtBottom, scrollToBottom } = useChatScroll(entries, sessionId, loadingMore, thinking);
   useLocateMessage({
     containerRef,
     client,

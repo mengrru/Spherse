@@ -51,6 +51,7 @@ describe("computeAnchorAdjustment", () => {
 type Harness = {
   entries: ChatEntry[];
   loadingMore: boolean;
+  thinking: boolean;
 };
 
 function createUserEntry(id: string): ChatEntry {
@@ -67,8 +68,8 @@ function setupHook(initialHeight: number) {
   });
   container.scrollTo = vi.fn();
 
-  const utils = renderHook(({ entries, loadingMore }: Harness) => useChatScroll(entries, "s1", loadingMore), {
-    initialProps: { entries: [] as ChatEntry[], loadingMore: false },
+  const utils = renderHook(({ entries, loadingMore, thinking }: Harness) => useChatScroll(entries, "s1", loadingMore, thinking), {
+    initialProps: { entries: [] as ChatEntry[], loadingMore: false, thinking: false },
   });
   utils.result.current.containerRef.current = container;
 
@@ -79,7 +80,7 @@ function setupHook(initialHeight: number) {
       height = next;
     },
     streamFrame(entries: ChatEntry[]) {
-      utils.rerender({ entries, loadingMore: false });
+      utils.rerender({ entries, loadingMore: false, thinking: false });
     },
   };
 }
@@ -143,15 +144,44 @@ describe("useChatScroll anchor compensation", () => {
     expect(harness.container.scrollTop).toBe(-620);
   });
 
+  it("resumes compensation after a smooth scroll reaches the bottom and the user scrolls up again", () => {
+    const harness = setupHook(2000);
+    const first = [createUserEntry("e1")];
+    harness.streamFrame(first);
+    scrollUp(harness.container, -500);
+
+    harness.streamFrame([...first, createUserEntry("e2")]);
+    expect(harness.container.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+
+    harness.container.scrollTop = 0;
+    harness.container.dispatchEvent(new Event("scroll"));
+
+    scrollUp(harness.container, -400);
+    harness.setHeight(2120);
+    harness.streamFrame([createUserEntry("e1"), createUserEntry("e2")]);
+    expect(harness.container.scrollTop).toBe(-520);
+  });
+
+  it("compensates thinking indicator growth while scrolled up without an entries change", () => {
+    const harness = setupHook(2000);
+    const first = [createUserEntry("e1")];
+    harness.streamFrame(first);
+    scrollUp(harness.container, -500);
+
+    harness.setHeight(2040);
+    harness.rerender({ entries: first, loadingMore: false, thinking: true });
+    expect(harness.container.scrollTop).toBe(-540);
+  });
+
   it("restores the captured scrollTop after load-more even when height changed", () => {
     const harness = setupHook(2000);
     const first = [createUserEntry("e1")];
     harness.streamFrame(first);
     scrollUp(harness.container, -800);
 
-    harness.rerender({ entries: first, loadingMore: true });
+    harness.rerender({ entries: first, loadingMore: true, thinking: false });
     harness.setHeight(3000);
-    harness.rerender({ entries: [createUserEntry("e0"), ...first], loadingMore: false });
+    harness.rerender({ entries: [createUserEntry("e0"), ...first], loadingMore: false, thinking: false });
 
     expect(harness.container.scrollTop).toBe(-800);
   });
