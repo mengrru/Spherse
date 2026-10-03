@@ -12,7 +12,7 @@ const WEB_CAPABILITIES: HostCapabilities = {
   mobileAccess: false,
   openFileExternal: false,
   tray: false,
-  content: { editable: false },
+  content: { editable: true },
 };
 
 const IS_DEV_DEPLOY =
