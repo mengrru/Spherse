@@ -185,7 +185,7 @@ export function MessageList({
 
   return (
     <div className="relative flex-1 min-h-0">
-      <div ref={containerRef} className="h-full overflow-y-auto p-4 flex flex-col-reverse gap-3" data-chat-messages>
+      <div ref={containerRef} className="h-full overflow-y-auto p-4 flex flex-col-reverse gap-3 [overflow-anchor:none]" data-chat-messages>
         {thinking && (
           <div className="self-start">
             <ThinkingIndicator />

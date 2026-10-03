@@ -58,6 +58,7 @@ describe("MessageList", () => {
     expect(texts[0]).toContain("second");
     expect(texts[1]).toContain("one");
     expect(texts[2]).toContain("first");
+    expect(document.querySelector("[data-chat-messages]")).toHaveClass("[overflow-anchor:none]");
   });
 
   it("marks persisted messages with data-entry-seq anchors", () => {
