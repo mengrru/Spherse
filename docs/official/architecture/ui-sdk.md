@@ -61,7 +61,7 @@ SDK 由两半组成，仅以 postMessage 协议耦合：
 ## uploadFile handler
 
 - 专用写 action：把卡片 postMessage 结构化克隆传来的 `Blob` / `File` 经 `client.uploadFile` 落盘既有 upload 路由（server / core 零改动），成功后 `invalidateProjectFileQueries` 刷新文件树
-- host 侧约束（server 约束之上的收窄）：扩展名白名单（图片 / 音频 / 视频 / txt·json·md，大小写不敏感）；`name` 为 reject 语义（trim 后非空且不含 `/` `\` `:`，显式 `name` 优先于 `File.name` 并以之为最终上传名）；`dirPath` 禁绝对路径 / 反斜杠 / `..`·`.` 段并大小写不敏感拒绝 `.spherse` 子树（server 端 `SRV_WRITE` 含 skills 等类别，需 host 自行封死）；预检 100MB；仅 electron 宿主（web `content.editable = false` 产品边界的 SDK 侧对应）
+- host 侧约束（server 约束之上的收窄）：扩展名白名单（图片 / 音频 / 视频 / txt·json·md，大小写不敏感）；`name` 为 reject 语义（trim 后非空且不含 `/` `\` `:`，显式 `name` 优先于 `File.name` 并以之为最终上传名）；`dirPath` 禁绝对路径 / 反斜杠 / `..`·`.` 段并大小写不敏感拒绝 `.spherse` 子树（server 端 `SRV_WRITE` 含 skills 等类别，需 host 自行封死）；预检 100MB；全部宿主可用（web 端 `content.editable` 已开放，与文件树上传行为对齐）
 - 错误码：`bad_request` / `unsupported_type` / `file_too_large` / `forbidden` / `upload_failed`
 
 ## data handler 与 `$manifest`

@@ -373,8 +373,7 @@ await spherse.uploadFile({ dirPath: "media", name: "chart.png", data: blob });
 
 - **扩展名白名单**（大小写不敏感）：图片 `png jpg jpeg gif webp svg bmp avif ico` · 音频 `mp3 wav ogg m4a flac aac opus` · 视频 `mp4 webm mov avi mkv` · 文本 `txt json md`。之外的类型 reject `unsupported_type`
 - `dirPath` 不允许指向 `.spherse/` 内部目录，不允许 `..` / 绝对路径 / 反斜杠
-- 仅 desktop 宿主可用（web 端 reject `forbidden`）
-- 错误码：`bad_request`（参数非法）/ `unsupported_type` / `file_too_large`（>100MB）/ `forbidden` / `upload_failed`（目标目录不存在等）
+- 错误码：`bad_request`（参数非法）/ `unsupported_type` / `file_too_large`（>100MB）/ `forbidden`（`.spherse` 子树）/ `upload_failed`（目标目录不存在等）
 - 上传成功后文件面板自动刷新；其它页面可通过 `events.on("file:update")` 感知新文件
 
 ## 请求型 Action — 只读项目信息（HTTP bridge）

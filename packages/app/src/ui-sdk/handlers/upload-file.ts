@@ -60,7 +60,6 @@ registerAction("uploadFile", async (params, ctx) => {
   const fail = (error: string) => respond(ctx, false, { error });
 
   if (!ctx.client) return fail("bad_request");
-  if (ctx.hostKind !== "electron") return fail("forbidden");
   if (!(data instanceof Blob)) return fail("bad_request");
 
   const dir = validateDirPath(dirPath);

@@ -184,16 +184,13 @@ describe("uploadFile action", () => {
     expect(lastResponse(ctx)).toMatchObject({ ok: false, data: { error: "bad_request" } });
   });
 
-  it("is forbidden on web hosts", async () => {
+  it("uploads on web hosts as well", async () => {
     const client = makeClient();
     const ctx = makeCtx(client, "web");
-    await dispatchAction(
-      "uploadFile",
-      { data: new File(["abc"], "a.png", { type: "image/png" }) },
-      ctx,
-    );
-    expect(client.uploadFile).not.toHaveBeenCalled();
-    expect(lastResponse(ctx)).toMatchObject({ ok: false, data: { error: "forbidden" } });
+    const file = new File(["abc"], "a.png", { type: "image/png" });
+    await dispatchAction("uploadFile", { data: file }, ctx);
+    expect(client.uploadFile).toHaveBeenCalledWith("", file);
+    expect(lastResponse(ctx)).toMatchObject({ ok: true });
   });
 
   it("fails with bad_request when the client is missing", async () => {
