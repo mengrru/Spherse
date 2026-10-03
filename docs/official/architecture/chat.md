@@ -106,10 +106,11 @@ Composer.send
 ## 滚动（column-reverse 方案）
 
 - 容器 `flex flex-col-reverse`、消息数组 reverse 渲染：DOM newest→oldest，`scrollTop = 0` 即底部——流式 token 到达时末条在底部增长，**原生逐帧贴底无需 JS 节流**
-- JS 介入点共三处：load-more 前捕获 `scrollTop`、渲染后恢复（阅读位置不被 prepend 扰动）；用户发送时 `scrollToBottom("smooth")`（目标 `top:0`）；首次挂载时恢复保存位置或 instant 贴底
+- JS 介入点共四处：load-more 前捕获 `scrollTop`、渲染后恢复（阅读位置不被 prepend 扰动）；用户发送时 `scrollToBottom("smooth")`（目标 `top:0`）；首次挂载时恢复保存位置或 instant 贴底；流式帧锚定补偿（见下）
+- **流式帧锚定补偿**：非贴底位置（`scrollTop < 0`）的视口稳定性不能依赖浏览器原生 scroll anchoring——WebKit（iOS 全部浏览器/PWA）未实现。容器显式 `[overflow-anchor:none]` 统一禁用原生锚定（避免与 JS 双重补偿），`useChatScroll` 在 entries 变化的 `useLayoutEffect` 中按 `scrollHeight` 增量补偿 `scrollTop`（column-reverse 下底部增长 Δ，视口锁定需 `scrollTop -= Δ`）；贴底（`scrollTop === 0`）不补偿保留原生跟随，`scrollToBottom("smooth")` 动画期间跳过补偿（补偿写 `scrollTop` 会取消进行中的 smooth 动画），load-more 与首挂载恢复路径不参与补偿
 - 「回到底部」FAB 显隐：`scrollTop >= -100px` 即视为贴底
 - session 切换按 store 中 `scrollPosition` 恢复：保存值 < 0（曾离开底部）才恢复，否则 instant 贴底；恢复在 `useLayoutEffect` 中执行规避 remount 读到脱离 DOM 的值
-- 已知取舍：DOM 顺序 newest→oldest，屏幕阅读器从最新消息读起
+- 已知取舍：DOM 顺序 newest→oldest，屏幕阅读器从最新消息读起；锚定补偿按 `scrollHeight` 总增量，视口上方高度变化（历史图片加载）理论上过度补偿，属边缘场景；补偿写 `scrollTop` 会打断 iOS 惯性滚动
 
 ## 类型归属
 

@@ -3,9 +3,15 @@ import type { ChatEntry } from "../model/entry";
 import { useChatSessionStore } from "../runtime/session-store";
 
 const NEAR_BOTTOM_THRESHOLD = 100;
+const PROGRAMMATIC_SCROLL_TIMEOUT = 700;
 
 export function isNearBottom(scrollTop: number, threshold: number = NEAR_BOTTOM_THRESHOLD): boolean {
   return scrollTop >= -threshold;
+}
+
+export function computeAnchorAdjustment(scrollTop: number, heightDelta: number, programmatic: boolean): number {
+  if (programmatic || heightDelta === 0 || scrollTop >= 0) return 0;
+  return -heightDelta;
 }
 
 export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMore: boolean = false) {
@@ -18,22 +24,47 @@ export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMo
   const scrollTopRef = useRef(0);
   const pendingLoadingMoreRef = useRef(false);
   const preLoadMoreScrollTopRef = useRef<number | null>(null);
+  const prevScrollHeightRef = useRef<number | null>(null);
+  const programmaticScrollRef = useRef(false);
+  const programmaticScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearProgrammaticScroll = useCallback(() => {
+    programmaticScrollRef.current = false;
+    if (programmaticScrollTimerRef.current) {
+      clearTimeout(programmaticScrollTimerRef.current);
+      programmaticScrollTimerRef.current = null;
+    }
+  }, []);
 
   const syncBottomState = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     scrollTopRef.current = container.scrollTop;
+    if (container.scrollTop === 0) clearProgrammaticScroll();
     const nearBottom = isNearBottom(container.scrollTop);
     setIsAtBottom((prev) => (prev === nearBottom ? prev : nearBottom));
-  }, []);
+  }, [clearProgrammaticScroll]);
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-    const container = containerRef.current;
-    if (!container) return;
-    container.scrollTo({ top: 0, behavior });
-    scrollTopRef.current = 0;
-    setIsAtBottom(true);
-  }, []);
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const container = containerRef.current;
+      if (!container) return;
+      container.scrollTo({ top: 0, behavior });
+      scrollTopRef.current = 0;
+      setIsAtBottom(true);
+      if (behavior === "smooth") {
+        programmaticScrollRef.current = true;
+        if (programmaticScrollTimerRef.current) clearTimeout(programmaticScrollTimerRef.current);
+        programmaticScrollTimerRef.current = setTimeout(() => {
+          programmaticScrollRef.current = false;
+          programmaticScrollTimerRef.current = null;
+        }, PROGRAMMATIC_SCROLL_TIMEOUT);
+      } else {
+        clearProgrammaticScroll();
+      }
+    },
+    [clearProgrammaticScroll],
+  );
 
   const hasEntries = entries.length > 0;
 
@@ -68,6 +99,10 @@ export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMo
     const container = containerRef.current;
     if (!container || entries.length === 0) return;
 
+    const heightDelta =
+      prevScrollHeightRef.current === null ? 0 : container.scrollHeight - prevScrollHeightRef.current;
+    prevScrollHeightRef.current = container.scrollHeight;
+
     if (!restoredScrollRef.current) {
       restoredScrollRef.current = true;
       const saved = useChatSessionStore.getState().sessions[sessionId]?.scrollPosition;
@@ -101,6 +136,16 @@ export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMo
       scrollToBottom("smooth");
       return;
     }
+
+    const adjustment = computeAnchorAdjustment(
+      container.scrollTop,
+      heightDelta,
+      programmaticScrollRef.current,
+    );
+    if (adjustment !== 0) {
+      container.scrollTop += adjustment;
+      scrollTopRef.current = container.scrollTop;
+    }
   }, [entries, sessionId, scrollToBottom, syncBottomState]);
 
   useEffect(() => {
@@ -108,6 +153,7 @@ export function useChatScroll(entries: ChatEntry[], sessionId: string, loadingMo
     if (!container) return;
     return () => {
       useChatSessionStore.getState().setScrollPosition(sessionId, scrollTopRef.current);
+      if (programmaticScrollTimerRef.current) clearTimeout(programmaticScrollTimerRef.current);
     };
   }, [sessionId]);
 
