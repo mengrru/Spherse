@@ -1,6 +1,6 @@
 ---
 name: spherse-write-html
-description: 在 Spherse 中产出任何 HTML 之前必须先阅读本 skill。当用户要求创建或修改 HTML 页面、生成网页、制作可视化展示（欢迎页、导览主页、内容卡片、预览页等任意 HTML 交付物）时，务必在写出 HTML 代码前先读本 skill，了解 charset、数据与渲染分离的决策、数据加载模式与 App 能力调用（含交互式卡片回传会话）的约定；切勿未经阅读直接输出 HTML
+description: 在 Spherse 中产出任何 HTML 之前必须先阅读本 skill。当用户要求创建或修改 HTML 页面、生成网页、制作可视化展示（欢迎页、侧边面板、导览主页、内容卡片、预览页等任意 HTML 交付物）时，务必在写出 HTML 代码前先读本 skill，了解 charset、数据与渲染分离的决策、数据加载模式与 App 能力调用（含交互式卡片回传会话）的约定；切勿未经阅读直接输出 HTML
 ---
 
 # 编写 HTML 页面 — 数据读写与 App 能力调用
@@ -36,7 +36,7 @@ body { overflow: hidden; }
 body { overflow-y: auto; }
 ```
 
-> 即便不加 `overflow:hidden`，App 也会在渲染时强制注入 `html,body{overflow-y:auto!important}` 作为兜底；但请勿依赖兜底，页面自身就应保持可滚动。
+> 即便不加 `overflow:hidden`，App 也会在渲染时强制注入 `html,body{overflow-y:auto!important}` 作为兜底；但请勿依赖兜底，页面自身就应保持可滚动。自定义侧边面板（约 260px 窄栏、占满面板高度、原生滚动）同理，不要设 `overflow: hidden` 裁剪内容。
 
 ## 区分两种渲染模式
 
@@ -44,7 +44,7 @@ Spherse 中的 HTML 有两种加载方式，决定了数据能否通过 `fetch` 
 
 | 模式 | 加载方式 | 能否 `fetch` 同目录文件 | 典型场景 |
 |------|----------|------------------------|----------|
-| **文件模式** | HTML 落在项目目录，经 preview 路由以 `src` 加载（真实 origin） | ✅ 可以 | Welcome Page、Content Browser 预览、HtmlCard 带 `file_path` |
+| **文件模式** | HTML 落在项目目录，经 preview 路由以 `src` 加载（真实 origin） | ✅ 可以 | Welcome Page、自定义侧边面板、Content Browser 预览、HtmlCard 带 `file_path` |
 | **字符串模式** | 纯 HTML 字符串经 `srcDoc` 加载（无真实 origin） | ❌ 不可以 | Chat HtmlCard 无 `file_path` |
 
 判断方法：如果页面是作为**文件**写入用户项目目录（而非内联字符串），按「文件模式」处理。
@@ -220,7 +220,7 @@ spherse.openExternalLink("https://example.com");
 </html>
 ```
 
-> - 此模式仅适用于**聊天 HtmlCard**（Welcome Page / Content Browser 预览中 `spherse.runtime` 为 `null`）。
+> - 此模式仅适用于**聊天 HtmlCard**（Welcome Page / 自定义侧边面板 / Content Browser 预览中 `spherse.runtime` 为 `null`）。
 > - 提交内容应是有意义的、可被会话/agent 理解的自然语言，而非原始参数。
 
 ## 其它 App 能力调用

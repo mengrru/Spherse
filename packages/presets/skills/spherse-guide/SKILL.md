@@ -84,6 +84,14 @@ Content Browser 支持：
 
 配置方式：左侧活动栏右键当前项目头像 →「设置 → 欢迎页」→ 填写项目内相对路径，或者由启用了 `manage_project_config` 工具的 Agent 在对话中设置（路径会经过校验）。清空配置可恢复默认；未显式配置时自动尝试项目根目录的 `index.html`。欢迎页文件或 `project.yaml` 配置被修改后会自动刷新；文件缺失或加载失败时回退到默认空状态。
 
+### 自定义侧边面板
+
+项目左侧面板（Agent/session 列表与文件树区域）可以被一个项目内 HTML 页面整体替换（透明 iframe 渲染，约 260px 窄栏），适合作为常驻导航、快捷操作或状态面板。仅支持 `html` / `htm`，不支持图片。
+
+配置方式：左侧活动栏右键当前项目头像 →「设置 → 侧边面板」→ 填写项目内相对路径（仅桌面端有此入口，Agent 工具目前无法代为配置，需要用户在界面中设置）。配置后默认显示自定义面板，可通过项目头像右键菜单「显示默认/自定义侧边面板」切换，每个项目独立记忆。配置清除或文件不可达时自动回落默认面板；面板 HTML 与 `project.yaml` 变更后自动刷新。
+
+生成面板 HTML 前加载 `spherse-write-html`：面板为窄栏且背景透明（不设 `body` 背景可透出应用侧边栏背景色），SDK 全量可用但与欢迎页一样没有会话上下文（`spherse.runtime` 为 `null`，不要 `await getRuntime()`）。
+
 ### 工具与审批
 
 常见工具类别：
@@ -160,7 +168,7 @@ MCP Server 可能执行本地程序或接收敏感 headers/env，只配置可信
 
 ### HTML Workspace 与 UI SDK
 
-HTML 可作为项目欢迎页、Content Browser 页面或聊天 HtmlCard。Spherse 会自动注入 `window.spherse`，页面不需要加载 SDK 脚本，也不应手写 `postMessage` wrapper。
+HTML 可作为项目欢迎页、自定义侧边面板、Content Browser 页面或聊天 HtmlCard。Spherse 会自动注入 `window.spherse`，页面不需要加载 SDK 脚本，也不应手写 `postMessage` wrapper。
 
 HTML 可以：
 
@@ -172,7 +180,7 @@ HTML 可以：
 - 读写 `*.data.json`
 - 订阅文件变化
 
-只有聊天 HtmlCard 能通过 `spherse.runtime` / `getRuntime()` 获得当前 `projectId`、`agentId` 和 `sessionId`；欢迎页和普通文件预览没有会话上下文。
+只有聊天 HtmlCard 能通过 `spherse.runtime` / `getRuntime()` 获得当前 `projectId`、`agentId` 和 `sessionId`；欢迎页、自定义侧边面板和普通文件预览没有会话上下文。
 
 生成或修改 HTML 前加载 `spherse-write-html`，查询 SDK 细节时加载 `spherse-use-ui-sdk`。
 
@@ -260,7 +268,7 @@ Agent 配置会在下一次发送或重试前热重载，不会打断当前正�
 
 ### 为什么 HTML 中不能获得当前会话？
 
-只有聊天 HtmlCard 有 runtime context。欢迎页和 Content Browser 中的 HTML 没有当前 `sessionId` 或 `agentId`。
+只有聊天 HtmlCard 有 runtime context。欢迎页、自定义侧边面板和 Content Browser 中的 HTML 没有当前 `sessionId` 或 `agentId`。
 
 ### 为什么数据文件发生覆盖？
 

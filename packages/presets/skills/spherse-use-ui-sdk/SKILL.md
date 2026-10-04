@@ -5,7 +5,7 @@ description: 在 Spherse 的 HTML 内容中使用注入的 window.spherse SDK �
 
 # UI SDK — `window.spherse`
 
-Spherse 中的 HTML 内容（欢迎页、Content Browser 预览、聊天 HtmlCard）都在 iframe 中展示。**App 会自动向每个 HTML 注入一个零依赖的 SDK 脚本**，暴露 `window.spherse`（另有别名 `window.Spherse`，其它大小写不可用）。你**不需要**手写 `postMessage`、不需要内联 Promise wrapper、不需要引入任何脚本标签 —— 直接用即可。
+Spherse 中的 HTML 内容（欢迎页、自定义侧边面板、Content Browser 预览、聊天 HtmlCard）都在 iframe 中展示。**App 会自动向每个 HTML 注入一个零依赖的 SDK 脚本**，暴露 `window.spherse`（另有别名 `window.Spherse`，其它大小写不可用）。你**不需要**手写 `postMessage`、不需要内联 Promise wrapper、不需要引入任何脚本标签 —— 直接用即可。
 
 ## 快速上手
 
@@ -42,7 +42,7 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 
 ## 运行时上下文（聊天 HtmlCard 专属）
 
-当 HTML 作为**聊天 HtmlCard** 渲染时，`spherse.runtime` 携带当前会话信息；Welcome Page 与 Content Browser 预览中为 `null`。
+当 HTML 作为**聊天 HtmlCard** 渲染时，`spherse.runtime` 携带当前会话信息；Welcome Page、自定义侧边面板与 Content Browser 预览中为 `null`（后两者的 HTML 不要 `await spherse.getRuntime()`，它不会 resolve）。
 
 - **交互式卡片**（用户点击才触发）：直接读 `spherse.runtime`
 - **加载即使用**：用 `await spherse.getRuntime()`（内部已处理竞态，无需自己注册 message 监听）
