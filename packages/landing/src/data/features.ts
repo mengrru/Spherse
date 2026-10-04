@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Bot,
+  Brain,
   FolderOpen,
   PackageOpen,
   PanelsTopLeft,
@@ -10,7 +11,14 @@ import {
 import { asset } from "@/lib/utils";
 
 export interface Feature {
-  id: "workspace" | "agents" | "automation" | "apps" | "portable" | "mobile";
+  id:
+    | "workspace"
+    | "agents"
+    | "memory"
+    | "automation"
+    | "apps"
+    | "portable"
+    | "mobile";
   icon: LucideIcon;
   i18nKeyPrefix: string;
   screenshots: string[];
@@ -33,6 +41,12 @@ export const features: Feature[] = [
       asset("screenshots/features/agents/1.png"),
       asset("screenshots/features/agents/2.png"),
     ],
+  },
+  {
+    id: "memory",
+    icon: Brain,
+    i18nKeyPrefix: "feature.memory",
+    screenshots: [],
   },
   {
     id: "automation",

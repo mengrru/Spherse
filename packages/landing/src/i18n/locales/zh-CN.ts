@@ -30,21 +30,25 @@ export const zhCN = {
   "feature.agents.title": "每个 Agent 都真正独立",
   // 首页第二张功能卡片描述，列出 Agent 级提示词、权限、Skill、MCP、会话和主题配置。
   "feature.agents.desc": "分别配置系统提示词、工具权限、私有 Skill、MCP Server、多个会话与聊天主题。",
-  // 首页第三张功能卡片，表达 Agent 可由计划和事件主动运行，而非只能被动聊天。
+  // 首页第三张功能卡片，说明 Agent 可开启跨会话长期记忆。
+  "feature.memory.title": "每个 Agent 都有长期记忆",
+  // 首页第三张功能卡片描述，说明核心记忆常驻注入、长期记忆按需检索，以及本地可管理。
+  "feature.memory.desc": "为 Agent 开启跨会话记忆：核心记忆常驻注入，长期记忆按需检索，随时查看与编辑。",
+  // 首页第四张功能卡片，表达 Agent 可由计划和事件主动运行，而非只能被动聊天。
   "feature.automation.title": "让 Agent 主动工作",
-  // 首页第三张功能卡片描述，说明定时、自定义事件以及 Agent 间联动能力。
+  // 首页第四张功能卡片描述，说明定时、自定义事件以及 Agent 间联动能力。
   "feature.automation.desc": "按计划定时执行，或响应用户、页面和其他 Agent 发出的事件，组成持续运行的自动化流程。",
-  // 首页第四张功能卡片，说明项目 HTML 可成为调用 Agent 运行时的交互应用。
+  // 首页第五张功能卡片，说明项目 HTML 可成为调用 Agent 运行时的交互应用。
   "feature.apps.title": "把内容做成可交互应用",
-  // 首页第四张功能卡片描述，说明内置预览服务和 UI SDK 提供的主要交互能力。
+  // 首页第五张功能卡片描述，说明内置预览服务和 UI SDK 提供的主要交互能力。
   "feature.apps.desc": "直接运行项目中的 HTML，并通过 UI SDK 读写数据、创建会话、发送消息和触发 Agent。",
-  // 首页第五张功能卡片，说明项目文件夹可携带完整运行配置进行复制和分享。
+  // 首页第六张功能卡片，说明项目文件夹可携带完整运行配置进行复制和分享。
   "feature.portable.title": "整个 Workspace 都能分享",
-  // 首页第五张功能卡片描述，强调接收者获得的是包含数据和运行能力的完整作品。
+  // 首页第六张功能卡片描述，强调接收者获得的是包含数据和运行能力的完整作品。
   "feature.portable.desc": "数据、Agent、Skill、自动化、主题和页面随项目目录一同分发，打开后即可运行和继续扩展。",
-  // 首页第六张功能卡片，说明用户可通过受保护的 Web 入口从移动设备访问桌面运行时。
+  // 首页第七张功能卡片，说明用户可通过受保护的 Web 入口从移动设备访问桌面运行时。
   "feature.mobile.title": "离开电脑也能继续访问",
-  // 首页第六张功能卡片描述，说明扫码连接和 Tunnel 带来的跨设备使用体验。
+  // 首页第七张功能卡片描述，说明扫码连接和 Tunnel 带来的跨设备使用体验。
   "feature.mobile.desc": "通过受访问令牌保护的 Web 客户端和 Tunnel，扫码即可从移动设备连接你的桌面运行时。",
   // 首页功能卡片区结语，强化 Spherse 分发完整 Agent Workspace 而非单一提示词的差异。
   "feature.slogan": "你创造和分享的不只是一段 Prompt，而是一个可以直接运行的 Agent Workspace。",
@@ -57,8 +61,10 @@ export const zhCN = {
   "usecase.3": "（使用案例描述占位）",
   "usecase.4": "（使用案例描述占位）",
 
-  "upcoming.memory.title": "Agent 跨 Session 记忆",
-  "upcoming.memory.desc": "Agent 将能跨会话保持长期记忆",
+  // 首页「即将到来」区第一张卡片：世界书（Lorebook）
+  "upcoming.worldbook.title": "世界书",
+  // 世界书卡片描述：导入大文本，关键词命中自动注入对话
+  "upcoming.worldbook.desc": "导入世界观设定等大文本，命中关键词时将自动注入对话，让 Agent 真正懂你的世界",
   // 首页「即将到来」区第二张卡片：多 Agent 圆桌讨论
   "upcoming.roundtable.title": "Agent 圆桌",
   // 圆桌卡片描述：多个 Agent 围绕同一话题展开讨论
