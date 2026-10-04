@@ -1,17 +1,17 @@
 import type { LucideIcon } from "lucide-react";
-import { Brain, Users } from "lucide-react";
+import { BookOpen, Users } from "lucide-react";
 
 export interface UpcomingFeature {
-  id: "memory" | "roundtable";
+  id: "worldbook" | "roundtable";
   icon: LucideIcon;
   i18nKeyPrefix: string;
 }
 
 export const upcomingFeatures: UpcomingFeature[] = [
   {
-    id: "memory",
-    icon: Brain,
-    i18nKeyPrefix: "upcoming.memory",
+    id: "worldbook",
+    icon: BookOpen,
+    i18nKeyPrefix: "upcoming.worldbook",
   },
   {
     id: "roundtable",
