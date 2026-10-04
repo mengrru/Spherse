@@ -71,7 +71,7 @@
 
 - [ ] **记忆自动召回注入（条件触发：packages/eval 行为评估显示召回主动性不足时）**：扫最新用户消息 → FTS 匹配 → 以 system-reminder 式注入对话尾部（cache 安全），替代/补充静态 memory-guide 对 agent 主动 recall 的依赖；该机制与世界书（Lorebook）的关键词被动触发同构，立项时一并设计。参见 `docs/dev/features/2026-09-26-agent-memory/design.md`
 - [ ] **packages/eval（LLM 行为评估基建）**：脚本化多会话场景（会话 1 喂事实 → 断言 `memory_save` 调用与内容；新会话提问 → 断言答案/`memory_recall` 命中），断言工具调用为主、答案判分为辅；作为独立 package 服务记忆及后续 agent 行为回归。参见 `docs/dev/features/2026-09-26-agent-memory/design.md`（用户已确认后续交付）
-- [ ] **世界书（Lorebook）**：用户导入大文本 → 切分入库 → 关键词命中自动注入；复用记忆的词条库基底（entries 表已预留 `kind: fact|chunk` 与 `source` 溯源字段）但独立 capability/UX——写者（用户策展 vs agent 写）、信任域（agent 只读）、触发模型（被动扫描 vs 主动 recall）均不同，大文本总结作为独立 pinned block 不与 core.md 合并。参见 `docs/dev/features/2026-09-26-agent-memory/design.md`「世界书」节
+- [ ] **世界书（Lorebook）**：用户导入大文本 → 切分入库 → 关键词命中自动注入；复用记忆的词条库基底（entries 表已预留 `kind: fact|chunk` 与 `source` 溯源字段）但独立 capability/UX——写者（用户策展 vs agent 写）、信任域（agent 只读）、触发模型（被动扫描 vs 主动 recall）均不同，大文本总结作为独立 pinned block 不与 core.md 合并。landing page「即将到来」区已提前露出卡片。参见 `docs/dev/features/2026-09-26-agent-memory/design.md`「世界书」节
 - [ ] **全局搜索 v2 扩展**：搜索结果命中词高亮；tool 调用参数/结果参与聊天搜索（可加开关）；legacy 会话（未迁移 messages 表）纳入搜索范围；查询词含 JSON 转义字符（`"` / `\` / 换行）时 LIKE 预取漏召回的归一化处理。参见 `docs/dev/features/2026-09-26-global-search/design.md`「不做 / 已知边界」
 - [ ] **首次收至托盘时提示用户**：「关闭至托盘」默认启用，首次关闭窗口后用户可能误以为已退出；方向：首次隐藏时发一次系统通知（Windows balloon / `Notification`），说明可从托盘图标打开或在设置 > 通用关闭。参见 `docs/dev/features/2026-09-25-close-to-tray/design.md`
 - [ ] **web_search 来源专用卡片**：当前 `web_search` 只以「执行过程」折叠区内通用工具行展示（结果 `details.sources`（title/url）未可视化）；方向：参照 generate_image 的 cardType 投影做来源列表卡片（可点击外链），投影出卡片后自动脱离折叠区。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md` 与 `2026-09-27-chat-tool-process-collapse/design.md`

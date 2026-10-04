@@ -32,7 +32,7 @@ export const zhCN = {
   "feature.agents.desc": "分别配置系统提示词、工具权限、私有 Skill、MCP Server、多个会话与聊天主题。",
   // 首页第三张功能卡片，说明 Agent 可开启跨会话长期记忆。
   "feature.memory.title": "每个 Agent 都有长期记忆",
-  // 首页第三张功能卡片描述，说明核心记忆常驻注入、长期记忆按需检索，以及本地可管理。
+  // 首页第三张功能卡片描述，说明核心记忆常驻注入、长期记忆按需检索，以及可随时查看与编辑。
   "feature.memory.desc": "为 Agent 开启跨会话记忆：核心记忆常驻注入，长期记忆按需检索，随时查看与编辑。",
   // 首页第四张功能卡片，表达 Agent 可由计划和事件主动运行，而非只能被动聊天。
   "feature.automation.title": "让 Agent 主动工作",
