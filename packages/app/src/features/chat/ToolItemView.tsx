@@ -71,7 +71,7 @@ export function ToolItemView({ tool, onNavigateToPath }: ToolItemViewProps) {
                   <td className="py-0.5">
                     {(key === "path" || key === "file_path") && typeof value === "string" && onNavigateToPath ? (
                       <button
-                        className="cursor-pointer border-none bg-transparent p-0 text-left font-mono text-xs whitespace-pre-wrap text-primary underline hover:opacity-80"
+                        className="cursor-pointer border-none bg-transparent p-0 text-left font-mono text-xs break-all whitespace-pre-wrap text-primary underline hover:opacity-80"
                         onClick={() => onNavigateToPath(value)}
                       >
                         {value}

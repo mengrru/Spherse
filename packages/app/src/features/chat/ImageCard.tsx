@@ -75,9 +75,9 @@ export function ImageCardRenderer({ card }: ImageCardRendererProps) {
   if (card.status === "error") {
     return (
       <div className="my-2 flex h-32 items-center justify-center rounded-lg border border-destructive/50 bg-destructive/5">
-        <div className="flex flex-col items-center gap-2 text-destructive">
+        <div className="flex min-w-0 flex-col items-center gap-2 text-destructive">
           <AlertCircleIcon className="size-5" />
-          <span className="text-xs">{card.errorMessage ?? t("chat.imageGenerateFailed")}</span>
+          <span className="max-w-full text-xs break-words">{card.errorMessage ?? t("chat.imageGenerateFailed")}</span>
         </div>
       </div>
     );

@@ -157,7 +157,7 @@ export function MarkdownContent({ children, variant = "document", plain, resolve
   }, [variant, resolveImageSrc, linkClassName, onLinkClick]);
 
   return (
-    <div className={variant === "chat" ? "text-sm leading-6" : "text-sm leading-7"}>
+    <div className={variant === "chat" ? "break-words text-sm leading-6" : "break-words text-sm leading-7"}>
       <Markdown
         remarkPlugins={plain ? [remarkGfm, remarkPlainStructure, remarkBreaks] : [remarkGfm]}
         rehypePlugins={[rehypeSlug]}

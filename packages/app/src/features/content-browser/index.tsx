@@ -79,7 +79,7 @@ export function ContentBrowser({ filePath, onBack, onClose, onSplit }: ContentBr
         />
       )}
       {editor.saveError && (
-        <div className="border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
+        <div className="border-b border-destructive/20 bg-destructive/10 px-4 py-2 text-sm break-words text-destructive">
           {t("content-browser.saveFailed", { error: editor.saveError })}
         </div>
       )}
