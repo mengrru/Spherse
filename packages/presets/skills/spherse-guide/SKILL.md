@@ -86,11 +86,11 @@ Content Browser 支持：
 
 ### 自定义侧边面板
 
-项目左侧面板（Agent/session 列表与文件树区域）可以被一个项目内 HTML 页面整体替换（透明 iframe 渲染，约 260px 窄栏），适合作为常驻导航、快捷操作或状态面板。仅支持 `html` / `htm`，不支持图片。
+项目左侧面板（Agent/session 列表、文件树与 Skill 面板区域）可以被一个项目内 HTML 页面整体替换（透明 iframe 渲染，约 260px 窄栏），适合作为常驻导航、快捷操作或状态面板。仅支持 `html` / `htm`，不支持图片。
 
 配置方式：左侧活动栏右键当前项目头像 →「设置 → 侧边面板」→ 填写项目内相对路径（仅桌面端有此入口，Agent 工具目前无法代为配置，需要用户在界面中设置）。配置后默认显示自定义面板，可通过项目头像右键菜单「显示默认/自定义侧边面板」切换，每个项目独立记忆。配置清除或文件不可达时自动回落默认面板；面板 HTML 与 `project.yaml` 变更后自动刷新。
 
-生成面板 HTML 前加载 `spherse-write-html`：面板为窄栏且背景透明（不设 `body` 背景可透出应用侧边栏背景色），SDK 全量可用但与欢迎页一样没有会话上下文（`spherse.runtime` 为 `null`，不要 `await getRuntime()`）。
+生成面板 HTML 前加载 `spherse-write-html`：面板为窄栏且背景透明（不设 `body` 背景可透出应用侧边栏背景色），SDK 全量可用但没有会话上下文——`spherse.runtime` 恒为 `null`，不要 `await spherse.getRuntime()`（永远不会 resolve）。
 
 ### 工具与审批
 

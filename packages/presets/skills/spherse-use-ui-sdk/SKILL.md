@@ -42,7 +42,7 @@ SDK 已由 App 注入，**不要**再自己写 `<script>` 加载它，也**不�
 
 ## 运行时上下文（聊天 HtmlCard 专属）
 
-当 HTML 作为**聊天 HtmlCard** 渲染时，`spherse.runtime` 携带当前会话信息；Welcome Page、自定义侧边面板与 Content Browser 预览中为 `null`（后两者的 HTML 不要 `await spherse.getRuntime()`，它不会 resolve）。
+当 HTML 作为**聊天 HtmlCard** 渲染时，`spherse.runtime` 携带当前会话信息；Welcome Page、自定义侧边面板与 Content Browser 预览中为 `null`，且这些场景下 `await spherse.getRuntime()` 永远不会 resolve——不要在页面加载时调用它。
 
 - **交互式卡片**（用户点击才触发）：直接读 `spherse.runtime`
 - **加载即使用**：用 `await spherse.getRuntime()`（内部已处理竞态，无需自己注册 message 监听）

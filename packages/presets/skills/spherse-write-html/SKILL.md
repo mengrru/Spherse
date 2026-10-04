@@ -36,7 +36,7 @@ body { overflow: hidden; }
 body { overflow-y: auto; }
 ```
 
-> 即便不加 `overflow:hidden`，App 也会在渲染时强制注入 `html,body{overflow-y:auto!important}` 作为兜底；但请勿依赖兜底，页面自身就应保持可滚动。自定义侧边面板（约 260px 窄栏、占满面板高度、原生滚动）同理，不要设 `overflow: hidden` 裁剪内容。
+> 即便不加 `overflow:hidden`，App 也会在渲染时强制注入 `html,body{overflow-y:auto!important}` 作为兜底；但请勿依赖兜底，页面自身就应保持可滚动。自定义侧边面板（约 260px 窄栏、占满面板高度、原生滚动）**没有**这层兜底注入，更要保持可滚动，不要设 `overflow: hidden` 裁剪内容。
 
 ## 区分两种渲染模式
 
