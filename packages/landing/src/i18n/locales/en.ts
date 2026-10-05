@@ -71,8 +71,37 @@ export const en: Record<keyof typeof zhCN, string> = {
   "cases.download": "Download sample",
   "cases.viewLarger": "View larger image",
   "cases.backHome": "Back to home",
+  "nav.docs": "Docs",
   "docs.title": "Documentation",
-  "docs.construction": "Under construction…",
+  "docs.subtitle": "Guides and tutorials",
+  "docs.tailscale.title": "Access Spherse from your phone with Tailscale",
+  "docs.tailscale.intro":
+    "Tailscale puts your computer and phone on the same private network (a tailnet). With it, you can securely reach the Spherse instance on your computer from your phone on any network — no public IP needed, and nothing is exposed to the internet. All you need is a free Tailscale account.",
+  "docs.tailscale.step1.title": "Install Tailscale on your computer",
+  "docs.tailscale.step1.desc":
+    "Download and install the Tailscale client, then sign in to your account. Once signed in, this computer joins your tailnet.",
+  "docs.tailscale.step2.title": "Serve the Spherse port on your tailnet",
+  "docs.tailscale.step2.desc":
+    "In the Spherse desktop app, open Settings → Mobile, switch Connection mode to Custom domain, note the port from the Local service URL, then run this in a terminal:",
+  "docs.tailscale.step2.hint":
+    "Replace 12345 with your actual port. The command prints a https://<machine>.<tailnet>.ts.net URL that only devices in your tailnet can reach.",
+  "docs.tailscale.step2.macosHint":
+    "On macOS, if the command is not found, use the full path instead:",
+  "docs.tailscale.step3.title": "Enter the domain in Spherse",
+  "docs.tailscale.step3.desc":
+    "Back in Settings → Mobile in Spherse, paste the ts.net URL into Public domain and save. The QR code appears immediately.",
+  "docs.tailscale.step4.title": "Connect your phone to Tailscale",
+  "docs.tailscale.step4.desc":
+    "Install the Tailscale app (App Store / Google Play) on your phone, sign in with the same account, and turn on the connection.",
+  "docs.tailscale.step5.title": "Scan and connect",
+  "docs.tailscale.step5.desc":
+    "Scan the QR code on the Spherse settings page with your phone. Once it opens in the browser, you're connected — your Spherse is now reachable from your phone anywhere.",
+  "docs.tailscale.notes.title": "Manage and troubleshoot",
+  "docs.tailscale.notes.status": "List the served URL and running status",
+  "docs.tailscale.notes.off": "Stop serving; your phone will no longer reach Spherse",
+  "docs.tailscale.notes.https":
+    "If the first run asks you to enable HTTPS certificates, follow the link in the command output and enable it once in the Tailscale admin console.",
+  "docs.tailscale.notes.docs": "See the official Tailscale Serve docs for more",
   "cases.item1.title": "Harry Potter",
   "cases.item1.desc": "Step into the wizarding world of Hogwarts — the Daily Prophet, the Pensieve and more, with multiple agents collaborating to show how Spherse brings an interactive story universe to life.",
   "cases.item2.title": "Worldbuilding Framework",

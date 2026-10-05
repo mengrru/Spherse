@@ -93,13 +93,62 @@ export const zhCN = {
   "cases.pageTitle": "案例",
   "cases.pageSubtitle": "下载示例项目，体验 Spherse 的更多可能",
   "cases.download": "下载示例项目",
+  // 顶部导航「文档」链接
+  "nav.docs": "文档",
+
   // 案例卡片截图的无障碍标签：点击放大查看
   "cases.viewLarger": "查看大图",
   "cases.backHome": "返回首页",
-  // 文档页（/docs）标题，当前为施工中占位页
+  // 文档页（/docs）标题
   "docs.title": "文档",
-  // 文档页施工中占位提示
-  "docs.construction": "施工中…",
+  // 文档页副标题
+  "docs.subtitle": "指南与教程",
+  // 文档页 Tailscale 教程标题：手机远程访问
+  "docs.tailscale.title": "用 Tailscale 从手机访问 Spherse",
+  // Tailscale 教程简介：说明 tailnet 私有网络的价值与所需准备
+  "docs.tailscale.intro":
+    "Tailscale 会把你的电脑和手机组成一个私有网络（tailnet）。借助它，你可以在任何网络下用手机安全地访问电脑上的 Spherse——无需公网 IP，也不会把服务暴露到互联网。整个过程只需要一个免费的 Tailscale 账号。",
+  // 教程第 1 步标题：电脑安装 Tailscale 客户端
+  "docs.tailscale.step1.title": "在电脑上安装 Tailscale",
+  // 教程第 1 步说明：下载、登录、加入 tailnet
+  "docs.tailscale.step1.desc":
+    "下载并安装 Tailscale 客户端，启动后登录你的账号。登录成功后，这台电脑就加入了你的 tailnet。",
+  // 教程第 2 步标题：tailscale serve 发布端口
+  "docs.tailscale.step2.title": "把 Spherse 端口发布到 tailnet",
+  // 教程第 2 步说明：从设置页获取端口号并执行 serve 命令
+  "docs.tailscale.step2.desc":
+    "在 Spherse 桌面端打开 设置 → 移动端，将「连接方式」切换为「自有域名」，记下「本地服务 URL」中的端口号，然后在电脑终端执行：",
+  // 教程第 2 步命令说明：替换端口、ts.net 地址仅 tailnet 内可见
+  "docs.tailscale.step2.hint":
+    "把 12345 替换为你的实际端口。命令会输出一个 https://<机器名>.<tailnet>.ts.net 地址，只有你 tailnet 中的设备可以访问它。",
+  // 教程第 2 步 macOS 补充：CLI 不在 PATH 中需用完整路径
+  "docs.tailscale.step2.macosHint": "macOS 下如提示找不到命令，请改用完整路径执行：",
+  // 教程第 3 步标题：Spherse 中保存公网域名
+  "docs.tailscale.step3.title": "在 Spherse 中填写域名",
+  // 教程第 3 步说明：填入 ts.net 地址生成二维码
+  "docs.tailscale.step3.desc":
+    "回到 Spherse 的 设置 → 移动端，把上一步得到的 ts.net 地址填入「公网域名」并保存，二维码会立即显示。",
+  // 教程第 4 步标题：手机加入 tailnet
+  "docs.tailscale.step4.title": "在手机上连接 Tailscale",
+  // 教程第 4 步说明：安装 App、同账号登录并开启连接
+  "docs.tailscale.step4.desc":
+    "在手机上安装 Tailscale App（App Store / Google Play），登录同一个账号，然后开启连接。",
+  // 教程第 5 步标题：扫码配对
+  "docs.tailscale.step5.title": "扫码访问",
+  // 教程第 5 步说明：扫码完成连接后可随时访问
+  "docs.tailscale.step5.desc":
+    "用手机扫描 Spherse 设置页中的二维码，浏览器打开后即完成连接。之后随时在手机上访问你的 Spherse。",
+  // 教程附注区标题：管理与排错
+  "docs.tailscale.notes.title": "管理与排错",
+  // 附注：查看 serve 状态的命令说明
+  "docs.tailscale.notes.status": "查看已发布的地址与运行状态",
+  // 附注：停止 serve 的命令说明
+  "docs.tailscale.notes.off": "停止发布，手机将无法继续访问",
+  // 附注：首次使用可能需要启用 HTTPS 证书
+  "docs.tailscale.notes.https":
+    "若首次执行时提示需要启用 HTTPS 证书，跟随命令输出中的指引在 Tailscale 管理台开启一次即可。",
+  // 附注：Tailscale Serve 官方文档外链文案
+  "docs.tailscale.notes.docs": "更多用法参考 Tailscale Serve 官方文档",
   "cases.item1.title": "哈利波特",
   "cases.item1.desc": "走进霍格沃茨的魔法世界——预言家日报社、冥想盆等多个 Agent 协同演绎，展示如何用 Spherse 构建一个鲜活的交互式故事宇宙。",
   // 案例页第二张卡片，在 Spherse 中原生打造的世界观创作应用。

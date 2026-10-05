@@ -36,6 +36,12 @@ export function Header({ locale, onLocaleChange, t }: HeaderProps) {
         >
           {t("nav.download")}
         </Link>
+        <Link
+          to="/docs"
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {t("nav.docs")}
+        </Link>
         <LanguageSwitcher locale={locale} onLocaleChange={onLocaleChange} t={t} />
       </div>
     </header>
