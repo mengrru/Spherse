@@ -13,8 +13,8 @@ GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）。Vite + R
 
 ### 新增一篇文档
 
-1. 在 `src/content/docs/` 新建 `.zh-CN`、`.zh-TW`、`.en` 三个 md 文件（id 保持一致）
-2. 文件以 `# 标题` 开头（用作文章标题）
-3. 若要在页面挂载，在 `DocsPage.tsx` 引用对应 id
+1. 在 `src/content/docs/` 新建 `.zh-CN`、`.zh-TW`、`.en` 三个 md 文件（id 保持一致，即文章 URL `/docs/<id>`）
+2. 文件以 `# 标题` 开头（用作文章标题），标题后的首段会作为列表页摘要
+3. 无需改代码：`/docs` 列表与 `/docs/<id>` 文章页由 `DocsPage` / `DocsArticlePage` 自动收录
 
-约束由 `src/lib/docs.test.ts` 保证：三语齐全、以 `# ` 开头、页面引用的 id 存在；locale 缺失时 `docs.ts` 的 `getDoc` 回退到默认 locale（该回退分支在测试中被三语齐全约束排除，不单独覆盖）。
+约束由 `src/lib/docs.test.ts` 保证：三语齐全、以 `# ` 开头、摘要可提取、已发布 URL 的 id 不失效；locale 缺失时 `docs.ts` 的 `getDoc` 回退到默认 locale（该回退分支在测试中被三语齐全约束排除，不单独覆盖）。

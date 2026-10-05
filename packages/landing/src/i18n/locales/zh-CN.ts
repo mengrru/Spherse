@@ -102,6 +102,8 @@ export const zhCN = {
   "docs.title": "文档",
   // 文档页副标题
   "docs.subtitle": "指南与教程",
+  // 文章页（/docs/:id）Header 中的返回列表链接
+  "docs.backToList": "返回文档",
   "cases.item1.title": "哈利波特",
   "cases.item1.desc": "走进霍格沃茨的魔法世界——预言家日报社、冥想盆等多个 Agent 协同演绎，展示如何用 Spherse 构建一个鲜活的交互式故事宇宙。",
   // 案例页第二张卡片，在 Spherse 中原生打造的世界观创作应用。

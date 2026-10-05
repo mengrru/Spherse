@@ -8,6 +8,7 @@ import { FeatureCards } from "./components/FeatureCards";
 import { UpcomingFeatures } from "./components/UpcomingFeatures";
 import { CasesPage } from "./components/CasesPage";
 import { DocsPage } from "./components/DocsPage";
+import { DocsArticlePage } from "./components/DocsArticlePage";
 import { DownloadPage } from "./components/DownloadPage";
 
 export function App() {
@@ -42,6 +43,10 @@ export function App() {
             <Route path="/explore" element={<CasesPage t={t} />} />
             <Route path="/download" element={<DownloadPage t={t} />} />
             <Route path="/docs" element={<DocsPage t={t} locale={locale} />} />
+            <Route
+              path="/docs/:docId"
+              element={<DocsArticlePage t={t} locale={locale} />}
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

@@ -72,6 +72,7 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "cases.backHome": "返回首頁",
   "docs.title": "文件",
   "docs.subtitle": "指南與教學",
+  "docs.backToList": "返回文件",
   "cases.item1.title": "哈利波特",
   "cases.item1.desc": "走進霍格沃茨的魔法世界——預言家日報社、冥想盆等多個 Agent 協同演繹，展示如何用 Spherse 構建一個鮮活的互動式故事宇宙。",
   "cases.item2.title": "世界觀創作框架",

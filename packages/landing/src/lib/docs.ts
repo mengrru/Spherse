@@ -37,3 +37,24 @@ export function docTitle(content: string): string {
   const heading = /^#\s+(.+)$/m.exec(content);
   return heading?.[1]?.trim() ?? "";
 }
+
+function stripInlineMarkdown(text: string): string {
+  return text
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/`+/g, "")
+    .replace(/(\*\*|__|\*|_)/g, "");
+}
+
+export function docExcerpt(content: string, maxLength = 120): string {
+  const paragraph = content
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .find(
+      (block) =>
+        !block.startsWith("#") && !block.startsWith("```") && block.length > 0,
+    );
+  if (!paragraph) return "";
+  const plain = stripInlineMarkdown(paragraph.split("\n").join(" ")).replace(/\s+/g, " ").trim();
+  return plain.length > maxLength ? `${plain.slice(0, maxLength)}…` : plain;
+}

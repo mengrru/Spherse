@@ -11,10 +11,10 @@ Download and install the [Tailscale client](https://tailscale.com/download), the
 In the Spherse desktop app, open Settings → Mobile, switch Connection mode to Custom domain (if you previously enabled the quick tunnel, turn it off first), note the port from the Local service URL, then run this in a terminal:
 
 ```sh
-tailscale serve --bg 12345
+tailscale serve --bg 53972
 ```
 
-Replace `12345` with your actual port. The command prints a `https://<machine>.<tailnet>.ts.net` URL that only devices in your tailnet can reach.
+Spherse listens on port 53972 by default; if the Local service URL shows a different port, replace it with yours. The command prints a `https://<machine>.<tailnet>.ts.net` URL that only devices in your tailnet can reach.
 
 On macOS, if the command is not found, use the full path instead: `/Applications/Tailscale.app/Contents/MacOS/Tailscale`
 

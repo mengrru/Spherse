@@ -411,7 +411,7 @@ spherse/
 │   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型与 locale 工具，自建 catalog；只放 UI chrome 文案，长文内容放 content/docs）
 │   │       │   ├── index.ts          # useLandingI18n hook + localStorage 持久化
 │   │       │   └── locales/          # zh-CN / zh-TW / en 三语
-│   │       ├── components/           # 页面组件（Hero、Carousel、FeatureCards、DownloadPage、DocsPage、DocMarkdown、FeatureModal、LanguageSwitcher 等）
+│   │       ├── components/           # 页面组件（Hero、Carousel、FeatureCards、DownloadPage、DocsPage 文档列表、DocsArticlePage 文章页、DocMarkdown、FeatureModal、LanguageSwitcher 等）
 │   │       │   └── ui/              # 从 app 复制的 shadcn 组件（button、dialog）
 │   │       └── data/                # 轮播与 feature 配置数据
 ├── scripts/

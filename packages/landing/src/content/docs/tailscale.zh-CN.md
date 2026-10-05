@@ -11,10 +11,10 @@ Tailscale 会把你的电脑和手机组成一个私有网络（tailnet）。借
 在 Spherse 桌面端打开 设置 → 移动端，将「连接方式」切换为「自有域名」（若此前启用过快速隧道，请先关闭其开关），记下「本地服务 URL」中的端口号，然后在电脑终端执行：
 
 ```sh
-tailscale serve --bg 12345
+tailscale serve --bg 53972
 ```
 
-把 `12345` 替换为你的实际端口。命令会输出一个 `https://<机器名>.<tailnet>.ts.net` 地址，只有你 tailnet 中的设备可以访问它。
+Spherse 默认使用 53972 端口；若「本地服务 URL」显示的端口不同，请替换为你的实际端口。命令会输出一个 `https://<机器名>.<tailnet>.ts.net` 地址，只有你 tailnet 中的设备可以访问它。
 
 macOS 下如提示找不到命令，请改用完整路径执行：`/Applications/Tailscale.app/Contents/MacOS/Tailscale`
 

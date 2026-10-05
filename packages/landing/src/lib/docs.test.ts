@@ -1,17 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { docIds, docTitle, getDoc } from "./docs";
+import { docIds, docTitle, docExcerpt, getDoc } from "./docs";
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, type Locale } from "@spherse/i18n";
 
-const LANDING_DOC_ID = "tailscale";
+const PUBLISHED_DOC_IDS = ["tailscale"];
 
 describe("docs content", () => {
   it("has at least one article", () => {
     expect(docIds().length).toBeGreaterThan(0);
   });
 
-  it("includes every article referenced by the docs page", () => {
-    expect(docIds()).toContain(LANDING_DOC_ID);
-    expect(getDoc(LANDING_DOC_ID, DEFAULT_LOCALE)).not.toBeNull();
+  it("keeps every published /docs/:id URL resolvable", () => {
+    for (const id of PUBLISHED_DOC_IDS) {
+      expect(docIds()).toContain(id);
+      expect(getDoc(id, DEFAULT_LOCALE)).not.toBeNull();
+    }
   });
 
   it("every article ships all supported locales and starts with a title heading", () => {
@@ -24,6 +26,16 @@ describe("docs content", () => {
         );
         expect(docTitle(content!), `${id}.${locale}.md has empty title`).not.toBe("");
       }
+    }
+  });
+
+  it("every article yields a plain-text excerpt for the list page", () => {
+    for (const id of docIds()) {
+      const content = getDoc(id, DEFAULT_LOCALE)!;
+      const excerpt = docExcerpt(content);
+      expect(excerpt, `${id} excerpt empty`).not.toBe("");
+      expect(excerpt).not.toMatch(/\[.*\]\(/);
+      expect(excerpt).not.toContain("```");
     }
   });
 });
