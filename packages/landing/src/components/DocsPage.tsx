@@ -2,26 +2,36 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import type { TranslationKey } from "../i18n";
+import {
+  TAILSCALE_DOWNLOAD_URL,
+  TAILSCALE_SERVE_DOC_URL,
+} from "../lib/urls";
 
-const TAILSCALE_DOWNLOAD_URL = "https://tailscale.com/download";
-const TAILSCALE_SERVE_DOC_URL = "https://tailscale.com/kb/1242/tailscale-serve";
 const TAILSCALE_SERVE_COMMAND = "tailscale serve --bg 12345";
 
 interface DocsPageProps {
   t: (key: TranslationKey) => string;
 }
 
-function CodeBlock({ command, label }: { command: string; label?: string }) {
+function CodeBlock({
+  command,
+  copyLabel,
+  copiedLabel,
+}: {
+  command: string;
+  copyLabel: string;
+  copiedLabel: string;
+}) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // ignore clipboard errors — user can still read and type the command
-    }
+  const handleCopy = () => {
+    void navigator.clipboard
+      .writeText(command)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => undefined);
   };
 
   return (
@@ -30,7 +40,7 @@ function CodeBlock({ command, label }: { command: string; label?: string }) {
       <button
         type="button"
         onClick={() => void handleCopy()}
-        aria-label={label ?? command}
+        aria-label={copied ? copiedLabel : copyLabel}
         className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
       >
         {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
@@ -106,7 +116,8 @@ export function DocsPage({ t }: DocsPageProps) {
             <p className={STEP_BODY_CLASS}>{t("docs.tailscale.step2.desc")}</p>
             <CodeBlock
               command={TAILSCALE_SERVE_COMMAND}
-              label={t("hero.copyCommand")}
+              copyLabel={t("hero.copyCommand")}
+              copiedLabel={t("hero.copied")}
             />
             <p className={STEP_HINT_CLASS}>{t("docs.tailscale.step2.hint")}</p>
             <p className={STEP_HINT_CLASS}>

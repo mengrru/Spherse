@@ -50,6 +50,7 @@ export const en: Record<keyof typeof zhCN, string> = {
   "home.moreCases": "Explore more possibilities",
   "nav.explore": "Explore",
   "nav.download": "Download",
+  "nav.docs": "Docs",
 
   "download.pageTitle": "Download Spherse",
   "download.pageSubtitle": "Get the latest version, or browse the release history",
@@ -71,7 +72,6 @@ export const en: Record<keyof typeof zhCN, string> = {
   "cases.download": "Download sample",
   "cases.viewLarger": "View larger image",
   "cases.backHome": "Back to home",
-  "nav.docs": "Docs",
   "docs.title": "Documentation",
   "docs.subtitle": "Guides and tutorials",
   "docs.tailscale.title": "Access Spherse from your phone with Tailscale",
@@ -82,7 +82,7 @@ export const en: Record<keyof typeof zhCN, string> = {
     "Download and install the Tailscale client, then sign in to your account. Once signed in, this computer joins your tailnet.",
   "docs.tailscale.step2.title": "Serve the Spherse port on your tailnet",
   "docs.tailscale.step2.desc":
-    "In the Spherse desktop app, open Settings → Mobile, switch Connection mode to Custom domain, note the port from the Local service URL, then run this in a terminal:",
+    "In the Spherse desktop app, open Settings → Mobile, switch Connection mode to Custom domain (if you previously enabled the quick tunnel, turn it off first), note the port from the Local service URL, then run this in a terminal:",
   "docs.tailscale.step2.hint":
     "Replace 12345 with your actual port. The command prints a https://<machine>.<tailnet>.ts.net URL that only devices in your tailnet can reach.",
   "docs.tailscale.step2.macosHint":
@@ -98,7 +98,8 @@ export const en: Record<keyof typeof zhCN, string> = {
     "Scan the QR code on the Spherse settings page with your phone. Once it opens in the browser, you're connected — your Spherse is now reachable from your phone anywhere.",
   "docs.tailscale.notes.title": "Manage and troubleshoot",
   "docs.tailscale.notes.status": "List the served URL and running status",
-  "docs.tailscale.notes.off": "Stop serving; your phone will no longer reach Spherse",
+  "docs.tailscale.notes.off":
+    "Stop serving and clear all serve config on this machine; your phone will no longer reach Spherse",
   "docs.tailscale.notes.https":
     "If the first run asks you to enable HTTPS certificates, follow the link in the command output and enable it once in the Tailscale admin console.",
   "docs.tailscale.notes.docs": "See the official Tailscale Serve docs for more",

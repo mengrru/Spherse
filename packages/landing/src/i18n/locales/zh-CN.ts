@@ -68,6 +68,8 @@ export const zhCN = {
   "home.moreCases": "探索更多可能",
   "nav.explore": "探索",
   "nav.download": "下载",
+  // 顶部导航「文档」链接
+  "nav.docs": "文档",
 
   // 下载页（/download）标题与副标题。
   "download.pageTitle": "下载 Spherse",
@@ -93,9 +95,6 @@ export const zhCN = {
   "cases.pageTitle": "案例",
   "cases.pageSubtitle": "下载示例项目，体验 Spherse 的更多可能",
   "cases.download": "下载示例项目",
-  // 顶部导航「文档」链接
-  "nav.docs": "文档",
-
   // 案例卡片截图的无障碍标签：点击放大查看
   "cases.viewLarger": "查看大图",
   "cases.backHome": "返回首页",
@@ -117,7 +116,7 @@ export const zhCN = {
   "docs.tailscale.step2.title": "把 Spherse 端口发布到 tailnet",
   // 教程第 2 步说明：从设置页获取端口号并执行 serve 命令
   "docs.tailscale.step2.desc":
-    "在 Spherse 桌面端打开 设置 → 移动端，将「连接方式」切换为「自有域名」，记下「本地服务 URL」中的端口号，然后在电脑终端执行：",
+    "在 Spherse 桌面端打开 设置 → 移动端，将「连接方式」切换为「自有域名」（若此前启用过快速隧道，请先关闭其开关），记下「本地服务 URL」中的端口号，然后在电脑终端执行：",
   // 教程第 2 步命令说明：替换端口、ts.net 地址仅 tailnet 内可见
   "docs.tailscale.step2.hint":
     "把 12345 替换为你的实际端口。命令会输出一个 https://<机器名>.<tailnet>.ts.net 地址，只有你 tailnet 中的设备可以访问它。",
@@ -143,7 +142,7 @@ export const zhCN = {
   // 附注：查看 serve 状态的命令说明
   "docs.tailscale.notes.status": "查看已发布的地址与运行状态",
   // 附注：停止 serve 的命令说明
-  "docs.tailscale.notes.off": "停止发布，手机将无法继续访问",
+  "docs.tailscale.notes.off": "停止发布并清除本机全部 serve 配置，手机将无法继续访问",
   // 附注：首次使用可能需要启用 HTTPS 证书
   "docs.tailscale.notes.https":
     "若首次执行时提示需要启用 HTTPS 证书，跟随命令输出中的指引在 Tailscale 管理台开启一次即可。",
