@@ -74,7 +74,7 @@ export const en: Record<keyof typeof zhCN, string> = {
   "cases.backHome": "Back to home",
   "docs.title": "Documentation",
   "docs.subtitle": "Guides and tutorials",
-  "docs.backToList": "All docs",
+  "docs.backToList": "Back to docs",
   "cases.item1.title": "Harry Potter",
   "cases.item1.desc": "Step into the wizarding world of Hogwarts — the Daily Prophet, the Pensieve and more, with multiple agents collaborating to show how Spherse brings an interactive story universe to life.",
   "cases.item2.title": "Worldbuilding Framework",

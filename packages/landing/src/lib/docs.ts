@@ -56,5 +56,9 @@ export function docExcerpt(content: string, maxLength = 120): string {
     );
   if (!paragraph) return "";
   const plain = stripInlineMarkdown(paragraph.split("\n").join(" ")).replace(/\s+/g, " ").trim();
-  return plain.length > maxLength ? `${plain.slice(0, maxLength)}…` : plain;
+  const chars = Array.from(plain);
+  if (chars.length <= maxLength) return plain;
+  const cut = chars.slice(0, maxLength).join("");
+  const boundary = cut.lastIndexOf(" ");
+  return `${(boundary > maxLength * 0.6 ? cut.slice(0, boundary) : cut).trimEnd()}…`;
 }

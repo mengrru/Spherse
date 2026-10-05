@@ -3,7 +3,6 @@ import { Link } from "react-router";
 import { ChevronRight } from "lucide-react";
 import type { TranslationKey } from "../i18n";
 import { docIds, docTitle, docExcerpt, getDoc } from "../lib/docs";
-import { DEFAULT_LOCALE } from "@spherse/i18n";
 
 interface DocsPageProps {
   t: (key: TranslationKey) => string;
@@ -11,11 +10,14 @@ interface DocsPageProps {
 }
 
 export function DocsPage({ t, locale }: DocsPageProps) {
-  const articles = docIds().map((id) => ({
-    id,
-    title: docTitle(getDoc(id, locale) ?? getDoc(id, DEFAULT_LOCALE) ?? ""),
-    excerpt: docExcerpt(getDoc(id, locale) ?? getDoc(id, DEFAULT_LOCALE) ?? ""),
-  }));
+  const articles = docIds().map((id) => {
+    const content = getDoc(id, locale) ?? "";
+    return {
+      id,
+      title: docTitle(content),
+      excerpt: docExcerpt(content),
+    };
+  });
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
