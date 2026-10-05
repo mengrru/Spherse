@@ -48,6 +48,7 @@ export const en: Record<keyof typeof zhCN, string> = {
   "upcoming.label": "Coming Soon",
 
   "home.moreCases": "Explore more possibilities",
+  "nav.home": "Home",
   "nav.explore": "Explore",
   "nav.download": "Download",
   "nav.docs": "Docs",
@@ -71,7 +72,6 @@ export const en: Record<keyof typeof zhCN, string> = {
   "cases.pageSubtitle": "Download sample projects to explore what Spherse can do",
   "cases.download": "Download sample",
   "cases.viewLarger": "View larger image",
-  "cases.backHome": "Back to home",
   "docs.title": "Documentation",
   "docs.subtitle": "Guides and tutorials",
   "docs.backToList": "Back to docs",

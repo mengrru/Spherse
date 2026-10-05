@@ -66,6 +66,7 @@ export const zhCN = {
   "upcoming.label": "即将到来",
 
   "home.moreCases": "探索更多可能",
+  "nav.home": "首页",
   "nav.explore": "探索",
   "nav.download": "下载",
   // 顶部导航「文档」链接
@@ -97,7 +98,6 @@ export const zhCN = {
   "cases.download": "下载示例项目",
   // 案例卡片截图的无障碍标签：点击放大查看
   "cases.viewLarger": "查看大图",
-  "cases.backHome": "返回首页",
   // 文档页（/docs）标题；文章内容在 src/content/docs/ 下的三语 md 中维护，不走本 catalog
   "docs.title": "文档",
   // 文档页副标题

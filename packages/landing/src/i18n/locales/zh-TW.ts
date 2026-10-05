@@ -46,6 +46,7 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "upcoming.label": "即將到來",
 
   "home.moreCases": "探索更多可能",
+  "nav.home": "首頁",
   "nav.explore": "探索",
   "nav.download": "下載",
   "nav.docs": "文件",
@@ -69,7 +70,6 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "cases.pageSubtitle": "下載範例專案，體驗 Spherse 的更多可能",
   "cases.download": "下載範例專案",
   "cases.viewLarger": "查看大圖",
-  "cases.backHome": "返回首頁",
   "docs.title": "文件",
   "docs.subtitle": "指南與教學",
   "docs.backToList": "返回文件",
