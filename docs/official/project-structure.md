@@ -405,11 +405,13 @@ spherse/
 │   │   │   └── themes/              # 轮播切换时动态加载的主题 CSS（覆盖 --sp-* 变量）
 │   │   └── src/
 │   │       ├── styles.css            # Tailwind v4 + --sp-* token 体系（从 app 精简复制）
-│   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）、changelog.ts（OSS changelog.json 拉取）、urls.ts（GitHub 仓库 URL 常量派生）及单测
-│   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型与 locale 工具，自建 catalog）
+│   │       ├── lib/                  # release.ts（OSS latest.json 解析 + 平台/架构检测选安装包）、changelog.ts（OSS changelog.json 拉取）、urls.ts（GitHub 仓库 URL 常量派生）、docs.ts（content/docs 三语 md 加载与 locale 回退）及单测
+│   │       ├── content/
+│   │       │   └── docs/             # 文档页长文内容：每篇文章三个 locale 文件（<id>.<locale>.md，以 # 标题开头），不走 i18n catalog
+│   │       ├── i18n/                 # landing 专属 i18n（复用 @spherse/i18n 类型与 locale 工具，自建 catalog；只放 UI chrome 文案，长文内容放 content/docs）
 │   │       │   ├── index.ts          # useLandingI18n hook + localStorage 持久化
 │   │       │   └── locales/          # zh-CN / zh-TW / en 三语
-│   │       ├── components/           # 页面组件（Hero、Carousel、FeatureCards、DownloadPage、FeatureModal、LanguageSwitcher 等）
+│   │       ├── components/           # 页面组件（Hero、Carousel、FeatureCards、DownloadPage、DocsPage、DocMarkdown、FeatureModal、LanguageSwitcher 等）
 │   │       │   └── ui/              # 从 app 复制的 shadcn 组件（button、dialog）
 │   │       └── data/                # 轮播与 feature 配置数据
 ├── scripts/

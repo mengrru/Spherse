@@ -72,33 +72,6 @@ export const zhTW: Record<keyof typeof zhCN, string> = {
   "cases.backHome": "返回首頁",
   "docs.title": "文件",
   "docs.subtitle": "指南與教學",
-  "docs.tailscale.title": "用 Tailscale 從手機存取 Spherse",
-  "docs.tailscale.intro":
-    "Tailscale 會把你的電腦和手機組成一個私有網路（tailnet）。藉助它，你可以在任何網路下用手機安全地存取電腦上的 Spherse——無需公網 IP，也不會把服務暴露到網際網路。整個過程只需要一個免費的 Tailscale 帳號。",
-  "docs.tailscale.step1.title": "在電腦上安裝 Tailscale",
-  "docs.tailscale.step1.desc":
-    "下載並安裝 Tailscale 用戶端，啟動後登入你的帳號。登入成功後，這台電腦就加入了你的 tailnet。",
-  "docs.tailscale.step2.title": "把 Spherse 連接埠發佈到 tailnet",
-  "docs.tailscale.step2.desc":
-    "在 Spherse 桌面端開啟 設定 → 行動裝置，將「連線方式」切換為「自有網域」（若此前啟用過快速通道，請先關閉其開關），記下「本地服務 URL」中的連接埠號，然後在電腦終端機執行：",
-  "docs.tailscale.step2.hint":
-    "把 12345 替換為你的實際連接埠。命令會輸出一個 https://<機器名>.<tailnet>.ts.net 位址，只有你 tailnet 中的裝置可以存取它。",
-  "docs.tailscale.step2.macosHint": "macOS 下如提示找不到命令，請改用完整路徑執行：",
-  "docs.tailscale.step3.title": "在 Spherse 中填寫網域",
-  "docs.tailscale.step3.desc":
-    "回到 Spherse 的 設定 → 行動裝置，把上一步得到的 ts.net 位址填入「公用網域」並儲存，QR Code 會立即顯示。",
-  "docs.tailscale.step4.title": "在手機上連線 Tailscale",
-  "docs.tailscale.step4.desc":
-    "在手機上安裝 Tailscale App（App Store / Google Play），登入同一個帳號，然後開啟連線。",
-  "docs.tailscale.step5.title": "掃碼存取",
-  "docs.tailscale.step5.desc":
-    "用手機掃描 Spherse 設定頁中的 QR Code，瀏覽器開啟後即完成連線。之後隨時在手機上存取你的 Spherse。",
-  "docs.tailscale.notes.title": "管理與疑難排解",
-  "docs.tailscale.notes.status": "查看已發佈的位址與運行狀態",
-  "docs.tailscale.notes.off": "停止發佈並清除本機全部 serve 設定，手機將無法繼續存取",
-  "docs.tailscale.notes.https":
-    "若首次執行時提示需要啟用 HTTPS 憑證，跟隨命令輸出中的指引在 Tailscale 管理後台開啟一次即可。",
-  "docs.tailscale.notes.docs": "更多用法參考 Tailscale Serve 官方文件",
   "cases.item1.title": "哈利波特",
   "cases.item1.desc": "走進霍格沃茨的魔法世界——預言家日報社、冥想盆等多個 Agent 協同演繹，展示如何用 Spherse 構建一個鮮活的互動式故事宇宙。",
   "cases.item2.title": "世界觀創作框架",

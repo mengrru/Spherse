@@ -1,0 +1,20 @@
+# @spherse/landing
+
+GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）。Vite + React SPA，Tailwind v4 + `--sp-*` token 体系。
+
+## 文案分层
+
+| 内容 | 位置 | 说明 |
+|---|---|---|
+| UI chrome（按钮、标签、页面标题等短文案） | `src/i18n/locales/`（zh-CN / zh-TW / en，zh-CN 为规范目录） | 走 landing 自建 catalog，与 `@spherse/i18n` 的区别见 `docs/official/project-structure.md` |
+| 长文内容（教程、指南等成篇文档） | `src/content/docs/<id>.<locale>.md` | **禁止写成 i18n key**。每篇文章三个 locale 文件，以 `# 标题` 开头，由 `src/lib/docs.ts` 经 `import.meta.glob` 加载、`DocMarkdown` 组件（react-markdown）渲染 |
+
+理由：catalog 适合短而有标签的 UI 文案；成篇内容写成 key 会让 catalog 膨胀且无法按 md 工作流维护。两者边界以此为准。
+
+### 新增一篇文档
+
+1. 在 `src/content/docs/` 新建 `.zh-CN`、`.zh-TW`、`.en` 三个 md 文件（id 保持一致）
+2. 文件以 `# 标题` 开头（用作文章标题）
+3. 若要在页面挂载，在 `DocsPage.tsx` 引用对应 id
+
+约束由 `src/lib/docs.test.ts` 保证：三语齐全、以 `# ` 开头；locale 缺失时回退 zh-CN。

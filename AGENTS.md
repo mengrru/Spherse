@@ -22,7 +22,7 @@
 | `packages/app` | 共享 React renderer | [README](packages/app/README.md)（必读） |
 | `packages/desktop` | Electron 桌面壳（main/preload/基础设施） | 遵循 `docs/official/` |
 | `packages/web` | Web 版本壳（移动端 PWA） | 遵循 `docs/official/` |
-| `packages/landing` | GitHub Pages 项目介绍页 | 遵循 `docs/official/` |
+| `packages/landing` | GitHub Pages 项目介绍页 | [README](packages/landing/README.md)（文案分层：UI chrome 走 i18n catalog，长文走三语 md） |
 
 ### 读：按需加载
 

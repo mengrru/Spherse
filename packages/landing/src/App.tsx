@@ -41,7 +41,7 @@ export function App() {
             />
             <Route path="/explore" element={<CasesPage t={t} />} />
             <Route path="/download" element={<DownloadPage t={t} />} />
-            <Route path="/docs" element={<DocsPage t={t} />} />
+            <Route path="/docs" element={<DocsPage t={t} locale={locale} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
