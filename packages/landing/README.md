@@ -17,4 +17,4 @@ GitHub Pages 项目介绍页（自定义域名 spherse.mengru.work）。Vite + R
 2. 文件以 `# 标题` 开头（用作文章标题）
 3. 若要在页面挂载，在 `DocsPage.tsx` 引用对应 id
 
-约束由 `src/lib/docs.test.ts` 保证：三语齐全、以 `# ` 开头；locale 缺失时回退 zh-CN。
+约束由 `src/lib/docs.test.ts` 保证：三语齐全、以 `# ` 开头、页面引用的 id 存在；locale 缺失时 `docs.ts` 的 `getDoc` 回退到默认 locale（该回退分支在测试中被三语齐全约束排除，不单独覆盖）。

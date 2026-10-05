@@ -1,4 +1,4 @@
-import type { Locale } from "@spherse/i18n";
+import { DEFAULT_LOCALE, type Locale } from "@spherse/i18n";
 
 export type DocId = string;
 
@@ -30,7 +30,7 @@ export function docIds(): DocId[] {
 export function getDoc(id: DocId, locale: Locale): string | null {
   const article = docSources[id];
   if (!article) return null;
-  return article[locale] ?? article["zh-CN"] ?? null;
+  return article[locale] ?? article[DEFAULT_LOCALE] ?? null;
 }
 
 export function docTitle(content: string): string {

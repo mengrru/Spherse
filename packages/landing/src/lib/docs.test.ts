@@ -2,9 +2,16 @@ import { describe, expect, it } from "vitest";
 import { docIds, docTitle, getDoc } from "./docs";
 import { SUPPORTED_LOCALES, DEFAULT_LOCALE, type Locale } from "@spherse/i18n";
 
+const LANDING_DOC_ID = "tailscale";
+
 describe("docs content", () => {
   it("has at least one article", () => {
     expect(docIds().length).toBeGreaterThan(0);
+  });
+
+  it("includes every article referenced by the docs page", () => {
+    expect(docIds()).toContain(LANDING_DOC_ID);
+    expect(getDoc(LANDING_DOC_ID, DEFAULT_LOCALE)).not.toBeNull();
   });
 
   it("every article ships all supported locales and starts with a title heading", () => {
@@ -17,13 +24,6 @@ describe("docs content", () => {
         );
         expect(docTitle(content!), `${id}.${locale}.md has empty title`).not.toBe("");
       }
-    }
-  });
-
-  it("falls back to the default locale when a locale file is absent", () => {
-    for (const id of docIds()) {
-      const canonical = getDoc(id, DEFAULT_LOCALE);
-      expect(canonical).not.toBeNull();
     }
   });
 });
