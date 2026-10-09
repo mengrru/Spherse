@@ -63,6 +63,25 @@ test("header split moves the file into the split pane, which persists and closes
   }
 });
 
+test("split pane return button brings the file back to the main window", async () => {
+  const project = await createFileTreeProject();
+  const { app, page } = await launchFileTreeApp(project);
+
+  try {
+    await main(page).getByRole("button", { name: "分窗" }).click();
+    await expect(pane(page)).toContainText("Test Project");
+    await expect(tabs(page)).toHaveText(["欢迎页"]);
+
+    await pane(page).getByRole("button", { name: "回到主窗口" }).click();
+    await expect(pane(page)).toHaveCount(0);
+    await expect(page.getByRole("separator")).toHaveCount(0);
+    await expect(main(page).locator("[data-content-browser]")).toContainText("Test Project");
+    await expect(tabs(page)).toHaveText(["欢迎页", "README"]);
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test("context menu splits and unsplits a file; deleting its folder ends the split", async () => {
   const project = await createFileTreeProject();
   const { app, page } = await launchFileTreeApp(project);

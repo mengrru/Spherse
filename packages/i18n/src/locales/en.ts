@@ -432,6 +432,7 @@ export const en: Record<TranslationKey, string> = {
   "content-browser.pathCopied": "Path copied",
   "content-browser.refresh": "Refresh",
   "content-browser.split": "Split",
+  "content-browser.unsplit": "Return to main window",
   "content-browser.linkNotFound": "File not found: {path}",
   "content-browser.loadError.notFound": "File not found",
   "content-browser.loadError.accessDenied": "You don't have access to this file",

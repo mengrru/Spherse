@@ -14,9 +14,10 @@ export function SplitRouteBridge() {
 
   useEffect(() => {
     const nav = readNavState(location.state);
-    if (!nav.openSplit) return;
-    useSplitPaneStore.getState().openSplit(projectId, nav.openSplit);
+    if (nav.openSplit) useSplitPaneStore.getState().openSplit(projectId, nav.openSplit);
+    if (nav.closeSplit) useSplitPaneStore.getState().closeSplit(projectId);
     if (nav.closedUrl) dropFromProjectNavHistory(projectId, nav.closedUrl);
+    if (!nav.openSplit && !nav.closeSplit) return;
     if (tabsEnabled && hasTabNavState(nav)) return;
     navigate(
       { pathname: location.pathname, search: location.search, hash: location.hash },

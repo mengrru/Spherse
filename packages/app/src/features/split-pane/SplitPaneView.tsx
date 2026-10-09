@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { ReadOnlyContentBrowser } from "../content-browser";
 import { useProjectCtx } from "../../context/project-context";
 import { tabKey } from "../../lib/tab-target";
+import { useReturnSplit } from "./hooks";
 import { useSplitPaneStore } from "./store";
 import type { SplitTarget } from "./target";
 
@@ -12,6 +13,7 @@ export function SplitPaneView({ target }: { target: SplitTarget }) {
     (path: string) => useSplitPaneStore.getState().openSplit(projectId, { kind: "file", path }),
     [projectId],
   );
+  const returnSplit = useReturnSplit();
   const key = `${projectId}:${tabKey(target)}`;
 
   switch (target.kind) {
@@ -23,6 +25,7 @@ export function SplitPaneView({ target }: { target: SplitTarget }) {
           onClose={close}
           onOpenFile={openFile}
           onNotFound={close}
+          onUnsplit={returnSplit}
         />
       );
     default:

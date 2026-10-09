@@ -6,6 +6,7 @@ export interface NavState {
   replaceTab?: string;
   skipLeaveGuard?: boolean;
   openSplit?: TabTarget;
+  closeSplit?: boolean;
 }
 
 export function readNavState(state: unknown): NavState {
@@ -17,6 +18,7 @@ export function readNavState(state: unknown): NavState {
   if (typeof s.replaceTab === "string") result.replaceTab = s.replaceTab;
   if (s.skipLeaveGuard === true) result.skipLeaveGuard = true;
   if (isTabTarget(s.openSplit)) result.openSplit = s.openSplit;
+  if (s.closeSplit === true) result.closeSplit = true;
   return result;
 }
 

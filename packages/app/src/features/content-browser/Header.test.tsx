@@ -32,10 +32,11 @@ function editing(overrides: Partial<HeaderEditing> = {}): HeaderEditing {
 }
 
 describe("content-browser Header", () => {
-  it("omits back, split and edit controls when not provided", () => {
+  it("omits back, split, unsplit and edit controls when not provided", () => {
     renderWithProviders(<Header {...baseProps()} />, { locale: "en" });
     expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Split" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Return to main window" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
     expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
@@ -62,6 +63,19 @@ describe("content-browser Header", () => {
       const other = screen.getByRole("button", { name });
       expect(split.compareDocumentPosition(other) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     }
+  });
+
+  it("renders unsplit in the split button slot when provided", async () => {
+    const onUnsplit = vi.fn();
+    renderWithProviders(<Header {...baseProps({ onUnsplit })} />, { locale: "en" });
+    expect(screen.queryByRole("button", { name: "Split" })).toBeNull();
+    const unsplit = screen.getByRole("button", { name: "Return to main window" });
+    const find = screen.getByRole("button", { name: "Find" });
+    const close = screen.getByRole("button", { name: "Close" });
+    expect(unsplit.compareDocumentPosition(find) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+    expect(unsplit.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await userEvent.click(unsplit);
+    expect(onUnsplit).toHaveBeenCalled();
   });
 
   it("hides split and close while editing", () => {

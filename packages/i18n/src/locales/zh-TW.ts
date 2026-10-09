@@ -432,6 +432,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "content-browser.pathCopied": "路徑已複製",
   "content-browser.refresh": "重新整理",
   "content-browser.split": "分窗",
+  "content-browser.unsplit": "回到主視窗",
   "content-browser.linkNotFound": "找不到檔案：{path}",
   "content-browser.loadError.notFound": "檔案不存在",
   "content-browser.loadError.accessDenied": "無權存取此檔案",

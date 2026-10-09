@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { Button } from "../../components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "../../components/ui/toggle-group";
-import { ArrowLeftIcon, CheckIcon, Columns2Icon, CopyIcon, RefreshCwIcon, SearchIcon, XIcon } from "lucide-react";
+import { ArrowLeftFromLineIcon, ArrowLeftIcon, CheckIcon, Columns2Icon, CopyIcon, RefreshCwIcon, SearchIcon, XIcon } from "lucide-react";
 
 export interface HeaderEditing {
   isDirty: boolean;
@@ -22,6 +22,7 @@ interface HeaderProps {
   editing?: HeaderEditing;
   onBack?: () => void;
   onSplit?: () => void;
+  onUnsplit?: () => void;
   onClose: () => void;
   onHtmlViewChange: (view: "preview" | "source") => void;
   onRefresh: () => void;
@@ -36,6 +37,7 @@ export function Header({
   editing,
   onBack,
   onSplit,
+  onUnsplit,
   onClose,
   onHtmlViewChange,
   onRefresh,
@@ -100,6 +102,17 @@ export function Header({
             aria-label={t("content-browser.split")}
           >
             <Columns2Icon />
+          </Button>
+        )}
+        {onUnsplit && !isEditing && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onUnsplit}
+            title={t("content-browser.unsplit")}
+            aria-label={t("content-browser.unsplit")}
+          >
+            <ArrowLeftFromLineIcon />
           </Button>
         )}
         {isHtml && !isEditing && (
