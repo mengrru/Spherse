@@ -306,9 +306,11 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 ```css
 /* 圆角「胶囊」标签 + 活跃态渐变与下划线 */
 [data-tab-bar] {
-  gap: 4px;
   padding: 4px 6px 0;
   border-bottom: none;
+}
+[data-tab-scroll] {
+  gap: 4px;
 }
 [data-tab] {
   border: none;
@@ -340,6 +342,7 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 注意事项：
 
 - **纵向会被裁剪**：标签栏固定高度（约 36px）且纵向 `overflow: hidden`（`data-tab-scroll` 内横向可滚动）。向外的投影、`transform: translateY` 上浮等超出标签栏上下边界的效果会被裁掉——优先用 inset 阴影、内边距；确需外溢时同时覆盖 `[data-tab-bar]` 的 `height` / `padding`
+- **标签间距加在滚动容器上**：`[data-tab-bar]` 的 `gap` 只作用于欢迎页标签与 `[data-tab-scroll]` 之间，各内容标签的间距需对 `[data-tab-scroll]` 设置
 - **伪元素可自由使用**：`[data-tab]` 自身是定位上下文（`position: relative`），`::before` / `::after` 均未被占用，装饰伪元素记得写 `position: absolute`，避免挤压标签内容
 - **标签内部元素无专属钩子**：文字按钮与关闭按钮暂未暴露 `data-*` 钩子，如需微调只能用 `[data-tab] > button` 之类的结构选择器，应用更新时可能失效，尽量只在 `[data-tab]` 层定制
 - **欢迎页标签**：`[data-tab="welcome"]` 固定在首位且无关闭按钮，位于 `[data-tab-scroll]` 外、横向滚动时常驻可见，可用该选择器单独设计
