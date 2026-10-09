@@ -266,6 +266,7 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 | `data-project-panel` | 项目侧边面板（agent/session 列表 + 文件树的容器，默认 `--sp-sidebar` 背景） |
 | `data-content-browser` | 内容浏览器（文档/代码查看区根容器，包含 header 与内容滚动区） |
 | `data-tab-bar` | 内容区标签栏（位于内容区左栏最上方，开启分窗时不跨越右侧分窗；用户可在设置中关闭；默认 `bg-muted/40` + 底边框） |
+| `data-tab-scroll` | 标签栏内可横向滚动的标签列表（welcome tab 固定在它外面，不随横向滚动移动） |
 | `data-tab`（值为 `welcome` / `chat` / `file` / `browser`，活跃项带 `data-active="true"`） | 标签栏中的单个标签（活跃标签默认 `--sp-background` 背景） |
 | `data-tab-drop-indicator` | 拖拽排序时插入位置的竖线指示条（仅拖拽悬停时存在，默认 `--sp-primary` 色、贴标签起始边） |
 | `data-split-layout` | 内容区横向容器（包住左栏、分隔条与右侧分窗） |
@@ -338,10 +339,10 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 
 注意事项：
 
-- **纵向会被裁剪**：标签栏固定高度（约 36px）且纵向 `overflow: hidden`（横向可滚动）。向外的投影、`transform: translateY` 上浮等超出标签栏上下边界的效果会被裁掉——优先用 inset 阴影、内边距；确需外溢时同时覆盖 `[data-tab-bar]` 的 `height` / `padding`
+- **纵向会被裁剪**：标签栏固定高度（约 36px）且纵向 `overflow: hidden`（`data-tab-scroll` 内横向可滚动）。向外的投影、`transform: translateY` 上浮等超出标签栏上下边界的效果会被裁掉——优先用 inset 阴影、内边距；确需外溢时同时覆盖 `[data-tab-bar]` 的 `height` / `padding`
 - **伪元素可自由使用**：`[data-tab]` 自身是定位上下文（`position: relative`），`::before` / `::after` 均未被占用，装饰伪元素记得写 `position: absolute`，避免挤压标签内容
 - **标签内部元素无专属钩子**：文字按钮与关闭按钮暂未暴露 `data-*` 钩子，如需微调只能用 `[data-tab] > button` 之类的结构选择器，应用更新时可能失效，尽量只在 `[data-tab]` 层定制
-- **欢迎页标签**：`[data-tab="welcome"]` 固定在首位且无关闭按钮，可用该选择器单独设计
+- **欢迎页标签**：`[data-tab="welcome"]` 固定在首位且无关闭按钮，位于 `[data-tab-scroll]` 外、横向滚动时常驻可见，可用该选择器单独设计
 - 标签栏在聊天窗口之外，**agent 主题不影响它**，只能在项目级 `.spherse/theme.css` 定制
 
 ## 设置页签（Tabs）

@@ -114,6 +114,15 @@ describe("TabBar", () => {
     expect(screen.getByRole("tab", { name: "First chat" })).toHaveAttribute("aria-selected", "true");
   });
 
+  it("keeps the welcome tab outside the scrolling tab list", async () => {
+    const { go } = setup();
+    await go("/project/p1/chat/s1");
+    const scroller = screen.getByRole("tablist").querySelector("[data-tab-scroll]") as HTMLElement;
+
+    expect(scroller).not.toContainElement(screen.getByRole("tab", { name: "Welcome" }));
+    expect(scroller).toContainElement(screen.getByRole("tab", { name: "First chat" }));
+  });
+
   it("navigates when a tab is clicked", async () => {
     const { go } = setup();
     await go("/project/p1/chat/s1");

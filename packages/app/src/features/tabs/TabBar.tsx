@@ -63,7 +63,7 @@ export function TabBar() {
       data-tab-bar
       role="tablist"
       aria-label={t("tabs.label")}
-      className="flex h-9 shrink-0 items-stretch overflow-x-auto overflow-y-hidden border-b border-border bg-muted/40"
+      className="flex h-9 shrink-0 items-stretch border-b border-border bg-muted/40"
     >
       <WelcomeTab
         active={isWelcome}
@@ -71,22 +71,24 @@ export function TabBar() {
           if (!isWelcome) navigate(projectHomeUrl(projectId));
         }}
       />
-      {visible.map((target) => {
-        const key = tabKey(target);
-        return (
-          <TargetTab
-            key={key}
-            tabKey={key}
-            target={target}
-            active={key === activeKey}
-            onSelect={() => {
-              if (key !== activeKey) navigate(tabUrl(projectId, target));
-            }}
-            onClose={() => closeTab(key)}
-            drag={dragProps(key)}
-          />
-        );
-      })}
+      <div data-tab-scroll className="flex min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden">
+        {visible.map((target) => {
+          const key = tabKey(target);
+          return (
+            <TargetTab
+              key={key}
+              tabKey={key}
+              target={target}
+              active={key === activeKey}
+              onSelect={() => {
+                if (key !== activeKey) navigate(tabUrl(projectId, target));
+              }}
+              onClose={() => closeTab(key)}
+              drag={dragProps(key)}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }
