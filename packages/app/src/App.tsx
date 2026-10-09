@@ -83,6 +83,14 @@ export function App() {
         if (bridge.kind === "web") {
           const locale = useSettingsStore.getState().locale ?? DEFAULT_LOCALE;
           toast.error(translate(locale, "mobile-connect.connectFailed", { error: (err as Error).message }));
+          // A failed restore (stale token, unreachable server) leaves the
+          // store empty; staying on a project route would strand the UI on
+          // "project not found" with no exit, so fall back to the connect
+          // page — mirroring the no-connection branch above.
+          const hash = window.location.hash.replace(/^#/, "") || "/";
+          if (hash !== "/") {
+            navigate("/", { replace: true });
+          }
         }
       });
     void useBusStore.getState().init(bridge);

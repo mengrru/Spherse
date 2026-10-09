@@ -1199,6 +1199,8 @@ export const zhCN = {
   // --- Pages ---
   // 项目不存在时的提示文案
   "pages.projectNotFound": "项目不存在",
+  // 项目不存在时（web）返回连接页的按钮文案
+  "pages.projectNotFoundBackToConnect": "返回连接页",
 
   // --- Tool Labels ---
   // 独立工具标签：数据访问（read_data/query_data/mutate_data 三个工具，对 *.data.json 活网页数据文件的选择性读写）
