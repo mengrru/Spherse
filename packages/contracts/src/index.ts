@@ -152,5 +152,6 @@ export type {
   BusClientMessage,
   TriggerServerEvent,
   AgentUpdatedEvent,
+  SessionUpdatedEvent,
   FsWatchChangeEvent,
 } from "./bus.js";

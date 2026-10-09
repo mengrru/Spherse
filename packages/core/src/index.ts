@@ -70,6 +70,7 @@ export type { ImageCardDetails, ImageCardResultDetails } from "./tools/generate-
 export type { ManageAgentDetails } from "./tools/manage-agent.js";
 export type { ManageTriggerDetails } from "./tools/manage-trigger.js";
 export type { AgentChangePayload, AgentChangeAction } from "./store/project.js";
+export type { SessionChangePayload, SessionChangeAction } from "./store/session.js";
 export { isValidCron, isReservedEventName, requiresTargetSession } from "./trigger/validation.js";
 export type { Attachment } from "./attachments/index.js";
 export type { McpTransportType } from "./mcp/index.js";

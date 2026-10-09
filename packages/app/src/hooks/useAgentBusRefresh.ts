@@ -29,3 +29,14 @@ export function useAgentBusRefresh(projectId: string | undefined, client: ApiCli
     });
   });
 }
+
+/**
+ * Keeps the cached session list in sync when sessions are created/renamed/deleted
+ * from another client (e.g. mobile web connected to the same server).
+ */
+export function useSessionBusRefresh(projectId: string | undefined): void {
+  useBusSubscription(projectId ?? "", "session", (type) => {
+    if (type !== "session_updated" || !projectId) return;
+    void refreshProjectSessions(projectId);
+  });
+}
