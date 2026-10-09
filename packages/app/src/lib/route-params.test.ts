@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { parseMessageIdParam, stripMessageId } from "./route-params";
+import { isIndexRoute, parseMessageIdParam, stripMessageId } from "./route-params";
+
+describe("isIndexRoute", () => {
+  it("matches the bare index route", () => {
+    expect(isIndexRoute("/")).toBe(true);
+  });
+
+  it("matches the index route carrying deep-link params", () => {
+    expect(isIndexRoute("/?base=https%3A%2F%2Fx&token=t&targetPath=%2Fproject%2Fp1")).toBe(true);
+    expect(isIndexRoute("/?x=1")).toBe(true);
+  });
+
+  it("rejects project and other routes", () => {
+    expect(isIndexRoute("/project/p1")).toBe(false);
+    expect(isIndexRoute("/project/p1/chat/s1")).toBe(false);
+  });
+});
 
 describe("parseMessageIdParam", () => {
   it("parses decimal seq strings including zero", () => {
