@@ -67,7 +67,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
   - 纯内存（关项目即清）：agent-session-list 折叠、agent-trigger 运行态
 - **query key 一律 `["projects", projectId, ...]`**（`queries/keys.ts` factory）；文件内容 query 定义在 `features/content-browser/hooks/useContentFile.ts`——域 key 统一，定义位置按消费方就近
 - **项目关闭清缓存**：`clearProjectQueries` 三步——generation++ → cancelQueries → removeQueries；generation 递增使迟到异步结果拒绝写入已清缓存
-- 总线层 `bus-store`：全局多路复用 WS（`/ws/bus`），channels trigger / agent / fs-watch / debug；连接委托 `lib/ws/ws-connection.ts`（backoff `[1,2,5,10,30]s`、心跳 30s/60s、probe 5s；store 只保留 resumedAt 与订阅派发）
+- 总线层 `bus-store`：全局多路复用 WS（`/ws/bus`），channels trigger / agent / session / fs-watch / debug；连接委托 `lib/ws/ws-connection.ts`（backoff `[1,2,5,10,30]s`、心跳 30s/60s、probe 5s；store 只保留 resumedAt 与订阅派发）
 
 ## 失效桥（bus → query invalidation）
 
@@ -79,6 +79,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | CustomSidePanelQueryBridge | fs-watch | project.yaml 变更失效 custom-side-panel |
 | TriggerEventBridge | trigger | updated / completed / failed 失效 triggers 并增删 running；completed 通知 + 刷新会话历史 |
 | useAgentBusRefresh（hook） | agent | agent_updated 刷 agents；created / deleted 加刷 sessions |
+| useSessionBusRefresh（hook） | session | session_updated 刷 sessions（跨端同步：另一客户端建/删/改名 session 时失效本地列表缓存） |
 | UiSdkBridge（event 桥） | fs-watch | 变更事件 debounce 后定向转发给订阅的 iframe（见 [ui-sdk.md](ui-sdk.md)） |
 
 - 项目级桥统一挂 `ProjectRuntimeBridges`（ProjectScope 内的纯挂载 fragment：3 个 FeatureGate manager + 8 个 bridge，其中 SplitRouteBridge 经 FeatureGate）；带运行态的域（trigger）用专属桥；跨会话 toast（ApprovalNoticeBridge，订阅 chat session store）与自动更新 toast（UpdateNoticeBridge，订阅 host-bridge updater 事件）挂 App 级
