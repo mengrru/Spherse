@@ -1,5 +1,9 @@
 export const MESSAGE_ID_PARAM = "messageId";
 
+export function isIndexRoute(path: string): boolean {
+  return path === "/" || path.startsWith("/?");
+}
+
 export function parseMessageIdParam(value: string | null): number | null {
   if (value === null || value.trim() === "") return null;
   if (!/^\d+$/.test(value)) return null;

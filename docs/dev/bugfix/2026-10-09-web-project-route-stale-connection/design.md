@@ -33,9 +33,15 @@
 - **瞬时失败也回退**：隧道抖动等瞬时 restore 失败同样被 navigate("/") 踢回连接页，且无自动回归（避免拽走正在手输 token 的用户）。恢复路径：reload（hash 已是 `/`，重启 restore 自动进项目）或重扫码。严格优于现状 dead-end。
 - **按钮目标恒为 `/`**：连接健康但项目 id 无效（书签过期 id）时点按钮落到扫码页而非有效项目；该场景下 WS 重连补偿（`App.tsx:35-56`）会在数秒内自动 navigate 到 activeProject，按钮真正服务的是连接坏掉、补偿永不触发的场景。「连接页在 store 有项目时提供回到项目入口」记为后续增强。
 
+## Review 修复（commit 2）
+
+- **深链参数保护（important）**：catch 回退与既有 `!projectId` 回退原先判 `hash !== "/"` 即 `navigate("/")`，会剥掉 QR 深链 `#/?base=&token=&targetPath=` 的 query——「存量失效连接 + 相机扫码深链冷启动」正是本修复目标场景，参数被剥后连接页自动连接失效（连接页 mount 晚于 initializing gate，必然晚于 catch 里的 navigate）。改为统一用 `isIndexRoute`（`lib/route-params.ts`，`/` 或 `/?...` 均视为 index 路由）：index 路由携带深链参数时不回退，让连接页自连接逻辑接管；自动连接失败时连接页自身会清理参数，无循环。顺带修复 `!projectId` 分支的同族问题（a76c3e3 引入）。
+- 移除 catch 分支新增注释（仓库不加注释红线）。
+
 ## 测试
 
 - `packages/app` 组件测试（`createMemoryRouter` + `createMockHostBridge({ kind: "web" })`，参照 `TabBar.test.tsx` 模式）：
   - ProjectScope not-found：web 渲染「返回连接页」按钮且点击 navigate 到 `/`；electron 不渲染；initializing 时不渲染
+  - `isIndexRoute` 纯函数单测（`route-params.test.ts`）：裸 `/`、携带深链参数的 `/?...` 为 true，项目路由为 false
   - App 启动 catch 回退为组件内 effect，依赖 router/bridge context，以 ProjectScope 兜底按钮 + 手动验证覆盖（该区域既有测试即 structure test，不为 catch 分支引入重型 harness）
 - 手动 / E2E：模拟失效连接（改 localStorage token）带项目路由冷启动 → 落连接页；断开重连流程可正常回到项目
