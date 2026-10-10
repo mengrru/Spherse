@@ -4,7 +4,7 @@ import type { HostBridge } from "../lib/host-bridge";
 import { buildWsUrl } from "../lib/api";
 import { WsConnection, type WsConnectionState } from "../lib/ws/ws-connection";
 
-export type BusChannel = "trigger" | "agent" | "fs-watch" | "debug";
+export type BusChannel = "trigger" | "agent" | "session" | "fs-watch" | "debug";
 export type BusStatus = "idle" | "connecting" | "open" | "closed";
 export type BusHandler = (type: string, payload: unknown) => void;
 

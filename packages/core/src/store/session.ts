@@ -114,18 +114,32 @@ CREATE TABLE IF NOT EXISTS events (
 );
 `;
 
+export type SessionChangeAction = "created" | "updated" | "deleted";
+
+export interface SessionChangePayload {
+  agentId: string;
+  sessionId: string;
+  action: SessionChangeAction;
+}
+
 export class SessionStore {
   private agentId: string;
   private db: Database.Database;
   private logger: Logger;
+  private readonly onSessionChange?: (payload: SessionChangePayload) => void;
 
-  constructor(dbPath: string, agentId: string, logger?: Logger) {
+  constructor(dbPath: string, agentId: string, logger?: Logger, onSessionChange?: (payload: SessionChangePayload) => void) {
     this.agentId = agentId;
     this.logger = logger ?? createSilentLogger();
+    this.onSessionChange = onSessionChange;
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
     this.applyMigrations();
     this.logger.info({ agentId, dbPath }, "session db opened for agent");
+  }
+
+  private emitSessionChange(sessionId: string, action: SessionChangeAction): void {
+    this.onSessionChange?.({ agentId: this.agentId, sessionId, action });
   }
 
   private applyMigrations(): void {
@@ -163,6 +177,7 @@ export class SessionStore {
       )
       .run(id, this.agentId, title ?? null, now, now, source ?? "manual");
     this.logger.info({ sessionId: id, agentId: this.agentId }, "session created in store");
+    this.emitSessionChange(id, "created");
     return id;
   }
 
@@ -207,9 +222,10 @@ export class SessionStore {
   }
 
   archiveSession(sessionId: string): void {
-    this.db
+    const result = this.db
       .prepare<[string]>("UPDATE sessions SET status = 'archived' WHERE id = ?")
       .run(sessionId);
+    if (result.changes > 0) this.emitSessionChange(sessionId, "deleted");
   }
 
   appendEvents(sessionId: string, events: ReadonlyArray<SessionEvent>, schemaVersion: number): void {
@@ -532,9 +548,10 @@ export class SessionStore {
   }
 
   updateSessionTitle(sessionId: string, title: string): void {
-    this.db
+    const result = this.db
       .prepare<[string, string]>("UPDATE sessions SET title = ? WHERE id = ?")
       .run(title, sessionId);
+    if (result.changes > 0) this.emitSessionChange(sessionId, "updated");
   }
 
   close(): void {

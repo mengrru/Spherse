@@ -113,6 +113,44 @@ describe("bus server message contract", () => {
     ).toThrow();
   });
 
+  it("accepts session_updated envelope", () => {
+    expect(
+      parseBusServerMessage({
+        channel: "session",
+        projectId: "p1",
+        type: "session_updated",
+        payload: { agentId: "a1", sessionId: "s1", action: "updated" },
+      }),
+    ).toEqual({
+      channel: "session",
+      projectId: "p1",
+      type: "session_updated",
+      payload: { agentId: "a1", sessionId: "s1", action: "updated" },
+    });
+  });
+
+  it("rejects session_updated with an unknown action", () => {
+    expect(() =>
+      parseBusServerMessage({
+        channel: "session",
+        projectId: "p1",
+        type: "session_updated",
+        payload: { agentId: "a1", sessionId: "s1", action: "renamed" },
+      }),
+    ).toThrow();
+  });
+
+  it("rejects session_updated missing sessionId", () => {
+    expect(() =>
+      parseBusServerMessage({
+        channel: "session",
+        projectId: "p1",
+        type: "session_updated",
+        payload: { agentId: "a1", action: "deleted" },
+      }),
+    ).toThrow(/Invalid payload/);
+  });
+
   it("accepts fs-watch change envelope", () => {
     expect(
       parseBusServerMessage({
@@ -225,7 +263,7 @@ describe("bus server message contract", () => {
 
 describe("bus client message contract", () => {
   it("accepts subscribe messages across channels", () => {
-    for (const channel of ["trigger", "fs-watch", "debug"] as const) {
+    for (const channel of ["trigger", "agent", "session", "fs-watch", "debug"] as const) {
       expect(parseBusClientMessage({ kind: "subscribe", projectId: "p1", channel })).toEqual({
         kind: "subscribe",
         projectId: "p1",
@@ -235,7 +273,7 @@ describe("bus client message contract", () => {
   });
 
   it("accepts unsubscribe messages across channels", () => {
-    for (const channel of ["trigger", "fs-watch", "debug"] as const) {
+    for (const channel of ["trigger", "agent", "session", "fs-watch", "debug"] as const) {
       expect(parseBusClientMessage({ kind: "unsubscribe", projectId: "p1", channel })).toEqual({
         kind: "unsubscribe",
         projectId: "p1",

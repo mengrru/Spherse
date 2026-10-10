@@ -79,7 +79,7 @@
 
 ## WebSocket
 
-- **bus（`/ws/bus`）**：全局多路复用，通道 `trigger` / `agent` / `fs-watch` / `debug` + 系统 `__system__`（pong、watch 错误）
+- **bus（`/ws/bus`）**：全局多路复用，通道 `trigger` / `agent` / `session` / `fs-watch` / `debug` + 系统 `__system__`（pong、watch 错误）
   - client→server：`subscribe` / `unsubscribe`（按 `(projectId, channel)`）、`ping`、`emit-trigger-event`
   - 非法消息 debug 日志丢弃；连接关闭释放全部订阅
 - **debug 日志流**：`createServerLogger` 用 pino multistream——pretty transport 之外，debug bus stream 把每行日志包成 debug 通道事件广播

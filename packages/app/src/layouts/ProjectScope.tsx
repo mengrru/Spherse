@@ -6,7 +6,7 @@ import { TabBar } from "../features/tabs";
 import { SplitLayout } from "../features/split-pane";
 import { GlobalSearchDialog } from "../features/global-search";
 import { useCustomTheme } from "../hooks/useCustomTheme";
-import { useAgentBusRefresh } from "../hooks/useAgentBusRefresh";
+import { useAgentBusRefresh, useSessionBusRefresh } from "../hooks/useAgentBusRefresh";
 import { useSidePanel } from "../hooks/use-side-panel";
 import { useAppStore } from "../stores/app-store";
 import { useAppUiStore } from "../stores/app-ui-store";
@@ -40,6 +40,7 @@ export function ProjectScope() {
   );
   useProjectNavHistory(projectId ?? "");
   useAgentBusRefresh(projectId, client);
+  useSessionBusRefresh(projectId);
   useEffect(() => {
     if (projectId) void setActiveProject(bridge, projectId);
   }, [projectId, setActiveProject, bridge]);

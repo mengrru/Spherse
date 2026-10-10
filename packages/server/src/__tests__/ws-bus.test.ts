@@ -52,6 +52,7 @@ function createMockTriggerManager() {
 
 function createMockRegistry(triggerManager: EventEmitter, projectRoot = "/proj/p1", projectId = "p1") {
   const agentEmitter = new EventEmitter();
+  const sessionEmitter = new EventEmitter();
   const ctx = {
     triggerManager,
     projectManager: {
@@ -62,7 +63,14 @@ function createMockRegistry(triggerManager: EventEmitter, projectRoot = "/proj/p
       offAgentChange: vi.fn((listener: (...args: unknown[]) => void) => {
         agentEmitter.off("agent_updated", listener);
       }),
+      onSessionChange: vi.fn((listener: (...args: unknown[]) => void) => {
+        sessionEmitter.on("session_updated", listener);
+      }),
+      offSessionChange: vi.fn((listener: (...args: unknown[]) => void) => {
+        sessionEmitter.off("session_updated", listener);
+      }),
       agentEmitter,
+      sessionEmitter,
     },
     projectId,
   };
@@ -108,12 +116,16 @@ describe("ws-bus /ws/bus handler", () => {
   let socket: MockSocket;
   let triggerManager: EventEmitter & { onUserEvent: ReturnType<typeof vi.fn> };
   let agentEmitter: EventEmitter;
+  let sessionEmitter: EventEmitter;
+  let ctxRef: ReturnType<typeof createMockRegistry>["ctx"];
 
   beforeEach(() => {
     routeHandler = null;
     triggerManager = createMockTriggerManager();
     const { registry, ctx } = createMockRegistry(triggerManager);
+    ctxRef = ctx;
     agentEmitter = ctx.projectManager.agentEmitter;
+    sessionEmitter = ctx.projectManager.sessionEmitter;
     handleBusWebSocket(mockFastify as never, registry as never);
     socket = createMockSocket();
     routeHandler!(socket);
@@ -353,6 +365,36 @@ describe("ws-bus /ws/bus handler", () => {
     });
   });
 
+  describe("session channel", () => {
+    it("forwards session_updated events as bus envelopes", () => {
+      socket.simulateMessage(subMsg("p1", "session"));
+
+      sessionEmitter.emit("session_updated", { agentId: "a1", sessionId: "s1", action: "created" });
+
+      expect(sentObjects(socket)).toContainEqual({
+        channel: "session",
+        projectId: "p1",
+        type: "session_updated",
+        payload: { agentId: "a1", sessionId: "s1", action: "created" },
+      });
+    });
+
+    it("stops forwarding after unsubscribe", () => {
+      socket.simulateMessage(subMsg("p1", "session"));
+      socket.simulateMessage(unsubMsg("p1", "session"));
+
+      sessionEmitter.emit("session_updated", { agentId: "a1", sessionId: "s1", action: "deleted" });
+
+      expect(socket.send).not.toHaveBeenCalled();
+    });
+
+    it("silently ignores subscribe with unknown projectId", () => {
+      socket.simulateMessage(subMsg("unknown", "session"));
+      sessionEmitter.emit("session_updated", { agentId: "a1", sessionId: "s1", action: "updated" });
+      expect(socket.send).not.toHaveBeenCalled();
+    });
+  });
+
   describe("invalid messages", () => {
     it("silently ignores unparseable JSON", () => {
       socket.simulateMessage(Buffer.from("not json"));
@@ -380,13 +422,20 @@ describe("ws-bus /ws/bus handler", () => {
   describe("socket close", () => {
     it("releases all subscriptions on close", () => {
       socket.simulateMessage(subMsg("p1", "trigger"));
+      socket.simulateMessage(subMsg("p1", "agent"));
+      socket.simulateMessage(subMsg("p1", "session"));
       socket.simulateMessage(subMsg("p1", "fs-watch"));
       socket.simulateMessage(subMsg("__global__", "debug"));
 
       socket.simulateClose();
 
       expect(triggerManager.off).toHaveBeenCalledTimes(4);
+      expect(ctxRef!.projectManager.offAgentChange).toHaveBeenCalledWith(expect.any(Function));
+      expect(ctxRef!.projectManager.offSessionChange).toHaveBeenCalledWith(expect.any(Function));
       expect(releaseFsWatch).toHaveBeenCalledWith("p1", expect.any(Function));
+
+      agentEmitter.emit("agent_updated", { agentId: "a1", action: "created" });
+      sessionEmitter.emit("session_updated", { agentId: "a1", sessionId: "s1", action: "created" });
 
       const stream = createDebugBusStream();
       return writeAsync(stream, Buffer.from("leaked?")).then(() => {

@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyBaseLogger } from "fastify";
 import type { WebSocket } from "@fastify/websocket";
-import type { TriggerEventPayload, TriggerManager, ProjectManager, AgentChangePayload } from "@spherse/core";
+import type { TriggerEventPayload, TriggerManager, ProjectManager, AgentChangePayload, SessionChangePayload } from "@spherse/core";
 import { parseBusClientMessage } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { acquireFsWatch, releaseFsWatch } from "./fs-watcher.js";
@@ -11,7 +11,7 @@ import type { DebugSubscriber } from "../lib/debug-sink.js";
 const EVENT_TYPES = ["trigger_triggered", "trigger_completed", "trigger_failed", "trigger_updated"] as const;
 type TriggerEventType = (typeof EVENT_TYPES)[number];
 
-type BusChannel = "trigger" | "agent" | "fs-watch" | "debug";
+type BusChannel = "trigger" | "agent" | "session" | "fs-watch" | "debug";
 
 interface TriggerHandle {
   triggerManager: TriggerManager;
@@ -54,6 +54,7 @@ class BusConnectionHandler {
   private readonly subscriptions = new Set<string>();
   private readonly triggerHandles = new Map<string, TriggerHandle>();
   private readonly agentHandles = new Map<string, { projectManager: ProjectManager; handler: (payload: AgentChangePayload) => void }>();
+  private readonly sessionHandles = new Map<string, { projectManager: ProjectManager; handler: (payload: SessionChangePayload) => void }>();
   private readonly fsWatchListener: FsWatchListener = (projectId, evt) => {
     this.safeSend({
       channel: "fs-watch",
@@ -149,6 +150,25 @@ class BusConnectionHandler {
         this.subscriptions.add(key);
         break;
       }
+      case "session": {
+        const ctx = this.registry.get(projectId);
+        if (!ctx) {
+          this.logger.debug({ projectId }, "bus subscribe session: unknown project");
+          return;
+        }
+        const handler = (payload: SessionChangePayload) => {
+          this.safeSend({
+            channel: "session",
+            projectId,
+            type: "session_updated",
+            payload: { agentId: payload.agentId, sessionId: payload.sessionId, action: payload.action },
+          });
+        };
+        ctx.projectManager.onSessionChange(handler);
+        this.sessionHandles.set(projectId, { projectManager: ctx.projectManager, handler });
+        this.subscriptions.add(key);
+        break;
+      }
       case "fs-watch": {
         const ctx = this.registry.get(projectId);
         if (!ctx) {
@@ -200,6 +220,14 @@ class BusConnectionHandler {
         if (handle) {
           handle.projectManager.offAgentChange(handle.handler);
           this.agentHandles.delete(projectId);
+        }
+        break;
+      }
+      case "session": {
+        const handle = this.sessionHandles.get(projectId);
+        if (handle) {
+          handle.projectManager.offSessionChange(handle.handler);
+          this.sessionHandles.delete(projectId);
         }
         break;
       }

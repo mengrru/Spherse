@@ -197,8 +197,8 @@ spherse/
 │   │       │   ├── chat-wire-projector.ts # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
 │   │       │   ├── ws-chat.ts          # WebSocket 对话流端点（/ws/projects/:projectId/chat/...，?since= 游标重放）
 │   │       │   └── classify-run-error.ts # run 错误 → wire error code 分类
-│   │       ├── bus/                  # bus 域（全局多路复用 bus WebSocket，trigger/fs-watch/debug/agent 按 projectId×channel 订阅；对外经 index.ts 导出 handleBusWebSocket）
-│   │       │   ├── ws-bus.ts           # 端点 + BusConnectionHandler（订阅生命周期、trigger/agent payload 转发）
+│   │       ├── bus/                  # bus 域（全局多路复用 bus WebSocket，trigger/agent/session/fs-watch/debug 按 projectId×channel 订阅；对外经 index.ts 导出 handleBusWebSocket）
+│   │       │   ├── ws-bus.ts           # 端点 + BusConnectionHandler（订阅生命周期、trigger/agent/session payload 转发）
 │   │       │   └── fs-watcher.ts       # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪
 │   │       └── lib/
 │   │           └── debug-sink.ts     # debug 订阅注册表 + createDebugBusStream（pino multistream 的 WS 广播流，无 Fastify/ws 依赖；logger 与 bus 域共同消费）
@@ -254,7 +254,7 @@ spherse/
 │   │       │   ├── useDismissable.ts
 │   │       │   ├── use-mobile.ts
 │   │       │   ├── use-coarse-pointer.ts # (pointer: coarse) 探测触摸主输入（软键盘场景，chat Composer 回车换行）
-│   │       │   ├── useAgentBusRefresh.ts # bus agent_updated 事件刷新 agent 列表
+│   │       │   ├── useAgentBusRefresh.ts # bus agent_updated 事件刷新 agent 列表；useSessionBusRefresh 订阅 session_updated 刷新会话列表（跨端同步）
 │   │       │   ├── useBusSubscription.ts # bus 事件订阅 hook
 │   │       │   └── useReconnectedSync.ts # bus 重连回调（resync 补偿）
 │   │       ├── ui-sdk/

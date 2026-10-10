@@ -80,6 +80,7 @@ ProjectRuntime           对外协调层，聚合以上全部
 - store 在构造时确定自己的文件路径，运行时不做 agentId → 目录查找
 - **store 只管存储**：不持有运行时状态（如活跃会话实例）
 - **thin aggregator**：聚合根不逐个 wrap 子 store 的方法，只暴露 getter；`ProjectStore` 自身承担 agent CRUD、AGENTS.md index 与 CHANGELOG 读写
+- **变更事件**：`ProjectStore` 是 EventEmitter——agent CRUD 发 `agent_updated`；session 写库（创建/重命名/归档）由 `SessionStore` 经构造注入的回调冒泡为 `session_updated`，消费方经 `ProjectManager.onAgentChange` / `onSessionChange` 订阅（server ws-bus 转发给 renderer 做跨端缓存失效）
 
 ### ProjectManager 门面
 
