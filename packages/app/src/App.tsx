@@ -11,6 +11,7 @@ import { useAppStore } from "./stores/app-store";
 import { useAppUiStore } from "./stores/app-ui-store";
 import { useHostBridge } from "./context/host-bridge-context";
 import { useFeature } from "./lib/use-feature";
+import { isIndexRoute } from "./lib/route-params";
 import { I18nProvider } from "@spherse/i18n/react";
 import { toast } from "sonner";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
@@ -66,7 +67,9 @@ export function App() {
           // desktop has zero open projects) has nothing to show on a project
           // route — e.g. right after disconnect reload — so fall back to the
           // connect page instead of stranding on "project not found".
-          if (bridge.kind === "web" && hash !== "/") {
+          // A deep link into the index route (?base=&token=...) is preserved:
+          // the connect page consumes those params itself.
+          if (bridge.kind === "web" && !isIndexRoute(hash)) {
             navigate("/", { replace: true });
           }
           return;
@@ -83,6 +86,10 @@ export function App() {
         if (bridge.kind === "web") {
           const locale = useSettingsStore.getState().locale ?? DEFAULT_LOCALE;
           toast.error(translate(locale, "mobile-connect.connectFailed", { error: (err as Error).message }));
+          const hash = window.location.hash.replace(/^#/, "") || "/";
+          if (!isIndexRoute(hash)) {
+            navigate("/", { replace: true });
+          }
         }
       });
     void useBusStore.getState().init(bridge);

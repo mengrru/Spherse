@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { Outlet, useLocation, useParams } from "react-router";
+import { Outlet, useLocation, useNavigate, useParams } from "react-router";
 import { useI18n } from "@spherse/i18n/react";
 import { SidePanel } from "../features/side-panel";
 import { TabBar } from "../features/tabs";
 import { SplitLayout } from "../features/split-pane";
 import { GlobalSearchDialog } from "../features/global-search";
+import { Button } from "../components/ui/button";
 import { useCustomTheme } from "../hooks/useCustomTheme";
 import { useAgentBusRefresh } from "../hooks/useAgentBusRefresh";
 import { useSidePanel } from "../hooks/use-side-panel";
@@ -21,6 +22,7 @@ import { ProjectRuntimeBridges } from "./ProjectRuntimeBridges";
 export function ProjectScope() {
   const { projectId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useI18n();
   const bridge = useHostBridge();
   const project = useAppStore((s) => (projectId ? s.projects.get(projectId) : undefined));
@@ -73,8 +75,13 @@ export function ProjectScope() {
 
   if (!projectId || !project) {
     return (
-      <div className="flex h-full flex-1 items-center justify-center text-muted-foreground">
-        {initializing ? t("common.loading") : t("pages.projectNotFound")}
+      <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 text-muted-foreground">
+        <p>{initializing ? t("common.loading") : t("pages.projectNotFound")}</p>
+        {!initializing && projectId && bridge.kind === "web" && (
+          <Button variant="outline" onClick={() => navigate("/", { replace: true })}>
+            {t("pages.projectNotFoundBackToConnect")}
+          </Button>
+        )}
       </div>
     );
   }
