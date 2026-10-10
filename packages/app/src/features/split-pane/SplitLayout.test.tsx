@@ -244,3 +244,78 @@ describe("useOpenSplit", () => {
     expect(screen.getByTestId("page")).toHaveTextContent("welcome:/project/p1");
   });
 });
+
+describe("useReturnSplit", () => {
+  beforeEach(() => {
+    clearProjectNavHistory("p1");
+    localStorage.clear();
+    readContent.mockReset();
+    readContent.mockImplementation(async (path: string) => ({ path, content: `# ${path}`, binary: false }));
+    useTabsStore.setState({ byProject: {} });
+    useSplitPaneStore.setState({ byProject: {} });
+    useSettingsStore.setState({ loaded: true, tabsEnabled: true });
+  });
+
+  it("returns the split file to the main window and closes the split after navigation", async () => {
+    const { router } = setup();
+    await waitFor(() => expect(screen.getByTestId("page")).toHaveTextContent("welcome:/project/p1"));
+    act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "docs/a.md" }));
+    expect(await screen.findByText("docs/a.md")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Return to main window" }));
+
+    expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=docs%2Fa.md");
+    await waitFor(() => expect(split()).toBeUndefined());
+    expect(useTabsStore.getState().byProject.p1).toEqual([{ kind: "file", path: "docs/a.md" }]);
+    await waitFor(() => expect(router.state.location.state).toBeNull());
+  });
+
+  it("closes the split without navigating when the split file is already the active tab", async () => {
+    setup("/project/p1/content?path=docs/a.md");
+    act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "docs/a.md" }));
+    expect(await screen.findByText("docs/a.md")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Return to main window" }));
+
+    await waitFor(() => expect(split()).toBeUndefined());
+    expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=docs/a.md");
+  });
+
+  it("returns the split file to the main window when tabs are disabled", async () => {
+    useSettingsStore.setState({ loaded: true, tabsEnabled: false });
+    const { router } = setup();
+    await waitFor(() => expect(screen.getByTestId("page")).toHaveTextContent("welcome:/project/p1"));
+    act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "docs/a.md" }));
+    expect(await screen.findByText("docs/a.md")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Return to main window" }));
+
+    expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=docs%2Fa.md");
+    await waitFor(() => expect(split()).toBeUndefined());
+    expect(useTabsStore.getState().byProject.p1).toBeUndefined();
+    await waitFor(() => expect(router.state.location.state).toBeNull());
+  });
+
+  it("closes the split once the return navigation is confirmed", async () => {
+    setup("/project/p1/content?path=a.md", <BlockingPage />);
+    act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "other.md" }));
+    expect(await screen.findByText("other.md")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Return to main window" }));
+    await userEvent.click(screen.getByRole("button", { name: "leave" }));
+
+    await waitFor(() => expect(split()).toBeUndefined());
+  });
+
+  it("keeps the split when the return navigation is blocked", async () => {
+    setup("/project/p1/content?path=a.md", <BlockingPage />);
+    act(() => useSplitPaneStore.getState().openSplit("p1", { kind: "file", path: "other.md" }));
+    expect(await screen.findByText("other.md")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Return to main window" }));
+    expect(screen.getByTestId("blocker")).toHaveTextContent("blocked");
+    await userEvent.click(screen.getByRole("button", { name: "stay" }));
+
+    expect(split()?.target).toEqual({ kind: "file", path: "other.md" });
+  });
+});

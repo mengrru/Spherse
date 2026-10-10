@@ -881,6 +881,8 @@ export const zhCN = {
   "content-browser.refresh": "刷新",
   // 分窗按钮（content browser Header 编辑按钮旁，图标按钮 title/aria-label）：将当前文件移到内容区右侧分窗中显示
   "content-browser.split": "分窗",
+  // 回主窗口按钮（右侧分窗 Header 原分窗按钮位置，图标按钮 title/aria-label）：结束分窗并将该文件打开回内容区左侧主窗口
+  "content-browser.unsplit": "回到主窗口",
   // 点击 markdown 内部链接指向的文件不存在时的 toast 错误提示，{path} 为目标文件相对项目根的路径
   "content-browser.linkNotFound": "找不到文件：{path}",
   // 内容浏览器（主内容区 / 分窗 / 浮窗 / 快捷链接面板）读取文件失败时内容区显示的错误：文件已不存在

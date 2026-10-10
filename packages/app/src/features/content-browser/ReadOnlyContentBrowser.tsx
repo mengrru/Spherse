@@ -12,9 +12,10 @@ interface ReadOnlyContentBrowserProps {
   onClose: () => void;
   onOpenFile: (path: string) => void;
   onNotFound: () => void;
+  onUnsplit?: () => void;
 }
 
-export function ReadOnlyContentBrowser({ filePath, onClose, onOpenFile, onNotFound }: ReadOnlyContentBrowserProps) {
+export function ReadOnlyContentBrowser({ filePath, onClose, onOpenFile, onNotFound, onUnsplit }: ReadOnlyContentBrowserProps) {
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const file = useContentFile(projectId, client, filePath);
@@ -32,6 +33,7 @@ export function ReadOnlyContentBrowser({ filePath, onClose, onOpenFile, onNotFou
         htmlView={view.htmlView}
         findable={view.findable}
         onClose={onClose}
+        onUnsplit={onUnsplit}
         onHtmlViewChange={view.setHtmlView}
         onRefresh={view.refresh}
         onFindToggle={view.toggleFind}

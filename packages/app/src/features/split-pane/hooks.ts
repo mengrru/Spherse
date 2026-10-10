@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useProjectCtx } from "../../context/project-context";
 import { useIsMobile } from "../../hooks/use-mobile";
 import type { NavState } from "../../lib/nav-state";
-import { projectHomeUrl, tabKey } from "../../lib/tab-target";
+import { projectHomeUrl, tabKey, tabUrl } from "../../lib/tab-target";
 import { useFeature } from "../../lib/use-feature";
 import { useCloseActiveTab, useRouteTabTarget } from "../tabs";
 import { useSplitPaneStore } from "./store";
@@ -50,4 +50,20 @@ export function useOpenSplit(): (target: SplitTarget) => void {
       navigate(projectHomeUrl(projectId), { replace: true, state: { ...state, closedUrl: currentUrl } });
     }, state);
   }, [closeActiveTab, currentUrl, navigate, projectId, routeTarget]);
+}
+
+export function useReturnSplit(): () => void {
+  const { projectId } = useProjectCtx();
+  const navigate = useNavigate();
+  const routeTarget = useRouteTabTarget();
+  const splitTarget = useSplitTarget();
+
+  return useCallback(() => {
+    if (!splitTarget) return;
+    if (routeTarget && tabKey(routeTarget) === tabKey(splitTarget)) {
+      useSplitPaneStore.getState().closeSplit(projectId);
+      return;
+    }
+    navigate(tabUrl(projectId, splitTarget), { state: { closeSplit: true } });
+  }, [navigate, projectId, routeTarget, splitTarget]);
 }
