@@ -17,6 +17,7 @@ describe("feature-registry", () => {
         "floating-chat",
         "floating-content-browser",
         "open-project",
+        "open-project-folder",
         "settings",
         "text-selection-session",
       ].sort(),
