@@ -13,10 +13,12 @@ import { MarkdownContent } from "../../components/markdown-content/MarkdownConte
 import { SectionTitle } from "./SectionTitle";
 import { useUpdateChecker } from "./use-update-checker";
 import { useHostBridge } from "../../context/host-bridge-context";
+import { useGlobalApiClient } from "../../lib/use-connection";
 import { DOWNLOAD_PAGE_URL } from "../../lib/urls";
 
 export function UpdateChecker() {
   const bridge = useHostBridge();
+  const globalClient = useGlobalApiClient();
   const { t } = useI18n();
   const {
     state,
@@ -28,16 +30,33 @@ export function UpdateChecker() {
     dismissRestart,
   } = useUpdateChecker();
   const [appVersion, setAppVersion] = useState("");
+  const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
+  const hasUpdater = Boolean(bridge.updater);
 
   useEffect(() => {
-    void bridge.updater?.getAppVersion()?.then(setAppVersion);
-  }, []);
+    void bridge.getAppVersion().then(setAppVersion).catch(() => setAppVersion(""));
+  }, [bridge]);
+
+  useEffect(() => {
+    if (hasUpdater) return;
+    void globalClient
+      ?.getConnectionInfo()
+      .then((info) => setDesktopVersion(info.appVersion))
+      .catch(() => setDesktopVersion(null));
+  }, [globalClient, hasUpdater]);
 
   return (
     <FieldGroup>
       <SectionTitle>{t("settings.about.version")}</SectionTitle>
       <p className="text-sm text-muted-foreground">v{appVersion}</p>
+      {!hasUpdater && (
+        <p className="text-sm text-muted-foreground">
+          {t("settings.about.desktopVersion")}
+          {desktopVersion ? `v${desktopVersion}` : "—"}
+        </p>
+      )}
 
+      {hasUpdater && (
       <div className="mt-1">
         {state.status === "idle" && (
           <Button onClick={() => void check()}>
@@ -98,6 +117,7 @@ export function UpdateChecker() {
           </div>
         )}
       </div>
+      )}
 
       <Dialog
         open={state.status === "available"}

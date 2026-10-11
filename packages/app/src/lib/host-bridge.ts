@@ -52,11 +52,11 @@ export type HostKind = "electron" | "web";
 
 export interface GeneralPrefs {
   locale: string;
+  tabsEnabled: boolean;
 }
 
 export interface DesktopPrefs {
   theme: ThemeMode;
-  tabsEnabled: boolean;
   debugToolsEnabled: boolean;
   closeToTray: boolean;
 }
@@ -151,6 +151,7 @@ export interface HostBridge {
   getServerBaseUrl(): Promise<string>;
   getServerAccessToken?(): Promise<string | null>;
   clearConnection?(): Promise<void>;
+  getAppVersion(): Promise<string>;
   readonly capabilities: HostCapabilities;
   readonly prefs: HostPrefsApi;
   readonly desktopPrefs?: DesktopPrefsApi;

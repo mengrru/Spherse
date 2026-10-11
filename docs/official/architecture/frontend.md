@@ -16,7 +16,7 @@
 
 renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](../../dev/decisions/0006-host-bridge-shells.md)。
 
-- 接口定义宿主能力：server 连接信息、`openExternal`、偏好分区 `prefs`（必需，locale 通用偏好）/ `desktopPrefs`（可选，theme/tabsEnabled/debugToolsEnabled/closeToTray 桌面专属），可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套）/ `clearConnection`（清除已存连接，web 壳断开入口配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile`；模型配置不走 bridge——renderer 经全局 API client 直连 server（`GET/PUT /api/settings/models`，见 [ADR-0015](../../dev/decisions/0015-settings-partitioned-persistence.md)）
+- 接口定义宿主能力：server 连接信息、`getAppVersion()`（各宿主自身构建版本：desktop 为 app 版本，web 为 web 构建版本）、`openExternal`、偏好分区 `prefs`（必需，locale 与 tabsEnabled 通用偏好）/ `desktopPrefs`（可选，theme/debugToolsEnabled/closeToTray 桌面专属），可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套）/ `clearConnection`（清除已存连接，web 壳断开入口配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile`；模型配置不走 bridge——renderer 经全局 API client 直连 server（`GET/PUT /api/settings/models`，见 [ADR-0015](../../dev/decisions/0015-settings-partitioned-persistence.md)）
 - `HostCapabilities` 声明能力**程度**（同功能在各宿主的差异，如可编辑与否），renderer 据此条件渲染；feature 级整块开关不在这里，走 feature-registry。字段清单由 `host-capabilities.structure.test.ts` 钉住：**声明即必须被消费**（加字段必须带消费点，零消费字段删除）
   - 布尔项：`filePicker` / `mobileAccess` / `openFileExternal`
   - 对象项：`content.editable`
@@ -57,7 +57,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | 层 | 内容 | 持久化 |
 |---|---|---|
 | app-store | connection、打开项目集合、activeProjectId | 项目集合与 lastActive 经 bridge.project 子 API（desktop 落 electron settings，web 走 HTTP + localStorage）；lastRoute 在 localStorage |
-| settings-store | locale（bridge.prefs）/ theme / debugTools / tabsEnabled / closeToTray（bridge.desktopPrefs，仅 desktop；`loaded` 标记区分未加载与默认值） | desktop 落 electron-store hostPrefs，web 落 localStorage `spherse:prefs`（仅 locale） |
+| settings-store | locale 与 tabsEnabled（bridge.prefs）/ theme / debugTools / closeToTray（bridge.desktopPrefs，仅 desktop；`loaded` 标记区分未加载与默认值） | desktop 落 electron-store hostPrefs，web 落 localStorage `spherse:prefs`（locale 与 tabsEnabled） |
 | TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / marketplace-projects（全局 key，不随项目关闭清理）/ marketplace-prompts（全局 key，随 app 语言分桶）/ triggers / welcome-page / custom-side-panel / theme-settings | 内存 cache，项目关闭清除 |
 | project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
 | feature stores | 折叠、浮窗、内容区 tab 列表、分窗、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |

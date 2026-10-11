@@ -12,6 +12,14 @@ vi.mock("./use-update-checker", () => ({
   useUpdateChecker: vi.fn(),
 }));
 
+const getConnectionInfo = vi.hoisted(() =>
+  vi.fn(async () => ({ serverVersion: "1.0.0", authRequired: true, apiVersion: "1", appVersion: "3.4.5" })),
+);
+
+vi.mock("../../lib/use-connection", () => ({
+  useGlobalApiClient: () => ({ getConnectionInfo }),
+}));
+
 const check = vi.fn();
 const acceptDownload = vi.fn();
 const dismissUpdate = vi.fn();
@@ -45,6 +53,7 @@ afterEach(() => {
 function renderUpdateChecker() {
   const bridge = createMockHostBridge({
     openExternal,
+    getAppVersion: vi.fn(async () => "1.2.3"),
     updater: {
       getAppVersion: vi.fn(async () => "1.2.3"),
     } as never,
@@ -62,6 +71,19 @@ describe("UpdateChecker", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "检查更新" }));
     expect(check).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows client and desktop versions without the update section when no updater channel exists (web host)", async () => {
+    mockHookState({ status: "idle" });
+    const bridge = createMockHostBridge({
+      kind: "web",
+      getAppVersion: vi.fn(async () => "0.9.0-web"),
+    });
+    renderWithProviders(<UpdateChecker />, { bridge });
+
+    expect(await screen.findByText("v0.9.0-web")).toBeInTheDocument();
+    expect(await screen.findByText("桌面端版本：v3.4.5")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "检查更新" })).not.toBeInTheDocument();
   });
 
   it("shows a disabled checking button while checking", () => {

@@ -123,6 +123,7 @@ export const en: Record<TranslationKey, string> = {
   "settings.help.description": "Browse Spherse documentation, configuration guides, and examples.",
   "settings.help.openDocs": "Open documentation",
   "settings.about.version": "Current version",
+  "settings.about.desktopVersion": "Desktop version: ",
   "settings.about.checkUpdate": "Check for updates",
   "settings.about.checking": "Checking...",
   "settings.about.upToDate": "Up to date",

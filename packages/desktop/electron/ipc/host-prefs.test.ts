@@ -15,8 +15,8 @@ const { prefsStore, syncTray } = vi.hoisted(() => {
   const syncTray = vi.fn();
   return {
     prefsStore: {
-      general: { locale: "zh-CN" },
-      desktop: { theme: "system" as string, tabsEnabled: true, debugToolsEnabled: false, closeToTray: true },
+      general: { locale: "zh-CN", tabsEnabled: true },
+      desktop: { theme: "system" as string, debugToolsEnabled: false, closeToTray: true },
     },
     syncTray,
   };
@@ -24,7 +24,7 @@ const { prefsStore, syncTray } = vi.hoisted(() => {
 
 vi.mock("../settings.js", () => ({
   getGeneralPrefs: () => ({ ...prefsStore.general }),
-  saveGeneralPrefs: (prefs: { locale: string }) => {
+  saveGeneralPrefs: (prefs: { locale: string; tabsEnabled: boolean }) => {
     prefsStore.general = { ...prefs };
   },
   getDesktopPrefs: () => ({ ...prefsStore.desktop }),
@@ -56,27 +56,25 @@ describe("host prefs ipc", () => {
   });
 
   it("get-general-prefs returns current prefs", () => {
-    expect(handlers.get("get-general-prefs")!()).toEqual({ locale: "zh-CN" });
+    expect(handlers.get("get-general-prefs")!()).toEqual({ locale: "zh-CN", tabsEnabled: true });
   });
 
   it("save-general-prefs persists and syncs tray", () => {
-    const result = handlers.get("save-general-prefs")!(undefined, { locale: "en" });
+    const result = handlers.get("save-general-prefs")!(undefined, { locale: "en", tabsEnabled: false });
     expect(result).toEqual({ success: true });
-    expect(prefsStore.general).toEqual({ locale: "en" });
+    expect(prefsStore.general).toEqual({ locale: "en", tabsEnabled: false });
     expect(syncTray).toHaveBeenCalledTimes(1);
   });
 
   it("save-desktop-prefs persists and syncs tray", () => {
     const result = handlers.get("save-desktop-prefs")!(undefined, {
       theme: "dark",
-      tabsEnabled: false,
       debugToolsEnabled: true,
       closeToTray: false,
     });
     expect(result).toEqual({ success: true });
     expect(prefsStore.desktop).toEqual({
       theme: "dark",
-      tabsEnabled: false,
       debugToolsEnabled: true,
       closeToTray: false,
     });

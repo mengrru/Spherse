@@ -243,7 +243,7 @@ spherse/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 前端运行时投影（当前仅 initialMessage 交接）
 │   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗、全局搜索弹窗 open 状态）
-│   │       │   ├── settings-store.ts     # 应用级偏好 store：locale 走 bridge.prefs、theme/debugTools/tabsEnabled/closeToTray 走 bridge.desktopPrefs（仅 desktop）
+│   │       │   ├── settings-store.ts     # 应用级偏好 store：locale 与 tabsEnabled 走 bridge.prefs、theme/debugTools/closeToTray 走 bridge.desktopPrefs（仅 desktop）
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
 │   │       │   ├── custom-side-panel-store.ts # 自定义侧边面板激活态（per-project，缺省显示，localStorage spherse:custom-side-panel:active-by-project 仅存显式关闭）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
@@ -307,7 +307,7 @@ spherse/
 │   │       │   ├── split-pane/           # 内容区分窗：target.ts（复用 TabTarget，声明可支持的 kind，当前仅 file）、store.ts（每项目 { target, ratio }，localStorage spherse:content-split）、SplitLayout（左栏恒在 + 分隔条 + 右栏）、SplitPaneView（按 kind 分发，file → ReadOnlyContentBrowser）、SplitRouteBridge（「移动」/「回到主窗口」导航到达后提交）、useOpenSplit / useReturnSplit 等命令 hook
 │   │       │   ├── tabs/                 # 内容区标签栏：store.ts（每项目 tab 列表，localStorage spherse:tabs）、TabBar（欢迎页固定首 tab、拖拽排序移动端禁用）、TabRouteBridge（路由派生 upsert / 关闭 / 替换）、useCloseActiveTab / useCloseDeletedFileTabs
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
-│   │       │   ├── settings/             # 设置弹窗（models/image/general/help 全平台 + mobile/about 按 capability 门控；模型配置经全局 API client 走 server GET/PUT /api/settings/models——write-only key：已配置条目输入框禁用、断开后解禁，configured 徽标，disconnect 显式清除；文本 tab 含默认模型 + 思考强度选择 ThinkingLevelField、高级采样参数、自定义 OpenAI 兼容供应商 CustomProviderDialog）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、类型与测试
+│   │       │   ├── settings/             # 设置弹窗（models/image/general/help/about 全平台 + mobile 按 capability 门控；general 含 locale 与多标签页开关（通用偏好），theme/debugTools/closeToTray 按 desktopPrefs 显隐；about 无 updater 通道时（web）显示 web 与桌面端版本；模型配置经全局 API client 走 server GET/PUT /api/settings/models——write-only key：已配置条目输入框禁用、断开后解禁，configured 徽标，disconnect 显式清除；文本 tab 含默认模型 + 思考强度选择 ThinkingLevelField、高级采样参数、自定义 OpenAI 兼容供应商 CustomProviderDialog）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、类型与测试
 │   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）+ WelcomePageQueryBridge（project.yaml fs-watch/reconnect → welcome-page 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   ├── custom-side-panel/    # 自定义侧边面板：透明 iframe 占满 ProjectPanel（preview 路由 + fs-watch 防抖刷新）+ CustomSidePanelQueryBridge（project.yaml fs-watch/reconnect → custom-side-panel 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   ├── project-settings/     # 项目设置弹窗集合

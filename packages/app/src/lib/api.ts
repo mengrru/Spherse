@@ -41,6 +41,7 @@ import type {
   UploadResponse,
   ModelSettingsRequest,
   ModelSettingsResponse,
+  ConnectionInfoResponse,
 } from "@spherse/contracts";
 import { parseApiResponse, schemas } from "@spherse/contracts";
 import { Type } from "@sinclair/typebox";
@@ -779,6 +780,12 @@ export function createGlobalApiClient(baseUrl: string, accessToken?: string | nu
       const res = await authedFetch(`${baseUrl}/api/settings/models`);
       await assertOk(res);
       return parseJsonResponse<ModelSettingsResponse>(res, schemas.modelSettingsResponse);
+    },
+
+    async getConnectionInfo(): Promise<ConnectionInfoResponse> {
+      const res = await authedFetch(`${baseUrl}/api/connection/info`);
+      await assertOk(res);
+      return parseJsonResponse<ConnectionInfoResponse>(res, schemas.connectionInfoResponse);
     },
 
     async updateModelSettings(req: ModelSettingsRequest): Promise<ModelSettingsResponse> {

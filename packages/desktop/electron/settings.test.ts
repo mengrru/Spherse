@@ -51,10 +51,9 @@ describe("hostPrefs", () => {
       debugToolsEnabled: false,
       closeToTray: true,
     });
-    expect(getGeneralPrefs()).toEqual({ locale: "zh-CN" });
+    expect(getGeneralPrefs()).toEqual({ locale: "zh-CN", tabsEnabled: true });
     expect(getDesktopPrefs()).toEqual({
       theme: "system",
-      tabsEnabled: true,
       debugToolsEnabled: false,
       closeToTray: true,
     });
@@ -69,13 +68,19 @@ describe("hostPrefs", () => {
       debugToolsEnabled: true,
       closeToTray: false,
     });
+    expect(getGeneralPrefs()).toEqual({ locale: "en", tabsEnabled: false });
+    expect(getDesktopPrefs()).toEqual({
+      theme: "dark",
+      debugToolsEnabled: true,
+      closeToTray: false,
+    });
     expect(getCloseToTray()).toBe(false);
     expect(getLocale()).toBe("en");
   });
 
-  it("saveGeneralPrefs only touches locale", () => {
-    settingsStore.set("hostPrefs", { locale: "zh-CN", theme: "dark", tabsEnabled: false, debugToolsEnabled: true, closeToTray: false });
-    saveGeneralPrefs({ locale: "en" });
+  it("saveGeneralPrefs only touches locale and tabsEnabled", () => {
+    settingsStore.set("hostPrefs", { locale: "zh-CN", theme: "dark", tabsEnabled: true, debugToolsEnabled: true, closeToTray: false });
+    saveGeneralPrefs({ locale: "en", tabsEnabled: false });
     expect(settingsStore.get("hostPrefs")).toEqual({
       locale: "en",
       theme: "dark",
@@ -86,8 +91,8 @@ describe("hostPrefs", () => {
   });
 
   it("saveDesktopPrefs persists fields and applies theme source", () => {
-    saveDesktopPrefs({ theme: "dark", tabsEnabled: false, debugToolsEnabled: true, closeToTray: true });
-    expect(settingsStore.get("hostPrefs")).toMatchObject({ theme: "dark", tabsEnabled: false });
+    saveDesktopPrefs({ theme: "dark", debugToolsEnabled: true, closeToTray: true });
+    expect(settingsStore.get("hostPrefs")).toMatchObject({ theme: "dark" });
     expect(nativeTheme.themeSource).toBe("dark");
   });
 

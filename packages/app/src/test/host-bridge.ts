@@ -17,8 +17,9 @@ export function createMockHostBridge(overrides: HostBridgeOverrides = {}): HostB
       ...capabilities,
     },
     getServerBaseUrl: vi.fn(async () => "http://localhost:5173"),
+    getAppVersion: vi.fn(async () => "0.0.0-test"),
     prefs: {
-      getPrefs: vi.fn(async () => ({ locale: "zh-CN" })),
+      getPrefs: vi.fn(async () => ({ locale: "zh-CN", tabsEnabled: true })),
       savePrefs: vi.fn(async () => true),
     },
     openExternal: vi.fn(async () => {}),

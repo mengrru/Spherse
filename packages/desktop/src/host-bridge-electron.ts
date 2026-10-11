@@ -71,6 +71,7 @@ export function createElectronHostBridge(): HostBridge {
       const state = await api.getMobileAccessState();
       return state.token;
     },
+    getAppVersion: api.getAppVersion,
     prefs: {
       getPrefs: api.getGeneralPrefs,
       savePrefs: async (prefs) => {

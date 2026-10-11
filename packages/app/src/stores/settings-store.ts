@@ -4,7 +4,6 @@ import type { HostBridge, ThemeMode } from "../lib/host-bridge";
 
 const DEFAULT_DESKTOP_PREFS = {
   theme: "system" as ThemeMode,
-  tabsEnabled: true,
   debugToolsEnabled: false,
   closeToTray: true,
 };
@@ -24,7 +23,7 @@ interface SettingsStore {
   setTheme: (bridge: HostBridge, theme: ThemeMode) => Promise<boolean>;
 }
 
-type DesktopOnlyPrefs = Pick<SettingsStore, "debugToolsEnabled" | "tabsEnabled" | "closeToTray" | "theme">;
+type DesktopOnlyPrefs = Pick<SettingsStore, "debugToolsEnabled" | "closeToTray" | "theme">;
 
 export const useSettingsStore = create<SettingsStore>((set, get) => {
   async function persistDesktopPrefs(bridge: HostBridge, patch: Partial<DesktopOnlyPrefs>): Promise<boolean> {
@@ -32,7 +31,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     if (!prefs) return false;
     return prefs.savePrefs({
       theme: patch.theme ?? get().theme,
-      tabsEnabled: patch.tabsEnabled ?? get().tabsEnabled,
       debugToolsEnabled: patch.debugToolsEnabled ?? get().debugToolsEnabled,
       closeToTray: patch.closeToTray ?? get().closeToTray,
     });
@@ -54,6 +52,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
       set({
         loaded: true,
         locale: normalizeLocale(general?.locale),
+        tabsEnabled: general?.tabsEnabled ?? true,
         ...DEFAULT_DESKTOP_PREFS,
         ...(desktop ?? {}),
       });
@@ -61,7 +60,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 
     async changeLocale(bridge, locale) {
       set({ locale });
-      return bridge.prefs.savePrefs({ locale });
+      const current = get();
+      return bridge.prefs.savePrefs({ locale, tabsEnabled: current.tabsEnabled });
     },
 
     async setDebugToolsEnabled(bridge, enabled) {
@@ -71,7 +71,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
 
     async setTabsEnabled(bridge, enabled) {
       set({ tabsEnabled: enabled });
-      return persistDesktopPrefs(bridge, { tabsEnabled: enabled });
+      const current = get();
+      return bridge.prefs.savePrefs({ locale: current.locale, tabsEnabled: enabled });
     },
 
     async setCloseToTray(bridge, enabled) {

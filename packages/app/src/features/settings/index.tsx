@@ -225,7 +225,6 @@ function SettingsTabs() {
   const setCloseToTray = useSettingsStore((s) => s.setCloseToTray);
   const mobileAccessEnabled = bridge.capabilities.mobileAccess;
   const desktopPrefsEnabled = Boolean(bridge.desktopPrefs);
-  const aboutEnabled = Boolean(bridge.updater);
   const modelSettingsApi = useMemo<ModelSettingsApi | null>(() => (globalClient ? {
     getModelSettings: globalClient.getModelSettings,
     updateModelSettings: globalClient.updateModelSettings,
@@ -245,7 +244,7 @@ function SettingsTabs() {
           <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
           {mobileAccessEnabled && <TabsTrigger value="mobile">{t("settings.tabs.mobile")}</TabsTrigger>}
           <TabsTrigger value="help">{t("settings.tabs.help")}</TabsTrigger>
-          {aboutEnabled && <TabsTrigger value="about">{t("settings.tabs.about")}</TabsTrigger>}
+          <TabsTrigger value="about">{t("settings.tabs.about")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="models" className="mt-3 flex min-h-0 flex-col">
@@ -265,6 +264,19 @@ function SettingsTabs() {
               ))}
             </NativeSelect>
           </Field>
+          <FieldGroup className="mt-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium leading-none">{t("settings.contentTabs")}</span>
+                <span className="text-xs text-muted-foreground">{t("settings.contentTabsDesc")}</span>
+              </div>
+              <Switch
+                checked={tabsEnabled}
+                aria-label={t("settings.contentTabs")}
+                onCheckedChange={(checked) => { void setTabsEnabled(bridge, checked); }}
+              />
+            </div>
+          </FieldGroup>
           {desktopPrefsEnabled && (
             <>
               <Field className="mt-5">
@@ -284,19 +296,6 @@ function SettingsTabs() {
                   <Switch
                     checked={debugToolsEnabled}
                     onCheckedChange={(checked) => { void setDebugToolsEnabled(bridge, checked); }}
-                  />
-                </div>
-              </FieldGroup>
-              <FieldGroup className="mt-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium leading-none">{t("settings.contentTabs")}</span>
-                    <span className="text-xs text-muted-foreground">{t("settings.contentTabsDesc")}</span>
-                  </div>
-                  <Switch
-                    checked={tabsEnabled}
-                    aria-label={t("settings.contentTabs")}
-                    onCheckedChange={(checked) => { void setTabsEnabled(bridge, checked); }}
                   />
                 </div>
               </FieldGroup>
@@ -327,11 +326,9 @@ function SettingsTabs() {
           <HelpPanel />
         </TabsContent>
 
-        {aboutEnabled && (
-          <TabsContent value="about" className="mt-3 min-h-0 overflow-y-auto">
-            <UpdateChecker />
-          </TabsContent>
-        )}
+        <TabsContent value="about" className="mt-3 min-h-0 overflow-y-auto">
+          <UpdateChecker />
+        </TabsContent>
       </Tabs>
     </div>
   );

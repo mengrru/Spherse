@@ -123,6 +123,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.help.description": "查看 Spherse 的使用文件、設定指南與範例。",
   "settings.help.openDocs": "查看文件",
   "settings.about.version": "目前版本",
+  "settings.about.desktopVersion": "桌面端版本：",
   "settings.about.checkUpdate": "檢查更新",
   "settings.about.checking": "檢查中...",
   "settings.about.upToDate": "已是最新版本",

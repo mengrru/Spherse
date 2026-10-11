@@ -3,16 +3,17 @@ import type { HostBridge } from "../lib/host-bridge";
 import { useSettingsStore } from "./settings-store";
 
 function createBridge(overrides: {
-  general?: { locale: string };
-  desktop?: { theme: "light" | "dark" | "system"; tabsEnabled: boolean; debugToolsEnabled: boolean; closeToTray: boolean } | null;
+  general?: { locale: string; tabsEnabled?: boolean };
+  desktop?: { theme: "light" | "dark" | "system"; debugToolsEnabled: boolean; closeToTray: boolean } | null;
 } = {}): HostBridge {
-  const defaultDesktop = { theme: "system" as const, tabsEnabled: true, debugToolsEnabled: false, closeToTray: true };
+  const defaultDesktop = { theme: "system" as const, debugToolsEnabled: false, closeToTray: true };
   return {
     kind: "electron",
     capabilities: { filePicker: true, mobileAccess: false, openFileExternal: true, content: { editable: true } },
     getServerBaseUrl: vi.fn(async () => "http://localhost:5173"),
+    getAppVersion: vi.fn(async () => "0.0.0-test"),
     prefs: {
-      getPrefs: vi.fn(async () => overrides.general ?? { locale: "zh-CN" }),
+      getPrefs: vi.fn(async () => ({ locale: overrides.general?.locale ?? "zh-CN", tabsEnabled: overrides.general?.tabsEnabled ?? true })),
       savePrefs: vi.fn(async () => true),
     },
     desktopPrefs: overrides.desktop === null ? undefined : {
@@ -45,19 +46,26 @@ describe("useSettingsStore", () => {
 
     expect(ok).toBe(true);
     expect(useSettingsStore.getState().locale).toBe("en");
-    expect(bridge.prefs.savePrefs).toHaveBeenCalledWith({ locale: "en" });
+    expect(bridge.prefs.savePrefs).toHaveBeenCalledWith({ locale: "en", tabsEnabled: true });
   });
 
   it("loads desktop prefs when the channel exists", async () => {
     await useSettingsStore.getState().loadPrefs(createBridge({
-      desktop: { theme: "dark", tabsEnabled: false, debugToolsEnabled: true, closeToTray: false },
+      desktop: { theme: "dark", debugToolsEnabled: true, closeToTray: false },
     }));
 
     expect(useSettingsStore.getState().theme).toBe("dark");
-    expect(useSettingsStore.getState().tabsEnabled).toBe(false);
     expect(useSettingsStore.getState().debugToolsEnabled).toBe(true);
     expect(useSettingsStore.getState().closeToTray).toBe(false);
     expect(useSettingsStore.getState().loaded).toBe(true);
+  });
+
+  it("loads tabsEnabled from general prefs", async () => {
+    await useSettingsStore.getState().loadPrefs(createBridge({ general: { locale: "zh-CN", tabsEnabled: false } }));
+    expect(useSettingsStore.getState().tabsEnabled).toBe(false);
+
+    await useSettingsStore.getState().loadPrefs(createBridge({ general: { locale: "zh-CN" } }));
+    expect(useSettingsStore.getState().tabsEnabled).toBe(true);
   });
 
   it("falls back to desktop defaults when the channel is absent (web)", async () => {
@@ -79,7 +87,6 @@ describe("useSettingsStore", () => {
     expect(useSettingsStore.getState().theme).toBe("dark");
     expect(bridge.desktopPrefs?.savePrefs).toHaveBeenCalledWith({
       theme: "dark",
-      tabsEnabled: true,
       debugToolsEnabled: false,
       closeToTray: true,
     });
@@ -87,30 +94,26 @@ describe("useSettingsStore", () => {
 
   it("setDebugToolsEnabled preserves other desktop fields", async () => {
     const bridge = createBridge();
-    useSettingsStore.setState({ theme: "dark", tabsEnabled: false });
+    useSettingsStore.setState({ theme: "dark" });
 
     await useSettingsStore.getState().setDebugToolsEnabled(bridge, true);
 
     expect(bridge.desktopPrefs?.savePrefs).toHaveBeenCalledWith({
       theme: "dark",
-      tabsEnabled: false,
       debugToolsEnabled: true,
       closeToTray: true,
     });
   });
 
-  it("setTabsEnabled preserves other desktop fields", async () => {
+  it("setTabsEnabled persists via the general prefs channel", async () => {
     const bridge = createBridge();
-    useSettingsStore.setState({ closeToTray: false, theme: "light" });
+    useSettingsStore.setState({ locale: "en", tabsEnabled: true });
 
-    await useSettingsStore.getState().setTabsEnabled(bridge, false);
+    const ok = await useSettingsStore.getState().setTabsEnabled(bridge, false);
 
-    expect(bridge.desktopPrefs?.savePrefs).toHaveBeenCalledWith({
-      theme: "light",
-      tabsEnabled: false,
-      debugToolsEnabled: false,
-      closeToTray: false,
-    });
+    expect(ok).toBe(true);
+    expect(useSettingsStore.getState().tabsEnabled).toBe(false);
+    expect(bridge.prefs.savePrefs).toHaveBeenCalledWith({ locale: "en", tabsEnabled: false });
   });
 
   it("setCloseToTray preserves other desktop fields", async () => {
@@ -118,7 +121,7 @@ describe("useSettingsStore", () => {
 
     await useSettingsStore.getState().setCloseToTray(bridge, false);
 
-    expect(bridge.desktopPrefs?.savePrefs).toHaveBeenCalledWith(expect.objectContaining({ closeToTray: false, tabsEnabled: true }));
+    expect(bridge.desktopPrefs?.savePrefs).toHaveBeenCalledWith(expect.objectContaining({ closeToTray: false, theme: "system" }));
   });
 
   it("desktop setters are no-ops without the desktopPrefs channel", async () => {

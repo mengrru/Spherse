@@ -7,6 +7,8 @@ import type {
 } from "@spherse/app/host-bridge";
 import { MobileConnectPage } from "./pages/MobileConnectPage";
 
+declare const __SPHERSE_WEB_VERSION__: string;
+
 const WEB_CAPABILITIES: HostCapabilities = {
   filePicker: false,
   mobileAccess: false,
@@ -28,10 +30,10 @@ const LAST_ACTIVE_PROJECT_KEY = scopedStorageKey("spherse:last-active-project");
 
 const PLACEHOLDER_LAST_OPENED = new Date(0).toISOString();
 
-function readStoredPrefs(): { locale?: string } | null {
+function readStoredPrefs(): { locale?: string; tabsEnabled?: boolean } | null {
   try {
     const raw = localStorage.getItem(PREFS_STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as { locale?: string };
+    if (raw) return JSON.parse(raw) as { locale?: string; tabsEnabled?: boolean };
     const legacyRaw = localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY);
     if (legacyRaw) {
       const legacy = JSON.parse(legacyRaw) as { locale?: string };
@@ -50,7 +52,8 @@ function readStoredPrefs(): { locale?: string } | null {
 function createWebPrefsApi(): HostPrefsApi {
   return {
     async getPrefs() {
-      return { locale: readStoredPrefs()?.locale ?? "zh-CN" };
+      const stored = readStoredPrefs();
+      return { locale: stored?.locale ?? "zh-CN", tabsEnabled: stored?.tabsEnabled ?? true };
     },
     async savePrefs(prefs) {
       try {
@@ -190,6 +193,7 @@ export function createWebHostBridge(): HostBridge {
     clearConnection: async () => {
       localStorage.removeItem(WEB_CONNECTION_STORAGE_KEY);
     },
+    getAppVersion: async () => __SPHERSE_WEB_VERSION__,
     prefs: createWebPrefsApi(),
     openExternal: async (url: string) => {
       window.open(url, "_blank", "noopener,noreferrer");

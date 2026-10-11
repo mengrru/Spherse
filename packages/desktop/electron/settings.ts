@@ -54,19 +54,19 @@ export function getHostPrefs(): HostPrefsData {
 }
 
 export function getGeneralPrefs(): GeneralPrefs {
-  return { locale: getHostPrefs().locale };
+  const prefs = getHostPrefs();
+  return { locale: prefs.locale, tabsEnabled: prefs.tabsEnabled };
 }
 
 export function saveGeneralPrefs(prefs: GeneralPrefs): void {
   const current = getHostPrefs();
-  settingsStore.set("hostPrefs", { ...current, locale: prefs.locale });
+  settingsStore.set("hostPrefs", { ...current, locale: prefs.locale, tabsEnabled: prefs.tabsEnabled });
 }
 
 export function getDesktopPrefs(): DesktopPrefs {
   const prefs = getHostPrefs();
   return {
     theme: prefs.theme,
-    tabsEnabled: prefs.tabsEnabled,
     debugToolsEnabled: prefs.debugToolsEnabled,
     closeToTray: prefs.closeToTray,
   };

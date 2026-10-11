@@ -245,6 +245,8 @@ export const zhCN = {
   "settings.help.openDocs": "查看文档",
   // 关于 tab → 当前版本号前的标签
   "settings.about.version": "当前版本",
+  // 关于页 web 端显示的桌面端（所连 server）版本行
+  "settings.about.desktopVersion": "桌面端版本：",
   // 关于 tab → 检查更新按钮（idle 态）
   "settings.about.checkUpdate": "检查更新",
   // 检查更新按钮 loading 态（checking）

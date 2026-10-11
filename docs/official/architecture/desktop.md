@@ -31,7 +31,7 @@
 | 域 | channel 概要 |
 |---|---|
 | project | 目录选择、项目打开/关闭/恢复（`restore-projects` 重注册已打开项目）、lastActive、`get-server-port`、`open-project-folder`、`open-file`（校验在已打开项目内）、`open-external`（仅 http/https/mailto/tel）、save dialog |
-| host-prefs | `get/save-general-prefs`（locale）、`get/save-desktop-prefs`（theme/tabsEnabled/debugToolsEnabled/closeToTray；save 后 `syncTray()`，desktopPrefs 另应用 `nativeTheme`） |
+| host-prefs | `get/save-general-prefs`（locale + tabsEnabled）、`get/save-desktop-prefs`（theme/debugToolsEnabled/closeToTray；save 后 `syncTray()`，desktopPrefs 另应用 `nativeTheme`） |
 | debug | is-dev、DevTools 开关、electron-store 查看、reload renderer、reset app data（一并删除 model-settings.json） |
 | skill | zip 文件选择（本地安装用） |
 | updater | check / download / install / cancel / get-state / get-version |
