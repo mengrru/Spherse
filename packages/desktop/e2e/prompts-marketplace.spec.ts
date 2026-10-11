@@ -114,7 +114,7 @@ test("prompt templates dialog lists, copies and shows full content", async () =>
     await openAgentDialog(page);
 
     await page.locator("[data-prompt-templates-entry]").click();
-    await expect(page.getByText("提示词模板")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "提示词模板" })).toBeVisible({ timeout: 15_000 });
 
     const card = page.locator("[data-prompt-card='e2e-worldview']");
     await expect(card).toBeVisible({ timeout: 15_000 });
