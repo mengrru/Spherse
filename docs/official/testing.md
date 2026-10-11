@@ -8,9 +8,10 @@
 
 | 层 | 运行环境 | 覆盖对象 | 归属 | 反馈 |
 |---|---|---|---|---|
-| 纯逻辑单测 | Node / jsdom | store、query、reducer、纯函数、hook 数据流 | core / server / app / contracts / sdk 等 | 秒级 |
+| 纯逻辑单测 | Node / jsdom | store、query、reducer、纯函数、hook 数据流 | core / server / app / contracts / sdk / cli 等 | 秒级 |
 | 组件测试 | jsdom + Testing Library | React 组件渲染、ARIA 状态、交互 | `packages/app` | 秒级 |
 | 契约测试 | Node | 跨层接缝：PM 写入门面、`SessionPort`、HTTP/WS contract | core / server | 秒级 |
+| CLI 装配测试 | Node（真实 server 实例） | `packages/cli`：`startServer` 不 mock `createMultiProjectServer`，断言 health / connection info / 项目注册 / lockfile / 端口守卫；bundle 冒烟另走 `npm run smoke -w packages/cli`（CI / 发版链执行） | `packages/cli` | 秒级 |
 | 架构不变量 | Node（源码扫描） | 跨文件完整性、层边界负断言 | `packages/app`（`*.structure.test.ts`） | 秒级 |
 | E2E | 真实 Electron + Playwright | 启动链、路由、多面板集成、UI SDK | `packages/desktop/e2e/` | 分钟级 |
 | 打包 smoke | 打包产物（asar） | electron-builder 配置、native dependency、安装包可启动 | `packages/desktop/e2e/packaged-smoke.spec.ts` | 分钟级 |

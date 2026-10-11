@@ -13,6 +13,7 @@
   - hook 注册在根实例（`fastify.register` 封装上下文内不生效）
 - **端口**：默认固定 53972、只绑 `127.0.0.1`；`EADDRINUSE` 才回退 OS 随机端口
 - desktop 启动链：`app.whenReady` → `migrateLegacySettings()` → `ensureServer()`（传 `auth.accessToken = getServerToken()`、`modelSettingsPath` 与 app 版本）→ 重放已注册项目 → 重放动态 host
+- CLI 宿主（`npx spherse server`，第二 host）以同套 options 组装：token/modelSettingsPath 来自 `~/.spherse/`、项目经目录扫描注册（无 IPC/renderer），职责边界与决策见 [ADR-0016](../../dev/decisions/0016-cli-second-host.md) 与 [packages/cli/README](../../../packages/cli/README.md)
   - server 重建（regenerate token）后由 `syncAllowedHosts()` 按当前 mobileAccess 状态重放动态 host
 - shutdown：tunnel stop → `server.close(options?)`（唯一关停入口，幂等共享 Promise；顺序 `chatHub.close()` → `registry.removeAll()`（allSettled）→ `fastify.close()`，阶段各自 `settleWithin` 超时/失败隔离，缺省 10s 与 logger 上报；desktop 只注入超时与日志策略，见 [ADR-0012](../../dev/decisions/0012-chat-hub-lifecycle-ownership.md)）
 

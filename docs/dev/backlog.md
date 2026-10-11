@@ -98,6 +98,8 @@
 
 ## 基础设施
 
+- [ ] **CLI（`npx spherse`）发布流程与 npm publish 接入**：`packages/cli` 的 bundle/冒烟/一致性校验已就绪（ADR-0016），但 npm publish 尚未接入 release 流程——需在 build-and-release 扩展：tag 版本 sync 进 CLI 包、发布前剥离 workspace `"*"` 依赖（生成 publish 用 package.json）、`npm publish`（NPM_TOKEN）、与 GitHub Pages 前端同版本发布（版本守卫 major/minor 失配会全屏阻断）。前置：首次发布需决定版本策略与包名占位确认。
+- [ ] **CLI 自托管前端（离线化）**：`npx spherse server` 目前回显线上 PWA 深链，首访需联网；server 增加 `staticDir` 选项服务 web dist（auth hook 对非 `/api/`、`/ws/` 路径天然放行，调研已确认成本低），CLI 把 web dist 打进 npm 包、深链切换本机 URL，摆脱 GitHub Pages 依赖。后续增强：限定 projects 目录的注册/新建项目 HTTP API（web 端新建项目）、token 轮换子命令、局域网访问模式（`--host` 绑定 + host-guard 放行，涉及安全模型变更）。参见 `docs/dev/features/2026-10-12-npx-server-cli/design.md` 二期草图
 - [ ] **Linux 发行打磨（条件触发：出现 Linux 用户实际诉求时）**：当前 Linux 发布为 x64 AppImage + deb（CI linux matrix job，executableName 三平台统一 `Spherse`）。潜在跟进：arm64 构建、rpm/snap 等格式、Ubuntu 23.10+（AppArmor 限制 unprivileged userns）下 Electron SUID sandbox 启动失败的更优解（现为 README/下载页 sysctl workaround）。
 - [ ] **限制 skill / 市场项目 ZIP 安装资源消耗**：`adm-zip 0.6.0` 可关闭 forged uncompressed-size OOM 漏洞，但 `SkillStore.installSkill()` 与 `installMarketplaceProjectZip()`（市场项目安装，同一解压管线）仍会无上限读取 entry table、frontmatter/meta 并解压完整外部 ZIP。增加压缩包字节数、entry 数、单 entry 展开大小、总展开大小/磁盘预算约束，超限在解压前拒绝，并补 zip bomb / 大量 entry / 超大合法 archive 测试。参见 `docs/dev/investigation/2026-08-28-dependency-security/README.md`
 - [ ] **Turborepo 编排评估（条件触发：包数增长或 CI 时长成痛点时）**：root 已用显式拓扑序 workspaces 列表让 `npm run build --workspaces` 满足构建顺序（2026-08-28），但仍是全量串行、无缓存、`dev` 无法并行 watch。turbo 可提供 `build dependsOn ^build` 自动拓扑 + 远程缓存 + `--filter` 增量 + `turbo dev --parallel`；评估安装成本与 CI 适配后决定是否引入。参见 `docs/dev/infra/2026-08-28-build-commands-package-boundaries/design.md`

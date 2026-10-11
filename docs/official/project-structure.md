@@ -388,6 +388,21 @@ spherse/
 │   │       ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
 │   │       ├── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
 │   │       └── ui-sdk-bridge.spec.ts   # 注入式 @spherse/sdk 桥接 E2E 测试（window.spherse.* 暴露面 / fire 导航 / call 往返 / api.* HTTP 桥接 resolve+reject / navigate 订阅回放）
+│   ├── cli/                          # spherse（npm 包名，非 @spherse scope）— 终端宿主：npx 一键启动 server（CLI 作为第二 host 复刻 desktop 最小职责集，决策见 ADR-0016）
+│   │   ├── build.mjs                 # esbuild bundle（packages:external + workspace alias 全表含 @spherse/sdk/source）+ 产物不变量（无 @spherse/* 残留）+ dependencies 与 core/server 一致性校验
+│   │   ├── bin/spherse.js            # bin 薄 shim（#!/usr/bin/env node + runCli）
+│   │   ├── scripts/smoke.mjs         # bundle 冒烟：--version + 真实 server 实例（health / connection info / projects / preview SDK 短路 / SIGTERM 优雅退出）
+│   │   └── src/
+│   │       ├── main.ts               # runCli 入口：node 版本守卫 + 子命令分发（server / new / --version / --help）
+│   │       ├── args.ts               # 参数解析（--port/--home/--frontend-url，CliArgError）
+│   │       ├── home.ts               # home 目录解析（--home > SPHERSE_HOME > ~/.spherse）与布局
+│   │       ├── settings-store.ts     # serverToken 惰性生成 + tmp+rename 原子写
+│   │       ├── lockfile.ts           # server.lock 单实例锁（pid 探测 / stale 覆盖 / 退出清理）
+│   │       ├── projects.ts           # projects/ 目录扫描（isDirectory + dotfile 跳过 + isPathInside 断言）、默认项目、new 落盘与命名校验（大小写折叠）
+│   │       ├── server-cmd.ts         # server 子命令：lockfile → token → 端口预探测 → createMultiProjectServer → 扫描注册 → 回显（线上 PWA 登录深链）→ 信号退出
+│   │       ├── echo.ts               # 深链生成（对齐 app buildConnectUrl 编码）与启动回显文本
+│   │       ├── version.ts            # MIN_NODE_VERSION / checkNodeVersion / readCliVersion
+│   │       └── __tests__/            # vitest 单测 + 装配测试（不 mock createMultiProjectServer）
 │   ├── web/                          # @spherse/web — Web 版本壳 / 移动端 PWA（GitHub Pages：prod 部署到 /web/ 随发版，dev 分支部署到 /dev/web/；构建产物路径无关，`WEB_ENV=dev` 注入 manifest/title Dev 标识）
 │   │   ├── vite.config.ts            # Vite + vite-plugin-pwa（manifest + generateSW app shell precache）+ manualChunks（vendor-react/vendor-markdown）
 │   │   ├── index.html                # 入口 HTML（theme-color / apple-mobile-web-app / viewport-fit=cover 元数据）

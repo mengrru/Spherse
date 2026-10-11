@@ -11,6 +11,8 @@ const tsFiles = [
   "packages/*/shared/**/*.ts",
   "packages/*/*.{ts,tsx}",
   "packages/*/scripts/**/*.mjs",
+  "packages/cli/build.mjs",
+  "packages/cli/bin/*.js",
   "scripts/**/*.mjs",
   "*.config.{js,mjs,ts}",
 ];
@@ -109,6 +111,8 @@ export default [
       "packages/*/shared/**/*.ts",
       "packages/*/*.{ts,tsx}",
       "packages/*/scripts/**/*.mjs",
+      "packages/cli/build.mjs",
+      "packages/cli/bin/*.js",
       "scripts/**/*.mjs",
       "*.config.{js,mjs,ts}",
     ],
