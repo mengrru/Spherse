@@ -86,28 +86,16 @@ describe("ModelProviderItem keyed rows", () => {
     expect(onApiKeyCommit).toHaveBeenCalledWith("new-key");
   });
 
-  it("shows connected from server state and commits a replaced key on blur", async () => {
+  it("disables the key input while configured and disconnects on click", async () => {
     const user = userEvent.setup();
-    const { onApiKeyCommit } = renderProviderItem({}, { configured: true });
+    const { onApiKeyCommit, onDisconnect } = renderProviderItem({}, { configured: true });
 
     expect(screen.getByText("已连接")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("已配置")).toBeInTheDocument();
-
     const input = screen.getByPlaceholderText("已配置");
-    await user.type(input, "new-key");
-    await user.tab();
-    expect(onApiKeyCommit).toHaveBeenCalledWith("new-key");
-  });
-
-  it("empty blur does not show disconnect state for a configured provider", async () => {
-    const user = userEvent.setup();
-    const { onApiKeyCommit } = renderProviderItem({}, { configured: true });
-
-    const input = screen.getByPlaceholderText("已配置");
-    await user.click(input);
-    await user.tab();
-    expect(onApiKeyCommit).toHaveBeenCalledWith("");
+    expect(input).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: /断开连接/ }));
+    expect(onDisconnect).toHaveBeenCalledTimes(1);
+    expect(onApiKeyCommit).not.toHaveBeenCalled();
   });
 });

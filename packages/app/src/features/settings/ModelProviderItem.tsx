@@ -85,8 +85,9 @@ export function ModelProviderItem({
           <Input
             type="password"
             className="flex-1"
-            placeholder={configured && !apiKey ? t("settings.provider.apiKeyConfigured") : t("settings.provider.apiKeyPlaceholder")}
+            placeholder={configured ? t("settings.provider.apiKeyConfigured") : t("settings.provider.apiKeyPlaceholder")}
             value={apiKey}
+            disabled={configured}
             onChange={(e) => onApiKeyChange(e.target.value)}
             onBlur={() => onApiKeyCommit(apiKey)}
             autoComplete={`off-${id}`}
