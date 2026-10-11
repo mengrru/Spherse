@@ -444,6 +444,7 @@ export const en: Record<TranslationKey, string> = {
   "content-browser.unsupported.openExternally": "Open with default app",
   "file-tree.newFile": "New File",
   "file-tree.newFolder": "New Folder",
+  "file-tree.uploadFiles": "Upload Files",
   "file-tree.confirmDeleteTitle": "Confirm Delete",
   "file-tree.confirmDeleteDir": "Are you sure you want to delete directory \u201C{name}\u201D? This action cannot be undone.",
   "file-tree.confirmDeleteFile": "Are you sure you want to delete file \u201C{name}\u201D? This action cannot be undone.",

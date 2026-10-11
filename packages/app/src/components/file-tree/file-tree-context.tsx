@@ -15,6 +15,7 @@ export interface FileTreeContextValue {
   submitCreate: (parentPath: string, action: CreateAction, name: string) => void;
   cancelCreate: () => void;
   requestDelete: (item: TreeItem) => void;
+  pickUploadFiles?: (dirPath: string) => void;
   onFloatFile?: (filePath: string) => void;
   floatedFilePaths?: Set<string>;
   onSplitFile?: (filePath: string) => void;

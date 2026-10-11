@@ -43,3 +43,25 @@ describe("FileTreeContextMenu split item", () => {
     expect(screen.queryByRole("menuitem", { name: "Split" })).toBeNull();
   });
 });
+
+describe("FileTreeContextMenu upload item", () => {
+  it("uploads to the directory itself for directories", async () => {
+    const onUploadFiles = vi.fn();
+    open(dir, { onUploadFiles });
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Upload Files" }));
+    expect(onUploadFiles).toHaveBeenCalledWith("docs");
+  });
+
+  it("uploads to the parent directory for files", async () => {
+    const onUploadFiles = vi.fn();
+    open(file, { onUploadFiles });
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Upload Files" }));
+    expect(onUploadFiles).toHaveBeenCalledWith("docs");
+  });
+
+  it("does not offer upload when no handler is provided", async () => {
+    open(file);
+    await screen.findByRole("menuitem", { name: "New File" });
+    expect(screen.queryByRole("menuitem", { name: "Upload Files" })).toBeNull();
+  });
+});

@@ -28,6 +28,7 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
     selectFile,
     requestCreate,
     requestDelete,
+    pickUploadFiles,
     onFloatFile,
     floatedFilePaths,
     onSplitFile,
@@ -70,6 +71,7 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
       node={item}
       onCreate={(action) => requestCreate(item, action)}
       onDelete={() => requestDelete(item)}
+      onUploadFiles={pickUploadFiles}
       onFloatFile={onFloatFile}
       floatedFilePaths={floatedFilePaths}
       onSplitFile={onSplitFile}
@@ -92,6 +94,7 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
     submitCreate,
     cancelCreate,
     requestDelete,
+    pickUploadFiles,
     readOnly,
     dropFiles,
     dropTargetDir,
@@ -171,6 +174,7 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
         node={item}
         onCreate={(action) => requestCreate(item, action)}
         onDelete={() => requestDelete(item)}
+        onUploadFiles={pickUploadFiles}
       >
         {trigger}
       </FileTreeContextMenu>

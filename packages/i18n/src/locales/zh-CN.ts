@@ -907,6 +907,8 @@ export const zhCN = {
   "file-tree.newFile": "新建文件",
   // 新建文件夹按钮
   "file-tree.newFolder": "新建文件夹",
+  // 右键菜单：从设备上传文件到该目录
+  "file-tree.uploadFiles": "上传文件",
   // 删除确认弹窗标题
   "file-tree.confirmDeleteTitle": "确认删除",
   // 删除目录确认弹窗内容，{name} 为目录名

@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import type { DragEvent } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, DragEvent } from "react";
 import { useI18n } from "@spherse/i18n/react";
 import { cn } from "@/lib/utils";
 import { useProjectCtx } from "../../context/project-context";
@@ -53,6 +53,22 @@ export function FileTree({
 
   const dropFiles = uploadsEnabled && !readOnly ? ctrl.uploadFiles : undefined;
 
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadDirRef = useRef(basePath);
+  const handlePickUploadFiles = useCallback((dirPath: string) => {
+    uploadDirRef.current = dirPath;
+    uploadInputRef.current?.click();
+  }, []);
+  const pickUploadFiles = dropFiles ? handlePickUploadFiles : undefined;
+  const handleUploadInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const files = Array.from(input.files ?? []);
+    input.value = "";
+    if (files.length > 0) {
+      void dropFiles?.(uploadDirRef.current, files);
+    }
+  };
+
   const [dropTargetDir, setDropTargetDir] = useState<string | null>(null);
   const rootDragHandlers = dropFiles
     ? {
@@ -89,6 +105,7 @@ export function FileTree({
     submitCreate: ctrl.submitCreate,
     cancelCreate: ctrl.cancelCreate,
     requestDelete: ctrl.requestDelete,
+    pickUploadFiles,
     onFloatFile,
     floatedFilePaths,
     onSplitFile,
@@ -132,6 +149,15 @@ export function FileTree({
           target={ctrl.deleteTarget}
           onConfirm={ctrl.confirmDelete}
           onCancel={ctrl.cancelDelete}
+        />
+      )}
+      {dropFiles && (
+        <input
+          ref={uploadInputRef}
+          type="file"
+          multiple
+          hidden
+          onChange={handleUploadInputChange}
         />
       )}
     </div>

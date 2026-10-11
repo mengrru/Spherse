@@ -444,6 +444,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "content-browser.unsupported.openExternally": "用預設應用開啟",
   "file-tree.newFile": "新建檔案",
   "file-tree.newFolder": "新建資料夾",
+  "file-tree.uploadFiles": "上傳檔案",
   "file-tree.confirmDeleteTitle": "確認刪除",
   "file-tree.confirmDeleteDir": "確定要刪除目錄「{name}」嗎？此操作不可撤銷。",
   "file-tree.confirmDeleteFile": "確定要刪除檔案「{name}」嗎？此操作不可撤銷。",
