@@ -145,7 +145,7 @@ prompts/worldview-assistant/
 - loading / error+重试 / empty 三分支，文案镜像两个市场 dialog；**API 404（整链无 JSON，市场未发布/全下架）映射为 empty 态而非 error 态**（重试无意义，通过 `err instanceof ApiError && err.status === 404` 区分）
 - 嵌套于 AgentDialog（Radix portal，与现有 AlertDialog 嵌套同机制）
 
-**入口（AgentDialogForm）**：Textarea 下方的 badge 行替换为 `预设模板：[浏览模板…]` 单按钮（位置不变），点击 `setTemplatesOpen(true)`；删除 `PromptTemplatePicker`、`handleSelectTemplate`、`applyTemplate`、确认 AlertDialog。
+**入口（AgentDialogForm）**：Textarea 下方的 badge 行替换为单个「浏览提示词模板…」outline 按钮（位置不变），点击 `setTemplatesOpen(true)`；删除 `PromptTemplatePicker`、`handleSelectTemplate`、`applyTemplate`、确认 AlertDialog。
 
 **移除清单**：
 
@@ -158,7 +158,7 @@ prompts/worldview-assistant/
 | `packages/presets/src/index.ts` | 删 `PRESET_PROMPT_TEMPLATES` 导出 |
 | `packages/presets/__tests__/sync-templates.test.ts` | 删对应断言块 |
 | `packages/app/src/features/agent-dialog/PromptTemplatePicker.tsx` | 删除 |
-| i18n keys | 删 `agent-dialog.templateLabel`、`agent-dialog.template.{worldview-assistant,roleplay}`、`agent-dialog.templateConfirm*`；保留复用 `agent-dialog.templatePresetsLabel` 作为入口行前缀 |
+| i18n keys | 删 `agent-dialog.templateLabel`、`agent-dialog.templatePresetsLabel`、`agent-dialog.template.{worldview-assistant,roleplay}`、`agent-dialog.templateConfirm*` |
 
 **新增 i18n keys**（`agent-dialog.templates.*`，三语言同步）：`browse`（入口按钮）、`title`、`copy`、`copied`、`view`、`back`、`loading`、`loadFailed`、`retry`、`empty`、`categoryAll`。
 

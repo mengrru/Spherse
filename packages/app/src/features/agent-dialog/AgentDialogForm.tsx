@@ -179,7 +179,6 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
                 spellCheck={false}
               />
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-muted-foreground">{t("agent-dialog.templatePresetsLabel")}</span>
                 <Button
                   type="button"
                   variant="outline"

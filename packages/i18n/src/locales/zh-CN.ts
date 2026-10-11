@@ -427,10 +427,8 @@ export const zhCN = {
   "agent-dialog.quickLinksHint": "显示为聊天窗口顶部的按钮，点击可快速打开该文件",
   // Agent 快捷链接路径输入框占位提示
   "agent-dialog.quickLinksPlaceholder": "添加文件…",
-  // 提示词下方预设模板入口行的前缀文案
-  "agent-dialog.templatePresetsLabel": "预设模板：",
   // 预设模板入口按钮：打开提示词模板市场 dialog
-  "agent-dialog.templates.browse": "浏览模板…",
+  "agent-dialog.templates.browse": "浏览提示词模板…",
   // 提示词模板市场 dialog 标题
   "agent-dialog.templates.title": "提示词模板",
   // 模板卡片与详情视图的「复制」按钮
