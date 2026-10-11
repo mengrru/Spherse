@@ -37,7 +37,7 @@ export function modelExistsInCatalog(
 
 interface ModelConfigFieldProps {
   providers: Record<string, ProviderCatalogItem>;
-  apiKeys: Record<string, string>;
+  configuredProviders: Record<string, boolean>;
   model: string | undefined;
   thinkingLevel: ThinkingLevel | undefined;
   onModelChange: (model: string | undefined) => void;
@@ -46,7 +46,7 @@ interface ModelConfigFieldProps {
 
 export function ModelConfigField({
   providers,
-  apiKeys,
+  configuredProviders,
   model,
   thinkingLevel,
   onModelChange,
@@ -56,7 +56,7 @@ export function ModelConfigField({
   const [query, setQuery] = useState("");
 
   const providerEntries = Object.entries(providers).filter(
-    ([id, config]) => apiKeys[id] && config.models.length > 0,
+    ([id, config]) => configuredProviders[id] && config.models.length > 0,
   );
 
   const selectedLabel = (() => {

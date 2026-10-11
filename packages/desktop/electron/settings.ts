@@ -2,8 +2,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { app, nativeTheme } from "electron";
 import Store from "electron-store";
-import type { AppSettings, ModelGroupSettings, ProviderCredentials, MobileAccessSettings } from "@spherse/core";
-import { getAppModelCatalog } from "./model-catalog.js";
+import type { DesktopPrefs, GeneralPrefs, ThemeMode } from "@spherse/app/host-bridge";
 
 export interface OpenProjectEntry {
   id: string;
@@ -12,8 +11,21 @@ export interface OpenProjectEntry {
   lastOpened: string;
 }
 
+export type MobileTunnelMode = "quick" | "manual";
+
+export interface MobileAccessSettings {
+  enabled: boolean;
+  token?: string;
+  mode?: MobileTunnelMode;
+  publicDomain?: string;
+}
+
+export interface HostPrefsData extends GeneralPrefs, DesktopPrefs {}
+
 type SettingsSchema = {
-  settings?: AppSettings;
+  settings?: unknown;
+  hostPrefs?: HostPrefsData;
+  mobileAccess?: MobileAccessSettings;
   openProjects?: OpenProjectEntry[];
   lastActiveProject?: string | null;
   serverToken?: string;
@@ -23,141 +35,51 @@ export const settingsStore = new Store<SettingsSchema>({
   name: "settings",
 });
 
-export function getSettings(): AppSettings | undefined {
-  return settingsStore.get("settings");
+export function getModelSettingsPath(): string {
+  return path.join(app.getPath("userData"), "model-settings.json");
 }
 
-function extractProviderKeys(providers: Record<string, { apiKey?: string }> | undefined): Record<string, string> {
-  const keys: Record<string, string> = {};
-  for (const [id, c] of Object.entries(providers ?? {})) {
-    if (c?.apiKey) keys[id] = c.apiKey;
-  }
-  return keys;
-}
-
-function maskApiKey(key: string): string {
-  if (key.length <= 8) return "****";
-  return key.slice(0, 4) + "****" + key.slice(-4);
-}
-
-export function maskModelGroup(group: ModelGroupSettings | undefined): ModelGroupSettings {
-  const providers: Record<string, ProviderCredentials> = {};
-  for (const [id, creds] of Object.entries(group?.providers ?? {})) {
-    if (creds?.apiKey) {
-      providers[id] = { apiKey: maskApiKey(creds.apiKey) };
-    }
-  }
-  return { defaultModel: group?.defaultModel ?? "", providers, sampling: group?.sampling, thinkingLevel: group?.thinkingLevel };
-}
-
-export function getMaskedSettings(): AppSettings | null {
-  const settings = settingsStore.get("settings");
-  if (!settings) return null;
+function defaultHostPrefs(): HostPrefsData {
   return {
-    locale: settings.locale ?? "zh-CN",
-    models: {
-      text: maskModelGroup(settings.models?.text),
-      image: maskModelGroup(settings.models?.image),
-    },
-    customProviders: settings.customProviders ?? [],
-    debugToolsEnabled: settings.debugToolsEnabled ?? false,
-    tabsEnabled: settings.tabsEnabled ?? true,
-    closeToTray: settings.closeToTray ?? defaultCloseToTray(),
-    theme: settings.theme ?? "system",
+    locale: "zh-CN",
+    theme: "system",
+    tabsEnabled: true,
+    debugToolsEnabled: false,
+    closeToTray: defaultCloseToTray(),
   };
 }
 
-export function mergeModelGroup(
-  incoming: ModelGroupSettings | undefined,
-  prev: ModelGroupSettings | undefined,
-): ModelGroupSettings {
-  const defaultModel = incoming?.defaultModel ?? prev?.defaultModel ?? "";
-  const providers: Record<string, ProviderCredentials> = {};
-  const allIds = new Set([
-    ...Object.keys(incoming?.providers ?? {}),
-    ...Object.keys(prev?.providers ?? {}),
-  ]);
-  for (const id of allIds) {
-    const newKey = incoming?.providers?.[id]?.apiKey;
-    const prevKey = prev?.providers?.[id]?.apiKey;
-    if (!newKey || newKey.trim() === "") continue;
-    if (newKey.includes("****")) {
-      if (prevKey) providers[id] = { apiKey: prevKey };
-    } else {
-      providers[id] = { apiKey: newKey };
-    }
-  }
-  return { defaultModel, providers, sampling: incoming?.sampling, thinkingLevel: incoming?.thinkingLevel };
+export function getHostPrefs(): HostPrefsData {
+  return { ...defaultHostPrefs(), ...settingsStore.get("hostPrefs") };
 }
 
-export function saveSettings(incoming: AppSettings): void {
-  const prev = settingsStore.get("settings");
-  const merged: AppSettings = {
-    locale: incoming.locale ?? prev?.locale ?? "zh-CN",
-    models: {
-      text: mergeModelGroup(incoming.models?.text, prev?.models?.text),
-      image: mergeModelGroup(incoming.models?.image, prev?.models?.image),
-    },
-    customProviders: incoming.customProviders ?? prev?.customProviders ?? [],
-    debugToolsEnabled: incoming.debugToolsEnabled ?? prev?.debugToolsEnabled ?? false,
-    tabsEnabled: incoming.tabsEnabled ?? prev?.tabsEnabled ?? true,
-    closeToTray: incoming.closeToTray ?? prev?.closeToTray ?? defaultCloseToTray(),
-    theme: incoming.theme ?? prev?.theme ?? "system",
-    mobileAccess: prev?.mobileAccess,
+export function getGeneralPrefs(): GeneralPrefs {
+  return { locale: getHostPrefs().locale };
+}
+
+export function saveGeneralPrefs(prefs: GeneralPrefs): void {
+  const current = getHostPrefs();
+  settingsStore.set("hostPrefs", { ...current, locale: prefs.locale });
+}
+
+export function getDesktopPrefs(): DesktopPrefs {
+  const prefs = getHostPrefs();
+  return {
+    theme: prefs.theme,
+    tabsEnabled: prefs.tabsEnabled,
+    debugToolsEnabled: prefs.debugToolsEnabled,
+    closeToTray: prefs.closeToTray,
   };
-  settingsStore.set("settings", merged);
-  applySettingsToEnv(merged);
 }
 
-export function restoreEnvFromSettings(): void {
-  const settings = settingsStore.get("settings");
-  if (!settings) return;
-  applySettingsToEnv(settings);
+export function saveDesktopPrefs(prefs: DesktopPrefs): void {
+  const current = getHostPrefs();
+  settingsStore.set("hostPrefs", { ...current, ...prefs });
+  applyThemeSource(prefs.theme);
 }
 
-export function applyThemeSource(theme: AppSettings["theme"]): void {
+export function applyThemeSource(theme: ThemeMode): void {
   nativeTheme.themeSource = theme ?? "system";
-}
-
-const envOverrides = new Map<string, string | undefined>();
-
-function applyProviderKeysToEnv(settings: AppSettings): void {
-  const textCatalog = getAppModelCatalog().getSupportedProviders();
-  const applied = new Set<string>();
-  for (const [id, creds] of Object.entries(settings.models?.text?.providers ?? {})) {
-    const envName = textCatalog[id]?.auth.envKeys[0];
-    if (!creds?.apiKey || !envName) continue;
-    if (!envOverrides.has(envName)) envOverrides.set(envName, process.env[envName]);
-    process.env[envName] = creds.apiKey;
-    applied.add(envName);
-  }
-  for (const [envName, original] of envOverrides) {
-    if (applied.has(envName)) continue;
-    if (original === undefined) delete process.env[envName];
-    else process.env[envName] = original;
-    envOverrides.delete(envName);
-  }
-}
-
-function applySettingsToEnv(settings: AppSettings): void {
-  applyThemeSource(settings.theme);
-  applyProviderKeysToEnv(settings);
-
-  const imageGroup = settings.models?.image;
-  if (imageGroup?.defaultModel) {
-    process.env.SPHERSE_IMAGE_MODEL = imageGroup.defaultModel;
-    const slashIdx = imageGroup.defaultModel.indexOf("/");
-    const provider = slashIdx > 0 ? imageGroup.defaultModel.slice(0, slashIdx) : "";
-    process.env.SPHERSE_IMAGE_API_KEY = imageGroup.providers[provider]?.apiKey ?? "";
-  } else {
-    delete process.env.SPHERSE_IMAGE_MODEL;
-    delete process.env.SPHERSE_IMAGE_API_KEY;
-  }
-
-  getAppModelCatalog().syncCustomProviders(
-    settings.customProviders ?? [],
-    extractProviderKeys(settings.models?.text?.providers),
-  );
 }
 
 export function getOpenProjects(): OpenProjectEntry[] {
@@ -226,24 +148,16 @@ export function setLastActiveProject(projectPath: string | null): void {
   settingsStore.set("lastActiveProject", projectPath);
 }
 
-function defaultCloseToTray(): boolean {
+export function defaultCloseToTray(): boolean {
   return app.isPackaged || process.env.NODE_ENV === "test";
 }
 
 export function getCloseToTray(): boolean {
-  return settingsStore.get("settings")?.closeToTray ?? defaultCloseToTray();
+  return getHostPrefs().closeToTray;
 }
 
 export function getLocale(): string {
-  return settingsStore.get("settings")?.locale ?? "zh-CN";
-}
-
-export function setLocale(locale: string): void {
-  const settings = settingsStore.get("settings");
-  if (settings) {
-    settings.locale = locale;
-    settingsStore.set("settings", settings);
-  }
+  return getHostPrefs().locale;
 }
 
 export function generateAccessToken(): string {
@@ -253,7 +167,7 @@ export function generateAccessToken(): string {
 export function getServerToken(): string {
   const existing = settingsStore.get("serverToken");
   if (existing) return existing;
-  const legacy = settingsStore.get("settings")?.mobileAccess?.token;
+  const legacy = settingsStore.get("mobileAccess")?.token;
   if (legacy) {
     settingsStore.set("serverToken", legacy);
     return legacy;
@@ -268,25 +182,18 @@ export function setServerToken(token: string): void {
 }
 
 export function getMobileAccess(): MobileAccessSettings {
-  const settings = settingsStore.get("settings");
+  const stored = settingsStore.get("mobileAccess");
   return {
-    enabled: settings?.mobileAccess?.enabled ?? false,
-    token: settings?.mobileAccess?.token,
-    mode: settings?.mobileAccess?.mode ?? "quick",
-    publicDomain: settings?.mobileAccess?.publicDomain,
+    enabled: stored?.enabled ?? false,
+    token: stored?.token,
+    mode: stored?.mode ?? "quick",
+    publicDomain: stored?.publicDomain,
   };
 }
 
 export function setMobileAccess(patch: Partial<MobileAccessSettings>): MobileAccessSettings {
-  const settings = settingsStore.get("settings") ?? ({} as AppSettings);
-  const current: MobileAccessSettings = {
-    enabled: settings.mobileAccess?.enabled ?? false,
-    token: settings.mobileAccess?.token,
-    mode: settings.mobileAccess?.mode ?? "quick",
-    publicDomain: settings.mobileAccess?.publicDomain,
-  };
+  const current = getMobileAccess();
   const next: MobileAccessSettings = { ...current, ...patch };
-  settings.mobileAccess = next;
-  settingsStore.set("settings", settings);
+  settingsStore.set("mobileAccess", next);
   return next;
 }

@@ -1,6 +1,7 @@
 import { app, ipcMain } from "electron";
 import type { BrowserWindow } from "electron";
-import { settingsStore } from "../settings.js";
+import fs from "node:fs";
+import { settingsStore, getModelSettingsPath } from "../settings.js";
 
 export function registerDebugIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle("is-dev", () => {
@@ -33,6 +34,7 @@ export function registerDebugIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle("reset-app-data", () => {
     settingsStore.clear();
+    fs.rmSync(getModelSettingsPath(), { force: true });
     app.relaunch();
     app.exit(0);
   });

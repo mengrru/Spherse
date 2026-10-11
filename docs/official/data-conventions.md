@@ -1,8 +1,22 @@
 # 数据约定
 
-> 覆盖：项目内数据文件的路径布局、格式与存储不变量——`.spherse/` 树、project.yaml、agent / trigger / skill 定义、sessions.db 与数据文件。
+> 覆盖：项目内数据文件的路径布局、格式与存储不变量——`.spherse/` 树、project.yaml、agent / trigger / skill 定义、sessions.db 与数据文件；以及应用级数据（模型配置、host prefs）的分区归属。
 > 运行机制（事件投影、compaction、MCP 连接生命周期、触发器调度）见 `architecture/` 对应域文件；本文只记录「什么数据、放在哪、什么格式、什么不变量」。
 > 预置模板与 presets.json 见 `packages/presets/README.md`；访问控制 category 语义见 `architecture/security.md`。
+
+## 应用级数据
+
+settings 按分区持久化（决策见 [ADR-0015](../dev/decisions/0015-settings-partitioned-persistence.md)）：
+
+| 数据 | 位置 | 格式与不变量 |
+|---|---|---|
+| 模型配置 | server-owned `model-settings.json`（desktop 上在 userData，路径由 host 经 `CreateServerOptions.modelSettingsPath` 注入；缺省路径 = 纯内存） | `{ text, image, customProviders }`（core `ModelSettings`）；含**明文 API key**，永不经 API 回传（GET 只返回 per-provider `configured` 布尔）；tmp+rename 原子写；reset-app-data 一并删除 |
+| desktop host prefs | electron-store `settings.json` 顶层 `hostPrefs` | `{ locale, theme, tabsEnabled, debugToolsEnabled, closeToTray }`，缺省值见 desktop.md |
+| mobileAccess | 同文件顶层 `mobileAccess` | `{ enabled, token?, mode?, publicDomain? }` |
+| serverToken / openProjects / lastActiveProject | 同文件顶层 key | 与 prefs 无关的 host 数据；`serverToken` 是 server 鉴权唯一凭据 |
+| web 通用偏好 | localStorage `spherse:prefs`（`/dev/web` 带后缀） | `{ locale }`；旧的 `spherse:settings` 首读迁移后删除 |
+| legacy `settings` key | — | 已发布版本的旧顶层 `settings` key 由 desktop 启动迁移（`migrate-legacy-settings.ts`）拆分后删除，幂等 |
+
 
 ## 项目目录布局
 
@@ -73,7 +87,7 @@ aiAccess:
 | `aiAccess.deniedPaths` | 否 | 同时禁止 AI 工具读写的项目相对路径数组，校验见下 |
 
 - 解析为 YAML 后裸 cast，core 侧无 schema 校验；残留未知字段（如老项目的 `defaultModel`）静默忽略，随下次保存原样保留
-- 模型选择不在项目配置：由用户级 `AppSettings.models.text.defaultModel` 决定
+- 模型选择不在项目配置：由 server 侧模型配置（`ModelSettings.models.text.defaultModel`）决定
 - 特殊文件路径归属由 `@spherse/core` 的 `access/path-category.ts` 中 `PATH_PATTERNS` 固定（19 类 + `userFiles` 兜底），不可配置；capability 可经 `pathRules` 声明优先裁决（见 `architecture/security.md`）
 - `welcomePage.path` 校验：`/` 分隔、拒绝绝对路径与 `..`、扩展名白名单 html / htm / png / jpg / jpeg / gif / webp / svg、必须归类为 `userFiles`（即排除 `.spherse/**`、AGENTS.md、CHANGELOG.md）；保存时不要求文件存在；渲染时 settings 查询失败或资源加载失败回退占位态
 - `sidePanel.path` 校验：同 `welcomePage.path` 规则，仅扩展名白名单为 html / htm；保存时不要求文件存在；渲染时配置缺失或资源不可达自动回落默认面板

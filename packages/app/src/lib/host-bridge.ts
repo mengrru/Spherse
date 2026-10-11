@@ -1,4 +1,3 @@
-import type { ProviderCatalogItem, ModelGroupSettings, CustomProviderDef } from "@spherse/core";
 import type { ReactNode } from "react";
 
 export interface RestoredProject {
@@ -51,17 +50,25 @@ export type UpdateEvent =
 
 export type HostKind = "electron" | "web";
 
-export interface HostSettings {
-  locale?: string;
-  models?: {
-    text?: ModelGroupSettings;
-    image?: ModelGroupSettings;
-  };
-  customProviders?: CustomProviderDef[];
-  debugToolsEnabled?: boolean;
-  tabsEnabled?: boolean;
-  closeToTray?: boolean;
-  theme?: ThemeMode;
+export interface GeneralPrefs {
+  locale: string;
+}
+
+export interface DesktopPrefs {
+  theme: ThemeMode;
+  tabsEnabled: boolean;
+  debugToolsEnabled: boolean;
+  closeToTray: boolean;
+}
+
+export interface HostPrefsApi {
+  getPrefs(): Promise<GeneralPrefs>;
+  savePrefs(prefs: GeneralPrefs): Promise<boolean>;
+}
+
+export interface DesktopPrefsApi {
+  getPrefs(): Promise<DesktopPrefs>;
+  savePrefs(prefs: DesktopPrefs): Promise<boolean>;
 }
 
 export type TunnelStatus = "stopped" | "starting" | "running" | "error";
@@ -104,7 +111,6 @@ export interface HostCapabilities {
   filePicker: boolean;
   mobileAccess: boolean;
   openFileExternal: boolean;
-  tray: boolean;
   content: { editable: boolean };
 }
 
@@ -146,13 +152,11 @@ export interface HostBridge {
   getServerAccessToken?(): Promise<string | null>;
   clearConnection?(): Promise<void>;
   readonly capabilities: HostCapabilities;
-  getSettings(): Promise<HostSettings | null>;
-  saveSettings(settings: HostSettings): Promise<{ success: boolean }>;
+  readonly prefs: HostPrefsApi;
+  readonly desktopPrefs?: DesktopPrefsApi;
   openExternal(url: string): Promise<void>;
   saveBlob?(filename: string, blob: Blob): Promise<void>;
   showSaveDialog?(options: SaveDialogOptions): Promise<string | null>;
-  getSupportedProviders?(): Promise<Record<string, ProviderCatalogItem>>;
-  getImageProviders?(): Promise<Record<string, ProviderCatalogItem>>;
   readonly project?: ProjectHostApi;
   readonly updater?: UpdaterHostApi;
   readonly devTools?: DevToolsHostApi;

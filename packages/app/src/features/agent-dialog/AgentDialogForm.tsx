@@ -4,9 +4,7 @@ import type { TranslationKey } from "@spherse/i18n";
 import type { ProviderCatalogItem } from "@spherse/core";
 import { parseAgentMarkdown, buildAgentMarkdown } from "./agent-markdown";
 import type { AgentFormData } from "./agent-markdown";
-import { useProjectCtx } from "../../context/project-context";
-import { useHostBridge } from "../../context/host-bridge-context";
-import { useApiClient } from "../../lib/use-connection";
+import { useGlobalApiClient } from "../../lib/use-connection";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import {
   AlertDialog,
@@ -47,9 +45,7 @@ interface AgentDialogFormProps {
 
 export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDialogFormProps) {
   const { t } = useI18n();
-  const { projectId } = useProjectCtx();
-  const client = useApiClient(projectId);
-  const bridge = useHostBridge();
+  const globalClient = useGlobalApiClient();
   const parsed = useMemo(() => parseAgentMarkdown(initial.raw), [initial.raw]);
   const [formData, setFormData] = useState<AgentFormData>(parsed.formData);
   const [themeContent, setThemeContent] = useState(initial.theme);
@@ -57,29 +53,27 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
   const [error, setError] = useState<string | null>(null);
   const [confirmTemplate, setConfirmTemplate] = useState<PromptTemplate | null>(null);
   const [providers, setProviders] = useState<Record<string, ProviderCatalogItem> | null>(null);
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
+  const [configuredProviders, setConfiguredProviders] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (bridge.kind === "web") return;
+    if (!globalClient) return;
     let cancelled = false;
     Promise.all([
-      client.getSupportedProviders().catch(() => null),
-      bridge.getSettings().catch(() => null),
+      globalClient.getSupportedProviders().catch(() => null),
+      globalClient.getModelSettings().catch(() => null),
     ]).then(([catalog, settings]) => {
       if (cancelled) return;
       if (catalog) setProviders(catalog);
-      const keys: Record<string, string> = {};
-      for (const [id, credentials] of Object.entries(settings?.models?.text?.providers ?? {})) {
-        if (typeof credentials?.apiKey === "string" && credentials.apiKey.trim()) {
-          keys[id] = credentials.apiKey;
-        }
+      const configured: Record<string, boolean> = {};
+      for (const [id, entry] of Object.entries(settings?.models.text.providers ?? {})) {
+        if (entry.configured) configured[id] = true;
       }
-      setApiKeys(keys);
+      setConfiguredProviders(configured);
     });
     return () => {
       cancelled = true;
     };
-  }, [client, bridge]);
+  }, [globalClient]);
 
   useEffect(() => {
     if (providers == null) return;
@@ -169,18 +163,16 @@ export function AgentDialogForm({ initial, mode, onSubmit, onCancel }: AgentDial
                 placeholder={t("agent-dialog.namePlaceholder")}
               />
             </Field>
-            {bridge.kind !== "web" && (
-              <ModelConfigField
-                providers={providers ?? {}}
-                apiKeys={apiKeys}
-                model={formData.model}
-                thinkingLevel={formData.thinkingLevel}
-                onModelChange={(model) => setFormData((prev) => ({ ...prev, model }))}
-                onThinkingLevelChange={(thinkingLevel) =>
-                  setFormData((prev) => ({ ...prev, thinkingLevel }))
-                }
-              />
-            )}
+            <ModelConfigField
+              providers={providers ?? {}}
+              configuredProviders={configuredProviders}
+              model={formData.model}
+              thinkingLevel={formData.thinkingLevel}
+              onModelChange={(model) => setFormData((prev) => ({ ...prev, model }))}
+              onThinkingLevelChange={(thinkingLevel) =>
+                setFormData((prev) => ({ ...prev, thinkingLevel }))
+              }
+            />
             <ToolPicker selectedTools={formData.tools} onToggleGroup={toggleGroup} />
             {hasAdvancedTool && (
               <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">

@@ -6,9 +6,17 @@ import { renderWithProviders, createTestQueryClient } from "../../test/render";
 import { createMockHostBridge } from "../../test/host-bridge";
 
 const getSupportedProviders = vi.fn(async () => ({}));
+const getModelSettings = vi.fn(async () => ({
+  models: {
+    text: { defaultModel: "", providers: {} },
+    image: { defaultModel: "", providers: {} },
+  },
+  customProviders: [],
+}));
 
 vi.mock("../../lib/use-connection", () => ({
-  useApiClient: () => ({ getSupportedProviders }),
+  useApiClient: () => ({ searchFiles: vi.fn(async () => []) }),
+  useGlobalApiClient: () => ({ getSupportedProviders, getModelSettings }),
 }));
 
 const initial: LoadedAgentData = { raw: "---\nname: Test\n---\n\nprompt", theme: "" };
@@ -31,18 +39,18 @@ function renderForm(bridgeKind?: "web") {
 describe("AgentDialogForm", () => {
   beforeEach(() => {
     getSupportedProviders.mockClear();
-  });
-
-  it("hides model and thinking level config on web host and skips provider fetching", () => {
-    renderForm("web");
-
-    expect(screen.queryByText("模型")).toBeNull();
-    expect(screen.queryByText("思考强度")).toBeNull();
-    expect(getSupportedProviders).not.toHaveBeenCalled();
+    getModelSettings.mockClear();
   });
 
   it("renders model and thinking level config on electron host", () => {
     renderForm();
+
+    expect(screen.getByText("模型")).toBeVisible();
+    expect(screen.getByText("思考强度")).toBeVisible();
+  });
+
+  it("renders model config on web host and fetches provider state from the server", () => {
+    renderForm("web");
 
     expect(screen.getByText("模型")).toBeVisible();
     expect(screen.getByText("思考强度")).toBeVisible();

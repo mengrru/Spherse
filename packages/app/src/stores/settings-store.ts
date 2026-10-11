@@ -1,8 +1,13 @@
 import { create } from "zustand";
 import { normalizeLocale, type Locale } from "@spherse/i18n";
-import type { HostBridge, HostSettings, ThemeMode } from "../lib/host-bridge";
+import type { HostBridge, ThemeMode } from "../lib/host-bridge";
 
-export type SettingsStoreApi = Pick<HostBridge, "getSettings" | "saveSettings">;
+const DEFAULT_DESKTOP_PREFS = {
+  theme: "system" as ThemeMode,
+  tabsEnabled: true,
+  debugToolsEnabled: false,
+  closeToTray: true,
+};
 
 interface SettingsStore {
   loaded: boolean;
@@ -11,30 +16,26 @@ interface SettingsStore {
   tabsEnabled: boolean;
   closeToTray: boolean;
   theme: ThemeMode;
-  loadLocale: (api: SettingsStoreApi) => Promise<void>;
-  changeLocale: (api: SettingsStoreApi, locale: Locale) => Promise<boolean>;
-  setDebugToolsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
-  setTabsEnabled: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
-  setCloseToTray: (api: SettingsStoreApi, enabled: boolean) => Promise<boolean>;
-  setTheme: (api: SettingsStoreApi, theme: ThemeMode) => Promise<boolean>;
+  loadPrefs: (bridge: HostBridge) => Promise<void>;
+  changeLocale: (bridge: HostBridge, locale: Locale) => Promise<boolean>;
+  setDebugToolsEnabled: (bridge: HostBridge, enabled: boolean) => Promise<boolean>;
+  setTabsEnabled: (bridge: HostBridge, enabled: boolean) => Promise<boolean>;
+  setCloseToTray: (bridge: HostBridge, enabled: boolean) => Promise<boolean>;
+  setTheme: (bridge: HostBridge, theme: ThemeMode) => Promise<boolean>;
 }
 
-type UiSettings = Pick<SettingsStore, "debugToolsEnabled" | "tabsEnabled" | "closeToTray" | "theme">;
+type DesktopOnlyPrefs = Pick<SettingsStore, "debugToolsEnabled" | "tabsEnabled" | "closeToTray" | "theme">;
 
 export const useSettingsStore = create<SettingsStore>((set, get) => {
-  async function persist(api: SettingsStoreApi, patch: Partial<UiSettings> & { locale?: Locale }) {
-    const settings = await api.getSettings();
-    const next: HostSettings = {
-      locale: patch.locale ?? settings?.locale ?? get().locale,
-      models: settings?.models,
-      debugToolsEnabled: get().debugToolsEnabled,
-      tabsEnabled: get().tabsEnabled,
-      closeToTray: get().closeToTray,
-      theme: get().theme,
-      ...patch,
-    };
-    await api.saveSettings(next);
-    return true;
+  async function persistDesktopPrefs(bridge: HostBridge, patch: Partial<DesktopOnlyPrefs>): Promise<boolean> {
+    const prefs = bridge.desktopPrefs;
+    if (!prefs) return false;
+    return prefs.savePrefs({
+      theme: patch.theme ?? get().theme,
+      tabsEnabled: patch.tabsEnabled ?? get().tabsEnabled,
+      debugToolsEnabled: patch.debugToolsEnabled ?? get().debugToolsEnabled,
+      closeToTray: patch.closeToTray ?? get().closeToTray,
+    });
   }
 
   return {
@@ -45,44 +46,42 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     closeToTray: true,
     theme: "system",
 
-    async loadLocale(api) {
-      const settings = await api.getSettings().catch((err: unknown) => {
-        set({ loaded: true });
-        throw err;
-      });
+    async loadPrefs(bridge) {
+      const [general, desktop] = await Promise.all([
+        bridge.prefs.getPrefs().catch(() => null),
+        bridge.desktopPrefs?.getPrefs().catch(() => null) ?? Promise.resolve(null),
+      ]);
       set({
         loaded: true,
-        locale: normalizeLocale(settings?.locale),
-        debugToolsEnabled: settings?.debugToolsEnabled ?? false,
-        tabsEnabled: settings?.tabsEnabled ?? true,
-        closeToTray: settings?.closeToTray ?? true,
-        theme: settings?.theme ?? "system",
+        locale: normalizeLocale(general?.locale),
+        ...DEFAULT_DESKTOP_PREFS,
+        ...(desktop ?? {}),
       });
     },
 
-    async changeLocale(api, locale) {
+    async changeLocale(bridge, locale) {
       set({ locale });
-      return persist(api, { locale });
+      return bridge.prefs.savePrefs({ locale });
     },
 
-    async setDebugToolsEnabled(api, enabled) {
+    async setDebugToolsEnabled(bridge, enabled) {
       set({ debugToolsEnabled: enabled });
-      return persist(api, { debugToolsEnabled: enabled });
+      return persistDesktopPrefs(bridge, { debugToolsEnabled: enabled });
     },
 
-    async setTabsEnabled(api, enabled) {
+    async setTabsEnabled(bridge, enabled) {
       set({ tabsEnabled: enabled });
-      return persist(api, { tabsEnabled: enabled });
+      return persistDesktopPrefs(bridge, { tabsEnabled: enabled });
     },
 
-    async setCloseToTray(api, enabled) {
+    async setCloseToTray(bridge, enabled) {
       set({ closeToTray: enabled });
-      return persist(api, { closeToTray: enabled });
+      return persistDesktopPrefs(bridge, { closeToTray: enabled });
     },
 
-    async setTheme(api, theme) {
+    async setTheme(bridge, theme) {
       set({ theme });
-      return persist(api, { theme });
+      return persistDesktopPrefs(bridge, { theme });
     },
   };
 });

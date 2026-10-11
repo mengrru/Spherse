@@ -24,6 +24,57 @@ const providerCatalogItem = Type.Object({
   baseUrl: Type.Optional(Type.String()),
 });
 
+const samplingParams = Type.Object({
+  temperature: Type.Optional(Type.Number()),
+  topP: Type.Optional(Type.Number()),
+});
+
+const thinkingLevel = Type.Union([
+  Type.Literal("off"),
+  Type.Literal("low"),
+  Type.Literal("medium"),
+  Type.Literal("high"),
+]);
+
+const customProviderDef = Type.Object({
+  id: Type.String(),
+  name: Type.String(),
+  baseUrl: Type.String(),
+  models: Type.Array(Type.String()),
+  keyless: Type.Boolean(),
+  contextWindow: Type.Optional(Type.Number()),
+  maxTokens: Type.Optional(Type.Number()),
+  headers: Type.Optional(Type.Record(Type.String(), Type.String())),
+});
+
+const providerCredentialsWrite = Type.Object({
+  apiKey: Type.Optional(Type.String()),
+});
+
+const modelGroupPublic = Type.Object({
+  defaultModel: Type.String(),
+  providers: Type.Record(Type.String(), Type.Object({ configured: Type.Boolean() })),
+  sampling: Type.Optional(samplingParams),
+  thinkingLevel: Type.Optional(thinkingLevel),
+});
+
+const imageGroupPublic = Type.Object({
+  defaultModel: Type.String(),
+  providers: Type.Record(Type.String(), Type.Object({ configured: Type.Boolean() })),
+});
+
+const modelGroupWrite = Type.Object({
+  defaultModel: Type.String(),
+  providers: Type.Optional(Type.Record(Type.String(), providerCredentialsWrite)),
+  sampling: Type.Optional(samplingParams),
+  thinkingLevel: Type.Optional(thinkingLevel),
+});
+
+const imageGroupWrite = Type.Object({
+  defaultModel: Type.String(),
+  providers: Type.Optional(Type.Record(Type.String(), providerCredentialsWrite)),
+});
+
 export const schemas = {
   providerCatalogItem,
   providerCatalog: Type.Record(Type.String(), providerCatalogItem),
@@ -55,6 +106,20 @@ export const schemas = {
     ok: Type.Boolean(),
     content: Type.String(),
   }),
+  modelSettingsRequest: Type.Object({
+    models: Type.Object({
+      text: modelGroupWrite,
+      image: imageGroupWrite,
+    }),
+    customProviders: Type.Optional(Type.Array(customProviderDef)),
+  }),
+  modelSettingsResponse: Type.Object({
+    models: Type.Object({
+      text: modelGroupPublic,
+      image: imageGroupPublic,
+    }),
+    customProviders: Type.Array(customProviderDef),
+  }),
 } as const;
 
 export type ProviderCatalogItemContract = Static<typeof providerCatalogItem>;
@@ -67,3 +132,6 @@ export type SidePanelSettingsRequest = Static<typeof schemas.sidePanelSettingsRe
 export type SidePanelSettingsResponse = Static<typeof schemas.sidePanelSettingsResponse>;
 export type ThemeSettingsRequest = Static<typeof schemas.themeSettingsRequest>;
 export type ThemeSettingsResponse = Static<typeof schemas.themeSettingsResponse>;
+export type CustomProviderDefContract = Static<typeof customProviderDef>;
+export type ModelSettingsRequest = Static<typeof schemas.modelSettingsRequest>;
+export type ModelSettingsResponse = Static<typeof schemas.modelSettingsResponse>;

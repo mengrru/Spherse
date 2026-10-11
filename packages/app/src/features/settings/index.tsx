@@ -15,7 +15,7 @@ import { useSettingsStore } from "../../stores/settings-store";
 import { useAppUiStore } from "../../stores/app-ui-store";
 import { useSettingsForm } from "./use-settings-form";
 import type { GroupFormState } from "./use-settings-form";
-import { type SettingsApi } from "./types";
+import { type ModelSettingsApi } from "./types";
 import { DefaultModelField } from "./DefaultModelField";
 import { ThinkingLevelField } from "./ThinkingLevelField";
 import { ModelProviderItem } from "./ModelProviderItem";
@@ -32,6 +32,7 @@ import type { ThemeMode } from "../../lib/host-bridge";
 import { InfoIcon, Plus, SearchIcon } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { useHostBridge } from "../../context/host-bridge-context";
+import { useGlobalApiClient } from "../../lib/use-connection";
 
 const LOCALE_LABELS: Record<string, string> = {
   "zh-CN": "简体中文",
@@ -85,7 +86,7 @@ function ModelGroupTab({
       <FieldGroup className="shrink-0">
         <DefaultModelField
           providers={group.providers}
-          apiKeys={group.apiKeys}
+          configured={group.configured}
           value={group.defaultModel}
           onChange={(model) => { void group.changeDefaultModel(model); }}
         />
@@ -155,6 +156,7 @@ function ModelGroupTab({
             id={id}
             config={config}
             apiKey={group.apiKeys[id] ?? ""}
+            configured={Boolean(group.configured[id])}
             onApiKeyChange={(value) => group.setApiKey(id, value)}
             onApiKeyCommit={(value) => group.commitApiKey(id, value)}
             onConnect={() => void group.connect(id)}
@@ -203,6 +205,7 @@ function ModelGroupTab({
 function SettingsTabs() {
   const { t } = useI18n();
   const bridge = useHostBridge();
+  const globalClient = useGlobalApiClient();
   const locale = useSettingsStore((s) => s.locale);
   const changeLocale = useSettingsStore((s) => s.changeLocale);
   const theme = useSettingsStore((s) => s.theme);
@@ -214,14 +217,15 @@ function SettingsTabs() {
   const closeToTray = useSettingsStore((s) => s.closeToTray);
   const setCloseToTray = useSettingsStore((s) => s.setCloseToTray);
   const mobileAccessEnabled = bridge.capabilities.mobileAccess;
-  const trayEnabled = bridge.capabilities.tray;
-  const settingsApi = useMemo<SettingsApi>(() => ({
-    getSettings: bridge.getSettings,
-    saveSettings: bridge.saveSettings,
-    getSupportedProviders: bridge.getSupportedProviders ?? (async () => ({})),
-    getImageProviders: bridge.getImageProviders ?? (async () => ({})),
-  }), [bridge]);
-  const form = useSettingsForm(settingsApi);
+  const desktopPrefsEnabled = Boolean(bridge.desktopPrefs);
+  const aboutEnabled = Boolean(bridge.updater);
+  const modelSettingsApi = useMemo<ModelSettingsApi | null>(() => (globalClient ? {
+    getModelSettings: globalClient.getModelSettings,
+    updateModelSettings: globalClient.updateModelSettings,
+    getSupportedProviders: globalClient.getSupportedProviders,
+    getImageProviders: globalClient.getImageProviders,
+  } : null), [globalClient]);
+  const form = useSettingsForm(modelSettingsApi);
   const initialTab = useAppUiStore((s) => s.settingsModalTab) ?? "models";
   const [tab, setTab] = useState(initialTab);
 
@@ -234,7 +238,7 @@ function SettingsTabs() {
           <TabsTrigger value="general">{t("settings.tabs.general")}</TabsTrigger>
           {mobileAccessEnabled && <TabsTrigger value="mobile">{t("settings.tabs.mobile")}</TabsTrigger>}
           <TabsTrigger value="help">{t("settings.tabs.help")}</TabsTrigger>
-          <TabsTrigger value="about">{t("settings.tabs.about")}</TabsTrigger>
+          {aboutEnabled && <TabsTrigger value="about">{t("settings.tabs.about")}</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="models" className="mt-3 flex min-h-0 flex-col">
@@ -248,59 +252,61 @@ function SettingsTabs() {
         <TabsContent value="general" className="mt-3 min-h-0 overflow-y-auto">
           <Field>
             <SectionTitle as={FieldLabel}>{t("settings.language")}</SectionTitle>
-            <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(settingsApi, normalizeLocale(e.target.value))}>
+            <NativeSelect className="w-full" value={locale} onChange={(e) => void changeLocale(bridge, normalizeLocale(e.target.value))}>
               {SUPPORTED_LOCALES.map((loc) => (
                 <NativeSelectOption key={loc} value={loc}>{LOCALE_LABELS[loc]}</NativeSelectOption>
               ))}
             </NativeSelect>
           </Field>
-          <Field className="mt-5">
-            <SectionTitle as={FieldLabel}>{t("settings.appearance")}</SectionTitle>
-            <NativeSelect className="w-full" value={theme} onChange={(e) => void setTheme(settingsApi, e.target.value as ThemeMode)}>
-              <NativeSelectOption value="light">{t("settings.appearance.light")}</NativeSelectOption>
-              <NativeSelectOption value="dark">{t("settings.appearance.dark")}</NativeSelectOption>
-              <NativeSelectOption value="system">{t("settings.appearance.system")}</NativeSelectOption>
-            </NativeSelect>
-          </Field>
-          <FieldGroup className="mt-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium leading-none">{t("settings.debugTools")}</span>
-                <span className="text-xs text-muted-foreground">{t("settings.debugToolsDesc")}</span>
-              </div>
-              <Switch
-                checked={debugToolsEnabled}
-                onCheckedChange={(checked) => { void setDebugToolsEnabled(settingsApi, checked); }}
-              />
-            </div>
-          </FieldGroup>
-          <FieldGroup className="mt-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium leading-none">{t("settings.contentTabs")}</span>
-                <span className="text-xs text-muted-foreground">{t("settings.contentTabsDesc")}</span>
-              </div>
-              <Switch
-                checked={tabsEnabled}
-                aria-label={t("settings.contentTabs")}
-                onCheckedChange={(checked) => { void setTabsEnabled(settingsApi, checked); }}
-              />
-            </div>
-          </FieldGroup>
-          {trayEnabled && (
-            <FieldGroup className="mt-5">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <span className="text-sm font-medium leading-none">{t("settings.closeToTray")}</span>
-                  <span className="text-xs text-muted-foreground">{t("settings.closeToTrayDesc")}</span>
+          {desktopPrefsEnabled && (
+            <>
+              <Field className="mt-5">
+                <SectionTitle as={FieldLabel}>{t("settings.appearance")}</SectionTitle>
+                <NativeSelect className="w-full" value={theme} onChange={(e) => void setTheme(bridge, e.target.value as ThemeMode)}>
+                  <NativeSelectOption value="light">{t("settings.appearance.light")}</NativeSelectOption>
+                  <NativeSelectOption value="dark">{t("settings.appearance.dark")}</NativeSelectOption>
+                  <NativeSelectOption value="system">{t("settings.appearance.system")}</NativeSelectOption>
+                </NativeSelect>
+              </Field>
+              <FieldGroup className="mt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium leading-none">{t("settings.debugTools")}</span>
+                    <span className="text-xs text-muted-foreground">{t("settings.debugToolsDesc")}</span>
+                  </div>
+                  <Switch
+                    checked={debugToolsEnabled}
+                    onCheckedChange={(checked) => { void setDebugToolsEnabled(bridge, checked); }}
+                  />
                 </div>
-                <Switch
-                  checked={closeToTray}
-                  aria-label={t("settings.closeToTray")}
-                  onCheckedChange={(checked) => { void setCloseToTray(settingsApi, checked); }}
-                />
-              </div>
-            </FieldGroup>
+              </FieldGroup>
+              <FieldGroup className="mt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium leading-none">{t("settings.contentTabs")}</span>
+                    <span className="text-xs text-muted-foreground">{t("settings.contentTabsDesc")}</span>
+                  </div>
+                  <Switch
+                    checked={tabsEnabled}
+                    aria-label={t("settings.contentTabs")}
+                    onCheckedChange={(checked) => { void setTabsEnabled(bridge, checked); }}
+                  />
+                </div>
+              </FieldGroup>
+              <FieldGroup className="mt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-medium leading-none">{t("settings.closeToTray")}</span>
+                    <span className="text-xs text-muted-foreground">{t("settings.closeToTrayDesc")}</span>
+                  </div>
+                  <Switch
+                    checked={closeToTray}
+                    aria-label={t("settings.closeToTray")}
+                    onCheckedChange={(checked) => { void setCloseToTray(bridge, checked); }}
+                  />
+                </div>
+              </FieldGroup>
+            </>
           )}
         </TabsContent>
 
@@ -314,9 +320,11 @@ function SettingsTabs() {
           <HelpPanel />
         </TabsContent>
 
-        <TabsContent value="about" className="mt-3 min-h-0 overflow-y-auto">
-          <UpdateChecker />
-        </TabsContent>
+        {aboutEnabled && (
+          <TabsContent value="about" className="mt-3 min-h-0 overflow-y-auto">
+            <UpdateChecker />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

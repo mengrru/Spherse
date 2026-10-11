@@ -1,10 +1,23 @@
 import fs from "node:fs/promises";
 import type { FastifyInstance } from "fastify";
+import type { ModelCatalog } from "@spherse/core";
+import type { ModelSettingsRequest } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
+import type { ModelSettingsStore } from "../model-settings.js";
+import { applyModelSettingsToEnv } from "../model-settings.js";
 import { getImageSupportedProviders, resolveProjectPath } from "@spherse/core";
 import { schemas } from "@spherse/contracts";
 
-export function registerSettingsRoutes(fastify: FastifyInstance, registry: ProjectRegistry): void {
+interface SettingsRouteOptions {
+  modelSettingsStore: ModelSettingsStore;
+  modelCatalog: ModelCatalog;
+}
+
+export function registerSettingsRoutes(
+  fastify: FastifyInstance,
+  registry: ProjectRegistry,
+  options?: SettingsRouteOptions,
+): void {
   fastify.get("/api/settings/providers", {
     schema: { response: { 200: schemas.providerCatalog } },
     async handler() {
@@ -18,6 +31,32 @@ export function registerSettingsRoutes(fastify: FastifyInstance, registry: Proje
       return getImageSupportedProviders();
     },
   });
+
+  if (options) {
+    fastify.get("/api/settings/models", {
+      schema: { response: { 200: schemas.modelSettingsResponse } },
+      async handler() {
+        return options.modelSettingsStore.sanitize();
+      },
+    });
+
+    fastify.put<{ Body: ModelSettingsRequest }>("/api/settings/models", {
+      schema: {
+        body: schemas.modelSettingsRequest,
+        response: { 200: schemas.modelSettingsResponse },
+      },
+      async handler(req) {
+        const next = options.modelSettingsStore.applyUpdate(req.body);
+        applyModelSettingsToEnv(next, options.modelCatalog);
+        if (next.text.defaultModel) {
+          registry.setDefaultModel(next.text.defaultModel);
+        }
+        registry.setSampling(next.text.sampling);
+        registry.setThinkingLevel(next.text.thinkingLevel);
+        return options.modelSettingsStore.sanitize();
+      },
+    });
+  }
 
   fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/settings/ai-access",

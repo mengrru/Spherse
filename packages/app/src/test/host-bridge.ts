@@ -13,13 +13,14 @@ export function createMockHostBridge(overrides: HostBridgeOverrides = {}): HostB
       filePicker: true,
       mobileAccess: false,
       openFileExternal: true,
-      tray: false,
       content: { editable: true },
       ...capabilities,
     },
     getServerBaseUrl: vi.fn(async () => "http://localhost:5173"),
-    getSettings: vi.fn(async () => null),
-    saveSettings: vi.fn(async () => ({ success: true })),
+    prefs: {
+      getPrefs: vi.fn(async () => ({ locale: "zh-CN" })),
+      savePrefs: vi.fn(async () => true),
+    },
     openExternal: vi.fn(async () => {}),
   };
   return { ...base, ...rest };

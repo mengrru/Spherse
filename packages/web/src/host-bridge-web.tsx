@@ -1,7 +1,7 @@
 import type {
   HostBridge,
   HostCapabilities,
-  HostSettings,
+  HostPrefsApi,
   ProjectHostApi,
   RestoredProject,
 } from "@spherse/app/host-bridge";
@@ -11,7 +11,6 @@ const WEB_CAPABILITIES: HostCapabilities = {
   filePicker: false,
   mobileAccess: false,
   openFileExternal: false,
-  tray: false,
   content: { editable: true },
 };
 
@@ -22,28 +21,46 @@ function scopedStorageKey(key: string): string {
   return IS_DEV_DEPLOY ? `${key}:dev` : key;
 }
 
-const SETTINGS_STORAGE_KEY = scopedStorageKey("spherse:settings");
+const PREFS_STORAGE_KEY = scopedStorageKey("spherse:prefs");
+const LEGACY_SETTINGS_STORAGE_KEY = scopedStorageKey("spherse:settings");
 export const WEB_CONNECTION_STORAGE_KEY = scopedStorageKey("spherse:connection");
 const LAST_ACTIVE_PROJECT_KEY = scopedStorageKey("spherse:last-active-project");
 
 const PLACEHOLDER_LAST_OPENED = new Date(0).toISOString();
 
-async function loadSettings(): Promise<HostSettings | null> {
+function readStoredPrefs(): { locale?: string } | null {
   try {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as HostSettings) : null;
+    const raw = localStorage.getItem(PREFS_STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as { locale?: string };
+    const legacyRaw = localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY);
+    if (legacyRaw) {
+      const legacy = JSON.parse(legacyRaw) as { locale?: string };
+      if (legacy.locale) {
+        localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify({ locale: legacy.locale }));
+      }
+      localStorage.removeItem(LEGACY_SETTINGS_STORAGE_KEY);
+      return { locale: legacy.locale };
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
-async function persistSettings(settings: HostSettings): Promise<{ success: boolean }> {
-  try {
-    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
-    return { success: true };
-  } catch {
-    return { success: false };
-  }
+function createWebPrefsApi(): HostPrefsApi {
+  return {
+    async getPrefs() {
+      return { locale: readStoredPrefs()?.locale ?? "zh-CN" };
+    },
+    async savePrefs(prefs) {
+      try {
+        localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify(prefs));
+        return true;
+      } catch {
+        return false;
+      }
+    },
+  };
 }
 
 export function readWebConnection(): { baseUrl?: string; token?: string } | null {
@@ -173,8 +190,7 @@ export function createWebHostBridge(): HostBridge {
     clearConnection: async () => {
       localStorage.removeItem(WEB_CONNECTION_STORAGE_KEY);
     },
-    getSettings: loadSettings,
-    saveSettings: persistSettings,
+    prefs: createWebPrefsApi(),
     openExternal: async (url: string) => {
       window.open(url, "_blank", "noopener,noreferrer");
     },

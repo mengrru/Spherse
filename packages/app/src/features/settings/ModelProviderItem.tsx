@@ -9,6 +9,7 @@ export function ModelProviderItem({
   id,
   config,
   apiKey,
+  configured,
   onApiKeyChange,
   onApiKeyCommit,
   onConnect,
@@ -19,6 +20,7 @@ export function ModelProviderItem({
   id: string;
   config: ProviderConfig;
   apiKey: string;
+  configured: boolean;
   onApiKeyChange: (value: string) => void;
   onApiKeyCommit: (value: string) => void;
   onConnect: () => void;
@@ -27,7 +29,6 @@ export function ModelProviderItem({
   onDelete?: () => void;
 }) {
   const { t } = useI18n();
-  const configured = apiKey.trim().length > 0;
   const isCustom = config.custom === true;
   const isKeyless = config.keyless === true;
 
@@ -84,7 +85,7 @@ export function ModelProviderItem({
           <Input
             type="password"
             className="flex-1"
-            placeholder={t("settings.provider.apiKeyPlaceholder")}
+            placeholder={configured && !apiKey ? t("settings.provider.apiKeyConfigured") : t("settings.provider.apiKeyPlaceholder")}
             value={apiKey}
             onChange={(e) => onApiKeyChange(e.target.value)}
             onBlur={() => onApiKeyCommit(apiKey)}
@@ -99,8 +100,7 @@ export function ModelProviderItem({
             <Button type="button" className="min-w-20" onClick={onConnect} disabled={!apiKey.trim()}>
               {t("settings.provider.connect")}
             </Button>
-          )}
-        </div>
+          )}        </div>
       )}
     </div>
   );

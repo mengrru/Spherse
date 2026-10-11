@@ -2,9 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { app } from "electron";
 import { createMultiProjectServer } from "@spherse/server";
 import type { ProjectRegistry, MultiProjectServer } from "@spherse/server";
-import type { SamplingParams, ThinkingLevel } from "@spherse/core";
-import { getSettings, getMobileAccess, getServerToken } from "./settings.js";
-import { getAppModelCatalog } from "./model-catalog.js";
+import { getMobileAccess, getServerToken, getModelSettingsPath } from "./settings.js";
 import { getTunnelManager } from "./tunnel/manager.js";
 
 interface ServerHandle {
@@ -54,13 +52,9 @@ export function syncAllowedHosts(): void {
 
 export async function ensureServer(): Promise<void> {
   if (serverHandle) return;
-  const settings = getSettings();
   const result = await createMultiProjectServer({
-    defaultModel: settings?.models?.text?.defaultModel,
-    sampling: settings?.models?.text?.sampling,
-    thinkingLevel: settings?.models?.text?.thinkingLevel,
     auth: { accessToken: getServerToken() },
-    modelCatalog: getAppModelCatalog(),
+    modelSettingsPath: getModelSettingsPath(),
     appVersion: app.getVersion(),
   });
   serverHandle = { server: result, fastify: result.fastify, registry: result.registry };
@@ -113,21 +107,6 @@ export function setProjectLastOpened(projectId: string, lastOpened: string): voi
 export async function unregisterProject(projectId: string): Promise<void> {
   if (!serverHandle) return;
   await serverHandle.registry.remove(projectId);
-}
-
-export function updateDefaultModel(defaultModel: string | undefined): void {
-  if (!serverHandle) return;
-  serverHandle.registry.setDefaultModel(defaultModel);
-}
-
-export function updateSampling(sampling: SamplingParams | undefined): void {
-  if (!serverHandle) return;
-  serverHandle.registry.setSampling(sampling);
-}
-
-export function updateThinkingLevel(thinkingLevel: ThinkingLevel | undefined): void {
-  if (!serverHandle) return;
-  serverHandle.registry.setThinkingLevel(thinkingLevel);
 }
 
 export async function stopServer(): Promise<void> {

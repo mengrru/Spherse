@@ -2,7 +2,8 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import type { AddressInfo } from "node:net";
 import websocket from "@fastify/websocket";
 import multipart from "@fastify/multipart";
-import type { Logger, SamplingParams, ThinkingLevel, ModelCatalog } from "@spherse/core";
+import { ModelCatalog } from "@spherse/core";
+import type { Logger } from "@spherse/core";
 import {
   NotFoundError,
   ValidationError,
@@ -20,6 +21,7 @@ import { setAppVersion } from "./server-info.js";
 import { ChatSessionHub } from "./chat/index.js";
 import { handleChatWebSocket } from "./chat/index.js";
 import { handleBusWebSocket } from "./bus/index.js";
+import { ModelSettingsStore, applyModelSettingsToEnv } from "./model-settings.js";
 import {
   closeMultiProjectServer,
   type ServerCloseOptions,
@@ -27,6 +29,7 @@ import {
 
 export { ProjectRegistry, type ProjectContext, type ProjectContextCompat, type ProjectInfo, type RegisterOptions } from "./registry.js";
 export type { ServerCloseOptions } from "./shutdown.js";
+export { ModelSettingsStore } from "./model-settings.js";
 
 export const DEFAULT_SERVER_PORT = 53972;
 
@@ -40,13 +43,11 @@ export interface MultiProjectServer {
 }
 
 export interface CreateServerOptions {
-  defaultModel?: string;
-  sampling?: SamplingParams;
-  thinkingLevel?: ThinkingLevel;
   auth?: AuthOptions;
   port?: number;
   modelCatalog?: ModelCatalog;
   appVersion?: string;
+  modelSettingsPath?: string;
 }
 
 export async function createMultiProjectServer(
@@ -114,11 +115,16 @@ export async function createMultiProjectServer(
 
   const chatHub = new ChatSessionHub(logger);
 
+  const modelCatalog = options?.modelCatalog ?? new ModelCatalog();
+  const modelSettingsStore = new ModelSettingsStore({ filePath: options?.modelSettingsPath });
+  const modelSettings = modelSettingsStore.get();
+  applyModelSettingsToEnv(modelSettings, modelCatalog);
+
   const registry = new ProjectRegistry(logger, {
-    defaultModel: options?.defaultModel,
-    sampling: options?.sampling,
-    thinkingLevel: options?.thinkingLevel,
-    modelCatalog: options?.modelCatalog,
+    defaultModel: modelSettings.text.defaultModel,
+    sampling: modelSettings.text.sampling,
+    thinkingLevel: modelSettings.text.thinkingLevel,
+    modelCatalog,
     onRuntimeRemoved: (runtime) => chatHub.closeRuntime(runtime),
   });
 
@@ -126,6 +132,8 @@ export async function createMultiProjectServer(
   registerAllRoutes(fastify, registry, {
     authRequired: Boolean(options?.auth?.accessToken),
     hub: chatHub,
+    modelSettingsStore,
+    modelCatalog,
   });
   handleChatWebSocket(fastify, registry, chatHub);
   handleBusWebSocket(fastify, registry);

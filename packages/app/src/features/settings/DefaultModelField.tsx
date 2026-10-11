@@ -18,19 +18,19 @@ import { SectionTitle } from "./SectionTitle";
 
 export function DefaultModelField({
   providers,
-  apiKeys,
+  configured,
   value,
   onChange,
 }: {
   providers: Record<string, ProviderConfig>;
-  apiKeys: Record<string, string>;
+  configured: Record<string, boolean>;
   value: string;
   onChange: (value: string) => void;
 }) {
   const { t } = useI18n();
   const [query, setQuery] = useState("");
 
-  const configuredProviders = Object.entries(providers).filter(([id]) => apiKeys[id]?.trim());
+  const configuredProviders = Object.entries(providers).filter(([id]) => configured[id]);
 
   const selectedLabel = (() => {
     const slashIdx = value.indexOf("/");

@@ -38,6 +38,8 @@ import type {
   ProjectMarketplaceInstallRequest,
   ProjectMarketplaceInstallResponse,
   UploadResponse,
+  ModelSettingsRequest,
+  ModelSettingsResponse,
 } from "@spherse/contracts";
 import { parseApiResponse, schemas } from "@spherse/contracts";
 import { Type } from "@sinclair/typebox";
@@ -534,18 +536,6 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return version !== undefined ? `${base}?v=${version}` : base;
     },
 
-    async getSupportedProviders(): Promise<ProviderCatalogContract> {
-      const res = await authedFetch(`${baseUrl}/api/settings/providers`);
-      await assertOk(res);
-      return parseJsonResponse<ProviderCatalogContract>(res, schemas.providerCatalog);
-    },
-
-    async getImageProviders(): Promise<ProviderCatalogContract> {
-      const res = await authedFetch(`${baseUrl}/api/settings/image-providers`);
-      await assertOk(res);
-      return parseJsonResponse<ProviderCatalogContract>(res, schemas.providerCatalog);
-    },
-
     async exportImage(srcRel: string, destAbs: string): Promise<{ ok: boolean }> {
       const res = await authedFetch(`${apiBase}/images/export`, {
         method: "POST",
@@ -770,6 +760,34 @@ export function createGlobalApiClient(baseUrl: string, accessToken?: string | nu
         res,
         schemas.projectMarketplaceInstallResponse,
       );
+    },
+
+    async getSupportedProviders(): Promise<ProviderCatalogContract> {
+      const res = await authedFetch(`${baseUrl}/api/settings/providers`);
+      await assertOk(res);
+      return parseJsonResponse<ProviderCatalogContract>(res, schemas.providerCatalog);
+    },
+
+    async getImageProviders(): Promise<ProviderCatalogContract> {
+      const res = await authedFetch(`${baseUrl}/api/settings/image-providers`);
+      await assertOk(res);
+      return parseJsonResponse<ProviderCatalogContract>(res, schemas.providerCatalog);
+    },
+
+    async getModelSettings(): Promise<ModelSettingsResponse> {
+      const res = await authedFetch(`${baseUrl}/api/settings/models`);
+      await assertOk(res);
+      return parseJsonResponse<ModelSettingsResponse>(res, schemas.modelSettingsResponse);
+    },
+
+    async updateModelSettings(req: ModelSettingsRequest): Promise<ModelSettingsResponse> {
+      const res = await authedFetch(`${baseUrl}/api/settings/models`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req),
+      });
+      await assertOk(res);
+      return parseJsonResponse<ModelSettingsResponse>(res, schemas.modelSettingsResponse);
     },
   };
 }

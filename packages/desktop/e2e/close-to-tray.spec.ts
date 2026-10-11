@@ -78,16 +78,8 @@ test("closing the window quits the app when close-to-tray is disabled", async ()
     let page;
     ({ app, page } = await launch());
     await page.evaluate(async () => {
-      const current = await window.electronAPI.getSettings();
-      await window.electronAPI.saveSettings({
-        ...(current ?? {}),
-        locale: current?.locale ?? "zh-CN",
-        models: current?.models ?? {
-          text: { defaultModel: "", providers: {} },
-          image: { defaultModel: "", providers: {} },
-        },
-        closeToTray: false,
-      });
+      const current = await window.electronAPI.getDesktopPrefs();
+      await window.electronAPI.saveDesktopPrefs({ ...current, closeToTray: false });
     });
 
     const exited = new Promise<void>((resolve) => app!.process().once("exit", () => resolve()));

@@ -1,6 +1,7 @@
 import { app } from "electron";
 import { createWindow, getMainWindow } from "./window.js";
-import { restoreEnvFromSettings, getMobileAccess } from "./settings.js";
+import { getMobileAccess } from "./settings.js";
+import { migrateLegacySettings } from "./migrate-legacy-settings.js";
 import { fixPath } from "./fix-path.js";
 import { ensureServer, getServerPort } from "./server.js";
 import { registerAllIpc } from "./ipc/index.js";
@@ -12,7 +13,7 @@ import { attachCloseToTray, destroyTray, showMainWindow, syncTray } from "./tray
 
 app.whenReady().then(async () => {
   await fixPath();
-  restoreEnvFromSettings();
+  migrateLegacySettings();
   await ensureServer();
   const mainWindow = createWindow();
   setupContextMenu(mainWindow);

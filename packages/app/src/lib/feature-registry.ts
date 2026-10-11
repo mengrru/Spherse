@@ -17,7 +17,7 @@ const ELECTRON_ONLY: ReadonlySet<HostKind> = new Set(["electron"]);
 const ALL_HOSTS: ReadonlySet<HostKind> = new Set(["electron", "web"]);
 
 export const FEATURE_HOST_MATRIX: Record<FeatureName, ReadonlySet<HostKind>> = {
-  settings: ELECTRON_ONLY,
+  settings: ALL_HOSTS,
   "agent-dialog": ALL_HOSTS,
   "agent-trigger": ALL_HOSTS,
   "agent-mcp": ALL_HOSTS,

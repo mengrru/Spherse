@@ -10,16 +10,16 @@
   - dev 与 prod 的 electron-store / localStorage 完全隔离，可同时运行
   - E2E 由 Playwright 传 `--user-data-dir` + `NODE_ENV=test` 跳过重定向
   - 随后 `requestSingleInstanceLock()`（按 userData 区分，须在重定向之后）：未拿到锁 `app.exit(0)` 且不加载 main；主实例 `second-instance` 唤回主窗口
-- `app.whenReady` 顺序：`fixPath` → `restoreEnvFromSettings` → `ensureServer()`（恒带 server token）→ 创建窗口与右键菜单、挂关闭至托盘拦截 → 注册全部 IPC → `syncTray()` → quick 模式启动 tunnel；更新检查另以 `setTimeout` 5s 调度，与 tunnel 无先后依赖
+- `app.whenReady` 顺序：`fixPath` → `migrateLegacySettings()`（幂等拆分旧 settings + 应用 theme）→ `ensureServer()`（恒带 server token）→ 创建窗口与右键菜单、挂关闭至托盘拦截 → 注册全部 IPC → `syncTray()` → quick 模式启动 tunnel；更新检查另以 `setTimeout` 5s 调度，与 tunnel 无先后依赖
 - BrowserWindow：1200×800、`contextIsolation: true`、`nodeIntegration: false`、preload 白名单桥
 - `fixPath` 仅 packaged + darwin/linux：spawn 登录 shell 取 `$PATH` 去重合并，保证 GUI 启动拿到 CLI 环境
 - 优雅退出：`window-all-closed` / `before-quit` → tunnel stop → `stopServer()` → quit；唯一退出标志在 `electron/lifecycle.ts`（`gracefulShutdown` 首个 await 前 `beginQuit()` 置位，`before-quit` / 窗口 close 拦截读 `isQuitting()`），`will-quit` 销毁托盘；`stopServer` / `restartServer` 委托 `MultiProjectServer.close()`（注入 10s 阶段超时与日志回调），不再手工编排 registry/fastify 顺序
 
 ## 关闭至托盘
 
-`electron/tray.ts`，由 `AppSettings.closeToTray`（缺省 true；未打包且非 `NODE_ENV=test` 的 dev 运行缺省 false）控制：
+`electron/tray.ts`，由 hostPrefs 的 `closeToTray`（缺省 true；未打包且非 `NODE_ENV=test` 的 dev 运行缺省 false）控制：
 
-- 托盘在开关启用期间常驻，启动与每次 `save-settings` 后 `syncTray()` 创建 / 销毁并按 locale 重建菜单（「打开 Spherse」「退出」）；左键 `click` 唤回窗口；macOS 用 `right-click` → `popUpContextMenu`（避免左键也弹菜单），Windows / Linux 用 `setContextMenu`
+- 托盘在开关启用期间常驻，启动与每次 `save-desktop-prefs` / `save-general-prefs` 后 `syncTray()` 创建 / 销毁并按 locale 重建菜单（「打开 Spherse」「退出」）；左键 `click` 唤回窗口；macOS 用 `right-click` → `popUpContextMenu`（避免左键也弹菜单），Windows / Linux 用 `setContextMenu`
 - 主窗口 `close`：`isQuitting()` 放行；已收至托盘的窗口再收到 close（安装器 `taskkill` 等非用户操作）→ `app.quit()` 优雅退出；开关启用 → 阻止并隐藏（全屏先退出全屏），macOS 同时 `app.dock.hide()`；开关关闭 → 放行，走 `window-all-closed` 退出（含 macOS）
 - 唤回（托盘 / macOS `activate` / `second-instance`）：macOS 先 `await app.dock.show()`，再 restore / show / focus；退出中或窗口已销毁时 no-op
 - 图标 `resources/tray/`（macOS `trayTemplate*.png` 模板图，其余 `tray*.png`），打包经 `extraResources` 落 `process.resourcesPath/tray`
@@ -31,8 +31,8 @@
 | 域 | channel 概要 |
 |---|---|
 | project | 目录选择、项目打开/关闭/恢复（`restore-projects` 重注册已打开项目）、lastActive、`get-server-port`、`open-project-folder`、`open-file`（校验在已打开项目内）、`open-external`（仅 http/https/mailto/tel）、save dialog |
-| settings | get/save（save 后 `syncTray()`）、文本与图片 provider 目录 |
-| debug | is-dev、DevTools 开关、electron-store 查看、reload renderer、reset app data |
+| host-prefs | `get/save-general-prefs`（locale）、`get/save-desktop-prefs`（theme/tabsEnabled/debugToolsEnabled/closeToTray；save 后 `syncTray()`，desktopPrefs 另应用 `nativeTheme`） |
+| debug | is-dev、DevTools 开关、electron-store 查看、reload renderer、reset app data（一并删除 model-settings.json） |
 | skill | zip 文件选择（本地安装用） |
 | updater | check / download / install / cancel / get-state / get-version |
 | mobile | mobile-access 的 get-state / enable / disable / regenerate-token / restart-tunnel / set-mode / set-public-domain |
@@ -40,22 +40,21 @@
 - preload 经 `contextBridge` 暴露 `window.electronAPI`（类型即 `ElectronAPI`），renderer 由 `createElectronHostBridge()` 包装为 HostBridge
 - mobile 域变更经 `mutationChain` 串行化防并发
 
-## settings 持久化
+## settings 持久化（应用级数据分区）
 
-- electron-store 落 userData 下 `settings.json`；`AppSettings` schema：
-  - `locale` + `models: { text, image }`——每 group 含 `defaultModel`、per-provider `apiKey`，text 另含可选 `sampling` 与 `thinkingLevel`（off/low/medium/high，缺省 medium）
-  - 可选 `customProviders` / `debugToolsEnabled` / `tabsEnabled`（缺省 true） / `closeToTray`（缺省 true，dev 运行 false） / `theme` / `mobileAccess`
-- **serverToken 是 settingsStore 顶层 key，不是 AppSettings 字段**（`saveSettings` 会从零重建 AppSettings）。`getServerToken()` 迁移链：`serverToken` → legacy `mobileAccess.token` → 生成并持久化；它是 server 鉴权唯一凭据来源（见 [server.md](server.md)「鉴权模型」）
-- **API key 掩码与合并**：显示前 4 + `****` + 后 4；保存时空串跳过、含 `****` 保留旧值
-  - `saveSettings` 强制保留 `mobileAccess` 旧值，防 renderer 覆写
-- `applySettingsToEnv`（保存后立即执行）：
-  - `applyThemeSource` → 文本 provider key 按 `PROVIDER_ENV_KEYS` 映射 env（记录首次覆写前的原值；key 从设置中移除后恢复原值或删除 env，共享 env 名的 provider 仍有 key 时保留）→ 图片写 `SPHERSE_IMAGE_MODEL` / `SPHERSE_IMAGE_API_KEY`
-  - 末尾 `syncCustomProviders`（core 删除消失项 + `setProvider` 重建，原样使用 def.id；`custom-` 前缀由 renderer 创建供应商时生成）
-- 启动时 `restoreEnvFromSettings` 在 `ensureServer` 之前——custom provider 注册先于 server 捕获同一 catalog 单例
+settings 按分区拆分持久化（决策见 [ADR-0015](../../dev/decisions/0015-settings-partitioned-persistence.md)），desktop electron-store（userData 下 `settings.json`）只承载 host 侧分区：
+
+- **模型配置归 server**：`models.text/image` + `customProviders` 存 server-owned 的 `model-settings.json`（路径经 `getModelSettingsPath()` 注入 `CreateServerOptions.modelSettingsPath`），desktop 主进程不读不写；API key write-only（GET 只回 `configured` 布尔），传播链见 [server.md](server.md)
+- **hostPrefs**（顶层 key）：`locale` + 桌面专属四项 `theme` / `tabsEnabled`（缺省 true）/ `debugToolsEnabled` / `closeToTray`（缺省 true，dev 运行 false）；save 副作用为 `applyThemeSource` + `syncTray()`；main 进程全部 `getLocale()` 消费点（tray / context-menu / project 对话框）读 hostPrefs
+- **mobileAccess**（顶层 key）：`getMobileAccess` / `setMobileAccess` 读写，renderer 经 `bridge.mobile` API（不走 prefs 通道）
+- **serverToken 是 settingsStore 顶层 key**：`getServerToken()` 迁移链：`serverToken` → 顶层 `mobileAccess.token` → 生成并持久化；它是 server 鉴权唯一凭据来源（见 [server.md](server.md)「鉴权模型」）
+- **legacy 迁移**：启动时 `migrate-legacy-settings.ts` 先触发 serverToken 提升，再把旧顶层 `settings` key 拆分到 model-settings.json / hostPrefs / mobileAccess 后删除；目标已存在则跳过（幂等）
 
 ## 模型与采样配置传播
 
-- save-settings 链：`if (defaultModel)` 才 `updateDefaultModel()`；`updateSampling()` / `updateThinkingLevel()` 无条件（undefined 即「恢复默认」需要传播）→ registry fan-out 各项目并缓存供后续 register → `SessionManager`
+模型配置传播链全在 server 侧（`PUT /api/settings/models` → `ModelSettingsStore` 持久化 → env 注入 → `syncCustomProviders` → registry fan-out，见 [server.md](server.md)）；desktop 只负责把 `modelSettingsPath` 传给 server。运行时行为不变：
+
+- PUT 链：`if (defaultModel)` 才 `registry.setDefaultModel()`；`setSampling()` / `setThinkingLevel()` 无条件（undefined 即「恢复默认」需要传播）→ fan-out 各项目并缓存供后续 register → `SessionManager`
 - 热替换：`setDefaultModel` 遍历活跃会话，仅在解析结果变化时重赋 `agent.state.model`（下一轮生效）；未配置的 agent 跳过不抛错；profile 显式指定 `model` 者优先，但所选模型已不可解析（过期）时回退全局默认（`model-resolver` 按候选序尝试）
 - `setThinkingLevel` 重赋各 agent 的 `state.thinkingLevel`（下一轮生效），profile `thinkingLevel` 覆盖全局值（见 [`../data-conventions.md`](../data-conventions.md)「Agent 定义」）；`off` 即关闭思考，实际档位由 pi-ai 按模型 `clampThinkingLevel` 就近取档（不支持推理的模型忽略）
 - `setSampling` 重赋各 agent 的 `streamFn`；注入点 `getChatStreamFn`：
@@ -64,11 +63,11 @@
 - 模型解析延迟到 send 路径：无模型时可打开会话存活，`sendMessage` 前 `ensureModel` 抛 `ModelNotConfiguredError`
   - 转为 `MODEL_NOT_CONFIGURED` error 事件，不关连接；空串 model 在 profile 解析层即归一为未配置
 - 已知边界：清空 defaultModel 后运行时旧默认保留至重启（`if` 守卫 + registry 缓存）
-- **provider catalog**：core `ModelCatalog` 类实例由 desktop `getAppModelCatalog()` 持有单例，经 `CreateServerOptions` 注入 server；文本 17 个内置 provider，图片 3 家（openrouter / zhipu / openai）
+- **provider catalog**：core `ModelCatalog` 实例由 server 自建于 `createMultiProjectServer`（desktop 不再注入）；文本 17 个内置 provider，图片 3 家（openrouter / zhipu / openai）
 
 ## 外观模式
 
-`AppSettings.theme`（light / dark / system，默认 system）：启动 `restoreEnvFromSettings` 与每次保存时设 `nativeTheme.themeSource`——renderer 的 `prefers-color-scheme` 媒体查询与 `dark:` 工具类据此跟随应用选择。
+hostPrefs 的 `theme`（light / dark / system，默认 system）：启动 `migrateLegacySettings()` 与每次 `save-desktop-prefs` 时设 `nativeTheme.themeSource`——renderer 的 `prefers-color-scheme` 媒体查询与 `dark:` 工具类据此跟随应用选择。theme 为 desktop 专属偏好（web 端跟随系统，无手动切换）。
 
 ## mobile access / tunnel
 

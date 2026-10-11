@@ -5,7 +5,7 @@ spherse/
 ├── packages/
 │   ├── core/                         # @spherse/core — 纯 Node.js 核心逻辑（微内核 + Capability 架构）
 │   │   └── src/
-│   │       ├── types.ts              # 共享类型与 provider catalog / settings 类型定义
+│   │       ├── types.ts              # 共享类型与 provider catalog / 模型配置（ModelSettings）类型定义
 │   │       ├── logger.ts             # pino Logger 类型与 createSilentLogger 内部兜底工厂
 │   │       ├── factory.ts            # assembleProject() 唯一装配点（defaultCapabilities 列表、Capability.init 接线；createProject 兼容导出）——新增能力 = 此处一行
 │   │       ├── marketplace-project.ts # installMarketplaceProjectZip(zipPath, destDir)：市场项目 zip 校验（单一顶层目录/zip-slip/顶层名规则）+ tmp 解压 + 目标自动重命名（{name}-{n} 从 2 起）+ 原子移入，返回 {projectRoot, folderName}
@@ -150,7 +150,7 @@ spherse/
 │   │       ├── content.ts            # FileEntry、ContentResponse、create/save 请求
 │   │       ├── file-tree.ts          # FileTreeResponse
 │   │       ├── upload.ts             # UploadResponse（{ path, bytes, renamed }）
-│   │       ├── settings.ts           # ProviderCatalog、AiAccess/WelcomePage/Theme Request/Response
+│   │       ├── settings.ts           # ProviderCatalog、ModelSettingsRequest/Response（write-only key）、AiAccess/WelcomePage/Theme Request/Response
 │   │       ├── trigger.ts            # TriggerEntry、TriggerCreate/Update 请求、List/Log Response
 │   │       ├── skills.ts             # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
 │   │       ├── marketplace.ts        # MarketplaceSkillEntry、MarketplaceManifestResponse、SkillMarketplaceInstallRequest（{name, version}）
@@ -167,6 +167,7 @@ spherse/
 │   │       │   └── host-guard.ts     # Host 校验（静态集合 + 动态注册，返回 HostGuard 管理动态 host）
 │   │       ├── logger.ts             # createServerLogger()：pino multistream（pretty + debug WS），composition root
     │   │       ├── registry.ts           # ProjectRegistry：Map<projectId, ProjectContext>，项目 register/remove（removal barrier + onRuntimeRemoved 观察者）
+    │   │       ├── model-settings.ts    # ModelSettingsStore：模型配置唯一持久化点（models.text/image + customProviders + 明文 key，tmp+rename 原子写）+ applyModelSettingsToEnv（env 注入 + custom providers 注册）
     │   │       ├── shutdown.ts           # closeMultiProjectServer()：hub → registry → fastify 关停顺序、阶段超时与失败隔离
 │   │       ├── marketplace.ts        # 市场域 service 工厂（createMarketplaceServiceImpl 参数化 manifest schema / zip 上限 / 超时 / tmp 前缀）：skills 单例（OSS spherse/skills/manifest.json，env SPHERSE_MARKETPLACE_MANIFEST_URL 覆盖，50MB）+ projects 单例（spherse/projects/manifest.json，env SPHERSE_PROJECT_MARKETPLACE_MANIFEST_URL 覆盖，100MB/300s）；均含 30s 内存缓存 + zip 下载（同源 SSRF 校验、流内计数）
 │   │       ├── routes/               # REST 路由，按业务域拆分
@@ -182,7 +183,7 @@ spherse/
 │   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
 │   │       │   ├── marketplace.ts    # 技能市场路由（GET /marketplace/skills 代理 manifest；POST /skills/marketplace-install 按 {name, version} 下载 zip 并覆盖安装）
 │   │       │   ├── project-marketplace.ts # 项目市场全局路由（无 projectId 前缀，零项目可用）：GET /api/marketplace/projects 代理 manifest；POST /api/marketplace/projects/install 按 {name, version, destDir} 下载 zip → core installMarketplaceProjectZip 解压落盘 → 返回 {projectRoot}（注册仍走 renderer 的 open-project IPC）
-│   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
+│   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 全局模型配置读写（GET/PUT /api/settings/models，write-only key）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
 │   │       │   ├── upload.ts         # 通用文件上传 API（POST /api/projects/:projectId/upload/*，multipart 单文件 → 目标目录，per-route 100MB 上限，同名大小写不敏感自动重命名，落盘走 PM writeBinaryFile）
@@ -240,7 +241,7 @@ spherse/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 前端运行时投影（当前仅 initialMessage 交接）
 │   │       │   ├── app-ui-store.ts       # 应用级临时 UI 状态（settings 弹窗、全局搜索弹窗 open 状态）
-│   │       │   ├── settings-store.ts     # 应用级 locale/theme/debugTools/tabsEnabled/closeToTray 等持久化设置（与设置文件同步）
+│   │       │   ├── settings-store.ts     # 应用级偏好 store：locale 走 bridge.prefs、theme/debugTools/tabsEnabled/closeToTray 走 bridge.desktopPrefs（仅 desktop）
 │   │       │   ├── side-panel-store.ts   # side panel pinned/hover 折叠机制（全局 UI 状态，localStorage 持久化）+ 移动端 mobileOpen 滑出态（与桌面解耦）
 │   │       │   ├── custom-side-panel-store.ts # 自定义侧边面板激活态（per-project，缺省显示，localStorage spherse:custom-side-panel:active-by-project 仅存显式关闭）
 │   │       │   └── bus-store.ts          # 全局多路复用 WebSocket 连接 store
@@ -303,7 +304,7 @@ spherse/
 │   │       │   ├── split-pane/           # 内容区分窗：target.ts（复用 TabTarget，声明可支持的 kind，当前仅 file）、store.ts（每项目 { target, ratio }，localStorage spherse:content-split）、SplitLayout（左栏恒在 + 分隔条 + 右栏）、SplitPaneView（按 kind 分发，file → ReadOnlyContentBrowser）、SplitRouteBridge（「移动」/「回到主窗口」导航到达后提交）、useOpenSplit / useReturnSplit 等命令 hook
 │   │       │   ├── tabs/                 # 内容区标签栏：store.ts（每项目 tab 列表，localStorage spherse:tabs）、TabBar（欢迎页固定首 tab、拖拽排序移动端禁用）、TabRouteBridge（路由派生 upsert / 关闭 / 替换）、useCloseActiveTab / useCloseDeletedFileTabs
 │   │       │   ├── skill-panel/          # Skills section（三点菜单：技能市场/创建/安装技能 + CreateSkillDialog + MarketplaceDialog + marketplace-state 卡片状态推导），复用 base components/file-tree（rootPath=".spherse/skills"）
-│   │       │   ├── settings/             # 设置弹窗（文本/图片/通用/关于 tab，文本 tab 含默认模型 + 思考强度选择 ThinkingLevelField、高级采样参数，支持自定义 OpenAI 兼容供应商：CustomProviderDialog 创建/编辑、ModelProviderItem 行渲染、custom-provider-id id 生成）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、设置 store、类型与测试
+│   │       │   ├── settings/             # 设置弹窗（models/image/general/help 全平台 + mobile/about 按 capability 门控；模型配置经全局 API client 走 server GET/PUT /api/settings/models——write-only key：configured 徽标、空值 blur 不发字段、disconnect 显式清除；文本 tab 含默认模型 + 思考强度选择 ThinkingLevelField、高级采样参数、自定义 OpenAI 兼容供应商 CustomProviderDialog）、更新检查 hook（useUpdateChecker reducer + 挂载恢复归位）与 UpdateChecker 组件、UpdateNoticeBridge（自动检测发现新版 → 全局右下角 toast，App 根挂载）、类型与测试
 │   │       │   ├── welcome-page/         # 项目欢迎页渲染（HTML iframe / 图片）+ WelcomePageQueryBridge（project.yaml fs-watch/reconnect → welcome-page 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   ├── custom-side-panel/    # 自定义侧边面板：透明 iframe 占满 ProjectPanel（preview 路由 + fs-watch 防抖刷新）+ CustomSidePanelQueryBridge（project.yaml fs-watch/reconnect → custom-side-panel 查询失效，ProjectRuntimeBridges 挂载）
 │   │       │   ├── project-settings/     # 项目设置弹窗集合
@@ -342,7 +343,7 @@ spherse/
 │   │       │   │   ├── index.ts          # registerAllIpc 聚合
 │   │       │   │   ├── project.ts        # 项目选择（SPHERSE_E2E_SELECT_DIRECTORY seam 可注入测试目录）、server 启停、打开项目持久化、打开项目文件夹（shell.openPath）、用默认应用打开文件（openFileExternal）；confirmUnsafeLocation 对安装目录内路径弹警告框（默认取消），restore-projects 恢复后对存量易失区项目每会话弹一次迁移警告
 │   │   │   │   ├── open-file-path.ts # isInsideAnyOpenProject 路径校验辅助（openFileExternal handler 使用，校验路径在已打开项目内）
-│   │   │   │   ├── settings.ts       # 设置读取/保存与 provider 列表
+│   │   │       │   │   ├── host-prefs.ts    # 通用偏好（locale）与桌面专属偏好（theme/tabs/debugTools/closeToTray）get/save IPC（save 后 syncTray）
 │   │   │   │   ├── updater.ts        # 更新检查 IPC（check/download/install/cancel/get-state/get-app-version/open-external）
 │   │   │   │   ├── skill.ts          # 技能 zip 安装原生文件选择器（select-skill-zip）
 │   │   │   │   ├── context-menu.ts   # 文本框原生右键菜单：webContents 'context-menu' 事件（isEditable 门控，editFlags 控制 enable，i18n 本地化 undo/redo/cut/copy/paste/selectAll）
@@ -356,8 +357,9 @@ spherse/
   │   │   │   ├── quit-handlers.ts      # 退出编排：常规优雅关闭（隧道 5s + server 分阶段 + 30s 看门狗）与更新安装快路径（before-quit-for-update——electron-updater 对 Electron 内置 autoUpdater emit——隧道 1s、跳过 server 优雅关闭、app.exit(0) 收尾）双路径
   │   │   │   ├── lifecycle.ts          # 唯一退出标志（beginQuit/isQuitting + 更新专用 beginUpdateQuit/isUpdateQuit），供优雅退出与关闭拦截共用
 │   │   │   ├── tray.ts               # 关闭至托盘：托盘创建/销毁与菜单（syncTray）、主窗口 close 拦截、showMainWindow（含 macOS Dock 显隐）
-│   │   │   ├── server.ts             # server 实例管理（ensure/restart/stop，恒带 serverToken 鉴权）+ 动态 host 重放（syncAllowedHosts）+ defaultModel 更新
-│   │   │   └── settings.ts           # electron-store 封装 + env 管理（含 syncCustomProviders）+ openProjects/locale/mobileAccess 持久化 + serverToken（顶层 key，getServerToken 迁移链）+ generateAccessToken
+│   │       │   ├── server.ts             # server 实例管理（ensure/restart/stop，恒带 serverToken 鉴权 + modelSettingsPath 注入）+ 动态 host 重放（syncAllowedHosts）
+│   │       │   ├── settings.ts           # electron-store 封装（hostPrefs/mobileAccess/openProjects/lastActiveProject/serverToken 顶层 key）+ applyThemeSource + getModelSettingsPath
+│   │       │   └── migrate-legacy-settings.ts # 启动迁移：旧顶层 settings key 拆分到 model-settings.json/hostPrefs/mobileAccess 后删除（幂等，先触发 serverToken 提升）
 │   │   └── e2e/                      # Playwright E2E 测试
 │   │       ├── helpers/
 │   │       │   ├── electron.ts       # Electron 应用启动辅助（测试项目创建、app launch）
@@ -391,7 +393,7 @@ spherse/
 │   │   ├── pages-assets/404.html     # GitHub Pages SPA fallback（/web、/dev/web → 补尾斜杠，其余 → /）
 │   │   └── src/                      # Web 版本专属源码
 │   │       ├── main.tsx              # 注入 WebHostBridge 调 createAppRoot
-│   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集、token 探活、clearConnection 断开清理）
+│   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集：prefs 走 spherse:prefs 并迁移旧 spherse:settings、token 探活、clearConnection 断开清理）
 │   │       └── pages/
 │   │           ├── MobileConnectPage.tsx # 连接页 shell（模式切换、连接流程、URL 参数自动连接、connecting 态）
 │   │           └── connect/          # 连接页子模块：ScanPanel（应用内扫码 + 二维码图片识别兜底）、ManualPanel（手动输入表单）、qr-decode.ts（BarcodeDetector/jsQR 解码纯函数）

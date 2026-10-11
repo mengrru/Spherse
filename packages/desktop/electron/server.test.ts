@@ -42,13 +42,9 @@ vi.mock("@spherse/server", () => ({
 }));
 
 vi.mock("./settings.js", () => ({
-  getSettings: () => undefined,
   getServerToken: () => "server-token",
   getMobileAccess: () => ({ ...mobileStore, mode: mobileStore.mode ?? "quick" }),
-}));
-
-vi.mock("./model-catalog.js", () => ({
-  getAppModelCatalog: () => ({}),
+  getModelSettingsPath: () => "/tmp/spherse-test-userdata/model-settings.json",
 }));
 
 vi.mock("./tunnel/manager.js", () => ({

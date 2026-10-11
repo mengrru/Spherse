@@ -8,7 +8,7 @@ import type { ProviderConfig } from "./types";
 
 function renderProviderItem(
   config: Partial<ProviderConfig> & { custom?: boolean; keyless?: boolean },
-  props: { apiKey?: string; onEdit?: () => void; onDelete?: () => void } = {},
+  props: { apiKey?: string; configured?: boolean; onEdit?: () => void; onDelete?: () => void } = {},
 ) {
   const onApiKeyCommit = vi.fn();
   const onConnect = vi.fn();
@@ -21,6 +21,7 @@ function renderProviderItem(
         id="provider-x"
         config={{ name: "Provider X", ...config } as ProviderConfig}
         apiKey={apiKey}
+        configured={props.configured ?? false}
         onApiKeyChange={setApiKey}
         onApiKeyCommit={onApiKeyCommit}
         onConnect={onConnect}
@@ -69,35 +70,44 @@ describe("ModelProviderItem keyless rows", () => {
 });
 
 describe("ModelProviderItem keyed rows", () => {
-  it("shows a disabled connect button while no api key is set", () => {
+  it("shows a disabled connect button while no api key is typed", () => {
     renderProviderItem({});
     expect(screen.getByRole("button", { name: "连接" })).toBeDisabled();
   });
 
-  it("marks the row connected once a key is typed, commits on blur and disconnects on click", async () => {
+  it("enables connect once a key is typed, commits on blur and stays unconnected until server confirms", async () => {
     const user = userEvent.setup();
-    const { onApiKeyCommit, onDisconnect } = renderProviderItem({});
+    const { onApiKeyCommit } = renderProviderItem({});
 
     await user.type(screen.getByPlaceholderText("API密钥"), "new-key");
-    expect(screen.getByText("已连接")).toBeInTheDocument();
+    expect(screen.getByText("未连接")).toBeInTheDocument();
 
     await user.tab();
     expect(onApiKeyCommit).toHaveBeenCalledWith("new-key");
-
-    await user.click(screen.getByRole("button", { name: /断开连接/ }));
-    expect(onDisconnect).toHaveBeenCalledTimes(1);
   });
 
-  it("shows connected with a stored key and commits a replaced key on blur", async () => {
+  it("shows connected from server state and commits a replaced key on blur", async () => {
     const user = userEvent.setup();
-    const { onApiKeyCommit } = renderProviderItem({}, { apiKey: "stored-key" });
+    const { onApiKeyCommit } = renderProviderItem({}, { configured: true });
 
     expect(screen.getByText("已连接")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("已配置")).toBeInTheDocument();
 
-    const input = screen.getByPlaceholderText("API密钥");
-    await user.clear(input);
+    const input = screen.getByPlaceholderText("已配置");
     await user.type(input, "new-key");
     await user.tab();
     expect(onApiKeyCommit).toHaveBeenCalledWith("new-key");
+  });
+
+  it("empty blur does not show disconnect state for a configured provider", async () => {
+    const user = userEvent.setup();
+    const { onApiKeyCommit } = renderProviderItem({}, { configured: true });
+
+    const input = screen.getByPlaceholderText("已配置");
+    await user.click(input);
+    await user.tab();
+    expect(onApiKeyCommit).toHaveBeenCalledWith("");
+
+    await user.click(screen.getByRole("button", { name: /断开连接/ }));
   });
 });

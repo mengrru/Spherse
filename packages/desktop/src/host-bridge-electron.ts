@@ -11,7 +11,6 @@ const ELECTRON_CAPABILITIES: HostCapabilities = {
   filePicker: true,
   mobileAccess: true,
   openFileExternal: true,
-  tray: true,
   content: { editable: true },
 };
 
@@ -72,12 +71,22 @@ export function createElectronHostBridge(): HostBridge {
       const state = await api.getMobileAccessState();
       return state.token;
     },
-    getSettings: api.getSettings,
-    saveSettings: api.saveSettings,
+    prefs: {
+      getPrefs: api.getGeneralPrefs,
+      savePrefs: async (prefs) => {
+        const res = await api.saveGeneralPrefs(prefs);
+        return res.success;
+      },
+    },
+    desktopPrefs: {
+      getPrefs: api.getDesktopPrefs,
+      savePrefs: async (prefs) => {
+        const res = await api.saveDesktopPrefs(prefs);
+        return res.success;
+      },
+    },
     openExternal: api.openExternal,
     showSaveDialog: api.showSaveDialog,
-    getSupportedProviders: api.getSupportedProviders,
-    getImageProviders: api.getImageProviders,
     project,
     updater,
     devTools,

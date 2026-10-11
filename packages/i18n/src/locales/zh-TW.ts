@@ -39,6 +39,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.models.topPReset": "恢復預設",
   "settings.provider.apiKeyProvided": "已提供 API Key",
   "settings.provider.apiKeyPlaceholder": "API金鑰",
+  "settings.provider.apiKeyConfigured": "已設定",
   "settings.provider.notConnected": "未連線",
   "settings.provider.searchPlaceholder": "搜尋供應商…",
   "settings.provider.noResults": "未找到符合的供應商",

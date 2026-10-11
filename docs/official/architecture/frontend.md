@@ -9,18 +9,18 @@
 - `createAppRoot(bridge)` 构建渲染树：QueryClientProvider → HostBridgeProvider → RouterProvider
 - desktop 壳注入 `createElectronHostBridge()`；web 壳注入 `createWebHostBridge()` 外加恢复探针与版本守卫——renderer 代码单份复用，宿主差异全部收敛在 bridge
 - 壳只经 `@spherse/app` package.json `exports` 白名单入口导入（决策见 [ADR-0009](../../dev/decisions/0009-app-exports-whitelist.md)）；ESLint 禁止壳源码经 `@/` alias 深度导入 app 内部模块
-- web 壳首启的连接引导：index 路由经 `bridge.renderConnectPage()` 渲染连接页（应用内扫码 / 二维码图片识别 / 手动输入；扫码 payload 编解码在 `app/src/lib/connect-payload.ts`），连接信息（baseUrl / token）存 localStorage `spherse:connection`，`getServerBaseUrl` / token 从它读取；断开连接（ActivityBar 底部与连接页入口，`clearConnection` + reload）清除该 key 并整页重载清空内存态；`/web/` 与 `/dev/web/` 同 origin，web 壳三个持久化 key（connection / settings / last-active-project）在 `/dev/web` 前缀下加 `:dev` 后缀隔离，避免 dev/prod 连接互踩
+- web 壳首启的连接引导：index 路由经 `bridge.renderConnectPage()` 渲染连接页（应用内扫码 / 二维码图片识别 / 手动输入；扫码 payload 编解码在 `app/src/lib/connect-payload.ts`），连接信息（baseUrl / token）存 localStorage `spherse:connection`，`getServerBaseUrl` / token 从它读取；断开连接（ActivityBar 底部与连接页入口，`clearConnection` + reload）清除该 key 并整页重载清空内存态；`/web/` 与 `/dev/web/` 同 origin，web 壳三个持久化 key（connection / prefs / last-active-project）在 `/dev/web` 前缀下加 `:dev` 后缀隔离，避免 dev/prod 连接互踩
 - TanStack Query 全局配置（`queries/client.ts`）：`staleTime: Infinity`、`retry: 1`，模块级单例；个别域显式覆盖 gcTime，marketplace-skills 与 marketplace-projects 是仅有的两个 `staleTime: 0` 域（每次打开市场拉新）；marketplace-projects 挂全局 key `["marketplace", "projects"]`（非 project-scoped，零项目可用）
 
 ## HostBridge 抽象
 
 renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](../../dev/decisions/0006-host-bridge-shells.md)。
 
-- 接口定义宿主能力：server 连接信息、settings 读写（`getSettings` / `saveSettings`）、`openExternal`，可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套）/ `clearConnection`（清除已存连接，web 壳断开入口配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile`
+- 接口定义宿主能力：server 连接信息、`openExternal`、偏好分区 `prefs`（必需，locale 通用偏好）/ `desktopPrefs`（可选，theme/tabsEnabled/debugToolsEnabled/closeToTray 桌面专属），可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套）/ `clearConnection`（清除已存连接，web 壳断开入口配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile`；模型配置不走 bridge——renderer 经全局 API client 直连 server（`GET/PUT /api/settings/models`，见 [ADR-0015](../../dev/decisions/0015-settings-partitioned-persistence.md)）
 - `HostCapabilities` 声明能力**程度**（同功能在各宿主的差异，如可编辑与否），renderer 据此条件渲染；feature 级整块开关不在这里，走 feature-registry。字段清单由 `host-capabilities.structure.test.ts` 钉住：**声明即必须被消费**（加字段必须带消费点，零消费字段删除）
-  - 布尔项：`filePicker` / `mobileAccess` / `openFileExternal` / `tray`（设置 > 通用「关闭至托盘」开关）
+  - 布尔项：`filePicker` / `mobileAccess` / `openFileExternal`
   - 对象项：`content.editable`
-- desktop 实现全开；web 实现 `content` 可写（文件树右键菜单、内容编辑、skill 写入、AI 读取黑名单入口已开放；例外：移动端视口下 HTML 文件的 Header 连同 Edit 入口仍按 `hideHeader` 隐藏，为预览腾空间，HTML 在移动端只读。server 写 API 本就对所有持 token 客户端开放，UI gate 仅做交互约束不做安全边界）、其余 false，project API 走 HTTP
+- desktop 实现全开（prefs 与 desktopPrefs 走 IPC）；web 实现 `content` 可写（文件树右键菜单、内容编辑、skill 写入、AI 读取黑名单入口已开放；例外：移动端视口下 HTML 文件的 Header 连同 Edit 入口仍按 `hideHeader` 隐藏，为预览腾空间，HTML 在移动端只读。server 写 API 本就对所有持 token 客户端开放，UI gate 仅做交互约束不做安全边界）、其余 false、prefs 走 localStorage，project API 走 HTTP
 - 消费经 `useHostBridge()`；feature 可见性经 `useFeature` + `FeatureGate` 按 hostKind 查 `feature-registry.ts` 矩阵（改动需同步 `feature-registry.test.ts`）
 
 ## 路由模型
@@ -57,7 +57,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
 | 层 | 内容 | 持久化 |
 |---|---|---|
 | app-store | connection、打开项目集合、activeProjectId | 项目集合与 lastActive 经 bridge.project 子 API（desktop 落 electron settings，web 走 HTTP + localStorage）；lastRoute 在 localStorage |
-| settings-store | locale / theme / debugTools / tabsEnabled / closeToTray（`loaded` 标记区分未加载与默认值） | 经 bridge `getSettings` / `saveSettings`（desktop 落 electron settings，web 落 `spherse:settings`） |
+| settings-store | locale（bridge.prefs）/ theme / debugTools / tabsEnabled / closeToTray（bridge.desktopPrefs，仅 desktop；`loaded` 标记区分未加载与默认值） | desktop 落 electron-store hostPrefs，web 落 localStorage `spherse:prefs`（仅 locale） |
 | TanStack Query | agents / sessions / content / directories / fileTree / skills / marketplace-skills / marketplace-projects（全局 key，不随项目关闭清理）/ triggers / welcome-page / custom-side-panel / theme-settings | 内存 cache，项目关闭清除 |
 | project-data-store | 只保存 initialMessage 一个运行时投影 | 内存 |
 | feature stores | 折叠、浮窗、内容区 tab 列表、分窗、trigger 运行态、chat 会话运行时（连接/entries/分页） | 见下 |

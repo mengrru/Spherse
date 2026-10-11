@@ -113,29 +113,10 @@ export interface ModelGroupSettings {
   thinkingLevel?: ThinkingLevel;
 }
 
-export type ThemeMode = "light" | "dark" | "system";
-
-export type MobileTunnelMode = "quick" | "manual";
-
-export interface MobileAccessSettings {
-  enabled: boolean;
-  token?: string;
-  mode?: MobileTunnelMode;
-  publicDomain?: string;
-}
-
-export interface AppSettings {
-  locale: string;
-  models: {
-    text: ModelGroupSettings;
-    image: ModelGroupSettings;
-  };
-  customProviders?: CustomProviderDef[];
-  debugToolsEnabled?: boolean;
-  tabsEnabled?: boolean;
-  closeToTray?: boolean;
-  theme?: ThemeMode;
-  mobileAccess?: MobileAccessSettings;
+export interface ModelSettings {
+  text: ModelGroupSettings;
+  image: ModelGroupSettings;
+  customProviders: CustomProviderDef[];
 }
 
 export interface ProviderCatalogItem {

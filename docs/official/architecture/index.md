@@ -39,12 +39,14 @@ renderer 单份代码经 `HostBridge` 抽象在桌面与 Web 复用：desktop �
 
 ```
 desktop main
-  → settings（model / sampling / thinkingLevel / token / appVersion）
-  → getAppModelCatalog() 单例
-  → createMultiProjectServer({ modelCatalog, auth, ... })
-      → ProjectRegistry
+  → migrateLegacySettings()（幂等拆分旧 settings + 应用 theme）
+  → ensureServer({ modelSettingsPath, auth: { accessToken: getServerToken() } })
+  → createMultiProjectServer()
+      → ModelCatalog（server 自建）
+      → ModelSettingsStore（load model-settings.json → env 注入 → custom providers 注册）
+      → ProjectRegistry（以 store 中 defaultModel/sampling/thinkingLevel 构造）
           → assembleProject（core 组合根：store → PM → SessionManager → capability init）
 ```
 
-- model catalog 所有权在 desktop main，注入链上任何一层都不自建（server 仅在未注入时兜底）
-- web 壳不是组合根：它经 HTTP / WS 连接桌面 server，本地只持有连接信息
+- model catalog 与模型配置所有权在 server（desktop 只注入 `modelSettingsPath` 与 token）；见 [ADR-0015](../../dev/decisions/0015-settings-partitioned-persistence.md)
+- web 壳不是组合根：它经 HTTP / WS 连接桌面 server，本地只持有连接信息与 locale 偏好

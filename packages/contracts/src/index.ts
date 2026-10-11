@@ -96,6 +96,9 @@ export type {
   SidePanelSettingsResponse,
   ThemeSettingsRequest,
   ThemeSettingsResponse,
+  CustomProviderDefContract,
+  ModelSettingsRequest,
+  ModelSettingsResponse,
 } from "./settings.js";
 
 export type {

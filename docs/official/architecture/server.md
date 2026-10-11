@@ -6,14 +6,13 @@
 
 ## 组合根与生命周期
 
-- `createMultiProjectServer({ defaultModel?, sampling?, thinkingLevel?, auth?, port?, modelCatalog?, appVersion? })` 创建单实例，返回 `{ fastify, registry, logger, addAllowedHosts, removeAllowedHosts, close }`
+- `createMultiProjectServer({ auth?, port?, modelCatalog?, appVersion?, modelSettingsPath? })` 创建单实例，返回 `{ fastify, registry, logger, addAllowedHosts, removeAllowedHosts, close }`
 - 初始化顺序：logger → appVersion → Fastify（debug 级 + query redact）→ **Host 校验 hook → 认证制 CORS hook** → websocket → multipart（5MB）→ 错误处理器
-  - 之后：ProjectRegistry → ChatSessionHub → auth hook → 全部路由 → chat / bus WS handler
+  - 之后：ModelCatalog（未注入时自建）→ ModelSettingsStore（load `modelSettingsPath`，缺省纯内存）→ env 注入 + custom providers 注册 → ProjectRegistry（以 store 中的 defaultModel/sampling/thinkingLevel 构造）→ ChatSessionHub → auth hook → 全部路由 → chat / bus WS handler
   - onRequest hook 顺序固定 Host → CORS → auth；CORS hook 对 OPTIONS 直接 204 短路
   - hook 注册在根实例（`fastify.register` 封装上下文内不生效）
 - **端口**：默认固定 53972、只绑 `127.0.0.1`；`EADDRINUSE` 才回退 OS 随机端口
-- desktop 启动链：`app.whenReady` → `ensureServer()`（恒传 `auth.accessToken = getServerToken()`）→ 重放已注册项目 → 重放动态 host
-  - `ensureServer` 以 settings 的 model/sampling/thinkingLevel、server token、`getAppModelCatalog()` 单例与 app 版本建服务
+- desktop 启动链：`app.whenReady` → `migrateLegacySettings()` → `ensureServer()`（传 `auth.accessToken = getServerToken()`、`modelSettingsPath` 与 app 版本）→ 重放已注册项目 → 重放动态 host
   - server 重建（regenerate token）后由 `syncAllowedHosts()` 按当前 mobileAccess 状态重放动态 host
 - shutdown：tunnel stop → `server.close(options?)`（唯一关停入口，幂等共享 Promise；顺序 `chatHub.close()` → `registry.removeAll()`（allSettled）→ `fastify.close()`，阶段各自 `settleWithin` 超时/失败隔离，缺省 10s 与 logger 上报；desktop 只注入超时与日志策略，见 [ADR-0012](../../dev/decisions/0012-chat-hub-lifecycle-ownership.md)）
 
@@ -24,14 +23,24 @@
 - `remove` 顺序：先从 map 摘除（新请求 404）→ 通知 `onRuntimeRemoved`（hub 收口 channel）→ `await runtime.shutdown()`；removal barrier 让同 root 的并发 `register` 等待旧 runtime 关闭后才新建（避免同目录双开 SQLite）
 - projectId 冲突（复制目录）时改写副本的 `project.yaml`（log warn，不中断；重新生成 8 位 nanoid）
 - `setDefaultModel` / `setSampling` 向所有已注册项目 fan-out
-- modelCatalog 注入链：desktop main 单例 → `CreateServerOptions` → registry → 每项目 `createProject`；未注入时 registry 兜底自建（desktop 链路不会走到兜底）
+- modelCatalog 注入链：`CreateServerOptions.modelCatalog`（可选）→ registry → 每项目 `createProject`；未注入时 server 自建（desktop 链路不自建，所有权在 server）
+
+## 模型配置（ModelSettingsStore）
+
+决策见 [ADR-0015](../../dev/decisions/0015-settings-partitioned-persistence.md)。
+
+- `src/model-settings.ts` 的 `ModelSettingsStore` 是模型配置唯一持久化点：`ModelSettings`（models.text/image + customProviders，含真实 apiKey）落 `modelSettingsPath` 指向的 JSON（tmp+rename 原子写），缺省路径 = 纯内存（测试用）
+- **write-only key 语义**：`sanitize()` 只返回 per-provider `configured` 布尔，API key 永不出 server；PUT 时 `apiKey` 缺省 = 不变、空串 = 清除、非空 = 设置；非 secret 字段全量替换（incoming 即真相），`customProviders` 字段缺省 = 保持
+- **启动与 PUT 共用副作用链** `applyModelSettingsToEnv`：文本 provider key 按 catalog `auth.envKeys` 注入 env（记录覆写前原值，key 移除后恢复或删除；共享 env 名仍有 key 时保留）→ 图片写 `SPHERSE_IMAGE_MODEL` / `SPHERSE_IMAGE_API_KEY` → `syncCustomProviders`（custom provider 注册进 catalog）
+- PUT 链：持久化 → env/custom providers → `if (defaultModel)` 才 `registry.setDefaultModel()`（清空后旧默认保留至重启的守卫）→ `setSampling` / `setThinkingLevel` 无条件 fan-out → 返回 sanitized 视图
+- 多客户端变更事件广播二期再做：运行时 fan-out 即时，已打开的其他客户端表单下次打开取新值
 
 ## 鉴权模型
 
 安全模型的由来见 [ADR-0010](../../dev/decisions/0010-server-auth-model.md)。
 
 - 安全模型 = **loopback 绑定 + always-on access token + Host 校验**
-- **always-on token**：desktop 端 `getServerToken()` 恒有值（迁移链：`serverToken` 顶层 key → legacy `mobileAccess.token` → 生成并持久化），auth hook 恒注册；仅 server 包独立使用（如测试）可不传 auth
+- **always-on token**：desktop 端 `getServerToken()` 恒有值（迁移链：`serverToken` 顶层 key → 顶层 `mobileAccess.token` → 生成并持久化；旧 `settings.mobileAccess.token` 的提升由启动迁移 `migrateLegacySettings()` 先触发），auth hook 恒注册；仅 server 包独立使用（如测试）可不传 auth
   - 公开路径仅 `/health` 与 `/api/connection/info`
   - token 呈现：HTTP `Authorization: Bearer` → query `token` → preview 路径 token（`/preview/__auth/<token>/...`，为 iframe/img 等无法带 header 的场景设计）；WS 只接受 query `token`；比较用 `timingSafeEqual`；`verifyPresentedToken` 是 auth hook 与 CORS hook 的单一校验来源
   - 裸调本地 API（脚本/curl）从 desktop settings 文件读 `serverToken`
@@ -52,7 +61,7 @@
 | sessions | 项目级批量会话目录、agent 级列表、创建、详情、messages GET/POST、status、rename、删除、消息搜索（GET /sessions/search?q=，core 层 LIKE 预取 + JS 精确匹配） |
 | content | stat、文件/目录的读写删建 |
 | data | `/data/read` `/mutate` `/raw-set` `/raw-delete` |
-| settings | 全局：文本与图片 provider 目录；项目级：ai-access / welcome-page / theme |
+| settings | 全局：文本与图片 provider 目录、`GET/PUT /api/settings/models`（模型配置读写，write-only key）；项目级：ai-access / welcome-page / theme |
 | preview | 预览文件服务（见下节） |
 | skills / marketplace | skill 列表/详情/创建/zip 安装；市场 manifest 代理与远程安装 |
 | project-marketplace | 全局：项目市场 manifest 代理与安装（下载 zip → 解压落盘到用户选定目录，返回 projectRoot，注册复用 open-project IPC） |
