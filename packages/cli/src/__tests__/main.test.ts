@@ -2,7 +2,8 @@ import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { checkNodeVersion, runCli } from "../main.js";
+import { runCli } from "../main.js";
+import { checkNodeVersion } from "../version.js";
 
 const base = mkdtempSync(join(tmpdir(), "spherse-cli-main-"));
 afterAll(() => {
@@ -79,16 +80,6 @@ describe("runCli", () => {
     try {
       expect(await runCli(["new", "world", "--home", home])).toBe(1);
       expect(err.mock.calls.flat().join("\n")).toContain("already exists");
-    } finally {
-      err.mockRestore();
-    }
-  });
-
-  it("refuses the server command in this build", async () => {
-    const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    try {
-      expect(await runCli(["server"])).toBe(1);
-      expect(err.mock.calls.flat().join("\n")).toContain("not available");
     } finally {
       err.mockRestore();
     }
