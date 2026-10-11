@@ -264,19 +264,6 @@ function SettingsTabs() {
               ))}
             </NativeSelect>
           </Field>
-          <FieldGroup className="mt-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium leading-none">{t("settings.contentTabs")}</span>
-                <span className="text-xs text-muted-foreground">{t("settings.contentTabsDesc")}</span>
-              </div>
-              <Switch
-                checked={tabsEnabled}
-                aria-label={t("settings.contentTabs")}
-                onCheckedChange={(checked) => { void setTabsEnabled(bridge, checked); }}
-              />
-            </div>
-          </FieldGroup>
           {desktopPrefsEnabled && (
             <>
               <Field className="mt-5">
@@ -299,20 +286,35 @@ function SettingsTabs() {
                   />
                 </div>
               </FieldGroup>
-              <FieldGroup className="mt-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium leading-none">{t("settings.closeToTray")}</span>
-                    <span className="text-xs text-muted-foreground">{t("settings.closeToTrayDesc")}</span>
-                  </div>
-                  <Switch
-                    checked={closeToTray}
-                    aria-label={t("settings.closeToTray")}
-                    onCheckedChange={(checked) => { void setCloseToTray(bridge, checked); }}
-                  />
-                </div>
-              </FieldGroup>
             </>
+          )}
+          <FieldGroup className="mt-5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium leading-none">{t("settings.contentTabs")}</span>
+                <span className="text-xs text-muted-foreground">{t("settings.contentTabsDesc")}</span>
+              </div>
+              <Switch
+                checked={tabsEnabled}
+                aria-label={t("settings.contentTabs")}
+                onCheckedChange={(checked) => { void setTabsEnabled(bridge, checked); }}
+              />
+            </div>
+          </FieldGroup>
+          {desktopPrefsEnabled && (
+            <FieldGroup className="mt-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm font-medium leading-none">{t("settings.closeToTray")}</span>
+                  <span className="text-xs text-muted-foreground">{t("settings.closeToTrayDesc")}</span>
+                </div>
+                <Switch
+                  checked={closeToTray}
+                  aria-label={t("settings.closeToTray")}
+                  onCheckedChange={(checked) => { void setCloseToTray(bridge, checked); }}
+                />
+              </div>
+            </FieldGroup>
           )}
         </TabsContent>
 
