@@ -108,9 +108,9 @@ prompts/worldview-assistant/
 
 - `PROMPTS_BASE_URL = process.env.SPHERSE_PROMPT_MARKETPLACE_BASE_URL ?? \`${OSS_BUCKET_BASE_URL}/prompts\``（env 覆盖用于测试/E2E stub）
 - `createPromptMarketplaceService({ fetchFn?, baseUrl?, cacheTtlMs? })` → `getPrompts(language)`
-- **回退链**（server 端一处实现，链内去重）：
+- **回退链**（server 端一处实现，链内去重；裸 `zh` 视为 zh 系）：
   - `zh-cn` → `[zh-cn, en-us]`
-  - 其它 `zh-*`（如 `zh-tw`）→ `[L, zh-cn, en-us]`
+  - 其它 zh 系（`zh-tw`、裸 `zh` 等）→ `[L, zh-cn, en-us]`
   - 其余（如 `en-us`、未来的 `ja-jp`）→ `[L, en-us, zh-cn]`（en-us 为缺省默认，zh-cn 兜底）
 - 逐个 fetch `${base}/${lang}.json`：404 → 试下一个；其它非 2xx / 网络错误 / 超时 / 超限 → 直接 502（不掩盖真实错误）；整链 404 → 404
 - 30s 内存缓存（按请求语言 key，回退解析结果随请求语言缓存）+ in-flight 去重；**404 不进缓存**（缺失语言期间每次打开 dialog 会重新打一次上游 404，量级无害，接受；不做负缓存）
@@ -213,3 +213,18 @@ PromptTemplatesDialog 组件测试不补（对齐 2026-08-29 react-component-tes
 - M-2 meta 链耗尽 → 明确 build 报错退出
 - M-3 publish.yml 「Install ossutil」step 条件 → 已补
 - m-1 孤儿 meta 表述修正；m-2 zh-TW 类比措辞修正；m-3 categories 上提 `lib/categories.ts`；m-4 测试用例措辞修正 + 链内去重注明；m-5 404 不缓存注明接受；m-6 无 content-length 时流式累计校验已补
+
+## Code review 记录（2026-10-11 实现后 sub agent review）
+
+无 critical / important。已修复：
+
+- M-1 OSS bucket base URL 双处硬编码 → `marketplace.ts` 导出 `OSS_BUCKET_BASE_URL`，`PROMPTS_BASE_URL` 恢复模板表达式
+- m-1 client null 时 dialog 停留 loading → 改为渲染 loadFailed 态（client 恢复后自愈）
+- m-2 裸 `zh` 回退链语义 → server 与 spherse-assets 两侧均归入 zh 系（`[zh, zh-cn, en-us]`），回退链规格同步更新
+
+记录未修：
+
+- m-3 spherse-assets 工作区混有无关 untracked 文件 → 该仓库提交时逐文件显式 add
+- m-4 contracts README 经检查无需改动（不含逐 schema 文件清单，同名文件对应规则已满足）
+
+备注：E2E `prompts-marketplace.spec.ts` 已实跑通过；OSS 发布需先在 spherse-assets 提交并手动触发 publish workflow（resource = prompts），发布前线上 dialog 将命中整链 404 → 空态。

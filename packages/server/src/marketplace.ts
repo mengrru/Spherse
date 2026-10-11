@@ -15,7 +15,7 @@ import type {
 import { getAppVersion } from "./server-info.js";
 import { HttpError } from "./errors.js";
 
-const OSS_BUCKET_BASE_URL =
+export const OSS_BUCKET_BASE_URL =
   "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse";
 
 export const MARKETPLACE_MANIFEST_URL =

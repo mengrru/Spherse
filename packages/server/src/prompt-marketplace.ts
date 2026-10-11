@@ -1,11 +1,11 @@
 import { schemas, parseContract } from "@spherse/contracts";
 import type { MarketplacePromptManifestResponse } from "@spherse/contracts";
-import { marketplaceUserAgent } from "./marketplace.js";
+import { OSS_BUCKET_BASE_URL, marketplaceUserAgent } from "./marketplace.js";
 import { HttpError } from "./errors.js";
 
 export const PROMPTS_BASE_URL =
   process.env.SPHERSE_PROMPT_MARKETPLACE_BASE_URL ??
-  "https://mengru-open-source.oss-cn-beijing.aliyuncs.com/spherse/prompts";
+  `${OSS_BUCKET_BASE_URL}/prompts`;
 
 const PROMPTS_CACHE_TTL_MS = 30_000;
 const PROMPTS_FETCH_TIMEOUT_MS = 10_000;
@@ -18,8 +18,9 @@ export interface PromptMarketplaceService {
 }
 
 export function promptFallbackChain(language: string): string[] {
+  const isZhFamily = language === "zh" || language.startsWith("zh-");
   const chain = [language];
-  if (language.startsWith("zh-") && language !== "zh-cn") chain.push("zh-cn");
+  if (isZhFamily && language !== "zh-cn") chain.push("zh-cn");
   if (!chain.includes("en-us")) chain.push("en-us");
   if (!chain.includes("zh-cn")) chain.push("zh-cn");
   return chain;

@@ -78,6 +78,13 @@ export function PromptTemplatesDialog({
     promptsQuery.error.status === 404;
 
   const renderBody = () => {
+    if (!client) {
+      return (
+        <div className="flex flex-col items-center gap-3 py-10">
+          <p className="text-muted-foreground">{t("agent-dialog.templates.loadFailed")}</p>
+        </div>
+      );
+    }
     if (promptsQuery.isPending) {
       return <p className="py-10 text-center text-muted-foreground">{t("agent-dialog.templates.loading")}</p>;
     }

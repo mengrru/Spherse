@@ -49,6 +49,7 @@ describe("prompt marketplace: fallback chain", () => {
   it("orders zh-cn and en-us fallbacks per language family", () => {
     expect(promptFallbackChain("zh-cn")).toEqual(["zh-cn", "en-us"]);
     expect(promptFallbackChain("zh-tw")).toEqual(["zh-tw", "zh-cn", "en-us"]);
+    expect(promptFallbackChain("zh")).toEqual(["zh", "zh-cn", "en-us"]);
     expect(promptFallbackChain("en-us")).toEqual(["en-us", "zh-cn"]);
     expect(promptFallbackChain("ja-jp")).toEqual(["ja-jp", "en-us", "zh-cn"]);
   });
