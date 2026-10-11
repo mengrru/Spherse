@@ -17,7 +17,7 @@ export function Header({ agent, quickLinks, activeQuickLink, onQuickLink, onClos
   const { t } = useI18n();
   const links = quickLinks?.filter((p, i, arr) => arr.indexOf(p) === i) ?? [];
   return (
-    <div className="flex items-center gap-2 border-b border-border bg-background px-4 py-3" data-chat-header>
+    <div className="flex items-center gap-2 border-b border-border bg-background px-4 py-2" data-chat-header>
       <span className="font-semibold text-[15px]">{agent.name}</span>
       {links.length > 0 && (
         <div

@@ -47,7 +47,7 @@ export function Header({
   const [copied, setCopied] = useState(false);
   const isEditing = editing?.isEditing ?? false;
   return (
-    <div className="flex items-center gap-3 border-b border-border bg-background px-4 py-3">
+    <div className="flex items-center gap-3 border-b border-border bg-background px-4 py-2">
       {onBack && (
         <div className="flex shrink-0 items-center gap-1">
           <Button variant="outline" size="sm" onClick={onBack} title={t("common.back")}>
