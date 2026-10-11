@@ -94,7 +94,7 @@ describe("migrateLegacySettings", () => {
     });
     expect(getMobileAccess()).toEqual({
       enabled: true,
-      token: "legacy-tok",
+      token: undefined,
       mode: "manual",
       publicDomain: "https://x.com",
     });

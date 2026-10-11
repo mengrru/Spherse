@@ -12,6 +12,12 @@ describe("model settings routes", () => {
   let tmpDir: string;
   let app: FastifyInstance;
   let store: ModelSettingsStore;
+  const originalAnthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  afterAll(() => {
+    if (originalAnthropicKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = originalAnthropicKey;
+  });
 
   beforeAll(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "spherse-model-settings-routes-"));

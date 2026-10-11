@@ -61,9 +61,11 @@ export function SettingsModal({ onClose }: SettingsModalProps) {
 function ModelGroupTab({
   group,
   kind,
+  loadError,
 }: {
   group: GroupFormState;
   kind: "text" | "image";
+  loadError: boolean;
 }) {
   const { t } = useI18n();
   const bridge = useHostBridge();
@@ -83,6 +85,11 @@ function ModelGroupTab({
   }, [providerEntries, providerQuery, showProviderSearch]);
   return (
     <>
+      {loadError && (
+        <p className="shrink-0 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {t("settings.models.loadFailed")}
+        </p>
+      )}
       <FieldGroup className="shrink-0">
         <DefaultModelField
           providers={group.providers}
@@ -242,11 +249,11 @@ function SettingsTabs() {
         </TabsList>
 
         <TabsContent value="models" className="mt-3 flex min-h-0 flex-col">
-          <ModelGroupTab group={form.text} kind="text" />
+          <ModelGroupTab group={form.text} kind="text" loadError={form.loadError} />
         </TabsContent>
 
         <TabsContent value="image" className="mt-3 flex min-h-0 flex-col">
-          <ModelGroupTab group={form.image} kind="image" />
+          <ModelGroupTab group={form.image} kind="image" loadError={form.loadError} />
         </TabsContent>
 
         <TabsContent value="general" className="mt-3 min-h-0 overflow-y-auto">

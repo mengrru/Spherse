@@ -77,6 +77,8 @@ export const zhCN = {
   "settings.provider.apiKeyPlaceholder": "API密钥",
   // 已配置 provider 的 Key 输入框占位提示（服务端不回传 Key，仅提示已存储）
   "settings.provider.apiKeyConfigured": "已配置",
+  // 模型配置加载失败（server 不可达或版本过旧）的错误提示
+  "settings.models.loadFailed": "无法加载模型配置：请检查与桌面的连接，或升级桌面端到最新版本。",
   // provider 状态标签：尚未连接
   "settings.provider.notConnected": "未连接",
   // 模型提供商列表的搜索框占位提示（当提供商数量超过 6 个时显示，输入名称或 id 筛选）

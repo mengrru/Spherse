@@ -3,8 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
-import { createProject } from "@spherse/core";
+import { createProject, ModelCatalog } from "@spherse/core";
 import { registerSettingsRoutes } from "../routes/settings.js";
+import { ModelSettingsStore } from "../model-settings.js";
 import type { ProjectRegistry } from "../registry.js";
 import { createSilentLoggerForTests } from "./test-logger.js";
 
@@ -28,7 +29,10 @@ describe("side-panel settings routes", () => {
       if (!ctx) throw new Error("Unknown project");
       req.projectCtx = ctx;
     });
-    registerSettingsRoutes(app, registry);
+    registerSettingsRoutes(app, registry, {
+      modelSettingsStore: new ModelSettingsStore(),
+      modelCatalog: new ModelCatalog(),
+    });
     await app.ready();
   });
 

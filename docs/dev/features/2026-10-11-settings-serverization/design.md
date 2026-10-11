@@ -86,7 +86,7 @@ PUT /api/settings/models   ← modelSettingsRequest，→ modelSettingsResponse
 ### 4. desktop host prefs
 
 - electron-store 同文件（settings.json）新 key `hostPrefs: { locale, theme, tabsEnabled, debugToolsEnabled, closeToTray }`；`mobileAccess` 迁到顶层独立 key
-- IPC 通道：`get-settings`/`save-settings` 替换为 `get-host-prefs`/`save-host-prefs`（全量写 + 缺省 merge）；`get-supported-providers`/`get-image-providers` IPC 删除
+- IPC 通道：`get-settings`/`save-settings` 替换为两对——`get/save-general-prefs`（locale）与 `get/save-desktop-prefs`（桌面四项，save 副作用 `applyThemeSource` + `syncTray()`），与 HostBridge 双 API 面对齐；`get-supported-providers`/`get-image-providers` IPC 删除
 - HostBridge 接口变化：
 
 ```typescript

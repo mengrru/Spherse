@@ -60,7 +60,6 @@ export function migrateLegacySettings(): void {
     if (!settingsStore.get("mobileAccess") && legacy.mobileAccess) {
       settingsStore.set("mobileAccess", {
         enabled: legacy.mobileAccess.enabled ?? false,
-        token: legacy.mobileAccess.token,
         mode: legacy.mobileAccess.mode ?? "quick",
         publicDomain: legacy.mobileAccess.publicDomain,
       });

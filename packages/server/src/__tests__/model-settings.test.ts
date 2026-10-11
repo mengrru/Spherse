@@ -112,6 +112,20 @@ describe("ModelSettingsStore", () => {
     store.applyUpdate(writeRequest({ text: { defaultModel: "m" } }));
     expect(store.get().text.defaultModel).toBe("m");
   });
+
+  it("keeps previous settings in memory when persistence fails", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "spherse-model-settings-"));
+    const store = new ModelSettingsStore({ filePath: path.join(dir, "model-settings.json") });
+    store.applyUpdate(writeRequest({ text: { defaultModel: "first" } }));
+    fs.chmodSync(dir, 0o500);
+    try {
+      expect(() => store.applyUpdate(writeRequest({ text: { defaultModel: "second" } }))).toThrow();
+      expect(store.get().text.defaultModel).toBe("first");
+    } finally {
+      fs.chmodSync(dir, 0o700);
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("applyModelSettingsToEnv", () => {

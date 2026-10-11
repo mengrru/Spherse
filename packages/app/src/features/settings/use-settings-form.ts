@@ -69,6 +69,7 @@ export function useSettingsForm(api: ModelSettingsApi | null) {
   const [textData, setTextData] = useState<GroupData>(EMPTY_GROUP);
   const [imageData, setImageData] = useState<GroupData>(EMPTY_GROUP);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [customProviders, setCustomProviders] = useState<CustomProviderDef[]>([]);
 
   useEffect(() => {
@@ -88,11 +89,12 @@ export function useSettingsForm(api: ModelSettingsApi | null) {
         setTextData({ ...EMPTY_GROUP, configured: configured.text, defaultModel: settings.models.text.defaultModel ?? "", sampling: settings.models.text.sampling, thinkingLevel: settings.models.text.thinkingLevel });
         setImageData({ ...EMPTY_GROUP, configured: configured.image, defaultModel: settings.models.image.defaultModel ?? "" });
         setCustomProviders(settings.customProviders ?? []);
+        setLoadError(false);
       } catch {
-        if (!cancelled) {
-          setTextProviders({});
-          setImageProviders({});
-        }
+        if (cancelled) return;
+        setTextProviders({});
+        setImageProviders({});
+        setLoadError(true);
       }
     })();
     return () => {
@@ -265,6 +267,7 @@ export function useSettingsForm(api: ModelSettingsApi | null) {
   const textGroup = makeGroup("text", textProviders, textData, setTextData);
   return {
     saving,
+    loadError,
     text: {
       ...textGroup,
       customProviders,

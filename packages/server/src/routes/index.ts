@@ -61,8 +61,7 @@ export function registerAllRoutes(
   registerSettingsRoutes(fastify, registry, {
     modelSettingsStore: options.modelSettingsStore,
     modelCatalog: options.modelCatalog,
-  });
-  registerPreviewRoutes(fastify, registry);
+  });  registerPreviewRoutes(fastify, registry);
   registerSkillRoutes(fastify, registry);
   registerMarketplaceRoutes(fastify, registry);
   registerProjectMarketplaceRoutes(fastify);

@@ -119,17 +119,16 @@ export class ModelSettingsStore {
       },
       customProviders: request.customProviders ?? prev.customProviders,
     };
+    if (this.filePath) this.writeToDisk(next);
     this.settings = next;
-    this.persist();
     return next;
   }
 
-  private persist(): void {
-    if (!this.filePath) return;
-    fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+  private writeToDisk(settings: ModelSettings): void {
+    fs.mkdirSync(path.dirname(this.filePath!), { recursive: true });
     const tmp = `${this.filePath}.${process.pid}.${Date.now()}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(this.settings, null, 2), "utf-8");
-    fs.renameSync(tmp, this.filePath);
+    fs.writeFileSync(tmp, JSON.stringify(settings, null, 2), "utf-8");
+    fs.renameSync(tmp, this.filePath!);
   }
 }
 

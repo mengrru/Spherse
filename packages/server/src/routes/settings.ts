@@ -16,7 +16,7 @@ interface SettingsRouteOptions {
 export function registerSettingsRoutes(
   fastify: FastifyInstance,
   registry: ProjectRegistry,
-  options?: SettingsRouteOptions,
+  options: SettingsRouteOptions,
 ): void {
   fastify.get("/api/settings/providers", {
     schema: { response: { 200: schemas.providerCatalog } },
@@ -32,31 +32,29 @@ export function registerSettingsRoutes(
     },
   });
 
-  if (options) {
-    fastify.get("/api/settings/models", {
-      schema: { response: { 200: schemas.modelSettingsResponse } },
-      async handler() {
-        return options.modelSettingsStore.sanitize();
-      },
-    });
+  fastify.get("/api/settings/models", {
+    schema: { response: { 200: schemas.modelSettingsResponse } },
+    async handler() {
+      return options.modelSettingsStore.sanitize();
+    },
+  });
 
-    fastify.put<{ Body: ModelSettingsRequest }>("/api/settings/models", {
-      schema: {
-        body: schemas.modelSettingsRequest,
-        response: { 200: schemas.modelSettingsResponse },
-      },
-      async handler(req) {
-        const next = options.modelSettingsStore.applyUpdate(req.body);
-        applyModelSettingsToEnv(next, options.modelCatalog);
-        if (next.text.defaultModel) {
-          registry.setDefaultModel(next.text.defaultModel);
-        }
-        registry.setSampling(next.text.sampling);
-        registry.setThinkingLevel(next.text.thinkingLevel);
-        return options.modelSettingsStore.sanitize();
-      },
-    });
-  }
+  fastify.put<{ Body: ModelSettingsRequest }>("/api/settings/models", {
+    schema: {
+      body: schemas.modelSettingsRequest,
+      response: { 200: schemas.modelSettingsResponse },
+    },
+    async handler(req) {
+      const next = options.modelSettingsStore.applyUpdate(req.body);
+      applyModelSettingsToEnv(next, options.modelCatalog);
+      if (next.text.defaultModel) {
+        registry.setDefaultModel(next.text.defaultModel);
+      }
+      registry.setSampling(next.text.sampling);
+      registry.setThinkingLevel(next.text.thinkingLevel);
+      return options.modelSettingsStore.sanitize();
+    },
+  });
 
   fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/settings/ai-access",

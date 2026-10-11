@@ -40,6 +40,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "settings.provider.apiKeyProvided": "已提供 API Key",
   "settings.provider.apiKeyPlaceholder": "API金鑰",
   "settings.provider.apiKeyConfigured": "已設定",
+  "settings.models.loadFailed": "無法載入模型設定：請檢查與桌面的連線，或升級桌面端至最新版本。",
   "settings.provider.notConnected": "未連線",
   "settings.provider.searchPlaceholder": "搜尋供應商…",
   "settings.provider.noResults": "未找到符合的供應商",
