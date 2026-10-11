@@ -318,7 +318,7 @@ spherse/
 │   │       │   └── WelcomePagePage.tsx   # Project index 路由 page，渲染 WelcomePage 空状态
 │   │       ├── components/
 │   │       │   ├── ui/                   # shadcn/ui 本地基础组件（Base UI 底层原语）与 TreeRow 等通用 UI 样式组件
-│   │       │   ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel/onFloatFile/floatedFilePaths/uploadsEnabled（拖拽上传，目录行/文件行/空白区三处落点，dnd.ts 同步快照与文件夹过滤），被 user-file-panel 与 skill-panel 共用
+│   │       │   ├── file-tree/            # 可复用文件树基础组件（FileTree + 树模型 + controller hook + 通用 dialog），支持可选 rootPath/emptyLabel/onFloatFile/floatedFilePaths/uploadsEnabled（拖拽上传：目录行/文件行/空白区三处落点，dnd.ts 同步快照与文件夹过滤；右键菜单「上传文件」点击式入口：目录行→该目录、文件行→父目录，共享隐藏 input），被 user-file-panel 与 skill-panel 共用
 │   │       │   ├── floating-frame/       # 通用浮动窗口 chrome（拖拽/调整大小、titlebar、close），由 floating-chat 与 floating-content-browser 复用；hookPrefix 参数生成各自 data-*-float-* 主题钩子
 │   │       │   └── markdown-content/     # Markdown 渲染域：MarkdownContent（统一渲染组件，plain 模式用于用户消息）、CodeBlock、markdown-code-text（代码块文本抽取）、remark-plain-structure（plain 模式 remark 插件：list/table/thematicBreak 还原为带字面标记的文本行，保序号/行结构）
 │   │       └── test/                    # 组件测试共享工具：render.tsx（renderWithProviders + createTestQueryClient）、host-bridge.ts（createMockHostBridge）、mock-web-socket.ts（createMockWebSocket：readyState/closeSpy/instances 收集）、bus.ts（MockWebSocket bus harness：connectMockBus/emitBusEvent/bumpBusResumedAt）、jest-dom.d.ts（vitest matcher 类型入口）

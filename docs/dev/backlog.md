@@ -8,7 +8,7 @@
 
 - [ ] **真机验证移动端文件写开放后的触屏交互**：web 宿主 `content.editable` 已开放（2026-10-03），文件树右键菜单（Base UI 500ms 长按，同 AgentRow 长按风险）、InlineNameInput 弹软键盘的命名输入、Textarea 编辑大文件、DeleteConfirmDialog 小屏表现均未真机回归；HTML 文件在移动端按 `hideHeader` 保持只读（产品决策，例外已注明 frontend.md）。参见 `docs/dev/investigation/2026-08-28-web-disabled-features/investigation.md`
 
-- [ ] **真机验证 file panel 拖拽上传的浏览器 DnD 行为**：自动化覆盖 server route（真 PM 契约测试）与 controller/dnd 纯逻辑单测，但缺真机回归：① Electron/Chromium 实际拖拽中 `webkitGetAsEntry` 对跨应用拖拽（如从 Finder 拖代理图标）返回 null 时的 fallback 表现；② 拖入纯文件夹时的提示 toast；③ 大文件（数十 MB）上传期间 UI 手感（无进度条）；④ web 端触屏设备无 DnD 手势、无拖拽响应（仅桌面浏览器访问 web 壳时可达）。参见 `docs/dev/features/2026-09-27-file-dnd-upload/design.md`
+- [ ] **真机验证 file panel 拖拽上传的浏览器 DnD 行为**：自动化覆盖 server route（真 PM 契约测试）与 controller/dnd 纯逻辑单测，但缺真机回归：① Electron/Chromium 实际拖拽中 `webkitGetAsEntry` 对跨应用拖拽（如从 Finder 拖代理图标）返回 null 时的 fallback 表现；② 拖入纯文件夹时的提示 toast；③ 大文件（数十 MB）上传期间 UI 手感（无进度条）；④ web 端触屏设备无 DnD 手势、无拖拽响应（仅桌面浏览器访问 web 壳时可达；2026-10-11 已补右键菜单点击式上传入口部分缓解，但其可达性依赖 ContextMenu 长按，见上方触屏交互条目）。参见 `docs/dev/features/2026-09-27-file-dnd-upload/design.md`
 
 - [ ] **真机验证关闭至托盘三平台表现**：自动化只覆盖 macOS 下的隐藏 / 单实例唤回 / 关闭开关后退出（`close-to-tray.spec.ts`），缺真机回归：① Windows 托盘左键唤回、右键菜单、NSIS 覆盖安装时对已收起实例的优雅退出；② Linux（KDE / 带 AppIndicator 扩展的 GNOME）托盘显示与菜单；③ macOS Dock 隐藏后 Finder / Launchpad 再次打开能否派发 `activate`；④ 打包版 `process.resourcesPath/tray` 图标加载。参见 `docs/dev/features/2026-09-25-close-to-tray/design.md`
 - [ ] **手动验证 server 浏览器安全边界加固的真实隧道链路**：`2026-08-28-server-browser-security` 已合入 always-on token + 认证制 CORS + Host 校验，自动化已覆盖 server/desktop 语义（`browser-security.test.ts` / `server.test.ts`），但缺真机回归：① cloudflared 转发到 `http://localhost:{port}` 时的实际 Host 头形态（决定 quick 模式是否依赖动态 host 注册）；② quick tunnel 全流程（含 PWA WS 连接）；③ manual domain 反代访问与 regenerate 后域名仍可访问；④ prod 打包 renderer（file:// origin）API/WS。参见 `docs/dev/features/2026-08-28-server-browser-security/plan.md` 验证节。
@@ -68,6 +68,8 @@
 ## 功能增强
 
 - [ ] **file panel 拖拽上传 v2**：① 文件夹拖入（递归展开上传，需处理层级名冲突与大量文件进度反馈）；② 大文件上传进度条（需换 XHR 或流式 fetch 上传进度 API）；③ dotfile 上传后树内不可见的提示或白名单。参见 `docs/dev/features/2026-09-27-file-dnd-upload/design.md`「已知限制」
+
+- [ ] **空文件树无点击上传入口**：上传入口（拖拽空白区落根目录、右键菜单依赖行节点）在项目尚无任何文件时仅剩空白区拖拽可用；「上传第一批文件」恰是空项目高频动作。方向：树根容器挂 context menu 或空态提示旁加上传按钮（目标为根目录）。2026-10-11 右键上传入口 review 发现。
 
 - [ ] **记忆自动召回注入（条件触发：packages/eval 行为评估显示召回主动性不足时）**：扫最新用户消息 → FTS 匹配 → 以 system-reminder 式注入对话尾部（cache 安全），替代/补充静态 memory-guide 对 agent 主动 recall 的依赖；该机制与世界书（Lorebook）的关键词被动触发同构，立项时一并设计。参见 `docs/dev/features/2026-09-26-agent-memory/design.md`
 - [ ] **packages/eval（LLM 行为评估基建）**：脚本化多会话场景（会话 1 喂事实 → 断言 `memory_save` 调用与内容；新会话提问 → 断言答案/`memory_recall` 命中），断言工具调用为主、答案判分为辅；作为独立 package 服务记忆及后续 agent 行为回归。参见 `docs/dev/features/2026-09-26-agent-memory/design.md`（用户已确认后续交付）
