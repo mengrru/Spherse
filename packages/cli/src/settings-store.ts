@@ -33,6 +33,6 @@ export function ensureServerToken(settingsPath: string): string {
 function writeSettingsFile(settingsPath: string, data: SettingsFile): void {
   mkdirSync(dirname(settingsPath), { recursive: true });
   const tmp = `${settingsPath}.${process.pid}.${Date.now()}.tmp`;
-  writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
+  writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`, { encoding: "utf-8", mode: 0o600 });
   renameSync(tmp, settingsPath);
 }

@@ -23,6 +23,17 @@ describe("resolveHome", () => {
     }
   });
 
+  it("treats an empty SPHERSE_HOME as unset", () => {
+    const prev = process.env.SPHERSE_HOME;
+    process.env.SPHERSE_HOME = "";
+    try {
+      expect(resolveHome()).toBe(join(homedir(), ".spherse"));
+    } finally {
+      if (prev === undefined) delete process.env.SPHERSE_HOME;
+      else process.env.SPHERSE_HOME = prev;
+    }
+  });
+
   it("falls back to ~/.spherse when flag and env are absent", () => {
     const prev = process.env.SPHERSE_HOME;
     delete process.env.SPHERSE_HOME;

@@ -40,6 +40,17 @@ await build({
   logLevel: "info",
 });
 
+await build({
+  entryPoints: [join(cliDir, "src/version.ts")],
+  bundle: true,
+  format: "esm",
+  platform: "node",
+  target: "node22",
+  packages: "external",
+  outfile: join(cliDir, "dist/version-guard.mjs"),
+  logLevel: "info",
+});
+
 const bundleSource = readFileSync(join(cliDir, "dist/cli.mjs"), "utf-8");
 const leaked = bundleSource.match(/(?:from|import|require)\s*\(?\s*"@spherse\//);
 if (leaked) {
@@ -76,7 +87,7 @@ function assertDependenciesInSync() {
   if (missing.length || extra.length || drifted.length) {
     console.error("packages/cli dependencies out of sync with @spherse/core + @spherse/server:");
     for (const name of missing) console.error(`  missing: ${name}@${expected.get(name)}`);
-    for (const name of extra) console.error(`  extra: ${actual.get(name) ? name : name}`);
+    for (const name of extra) console.error(`  extra: ${name}@${actual.get(name)}`);
     for (const name of drifted) console.error(`  drifted: ${name} cli=${actual.get(name)} expected=${expected.get(name)}`);
     process.exit(1);
   }

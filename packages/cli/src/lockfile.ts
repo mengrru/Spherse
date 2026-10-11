@@ -1,10 +1,38 @@
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 export interface LockfileData {
   pid: number;
   port: number;
   startedAt: string;
+}
+
+export type LockAcquisition = { ok: true } | { ok: false; heldBy: LockfileData | null };
+
+export function acquireLockfile(lockfilePath: string): LockAcquisition {
+  const existing = readLockfile(lockfilePath);
+  if (existing && isProcessAlive(existing.pid)) return { ok: false, heldBy: existing };
+  if (existing || existsSync(lockfilePath)) rmSync(lockfilePath, { force: true });
+
+  const placeholder: LockfileData = { pid: process.pid, port: 0, startedAt: new Date().toISOString() };
+  if (tryCreateExclusive(lockfilePath, placeholder)) return { ok: true };
+
+  const raced = readLockfile(lockfilePath);
+  if (raced && isProcessAlive(raced.pid)) return { ok: false, heldBy: raced };
+  rmSync(lockfilePath, { force: true });
+  if (tryCreateExclusive(lockfilePath, placeholder)) return { ok: true };
+  return { ok: false, heldBy: raced };
+}
+
+function tryCreateExclusive(lockfilePath: string, data: LockfileData): boolean {
+  try {
+    mkdirSync(dirname(lockfilePath), { recursive: true });
+    writeFileSync(lockfilePath, JSON.stringify(data, null, 2), { encoding: "utf-8", mode: 0o600, flag: "wx" });
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "EEXIST") return false;
+    throw err;
+  }
 }
 
 export function readLockfile(lockfilePath: string): LockfileData | null {

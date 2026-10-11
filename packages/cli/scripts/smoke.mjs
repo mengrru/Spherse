@@ -3,8 +3,9 @@ import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import { fileURLToPath } from "node:url";
 
-const cliDir = new URL(".", import.meta.url).pathname;
+const cliDir = fileURLToPath(new URL(".", import.meta.url));
 const bin = join(cliDir, "../bin/spherse.js");
 
 function fail(message) {
