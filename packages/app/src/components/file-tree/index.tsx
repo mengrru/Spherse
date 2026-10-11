@@ -54,7 +54,7 @@ export function FileTree({
   const dropFiles = uploadsEnabled && !readOnly ? ctrl.uploadFiles : undefined;
 
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
-  const uploadDirRef = useRef(basePath);
+  const uploadDirRef = useRef("");
   const handlePickUploadFiles = useCallback((dirPath: string) => {
     uploadDirRef.current = dirPath;
     uploadInputRef.current?.click();
