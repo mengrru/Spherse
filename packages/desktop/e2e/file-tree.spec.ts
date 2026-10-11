@@ -131,7 +131,7 @@ test("create a new file via context menu", async () => {
 
     await page.getByRole("menuitem", { name: "新建文件", exact: true }).click();
 
-    const input = sidebar(page).locator("input").last();
+    const input = sidebar(page).getByRole("textbox").last();
     await expect(input).toBeVisible();
     await input.fill("notes.md");
     await input.press("Enter");
@@ -152,7 +152,7 @@ test("create a new folder via context menu", async () => {
 
     await page.getByRole("menuitem", { name: "新建文件夹" }).click();
 
-    const input = sidebar(page).locator("input").last();
+    const input = sidebar(page).getByRole("textbox").last();
     await expect(input).toBeVisible();
     await input.fill("images");
     await input.press("Enter");
@@ -172,7 +172,7 @@ test("cancel creating a file with Escape", async () => {
     await docsRow.click({ button: "right" });
 
     await page.getByRole("menuitem", { name: "新建文件", exact: true }).click();
-    const input = sidebar(page).locator("input").last();
+    const input = sidebar(page).getByRole("textbox").last();
     await expect(input).toBeVisible();
     await input.press("Escape");
 
