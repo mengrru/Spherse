@@ -10,6 +10,7 @@ import * as schedules from "./trigger.js";
 import * as skills from "./skills.js";
 import * as marketplace from "./marketplace.js";
 import * as projectMarketplace from "./project-marketplace.js";
+import * as promptMarketplace from "./prompt-marketplace.js";
 import * as debug from "./debug.js";
 import * as bus from "./bus.js";
 import * as websocket from "./websocket.js";
@@ -28,6 +29,7 @@ export const schemas = {
   ...skills.schemas,
   ...marketplace.schemas,
   ...projectMarketplace.schemas,
+  ...promptMarketplace.schemas,
   ...debug.schemas,
   ...bus.schemas,
   ...websocket.schemas,
@@ -124,6 +126,10 @@ export type {
   ProjectMarketplaceInstallRequest,
   ProjectMarketplaceInstallResponse,
 } from "./project-marketplace.js";
+export type {
+  MarketplacePromptEntry,
+  MarketplacePromptManifestResponse,
+} from "./prompt-marketplace.js";
 export type {
   TurnContextSnapshotContract,
   DebugSessionEventContract,

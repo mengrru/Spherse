@@ -70,6 +70,14 @@
 | load_skill | 按需加载 skill 全文的工具，输出经 `<skill-content>` 包裹 | [data-conventions.md](data-conventions.md) |
 | skill catalog | system prompt 的 `<skill-catalog>` 块，仅列 name + description | [data-conventions.md](data-conventions.md) |
 
+## 市场体系
+
+| 术语 | 定义 | 详见 |
+|---|---|---|
+| 技能市场 | 从 OSS 拉取 skill manifest 并按 `{name, version}` 下载 zip 覆盖安装到 `.spherse/skills/` 的市场，项目级路由 | [data-conventions.md](data-conventions.md) |
+| 项目市场 | 从 OSS 拉取项目 manifest 并下载 zip 解压到用户选定目录的全局市场（零项目可用），注册复用 open-project IPC | [data-conventions.md](data-conventions.md) |
+| 提示词模板市场 | 从 OSS 按语言拉取提示词大 JSON（`spherse/prompts/{lang}.json`）供 Agent dialog 浏览/复制的全局市场，无安装步骤，语言回退 zh 系 → zh-cn 优先 / 缺省 en-us / 兜底 zh-cn | [data-conventions.md](data-conventions.md) |
+
 ## 触发器与 MCP
 
 | 术语 | 定义 | 详见 |

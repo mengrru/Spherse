@@ -1,6 +1,6 @@
 # @spherse/presets
 
-预置模板与静态内容包：builtin skill 源码、预置 agent、prompt 模板与新项目初始化物料。全局定位与 package 边界见 `docs/official/architecture/index.md`；数据文件的格式与存储约定见 `docs/official/data-conventions.md`。
+预置模板与静态内容包：builtin skill 源码、预置 agent 与新项目初始化物料。全局定位与 package 边界见 `docs/official/architecture/index.md`；数据文件的格式与存储约定见 `docs/official/data-conventions.md`。（提示词模板已迁移至 spherse-assets 仓库的 `prompts/`，经 OSS 提示词市场下发，不再属于本包。）
 
 ## 构建期同步（scripts/sync-templates.mjs）
 
@@ -13,16 +13,15 @@
 | `AGENTS_INDEX_TEMPLATE` | `templates/agents-index-template.md` | core 写新项目 AGENTS.md |
 | `PRESET_SKILLS` | `presets.json` 的 `presetSkills` | 无运行时代码消费，仅为声明列表（驱动 builtin 合并的是 `PRESET_SKILL_SOURCES`） |
 | `PRESET_AGENTS` | `presets.json` 的 `presetAgents` + `templates/preset-agents/<dir>.md` 完整内容（含 frontmatter `name`） | `initPresets()` |
-| `PRESET_PROMPT_TEMPLATES` | `presets.json` 的 `presetPromptTemplates` + `templates/prompt-templates/<id>.md` 正文 | Agent 创建对话框徽章 |
 | `PRESET_SKILL_SOURCES` | 递归读取 `skills/` 下声明的 skill 目录 | `SkillStore` 内存合并为 builtin skill |
 
-声明缺失（skill dir 在 `skills/` 下不存在、agent `.md` 缺失或缺 frontmatter `name`、prompt template `.md` 缺失）时构建报错退出。
+声明缺失（skill dir 在 `skills/` 下不存在、agent `.md` 缺失或缺 frontmatter `name`）时构建报错退出。
 
 修改 `templates/` 或 `skills/` 下的源文件后，通过 `npm run build --workspace=packages/presets` 或 root `npm run build` 触发同步，确保生成内容可用。
 
 ## presets.json 格式
 
-声明两类预置内容：新项目创建时注入的（`presetSkills`、`presetAgents`）与供 UI 直接消费的（`presetPromptTemplates`，不参与项目创建注入）：
+声明新项目创建时注入的预置内容（`presetSkills`、`presetAgents`）：
 
 ```json
 {
@@ -37,10 +36,6 @@
   ],
   "presetAgents": [
     { "dir": "assistant", "slugBase": "assistant" }
-  ],
-  "presetPromptTemplates": [
-    { "id": "worldview-assistant", "name": "世界观创作助手" },
-    { "id": "roleplay", "name": "角色扮演" }
   ]
 }
 ```
@@ -48,7 +43,6 @@
 - `presetSkills[].dir`：`skills/` 下的目录名，内容打包为 builtin skill 源码，运行时内存合并（source `builtin`），不复制到项目磁盘
 - `presetAgents[].dir`：`templates/preset-agents/<dir>.md` 文件名（不含扩展名），完整 agent profile（frontmatter 声明 `name`、`tools` 等，正文为 system prompt）；展示 `name` 从 frontmatter 提取，不在 presets.json 重复声明
 - `presetAgents[].slugBase`：agent 目录 slug 前缀（与 shortId 拼接成 agent slug）
-- `presetPromptTemplates[].id` / `.name`：`templates/prompt-templates/<id>.md` 文件名与徽章展示名
 
 ## 运行时注入（initPresets）
 

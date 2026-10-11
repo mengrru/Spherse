@@ -94,7 +94,7 @@
 - [ ] **Chat Debug 模式**：在对话界面提供 debug 模式，展示 agent 的 tool call 请求、响应、system prompt 等原始数据，方便开发和调试
 - [ ] **思考强度 composer 会话级覆盖（二期）**：全局默认已落地（settings → RunConfig 传播链）；二期在聊天输入框加快捷档位切换，仅当前会话生效。要点：chat WS `message` payload 加 `thinkingLevel?` 字段（contracts + 契约测试）、`AgentRunner.sendMessage` turn 前一次性覆盖 `agent.state.thinkingLevel`、composer 按 sessionId sticky 状态（同 draft 键控模式）、档位按当前生效模型 `getSupportedThinkingLevels` 动态显示。参见 `docs/dev/features/2026-08-28-model-thinking-intensity/design.md` 二期草图
 - [ ] **渲染 ThinkingContent 到执行过程折叠区**：chat 目前完全丢弃 `ThinkingContent` part（`chat-tool-projection.ts` 的 `extractMessageText`/`extractToolCalls` 只取 text 与 toolCall，live 与 history 两条入口相同）；工具调用折叠区（`ToolProcessSection`）落地后，可把 thinking part 提取为 assistant entry 的一等内容渲染进同一折叠区。需动 `entry-reducer`/`history-entries` 两条入口与 `AssistantEntry` 结构。参见 `docs/dev/features/2026-09-27-chat-tool-process-collapse/design.md`
-- [ ] **Presets i18n**：为 `@spherse/presets` 内置模板和预置内容增加多语言支持，作为 i18n 基础设施完成后的独立任务
+- [ ] **Presets i18n**：为 `@spherse/presets` 剩余内置内容（AGENT_TEMPLATE、预置 agent、builtin skills）增加多语言支持。提示词模板部分已随 2026-10-11 迁移至 spherse-assets 提示词模板市场（按语言发布，见 `docs/dev/features/2026-10-11-prompt-template-marketplace/design.md`），不再属于 presets
 
 ## 基础设施
 

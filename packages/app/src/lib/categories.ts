@@ -1,6 +1,4 @@
-import type { MarketplaceProjectEntry } from "@spherse/contracts";
-
-export function deriveCategories(entries: readonly MarketplaceProjectEntry[]): string[] {
+export function deriveCategories(entries: readonly { category: string }[]): string[] {
   const categories: string[] = [];
   for (const entry of entries) {
     if (!categories.includes(entry.category)) categories.push(entry.category);
@@ -8,10 +6,10 @@ export function deriveCategories(entries: readonly MarketplaceProjectEntry[]): s
   return categories;
 }
 
-export function filterByCategory(
-  entries: readonly MarketplaceProjectEntry[],
+export function filterByCategory<T extends { category: string }>(
+  entries: readonly T[],
   category: string | null,
-): MarketplaceProjectEntry[] {
+): T[] {
   if (category === null) return [...entries];
   return entries.filter((entry) => entry.category === category);
 }

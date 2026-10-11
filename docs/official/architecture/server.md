@@ -65,6 +65,7 @@
 | preview | 预览文件服务（见下节） |
 | skills / marketplace | skill 列表/详情/创建/zip 安装；市场 manifest 代理与远程安装 |
 | project-marketplace | 全局：项目市场 manifest 代理与安装（下载 zip → 解压落盘到用户选定目录，返回 projectRoot，注册复用 open-project IPC） |
+| prompt-marketplace | 全局：提示词模板市场（GET /api/marketplace/prompts?language=，按 app 语言请求对应 OSS 大 JSON；service 侧语言回退链 zh 系 → zh-cn 优先 / 缺省 en-us / 兜底 zh-cn，整链 404 → 404） |
 | file-tree | UI 用文件树（过滤 dotfile / node_modules / .git / .spherse） |
 | trigger | CRUD、手动触发、reset-binding、运行日志 |
 | debug | turn-context 导出、session 事件日志读取（`?agentId=`，供 debug 工具的事件日志查看器） |
@@ -76,7 +77,7 @@
 - core 错误：`NotFoundError`→404、`ValidationError`→400、`AccessDeniedError`→403、`ConflictError`→409
 - Fastify schema 校验失败→400；兜底 500；未知路由 404
 - data 域本地映射：VersionConflict→409（带 currentVersion）、DataFileCorrupted→422 等
-- marketplace 网络失败统一 502（skills 与 projects 两个 service 单例共用同一实现，仅 manifest schema / zip 上限 / 超时 / tmp 前缀不同）
+- marketplace 网络失败统一 502（skills 与 projects 两个 service 单例共用同一实现，仅 manifest schema / zip 上限 / 超时 / tmp 前缀不同；prompt-marketplace 为独立 service，无 zip 下载，多一层语言回退链）
 
 ## contracts 机制
 

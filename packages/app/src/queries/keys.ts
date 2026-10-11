@@ -25,4 +25,5 @@ export const projectQueryKeys = {
 
 export const marketplaceQueryKeys = {
   projects: () => ["marketplace", "projects"] as const,
+  prompts: (language: string) => ["marketplace", "prompts", language] as const,
 };

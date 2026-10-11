@@ -18,7 +18,7 @@ import {
   useMarketplaceProjects,
 } from "../../queries/marketplace-projects";
 import { buildProjectRoute } from "../activity-bar/use-project-actions";
-import { deriveCategories, filterByCategory } from "./categories";
+import { deriveCategories, filterByCategory } from "../../lib/categories";
 
 type CardStatus = "idle" | "downloading" | "error";
 

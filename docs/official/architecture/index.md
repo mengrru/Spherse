@@ -14,7 +14,7 @@ Spherse 是本地运行的个人 Agent 运行时：多个拥有独立系统提�
 |---|---|
 | `core` | 纯 Node.js 核心逻辑（微内核 + Capability）：项目数据、agent、session、skill、tool、运行时；零 Electron / Fastify 依赖 |
 | `contracts` | 跨进程边界 wire 协议：HTTP / WS 的 typebox schema + parser，server 与 renderer 共同依赖 |
-| `presets` | 预置模板与静态内容，构建期经 sync 脚本生成可导入常量（builtin skill 源码、预置 agent、prompt 模板） |
+| `presets` | 预置模板与静态内容，构建期经 sync 脚本生成可导入常量（builtin skill 源码、预置 agent；提示词模板已迁往 spherse-assets 提示词模板市场，经 OSS 下发） |
 | `i18n` | locale catalog 与翻译纯函数（`.`）+ React 绑定（`./react`） |
 | `server` | Fastify API 层：HTTP / WS 边界、ProjectRegistry——薄转发层，含少量编排逻辑（ChatSessionHub 会话编排、错误分级） |
 | `sdk` | 被注入 iframe 的浏览器运行时（`window.spherse`），esbuild 单文件 IIFE |

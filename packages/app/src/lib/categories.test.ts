@@ -1,17 +1,13 @@
 import { describe, expect, it } from "vitest";
-import type { MarketplaceProjectEntry } from "@spherse/contracts";
 import { deriveCategories, filterByCategory } from "./categories";
 
-function entry(name: string, category: string): MarketplaceProjectEntry {
-  return {
-    name,
-    description: `${name} description`,
-    version: "1.0.0",
-    category,
-    zipUrl: `https://marketplace.test/${name}.zip`,
-    size: 10,
-    updatedAt: "2026-09-19T00:00:00Z",
-  };
+interface Entry {
+  name: string;
+  category: string;
+}
+
+function entry(name: string, category: string): Entry {
+  return { name, category };
 }
 
 describe("deriveCategories", () => {
@@ -38,5 +34,13 @@ describe("filterByCategory", () => {
 
   it("returns an empty list for an unknown category", () => {
     expect(filterByCategory(entries, "不存在")).toEqual([]);
+  });
+
+  it("preserves extra fields of arbitrary entry shapes", () => {
+    const prompts = [
+      { id: "a", category: "创作", content: "x" },
+      { id: "b", category: "互动", content: "y" },
+    ];
+    expect(filterByCategory(prompts, "创作")).toEqual([{ id: "a", category: "创作", content: "x" }]);
   });
 });

@@ -427,22 +427,30 @@ export const zhCN = {
   "agent-dialog.quickLinksHint": "显示为聊天窗口顶部的按钮，点击可快速打开该文件",
   // Agent 快捷链接路径输入框占位提示
   "agent-dialog.quickLinksPlaceholder": "添加文件…",
-  // Agent dialog 提示词模板行标签（预留，当前 UI 未强制展示）
-  "agent-dialog.templateLabel": "模板",
-  // 提示词下方预设模板按钮组的前缀文案
+  // 提示词下方预设模板入口行的前缀文案
   "agent-dialog.templatePresetsLabel": "预设模板：",
-  // 预制提示词模板：世界观创作助手 badge 文案
-  "agent-dialog.template.worldview-assistant": "世界观创作助手",
-  // 预制提示词模板：角色扮演 badge 文案
-  "agent-dialog.template.roleplay": "角色扮演",
-  // 提示词非空时点击模板的确认弹窗标题
-  "agent-dialog.templateConfirmTitle": "应用模板",
-  // 确认弹窗正文：提示将覆盖当前提示词
-  "agent-dialog.templateConfirmDesc": "应用模板将覆盖当前提示词内容，是否继续？",
-  // 确认弹窗「应用」按钮
-  "agent-dialog.templateConfirmApply": "应用",
-  // 确认弹窗「取消」按钮
-  "agent-dialog.templateConfirmCancel": "取消",
+  // 预设模板入口按钮：打开提示词模板市场 dialog
+  "agent-dialog.templates.browse": "浏览模板…",
+  // 提示词模板市场 dialog 标题
+  "agent-dialog.templates.title": "提示词模板",
+  // 模板卡片与详情视图的「复制」按钮
+  "agent-dialog.templates.copy": "复制",
+  // 复制成功后的按钮反馈
+  "agent-dialog.templates.copied": "已复制",
+  // 模板卡片「查看」按钮：进入详情视图
+  "agent-dialog.templates.view": "查看",
+  // 详情视图「返回」按钮
+  "agent-dialog.templates.back": "返回",
+  // 模板市场加载中
+  "agent-dialog.templates.loading": "加载中…",
+  // 模板市场加载失败
+  "agent-dialog.templates.loadFailed": "加载失败",
+  // 加载失败后的「重试」按钮
+  "agent-dialog.templates.retry": "重试",
+  // 模板列表为空（含市场未发布）
+  "agent-dialog.templates.empty": "暂无模板",
+  // 分类 chips 的「全部」选项
+  "agent-dialog.templates.categoryAll": "全部",
   // Agent dialog 个性化 tab：主题区块标签
   "agent-dialog.themeLabel": "主题",
   // Agent dialog 个性化 tab：主题区块 tooltip，告知主题 CSS 的作用范围（仅当前智能体的聊天窗口）

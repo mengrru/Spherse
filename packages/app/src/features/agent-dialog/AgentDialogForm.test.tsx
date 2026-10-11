@@ -13,10 +13,16 @@ const getModelSettings = vi.fn(async () => ({
   },
   customProviders: [],
 }));
+const listMarketplacePrompts = vi.fn(async () => ({
+  schemaVersion: 1,
+  generatedAt: "2026-10-11T00:00:00Z",
+  language: "zh-cn",
+  prompts: [],
+}));
 
 vi.mock("../../lib/use-connection", () => ({
   useApiClient: () => ({ searchFiles: vi.fn(async () => []) }),
-  useGlobalApiClient: () => ({ getSupportedProviders, getModelSettings }),
+  useGlobalApiClient: () => ({ getSupportedProviders, getModelSettings, listMarketplacePrompts }),
 }));
 
 const initial: LoadedAgentData = { raw: "---\nname: Test\n---\n\nprompt", theme: "" };

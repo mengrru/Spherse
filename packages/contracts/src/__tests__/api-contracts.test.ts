@@ -404,6 +404,50 @@ describe("api contracts", () => {
     expect(() => parseApiResponse(schemas.projectMarketplaceInstallResponse, {})).toThrow(/Invalid payload/);
   });
 
+  it("validates prompt marketplace manifest response", () => {
+    const entry = {
+      id: "worldview-assistant",
+      title: "世界观创作助手",
+      description: "辅助世界观设定创作",
+      category: "创作",
+      content: "你将辅助用户进行世界观设定创作。",
+    };
+    const manifest = {
+      schemaVersion: 1,
+      generatedAt: "2026-10-11T00:00:00Z",
+      language: "zh-cn",
+      prompts: [entry],
+    };
+    expect(parseApiResponse(schemas.marketplacePromptManifestResponse, manifest)).toEqual(manifest);
+    expect(parseApiResponse(schemas.marketplacePromptManifestResponse, { ...manifest, prompts: [] })).toEqual({
+      ...manifest,
+      prompts: [],
+    });
+    expect(() =>
+      parseApiResponse(schemas.marketplacePromptManifestResponse, {
+        schemaVersion: 1,
+        generatedAt: "x",
+        language: "zh-cn",
+        prompts: [{}],
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.marketplacePromptManifestResponse, {
+        schemaVersion: 1,
+        generatedAt: "x",
+        language: "zh-cn",
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.marketplacePromptManifestResponse, {
+        schemaVersion: 1,
+        generatedAt: "x",
+        language: "zh-cn",
+        prompts: [{ ...entry, content: 1 }],
+      }),
+    ).toThrow(/Invalid payload/);
+  });
+
   it("accepts optional version on skill definitions", () => {
     const skill = {
       name: "n",

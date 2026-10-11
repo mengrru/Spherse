@@ -35,6 +35,7 @@ import type {
   DataReadResponseContract as DataReadResponse,
   MarketplaceManifestResponse,
   MarketplaceProjectManifestResponse,
+  MarketplacePromptManifestResponse,
   ProjectMarketplaceInstallRequest,
   ProjectMarketplaceInstallResponse,
   UploadResponse,
@@ -788,6 +789,17 @@ export function createGlobalApiClient(baseUrl: string, accessToken?: string | nu
       });
       await assertOk(res);
       return parseJsonResponse<ModelSettingsResponse>(res, schemas.modelSettingsResponse);
+    },
+
+    async listMarketplacePrompts(language: string): Promise<MarketplacePromptManifestResponse> {
+      const res = await authedFetch(
+        `${baseUrl}/api/marketplace/prompts?language=${encodeURIComponent(language)}`,
+      );
+      await assertOk(res);
+      return parseJsonResponse<MarketplacePromptManifestResponse>(
+        res,
+        schemas.marketplacePromptManifestResponse,
+      );
     },
   };
 }

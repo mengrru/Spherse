@@ -70,13 +70,12 @@ spherse/
 │   │       └── index.ts              # 公开导出（显式清单，按外部消费面收紧）
 │   ├── presets/                      # @spherse/presets — 内置模板与预置静态内容
 │   │   ├── README.md                 # 包级守则：sync 产物、presets.json 格式、注入流程与维护守则
-│   │   ├── presets.json              # 预置 skill、agent 与 prompt template 声明配置
+│   │   ├── presets.json              # 预置 skill 与 agent 声明配置
 │   │   ├── templates/
 │   │   │   ├── agent-template.md     # 新 Agent 创建模板源文件
 │   │   │   ├── agent-theme-template.css # Agent 聊天窗口主题模板源文件
 │   │   │   ├── agents-index-template.md # 新项目 AGENTS.md 模板源文件
-│   │   │   ├── preset-agents/        # 预置 agent 模板源文件（<dir>.md 完整 profile，由 presets.json 的 presetAgents 声明）
-│   │   │   └── prompt-templates/     # 预置 prompt template 源文件（<id>.md，由 presets.json 的 presetPromptTemplates 声明）
+│   │   │   └── preset-agents/        # 预置 agent 模板源文件（<dir>.md 完整 profile，由 presets.json 的 presetAgents 声明）
 │   │   ├── skills/                   # 内置 skill 源（app 内置只读，通过 SkillStore 内存合并；新项目不再注入到 .spherse/skills/）
 │   │   │   ├── spherse-guide/        # Spherse 功能介绍、快速上手、目标导向使用引导与常见问题
 │   │   │   │   └── SKILL.md
@@ -102,8 +101,7 @@ spherse/
 │   │       │   ├── agent-theme-template.ts
 │   │       │   ├── presets.ts        # PRESET_SKILLS, PRESET_AGENTS 常量
 │   │       │   ├── preset-skills.ts  # PRESET_SKILL_SOURCES 常量
-│   │       │   └── prompt-templates.ts # PRESET_PROMPT_TEMPLATES 常量（{ id, name, prompt }）
-│   │       └── index.ts              # 公开导出：模板内容 + 预置 skill/agent/prompt template 配置
+│   │       └── index.ts              # 公开导出：模板内容 + 预置 skill/agent 配置
 │   ├── i18n/                         # @spherse/i18n — 纯 TS i18n 基础设施
 │   │   ├── README.md                 # 包级守则：翻译基准、逐条注释规范、校验命令
 │   │   ├── scripts/
@@ -155,6 +153,7 @@ spherse/
 │   │       ├── skills.ts             # SkillDefinition（含可选 version）、SkillList/Create/Install Request 响应与请求 schema
 │   │       ├── marketplace.ts        # MarketplaceSkillEntry、MarketplaceManifestResponse、SkillMarketplaceInstallRequest（{name, version}）
 │   │       ├── project-marketplace.ts # MarketplaceProjectEntry（含 category）、MarketplaceProjectManifestResponse、ProjectMarketplaceInstallRequest（{name, version, destDir}）与 InstallResponse（{projectRoot}）
+│   │       ├── prompt-marketplace.ts # MarketplacePromptEntry（含 category 与 content 全文）、MarketplacePromptManifestResponse（含 language）
 │   │       ├── debug.ts              # TurnContextSnapshot、SessionEventLog（session 事件日志导出）
 │   │       ├── websocket.ts          # ChatClientMessage/ChatServerEvent/ChatReplayEvent（协议 v2：session_ready/replay_events/user_message/turn_retried、close code 族）+ parser
 │   │       └── __tests__/            # 契约测试（正向通过 / 负向抛 Invalid payload + Fastify coercion 兼容）
@@ -170,6 +169,7 @@ spherse/
     │   │       ├── model-settings.ts    # ModelSettingsStore：模型配置唯一持久化点（models.text/image + customProviders + 明文 key，tmp+rename 原子写）+ applyModelSettingsToEnv（env 注入 + custom providers 注册）
     │   │       ├── shutdown.ts           # closeMultiProjectServer()：hub → registry → fastify 关停顺序、阶段超时与失败隔离
 │   │       ├── marketplace.ts        # 市场域 service 工厂（createMarketplaceServiceImpl 参数化 manifest schema / zip 上限 / 超时 / tmp 前缀）：skills 单例（OSS spherse/skills/manifest.json，env SPHERSE_MARKETPLACE_MANIFEST_URL 覆盖，50MB）+ projects 单例（spherse/projects/manifest.json，env SPHERSE_PROJECT_MARKETPLACE_MANIFEST_URL 覆盖，100MB/300s）；均含 30s 内存缓存 + zip 下载（同源 SSRF 校验、流内计数）
+│   │       ├── prompt-marketplace.ts # 提示词模板市场 service（OSS spherse/prompts/{lang}.json，env SPHERSE_PROMPT_MARKETPLACE_BASE_URL 覆盖，5MB 上限含流式计数）：语言回退链（zh-cn → [zh-cn, en-us]；其它 zh-* → [L, zh-cn, en-us]；其余 → [L, en-us, zh-cn]）+ 按请求语言 30s 缓存与 in-flight 去重，整链 404 → 404
 │   │       ├── routes/               # REST 路由，按业务域拆分
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
@@ -183,6 +183,7 @@ spherse/
 │   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
 │   │       │   ├── marketplace.ts    # 技能市场路由（GET /marketplace/skills 代理 manifest；POST /skills/marketplace-install 按 {name, version} 下载 zip 并覆盖安装）
 │   │       │   ├── project-marketplace.ts # 项目市场全局路由（无 projectId 前缀，零项目可用）：GET /api/marketplace/projects 代理 manifest；POST /api/marketplace/projects/install 按 {name, version, destDir} 下载 zip → core installMarketplaceProjectZip 解压落盘 → 返回 {projectRoot}（注册仍走 renderer 的 open-project IPC）
+│   │       │   ├── prompt-marketplace.ts # 提示词模板市场全局路由：GET /api/marketplace/prompts?language=<lang>（语言码格式校验，非法 400），service 侧整链 404 → 404、上游故障 → 502
 │   │       │   ├── settings.ts       # 文本/图片 Provider 列表（GET /api/settings/providers、/image-providers）+ 全局模型配置读写（GET/PUT /api/settings/models，write-only key）+ 项目 settings API（AI 读取禁止列表、欢迎页、主题 CSS）
 │   │       │   ├── images.ts         # 图片导出 API（POST /api/projects/:projectId/images/export，将生成的图片复制到项目目标路径）
 │   │       │   ├── attachments.ts    # 通用附件上传/删除 API（POST/DELETE /api/projects/:projectId/attachments，图片落盘 .spherse/attachments/）
@@ -227,7 +228,8 @@ spherse/
 │   │       │   ├── nav-state.ts      # 路由 location.state 约定（closeTab/closedUrl/replaceTab/skipLeaveGuard）解析
 │   │       │   ├── file-name.ts      # 文件显示名（basename / 去扩展名，点文件与无扩展名保持原样），tab 与 chat 快捷链接共用
 │   │       │   ├── session-title.ts  # 会话显示标题（title 缺省回落 updatedAt 本地时间），侧栏与 tab 共用
-│   │       │   ├── use-connection.ts  # useApiClient(projectId) / useGlobalApiClient()（无 projectId 的全局 client，项目市场用）/ useConnection() — 基于 app-store connection 派生 ApiClient
+│   │       │   ├── use-connection.ts  # useApiClient(projectId) / useGlobalApiClient()（无 projectId 的全局 client，项目市场/提示词模板市场用）/ useConnection() — 基于 app-store connection 派生 ApiClient
+│   │       │   ├── categories.ts    # 市场分类 chips 归并/过滤纯函数（deriveCategories/filterByCategory，泛型 { category } 条目），项目市场与提示词模板市场共用
 │   │       │   ├── connect-payload.ts # 连接 payload 编解码（桌面端 buildConnectUrl 生成 QR 链接 ↔ web 端 parseConnectPayload 解析 base/token/targetPath）
 │   │       │   ├── urls.ts            # 官网域派生的集中 URL 常量（WEB_APP_URL/DOCS_URL/DOWNLOAD_PAGE_URL）
 │   │       │   ├── ws/                # 通用 WS 连接抽象：ws-connection.ts（WsConnection 状态机——idle/connecting/open/waiting-backoff/failed/fatal/closed、心跳 awaitingPongSince、退避重试、probe；bus 与 chat（PR3 起）共用）
@@ -236,7 +238,7 @@ spherse/
 │   │       │       └── last-route.ts # per-project lastRoute localStorage helper（spherse:last-route:<projectId>）
 │   │       ├── context/
 │   │       │   └── project-context.tsx # ProjectProvider / useProjectCtx — project scope 的 ctx 注入（projectId/projectRoot）
-│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory（projectQueryKeys 项目级 + marketplaceQueryKeys 全局）、project/content/skills/marketplace-projects/welcome-page/custom-side-panel/theme-settings/triggers 服务端状态
+│   │       ├── queries/                 # TanStack Query 基础设施：client、key factory（projectQueryKeys 项目级 + marketplaceQueryKeys 全局）、project/content/skills/marketplace-projects/marketplace-prompts（含 promptLanguageFromLocale locale→资产语言码映射）/welcome-page/custom-side-panel/theme-settings/triggers 服务端状态
 │   │       ├── stores/
 │   │       │   ├── app-store.ts          # 打开项目集合、当前项目（含 lastOpened 排序）、Electron IPC 动作
 │   │       │   ├── project-data-store.ts # 前端运行时投影（当前仅 initialMessage 交接）
@@ -288,7 +290,8 @@ spherse/
 │   │       │   ├── activity-bar/         # 自治型 Activity Bar（项目头像轨、设置按钮、添加项目下拉菜单「市场/本地」，内部读 app-store/app-ui-store 与 useProjectActions，挂 ProjectMarketDialog；pin 按钮通过 pinToggle prop 可选注入）
 │   │       │   ├── agent-trigger/        # Agent 触发器弹窗、表单、列表与运行日志，含 running 运行态 feature store 与 TriggerEventBridge（trigger 域唯一事件接线：查询失效 + 运行态 + 通知）
 │   │       │   ├── agent-memory/         # Agent 记忆弹窗（开关 + 核心记忆编辑 + 长期条目搜索/编辑/删除，右键菜单入口）
-│   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 AgentDialog/SearchFileField 与折叠状态 feature store
+│   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 SearchFileField 与折叠状态 feature store
+│   │       │   ├── agent-dialog/         # Agent 创建/编辑 Dialog（AgentDialogForm 双 tab 表单、ModelConfigField、ToolPicker、PathListField、TimePerceptionField、agent-markdown 序列化）+ PromptTemplatesDialog（提示词模板市场：分类 chips + 卡片网格 + 详情视图 + 一键复制，经全局 marketplace/prompts API 加载）
 │   │       │   ├── chat/                 # 对话 feature；model/ 放 Entry 归约、历史合并、MessageGroup 组装与卡片投影，runtime/ 放 session store、link/recovery/lifecycle/queue 等运行时模块，hooks/ 放 UI hooks，lib/ 放 diff/format-time 纯函数，utils/ 放图片压缩（compress-image）；根目录保留页面组件、气泡组件（UserBubble/AssistantBubble/ToolItemView/ThoughtBlock/ToolCards）、runtime context、chat 专属类型与附件 UI（AttachmentBar/MessageAttachments）
 │   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑（useLeaveGuard：useBlocker 未保存离开守卫）、复制路径/刷新、冲突提示，ContentQueryBridge 集中处理 fs-watch/reconnect 缓存失效；二进制文件拦截渲染占位卡 UnsupportedFileCard（桌面端经 HostCapabilities.openFileExternal 提供「用默认应用打开」按钮）；ReadOnlyContentBrowser 供分窗只读复用（与 ContentBrowser 共用 Header / ContentBody / useContentViewState），find-scope + FindScopeRoot 限定 Cmd+F 作用域
 │   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板 + TurnContextDialog（session 事件日志查看器：类型搜索/展开/复制，附当前 turn context 下载）
@@ -297,7 +300,7 @@ spherse/
 │   │       │   ├── global-search/     # 项目内全局搜索弹窗（command palette 风格 Dialog，聊天/文件两组结果；Cmd/Ctrl+P 与 project panel 空白处右键唤出；聊天命中跳转 chat 路由 ?messageId= 定位）
 │   │       │   ├── onboarding/           # 新用户引导页（无项目时 `/` 路由）：打开或创建项目 / 打开项目市场（复用 project-market Dialog）
 │   │       │   ├── project-panel/         # 项目侧栏内容（AgentSessionList/UserFilePanel/SkillPanel 薄组合层），作为 SidePanel 的静态 flex child；激活自定义侧边面板时整体替换为 CustomSidePanel（iframe）；空白处右键唤出全局搜索
-│   │       │   ├── project-market/       # 项目市场 Dialog（顶部分类 chips「全部」+ 动态归并 + 卡片网格；下载 = selectDirectory → 全局 install API → openProjectAtPath → 导航打开）+ categories 归并/过滤纯函数
+│   │       │   ├── project-market/       # 项目市场 Dialog（顶部分类 chips「全部」+ 动态归并 + 卡片网格；下载 = selectDirectory → 全局 install API → openProjectAtPath → 导航打开），分类归并/过滤复用 lib/categories
 │   │       │   ├── side-panel/           # 项目工作区左侧滑动单元：桌面端物理合并 ActivityBar + ProjectPanel 为同一 transform 容器（pinned/hover 滑入滑出）；移动端（useIsMobile 768px 断点）改为左下角浮动按钮 + 常驻 CSS 滑动面板（translate-x + backdrop，关闭态 inert），由解耦的 mobileOpen 状态控制
 │   │       │   ├── user-file-panel/      # Files section（SidebarGroup + AI 读取限制 dialog），复用 base components/file-tree
 │   │       │   ├── web-disconnect/       # web 断开连接按钮（icon/panel 两种形态 + AlertDialog 确认；内部按 bridge.kind==="web" 自 gating，断开 = clearConnection + reload；ActivityBar 底部与 web 壳连接页经 `@spherse/app/web-disconnect` 复用）
@@ -376,6 +379,7 @@ spherse/
 │   │       ├── project-close.spec.ts # 项目关闭 E2E 测试（streaming 中关闭断连 runtime、重启后干净重开）
 │   │       ├── unsafe-location-guard.spec.ts # 易失区拦截 E2E 测试（SPHERSE_UNSAFE_ZONE + SPHERSE_E2E_DIALOG_RESPONSE seam：拒绝/确认 open-project、存量项目启动警告）
 │   │       ├── project-marketplace.spec.ts # 项目市场 E2E 测试（stub manifest server + SPHERSE_PROJECT_MARKETPLACE_MANIFEST_URL + SPHERSE_E2E_SELECT_DIRECTORY seam：菜单 → 市场 → 下载 → 项目打开）
+│   │       ├── prompts-marketplace.spec.ts # 提示词模板市场 E2E 测试（stub server + SPHERSE_PROMPT_MARKETPLACE_BASE_URL：agent dialog 入口 → 模板列表 → 复制 → 详情 → 返回）
 │   │       ├── file-tree.spec.ts     # 文件树 E2E 测试（展开折叠、创建删除、溢出截断）
 │   │       ├── agent-list.spec.ts              # Agent 列表展开折叠与会话重命名 E2E 测试
 │   │       ├── floating-chat.spec.ts            # 浮窗聊天 E2E 测试（浮窗/关闭/拖动/调整大小/项目切换）

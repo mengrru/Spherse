@@ -246,6 +246,15 @@ frontmatter 必需字段 `name`、`description`，可选 `version`。`SkillDefin
 - 项目注册不在 install 路由内完成：renderer 拿到 projectRoot 后复用 `open-project` IPC（含易失区确认）注册并打开
 - 落盘后的项目与手动打开的本地项目无区别（无市场来源标记，v1 不做已安装/更新判断）
 
+## 提示词模板市场
+
+提示词模板市场（Prompt Template Marketplace）供 Agent dialog 浏览/复制预制提示词，走**全局路由**，无安装步骤（内容全量内联）：
+
+- `GET /api/marketplace/prompts?language=<lang>`：`lang` 为小写资产语言码（如 `zh-cn`、`en-us`，格式 `^[a-z]{2}(-[a-z]{2})?$`，非法 400），由 renderer 从 app locale 映射（`zh-CN→zh-cn`、`zh-TW→zh-tw`、`en→en-us`）
+- OSS 路径 `spherse/prompts/{lang}.json`，每语言一个大 JSON：`{ schemaVersion, generatedAt, language, prompts: [{ id, title, description, category, content }] }`，只包含拥有该语言版本的模板（整包回退）
+- service 侧语言回退链：`zh-cn → [zh-cn, en-us]`；其它 `zh-*`（zh-TW 用户）→ `[L, zh-cn, en-us]`；其余 → `[L, en-us, zh-cn]`（en-us 缺省默认、zh-cn 兜底）；整链 404 → 404（客户端展示空态），上游故障 → 502
+- 发布侧为独立仓库 spherse-assets 的 `prompts/` 目录：每个模板一个目录（`{lang}.md` 正文 + `meta.{lang}.json` 标题/简介/类别，语言码同上）；构建时语言并集各生成一个大 JSON 全量覆盖上传；meta 按条目回退（zh 系 `L → zh-cn → en-us`，其余 `L → en-us → zh-cn`），链耗尽构建报错
+
 ```markdown
 ---
 name: my-skill
