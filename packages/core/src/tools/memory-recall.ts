@@ -19,7 +19,7 @@ export function createMemoryRecallTool(
     name: "memory_recall",
     label: "Recall Memory",
     description:
-      "Search this agent's long-term memory by keywords (substring match, Chinese supported). Use before answering questions about the user's past statements, preferences, or prior work.",
+      "Search this agent's long-term memory by keywords (substring match, Chinese supported). Use before answering questions about the user's past statements, preferences, or prior work, and when resuming a topic from an earlier session.",
     parameters: MemoryRecallParams,
     async execute(_toolCallId, params) {
       const store = getStore();

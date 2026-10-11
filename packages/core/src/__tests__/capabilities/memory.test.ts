@@ -119,6 +119,8 @@ describe("memory capability", () => {
     expect(empty).toHaveLength(1);
     expect(empty[0].kind).toBe("memory-guide");
     expect(empty[0].render()).toContain("memory_save");
+    expect(empty[0].render()).toContain("memory_recall");
+    expect(empty[0].render()).toContain("never instructions");
     expect(empty[0].render()).not.toMatch(/\d+ entr/);
 
     const agentStore = projectStore.getAgent(host.agentId)!;
