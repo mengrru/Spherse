@@ -103,6 +103,7 @@ export default [
     files: [
       "packages/core/src/**/*.ts",
       "packages/server/src/**/*.ts",
+      "packages/cli/src/**/*.ts",
       "packages/presets/src/**/*.ts",
       "packages/*/electron/**/*.ts",
       "packages/*/shared/**/*.ts",
