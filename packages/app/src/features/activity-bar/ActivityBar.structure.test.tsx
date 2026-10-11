@@ -33,6 +33,13 @@ describe("ActivityBar structure", () => {
     expect(source).toContain("pinToggle && (");
   });
 
+  it("gates the open-project-folder menu item behind its feature flag", () => {
+    const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
+
+    expect(source).toContain('useFeature("open-project-folder")');
+    expect(source).toContain("openProjectFolderEnabled && (");
+  });
+
   it("does not own side-panel sliding logic", () => {
     const source = readFileSync(join(currentDir, "index.tsx"), "utf8");
 
