@@ -15,6 +15,7 @@
     "packages/app",
     "packages/web",
     "packages/desktop",
+    "packages/cli",
     "packages/landing"
   ],
   "scripts": {
