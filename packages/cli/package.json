@@ -14,7 +14,8 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@spherse/core": "*"
+    "@spherse/core": "*",
+    "@spherse/server": "*"
   },
   "devDependencies": {
     "@types/node": "^25.8.0",
