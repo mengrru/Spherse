@@ -11,6 +11,7 @@ settings 按分区持久化（决策见 [ADR-0015](../dev/decisions/0015-setting
 | 数据 | 位置 | 格式与不变量 |
 |---|---|---|
 | 模型配置 | server-owned `model-settings.json`（desktop 上在 userData，路径由 host 经 `CreateServerOptions.modelSettingsPath` 注入；缺省路径 = 纯内存） | `{ text, image, customProviders }`（core `ModelSettings`）；含**明文 API key**，永不经 API 回传（GET 只返回 per-provider `configured` 布尔）；tmp+rename 原子写；reset-app-data 一并删除 |
+| CLI home（`npx spherse`） | `~/.spherse/`（`--home` / `SPHERSE_HOME` 覆盖；与 desktop userData 天然隔离） | `settings.json` 仅 `{ serverToken }`（惰性生成、原子写）；`model-settings.json` 同上；`projects/<name>/` 每个非 dotfile 子目录即一个项目（启动时扫描注册、空目录首开自动初始化，磁盘即注册清单、无 openProjects 记账）；`server.lock` 单实例锁（pid/port/startedAt，stale 覆盖、退出删除） |
 | desktop host prefs | electron-store `settings.json` 顶层 `hostPrefs` | `{ locale, tabsEnabled, theme, debugToolsEnabled, closeToTray }`，缺省值见 desktop.md；经 general（locale+tabsEnabled）与 desktop（其余三项）两条 IPC 通道读写 |
 | mobileAccess | 同文件顶层 `mobileAccess` | `{ enabled, mode?, publicDomain? }`（token 已并入顶层 `serverToken`，迁移时剥离） |
 | serverToken / openProjects / lastActiveProject | 同文件顶层 key | 与 prefs 无关的 host 数据；`serverToken` 是 server 鉴权唯一凭据 |

@@ -1,8 +1,9 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  acquireLockfile,
   findRunningInstance,
   isProcessAlive,
   readLockfile,
@@ -100,5 +101,54 @@ describe("findRunningInstance", () => {
     } finally {
       kill.mockRestore();
     }
+  });
+});
+
+describe("acquireLockfile", () => {
+  it("creates an exclusive placeholder when no lock exists", () => {
+    const path = tmpPath("acquire.lock");
+    expect(acquireLockfile(path)).toEqual({ ok: true });
+    const created = readLockfile(path);
+    expect(created?.pid).toBe(process.pid);
+    expect(created?.port).toBe(0);
+  });
+
+  it("is idempotent-safe for repeated close via removeLockfile", () => {
+    const path = tmpPath("acquire-remove.lock");
+    expect(acquireLockfile(path)).toEqual({ ok: true });
+    removeLockfile(path);
+    expect(existsSync(path)).toBe(false);
+  });
+
+  it("refuses when a live instance holds the lock", () => {
+    const path = tmpPath("acquire-held.lock");
+    writeLockfile(path, { pid: process.pid, port: 42, startedAt: "now" });
+    const result = acquireLockfile(path);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.heldBy?.port).toBe(42);
+    expect(readLockfile(path)?.port).toBe(42);
+  });
+
+  it("overwrites a stale lock left by a dead process", () => {
+    const path = tmpPath("acquire-stale.lock");
+    writeLockfile(path, { pid: 999999, port: 42, startedAt: "now" });
+    const kill = vi.spyOn(process, "kill").mockImplementation(() => {
+      const err = new Error("no such process") as NodeJS.ErrnoException;
+      err.code = "ESRCH";
+      throw err;
+    });
+    try {
+      expect(acquireLockfile(path)).toEqual({ ok: true });
+      expect(readLockfile(path)?.pid).toBe(process.pid);
+    } finally {
+      kill.mockRestore();
+    }
+  });
+
+  it("overwrites a corrupted lockfile", () => {
+    const path = tmpPath("acquire-corrupt.lock");
+    writeFileSync(path, "not json", "utf-8");
+    expect(acquireLockfile(path)).toEqual({ ok: true });
+    expect(readLockfile(path)?.pid).toBe(process.pid);
   });
 });

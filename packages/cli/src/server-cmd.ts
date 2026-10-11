@@ -2,7 +2,7 @@ import net from "node:net";
 import { createMultiProjectServer, type MultiProjectServer } from "@spherse/server";
 import { DEFAULT_FRONTEND_URL, buildLoginUrl, renderStartupMessage } from "./echo.js";
 import { homePaths, initHome, resolveHome } from "./home.js";
-import { findRunningInstance, removeLockfile, writeLockfile } from "./lockfile.js";
+import { acquireLockfile, removeLockfile, writeLockfile } from "./lockfile.js";
 import { ensureDefaultProject, scanProjects } from "./projects.js";
 import { ensureServerToken } from "./settings-store.js";
 import { readCliVersion } from "./version.js";
@@ -27,13 +27,23 @@ export async function startServer(options: ServerCmdOptions): Promise<RunningSer
   const paths = homePaths(resolveHome(options.homeFlag));
   initHome(paths);
 
-  const running = findRunningInstance(paths.lockfilePath);
-  if (running) {
-    throw new ServerCmdError(
-      `another Spherse server is already running (pid ${running.pid}) at http://127.0.0.1:${running.port} — home: ${paths.home}`,
-    );
+  const acquisition = acquireLockfile(paths.lockfilePath);
+  if (!acquisition.ok) {
+    const heldBy = acquisition.heldBy;
+    const where = heldBy && heldBy.port > 0 ? ` at http://127.0.0.1:${heldBy.port}` : "";
+    const pid = heldBy ? ` (pid ${heldBy.pid})` : "";
+    throw new ServerCmdError(`another Spherse server is already running${pid}${where} — home: ${paths.home}`);
   }
 
+  try {
+    return await bootServer(options, paths);
+  } catch (err) {
+    removeLockfile(paths.lockfilePath);
+    throw err;
+  }
+}
+
+async function bootServer(options: ServerCmdOptions, paths: ReturnType<typeof homePaths>): Promise<RunningServer> {
   const token = ensureServerToken(paths.settingsPath);
 
   if (options.port !== undefined && options.port !== 0) {
@@ -47,17 +57,9 @@ export async function startServer(options: ServerCmdOptions): Promise<RunningSer
     port: options.port,
   });
 
-  let closed = false;
-  const close = async (): Promise<void> => {
-    if (closed) return;
-    closed = true;
-    await server.close({ stageTimeoutMs: 10_000 });
-    removeLockfile(paths.lockfilePath);
-  };
-
   const port = readActualPort(server);
   if (options.port !== undefined && options.port !== 0 && port !== options.port) {
-    await close();
+    await server.close({ stageTimeoutMs: 10_000 });
     throw new ServerCmdError(`port ${options.port} was taken during startup — refusing to continue`);
   }
 
@@ -69,7 +71,18 @@ export async function startServer(options: ServerCmdOptions): Promise<RunningSer
   const frontendUrl = options.frontendUrl ?? DEFAULT_FRONTEND_URL;
   const loginUrl = buildLoginUrl({ frontendUrl, baseUrl: endpoint, token });
 
-  return { port, endpoint, token, loginUrl, close };
+  return {
+    port,
+    endpoint,
+    token,
+    loginUrl,
+    close: () => closeServer(server, paths.lockfilePath),
+  };
+}
+
+async function closeServer(server: MultiProjectServer, lockfilePath: string): Promise<void> {
+  await server.close({ stageTimeoutMs: 10_000 });
+  removeLockfile(lockfilePath);
 }
 
 export async function runServerCommand(options: ServerCmdOptions): Promise<number> {
@@ -125,7 +138,7 @@ function assertPortAvailable(port: number): Promise<void> {
   return new Promise((resolvePromise, rejectPromise) => {
     const probe = net.createServer();
     probe.once("error", () => {
-      rejectPromise(new ServerCmdError(`port ${port} is already in use — pass --port <n> to choose another one`));
+      rejectPromise(new ServerCmdError(`port ${port} is already in use — choose a different port via --port <n>`));
     });
     probe.once("listening", () => {
       probe.close(() => resolvePromise());

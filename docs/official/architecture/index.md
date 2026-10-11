@@ -21,19 +21,20 @@ Spherse 是本地运行的个人 Agent 运行时：多个拥有独立系统提�
 | `app` | 共享 React renderer：路由、feature UI、查询缓存、UI SDK host 桥 |
 | `desktop` | Electron 桌面壳：main / preload / 生命周期，最终组合根所在 |
 | `web` | 移动端 PWA 壳：`WebHostBridge`，经公网地址连接桌面 server（quick 模式 tunnel 或 manual 自填域名） |
+| `cli` | 终端宿主（npm `spherse`，`npx spherse server`）：纯 Node 第二 host，组装 server 并承担 token / 模型配置路径 / 项目注册重放，无 renderer |
 | `landing` | GitHub Pages 项目介绍页（复用 `@spherse/i18n` 的类型与 locale 工具，自建 catalog） |
 
 依赖方向单向收窄：
 
 ```
-desktop / web（壳）
+desktop / web / cli（壳）
    └→ app（renderer）→ contracts / server → core
 叶子库被上层按需引用：presets → core 与 app；sdk → app 与 server；i18n → app、desktop、web 与 landing。
 ```
 
 ## 前端三壳复用
 
-renderer 单份代码经 `HostBridge` 抽象在桌面与 Web 复用：desktop 提供 `ElectronHostBridge`（IPC 全能力），web 提供 `WebHostBridge`（HTTP 子集）；`HostCapabilities` 声明能力开关，renderer 据此条件渲染宿主专属 UI。机制见 [frontend.md](frontend.md)。
+renderer 单份代码经 `HostBridge` 抽象在桌面与 Web 复用：desktop 提供 `ElectronHostBridge`（IPC 全能力），web 提供 `WebHostBridge`（HTTP 子集）；`HostCapabilities` 声明能力开关，renderer 据此条件渲染宿主专属 UI。CLI 宿主无 renderer（用户经线上 web PWA 连接）。机制见 [frontend.md](frontend.md)；CLI 宿主决策见 [ADR-0016](../../dev/decisions/0016-cli-second-host.md)。
 
 ## 组合根链
 

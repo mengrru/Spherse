@@ -3,7 +3,8 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 
 export function resolveHome(flag?: string): string {
-  const raw = flag ?? process.env.SPHERSE_HOME ?? join(homedir(), ".spherse");
+  const envHome = process.env.SPHERSE_HOME?.trim();
+  const raw = flag ?? (envHome && envHome.length > 0 ? envHome : undefined) ?? join(homedir(), ".spherse");
   return resolve(raw);
 }
 
