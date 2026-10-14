@@ -22,7 +22,7 @@ const stubCatalog = {
 import { createProject } from "../../factory.js";
 import { AgentRunner } from "../../session/agent-runner.js";
 import { SessionEventLog } from "../../session/event-log.js";
-import { deriveMessages } from "../../session/fold.js";
+import { deriveHistoryEntries, deriveMessages } from "../../session/fold.js";
 import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
 import { createModelResolver } from "../../session/model-resolver.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
@@ -806,6 +806,63 @@ Agent with time perception.`,
     expect(agentStore.sessions.readEvents(sessionId)).toHaveLength(5);
   });
 
+  it.each([false, true])("withdrawLastTurn consecutively withdraws surviving turns (restore: %s)", async (restore) => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    let runner = await AgentRunner.init(deps, agentId, sessionId);
+
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q1" }], timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a1" }], stopReason: "stop", timestamp: 2 } } },
+      { type: "user/message", data: { message: { role: "user", content: [{ type: "text", text: "q2" }], timestamp: 3 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a2" }], stopReason: "stop", timestamp: 4 } } },
+    ]);
+    const originalEvents = [...runner.currentEvents];
+
+    await expect(runner.withdrawLastTurn()).resolves.toBe(2);
+    if (restore) runner = await AgentRunner.init(deps, agentId, sessionId);
+    expect(runner.agentRef.state.messages).toHaveLength(2);
+    expect(deriveHistoryEntries(runner.currentEvents).map((entry) => entry.seq)).toEqual([0, 1]);
+
+    await expect(runner.withdrawLastTurn()).resolves.toBe(0);
+    expect(runner.agentRef.state.messages).toEqual([]);
+    const persistedEvents = agentStore.sessions.readEvents(sessionId);
+    expect(persistedEvents.slice(0, 4)).toEqual(originalEvents);
+    expect(persistedEvents.slice(4)).toMatchObject([
+      { type: "turn/withdrawn", seq: 4, data: { seq: 2 } },
+      { type: "turn/withdrawn", seq: 5, data: { seq: 0 } },
+    ]);
+    expect(deriveMessages(persistedEvents)).toEqual([]);
+    expect(deriveHistoryEntries(persistedEvents)).toEqual([]);
+
+    const restored = await AgentRunner.init(deps, agentId, sessionId);
+    expect(restored.agentRef.state.messages).toEqual([]);
+    await expect(restored.withdrawLastTurn()).rejects.toThrow(/no user message to withdraw/);
+    expect(agentStore.sessions.readEvents(sessionId)).toEqual(persistedEvents);
+  });
+
+  it("withdrawLastTurn skips withdrawn turns after a new turn is added and withdrawn", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: "q1", timestamp: 1 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a1" }], stopReason: "stop", timestamp: 2 } } },
+      { type: "user/message", data: { message: { role: "user", content: "q2", timestamp: 3 } } },
+    ]);
+    await expect(runner.withdrawLastTurn()).resolves.toBe(2);
+
+    seedEvents(runner, [
+      { type: "user/message", data: { message: { role: "user", content: "q3", timestamp: 4 } } },
+      { type: "assistant/message", data: { message: { role: "assistant", content: [{ type: "text", text: "a3" }], stopReason: "stop", timestamp: 5 } } },
+    ]);
+    await expect(runner.withdrawLastTurn()).resolves.toBe(4);
+    await expect(runner.withdrawLastTurn()).resolves.toBe(0);
+    expect(runner.agentRef.state.messages).toEqual([]);
+    expect(deriveHistoryEntries(agentStore.sessions.readEvents(sessionId))).toEqual([]);
+  });
+
   it("withdrawLastTurn restores to an empty buffer when it withdraws the only turn", async () => {
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
@@ -908,6 +965,11 @@ Agent with time perception.`,
     const messages = agentOf(runner).state.messages;
     expect(messages.length).toBe(1);
     expect((messages[0] as any).content).toContain("digest of q1/a1");
+
+    const persistedEvents = agentStore.sessions.readEvents(sessionId);
+    await expect(runner.withdrawLastTurn()).rejects.toThrow(/already compacted/);
+    expect(runner.agentRef.state.messages).toEqual(messages);
+    expect(agentStore.sessions.readEvents(sessionId)).toEqual(persistedEvents);
   });
 });
 
