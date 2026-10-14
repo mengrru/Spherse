@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import { getCurrentSystemPrompt, getCurrentTools } from "@earendil-works/pi-ai";
 import { attachmentsCapability } from "../../capabilities/attachments/index.js";
 import { attachmentContextProjector } from "../../capabilities/attachments/projector.js";
 import { contextProjectorsFor } from "../../session/agent-assembly.js";
@@ -54,6 +55,30 @@ describe("attachment context projector", () => {
     const projectors = contextProjectorsFor([capA, capB] as never, view());
     for (const project of projectors) project([userMsg()]);
     expect(seen).toEqual(["a", "b"]);
+  });
+
+  it("preserves system prompt and tool declarations in the normalized transcript", () => {
+    const project = attachmentContextProjector(view())!;
+    const input: AgentMessage[] = [
+      { role: "system", content: "Agent instructions", toolsAdded: [
+        { name: "read_file", description: "Read a file", parameters: { type: "object", properties: {} } },
+      ] },
+      userMsg({ _attachments: [{ type: "image", path: "p" }] }),
+      { role: "system", content: "Updated instructions", toolsAdded: [
+        { name: "mcp__tool", description: "MCP tool", parameters: { type: "object", properties: {} } },
+      ] },
+    ];
+
+    const out = project(input);
+
+    expect(out).toHaveLength(3);
+    expect(out[0]).toBe(input[0]);
+    expect(out[2]).toBe(input[2]);
+    expect(getCurrentSystemPrompt(out)).toContain("Agent instructions");
+    expect(getCurrentSystemPrompt(out)).toContain("Updated instructions");
+    expect(getCurrentTools(out).map((tool) => tool.name)).toEqual(["read_file", "mcp__tool"]);
+    expect(out[1]).not.toHaveProperty("_attachments");
+    expect(input[1]).toHaveProperty("_attachments");
   });
 
   it("pluggability: without the attachments capability no projector runs (messages pass through untouched)", () => {

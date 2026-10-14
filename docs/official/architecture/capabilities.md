@@ -39,7 +39,7 @@
 | `contextBlocks(view)` | 构建 system prompt 时调用 | 注入知识块（`ContextBlock { kind, render() }`） |
 | `turnHooks` | turn 生命周期回调（beforeTurn / afterTurn / onReload） | turn 级行为、事件追加、systemPrompt 追加 |
 | `streamDecorators` | 包装出站请求流，洋葱组合（后注册者最外层） | 改写发给 LLM 的消息 |
-| `contextProjectors` | 在 convertToLlm 内组合执行（角色过滤前），管线序 | 清洗 AgentMessage（如剥附件引用） |
+| `contextProjectors` | 在 convertToLlm 内组合执行（角色过滤前），管线序 | 清洗 AgentMessage（如剥附件引用），保留承载提示词与工具声明的 system messages |
 | `previewTransforms` | 仅 debug turn-context 快照重放，不进 wire 路径 | 调试可视化 |
 | `attachmentProcessors` | flatMap 汇入 `RuntimeDeps`，sendMessage 组装多模态消息时消费 | 新附件类型 |
 | `eventMiddlewares` | 挂入 EventPipeline（log → capability middleware → 附件 sanitizer → 持久化翻译） | 事件改写/观察 |

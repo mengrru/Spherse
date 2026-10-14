@@ -507,7 +507,13 @@ Agent with time perception.`,
 
       expect(wireContexts).toHaveLength(1);
       const snapshot = runner.getTurnContext();
-      expect(snapshot.messages).toEqual([...wireContexts[0].messages, finalAssistant]);
+      expect(snapshot.messages).toEqual([
+        ...wireContexts[0].messages.filter((message: { role: string }) => message.role !== "system"),
+        finalAssistant,
+      ]);
+      expect(snapshot.systemPrompt).toBe(getCurrentSystemPrompt(wireContexts[0].messages));
+      expect(snapshot.systemPrompt).toContain("Agent with time perception.");
+      expect(snapshot.tools).toEqual(getCurrentTools(wireContexts[0].messages));
       const wireUser = wireContexts[0].messages.find((m: any) => m.role === "user");
       expect(wireUser.content[0].text).toContain("<time>");
       expect(wireUser.content[0].text).toContain("hello wire");
@@ -928,8 +934,10 @@ Agent with time perception.`,
   });
 
   it("preserves prompt and tool declarations on the wire after restore, reload and withdrawal", async () => {
-    deps = { ...deps, attachmentProcessors: [] };
-    runConfig.update({ defaultModel: "provider/model" });
+    deps = runtime.sessionRuntime.getRuntimeDeps();
+    runConfig = runtime.sessionRuntime.getRunConfigHolder();
+    const model = deps.modelCatalog.getChatModels().getModels("openai")[0];
+    runConfig.update({ defaultModel: `openai/${model.id}` });
     const agentStore = getAgentStore(runtime, agentId);
     const sessionId = agentStore.sessions.createSession();
     const log = SessionEventLog.open(agentStore.sessions, sessionId);
