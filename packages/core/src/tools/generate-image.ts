@@ -101,7 +101,7 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
       });
 
       const imagesModels = getImagesModels();
-      const model = imagesModels.getModel(config.provider, config.modelId);
+      const model = imagesModels.getModelOfType("image", config.provider, config.modelId);
       if (!model) {
         return {
           content: [{ type: "text" as const, text: `图片生成失败：无法解析模型 ${config.provider}/${config.modelId}` }],

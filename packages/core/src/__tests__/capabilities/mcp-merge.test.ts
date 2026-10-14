@@ -3,7 +3,8 @@ import { createMcpCapability } from "../../capabilities/mcp/index.js";
 import type { ProjectStore } from "../../store/project.js";
 import type { Logger } from "../../logger.js";
 import { createSilentLogger } from "../../logger.js";
-import type { AgentTool } from "@earendil-works/pi-agent-core";
+import { Agent, type AgentTool } from "@earendil-works/pi-agent-core";
+import { createAssistantMessageEventStream, getCurrentTools } from "@earendil-works/pi-ai";
 import type { McpServerConfig, McpServerInfo } from "../../mcp/types.js";
 
 vi.mock("../../mcp/mcp-client.js", () => ({
@@ -74,13 +75,14 @@ async function initCapability(configs: McpServerConfig[]) {
 }
 
 function makeAgent() {
-  return {
-    state: {
+  return new Agent({
+    streamFn: () => createAssistantMessageEventStream(),
+    initialState: {
       tools: [{ name: "builtin_tool", label: "b", description: "d", parameters: {} as never, execute: vi.fn() }],
       systemPrompt: "BASE PROMPT",
       model: undefined,
     },
-  } as never;
+  });
 }
 
 describe("mcp capability beforeTurn self-healing merge", () => {
@@ -97,6 +99,8 @@ describe("mcp capability beforeTurn self-healing merge", () => {
     expect(state.systemPrompt.startsWith("BASE PROMPT")).toBe(true);
     expect(state.systemPrompt).toContain("<!-- spherse:mcp-context:start -->");
     expect(state.systemPrompt).toContain("<!-- spherse:mcp-context:end -->");
+    expect(getCurrentTools(agent.state.messages).map((tool) => tool.name))
+      .toEqual(["builtin_tool", "mcp__fixture_srv1__echo"]);
   });
 
   it("re-merge strips previously merged mcp tools (including dedupe suffixes) and the old block", async () => {
@@ -142,6 +146,7 @@ describe("mcp capability beforeTurn self-healing merge", () => {
 
     expect(state.tools.map((t) => t.name)).toEqual(["builtin_tool"]);
     expect(state.systemPrompt).toBe("BASE PROMPT");
+    expect(getCurrentTools(agent.state.messages).map((tool) => tool.name)).toEqual(["builtin_tool"]);
   });
 
   it("onReload resets the memo so the next turn re-merges", async () => {

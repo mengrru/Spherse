@@ -1,11 +1,11 @@
 import type {
   AssistantImages,
   ImagesContext,
-  ImagesModel,
-  ImagesProvider,
+  ImageModel,
+  Provider,
   ProviderImagesOptions,
 } from "@earendil-works/pi-ai";
-import { createImagesProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
+import { createProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
 
 export type OpenaiImagesApi = "openai-images";
 
@@ -75,12 +75,13 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
   },
 };
 
-export function resolveOpenaiImageModel(modelId: string): ImagesModel<OpenaiImagesApi> {
+export function resolveOpenaiImageModel(modelId: string): ImageModel<OpenaiImagesApi> {
   const record = OPENAI_IMAGE_MODELS[modelId];
   if (!record) {
     throw new Error(`Unknown OpenAI image model: ${modelId}`);
   }
   return {
+    type: "image",
     id: record.id,
     name: record.name,
     api: record.api,
@@ -118,7 +119,7 @@ function inferMimeTypeFromUrl(url: string): string {
 const DALLE_MODELS = new Set(["dall-e-2", "dall-e-3"]);
 
 export async function generateImagesOpenai(
-  model: ImagesModel<OpenaiImagesApi>,
+  model: ImageModel<OpenaiImagesApi>,
   context: ImagesContext,
   options?: OpenaiImagesOptions,
 ): Promise<AssistantImages> {
@@ -213,12 +214,13 @@ export async function generateImagesOpenai(
   }
 }
 
-export function createOpenaiImagesProvider(): ImagesProvider {
-  return createImagesProvider({
+export function createOpenaiImagesProvider(): Provider {
+  return createProvider({
     id: "openai",
     name: "OpenAI",
     auth: { apiKey: envApiKeyAuth("OpenAI image API key", ["SPHERSE_IMAGE_API_KEY"]) },
     models: Object.values(OPENAI_IMAGE_MODELS).map((m) => ({
+      type: "image",
       id: m.id,
       name: m.name,
       provider: "openai",
@@ -228,6 +230,6 @@ export function createOpenaiImagesProvider(): ImagesProvider {
       output: m.output,
       cost: m.cost,
     })),
-    api: { generateImages: generateImagesOpenai as any },
+    images: { "openai-images": { generateImages: generateImagesOpenai } },
   });
 }

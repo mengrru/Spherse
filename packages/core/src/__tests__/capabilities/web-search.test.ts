@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
+import { getCurrentTools, normalizeContext, type TranscriptContext } from "@earendil-works/pi-ai";
 import { webSearchCapability } from "../../capabilities/web-search/index.js";
 import type { SessionView } from "../../kernel/ports.js";
 
@@ -7,14 +8,14 @@ function viewWith(tools: string[] | undefined): SessionView {
   return { agentId: "a1", profile: { id: "a1", name: "A", slug: "a", tools } } as unknown as SessionView;
 }
 
-const context = {
+const context = normalizeContext({
   systemPrompt: "sys",
   messages: [],
   tools: [
     { name: "read_file", description: "", parameters: {} },
     { name: "web_search", description: "", parameters: {} },
   ],
-};
+});
 
 function decorate(key: string | undefined, tools: string[] | undefined) {
   const capability = webSearchCapability({ getApiKey: () => key });
@@ -24,8 +25,8 @@ function decorate(key: string | undefined, tools: string[] | undefined) {
 }
 
 function toolNamesSeen(base: ReturnType<typeof vi.fn>): string[] {
-  const ctx = base.mock.calls[0][1] as { tools: Array<{ name: string }> };
-  return ctx.tools.map((t) => t.name);
+  const ctx = base.mock.calls[0][1] as TranscriptContext;
+  return getCurrentTools(ctx.messages).map((t) => t.name);
 }
 
 describe("webSearchCapability", () => {
@@ -44,7 +45,7 @@ describe("webSearchCapability", () => {
     const { decorated, base } = decorate(undefined, ["read_file", "web_search"]);
     void decorated!({} as never, context as never, undefined);
     expect(toolNamesSeen(base)).toEqual(["read_file"]);
-    expect(context.tools).toHaveLength(2);
+    expect(getCurrentTools(context.messages)).toHaveLength(2);
   });
 
   it("keeps web_search when a key is configured", () => {
@@ -61,7 +62,23 @@ describe("webSearchCapability", () => {
     void decorated({} as never, context as never, undefined);
     key = "sk-2";
     void decorated({} as never, context as never, undefined);
-    expect((base.mock.calls[0][1] as { tools: unknown[] }).tools).toHaveLength(1);
-    expect((base.mock.calls[1][1] as { tools: unknown[] }).tools).toHaveLength(2);
+    expect(getCurrentTools(base.mock.calls[0][1].messages)).toHaveLength(1);
+    expect(getCurrentTools(base.mock.calls[1][1].messages)).toHaveLength(2);
+  });
+
+  it("also hides web_search introduced by a later system message without mutating the transcript", () => {
+    const laterContext = normalizeContext({
+      messages: [
+        { role: "system", content: "sys" },
+        { role: "user", content: "search", timestamp: 1 },
+        { role: "system", content: "", toolsAdded: getCurrentTools(context.messages) },
+      ],
+    });
+    const { decorated, base } = decorate(undefined, ["web_search"]);
+
+    void decorated!({} as never, laterContext, undefined);
+
+    expect(toolNamesSeen(base)).toEqual(["read_file"]);
+    expect(getCurrentTools(laterContext.messages).map((tool) => tool.name)).toEqual(["read_file", "web_search"]);
   });
 });

@@ -18,7 +18,7 @@
 | `interaction` | `run_command`（逐次审批）、`ask_user`（问答门） |
 | `project-config` | `manage_project_config` 工具 |
 | `data` | `read_data` / `query_data` / `mutate_data` 工具（`*.data.json`） |
-| `web-search` | `web_search` 工具（调用 DeepSeek Anthropic 兼容端点的 server web_search）+ streamDecorator：无 DeepSeek key 时从出站请求 `tools` 中过滤（`state.tools` 不变，toolCatalog 稳定） |
+| `web-search` | `web_search` 工具（调用 DeepSeek Anthropic 兼容端点的 server web_search）+ streamDecorator：无 DeepSeek key 时从出站 system messages 的工具声明中过滤（`state.tools` 不变，toolCatalog 稳定） |
 | `trigger` | `emit_trigger_event` / `manage_trigger` 工具 + `TriggerManager` / `TimerService` 调度（time 型 10 分钟墙钟对齐轮询、event 型即时；磁盘为唯一真相源，每 tick 重读） |
 | `mcp` | MCP server 连接、工具运行时合并、`<mcp-context>` 注入 |
 | `attachments` | 图片等附件处理器 |
@@ -39,7 +39,7 @@
 | `contextBlocks(view)` | 构建 system prompt 时调用 | 注入知识块（`ContextBlock { kind, render() }`） |
 | `turnHooks` | turn 生命周期回调（beforeTurn / afterTurn / onReload） | turn 级行为、事件追加、systemPrompt 追加 |
 | `streamDecorators` | 包装出站请求流，洋葱组合（后注册者最外层） | 改写发给 LLM 的消息 |
-| `contextProjectors` | 在 convertToLlm 内组合执行（角色过滤前），管线序 | 清洗 AgentMessage（如剥附件引用） |
+| `contextProjectors` | 在 convertToLlm 内组合执行（角色过滤前），管线序 | 清洗 AgentMessage（如剥附件引用），保留承载提示词与工具声明的 system messages |
 | `previewTransforms` | 仅 debug turn-context 快照重放，不进 wire 路径 | 调试可视化 |
 | `attachmentProcessors` | flatMap 汇入 `RuntimeDeps`，sendMessage 组装多模态消息时消费 | 新附件类型 |
 | `eventMiddlewares` | 挂入 EventPipeline（log → capability middleware → 附件 sanitizer → 持久化翻译） | 事件改写/观察 |
@@ -71,7 +71,7 @@
   - 首 turn 前按 agent 连接 enabled 的 MCP server，发现的工具以 `mcp__{server}_{shortid}__{tool}` 命名合并进 `agent.state.tools`；**`mcp__` 前缀为保留命名空间**，其他能力/工具不得使用
   - 连接按 agent **per-server** 缓存、跨会话共享（同 agent load pass 串行化去重）；单个 server 连接失败进指数退避重试（30s 起 ×2 封顶 10min），不阻断会话；单次连接尝试总预算 20s
   - 声明 `resources` / `prompts` capability 的 server 额外合成 `read_resource` / `get_prompt` 工具，与发现工具共用命名空间
-  - 同时经 beforeTurn 向 systemPrompt 追加 `<mcp-context>` block（不走 contextBlocks 贡献点），block 由 sentinel 注释对包裹以便剥离
+  - 同时经 beforeTurn 向提示词追加 `<mcp-context>` block（不走 contextBlocks 贡献点），block 由 sentinel 注释对包裹以便剥离；通过 kernel 的上下文替换入口更新 system message（见 [core.md](core.md)「会话运行时」）
   - 配置变更经 `onAgentConfigChanged(agentId, "mcp")` 失效缓存并 bump revision；`mcp.json` 保存同时 emit `agent_updated` 触发活跃会话 reload，retry 路径与 sendMessage 共用 beforeTurn 前置
   - 协议层基于 `@modelcontextprotocol/client` v2，era 自动协商（兼容 2026-07-28 无状态协议与 legacy server）；sse transport 已移除（见 [ADR-0014](../../dev/decisions/0014-mcp-sdk-v2-stateless-protocol.md)）
 

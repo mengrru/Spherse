@@ -1,5 +1,5 @@
 import type { Agent } from "@earendil-works/pi-agent-core";
-import type { Message } from "@earendil-works/pi-ai";
+import { normalizeContext, type Message } from "@earendil-works/pi-ai";
 import { isDegenerateDigest, sanitizeDigestContent } from "../../context/compaction.js";
 import type { Logger } from "../../logger.js";
 
@@ -62,11 +62,11 @@ export async function summarizeForCompaction(
   const instruction = buildSummaryInstruction(maxTokens);
 
   const llmMessages = await agent.convertToLlm(foldMessages as never);
-  const context = {
+  const context = normalizeContext({
     systemPrompt: agent.state.systemPrompt,
     tools: agent.state.tools,
-    messages: [...llmMessages, { role: "user", content: instruction } as Message],
-  };
+    messages: [...llmMessages, { role: "user", content: instruction, timestamp: Date.now() }],
+  });
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), SUMMARIZE_TIMEOUT_MS);

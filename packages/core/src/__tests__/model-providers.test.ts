@@ -9,11 +9,6 @@ vi.mock("@earendil-works/pi-ai/providers/all", () => ({
     getModels: () => [],
     getModel: () => undefined,
   }),
-  builtinImagesModels: () => ({
-    getProviders: () => [],
-    getModels: () => [],
-    setProvider: () => {},
-  }),
 }));
 
 import { ModelCatalog } from "../model-providers/catalog.js";

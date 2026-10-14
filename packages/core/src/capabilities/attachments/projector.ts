@@ -1,7 +1,7 @@
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { ContextProjector } from "../../kernel/capability.js";
 
-const STRIP_ROLES = new Set(["user", "assistant", "toolResult"]);
+const STRIP_ROLES = new Set(["system", "user", "assistant", "toolResult"]);
 
 export const attachmentContextProjector: ContextProjector = () => {
   return (messages) => {

@@ -1,11 +1,11 @@
 import type {
   AssistantImages,
   ImagesContext,
-  ImagesModel,
-  ImagesProvider,
+  ImageModel,
+  Provider,
   ProviderImagesOptions,
 } from "@earendil-works/pi-ai";
-import { createImagesProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
+import { createProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
 
 export type ZhipuImagesApi = "zhipu-images";
 
@@ -33,12 +33,13 @@ export const ZHIPU_IMAGE_MODELS: Record<string, ZhipuImagesModelRecord> = {
   },
 };
 
-export function resolveZhipuImageModel(modelId: string): ImagesModel<ZhipuImagesApi> {
+export function resolveZhipuImageModel(modelId: string): ImageModel<ZhipuImagesApi> {
   const record = ZHIPU_IMAGE_MODELS[modelId];
   if (!record) {
     throw new Error(`Unknown Zhipu image model: ${modelId}`);
   }
   return {
+    type: "image",
     id: record.id,
     name: record.name,
     api: record.api,
@@ -74,7 +75,7 @@ function inferMimeTypeFromUrl(url: string): string {
 }
 
 export async function generateImagesZhipu(
-  model: ImagesModel<ZhipuImagesApi>,
+  model: ImageModel<ZhipuImagesApi>,
   context: ImagesContext,
   options?: ZhipuImagesOptions,
 ): Promise<AssistantImages> {
@@ -163,12 +164,13 @@ export async function generateImagesZhipu(
   }
 }
 
-export function createZhipuImagesProvider(): ImagesProvider {
-  return createImagesProvider({
+export function createZhipuImagesProvider(): Provider {
+  return createProvider({
     id: "zhipu",
     name: "智谱",
     auth: { apiKey: envApiKeyAuth("Zhipu image API key", ["SPHERSE_IMAGE_API_KEY"]) },
     models: Object.values(ZHIPU_IMAGE_MODELS).map((m) => ({
+      type: "image",
       id: m.id,
       name: m.name,
       provider: "zhipu",
@@ -178,6 +180,6 @@ export function createZhipuImagesProvider(): ImagesProvider {
       output: m.output,
       cost: m.cost,
     })),
-    api: { generateImages: generateImagesZhipu as any },
+    images: { "zhipu-images": { generateImages: generateImagesZhipu } },
   });
 }

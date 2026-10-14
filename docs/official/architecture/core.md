@@ -54,9 +54,12 @@ ProjectRuntime           对外协调层，聚合以上全部
   - `restoreSession` 带 admission 重检：session 不存在 / 已归档 / store 已关闭（含 init 中途关闭）→ `NotFoundError`，`initForRestore` 完成后与 `sessions.set` 同同步块再检一次，archived session 不可被并发 restore 复活
   - `releaseSession` 是空闲释放入口（busy runner 拒绝并返回 false），server hub 空闲收口经此请求，不直接销毁 runner；`AgentRunner.isBusy()` 是 in-flight 只读视图
 - **AgentRunner** 直接作为会话对象并执行 turn；事件经 `EventPipeline`（log → capability middleware → sanitizer → 持久化翻译）对外直播
-- **SessionEventLog 是消息唯一真相**：user / assistant / tool result / turn 边界追加到 per-agent SQLite events 表，`deriveMessages(events)` fold 结果单向同步给 pi 的内存数组，内存可随时丢弃重建（为什么见 [ADR-0001](../../dev/decisions/0001-event-log-fold.md)）
+- **SessionEventLog 是消息唯一真相**：user / assistant / tool result / turn 边界追加到 per-agent SQLite events 表，`deriveMessages(events)` fold 结果加上当前配置生成的首条 system message 后单向同步给 pi 的内存数组，内存可随时丢弃重建（为什么见 [ADR-0001](../../dev/decisions/0001-event-log-fold.md)）
   - 不变量：`seq` 在单个 session log 内从 0 连续，`open` 校验损坏即抛；`appendBatch` 落库失败回滚内存追加
   - restore 先 `repairLog` 为未闭合 turn 持久化补写合成 error toolResult 与 `turn/end(aborted)`（二次恢复幂等），再 fold
+  - pi 的 system messages 仅承载运行时提示词与工具声明，不写入会话 events。restore / retry / withdraw / compaction 同步通过 `kernel/agent-context.ts` 保留当前提示词与工具；配置热更新和 MCP 重合并通过同一入口重建首条 system message，不直接赋值只读 `state.systemPrompt`
+  - `convertToLlm` 保留 system messages；`StreamFn` 接收规范化 `TranscriptContext`，prompt / tools 从 system messages 读取，返回 `AssistantMessageEventStream`。压缩摘要的独立请求先经 `normalizeContext` 归一化
+  - debug Turn Context 仍分别导出 `systemPrompt` / `tools` / 非 system `messages`；token fallback 估算仅计算一次 system prompt
 - **控制事件（重启点）**：`turn/retried`、`turn/withdrawn`、`compaction/applied`，restore 时按语义重建；WS 协议不受存储格式影响
   - withdraw：`turn/withdrawn {seq}` 锚定被撤回的 user message，fold 从日志推导废弃区间 `[seq, 本事件 seq)`；末轮已被 digest 覆盖（lastUserEvent.seq ≤ anchorSeq）时拒绝撤回
   - compaction：阈值触发时经 agent 自身 streamFn 生成 LLM 摘要——精确复刻请求前缀（systemPrompt + tools + fold 视图 + 追加摘要指令）命中 provider prompt cache；失败且 tokens ≤ 90% window 跳过本轮，> 90% 回退机械拼接
@@ -70,6 +73,13 @@ ProjectRuntime           对外协调层，聚合以上全部
 - 聚合 `ProjectManager`、`SessionRuntime`、`DataStore` 与 capabilities 数组；`triggerManager` / `timerService` 是从 capability 派生的 getter
 - `dispatchAgentConfigChanged` 把配置变更广播给全部 capability
 - `deleteAgent` / `shutdown` 遍历 capability 生命周期钩子做级联清理
+
+## 模型目录与图片生成
+
+- `ModelCatalog` 使用 pi-ai 的统一 `Models` / `Provider` 接口，聊天与图片分别持有独立目录实例；图片 provider 注册不覆盖聊天 provider 或其认证
+- 聊天查询使用 `getModels` / `getModel`；图片必须使用 `getModelsOfType("image", …)` / `getModelOfType("image", …)`，经 `generateImages` 调用，图片模型带 `type: "image"`
+- 图片目录保留 OpenRouter、OpenAI、智谱三个 provider；OpenAI / 智谱由本地 `createProvider({ images })` 接入，模型 ID 与 `SPHERSE_IMAGE_MODEL` / `SPHERSE_IMAGE_API_KEY` 配置约定不变
+- 内置聊天与 OpenRouter 图片模型列表随 pi-ai 更新；目录中不存在的模型仍显式报解析失败，不静默替换用户配置的模型 ID
 
 ## 数据层
 

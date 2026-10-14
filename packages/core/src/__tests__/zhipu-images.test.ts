@@ -7,6 +7,7 @@ import {
 } from "../model-providers/zhipu-images.js";
 
 const SAMPLE_MODEL = {
+  type: "image",
   id: "glm-image",
   name: "GLM Image",
   api: "zhipu-images",
@@ -29,8 +30,9 @@ describe("ZHIPU_IMAGE_MODELS", () => {
 });
 
 describe("resolveZhipuImageModel", () => {
-  it("returns ImagesModel literal for known model", () => {
+  it("returns ImageModel literal for known model", () => {
     const model = resolveZhipuImageModel("glm-image");
+    expect(model.type).toBe("image");
     expect(model.id).toBe("glm-image");
     expect(model.api).toBe("zhipu-images");
     expect(model.provider).toBe("zhipu");
@@ -213,6 +215,7 @@ describe("createZhipuImagesProvider", () => {
     expect(provider.id).toBe("zhipu");
     expect(provider.name).toBe("智谱");
     expect(typeof provider.generateImages).toBe("function");
-    expect(provider.getModels().length).toBeGreaterThan(0);
+    expect(provider.getModels()).toEqual([]);
+    expect(provider.getAllModels?.()).toEqual([resolveZhipuImageModel("glm-image")]);
   });
 });

@@ -3,7 +3,6 @@ import type {
   ImageCardDetails,
   Message,
   RenderCardDetails,
-  ToolCall as AgentToolCall,
 } from "@spherse/core";
 import {
   isCommandCardDetails,
@@ -58,7 +57,7 @@ export function extractCardFromPartial(
 
 export function buildCardFromToolResult(
   toolName: string,
-  toolCall: AgentToolCall,
+  args: Record<string, unknown>,
   details: unknown,
 ): ChatCard | undefined {
   if (toolName === "render_card" && isRenderCardResultDetails(details)) {
@@ -68,7 +67,7 @@ export function buildCardFromToolResult(
         details.html ??
         (details.file_path
           ? undefined
-          : getStringArg(toolCall.arguments, "content")),
+          : getStringArg(args, "content")),
       file_path: details.file_path,
       title: details.title,
       width: details.width,
@@ -96,7 +95,7 @@ export function buildCardFromToolResult(
         type: "command",
         status: "error",
         rejected: true,
-        command: getStringArg(toolCall.arguments, "command") ?? "",
+        command: getStringArg(args, "command") ?? "",
         stdout: "",
         stderr: "",
       };
