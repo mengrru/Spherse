@@ -7,6 +7,7 @@ import {
 } from "../model-providers/openai-images.js";
 
 const SAMPLE_MODEL = {
+  type: "image",
   id: "gpt-image-2",
   name: "GPT Image 2",
   api: "openai-images",
@@ -45,8 +46,9 @@ describe("OPENAI_IMAGE_MODELS", () => {
 });
 
 describe("resolveOpenaiImageModel", () => {
-  it("returns ImagesModel literal for known model", () => {
+  it("returns ImageModel literal for known model", () => {
     const model = resolveOpenaiImageModel("gpt-image-2");
+    expect(model.type).toBe("image");
     expect(model.id).toBe("gpt-image-2");
     expect(model.api).toBe("openai-images");
     expect(model.provider).toBe("openai");
@@ -262,6 +264,8 @@ describe("createOpenaiImagesProvider", () => {
     expect(provider.id).toBe("openai");
     expect(provider.name).toBe("OpenAI");
     expect(typeof provider.generateImages).toBe("function");
-    expect(provider.getModels().length).toBeGreaterThan(0);
+    expect(provider.getModels()).toEqual([]);
+    expect(provider.getAllModels?.().every((model) => model.type === "image")).toBe(true);
+    expect(provider.getAllModels?.().length).toBe(Object.keys(OPENAI_IMAGE_MODELS).length);
   });
 });

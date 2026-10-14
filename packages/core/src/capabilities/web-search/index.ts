@@ -1,15 +1,21 @@
 import type { StreamFn } from "@earendil-works/pi-agent-core";
+import { getCurrentTools } from "@earendil-works/pi-ai";
 import type { Capability, StreamDecorator } from "../../kernel/capability.js";
 import { WEB_SEARCH_TOOL_NAME, createWebSearchTool, readDeepSeekApiKey } from "../../tools/web-search.js";
 import type { WebSearchDeps } from "../../tools/web-search.js";
 
 function hideWebSearchWithoutKey(base: StreamFn, getApiKey: () => string | undefined): StreamFn {
   return (model, context, options) => {
-    if (getApiKey() || !context.tools?.some((tool) => tool.name === WEB_SEARCH_TOOL_NAME)) {
+    if (getApiKey() || !getCurrentTools(context.messages).some((tool) => tool.name === WEB_SEARCH_TOOL_NAME)) {
       return base(model, context, options);
     }
-    const tools = context.tools.filter((tool) => tool.name !== WEB_SEARCH_TOOL_NAME);
-    return base(model, { ...context, tools }, options);
+    const messages = context.messages.map((message) => message.role === "system"
+      ? {
+          ...message,
+          toolsAdded: message.toolsAdded?.filter((tool) => tool.name !== WEB_SEARCH_TOOL_NAME),
+        }
+      : message);
+    return base(model, { ...context, messages }, options);
   };
 }
 

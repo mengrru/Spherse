@@ -1,14 +1,14 @@
 import {
   type Models,
   type MutableModels,
-  type ImagesModels,
-  type MutableImagesModels,
+  createModels,
   createProvider,
   type ApiKeyAuth,
   type ProviderStreams,
   type ProviderHeaders,
 } from "@earendil-works/pi-ai";
-import { builtinModels, builtinImagesModels } from "@earendil-works/pi-ai/providers/all";
+import { builtinModels } from "@earendil-works/pi-ai/providers/all";
+import { openrouterProvider } from "@earendil-works/pi-ai/providers/openrouter";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type {
@@ -199,13 +199,14 @@ function injectTopP(topP: number) {
 
 export class ModelCatalog {
   private readonly models: MutableModels;
-  private readonly imagesModels: MutableImagesModels;
+  private readonly imagesModels: MutableModels;
   private registeredDefs: CustomProviderDef[] = [];
   private readonly customIds = new Set<string>();
 
   constructor() {
     this.models = builtinModels();
-    this.imagesModels = builtinImagesModels();
+    this.imagesModels = createModels();
+    this.imagesModels.setProvider(openrouterProvider());
     this.imagesModels.setProvider(createZhipuImagesProvider());
     this.imagesModels.setProvider(createOpenaiImagesProvider());
   }
@@ -301,7 +302,7 @@ export class ModelCatalog {
     const catalog: ProviderCatalog = {};
 
     for (const provider of this.imagesModels.getProviders()) {
-      const providerModels = this.imagesModels.getModels(provider.id);
+      const providerModels = this.imagesModels.getModelsOfType("image", provider.id);
       if (providerModels.length === 0) continue;
       const items: ProviderModelItem[] = providerModels.map((m) => ({
         id: m.id,
@@ -337,7 +338,7 @@ export class ModelCatalog {
     return this.models;
   }
 
-  getImagesModels(): ImagesModels {
+  getImagesModels(): Models {
     return this.imagesModels;
   }
 }

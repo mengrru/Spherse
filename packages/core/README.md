@@ -41,7 +41,7 @@
 1. **贡献即数据（Capability）**——能力是一个对象，不是一个待修改的调用链。新增行为 = 新增贡献，而不是修改既有代码。
 2. **依赖即窄接口（Port）**——模块只看见它需要的最小面。trigger 只见 `SessionPort` 五个方法，不知道 SessionManager 存在；capability 的 contextBlocks 只见 `SessionView` 三字段。
 3. **横切即管线（Middleware）**——事件流上的横切关注点（日志、持久化、脱敏）是可组合的 middleware，不是内联回调。链序固定：`log → capability middlewares → sanitizer? → persist`。
-4. **状态即单源（SessionEventLog / 冻结 deps）**——会话 durable state 以 append-only events 为唯一写入真相，`agent.state.messages` 由 fold 重建；`RuntimeDeps` 构造后冻结，可变配置只经 `RunConfigHolder` 单点更新。禁止另建并行消息真相源、禁止共享可变上下文。
+4. **状态即单源（SessionEventLog / 冻结 deps）**——会话 durable state 以 append-only events 为唯一写入真相，`agent.state.messages` 由 fold 对话投影加当前配置的 system message 重建（适配契约见 [core 架构](../../docs/official/architecture/core.md)「会话运行时」）；`RuntimeDeps` 构造后冻结，可变配置只经 `RunConfigHolder` 单点更新。禁止另建并行消息真相源、禁止共享可变上下文。
 5. **磁盘格式是契约**——`sessions.db` 的 sessions/events schema、事件 `data` 与 `schema_version`、`.spherse/` 目录布局不可轻动。旧 messages/compactions 仅供迁移前读取，首次可写 restore 由 `SessionManager` 在 core 内部单事务幂等迁移；兼容逻辑归 session 层，不暴露客户端迁移 API。
 6. **安全不变量不可拔插**——base64 卫生（attachment sanitizer）、路径穿越校验、写互斥是系统不变量，不是可选项。它们住在固定的层（附件域/session 层/PM 门面），由 Runner 或门面无条件装配，**永远不要做成 capability**。
 

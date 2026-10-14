@@ -18,6 +18,7 @@ spherse/
 │   │       │   ├── gates.ts          # ApprovalGate / AskGate 端口（session control 请求的类型源）
 │   │       │   ├── event-pipeline.ts # EventMiddleware + createEventPipeline（横切组合律）
 │   │       │   ├── turn-hooks.ts     # TurnHooks（beforeTurn/afterTurn/onReload）+ composeTurnHooks
+│   │       │   ├── agent-context.ts  # composeAgentMessages：当前提示词/工具声明 + 对话投影的纯组合
 │   │       │   └── context-block.ts  # 开放 ContextBlock { kind, render() } + serializeBlocks
 │   │       ├── capabilities/         # 能力模块（只依赖 kernel 类型；每个目录自足）
 │   │       │   ├── fs/               # read/write/edit/list/search/move/copy_file + generate_image
@@ -33,7 +34,7 @@ spherse/
 │   │       │   ├── compaction/       # maybeCompactLog 纯变换（transform.ts）+ capability
 │   │       │   ├── time-perception/ # streamDecorators 贡献（<time> 前缀注入）+ previewTransforms（debug snapshot 重放）+ 提示 block；感知时间数学在 time-perception.ts
 │   │       │   ├── memory/           # memory capability（featureTools 5 工具 + memory-guide/core block；MemoryStore 在 store/memory.ts）
-│   │       │   ├── web-search/       # web_search 工具接线 + streamDecorator（无 DeepSeek key 时从出站请求 tools 中隐藏）
+│   │       │   ├── web-search/       # web_search 工具接线 + streamDecorator（无 DeepSeek key 时从出站 system 工具声明中隐藏）
 │   │       │   ├── shared/           # llmPolicyOf 等跨能力共享工具
 │   │       │   └── builtin.ts        # builtinToolCapabilities()：纯工具类 capability 集合
 │   │       ├── session/              # 会话运行时（kernel 抽象的编排实例化）

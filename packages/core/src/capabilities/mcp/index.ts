@@ -4,6 +4,7 @@ import { MCP_TOOL_NAME_PREFIX } from "../../mcp/config.js";
 import type { Capability } from "../../kernel/capability.js";
 import type { KernelServices } from "../../kernel/ports.js";
 import type { TurnHooksFactory } from "../../kernel/turn-hooks.js";
+import { composeAgentMessages } from "../../kernel/agent-context.js";
 import type { ProjectStore } from "../../store/project.js";
 import type { Logger } from "../../logger.js";
 import { mcpContextBlock } from "./block.js";
@@ -79,11 +80,13 @@ export function createMcpCapability(deps: McpCapabilityDeps): McpCapability {
           const nextTools = [...baseTools, ...dedupeToolNames(baseTools, mcpTools)];
           agent.state.tools = nextTools;
 
-          agent.state.systemPrompt = agent.state.systemPrompt.replace(MCP_CONTEXT_BLOCK_RE, "");
+          const systemPrompt = agent.state.systemPrompt.replace(MCP_CONTEXT_BLOCK_RE, "");
           const block = mcpContextBlock(info);
-          if (block) {
-            agent.state.systemPrompt += "\n\n" + block.render();
-          }
+          agent.state.messages = composeAgentMessages(
+            agent.state.messages,
+            block ? systemPrompt + "\n\n" + block.render() : systemPrompt,
+            nextTools,
+          );
         } catch (err) {
           (currentLogger)?.warn({ err, sessionId }, "mcp merge hook failed");
         }

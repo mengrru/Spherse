@@ -1,4 +1,3 @@
-import type { ToolCall as AgentToolCall } from "@spherse/core";
 import type { ChatCard } from "../types";
 import {
   buildCardFromToolResult,
@@ -32,7 +31,7 @@ function computeToolCard(
   }
   const details = resolveDetails(result);
   if (result.result !== undefined || details !== undefined) {
-    const fromResult = buildCardFromToolResult(toolName, agentToolCall(toolName, args), details);
+    const fromResult = buildCardFromToolResult(toolName, args, details);
     if (fromResult) return fromResult;
   }
   if (result.partialResult !== undefined) {
@@ -99,10 +98,6 @@ function questionOptions(args: Record<string, unknown>): string[] | undefined {
   if (!Array.isArray(args.options)) return undefined;
   const options = args.options.filter((value): value is string => typeof value === "string");
   return options.length >= 2 ? options : undefined;
-}
-
-function agentToolCall(toolName: string, args: Record<string, unknown>): AgentToolCall {
-  return { type: "toolCall", id: "", name: toolName, arguments: args };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

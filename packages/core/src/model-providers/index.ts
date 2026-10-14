@@ -1,4 +1,4 @@
-import type { ImagesModels } from "@earendil-works/pi-ai";
+import type { Models } from "@earendil-works/pi-ai";
 import type { ProviderCatalog } from "../types.js";
 import { ModelCatalog } from "./catalog.js";
 
@@ -10,6 +10,6 @@ export function getImageSupportedProviders(): ProviderCatalog {
   return defaultCatalog.getImageSupportedProviders();
 }
 
-export function getImagesModels(): ImagesModels {
+export function getImagesModels(): Models {
   return defaultCatalog.getImagesModels();
 }

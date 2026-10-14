@@ -1,17 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { ToolCall as AgentToolCall } from "@spherse/core";
 import { buildCardFromToolResult } from "./chat-tool-projection";
-
-function toolCall(name: string, args: Record<string, unknown> = {}): AgentToolCall {
-  return { type: "toolCall", id: "tc1", name, arguments: args };
-}
 
 describe("buildCardFromToolResult", () => {
   describe("ask_user", () => {
     it("builds an answered question card when details carry an answer", () => {
       const card = buildCardFromToolResult(
         "ask_user",
-        toolCall("ask_user", { question: "Deploy?" }),
+        { question: "Deploy?" },
         { cardType: "question", question: "Deploy?", options: ["yes", "no"], answer: "yes" },
       );
 
@@ -27,7 +22,7 @@ describe("buildCardFromToolResult", () => {
     it("builds an answered question card without options when options are absent", () => {
       const card = buildCardFromToolResult(
         "ask_user",
-        toolCall("ask_user"),
+        {},
         { cardType: "question", question: "Proceed?", answer: "go" },
       );
 
@@ -42,7 +37,7 @@ describe("buildCardFromToolResult", () => {
     it("builds a timeout question card when details carry timedOut", () => {
       const card = buildCardFromToolResult(
         "ask_user",
-        toolCall("ask_user"),
+        {},
         { cardType: "question", question: "Deploy?", options: ["yes", "no"], timedOut: true },
       );
 
@@ -57,7 +52,7 @@ describe("buildCardFromToolResult", () => {
     it("drops non-string option entries and empty option lists", () => {
       const card = buildCardFromToolResult(
         "ask_user",
-        toolCall("ask_user"),
+        {},
         { cardType: "question", question: "Q?", options: ["ok", 3], answer: "ok" },
       );
 
@@ -71,7 +66,7 @@ describe("buildCardFromToolResult", () => {
 
       const emptyOptions = buildCardFromToolResult(
         "ask_user",
-        toolCall("ask_user"),
+        {},
         { cardType: "question", question: "Q?", options: [], answer: "ok" },
       );
 
@@ -86,7 +81,7 @@ describe("buildCardFromToolResult", () => {
     it("prefers answer over timedOut when both are present", () => {
       const card = buildCardFromToolResult(
         "ask_user",
-        toolCall("ask_user"),
+        {},
         { cardType: "question", question: "Q?", answer: "yes", timedOut: true },
       );
 
@@ -100,7 +95,7 @@ describe("buildCardFromToolResult", () => {
 
     it("produces no card for question details without answer or timedOut (aborted)", () => {
       expect(
-        buildCardFromToolResult("ask_user", toolCall("ask_user"), {
+        buildCardFromToolResult("ask_user", {}, {
           cardType: "question",
           question: "Deploy?",
           options: ["yes", "no"],
@@ -109,20 +104,20 @@ describe("buildCardFromToolResult", () => {
     });
 
     it("produces no card for non-question details", () => {
-      expect(buildCardFromToolResult("ask_user", toolCall("ask_user"), undefined)).toBeUndefined();
-      expect(buildCardFromToolResult("ask_user", toolCall("ask_user"), null)).toBeUndefined();
-      expect(buildCardFromToolResult("ask_user", toolCall("ask_user"), {})).toBeUndefined();
+      expect(buildCardFromToolResult("ask_user", {}, undefined)).toBeUndefined();
+      expect(buildCardFromToolResult("ask_user", {}, null)).toBeUndefined();
+      expect(buildCardFromToolResult("ask_user", {}, {})).toBeUndefined();
       expect(
-        buildCardFromToolResult("ask_user", toolCall("ask_user"), { cardType: "html" }),
+        buildCardFromToolResult("ask_user", {}, { cardType: "html" }),
       ).toBeUndefined();
       expect(
-        buildCardFromToolResult("ask_user", toolCall("ask_user"), { question: "Deploy?" }),
+        buildCardFromToolResult("ask_user", {}, { question: "Deploy?" }),
       ).toBeUndefined();
     });
 
     it("ignores question details for other tool names", () => {
       expect(
-        buildCardFromToolResult("run_command", toolCall("run_command"), {
+        buildCardFromToolResult("run_command", {}, {
           cardType: "question",
           question: "Deploy?",
           answer: "yes",
@@ -133,7 +128,7 @@ describe("buildCardFromToolResult", () => {
 
   describe("existing branches", () => {
     it("rebuilds an html card from render_card result details", () => {
-      const card = buildCardFromToolResult("render_card", toolCall("render_card"), {
+      const card = buildCardFromToolResult("render_card", {}, {
         cardType: "html",
         html: "<h1>Hi</h1>",
         title: "Hi",
@@ -155,7 +150,7 @@ describe("buildCardFromToolResult", () => {
     });
 
     it("rebuilds an image card from generate_image result details", () => {
-      const card = buildCardFromToolResult("generate_image", toolCall("generate_image"), {
+      const card = buildCardFromToolResult("generate_image", {}, {
         cardType: "image",
         status: "done",
         path: "/tmp/x.png",
@@ -174,7 +169,7 @@ describe("buildCardFromToolResult", () => {
     });
 
     it("rebuilds a completed command card from run_command result details", () => {
-      const card = buildCardFromToolResult("run_command", toolCall("run_command", { command: "echo hi" }), {
+      const card = buildCardFromToolResult("run_command", { command: "echo hi" }, {
         cardType: "command",
         status: "completed",
         command: "echo hi",
@@ -199,7 +194,7 @@ describe("buildCardFromToolResult", () => {
     it("rebuilds a rejected command card from run_command rejected details", () => {
       const card = buildCardFromToolResult(
         "run_command",
-        toolCall("run_command", { command: "rm -rf /" }),
+        { command: "rm -rf /" },
         { rejected: true },
       );
 
@@ -214,7 +209,7 @@ describe("buildCardFromToolResult", () => {
     });
 
     it("returns undefined for unknown tool names", () => {
-      expect(buildCardFromToolResult("write_file", toolCall("write_file"), { path: "a" })).toBeUndefined();
+      expect(buildCardFromToolResult("write_file", {}, { path: "a" })).toBeUndefined();
     });
   });
 });

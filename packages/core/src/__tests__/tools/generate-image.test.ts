@@ -6,7 +6,7 @@ import path from "node:path";
 
 const { mockImagesModels } = vi.hoisted(() => ({
   mockImagesModels: {
-    getModel: vi.fn(),
+    getModelOfType: vi.fn(),
     generateImages: vi.fn(),
   },
 }));
@@ -33,10 +33,10 @@ describe("createGenerateImageTool", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    mockImagesModels.getModel.mockClear();
+    mockImagesModels.getModelOfType.mockClear();
     mockImagesModels.generateImages.mockClear();
     mockImagesModels.generateImages.mockResolvedValue(mockAssistantImages());
-    mockImagesModels.getModel.mockReturnValue({ id: "test-model", api: "openrouter-images", provider: "openrouter" });
+    mockImagesModels.getModelOfType.mockReturnValue({ id: "test-model", api: "openrouter-images", provider: "openrouter" });
     process.env.SPHERSE_IMAGE_MODEL = "openrouter/google/test-image";
     process.env.SPHERSE_IMAGE_API_KEY = "test-key";
   });
@@ -152,13 +152,13 @@ describe("createGenerateImageTool", () => {
   it("uses zhipu path when provider is zhipu", async () => {
     process.env.SPHERSE_IMAGE_MODEL = "zhipu/glm-image";
     process.env.SPHERSE_IMAGE_API_KEY = "zhipu-key";
-    mockImagesModels.getModel.mockReturnValue({ id: "glm-image", api: "zhipu-images", provider: "zhipu" });
+    mockImagesModels.getModelOfType.mockReturnValue({ id: "glm-image", api: "zhipu-images", provider: "zhipu" });
     mockImagesModels.generateImages.mockResolvedValue({ ...mockAssistantImages(), api: "zhipu-images", provider: "zhipu", model: "glm-image" });
 
     const tool = createGenerateImageTool(projectRoot);
     await tool.execute("tc1", { prompt: "x" }, undefined as any, undefined as any);
 
-    expect(mockImagesModels.getModel).toHaveBeenCalledWith("zhipu", "glm-image");
+    expect(mockImagesModels.getModelOfType).toHaveBeenCalledWith("image", "zhipu", "glm-image");
     const passedModel = mockImagesModels.generateImages.mock.calls[0][0];
     expect(passedModel.provider).toBe("zhipu");
   });

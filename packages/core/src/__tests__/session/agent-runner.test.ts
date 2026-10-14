@@ -30,6 +30,9 @@ import { attachmentsCapability } from "../../capabilities/attachments/index.js";
 import { timePerceptionCapability } from "../../capabilities/time-perception/index.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
 import { compactionCapability } from "../../capabilities/compaction/index.js";
+import { composeAgentMessages } from "../../kernel/agent-context.js";
+import { estimateTokens } from "../../context/token-estimate.js";
+import { getCurrentSystemPrompt, getCurrentTools, createAssistantMessageEventStream, type TranscriptContext, type AssistantMessage } from "@earendil-works/pi-ai";
 
 const TEST_AGENT_PROFILE = `---
 name: Test Agent
@@ -66,7 +69,8 @@ function seedEvents(runner: AgentRunner, events: Array<{ type: string; data: unk
   for (const e of events) {
     log.append(e.type as never, e.data as never);
   }
-  agentOf(runner).state.messages = deriveMessages(log.events);
+  const state = runner.agentRef.state;
+  state.messages = composeAgentMessages(deriveMessages(log.events), state.systemPrompt, state.tools);
 }
 
 async function compactLive(
@@ -80,7 +84,8 @@ async function compactLive(
   const before = log.events.length;
   await hook.afterTurn!(agentOf(runner), log);
   if (log.events.length !== before) {
-    agentOf(runner).state.messages = deriveMessages(log.events);
+    const state = runner.agentRef.state;
+    state.messages = composeAgentMessages(deriveMessages(log.events), state.systemPrompt, state.tools);
   }
 }
 
@@ -248,9 +253,11 @@ describe("AgentRunner context engineering", () => {
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const agent = agentOf(runner);
-    expect(agent.state.messages.length).toBe(2);
-    expect(agent.state.messages[0].role).toBe("user");
-    expect(agent.state.messages[0].content).toContain("hello world");
+    expect(agent.state.messages.length).toBe(3);
+    expect(agent.state.messages[0].role).toBe("system");
+    expect(agent.state.systemPrompt).toContain("Test agent for sessions.");
+    expect(agent.state.messages[1].role).toBe("user");
+    expect(agent.state.messages[1].content).toContain("hello world");
   });
 
   it("restore synthesizes toolResult for interrupted tool call and persists it", async () => {
@@ -331,7 +338,7 @@ describe("AgentRunner context engineering", () => {
     log.append("turn/end", { reason: "completed" });
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
-    expect(agentOf(runner).state.messages.length).toBe(3);
+    expect(agentOf(runner).state.messages.length).toBe(4);
     expect(agentStore.sessions.readEvents(sessionId).length).toBe(5);
   });
 
@@ -352,13 +359,15 @@ describe("AgentRunner context engineering", () => {
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const agent = agentOf(runner);
-    expect(agent.state.messages.length).toBe(3);
-    expect(agent.state.messages[0].role).toBe("user");
-    expect(agent.state.messages[0].content).toContain("<compaction-digest");
-    expect(agent.state.messages[0].content).toContain("early q");
+    expect(agent.state.messages.length).toBe(4);
+    expect(agent.state.messages[0].role).toBe("system");
+    expect(agent.state.systemPrompt).toContain("Test agent for sessions.");
     expect(agent.state.messages[1].role).toBe("user");
-    expect(agent.state.messages[1].content).toContain("tail question");
-    expect(agent.state.messages[2].role).toBe("assistant");
+    expect(agent.state.messages[1].content).toContain("<compaction-digest");
+    expect(agent.state.messages[1].content).toContain("early q");
+    expect(agent.state.messages[2].role).toBe("user");
+    expect(agent.state.messages[2].content).toContain("tail question");
+    expect(agent.state.messages[3].role).toBe("assistant");
   });
 
   it("getTurnContext returns the LLM-projected context including time prefix and stripped attachments", async () => {
@@ -407,10 +416,10 @@ Agent with time perception.`,
 
     const runner = await AgentRunner.initForRestore(tpDeps, tpAgentId, sessionId);
     const agent = agentOf(runner);
-    agent.state.messages = [
+    agent.state.messages = composeAgentMessages([
       ...deriveMessages(log.events),
       { role: "notification", content: "ui-only", timestamp: 1 },
-    ];
+    ], agent.state.systemPrompt, agent.state.tools);
 
     const snapshot = runner.getTurnContext();
     const roles = snapshot.messages.map((m: any) => m.role);
@@ -759,8 +768,10 @@ Agent with time perception.`,
     await runner.retryLastTurn(() => {});
 
     expect(agent.continue).toHaveBeenCalledTimes(1);
-    expect(agent.state.messages.length).toBe(1);
-    expect(agent.state.messages[0].role).toBe("user");
+    expect(agent.state.messages.length).toBe(2);
+    expect(agent.state.messages[0].role).toBe("system");
+    expect(agent.state.systemPrompt).toContain("Test agent for sessions.");
+    expect(agent.state.messages[1].role).toBe("user");
 
     const retriedEvents = eventsOf(runner).filter((e: any) => e.type === "turn/retried");
     expect(retriedEvents).toHaveLength(1);
@@ -800,9 +811,11 @@ Agent with time perception.`,
     const withdrawnEvents = eventsOf(runner).filter((e: any) => e.type === "turn/withdrawn");
     expect(withdrawnEvents).toHaveLength(1);
     expect(withdrawnEvents[0].data).toEqual({ seq: 2 });
-    expect(agent.state.messages.length).toBe(2);
-    expect((agent.state.messages[0] as any).content[0].text).toBe("q1");
-    expect((agent.state.messages[1] as any).content[0].text).toBe("a1");
+    expect(agent.state.messages.length).toBe(3);
+    expect(agent.state.messages[0].role).toBe("system");
+    expect(agent.state.systemPrompt).toContain("Test agent for sessions.");
+    expect((agent.state.messages[1] as any).content[0].text).toBe("q1");
+    expect((agent.state.messages[2] as any).content[0].text).toBe("a1");
     expect(agentStore.sessions.readEvents(sessionId)).toHaveLength(5);
   });
 
@@ -820,7 +833,10 @@ Agent with time perception.`,
     const anchor = await runner.withdrawLastTurn();
 
     expect(anchor).toBe(0);
-    expect(agent.state.messages).toEqual([]);
+    expect(agent.state.messages).toHaveLength(1);
+    expect(agent.state.messages[0].role).toBe("system");
+    expect(agent.state.systemPrompt).toContain("Test agent for sessions.");
+    expect(runner.getTurnContext().messages).toEqual([]);
     expect(deriveMessages(agentStore.sessions.readEvents(sessionId))).toEqual([]);
   });
 
@@ -906,8 +922,61 @@ Agent with time perception.`,
 
     expect(anchor).toBe(3);
     const messages = agentOf(runner).state.messages;
-    expect(messages.length).toBe(1);
-    expect((messages[0] as any).content).toContain("digest of q1/a1");
+    expect(messages.length).toBe(2);
+    expect(messages[0].role).toBe("system");
+    expect((messages[1] as any).content).toContain("digest of q1/a1");
+  });
+
+  it("preserves prompt and tool declarations on the wire after restore, reload and withdrawal", async () => {
+    deps = { ...deps, attachmentProcessors: [] };
+    runConfig.update({ defaultModel: "provider/model" });
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const log = SessionEventLog.open(agentStore.sessions, sessionId);
+    log.append("user/message", { message: { role: "user", content: "earlier", timestamp: 1 } });
+    const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
+    const requests: TranscriptContext[] = [];
+    expect(runner.getStatus().currentTokens)
+      .toBe(estimateTokens(runner.agentRef.state.systemPrompt) + estimateTokens("earlier"));
+    const streamFn = (_model: unknown, context: TranscriptContext) => {
+      requests.push(structuredClone(context));
+      const stream = createAssistantMessageEventStream();
+      const message: AssistantMessage = {
+        role: "assistant",
+        content: [{ type: "text", text: "reply" }],
+        api: "openai-completions",
+        provider: "provider",
+        model: "model",
+        stopReason: "stop",
+        timestamp: Date.now(),
+        usage: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, totalTokens: 2,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
+      };
+      stream.push({ type: "start", partial: message });
+      stream.push({ type: "done", reason: "stop", message });
+      return stream;
+    };
+    runner.agentRef.streamFunction = streamFn;
+
+    await runner.sendMessage("after restore", [], () => {});
+    expect(getCurrentSystemPrompt(requests[0].messages)).toContain("Test agent for sessions.");
+    expect(getCurrentTools(requests[0].messages).map((tool) => tool.name)).toEqual(["read_file"]);
+
+    agentStore._profile = { ...agentStore._profile, systemPrompt: "Reloaded instructions", tools: ["list_files"] };
+    await runner.applyReload();
+    runner.agentRef.streamFunction = streamFn;
+    await runner.sendMessage("after reload", [], () => {});
+    expect(getCurrentSystemPrompt(requests[1].messages)).toContain("Reloaded instructions");
+    expect(getCurrentSystemPrompt(requests[1].messages)).not.toContain("Test agent for sessions.");
+    expect(getCurrentTools(requests[1].messages).map((tool) => tool.name)).toEqual(["list_files"]);
+
+    await runner.withdrawLastTurn();
+    await runner.sendMessage("after withdrawal", [], () => {});
+    expect(getCurrentSystemPrompt(requests[2].messages)).toContain("Reloaded instructions");
+    expect(getCurrentTools(requests[2].messages).map((tool) => tool.name)).toEqual(["list_files"]);
+    expect(requests[2].messages.filter((message) => message.role === "system")).toHaveLength(1);
+    expect(runner.getTurnContext().messages.every((message) => message.role !== "system")).toBe(true);
+    expect(deriveMessages(agentStore.sessions.readEvents(sessionId)).every((message) => message.role !== "system")).toBe(true);
   });
 });
 

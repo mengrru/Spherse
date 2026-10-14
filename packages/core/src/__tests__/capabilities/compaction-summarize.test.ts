@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Agent } from "@earendil-works/pi-agent-core";
-import type { Message } from "@earendil-works/pi-ai";
+import { getCurrentSystemPrompt, getCurrentTools, type Message } from "@earendil-works/pi-ai";
 import {
   buildSummaryInstruction,
   computeSummaryTokenBudget,
@@ -95,12 +95,13 @@ describe("summarizeForCompaction", () => {
       tools: unknown;
       messages: Message[];
     };
-    expect(context.systemPrompt).toBe(agent.state.systemPrompt);
-    expect(context.tools).toBe(agent.state.tools);
-    expect(context.messages.slice(0, foldMessages.length)).toEqual(foldMessages);
-    expect(context.messages[foldMessages.length]).toEqual({
+    expect(getCurrentSystemPrompt(context.messages)).toBe(agent.state.systemPrompt);
+    expect(getCurrentTools(context.messages)).toEqual(agent.state.tools);
+    expect(context.messages.slice(1, foldMessages.length + 1)).toEqual(foldMessages);
+    expect(context.messages[foldMessages.length + 1]).toEqual({
       role: "user",
       content: buildSummaryInstruction(16_000),
+      timestamp: expect.any(Number),
     });
     expect((calls[0].options as { sessionId: string }).sessionId).toBe("session-1");
     expect((calls[0].options as { maxTokens: number }).maxTokens).toBe(16_000);
@@ -206,8 +207,8 @@ describe("summarizeForCompaction", () => {
 
     await summarizeForCompaction(agent, foldMessages, "s", { logger: createSilentLogger() });
 
-    expect(calls[0].context.messages[0]).toBe(projected[0]);
-    expect(calls[0].context.messages[0].content).not.toContain("帮我建立魔法体系");
+    expect(calls[0].context.messages[1]).toBe(projected[0]);
+    expect(calls[0].context.messages[1].content).not.toContain("帮我建立魔法体系");
   });
 
   it("returns null when model is missing", async () => {

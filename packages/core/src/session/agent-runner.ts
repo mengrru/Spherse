@@ -15,6 +15,7 @@ import {
   type AttachmentSanitizer,
 } from "../attachments/sanitizer.js";
 import { composeTurnHooks, type TurnHooks } from "../kernel/turn-hooks.js";
+import { composeAgentMessages } from "../kernel/agent-context.js";
 import { collectAbandonedSeqs, deriveMessages, repairLog } from "./fold.js";
 import { SessionEventLog } from "./event-log.js";
 import type { SessionEvent, SendMessageMeta } from "./events.js";
@@ -329,7 +330,7 @@ export class AgentRunner {
       sessionId: this.sessionId,
       capturedAt: new Date().toISOString(),
       systemPrompt: this.agent.state.systemPrompt,
-      messages: llmMessages,
+      messages: llmMessages.filter((message) => message.role !== "system"),
       tools: this.agent.state.tools.map((tool: AgentTool) => ({
         name: tool.name,
         description: tool.description ?? "",
@@ -344,7 +345,10 @@ export class AgentRunner {
 
   getStatus(): SessionStatus {
     return {
-      currentTokens: readCurrentTokens(this.agent.state.messages, this.agent.state.systemPrompt),
+      currentTokens: readCurrentTokens(
+        this.agent.state.messages.filter((message) => message.role !== "system"),
+        this.agent.state.systemPrompt,
+      ),
       contextWindowLimit:
         (this.agent.state.model as { contextWindow?: number } | undefined)?.contextWindow ?? null,
     };
@@ -400,8 +404,8 @@ export class AgentRunner {
         createApprovalGate(this.controlBus),
         createAskGate(this.controlBus),
       );
-      this.agent.state.systemPrompt = systemPrompt;
       this.agent.state.tools = tools;
+      this.agent.state.messages = composeAgentMessages(this.agent.state.messages, systemPrompt, tools);
       this.applyDefaultModel(this.deps.runConfig.current().defaultModel);
       this.applyThinkingLevel(this.deps.runConfig.current().thinkingLevel);
       this.agent.streamFunction = composeStreamFn(
@@ -502,7 +506,11 @@ export class AgentRunner {
 
   private syncBufferFromLog(): void {
     if (this.eventLog) {
-      this.agent.state.messages = deriveMessages(this.eventLog.events);
+      this.agent.state.messages = composeAgentMessages(
+        deriveMessages(this.eventLog.events),
+        this.agent.state.systemPrompt,
+        this.agent.state.tools,
+      );
     }
   }
 
