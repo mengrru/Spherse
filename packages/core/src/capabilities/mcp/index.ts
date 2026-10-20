@@ -7,6 +7,7 @@ import type { TurnHooksFactory } from "../../kernel/turn-hooks.js";
 import type { ProjectStore } from "../../store/project.js";
 import type { Logger } from "../../logger.js";
 import { mcpContextBlock } from "./block.js";
+import { updateLeadingSystemContent } from "../../session/system-message.js";
 
 const MCP_CONTEXT_BLOCK_RE = /\n*<!-- spherse:mcp-context:start -->[\s\S]*<!-- spherse:mcp-context:end -->/g;
 
@@ -79,11 +80,11 @@ export function createMcpCapability(deps: McpCapabilityDeps): McpCapability {
           const nextTools = [...baseTools, ...dedupeToolNames(baseTools, mcpTools)];
           agent.state.tools = nextTools;
 
-          agent.state.systemPrompt = agent.state.systemPrompt.replace(MCP_CONTEXT_BLOCK_RE, "");
           const block = mcpContextBlock(info);
-          if (block) {
-            agent.state.systemPrompt += "\n\n" + block.render();
-          }
+          updateLeadingSystemContent(agent, (content) => {
+            const stripped = content.replace(MCP_CONTEXT_BLOCK_RE, "");
+            return block ? stripped + "\n\n" + block.render() : stripped;
+          });
         } catch (err) {
           (currentLogger)?.warn({ err, sessionId }, "mcp merge hook failed");
         }

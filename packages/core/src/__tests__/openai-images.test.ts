@@ -3,12 +3,14 @@ import {
   resolveOpenaiImageModel,
   generateImagesOpenai,
   OPENAI_IMAGE_MODELS,
-  createOpenaiImagesProvider,
+  withOpenaiImages,
 } from "../model-providers/openai-images.js";
+import { openaiProvider } from "@earendil-works/pi-ai/providers/openai";
 
 const SAMPLE_MODEL = {
   id: "gpt-image-2",
   name: "GPT Image 2",
+  type: "image" as const,
   api: "openai-images",
   provider: "openai",
   baseUrl: "https://api.openai.com/v1",
@@ -256,12 +258,17 @@ describe("generateImagesOpenai", () => {
   });
 });
 
-describe("createOpenaiImagesProvider", () => {
-  it("returns provider with correct id and generateImages function", () => {
-    const provider = createOpenaiImagesProvider();
-    expect(provider.id).toBe("openai");
-    expect(provider.name).toBe("OpenAI");
-    expect(typeof provider.generateImages).toBe("function");
-    expect(provider.getModels().length).toBeGreaterThan(0);
+describe("withOpenaiImages", () => {
+  it("keeps the builtin chat provider intact and adds image models", () => {
+    const wrapped = withOpenaiImages(openaiProvider());
+    expect(wrapped.id).toBe("openai");
+    expect(typeof wrapped.generateImages).toBe("function");
+    const chatModels = wrapped.getModels();
+    expect(chatModels.length).toBeGreaterThan(0);
+    expect(chatModels.every((m) => (m as { type?: string }).type !== "image")).toBe(true);
+    const all = wrapped.getAllModels?.() ?? [];
+    const imageModels = all.filter((m) => (m as { type?: string }).type === "image");
+    expect(imageModels.map((m) => m.id)).toContain("gpt-image-2");
+    expect(imageModels.every((m) => (m as { type?: string }).type === "image")).toBe(true);
   });
 });

@@ -4,15 +4,15 @@ import { createTempProject, cleanupDir, pathExists } from "../helpers.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-const { mockImagesModels } = vi.hoisted(() => ({
-  mockImagesModels: {
-    getModel: vi.fn(),
+const { mockImageModels } = vi.hoisted(() => ({
+  mockImageModels: {
+    getModelOfType: vi.fn(),
     generateImages: vi.fn(),
   },
 }));
 
 vi.mock("../../model-providers/index.js", () => ({
-  getImagesModels: () => mockImagesModels,
+  getImageModels: () => mockImageModels,
 }));
 
 const MOCK_B64 = "iVBORw0KGgo=";
@@ -33,10 +33,10 @@ describe("createGenerateImageTool", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    mockImagesModels.getModel.mockClear();
-    mockImagesModels.generateImages.mockClear();
-    mockImagesModels.generateImages.mockResolvedValue(mockAssistantImages());
-    mockImagesModels.getModel.mockReturnValue({ id: "test-model", api: "openrouter-images", provider: "openrouter" });
+    mockImageModels.getModelOfType.mockClear();
+    mockImageModels.generateImages.mockClear();
+    mockImageModels.generateImages.mockResolvedValue(mockAssistantImages());
+    mockImageModels.getModelOfType.mockReturnValue({ id: "test-model", api: "openrouter-images", provider: "openrouter" });
     process.env.SPHERSE_IMAGE_MODEL = "openrouter/google/test-image";
     process.env.SPHERSE_IMAGE_API_KEY = "test-key";
   });
@@ -94,7 +94,7 @@ describe("createGenerateImageTool", () => {
     expect(onUpdate.mock.calls[0][0].details).toMatchObject({ type: "image", status: "generating" });
     expect(onUpdate.mock.calls[1][0].details).toMatchObject({ type: "image", status: "done" });
 
-    expect(mockImagesModels.generateImages).toHaveBeenCalled();
+    expect(mockImageModels.generateImages).toHaveBeenCalled();
   });
 
   it("generates filename matching yyyyMMddHHmmss-UTC + 4 hex", async () => {
@@ -112,7 +112,7 @@ describe("createGenerateImageTool", () => {
     const result = await tool.execute("tc1", { prompt: "x" }, undefined as any, onUpdate);
 
     expect(result.content[0].text).toContain("配置");
-    expect(mockImagesModels.generateImages).not.toHaveBeenCalled();
+    expect(mockImageModels.generateImages).not.toHaveBeenCalled();
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
@@ -124,7 +124,7 @@ describe("createGenerateImageTool", () => {
   });
 
   it("returns error when generateImages stopReason is error", async () => {
-    mockImagesModels.generateImages.mockResolvedValue({
+    mockImageModels.generateImages.mockResolvedValue({
       ...mockAssistantImages(),
       stopReason: "error",
       errorMessage: "upstream failed",
@@ -140,7 +140,7 @@ describe("createGenerateImageTool", () => {
   });
 
   it("returns error when output has no image content", async () => {
-    mockImagesModels.generateImages.mockResolvedValue({
+    mockImageModels.generateImages.mockResolvedValue({
       ...mockAssistantImages(),
       output: [{ type: "text", text: "no image" }],
     });
@@ -152,14 +152,14 @@ describe("createGenerateImageTool", () => {
   it("uses zhipu path when provider is zhipu", async () => {
     process.env.SPHERSE_IMAGE_MODEL = "zhipu/glm-image";
     process.env.SPHERSE_IMAGE_API_KEY = "zhipu-key";
-    mockImagesModels.getModel.mockReturnValue({ id: "glm-image", api: "zhipu-images", provider: "zhipu" });
-    mockImagesModels.generateImages.mockResolvedValue({ ...mockAssistantImages(), api: "zhipu-images", provider: "zhipu", model: "glm-image" });
+    mockImageModels.getModelOfType.mockReturnValue({ id: "glm-image", api: "zhipu-images", provider: "zhipu" });
+    mockImageModels.generateImages.mockResolvedValue({ ...mockAssistantImages(), api: "zhipu-images", provider: "zhipu", model: "glm-image" });
 
     const tool = createGenerateImageTool(projectRoot);
     await tool.execute("tc1", { prompt: "x" }, undefined as any, undefined as any);
 
-    expect(mockImagesModels.getModel).toHaveBeenCalledWith("zhipu", "glm-image");
-    const passedModel = mockImagesModels.generateImages.mock.calls[0][0];
+    expect(mockImageModels.getModelOfType).toHaveBeenCalledWith("image", "zhipu", "glm-image");
+    const passedModel = mockImageModels.generateImages.mock.calls[0][0];
     expect(passedModel.provider).toBe("zhipu");
   });
 
@@ -172,8 +172,8 @@ describe("createGenerateImageTool", () => {
       undefined as any,
     );
 
-    expect(mockImagesModels.generateImages).toHaveBeenCalledTimes(1);
-    const passedOptions = mockImagesModels.generateImages.mock.calls[0][2];
+    expect(mockImageModels.generateImages).toHaveBeenCalledTimes(1);
+    const passedOptions = mockImageModels.generateImages.mock.calls[0][2];
     expect(passedOptions.size).toBe("1536x1024");
     expect(passedOptions.quality).toBe("high");
     expect(passedOptions.apiKey).toBe("test-key");
@@ -183,7 +183,7 @@ describe("createGenerateImageTool", () => {
     const tool = createGenerateImageTool(projectRoot);
     await tool.execute("tc1", { prompt: "x" }, undefined as any, undefined as any);
 
-    const passedOptions = mockImagesModels.generateImages.mock.calls[0][2];
+    const passedOptions = mockImageModels.generateImages.mock.calls[0][2];
     expect(passedOptions.size).toBeUndefined();
     expect(passedOptions.quality).toBeUndefined();
   });

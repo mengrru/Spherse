@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { Agent } from "@earendil-works/pi-agent-core";
 import { createMcpCapability } from "../../capabilities/mcp/index.js";
 import type { ProjectStore } from "../../store/project.js";
 import type { Logger } from "../../logger.js";
@@ -74,13 +75,14 @@ async function initCapability(configs: McpServerConfig[]) {
 }
 
 function makeAgent() {
-  return {
-    state: {
-      tools: [{ name: "builtin_tool", label: "b", description: "d", parameters: {} as never, execute: vi.fn() }],
+  return new Agent({
+    initialState: {
       systemPrompt: "BASE PROMPT",
-      model: undefined,
+      tools: [{ name: "builtin_tool", label: "b", description: "d", parameters: {} as never, execute: vi.fn() }],
+      model: undefined as never,
     },
-  } as never;
+    streamFn: (() => undefined) as never,
+  });
 }
 
 describe("mcp capability beforeTurn self-healing merge", () => {

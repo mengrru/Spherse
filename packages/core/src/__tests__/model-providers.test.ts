@@ -8,10 +8,7 @@ vi.mock("@earendil-works/pi-ai/providers/all", () => ({
     getProviders: () => [],
     getModels: () => [],
     getModel: () => undefined,
-  }),
-  builtinImagesModels: () => ({
-    getProviders: () => [],
-    getModels: () => [],
+    getProvider: () => undefined,
     setProvider: () => {},
   }),
 }));

@@ -19,6 +19,7 @@ import { collectAbandonedSeqs, deriveMessages, repairLog } from "./fold.js";
 import { SessionEventLog } from "./event-log.js";
 import type { SessionEvent, SendMessageMeta } from "./events.js";
 import { readCurrentTokens } from "../context/token-estimate.js";
+import { retainLeadingSystem, updateLeadingSystemContent, withoutLeadingSystem } from "./system-message.js";
 import {
   buildAgent,
   buildPromptAndTools,
@@ -118,6 +119,18 @@ export class AgentRunner {
     this.pendingReload = true;
   }
 
+  private subscribeAgentEvents(dispatch: (event: AgentEvent) => void): () => void {
+    return this.agent.subscribe((event) => {
+      if (
+        (event.type === "message_start" || event.type === "message_update" || event.type === "message_end") &&
+        (event.message as { role?: string } | undefined)?.role === "system"
+      ) {
+        return;
+      }
+      dispatch(event);
+    });
+  }
+
   async sendMessage(
     message: string,
     attachments: ReadonlyArray<Attachment>,
@@ -174,7 +187,7 @@ export class AgentRunner {
 
       const previousSink = this.controlBus.swapEventSink(this.persistingControlSink(onEvent));
       restoreSink = () => this.controlBus.swapEventSink(previousSink);
-      unsubscribe = this.agent.subscribe(dispatch);
+      unsubscribe = this.subscribeAgentEvents(dispatch);
 
       await this.agent.prompt(userMessage);
       await this.applyAfterTurnHooks();
@@ -235,7 +248,7 @@ export class AgentRunner {
 
       const previousSink = this.controlBus.swapEventSink(this.persistingControlSink(onEvent));
       restoreSink = () => this.controlBus.swapEventSink(previousSink);
-      unsubscribe = this.agent.subscribe(dispatch);
+      unsubscribe = this.subscribeAgentEvents(dispatch);
 
       await this.agent.continue();
       await this.applyAfterTurnHooks();
@@ -344,7 +357,10 @@ export class AgentRunner {
 
   getStatus(): SessionStatus {
     return {
-      currentTokens: readCurrentTokens(this.agent.state.messages, this.agent.state.systemPrompt),
+      currentTokens: readCurrentTokens(
+        withoutLeadingSystem(this.agent.state.messages),
+        this.agent.state.systemPrompt,
+      ),
       contextWindowLimit:
         (this.agent.state.model as { contextWindow?: number } | undefined)?.contextWindow ?? null,
     };
@@ -400,7 +416,7 @@ export class AgentRunner {
         createApprovalGate(this.controlBus),
         createAskGate(this.controlBus),
       );
-      this.agent.state.systemPrompt = systemPrompt;
+      updateLeadingSystemContent(this.agent, () => systemPrompt);
       this.agent.state.tools = tools;
       this.applyDefaultModel(this.deps.runConfig.current().defaultModel);
       this.applyThinkingLevel(this.deps.runConfig.current().thinkingLevel);
@@ -502,7 +518,10 @@ export class AgentRunner {
 
   private syncBufferFromLog(): void {
     if (this.eventLog) {
-      this.agent.state.messages = deriveMessages(this.eventLog.events);
+      this.agent.state.messages = retainLeadingSystem(
+        this.agent.state.messages,
+        deriveMessages(this.eventLog.events),
+      );
     }
   }
 

@@ -1,14 +1,12 @@
 import {
   type Models,
   type MutableModels,
-  type ImagesModels,
-  type MutableImagesModels,
   createProvider,
   type ApiKeyAuth,
   type ProviderStreams,
   type ProviderHeaders,
 } from "@earendil-works/pi-ai";
-import { builtinModels, builtinImagesModels } from "@earendil-works/pi-ai/providers/all";
+import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type {
@@ -19,7 +17,7 @@ import type {
   SamplingParams,
 } from "../types.js";
 import { createZhipuImagesProvider } from "./zhipu-images.js";
-import { createOpenaiImagesProvider } from "./openai-images.js";
+import { withOpenaiImages } from "./openai-images.js";
 
 export const ENABLED_PROVIDERS = [
   "openai",
@@ -199,15 +197,16 @@ function injectTopP(topP: number) {
 
 export class ModelCatalog {
   private readonly models: MutableModels;
-  private readonly imagesModels: MutableImagesModels;
   private registeredDefs: CustomProviderDef[] = [];
   private readonly customIds = new Set<string>();
 
   constructor() {
     this.models = builtinModels();
-    this.imagesModels = builtinImagesModels();
-    this.imagesModels.setProvider(createZhipuImagesProvider());
-    this.imagesModels.setProvider(createOpenaiImagesProvider());
+    this.models.setProvider(createZhipuImagesProvider());
+    const openaiBase = this.models.getProvider("openai");
+    if (openaiBase) {
+      this.models.setProvider(withOpenaiImages(openaiBase));
+    }
   }
 
   syncCustomProviders(defs: CustomProviderDef[], apiKeys: Record<string, string>): void {
@@ -300,8 +299,8 @@ export class ModelCatalog {
   getImageSupportedProviders(): ProviderCatalog {
     const catalog: ProviderCatalog = {};
 
-    for (const provider of this.imagesModels.getProviders()) {
-      const providerModels = this.imagesModels.getModels(provider.id);
+    for (const provider of this.models.getProviders()) {
+      const providerModels = this.models.getModelsOfType("image", provider.id);
       if (providerModels.length === 0) continue;
       const items: ProviderModelItem[] = providerModels.map((m) => ({
         id: m.id,
@@ -335,9 +334,5 @@ export class ModelCatalog {
 
   getChatModels(): Models {
     return this.models;
-  }
-
-  getImagesModels(): ImagesModels {
-    return this.imagesModels;
   }
 }

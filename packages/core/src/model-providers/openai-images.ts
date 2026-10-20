@@ -1,11 +1,11 @@
 import type {
   AssistantImages,
   ImagesContext,
-  ImagesModel,
-  ImagesProvider,
+  ImageModel,
+  ImagesOptions,
+  Provider,
   ProviderImagesOptions,
 } from "@earendil-works/pi-ai";
-import { createImagesProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
 
 export type OpenaiImagesApi = "openai-images";
 
@@ -14,6 +14,7 @@ const OPENAI_API_BASE_URL = "https://api.openai.com/v1";
 export interface OpenaiImagesModelRecord {
   id: string;
   name: string;
+  type: "image";
   provider: "openai";
   api: OpenaiImagesApi;
   baseUrl: string;
@@ -26,6 +27,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
   "gpt-image-2": {
     id: "gpt-image-2",
     name: "GPT Image 2",
+    type: "image",
     provider: "openai",
     api: "openai-images",
     baseUrl: OPENAI_API_BASE_URL,
@@ -36,6 +38,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
   "gpt-image-1.5": {
     id: "gpt-image-1.5",
     name: "GPT Image 1.5",
+    type: "image",
     provider: "openai",
     api: "openai-images",
     baseUrl: OPENAI_API_BASE_URL,
@@ -46,6 +49,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
   "gpt-image-1": {
     id: "gpt-image-1",
     name: "GPT Image 1",
+    type: "image",
     provider: "openai",
     api: "openai-images",
     baseUrl: OPENAI_API_BASE_URL,
@@ -56,6 +60,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
   "gpt-image-1-mini": {
     id: "gpt-image-1-mini",
     name: "GPT Image 1 Mini",
+    type: "image",
     provider: "openai",
     api: "openai-images",
     baseUrl: OPENAI_API_BASE_URL,
@@ -66,6 +71,7 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
   "dall-e-3": {
     id: "dall-e-3",
     name: "DALL·E 3",
+    type: "image",
     provider: "openai",
     api: "openai-images",
     baseUrl: OPENAI_API_BASE_URL,
@@ -75,14 +81,11 @@ export const OPENAI_IMAGE_MODELS: Record<string, OpenaiImagesModelRecord> = {
   },
 };
 
-export function resolveOpenaiImageModel(modelId: string): ImagesModel<OpenaiImagesApi> {
-  const record = OPENAI_IMAGE_MODELS[modelId];
-  if (!record) {
-    throw new Error(`Unknown OpenAI image model: ${modelId}`);
-  }
+function toImageModel(record: OpenaiImagesModelRecord): ImageModel<OpenaiImagesApi> {
   return {
     id: record.id,
     name: record.name,
+    type: record.type,
     api: record.api,
     provider: record.provider,
     baseUrl: record.baseUrl,
@@ -90,6 +93,14 @@ export function resolveOpenaiImageModel(modelId: string): ImagesModel<OpenaiImag
     output: record.output,
     cost: record.cost,
   };
+}
+
+export function resolveOpenaiImageModel(modelId: string): ImageModel<OpenaiImagesApi> {
+  const record = OPENAI_IMAGE_MODELS[modelId];
+  if (!record) {
+    throw new Error(`Unknown OpenAI image model: ${modelId}`);
+  }
+  return toImageModel(record);
 }
 
 type OpenaiImagesOptions = ProviderImagesOptions & {
@@ -118,7 +129,7 @@ function inferMimeTypeFromUrl(url: string): string {
 const DALLE_MODELS = new Set(["dall-e-2", "dall-e-3"]);
 
 export async function generateImagesOpenai(
-  model: ImagesModel<OpenaiImagesApi>,
+  model: ImageModel<OpenaiImagesApi>,
   context: ImagesContext,
   options?: OpenaiImagesOptions,
 ): Promise<AssistantImages> {
@@ -213,21 +224,27 @@ export async function generateImagesOpenai(
   }
 }
 
-export function createOpenaiImagesProvider(): ImagesProvider {
-  return createImagesProvider({
-    id: "openai",
-    name: "OpenAI",
-    auth: { apiKey: envApiKeyAuth("OpenAI image API key", ["SPHERSE_IMAGE_API_KEY"]) },
-    models: Object.values(OPENAI_IMAGE_MODELS).map((m) => ({
-      id: m.id,
-      name: m.name,
-      provider: "openai",
-      api: m.api,
-      baseUrl: m.baseUrl,
-      input: m.input,
-      output: m.output,
-      cost: m.cost,
-    })),
-    api: { generateImages: generateImagesOpenai as any },
-  });
+export function withOpenaiImages(base: Provider): Provider {
+  const imageModels = Object.values(OPENAI_IMAGE_MODELS).map(toImageModel);
+  return {
+    id: base.id,
+    name: base.name,
+    baseUrl: base.baseUrl,
+    headers: base.headers,
+    auth: base.auth,
+    getModels: () => base.getModels(),
+    getAllModels: () => [...(base.getAllModels?.() ?? base.getModels()), ...imageModels],
+    refreshModels: base.refreshModels?.bind(base),
+    filterModels: base.filterModels?.bind(base),
+    filterAllModels: base.filterAllModels?.bind(base),
+    stream: (model, context, options) => base.stream(model, context, options),
+    streamSimple: (model, context, options) => base.streamSimple(model, context, options),
+    fetchDeferred: base.fetchDeferred?.bind(base),
+    cancelDeferred: base.cancelDeferred?.bind(base),
+    generateImages: (
+      model: ImageModel<OpenaiImagesApi>,
+      context: ImagesContext,
+      options?: ImagesOptions,
+    ) => generateImagesOpenai(model, context, options as OpenaiImagesOptions | undefined),
+  };
 }

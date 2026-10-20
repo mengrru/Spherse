@@ -102,7 +102,7 @@ function questionOptions(args: Record<string, unknown>): string[] | undefined {
 }
 
 function agentToolCall(toolName: string, args: Record<string, unknown>): AgentToolCall {
-  return { type: "toolCall", id: "", name: toolName, arguments: args };
+  return { type: "toolCall", id: "", name: toolName, arguments: args as AgentToolCall["arguments"] };
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
