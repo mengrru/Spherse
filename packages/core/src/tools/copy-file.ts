@@ -39,7 +39,7 @@ export function createCopyFileTool(
       }
 
       try {
-        getPolicy().assertWrite(params.destination);
+        policy.assertTransferDest(params.destination);
       } catch (err) {
         return {
           content: [{ type: "text" as const, text: (err as Error).message }],

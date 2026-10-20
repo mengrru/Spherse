@@ -30,7 +30,7 @@ export function createMoveFileTool(
       const policy = getPolicy();
 
       try {
-        policy.assertRead(params.source);
+        policy.assertMoveSource(params.source);
       } catch (err) {
         return {
           content: [{ type: "text" as const, text: (err as Error).message }],
@@ -39,7 +39,7 @@ export function createMoveFileTool(
       }
 
       try {
-        getPolicy().assertWrite(params.destination);
+        getPolicy().assertTransferDest(params.destination);
       } catch (err) {
         return {
           content: [{ type: "text" as const, text: (err as Error).message }],

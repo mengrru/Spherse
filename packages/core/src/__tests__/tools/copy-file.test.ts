@@ -65,6 +65,26 @@ describe("createCopyFileTool", () => {
     expect(result.details?.denied).toBe(true);
   });
 
+  it("denies copying a file onto AGENTS.md", async () => {
+    await writeFile(projectRoot, "src.txt", "content");
+    await writeFile(projectRoot, "AGENTS.md", "# Index");
+    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { source: "src.txt", destination: "AGENTS.md" }, undefined as any);
+    expect(result.content[0].text).toContain("Access denied");
+    expect(result.content[0].text).toContain("transfer destination");
+    expect(result.details?.denied).toBe(true);
+    expect(await readFile(projectRoot, "AGENTS.md")).toBe("# Index");
+  });
+
+  it("copies AGENTS.md to a user file (non-destructive read)", async () => {
+    await writeFile(projectRoot, "AGENTS.md", "# Index");
+    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { source: "AGENTS.md", destination: "notes/index-backup.md" }, undefined as any);
+    expect(result.content[0].text).toContain("Successfully copied");
+    expect(await readFile(projectRoot, "notes/index-backup.md")).toBe("# Index");
+    expect(await readFile(projectRoot, "AGENTS.md")).toBe("# Index");
+  });
+
   it("rejects path traversal on source", async () => {
     const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
     await expect(

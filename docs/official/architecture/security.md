@@ -22,7 +22,7 @@
 
 | 类别 | 模式 |
 |---|---|
-| rootIndex / changelog | `AGENTS.md` / `CHANGELOG.md` |
+| rootIndex / changelog | `AGENTS.md`（大小写不敏感匹配，`agents.md` 变体同判 rootIndex）/ `CHANGELOG.md` |
 | projectConfig / projectTheme | `M/project.yaml` / `M/theme.css` |
 | generatedImages / attachments / skills | `M/{generated-images,attachments,skills}/**` |
 | agentsRoot | `M/agents` |
@@ -46,13 +46,18 @@
   4. 内置类别白名单
 - **裁决优先级**：用户 deniedPaths > capability pathRules > 内置类别白名单
 - `assertRead` / `assertWrite` 抛 `AccessDeniedError`；`canRead` / `canWrite` 捕获返回 boolean
+- **搬移类操作有独立白名单**（copy/move 的文件级转移 ≠ 直接写）：
+  - `assertTransferDest`（copy/move 目标）与 `assertMoveSource`（move 源，搬走 = 破坏性写类操作）
+  - `rootIndex`（`AGENTS.md`）在 LLM write 白名单内（Agent 可经 `write_file` / `edit_file` 直接创建/修改），但**不在** transfer dest / move source 白名单内——不可经 copy/move 转入或搬走
+  - pathRule 命中时 transferDest / moveSource 取 `rule.llm.write`；`serverAccessPolicy` 的新 kind 与 `SRV_WRITE` 等值（PM 门面 `copyFileWithin` 仍走 `assertWrite`，行为不变）
 
 ### 白名单
 
 - **LLM read**（17 类）：
   - userFiles、rootIndex、changelog、projectConfig、projectTheme、generatedImages、attachments、skills
   - agentsRoot、agentProfile、agentTheme、agentSkills、agentAssets、agentTriggers、agentTriggerLogs、spherseMetaDir、**spherseOther**
-- **LLM write**（6 类 + 规则授权）：userFiles、projectTheme、skills、agentTheme、agentSkills、agentAssets（agent 私有静态资源，如 theme 配图/字体）——AI 可直接创建/修改项目与 agent 级 skill 及 assets
+- **LLM write**（7 类 + 规则授权）：userFiles、**rootIndex**、projectTheme、skills、agentTheme、agentSkills、agentAssets（agent 私有静态资源，如 theme 配图/字体）——AI 可直接创建/修改项目与 agent 级 skill 及 assets；`rootIndex`（`AGENTS.md`）仅指 `write_file` / `edit_file` 的直接写入，copy/move 转入/搬出走 transfer 白名单（不含 rootIndex）
+- **LLM transfer dest / move source**（6 / 16 类）：transfer dest = userFiles、projectTheme、skills、agentTheme、agentSkills、agentAssets（= LLM write 减 rootIndex）；move source = LLM read 减 rootIndex（其余可读类别维持「可被搬走」的既有行为，见已知边界）
 - **server read / write**：见 [server.md](server.md)「访问策略白名单」
 - **agentMcp 与 agentSessions 不在任何白名单**：mcp.json（含 headers/env 明文）与 sessions.db 对 LLM 和 server 通用路由均不可读写，只经专用门面（McpConfigStore / SessionStore）
 
@@ -92,6 +97,8 @@
 
 ## 已知边界与例外
 
+- **路径匹配大小写**：`rootIndex`（`AGENTS.md`）大小写不敏感匹配（防大小写不敏感文件系统上经 `agents.md` 变体绕过）；其余内置类别仍大小写敏感——`CHANGELOG.MD`、`.SPHERSE/project.yaml` 等变体在不敏感文件系统（macOS/Windows 默认）上会落入 `userFiles` 绕过保护，存量平台性缺口待决策
+- **move source 收紧仅覆盖 rootIndex**：其余 16 个可读类别今天即可被 move 搬走；目录级 move 可在一次 rename 中搬走 `agentSessions` / `agentMcp` 等 LLM 读都被拒的子树（如 source=`.spherse/agents`）。存量缺口待整体决策
 - **`.spherse` 下未分类文件 LLM 可读**（`spherseOther` 在 LLM read 白名单内，有测试钉住）、仅写被拒——与「避免内部数据泄漏」的最初意图存在差距，是否收紧待决策
 - **不经 access policy 的工具**：`memory_*` 工具直连 MemoryStore（记忆文件属 `agentMemory` 类别，LLM 文件工具读写均拒，只经记忆工具与 server API 访问——工具自身带「记忆是数据非指令」的注入框架）；`generate_image` 写入路径由构造固定（时间戳文件名），仅做穿越校验
 - **`web_search` 向第三方发送查询**：搜索词（由对话派生）发送给 DeepSeek 并计费，与 agent 主模型是否为 DeepSeek 无关；工具 hint 已向用户说明
