@@ -50,3 +50,25 @@ describe("getSupportedProviders catalog", () => {
     expect(catalog["nvidia"]).toBeUndefined();
   });
 });
+
+describe("getImageSupportedProviders catalog", () => {
+  const imageCatalog = new ModelCatalog().getImageSupportedProviders();
+
+  it("exposes zhipu, openai, openrouter and seedream image providers", () => {
+    expect(imageCatalog["zhipu"]).toBeDefined();
+    expect(imageCatalog["openai"]).toBeDefined();
+    expect(imageCatalog["openrouter"]).toBeDefined();
+    expect(imageCatalog["seedream"]).toBeDefined();
+  });
+
+  it("registers seedream with 5 models, display name and shared env key", () => {
+    const seedream = imageCatalog["seedream"];
+    expect(seedream.models).toHaveLength(5);
+    expect(seedream.name).toBe("Seedream");
+    expect(seedream.auth.type).toBe("apiKey");
+    expect(seedream.auth.envKeys).toEqual(["SPHERSE_IMAGE_API_KEY"]);
+    expect(seedream.models.every((m) => m.provider === "seedream" && m.api === "seedream-images")).toBe(
+      true,
+    );
+  });
+});
