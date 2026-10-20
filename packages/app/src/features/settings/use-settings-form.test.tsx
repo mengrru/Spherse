@@ -150,10 +150,10 @@ describe("useSettingsForm save payload", () => {
     await waitFor(() => expect(result.current.text.configured["builtin-x"]).toBe(true));
 
     await act(async () => {
-      result.current.text.commitApiKey("builtin-x", "new-key");
+      result.current.text.commitApiKey("builtin-y", "new-key");
     });
     await waitFor(() => expect(api.updateModelSettings).toHaveBeenCalled());
-    expect(lastRequest(api).models.text.providers?.["builtin-x"]).toEqual({ apiKey: "new-key" });
+    expect(lastRequest(api).models.text.providers?.["builtin-y"]).toEqual({ apiKey: "new-key" });
   });
 
   it("commitApiKey with an empty value is a no-op and never clears a stored key", async () => {
@@ -165,6 +165,63 @@ describe("useSettingsForm save payload", () => {
     });
     expect(api.updateModelSettings).not.toHaveBeenCalled();
     expect(result.current.text.configured["builtin-x"]).toBe(true);
+  });
+
+  it("commitApiKey is a no-op while the provider is already configured", async () => {
+    const { result } = renderHook(() => useSettingsForm(api));
+    await waitFor(() => expect(result.current.text.configured["builtin-x"]).toBe(true));
+
+    await act(async () => {
+      result.current.text.commitApiKey("builtin-x", "late-key");
+    });
+    expect(api.updateModelSettings).not.toHaveBeenCalled();
+    expect(result.current.text.configured["builtin-x"]).toBe(true);
+  });
+
+  it("a save response keeps keys typed into other providers that were not committed", async () => {
+    const { result } = renderHook(() => useSettingsForm(api));
+    await waitFor(() => expect(result.current.text.configured["builtin-x"]).toBe(true));
+
+    act(() => {
+      result.current.text.setApiKey("builtin-y", "draft-key");
+    });
+    await act(async () => {
+      await result.current.text.changeDefaultModel("builtin-x/m2");
+    });
+    expect(lastRequest(api).models.text.defaultModel).toBe("builtin-x/m2");
+    expect(result.current.text.apiKeys["builtin-y"]).toBe("draft-key");
+  });
+});
+
+describe("useSettingsForm connect", () => {
+  it("commits the typed key itself without relying on a prior blur commit", async () => {
+    api = createApi();
+    const { result } = renderHook(() => useSettingsForm(api));
+    await waitFor(() => expect(result.current.text.configured).toBeDefined());
+
+    act(() => {
+      result.current.text.setApiKey("builtin-x", "connect-key");
+    });
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.text.connect("builtin-x");
+    });
+    expect(ok).toBe(true);
+    expect(lastRequest(api).models.text.providers?.["builtin-x"]).toEqual({ apiKey: "connect-key" });
+    await waitFor(() => expect(result.current.text.configured["builtin-x"]).toBe(true));
+  });
+
+  it("returns false without saving when no key has been typed", async () => {
+    api = createApi();
+    const { result } = renderHook(() => useSettingsForm(api));
+    await waitFor(() => expect(result.current.text.configured).toBeDefined());
+
+    let ok = true;
+    await act(async () => {
+      ok = await result.current.text.connect("builtin-x");
+    });
+    expect(ok).toBe(false);
+    expect(api.updateModelSettings).not.toHaveBeenCalled();
   });
 });
 

@@ -104,8 +104,15 @@ export function useSettingsForm(api: ModelSettingsApi | null) {
 
   const applyResponse = useCallback((response: ModelSettingsResponse) => {
     const configured = configuredFromResponse(response);
-    setTextData((prev) => ({ ...prev, configured: configured.text, apiKeys: {}, writes: {}, clears: {} }));
-    setImageData((prev) => ({ ...prev, configured: configured.image, apiKeys: {}, writes: {}, clears: {} }));
+    const keepUncommitted = (apiKeys: Record<string, string>, configuredGroup: Record<string, boolean>): Record<string, string> => {
+      const next: Record<string, string> = {};
+      for (const [id, key] of Object.entries(apiKeys)) {
+        if (!configuredGroup[id] && key) next[id] = key;
+      }
+      return next;
+    };
+    setTextData((prev) => ({ ...prev, configured: configured.text, apiKeys: keepUncommitted(prev.apiKeys, configured.text), writes: {}, clears: {} }));
+    setImageData((prev) => ({ ...prev, configured: configured.image, apiKeys: keepUncommitted(prev.apiKeys, configured.image), writes: {}, clears: {} }));
     setCustomProviders(response.customProviders ?? []);
   }, []);
 
@@ -215,7 +222,7 @@ export function useSettingsForm(api: ModelSettingsApi | null) {
       setData({ ...data, apiKeys: { ...data.apiKeys, [id]: value } });
     },
     commitApiKey: (id, value) => {
-      if (!value.trim()) return;
+      if (!value.trim() || data.configured[id]) return;
       const next: GroupData = {
         ...data,
         apiKeys: { ...data.apiKeys, [id]: value },
@@ -242,8 +249,15 @@ export function useSettingsForm(api: ModelSettingsApi | null) {
       return kind === "text" ? save(next, undefined) : save(undefined, next);
     },
     connect: async (id) => {
-      if (!data.apiKeys[id]?.trim()) return false;
-      return save();
+      const apiKey = data.apiKeys[id];
+      if (!apiKey?.trim()) return false;
+      const next: GroupData = {
+        ...data,
+        writes: { ...data.writes, [id]: apiKey },
+      };
+      delete next.clears[id];
+      setData(next);
+      return kind === "text" ? save(next, undefined) : save(undefined, next);
     },
     disconnect: async (id) => {
       const nextApiKeys = { ...data.apiKeys };

@@ -98,7 +98,13 @@ export function ModelProviderItem({
               <span className="hidden group-hover:inline">{t("settings.provider.disconnect")}</span>
             </Button>
           ) : (
-            <Button type="button" className="min-w-20" onClick={onConnect} disabled={!apiKey.trim()}>
+            <Button
+              type="button"
+              className="min-w-20"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onConnect}
+              disabled={!apiKey.trim()}
+            >
               {t("settings.provider.connect")}
             </Button>
           )}        </div>
