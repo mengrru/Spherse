@@ -248,9 +248,10 @@ describe("AgentRunner context engineering", () => {
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const agent = agentOf(runner);
-    expect(agent.state.messages.length).toBe(2);
-    expect(agent.state.messages[0].role).toBe("user");
-    expect(agent.state.messages[0].content).toContain("hello world");
+    expect(agent.state.messages[0].role).toBe("system");
+    expect(agent.state.messages.length).toBe(3);
+    expect(agent.state.messages[1].role).toBe("user");
+    expect(agent.state.messages[1].content).toContain("hello world");
   });
 
   it("restore synthesizes toolResult for interrupted tool call and persists it", async () => {
@@ -331,7 +332,7 @@ describe("AgentRunner context engineering", () => {
     log.append("turn/end", { reason: "completed" });
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
-    expect(agentOf(runner).state.messages.length).toBe(3);
+    expect(agentOf(runner).state.messages.length).toBe(4);
     expect(agentStore.sessions.readEvents(sessionId).length).toBe(5);
   });
 
@@ -352,13 +353,14 @@ describe("AgentRunner context engineering", () => {
 
     const runner = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const agent = agentOf(runner);
-    expect(agent.state.messages.length).toBe(3);
-    expect(agent.state.messages[0].role).toBe("user");
-    expect(agent.state.messages[0].content).toContain("<compaction-digest");
-    expect(agent.state.messages[0].content).toContain("early q");
+    expect(agent.state.messages[0].role).toBe("system");
+    expect(agent.state.messages.length).toBe(4);
     expect(agent.state.messages[1].role).toBe("user");
-    expect(agent.state.messages[1].content).toContain("tail question");
-    expect(agent.state.messages[2].role).toBe("assistant");
+    expect(agent.state.messages[1].content).toContain("<compaction-digest");
+    expect(agent.state.messages[1].content).toContain("early q");
+    expect(agent.state.messages[2].role).toBe("user");
+    expect(agent.state.messages[2].content).toContain("tail question");
+    expect(agent.state.messages[3].role).toBe("assistant");
   });
 
   it("getTurnContext returns the LLM-projected context including time prefix and stripped attachments", async () => {

@@ -3,7 +3,7 @@ import type { ToolCall as AgentToolCall } from "@spherse/core";
 import { buildCardFromToolResult } from "./chat-tool-projection";
 
 function toolCall(name: string, args: Record<string, unknown> = {}): AgentToolCall {
-  return { type: "toolCall", id: "tc1", name, arguments: args };
+  return { type: "toolCall", id: "tc1", name, arguments: args as AgentToolCall["arguments"] };
 }
 
 describe("buildCardFromToolResult", () => {

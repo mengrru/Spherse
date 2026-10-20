@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { Type } from "@sinclair/typebox";
+import { getCurrentTools, normalizeContext } from "@earendil-works/pi-ai";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -188,8 +189,10 @@ describe("builtin tool capabilities via real assembly path", () => {
           stores: createStoreRegistry(),
         }),
       );
-      await streamFn({} as never, { systemPrompt: "", messages: [], tools } as never, undefined);
-      const sent = (base.mock.calls[0] as unknown as [unknown, { tools: Array<{ name: string }> }])[1].tools;
+      await streamFn({} as never, normalizeContext({ systemPrompt: "", messages: [], tools }) as never, undefined);
+      const sent = getCurrentTools(
+        (base.mock.calls[0] as unknown as [unknown, { messages: Parameters<typeof getCurrentTools>[0] }])[1].messages,
+      );
       return { sent: sent.map((t) => t.name), state: tools.map((t) => t.name) };
     }
 

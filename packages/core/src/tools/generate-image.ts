@@ -6,7 +6,7 @@ import type { ProviderImagesOptions } from "@earendil-works/pi-ai";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { resolveProjectPath } from "../utils/path-safety.js";
-import { getImagesModels } from "../model-providers/index.js";
+import { getImageModels } from "../model-providers/index.js";
 
 type ImageGenOptions = ProviderImagesOptions & {
   size?: string;
@@ -100,8 +100,8 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
         details: { type: "image", status: "generating", prompt },
       });
 
-      const imagesModels = getImagesModels();
-      const model = imagesModels.getModel(config.provider, config.modelId);
+      const models = getImageModels();
+      const model = models.getModelOfType("image", config.provider, config.modelId);
       if (!model) {
         return {
           content: [{ type: "text" as const, text: `图片生成失败：无法解析模型 ${config.provider}/${config.modelId}` }],
@@ -117,7 +117,7 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
           ...(params.size ? { size: params.size } : {}),
           ...(params.quality ? { quality: params.quality } : {}),
         };
-        result = await imagesModels.generateImages(
+        result = await models.generateImages(
           model,
           { input: [{ type: "text", text: prompt }] },
           genOptions,

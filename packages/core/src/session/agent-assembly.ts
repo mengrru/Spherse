@@ -257,7 +257,7 @@ export async function buildAgent(
         projected = project(projected);
       }
       return projected.filter(
-        (m) => m.role === "user" || m.role === "assistant" || m.role === "toolResult",
+        (m) => m.role === "system" || m.role === "user" || m.role === "assistant" || m.role === "toolResult",
       ) as Message[];
     },
   });

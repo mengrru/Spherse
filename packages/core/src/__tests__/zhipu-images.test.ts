@@ -9,6 +9,7 @@ import {
 const SAMPLE_MODEL = {
   id: "glm-image",
   name: "GLM Image",
+  type: "image" as const,
   api: "zhipu-images",
   provider: "zhipu",
   baseUrl: "https://open.bigmodel.cn/api/paas/v4",
@@ -208,11 +209,14 @@ describe("generateImagesZhipu", () => {
 });
 
 describe("createZhipuImagesProvider", () => {
-  it("returns provider with correct id and generateImages function", () => {
+  it("returns provider with correct id, image models, and generateImages function", () => {
     const provider = createZhipuImagesProvider();
     expect(provider.id).toBe("zhipu");
     expect(provider.name).toBe("智谱");
     expect(typeof provider.generateImages).toBe("function");
-    expect(provider.getModels().length).toBeGreaterThan(0);
+    const all = provider.getAllModels?.() ?? [];
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.every((m) => (m as { type?: string }).type === "image")).toBe(true);
+    expect(provider.getModels().length).toBe(0);
   });
 });

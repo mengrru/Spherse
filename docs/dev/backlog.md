@@ -33,6 +33,7 @@
 
 ## 技术债（重构与收敛）
 
+- [ ] **system prompt 增量更新迁移到 SystemMessage.sections**：pi 1.3 升级（2026-10-20）将 prompt 更新保持为「整体改写 leading system message content」以与旧版字节等价；pi-agent-core 的 sections / mid-conversation system message 原生支持增量声明（对 Anthropic 等可保留 prompt cache），MCP context block 与 reload 是候选迁移点。参见 `docs/dev/infra/2026-10-20-pi-deps-upgrade-0130/design.md`「不做的事」
 - [ ] **评估 MCP stdio era 探测进程的实际开销与降级开关**：`versionNegotiation: auto` 对 stdio server 每次连接多 spawn 一次性探测进程；若实测个别 server 探测异常（side effect 进程、启动慢导致 20s 预算内探测+握手双开销），需要按 server 配置降级 `legacy` 模式或 pin 版本。参见 `docs/dev/decisions/0014-mcp-sdk-v2-stateless-protocol.md`
 - [ ] **debug turn-context 快照的 tools 与实际请求不一致**：streamDecorator 可改写出站 `context.tools`（如 web_search 无 key 时隐藏），但 debug 快照直接列 `state.tools`；`previewTransforms` 只覆盖 messages。方向：kernel 增加 tools 维度的 preview 贡献点。参见 `docs/dev/features/2026-09-24-deepseek-web-search/design.md`
 - [ ] **UI SDK 增加分窗 action**：现有 `floatContent` / `unfloatContent` / `openFile{float}` 可在浮窗打开文件，分窗没有对应入口。方向：`splitContent` / `unsplitContent`（或 `openFile{split}`），feature 关闭 / 移动端回落为导航；需同步 `packages/sdk` 类型与 `docs/official/architecture/ui-sdk.md`。参见 `docs/dev/features/2026-09-24-content-split-pane/design.md`（review m8）

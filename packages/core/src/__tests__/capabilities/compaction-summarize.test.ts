@@ -90,15 +90,17 @@ describe("summarizeForCompaction", () => {
     expect(result).not.toBeNull();
     expect(calls).toHaveLength(1);
     expect(calls[0].model).toBe(agent.state.model);
-    const context = calls[0].context as {
-      systemPrompt: string;
-      tools: unknown;
-      messages: Message[];
+    const context = calls[0].context as { messages: Message[] };
+    const leading = context.messages[0] as {
+      role: string;
+      content: string;
+      toolsAdded?: Array<{ name: string }>;
     };
-    expect(context.systemPrompt).toBe(agent.state.systemPrompt);
-    expect(context.tools).toBe(agent.state.tools);
-    expect(context.messages.slice(0, foldMessages.length)).toEqual(foldMessages);
-    expect(context.messages[foldMessages.length]).toEqual({
+    expect(leading.role).toBe("system");
+    expect(leading.content).toBe(agent.state.systemPrompt);
+    expect(leading.toolsAdded?.map((t) => t.name)).toEqual(["read_file"]);
+    expect(context.messages.slice(1, 1 + foldMessages.length)).toEqual(foldMessages);
+    expect(context.messages[1 + foldMessages.length]).toEqual({
       role: "user",
       content: buildSummaryInstruction(16_000),
     });
@@ -206,7 +208,9 @@ describe("summarizeForCompaction", () => {
 
     await summarizeForCompaction(agent, foldMessages, "s", { logger: createSilentLogger() });
 
-    expect(calls[0].context.messages[0]).toBe(projected[0]);
+    const leading = calls[0].context.messages[0] as { role: string };
+    expect(leading.role).toBe("system");
+    expect(calls[0].context.messages[1]).toBe(projected[0]);
     expect(calls[0].context.messages[0].content).not.toContain("帮我建立魔法体系");
   });
 

@@ -570,7 +570,9 @@ describe("SessionManager lifecycle", () => {
     expect(agentStore.sessions.readEvents(sessionId).map((event) => event.type)).toEqual([
       "user/message",
     ]);
-    expect(activeAgent(runtime, sessionId).state.messages).toEqual([
+    const restored = activeAgent(runtime, sessionId).state.messages;
+    expect(restored[0].role).toBe("system");
+    expect(restored.slice(1)).toEqual([
       expect.objectContaining({ role: "user", content: "legacy question" }),
     ]);
   });
@@ -619,7 +621,9 @@ describe("SessionManager lifecycle", () => {
       type: "turn/withdrawn",
       data: { seq: 0 },
     });
-    expect(activeAgent(runtime, sessionId).state.messages).toEqual([]);
+    const withdrawn = activeAgent(runtime, sessionId).state.messages;
+    expect(withdrawn[0].role).toBe("system");
+    expect(withdrawn.slice(1)).toEqual([]);
   });
 
   it("withdrawLastTurn throws NotFoundError for an inactive session", async () => {
