@@ -6,6 +6,8 @@
 
 ## 验证补全
 
+- [ ] **手动验证 Seedream 火山方舟真实调用**：provider 接入仅 mock 测试（2026-10-21），缺真实 Ark key smoke：① 5 个 CN Model ID 是否可解析（拼错表现为 404 归一化错误）；② `response_format: "b64_json"` 时 data 项是否带 `output_format`（mime 映射依赖）；③ url 分支、`watermark` 服务端默认行为。参见 `docs/dev/features/2026-10-21-seedream-image-provider/design.md`
+
 - [ ] **真机验证移动端文件写开放后的触屏交互**：web 宿主 `content.editable` 已开放（2026-10-03），文件树右键菜单（Base UI 500ms 长按，同 AgentRow 长按风险）、InlineNameInput 弹软键盘的命名输入、Textarea 编辑大文件、DeleteConfirmDialog 小屏表现均未真机回归；HTML 文件在移动端按 `hideHeader` 保持只读（产品决策，例外已注明 frontend.md）。参见 `docs/dev/investigation/2026-08-28-web-disabled-features/investigation.md`
 
 - [ ] **真机验证 file panel 拖拽上传的浏览器 DnD 行为**：自动化覆盖 server route（真 PM 契约测试）与 controller/dnd 纯逻辑单测，但缺真机回归：① Electron/Chromium 实际拖拽中 `webkitGetAsEntry` 对跨应用拖拽（如从 Finder 拖代理图标）返回 null 时的 fallback 表现；② 拖入纯文件夹时的提示 toast；③ 大文件（数十 MB）上传期间 UI 手感（无进度条）；④ web 端触屏设备无 DnD 手势、无拖拽响应（仅桌面浏览器访问 web 壳时可达；2026-10-11 已补右键菜单点击式上传入口部分缓解，但其可达性依赖 ContextMenu 长按，见上方触屏交互条目）。参见 `docs/dev/features/2026-09-27-file-dnd-upload/design.md`

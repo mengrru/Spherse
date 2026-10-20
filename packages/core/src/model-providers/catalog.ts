@@ -18,6 +18,7 @@ import type {
 } from "../types.js";
 import { createZhipuImagesProvider } from "./zhipu-images.js";
 import { withOpenaiImages } from "./openai-images.js";
+import { createSeedreamImagesProvider } from "./seedream-images.js";
 
 export const ENABLED_PROVIDERS = [
   "openai",
@@ -87,12 +88,14 @@ const IMAGE_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openrouter: "OpenRouter",
   zhipu: "智谱",
   openai: "OpenAI",
+  seedream: "Seedream",
 };
 
 const IMAGE_PROVIDER_ENV_KEYS: Record<string, string[]> = {
   openrouter: ["SPHERSE_IMAGE_API_KEY"],
   zhipu: ["SPHERSE_IMAGE_API_KEY"],
   openai: ["SPHERSE_IMAGE_API_KEY"],
+  seedream: ["SPHERSE_IMAGE_API_KEY"],
 };
 
 const KEYLESS_PLACEHOLDER = "sk-no-key";
@@ -203,6 +206,7 @@ export class ModelCatalog {
   constructor() {
     this.models = builtinModels();
     this.models.setProvider(createZhipuImagesProvider());
+    this.models.setProvider(createSeedreamImagesProvider());
     const openaiBase = this.models.getProvider("openai");
     if (openaiBase) {
       this.models.setProvider(withOpenaiImages(openaiBase));

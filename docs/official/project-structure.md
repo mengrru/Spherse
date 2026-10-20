@@ -65,7 +65,7 @@ spherse/
 │   │       ├── context/              # context window 管理域（跨层共享纯函数）：compaction（planCompaction/sanitizeToolCallPairs）/ token-estimate
 │   │       ├── attachments/          # 附件域：AttachmentProcessor 端口 + image-processor + sanitizer（base64 卫生不变量）+ strip/sanitize
 │   │       ├── mcp/                  # mcp-client（连接与工具适配）/ mcp-connection-manager / config / types / json-schema-to-typebox
-│   │       ├── model-providers/      # ModelCatalog 类（per-runtime 实例，所有权在组合根；统一 Models 集合，chat 与 image 模型同库）+ zhipu/openai images（openai 为 builtin provider 包装）+ index（仅 images 静态目录导出）
+│   │       ├── model-providers/      # ModelCatalog 类（per-runtime 实例，所有权在组合根；统一 Models 集合，chat 与 image 模型同库）+ zhipu/openai/seedream images（openai 为 builtin provider 包装）+ index（仅 images 静态目录导出）
 │   │       ├── utils/                # file-write-mutex（全链路唯一实例）/ fs-walk / path-safety / binary-detect / xml-escape / settle-within（shutdown 等待有界化）/ fs-move（moveDirAtomic：rename + EXDEV cp/rm 兜底，skill 安装与市场项目安装共用）
 │   │       ├── __tests__/            # Vitest 单元测试（kernel/capabilities/session/access/tools 分组）
 │   │       └── index.ts              # 公开导出（显式清单，按外部消费面收紧）
