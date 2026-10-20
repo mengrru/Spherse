@@ -58,7 +58,7 @@ macOS（APFS）/ Windows（NTFS）默认大小写不敏感文件系统上，`age
 
 - 不放开 changelog / projectConfig / `.spherse` 敏感元数据等其他类别的 LLM 写（矩阵测试钉住不回归）
 - 不动 `run_command`（逐次审批是唯一硬屏障，保持）；Agent 编辑 `AGENTS.md` 的合法路径 = 文件工具 + access policy，不是 shell 绕过
-- 不扩展 deniedPaths 覆盖 `rootIndex`（保留路径校验与前端提示均不变）
+- 不扩展 deniedPaths 覆盖 `rootIndex`（保留路径校验与前端提示机制不变；随大小写不敏感匹配，`agents.md` 变体现在也归入保留路径——`isReservedDenyPath` 依赖 `categorizePath`，行为更一致，有测试钉住）
 - 不新增 LLM delete 工具；server 侧删除行为不变
 - 不整体修改 move source 语义（如「source 必须 ∈ LLM_WRITE」）——那会改变 attachments 等类别的既有行为，超出本次范围
 

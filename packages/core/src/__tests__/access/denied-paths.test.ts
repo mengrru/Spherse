@@ -35,6 +35,11 @@ describe("isReservedDenyPath", () => {
     expect(isReservedDenyPath("CHANGELOG.md")).toBe(true);
   });
 
+  it("reserves root index case variants (case-insensitive categorization)", () => {
+    expect(isReservedDenyPath("agents.md")).toBe(true);
+    expect(isReservedDenyPath("Agents.md")).toBe(true);
+  });
+
   it("reserves the .spherse meta dir and its contents", () => {
     expect(isReservedDenyPath(".spherse")).toBe(true);
     expect(isReservedDenyPath(".spherse/project.yaml")).toBe(true);

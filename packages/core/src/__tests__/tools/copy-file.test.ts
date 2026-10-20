@@ -76,6 +76,14 @@ describe("createCopyFileTool", () => {
     expect(await readFile(projectRoot, "AGENTS.md")).toBe("# Index");
   });
 
+  it("denies copying onto AGENTS.md via case variant path", async () => {
+    await writeFile(projectRoot, "src.txt", "content");
+    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { source: "src.txt", destination: "agents.md" }, undefined as any);
+    expect(result.content[0].text).toContain("Access denied");
+    expect(result.details?.denied).toBe(true);
+  });
+
   it("copies AGENTS.md to a user file (non-destructive read)", async () => {
     await writeFile(projectRoot, "AGENTS.md", "# Index");
     const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
