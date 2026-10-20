@@ -129,6 +129,13 @@ function inferMimeTypeFromUrl(url: string): string {
   }
 }
 
+export function normalizeSeedreamSize(size: string | undefined): string | undefined {
+  if (!size) return undefined;
+  const trimmed = size.trim();
+  if (trimmed === "" || trimmed.toLowerCase() === "auto") return undefined;
+  return trimmed;
+}
+
 export async function generateImagesSeedream(
   model: ImageModel<SeedreamImagesApi>,
   context: ImagesContext,
@@ -136,7 +143,7 @@ export async function generateImagesSeedream(
 ): Promise<AssistantImages> {
   const apiKey = options?.apiKey;
   const signal = options?.signal;
-  const size = options?.size;
+  const size = normalizeSeedreamSize(options?.size);
   const base: AssistantImages = {
     api: model.api,
     provider: model.provider,

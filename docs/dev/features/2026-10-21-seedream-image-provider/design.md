@@ -40,8 +40,8 @@
 
 1. `SEEDREAM_IMAGE_MODELS`：上表 5 个模型，`provider: "seedream"`、`api: "seedream-images"`、`baseUrl: "https://ark.cn-beijing.volces.com/api/v3"`、`input: ["text"]`、`output: ["image"]`
 2. `generateImagesSeedream(model, context, options)`：
-   - 请求体 `{ model, prompt, response_format: "b64_json" }`，`size` 存在时透传（档位与显式像素格式均为 string，直接透传）；`quality` 忽略（Seedream 无此参数，与 zhipu 行为一致）
-   - `watermark` 不传，用服务端默认（不替用户做产品决策，列为开放项）
+   - 请求体 `{ model, prompt, response_format: "b64_json" }`，`size` 经 `normalizeSeedreamSize` 归一化后透传（档位与显式像素格式均为 string，直接透传；`auto`（含大小写/空白变体）归一化为省略，走服务端默认——官方 API 参考 2026-10-21 核验：文生图场景 `auto` 对全部模型为非法值，仅图层拆分场景合法（不在本次范围）；省略 `size` 对全部 5 个模型有效，各模型有文档化默认值：pro/flash 默认 `2K`，lite/4.5/4.0 默认 `2048x2048`）；`quality` 忽略（Seedream 无此参数，与 zhipu 行为一致）
+   - `watermark` 不传，用服务端默认（manager 决策：保留默认 true，不加关闭范围）
    - mimeType：`item.output_format` 存在时映射（`image/jpeg` / `image/png` / `image/webp`），否则默认 `image/jpeg`（Seedream 全系默认输出 jpeg）；兼容 `url` 响应分支（下载转 base64，同 zhipu）
    - `data` 项带 `error` 字段时归一化为 error 返回（message 缺失时回退 code）
    - 错误处理同 zhipu：`!res.ok` 解析 `error.message` 回退 `` `Seedream API error: ${status}` ``，catch 区分 abort/error，永不 throw
@@ -71,20 +71,30 @@
 
 ## 测试计划
 
-- `packages/core/src/__tests__/seedream-images.test.ts`：模型常量 shape、resolve、b64/url 归一化（含 output_format mime 映射）、非 200（含 401 error.message 提取）、单项 error、无 data、无 key、abort、size 透传/缺省、provider 工厂
+- `packages/core/src/__tests__/seedream-images.test.ts`：模型常量 shape、resolve、`normalizeSeedreamSize` 单测（auto 变体/空值/档位与显式像素透传）、provider 工厂
+- `packages/core/src/__tests__/seedream-images-generation.test.ts`：`generateImagesSeedream` 行为——b64/url 归一化（含 output_format mime 映射）、非 200（含 401 error.message 提取）、单项 error、无 data、无 key、网络错误/AbortError、pre-abort、size 透传（档位/显式像素）/缺省/auto 归一化回归
 - `model-providers-catalog.test.ts` 补 `getImageSupportedProviders` 接线断言：含 `seedream`、5 个模型、display name 与 envKeys 正确（防 `setProvider` 漏注册静默缺失）
 - `generate-image.test.ts` 现有覆盖已按 provider id 数据驱动分派，无需新增
-- 无真实 Ark key，真实调用未测（mock 验证）；外部 API 断言（b64 项是否带 `output_format`、watermark 默认、24h URL 有效期）为实现时假设，待有真实 key 后 smoke 验证
+- 无真实 Ark key，真实调用未测（mock 验证，mock 无法证明外部 API 真实性）；模型 ID 与参数断言的官方来源与抓取日期见文末，真实性待有真实 key 后 smoke 验证
+
+## 工具默认 size 兼容性核查（2026-10-21，官方 API 参考）
+
+`generate_image` tool 的 `size` 为可选参数、无内置默认值：不传 → provider 省略 `size` → 对全部 5 个 Seedream 模型有效（文档化默认）。tool 描述中的示例值核查：
+
+- `"auto"`：对全部 5 个模型必然非法（仅图层拆分场景合法）→ **已修复**：provider 层归一化为省略
+- `"1024x1024"`（921,600 px）/ `"1536x1024"` / `"1024x1536"`：对 pro/flash/4.0（总像素下限 921,600）有效，对 lite/4.5（总像素下限 3,686,400）非法——非"必然无效"，属模型相关约束；超范围时 Ark 返回描述性 400（含有效区间说明），已归一化为错误卡片展示，与 zhipu/openai 传非法 size 的失败模式一致。按"最小适配"原则不做按模型的像素区间校验（需 per-model 范围表，超本次范围）
 
 ## 开放项（不阻塞）
 
-- `watermark` 默认 true（图片右下角"AI 生成"水印）——保持服务端默认；如用户想去水印，后续加设置项
-- `generate_image` tool 的 size 参数描述含 `"auto"` 示例，LLM 若对 Seedream 传 `auto` 会被 Ark 拒绝（400），错误已归一化为卡片错误展示，不 crash；如需可在 tool 层按 provider 归一化
+- `watermark` 保持服务端默认 true（manager 已决策：不加关闭范围）
+- 显式像素 size 超出模型总像素区间时依赖 Ark 400 错误反馈（见上节核查）
 - 模型列表为静态常量，新版本模型需随代码更新
 
 ## 来源
 
-- API 参考：https://ark.volcengine.com/region:cn-beijing/docs/image-generation-api （www.volcengine.com/docs/82379/1330310）
-- Seedream 教程：https://ark.volcengine.com/region:cn-beijing/docs/seedream-4-0-5-0 （82379/1541523）
+以下官方文档均于 **2026-10-21** 抓取核验（`.md` 原文端点）：
+
+- API 参考（endpoint/鉴权/请求响应参数/`size` 各模型默认值与取值范围/`auto` 合法性）：https://ark.volcengine.com/region:cn-beijing/docs/image-generation-api （www.volcengine.com/docs/82379/1330310）
+- 教程「模型能力」对比表（**5 个 CN Model ID 的权威来源**，含 `doubao-seedream-5-0-260128` 别名 `doubao-seedream-5-0-lite-260128`）：https://ark.volcengine.com/region:cn-beijing/docs/seedream-4-0-5-0 （82379/1541523）
 - 鉴权：https://ark.volcengine.com/region:cn-beijing/docs/base-url-and-authentication （82379/1263279）
 - 错误码：https://ark.volcengine.com/region:cn-beijing/docs/error-codes
