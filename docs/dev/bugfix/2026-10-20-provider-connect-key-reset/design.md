@@ -36,10 +36,11 @@
 
 修复后点「连接」的时序：mousedown 无 blur → click → connect 显式写 key → 单次 PUT → 响应翻转 configured → 输入框禁用显示「已配置」。blur-commit（点其它处/Tab 保存）语义不变。
 
-已知残留（不修）：键盘 Tab→Enter 流程中 blur commit 响应若在 Enter 前返回，Enter 仍可能落在翻转后的「断开」按钮上；与鼠标路径同源但为既有行为、非本次反馈，留待后续统一处理。
+已知残留（不修）：键盘 Tab→Enter 流程中，若 blur commit 响应在 Enter 之前返回，「连接」按钮 unmount 后焦点回落 body，Enter 落空（key 已由 blur 保存，无损害）；仅 keydown 与 click 派发之间的毫秒级窗口内可能命中翻转后的按钮，实际基本不可达。触屏平台若在 `touchstart` 即转移焦点（非主流行为），blur PUT 仍可能先于合成 click 返回触发原竞态，未真机验证，判断为低概率。另发现相邻既有问题：`removeCustomProvider` 删除已配置的 custom provider 时不发送 clears，凭据以孤儿状态留存 settings 文件，另行处理。
 
 ## 4. 验证
 
-- `use-settings-form.test.tsx` 新增：connect 无 blur 自提交、无 key 不发请求、已配置 commit no-op、save 响应保留其它 provider 未提交 key
+- `use-settings-form.test.tsx` 新增：connect 无 blur 自提交（text + image 组）、无 key 不发请求、已配置 commit no-op、save 响应保留其它 provider 未提交 key、connect 成功后清空该项 apiKeys
 - `ModelProviderItem.test.tsx` 新增：点「连接」不触发 blur commit 且输入框保持焦点
+- e2e `settings.spec.ts` 新增：DeepSeek 已配置时，为 OpenAI 填 key 点「连接」后两者均 configured（本 bug 原始复现场景）
 - 既有 e2e（blur 持久化、重启存活）语义不变

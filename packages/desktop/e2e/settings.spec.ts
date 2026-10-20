@@ -53,6 +53,40 @@ async function fetchModelSettings(page: Page) {
   }>;
 }
 
+test("connecting a second provider through the connect button keeps both keys configured", async () => {
+  const { app, page, userDataDir } = await launch();
+  try {
+    await openSettings(page);
+
+    const deepseekRow = page.locator("div.rounded-lg", { hasText: "DeepSeek" }).first();
+    await deepseekRow.getByPlaceholder("API密钥").fill("sk-e2e-first-key");
+    await deepseekRow.getByPlaceholder("API密钥").blur();
+
+    await expect
+      .poll(async () => {
+        const current = await fetchModelSettings(page);
+        return current.models.text.providers["deepseek"]?.configured ?? false;
+      })
+      .toBe(true);
+
+    const openaiRow = page.locator("div.rounded-lg", { hasText: "OpenAI" }).first();
+    await openaiRow.getByPlaceholder("API密钥").fill("sk-e2e-second-key");
+    await openaiRow.getByRole("button", { name: "连接" }).click();
+
+    await expect
+      .poll(async () => {
+        const current = await fetchModelSettings(page);
+        return (
+          current.models.text.providers["deepseek"]?.configured === true &&
+          current.models.text.providers["openai"]?.configured === true
+        );
+      })
+      .toBe(true);
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test("settings modal saves a provider key through the server api and it survives restart", async () => {
   const { app, page, userDataDir } = await launch();
   try {

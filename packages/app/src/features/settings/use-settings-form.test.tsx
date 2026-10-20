@@ -209,6 +209,24 @@ describe("useSettingsForm connect", () => {
     expect(ok).toBe(true);
     expect(lastRequest(api).models.text.providers?.["builtin-x"]).toEqual({ apiKey: "connect-key" });
     await waitFor(() => expect(result.current.text.configured["builtin-x"]).toBe(true));
+    expect(result.current.text.apiKeys["builtin-x"]).toBeUndefined();
+  });
+
+  it("commits the typed key on the image group too", async () => {
+    api = createApi();
+    const { result } = renderHook(() => useSettingsForm(api));
+    await waitFor(() => expect(result.current.image.configured).toBeDefined());
+
+    act(() => {
+      result.current.image.setApiKey("img-x", "img-key");
+    });
+    let ok = false;
+    await act(async () => {
+      ok = await result.current.image.connect("img-x");
+    });
+    expect(ok).toBe(true);
+    expect(lastRequest(api).models.image.providers?.["img-x"]).toEqual({ apiKey: "img-key" });
+    await waitFor(() => expect(result.current.image.configured["img-x"]).toBe(true));
   });
 
   it("returns false without saving when no key has been typed", async () => {
