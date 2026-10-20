@@ -29,6 +29,7 @@
 - [ ] **打包版主窗口 icon 路径失效**：`packages/desktop/electron/window.ts` 的 `path.join(__dirname, "../../build/spherse-icon.png")` 在 main 被拆到 `dist/main/chunks/` 后指向 `dist/build/`，且 `build/` 不进打包 `files`，Linux 窗口图标可能缺失（mac/win 用 bundle 图标不受影响）。方向：同托盘图标走 `extraResources` 或删掉该选项改由 electron-builder 平台图标决定。2026-09-25 close-to-tray review 顺带发现（pre-existing）。
 - [ ] **chat WS close reason 截断到 123 字节**：`ws-chat.ts` 的 `socket.close(code, message)` 使用任意 core 错误消息；`ws` 对 >123 字节 reason 抛 `RangeError`，且抛出点在 `setCloseTimer` 之前、会派生 unhandled rejection，close 事件可能不触发导致 attachment lease 无法归还、channel 无法收口。方向：reason 截断（或只传 code），补超长错误消息用例。2026-09-15 hub review 发现（pre-existing）。
 - [ ] **iframe 页面（欢迎页 / 自定义侧边面板）资源失效不回落**：浏览器对 iframe 的 HTTP 失败不派发元素 error 事件，`onError` 兜底分支不可达；配置的 HTML 文件被删除后 iframe 内显示 preview 404 而非占位 / 默认面板。方向：reload 后探活 fetch，不可达则回落（两个 feature 一起修）。参见 `docs/dev/features/2026-09-27-custom-side-panel/design.md` 已知限制。
+- [ ] **removeCustomProvider 删除已配置自定义供应商后凭据残留**：`packages/app/src/features/settings/use-settings-form.ts` 的 `removeCustomProvider` 只清本地 apiKeys/writes 且 `delete nextClears[id]`，删除时 PUT 不携带该 id 的 clear，服务端 `mergeProviderKeys` 保留其 key，凭据以孤儿状态留存 model-settings.json（id 含随机段难复用，但直接读文件可取回）。方向：删除时在 text 组 `clears` 带上该 id。2026-10-20 provider connect reset review 顺带发现（pre-existing），参见 `docs/dev/bugfix/2026-10-20-provider-connect-key-reset/design.md` 已知残留。
 
 ## 技术债（重构与收敛）
 

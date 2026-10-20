@@ -86,6 +86,19 @@ describe("ModelProviderItem keyed rows", () => {
     expect(onApiKeyCommit).toHaveBeenCalledWith("new-key");
   });
 
+  it("clicking connect keeps the input focused so the blur commit cannot race the click", async () => {
+    const user = userEvent.setup();
+    const { onApiKeyCommit, onConnect } = renderProviderItem({});
+
+    const input = screen.getByPlaceholderText("API密钥");
+    await user.type(input, "new-key");
+    await user.click(screen.getByRole("button", { name: "连接" }));
+
+    expect(onConnect).toHaveBeenCalledTimes(1);
+    expect(onApiKeyCommit).not.toHaveBeenCalled();
+    expect(input).toHaveFocus();
+  });
+
   it("disables the key input while configured and disconnects on click", async () => {
     const user = userEvent.setup();
     const { onApiKeyCommit, onDisconnect } = renderProviderItem({}, { configured: true });
