@@ -9,5 +9,6 @@ packages/app/release/
 packages/desktop/release/
 .superpowers/
 .spherse/
+.worktree/
 .pi/
 paseo.json
