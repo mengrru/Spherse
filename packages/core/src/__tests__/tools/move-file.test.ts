@@ -74,6 +74,37 @@ describe("createMoveFileTool", () => {
     expect(result.details?.denied).toBe(true);
   });
 
+  it("denies moving AGENTS.md away (move source)", async () => {
+    await writeFile(projectRoot, "AGENTS.md", "# Index");
+    const tool = createMoveFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { source: "AGENTS.md", destination: "notes/index.md" }, undefined as any);
+    expect(result.content[0].text).toContain("Access denied");
+    expect(result.content[0].text).toContain("move source");
+    expect(result.details?.denied).toBe(true);
+    expect(await readFile(projectRoot, "AGENTS.md")).toBe("# Index");
+    expect(pathExists(projectRoot, "notes/index.md")).toBe(false);
+  });
+
+  it("denies moving AGENTS.md away via case variant path", async () => {
+    await writeFile(projectRoot, "AGENTS.md", "# Index");
+    const tool = createMoveFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { source: "agents.md", destination: "notes/index.md" }, undefined as any);
+    expect(result.content[0].text).toContain("Access denied");
+    expect(result.details?.denied).toBe(true);
+  });
+
+  it("denies moving a file onto AGENTS.md (transfer destination)", async () => {
+    await writeFile(projectRoot, "src.txt", "content");
+    await writeFile(projectRoot, "AGENTS.md", "# Index");
+    const tool = createMoveFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { source: "src.txt", destination: "AGENTS.md" }, undefined as any);
+    expect(result.content[0].text).toContain("Access denied");
+    expect(result.content[0].text).toContain("transfer destination");
+    expect(result.details?.denied).toBe(true);
+    expect(await readFile(projectRoot, "AGENTS.md")).toBe("# Index");
+    expect(await readFile(projectRoot, "src.txt")).toBe("content");
+  });
+
   it("returns error when moving a directory into itself", async () => {
     await writeFile(projectRoot, "dir/file.txt", "content");
     const tool = createMoveFileTool(projectRoot, mutex, permissivePolicy(projectRoot));

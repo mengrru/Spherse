@@ -40,4 +40,27 @@ describe("PathRule registry", () => {
       /category "memory"/,
     );
   });
+
+  it("rule write verdict governs transfer destination and move source (write-class ops)", () => {
+    const rule: PathRule = {
+      match: /^\.spherse\/agents\/[^/]+\/memory\.jsonl$/,
+      category: "memory",
+      llm: { read: true, write: true },
+    };
+    const policy = llmAccessPolicy("/tmp/proj", [], [rule]);
+    expect(policy.canTransferDest(".spherse/agents/abc/memory.jsonl")).toBe(true);
+    expect(policy.canMoveSource(".spherse/agents/abc/memory.jsonl")).toBe(true);
+  });
+
+  it("rule forbidding write also denies transfer destination and move source", () => {
+    const rule: PathRule = {
+      match: /^\.spherse\/agents\/[^/]+\/memory\.jsonl$/,
+      category: "memory",
+      llm: { read: true, write: false },
+    };
+    const policy = llmAccessPolicy("/tmp/proj", [], [rule]);
+    expect(policy.canRead(".spherse/agents/abc/memory.jsonl")).toBe(true);
+    expect(policy.canTransferDest(".spherse/agents/abc/memory.jsonl")).toBe(false);
+    expect(policy.canMoveSource(".spherse/agents/abc/memory.jsonl")).toBe(false);
+  });
 });

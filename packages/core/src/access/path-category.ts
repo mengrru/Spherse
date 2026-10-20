@@ -52,6 +52,8 @@ const PATH_PATTERNS: Record<string, string> = {
   spherseOther: `${PROJECT_META_DIR}/**`,
 };
 
+const CASE_INSENSITIVE_CATEGORIES = new Set(["rootIndex"]);
+
 const CATEGORY_ORDER = Object.keys(PATH_PATTERNS) as Exclude<PathCategory, "userFiles">[];
 
 export function categorizePath(relativePath: string, extraRules?: ReadonlyArray<PathRule>): PathCategory {
@@ -62,7 +64,9 @@ export function categorizePath(relativePath: string, extraRules?: ReadonlyArray<
     }
   }
   for (const category of CATEGORY_ORDER) {
-    if (globToRegex(PATH_PATTERNS[category]).test(p)) return category;
+    if (globToRegex(PATH_PATTERNS[category], CASE_INSENSITIVE_CATEGORIES.has(category)).test(p)) {
+      return category;
+    }
   }
   return "userFiles";
 }
@@ -78,16 +82,17 @@ export function ruleForPath(relativePath: string, extraRules?: ReadonlyArray<Pat
 
 const regexCache = new Map<string, RegExp>();
 
-function globToRegex(glob: string): RegExp {
-  let re = regexCache.get(glob);
+function globToRegex(glob: string, caseInsensitive = false): RegExp {
+  const cacheKey = caseInsensitive ? `${glob}#i` : glob;
+  let re = regexCache.get(cacheKey);
   if (!re) {
     const escaped = glob
       .replace(/[.+^${}()|[\]\\]/g, "\\$&")
       .replace(/\/\*\*/g, "::SUBTREE::")
       .replace(/\*/g, "[^/]*")
       .replace(/::SUBTREE::/g, "(/.*)?");
-    re = new RegExp(`^${escaped}$`);
-    regexCache.set(glob, re);
+    re = new RegExp(`^${escaped}$`, caseInsensitive ? "i" : undefined);
+    regexCache.set(cacheKey, re);
   }
   return re;
 }

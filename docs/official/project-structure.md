@@ -61,7 +61,7 @@ spherse/
 │   │       ├── tools/                # AgentTool 实现体（capability 的实现层，无注册表）
 │   │       │   ├── read/write/edit/list/search/move/copy-file.ts、run-command.ts、ask-user.ts、manage-agent.ts、manage-trigger.ts、manage-project-config.ts、emit-trigger-event.ts、load-skill.ts、render-card.ts、generate-image.ts、web-search.ts（经 DeepSeek Anthropic 端点 server web_search）、append-changelog.ts、memory-core-append.ts、memory-core-replace.ts、memory-save.ts、memory-recall.ts、memory-delete.ts、with-approval.ts、json-check.ts
 │   │       ├── trigger/              # TriggerManager（门面：CRUD+事件+委派）/ scheduler（时间调度状态）/ executor（fire 执行+日志）/ TimerService / template / validation
-│   │       ├── access/               # path-category（内置 PATH_PATTERNS + PathRule 类型 + 注册规则优先）/ access-policy（llm/server 工厂，裁决优先级 deniedPaths > pathRules > 白名单）/ denied-paths
+│   │       ├── access/               # path-category（内置 PATH_PATTERNS + PathRule 类型 + 注册规则优先，rootIndex 大小写不敏感）/ access-policy（llm/server 工厂，read/write/transferDest/moveSource 四种裁决，优先级 deniedPaths > pathRules > 白名单）/ denied-paths
 │   │       ├── context/              # context window 管理域（跨层共享纯函数）：compaction（planCompaction/sanitizeToolCallPairs）/ token-estimate
 │   │       ├── attachments/          # 附件域：AttachmentProcessor 端口 + image-processor + sanitizer（base64 卫生不变量）+ strip/sanitize
 │   │       ├── mcp/                  # mcp-client（连接与工具适配）/ mcp-connection-manager / config / types / json-schema-to-typebox

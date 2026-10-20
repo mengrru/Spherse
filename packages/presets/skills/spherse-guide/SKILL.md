@@ -26,7 +26,7 @@ project-root/
 ```
 
 - 普通文件是项目主体，可继续使用外部编辑器和版本控制管理。
-- `AGENTS.md` 是所有 Agent 共享的项目指令。
+- `AGENTS.md` 是所有 Agent 共享的项目指令，用户与启用了文件写入工具（`write_file` / `edit_file`）的 Agent 都可以编辑；Agent 不可移动或经复制覆盖它。
 - `CHANGELOG.md` 可由启用了 `append_changelog` 的 Agent 追加记录。
 - `.spherse` 保存项目 ID、Agent、会话、主题、Skill、MCP、触发器等平台元数据。
 - 桌面端可以同时打开多个项目，并从左侧项目头像切换。

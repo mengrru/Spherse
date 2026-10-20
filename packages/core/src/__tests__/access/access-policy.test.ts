@@ -20,7 +20,7 @@ interface MatrixRow {
 
 const MATRIX: MatrixRow[] = [
   { category: "userFiles", path: "lore/timeline.md", llmRead: true, llmWrite: true, srvRead: true, srvWrite: true },
-  { category: "rootIndex", path: "AGENTS.md", llmRead: true, llmWrite: false, srvRead: true, srvWrite: true },
+  { category: "rootIndex", path: "AGENTS.md", llmRead: true, llmWrite: true, srvRead: true, srvWrite: true },
   { category: "changelog", path: "CHANGELOG.md", llmRead: true, llmWrite: false, srvRead: true, srvWrite: true },
   { category: "projectConfig", path: ".spherse/project.yaml", llmRead: true, llmWrite: false, srvRead: false, srvWrite: false },
   { category: "projectTheme", path: ".spherse/theme.css", llmRead: true, llmWrite: true, srvRead: true, srvWrite: true },
@@ -151,11 +151,93 @@ describe("throwing vs non-throwing behavior", () => {
   });
 
   it("write() throws AccessDeniedError on a category not permitted for write", () => {
-    expect(() => llm.assertWrite("AGENTS.md")).toThrow(AccessDeniedError);
-    expect(llm.canWrite("AGENTS.md")).toBe(false);
+    expect(() => llm.assertWrite("CHANGELOG.md")).toThrow(AccessDeniedError);
+    expect(llm.canWrite("CHANGELOG.md")).toBe(false);
   });
 
   it("read() does not throw for an allowed path", () => {
     expect(() => llm.assertRead("lore/timeline.md")).not.toThrow();
+  });
+});
+
+describe("llmAccessPolicy rootIndex direct write", () => {
+  const llm = llmAccessPolicy(PROJECT_ROOT, []);
+
+  it("allows write and edit (direct write) of AGENTS.md including case variants", () => {
+    expect(llm.canWrite("AGENTS.md")).toBe(true);
+    expect(llm.canWrite("agents.md")).toBe(true);
+    expect(() => llm.assertWrite("AGENTS.md")).not.toThrow();
+  });
+});
+
+describe("llmAccessPolicy transfer destinations (copy/move dest)", () => {
+  const llm = llmAccessPolicy(PROJECT_ROOT, []);
+
+  it("rejects AGENTS.md and its case variants as transfer destination", () => {
+    expect(llm.canTransferDest("AGENTS.md")).toBe(false);
+    expect(llm.canTransferDest("agents.md")).toBe(false);
+    expect(() => llm.assertTransferDest("AGENTS.md")).toThrow(/transfer destination of "AGENTS\.md" \(category "rootIndex"\)/);
+  });
+
+  it("allows userFiles and other direct-write categories as transfer destination", () => {
+    expect(llm.canTransferDest("lore/timeline.md")).toBe(true);
+    expect(llm.canTransferDest(".spherse/theme.css")).toBe(true);
+    expect(llm.canTransferDest(".spherse/skills/my-skill/SKILL.md")).toBe(true);
+  });
+
+  it("still rejects protected .spherse paths as transfer destination", () => {
+    expect(llm.canTransferDest(".spherse/project.yaml")).toBe(false);
+    expect(llm.canTransferDest(".spherse/agents/bot-abc123/profile.md")).toBe(false);
+    expect(llm.canTransferDest("CHANGELOG.md")).toBe(false);
+  });
+});
+
+describe("llmAccessPolicy move sources", () => {
+  const llm = llmAccessPolicy(PROJECT_ROOT, []);
+
+  it("rejects AGENTS.md and its case variants as move source (cannot be moved away)", () => {
+    expect(llm.canMoveSource("AGENTS.md")).toBe(false);
+    expect(llm.canMoveSource("agents.md")).toBe(false);
+    expect(() => llm.assertMoveSource("AGENTS.md")).toThrow(/move source of "AGENTS\.md" \(category "rootIndex"\)/);
+  });
+
+  it("allows userFiles as move source", () => {
+    expect(llm.canMoveSource("lore/timeline.md")).toBe(true);
+    expect(llm.canMoveSource("lore")).toBe(true);
+  });
+
+  it("keeps non-rootIndex readable categories as move source (existing behavior)", () => {
+    expect(llm.canMoveSource(".spherse/attachments/img.png")).toBe(true);
+    expect(llm.canMoveSource("CHANGELOG.md")).toBe(true);
+  });
+
+  it("still rejects unreadable categories as move source", () => {
+    expect(llm.canMoveSource(".spherse/agents/bot-abc123/mcp.json")).toBe(false);
+    expect(llm.canMoveSource(".spherse/agents/bot-abc123/sessions.db")).toBe(false);
+  });
+});
+
+describe("llmAccessPolicy denied paths apply to transfer and move kinds", () => {
+  const llm = llmAccessPolicy(PROJECT_ROOT, ["secrets"]);
+
+  it("blocks transfer destination and move source under a denied directory", () => {
+    expect(llm.canTransferDest("secrets/key.md")).toBe(false);
+    expect(llm.canMoveSource("secrets/key.md")).toBe(false);
+  });
+});
+
+describe("serverAccessPolicy transfer and move kinds mirror SRV_WRITE", () => {
+  const srv = serverAccessPolicy(PROJECT_ROOT);
+
+  it("allows AGENTS.md and user files as transfer destination and move source", () => {
+    expect(srv.canTransferDest("AGENTS.md")).toBe(true);
+    expect(srv.canMoveSource("AGENTS.md")).toBe(true);
+    expect(srv.canTransferDest("lore/timeline.md")).toBe(true);
+    expect(srv.canMoveSource("lore/timeline.md")).toBe(true);
+  });
+
+  it("still rejects non-skills .spherse paths", () => {
+    expect(srv.canTransferDest(".spherse/project.yaml")).toBe(false);
+    expect(srv.canMoveSource(".spherse/project.yaml")).toBe(false);
   });
 });

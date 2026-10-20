@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createWriteFileTool } from "../../tools/write-file.js";
 import { FileWriteMutex } from "../../utils/file-write-mutex.js";
-import { createTempProject, cleanupDir, readFile, pathExists, permissivePolicy } from "../helpers.js";
+import { createTempProject, cleanupDir, readFile, pathExists, writeFile, permissivePolicy } from "../helpers.js";
 
 describe("createWriteFileTool", () => {
   let projectRoot: string;
@@ -23,6 +23,27 @@ describe("createWriteFileTool", () => {
     expect(result.details).toEqual({ path: "out.txt", size: 5 });
     const content = await readFile(projectRoot, "out.txt");
     expect(content).toBe("hello");
+  });
+
+  it("creates the root AGENTS.md", async () => {
+    const tool = createWriteFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { path: "AGENTS.md", content: "# Index" }, undefined as any);
+    expect(result.content[0].text).toContain("Successfully wrote");
+    expect(await readFile(projectRoot, "AGENTS.md")).toBe("# Index");
+  });
+
+  it("overwrites an existing AGENTS.md", async () => {
+    await writeFile(projectRoot, "AGENTS.md", "old");
+    const tool = createWriteFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { path: "AGENTS.md", content: "new" }, undefined as any);
+    expect(result.content[0].text).toContain("Successfully wrote");
+    expect(await readFile(projectRoot, "AGENTS.md")).toBe("new");
+  });
+
+  it("writes AGENTS.md via case variant path (case-insensitive rootIndex)", async () => {
+    const tool = createWriteFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute("tc1", { path: "agents.md", content: "x" }, undefined as any);
+    expect(result.content[0].text).toContain("Successfully wrote");
   });
 
   it("overwrites an existing file", async () => {

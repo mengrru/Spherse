@@ -31,6 +31,18 @@ describe("createEditFileTool", () => {
     expect(content).toBe("const x = 10;\nconst y = 2;");
   });
 
+  it("edits an existing AGENTS.md", async () => {
+    await writeFile(projectRoot, "AGENTS.md", "# Guide\n\nOld rules.");
+    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const result = await tool.execute(
+      "tc1",
+      { path: "AGENTS.md", old_string: "Old rules.", new_string: "New rules." },
+      undefined as any,
+    );
+    expect(result.content[0].text).toContain("Successfully edited");
+    expect(await readFile(projectRoot, "AGENTS.md")).toBe("# Guide\n\nNew rules.");
+  });
+
   it("deletes text by using empty new_string", async () => {
     await writeFile(projectRoot, "a.txt", "keep thisremove this");
     const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));

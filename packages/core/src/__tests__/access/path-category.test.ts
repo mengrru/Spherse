@@ -8,6 +8,18 @@ describe("categorizePath", () => {
     expect(categorizePath("CHANGELOG.md")).toBe("changelog");
   });
 
+  it("matches rootIndex case-insensitively for case-insensitive filesystems", () => {
+    expect(categorizePath("agents.md")).toBe("rootIndex");
+    expect(categorizePath("Agents.md")).toBe("rootIndex");
+    expect(categorizePath("AGENTS.MD")).toBe("rootIndex");
+  });
+
+  it("keeps other builtin categories case-sensitive (known platform edge)", () => {
+    expect(categorizePath("CHANGELOG.MD")).toBe("userFiles");
+    expect(categorizePath("changelog.md")).toBe("userFiles");
+    expect(categorizePath(".SPHERSE/project.yaml")).toBe("userFiles");
+  });
+
   it("classifies project config and theme", () => {
     expect(categorizePath(".spherse/project.yaml")).toBe("projectConfig");
     expect(categorizePath(".spherse/theme.css")).toBe("projectTheme");
