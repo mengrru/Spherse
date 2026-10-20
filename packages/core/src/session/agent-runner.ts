@@ -127,6 +127,13 @@ export class AgentRunner {
       ) {
         return;
       }
+      if (event.type === "agent_end" && event.messages.some((m) => m.role === "system")) {
+        dispatch({
+          ...event,
+          messages: event.messages.filter((m) => m.role !== "system"),
+        });
+        return;
+      }
       dispatch(event);
     });
   }

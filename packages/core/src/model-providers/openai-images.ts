@@ -241,6 +241,7 @@ export function withOpenaiImages(base: Provider): Provider {
     streamSimple: (model, context, options) => base.streamSimple(model, context, options),
     fetchDeferred: base.fetchDeferred?.bind(base),
     cancelDeferred: base.cancelDeferred?.bind(base),
+    classify: base.classify?.bind(base),
     generateImages: (
       model: ImageModel<OpenaiImagesApi>,
       context: ImagesContext,
