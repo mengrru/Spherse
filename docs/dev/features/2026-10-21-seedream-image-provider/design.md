@@ -42,8 +42,8 @@
 2. `generateImagesSeedream(model, context, options)`：
    - 请求体 `{ model, prompt, response_format: "b64_json" }`，`size` 存在时透传（档位与显式像素格式均为 string，直接透传）；`quality` 忽略（Seedream 无此参数，与 zhipu 行为一致）
    - `watermark` 不传，用服务端默认（不替用户做产品决策，列为开放项）
-   - mimeType：`item.output_format` 存在时映射 `image/jpeg` / `image/png`，否则默认 `image/jpeg`（Seedream 全系默认输出 jpeg）；兼容 `url` 响应分支（下载转 base64，同 zhipu）
-   - `data` 项带 `error` 字段时归一化为 error 返回
+   - mimeType：`item.output_format` 存在时映射（`image/jpeg` / `image/png` / `image/webp`），否则默认 `image/jpeg`（Seedream 全系默认输出 jpeg）；兼容 `url` 响应分支（下载转 base64，同 zhipu）
+   - `data` 项带 `error` 字段时归一化为 error 返回（message 缺失时回退 code）
    - 错误处理同 zhipu：`!res.ok` 解析 `error.message` 回退 `` `Seedream API error: ${status}` ``，catch 区分 abort/error，永不 throw
 3. `createSeedreamImagesProvider()`：`auth: envApiKeyAuth("Seedream API key", ["SPHERSE_IMAGE_API_KEY"])`
 

@@ -114,7 +114,9 @@ const MIME_BY_EXT: Record<string, string> = {
 
 const MIME_BY_OUTPUT_FORMAT: Record<string, string> = {
   jpeg: "image/jpeg",
+  jpg: "image/jpeg",
   png: "image/png",
+  webp: "image/webp",
 };
 
 function inferMimeTypeFromUrl(url: string): string {
@@ -187,8 +189,9 @@ export async function generateImagesSeedream(
     }
 
     for (const item of items) {
-      if (item?.error?.message) {
-        return { ...base, stopReason: "error", errorMessage: item.error.message };
+      if (item?.error) {
+        const msg = item.error.message ?? item.error.code ?? "Seedream API returned an image error";
+        return { ...base, stopReason: "error", errorMessage: msg };
       }
       const mimeType =
         (typeof item.output_format === "string" && MIME_BY_OUTPUT_FORMAT[item.output_format]) ||

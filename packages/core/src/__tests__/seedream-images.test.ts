@@ -65,6 +65,7 @@ describe("generateImagesSeedream", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("normalizes b64_json response to ImageContent with ark endpoint and bearer auth", async () => {
@@ -235,7 +236,54 @@ describe("generateImagesSeedream", () => {
   it("returns stopReason error when apiKey is missing", async () => {
     const result = await generateImagesSeedream(SAMPLE_MODEL as any, baseContext as any, {});
     expect(result.stopReason).toBe("error");
-    expect(result.errorMessage).toContain("api");
+    expect(result.errorMessage).toBe("No Seedream api key provided");
+  });
+
+  it("returns stopReason error when fetch rejects with network error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValueOnce(new Error("network down")),
+    );
+
+    const result = await generateImagesSeedream(SAMPLE_MODEL as any, baseContext as any, {
+      apiKey: "test-key",
+    });
+
+    expect(result.stopReason).toBe("error");
+    expect(result.errorMessage).toBe("network down");
+  });
+
+  it("returns stopReason aborted when fetch rejects with AbortError", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValueOnce(Object.assign(new Error(), { name: "AbortError" })),
+    );
+
+    const result = await generateImagesSeedream(SAMPLE_MODEL as any, baseContext as any, {
+      apiKey: "test-key",
+    });
+
+    expect(result.stopReason).toBe("aborted");
+  });
+
+  it("returns stopReason error with code fallback when data item error lacks message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          data: [{ error: { code: "OutputImageSensitiveContentDetected" } }],
+        }),
+      }),
+    );
+
+    const result = await generateImagesSeedream(SAMPLE_MODEL as any, baseContext as any, {
+      apiKey: "test-key",
+    });
+
+    expect(result.stopReason).toBe("error");
+    expect(result.errorMessage).toBe("OutputImageSensitiveContentDetected");
   });
 
   it("returns stopReason aborted when signal is already aborted", async () => {
