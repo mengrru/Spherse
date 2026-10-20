@@ -8,5 +8,6 @@ test-results/
 packages/app/release/
 packages/desktop/release/
 .superpowers/
+.spherse/
 .pi/
 paseo.json
