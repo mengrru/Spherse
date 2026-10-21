@@ -94,8 +94,11 @@ export function createAskUserTool(askGate?: AskGate): AgentTool<typeof AskUserPa
           },
           timeoutS * 1000,
         );
-      } catch {
-        return abortedResult(question, options);
+      } catch (err) {
+        if (err instanceof Error && err.message.includes("session aborted")) {
+          return abortedResult(question, options);
+        }
+        return unrecordedResult(question, options);
       }
 
       if (outcome.timedOut || outcome.answer === undefined) {
@@ -124,6 +127,21 @@ function abortedResult(
 ): { content: { type: "text"; text: string }[]; details: AskUserDetails } {
   return {
     content: [{ type: "text" as const, text: "Question cancelled: the session was aborted before the user answered." }],
+    details: { cardType: "question", question, options },
+  };
+}
+
+function unrecordedResult(
+  question: string,
+  options?: string[],
+): { content: { type: "text"; text: string }[]; details: AskUserDetails } {
+  return {
+    content: [
+      {
+        type: "text" as const,
+        text: "The user's answer could not be recorded because of a storage failure. Continue with your best judgment; do not call ask_user again for this question in this run.",
+      },
+    ],
     details: { cardType: "question", question, options },
   };
 }

@@ -63,7 +63,7 @@ ProjectRuntime           对外协调层，聚合以上全部
     摘要长度预算按压缩时 context tokens 的 5% 动态给定（clamp 1500–16000），同时约束摘要指令文本与 stream `maxTokens`（再与模型输出上限取 min）
     摘要来源以 `digestSource: "llm" | "mechanical"` 标记
 - 触发器 ⇄ 会话的循环依赖经 `SessionPort` 消解：factory 先构造 SessionManager，port 是普通对象，capability 在 `init` 中拿到它；trigger 经 port 直连发送，可见性由 server 侧 event log 订阅派生（见 chat.md），core 不引入路由钩子
-- **control 事件落库**：审批/问答 gate 的 `control/requested` / `control/resolved` 经 runner 的 control sink 包装层 persist → emit（wire 附 seq）；abort 的 `rejectAll` 对每个 pending 补发 `resolved {aborted}`；`derivePendingControls(events)` 投影 pending（requested 未配对 resolved 且其后无 `turn/end`，repair 合成的 turn/end 自动排除崩溃悬空）
+- **control 事件落库**：审批/问答 gate 的 `control/requested` / `control/resolved` 经 runner 的 control sink 包装层 persist → emit（wire 附 seq）；落库失败不释放决策（等待方收 rejection 终态），落库成功后的通知失败只降级不回滚；abort 的 `rejectAll` 对每个 pending 补发 `resolved {aborted}`（逐项隔离异常）；`derivePendingControls(events)` 投影 pending（requested 未配对 resolved 且其后无 `turn/end`，repair 合成的 turn/end 自动排除崩溃悬空）
 
 ## ProjectRuntime（对外协调层）
 

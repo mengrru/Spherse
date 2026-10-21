@@ -38,8 +38,13 @@ export class SessionControlBus {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         if (this.pending.delete(req.requestId)) {
+          try {
+            this.emitResolved(req.requestId, req.kind, timeoutDecision);
+          } catch {
+            // timeout decisions are fail-closed denials; a failed record must
+            // not escalate into an uncaught exception inside the timer callback
+          }
           (resolve as (d: unknown) => void)(timeoutDecision);
-          this.emitResolved(req.requestId, req.kind, timeoutDecision);
         }
       }, timeoutMs);
       this.pending.set(req.requestId, {
@@ -49,14 +54,20 @@ export class SessionControlBus {
         reject,
         timer,
       });
-      this.emit({
-        type: "control_request",
-        requestId: req.requestId,
-        kind: req.kind,
-        toolCallId: req.toolCallId,
-        toolName: req.toolName,
-        args: req.args,
-      });
+      try {
+        this.emit({
+          type: "control_request",
+          requestId: req.requestId,
+          kind: req.kind,
+          toolCallId: req.toolCallId,
+          toolName: req.toolName,
+          args: req.args,
+        });
+      } catch (error) {
+        clearTimeout(timer);
+        this.pending.delete(req.requestId);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
     });
   }
 
@@ -65,17 +76,28 @@ export class SessionControlBus {
     if (!entry) return;
     clearTimeout(entry.timer);
     this.pending.delete(requestId);
+    try {
+      this.emitResolved(requestId, entry.kind, decision);
+    } catch (error) {
+      entry.reject(error instanceof Error ? error : new Error(String(error)));
+      return;
+    }
     entry.resolve(decision);
-    this.emitResolved(requestId, entry.kind, decision);
   }
 
   rejectAll(reason: string): void {
-    for (const entry of this.pending.values()) {
+    const entries = [...this.pending.values()];
+    this.pending.clear();
+    for (const entry of entries) {
       clearTimeout(entry.timer);
       entry.reject(new Error(reason));
-      this.emitAborted(entry.requestId, entry.kind);
+      try {
+        this.emitAborted(entry.requestId, entry.kind);
+      } catch {
+        // one failed aborted-resolution record must not stop the remaining
+        // cleanup nor the caller's abort chain
+      }
     }
-    this.pending.clear();
   }
 
   private emit(e: SessionControlEvent): void {
