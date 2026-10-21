@@ -45,6 +45,24 @@ export function getProjectNavStack(projectId: string): readonly string[] {
   return projectNavStacks.get(projectId) ?? [];
 }
 
+function canonicalNavKey(url: string): string | null {
+  try {
+    const parsed = new URL(url, "http://spherse.local");
+    const entries = [...parsed.searchParams.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    const query = entries.map(([k, v]) => `${k}=${v}`).join("&");
+    return query ? `${parsed.pathname}?${query}` : parsed.pathname;
+  } catch {
+    return null;
+  }
+}
+
+export function sameNavUrl(a: string, b: string): boolean {
+  if (a === b) return true;
+  const keyA = canonicalNavKey(a);
+  const keyB = canonicalNavKey(b);
+  return keyA !== null && keyA === keyB;
+}
+
 export function dropFromProjectNavHistory(
   projectId: string,
   match: string | ((key: string) => boolean),

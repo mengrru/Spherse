@@ -224,6 +224,19 @@ describe("TabBar", () => {
     expect(useTabsStore.getState().byProject).toEqual({});
   });
 
+  it("closing other tabs while on the welcome tab navigates to the keep target", async () => {
+    const { go } = setup();
+    await go("/project/p1/chat/s1");
+    await go("/project/p1/chat/s2");
+    await go("/project/p1");
+
+    await userEvent.click(await openCloseOthersMenu("Second chat"));
+
+    expect(tabNames()).toEqual(["Welcome", "Second chat"]);
+    expect(screen.getByTestId("page")).toHaveTextContent("chat:/project/p1/chat/s2");
+    expect(useTabsStore.getState().byProject.p1).toEqual([{ kind: "chat", sessionId: "s2" }]);
+  });
+
   it("disables close others when the keep target is the only tab, but not on the welcome tab", async () => {
     const { go } = setup();
     await go("/project/p1/chat/s1");

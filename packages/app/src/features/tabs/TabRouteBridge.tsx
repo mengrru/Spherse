@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useProjectCtx } from "../../context/project-context";
 import { useTabsStore } from "./store";
-import { dropFromProjectNavHistory } from "../../lib/use-project-navigation";
+import { dropFromProjectNavHistory, sameNavUrl } from "../../lib/use-project-navigation";
 import { hasTabNavState, readNavState } from "../../lib/nav-state";
 import { tabKey } from "../../lib/tab-target";
 import { useFloatingSessionId } from "../floating-chat/use-floating-session-id";
@@ -22,7 +22,10 @@ export function TabRouteBridge() {
     const store = useTabsStore.getState();
     const nav = readNavState(location.state);
     if (nav.closeTab) store.closeTab(projectId, nav.closeTab);
-    if (nav.closedUrl) dropFromProjectNavHistory(projectId, nav.closedUrl);
+    if (nav.closedUrl) {
+      const closedUrl = nav.closedUrl;
+      dropFromProjectNavHistory(projectId, (url) => sameNavUrl(url, closedUrl));
+    }
     if (target && !(target.kind === "chat" && target.sessionId === floatingSessionId)) {
       if (nav.replaceTab) store.replaceTab(projectId, nav.replaceTab, target);
       else store.openTab(projectId, target);
