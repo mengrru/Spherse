@@ -143,11 +143,13 @@ test("closing other tabs keeps the right-clicked tab and navigates to it", async
 
 test("closing other tabs prompts for unsaved edits of the active tab", async () => {
   const project = await createFileTreeProject();
+  await writeFile(path.join(project.root, "extra.md"), "# Extra\n");
   const { app, page } = await launchFileTreeApp(project);
 
   try {
     await treeButton(page, "docs").click();
     await treeButton(page, "guide.md").click();
+    await treeButton(page, "extra.md").click();
     await tabBar(page).getByRole("tab", { name: "README" }).click();
 
     await page.getByRole("button", { name: "编辑" }).click();
