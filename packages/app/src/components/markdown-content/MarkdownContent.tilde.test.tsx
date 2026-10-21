@@ -27,6 +27,16 @@ describe("MarkdownContent chat variant single-tilde handling", () => {
     expect(md.text()).toContain("约 ~10 个");
   });
 
+  it("keeps triple tildes and an unpaired double tilde literal", () => {
+    const triple = renderMd("前后~~~波浪~~~文本");
+    expect(triple.html()).not.toContain("<del");
+    expect(triple.text()).toContain("前后~~~波浪~~~文本");
+
+    const unpaired = renderMd("未关闭 ~~ 删除线");
+    expect(unpaired.html()).not.toContain("<del");
+    expect(unpaired.text()).toContain("未关闭 ~~ 删除线");
+  });
+
   it("still renders double tilde as strikethrough", () => {
     const md = renderMd("前置~~删除线~~后置");
     const del = md.container.querySelector("del");
