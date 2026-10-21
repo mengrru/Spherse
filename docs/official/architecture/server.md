@@ -112,7 +112,7 @@
 
 - `GET /api/projects/:projectId/download/*`：不支持预览文件（Content Browser 占位卡）的下载通道，`application/octet-stream` + `Content-Disposition: attachment`（RFC 5987 `filename*` 编码非 ASCII 文件名）+ `Content-Length`，`createReadStream` 流式
 - **无扩展名白名单**（与 preview 的关键差异）：preview 是「内联展示」边界（浏览器直接渲染响应，须限定类型）；download 强制 attachment + octet-stream，浏览器只落盘不解释执行，风险与桌面「用默认应用打开」同级
-- 访问控制：同一 `serverAccessPolicy.assertRead`（穿越防护 + 类别白名单，未扩大可读集合），另显式拒绝路径中含 `.git` / `node_modules` 段（这两类被 `categorizePath` 兜底为 userFiles 而放行，对齐 fs-watcher 降噪语义）
+- 访问控制：同一 `serverAccessPolicy.assertRead`（穿越防护 + 类别白名单，未扩大可读集合），另显式拒绝路径中含 `.git` / `node_modules` 段（反斜杠归一化 + 段名小写比较——大小写不敏感文件系统上 `.GIT` 仍命中；这两类被 `categorizePath` 兜底为 userFiles 而放行）
 - 鉴权走全局 `/api/` auth hook（renderer 经 apiClient Bearer fetch，不新增 `__auth` 路径 token 形态）；无 JSON schema（二进制流响应）
 
 ## data 路由

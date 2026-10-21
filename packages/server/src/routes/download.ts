@@ -14,7 +14,10 @@ import { forbidden, notFound } from "../errors.js";
 const BLOCKED_SEGMENTS = new Set([".git", "node_modules"]);
 
 function hasBlockedSegment(relativePath: string): boolean {
-  return relativePath.split("/").some((segment) => BLOCKED_SEGMENTS.has(segment));
+  return relativePath
+    .replace(/\\/g, "/")
+    .split("/")
+    .some((segment) => BLOCKED_SEGMENTS.has(segment.toLowerCase()));
 }
 
 function contentDispositionFilename(basename: string): string {

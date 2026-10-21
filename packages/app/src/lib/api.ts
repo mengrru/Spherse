@@ -546,7 +546,11 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       const res = await authedFetch(`${apiBase}/download/${encodePathSegments(filePath)}`);
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new ApiError(body?.error ?? `HTTP ${res.status}`, res.status);
+        throw new ApiError(
+          body?.error ?? `HTTP ${res.status}`,
+          res.status,
+          typeof body?.code === "string" ? body.code : undefined,
+        );
       }
       return res.blob();
     },

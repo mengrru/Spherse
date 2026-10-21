@@ -107,6 +107,25 @@ describe("download route", () => {
     expect(top.statusCode).toBe(403);
   });
 
+  it("rejects .git and node_modules with backslash separators", async () => {
+    const git = await app.inject({
+      method: "GET",
+      url: `/api/projects/p1/download/${encodeURIComponent(".git\\config")}`,
+    });
+    expect(git.statusCode).toBe(403);
+
+    const nm = await app.inject({
+      method: "GET",
+      url: `/api/projects/p1/download/${encodeURIComponent("packages\\node_modules\\pkg\\index.js")}`,
+    });
+    expect(nm.statusCode).toBe(403);
+  });
+
+  it("rejects blocked segments case-insensitively", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/projects/p1/download/.GIT/config" });
+    expect(res.statusCode).toBe(403);
+  });
+
   it("rejects node_modules paths including nested segments", async () => {
     const nested = await app.inject({
       method: "GET",

@@ -30,7 +30,7 @@ Content Browser 对不支持预览的二进制文件（PDF / Word / zip 等）�
 新文件 `packages/server/src/routes/download.ts`，在 `routes/index.ts` 注册。处理顺序与 preview 一致，外加一条显式段过滤：
 
 1. `serverAccessPolicy(root).assertRead(relativePath)` —— 内部先 `resolveProjectPath` 拒绝 `../` 穿越，再按 SRV_READ 分类拒绝受保护路径（如 `.spherse/sessions.db`）。**与 content API 读取同一策略，不为下载扩大文件访问白名单**；
-2. **显式拒绝 `.git` / `node_modules` 路径段**：`relativePath` 任一路径段为 `.git` 或 `node_modules` → 403。对齐 server 层 fs-watcher 的既有过滤语义（`packages/server/src/bus/fs-watcher.ts:17`，`segs.includes(".git") || segs.includes("node_modules")`）。原因：这些路径被 `categorizePath` 兜底为 `userFiles` 而 SRV_READ 放行，现状其二进制内容不可经任何端点取回（preview 白名单挡、content binary 嗅探只返回 `binary:true`），无此过滤则 download 端点会扩大远程（tunnel/mobile）可取回的文件集合，违反「不为下载扩大文件访问白名单」。**不**一刀切拒绝全部 dotfile（SRV_READ 刻意放行 `.spherse/attachments|skills` 等）；
+2. **显式拒绝 `.git` / `node_modules` 路径段**：`relativePath` 归一化反斜杠（`\` → `/`，对齐 fs-watcher `fs-watcher.ts:16` 的预处理）后按段比较，段名小写比较（大小写不敏感文件系统上 `.GIT` 仍命中 `.git`；download 是数据外传通道，比 fs-watcher 的降噪用途风险更高，故比先例多一层小写化）→ 403。原因：这些路径被 `categorizePath` 兜底为 `userFiles` 而 SRV_READ 放行，现状其二进制内容不可经任何端点取回（preview 白名单挡、content binary 嗅探只返回 `binary:true`），无此过滤则 download 端点会扩大远程（tunnel/mobile）可取回的文件集合，违反「不为下载扩大文件访问白名单」。**不**一刀切拒绝全部 dotfile（SRV_READ 刻意放行 `.spherse/attachments|skills` 等）；
 3. `fs.stat`：不存在或为目录 → 404；
 4. 响应：
    - `Content-Type: application/octet-stream`
@@ -162,3 +162,14 @@ npm run test:e2e -w @spherse/desktop -- unsupported-file-download
 | M2 | `encodePath` 未指定语义 | 已修：指定逐段 encodeURIComponent（getPreviewUrl 惯例） |
 | M3 | 「复用 open-file 先例 throw」与 open-file 实际静默 return 不一致 | 已修：D2 改为「复用校验函数，行为改为 throw」 |
 | m1-m5 | i18n key 数目笔误、check:i18n 脚本位置、ascii fallback 控制字符、Windows 分隔符、未连接分支 | 已修：分别更正/注明；m5 简化为错误路径兜底 |
+
+## Code review 处理
+
+| 级别 | 意见 | 处理 |
+|---|---|---|
+| I-1 | 段过滤未归一化反斜杠，Windows 上 `.git\config` 可绕过（assertRead 对反斜杠路径 ALLOWED） | 已修：`hasBlockedSegment` 归一化 `\` → `/`（对齐 fs-watcher 预处理），补测试 |
+| M-1 | 段过滤大小写敏感，大小写不敏感文件系统（macOS/Windows）上 `.GIT/` 可取回 git 元数据 | 已修：段名小写比较（download 是外传通道，比 fs-watcher 降噪先例更严），补测试 |
+| M-2 | blocked-segment 测试缺反斜杠/大小写变体 | 已修：随 I-1/M-1 补 3 个用例 |
+| m1 | apiClient.downloadFile 未透传错误 `code`（assertOk 有） | 已修：补 code 透传 |
+| m2 | routes/index.ts 既有格式瑕疵（`}  registerPreviewRoutes` 单行拼接） | 已修：顺手分行 |
+| 未验证疑点 | E2E 未在 review 中实际执行（主 agent 已单独跑过，1 passed）；web 全链路仅组件级 mock（与 ImageCard 既有覆盖深度一致） | 记录，不阻塞 |
