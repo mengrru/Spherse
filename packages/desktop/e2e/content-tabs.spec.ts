@@ -115,6 +115,66 @@ test("unsaved edits prompt before switching tabs", async () => {
   }
 });
 
+test("closing other tabs keeps the right-clicked tab and navigates to it", async () => {
+  const project = await createFileTreeProject();
+  const { app, page } = await launchFileTreeApp(project);
+
+  try {
+    await treeButton(page, "docs").click();
+    await treeButton(page, "guide.md").click();
+    await expect(tabs(page)).toHaveText(["欢迎页", "README", "guide"]);
+
+    await tabBar(page).getByRole("tab", { name: "README" }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "关闭其他标签页" }).click();
+    await expect(tabs(page)).toHaveText(["欢迎页", "README"]);
+    await expect(tabBar(page).getByRole("tab", { name: "README" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("[data-content-browser]")).toContainText("Test Project");
+
+    await treeButton(page, "guide.md").click();
+    await expect(tabs(page)).toHaveText(["欢迎页", "README", "guide"]);
+    await tabBar(page).getByRole("tab", { name: "欢迎页" }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "关闭其他标签页" }).click();
+    await expect(tabs(page)).toHaveText(["欢迎页"]);
+    await expect(page.locator("[data-content-browser]")).toHaveCount(0);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test("closing other tabs prompts for unsaved edits of the active tab", async () => {
+  const project = await createFileTreeProject();
+  await writeFile(path.join(project.root, "extra.md"), "# Extra\n");
+  const { app, page } = await launchFileTreeApp(project);
+
+  try {
+    await treeButton(page, "docs").click();
+    await treeButton(page, "guide.md").click();
+    await treeButton(page, "extra.md").click();
+    await tabBar(page).getByRole("tab", { name: "README" }).click();
+
+    await page.getByRole("button", { name: "编辑" }).click();
+    await page.locator("[data-content-browser] textarea").fill("# Changed\n");
+
+    await tabBar(page).getByRole("tab", { name: "guide" }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "关闭其他标签页" }).click();
+    const dialog = page.locator('[role="alertdialog"]');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "继续编辑" }).click();
+    await expect(tabs(page)).toHaveText(["欢迎页", "README", "guide"]);
+    await expect(tabBar(page).getByRole("tab", { name: "README" })).toHaveAttribute("aria-selected", "true");
+
+    await tabBar(page).getByRole("tab", { name: "guide" }).click({ button: "right" });
+    await page.getByRole("menuitem", { name: "关闭其他标签页" }).click();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: "放弃修改" }).click();
+    await expect(tabs(page)).toHaveText(["欢迎页", "guide"]);
+    await expect(tabBar(page).getByRole("tab", { name: "guide" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator("[data-content-browser]")).toContainText("Guide");
+  } finally {
+    await closeApp(app);
+  }
+});
+
 test("mobile hides the content browser header for html files while tabs are enabled", async () => {
   const project = await createFileTreeProject();
   await writeFile(path.join(project.root, "page.html"), "<!doctype html><h1>Hello page</h1>\n");

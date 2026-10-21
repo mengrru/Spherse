@@ -301,7 +301,7 @@ Spherse 支持通过项目级 CSS 变量覆盖来自定义 UI 外观。在项目
 
 ### 标签栏定制
 
-标签默认是直角矩形，仅靠右侧边框分隔；形状、间距、活跃态都可在 `.spherse/theme.css` 中改写。项目主题以无层（unlayered）CSS 注入，普通选择器即可覆盖应用内置的 Tailwind 样式，无需 `!important`。
+标签默认是直角矩形，仅靠右侧边框分隔；形状、间距、活跃态都可在 `.spherse/theme.css` 中改写。项目主题以无层（unlayered）CSS 注入，普通选择器即可覆盖应用内置的 Tailwind 样式，无需 `!important`。标签外层有一个 `display: contents` 的右键菜单包装元素（不产生盒、不影响布局），主题选择器请用后代选择器（如 `[data-tab-scroll] [data-tab]`），不要对标签用直接子选择器。
 
 ```css
 /* 圆角「胶囊」标签 + 活跃态渐变与下划线 */

@@ -670,6 +670,7 @@ export const en: Record<TranslationKey, string> = {
   "tabs.close": "Close {name}",
   "tabs.loading": "Loading…",
   "tabs.label": "Open tabs",
+  "tabs.closeOthers": "Close Other Tabs",
   "split-pane.resize": "Resize split pane",
   "error.requestFailed": "Request failed",
   "error.unexpectedTitle": "Something went wrong",

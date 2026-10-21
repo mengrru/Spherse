@@ -670,6 +670,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "tabs.close": "關閉 {name}",
   "tabs.loading": "載入中…",
   "tabs.label": "已開啟的分頁",
+  "tabs.closeOthers": "關閉其他分頁",
   "split-pane.resize": "調整分窗寬度",
   "error.requestFailed": "請求失敗",
   "error.unexpectedTitle": "應用程式發生問題",
