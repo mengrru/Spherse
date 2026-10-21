@@ -6,6 +6,8 @@
 
 ## 验证补全
 
+- [ ] **补 control 决策路径消费方契约测试与 resolve 持久化失败 UI 反馈**：#159 修复后 server 侧 `resolve_control_request` / `abort` 测试仍全 mock SessionManager，缺不 mock 被测方法的接缝契约测试；且 `control/resolved` 落库失败时 core 静默（不抛错、等待方转 error toolResult），UI 审批卡停留 pending 无终态反馈，需经 contracts 发错误帧或卡片复位（与下方「审批卡 pending 态残留」同收敛面）。参见 `docs/dev/bugfix/2026-10-21-issue-159-approval-persistence/design.md` §1.4/§5
+
 - [ ] **手动验证 Seedream 火山方舟真实调用**：provider 接入仅 mock 测试（2026-10-21），缺真实 Ark key smoke：① 5 个 CN Model ID 是否可解析（拼错表现为 404 归一化错误）；② `response_format: "b64_json"` 时 data 项是否带 `output_format`（mime 映射依赖）；③ url 分支、`watermark` 服务端默认行为。参见 `docs/dev/features/2026-10-21-seedream-image-provider/design.md`
 
 - [ ] **真机验证移动端文件写开放后的触屏交互**：web 宿主 `content.editable` 已开放（2026-10-03），文件树右键菜单（Base UI 500ms 长按，同 AgentRow 长按风险）、InlineNameInput 弹软键盘的命名输入、Textarea 编辑大文件、DeleteConfirmDialog 小屏表现均未真机回归；HTML 文件在移动端按 `hideHeader` 保持只读（产品决策，例外已注明 frontend.md）。参见 `docs/dev/investigation/2026-08-28-web-disabled-features/investigation.md`
