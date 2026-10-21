@@ -306,7 +306,14 @@ export class AgentRunner {
     }
   }
   abort(): void {
-    this.controlBus.rejectAll("session aborted");
+    try {
+      this.controlBus.rejectAll("session aborted");
+    } catch (err) {
+      this.deps.logger.warn(
+        { err, sessionId: this.sessionId, agentId: this.agentId },
+        "control bus cleanup during abort failed; agent abort still proceeds",
+      );
+    }
     this.agent.abort();
   }
 
@@ -455,12 +462,22 @@ export class AgentRunner {
   }
 
   private persistingControlSink(onEvent: RunnerEventHandler): RunnerEventHandler {
+    const notify = (event: AgentEvent | SessionControlEvent): void => {
+      try {
+        onEvent(event);
+      } catch (err) {
+        this.deps.logger.warn(
+          { err, sessionId: this.sessionId, agentId: this.agentId, eventType: event.type },
+          "control event notification failed after commit",
+        );
+      }
+    };
     return (event) => {
       if (
         !this.eventLog ||
         (event.type !== "control_request" && event.type !== "control_resolved")
       ) {
-        onEvent(event);
+        notify(event);
         return;
       }
       if (event.type === "control_request") {
@@ -471,7 +488,7 @@ export class AgentRunner {
           toolName: event.toolName,
           args: event.args,
         });
-        onEvent({ ...event, seq: persisted.seq });
+        notify({ ...event, seq: persisted.seq });
         return;
       }
       const persisted = this.eventLog.append("control/resolved", {
@@ -485,7 +502,7 @@ export class AgentRunner {
           : {}),
         ...(event.aborted !== undefined ? { aborted: event.aborted } : {}),
       });
-      onEvent({ ...event, seq: persisted.seq });
+      notify({ ...event, seq: persisted.seq });
     };
   }
 
