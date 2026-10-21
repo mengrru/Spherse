@@ -74,16 +74,14 @@ export class SessionControlBus {
   resolve(requestId: string, decision: unknown): void {
     const entry = this.pending.get(requestId);
     if (!entry) return;
+    clearTimeout(entry.timer);
+    this.pending.delete(requestId);
     try {
       this.emitResolved(requestId, entry.kind, decision);
     } catch (error) {
-      clearTimeout(entry.timer);
-      this.pending.delete(requestId);
       entry.reject(error instanceof Error ? error : new Error(String(error)));
       return;
     }
-    clearTimeout(entry.timer);
-    this.pending.delete(requestId);
     entry.resolve(decision);
   }
 

@@ -57,6 +57,16 @@ describe("createAskUserTool", () => {
     expect(result.details.cardType).toBe("question");
   });
 
+  it("returns a storage-failure result when the gate rejects without an abort", async () => {
+    const gate = fakeGate(new Error("EIO: resolved append fails"));
+    const tool = createAskUserTool(gate);
+    const result = await tool.execute("tc1", { question: "Q?" });
+    const text = (result.content[0] as { text: string }).text;
+    expect(text).toContain("storage failure");
+    expect(text).not.toContain("session was aborted");
+    expect(result.details.cardType).toBe("question");
+  });
+
   it("returns an unavailable result when no gate is provided", async () => {
     const tool = createAskUserTool();
     const result = await tool.execute("tc1", { question: "Q?" });

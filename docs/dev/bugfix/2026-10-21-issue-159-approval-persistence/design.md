@@ -53,7 +53,7 @@ npm test --workspace=packages/core -- --run session/control-persistence-faults
 
 ### 2.1 `control-bus.ts`
 
-- `resolve()`：先 `emitResolved`（持久化+通知），成功后才 `clearTimeout + delete + entry.resolve(decision)`；sink 抛错时 `clearTimeout + delete + entry.reject(err)`，方法本身不再向上抛（等待者有终态；调用方不再见到 unhandled 风险）
+- `resolve()`：先 `clearTimeout + delete`（防 emit 期间同步重入产生第二条记录），再 `emitResolved`（持久化+通知），成功后才 `entry.resolve(decision)`；sink 抛错时 `entry.reject(err)`，方法本身不再向上抛（等待者有终态；调用方不再见到 unhandled 风险）
 - `rejectAll()`：先快照并清空 `pending`，逐项 `clearTimeout + entry.reject`（无条件收敛），`emitAborted` 单项 try/catch 隔离（一项失败只丢该条记录，不中断其余清理、不向外抛）
 - timer 回调：`emitResolved` 包 try/catch（失败只丢记录）；随后仍 `resolve(timeoutDecision)`——超时决策是 fail-closed 拒绝，释放无需记录前置
 - `request()`：executor 内 `emit(control_request)` 抛错时 `clearTimeout + delete pending + reject(err)`，无悬挂 entry/timer、无孤儿 resolved
@@ -63,15 +63,30 @@ npm test --workspace=packages/core -- --run session/control-persistence-faults
 - `persistingControlSink`：`eventLog.append` 失败照常向上抛（= 持久化失败信号，由 bus 统一转终态）；append 成功后的 `onEvent` 转发包 try/catch + `logger.warn`（UI 通知失败不误判为未持久化：requested 已落库则 gate 继续等待，resolved 已落库则 resolve 正常返回）
 - `abort()`：`rejectAll` 包 try/catch（防御性，契约上已不抛）后无条件 `this.agent.abort()`——底层 abort 必达
 
-### 2.3 不改的部分
+### 2.3 `tools/ask-user.ts`
 
-- 事件 schema、wire 协议、`swapEventSink` 生命周期、YOLO/ask_user/错误反馈路径行为不变
+- gate rejection 按 message 区分归因：`session aborted` → 原「Question cancelled」结果；其他（持久化失败）→ 新「storage failure」结果，避免模型把存储故障误读为会话中止
+
+### 2.4 不改的部分
+
+- 事件 schema、wire 协议、`swapEventSink` 生命周期、YOLO/错误反馈路径行为不变
 - server/desktop 层零改动（core 不再抛错后其现有调用方式即安全）
 
 ## 3. 测试
 
-`control-persistence-faults.test.ts` 9 条：修复前 7 RED（见 1.3）/ 2 GREEN，修复后全 GREEN。覆盖：resolved 持久化失败不放行且无悬挂、requested 持久化失败无悬挂无孤儿、rejectAll 逐项隔离 + abort 必达 + 全收敛、timer 失败 contained、通知失败与持久化失败解耦（两种事件 × 已落库断言）、成功路径单条记录 + 重复 resolve 幂等、健康 abort 全收敛。
+`control-persistence-faults.test.ts` 11 条：修复前 7 RED（见 1.3）/ 2 GREEN（当时共 9 条），修复后全 GREEN；新增「emit 期间重入 resolve 只落一条记录」与 tool/result isError 终态断言（review 反馈）。覆盖：resolved 持久化失败不放行且无悬挂、requested 持久化失败无悬挂无孤儿、rejectAll 逐项隔离 + abort 必达 + 全收敛、timer 失败 contained、通知失败与持久化失败解耦（两种事件 × 已落库断言）、成功路径单条记录 + 重复 resolve 幂等、健康 abort 全收敛。`tools/ask-user.test.ts` 补 storage-failure 归因用例。
 
 ## 4. 验证
 
-`npm test --workspace=packages/core`（全量）+ `npm run lint` + `npm run typecheck`；server 契约测试 `npm test --workspace=packages/server` 确认无回归。
+`npm test --workspace=packages/core`（全量 1395 用例）+ `npm run lint` + `npm run typecheck` + `npm run verify`（全仓）；server 契约测试 `npm test --workspace=packages/server`（394 用例）确认无回归。
+
+## 5. Code review 反馈处理
+
+Review（sub agent，commit `01afe9b9`）：无 critical / important。
+
+- **M-1（已修）**：resolve() 改为 `clearTimeout + delete` 前置于 `emitResolved`，与 timer 路径顺序对齐，消除 emit 期间同步重入的双写面；补重入测试（重入 resolve 只落一条记录）
+- **m-1（已修）**：control-bus.ts 最初新增注释按红线移除；后因 eslint `no-empty` 强制保留两处 catch 内注释（与 `event-log.ts:55` 先例一致的故障语义注释）
+- **m-2（已修）**：测试 1 补 tool/result `isError` + EIO message 断言，锁死「等待者收到 rejection 终态」
+- **m-3（已修）**：ask_user gate rejection 按 message 区分 abort / 存储故障归因，补单测
+- **m-4（不修，后续）**：server 侧缺不 mock SessionManager 的 resolve/abort 消费方契约测试——既有缺口，与本修复正交，记为后续事项
+- **m-5（不修，后续）**：resolve 持久化失败时 UI 审批卡无终态反馈（需 contracts + i18n 流程），已在 §1.4 声明范围外，记为后续事项

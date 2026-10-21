@@ -212,6 +212,11 @@ describe("control persistence fault injection (gate -> runner -> storage seam)",
       const log = (runner as any).eventLog.events as any[];
       expect(log.filter((e) => e.type === "control/requested")).toHaveLength(1);
       expect(log.filter((e) => e.type === "control/resolved")).toHaveLength(0);
+      const toolResult = log.find(
+        (e) => e.type === "tool/result" && e.data?.message?.toolCallId === "tc-1",
+      );
+      expect(toolResult).toBeDefined();
+      expect(JSON.stringify(toolResult.data.message)).toContain("EIO");
     } finally {
       restore();
     }
@@ -452,6 +457,32 @@ describe("SessionControlBus timer and emit fault paths", () => {
       await expect(gate).rejects.toThrow(/EIO/);
       expect(bus.pendingCount).toBe(0);
       expect(() => bus.resolve("q1", { answer: "again", timedOut: false })).not.toThrow();
+    } finally {
+      bus.setEventSink(null);
+    }
+  });
+
+  it("re-entrant resolve during the resolved emit is a no-op and emits exactly one record", async () => {
+    const bus = new SessionControlBus();
+    const resolvedEmits: any[] = [];
+    bus.setEventSink((e: any) => {
+      if (e.type === "control_request") return;
+      resolvedEmits.push(e);
+      if (resolvedEmits.length === 1) {
+        bus.resolve("r1", { approved: true });
+      }
+    });
+    try {
+      const gate = bus.request(
+        { requestId: "r1", kind: "approval", toolCallId: "tc", toolName: "run_command", args: {} },
+        60_000,
+        { approved: false, reason: "approval timeout" },
+      );
+
+      bus.resolve("r1", { approved: true });
+      await expect(gate).resolves.toEqual({ approved: true });
+      expect(resolvedEmits).toHaveLength(1);
+      expect(bus.pendingCount).toBe(0);
     } finally {
       bus.setEventSink(null);
     }
