@@ -96,6 +96,7 @@ export function SkillPanel() {
               selectedFilePath={contentPath}
               onSelectFile={handleSelectFile}
               onDeleted={handleFileDeleted}
+              onRenamed={(from) => handleFileDeleted(from)}
               emptyLabel={t("skill-panel.empty")}
               readOnly={!canCreate}
             />

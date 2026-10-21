@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "../../../lib/api";
 import { invalidateProjectFileQueries } from "../../../queries/content";
+import { invalidateProjectSkillQueries } from "../../../queries/skills";
 import { useFileTreeController } from "./useFileTreeController";
 
 vi.mock("sonner", () => ({
@@ -14,17 +15,25 @@ vi.mock("../../../queries/content", () => ({
   invalidateProjectFileQueries: vi.fn(async () => {}),
 }));
 
+vi.mock("../../../queries/skills", () => ({
+  invalidateProjectSkillQueries: vi.fn(async () => {}),
+}));
+
 function makeFile(name: string): File {
   return new File(["content"], name, { type: "text/plain" });
 }
 
-function setup() {
+function setup(onRenamed?: (from: string, to: string) => void) {
   const uploadFile = vi.fn<(dir: string, file: File) => Promise<{ path: string; bytes: number; renamed: boolean }>>();
-  const client = { uploadFile } as unknown as ApiClient;
-  const utils = renderHook(() => useFileTreeController(client, undefined, "p1"), {
-    wrapper: ({ children }) => <I18nProvider locale="zh-CN">{children}</I18nProvider>,
-  });
-  return { uploadFile, ...utils };
+  const renameContent = vi.fn<(from: string, to: string) => Promise<{ ok: boolean }>>();
+  const client = { uploadFile, renameContent } as unknown as ApiClient;
+  const utils = renderHook(
+    () => useFileTreeController(client, undefined, "p1", onRenamed),
+    {
+      wrapper: ({ children }) => <I18nProvider locale="zh-CN">{children}</I18nProvider>,
+    },
+  );
+  return { uploadFile, renameContent, ...utils };
 }
 
 describe("useFileTreeController uploadFiles", () => {
@@ -89,5 +98,74 @@ describe("useFileTreeController uploadFiles", () => {
     expect(uploadFile).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
     expect(toast.info).toHaveBeenCalledWith("仅支持拖入文件，文件夹将被忽略");
+  });
+});
+
+describe("useFileTreeController rename", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renames via the API, remaps expandedPaths, invalidates queries, and notifies onRenamed", async () => {
+    const onRenamed = vi.fn();
+    const { result, renameContent } = setup(onRenamed);
+    renameContent.mockResolvedValue({ ok: true });
+
+    act(() => {
+      result.current.requestRename({ name: "old", path: "docs/old", type: "directory" });
+    });
+    expect(result.current.renaming?.path).toBe("docs/old");
+    act(() => {
+      result.current.toggleDir("docs/old/sub");
+    });
+
+    await act(async () => {
+      await result.current.submitRename("new");
+    });
+
+    expect(renameContent).toHaveBeenCalledWith("docs/old", "docs/new");
+    expect(invalidateProjectFileQueries).toHaveBeenCalledWith("p1", "docs/old");
+    expect(invalidateProjectFileQueries).toHaveBeenCalledWith("p1", "docs/new");
+    expect(onRenamed).toHaveBeenCalledWith("docs/old", "docs/new");
+    expect(result.current.renaming).toBeNull();
+    expect(result.current.expandedPaths.has("docs/new/sub")).toBe(true);
+  });
+
+  it("exits editing without an API call when the name is unchanged", async () => {
+    const { result, renameContent } = setup();
+    act(() => {
+      result.current.requestRename({ name: "a.md", path: "docs/a.md", type: "file" });
+    });
+    await act(async () => {
+      await result.current.submitRename("a.md");
+    });
+    expect(renameContent).not.toHaveBeenCalled();
+    expect(result.current.renaming).toBeNull();
+  });
+
+  it("keeps editing and toasts on failure", async () => {
+    const { result, renameContent } = setup();
+    renameContent.mockRejectedValueOnce(new Error("boom"));
+    act(() => {
+      result.current.requestRename({ name: "a.md", path: "docs/a.md", type: "file" });
+    });
+    await act(async () => {
+      await result.current.submitRename("b.md");
+    });
+    expect(renameContent).toHaveBeenCalledWith("docs/a.md", "docs/b.md");
+    expect(toast.error).toHaveBeenCalledWith("重命名失败：boom");
+    expect(result.current.renaming?.path).toBe("docs/a.md");
+  });
+
+  it("invalidates skill queries when renaming under .spherse/skills", async () => {
+    const { result, renameContent } = setup();
+    renameContent.mockResolvedValue({ ok: true });
+    act(() => {
+      result.current.requestRename({ name: "old", path: ".spherse/skills/old", type: "directory" });
+    });
+    await act(async () => {
+      await result.current.submitRename("new");
+    });
+    expect(invalidateProjectSkillQueries).toHaveBeenCalledWith("p1");
   });
 });

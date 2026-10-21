@@ -9,12 +9,16 @@ export interface FileTreeContextValue {
   selectedFilePath?: string;
   expandedPaths: ReadonlySet<string>;
   creating: CreatingState | null;
+  renaming: TreeItem | null;
   selectFile: (filePath: string) => void;
   toggleDir: (path: string) => void;
   requestCreate: (item: TreeItem, action: CreateAction) => void;
   submitCreate: (parentPath: string, action: CreateAction, name: string) => void;
   cancelCreate: () => void;
   requestDelete: (item: TreeItem) => void;
+  requestRename: (item: TreeItem) => void;
+  submitRename: (name: string) => void;
+  cancelRename: () => void;
   pickUploadFiles?: (dirPath: string) => void;
   onFloatFile?: (filePath: string) => void;
   floatedFilePaths?: Set<string>;

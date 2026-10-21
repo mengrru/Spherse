@@ -80,6 +80,7 @@ export type {
   StatResponseContract,
   ContentCreateRequest,
   ContentSaveRequest,
+  ContentRenameRequest,
 } from "./content.js";
 
 export type { DataReadResponseContract } from "./data.js";

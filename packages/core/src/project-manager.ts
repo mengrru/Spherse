@@ -438,6 +438,22 @@ export class ProjectManager {
     });
   }
 
+  async renamePath(fromRelative: string, toRelative: string): Promise<void> {
+    const src = resolveProjectPath(this.getRootPath(), fromRelative);
+    const dest = resolveProjectPath(this.getRootPath(), toRelative);
+    this.policy().assertMoveSource(fromRelative);
+    this.policy().assertTransferDest(toRelative);
+    await this.fileWriteMutex.run(dest, async () => {
+      const srcStat = await fs.stat(src).catch(() => null);
+      if (!srcStat) throw new NotFoundError(`Entry not found: ${fromRelative}`);
+      const destStat = await fs.stat(dest).catch(() => null);
+      if (destStat && !(destStat.dev === srcStat.dev && destStat.ino === srcStat.ino)) {
+        throw new ConflictError(`Entry already exists: ${toRelative}`);
+      }
+      await fs.rename(src, dest);
+    });
+  }
+
   async copyFileWithin(fromRelative: string, toRelative: string): Promise<void> {
     const src = resolveProjectPath(this.getRootPath(), fromRelative);
     const dest = resolveProjectPath(this.getRootPath(), toRelative);

@@ -458,6 +458,7 @@ export const en: Record<TranslationKey, string> = {
   "file-tree.confirmDeleteFile": "Are you sure you want to delete file \u201C{name}\u201D? This action cannot be undone.",
   "file-tree.createFailed": "Create failed: {message}",
   "file-tree.deleteFailed": "Delete failed: {message}",
+  "file-tree.renameFailed": "Rename failed: {message}",
   "file-tree.uploadFailed": "Upload failed: {message}",
   "file-tree.uploadNoFiles": "Only files can be dropped; folders are ignored",
   "file-tree.uploadedCount": "Uploaded {count} file(s)",

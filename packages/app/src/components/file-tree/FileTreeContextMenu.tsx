@@ -14,6 +14,7 @@ export function FileTreeContextMenu({
   children,
   onCreate,
   onDelete,
+  onRename,
   onUploadFiles,
   onFloatFile,
   floatedFilePaths,
@@ -24,6 +25,7 @@ export function FileTreeContextMenu({
   children: React.ReactNode;
   onCreate: (action: CreateAction) => void;
   onDelete: () => void;
+  onRename?: (node: TreeItem) => void;
   onUploadFiles?: (dirPath: string) => void;
   onFloatFile?: (filePath: string) => void;
   floatedFilePaths?: Set<string>;
@@ -39,6 +41,14 @@ export function FileTreeContextMenu({
     <ContextMenu>
       <ContextMenuTrigger>{children}</ContextMenuTrigger>
       <ContextMenuContent>
+        {onRename && (
+          <>
+            <ContextMenuItem onClick={() => onRename(node)}>
+              {t("common.rename")}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        )}
         {isFile && onFloatFile && (
           <ContextMenuItem onClick={() => onFloatFile(node.path)}>
             {isFloated ? t("file-tree.cancelFloat") : t("file-tree.float")}

@@ -936,6 +936,8 @@ export const zhCN = {
   "file-tree.createFailed": "创建失败：{message}",
   // 删除失败提示，{message} 为错误信息
   "file-tree.deleteFailed": "删除失败：{message}",
+  // 重命名失败提示，{message} 为错误信息
+  "file-tree.renameFailed": "重命名失败：{message}",
   "file-tree.uploadFailed": "上传失败：{message}",
   "file-tree.uploadNoFiles": "仅支持拖入文件，文件夹将被忽略",
   "file-tree.uploadedCount": "已上传 {count} 个文件",

@@ -48,6 +48,11 @@ export function UserFilePanel() {
     closeDeletedFileTabs(path);
   };
 
+  const handleFileRenamed = (from: string) => {
+    closeDeletedSplit(from);
+    closeDeletedFileTabs(from);
+  };
+
   const handleSplitFile = (path: string) => {
     if (splitFilePath === path) closeSplit();
     else openSplit({ kind: "file", path });
@@ -74,6 +79,7 @@ export function UserFilePanel() {
               selectedFilePath={contentPath}
               onSelectFile={handleSelectFile}
               onDeleted={handleFileDeleted}
+              onRenamed={handleFileRenamed}
               floatedFilePaths={floatEnabled ? floatedFilePaths : undefined}
               onFloatFile={
                 floatEnabled

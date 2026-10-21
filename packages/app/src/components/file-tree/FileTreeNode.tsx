@@ -28,6 +28,10 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
     selectFile,
     requestCreate,
     requestDelete,
+    requestRename,
+    submitRename,
+    cancelRename,
+    renaming,
     pickUploadFiles,
     onFloatFile,
     floatedFilePaths,
@@ -47,6 +51,18 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
         setDropTargetDir,
       })
     : {};
+
+  if (renaming?.path === item.path) {
+    return (
+      <InlineNameInput
+        depth={depth}
+        paddingLeft={depth * 16 + 8}
+        defaultValue={item.name}
+        onSubmit={submitRename}
+        onCancel={cancelRename}
+      />
+    );
+  }
 
   const row = (
     <TreeRow
@@ -71,6 +87,7 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
       node={item}
       onCreate={(action) => requestCreate(item, action)}
       onDelete={() => requestDelete(item)}
+      onRename={requestRename}
       onUploadFiles={pickUploadFiles}
       onFloatFile={onFloatFile}
       floatedFilePaths={floatedFilePaths}
@@ -89,11 +106,15 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
     client,
     expandedPaths,
     creating,
+    renaming,
+    submitRename,
+    cancelRename,
     toggleDir,
     requestCreate,
     submitCreate,
     cancelCreate,
     requestDelete,
+    requestRename,
     pickUploadFiles,
     readOnly,
     dropFiles,
@@ -112,6 +133,16 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
   const dragHandlers = dropFiles
     ? dropTargetHandlers({ targetDir: item.path, dropFiles, setDropTargetDir })
     : {};
+
+  const renameInput = (
+    <InlineNameInput
+      depth={depth}
+      paddingLeft={depth * 16 + 8}
+      defaultValue={item.name}
+      onSubmit={submitRename}
+      onCancel={cancelRename}
+    />
+  );
 
   const trigger = (
     <CollapsibleTrigger
@@ -168,12 +199,22 @@ function DirectoryNode({ item, depth }: { item: TreeItem; depth: number }) {
     );
   }
 
+  if (renaming?.path === item.path) {
+    return (
+      <Collapsible open={expanded} onOpenChange={() => toggleDir(item.path)}>
+        {renameInput}
+        {content}
+      </Collapsible>
+    );
+  }
+
   return (
     <Collapsible open={expanded} onOpenChange={() => toggleDir(item.path)}>
       <FileTreeContextMenu
         node={item}
         onCreate={(action) => requestCreate(item, action)}
         onDelete={() => requestDelete(item)}
+        onRename={requestRename}
         onUploadFiles={pickUploadFiles}
       >
         {trigger}

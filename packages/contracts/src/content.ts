@@ -26,6 +26,7 @@ export const schemas = {
     action: Type.Union([Type.Literal("mkdir"), Type.Literal("touch")]),
   }),
   contentSaveRequest: Type.Object({ content: Type.String() }),
+  contentRenameRequest: Type.Object({ to: Type.String() }),
 } as const;
 
 export type FileEntryContract = Static<typeof fileEntry>;
@@ -34,3 +35,4 @@ export type ContentResponseContract = Static<typeof schemas.contentResponse>;
 export type StatResponseContract = Static<typeof schemas.statResponse>;
 export type ContentCreateRequest = Static<typeof schemas.contentCreateRequest>;
 export type ContentSaveRequest = Static<typeof schemas.contentSaveRequest>;
+export type ContentRenameRequest = Static<typeof schemas.contentRenameRequest>;
