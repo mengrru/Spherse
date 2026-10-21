@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import Markdown, { type Components } from "react-markdown";
+import Markdown, { type Components, type Options } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import rehypeSlug from "rehype-slug";
@@ -17,6 +17,10 @@ interface MarkdownContentProps {
 }
 
 const PLAIN_ALLOWED_ELEMENTS = ["p", "br", "blockquote", "pre", "code", "a"];
+
+const PLAIN_REMARK_PLUGINS: Options["remarkPlugins"] = [remarkGfm, remarkPlainStructure, remarkBreaks];
+const CHAT_REMARK_PLUGINS: Options["remarkPlugins"] = [[remarkGfm, { singleTilde: false }]];
+const DOCUMENT_REMARK_PLUGINS: Options["remarkPlugins"] = [remarkGfm];
 
 function imgClassName(variant: "chat" | "document"): string {
   return variant === "chat"
@@ -159,7 +163,7 @@ export function MarkdownContent({ children, variant = "document", plain, resolve
   return (
     <div className={variant === "chat" ? "break-words text-sm leading-6" : "break-words text-sm leading-7"}>
       <Markdown
-        remarkPlugins={plain ? [remarkGfm, remarkPlainStructure, remarkBreaks] : [remarkGfm]}
+        remarkPlugins={plain ? PLAIN_REMARK_PLUGINS : variant === "chat" ? CHAT_REMARK_PLUGINS : DOCUMENT_REMARK_PLUGINS}
         rehypePlugins={[rehypeSlug]}
         allowedElements={plain ? PLAIN_ALLOWED_ELEMENTS : undefined}
         unwrapDisallowed={plain}
