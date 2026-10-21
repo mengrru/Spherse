@@ -48,6 +48,29 @@ export function useTabActions() {
     navigate(target, { replace: true, state });
   }, [activeKey, currentUrl, navigate, projectId, visibleTabs]);
 
+  const closeOtherTabs = useCallback((keepKey: string | null) => {
+    const keepTarget = keepKey === null ? null : visibleTabs.find((t) => tabKey(t) === keepKey) ?? null;
+    if (keepKey !== null && !keepTarget) return;
+    const others = keepKey === null ? visibleTabs : visibleTabs.filter((t) => tabKey(t) !== keepKey);
+    if (others.length === 0) return;
+    const keepUrl = keepTarget ? tabUrl(projectId, keepTarget) : projectHomeUrl(projectId);
+    if (activeKey !== null && others.some((t) => tabKey(t) === activeKey)) {
+      const closedUrls: string[] = [];
+      for (const target of others) {
+        if (tabKey(target) === activeKey) continue;
+        useTabsStore.getState().closeTab(projectId, tabKey(target));
+        closedUrls.push(tabUrl(projectId, target));
+      }
+      dropFromProjectNavHistory(projectId, (url) => closedUrls.includes(url));
+      navigate(keepUrl, { replace: true, state: { closeTab: activeKey, closedUrl: currentUrl } });
+      return;
+    }
+
+    useTabsStore.getState().closeOthers(projectId, keepKey);
+    dropFromProjectNavHistory(projectId, (url) => others.some((t) => tabUrl(projectId, t) === url));
+    if (keepTarget && activeKey === null) navigate(keepUrl);
+  }, [activeKey, currentUrl, navigate, projectId, visibleTabs]);
+
   const closeActiveTab = useCallback((fallback: () => void, extraState?: NavState) => {
     if (enabled && activeKey) closeTab(activeKey, extraState);
     else fallback();
@@ -73,7 +96,7 @@ export function useTabActions() {
     }
   }, [activeKey, enabled, navigate, projectId, routeTarget, visibleTabs]);
 
-  return { activeKey, closeTab, closeActiveTab, closeDeletedFileTabs };
+  return { activeKey, closeTab, closeOtherTabs, closeActiveTab, closeDeletedFileTabs };
 }
 
 export function useCloseActiveTab(): (fallback: () => void, extraState?: NavState) => void {

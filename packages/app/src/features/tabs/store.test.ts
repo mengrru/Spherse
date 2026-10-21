@@ -81,6 +81,41 @@ describe("useTabsStore", () => {
     expect(useTabsStore.getState().byProject.p1).toBeUndefined();
   });
 
+  it("closeOthers keeps only the given tab and persists", async () => {
+    const { useTabsStore, storage } = await loadStore();
+    const s = useTabsStore.getState();
+    s.openTab("p1", chat("s1"));
+    s.openTab("p1", file("a.md"));
+    s.openTab("p1", browser("http://localhost:1/"));
+    s.openTab("p2", chat("s2"));
+    s.closeOthers("p1", "file:a.md");
+
+    expect(useTabsStore.getState().byProject).toEqual({ p1: [file("a.md")], p2: [chat("s2")] });
+    expect(JSON.parse(storage.setItem.mock.calls.at(-1)?.[1] as string)).toEqual({
+      p1: [file("a.md")],
+      p2: [chat("s2")],
+    });
+  });
+
+  it("closeOthers with null keep key removes the project entry, unknown key closes all, and no-op skips persist", async () => {
+    const { useTabsStore, storage } = await loadStore();
+    const s = useTabsStore.getState();
+    s.openTab("p1", chat("s1"));
+    s.openTab("p1", file("a.md"));
+    s.closeOthers("p1", null);
+    expect(useTabsStore.getState().byProject).toEqual({});
+
+    s.openTab("p1", chat("s1"));
+    s.closeOthers("p1", "chat:missing");
+    expect(useTabsStore.getState().byProject).toEqual({});
+
+    s.openTab("p1", chat("s1"));
+    storage.setItem.mockClear();
+    s.closeOthers("p1", "chat:s1");
+    expect(useTabsStore.getState().byProject).toEqual({ p1: [chat("s1")] });
+    expect(storage.setItem).not.toHaveBeenCalled();
+  });
+
   it("closes file tabs at or under a deleted path", async () => {
     const { useTabsStore } = await loadStore();
     const s = useTabsStore.getState();

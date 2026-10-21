@@ -38,6 +38,7 @@ renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](..
   - 关闭活跃 tab = `navigate(邻居, { replace, state: { closeTab, closedUrl } })`，导航实际发生后 bridge 才移除 tab 并清出 nav 栈，被离开守卫拦截时 tab 不丢；bridge 处理后以 replace 清空 state
   - 浏览器页内导航带 `replaceTab` 原位替换；浮窗 session、被 BrowserPage 拒绝的 url 不建 tab
   - 失效清理：会话缺失 / 所属 agent 已删 → chat tab 自动移除；文件树删除 → `useCloseDeletedFileTabs` 按路径段匹配移除并跳邻居
+  - 右键菜单「关闭其他标签页」（`TabContextMenu`，含欢迎页）：保留目标 = 被右键的标签（欢迎页菜单则保留目标为欢迎页、关闭全部内容标签）；非活跃标签直接从 store 删除，活跃标签属「其他」时经 `navigate(keepUrl, { state: { closeTab } })` 走离开守卫（取消不静默丢编辑、已关的非活跃标签不回滚）；完成后导航到保留目标，被关标签的 URL 清出 nav 栈
   - 文件 tab 名为去扩展名的文件名（`lib/file-name.ts`，与 chat 快捷链接按钮同规则），`title` 为全路径
   - 移动端 + 标签页开启 + HTML 文件：ContentBrowser 隐藏 header，纵向空间留给预览，切换 / 关闭由 tab 承担
 - **内容区分窗**（`features/split-pane/`，Electron only，移动端宽度不渲染）：`ProjectScope` 的 `<main>` 内容由 `SplitLayout` 包裹——左栏 `data-split-main`（TabBar + `<Outlet/>`）恒定存在，开关分窗只增减其后的分隔条与右栏，避免左侧页面重挂载；右栏与路由解耦，显示一个 target

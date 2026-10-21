@@ -5,6 +5,7 @@ import { useProjectCtx } from "../../context/project-context";
 import { useIsMobile } from "../../hooks/use-mobile";
 import { projectHomeUrl, tabKey, tabUrl } from "../../lib/tab-target";
 import { useTabsStore } from "./store";
+import { TabContextMenu } from "./TabContextMenu";
 import { TargetTab, WelcomeTab } from "./TabItems";
 import type { TabDragProps } from "./TabShell";
 import { useIsWelcomeRoute } from "./use-route-tab";
@@ -53,7 +54,7 @@ export function TabBar() {
   const isMobile = useIsMobile();
   const visible = useVisibleTabs();
   const isWelcome = useIsWelcomeRoute();
-  const { activeKey, closeTab } = useTabActions();
+  const { activeKey, closeTab, closeOtherTabs } = useTabActions();
   const dragProps = useTabDrag(projectId, !isMobile);
 
   if (!enabled) return null;
@@ -65,27 +66,30 @@ export function TabBar() {
       aria-label={t("tabs.label")}
       className="flex h-9 shrink-0 items-stretch border-b border-border bg-muted/40"
     >
-      <WelcomeTab
-        active={isWelcome}
-        onSelect={() => {
-          if (!isWelcome) navigate(projectHomeUrl(projectId));
-        }}
-      />
+      <TabContextMenu closeOthersDisabled={visible.length === 0} onCloseOthers={() => closeOtherTabs(null)}>
+        <WelcomeTab
+          active={isWelcome}
+          onSelect={() => {
+            if (!isWelcome) navigate(projectHomeUrl(projectId));
+          }}
+        />
+      </TabContextMenu>
       <div data-tab-scroll className="flex min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden">
         {visible.map((target) => {
           const key = tabKey(target);
           return (
-            <TargetTab
-              key={key}
-              tabKey={key}
-              target={target}
-              active={key === activeKey}
-              onSelect={() => {
-                if (key !== activeKey) navigate(tabUrl(projectId, target));
-              }}
-              onClose={() => closeTab(key)}
-              drag={dragProps(key)}
-            />
+            <TabContextMenu key={key} closeOthersDisabled={visible.length <= 1} onCloseOthers={() => closeOtherTabs(key)}>
+              <TargetTab
+                tabKey={key}
+                target={target}
+                active={key === activeKey}
+                onSelect={() => {
+                  if (key !== activeKey) navigate(tabUrl(projectId, target));
+                }}
+                onClose={() => closeTab(key)}
+                drag={dragProps(key)}
+              />
+            </TabContextMenu>
           );
         })}
       </div>

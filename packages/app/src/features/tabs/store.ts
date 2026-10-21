@@ -8,6 +8,7 @@ interface TabsStore {
   openTab: (projectId: string, target: TabTarget) => void;
   replaceTab: (projectId: string, oldKey: string, target: TabTarget) => void;
   closeTab: (projectId: string, key: string) => void;
+  closeOthers: (projectId: string, keepKey: string | null) => void;
   closeFileTabs: (projectId: string, path: string) => void;
   moveTab: (projectId: string, fromKey: string, toKey: string) => void;
   clearProject: (projectId: string) => void;
@@ -101,6 +102,13 @@ export const useTabsStore = create<TabsStore>((set) => {
     closeTab(projectId, key) {
       update(projectId, (tabs) => {
         const next = tabs.filter((t) => tabKey(t) !== key);
+        return next.length === tabs.length ? null : next;
+      });
+    },
+
+    closeOthers(projectId, keepKey) {
+      update(projectId, (tabs) => {
+        const next = keepKey === null ? [] : tabs.filter((t) => tabKey(t) === keepKey);
         return next.length === tabs.length ? null : next;
       });
     },

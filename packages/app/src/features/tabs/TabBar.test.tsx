@@ -88,6 +88,11 @@ function tabNames() {
   return within(screen.getByRole("tablist")).getAllByRole("tab").map((tab) => tab.textContent);
 }
 
+async function openCloseOthersMenu(name: string) {
+  fireEvent.contextMenu(screen.getByRole("tab", { name }));
+  return screen.findByRole("menuitem", { name: "Close Other Tabs" });
+}
+
 describe("TabBar", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -162,6 +167,75 @@ describe("TabBar", () => {
 
     expect(screen.getByTestId("page")).toHaveTextContent("chat:/project/p1/chat/s2");
     expect(tabNames()).toEqual(["Welcome", "Second chat"]);
+  });
+
+  it("closing other tabs from an inactive tab closes the rest and navigates to the keep target", async () => {
+    clearProjectNavHistory("p1");
+    const urls = ["/project/p1/chat/s1", "/project/p1/chat/s2", "/project/p1/content?path=a.md"];
+    for (const url of urls) recordProjectNavLocation("p1", url);
+    const { go } = setup();
+    await go("/project/p1/chat/s1");
+    await go("/project/p1/chat/s2");
+    await go("/project/p1/content?path=a.md");
+
+    await userEvent.click(await openCloseOthersMenu("First chat"));
+
+    expect(tabNames()).toEqual(["Welcome", "First chat"]);
+    expect(screen.getByTestId("page")).toHaveTextContent("chat:/project/p1/chat/s1");
+    expect(useTabsStore.getState().byProject.p1).toEqual([{ kind: "chat", sessionId: "s1" }]);
+    expect(getProjectNavStack("p1")).toEqual(["/project/p1/chat/s1"]);
+  });
+
+  it("closing other tabs from the active tab keeps the current page", async () => {
+    const { go } = setup();
+    await go("/project/p1/chat/s1");
+    await go("/project/p1/chat/s2");
+    await go("/project/p1/content?path=a.md");
+
+    await userEvent.click(await openCloseOthersMenu("a"));
+
+    expect(tabNames()).toEqual(["Welcome", "a"]);
+    expect(screen.getByTestId("page")).toHaveTextContent("content:/project/p1/content?path=a.md");
+    expect(useTabsStore.getState().byProject.p1).toEqual([{ kind: "file", path: "a.md" }]);
+  });
+
+  it("closing other tabs from the welcome tab closes every content tab and returns to welcome", async () => {
+    const { go } = setup();
+    await go("/project/p1/chat/s1");
+    await go("/project/p1/chat/s2");
+
+    await userEvent.click(await openCloseOthersMenu("Welcome"));
+
+    expect(tabNames()).toEqual(["Welcome"]);
+    expect(screen.getByTestId("page")).toHaveTextContent("welcome:/project/p1");
+    expect(useTabsStore.getState().byProject).toEqual({});
+  });
+
+  it("closing other tabs from the welcome tab while already there stays put", async () => {
+    const { go } = setup();
+    await go("/project/p1/chat/s1");
+    await go("/project/p1/chat/s2");
+    await go("/project/p1");
+
+    await userEvent.click(await openCloseOthersMenu("Welcome"));
+
+    expect(tabNames()).toEqual(["Welcome"]);
+    expect(screen.getByTestId("page")).toHaveTextContent("welcome:/project/p1");
+    expect(useTabsStore.getState().byProject).toEqual({});
+  });
+
+  it("disables close others when the keep target is the only tab, but not on the welcome tab", async () => {
+    const { go } = setup();
+    await go("/project/p1/chat/s1");
+
+    expect(await openCloseOthersMenu("First chat")).toHaveAttribute("data-disabled");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(await openCloseOthersMenu("Welcome")).not.toHaveAttribute("data-disabled");
+  });
+
+  it("disables close others on the welcome tab when no tabs are open", async () => {
+    setup();
+    expect(await openCloseOthersMenu("Welcome")).toHaveAttribute("data-disabled");
   });
 
   it("header close closes the active tab", async () => {
