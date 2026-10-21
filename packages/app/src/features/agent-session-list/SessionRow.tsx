@@ -170,6 +170,9 @@ export function SessionRow({ session, active, floating }: SessionRowProps) {
           </TreeRow>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          <ContextMenuItem onClick={startEditing}>
+            {t("common.rename")}
+          </ContextMenuItem>
           {floatingChatEnabled && (floating ? (
             <ContextMenuItem onClick={actions.cancelFloat}>
               {t("agent-session-list.cancelFloat")}
@@ -179,9 +182,6 @@ export function SessionRow({ session, active, floating }: SessionRowProps) {
               {t("agent-session-list.floatSession")}
             </ContextMenuItem>
           ))}
-          <ContextMenuItem onClick={startEditing}>
-            {t("common.rename")}
-          </ContextMenuItem>
           <ContextMenuSeparator />
           <ContextMenuItem
             onClick={() => {
