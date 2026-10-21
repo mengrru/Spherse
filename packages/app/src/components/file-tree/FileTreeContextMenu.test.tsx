@@ -45,22 +45,41 @@ describe("FileTreeContextMenu split item", () => {
 });
 
 describe("FileTreeContextMenu rename item", () => {
-  it("places Rename first, before Float, and calls back with the node", async () => {
+  it("places Rename after Upload Files (last of the create group) and calls back with the node", async () => {
     const onRename = vi.fn();
-    open(file, { onRename, onFloatFile: vi.fn(), floatedFilePaths: new Set() });
-    const items = await screen.findAllByRole("menuitem");
-    expect(items[0]).toHaveTextContent("Rename");
-    expect(items[1]).toHaveTextContent("Float");
-    await userEvent.click(items[0]);
+    open(file, { onRename, onUploadFiles: vi.fn(), onFloatFile: vi.fn(), floatedFilePaths: new Set() });
+    const names = (await screen.findAllByRole("menuitem")).map((el) => el.textContent);
+    expect(names).toEqual([
+      "Float",
+      "New File",
+      "New Folder",
+      "Upload Files",
+      "Rename",
+      "Copy Path",
+      "Delete",
+    ]);
+    await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
     expect(onRename).toHaveBeenCalledWith(file);
   });
 
-  it("offers Rename first for directories too, before create actions", async () => {
+  it("keeps Rename after Upload Files for directories", async () => {
     const onRename = vi.fn();
-    open(dir, { onRename });
-    const items = await screen.findAllByRole("menuitem");
-    expect(items[0]).toHaveTextContent("Rename");
-    expect(items[1]).toHaveTextContent("New File");
+    open(dir, { onRename, onUploadFiles: vi.fn() });
+    const names = (await screen.findAllByRole("menuitem")).map((el) => el.textContent);
+    expect(names).toEqual([
+      "New File",
+      "New Folder",
+      "Upload Files",
+      "Rename",
+      "Copy Path",
+      "Delete",
+    ]);
+  });
+
+  it("keeps Rename available after New Folder when the upload item is gated off", async () => {
+    open(dir, { onRename: vi.fn() });
+    const names = (await screen.findAllByRole("menuitem")).map((el) => el.textContent);
+    expect(names).toEqual(["New File", "New Folder", "Rename", "Copy Path", "Delete"]);
   });
 
   it("does not offer Rename when no handler is provided", async () => {
@@ -69,7 +88,7 @@ describe("FileTreeContextMenu rename item", () => {
     expect(screen.queryByRole("menuitem", { name: "Rename" })).toBeNull();
   });
 
-  it("keeps other actions available with Rename first: Float and Delete still work", async () => {
+  it("keeps other actions available with Rename in the create group: Float and Delete still work", async () => {
     const onFloatFile = vi.fn();
     const onDelete = vi.fn();
     open(file, { onRename: vi.fn(), onFloatFile, floatedFilePaths: new Set(), onDelete });

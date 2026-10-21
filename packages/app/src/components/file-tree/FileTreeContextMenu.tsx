@@ -41,14 +41,6 @@ export function FileTreeContextMenu({
     <ContextMenu>
       <ContextMenuTrigger>{children}</ContextMenuTrigger>
       <ContextMenuContent>
-        {onRename && (
-          <>
-            <ContextMenuItem onClick={() => onRename(node)}>
-              {t("common.rename")}
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-          </>
-        )}
         {isFile && onFloatFile && (
           <ContextMenuItem onClick={() => onFloatFile(node.path)}>
             {isFloated ? t("file-tree.cancelFloat") : t("file-tree.float")}
@@ -75,6 +67,11 @@ export function FileTreeContextMenu({
             }
           >
             {t("file-tree.uploadFiles")}
+          </ContextMenuItem>
+        )}
+        {onRename && (
+          <ContextMenuItem onClick={() => onRename(node)}>
+            {t("common.rename")}
           </ContextMenuItem>
         )}
         <ContextMenuSeparator />
