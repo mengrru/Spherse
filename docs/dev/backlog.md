@@ -4,6 +4,10 @@
 > 完成即删本条，不勾选滞留；新条目按性质入节；等待触发条件的设计决策放「条件触发」节，触发条件写进标题。
 > 历史完成记录见 git log 与 `docs/dev/`。
 
+## 重构
+
+- [ ] **拆分 SessionRow 的 rename 状态机与内联编辑**：`SessionRow.tsx` 209 行（软阈值 150），混合 rename reducer、内联编辑布局与菜单渲染；把 reducer + 编辑态抽为独立 hook/组件，菜单仅消费动作。排序纠正 review（2026-10-22）时发现，非该次引入。
+
 ## 验证补全
 
 - [ ] **补 control 决策路径消费方契约测试与 resolve 持久化失败 UI 反馈**：#159 修复后 server 侧 `resolve_control_request` / `abort` 测试仍全 mock SessionManager，缺不 mock 被测方法的接缝契约测试；且 `control/resolved` 落库失败时 core 静默（不抛错、等待方转 error toolResult），UI 审批卡停留 pending 无终态反馈，需经 contracts 发错误帧或卡片复位（与下方「审批卡 pending 态残留」同收敛面）。参见 `docs/dev/bugfix/2026-10-21-issue-159-approval-persistence/design.md` §1.4/§5
