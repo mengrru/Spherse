@@ -16,7 +16,7 @@
 
 renderer 单份代码、宿主差异经此接口抽象的决策见 [ADR-0006](../../dev/decisions/0006-host-bridge-shells.md)。
 
-- 接口定义宿主能力：server 连接信息、`getAppVersion()`（各宿主自身构建版本：desktop 为 app 版本，web 为 web 构建版本）、`openExternal`、偏好分区 `prefs`（必需，locale 与 tabsEnabled 通用偏好）/ `desktopPrefs`（可选，theme/debugToolsEnabled/closeToTray 桌面专属），可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套）/ `clearConnection`（清除已存连接，web 壳断开入口配套），以及可选子 API 对象 `project` / `updater` / `devTools` / `mobile`；模型配置不走 bridge——renderer 经全局 API client 直连 server（`GET/PUT /api/settings/models`，见 [ADR-0015](../../dev/decisions/0015-settings-partitioned-persistence.md)）
+- 接口定义宿主能力：server 连接信息、`getAppVersion()`（各宿主自身构建版本：desktop 为 app 版本，web 为 web 构建版本）、`openExternal`、偏好分区 `prefs`（必需，locale 与 tabsEnabled 通用偏好）/ `desktopPrefs`（可选，theme/debugToolsEnabled/closeToTray 桌面专属），可选方法 `saveBlob` / `showSaveDialog`（filePicker 能力配套）/ `clearConnection`（清除已存连接，web 壳断开入口配套），以及可选子 API 对象 `project`（含可选 `downloadFile`，桌面「另存为」下载通道，web 不实现走 `saveBlob`）/ `updater` / `devTools` / `mobile`；模型配置不走 bridge——renderer 经全局 API client 直连 server（`GET/PUT /api/settings/models`，见 [ADR-0015](../../dev/decisions/0015-settings-partitioned-persistence.md)）
 - `HostCapabilities` 声明能力**程度**（同功能在各宿主的差异，如可编辑与否），renderer 据此条件渲染；feature 级整块开关不在这里，走 feature-registry。字段清单由 `host-capabilities.structure.test.ts` 钉住：**声明即必须被消费**（加字段必须带消费点，零消费字段删除）
   - 布尔项：`filePicker` / `mobileAccess` / `openFileExternal`
   - 对象项：`content.editable`

@@ -1,10 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BrowserWindow } from "electron";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
-const { dialogMock, unsafeMock, serverMock, translateMock, settingsMock } = vi.hoisted(() => {
+const { dialogMock, unsafeMock, serverMock, translateMock, settingsMock, openFilePathMock } = vi.hoisted(() => {
   const dialogMock = {
     showMessageBox: vi.fn(),
     showOpenDialog: vi.fn(),
+    showSaveDialog: vi.fn(),
   };
   const unsafeMock = {
     isInsideUnsafeZone: vi.fn(),
@@ -24,7 +28,8 @@ const { dialogMock, unsafeMock, serverMock, translateMock, settingsMock } = vi.h
   const settingsMock = {
     openProjects: [] as Array<{ id: string; path: string; name: string; lastOpened: string }>,
   };
-  return { dialogMock, unsafeMock, serverMock, translateMock, settingsMock };
+  const openFilePathMock = vi.fn((_filePath: string, _projectRoots: string[]) => true);
+  return { dialogMock, unsafeMock, serverMock, translateMock, settingsMock, openFilePathMock };
 });
 
 const handlers = new Map<string, (...args: unknown[]) => unknown>();
@@ -57,7 +62,8 @@ vi.mock("../settings.js", () => ({
 }));
 
 vi.mock("./open-file-path.js", () => ({
-  isInsideAnyOpenProject: () => false,
+  isInsideAnyOpenProject: (filePath: string, projectRoots: string[]) =>
+    openFilePathMock(filePath, projectRoots),
 }));
 
 vi.mock("@spherse/i18n", () => ({
@@ -81,13 +87,17 @@ beforeEach(() => {
   handlers.clear();
   dialogMock.showMessageBox.mockReset();
   dialogMock.showOpenDialog.mockReset();
+  dialogMock.showSaveDialog.mockReset();
   unsafeMock.isInsideUnsafeZone.mockReset();
   unsafeMock.isInsideUnsafeZone.mockReturnValue(false);
   serverMock.registerProject.mockReset();
   settingsMock.openProjects = [];
   translateMock.mockClear();
+  openFilePathMock.mockReset();
+  openFilePathMock.mockReturnValue(true);
   delete process.env.SPHERSE_E2E_DIALOG_RESPONSE;
   delete process.env.SPHERSE_E2E_SELECT_DIRECTORY;
+  delete process.env.SPHERSE_E2E_SAVE_DIALOG_PATH;
   (globalThis as { __spherseTestDialogs?: unknown }).__spherseTestDialogs = undefined;
   registerProjectIpc(() => win);
 });
@@ -290,5 +300,62 @@ describe("select directory seam (SPHERSE_E2E_SELECT_DIRECTORY)", () => {
   it("returns null when the native dialog is canceled", async () => {
     dialogMock.showOpenDialog.mockResolvedValue({ canceled: true, filePaths: [] });
     await expect(invoke("select-directory")).resolves.toBeNull();
+  });
+});
+
+describe("download-file", () => {
+  let tmpDir: string;
+  let sourcePath: string;
+  let targetPath: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "spherse-dl-"));
+    sourcePath = path.join(tmpDir, "data.bin");
+    targetPath = path.join(tmpDir, "out", "copy.bin");
+    fs.writeFileSync(sourcePath, Buffer.from([0x00, 0x01, 0xff]));
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("rejects when the source is not inside an open project", async () => {
+    openFilePathMock.mockReturnValue(false);
+    await expect(invoke("download-file", sourcePath)).rejects.toThrow("not inside an open project");
+    expect(dialogMock.showSaveDialog).not.toHaveBeenCalled();
+  });
+
+  it("resolves without copying when the save dialog is canceled", async () => {
+    dialogMock.showSaveDialog.mockResolvedValue({ canceled: true, filePaths: [] });
+    await expect(invoke("download-file", sourcePath)).resolves.toBeUndefined();
+    expect(fs.existsSync(targetPath)).toBe(false);
+  });
+
+  it("copies the original bytes to the chosen target with the basename as default", async () => {
+    dialogMock.showSaveDialog.mockResolvedValue({ canceled: false, filePath: targetPath });
+    await expect(invoke("download-file", sourcePath)).resolves.toBeUndefined();
+    expect(dialogMock.showSaveDialog).toHaveBeenCalledWith(win, { defaultPath: "data.bin" });
+    expect(fs.readFileSync(targetPath).equals(Buffer.from([0x00, 0x01, 0xff]))).toBe(true);
+  });
+
+  it("copies to the seam target without showing a dialog", async () => {
+    process.env.SPHERSE_E2E_SAVE_DIALOG_PATH = targetPath;
+    await expect(invoke("download-file", sourcePath)).resolves.toBeUndefined();
+    expect(dialogMock.showSaveDialog).not.toHaveBeenCalled();
+    expect(fs.existsSync(targetPath)).toBe(true);
+  });
+
+  it("rejects when the source file is missing", async () => {
+    process.env.SPHERSE_E2E_SAVE_DIALOG_PATH = targetPath;
+    fs.rmSync(sourcePath);
+    await expect(invoke("download-file", sourcePath)).rejects.toThrow();
+  });
+
+  it("resolves without a dialog when the window is gone", async () => {
+    registerProjectIpc(() => null);
+    await expect(invoke("download-file", sourcePath)).resolves.toBeUndefined();
+    expect(dialogMock.showSaveDialog).not.toHaveBeenCalled();
+    expect(fs.existsSync(targetPath)).toBe(false);
   });
 });

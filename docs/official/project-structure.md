@@ -181,6 +181,7 @@ spherse/
 │   │       │   ├── content.ts        # 内容浏览、读取、保存、删除、新建文件/目录
 │   │       │   ├── file-tree.ts      # 面向 agent context 选择的项目文件列表
 │   │       │   ├── preview.ts        # HTML 文件预览服务
+│   │       │   ├── download.ts       # 任意类型文件下载（GET /api/projects/:projectId/download/*，octet-stream + Content-Disposition attachment，流式；.git/node_modules 段 403）
 │   │       │   ├── skills.ts         # Skill 列表、详情与创建/安装路由
 │   │       │   ├── marketplace.ts    # 技能市场路由（GET /marketplace/skills 代理 manifest；POST /skills/marketplace-install 按 {name, version} 下载 zip 并覆盖安装）
 │   │       │   ├── project-marketplace.ts # 项目市场全局路由（无 projectId 前缀，零项目可用）：GET /api/marketplace/projects 代理 manifest；POST /api/marketplace/projects/install 按 {name, version, destDir} 下载 zip → core installMarketplaceProjectZip 解压落盘 → 返回 {projectRoot}（注册仍走 renderer 的 open-project IPC）
@@ -294,7 +295,7 @@ spherse/
 │   │       │   ├── agent-session-list/   # Agent/session 分组列表，含 SearchFileField 与折叠状态 feature store
 │   │       │   ├── agent-dialog/         # Agent 创建/编辑 Dialog（AgentDialogForm 双 tab 表单、ModelConfigField、ToolPicker、PathListField、TimePerceptionField、agent-markdown 序列化）+ PromptTemplatesDialog（提示词模板市场：分类 chips + 卡片网格 + 详情视图 + 一键复制，经全局 marketplace/prompts API 加载）
 │   │       │   ├── chat/                 # 对话 feature；model/ 放 Entry 归约、历史合并、MessageGroup 组装与卡片投影，runtime/ 放 session store、link/recovery/lifecycle/queue 等运行时模块，hooks/ 放 UI hooks，lib/ 放 diff/format-time 纯函数，utils/ 放图片压缩（compress-image）；根目录保留页面组件、气泡组件（UserBubble/AssistantBubble/ToolItemView/ThoughtBlock/ToolCards）、runtime context、chat 专属类型与附件 UI（AttachmentBar/MessageAttachments）
-│   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑（useLeaveGuard：useBlocker 未保存离开守卫）、复制路径/刷新、冲突提示，ContentQueryBridge 集中处理 fs-watch/reconnect 缓存失效；二进制文件拦截渲染占位卡 UnsupportedFileCard（桌面端经 HostCapabilities.openFileExternal 提供「用默认应用打开」按钮）；ReadOnlyContentBrowser 供分窗只读复用（与 ContentBrowser 共用 Header / ContentBody / useContentViewState），find-scope + FindScopeRoot 限定 Cmd+F 作用域
+│   │       │   ├── content-browser/      # 文件浏览、预览（HTML/markdown/image）、编辑（useLeaveGuard：useBlocker 未保存离开守卫）、复制路径/刷新、冲突提示，ContentQueryBridge 集中处理 fs-watch/reconnect 缓存失效；二进制文件拦截渲染占位卡 UnsupportedFileCard（桌面端经 HostCapabilities.openFileExternal 提供「用默认应用打开」，全端经 ProjectHostApi.downloadFile / saveBlob 提供「下载」）；ReadOnlyContentBrowser 供分窗只读复用（与 ContentBrowser 共用 Header / ContentBody / useContentViewState），find-scope + FindScopeRoot 限定 Cmd+F 作用域
 │   │       │   ├── debug-tools/          # 调试菜单（开发模式或设置开启 debugToolsEnabled 时显示）+ Streaming Log 悬浮面板 + TurnContextDialog（session 事件日志查看器：类型搜索/展开/复制，附当前 turn context 下载）
 │   │       │   ├── floating-chat/         # 浮动聊天窗口（Portal overlay、主题隔离），复用 components/floating-frame；含 useFloatingSessionId
 │   │       │   ├── floating-content-browser/ # 浮窗内容浏览器（多窗口、复用 ContentView 只读渲染 + components/floating-frame），含 useFloatedFilePaths；从文件树右键「浮窗」触发

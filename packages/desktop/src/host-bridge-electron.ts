@@ -26,6 +26,7 @@ export function createElectronHostBridge(): HostBridge {
     closeProject: api.closeProject,
     openProjectFolder: api.openProjectFolder,
     openFileExternal: api.openFile,
+    downloadFile: api.downloadFile,
     setLastActiveProject: api.setLastActiveProject,
     getLastActiveProject: api.getLastActiveProject,
   };

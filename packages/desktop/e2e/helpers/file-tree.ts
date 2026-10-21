@@ -56,6 +56,7 @@ export async function createFileTreeProject(): Promise<TestProject> {
 
 export async function launchFileTreeApp(
   project: TestProject,
+  opts: { initialPath?: string } = {},
 ): Promise<{ app: ElectronApplication; page: Page }> {
   const userDataDir = await mkdtemp(path.join(tmpdir(), "spherse-e2e-ft-user-"));
   const app = await electron.launch({
@@ -78,7 +79,7 @@ export async function launchFileTreeApp(
   }, { id: project.projectId, projectRoot: project.root });
   const projectUrl = `/project/${project.projectId}`;
   await page.goto(
-    `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent("README.md")}`,
+    `file://${rendererEntry}?e2e=${Date.now()}#${projectUrl}/content?path=${encodeURIComponent(opts.initialPath ?? "README.md")}`,
   );
   await page.waitForSelector("text=文件", { timeout: 30_000 });
   return { app, page };
