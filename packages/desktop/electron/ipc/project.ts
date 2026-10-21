@@ -1,5 +1,6 @@
 import { ipcMain, dialog, shell } from "electron";
 import type { BrowserWindow } from "electron";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { isInsideAnyOpenProject } from "./open-file-path.js";
 import { isInsideUnsafeZone } from "../unsafe-location.js";
@@ -169,6 +170,27 @@ export function registerProjectIpc(
     if (!isInsideAnyOpenProject(filePath, projectRoots)) return;
     const error = await shell.openPath(path.resolve(filePath));
     if (error) throw new Error(error);
+  });
+
+  ipcMain.handle("download-file", async (_event, filePath: string) => {
+    if (typeof filePath !== "string" || filePath.length === 0) return;
+    const source = path.resolve(filePath);
+    const projectRoots = getOpenProjects().map((entry) => entry.path);
+    if (!isInsideAnyOpenProject(source, projectRoots)) {
+      throw new Error("File is not inside an open project");
+    }
+    const forcedTarget = process.env.SPHERSE_E2E_SAVE_DIALOG_PATH;
+    let target: string | null = forcedTarget ?? null;
+    if (!forcedTarget) {
+      const win = getWindow();
+      if (!win) return;
+      const result = await dialog.showSaveDialog(win, {
+        defaultPath: path.basename(source),
+      });
+      target = result.canceled ? null : result.filePath ?? null;
+    }
+    if (!target) return;
+    await fs.copyFile(source, target);
   });
 
   ipcMain.handle("open-external", async (_event, url: string) => {

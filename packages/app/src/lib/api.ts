@@ -86,6 +86,10 @@ async function parseJsonResponse<T>(
   return parseApiResponse(schema, await res.json()) as T;
 }
 
+function encodePathSegments(filePath: string): string {
+  return filePath.split("/").map(encodeURIComponent).join("/");
+}
+
 function createAuthedFetch(accessToken?: string | null) {
   const authHeaders: Record<string, string> | undefined = accessToken
     ? { Authorization: `Bearer ${accessToken}` }
@@ -532,10 +536,23 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
     },
 
     getPreviewUrl(filePath: string, version?: number): string {
-      const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+      const encodedPath = encodePathSegments(filePath);
       const pathMiddle = accessToken ? `/preview/__auth/${encodeURIComponent(accessToken)}/${encodedPath}` : `/preview/${encodedPath}`;
       const base = `${apiBase}${pathMiddle}`;
       return version !== undefined ? `${base}?v=${version}` : base;
+    },
+
+    async downloadFile(filePath: string): Promise<Blob> {
+      const res = await authedFetch(`${apiBase}/download/${encodePathSegments(filePath)}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new ApiError(
+          body?.error ?? `HTTP ${res.status}`,
+          res.status,
+          typeof body?.code === "string" ? body.code : undefined,
+        );
+      }
+      return res.blob();
     },
 
     async exportImage(srcRel: string, destAbs: string): Promise<{ ok: boolean }> {

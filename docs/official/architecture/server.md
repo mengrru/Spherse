@@ -63,6 +63,7 @@
 | data | `/data/read` `/mutate` `/raw-set` `/raw-delete` |
 | settings | 全局：文本与图片 provider 目录、`GET/PUT /api/settings/models`（模型配置读写，write-only key）；项目级：ai-access / welcome-page / theme |
 | preview | 预览文件服务（见下节） |
+| download | 任意类型文件下载（见下节） |
 | skills / marketplace | skill 列表/详情/创建/zip 安装；市场 manifest 代理与远程安装 |
 | project-marketplace | 全局：项目市场 manifest 代理与安装（下载 zip → 解压落盘到用户选定目录，返回 projectRoot，注册复用 open-project IPC） |
 | prompt-marketplace | 全局：提示词模板市场（GET /api/marketplace/prompts?language=，按 app 语言请求对应 OSS 大 JSON；service 侧语言回退链 zh 系 → zh-cn 优先 / 缺省 en-us / 兜底 zh-cn，整链 404 → 404） |
@@ -106,6 +107,13 @@
 - **SDK 短路**：任意目录层级下文件名为 `__spherse-sdk.js` 的请求先于访问策略直接返回 `SDK_SOURCE`——保证注入的 `<script src>` 永远可达（见 [ui-sdk.md](ui-sdk.md)）
 - HTML 响应注入 SDK `<script>` 标签（幂等标记）
 - 访问策略走 `serverAccessPolicy.assertRead`；`__auth/:token/` 前缀与鉴权模型配合
+
+## download 路由
+
+- `GET /api/projects/:projectId/download/*`：不支持预览文件（Content Browser 占位卡）的下载通道，`application/octet-stream` + `Content-Disposition: attachment`（RFC 5987 `filename*` 编码非 ASCII 文件名）+ `Content-Length`，`createReadStream` 流式
+- **无扩展名白名单**（与 preview 的关键差异）：preview 是「内联展示」边界（浏览器直接渲染响应，须限定类型）；download 强制 attachment + octet-stream，浏览器只落盘不解释执行，风险与桌面「用默认应用打开」同级
+- 访问控制：同一 `serverAccessPolicy.assertRead`（穿越防护 + 类别白名单，未扩大可读集合），另显式拒绝路径中含 `.git` / `node_modules` 段（反斜杠归一化 + 段名小写比较——大小写不敏感文件系统上 `.GIT` 仍命中；这两类被 `categorizePath` 兜底为 userFiles 而放行）
+- 鉴权走全局 `/api/` auth hook（renderer 经 apiClient Bearer fetch，不新增 `__auth` 路径 token 形态）；无 JSON schema（二进制流响应）
 
 ## data 路由
 

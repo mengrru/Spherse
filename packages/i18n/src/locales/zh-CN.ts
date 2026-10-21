@@ -914,6 +914,10 @@ export const zhCN = {
   "content-browser.unsupported.description": "Spherse 暂不支持预览此类文件，可以用系统默认应用打开。",
   // 占位卡上「用默认应用打开」按钮的文案（仅桌面端显示，调用系统默认程序打开该文件）
   "content-browser.unsupported.openExternally": "用默认应用打开",
+  // 占位卡上「下载」按钮的文案（桌面端另存到指定位置，Web 端经浏览器下载保存到本地）
+  "content-browser.unsupported.download": "下载",
+  // 占位卡下载失败时的错误提示，{message} 为具体错误信息（网络失败 / 无权限 / 文件不存在等）
+  "content-browser.unsupported.downloadFailed": "下载失败：{message}",
 
   // --- File Tree ---
   // 新建文件按钮

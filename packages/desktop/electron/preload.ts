@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   openProjectFolder: (projectRoot: string) =>
     ipcRenderer.invoke("open-project-folder", projectRoot),
   openFile: (filePath: string) => ipcRenderer.invoke("open-file", filePath),
+  downloadFile: (filePath: string) => ipcRenderer.invoke("download-file", filePath),
   openExternal: (url: string) => ipcRenderer.invoke("open-external", url),
   setLastActiveProject: (projectId: string) =>
     ipcRenderer.invoke("set-last-active-project", projectId),

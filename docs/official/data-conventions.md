@@ -273,7 +273,7 @@ Full skill instructions in Markdown...
 - 路径安全：一切项目内路径解析必须 `path.resolve` 后做根目录边界校验（`resolveProjectPath` / `assertInsideProject`）
 - 并发写：会写文件的 agent tools 与 DataStore 共享 `FileWriteMutex`
 - **二进制处理**：`read_file` / `search_content` 以 null-byte 启发式（前 8KB 采样）检测二进制——`read_file` 拒绝读取并返回提示（图片引导 `render_card`），`search_content` 静默跳过；server content 路由同样嗅探，二进制返回 `binary: true` + 空 content
-  - 白名单文本格式（md / html / 图片含 ico）走专属 viewer，其余二进制渲染 `UnsupportedFileCard` 占位卡（桌面端经 `HostCapabilities.openFileExternal` 提供「用默认应用打开」）
+  - 白名单文本格式（md / html / 图片含 ico）走专属 viewer，其余二进制渲染 `UnsupportedFileCard` 占位卡（桌面端经 `HostCapabilities.openFileExternal` 提供「用默认应用打开」；全端提供「下载」——桌面端 `download-file` IPC 另存、Web 端 download 路由取回原始字节，见 `architecture/server.md` download 路由）
 
 ## 活网页数据文件（`*.data.json`）
 

@@ -448,6 +448,8 @@ export const en: Record<TranslationKey, string> = {
   "content-browser.unsupported.title": "This file type can't be previewed in Spherse",
   "content-browser.unsupported.description": "Spherse can't preview this kind of file. Open it with the system default app instead.",
   "content-browser.unsupported.openExternally": "Open with default app",
+  "content-browser.unsupported.download": "Download",
+  "content-browser.unsupported.downloadFailed": "Download failed: {message}",
   "file-tree.newFile": "New File",
   "file-tree.newFolder": "New Folder",
   "file-tree.uploadFiles": "Upload Files",

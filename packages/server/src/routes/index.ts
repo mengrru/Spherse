@@ -13,6 +13,7 @@ import { registerContentRoutes } from "./content.js";
 import { registerDataRoutes } from "./data.js";
 import { registerSettingsRoutes } from "./settings.js";
 import { registerPreviewRoutes } from "./preview.js";
+import { registerDownloadRoutes } from "./download.js";
 import { registerSkillRoutes } from "./skills.js";
 import { registerMarketplaceRoutes } from "./marketplace.js";
 import { registerProjectMarketplaceRoutes } from "./project-marketplace.js";
@@ -62,7 +63,9 @@ export function registerAllRoutes(
   registerSettingsRoutes(fastify, registry, {
     modelSettingsStore: options.modelSettingsStore,
     modelCatalog: options.modelCatalog,
-  });  registerPreviewRoutes(fastify, registry);
+  });
+  registerPreviewRoutes(fastify, registry);
+  registerDownloadRoutes(fastify, registry);
   registerSkillRoutes(fastify, registry);
   registerMarketplaceRoutes(fastify, registry);
   registerProjectMarketplaceRoutes(fastify);

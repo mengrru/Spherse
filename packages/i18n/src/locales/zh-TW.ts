@@ -448,6 +448,8 @@ export const zhTW: Record<TranslationKey, string> = {
   "content-browser.unsupported.title": "此檔案類型無法在 Spherse 內預覽",
   "content-browser.unsupported.description": "Spherse 暫不支援預覽此類檔案，可以用系統預設應用開啟。",
   "content-browser.unsupported.openExternally": "用預設應用開啟",
+  "content-browser.unsupported.download": "下載",
+  "content-browser.unsupported.downloadFailed": "下載失敗：{message}",
   "file-tree.newFile": "新建檔案",
   "file-tree.newFolder": "新建資料夾",
   "file-tree.uploadFiles": "上傳檔案",

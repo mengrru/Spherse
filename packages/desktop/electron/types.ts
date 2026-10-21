@@ -32,6 +32,7 @@ export interface ElectronAPI {
   closeProject: (projectId: string, projectPath: string) => Promise<void>;
   openProjectFolder: (projectRoot: string) => Promise<void>;
   openFile: (filePath: string) => Promise<void>;
+  downloadFile: (filePath: string) => Promise<void>;
   openExternal: (url: string) => Promise<void>;
   setLastActiveProject: (projectId: string) => Promise<void>;
   getLastActiveProject: () => Promise<string | null>;
