@@ -52,6 +52,22 @@ describe("AssistantBubble", () => {
     expect(screen.queryByTitle("复制")).not.toBeInTheDocument();
   });
 
+  it("renders single-tilde text literally in both streaming and loaded messages", () => {
+    const streaming = renderBubble({ text: "内容A~内容B，内容C~内容D", streaming: true });
+    expect(streaming.container.querySelector("del")).toBeNull();
+    expect(streaming.container.textContent).toContain("内容A~内容B，内容C~内容D");
+    streaming.unmount();
+
+    const loaded = renderBubble({ text: "内容A~内容B，内容C~内容D" });
+    expect(loaded.container.querySelector("del")).toBeNull();
+    expect(loaded.container.textContent).toContain("内容A~内容B，内容C~内容D");
+  });
+
+  it("still renders double-tilde strikethrough in assistant messages", () => {
+    const { container } = renderBubble({ text: "~~删除线~~" });
+    expect(container.querySelector("del")?.textContent).toBe("删除线");
+  });
+
   it("offers a retry action for errors and hides it when retry is suppressed", async () => {
     const user = userEvent.setup();
     const onRetry = vi.fn();
