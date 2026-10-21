@@ -44,6 +44,43 @@ describe("FileTreeContextMenu split item", () => {
   });
 });
 
+describe("FileTreeContextMenu rename item", () => {
+  it("places Rename first, before Float, and calls back with the node", async () => {
+    const onRename = vi.fn();
+    open(file, { onRename, onFloatFile: vi.fn(), floatedFilePaths: new Set() });
+    const items = await screen.findAllByRole("menuitem");
+    expect(items[0]).toHaveTextContent("Rename");
+    expect(items[1]).toHaveTextContent("Float");
+    await userEvent.click(items[0]);
+    expect(onRename).toHaveBeenCalledWith(file);
+  });
+
+  it("offers Rename first for directories too, before create actions", async () => {
+    const onRename = vi.fn();
+    open(dir, { onRename });
+    const items = await screen.findAllByRole("menuitem");
+    expect(items[0]).toHaveTextContent("Rename");
+    expect(items[1]).toHaveTextContent("New File");
+  });
+
+  it("does not offer Rename when no handler is provided", async () => {
+    open(file);
+    await screen.findByRole("menuitem", { name: "New File" });
+    expect(screen.queryByRole("menuitem", { name: "Rename" })).toBeNull();
+  });
+
+  it("keeps other actions available with Rename first: Float and Delete still work", async () => {
+    const onFloatFile = vi.fn();
+    const onDelete = vi.fn();
+    open(file, { onRename: vi.fn(), onFloatFile, floatedFilePaths: new Set(), onDelete });
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Float" }));
+    expect(onFloatFile).toHaveBeenCalledWith("docs/a.md");
+    fireEvent.contextMenu(screen.getByText("row"));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Delete" }));
+    expect(onDelete).toHaveBeenCalled();
+  });
+});
+
 describe("FileTreeContextMenu upload item", () => {
   it("uploads to the directory itself for directories", async () => {
     const onUploadFiles = vi.fn();

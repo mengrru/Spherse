@@ -458,6 +458,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "file-tree.confirmDeleteFile": "確定要刪除檔案「{name}」嗎？此操作不可撤銷。",
   "file-tree.createFailed": "建立失敗：{message}",
   "file-tree.deleteFailed": "刪除失敗：{message}",
+  "file-tree.renameFailed": "重新命名失敗：{message}",
   "file-tree.uploadFailed": "上傳失敗：{message}",
   "file-tree.uploadNoFiles": "僅支援拖入檔案，資料夾將被忽略",
   "file-tree.uploadedCount": "已上傳 {count} 個檔案",

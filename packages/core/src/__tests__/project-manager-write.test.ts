@@ -107,3 +107,70 @@ describe("ProjectManager extended write facades (M9)", () => {
     );
   });
 });
+
+describe("ProjectManager renamePath", () => {
+  let tmpDir: string;
+  let pm: ProjectManager;
+  let store: ProjectStore;
+
+  beforeEach(async () => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-rename-"));
+    store = new ProjectStore(tmpDir, createSilentLogger());
+    await store.create("Test");
+    pm = new ProjectManager(store, createSilentLogger(), new FileWriteMutex());
+  });
+
+  afterEach(async () => {
+    store.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it("renames files and directories within the same parent", async () => {
+    await pm.createEntry("dir/old.txt", "touch");
+    await pm.renamePath("dir/old.txt", "dir/new.txt");
+    expect(fs.existsSync(path.join(tmpDir, "dir/new.txt"))).toBe(true);
+
+    await pm.renamePath("dir", "folder");
+    expect(fs.existsSync(path.join(tmpDir, "folder/new.txt"))).toBe(true);
+    expect(fs.readFileSync(path.join(tmpDir, "folder/new.txt"), "utf-8")).toBe("");
+  });
+
+  it("allows case-only renames on case-insensitive filesystems (same entity)", async () => {
+    await pm.writeFile("note.md", "content");
+    await pm.renamePath("note.md", "NOTE.md");
+    const exists =
+      fs.existsSync(path.join(tmpDir, "note.md")) || fs.existsSync(path.join(tmpDir, "NOTE.md"));
+    expect(exists).toBe(true);
+  });
+
+  it("rejects an existing destination with ConflictError", async () => {
+    await pm.createEntry("a.md", "touch");
+    await pm.createEntry("b.md", "touch");
+    await expect(pm.renamePath("a.md", "b.md")).rejects.toThrow(/already exists/i);
+  });
+
+  it("throws NotFoundError for a missing source", async () => {
+    await expect(pm.renamePath("missing.md", "renamed.md")).rejects.toThrow(/not found/i);
+  });
+
+  it("denies engine-internal sources and destinations", async () => {
+    await pm.writeFile("src.md", "content");
+    await expect(pm.renamePath(".spherse/project.yaml", "stolen.yaml")).rejects.toThrow(
+      /not permitted/,
+    );
+    await expect(pm.renamePath("src.md", ".spherse/project.yaml")).rejects.toThrow(
+      /not permitted/,
+    );
+  });
+
+  it("rejects renaming into a different directory (move semantics belong to move_file)", async () => {
+    await pm.createEntry("a/old.md", "touch");
+    await expect(pm.renamePath("a/old.md", "b/new.md")).rejects.toThrow(/same directory/i);
+  });
+
+  it("denies paths escaping the project root", async () => {
+    await pm.writeFile("src.md", "content");
+    await expect(pm.renamePath("../escape.md", "src2.md")).rejects.toThrow(/traversal denied/i);
+    await expect(pm.renamePath("src.md", "../escape.md")).rejects.toThrow(/traversal denied/i);
+  });
+});

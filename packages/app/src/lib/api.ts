@@ -327,6 +327,16 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
       return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
     },
 
+    async renameContent(fromPath: string, toPath: string): Promise<{ ok: boolean }> {
+      const res = await authedFetch(`${apiBase}/content/${encodeURIComponent(fromPath)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: toPath }),
+      });
+      await assertOk(res);
+      return parseJsonResponse<{ ok: boolean }>(res, schemas.okResponse);
+    },
+
     async createAgent(slugBase: string, content: string, themeContent?: string): Promise<AgentCreateResponse> {
       const res = await authedFetch(`${apiBase}/agents/create`, {
         method: "POST",

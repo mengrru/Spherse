@@ -5,6 +5,8 @@ import {
   serverAccessPolicy,
   AccessDeniedError,
   ConflictError,
+  NotFoundError,
+  ValidationError,
   isBinaryBuffer,
   BINARY_SAMPLE_SIZE,
 } from "@spherse/core";
@@ -130,6 +132,30 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
         await pm.writeFile(relativePath, req.body.content);
       } catch (err) {
         if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        throw err;
+      }
+      return { ok: true };
+    },
+  );
+
+  fastify.patch<{ Params: { projectId: string; "*": string }; Body: { to: string } }>(
+    "/api/projects/:projectId/content/*",
+    { schema: { body: schemas.contentRenameRequest, response: { 200: schemas.okResponse } } },
+    async (req) => {
+      const relativePath = req.params["*"];
+      const pm = req.projectCtx!.projectManager;
+
+      if (typeof req.body?.to !== "string" || !req.body.to) {
+        throw badRequest("Missing or invalid 'to'");
+      }
+
+      try {
+        await pm.renamePath(relativePath, req.body.to);
+      } catch (err) {
+        if (err instanceof AccessDeniedError) throw forbidden("Access denied");
+        if (err instanceof ConflictError) throw conflict("Already exists");
+        if (err instanceof NotFoundError) throw notFound("Not found");
+        if (err instanceof ValidationError) throw badRequest(err.message);
         throw err;
       }
       return { ok: true };

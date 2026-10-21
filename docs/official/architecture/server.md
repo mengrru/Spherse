@@ -59,7 +59,7 @@
 | agents / agent-write | agent 列表/详情/raw/theme；创建、更新、删除 |
 | agent-mcp | agent 的 MCP 连接器配置读写 |
 | sessions | 项目级批量会话目录、agent 级列表、创建、详情、messages GET/POST、status、rename、删除、消息搜索（GET /sessions/search?q=，core 层 LIKE 预取 + JS 精确匹配） |
-| content | stat、文件/目录的读写删建 |
+| content | stat、文件/目录的读写删建、PATCH 重命名（源路径在 URL、`{to}` 在 body，同实体仅大小写变更放行） |
 | data | `/data/read` `/mutate` `/raw-set` `/raw-delete` |
 | settings | 全局：文本与图片 provider 目录、`GET/PUT /api/settings/models`（模型配置读写，write-only key）；项目级：ai-access / welcome-page / theme |
 | preview | 预览文件服务（见下节） |

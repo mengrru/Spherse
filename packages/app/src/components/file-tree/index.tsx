@@ -17,6 +17,7 @@ export interface FileTreeProps {
   selectedFilePath?: string;
   onSelectFile: (filePath: string) => void;
   onDeleted?: (path: string) => void;
+  onRenamed?: (from: string, to: string) => void;
   onFloatFile?: (filePath: string) => void;
   floatedFilePaths?: Set<string>;
   onSplitFile?: (filePath: string) => void;
@@ -31,6 +32,7 @@ export function FileTree({
   selectedFilePath,
   onSelectFile,
   onDeleted,
+  onRenamed,
   onFloatFile,
   floatedFilePaths,
   onSplitFile,
@@ -44,7 +46,7 @@ export function FileTree({
   const { projectId } = useProjectCtx();
   const client = useApiClient(projectId);
   const basePath = rootPath ?? "";
-  const ctrl = useFileTreeController(client, onDeleted, projectId);
+  const ctrl = useFileTreeController(client, onDeleted, projectId, onRenamed);
   const rootQuery = useProjectDirectory(projectId, client, basePath);
   const items = useMemo(
     () => (rootQuery.data ? buildTreeItems(rootQuery.data, basePath) : []),
@@ -99,12 +101,16 @@ export function FileTree({
     selectedFilePath,
     expandedPaths: ctrl.expandedPaths,
     creating: ctrl.creating,
+    renaming: ctrl.renaming,
     selectFile: onSelectFile,
     toggleDir: ctrl.toggleDir,
     requestCreate: ctrl.requestCreate,
     submitCreate: ctrl.submitCreate,
     cancelCreate: ctrl.cancelCreate,
     requestDelete: ctrl.requestDelete,
+    requestRename: ctrl.requestRename,
+    submitRename: ctrl.submitRename,
+    cancelRename: ctrl.cancelRename,
     pickUploadFiles,
     onFloatFile,
     floatedFilePaths,
