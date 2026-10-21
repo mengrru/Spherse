@@ -72,6 +72,9 @@ E2E 不新增（最小改动）；现有 file-tree 相关单测与 e2e 场景作
 1. 重命名后打开中的标签采用「关闭」而非「迁移到新路径」：对齐 delete 既有行为，避免扩大改动面到 tabs store；脏内容随关闭丢弃，接受
 2. rename 端点为 `PATCH /content/*`（源在 URL、`to` 在 body）：对齐 session rename 的 PATCH 先例，且避免静态路由遮蔽 `POST /content/*` 创建入口
 3. 重命名 skill 目录时追加 skills 查询失效（delete 流无此处理，rename 是 skill 目录的高频操作，一行成本）
+4. rename 端点限定**同目录**重命名（跨目录即 move 语义，归 agent 的 move_file 工具）：PM 校验 `dirname(dest) === dirname(src)`，违反抛 `ValidationError`→400；该限制同时使 into-itself 与目标父目录缺失在结构上不可达
+5. `fs.rename` 的 `ENOENT` 包装为 `NotFoundError`→404（stat 与 rename 间的 TOCTOU 兜底）
+6. 同实体（仅大小写变更）放行在 `dev/ino` 相等之外增加**解析路径大小写不敏感相等**必要条件：FAT/exFAT 等文件系统 `dev/ino` 恒 0，仅凭 inode 判定会把已存在的另一文件误判为同实体，Windows 上会静默覆盖
 
 ## Review 反馈处理（design review）
 
@@ -82,3 +85,12 @@ E2E 不新增（最小改动）；现有 file-tree 相关单测与 e2e 场景作
 - Medium-2 renaming 未随 projectId 重置 → D4 纳入 reset effect
 - Medium-3 skills 查询失效 → D4 采纳
 - Minor-1 dest 断言改用 `assertTransferDest`；Minor-3 失败保留编辑态 + in-flight 防抖；Minor-4 补 expandedPaths 重映射与 onRenamed 测试；Minor-5 Rename 后分隔符 → 均已吸收
+
+## Review 反馈处理（code review）
+
+- Important-1 errno 未映射 / 跨目录 move 语义 / into-itself → 边界决策 4、5（同目录限制 + ENOENT 包装），补 core 与契约测试
+- Important-2 dev=0/ino=0 文件系统同实体误判 → 边界决策 6（大小写不敏感相等必要条件）
+- Medium-3 错误路径测试 → 随 Important-1 补齐（400 cross-dir、/traversal denied/ 断言）
+- Minor-4 FileRow renaming 与 readOnly 检查顺序 → 统一 readOnly 在前
+- Minor-5 穿越测试裸 toThrow → 断言 /traversal denied/i
+- Minor-6 contracts README 要求新增 schema 用例 → 补 `content-contracts.test.ts`

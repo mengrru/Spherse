@@ -6,6 +6,7 @@ import {
   AccessDeniedError,
   ConflictError,
   NotFoundError,
+  ValidationError,
   isBinaryBuffer,
   BINARY_SAMPLE_SIZE,
 } from "@spherse/core";
@@ -154,6 +155,7 @@ export function registerContentRoutes(fastify: FastifyInstance, _registry: Proje
         if (err instanceof AccessDeniedError) throw forbidden("Access denied");
         if (err instanceof ConflictError) throw conflict("Already exists");
         if (err instanceof NotFoundError) throw notFound("Not found");
+        if (err instanceof ValidationError) throw badRequest(err.message);
         throw err;
       }
       return { ok: true };

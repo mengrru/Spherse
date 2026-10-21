@@ -163,9 +163,14 @@ describe("ProjectManager renamePath", () => {
     );
   });
 
+  it("rejects renaming into a different directory (move semantics belong to move_file)", async () => {
+    await pm.createEntry("a/old.md", "touch");
+    await expect(pm.renamePath("a/old.md", "b/new.md")).rejects.toThrow(/same directory/i);
+  });
+
   it("denies paths escaping the project root", async () => {
     await pm.writeFile("src.md", "content");
-    await expect(pm.renamePath("../escape.md", "src2.md")).rejects.toThrow();
-    await expect(pm.renamePath("src.md", "../escape.md")).rejects.toThrow();
+    await expect(pm.renamePath("../escape.md", "src2.md")).rejects.toThrow(/traversal denied/i);
+    await expect(pm.renamePath("src.md", "../escape.md")).rejects.toThrow(/traversal denied/i);
   });
 });

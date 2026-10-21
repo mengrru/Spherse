@@ -443,14 +443,29 @@ export class ProjectManager {
     const dest = resolveProjectPath(this.getRootPath(), toRelative);
     this.policy().assertMoveSource(fromRelative);
     this.policy().assertTransferDest(toRelative);
+    if (path.dirname(dest) !== path.dirname(src)) {
+      throw new ValidationError(`Rename must stay in the same directory: ${fromRelative} → ${toRelative}`);
+    }
     await this.fileWriteMutex.run(dest, async () => {
       const srcStat = await fs.stat(src).catch(() => null);
       if (!srcStat) throw new NotFoundError(`Entry not found: ${fromRelative}`);
       const destStat = await fs.stat(dest).catch(() => null);
-      if (destStat && !(destStat.dev === srcStat.dev && destStat.ino === srcStat.ino)) {
+      const sameEntity =
+        destStat !== null &&
+        destStat.dev === srcStat.dev &&
+        destStat.ino === srcStat.ino &&
+        src.toLowerCase() === dest.toLowerCase();
+      if (destStat && !sameEntity) {
         throw new ConflictError(`Entry already exists: ${toRelative}`);
       }
-      await fs.rename(src, dest);
+      try {
+        await fs.rename(src, dest);
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          throw new NotFoundError(`Entry not found: ${fromRelative}`);
+        }
+        throw err;
+      }
     });
   }
 

@@ -52,18 +52,6 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
       })
     : {};
 
-  if (renaming?.path === item.path) {
-    return (
-      <InlineNameInput
-        depth={depth}
-        paddingLeft={depth * 16 + 8}
-        defaultValue={item.name}
-        onSubmit={submitRename}
-        onCancel={cancelRename}
-      />
-    );
-  }
-
   const row = (
     <TreeRow
       depth={depth}
@@ -80,6 +68,18 @@ function FileRow({ item, depth }: { item: TreeItem; depth: number }) {
 
   if (readOnly) {
     return row;
+  }
+
+  if (renaming?.path === item.path) {
+    return (
+      <InlineNameInput
+        depth={depth}
+        paddingLeft={depth * 16 + 8}
+        defaultValue={item.name}
+        onSubmit={submitRename}
+        onCancel={cancelRename}
+      />
+    );
   }
 
   return (

@@ -134,7 +134,14 @@ describe("write facade contract: real ProjectManager through real routes", () =>
     expect(kept).toBe(true);
   });
 
-  it("content PATCH renamePath: 404 missing source, 409 existing destination, 403 denied path", async () => {
+  it("content PATCH renamePath: 400 cross-directory, 404 missing source, 409 existing destination, 403 denied path", async () => {
+    const crossDir = await app.inject({
+      method: "PATCH",
+      url: "/api/projects/p1/content/newdir/final.md",
+      payload: { to: "elsewhere/final.md" },
+    });
+    expect(crossDir.statusCode).toBe(400);
+
     const missing = await app.inject({
       method: "PATCH",
       url: "/api/projects/p1/content/nope.md",
@@ -144,19 +151,20 @@ describe("write facade contract: real ProjectManager through real routes", () =>
 
     await app.inject({
       method: "POST",
-      url: "/api/projects/p1/content/taken.md",
+      url: "/api/projects/p1/content/newdir/taken.md",
       payload: { action: "touch" },
     });
     const conflict = await app.inject({
       method: "PATCH",
       url: "/api/projects/p1/content/newdir/final.md",
-      payload: { to: "taken.md" },
+      payload: { to: "newdir/taken.md" },
     });
     expect(conflict.statusCode).toBe(409);
 
+    fs.writeFileSync(path.join(tmpDir, "root-taken.md"), "x");
     const denied = await app.inject({
       method: "PATCH",
-      url: "/api/projects/p1/content/taken.md",
+      url: "/api/projects/p1/content/root-taken.md",
       payload: { to: ".spherse/project.yaml" },
     });
     expect(denied.statusCode).toBe(403);
