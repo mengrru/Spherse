@@ -13,6 +13,7 @@ import { migrateLegacySession } from "./legacy-migrate.js";
 
 export class SessionManager {
   private readonly sessions = new Map<string, AgentRunner>();
+  private readonly pendingRestores = new Map<string, PendingRestore>();
   private readonly deps: RuntimeDeps;
   private readonly runConfigHolder: RunConfigHolder;
 
@@ -51,7 +52,35 @@ export class SessionManager {
   }
 
   async restoreSession(agentId: string, sessionId: string): Promise<string> {
-    if (this.sessions.has(sessionId)) return sessionId;
+    const active = this.sessions.get(sessionId);
+    if (active) {
+      if (active.getAgentId() !== agentId) {
+        throw new NotFoundError(`Session "${sessionId}" is not available`);
+      }
+      return sessionId;
+    }
+    const pending = this.pendingRestores.get(sessionId);
+    if (pending) {
+      if (pending.agentId !== agentId) {
+        throw new NotFoundError(`Session "${sessionId}" is not available`);
+      }
+      return pending.promise;
+    }
+    const record: PendingRestore = { agentId, invalidated: false, promise: null as never };
+    record.promise = this.initializeRunner(agentId, sessionId, record).finally(() => {
+      if (this.pendingRestores.get(sessionId) === record) {
+        this.pendingRestores.delete(sessionId);
+      }
+    });
+    this.pendingRestores.set(sessionId, record);
+    return record.promise;
+  }
+
+  private async initializeRunner(
+    agentId: string,
+    sessionId: string,
+    record: PendingRestore,
+  ): Promise<string> {
     this.assertRestorable(agentId, sessionId);
     this.ensureMigrated(agentId, sessionId);
     let session: AgentRunner;
@@ -64,6 +93,10 @@ export class SessionManager {
       throw err;
     }
     this.assertRestorable(agentId, sessionId);
+    if (record.invalidated) {
+      session.abort();
+      throw new NotFoundError(`Session "${sessionId}" is not available`);
+    }
     this.sessions.set(sessionId, session);
     this.deps.logger.info({ sessionId }, "session restored");
     return sessionId;
@@ -188,6 +221,8 @@ export class SessionManager {
 
   destroySession(sessionId: string): void {
     this.sessions.delete(sessionId);
+    const pending = this.pendingRestores.get(sessionId);
+    if (pending) pending.invalidated = true;
   }
 
   releaseSession(sessionId: string): boolean {
@@ -202,7 +237,8 @@ export class SessionManager {
   }
 
   sessionExists(agentId: string, sessionId: string): boolean {
-    if (this.sessions.has(sessionId)) return true;
+    const runner = this.sessions.get(sessionId);
+    if (runner) return runner.getAgentId() === agentId;
     const agentStore = this.deps.projectStore.getAgent(agentId);
     return agentStore?.sessions.getSession(sessionId)?.status === "active";
   }
@@ -213,10 +249,16 @@ export class SessionManager {
         this.sessions.delete(sessionId);
       }
     }
+    for (const pending of this.pendingRestores.values()) {
+      if (pending.agentId === agentId) pending.invalidated = true;
+    }
   }
 
   async closeAll(): Promise<void> {
     this.sessions.clear();
+    for (const pending of this.pendingRestores.values()) {
+      pending.invalidated = true;
+    }
   }
 
   setDefaultModel(model: string | undefined): void {
@@ -243,4 +285,10 @@ export class SessionManager {
 
 function isStoreClosedError(err: unknown): boolean {
   return err instanceof Error && /database connection is not open/i.test(err.message);
+}
+
+interface PendingRestore {
+  readonly agentId: string;
+  invalidated: boolean;
+  promise: Promise<string>;
 }
