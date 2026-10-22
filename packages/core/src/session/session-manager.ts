@@ -66,14 +66,22 @@ export class SessionManager {
       }
       return pending.promise;
     }
-    const record: PendingRestore = { agentId, invalidated: false, promise: null as never };
-    record.promise = this.initializeRunner(agentId, sessionId, record).finally(() => {
-      if (this.pendingRestores.get(sessionId) === record) {
-        this.pendingRestores.delete(sessionId);
-      }
+    let resolveRestore!: (value: string) => void;
+    let rejectRestore!: (reason?: unknown) => void;
+    const promise = new Promise<string>((resolve, reject) => {
+      resolveRestore = resolve;
+      rejectRestore = reject;
     });
+    const record: PendingRestore = { agentId, invalidated: false, promise };
     this.pendingRestores.set(sessionId, record);
-    return record.promise;
+    this.initializeRunner(agentId, sessionId, record)
+      .finally(() => {
+        if (this.pendingRestores.get(sessionId) === record) {
+          this.pendingRestores.delete(sessionId);
+        }
+      })
+      .then(resolveRestore, rejectRestore);
+    return promise;
   }
 
   private async initializeRunner(
@@ -92,10 +100,15 @@ export class SessionManager {
       }
       throw err;
     }
-    this.assertRestorable(agentId, sessionId);
     if (record.invalidated) {
       session.abort();
       throw new NotFoundError(`Session "${sessionId}" is not available`);
+    }
+    try {
+      this.assertRestorable(agentId, sessionId);
+    } catch (err) {
+      session.abort();
+      throw err;
     }
     this.sessions.set(sessionId, session);
     this.deps.logger.info({ sessionId }, "session restored");
@@ -290,5 +303,5 @@ function isStoreClosedError(err: unknown): boolean {
 interface PendingRestore {
   readonly agentId: string;
   invalidated: boolean;
-  promise: Promise<string>;
+  readonly promise: Promise<string>;
 }

@@ -28,7 +28,7 @@
 
 ### 1.3 复现方式
 
-确定性并发测试：`packages/core/src/__tests__/session/restore-concurrency.test.ts`。真实 `createProject` 运行时 + 真实 better-sqlite3 存储，仅按本仓库测试惯例 mock `ModelCatalog`（LLM provider 边界）。可控 barrier 为注入的自定义 capability：`tools()` 计数初始化尝试（buildPromptAndTools 早期同步段），`contextBlocks()` 按 session 挂起/放行（存储打开之后、Agent 构建中段）。被测核心方法 `SessionManager.restoreSession` / `AgentRunner.initForRestore` / 生命周期方法全部真实，无 mock。初始化失败接缝用真实 `readIndex` 的 EISDIR（AGENTS.md 换成目录；project.ts:259-267 仅吞 ENOENT）。
+确定性并发测试：`packages/core/src/__tests__/session/restore-concurrency.test.ts`。真实 `createProject` 运行时 + 真实 better-sqlite3 存储，仅按本仓库测试惯例 mock `ModelCatalog`（LLM provider 边界）；「turn 挂起/abort 命中」用例按既有惯例 stub 了 pi-agent-core `Agent` 实例的 `subscribe`/`prompt`/`abort`（第三方库边界方法，非被测核心类）。被测核心 `SessionManager.restoreSession` / `AgentRunner.initForRestore` / 生命周期方法全部真实，无 mock。可控 barrier 为注入的自定义 capability：`tools()` 计数初始化尝试（buildPromptAndTools 早期同步段），`contextBlocks()` 按 session 挂起/放行（存储打开之后、Agent 构建中段）。初始化失败接缝用真实 `readIndex` 的 EISDIR（AGENTS.md 换成目录；project.ts:259-267 仅吞 ENOENT）。
 
 复现命令：
 
@@ -54,6 +54,7 @@ npm test --workspace=packages/core -- --run session/restore-concurrency
 - #158 配置存储
 - `releaseSession` 与 in-flight 的交错：release 语义为「移除 idle runner」，无 runner 在 map 时返回 false，无需失效标记
 - trigger executor 侧的并发入队节流（上游自然受益于 single-flight）
+- in-flight 初始化期间 agent profile 更新不会给随后发布的 runner 打 reload 标记（`agent_updated` 只遍历已发布 sessions，session-manager.ts:22-27）：基线同样存在，窗口极窄，需等下一次 `agent_updated` 才 reload，留待后续按需处理
 
 ## 2. 修复设计（B，最小范围）
 
@@ -61,12 +62,15 @@ npm test --workspace=packages/core -- --run session/restore-concurrency
 
 ### 2.1 `session-manager.ts`
 
-- 新增 `pendingRestores: Map<sessionId, PendingRestore>`，记录 `{ agentId, invalidated, promise }`
+- 新增 `pendingRestores: Map<sessionId, PendingRestore>`，记录 `{ agentId, invalidated, promise }`（显式 deferred 构造，record 一次性完整成型后注册，无占位字段；不用 `Promise.withResolvers`——仓库 target ES2022）
 - `restoreSession`：
   - map 快路径：已有 runner 时校验 `getAgentId() === agentId`，不匹配抛 `NotFoundError`
   - pending 命中：同 agentId 返回共享 `promise`；不同 agentId 抛 `NotFoundError`（不合并跨 agent 请求）
   - 新一轮：同步注册 record 后执行 `initializeRunner`；promise settle 后按引用相等（generation）删除自身记录——旧一轮的 finally 不会删除更新一轮的记录
-- `initializeRunner`：保持原有前置 `assertRestorable` / `ensureMigrated` / store-closed 映射 / 后置 `assertRestorable`；新增 `record.invalidated` 检查：失效则 `session.abort()`（现有释放契约：controlBus rejectAll + agent abort，runner 从未发布、无在飞 turn）并抛 `NotFoundError`
+  - 失效窗口语义：destroy/evict/closeAll 置 invalidated 后、pending settle 前，新到的 restore 加入被标记轮次并收到同一 `NotFoundError`（不开启新一轮）；settle 后才能开启新一轮
+- `initializeRunner`：保持原有前置 `assertRestorable` / `ensureMigrated` / store-closed 映射；新增两道发布前核验，两条丢弃路径统一 `session.abort()`（现有释放契约：controlBus rejectAll + agent abort；对从未发布的 runner 二者均为 no-op——pi-agent-core `Agent.abort` 为 `activeRun?.abortController.abort()`，无 activeRun 时纯 no-op，无内部定时器/订阅资源，abort 属防御性统一释放）：
+  - `record.invalidated`（manager 级失效标记）→ abort + `NotFoundError`
+  - 后置 `assertRestorable`（store 级：会话仍 active、agent 仍存在）失败 → abort + 原样上抛
 - 生命周期失效标记：
   - `destroySession(sessionId)`：标记该 session 的 pending
   - `evictAgent(agentId)`：标记该 agent 的全部 pending（不影响其他 agent）

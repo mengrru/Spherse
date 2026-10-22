@@ -264,10 +264,13 @@ describe("SessionManager concurrent restore (single-flight)", () => {
     const second = runtime.sessionRuntime.restoreSession(agentId, sessionId);
     await vi.waitFor(() => expect(gate.heldCount()).toBeGreaterThanOrEqual(1));
     runtime.sessionRuntime.destroySession(sessionId);
+    const joinedDuringInvalidWindow =
+      runtime.sessionRuntime.restoreSession(agentId, sessionId);
     gate.releaseAll();
 
     await expect(first).rejects.toBeInstanceOf(NotFoundError);
     await expect(second).rejects.toBeInstanceOf(NotFoundError);
+    await expect(joinedDuringInvalidWindow).rejects.toBeInstanceOf(NotFoundError);
     expect(runtime.sessionRuntime.hasActiveSession(sessionId)).toBe(false);
     expect(gate.attempts()).toBe(1);
 
