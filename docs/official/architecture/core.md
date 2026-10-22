@@ -51,7 +51,7 @@ ProjectRuntime           对外协调层，聚合以上全部
 ## 会话运行时
 
 - **SessionManager** 是纯 session 池：session map 生命周期、legacy 迁移、hot-reload 标记、`setDefaultModel` / `setSampling` 经 `RunConfigHolder` 单点派发。构造只收成品 `RuntimeDeps`，不自带默认装配；对外提供事件读取门面（`readSessionEventsAfter` / `getSessionLastSeq` / `subscribeSessionEvents`，内存日志优先、store 回落），server 侧 chat 重放经此消费、不触达 runner 内部
-  - `restoreSession` 带 admission 重检：session 不存在 / 已归档 / store 已关闭（含 init 中途关闭）→ `NotFoundError`，`initForRestore` 完成后与 `sessions.set` 同同步块再检一次，archived session 不可被并发 restore 复活
+  - `restoreSession` single-flight + 双级发布核验：同一 session 并发恢复共享一次初始化（失败清理 pending 后可重试，不同 session 互不串行）；发布前 store 级 admission 重检（session 不存在 / 已归档 / store 已关闭 → `NotFoundError`）+ manager 级失效标记（`destroySession` / `evictAgent` / `closeAll` 在 init 期间置位后不发布，已创建 runner 按 abort 契约丢弃）；restore 与 `sessionExists` 按 runner 归属 agentId 判定，跨 agent 请求不合并不静默成功
   - `releaseSession` 是空闲释放入口（busy runner 拒绝并返回 false），server hub 空闲收口经此请求，不直接销毁 runner；`AgentRunner.isBusy()` 是 in-flight 只读视图
 - **AgentRunner** 直接作为会话对象并执行 turn；事件经 `EventPipeline`（log → capability middleware → sanitizer → 持久化翻译）对外直播
 - **SessionEventLog 是消息唯一真相**：user / assistant / tool result / turn 边界追加到 per-agent SQLite events 表，`deriveMessages(events)` fold 结果单向同步给 pi 的内存数组，内存可随时丢弃重建（为什么见 [ADR-0001](../../dev/decisions/0001-event-log-fold.md)）
