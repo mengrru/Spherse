@@ -36,17 +36,17 @@
 npm test --workspace=packages/core -- --run session/restore-concurrency
 ```
 
-基线（修复前）结果：**8 failed / 2 passed**（2 个通过项为健康路径锚点：独立会话并行不受全局串行影响、in-flight 期间跨 agent 请求不干扰本轮）。
+基线（修复前）结果：**exit code 1，8 failed / 2 passed**（pretest `npm rebuild better-sqlite3` 成功，全部失败均为业务 `AssertionError`，非安装/编译失败；2 个通过项为健康路径锚点：独立会话并行不受全局串行影响、in-flight 期间跨 agent 请求不干扰本轮）。复核方式：`git checkout 333e6772 -- packages/core/src/session/session-manager.ts` 还原基线实现后运行，退出码与失败明细直接取自 vitest 完整输出（不经管道截断）。
 
 ### 1.4 逐项结论
 
 | # | issue 主张 | 基线实测 | 结论 |
 |---|---|---|---|
-| 1 | 两个并发 restore 各自创建 runner，后完成者覆盖已开始工作的实例 | 双 restore：`expected 2 to be 1`（buildAgent 计数=2，两套 Agent/EventLog）；「先发布实例开始 turn 后滞后者 settle」场景：runner 引用被替换、`agent.abort` 未打到运行中实例（期望 1 次实为 0 次） | **成立** |
+| 1 | 两个并发 restore 各自创建 runner，后完成者覆盖已开始工作的实例 | 双 restore：`AssertionError: expected 2 to be 1`（restore-concurrency.test.ts:158，buildAgent 计数=2，两套 Agent/EventLog）；「先发布实例开始 turn 后滞后者 settle」场景：runner 引用被替换、`agent.abort` 未打到运行中实例（期望 1 次实为 0 次） | **成立** |
 | 2 | abort 指向错误实例 | 同上：覆盖后 `abortSession` 命中新 idle runner，busy 实例的 turn 继续运行 | **成立** |
-| 3 | 初始化失败语义 | EISDIR 失败：两个等待者收到**不同** Error 实例（两次独立初始化）；基线无 in-flight 记录、失败后可重试（本项基线即正确，无「失败后永久卡死」问题） | 部分成立（双实例成立；失败清理基线无缺陷） |
-| 4 | 初始化期间 destroy/evict/close 后复活 | 三者基线均 `promise resolved instead of rejecting`：in-flight restore 照常发布（store 级 archive 有二次 `assertRestorable` 挡住，manager 级完全无防护） | **成立**（issue 未显式列出，属同一交错族） |
-| 5 | 身份一致性 | 已发布 runner 下跨 agent restore 基线返回成功（无 agentId 校验）；`sessionExists` 跨 agent 也返回 true | **成立**（issue 建议方向「核验 session/agent/project 生命周期」的补充） |
+| 3 | 初始化失败语义 | EISDIR 失败：`AssertionError: expected Error … to be Error …`（test.ts:226，两个等待者收到**不同** Error 实例，两次独立初始化）；基线无 in-flight 记录、失败后可重试（本项基线即正确，无「失败后永久卡死」问题） | 部分成立（双实例成立；失败清理基线无缺陷） |
+| 4 | 初始化期间 destroy/evict/close 后复活 | 三者基线均 `AssertionError: promise resolved … instead of rejecting`（test.ts:269,297,313）：in-flight restore 照常发布（store 级 archive 有二次 `assertRestorable` 挡住，manager 级完全无防护） | **成立**（issue 未显式列出，属同一交错族） |
+| 5 | 身份一致性 | 已发布 runner 下跨 agent restore 基线 `promise resolved … instead of rejecting`（test.ts:350）返回成功（无 agentId 校验）；`sessionExists` 跨 agent 也返回 true | **成立**（issue 建议方向「核验 session/agent/project 生命周期」的补充） |
 
 ### 1.5 关联但不在本次范围
 
@@ -85,7 +85,8 @@ npm test --workspace=packages/core -- --run session/restore-concurrency
 
 ## 4. 验证
 
-- `npm test --workspace=packages/core`：1405 passed（含新增 10 例，修复前新测试 8 failed）
+- `npm test --workspace=packages/core -- --run session/restore-concurrency`：基线实现 exit code 1（8 failed，全部业务断言）；修复后 exit code 0（10 passed）
+- `npm test --workspace=packages/core`：1405 passed（含新增 10 例）
 - `npm test --workspace=packages/server`：394 passed
 - `npm test --workspace=packages/desktop`：280 passed；`packages/i18n` 10 passed；`packages/app` 1415 passed
 - `npm run lint`：0 errors（16 warnings 为存量，与基线一致）
