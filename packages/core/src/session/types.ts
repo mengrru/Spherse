@@ -1,12 +1,3 @@
-export interface CompactionSnapshotMeta {
-  seq: number;
-  anchorSeq: number;
-  digestSource: "llm" | "mechanical" | null;
-  excludedCount: number;
-  digestLength: number;
-  appliedAtMs: number;
-}
-
 export interface TurnContextSnapshot {
   sessionId: string;
   capturedAt: string;
@@ -17,8 +8,6 @@ export interface TurnContextSnapshot {
     description: string;
     parameters: unknown;
   }>;
-  compaction: CompactionSnapshotMeta | null;
-  compactionCount: number;
 }
 
 export type ControlRequestKind = "approval" | "question";
