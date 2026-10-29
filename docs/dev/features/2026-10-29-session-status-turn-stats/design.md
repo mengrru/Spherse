@@ -20,7 +20,7 @@ Manager 需求：给「会话状态」dialog 增加当前会话统计信息—�
 - **缓存命中率** = `cacheRead / (cacheRead + input)`，分母即本轮实际读取的上下文 token（cacheWrite 属首次写入，不计入分母）。
   - 本轮无含 usage 细分的 assistant 消息（老会话 / 尚无回复 / 仅 totalTokens 的残缺 usage）→ `null`
   - 本轮 `cacheRead + input == 0`（除零）→ `null`，UI 显示「未知」，**不伪造估算值**；此时若 output 有实测值仍照常返回（不因命中率 null 而抹掉已知量）
-- 汇总口径：本轮所有 assistant 消息的 usage 逐字段求和；「有 usage」的判定依据是 input/output/cacheRead/cacheWrite 任一为数字（pi-ai 各 provider 构造完整 Usage 对象，细分字段总同时出现；`totalTokens` 单独存在视为残缺，整体未知）。
+- 汇总口径：本轮所有 assistant 消息的 usage 逐字段求和；「有 usage」的判定依据是 input/output/cacheRead/cacheWrite 任一为数字（pi-ai 各 provider 构造完整 Usage 对象，细分字段总同时出现；`totalTokens` 单独存在视为残缺——本轮全部残缺时整体 `null`，同一轮残缺与完整并存时残缺条目按贡献 0 汇总、完整条目照常计入）。
 
 ## 消息计数（当前上下文范围，非完整历史）
 

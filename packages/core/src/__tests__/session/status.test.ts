@@ -202,6 +202,19 @@ describe("computeTurnStats", () => {
     expect(stats.turnOutputTokens).toBeNull();
   });
 
+  it("ignores incomplete usage entries and sums complete ones in the same turn", () => {
+    const messages = [
+      { role: "user", content: "hi" },
+      { role: "assistant", usage: { totalTokens: 4242 } },
+      { role: "assistant", usage: usage({ input: 100, cacheRead: 300, output: 20 }) },
+    ];
+    const stats = computeTurnStats(messages);
+    expect(stats.cacheHitRate).toBeCloseTo(300 / 400);
+    expect(stats.turnInputTokens).toBe(100);
+    expect(stats.turnCacheReadTokens).toBe(300);
+    expect(stats.turnOutputTokens).toBe(20);
+  });
+
   it("returns null hit rate but measured output when cacheRead and input are both zero", () => {
     const messages = [
       { role: "user", content: "hi" },
