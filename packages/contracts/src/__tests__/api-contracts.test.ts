@@ -219,6 +219,12 @@ describe("api contracts", () => {
     expect(
       parseApiResponse(schemas.sessionStatus, { ...fullStatus, cacheHitRate: null }),
     ).toEqual({ ...fullStatus, cacheHitRate: null });
+    expect(
+      parseApiResponse(schemas.sessionStatus, {
+        currentTokens: 0,
+        contextWindowLimit: null,
+      }),
+    ).toEqual({ currentTokens: 0, contextWindowLimit: null });
     expect(() => parseApiResponse(schemas.sessionStatus, { currentTokens: "x" })).toThrow(/Invalid payload/);
     expect(() =>
       parseApiResponse(schemas.sessionStatus, { currentTokens: 1, contextWindowLimit: "no" }),
@@ -227,11 +233,11 @@ describe("api contracts", () => {
       parseApiResponse(schemas.sessionStatus, { ...fullStatus, cacheHitRate: "87%" }),
     ).toThrow(/Invalid payload/);
     expect(() =>
-      parseApiResponse(schemas.sessionStatus, { ...fullStatus, userMessageCount: null }),
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, userMessageCount: "4" }),
     ).toThrow(/Invalid payload/);
-    expect(() => parseApiResponse(schemas.sessionStatus, { ...fullStatus, turnOutputTokens: undefined })).toThrow(
-      /Invalid payload/,
-    );
+    expect(() =>
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, messageCount: null }),
+    ).toThrow(/Invalid payload/);
   });
 
   it("validates session search response", () => {

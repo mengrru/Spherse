@@ -115,10 +115,10 @@ describe("computeSessionStatus", () => {
       currentTokens: 4242,
       contextWindowLimit: 1000,
       cacheHitRate: null,
-      turnInputTokens: 0,
-      turnCacheReadTokens: 0,
-      turnCacheWriteTokens: 0,
-      turnOutputTokens: 0,
+      turnInputTokens: null,
+      turnCacheReadTokens: null,
+      turnCacheWriteTokens: null,
+      turnOutputTokens: null,
       userMessageCount: 0,
       messageCount: 1,
     });
@@ -187,26 +187,29 @@ describe("computeTurnStats", () => {
     expect(computeTurnStats(messages).cacheHitRate).toBe(1);
   });
 
-  it("returns null hit rate when no assistant message carries usage", () => {
+  it("returns null stats when no assistant message carries a usage breakdown", () => {
     const messages = [
       { role: "user", content: "hi" },
       { role: "assistant", content: [{ type: "text", text: "legacy reply" }] },
+      { role: "user", content: "again" },
+      { role: "assistant", usage: { totalTokens: 4242 } },
     ];
     const stats = computeTurnStats(messages);
     expect(stats.cacheHitRate).toBeNull();
-    expect(stats.turnInputTokens).toBe(0);
-    expect(stats.turnCacheReadTokens).toBe(0);
-    expect(stats.turnCacheWriteTokens).toBe(0);
-    expect(stats.turnOutputTokens).toBe(0);
+    expect(stats.turnInputTokens).toBeNull();
+    expect(stats.turnCacheReadTokens).toBeNull();
+    expect(stats.turnCacheWriteTokens).toBeNull();
+    expect(stats.turnOutputTokens).toBeNull();
   });
 
-  it("returns null hit rate instead of dividing by zero when cacheRead and input are both zero", () => {
+  it("returns null hit rate but measured output when cacheRead and input are both zero", () => {
     const messages = [
       { role: "user", content: "hi" },
       { role: "assistant", usage: usage({ output: 12 }) },
     ];
     const stats = computeTurnStats(messages);
     expect(stats.cacheHitRate).toBeNull();
+    expect(stats.turnInputTokens).toBe(0);
     expect(stats.turnOutputTokens).toBe(12);
   });
 
@@ -244,7 +247,7 @@ describe("computeTurnStats", () => {
     ];
     const stats = computeTurnStats(messages);
     expect(stats.cacheHitRate).toBeNull();
-    expect(stats.turnInputTokens).toBe(0);
+    expect(stats.turnInputTokens).toBeNull();
   });
 });
 

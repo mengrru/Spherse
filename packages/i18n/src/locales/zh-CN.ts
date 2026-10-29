@@ -1162,10 +1162,10 @@ export const zhCN = {
   "session.statusTurnCacheRead": "缓存读取",
   // 会话状态弹窗中本轮 token 细分之「缓存写入」的标签
   "session.statusTurnCacheWrite": "缓存写入",
-  // 会话状态弹窗中「会话用户消息数」字段的标签，为整个会话的用户消息计数（不含压缩摘要）
-  "session.statusUserMessages": "会话用户消息数",
-  // 会话状态弹窗中「会话总消息数」字段的标签，为整个会话的全部消息计数
-  "session.statusTotalMessages": "会话总消息数",
+  // 会话状态弹窗中「上下文用户消息数」字段的标签，统计当前上下文消息缓冲（压缩后历史折叠为摘要、不含被丢弃消息），非完整历史总数
+  "session.statusUserMessages": "上下文用户消息数",
+  // 会话状态弹窗中「上下文总消息数」字段的标签，统计当前上下文消息缓冲（压缩后历史折叠为摘要、不含被丢弃消息），非完整历史总数
+  "session.statusTotalMessages": "上下文总消息数",
 
   // --- Settings ---
   // 设置中语言选择器的标签

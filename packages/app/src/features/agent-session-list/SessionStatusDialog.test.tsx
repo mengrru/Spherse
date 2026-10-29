@@ -37,6 +37,10 @@ function statusPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function num(value: number): string {
+  return value.toLocaleString();
+}
+
 function renderDialog() {
   return renderWithProviders(
     <SessionStatusDialog session={session} open onOpenChange={() => {}} />,
@@ -48,7 +52,7 @@ describe("SessionStatusDialog", () => {
     vi.clearAllMocks();
   });
 
-  it("renders turn stats and session message counts", async () => {
+  it("renders turn stats and context message counts", async () => {
     clientMock.getSessionStatus.mockResolvedValue(statusPayload());
     renderDialog();
 
@@ -56,29 +60,71 @@ describe("SessionStatusDialog", () => {
       expect(screen.getByText("本轮缓存命中率")).toBeInTheDocument();
     });
     expect(screen.getByText("61.5%")).toBeInTheDocument();
-    expect(screen.getByText("缓存读取 / (缓存读取 + 输入)：3,000 / 4,880")).toBeInTheDocument();
+    expect(
+      screen.getByText(`缓存读取 / (缓存读取 + 输入)：${num(3000)} / ${num(4880)}`),
+    ).toBeInTheDocument();
     expect(screen.getByText("本轮 Token 用量")).toBeInTheDocument();
-    expect(screen.getByText("1,880")).toBeInTheDocument();
-    expect(screen.getByText("62")).toBeInTheDocument();
-    expect(screen.getByText("3,000")).toBeInTheDocument();
-    expect(screen.getByText("500")).toBeInTheDocument();
-    expect(screen.getByText("会话用户消息数")).toBeInTheDocument();
-    expect(screen.getByText("会话总消息数")).toBeInTheDocument();
+    expect(screen.getAllByText(num(1880)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(num(62)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(num(3000)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(num(500)).length).toBeGreaterThan(0);
+    expect(screen.getByText("上下文用户消息数")).toBeInTheDocument();
+    expect(screen.getByText("上下文总消息数")).toBeInTheDocument();
     expect(screen.getByText("4")).toBeInTheDocument();
     expect(screen.getByText("11")).toBeInTheDocument();
   });
 
-  it("shows the unknown placeholder when cache hit rate is null", async () => {
-    clientMock.getSessionStatus.mockResolvedValue(statusPayload({ cacheHitRate: null }));
+  it("shows the unknown placeholder for every new metric when usage is unavailable (null)", async () => {
+    clientMock.getSessionStatus.mockResolvedValue(
+      statusPayload({
+        cacheHitRate: null,
+        turnInputTokens: null,
+        turnCacheReadTokens: null,
+        turnCacheWriteTokens: null,
+        turnOutputTokens: null,
+      }),
+    );
     renderDialog();
 
     await waitFor(() => {
-      expect(screen.getByText("会话用户消息数")).toBeInTheDocument();
+      expect(screen.getByText("上下文用户消息数")).toBeInTheDocument();
     });
     const hitRateRow = screen.getByText("本轮缓存命中率").closest("div");
-    expect(hitRateRow).not.toBeNull();
     expect(hitRateRow!.textContent).toContain("未知");
     expect(screen.queryByText(/缓存读取 \/ \(缓存读取 \+ 输入\)/)).not.toBeInTheDocument();
+
+    const tokenRow = screen.getByText("本轮 Token 用量").closest("div");
+    const tokenCells = tokenRow!.querySelectorAll(".tabular-nums");
+    expect(tokenCells.length).toBe(4);
+    for (const cell of tokenCells) {
+      expect(cell.textContent).toContain("未知");
+    }
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText("11")).toBeInTheDocument();
+  });
+
+  it("keeps legacy metrics and marks new metrics unknown for an old-server payload without new fields", async () => {
+    clientMock.getSessionStatus.mockResolvedValue({
+      currentTokens: 1234,
+      contextWindowLimit: 8192,
+    });
+    renderDialog();
+
+    await waitFor(() => {
+      expect(screen.getByText(num(1234))).toBeInTheDocument();
+    });
+    expect(screen.getByText(num(8192))).toBeInTheDocument();
+    expect(screen.getByText("本轮缓存命中率")).toBeInTheDocument();
+    const hitRateRow = screen.getByText("本轮缓存命中率").closest("div");
+    expect(hitRateRow!.textContent).toContain("未知");
+    const tokenRow = screen.getByText("本轮 Token 用量").closest("div");
+    for (const cell of tokenRow!.querySelectorAll(".tabular-nums")) {
+      expect(cell.textContent).toContain("未知");
+    }
+    const userRow = screen.getByText("上下文用户消息数").closest("div");
+    expect(userRow!.textContent).toContain("未知");
+    const totalRow = screen.getByText("上下文总消息数").closest("div");
+    expect(totalRow!.textContent).toContain("未知");
   });
 
   it("shows the loading state first", () => {

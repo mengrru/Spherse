@@ -1,6 +1,7 @@
 import { useEffect, useReducer, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
+import type { SessionStatusResponse } from "@spherse/contracts";
 import { useProjectCtx } from "../../context/project-context";
 import { useApiClient } from "../../lib/use-connection";
 import type { SessionInfo } from "../../lib/types";
@@ -14,34 +15,12 @@ import {
 
 type StatusState =
   | { mode: "loading" }
-  | {
-      mode: "loaded";
-      currentTokens: number;
-      contextWindowLimit: number | null;
-      cacheHitRate: number | null;
-      turnInputTokens: number;
-      turnCacheReadTokens: number;
-      turnCacheWriteTokens: number;
-      turnOutputTokens: number;
-      userMessageCount: number;
-      messageCount: number;
-    }
+  | { mode: "loaded"; status: SessionStatusResponse }
   | { mode: "error" };
 
 type StatusAction =
   | { type: "loading" }
-  | {
-      type: "loaded";
-      currentTokens: number;
-      contextWindowLimit: number | null;
-      cacheHitRate: number | null;
-      turnInputTokens: number;
-      turnCacheReadTokens: number;
-      turnCacheWriteTokens: number;
-      turnOutputTokens: number;
-      userMessageCount: number;
-      messageCount: number;
-    }
+  | { type: "loaded"; status: SessionStatusResponse }
   | { type: "error" };
 
 function statusReducer(_state: StatusState, action: StatusAction): StatusState {
@@ -49,24 +28,13 @@ function statusReducer(_state: StatusState, action: StatusAction): StatusState {
     case "loading":
       return { mode: "loading" };
     case "loaded":
-      return {
-        mode: "loaded",
-        currentTokens: action.currentTokens,
-        contextWindowLimit: action.contextWindowLimit,
-        cacheHitRate: action.cacheHitRate,
-        turnInputTokens: action.turnInputTokens,
-        turnCacheReadTokens: action.turnCacheReadTokens,
-        turnCacheWriteTokens: action.turnCacheWriteTokens,
-        turnOutputTokens: action.turnOutputTokens,
-        userMessageCount: action.userMessageCount,
-        messageCount: action.messageCount,
-      };
+      return { mode: "loaded", status: action.status };
     case "error":
       return { mode: "error" };
   }
 }
 
-function formatTokens(value: number): string {
+function formatNumber(value: number): string {
   return value.toLocaleString();
 }
 
@@ -85,6 +53,15 @@ function StatusRow({ label, children }: { label: string; children: ReactNode }) 
   );
 }
 
+function TurnTokenCell({ label, value, unknownLabel }: { label: string; value: number | null | undefined; unknownLabel: string }) {
+  return (
+    <span className="text-sm tabular-nums">
+      <span className="text-xs text-muted-foreground">{label}</span>{" "}
+      {typeof value === "number" ? formatNumber(value) : unknownLabel}
+    </span>
+  );
+}
+
 export function SessionStatusDialog({ session, open, onOpenChange }: SessionStatusDialogProps) {
   const { t } = useI18n();
   const { projectId } = useProjectCtx();
@@ -99,18 +76,7 @@ export function SessionStatusDialog({ session, open, onOpenChange }: SessionStat
       .getSessionStatus(session.agentId, session.id)
       .then((result) => {
         if (cancelled) return;
-        dispatch({
-          type: "loaded",
-          currentTokens: result.currentTokens,
-          contextWindowLimit: result.contextWindowLimit,
-          cacheHitRate: result.cacheHitRate,
-          turnInputTokens: result.turnInputTokens,
-          turnCacheReadTokens: result.turnCacheReadTokens,
-          turnCacheWriteTokens: result.turnCacheWriteTokens,
-          turnOutputTokens: result.turnOutputTokens,
-          userMessageCount: result.userMessageCount,
-          messageCount: result.messageCount,
-        });
+        dispatch({ type: "loaded", status: result });
       })
       .catch(() => {
         if (cancelled) return;
@@ -121,9 +87,13 @@ export function SessionStatusDialog({ session, open, onOpenChange }: SessionStat
     };
   }, [open, session.agentId, session.id, client]);
 
-  const limit = state.mode === "loaded" ? state.contextWindowLimit : null;
+  const status = state.mode === "loaded" ? state.status : null;
+  const limit = status ? status.contextWindowLimit : null;
   const ratio =
-    state.mode === "loaded" && limit ? Math.min(100, Math.round((state.currentTokens / limit) * 100)) : null;
+    status && limit ? Math.min(100, Math.round((status.currentTokens / limit) * 100)) : null;
+  const unknown = t("session.statusUnknown");
+  const turnCacheRead = status?.turnCacheReadTokens ?? null;
+  const turnInput = status?.turnInputTokens ?? null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,22 +114,22 @@ export function SessionStatusDialog({ session, open, onOpenChange }: SessionStat
           <div className="py-2 text-sm text-destructive">{t("session.statusLoadFailed")}</div>
         )}
 
-        {state.mode === "loaded" && (
+        {state.mode === "loaded" && status && (
           <div className="flex flex-col gap-3">
             <StatusRow label={t("session.statusContextTokens")}>
               <span className="text-sm font-medium tabular-nums">
-                {formatTokens(state.currentTokens)}
+                {formatNumber(status.currentTokens)}
                 {limit !== null && (
                   <span className="text-muted-foreground">
                     {" / "}
-                    {formatTokens(limit)}
+                    {formatNumber(limit)}
                   </span>
                 )}
               </span>
             </StatusRow>
             <StatusRow label={t("session.statusContextLimit")}>
               <span className="text-sm font-medium tabular-nums">
-                {limit !== null ? formatTokens(limit) : t("session.statusUnknown")}
+                {limit !== null ? formatNumber(limit) : unknown}
               </span>
             </StatusRow>
             {ratio !== null && (
@@ -175,47 +145,37 @@ export function SessionStatusDialog({ session, open, onOpenChange }: SessionStat
             )}
             <StatusRow label={t("session.statusTurnCacheHitRate")}>
               <span className="text-sm font-medium tabular-nums">
-                {state.cacheHitRate !== null
-                  ? `${(state.cacheHitRate * 100).toFixed(1)}%`
-                  : t("session.statusUnknown")}
+                {typeof status.cacheHitRate === "number"
+                  ? `${(status.cacheHitRate * 100).toFixed(1)}%`
+                  : unknown}
               </span>
-              {state.cacheHitRate !== null && (
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {t("session.statusCacheHitRateDetail", {
-                    read: formatTokens(state.turnCacheReadTokens),
-                    total: formatTokens(state.turnCacheReadTokens + state.turnInputTokens),
-                  })}
-                </span>
-              )}
+              {typeof status.cacheHitRate === "number" &&
+                typeof turnCacheRead === "number" &&
+                typeof turnInput === "number" && (
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    {t("session.statusCacheHitRateDetail", {
+                      read: formatNumber(turnCacheRead),
+                      total: formatNumber(turnCacheRead + turnInput),
+                    })}
+                  </span>
+                )}
             </StatusRow>
             <StatusRow label={t("session.statusTurnTokens")}>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <span className="text-sm tabular-nums">
-                  <span className="text-xs text-muted-foreground">{t("session.statusTurnInput")}</span>{" "}
-                  {formatTokens(state.turnInputTokens)}
-                </span>
-                <span className="text-sm tabular-nums">
-                  <span className="text-xs text-muted-foreground">{t("session.statusTurnOutput")}</span>{" "}
-                  {formatTokens(state.turnOutputTokens)}
-                </span>
-                <span className="text-sm tabular-nums">
-                  <span className="text-xs text-muted-foreground">{t("session.statusTurnCacheRead")}</span>{" "}
-                  {formatTokens(state.turnCacheReadTokens)}
-                </span>
-                <span className="text-sm tabular-nums">
-                  <span className="text-xs text-muted-foreground">{t("session.statusTurnCacheWrite")}</span>{" "}
-                  {formatTokens(state.turnCacheWriteTokens)}
-                </span>
+                <TurnTokenCell label={t("session.statusTurnInput")} value={turnInput} unknownLabel={unknown} />
+                <TurnTokenCell label={t("session.statusTurnOutput")} value={status.turnOutputTokens} unknownLabel={unknown} />
+                <TurnTokenCell label={t("session.statusTurnCacheRead")} value={turnCacheRead} unknownLabel={unknown} />
+                <TurnTokenCell label={t("session.statusTurnCacheWrite")} value={status.turnCacheWriteTokens} unknownLabel={unknown} />
               </div>
             </StatusRow>
             <StatusRow label={t("session.statusUserMessages")}>
               <span className="text-sm font-medium tabular-nums">
-                {formatTokens(state.userMessageCount)}
+                {typeof status.userMessageCount === "number" ? formatNumber(status.userMessageCount) : unknown}
               </span>
             </StatusRow>
             <StatusRow label={t("session.statusTotalMessages")}>
               <span className="text-sm font-medium tabular-nums">
-                {formatTokens(state.messageCount)}
+                {typeof status.messageCount === "number" ? formatNumber(status.messageCount) : unknown}
               </span>
             </StatusRow>
           </div>

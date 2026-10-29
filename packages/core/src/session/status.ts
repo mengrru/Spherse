@@ -9,26 +9,25 @@ export interface SessionStatus {
   currentTokens: number;
   contextWindowLimit: number | null;
   cacheHitRate: number | null;
-  turnInputTokens: number;
-  turnCacheReadTokens: number;
-  turnCacheWriteTokens: number;
-  turnOutputTokens: number;
+  turnInputTokens: number | null;
+  turnCacheReadTokens: number | null;
+  turnCacheWriteTokens: number | null;
+  turnOutputTokens: number | null;
   userMessageCount: number;
   messageCount: number;
 }
 
 export interface TurnStats {
   cacheHitRate: number | null;
-  turnInputTokens: number;
-  turnCacheReadTokens: number;
-  turnCacheWriteTokens: number;
-  turnOutputTokens: number;
+  turnInputTokens: number | null;
+  turnCacheReadTokens: number | null;
+  turnCacheWriteTokens: number | null;
+  turnOutputTokens: number | null;
   userMessageCount: number;
   messageCount: number;
 }
 
 interface UsageLike {
-  totalTokens?: unknown;
   input?: unknown;
   output?: unknown;
   cacheRead?: unknown;
@@ -80,21 +79,28 @@ export function computeTurnStats(messages: unknown[]): TurnStats {
   let output = 0;
   for (let i = turnStart; i < messages.length; i++) {
     const msg = messages[i] as { role?: string; usage?: UsageLike };
-    if (msg?.role !== "assistant" || typeof msg.usage?.totalTokens !== "number") continue;
+    if (msg?.role !== "assistant" || typeof msg.usage !== "object" || msg.usage === null) continue;
+    const usage = msg.usage;
+    const carriesBreakdown =
+      typeof usage.input === "number" ||
+      typeof usage.output === "number" ||
+      typeof usage.cacheRead === "number" ||
+      typeof usage.cacheWrite === "number";
+    if (!carriesBreakdown) continue;
     hasUsage = true;
-    input += typeof msg.usage.input === "number" ? msg.usage.input : 0;
-    cacheRead += typeof msg.usage.cacheRead === "number" ? msg.usage.cacheRead : 0;
-    cacheWrite += typeof msg.usage.cacheWrite === "number" ? msg.usage.cacheWrite : 0;
-    output += typeof msg.usage.output === "number" ? msg.usage.output : 0;
+    input += typeof usage.input === "number" ? usage.input : 0;
+    cacheRead += typeof usage.cacheRead === "number" ? usage.cacheRead : 0;
+    cacheWrite += typeof usage.cacheWrite === "number" ? usage.cacheWrite : 0;
+    output += typeof usage.output === "number" ? usage.output : 0;
   }
 
   const denominator = cacheRead + input;
   return {
     cacheHitRate: hasUsage && denominator > 0 ? cacheRead / denominator : null,
-    turnInputTokens: input,
-    turnCacheReadTokens: cacheRead,
-    turnCacheWriteTokens: cacheWrite,
-    turnOutputTokens: output,
+    turnInputTokens: hasUsage ? input : null,
+    turnCacheReadTokens: hasUsage ? cacheRead : null,
+    turnCacheWriteTokens: hasUsage ? cacheWrite : null,
+    turnOutputTokens: hasUsage ? output : null,
     userMessageCount,
     messageCount: messages.length,
   };
