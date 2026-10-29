@@ -80,6 +80,8 @@
 
 ## 功能增强
 
+- [ ] **「本轮为何未压缩」运行时诊断通道**：compaction 触发依赖双门阈值（token > 0.75×window 且非 digest user > 20 或 assistant > 40），未达阈值/锚点无效/LLM 摘要不可用未过 0.9 硬限时均静默跳过（`capabilities/compaction/transform.ts`），用户无法区分「会话不够长」与「压缩失败」。Turn Context 快照现已暴露最近一次压缩结果（2026-10-29），但缺「上次评估为何未压缩」的原因通道——需新的轻量状态记录（如 runner 内存 + debug 端点，不入事件日志），属独立任务。参见 `docs/dev/features/2026-10-29-turn-context-compaction/design.md`「blocker」表
+
 - [ ] **file panel 拖拽上传 v2**：① 文件夹拖入（递归展开上传，需处理层级名冲突与大量文件进度反馈）；② 大文件上传进度条（需换 XHR 或流式 fetch 上传进度 API）；③ dotfile 上传后树内不可见的提示或白名单。参见 `docs/dev/features/2026-09-27-file-dnd-upload/design.md`「已知限制」
 
 - [ ] **空文件树无点击上传入口**：上传入口（拖拽空白区落根目录、右键菜单依赖行节点）在项目尚无任何文件时仅剩空白区拖拽可用；「上传第一批文件」恰是空项目高频动作。方向：树根容器挂 context menu 或空态提示旁加上传按钮（目标为根目录）。2026-10-11 右键上传入口 review 发现。

@@ -664,6 +664,10 @@ export const en: Record<TranslationKey, string> = {
   "debug.eventLogEmpty": "No events",
   "debug.eventLogLoadFailed": "Failed to load event log",
   "debug.eventLogCopy": "Copy",
+  "debug.compactionNone": "Not compacted",
+  "debug.compactionLast":
+    "Last compaction: seq {seq} · anchor {anchorSeq} · source {source} · excluded {excludedCount} msgs · digest {digestLength} chars",
+  "debug.compactionTotal": "{count} in total",
   "welcome-page.fileMissing": "Welcome page file not found: {path}",
   "welcome-page.loadFailed": "Failed to load welcome page",
   "welcome-page.emptyState": "Spherse",

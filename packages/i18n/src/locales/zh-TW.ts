@@ -664,6 +664,10 @@ export const zhTW: Record<TranslationKey, string> = {
   "debug.eventLogEmpty": "No events",
   "debug.eventLogLoadFailed": "Failed to load event log",
   "debug.eventLogCopy": "Copy",
+  "debug.compactionNone": "未壓縮",
+  "debug.compactionLast":
+    "最近一次壓縮：seq {seq} · 錨點 {anchorSeq} · 來源 {source} · 排除 {excludedCount} 則 · 摘要 {digestLength} 字元",
+  "debug.compactionTotal": "累計 {count} 次",
   "welcome-page.fileMissing": "歡迎頁檔案不存在：{path}",
   "welcome-page.loadFailed": "歡迎頁載入失敗",
   "welcome-page.emptyState": "Spherse",

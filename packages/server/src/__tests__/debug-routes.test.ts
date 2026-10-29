@@ -18,6 +18,8 @@ function createRuntime() {
       systemPrompt: "p",
       messages: [],
       tools: [],
+      compaction: null,
+      compactionCount: 0,
     })),
     readSessionEventsAfter: vi.fn(() => [
       { seq: 0, type: "user/message", time: 1, data: { message: { role: "user" } } },
@@ -77,5 +79,76 @@ describe("debug routes", () => {
     });
     expect(res.statusCode).toBe(400);
     expect(res.json()).toMatchObject({ error: "agentId is required" });
+  });
+
+  it("passes compaction/applied events through the event log endpoint", async () => {
+    runtime.sessionRuntime.readSessionEventsAfter = vi.fn(() => [
+      {
+        seq: 12,
+        type: "compaction/applied",
+        time: 1700000000000,
+        data: { anchorSeq: 8, digestContent: "d", excludedSeqs: [9, 10, 11], digestSource: "llm" },
+      },
+    ]);
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/debug/sessions/s1/events?agentId=a1",
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({
+      sessionId: "s1",
+      events: [
+        {
+          seq: 12,
+          type: "compaction/applied",
+          time: 1700000000000,
+          data: { anchorSeq: 8, digestContent: "d", excludedSeqs: [9, 10, 11], digestSource: "llm" },
+        },
+      ],
+    });
+  });
+
+  it("returns the turn context snapshot with compaction metadata", async () => {
+    runtime.sessionRuntime.getTurnContext = vi.fn(() => ({
+      sessionId: "s1",
+      capturedAt: "2024-01-01T00:00:00.000Z",
+      systemPrompt: "p",
+      messages: [],
+      tools: [],
+      compaction: {
+        seq: 12,
+        anchorSeq: 8,
+        digestSource: "llm",
+        excludedCount: 3,
+        digestLength: 2048,
+        appliedAtMs: 1700000000000,
+      },
+      compactionCount: 1,
+    }));
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/debug/sessions/s1/turn-context",
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({
+      compaction: { seq: 12, anchorSeq: 8, digestSource: "llm", excludedCount: 3, digestLength: 2048 },
+      compactionCount: 1,
+    });
+  });
+
+  it("responds 500 when the turn context snapshot misses required compaction fields", async () => {
+    runtime.sessionRuntime.getTurnContext = vi.fn(() => ({
+      sessionId: "s1",
+      capturedAt: "2024-01-01T00:00:00.000Z",
+      systemPrompt: "p",
+      messages: [],
+      tools: [],
+    }));
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/projects/p1/debug/sessions/s1/turn-context",
+    });
+    expect(res.statusCode).toBe(500);
+    expect(res.json()).toMatchObject({ error: expect.stringContaining("Invalid payload") });
   });
 });

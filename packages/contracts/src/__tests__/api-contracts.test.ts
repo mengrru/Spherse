@@ -576,15 +576,52 @@ describe("api contracts", () => {
   });
 
   it("validates turn context snapshot", () => {
-    const snapshot = {
+    const base = {
       sessionId: "s1",
       capturedAt: "2024-01-01T00:00:00.000Z",
       systemPrompt: "p",
       messages: [],
       tools: [{ name: "t", description: "d", parameters: {} }],
     };
-    expect(parseApiResponse(schemas.turnContextSnapshot, snapshot)).toEqual(snapshot);
+    const uncompacted = { ...base, compaction: null, compactionCount: 0 };
+    expect(parseApiResponse(schemas.turnContextSnapshot, uncompacted)).toEqual(uncompacted);
+
+    const compacted = {
+      ...base,
+      compaction: {
+        seq: 12,
+        anchorSeq: 8,
+        digestSource: "llm",
+        excludedCount: 3,
+        digestLength: 2048,
+        appliedAtMs: 1700000000000,
+      },
+      compactionCount: 2,
+    };
+    expect(parseApiResponse(schemas.turnContextSnapshot, compacted)).toEqual(compacted);
+
+    expect(parseApiResponse(schemas.turnContextSnapshot, { ...base, compaction: { ...compacted.compaction, digestSource: null }, compactionCount: 1 })).toMatchObject({
+      compaction: { digestSource: null },
+    });
+
+    expect(() => parseApiResponse(schemas.turnContextSnapshot, base)).toThrow(/Invalid payload/);
     expect(() => parseApiResponse(schemas.turnContextSnapshot, { sessionId: "s1" })).toThrow(/Invalid payload/);
+    expect(() => parseApiResponse(schemas.turnContextSnapshot, { ...uncompacted, compactionCount: undefined })).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.turnContextSnapshot, {
+        ...compacted,
+        compaction: { ...compacted.compaction, digestSource: "other" },
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.turnContextSnapshot, {
+        ...compacted,
+        compaction: { ...compacted.compaction, excludedCount: -1 },
+      }),
+    ).toThrow(/Invalid payload/);
+    expect(() => parseApiResponse(schemas.turnContextSnapshot, { ...uncompacted, compaction: "none" })).toThrow(
+      /Invalid payload/,
+    );
   });
 
   it("validates session event log", () => {

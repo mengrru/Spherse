@@ -34,7 +34,15 @@ function createClient(overrides?: Partial<Record<"getSessionEvents" | "getTurnCo
     getSessionEvents: overrides?.getSessionEvents ?? vi.fn().mockResolvedValue({ sessionId, events }),
     getTurnContext:
       overrides?.getTurnContext ??
-      vi.fn().mockResolvedValue({ sessionId, capturedAt: "t", systemPrompt: "p", messages: [], tools: [] }),
+      vi.fn().mockResolvedValue({
+        sessionId,
+        capturedAt: "t",
+        systemPrompt: "p",
+        messages: [],
+        tools: [],
+        compaction: null,
+        compactionCount: 0,
+      }),
   } as unknown as ApiClient;
 }
 
@@ -65,6 +73,74 @@ describe("TurnContextDialog", () => {
     expect(screen.getByText("turn/start")).toBeInTheDocument();
     expect(screen.getByText("turn/end")).toBeInTheDocument();
     expect(screen.getByText("4 events")).toBeInTheDocument();
+    expect(screen.getByText("未压缩")).toBeInTheDocument();
+  });
+
+  it("renders a compaction status line derived from the latest compaction event", async () => {
+    const compactionEvents = [
+      ...events,
+      {
+        seq: 4,
+        type: "compaction/applied",
+        time: 1700000000003,
+        data: {
+          anchorSeq: 2,
+          digestContent: "summary of earlier turns",
+          excludedSeqs: [3],
+          digestSource: "llm",
+        },
+      },
+      {
+        seq: 6,
+        type: "compaction/applied",
+        time: 1700000000005,
+        data: {
+          anchorSeq: 4,
+          digestContent: "second summary",
+          excludedSeqs: [],
+          digestSource: "mechanical",
+        },
+      },
+    ];
+    renderWithProviders(
+      <TurnContextDialog
+        projectId="p1"
+        client={createClient({ getSessionEvents: vi.fn().mockResolvedValue({ sessionId, events: compactionEvents }) })}
+        sessionId={sessionId}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText(/最近一次压缩：seq 6 · 锚点 4 · 来源 mechanical · 排除 0 条/)).toBeInTheDocument();
+    expect(screen.getByText(/摘要 14 字符 · 累计 2 次/)).toBeInTheDocument();
+    expect(screen.queryByText("未压缩")).not.toBeInTheDocument();
+  });
+
+  it("renders a compaction/applied event row with badge and preview", async () => {
+    const compactionEvents = [
+      ...events,
+      {
+        seq: 4,
+        type: "compaction/applied",
+        time: 1700000000003,
+        data: {
+          anchorSeq: 2,
+          digestContent: "summary of earlier turns",
+          excludedSeqs: [3],
+          digestSource: "llm",
+        },
+      },
+    ];
+    renderWithProviders(
+      <TurnContextDialog
+        projectId="p1"
+        client={createClient({ getSessionEvents: vi.fn().mockResolvedValue({ sessionId, events: compactionEvents }) })}
+        sessionId={sessionId}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText("compaction/applied")).toBeInTheDocument();
+    expect(screen.getByText("anchorSeq: 2 · summary of earlier turns")).toBeInTheDocument();
+    expect(screen.getByText("5 events")).toBeInTheDocument();
   });
 
   it("filters events by type via the search box", async () => {
@@ -96,8 +172,17 @@ describe("TurnContextDialog", () => {
       systemPrompt: "p",
       messages: [],
       tools: [],
+      compaction: {
+        seq: 6,
+        anchorSeq: 4,
+        digestSource: "llm",
+        excludedCount: 0,
+        digestLength: 14,
+        appliedAtMs: 1700000000005,
+      },
+      compactionCount: 1,
     });
-    const createObjectURL = vi.fn(() => "blob:mock");
+    const createObjectURL = vi.fn((_: Blob) => "blob:mock");
     const revokeObjectURL = vi.fn();
     Object.defineProperty(URL, "createObjectURL", { value: createObjectURL, configurable: true, writable: true });
     Object.defineProperty(URL, "revokeObjectURL", { value: revokeObjectURL, configurable: true, writable: true });
@@ -116,6 +201,9 @@ describe("TurnContextDialog", () => {
     await vi.waitFor(() => expect(clickSpy).toHaveBeenCalled());
     expect(getTurnContext).toHaveBeenCalledWith(sessionId);
     expect(createObjectURL).toHaveBeenCalled();
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    await expect(blob.text()).resolves.toContain('"compactionCount": 1');
+    await expect(blob.text()).resolves.toContain('"anchorSeq": 4');
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock");
   });
 
