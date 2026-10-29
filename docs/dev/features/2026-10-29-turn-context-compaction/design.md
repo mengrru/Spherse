@@ -1,7 +1,7 @@
 # Turn Context 暴露 compaction 事件信息设计
 
 - 日期：2026-10-29
-- 状态：实现中（A 阶段核实测试先行，快照缺口测试红灯）
+- 状态：已实施
 - 来源：issue #159 派单（Task d857b6dd）
 
 ## 背景与目标
@@ -69,6 +69,17 @@
 - contracts `api-contracts.test.ts`：正向（compaction null / meta 各一）+ 负向（缺 compactionCount、compaction 类型错、digestSource 非法值）
 - server `debug-routes.test.ts`：events 端点透传 compaction 事件；turn-context 端点新形状 200、缺字段 parse 失败 500（现有 events/400 用例不动，getTurnContext mock 随新用例同步为新形状）
 - app：`event-log-display.test.ts`（preview/badge/状态派生：null、有值、两次取最近+count、畸形 data 防御）；`TurnContextDialog.test.tsx`（状态行 null/有值渲染、两条压缩事件 → count=2 取最近、compaction 事件行渲染；download 用例 mock 换新形状并断言 blob 内容含 `compaction`/`compactionCount`）
+- server `debug-turn-context-contract.test.ts`：真实 `createProject` runtime 走 `/debug/sessions/:id/turn-context` 的 unmocked 契约测试（未压缩 → null/0；两条压缩事件 → count=2 取最近）
+
+## Code review 处理
+
+| # | 级别 | 问题 | 处理 |
+|---|---|---|---|
+| 1 | medium | core→server turn-context 接缝缺不 mock 被测方法的契约测试（真实 core `getTurnContext` 输出从未流经 `parseContract`） | 已修：新增 `debug-turn-context-contract.test.ts`，真实 SessionManager + HTTP 注入，覆盖未压缩与多条取最近 |
+| 2 | minor | `project-structure.md` 未收录 `compaction-snapshot.ts` | doc-sync 阶段同步 |
+| 3 | minor | `architecture/desktop.md` debug 工具节未提压缩状态行 | doc-sync 阶段同步 |
+| 4 | minor | core/UI 双实现漂移防线依赖测试约定 | 已知风险，design §风险已记录，无需动作 |
+| 5 | minor | en 文案 `"{count} in total"` 略生硬 | 保留：count=1 时复数形式（"1 compactions"）更差，debug 行上下文内 "in total" 指代明确 |
 
 ## 风险
 
