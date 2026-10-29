@@ -84,6 +84,21 @@ async function compactLive(
   }
 }
 
+function seedTurnPairs(runner: AgentRunner, count: number, label: string): void {
+  const seeded: Array<{ type: string; data: unknown }> = [];
+  for (let i = 0; i < count; i++) {
+    seeded.push({
+      type: "user/message",
+      data: { message: { role: "user", content: `${label} turn ${i} with some text`, timestamp: Date.now() + i } },
+    });
+    seeded.push({
+      type: "assistant/message",
+      data: { message: { role: "assistant", content: [{ type: "text", text: `${label} reply ${i} with some text` }], stopReason: "stop", timestamp: Date.now() + i } },
+    });
+  }
+  seedEvents(runner, seeded);
+}
+
 describe("AgentRunner context engineering", () => {
   let tmpDir: string;
   let runtime: RuntimeInternals & Awaited<ReturnType<typeof createProject>>;
@@ -626,6 +641,79 @@ Agent with time perception.`,
     const restored = await AgentRunner.initForRestore(deps, agentId, sessionId);
     const restoredAgent = agentOf(restored);
     expect(restoredAgent.state.messages.length).toBeLessThan(50);
+  });
+
+  it("compaction/applied is persisted and surfaced through the debug event read path", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const agent = agentOf(runner);
+
+    seedTurnPairs(runner, 25, "debug");
+    agent.state.model.contextWindow = 10;
+    await compactLive(runner, deps, agentId, sessionId);
+
+    const applied = eventsOf(runner).filter((e: any) => e.type === "compaction/applied");
+    expect(applied).toHaveLength(1);
+    expect(applied[0].seq).toBeGreaterThanOrEqual(0);
+    expect(applied[0].time).toBeGreaterThan(0);
+    expect(applied[0].data).toMatchObject({
+      anchorSeq: expect.any(Number),
+      digestContent: expect.any(String),
+      excludedSeqs: expect.any(Array),
+      digestSource: expect.stringMatching(/^(llm|mechanical)$/),
+    });
+
+    const persisted = agentStore.sessions
+      .readEvents(sessionId)
+      .filter((e: any) => e.type === "compaction/applied");
+    expect(persisted).toHaveLength(1);
+
+    const debugRead = (runtime as any).sessionRuntime
+      .readSessionEventsAfter(agentId, sessionId, -1, Number.MAX_SAFE_INTEGER)
+      .filter((e: any) => e.type === "compaction/applied");
+    expect(debugRead).toHaveLength(1);
+    expect(debugRead[0]).toEqual(applied[0]);
+  });
+
+  it("getTurnContext exposes the latest compaction metadata and count", async () => {
+    const agentStore = getAgentStore(runtime, agentId);
+    const sessionId = agentStore.sessions.createSession();
+    const runner = await AgentRunner.init(deps, agentId, sessionId);
+    const agent = agentOf(runner);
+    agent.state.model.contextWindow = 10;
+
+    const before = runner.getTurnContext();
+    expect(before.compaction).toBeNull();
+    expect(before.compactionCount).toBe(0);
+
+    seedTurnPairs(runner, 25, "first");
+    await compactLive(runner, deps, agentId, sessionId);
+
+    const appliedOnce = eventsOf(runner).filter((e: any) => e.type === "compaction/applied");
+    expect(appliedOnce).toHaveLength(1);
+    const firstSnapshot = runner.getTurnContext();
+    expect(firstSnapshot.compaction).toEqual({
+      seq: appliedOnce[0].seq,
+      anchorSeq: appliedOnce[0].data.anchorSeq,
+      digestSource: appliedOnce[0].data.digestSource ?? null,
+      excludedCount: appliedOnce[0].data.excludedSeqs.length,
+      digestLength: appliedOnce[0].data.digestContent.length,
+      appliedAtMs: appliedOnce[0].time,
+    });
+    expect(firstSnapshot.compaction).not.toHaveProperty("digestContent");
+    expect(firstSnapshot.compactionCount).toBe(1);
+
+    seedTurnPairs(runner, 25, "second");
+    await compactLive(runner, deps, agentId, sessionId);
+
+    const appliedTwice = eventsOf(runner).filter((e: any) => e.type === "compaction/applied");
+    expect(appliedTwice).toHaveLength(2);
+    const secondSnapshot = runner.getTurnContext();
+    expect(secondSnapshot.compactionCount).toBe(2);
+    expect(secondSnapshot.compaction?.seq).toBe(appliedTwice[1].seq);
+    expect(secondSnapshot.compaction?.anchorSeq).toBe(appliedTwice[1].data.anchorSeq);
+    expect(secondSnapshot.compaction?.appliedAtMs).toBe(appliedTwice[1].time);
   });
 
   it("applyReload rebuilds system prompt and tools from fresh profile", async () => {

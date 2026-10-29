@@ -14,6 +14,7 @@ import {
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { EventLogRow } from "./EventLogRow";
+import { compactionStatusFromEvents } from "./event-log-display";
 
 interface TurnContextDialogProps {
   projectId: string;
@@ -76,6 +77,8 @@ export function TurnContextDialog({ projectId, client, sessionId, onClose }: Tur
     return events.filter((event) => event.type.toLowerCase().includes(q));
   }, [events, query]);
 
+  const compactionStatus = useMemo(() => compactionStatusFromEvents(events ?? []), [events]);
+
   const handleDownload = async () => {
     if (!client) return;
     setDownloading(true);
@@ -107,6 +110,19 @@ export function TurnContextDialog({ projectId, client, sessionId, onClose }: Tur
             {t("debug.downloadTurnContext")}
           </Button>
         </DialogHeader>
+        {events !== null && (
+          <div className="min-w-0 break-words text-xs text-muted-foreground">
+            {compactionStatus.compaction
+              ? `${t("debug.compactionLast", {
+                  seq: compactionStatus.compaction.seq,
+                  anchorSeq: compactionStatus.compaction.anchorSeq,
+                  source: compactionStatus.compaction.digestSource ?? "—",
+                  excludedCount: compactionStatus.compaction.excludedCount,
+                  digestLength: compactionStatus.compaction.digestLength,
+                })} · ${t("debug.compactionTotal", { count: compactionStatus.compactionCount })}`
+              : t("debug.compactionNone")}
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <div className="relative min-w-0 flex-1">
             <SearchIcon className="pointer-events-none absolute start-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
