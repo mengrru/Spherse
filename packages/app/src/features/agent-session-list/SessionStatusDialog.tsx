@@ -1,4 +1,4 @@
-import { useEffect, useReducer } from "react";
+import { useEffect, useReducer, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { useI18n } from "@spherse/i18n/react";
 import { useProjectCtx } from "../../context/project-context";
@@ -14,12 +14,34 @@ import {
 
 type StatusState =
   | { mode: "loading" }
-  | { mode: "loaded"; currentTokens: number; contextWindowLimit: number | null }
+  | {
+      mode: "loaded";
+      currentTokens: number;
+      contextWindowLimit: number | null;
+      cacheHitRate: number | null;
+      turnInputTokens: number;
+      turnCacheReadTokens: number;
+      turnCacheWriteTokens: number;
+      turnOutputTokens: number;
+      userMessageCount: number;
+      messageCount: number;
+    }
   | { mode: "error" };
 
 type StatusAction =
   | { type: "loading" }
-  | { type: "loaded"; currentTokens: number; contextWindowLimit: number | null }
+  | {
+      type: "loaded";
+      currentTokens: number;
+      contextWindowLimit: number | null;
+      cacheHitRate: number | null;
+      turnInputTokens: number;
+      turnCacheReadTokens: number;
+      turnCacheWriteTokens: number;
+      turnOutputTokens: number;
+      userMessageCount: number;
+      messageCount: number;
+    }
   | { type: "error" };
 
 function statusReducer(_state: StatusState, action: StatusAction): StatusState {
@@ -31,6 +53,13 @@ function statusReducer(_state: StatusState, action: StatusAction): StatusState {
         mode: "loaded",
         currentTokens: action.currentTokens,
         contextWindowLimit: action.contextWindowLimit,
+        cacheHitRate: action.cacheHitRate,
+        turnInputTokens: action.turnInputTokens,
+        turnCacheReadTokens: action.turnCacheReadTokens,
+        turnCacheWriteTokens: action.turnCacheWriteTokens,
+        turnOutputTokens: action.turnOutputTokens,
+        userMessageCount: action.userMessageCount,
+        messageCount: action.messageCount,
       };
     case "error":
       return { mode: "error" };
@@ -45,6 +74,15 @@ interface SessionStatusDialogProps {
   session: SessionInfo;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+function StatusRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {children}
+    </div>
+  );
 }
 
 export function SessionStatusDialog({ session, open, onOpenChange }: SessionStatusDialogProps) {
@@ -65,6 +103,13 @@ export function SessionStatusDialog({ session, open, onOpenChange }: SessionStat
           type: "loaded",
           currentTokens: result.currentTokens,
           contextWindowLimit: result.contextWindowLimit,
+          cacheHitRate: result.cacheHitRate,
+          turnInputTokens: result.turnInputTokens,
+          turnCacheReadTokens: result.turnCacheReadTokens,
+          turnCacheWriteTokens: result.turnCacheWriteTokens,
+          turnOutputTokens: result.turnOutputTokens,
+          userMessageCount: result.userMessageCount,
+          messageCount: result.messageCount,
         });
       })
       .catch(() => {
@@ -101,8 +146,7 @@ export function SessionStatusDialog({ session, open, onOpenChange }: SessionStat
 
         {state.mode === "loaded" && (
           <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">{t("session.statusContextTokens")}</span>
+            <StatusRow label={t("session.statusContextTokens")}>
               <span className="text-sm font-medium tabular-nums">
                 {formatTokens(state.currentTokens)}
                 {limit !== null && (
@@ -112,15 +156,14 @@ export function SessionStatusDialog({ session, open, onOpenChange }: SessionStat
                   </span>
                 )}
               </span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-muted-foreground">{t("session.statusContextLimit")}</span>
+            </StatusRow>
+            <StatusRow label={t("session.statusContextLimit")}>
               <span className="text-sm font-medium tabular-nums">
                 {limit !== null ? formatTokens(limit) : t("session.statusUnknown")}
               </span>
-            </div>
+            </StatusRow>
             {ratio !== null && (
-              <div className="mt-1 flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                   <div
                     className="h-full rounded-full bg-primary transition-all"
@@ -130,6 +173,51 @@ export function SessionStatusDialog({ session, open, onOpenChange }: SessionStat
                 <span className="text-xs tabular-nums text-muted-foreground">{ratio}%</span>
               </div>
             )}
+            <StatusRow label={t("session.statusTurnCacheHitRate")}>
+              <span className="text-sm font-medium tabular-nums">
+                {state.cacheHitRate !== null
+                  ? `${(state.cacheHitRate * 100).toFixed(1)}%`
+                  : t("session.statusUnknown")}
+              </span>
+              {state.cacheHitRate !== null && (
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {t("session.statusCacheHitRateDetail", {
+                    read: formatTokens(state.turnCacheReadTokens),
+                    total: formatTokens(state.turnCacheReadTokens + state.turnInputTokens),
+                  })}
+                </span>
+              )}
+            </StatusRow>
+            <StatusRow label={t("session.statusTurnTokens")}>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                <span className="text-sm tabular-nums">
+                  <span className="text-xs text-muted-foreground">{t("session.statusTurnInput")}</span>{" "}
+                  {formatTokens(state.turnInputTokens)}
+                </span>
+                <span className="text-sm tabular-nums">
+                  <span className="text-xs text-muted-foreground">{t("session.statusTurnOutput")}</span>{" "}
+                  {formatTokens(state.turnOutputTokens)}
+                </span>
+                <span className="text-sm tabular-nums">
+                  <span className="text-xs text-muted-foreground">{t("session.statusTurnCacheRead")}</span>{" "}
+                  {formatTokens(state.turnCacheReadTokens)}
+                </span>
+                <span className="text-sm tabular-nums">
+                  <span className="text-xs text-muted-foreground">{t("session.statusTurnCacheWrite")}</span>{" "}
+                  {formatTokens(state.turnCacheWriteTokens)}
+                </span>
+              </div>
+            </StatusRow>
+            <StatusRow label={t("session.statusUserMessages")}>
+              <span className="text-sm font-medium tabular-nums">
+                {formatTokens(state.userMessageCount)}
+              </span>
+            </StatusRow>
+            <StatusRow label={t("session.statusTotalMessages")}>
+              <span className="text-sm font-medium tabular-nums">
+                {formatTokens(state.messageCount)}
+              </span>
+            </StatusRow>
           </div>
         )}
       </DialogContent>

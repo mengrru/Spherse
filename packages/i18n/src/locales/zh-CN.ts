@@ -1148,6 +1148,24 @@ export const zhCN = {
   "session.statusLoadFailed": "状态加载失败",
   // 会话状态弹窗中上下文窗口上限无法解析（未配置模型等）时显示的占位符
   "session.statusUnknown": "未知",
+  // 会话状态弹窗中「本轮缓存命中率」字段的标签，仅统计当前轮次（最后一条用户消息起），非全会话累计
+  "session.statusTurnCacheHitRate": "本轮缓存命中率",
+  // 会话状态弹窗中缓存命中率的分母说明小字，{read} 为本轮缓存读取 token 数，{total} 为本轮缓存读取与输入 token 之和
+  "session.statusCacheHitRateDetail": "缓存读取 / (缓存读取 + 输入)：{read} / {total}",
+  // 会话状态弹窗中「本轮 Token 用量」区块的标签，展示当前轮次 input/output/cacheRead/cacheWrite 四项
+  "session.statusTurnTokens": "本轮 Token 用量",
+  // 会话状态弹窗中本轮 token 细分之「输入」的标签（非缓存命中的输入 token）
+  "session.statusTurnInput": "输入",
+  // 会话状态弹窗中本轮 token 细分之「输出」的标签
+  "session.statusTurnOutput": "输出",
+  // 会话状态弹窗中本轮 token 细分之「缓存读取」的标签
+  "session.statusTurnCacheRead": "缓存读取",
+  // 会话状态弹窗中本轮 token 细分之「缓存写入」的标签
+  "session.statusTurnCacheWrite": "缓存写入",
+  // 会话状态弹窗中「会话用户消息数」字段的标签，为整个会话的用户消息计数（不含压缩摘要）
+  "session.statusUserMessages": "会话用户消息数",
+  // 会话状态弹窗中「会话总消息数」字段的标签，为整个会话的全部消息计数
+  "session.statusTotalMessages": "会话总消息数",
 
   // --- Settings ---
   // 设置中语言选择器的标签

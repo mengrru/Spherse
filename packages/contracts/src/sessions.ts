@@ -61,6 +61,13 @@ export const schemas = {
   sessionStatus: Type.Object({
     currentTokens: Type.Number(),
     contextWindowLimit: Type.Union([Type.Number(), Type.Null()]),
+    cacheHitRate: Type.Union([Type.Number(), Type.Null()]),
+    turnInputTokens: Type.Number(),
+    turnCacheReadTokens: Type.Number(),
+    turnCacheWriteTokens: Type.Number(),
+    turnOutputTokens: Type.Number(),
+    userMessageCount: Type.Number(),
+    messageCount: Type.Number(),
   }),
   sessionSearchResponse: Type.Object({
     results: Type.Array(sessionSearchHit),
