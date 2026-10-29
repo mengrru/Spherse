@@ -7,7 +7,7 @@ import type { SessionControlEvent } from "./types.js";
 import { SessionControlBus } from "./control-bus.js";
 import { createApprovalGate } from "./approval-gate.js";
 import { createAskGate } from "./ask-gate.js";
-import type { SessionStatus } from "./status.js";
+import { computeTurnStats, type SessionStatus } from "./status.js";
 import type { RuntimeDeps } from "./runtime.js";
 import { logEventMiddleware } from "./event-middlewares.js";
 import {
@@ -370,13 +370,12 @@ export class AgentRunner {
   }
 
   getStatus(): SessionStatus {
+    const messages = withoutLeadingSystem(this.agent.state.messages);
     return {
-      currentTokens: readCurrentTokens(
-        withoutLeadingSystem(this.agent.state.messages),
-        this.agent.state.systemPrompt,
-      ),
+      currentTokens: readCurrentTokens(messages, this.agent.state.systemPrompt),
       contextWindowLimit:
         (this.agent.state.model as { contextWindow?: number } | undefined)?.contextWindow ?? null,
+      ...computeTurnStats(messages),
     };
   }
 

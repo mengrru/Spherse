@@ -6,7 +6,11 @@ import {
   resolveContextWindow,
   extractLastUsageTotalTokens,
   computeSessionStatus,
+  computeTurnStats,
 } from "../../session/status.js";
+import { deriveMessages } from "../../session/fold.js";
+import { wrapDigestContent } from "../../context/compaction.js";
+import type { SessionEvent } from "../../session/events.js";
 import type { AgentProfile } from "../../types.js";
 
 const baseProfile: AgentProfile = {
@@ -107,7 +111,17 @@ describe("computeSessionStatus", () => {
       { ...baseProfile, model: "p/m" },
       resolveModelByIdMock,
     );
-    expect(status).toEqual({ currentTokens: 4242, contextWindowLimit: 1000 });
+    expect(status).toEqual({
+      currentTokens: 4242,
+      contextWindowLimit: 1000,
+      cacheHitRate: null,
+      turnInputTokens: null,
+      turnCacheReadTokens: null,
+      turnCacheWriteTokens: null,
+      turnOutputTokens: null,
+      userMessageCount: 0,
+      messageCount: 1,
+    });
   });
 
   it("falls back to token estimate when no usage is present", () => {
@@ -126,5 +140,194 @@ describe("computeSessionStatus", () => {
     const status = computeSessionStatus([], baseProfile, resolveModelByIdMock, undefined);
     expect(status.contextWindowLimit).toBeNull();
     expect(status.currentTokens).toBe(0);
+  });
+});
+
+function usage(partial: Partial<{ input: number; output: number; cacheRead: number; cacheWrite: number }>) {
+  const input = partial.input ?? 0;
+  const output = partial.output ?? 0;
+  const cacheRead = partial.cacheRead ?? 0;
+  const cacheWrite = partial.cacheWrite ?? 0;
+  return { input, output, cacheRead, cacheWrite, totalTokens: input + output + cacheRead + cacheWrite };
+}
+
+describe("computeTurnStats", () => {
+  it("sums usage from the last turn only", () => {
+    const messages = [
+      { role: "user", content: "first" },
+      { role: "assistant", usage: usage({ input: 900, cacheRead: 100, cacheWrite: 50, output: 20 }) },
+      { role: "user", content: "second" },
+      { role: "assistant", usage: usage({ input: 100, cacheRead: 300, output: 40 }) },
+      { role: "toolResult", toolCallId: "t1", content: [] },
+      { role: "assistant", usage: usage({ input: 50, cacheRead: 700, cacheWrite: 10, output: 5 }) },
+    ];
+    const stats = computeTurnStats(messages);
+    expect(stats.turnInputTokens).toBe(150);
+    expect(stats.turnCacheReadTokens).toBe(1000);
+    expect(stats.turnCacheWriteTokens).toBe(10);
+    expect(stats.turnOutputTokens).toBe(45);
+    expect(stats.cacheHitRate).toBeCloseTo(1000 / 1150);
+    expect(stats.userMessageCount).toBe(2);
+    expect(stats.messageCount).toBe(6);
+  });
+
+  it("computes 0% when nothing was read from cache", () => {
+    const messages = [
+      { role: "user", content: "hi" },
+      { role: "assistant", usage: usage({ input: 200, output: 10 }) },
+    ];
+    expect(computeTurnStats(messages).cacheHitRate).toBe(0);
+  });
+
+  it("computes 100% when all reads hit the cache", () => {
+    const messages = [
+      { role: "user", content: "hi" },
+      { role: "assistant", usage: usage({ cacheRead: 400, output: 10 }) },
+    ];
+    expect(computeTurnStats(messages).cacheHitRate).toBe(1);
+  });
+
+  it("returns null stats when no assistant message carries a usage breakdown", () => {
+    const messages = [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: [{ type: "text", text: "legacy reply" }] },
+      { role: "user", content: "again" },
+      { role: "assistant", usage: { totalTokens: 4242 } },
+    ];
+    const stats = computeTurnStats(messages);
+    expect(stats.cacheHitRate).toBeNull();
+    expect(stats.turnInputTokens).toBeNull();
+    expect(stats.turnCacheReadTokens).toBeNull();
+    expect(stats.turnCacheWriteTokens).toBeNull();
+    expect(stats.turnOutputTokens).toBeNull();
+  });
+
+  it("ignores incomplete usage entries and sums complete ones in the same turn", () => {
+    const messages = [
+      { role: "user", content: "hi" },
+      { role: "assistant", usage: { totalTokens: 4242 } },
+      { role: "assistant", usage: usage({ input: 100, cacheRead: 300, output: 20 }) },
+    ];
+    const stats = computeTurnStats(messages);
+    expect(stats.cacheHitRate).toBeCloseTo(300 / 400);
+    expect(stats.turnInputTokens).toBe(100);
+    expect(stats.turnCacheReadTokens).toBe(300);
+    expect(stats.turnOutputTokens).toBe(20);
+  });
+
+  it("returns null hit rate but measured output when cacheRead and input are both zero", () => {
+    const messages = [
+      { role: "user", content: "hi" },
+      { role: "assistant", usage: usage({ output: 12 }) },
+    ];
+    const stats = computeTurnStats(messages);
+    expect(stats.cacheHitRate).toBeNull();
+    expect(stats.turnInputTokens).toBe(0);
+    expect(stats.turnOutputTokens).toBe(12);
+  });
+
+  it("degrades to the whole transcript when no user message exists", () => {
+    const messages = [
+      { role: "assistant", usage: usage({ input: 60, cacheRead: 140 }) },
+      { role: "toolResult", toolCallId: "t1", content: [] },
+      { role: "assistant", usage: usage({ input: 40, cacheRead: 60 }) },
+    ];
+    const stats = computeTurnStats(messages);
+    expect(stats.turnInputTokens).toBe(100);
+    expect(stats.turnCacheReadTokens).toBe(200);
+    expect(stats.cacheHitRate).toBeCloseTo(200 / 300);
+    expect(stats.userMessageCount).toBe(0);
+    expect(stats.messageCount).toBe(3);
+  });
+
+  it("does not count compaction digests as user messages but keeps them in totals", () => {
+    const messages = [
+      { role: "user", content: wrapDigestContent("summary") },
+      { role: "assistant", usage: usage({ input: 10, cacheRead: 90 }) },
+    ];
+    const stats = computeTurnStats(messages);
+    expect(stats.userMessageCount).toBe(0);
+    expect(stats.messageCount).toBe(2);
+    expect(stats.turnCacheReadTokens).toBe(90);
+  });
+
+  it("treats a trailing digest as the turn boundary", () => {
+    const digestMessage = { role: "user", content: wrapDigestContent("summary") };
+    const messages = [
+      { role: "user", content: "old" },
+      { role: "assistant", usage: usage({ input: 500, cacheRead: 500 }) },
+      digestMessage,
+    ];
+    const stats = computeTurnStats(messages);
+    expect(stats.cacheHitRate).toBeNull();
+    expect(stats.turnInputTokens).toBeNull();
+  });
+});
+
+describe("computeTurnStats over derived event log", () => {
+  function ev(type: string, data: unknown, seq: number): SessionEvent {
+    return { type, seq, time: 0, data } as SessionEvent;
+  }
+
+  function userEvent(text: string, seq: number): SessionEvent {
+    return ev("user/message", { message: { role: "user", content: text } }, seq);
+  }
+
+  function assistantEvent(seq: number): SessionEvent {
+    return ev(
+      "assistant/message",
+      {
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "ok" }],
+          usage: usage({ input: 100, cacheRead: 300 }),
+        },
+      },
+      seq,
+    );
+  }
+
+  it("excludes retried assistant messages from stats", () => {
+    const events = [
+      userEvent("hi", 0),
+      assistantEvent(1),
+      ev("turn/retried", { abandonedSeqs: [1] }, 2),
+      assistantEvent(3),
+    ];
+    const stats = computeTurnStats(deriveMessages(events));
+    expect(stats.turnInputTokens).toBe(100);
+    expect(stats.turnCacheReadTokens).toBe(300);
+    expect(stats.messageCount).toBe(2);
+  });
+
+  it("excludes withdrawn turns from stats", () => {
+    const events = [
+      userEvent("first", 0),
+      assistantEvent(1),
+      userEvent("second", 2),
+      assistantEvent(3),
+      ev("turn/withdrawn", { seq: 2 }, 4),
+    ];
+    const stats = computeTurnStats(deriveMessages(events));
+    expect(stats.userMessageCount).toBe(1);
+    expect(stats.messageCount).toBe(2);
+    expect(stats.turnInputTokens).toBe(100);
+  });
+
+  it("resumes stats from a compaction digest replacement", () => {
+    const events = [
+      userEvent("first", 0),
+      assistantEvent(1),
+      ev(
+        "compaction/applied",
+        { anchorSeq: 1, digestContent: "summary", excludedSeqs: [] },
+        2,
+      ),
+    ];
+    const messages = deriveMessages(events);
+    const stats = computeTurnStats(messages);
+    expect(stats.userMessageCount).toBe(0);
+    expect(stats.messageCount).toBe(1);
+    expect(stats.cacheHitRate).toBeNull();
   });
 });

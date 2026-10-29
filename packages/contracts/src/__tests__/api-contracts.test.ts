@@ -204,17 +204,39 @@ describe("api contracts", () => {
   });
 
   it("validates session status response", () => {
-    expect(parseApiResponse(schemas.sessionStatus, { currentTokens: 512, contextWindowLimit: 32768 })).toEqual({
+    const fullStatus = {
       currentTokens: 512,
       contextWindowLimit: 32768,
-    });
-    expect(parseApiResponse(schemas.sessionStatus, { currentTokens: 0, contextWindowLimit: null })).toEqual({
-      currentTokens: 0,
-      contextWindowLimit: null,
-    });
+      cacheHitRate: 0.75,
+      turnInputTokens: 100,
+      turnCacheReadTokens: 300,
+      turnCacheWriteTokens: 50,
+      turnOutputTokens: 62,
+      userMessageCount: 4,
+      messageCount: 11,
+    };
+    expect(parseApiResponse(schemas.sessionStatus, fullStatus)).toEqual(fullStatus);
+    expect(
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, cacheHitRate: null }),
+    ).toEqual({ ...fullStatus, cacheHitRate: null });
+    expect(
+      parseApiResponse(schemas.sessionStatus, {
+        currentTokens: 0,
+        contextWindowLimit: null,
+      }),
+    ).toEqual({ currentTokens: 0, contextWindowLimit: null });
     expect(() => parseApiResponse(schemas.sessionStatus, { currentTokens: "x" })).toThrow(/Invalid payload/);
     expect(() =>
       parseApiResponse(schemas.sessionStatus, { currentTokens: 1, contextWindowLimit: "no" }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, cacheHitRate: "87%" }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, userMessageCount: "4" }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, messageCount: null }),
     ).toThrow(/Invalid payload/);
   });
 
