@@ -1367,12 +1367,6 @@ export const zhCN = {
   "debug.eventLogLoadFailed": "Failed to load event log",
   // Turn Context 弹窗：单条事件一键复制按钮的提示
   "debug.eventLogCopy": "Copy",
-  // Turn Context 弹窗：压缩状态行，会话从未发生过压缩时显示
-  "debug.compactionNone": "未压缩",
-  // Turn Context 弹窗：压缩状态行，{seq} 为压缩事件序号，{anchorSeq} 为压缩锚点事件序号，{source} 为摘要来源（llm/mechanical），{excludedCount} 为被压缩排除的事件条数，{digestLength} 为摘要文本长度（字符数）
-  "debug.compactionLast": "最近一次压缩：seq {seq} · 锚点 {anchorSeq} · 来源 {source} · 排除 {excludedCount} 条 · 摘要 {digestLength} 字符",
-  // Turn Context 弹窗：压缩状态行结尾的会话累计压缩次数，{count} 为累计次数
-  "debug.compactionTotal": "累计 {count} 次",
 
   // 欢迎页文件缺失时的错误提示，{path} 为文件路径
   "welcome-page.fileMissing": "欢迎页文件不存在：{path}",
