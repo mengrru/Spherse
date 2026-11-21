@@ -2,10 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { schemas } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
-import { getAppVersion } from "../server-info.js";
-
-const SERVER_VERSION = "0.1.0";
-const API_VERSION = "1";
+import { getAppVersion, SERVER_VERSION, API_VERSION } from "../server-info.js";
 
 export interface ConnectionRouteOptions {
   authRequired: boolean;
