@@ -21,6 +21,7 @@ import { setAppVersion } from "./server-info.js";
 import { ChatSessionHub } from "./chat/index.js";
 import { handleChatWebSocket } from "./chat/index.js";
 import { handleBusWebSocket } from "./bus/index.js";
+import { handleRpcWebSocket } from "./rpc/index.js";
 import { ModelSettingsStore, applyModelSettingsToEnv } from "./model-settings.js";
 import {
   closeMultiProjectServer,
@@ -137,6 +138,7 @@ export async function createMultiProjectServer(
   });
   handleChatWebSocket(fastify, registry, chatHub);
   handleBusWebSocket(fastify, registry);
+  handleRpcWebSocket(fastify, registry);
 
   fastify.addHook("onResponse", async (req, reply) => {
     const urlPath = req.url.split("?", 1)[0];

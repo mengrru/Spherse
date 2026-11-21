@@ -14,6 +14,7 @@ import * as promptMarketplace from "./prompt-marketplace.js";
 import * as debug from "./debug.js";
 import * as bus from "./bus.js";
 import * as websocket from "./websocket.js";
+import * as rpc from "./rpc.js";
 import * as connection from "./connection.js";
 
 export const schemas = {
@@ -33,6 +34,7 @@ export const schemas = {
   ...debug.schemas,
   ...bus.schemas,
   ...websocket.schemas,
+  ...rpc.schemas,
   ...connection.schemas,
 } as const;
 
@@ -152,6 +154,28 @@ export {
   CHAT_CLOSE_CODES,
 } from "./websocket.js";
 export type { ChatClientMessage, ChatServerEvent, ChatReplayEvent } from "./websocket.js";
+export {
+  RPC_PROTOCOL_VERSION,
+  RpcErrorCode,
+  parseRpcClientFrame,
+  parseRpcServerFrame,
+  isRpcPongFrame,
+  chatScope,
+  parseChatScope,
+} from "./rpc.js";
+export type {
+  RpcErrorObject,
+  RpcClientFrame,
+  RpcServerFrame,
+  RpcCallFrame,
+  RpcSubFrame,
+  RpcUnsubFrame,
+  RpcPingFrame,
+  RpcResultFrame,
+  RpcEventFrame,
+  RpcSnapshotFrame,
+  RpcPongFrame,
+} from "./rpc.js";
 
 export {
   parseBusServerMessage,

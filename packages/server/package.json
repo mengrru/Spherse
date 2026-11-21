@@ -21,6 +21,7 @@
   "dependencies": {
     "@fastify/multipart": "^9.4.0",
     "@fastify/websocket": "^11.0.0",
+    "@sinclair/typebox": "^0.34.0",
     "@spherse/contracts": "*",
     "@spherse/core": "*",
     "@spherse/sdk": "*",
