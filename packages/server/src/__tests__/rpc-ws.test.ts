@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ProjectContextCompat } from "../registry.js";
+import type { ChatSessionAttachment } from "../chat/chat-channel.js";
+import type { ChatSessionHub } from "../chat/chat-session-hub.js";
 import { RpcConnectionHandler } from "../rpc/ws-rpc.js";
 import {
   RpcAppError,
@@ -28,6 +30,43 @@ function createSocket(): SocketMock {
   return { sent, send: (data: string) => sent.push(data) };
 }
 
+interface HubMock {
+  hub: ChatSessionHub;
+  attach: ReturnType<typeof vi.fn>;
+  emit: (ev: unknown) => void;
+  attachments: { close: ReturnType<typeof vi.fn>; ready: Promise<void> }[];
+}
+
+function createHub(): HubMock {
+  const attachments: HubMock["attachments"] = [];
+  let currentSubscriber: ((ev: unknown) => void) | undefined;
+  const attach = vi.fn(
+    (
+      _runtime: unknown,
+      _agentId: string,
+      _sessionId: string,
+      subscriber: (ev: unknown) => void,
+      options: { since?: number } | undefined,
+    ) => {
+      currentSubscriber = subscriber;
+      const attachment = {
+        close: vi.fn(),
+        ready: Promise.resolve(),
+      };
+      attachments.push(attachment);
+      void options;
+      return attachment as unknown as ChatSessionAttachment;
+    },
+  );
+  const hub = { attach } as unknown as ChatSessionHub;
+  return {
+    hub,
+    attach,
+    attachments,
+    emit: (ev: unknown) => currentSubscriber?.(ev),
+  };
+}
+
 function createProjectCtx(overrides: Partial<ProjectContextCompat> = {}): ProjectContextCompat {
   return {
     runtime: { deleteSession: vi.fn() },
@@ -53,21 +92,23 @@ function createProjectCtx(overrides: Partial<ProjectContextCompat> = {}): Projec
 
 function createHandler(ctxOverrides: Partial<ProjectContextCompat> = {}) {
   const known = createProjectCtx(ctxOverrides);
+  const hubMock = createHub();
+  const ctx = {
+    resolveProject(projectId: string) {
+      if (projectId === "missing") throw new RpcAppError(100, "Unknown project");
+      return known;
+    },
+  };
   const dispatcher = new RpcDispatcher({
     methods: new Map<string, RpcMethodEntry>(Object.entries(sessionMethods)),
-    ctx: {
-      resolveProject(projectId: string) {
-        if (projectId === "missing") throw new RpcAppError(100, "Unknown project");
-        return known;
-      },
-    },
+    ctx,
     logger,
   });
   const socket = createSocket();
-  const handler = new RpcConnectionHandler(socket, dispatcher, logger);
+  const handler = new RpcConnectionHandler(socket, dispatcher, hubMock.hub, ctx, logger);
   const sent = () => socket.sent.map((raw) => JSON.parse(raw));
   const receive = (payload: unknown) => handler.onMessage(Buffer.from(JSON.stringify(payload)));
-  return { handler, socket, sent, receive, known };
+  return { handler, socket, sent, receive, known, hubMock };
 }
 
 async function flush(): Promise<void> {
@@ -173,15 +214,86 @@ describe("rpc connection handler", () => {
     });
   });
 
-  it("rejects sub frames until event scopes are supported", () => {
+  it("subscribes chat scopes through the hub with an empty snapshot ack", () => {
+    const { receive, sent, hubMock } = createHandler();
+    receive({ type: "sub", id: 7, scope: "chat:p1:a1:s1", since: 5 });
+    expect(hubMock.attach).toHaveBeenCalledWith(
+      expect.objectContaining({}),
+      "a1",
+      "s1",
+      expect.any(Function),
+      { since: 5 },
+    );
+    const frames = sent();
+    expect(frames[0]).toEqual({ type: "snapshot", id: 7, events: [] });
+  });
+
+  it("forwards hub events as rpc event frames with payload passthrough", () => {
+    const { receive, sent, hubMock } = createHandler();
+    receive({ type: "sub", id: 1, scope: "chat:p1:a1:s1" });
+    hubMock.emit({ type: "session_ready", lastSeq: 9, replay: true });
+    hubMock.emit({ type: "assistant_delta", seq: 10, time: 123, data: { text: "hi" } });
+    const frames = sent().slice(1);
+    expect(frames[0]).toMatchObject({
+      type: "event",
+      scope: "chat:p1:a1:s1",
+      event: "session_ready",
+      payload: { type: "session_ready", lastSeq: 9, replay: true },
+    });
+    expect(frames[1]).toMatchObject({
+      type: "event",
+      event: "assistant_delta",
+      ts: 123,
+      payload: { seq: 10, data: { text: "hi" } },
+    });
+  });
+
+  it("rejects sub frames for non-chat scopes", () => {
     const { receive, sent } = createHandler();
-    receive({ type: "sub", id: 7, scope: "chat:p:a:s" });
+    receive({ type: "sub", id: 7, scope: "trigger:p1" });
     expect(sent()[0]).toMatchObject({
       type: "result",
       id: 7,
       ok: false,
       error: { code: -32000 },
     });
+  });
+
+  it("rejects chat sub for unknown project", () => {
+    const { receive, sent } = createHandler();
+    receive({ type: "sub", id: 8, scope: "chat:missing:a:s" });
+    expect(sent()[0]).toMatchObject({
+      type: "result",
+      id: 8,
+      ok: false,
+      error: { code: 100, message: "Unknown project" },
+    });
+  });
+
+  it("closing a subscription detaches from the hub", () => {
+    const { receive, sent, hubMock } = createHandler();
+    receive({ type: "sub", id: 1, scope: "chat:p1:a1:s1" });
+    receive({ type: "unsub", id: 2, scope: "chat:p1:a1:s1" });
+    expect(hubMock.attachments[0].close).toHaveBeenCalledTimes(1);
+    expect(sent()[1]).toMatchObject({ type: "result", id: 2, ok: true });
+  });
+
+  it("duplicate sub replaces the previous attachment", () => {
+    const { receive, hubMock } = createHandler();
+    receive({ type: "sub", id: 1, scope: "chat:p1:a1:s1" });
+    receive({ type: "sub", id: 2, scope: "chat:p1:a1:s1" });
+    expect(hubMock.attachments).toHaveLength(2);
+    expect(hubMock.attachments[0].close).toHaveBeenCalledTimes(1);
+    expect(hubMock.attachments[1].close).not.toHaveBeenCalled();
+  });
+
+  it("connection close detaches all subscriptions", () => {
+    const { handler, receive, hubMock } = createHandler();
+    receive({ type: "sub", id: 1, scope: "chat:p1:a1:s1" });
+    receive({ type: "sub", id: 2, scope: "chat:p1:a2:s2" });
+    handler.onClose();
+    expect(hubMock.attachments[0].close).toHaveBeenCalledTimes(1);
+    expect(hubMock.attachments[1].close).toHaveBeenCalledTimes(1);
   });
 
   it("ignores non-json and invalid frames", () => {
