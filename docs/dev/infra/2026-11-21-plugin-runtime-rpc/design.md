@@ -81,11 +81,11 @@ Fastify 反代（`server/src/routes/preview.ts`）承担四职责：URL 命名�
 
 | 决策点 | 结论 |
 |---|---|
-| 组合运行时 | cordis。理由：成熟度、插件生态经验、console（client/server 共享插件模型）生产先例；chord 0.85.x 版本锁死 pi 发版列车且 remote 边界半成品（symmetric RPC peers 仍为 planned）。代价：需自写 pi↔cordis bridge，桥面保持粗粒度控制适配成本 |
+| 组合运行时 | cordis。理由：console（client/server 共享插件模型）生产先例、组合模型与目标同构；chord 0.85.x 版本锁死 pi 发版列车且 remote 边界半成品（symmetric RPC peers 仍为 planned）。注意 cordis 本体线分裂：3.x 生产验证但 2024-09 后冻结，4.x 活跃但 API 不稳定（见风险表）；RPC 面已与 cordis 解耦（O4 已决自研），选线影响面收敛在组合层内部。代价：需自写 pi↔cordis bridge，桥面保持粗粒度控制适配成本 |
 | bridge 粒度 | service = core 聚合边界，权威两层清单见 D2（Project / Session / Trigger + 平台插件 Store / Auth / Preview / Bus）。pi 内部类型（Agent/AgentEvent/Message）只在 bridge 内部出现，对外经 contracts 类型投影 |
 | RPC 形态 | 方法调用 + 事件订阅两类原语；schema 从 contracts 包 TypeBox 派生，方法按未来插件权限边界分组（见 D9）。事件订阅协议：`subscribe(scope, since) → replay + live push`，seq 单调、断线重连以 since 续传（对齐现 chat WS `?since=` 与 event-log seq 语义） |
 | REST 去留 | 一次性切换后删除。Fastify 保留职责收敛为：RPC endpoint（WS/HTTP）、auth/host-guard、资源面反代（preview/静态/上传下载）。迁移量实测口径见「各层实现 / packages/server」：routes ~2.0k 行删除、非测试源码 ~4.5k 行上移、~8.4k 行契约测试重写 |
-| 传输实现 | 桌面：Fastify WS 上的 RPC 帧（自定义 envelope 或评估 cordis 生态现成 RPC 包，P0 spike 定）。浏览器：Worker postMessage transport。两个 transport 的断线/重连/背压/错误语义必须一致，前端只写一套容错 |
+| 传输实现 | 桌面：Fastify WS 上的自研 RPC envelope 帧（O4 已决，见 `docs/dev/investigation/2026-11-22-rpc-envelope-selection/`）。浏览器：Worker postMessage transport。两个 transport 的断线/重连/背压/错误语义必须一致，前端只写一套容错 |
 | store 插件 | 定义统一 Store service 接口（sessions/memory/JSON 配置三类）。desktop 插件 = better-sqlite3 + fs；browser 插件 = IndexedDB（sessions/memory）+ OPFS（项目文件）。数据格式允许分叉：无已发布 browser 版数据，不为兼容写迁移（仓库红线）。接口一次定稳，是 core 最深接缝 |
 | AuthProvider | key 存储与注入抽象为 service：desktop = electron-store JSON + 显式注入 catalog；browser = 浏览器存储 + `createProvider` 显式 ApiKeyAuth 重建 17 个内置 provider + 图片/web-search 的 env 直读改注入源。key 永不进插件可达面（只暴露 call 面） |
 | PreviewProvider（资源面） | `getPreviewUrl` 两实现：desktop = Fastify 反代（现状）；browser = SW 虚拟路由 + 客户端 SDK 注入（`injectHeadScript` 已为 SDK 导出的纯函数）+ 手写 Range/ETag/content-type/路径逃逸防护。桌面 app:// 协议改造与浏览器 SW 路由解耦，可并行 |
@@ -96,7 +96,7 @@ Fastify 反代（`server/src/routes/preview.ts`）承担四职责：URL 命名�
 
 ## 契约
 
-- **RPC schema**：从 `@spherse/contracts` 既有 TypeBox schema 派生方法参数/返回校验；contracts 包职责从「wire 协议包」演进为「RPC 词表 + 进程内校验」，导出面规则不变。**schema 词表锁定 `@sinclair/typebox` 0.34**；pi 侧已迁移到改名包 `typebox` 1.x（两包同源不兼容主线），交互仅限 bridge 内手工类型投影；O4 评估 cordis 生态 RPC 包时，其 schema 体系与 0.34 的兼容性列为硬评估项
+- **RPC schema**：从 `@spherse/contracts` 既有 TypeBox schema 派生方法参数/返回校验；contracts 包职责从「wire 协议包」演进为「RPC 词表 + 进程内校验」，导出面规则不变。**schema 词表锁定 `@sinclair/typebox` 0.34**；pi 侧已迁移到改名包 `typebox` 1.x（两包同源不兼容主线），交互仅限 bridge 内手工类型投影；RPC envelope 已定为自研（JSON-RPC 2.0 基座 + 事件扩展，O4 已决），词表天然锁定 contracts，无第三方 RPC 包 schema 兼容性问题
 - **事件契约**：统一为事件订阅原语，envelope 含 `scope`（channel + 实体键）与可选 `seq`（仅 replayable scope 定义，per-scope 单调）。**replayable**：chat 事件流（assistant delta / tool_execution_* / control_request / control_resolved），seq 源为 sessions.db event-log（`store/session.ts` events 表），`since` 续传与 replay 语义照搬现 chat WS；**live-only**：bus 五通道（trigger/agent/session/fs-watch/debug）——现状即纯内存推送（`server/src/bus/ws-bus.ts` 无 seq/持久化）、契约（`contracts/src/bus.ts`）无 seq 字段，P2 维持 live-only，断线恢复走全量对账（现 web 端 `resumedAt` 重对账模式），不为 replay 新增事件存储；browser 版 SharedWorker 内 live 事件以内存环缓冲做 best-effort 续传。通道语义表（replayable | live-only）随 P2 落 contracts
 - **错误映射**：core 异常类型 ↔ RPC 错误码的映射表进 contracts；两个 transport adapter 共用，保证前端错误处理单套
 
@@ -150,7 +150,7 @@ Fastify 反代（`server/src/routes/preview.ts`）承担四职责：URL 命名�
 
 | 阶段 | 内容 | 出口判据 |
 |---|---|---|
-| P0 | spike：cordis-in-Worker（含 SharedWorker 形态）验证；目标浏览器矩阵定义（SharedWorker/OPFS/SW 最低版本，iOS Safari 重点）与 OPFS 多写者约束验证；CORS 矩阵实测；`@modelcontextprotocol/client` 安装对齐与 browser 面终验；RPC envelope 选型（自研 vs cordis 生态现成包，含其 schema 体系与 @sinclair/typebox 0.34 的兼容性） | spike 结论落 docs/dev/investigation |
+| P0 | spike：cordis-in-Worker（含 SharedWorker 形态）验证；目标浏览器矩阵定义（SharedWorker/OPFS/SW 最低版本，iOS Safari 重点）与 OPFS 多写者约束验证；CORS 矩阵实测；`@modelcontextprotocol/client` 安装对齐与 browser 面终验 | spike 结论落 docs/dev/investigation（envelope 选型已完成：`2026-11-22-rpc-envelope-selection`） |
 | P1 | contracts 增补 RPC/事件/错误码 schema；core 引入 cordis host，capability/store 先行插件化（BackendPort 不动，桌面行为不变） | 全量 verify 通过，桌面行为无回归 |
 | P2 | Fastify RPC transport + 前端切 RPC + 删 REST（routes ~2.0k 行删除、server 非测试源码 ~4.5k 行上移、**~8.4k 行 REST 契约测试重写为 RPC 契约测试——P2 显式交付物**）；事件面 RPC 化（chat replayable + bus live-only，通道语义表落 contracts） | 桌面版全功能回归 + E2E 通过 |
 | P3 | packages/browser 壳 + SharedWorker host + browser store 插件（IndexedDB/OPFS）+ AuthProvider browser 实现；上传走 RPC（Blob 直传 Worker 落 OPFS） | browser 版可跑端到端会话：chat/审批/附件上传可用；资源面功能按 P3 降级定义验收——theme.css 回落默认主题、preview 卡片显示占位、欢迎页/侧板隐藏，不计为失败 |
@@ -165,6 +165,7 @@ P1/P2 期间 dev-v2 与 dev 的同步策略：dev-v2 长期并行，定期从 de
 |---|---|
 | pi 升级破坏 bridge | 桥面保持聚合级粗粒度；pi 类型只在 bridge 内部出现；pi 版本升级走既有 pi-deps-upgrade 流程时增加 bridge 契约测试回归 |
 | cordis 在 Worker 的兼容性未验证 | P0 spike 前置；Koishi console 有 client 端浏览器先例，但 Worker + 宿主侧插件无先例，失败则退化为 renderer 内独立 context（牺牲 reload 隔离） |
+| cordis 本体线分裂（调研 2026-11-22）：3.x 生产验证但 2024-09 后冻结，4.x 活跃但 latest=4.0.0-rc.13、API 不稳定 | 选线决策并入 O3 随 P1 拍板：3.x 稳定但停止演进，4.x 跟进主轨但接受 API 变动；无论选哪条，RPC 面与 envelope 已解耦（O4 自研），影响面收敛在组合层内部；锁定版本 + bridge 契约测试兜底 |
 | CORS 矩阵含不可直连 provider（OpenAI 官方 API 已知不可） | 浏览器版 provider 面按矩阵裁剪或提示走 OpenRouter/自定义 baseUrl；不引入代理服务（违背去 C/S 目标） |
 | better-sqlite3 → IndexedDB 语义差异（事务、并发写、WAL 语义） | Store 接口语义测试先行；sessions 事件回放一致性为核心用例 |
 | SW 生命周期竞态（注册慢于首次 preview 访问） | boot 时 register+ready 再启用资源面；HtmlCard 主路径本就 fetch+srcDoc，可兜底 |
@@ -178,8 +179,8 @@ P1/P2 期间 dev-v2 与 dev 的同步策略：dev-v2 长期并行，定期从 de
 |---|---|---|
 | O1 | web 远程壳（连桌面）长期保留还是被 browser 版替代 | 待定；影响 MobileConnect/tunnel 代码是否进入维护模式 |
 | O2 | 桌面 ↔ browser 数据互通最小方案（zip 导入导出 vs 暂不互通） | 待定；不阻塞 P0-P3 |
-| O3 | core 拆分最终形态（单包 subpath vs core-node/core-browser 分包） | P1 时定 |
-| O4 | RPC envelope 自研 vs 复用 cordis 生态 RPC 包 | P0 spike 定 |
+| O3 | core 拆分最终形态（单包 subpath vs core-node/core-browser 分包）；cordis 选线（3.x 冻结稳定 vs 4.x RC 活跃，见风险表） | P1 时定 |
+| O4 | RPC envelope 自研 vs 复用 cordis 生态 RPC 包 | **已决（2026-11-22）**：自研，JSON-RPC 2.0 基座 + 事件扩展；cordis 生态无可复用 RPC 包。调研与 envelope v1 草案见 `docs/dev/investigation/2026-11-22-rpc-envelope-selection/` |
 
 ## 文档同步（doc-sync 预填）
 
