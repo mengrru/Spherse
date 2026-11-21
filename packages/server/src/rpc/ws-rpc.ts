@@ -7,16 +7,20 @@ import {
   type RpcServerFrame,
   RpcErrorCode,
 } from "@spherse/contracts";
+import type { ModelCatalog } from "@spherse/core";
 import type { ProjectRegistry } from "../registry.js";
 import type { ChatSessionHub } from "../chat/index.js";
 import type { ChatSessionAttachment } from "../chat/chat-channel.js";
-import {
-  RpcAppError,
-  RpcDispatcher,
-  sessionMethods,
-  type RpcMethodEntry,
-  type RpcProjectContexts,
-} from "./methods/sessions.js";
+import type { ModelSettingsStore } from "../model-settings.js";
+import { getAppVersion } from "../server-info.js";
+import { RpcAppError, RpcDispatcher, type RpcContext } from "./context.js";
+import { buildMethodRegistry } from "./methods/registry.js";
+
+export interface RpcServerOptions {
+  modelSettingsStore: ModelSettingsStore;
+  modelCatalog: ModelCatalog;
+  authRequired: boolean;
+}
 
 function toChatEventFrame(scope: string, ev: unknown): RpcEventFrame {
   const e = ev as { type?: unknown; time?: unknown };
@@ -36,7 +40,7 @@ export class RpcConnectionHandler {
     private readonly socket: Pick<WebSocket, "send">,
     private readonly dispatcher: RpcDispatcher,
     private readonly hub: ChatSessionHub,
-    private readonly ctx: RpcProjectContexts,
+    private readonly ctx: RpcContext,
     private readonly logger: FastifyBaseLogger,
   ) {}
 
@@ -162,14 +166,20 @@ export function handleRpcWebSocket(
   fastify: FastifyInstance,
   registry: ProjectRegistry,
   hub: ChatSessionHub,
+  options: RpcServerOptions,
 ): void {
-  const methods = new Map<string, RpcMethodEntry>(Object.entries(sessionMethods));
-  const ctx: RpcProjectContexts = {
+  const methods = buildMethodRegistry();
+  const ctx: RpcContext = {
     resolveProject(projectId: string) {
       const project = registry.get(projectId);
       if (!project) throw new RpcAppError(RpcErrorCode.AppNotFound, "Unknown project");
       return project;
     },
+    registry,
+    modelSettingsStore: options.modelSettingsStore,
+    modelCatalog: options.modelCatalog,
+    authRequired: options.authRequired,
+    appVersion: getAppVersion() ?? null,
   };
   fastify.get("/ws/rpc", { websocket: true }, (socket) => {
     const dispatcher = new RpcDispatcher({ methods, ctx, logger: fastify.log });

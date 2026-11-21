@@ -1,118 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ProjectContextCompat } from "../registry.js";
-import type { ChatSessionAttachment } from "../chat/chat-channel.js";
-import type { ChatSessionHub } from "../chat/chat-session-hub.js";
 import { RpcConnectionHandler } from "../rpc/ws-rpc.js";
+import { sessionMethods } from "../rpc/methods/sessions.js";
 import {
-  RpcAppError,
-  RpcDispatcher,
-  sessionMethods,
-  type RpcMethodEntry,
-} from "../rpc/methods/sessions.js";
+  createRpcHarness,
+  flush,
+} from "./rpc-test-utils.js";
 
-const logger = {
-  debug: vi.fn(),
-  info: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
-  trace: vi.fn(),
-  child: vi.fn(() => logger),
-} as never;
-
-interface SocketMock {
-  sent: string[];
-  send: (data: string) => void;
-}
-
-function createSocket(): SocketMock {
-  const sent: string[] = [];
-  return { sent, send: (data: string) => sent.push(data) };
-}
-
-interface HubMock {
-  hub: ChatSessionHub;
-  attach: ReturnType<typeof vi.fn>;
-  emit: (ev: unknown) => void;
-  attachments: { close: ReturnType<typeof vi.fn>; ready: Promise<void> }[];
-}
-
-function createHub(): HubMock {
-  const attachments: HubMock["attachments"] = [];
-  let currentSubscriber: ((ev: unknown) => void) | undefined;
-  const attach = vi.fn(
-    (
-      _runtime: unknown,
-      _agentId: string,
-      _sessionId: string,
-      subscriber: (ev: unknown) => void,
-      options: { since?: number } | undefined,
-    ) => {
-      currentSubscriber = subscriber;
-      const attachment = {
-        close: vi.fn(),
-        ready: Promise.resolve(),
-      };
-      attachments.push(attachment);
-      void options;
-      return attachment as unknown as ChatSessionAttachment;
-    },
-  );
-  const hub = { attach } as unknown as ChatSessionHub;
-  return {
-    hub,
-    attach,
-    attachments,
-    emit: (ev: unknown) => currentSubscriber?.(ev),
-  };
-}
-
-function createProjectCtx(overrides: Partial<ProjectContextCompat> = {}): ProjectContextCompat {
-  return {
-    runtime: { deleteSession: vi.fn() },
-    projectManager: {
-      listProjectSessions: vi.fn(() => ({ sessions: [], byAgent: {} })),
-      searchProjectMessages: vi.fn(() => []),
-      listSessions: vi.fn(() => []),
-      listSessionsPage: vi.fn(() => ({ items: [], hasMore: false })),
-      getSession: vi.fn(),
-      renameSession: vi.fn(),
-      getSessionHistory: vi.fn(() => []),
-      getRecentSessionHistory: vi.fn(() => ({
-        entries: [],
-        hasMore: false,
-        oldestId: null,
-      })),
-    },
-    sessionRuntime: { createSession: vi.fn().mockResolvedValue("s1") },
-    triggerManager: {},
-    ...overrides,
-  } as unknown as ProjectContextCompat;
-}
-
-function createHandler(ctxOverrides: Partial<ProjectContextCompat> = {}) {
-  const known = createProjectCtx(ctxOverrides);
-  const hubMock = createHub();
-  const ctx = {
-    resolveProject(projectId: string) {
-      if (projectId === "missing") throw new RpcAppError(100, "Unknown project");
-      return known;
-    },
-  };
-  const dispatcher = new RpcDispatcher({
-    methods: new Map<string, RpcMethodEntry>(Object.entries(sessionMethods)),
-    ctx,
-    logger,
-  });
-  const socket = createSocket();
-  const handler = new RpcConnectionHandler(socket, dispatcher, hubMock.hub, ctx, logger);
-  const sent = () => socket.sent.map((raw) => JSON.parse(raw));
-  const receive = (payload: unknown) => handler.onMessage(Buffer.from(JSON.stringify(payload)));
-  return { handler, socket, sent, receive, known, hubMock };
-}
-
-async function flush(): Promise<void> {
-  await new Promise((resolve) => setImmediate(resolve));
+function createHandler() {
+  return createRpcHarness({ methods: sessionMethods });
 }
 
 describe("rpc connection handler", () => {
@@ -214,6 +109,16 @@ describe("rpc connection handler", () => {
     });
   });
 
+  it("ignores non-json and invalid frames", () => {
+    const { handler, sent, receive } = createHandler();
+    handler.onMessage(Buffer.from("not json"));
+    receive({ type: "call", id: 0, method: "sessions.get" });
+    receive({ type: "result", id: 1, ok: true });
+    expect(sent()).toEqual([]);
+  });
+});
+
+describe("rpc chat subscriptions", () => {
   it("subscribes chat scopes through the hub with an empty snapshot ack", () => {
     const { receive, sent, hubMock } = createHandler();
     receive({ type: "sub", id: 7, scope: "chat:p1:a1:s1", since: 5 });
@@ -295,12 +200,6 @@ describe("rpc connection handler", () => {
     expect(hubMock.attachments[0].close).toHaveBeenCalledTimes(1);
     expect(hubMock.attachments[1].close).toHaveBeenCalledTimes(1);
   });
-
-  it("ignores non-json and invalid frames", () => {
-    const { handler, sent, receive } = createHandler();
-    handler.onMessage(Buffer.from("not json"));
-    receive({ type: "call", id: 0, method: "sessions.get" });
-    receive({ type: "result", id: 1, ok: true });
-    expect(sent()).toEqual([]);
-  });
 });
+
+void RpcConnectionHandler;

@@ -1,103 +1,6 @@
-import { Type, type Static, type TSchema } from "@sinclair/typebox";
-import { Value } from "@sinclair/typebox/value";
-import { schemas, parseContract, type RpcServerFrame, type RpcCallFrame } from "@spherse/contracts";
-import type { ProjectContextCompat } from "../../registry.js";
-import type { FastifyBaseLogger } from "fastify";
-
-export class RpcAppError extends Error {
-  constructor(
-    readonly code: number,
-    message: string,
-    readonly data?: unknown,
-  ) {
-    super(message);
-  }
-}
-
-export interface RpcProjectContexts {
-  resolveProject(projectId: string): ProjectContextCompat;
-}
-
-export interface RpcMethodEntry {
-  params: TSchema;
-  handler(params: unknown, ctx: RpcProjectContexts): unknown;
-}
-
-export function defineRpcMethod<P extends TSchema>(
-  params: P,
-  handler: (params: Static<P>, ctx: RpcProjectContexts) => unknown,
-): RpcMethodEntry {
-  return { params, handler: handler as (params: unknown, ctx: RpcProjectContexts) => unknown };
-}
-
-export interface RpcDispatcherOptions {
-  methods: Map<string, RpcMethodEntry>;
-  ctx: RpcProjectContexts;
-  logger: FastifyBaseLogger;
-}
-
-export class RpcDispatcher {
-  private readonly methods: Map<string, RpcMethodEntry>;
-  private readonly ctx: RpcProjectContexts;
-  private readonly logger: FastifyBaseLogger;
-
-  constructor(options: RpcDispatcherOptions) {
-    this.methods = options.methods;
-    this.ctx = options.ctx;
-    this.logger = options.logger;
-  }
-
-  async dispatchCall(frame: RpcCallFrame, send: (frame: RpcServerFrame) => void): Promise<void> {
-    const entry = this.methods.get(frame.method);
-    if (!entry) {
-      send({
-        type: "result",
-        id: frame.id,
-        ok: false,
-        error: { code: -32601, message: `Method not found: ${frame.method}` },
-      });
-      return;
-    }
-    let params: unknown;
-    if (frame.params === undefined) {
-      params = Value.Parse(entry.params, {});
-    } else if (Value.Check(entry.params, frame.params)) {
-      params = Value.Parse(entry.params, frame.params);
-    } else {
-      send({
-        type: "result",
-        id: frame.id,
-        ok: false,
-        error: { code: -32602, message: `Invalid params for ${frame.method}` },
-      });
-      return;
-    }
-    try {
-      const data = await entry.handler(params, this.ctx);
-      send({ type: "result", id: frame.id, ok: true, data });
-    } catch (err) {
-      if (err instanceof RpcAppError) {
-        send({
-          type: "result",
-          id: frame.id,
-          ok: false,
-          error: { code: err.code, message: err.message, ...(err.data !== undefined ? { data: err.data } : {}) },
-        });
-        return;
-      }
-      this.logger.warn({ err, method: frame.method }, "rpc method failed");
-      send({
-        type: "result",
-        id: frame.id,
-        ok: false,
-        error: {
-          code: -32603,
-          message: err instanceof Error ? err.message : String(err),
-        },
-      });
-    }
-  }
-}
+import { Type } from "@sinclair/typebox";
+import { schemas, parseContract } from "@spherse/contracts";
+import { RpcAppError, defineRpcMethod } from "../context.js";
 
 const listProject = defineRpcMethod(
   Type.Object({
@@ -229,7 +132,7 @@ const remove = defineRpcMethod(
   },
 );
 
-export const sessionMethods: Record<string, RpcMethodEntry> = {
+export const sessionMethods: Record<string, ReturnType<typeof defineRpcMethod>> = {
   "sessions.listProject": listProject,
   "sessions.search": search,
   "sessions.listByAgent": listByAgent,

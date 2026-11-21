@@ -138,7 +138,11 @@ export async function createMultiProjectServer(
   });
   handleChatWebSocket(fastify, registry, chatHub);
   handleBusWebSocket(fastify, registry);
-  handleRpcWebSocket(fastify, registry, chatHub);
+  handleRpcWebSocket(fastify, registry, chatHub, {
+    modelSettingsStore,
+    modelCatalog,
+    authRequired: Boolean(options?.auth?.accessToken),
+  });
 
   fastify.addHook("onResponse", async (req, reply) => {
     const urlPath = req.url.split("?", 1)[0];
