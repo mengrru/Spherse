@@ -179,7 +179,7 @@ P1/P2 期间 dev-v2 与 dev 的同步策略：dev-v2 长期并行，定期从 de
 |---|---|---|
 | O1 | web 远程壳（连桌面）长期保留还是被 browser 版替代 | 待定；影响 MobileConnect/tunnel 代码是否进入维护模式 |
 | O2 | 桌面 ↔ browser 数据互通最小方案（zip 导入导出 vs 暂不互通） | 待定；不阻塞 P0-P3 |
-| O3 | core 拆分最终形态（单包 subpath vs core-node/core-browser 分包）；cordis 选线（3.x 冻结稳定 vs 4.x RC 活跃，见风险表） | P1 时定 |
+| O3 | core 拆分最终形态（单包 subpath vs core-node/core-browser 分包）；cordis 选线（3.x 冻结稳定 vs 4.x RC 活跃，见风险表） | **已拍板（2026-11-22）：cordis 4.x**（两版 SharedWorker spike 均通过，4.x 避免二次迁移、bundle 减半、使用面浅 rc 风险可控；锁精确版本 + host 层收敛 cordis 依赖到 core 一处。材料：`docs/dev/investigation/2026-11-22-cordis-4x-spike/`）。core 拆分形态随 P1 实施时定 |
 | O4 | RPC envelope 自研 vs 复用 cordis 生态 RPC 包 | **已决（2026-11-22）**：自研，JSON-RPC 2.0 基座 + 事件扩展；cordis 生态无可复用 RPC 包。调研与 envelope v1 草案见 `docs/dev/investigation/2026-11-22-rpc-envelope-selection/` |
 
 ## 文档同步（doc-sync 预填）
