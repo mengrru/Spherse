@@ -3,15 +3,15 @@ import { schemas, parseContract } from "@spherse/contracts";
 import {
   RpcAppError,
   defineRpcMethod,
+  type ChatAttachment,
   type RpcConnectionState,
   type RpcMethodEntry,
 } from "../context.js";
-import type { ChatSessionAttachment } from "../../chat/chat-channel.js";
 
 function requireAttachment(
   conn: RpcConnectionState,
   params: { projectId: string; agentId: string; sessionId: string },
-): ChatSessionAttachment {
+): ChatAttachment {
   const attachment = conn.chatAttachment(params.projectId, params.agentId, params.sessionId);
   if (!attachment) throw new RpcAppError(102, "Not subscribed to session");
   return attachment;

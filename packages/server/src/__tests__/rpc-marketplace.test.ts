@@ -17,7 +17,7 @@ import {
   createRpcHarness,
   flush,
   type RpcHarness,
-} from "./rpc-test-utils.js";
+} from "@spherse/rpc/testing";
 
 vi.mock("../marketplace.js", () => ({
   marketplaceService: { getManifest: vi.fn(), downloadZip: vi.fn() },

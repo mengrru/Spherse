@@ -1,5 +1,4 @@
-export const SERVER_VERSION = "0.1.0";
-export const API_VERSION = "1";
+export { SERVER_VERSION, API_VERSION } from "@spherse/rpc";
 
 let appVersion: string | undefined;
 

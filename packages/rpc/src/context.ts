@@ -1,18 +1,18 @@
 import type { Static, TSchema } from "@sinclair/typebox";
 import { Value } from "@sinclair/typebox/value";
-import type { FastifyBaseLogger } from "fastify";
 import {
   AccessDeniedError,
   ConflictError,
   NotFoundError,
-  type ModelCatalog,
+  type ProjectManager,
+  type ProjectRuntime,
+  type SessionManager,
+  type TriggerManager,
 } from "@spherse/core";
 import type { RpcServerFrame, RpcCallFrame } from "@spherse/contracts";
-import type { ProjectRegistry } from "../registry.js";
-import type { ModelSettingsStore } from "../model-settings.js";
-import type { ProjectContextCompat } from "../registry.js";
-import type { ChatSessionAttachment } from "../chat/chat-channel.js";
-import type { ChatSessionHub } from "../chat/chat-session-hub.js";
+
+export const SERVER_VERSION = "0.1.0";
+export const API_VERSION = "1";
 
 export class RpcAppError extends Error {
   constructor(
@@ -24,14 +24,81 @@ export class RpcAppError extends Error {
   }
 }
 
+export interface RpcLogger {
+  debug(obj: unknown, msg?: string): void;
+  info(obj: unknown, msg?: string): void;
+  warn(obj: unknown, msg?: string): void;
+  error(obj: unknown, msg?: string): void;
+}
+
+export interface ChatMessageAttachment {
+  type: string;
+  path: string;
+  mimeType: string;
+}
+
+export type ControlRequestDecision =
+  | { approved: boolean; reason?: string }
+  | { answer?: string; timedOut: boolean };
+
+export interface ChatAttachment {
+  ready: Promise<void>;
+  sendMessage(content: string, attachments?: ChatMessageAttachment[], clientId?: string): Promise<void>;
+  retryLastTurn(): Promise<void>;
+  withdrawLastTurn(): Promise<void>;
+  abort(): void;
+  resolveControlRequest(requestId: string, decision: ControlRequestDecision): void;
+  close(): void;
+}
+
+export interface RpcChatHub {
+  attach(
+    runtime: SessionManager,
+    agentId: string,
+    sessionId: string,
+    subscriber: (event: unknown) => void,
+    options?: { since?: number },
+  ): ChatAttachment;
+  startDetachedRun(
+    runtime: SessionManager,
+    agentId: string,
+    sessionId: string,
+    content: string,
+  ): Promise<void>;
+}
+
+export interface RpcProjectContext {
+  runtime: ProjectRuntime;
+  projectManager: ProjectManager;
+  sessionRuntime: SessionManager;
+  triggerManager: TriggerManager;
+}
+
+export interface RpcProjectInfo {
+  id: string;
+  name: string;
+  rootPath: string;
+  lastOpened?: string;
+}
+
+export interface RpcRegistry {
+  getSupportedProviders(): unknown;
+  listInfo(): RpcProjectInfo[];
+  getInfo(projectId: string): RpcProjectInfo | undefined;
+}
+
+export interface RpcModelSettings {
+  sanitize(): unknown;
+  apply(req: unknown): unknown;
+}
+
 export interface RpcContext {
-  resolveProject(projectId: string): ProjectContextCompat;
-  registry: ProjectRegistry;
-  modelSettingsStore: ModelSettingsStore;
-  modelCatalog: ModelCatalog;
+  resolveProject(projectId: string): RpcProjectContext;
+  registry: RpcRegistry;
+  modelSettings: RpcModelSettings;
   authRequired: boolean;
   appVersion: string | null;
-  hub: ChatSessionHub;
+  hub: RpcChatHub;
 }
 
 export interface RpcMethodEntry {
@@ -40,7 +107,7 @@ export interface RpcMethodEntry {
 }
 
 export interface RpcConnectionState {
-  chatAttachment(projectId: string, agentId: string, sessionId: string): ChatSessionAttachment | undefined;
+  chatAttachment(projectId: string, agentId: string, sessionId: string): ChatAttachment | undefined;
 }
 
 export function defineRpcMethod<P extends TSchema>(
@@ -68,12 +135,12 @@ function toAppError(err: unknown): RpcAppError {
 export class RpcDispatcher {
   private readonly methods: Map<string, RpcMethodEntry>;
   private readonly ctx: RpcContext;
-  private readonly logger: FastifyBaseLogger;
+  private readonly logger: RpcLogger;
 
   constructor(options: {
     methods: Map<string, RpcMethodEntry>;
     ctx: RpcContext;
-    logger: FastifyBaseLogger;
+    logger: RpcLogger;
   }) {
     this.methods = options.methods;
     this.ctx = options.ctx;

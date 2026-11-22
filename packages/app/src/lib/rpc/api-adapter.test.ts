@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../api";
-import { RpcCallError } from "./client";
+import { RpcCallError } from "@spherse/rpc";
 import { createRpcApiClient, createRpcGlobalApiClient } from "./api-adapter";
 
 class FakeRpc {

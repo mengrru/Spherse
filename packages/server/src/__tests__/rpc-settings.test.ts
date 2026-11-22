@@ -2,25 +2,20 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { applyModelSettingsToEnv } from "../model-settings.js";
-import { connectionMethods } from "../rpc/methods/connection.js";
+import { connectionMethods } from "@spherse/rpc";
 import { settingsMethods } from "../rpc/methods/settings.js";
 import {
   createFakeProjectCtx,
   createRpcHarness,
   flush,
   type RpcHarness,
-} from "./rpc-test-utils.js";
+} from "@spherse/rpc/testing";
 
 const alphaRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rpc-settings-alpha-"));
 
 afterAll(() => {
   fs.rmSync(alphaRoot, { recursive: true, force: true });
 });
-
-vi.mock("../model-settings.js", () => ({
-  applyModelSettingsToEnv: vi.fn(),
-}));
 
 const providerCatalog = {
   demo: {
@@ -40,16 +35,6 @@ const providerCatalog = {
   },
 };
 
-const appliedSettings = {
-  text: {
-    defaultModel: "demo/m1",
-    providers: { demo: { apiKey: "key" } },
-    sampling: { temperature: 0.5 },
-    thinkingLevel: "low" as const,
-  },
-  image: { defaultModel: "", providers: {} },
-  customProviders: [],
-};
 
 const sanitizedSettings = {
   models: {
@@ -78,10 +63,9 @@ const registry = {
   setThinkingLevel: vi.fn(),
 };
 
-const modelSettingsStore = {
-  get: vi.fn(() => appliedSettings),
+const modelSettings = {
   sanitize: vi.fn(() => sanitizedSettings),
-  applyUpdate: vi.fn(() => appliedSettings),
+  apply: vi.fn(() => sanitizedSettings),
 };
 
 const projectManager = {
@@ -100,7 +84,7 @@ function createHarness(): RpcHarness {
     methods: { ...settingsMethods, ...connectionMethods },
     projectCtx: createFakeProjectCtx({ projectManager }),
     registry,
-    modelSettingsStore,
+    modelSettings,
   });
 }
 
@@ -172,11 +156,11 @@ describe("rpc settings methods (global)", () => {
 
   it("settings.getModels returns sanitized settings", async () => {
     const { sent } = await call("settings.getModels");
-    expect(modelSettingsStore.sanitize).toHaveBeenCalled();
+    expect(modelSettings.sanitize).toHaveBeenCalled();
     expect(sent()[0].data).toEqual(sanitizedSettings);
   });
 
-  it("settings.updateModels applies update, env sync and registry side effects", async () => {
+  it("settings.updateModels delegates to the model settings port", async () => {
     const request = {
       models: {
         text: {
@@ -187,12 +171,8 @@ describe("rpc settings methods (global)", () => {
         image: { defaultModel: "" },
       },
     };
-    const { sent, ctx } = await call("settings.updateModels", request);
-    expect(modelSettingsStore.applyUpdate).toHaveBeenCalledWith(request);
-    expect(vi.mocked(applyModelSettingsToEnv)).toHaveBeenCalledWith(appliedSettings, ctx.modelCatalog);
-    expect(registry.setDefaultModel).toHaveBeenCalledWith("demo/m1");
-    expect(registry.setSampling).toHaveBeenCalledWith({ temperature: 0.5 });
-    expect(registry.setThinkingLevel).toHaveBeenCalledWith("low");
+    const { sent } = await call("settings.updateModels", request);
+    expect(modelSettings.apply).toHaveBeenCalledWith(request);
     expect(sent()[0].data).toEqual(sanitizedSettings);
   });
 });

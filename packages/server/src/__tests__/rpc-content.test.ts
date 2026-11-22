@@ -10,7 +10,7 @@ import {
   flush,
   UNKNOWN_PROJECT_ID,
   type RpcHarness,
-} from "./rpc-test-utils.js";
+} from "@spherse/rpc/testing";
 
 interface ResultFrame {
   type: string;

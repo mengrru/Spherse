@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ConflictError, NotFoundError, ValidationError } from "@spherse/core";
-import { agentMethods } from "../rpc/methods/agents.js";
-import { createFakeProjectCtx, createRpcHarness, flush } from "./rpc-test-utils.js";
+import { agentMethods } from "../methods/agents.js";
+import { createFakeProjectCtx, createRpcHarness, flush } from "../testing.js";
 
 const PROFILE = {
   id: "agent-1",

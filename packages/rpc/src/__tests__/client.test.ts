@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { RpcClientFrame, RpcEventFrame, RpcServerFrame } from "@spherse/contracts";
-import type { RpcTransport } from "./transport.js";
-import { RpcClient } from "./client.js";
+import type { RpcTransport } from "../transport.js";
+import { RpcClient } from "../client.js";
 
 class FakeTransport implements RpcTransport {
   sent: RpcClientFrame[] = [];

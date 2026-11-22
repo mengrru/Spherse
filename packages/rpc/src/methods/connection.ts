@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import { schemas, parseContract } from "@spherse/contracts";
 import { RpcAppError, defineRpcMethod, type RpcMethodEntry } from "../context.js";
-import { SERVER_VERSION, API_VERSION } from "../../server-info.js";
+import { SERVER_VERSION, API_VERSION } from "../context.js";
 
 const info = defineRpcMethod(Type.Object({}), (_params, ctx) =>
   parseContract(schemas.connectionInfoResponse, {

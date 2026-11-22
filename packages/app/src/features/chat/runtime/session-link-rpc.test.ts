@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { RpcClientFrame, RpcServerFrame } from "@spherse/contracts";
-import type { RpcTransport } from "../../../lib/rpc/transport";
-import { RpcClient } from "../../../lib/rpc/client";
+import type { RpcTransport } from "@spherse/rpc";
+import { RpcClient } from "@spherse/rpc";
 import { createRpcSessionLink } from "./session-link-rpc";
 import type { SessionLinkHandlers, SessionLinkParams } from "./session-link";
 

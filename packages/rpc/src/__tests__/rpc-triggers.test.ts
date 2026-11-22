@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import { ConflictError } from "@spherse/core";
 import type { SessionManager, TriggerManager } from "@spherse/core";
-import { triggerMethods } from "../rpc/methods/triggers.js";
-import { debugMethods } from "../rpc/methods/debug.js";
-import { createFakeProjectCtx, createRpcHarness, flush } from "./rpc-test-utils.js";
+import { triggerMethods } from "../methods/triggers.js";
+import { debugMethods } from "../methods/debug.js";
+import { createFakeProjectCtx, createRpcHarness, flush } from "../testing.js";
 
 const NEXT_AT = 1700000000000;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { chatMethods } from "../rpc/methods/chat.js";
-import { createRpcHarness, flush } from "./rpc-test-utils.js";
+import { chatMethods } from "../methods/chat.js";
+import { createRpcHarness, flush } from "../testing.js";
 
 const SESSION = { projectId: "p1", agentId: "a1", sessionId: "s1" };
 

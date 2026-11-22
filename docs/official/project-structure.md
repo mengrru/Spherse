@@ -141,6 +141,14 @@ spherse/
 │   │           ├── messaging.test.ts          # postAction/fire/call（resolve/reject/超时/并发 requestId 匹配）
 │   │           ├── context.test.ts            # 运行时种子化（window.__SPHERSE__ 同步 + spherse:runtime 异步 + waiter 队列）
 │   │           └── events.test.ts             # 文件/导航事件订阅、定向分发与幂等取消
+│   ├── rpc/                         # @spherse/rpc — RPC 协议运行时（browser-safe root：dispatcher + 连接处理 + client + browser-safe 方法组；Node 方法组留在 server）
+│   │   └── src/
+│   │       ├── context.ts           # RpcContext/RpcChatHub/RpcRegistry/RpcModelSettings 端口 + RpcAppError + defineRpcMethod + RpcDispatcher + SERVER/API_VERSION
+│   │       ├── connection.ts        # RpcConnectionHandler：帧解析/分发/ping-pong/chat sub-unsub（socket 只要求 send）
+│   │       ├── client.ts            # RpcClient：call/sub/snapshot/event 派发 + RpcCallError（保留错误码）+ onReopen
+│   │       ├── transport.ts         # RpcTransport 接口（WS / postMessage 传输的统一抽象）
+│   │       ├── methods/             # browser-safe 方法组：sessions/agents/triggers/debug/chat/connection + registry（buildBaseMethodRegistry）
+│   │       └── testing.ts           # ./testing 子路径导出：createRpcHarness 等测试助手（server 与本包测试共用）
 │   ├── contracts/                   # @spherse/contracts — 跨进程边界 wire 协议（HTTP/WS schema + parser）
 │   │   └── src/
 │   │       ├── index.ts              # 聚合 schemas 与类型 re-export，包唯一入口

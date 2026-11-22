@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import { Type } from "@sinclair/typebox";
 import { schemas, parseContract } from "@spherse/contracts";
-import { RpcAppError, defineRpcMethod, type RpcMethodEntry } from "../context.js";
+import { RpcAppError, defineRpcMethod, type RpcMethodEntry } from "@spherse/rpc";
 import { marketplaceService } from "../../marketplace.js";
 
 const create = defineRpcMethod(

@@ -19,7 +19,7 @@ import type {
   WelcomePageSettingsResponse,
 } from "../types.js";
 import type { AgentMcpConfig } from "../types.js";
-import { RpcCallError, type RpcClient } from "./client.js";
+import { RpcCallError, type RpcClient } from "@spherse/rpc";
 
 const STATUS_BY_CODE: Record<number, number> = {
   100: 404,

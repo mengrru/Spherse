@@ -1,7 +1,7 @@
 import { isRpcPongFrame, parseRpcServerFrame, type RpcClientFrame, type RpcServerFrame } from "@spherse/contracts";
 import { buildWsUrl } from "../api.js";
 import { WsConnection } from "../ws/ws-connection.js";
-import type { RpcTransport } from "./transport.js";
+import type { RpcTransport } from "@spherse/rpc";
 
 export interface RpcWsTransportOptions {
   baseUrl: () => string | Promise<string>;

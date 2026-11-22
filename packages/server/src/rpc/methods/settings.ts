@@ -2,8 +2,7 @@ import fs from "node:fs/promises";
 import { Type } from "@sinclair/typebox";
 import { schemas, parseContract } from "@spherse/contracts";
 import { getImageSupportedProviders, resolveProjectPath } from "@spherse/core";
-import { applyModelSettingsToEnv } from "../../model-settings.js";
-import { defineRpcMethod, type RpcMethodEntry } from "../context.js";
+import { defineRpcMethod, type RpcMethodEntry } from "@spherse/rpc";
 
 const supportedProviders = defineRpcMethod(Type.Object({}), (_params, ctx) =>
   parseContract(schemas.providerCatalog, ctx.registry.getSupportedProviders()),
@@ -14,19 +13,12 @@ const imageProviders = defineRpcMethod(Type.Object({}), () =>
 );
 
 const getModels = defineRpcMethod(Type.Object({}), (_params, ctx) =>
-  parseContract(schemas.modelSettingsResponse, ctx.modelSettingsStore.sanitize()),
+  parseContract(schemas.modelSettingsResponse, ctx.modelSettings.sanitize()),
 );
 
-const updateModels = defineRpcMethod(schemas.modelSettingsRequest, (params, ctx) => {
-  const next = ctx.modelSettingsStore.applyUpdate(params);
-  applyModelSettingsToEnv(next, ctx.modelCatalog);
-  if (next.text.defaultModel) {
-    ctx.registry.setDefaultModel(next.text.defaultModel);
-  }
-  ctx.registry.setSampling(next.text.sampling);
-  ctx.registry.setThinkingLevel(next.text.thinkingLevel);
-  return parseContract(schemas.modelSettingsResponse, ctx.modelSettingsStore.sanitize());
-});
+const updateModels = defineRpcMethod(schemas.modelSettingsRequest, (params, ctx) =>
+  parseContract(schemas.modelSettingsResponse, ctx.modelSettings.apply(params)),
+);
 
 const getAiAccess = defineRpcMethod(Type.Object({ projectId: Type.String() }), (params, ctx) => {
   const { projectManager } = ctx.resolveProject(params.projectId);

@@ -1,25 +1,15 @@
 import { vi } from "vitest";
-import type { FastifyBaseLogger } from "fastify";
-import type { ProjectContextCompat } from "../registry.js";
-import type { ChatSessionAttachment } from "../chat/chat-channel.js";
-import type { ChatSessionHub } from "../chat/chat-session-hub.js";
-import {
-  RpcAppError,
-  RpcDispatcher,
-  type RpcContext,
-  type RpcMethodEntry,
-} from "../rpc/context.js";
-import { RpcConnectionHandler } from "../rpc/ws-rpc.js";
+import type { SessionManager, TriggerManager, ProjectManager, ProjectRuntime } from "@spherse/core";
+import type { ChatAttachment, RpcChatHub, RpcContext, RpcLogger, RpcMethodEntry } from "./context.js";
+import { RpcAppError, RpcDispatcher } from "./context.js";
+import { RpcConnectionHandler } from "./connection.js";
 
-export const testLogger = {
+export const testLogger: RpcLogger = {
   debug: vi.fn(),
   info: vi.fn(),
   warn: vi.fn(),
   error: vi.fn(),
-  fatal: vi.fn(),
-  trace: vi.fn(),
-  child: vi.fn(),
-} as unknown as FastifyBaseLogger;
+};
 
 export const UNKNOWN_PROJECT_ID = "missing";
 
@@ -27,10 +17,15 @@ export async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve));
 }
 
-export function createFakeProjectCtx(
-  overrides: Partial<ProjectContextCompat> = {},
-): ProjectContextCompat {
-  return {
+export interface FakeRpcProjectContext {
+  runtime: Partial<ProjectRuntime>;
+  projectManager: Partial<ProjectManager>;
+  sessionRuntime: Partial<SessionManager>;
+  triggerManager: Partial<TriggerManager>;
+}
+
+export function createFakeProjectCtx(overrides: FakeRpcProjectContext = {} as FakeRpcProjectContext) {
+  const base = {
     runtime: { deleteSession: vi.fn() },
     projectManager: {
       listProjectSessions: vi.fn(() => ({ sessions: [], byAgent: {} })),
@@ -47,15 +42,13 @@ export function createFakeProjectCtx(
       getSessionStatus: vi.fn(() => ({ currentTokens: 0, contextWindowLimit: null })),
     },
     triggerManager: {},
-    ...overrides,
-  } as unknown as ProjectContextCompat;
-}
-
-export interface HubMock {
-  hub: ChatSessionHub;
-  attach: ReturnType<typeof vi.fn>;
-  emit: (ev: unknown) => void;
-  attachments: ChatAttachmentMock[];
+  };
+  return {
+    runtime: { ...base.runtime, ...overrides.runtime },
+    projectManager: { ...base.projectManager, ...overrides.projectManager },
+    sessionRuntime: { ...base.sessionRuntime, ...overrides.sessionRuntime },
+    triggerManager: { ...base.triggerManager, ...overrides.triggerManager },
+  } as unknown as FakeRpcProjectContext & Record<string, unknown>;
 }
 
 export interface ChatAttachmentMock {
@@ -66,6 +59,14 @@ export interface ChatAttachmentMock {
   withdrawLastTurn: ReturnType<typeof vi.fn>;
   abort: ReturnType<typeof vi.fn>;
   resolveControlRequest: ReturnType<typeof vi.fn>;
+}
+
+export interface HubMock {
+  hub: RpcChatHub;
+  attach: ReturnType<typeof vi.fn>;
+  startDetachedRun: ReturnType<typeof vi.fn>;
+  emit: (ev: unknown) => void;
+  attachments: ChatAttachmentMock[];
 }
 
 export function createHubMock(): HubMock {
@@ -91,12 +92,14 @@ export function createHubMock(): HubMock {
       };
       attachments.push(attachment);
       void options;
-      return attachment as unknown as ChatSessionAttachment;
+      return attachment as unknown as ChatAttachment;
     },
   );
+  const startDetachedRun = vi.fn(async () => {});
   return {
-    hub: { attach, startDetachedRun: vi.fn(async () => {}) } as unknown as ChatSessionHub,
+    hub: { attach, startDetachedRun } as unknown as RpcChatHub,
     attach,
+    startDetachedRun,
     attachments,
     emit: (ev: unknown) => currentSubscriber?.(ev),
   };
@@ -104,11 +107,11 @@ export function createHubMock(): HubMock {
 
 export interface RpcHarnessOptions {
   methods?: Record<string, RpcMethodEntry>;
-  projectCtx?: ProjectContextCompat;
+  projectCtx?: ReturnType<typeof createFakeProjectCtx>;
   registry?: Record<string, unknown>;
-  modelSettingsStore?: Record<string, unknown>;
-  modelCatalog?: Record<string, unknown>;
+  modelSettings?: Record<string, unknown>;
   authRequired?: boolean;
+  appVersion?: string | null;
   hubMock?: HubMock;
 }
 
@@ -116,40 +119,38 @@ export interface RpcHarness {
   handler: RpcConnectionHandler;
   receive: (payload: unknown) => void;
   sent: () => unknown[];
-  known: ProjectContextCompat;
+  known: ReturnType<typeof createFakeProjectCtx>;
   ctx: RpcContext;
   hubMock: HubMock;
 }
 
 export function createRpcHarness(options: RpcHarnessOptions = {}): RpcHarness {
   const known = options.projectCtx ?? createFakeProjectCtx();
-  const hubMock = options.hubMock ?? createHubMock();  const registryBase = {
+  const hubMock = options.hubMock ?? createHubMock();
+  const registryBase = {
     get: vi.fn((projectId: string) =>
       projectId === UNKNOWN_PROJECT_ID ? undefined : known,
     ),
   };
   const registry = Object.assign(registryBase, options.registry ?? {}) as never;
-  const modelSettingsStore = Object.assign(
+  const modelSettings = Object.assign(
     {
-      get: vi.fn(() => ({ text: {}, image: {}, providers: {} })),
       sanitize: vi.fn(() => ({ text: {}, image: {}, providers: {} })),
-      applyUpdate: vi.fn(),
+      apply: vi.fn(() => ({ text: {}, image: {}, providers: {} })),
     },
-    options.modelSettingsStore ?? {},
+    options.modelSettings ?? {},
   ) as never;
-  const modelCatalog = Object.assign({}, options.modelCatalog ?? {}) as never;
   const ctx: RpcContext = {
     resolveProject(projectId: string) {
       if (projectId === UNKNOWN_PROJECT_ID) {
         throw new RpcAppError(100, "Unknown project");
       }
-      return known;
+      return known as never;
     },
     registry,
-    modelSettingsStore,
-    modelCatalog,
+    modelSettings,
     authRequired: options.authRequired ?? false,
-    appVersion: "test",
+    appVersion: options.appVersion ?? "test",
     hub: hubMock.hub,
   };
   const dispatcher = new RpcDispatcher({
@@ -159,7 +160,7 @@ export function createRpcHarness(options: RpcHarnessOptions = {}): RpcHarness {
   });
   const sentFrames: string[] = [];
   const socket = { send: (data: string) => sentFrames.push(data) };
-  const handler = new RpcConnectionHandler(socket as never, dispatcher, hubMock.hub, ctx, testLogger);
+  const handler = new RpcConnectionHandler(socket, dispatcher, hubMock.hub, ctx, testLogger);
   return {
     handler,
     receive: (payload: unknown) => handler.onMessage(Buffer.from(JSON.stringify(payload))),

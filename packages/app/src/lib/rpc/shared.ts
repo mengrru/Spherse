@@ -1,4 +1,4 @@
-import { RpcClient } from "./client.js";
+import { RpcClient } from "@spherse/rpc";
 import { RpcWsTransport } from "./ws-transport.js";
 
 interface SharedEntry {

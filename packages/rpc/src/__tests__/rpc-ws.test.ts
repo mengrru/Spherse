@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { RpcConnectionHandler } from "../rpc/ws-rpc.js";
-import { sessionMethods } from "../rpc/methods/sessions.js";
+import { RpcConnectionHandler } from "../connection.js";
+import { sessionMethods } from "../methods/sessions.js";
 import {
   createRpcHarness,
   flush,
-} from "./rpc-test-utils.js";
+} from "../testing.js";
 
 function createHandler() {
   return createRpcHarness({ methods: sessionMethods });

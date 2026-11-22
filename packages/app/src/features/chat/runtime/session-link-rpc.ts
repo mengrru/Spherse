@@ -1,5 +1,5 @@
 import { chatScope } from "@spherse/contracts";
-import type { RpcClient } from "../../../lib/rpc/client";
+import type { RpcClient } from "@spherse/rpc";
 import type { SessionLink, SessionLinkHandlers, SessionLinkParams } from "./session-link";
 import { decodeServerFrame } from "./decode";
 
