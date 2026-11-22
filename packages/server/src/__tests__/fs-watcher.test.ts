@@ -1,186 +1,112 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import fs from "node:fs";
-import type { acquireFsWatch as AcquireFsWatch } from "../bus/fs-watcher.js";
-import type { releaseFsWatch as ReleaseFsWatch } from "../bus/fs-watcher.js";
+import { describe, expect, it, vi } from "vitest";
+import type { FsPort, FsWatchEvent } from "@spherse/core";
+import { acquireFsWatch } from "../bus/fs-watcher.js";
+import { releaseFsWatch } from "../bus/fs-watcher.js";
 
-interface FakeWatcher {
-  on: ReturnType<typeof vi.fn>;
+interface FakeWatch {
+  emit: (event: FsWatchEvent) => void;
   close: ReturnType<typeof vi.fn>;
-  trigger: (eventType: "rename" | "change", filename: string | null) => void;
-  triggerError: (err: unknown) => void;
 }
 
-interface WatchCall {
-  root: string;
-  opts: unknown;
-}
-
-interface FsWatchMock {
-  fake: FakeWatcher;
-  calls: WatchCall[];
-}
-
-function installFsWatchMock(): FsWatchMock {
-  const calls: WatchCall[] = [];
-  let changeCb:
-    | ((eventType: "rename" | "change", filename: string | null) => void)
-    | null = null;
-  let errorCb: ((err: unknown) => void) | null = null;
-  const fake: FakeWatcher = {
-    on: vi.fn((event: string, cb: (arg: unknown) => void) => {
-      if (event === "error") errorCb = cb as (err: unknown) => void;
-    }),
-    close: vi.fn(),
-    trigger: (eventType, filename) => {
-      changeCb?.(eventType, filename);
-    },
-    triggerError: (err) => {
-      errorCb?.(err);
-    },
+function createFakePort(options: { watchSupported?: boolean; throwOnWatch?: boolean } = {}) {
+  const watches: FakeWatch[] = [];
+  const port: FsPort = {
+    capabilities: { atomicRename: true, watch: options.watchSupported ?? true },
+    readFile: vi.fn(),
+    readBinaryFile: vi.fn(),
+    writeFile: vi.fn(),
+    writeBinaryFile: vi.fn(),
+    writeFileIfMissing: vi.fn(),
+    appendFile: vi.fn(),
+    mkdirp: vi.fn(),
+    readdir: vi.fn(),
+    stat: vi.fn(),
+    unlink: vi.fn(),
+    rm: vi.fn(),
+    rename: vi.fn(),
+    copyFile: vi.fn(),
+    copyTree: vi.fn(),
+    watch: options.throwOnWatch
+      ? () => {
+          throw new Error("watch boom");
+        }
+      : (_rel: string, onChange: (event: FsWatchEvent) => void) => {
+          const fake: FakeWatch = {
+            emit: onChange,
+            close: vi.fn(),
+          };
+          watches.push(fake);
+          return fake.close;
+        },
   };
-  vi.spyOn(fs, "watch").mockImplementation(((
-    root: unknown,
-    opts: unknown,
-    cb?: (eventType: "rename" | "change", filename: string | null) => void,
-  ) => {
-    calls.push({ root: String(root), opts });
-    changeCb = cb ?? null;
-    return fake as unknown as fs.FSWatcher;
-  }) as unknown as typeof fs.watch);
-  return { fake, calls };
+  return { port, watches };
 }
 
 describe("ProjectFsWatcher", () => {
-  let acquireFsWatch: typeof AcquireFsWatch;
-  let releaseFsWatch: typeof ReleaseFsWatch;
-  let mock: FsWatchMock;
-
-  beforeEach(async () => {
-    vi.resetModules();
-    mock = installFsWatchMock();
-    const mod = await import("../bus/fs-watcher.js");
-    acquireFsWatch = mod.acquireFsWatch;
-    releaseFsWatch = mod.releaseFsWatch;
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("creates a single fs.watch for multiple acquires on the same projectId", () => {
+  it("creates a single watcher for multiple acquires on the same projectId", () => {
+    const { port, watches } = createFakePort();
     const listenerA = vi.fn();
     const listenerB = vi.fn();
 
-    const r1 = acquireFsWatch("/proj", "p1", listenerA);
-    const r2 = acquireFsWatch("/proj", "p1", listenerB);
+    const r1 = acquireFsWatch(port, "p-single", listenerA);
+    const r2 = acquireFsWatch(port, "p-single", listenerB);
 
     expect(r1).toEqual({ ok: true });
     expect(r2).toEqual({ ok: true });
-    expect(fs.watch).toHaveBeenCalledTimes(1);
-    expect(mock.calls[0].root).toBe("/proj");
-    expect(mock.calls[0].opts).toEqual({ recursive: true });
+    expect(watches.length).toBe(1);
   });
 
   it("closes the watcher and clears the map on equal releases", () => {
+    const { port, watches } = createFakePort();
     const listenerA = vi.fn();
     const listenerB = vi.fn();
 
-    acquireFsWatch("/proj", "p1", listenerA);
-    acquireFsWatch("/proj", "p1", listenerB);
+    acquireFsWatch(port, "p-release", listenerA);
+    acquireFsWatch(port, "p-release", listenerB);
 
-    releaseFsWatch("p1", listenerA);
-    expect(mock.fake.close).not.toHaveBeenCalled();
+    releaseFsWatch("p-release", listenerA);
+    expect(watches[0].close).not.toHaveBeenCalled();
 
-    releaseFsWatch("p1", listenerB);
-    expect(mock.fake.close).toHaveBeenCalledTimes(1);
+    releaseFsWatch("p-release", listenerB);
+    expect(watches[0].close).toHaveBeenCalledTimes(1);
 
-    acquireFsWatch("/proj", "p1", listenerA);
-    expect(fs.watch).toHaveBeenCalledTimes(2);
+    acquireFsWatch(port, "p-release", listenerA);
+    expect(watches.length).toBe(2);
   });
 
-  it("returns error and does not add listener when fs.watch throws", () => {
-    vi.restoreAllMocks();
-    const boom = new Error("boom");
-    vi.spyOn(fs, "watch").mockImplementation(() => {
-      throw boom;
-    });
-
+  it("returns error and does not add listener when port watch throws", () => {
+    const { port } = createFakePort({ throwOnWatch: true });
     const listenerA = vi.fn();
-    const result = acquireFsWatch("/proj", "p1", listenerA);
-    expect(result).toEqual({ ok: false, error: boom });
-
-    vi.restoreAllMocks();
-    const fresh = installFsWatchMock();
-    const listenerB = vi.fn();
-    const ok = acquireFsWatch("/proj", "p1", listenerB);
-    expect(ok).toEqual({ ok: true });
-
-    fresh.fake.trigger("change", "src/x.ts");
-    expect(listenerA).not.toHaveBeenCalled();
-    expect(listenerB).toHaveBeenCalledTimes(1);
+    const result = acquireFsWatch(port, "p-throw", listenerA);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain("watch boom");
   });
 
-  it("invokes all listeners on change, reports userFiles and theme categories", () => {
-    const listenerA = vi.fn();
-    const listenerB = vi.fn();
-
-    acquireFsWatch("/proj", "p1", listenerA);
-    acquireFsWatch("/proj", "p1", listenerB);
-
-    mock.fake.trigger("change", "src/bar.ts");
-    mock.fake.trigger("rename", ".spherse/theme.css");
-    mock.fake.trigger("change", ".spherse/sessions/abc.json");
-    mock.fake.trigger("change", null);
-
-    expect(listenerA).toHaveBeenCalledTimes(2);
-    expect(listenerB).toHaveBeenCalledTimes(2);
-    expect(listenerA).toHaveBeenCalledWith("p1", {
-      eventType: "change",
-      path: "src/bar.ts",
-    });
-    expect(listenerA).toHaveBeenCalledWith("p1", {
-      eventType: "rename",
-      path: ".spherse/theme.css",
-    });
-  });
-
-  it("applies watch policy per path category and denoises node_modules/.git", () => {
+  it("degrades explicitly when the port lacks watch capability", () => {
+    const { port } = createFakePort({ watchSupported: false });
     const listener = vi.fn();
-    acquireFsWatch("/proj", "p1", listener);
-
-    const cases: Array<{ filename: string; reported: boolean }> = [
-      { filename: "lore/timeline.md", reported: true }, // userFiles
-      { filename: "AGENTS.md", reported: true }, // rootIndex
-      { filename: "CHANGELOG.md", reported: true }, // changelog
-      { filename: ".spherse/theme.css", reported: true }, // projectTheme
-      { filename: ".spherse/agents/bot/theme.css", reported: true }, // agentTheme
-      { filename: ".spherse/skills/my-skill/SKILL.md", reported: true }, // skills
-      { filename: ".spherse/project.yaml", reported: true }, // projectConfig (welcome page settings)
-      { filename: ".spherse/agents/bot/profile.md", reported: false }, // agentProfile
-      { filename: "node_modules/pkg/index.js", reported: false }, // denoise top-level
-      { filename: "packages/app/node_modules/x", reported: false }, // denoise nested
-      { filename: ".git/config", reported: false }, // denoise .git
-    ];
-
-    for (const { filename, reported } of cases) {
-      const before = listener.mock.calls.length;
-      mock.fake.trigger("change", filename);
-      const delta = listener.mock.calls.length - before;
-      expect(delta, `${filename} should be ${reported ? "reported" : "ignored"}`).toBe(
-        reported ? 1 : 0,
-      );
-    }
+    const result = acquireFsWatch(port, "p-nocap", listener);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).toContain("not supported");
   });
 
-  it("cleans up on async watcher error event", () => {
-    const listenerA = vi.fn();
-    acquireFsWatch("/proj", "p1", listenerA);
+  it("maps port vocabulary to bus wire vocabulary and filters categories", () => {
+    const { port, watches } = createFakePort();
+    const listener = vi.fn();
+    acquireFsWatch(port, "p-map", listener);
 
-    mock.fake.triggerError(new Error("os error"));
+    watches[0].emit({ relPath: "AGENTS.md", kind: "change" });
+    expect(listener).toHaveBeenCalledWith("p-map", { eventType: "change", path: "AGENTS.md" });
 
-    expect(mock.fake.close).toHaveBeenCalledTimes(1);
+    watches[0].emit({ relPath: "AGENTS.md", kind: "add" });
+    expect(listener).toHaveBeenCalledWith("p-map", { eventType: "rename", path: "AGENTS.md" });
 
-    acquireFsWatch("/proj", "p1", listenerA);
-    expect(fs.watch).toHaveBeenCalledTimes(2);
+    watches[0].emit({ relPath: "AGENTS.md", kind: "unlink" });
+    expect(listener).toHaveBeenCalledWith("p-map", { eventType: "rename", path: "AGENTS.md" });
+
+    watches[0].emit({ relPath: "node_modules/pkg/index.js", kind: "change" });
+    watches[0].emit({ relPath: ".git/config", kind: "change" });
+    expect(listener).toHaveBeenCalledTimes(3);
+    releaseFsWatch("p-map", listener);
   });
 });

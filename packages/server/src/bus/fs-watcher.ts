@@ -1,6 +1,5 @@
-import fs from "node:fs";
 import { categorizePath } from "@spherse/core";
-import type { PathCategory } from "@spherse/core";
+import type { PathCategory, FsPort, FsWatchEvent } from "@spherse/core";
 
 const WATCHED_CATEGORIES: ReadonlySet<PathCategory> = new Set([
   "userFiles",
@@ -24,15 +23,18 @@ export type FsWatchListener = (
 ) => void;
 
 interface ProjectFsWatcher {
-  watcher: fs.FSWatcher;
+  closer: () => void;
   listeners: Set<FsWatchListener>;
-  error: Error | null;
 }
 
 const watchers = new Map<string, ProjectFsWatcher>();
 
+function toBusEventType(kind: FsWatchEvent["kind"]): "rename" | "change" {
+  return kind === "change" ? "change" : "rename";
+}
+
 export function acquireFsWatch(
-  projectRoot: string,
+  fsPort: FsPort,
   projectId: string,
   listener: FsWatchListener,
 ): { ok: true } | { ok: false; error: Error } {
@@ -42,40 +44,26 @@ export function acquireFsWatch(
     return { ok: true };
   }
 
-  let watcher: fs.FSWatcher;
+  if (!fsPort.capabilities.watch || typeof fsPort.watch !== "function") {
+    return { ok: false, error: new Error("fs watch is not supported by the storage backend") };
+  }
+
+  let closer: () => void;
   try {
-    watcher = fs.watch(
-      projectRoot,
-      { recursive: true },
-      (eventType, filename) => {
-        if (!filename) return;
-        if (!shouldReport(filename)) return;
-        const entry = watchers.get(projectId);
-        if (!entry) return;
-        const evt = { eventType, path: filename };
-        for (const l of entry.listeners) {
-          l(projectId, evt);
-        }
-      },
-    );
+    closer = fsPort.watch("", (event) => {
+      if (!shouldReport(event.relPath)) return;
+      const entry = watchers.get(projectId);
+      if (!entry) return;
+      const evt = { eventType: toBusEventType(event.kind), path: event.relPath };
+      for (const l of entry.listeners) {
+        l(projectId, evt);
+      }
+    });
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err : new Error(String(err)) };
   }
 
-  const entry: ProjectFsWatcher = {
-    watcher,
-    listeners: new Set([listener]),
-    error: null,
-  };
-
-  watcher.on("error", (err) => {
-    entry.error = err instanceof Error ? err : new Error(String(err));
-    watcher.close();
-    entry.listeners.clear();
-    watchers.delete(projectId);
-  });
-
-  watchers.set(projectId, entry);
+  watchers.set(projectId, { closer, listeners: new Set([listener]) });
   return { ok: true };
 }
 
@@ -85,6 +73,6 @@ export function releaseFsWatch(projectId: string, listener: FsWatchListener): vo
   entry.listeners.delete(listener);
   if (entry.listeners.size === 0) {
     watchers.delete(projectId);
-    entry.watcher.close();
+    entry.closer();
   }
 }

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
-import type { FsPort } from "../../store/fs-port.js";
+import type { FsPort, FsWatchEvent } from "../../store/fs-port.js";
 import { NodeFsPort } from "../../store/node-fs-port.js";
 
 export interface FsPortContractSubject {
@@ -87,6 +87,26 @@ export function runFsPortContract(
       await port.writeFile("treeT/sub/f.txt", "deep");
       await port.copyTree("treeT", "treeT-copy");
       expect(await port.readFile("treeT-copy/sub/f.txt")).toBe("deep");
+    });
+
+    it("classifies watch events as add, change and unlink", async () => {
+      const port = subject.port;
+      if (!port.capabilities.watch || !port.watch) return;
+      const events: FsWatchEvent[] = [];
+      const close = port.watch("", (event) => events.push(event));
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      await port.writeFile("watched.txt", "v1");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await port.writeFile("watched.txt", "v2");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await port.unlink("watched.txt");
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      close();
+      const kinds = events.filter((event) => event.relPath === "watched.txt").map((event) => event.kind);
+      expect(kinds).toContain("add");
+      expect(kinds).toContain("change");
+      expect(kinds).toContain("unlink");
+      expect(kinds[kinds.length - 1]).toBe("unlink");
     });
 
     it("rejects absolute and escaping paths", async () => {

@@ -16,11 +16,6 @@ function assertRelInside(rel: string): string {
   return normalized;
 }
 
-function toFsEventKind(eventType: string): "add" | "change" | "unlink" | null {
-  if (eventType === "rename") return null;
-  return "change";
-}
-
 export class NodeFsPort implements FsPort {
   readonly capabilities = { atomicRename: true, watch: true };
   private readonly root: string;
@@ -114,14 +109,32 @@ export class NodeFsPort implements FsPort {
   watch(rel: string, onChange: (event: FsWatchEvent) => void): () => void {
     const absRoot = this.abs(rel);
     const seen = new Map<string, "file" | "dir" | null>();
-    const watcher = fsSync.watch(absRoot, { recursive: true }, (eventType, filename) => {
-      const relPath = toPosix(path.relative(this.root, path.join(absRoot, String(filename))));
-      fs.stat(path.join(absRoot, String(filename)))
+    let ready = false;
+    let closed = false;
+    const scan = async (dir: string, prefix: string): Promise<void> => {
+      const dirents = await fs.readdir(dir, { withFileTypes: true });
+      for (const dirent of dirents) {
+        const relPath = prefix === "" ? dirent.name : `${prefix}/${dirent.name}`;
+        seen.set(relPath, dirent.isDirectory() ? "dir" : "file");
+        if (dirent.isDirectory()) {
+          await scan(path.join(dir, dirent.name), relPath);
+        }
+      }
+    };
+    void scan(absRoot, "")
+      .catch(() => undefined)
+      .then(() => {
+        ready = true;
+      });
+    const watcher = fsSync.watch(absRoot, { recursive: true }, (_eventType, filename) => {
+      if (!ready || closed || !filename) return;
+      const abs = path.join(absRoot, String(filename));
+      const relPath = toPosix(path.relative(this.root, abs));
+      fs.stat(abs)
         .then((s) => {
           const previous = seen.get(relPath);
           const current = s.isFile() ? "file" : "dir";
-          const kind: FsWatchEvent["kind"] =
-            previous === undefined || previous === null ? "add" : "change";
+          const kind: FsWatchEvent["kind"] = previous === null || previous === undefined ? "add" : "change";
           seen.set(relPath, current);
           onChange({ relPath, kind });
         })
@@ -132,8 +145,10 @@ export class NodeFsPort implements FsPort {
             onChange({ relPath, kind: "unlink" });
           }
         });
-      void toFsEventKind;
     });
-    return () => watcher.close();
+    return () => {
+      closed = true;
+      watcher.close();
+    };
   }
 }

@@ -77,6 +77,10 @@ export class ProjectManager {
     return this.projectStore.getRootPath();
   }
 
+  getFsPort(): FsPort {
+    return this.fsPort;
+  }
+
   getProjectId(): string {
     return this.projectStore.config.getProjectId();
   }

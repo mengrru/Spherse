@@ -121,7 +121,7 @@ export function attachBusChannel(
         const listener: FsWatchListener = (_projectId, evt) => {
           emit("change", { eventType: evt.eventType, path: evt.path });
         };
-        const result = acquireFsWatch(ctx.projectManager.getRootPath(), projectId, listener);
+        const result = acquireFsWatch(ctx.projectManager.getFsPort(), projectId, listener);
         if (!result.ok) {
           logger.debug({ err: result.error }, "bus fs-watch acquire failed");
           return { ok: false, error: result.error.message };

@@ -57,6 +57,10 @@ function createMockRegistry(triggerManager: EventEmitter, projectRoot = "/proj/p
     triggerManager,
     projectManager: {
       getRootPath: () => projectRoot,
+      getFsPort: () => ({
+        capabilities: { atomicRename: true, watch: true },
+        watch: () => () => undefined,
+      }),
       onAgentChange: vi.fn((listener: (...args: unknown[]) => void) => {
         agentEmitter.on("agent_updated", listener);
       }),
@@ -250,7 +254,7 @@ describe("ws-bus /ws/bus handler", () => {
     it("acquires fs watch with correct projectRoot and forwards change events", () => {
       socket.simulateMessage(subMsg("p1", "fs-watch"));
 
-      expect(acquireFsWatch).toHaveBeenCalledWith("/proj/p1", "p1", expect.any(Function));
+      expect(acquireFsWatch).toHaveBeenCalledWith(expect.objectContaining({ capabilities: expect.anything() }), "p1", expect.any(Function));
 
       const listener = vi.mocked(acquireFsWatch).mock.calls[0][2];
       listener("p1", { eventType: "change", path: "src/foo.ts" });
