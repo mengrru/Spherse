@@ -1,11 +1,16 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import matter from "gray-matter";
 import type { AgentMemoryConfig, AgentProfile, ThinkingLevel, TimePerceptionConfig } from "../types.js";
 import { ValidationError } from "../errors.js";
+import type { FsPort } from "./fs-port.js";
 
 const THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "low", "medium", "high"];
+
+function posixDirname(rel: string): string {
+  const idx = rel.lastIndexOf("/");
+  return idx === -1 ? "" : rel.slice(0, idx);
+}
 
 function parseThinkingLevel(raw: unknown): ThinkingLevel | undefined {
   return typeof raw === "string" && THINKING_LEVELS.includes(raw as ThinkingLevel)
@@ -42,11 +47,17 @@ function parseMemoryConfig(raw: unknown): AgentMemoryConfig | undefined {
 }
 
 export class AgentProfileStore {
+  private fsPort: FsPort;
+  private relProfilePath: string;
+  private relThemePath: string;
   private profilePath: string;
   private themePath: string;
   private slug: string;
 
-  constructor(profilePath: string, slug: string) {
+  constructor(fsPort: FsPort, relProfilePath: string, profilePath: string, slug: string) {
+    this.fsPort = fsPort;
+    this.relProfilePath = relProfilePath;
+    this.relThemePath = path.posix.join(posixDirname(relProfilePath), "theme.css");
     this.profilePath = profilePath;
     this.themePath = path.join(path.dirname(profilePath), "theme.css");
     this.slug = slug;
@@ -76,8 +87,8 @@ export class AgentProfileStore {
     }
 
     const serialized = matter.stringify(body, data);
-    await fs.mkdir(path.dirname(this.profilePath), { recursive: true });
-    await fs.writeFile(this.profilePath, serialized, "utf-8");
+    await this.fsPort.mkdirp(posixDirname(this.relProfilePath));
+    await this.fsPort.writeFile(this.relProfilePath, serialized);
 
     return this.parseFile().then((p) => p!);
   }
@@ -88,7 +99,7 @@ export class AgentProfileStore {
 
   private async readFrontmatter(): Promise<Record<string, unknown> | null> {
     try {
-      const raw = await fs.readFile(this.profilePath, "utf-8");
+      const raw = await this.fsPort.readFile(this.relProfilePath);
       return matter(raw).data;
     } catch {
       return null;
@@ -97,30 +108,30 @@ export class AgentProfileStore {
 
   async getTheme(): Promise<string> {
     try {
-      return await fs.readFile(this.themePath, "utf-8");
+      return await this.fsPort.readFile(this.relThemePath);
     } catch {
       return "";
     }
   }
 
   async saveTheme(content: string): Promise<void> {
-    await fs.writeFile(this.themePath, content, "utf-8");
+    await this.fsPort.writeFile(this.relThemePath, content);
   }
 
   async getRawContent(): Promise<string> {
-    return fs.readFile(this.profilePath, "utf-8");
+    return this.fsPort.readFile(this.relProfilePath);
   }
 
   private async parseFile(): Promise<AgentProfile | null> {
     try {
-      const raw = await fs.readFile(this.profilePath, "utf-8");
+      const raw = await this.fsPort.readFile(this.relProfilePath);
       const { data, content } = matter(raw);
 
       if (!data.name) return null;
 
       if (!data.id) {
         data.id = crypto.randomUUID();
-        await fs.writeFile(this.profilePath, matter.stringify(content, data), "utf-8");
+        await this.fsPort.writeFile(this.relProfilePath, matter.stringify(content, data));
       }
 
       return {

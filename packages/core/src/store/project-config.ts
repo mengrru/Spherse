@@ -1,5 +1,3 @@
-import fs from "node:fs/promises";
-import fsSync from "node:fs";
 import YAML from "yaml";
 import { nanoid } from "nanoid";
 import {
@@ -10,6 +8,7 @@ import type { ProjectConfig } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 import { ValidationError, ProjectConfigNotFoundError, ProjectConfigParseError } from "../errors.js";
 import { categorizePath } from "../access/path-category.js";
+import type { FsPort } from "./fs-port.js";
 
 const WELCOME_PAGE_EXTENSIONS = new Set(["html", "htm", "png", "jpg", "jpeg", "gif", "webp", "svg"]);
 const SIDE_PANEL_EXTENSIONS = new Set(["html", "htm"]);
@@ -29,37 +28,39 @@ const normalizeWelcomePagePath = (input: string) => normalizeProjectPagePath(inp
 const normalizeSidePanelPath = (input: string) => normalizeProjectPagePath(input, SIDE_PANEL_EXTENSIONS);
 
 export class ProjectConfigStore {
-  private configPath: string;
+  private fsPort: FsPort;
+  private relConfigPath: string;
   private config: ProjectConfig | null = null;
   private logger: Logger;
 
-  constructor(configPath: string, logger?: Logger) {
-    this.configPath = configPath;
+  constructor(fsPort: FsPort, relConfigPath: string, logger?: Logger) {
+    this.fsPort = fsPort;
+    this.relConfigPath = relConfigPath;
     this.logger = logger ?? createSilentLogger();
   }
 
   async read(): Promise<ProjectConfig> {
-    if (!fsSync.existsSync(this.configPath)) {
-      throw new ProjectConfigNotFoundError(`project.yaml not found at ${this.configPath}`);
+    if ((await this.fsPort.stat(this.relConfigPath)) === null) {
+      throw new ProjectConfigNotFoundError(`project.yaml not found at ${this.relConfigPath}`);
     }
 
-    const raw = await fs.readFile(this.configPath, "utf-8");
+    const raw = await this.fsPort.readFile(this.relConfigPath);
     let parsed: unknown;
     try {
       parsed = YAML.parse(raw);
     } catch (err) {
       throw new ProjectConfigParseError(
-        `project.yaml is not valid YAML at ${this.configPath}: ${(err as Error).message}`,
+        `project.yaml is not valid YAML at ${this.relConfigPath}: ${(err as Error).message}`,
       );
     }
     if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new ProjectConfigParseError(`project.yaml is empty or invalid at ${this.configPath}`);
+      throw new ProjectConfigParseError(`project.yaml is empty or invalid at ${this.relConfigPath}`);
     }
     this.config = parsed as ProjectConfig;
 
     if (!this.config.id) {
       this.config.id = nanoid(8);
-      await fs.writeFile(this.configPath, YAML.stringify(this.config), "utf-8");
+      await this.fsPort.writeFile(this.relConfigPath, YAML.stringify(this.config));
       this.logger.info({ id: this.config.id }, "project id generated for legacy project");
     }
 
@@ -68,7 +69,7 @@ export class ProjectConfigStore {
 
   async write(config: ProjectConfig): Promise<void> {
     this.config = config;
-    await fs.writeFile(this.configPath, YAML.stringify(config), "utf-8");
+    await this.fsPort.writeFile(this.relConfigPath, YAML.stringify(config));
   }
 
   get(): ProjectConfig {

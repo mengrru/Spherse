@@ -5,6 +5,7 @@ import matter from "gray-matter";
 import AdmZip from "adm-zip";
 import { nanoid } from "nanoid";
 import type { SkillDefinition } from "../types.js";
+import type { FsPort } from "./fs-port.js";
 import { isPathInside } from "../utils/path-safety.js";
 import { shouldSkipDirEntry } from "../utils/fs-walk.js";
 import { moveDirAtomic } from "../utils/fs-move.js";
@@ -15,6 +16,11 @@ type PresetSkillSource = {
   dir: string;
   files: { relativePath: string; content: string }[];
 };
+
+export interface AdditionalSkillDir {
+  dir: string;
+  relDir: string;
+}
 
 const INVALID_SKILL_NAME_RE = /[/\\:]/;
 
@@ -35,18 +41,27 @@ function parseSkillVersion(value: unknown): string | undefined {
 
 export class SkillStore {
   private skillDir: string;
-  private additionalSkillDirs: string[];
+  private relSkillDir: string;
+  private additionalSkillDirs: AdditionalSkillDir[];
   private builtinSources?: readonly PresetSkillSource[];
   private fileWriteMutex: FileWriteMutex;
+  private readonly fsPort: FsPort;
 
   constructor(
+    fsPort: FsPort,
+    relSkillDir: string,
     skillDir: string,
     builtinSources?: readonly PresetSkillSource[],
     fileWriteMutex?: FileWriteMutex,
-    additionalSkillDirs: readonly string[] = [],
+    additionalSkillDirs: readonly AdditionalSkillDir[] = [],
   ) {
+    this.fsPort = fsPort;
+    this.relSkillDir = relSkillDir;
     this.skillDir = path.resolve(skillDir);
-    this.additionalSkillDirs = additionalSkillDirs.map((dir) => path.resolve(dir));
+    this.additionalSkillDirs = additionalSkillDirs.map((d) => ({
+      dir: path.resolve(d.dir),
+      relDir: d.relDir,
+    }));
     this.builtinSources = builtinSources;
     this.fileWriteMutex = fileWriteMutex ?? new FileWriteMutex();
   }
@@ -59,13 +74,13 @@ export class SkillStore {
     }
 
     for (const additionalSkillDir of this.additionalSkillDirs) {
-      const additionalSkills = await this.listProject(additionalSkillDir);
+      const additionalSkills = await this.listProject(additionalSkillDir.relDir, additionalSkillDir.dir);
       for (const skill of additionalSkills) {
         byName.set(skill.name, skill);
       }
     }
 
-    const projectSkills = await this.listProject(this.skillDir);
+    const projectSkills = await this.listProject(this.relSkillDir, this.skillDir);
     for (const skill of projectSkills) {
       byName.set(skill.name, skill);
     }
@@ -74,11 +89,11 @@ export class SkillStore {
   }
 
   async get(name: string): Promise<SkillDefinition | null> {
-    const projectSkill = await this.parseSkill(this.skillDir, name);
+    const projectSkill = await this.parseSkill(this.relSkillDir, this.skillDir, name);
     if (projectSkill) return projectSkill;
 
     for (const additionalSkillDir of this.additionalSkillDirs) {
-      const additionalSkill = await this.parseSkill(additionalSkillDir, name);
+      const additionalSkill = await this.parseSkill(additionalSkillDir.relDir, additionalSkillDir.dir, name);
       if (additionalSkill) return additionalSkill;
     }
 
@@ -220,27 +235,27 @@ export class SkillStore {
     }
   }
 
-  private async listProject(skillDir: string): Promise<SkillDefinition[]> {
+  private async listProject(relDir: string, dir: string): Promise<SkillDefinition[]> {
     try {
-      const entries = await fs.readdir(skillDir, { withFileTypes: true });
-      const dirs = entries.filter((e) => e.isDirectory());
-      const skills = await Promise.all(dirs.map((d) => this.parseSkill(skillDir, d.name)));
+      const entries = await this.fsPort.readdir(relDir);
+      const dirs = entries.filter((e) => e.isDirectory);
+      const skills = await Promise.all(dirs.map((d) => this.parseSkill(relDir, dir, d.name)));
       return skills.filter((s): s is SkillDefinition => s !== null);
     } catch {
       return [];
     }
   }
 
-  private async parseSkill(skillDir: string, dirName: string): Promise<SkillDefinition | null> {
-    const skillMdPath = path.resolve(skillDir, dirName, "SKILL.md");
-    if (!isPathInside(skillDir, skillMdPath)) return null;
+  private async parseSkill(relDir: string, dir: string, dirName: string): Promise<SkillDefinition | null> {
+    const skillMdPath = path.resolve(dir, dirName, "SKILL.md");
+    if (!isPathInside(dir, skillMdPath)) return null;
     try {
-      const raw = await fs.readFile(skillMdPath, "utf-8");
+      const raw = await this.fsPort.readFile(path.posix.join(relDir, dirName, "SKILL.md"));
       const { data, content } = matter(raw);
 
       if (!data.name || !data.description) return null;
 
-      const files = await this.collectSkillFiles(path.dirname(skillMdPath));
+      const files = await this.collectSkillFiles(path.posix.join(relDir, dirName));
       return {
         name: data.name,
         description: data.description,
@@ -255,22 +270,22 @@ export class SkillStore {
     }
   }
 
-  private async collectSkillFiles(skillDirAbs: string): Promise<string[]> {
+  private async collectSkillFiles(relSkillDir: string): Promise<string[]> {
     const result: string[] = [];
-    const walk = async (dir: string, prefix: string) => {
-      const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => null);
+    const walk = async (rel: string) => {
+      const entries = await this.fsPort.readdir(rel).catch(() => null);
       if (!entries) return;
       for (const entry of entries) {
         if (shouldSkipDirEntry(entry.name)) continue;
-        const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
-        if (entry.isDirectory()) {
-          await walk(path.join(dir, entry.name), rel);
-        } else if (rel !== "SKILL.md") {
-          result.push(rel);
+        const relName = rel === relSkillDir ? entry.name : `${rel.slice(relSkillDir.length + 1)}/${entry.name}`;
+        if (entry.isDirectory) {
+          await walk(path.posix.join(rel, entry.name));
+        } else if (relName !== "SKILL.md") {
+          result.push(relName);
         }
       }
     };
-    await walk(skillDirAbs, "");
+    await walk(relSkillDir);
     return result.sort();
   }
 

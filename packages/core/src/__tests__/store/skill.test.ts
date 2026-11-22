@@ -3,9 +3,30 @@ import path from "node:path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import AdmZip from "adm-zip";
 import { nanoid } from "nanoid";
-import { SkillStore } from "../../store/skill.js";
+import { SkillStore, type AdditionalSkillDir } from "../../store/skill.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { ConflictError, ValidationError } from "../../errors.js";
 import { createTempProject, cleanupDir, writeFile, pathExists } from "../helpers.js";
+
+type BuiltinSource = {
+  dir: string;
+  files: { relativePath: string; content: string }[];
+};
+
+function makeSkillStore(
+  skillDir: string,
+  builtinSources?: readonly BuiltinSource[],
+  additionalSkillDirs: readonly AdditionalSkillDir[] = [],
+): SkillStore {
+  return new SkillStore(
+    new NodeFsPort(path.dirname(skillDir)),
+    path.basename(skillDir),
+    skillDir,
+    builtinSources,
+    undefined,
+    additionalSkillDirs,
+  );
+}
 
 describe("SkillStore (project-only, backward compat)", () => {
   let skillDir: string;
@@ -13,7 +34,7 @@ describe("SkillStore (project-only, backward compat)", () => {
 
   beforeEach(async () => {
     skillDir = await createTempProject();
-    store = new SkillStore(skillDir);
+    store = makeSkillStore(skillDir);
   });
 
   afterEach(async () => {
@@ -94,7 +115,7 @@ describe("SkillStore (project-only, backward compat)", () => {
   });
 
   it("returns empty list for non-existent directory", async () => {
-    const emptyStore = new SkillStore(skillDir + "/nope");
+    const emptyStore = makeSkillStore(skillDir + "/nope");
     const skills = await emptyStore.list();
     expect(skills).toHaveLength(0);
   });
@@ -121,7 +142,7 @@ describe("SkillStore with builtin sources", () => {
   ] as const;
 
   it("lists builtin skills from in-memory sources", async () => {
-    const store = new SkillStore(skillDir, builtinFixture);
+    const store = makeSkillStore(skillDir, builtinFixture);
     const skills = await store.list();
     expect(skills).toHaveLength(1);
     expect(skills[0].name).toBe("x");
@@ -131,7 +152,7 @@ describe("SkillStore with builtin sources", () => {
   });
 
   it("returns empty list when both builtin and project sources are empty", async () => {
-    const store = new SkillStore(skillDir, []);
+    const store = makeSkillStore(skillDir, []);
     const skills = await store.list();
     expect(skills).toHaveLength(0);
   });
@@ -142,7 +163,7 @@ describe("SkillStore with builtin sources", () => {
       "x/SKILL.md",
       "---\nname: x\ndescription: Project X\n---\nProject body.",
     );
-    const store = new SkillStore(skillDir, builtinFixture);
+    const store = makeSkillStore(skillDir, builtinFixture);
     const skills = await store.list();
     expect(skills).toHaveLength(1);
     expect(skills[0].name).toBe("x");
@@ -156,14 +177,14 @@ describe("SkillStore with builtin sources", () => {
       "x/SKILL.md",
       "---\nname: x\ndescription: Project X\n---\nProject body.",
     );
-    const store = new SkillStore(skillDir, builtinFixture);
+    const store = makeSkillStore(skillDir, builtinFixture);
     const skill = await store.get("x");
     expect(skill).not.toBeNull();
     expect(skill!.source).toBe("project");
   });
 
   it("get returns builtin when only builtin has the name", async () => {
-    const store = new SkillStore(skillDir, builtinFixture);
+    const store = makeSkillStore(skillDir, builtinFixture);
     const skill = await store.get("x");
     expect(skill).not.toBeNull();
     expect(skill!.source).toBe("builtin");
@@ -179,7 +200,7 @@ describe("SkillStore with builtin sources", () => {
         ],
       },
     ] as const;
-    const store = new SkillStore(skillDir, badFixture);
+    const store = makeSkillStore(skillDir, badFixture);
     const skills = await store.list();
     expect(skills).toHaveLength(0);
   });
@@ -191,7 +212,7 @@ describe("SkillStore with builtin sources", () => {
         files: [{ relativePath: "README.md", content: "# readme" }],
       },
     ] as const;
-    const store = new SkillStore(skillDir, noSkillMdFixture);
+    const store = makeSkillStore(skillDir, noSkillMdFixture);
     const skills = await store.list();
     expect(skills).toHaveLength(0);
     expect(await store.get("no-skill-md")).toBeNull();
@@ -203,7 +224,7 @@ describe("SkillStore with builtin sources", () => {
       "x/SKILL.md",
       "---\nname: x\n---\nbody",
     );
-    const store = new SkillStore(skillDir, [
+    const store = makeSkillStore(skillDir, [
       {
         dir: "x",
         files: [
@@ -242,7 +263,14 @@ describe("SkillStore with additional project sources", () => {
     );
     await writeFile(agentsSkillDir, "external/references/guide.md", "Guide");
 
-    const store = new SkillStore(skillDir, undefined, undefined, [agentsSkillDir]);
+    const store = new SkillStore(
+      new NodeFsPort(projectRoot),
+      ".spherse/skills",
+      skillDir,
+      undefined,
+      undefined,
+      [{ dir: agentsSkillDir, relDir: ".agents/skills" }],
+    );
     const skill = await store.get("external");
 
     expect(skill).toMatchObject({
@@ -267,6 +295,8 @@ describe("SkillStore with additional project sources", () => {
       "---\nname: shared\ndescription: Agent skill\n---\nAgent body.",
     );
     const store = new SkillStore(
+      new NodeFsPort(projectRoot),
+      ".spherse/skills",
       skillDir,
       [{
         dir: "shared",
@@ -276,7 +306,7 @@ describe("SkillStore with additional project sources", () => {
         }],
       }],
       undefined,
-      [agentsSkillDir],
+      [{ dir: agentsSkillDir, relDir: ".agents/skills" }],
     );
 
     expect(await store.get("shared")).toMatchObject({
@@ -317,7 +347,7 @@ describe("SkillStore createSkill", () => {
 
   beforeEach(async () => {
     skillDir = await createTempProject();
-    store = new SkillStore(skillDir);
+    store = makeSkillStore(skillDir);
   });
 
   afterEach(async () => {
@@ -362,7 +392,7 @@ describe("SkillStore installSkill", () => {
 
   beforeEach(async () => {
     skillDir = await createTempProject();
-    store = new SkillStore(skillDir);
+    store = makeSkillStore(skillDir);
   });
 
   afterEach(async () => {
@@ -518,7 +548,7 @@ describe("SkillStore installSkill overwrite", () => {
 
   beforeEach(async () => {
     skillDir = await createTempProject();
-    store = new SkillStore(skillDir);
+    store = makeSkillStore(skillDir);
   });
 
   afterEach(async () => {

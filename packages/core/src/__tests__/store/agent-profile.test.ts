@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "node:path";
 import { AgentProfileStore, assertSafeSlug } from "../../store/agent-profile.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { createTempProject, cleanupDir, ensureDir, pathExists, writeFile } from "../helpers.js";
 
 describe("AgentProfileStore", () => {
@@ -13,6 +14,8 @@ describe("AgentProfileStore", () => {
     agentDir = path.join(tmpRoot, "agents", "test-agent-a1b2c3");
     await ensureDir(tmpRoot, "agents/test-agent-a1b2c3");
     store = new AgentProfileStore(
+      new NodeFsPort(tmpRoot),
+      "agents/test-agent-a1b2c3/profile.md",
       path.join(agentDir, "profile.md"),
       "test-agent-a1b2c3",
     );

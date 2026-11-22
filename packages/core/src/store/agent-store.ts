@@ -2,12 +2,13 @@ import path from "node:path";
 import matter from "gray-matter";
 import type { AgentProfile } from "../types.js";
 import { AgentProfileStore } from "./agent-profile.js";
-import { SqliteMemoryStore } from "./memory.js";
+import { CORE_FILE, MEMORY_DIR, SqliteMemoryStore } from "./memory.js";
 import { SqliteSessionStore } from "./session.js";
 import { TriggerStore } from "./trigger.js";
 import { SkillStore } from "./skill.js";
 import { McpConfigStore } from "./mcp-config.js";
 import type { ProjectStorageOptions } from "./storage-port.js";
+import type { FsPort } from "./fs-port.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 import type { SessionChangePayload, SessionStorePort } from "./session.js";
@@ -15,7 +16,9 @@ import type { MemoryStorePort } from "./memory.js";
 
 export class AgentStore {
   private agentDir: string;
+  private relAgentDir: string;
   private agentId: string;
+  private fsPort: FsPort;
   private _profile: AgentProfile | null = null;
   private _profileStore: AgentProfileStore;
   private _sessionStore: SessionStorePort | null = null;
@@ -28,6 +31,8 @@ export class AgentStore {
   constructor(
     agentDir: string,
     agentId: string,
+    fsPort: FsPort,
+    relAgentDir: string,
     logger?: Logger,
     fileWriteMutex?: FileWriteMutex,
     onSessionChange?: (payload: SessionChangePayload) => void,
@@ -35,11 +40,15 @@ export class AgentStore {
   ) {
     this.agentDir = agentDir;
     this.agentId = agentId;
+    this.fsPort = fsPort;
+    this.relAgentDir = relAgentDir;
     this.logger = logger ?? createSilentLogger();
     this.fileWriteMutex = fileWriteMutex;
     this.onSessionChange = onSessionChange;
     this.storage = storage;
     this._profileStore = new AgentProfileStore(
+      fsPort,
+      path.posix.join(relAgentDir, "profile.md"),
       path.join(agentDir, "profile.md"),
       path.basename(agentDir),
     );
@@ -99,6 +108,10 @@ export class AgentStore {
     return this.agentDir;
   }
 
+  getRelAgentDir(): string {
+    return this.relAgentDir;
+  }
+
   get profile(): AgentProfileStore {
     return this._profileStore;
   }
@@ -128,14 +141,24 @@ export class AgentStore {
 
   get skills(): SkillStore {
     if (!this._skillStore) {
-      this._skillStore = new SkillStore(path.join(this.agentDir, "skills"), undefined, this.fileWriteMutex);
+      this._skillStore = new SkillStore(
+        this.fsPort,
+        path.posix.join(this.relAgentDir, "skills"),
+        path.join(this.agentDir, "skills"),
+        undefined,
+        this.fileWriteMutex,
+      );
     }
     return this._skillStore;
   }
 
   get mcp(): McpConfigStore {
     if (!this._mcpStore) {
-      this._mcpStore = new McpConfigStore(this.agentDir, this.logger);
+      this._mcpStore = new McpConfigStore(
+        this.fsPort,
+        path.posix.join(this.relAgentDir, "mcp.json"),
+        this.logger,
+      );
     }
     return this._mcpStore;
   }
@@ -143,8 +166,13 @@ export class AgentStore {
   get memory(): MemoryStorePort {
     if (!this._memoryStore) {
       this._memoryStore = this.storage?.memoryStoreFactory
-        ? this.storage.memoryStoreFactory({ agentDir: this.agentDir, logger: this.logger })
-        : new SqliteMemoryStore(this.agentDir, this.logger);
+        ? this.storage.memoryStoreFactory({ agentDir: this.agentDir, logger: this.logger, fsPort: this.fsPort })
+        : new SqliteMemoryStore(
+            this.agentDir,
+            this.fsPort,
+            path.posix.join(this.relAgentDir, MEMORY_DIR, CORE_FILE),
+            this.logger,
+          );
     }
     return this._memoryStore;
   }

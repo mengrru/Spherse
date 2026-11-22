@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "node:path";
 import { McpConfigStore } from "../../store/mcp-config.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { createTempProject, cleanupDir, ensureDir, pathExists } from "../helpers.js";
 
 describe("McpConfigStore", () => {
@@ -12,7 +13,7 @@ describe("McpConfigStore", () => {
     tmpRoot = await createTempProject();
     agentDir = path.join(tmpRoot, "agents", "test-agent-a1b2c3");
     await ensureDir(tmpRoot, "agents/test-agent-a1b2c3");
-    store = new McpConfigStore(agentDir);
+    store = new McpConfigStore(new NodeFsPort(tmpRoot), "agents/test-agent-a1b2c3/mcp.json");
   });
 
   afterEach(async () => {

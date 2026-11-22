@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import path from "node:path";
 import { createLoadSkillTool } from "../../tools/load-skill.js";
 import { SkillStore } from "../../store/skill.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { createTempProject, cleanupDir, writeFile } from "../helpers.js";
 
 describe("createLoadSkillTool", () => {
@@ -20,7 +22,7 @@ describe("createLoadSkillTool", () => {
   });
 
   it("loads an existing skill", async () => {
-    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
+    const tool = createLoadSkillTool(skillDir, new SkillStore(new NodeFsPort(path.dirname(skillDir)), path.basename(skillDir), skillDir));
     const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
     expect(result.content[0].text).toContain('<skill-content name="brainstorming">');
     expect(result.content[0].text).toContain("Do creative brainstorming here.");
@@ -28,7 +30,7 @@ describe("createLoadSkillTool", () => {
   });
 
   it("returns error for non-existent skill", async () => {
-    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
+    const tool = createLoadSkillTool(skillDir, new SkillStore(new NodeFsPort(path.dirname(skillDir)), path.basename(skillDir), skillDir));
     const result = await tool.execute("tc1", { skill_name: "missing" }, undefined as any);
     expect(result.content[0].text).toContain('skill "missing" not found');
     expect(result.details).toBeUndefined();
@@ -36,7 +38,7 @@ describe("createLoadSkillTool", () => {
 
   it("returns error for skill without SKILL.md", async () => {
     await writeFile(skillDir, "empty-dir/placeholder.txt", "");
-    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
+    const tool = createLoadSkillTool(skillDir, new SkillStore(new NodeFsPort(path.dirname(skillDir)), path.basename(skillDir), skillDir));
     const result = await tool.execute("tc1", { skill_name: "empty-dir" }, undefined as any);
     expect(result.content[0].text).toContain("not found");
   });
@@ -45,7 +47,7 @@ describe("createLoadSkillTool", () => {
     await writeFile(skillDir, "brainstorming/references/foo.md", "# Foo\n\nFoo content.");
     await writeFile(skillDir, "brainstorming/scripts/helper.js", "console.log('hi');");
 
-    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
+    const tool = createLoadSkillTool(skillDir, new SkillStore(new NodeFsPort(path.dirname(skillDir)), path.basename(skillDir), skillDir));
     const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
     const text = result.content[0].text;
     expect(text).toContain("## Skill Files");
@@ -55,7 +57,7 @@ describe("createLoadSkillTool", () => {
   });
 
   it("does not append manifest for project skill without companion files", async () => {
-    const tool = createLoadSkillTool(skillDir, new SkillStore(skillDir));
+    const tool = createLoadSkillTool(skillDir, new SkillStore(new NodeFsPort(path.dirname(skillDir)), path.basename(skillDir), skillDir));
     const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
     expect(result.content[0].text).not.toContain("## Skill Files");
   });
@@ -84,8 +86,8 @@ describe("createLoadSkillTool", () => {
     it("prefers agent-level skill over global when names collide", async () => {
       const tool = createLoadSkillTool(
         skillDir,
-        new SkillStore(skillDir),
-        new SkillStore(agentSkillDir),
+        new SkillStore(new NodeFsPort(path.dirname(skillDir)), path.basename(skillDir), skillDir),
+        new SkillStore(new NodeFsPort(path.dirname(agentSkillDir)), path.basename(agentSkillDir), agentSkillDir),
       );
       const result = await tool.execute("tc1", { skill_name: "brainstorming" }, undefined as any);
       expect(result.content[0].text).toContain("Agent-local instructions.");
@@ -95,8 +97,8 @@ describe("createLoadSkillTool", () => {
     it("falls back to global skill when not present at agent level", async () => {
       const tool = createLoadSkillTool(
         skillDir,
-        new SkillStore(skillDir),
-        new SkillStore(agentSkillDir),
+        new SkillStore(new NodeFsPort(path.dirname(skillDir)), path.basename(skillDir), skillDir),
+        new SkillStore(new NodeFsPort(path.dirname(agentSkillDir)), path.basename(agentSkillDir), agentSkillDir),
       );
       const result = await tool.execute("tc1", { skill_name: "agent-only" }, undefined as any);
       expect(result.content[0].text).toContain("Agent-only skill content.");
@@ -105,8 +107,8 @@ describe("createLoadSkillTool", () => {
     it("loads agent-only skill that does not exist globally", async () => {
       const tool = createLoadSkillTool(
         skillDir,
-        new SkillStore(skillDir),
-        new SkillStore(agentSkillDir),
+        new SkillStore(new NodeFsPort(path.dirname(skillDir)), path.basename(skillDir), skillDir),
+        new SkillStore(new NodeFsPort(path.dirname(agentSkillDir)), path.basename(agentSkillDir), agentSkillDir),
       );
       const result = await tool.execute("tc1", { skill_name: "agent-only" }, undefined as any);
       expect(result.details).toEqual({ name: "agent-only" });
@@ -115,8 +117,8 @@ describe("createLoadSkillTool", () => {
     it("returns error when skill missing from both levels", async () => {
       const tool = createLoadSkillTool(
         skillDir,
-        new SkillStore(skillDir),
-        new SkillStore(agentSkillDir),
+        new SkillStore(new NodeFsPort(path.dirname(skillDir)), path.basename(skillDir), skillDir),
+        new SkillStore(new NodeFsPort(path.dirname(agentSkillDir)), path.basename(agentSkillDir), agentSkillDir),
       );
       const result = await tool.execute("tc1", { skill_name: "missing" }, undefined as any);
       expect(result.content[0].text).toContain('skill "missing" not found');

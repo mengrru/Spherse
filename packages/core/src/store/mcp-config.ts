@@ -1,23 +1,24 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import { normalizeMcpConfig } from "../mcp/index.js";
 import type { AgentMcpConfig } from "../mcp/index.js";
 import type { Logger } from "../logger.js";
 import { createSilentLogger } from "../logger.js";
+import type { FsPort } from "./fs-port.js";
 
 export class McpConfigStore {
-  private mcpPath: string;
+  private fsPort: FsPort;
+  private relMcpPath: string;
   private readonly logger: Logger;
 
-  constructor(agentDir: string, logger?: Logger) {
-    this.mcpPath = path.join(agentDir, "mcp.json");
+  constructor(fsPort: FsPort, relMcpPath: string, logger?: Logger) {
+    this.fsPort = fsPort;
+    this.relMcpPath = relMcpPath;
     this.logger = logger ?? createSilentLogger();
   }
 
   async getConfig(): Promise<AgentMcpConfig> {
     let raw: string;
     try {
-      raw = await fs.readFile(this.mcpPath, "utf-8");
+      raw = await this.fsPort.readFile(this.relMcpPath);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
         return { servers: [] };
@@ -35,7 +36,7 @@ export class McpConfigStore {
     const normalized = normalizeMcpConfig(config, (entry, reason) => {
       this.logger.warn({ entry, reason }, "mcp config entry dropped");
     });
-    await fs.writeFile(this.mcpPath, JSON.stringify(normalized, null, 2), "utf-8");
+    await this.fsPort.writeFile(this.relMcpPath, JSON.stringify(normalized, null, 2));
     return normalized;
   }
 }

@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createSilentLogger } from "../../logger.js";
 import { ProjectConfigStore } from "../../store/project-config.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import type { ProjectConfig } from "../../types.js";
 import { createTempProject, cleanupDir, ensureDir, readFile, pathExists } from "../helpers.js";
 
@@ -15,7 +16,7 @@ describe("ProjectConfigStore", () => {
     tmpRoot = await createTempProject();
     await ensureDir(tmpRoot, ".spherse");
     configPath = path.join(tmpRoot, ".spherse", "project.yaml");
-    store = new ProjectConfigStore(configPath, createSilentLogger());
+    store = new ProjectConfigStore(new NodeFsPort(tmpRoot), ".spherse/project.yaml", createSilentLogger());
   });
 
   afterEach(async () => {
@@ -32,7 +33,7 @@ describe("ProjectConfigStore", () => {
     await store.write(VALID_CONFIG);
     expect(pathExists(tmpRoot, ".spherse/project.yaml")).toBe(true);
 
-    const store2 = new ProjectConfigStore(configPath, createSilentLogger());
+    const store2 = new ProjectConfigStore(new NodeFsPort(tmpRoot), ".spherse/project.yaml", createSilentLogger());
     const config = await store2.read();
     expect(config.name).toBe("TestProject");
     expect(config.id).toBe("test-id-01");
@@ -44,7 +45,7 @@ describe("ProjectConfigStore", () => {
 
   it("get() returns config after read", async () => {
     await store.write(VALID_CONFIG);
-    const store2 = new ProjectConfigStore(configPath, createSilentLogger());
+    const store2 = new ProjectConfigStore(new NodeFsPort(tmpRoot), ".spherse/project.yaml", createSilentLogger());
     await store2.read();
     expect(store2.get().name).toBe("TestProject");
   });
@@ -71,7 +72,7 @@ describe("ProjectConfigStore", () => {
       "utf-8",
     );
 
-    const store2 = new ProjectConfigStore(configPath, createSilentLogger());
+    const store2 = new ProjectConfigStore(new NodeFsPort(tmpRoot), ".spherse/project.yaml", createSilentLogger());
     const config = await store2.read();
     expect(config.id).toBeDefined();
     expect(config.id).toHaveLength(8);
@@ -87,7 +88,7 @@ describe("ProjectConfigStore", () => {
       "utf-8",
     );
 
-    const store2 = new ProjectConfigStore(configPath, createSilentLogger());
+    const store2 = new ProjectConfigStore(new NodeFsPort(tmpRoot), ".spherse/project.yaml", createSilentLogger());
     const config = await store2.read();
     expect(config.name).toBe("LegacyProject");
     expect(config.id).toBe("legacy-id-02");
@@ -206,7 +207,7 @@ describe("ProjectConfigStore", () => {
       expect(result).toEqual({ path: "panel/index.htm" });
       expect(store.getSidePanelSettings()).toEqual({ path: "panel/index.htm" });
 
-      const store2 = new ProjectConfigStore(configPath, createSilentLogger());
+      const store2 = new ProjectConfigStore(new NodeFsPort(tmpRoot), ".spherse/project.yaml", createSilentLogger());
       await store2.read();
       expect(store2.getSidePanelSettings()).toEqual({ path: "panel/index.htm" });
     });

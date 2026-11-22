@@ -1,11 +1,12 @@
 import Database from "better-sqlite3";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import fsp from "node:fs/promises";
 import path from "node:path";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { escapeLikePattern } from "../session/search.js";
 import { type Logger, createSilentLogger } from "../logger.js";
+import type { FsPort } from "./fs-port.js";
+import { NodeFsPort } from "./node-fs-port.js";
 
 export interface MemoryEntry {
   id: string;
@@ -142,14 +143,16 @@ export interface MemoryStorePort {
 
 export class SqliteMemoryStore implements MemoryStorePort {
   private readonly dbPath: string;
-  private readonly corePath: string;
+  private readonly fsPort: FsPort;
+  private readonly relCorePath: string;
   private readonly db: Database.Database;
   private readonly logger: Logger;
   private coreWriteChain: Promise<unknown> = Promise.resolve();
 
-  constructor(agentDir: string, logger?: Logger) {
+  constructor(agentDir: string, fsPort?: FsPort, relCorePath?: string, logger?: Logger) {
     this.dbPath = path.join(agentDir, MEMORY_DIR, DB_FILE);
-    this.corePath = path.join(agentDir, MEMORY_DIR, CORE_FILE);
+    this.fsPort = fsPort ?? new NodeFsPort(agentDir);
+    this.relCorePath = relCorePath ?? path.posix.join(MEMORY_DIR, CORE_FILE);
     this.logger = logger ?? createSilentLogger();
     this.db = this.openDatabase();
   }
@@ -196,7 +199,7 @@ export class SqliteMemoryStore implements MemoryStorePort {
 
   private async readCoreFile(): Promise<string> {
     try {
-      return await fsp.readFile(this.corePath, "utf-8");
+      return await this.fsPort.readFile(this.relCorePath);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return "";
       throw err;
@@ -204,8 +207,8 @@ export class SqliteMemoryStore implements MemoryStorePort {
   }
 
   private async writeCoreFile(content: string): Promise<void> {
-    await fsp.mkdir(path.dirname(this.corePath), { recursive: true });
-    await fsp.writeFile(this.corePath, content, "utf-8");
+    await this.fsPort.mkdirp(path.posix.dirname(this.relCorePath));
+    await this.fsPort.writeFile(this.relCorePath, content);
   }
 
   async getCore(): Promise<string> {

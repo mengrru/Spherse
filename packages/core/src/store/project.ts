@@ -1,5 +1,3 @@
-import fs from "node:fs/promises";
-import fsSync from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { EventEmitter } from "node:events";
@@ -13,6 +11,8 @@ import { ProjectConfigStore } from "./project-config.js";
 import { SkillStore } from "./skill.js";
 import { AgentStore } from "./agent-store.js";
 import type { ProjectStorageOptions } from "./storage-port.js";
+import type { FsPort } from "./fs-port.js";
+import { NodeFsPort } from "./node-fs-port.js";
 import { AgentProfileStore, assertSafeSlug } from "./agent-profile.js";
 import type { SessionChangePayload } from "./session.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
@@ -29,14 +29,6 @@ export interface ChangelogEntry {
 
 export type AgentChangeAction = "created" | "updated" | "deleted";
 
-async function writeFileIfMissing(filePath: string, content: string): Promise<void> {
-  try {
-    await fs.writeFile(filePath, content, { encoding: "utf-8", flag: "wx" });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
-  }
-}
-
 export interface AgentChangePayload {
   agentId: string;
   action: AgentChangeAction;
@@ -50,6 +42,7 @@ export class ProjectStore extends EventEmitter {
   private logger: Logger;
   private readonly storage?: ProjectStorageOptions;
   private readonly fileWriteMutex?: FileWriteMutex;
+  private readonly fsPort: FsPort;
 
   private _configStore: ProjectConfigStore | null = null;
   private _skillStore: SkillStore | null = null;
@@ -67,69 +60,79 @@ export class ProjectStore extends EventEmitter {
     this.logger = logger ?? createSilentLogger();
     this.fileWriteMutex = fileWriteMutex;
     this.storage = storage;
+    this.fsPort = storage?.fsPort ?? new NodeFsPort(this.rootPath);
   }
 
-  async open(): Promise<void> {
-    const configPath = path.join(this.spherseDir, "project.yaml");
-    this._configStore = new ProjectConfigStore(configPath, this.logger);
-    await this._configStore.read();
-
-    this._skillStore = new SkillStore(
+  private createSkillStore(): SkillStore {
+    return new SkillStore(
+      this.fsPort,
+      path.posix.join(PROJECT_META_DIR, "skills"),
       path.join(this.spherseDir, "skills"),
       PRESET_SKILL_SOURCES,
       this.fileWriteMutex,
-      [path.join(this.rootPath, ".agents", "skills")],
+      [{ dir: path.join(this.rootPath, ".agents", "skills"), relDir: path.posix.join(".agents", "skills") }],
     );
+  }
+
+  async open(): Promise<void> {
+    this._configStore = new ProjectConfigStore(
+      this.fsPort,
+      path.posix.join(PROJECT_META_DIR, "project.yaml"),
+      this.logger,
+    );
+    await this._configStore.read();
+
+    this._skillStore = this.createSkillStore();
 
     await this.loadAgents();
   }
 
   async create(name: string): Promise<void> {
-    await fs.mkdir(this.spherseDir, { recursive: true });
-    await fs.mkdir(path.join(this.spherseDir, "agents"), { recursive: true });
+    await this.fsPort.mkdirp(PROJECT_META_DIR);
+    await this.fsPort.mkdirp(path.posix.join(PROJECT_META_DIR, "agents"));
 
-    const configPath = path.join(this.spherseDir, "project.yaml");
-    this._configStore = new ProjectConfigStore(configPath, this.logger);
+    this._configStore = new ProjectConfigStore(
+      this.fsPort,
+      path.posix.join(PROJECT_META_DIR, "project.yaml"),
+      this.logger,
+    );
     await this._configStore.write({
       id: nanoid(8),
       name,
       created: Date.now(),
     });
 
-    this._skillStore = new SkillStore(
-      path.join(this.spherseDir, "skills"),
-      PRESET_SKILL_SOURCES,
-      this.fileWriteMutex,
-      [path.join(this.rootPath, ".agents", "skills")],
-    );
+    this._skillStore = this.createSkillStore();
 
-    const indexPath = path.join(this.rootPath, "AGENTS.md");
-    await writeFileIfMissing(indexPath, AGENTS_INDEX_TEMPLATE);
+    await this.fsPort.writeFileIfMissing("AGENTS.md", AGENTS_INDEX_TEMPLATE);
 
-    const changelogPath = path.join(this.rootPath, "CHANGELOG.md");
-    await writeFileIfMissing(changelogPath, "");
+    await this.fsPort.writeFileIfMissing("CHANGELOG.md", "");
 
     this.logger.info({ rootPath: this.rootPath, name }, "project created");
   }
 
   private async loadAgents(): Promise<void> {
-    const agentsDir = path.join(this.spherseDir, "agents");
-    let entries: fsSync.Dirent[];
+    let entries;
     try {
-      entries = await fs.readdir(agentsDir, { withFileTypes: true });
+      entries = await this.fsPort.readdir(path.posix.join(PROJECT_META_DIR, "agents"));
     } catch {
       return;
     }
 
     for (const entry of entries) {
-      if (!entry.isDirectory()) continue;
-      const agentDir = path.join(agentsDir, entry.name);
-      const profilePath = path.join(agentDir, "profile.md");
-      const profileStore = new AgentProfileStore(profilePath, entry.name);
+      if (!entry.isDirectory) continue;
+      const relAgentDir = path.posix.join(PROJECT_META_DIR, "agents", entry.name);
+      const agentDir = path.join(this.spherseDir, "agents", entry.name);
+      const profileStore = new AgentProfileStore(
+        this.fsPort,
+        path.posix.join(relAgentDir, "profile.md"),
+        path.join(agentDir, "profile.md"),
+        entry.name,
+      );
       const profile = await profileStore.read();
       if (!profile) continue;
 
-      const agentStore = new AgentStore(agentDir, profile.id, this.logger, this.fileWriteMutex, this.forwardSessionChange, this.storage);
+      const agentStore = new AgentStore(agentDir, profile.id, this.fsPort, relAgentDir, this.logger, this.fileWriteMutex, this.forwardSessionChange, this.storage);
       await agentStore.open();
       this._agents.set(profile.id, agentStore);
     }
@@ -171,9 +174,9 @@ export class ProjectStore extends EventEmitter {
       taken.add(path.basename(agentStore.getAgentDir()));
     }
     try {
-      const entries = await fs.readdir(path.join(this.spherseDir, "agents"), { withFileTypes: true });
+      const entries = await this.fsPort.readdir(path.posix.join(PROJECT_META_DIR, "agents"));
       for (const entry of entries) {
-        if (entry.isDirectory()) taken.add(entry.name);
+        if (entry.isDirectory) taken.add(entry.name);
       }
     } catch {
       // agents dir may not exist yet
@@ -195,15 +198,16 @@ export class ProjectStore extends EventEmitter {
     const base = deriveAgentSlugBase(slugBase?.trim() ? slugBase : data.name);
     const dirName = buildAgentDirName(base, id, await this.readAgentDirNames());
     assertSafeSlug(dirName);
+    const relAgentDir = path.posix.join(PROJECT_META_DIR, "agents", dirName);
     const agentDir = path.join(this.spherseDir, "agents", dirName);
-    await fs.mkdir(agentDir, { recursive: true });
-    await fs.writeFile(path.join(agentDir, "profile.md"), serialized, "utf-8");
+    await this.fsPort.mkdirp(relAgentDir);
+    await this.fsPort.writeFile(path.posix.join(relAgentDir, "profile.md"), serialized);
 
     if (themeContent !== undefined) {
-      await fs.writeFile(path.join(agentDir, "theme.css"), themeContent, "utf-8");
+      await this.fsPort.writeFile(path.posix.join(relAgentDir, "theme.css"), themeContent);
     }
 
-    const agentStore = new AgentStore(agentDir, id, this.logger, this.fileWriteMutex, this.forwardSessionChange, this.storage);
+    const agentStore = new AgentStore(agentDir, id, this.fsPort, relAgentDir, this.logger, this.fileWriteMutex, this.forwardSessionChange, this.storage);
     await agentStore.open();
     this._agents.set(id, agentStore);
     this.logger.info({ agentId: id, slug: dirName }, "agent created");
@@ -249,8 +253,7 @@ export class ProjectStore extends EventEmitter {
     if (!agentStore) return;
 
     agentStore.close();
-    const agentDir = agentStore.getAgentDir();
-    await fs.rm(agentDir, { recursive: true, force: true });
+    await this.fsPort.rm(agentStore.getRelAgentDir(), { recursive: true });
     this._agents.delete(agentId);
     this.logger.info({ agentId }, "agent deleted");
     this.emitAgentChange(agentId, "deleted");
@@ -265,9 +268,8 @@ export class ProjectStore extends EventEmitter {
   };
 
   async readIndex(): Promise<string> {
-    const indexPath = path.join(this.rootPath, "AGENTS.md");
     try {
-      return await fs.readFile(indexPath, "utf-8");
+      return await this.fsPort.readFile("AGENTS.md");
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return "";
       throw err;
@@ -275,15 +277,13 @@ export class ProjectStore extends EventEmitter {
   }
 
   async updateIndex(content: string): Promise<void> {
-    const indexPath = path.join(this.rootPath, "AGENTS.md");
-    await fs.writeFile(indexPath, content, "utf-8");
+    await this.fsPort.writeFile("AGENTS.md", content);
   }
 
   async appendChangelog(entry: ChangelogEntry): Promise<void> {
-    const changelogPath = path.join(this.rootPath, "CHANGELOG.md");
     const timestamp = new Date().toISOString();
     const line = `- **[${timestamp}]** ${entry.agent} / ${entry.action} / \`${entry.target}\` — ${entry.description}\n`;
-    await fs.appendFile(changelogPath, line, "utf-8");
+    await this.fsPort.appendFile("CHANGELOG.md", line);
   }
 
   close(): void {
