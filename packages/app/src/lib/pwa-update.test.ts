@@ -12,14 +12,30 @@ type FakeRegistration = {
   unregister: ReturnType<typeof vi.fn>;
 };
 
-let reload: ReturnType<typeof vi.fn>;
-let originalLocation: Location;
+type ServiceWorkerStub = {
+  getRegistration: ReturnType<typeof vi.fn>;
+  controller: FakeServiceWorker | null;
+};
 
 function defineNavigatorServiceWorker(value: object | undefined) {
   Object.defineProperty(navigator, "serviceWorker", {
     value,
     configurable: true,
   });
+}
+
+function setNavigatorOnline(value: boolean) {
+  Object.defineProperty(navigator, "onLine", {
+    value,
+    configurable: true,
+  });
+}
+
+function stubServiceWorkerContainer(
+  getRegistration: ServiceWorkerStub["getRegistration"],
+  controller: FakeServiceWorker | null = null,
+) {
+  defineNavigatorServiceWorker({ getRegistration, controller });
 }
 
 function stubRegistration(
@@ -38,12 +54,12 @@ function stubRegistration(
     unregister: vi.fn(async () => true),
     ...rest,
   };
-  defineNavigatorServiceWorker({
-    getRegistration: vi.fn(async () => registration),
-    controller: null,
-  });
+  stubServiceWorkerContainer(vi.fn(async () => registration));
   return registration;
 }
+
+let reload: ReturnType<typeof vi.fn>;
+let originalLocation: Location;
 
 beforeEach(() => {
   originalLocation = window.location;
@@ -53,6 +69,7 @@ beforeEach(() => {
     configurable: true,
     writable: true,
   });
+  setNavigatorOnline(true);
 });
 
 afterEach(() => {
@@ -63,6 +80,7 @@ afterEach(() => {
   });
   defineNavigatorServiceWorker(undefined);
   delete (navigator as { serviceWorker?: object }).serviceWorker;
+  setNavigatorOnline(true);
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -77,13 +95,33 @@ describe("clearStaticCacheAndReload", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
-  it("reloads directly when no registration exists", async () => {
-    defineNavigatorServiceWorker({
-      getRegistration: vi.fn(async () => undefined),
-      controller: null,
-    });
+  it("reloads without touching the registration when offline", async () => {
+    const registration = stubRegistration();
+    setNavigatorOnline(false);
 
     await clearStaticCacheAndReload();
+
+    expect(registration.update).not.toHaveBeenCalled();
+    expect(registration.unregister).not.toHaveBeenCalled();
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads directly when no registration exists", async () => {
+    stubServiceWorkerContainer(vi.fn(async () => undefined));
+
+    await clearStaticCacheAndReload();
+
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("resolves with a plain reload when getRegistration rejects", async () => {
+    stubServiceWorkerContainer(
+      vi.fn(async () => {
+        throw new Error("sw broken");
+      }),
+    );
+
+    await expect(clearStaticCacheAndReload()).resolves.toBeUndefined();
 
     expect(reload).toHaveBeenCalledTimes(1);
   });
@@ -118,6 +156,36 @@ describe("clearStaticCacheAndReload", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  it("falls back to the controlling worker when no registration worker exists", async () => {
+    const order: string[] = [];
+    const registration = stubRegistration();
+    registration.waiting = null;
+    registration.active = null;
+    registration.update.mockImplementation(async () => {
+      order.push("update");
+    });
+    registration.unregister.mockImplementation(async () => {
+      order.push("unregister");
+      return true;
+    });
+    const controller = {
+      postMessage: vi.fn((_data: unknown, transfer: MessagePort[]) => {
+        order.push("controller-message");
+        transfer[0].postMessage({ ok: true });
+      }),
+    };
+    stubServiceWorkerContainer(
+      vi.fn(async () => registration),
+      controller,
+    );
+
+    await clearStaticCacheAndReload();
+
+    expect(controller.postMessage).toHaveBeenCalledTimes(1);
+    expect(order).toEqual(["update", "controller-message", "unregister"]);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
   it("still unregisters and reloads when the worker never acknowledges", async () => {
     vi.useFakeTimers();
     const registration = stubRegistration({
@@ -125,7 +193,7 @@ describe("clearStaticCacheAndReload", () => {
     });
 
     const pending = clearStaticCacheAndReload();
-    await vi.advanceTimersByTimeAsync(3_100);
+    await vi.advanceTimersByTimeAsync(8_100);
     await pending;
 
     expect(registration.unregister).toHaveBeenCalledTimes(1);
@@ -137,6 +205,21 @@ describe("clearStaticCacheAndReload", () => {
     registration.update.mockRejectedValue(new Error("offline"));
 
     await clearStaticCacheAndReload();
+
+    expect(registration.unregister).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips waiting for an update check that never resolves", async () => {
+    vi.useFakeTimers();
+    const registration = stubRegistration();
+    registration.update.mockImplementation(
+      () => new Promise<void>(() => undefined),
+    );
+
+    const pending = clearStaticCacheAndReload();
+    await vi.advanceTimersByTimeAsync(5_100);
+    await pending;
 
     expect(registration.unregister).toHaveBeenCalledTimes(1);
     expect(reload).toHaveBeenCalledTimes(1);

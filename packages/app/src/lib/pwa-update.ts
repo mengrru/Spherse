@@ -1,5 +1,15 @@
 const CLEAR_STATIC_CACHE_MESSAGE = "SPHERSE_CLEAR_STATIC_CACHE";
-const ACK_TIMEOUT_MS = 3_000;
+const ACK_TIMEOUT_MS = 8_000;
+const UPDATE_TIMEOUT_MS = 5_000;
+
+async function withTimeout(promise: Promise<unknown>, ms: number): Promise<undefined> {
+  await Promise.race([
+    promise.catch(() => undefined),
+    new Promise<undefined>((resolve) => {
+      setTimeout(() => resolve(undefined), ms);
+    }),
+  ]);
+}
 
 function requestStaticCacheClear(
   registration: ServiceWorkerRegistration,
@@ -25,13 +35,19 @@ export async function clearStaticCacheAndReload(): Promise<void> {
     window.location.reload();
     return;
   }
+  if (navigator.onLine === false) {
+    window.location.reload();
+    return;
+  }
   try {
     const registration = await navigator.serviceWorker.getRegistration();
     if (registration) {
-      await registration.update().catch(() => undefined);
+      await withTimeout(registration.update(), UPDATE_TIMEOUT_MS);
       await requestStaticCacheClear(registration);
       await registration.unregister().catch(() => undefined);
     }
+  } catch {
+    void 0;
   } finally {
     window.location.reload();
   }

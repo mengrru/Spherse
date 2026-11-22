@@ -42,6 +42,7 @@ export function VersionBlockOverlay({
           </Button>
           <Button
             variant="outline"
+            disabled={clearing}
             onClick={() => {
               localStorage.removeItem(WEB_CONNECTION_STORAGE_KEY);
               window.location.reload();
@@ -53,6 +54,7 @@ export function VersionBlockOverlay({
         <Button
           variant="ghost"
           className="mt-4 text-muted-foreground underline-offset-4 hover:underline"
+          disabled={clearing}
           onClick={onDismiss}
         >
           {translate(locale, "web-version.dismiss")}
