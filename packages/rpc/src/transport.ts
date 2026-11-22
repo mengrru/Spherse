@@ -8,3 +8,4 @@ export interface RpcTransport {
   onReopen?(handler: () => void): () => void;
   close(): void;
 }
+

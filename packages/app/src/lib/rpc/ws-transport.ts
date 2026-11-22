@@ -15,6 +15,10 @@ export class RpcWsTransport implements RpcTransport {
   private readonly frameHandlers = new Set<(frame: RpcServerFrame) => void>();
   private readonly closedHandlers = new Set<() => void>();
   private readonly reopenHandlers = new Set<() => void>();
+  private readonly openWaiters = new Set<{
+    resolve: () => void;
+    reject: (err: Error) => void;
+  }>();
   private notifiedClosed = false;
   private openedOnce = false;
 
@@ -56,9 +60,14 @@ export class RpcWsTransport implements RpcTransport {
             }
             this.openedOnce = true;
             this.notifiedClosed = false;
+            for (const waiter of this.openWaiters) waiter.resolve();
+            this.openWaiters.clear();
             return;
           }
           if (state === "closed" || state === "failed" || state === "fatal") {
+            const error = new Error(`rpc transport ${state}`);
+            for (const waiter of this.openWaiters) waiter.reject(error);
+            this.openWaiters.clear();
             if (this.notifiedClosed) return;
             this.notifiedClosed = true;
             for (const handler of this.closedHandlers) handler();
@@ -69,7 +78,11 @@ export class RpcWsTransport implements RpcTransport {
   }
 
   connect(): Promise<void> {
-    return this.connection.connect();
+    void this.connection.connect().catch(() => {});
+    if (this.connection.getState() === "open") return Promise.resolve();
+    return new Promise<void>((resolve, reject) => {
+      this.openWaiters.add({ resolve, reject });
+    });
   }
 
   send(frame: RpcClientFrame): void {
