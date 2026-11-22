@@ -8,7 +8,7 @@ import {
   type RpcServerFrame,
 } from "@spherse/contracts";
 import {
-  RpcAppError,
+  toAppError,
   type ChatAttachment,
   type RpcChatHub,
   type RpcContext,
@@ -147,7 +147,7 @@ export class RpcConnectionHandler {
         id,
         ok: false,
         error: {
-          code: RpcErrorCode.InternalError,
+          code: toAppError(err).code,
           message: err instanceof Error ? err.message : "bus subscribe failed",
         },
       });
@@ -189,7 +189,7 @@ export class RpcConnectionHandler {
         id,
         ok: false,
         error: {
-          code: err instanceof RpcAppError ? err.code : RpcErrorCode.InternalError,
+          code: toAppError(err).code,
           message: err instanceof Error ? err.message : "subscribe failed",
         },
       });

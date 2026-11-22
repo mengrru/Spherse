@@ -17,6 +17,29 @@ export async function flush(): Promise<void> {
   await new Promise((resolve) => setImmediate(resolve));
 }
 
+export interface RpcResultFrame {
+  type: "result";
+  id: number;
+  ok: boolean;
+  data?: unknown;
+  error?: { code: number; message: string };
+}
+
+export async function callMethod(harness: RpcHarness, method: string, params: unknown): Promise<RpcResultFrame> {
+  const id = (callMethod.nextId += 1);
+  harness.receive({ type: "call", id, method, params });
+  for (let i = 0; i < 200; i += 1) {
+    const frame = harness.sent().find((sent) => {
+      const candidate = sent as RpcResultFrame;
+      return candidate.type === "result" && candidate.id === id;
+    });
+    if (frame) return frame as RpcResultFrame;
+    await flush();
+  }
+  throw new Error(`no result frame for ${method}`);
+}
+callMethod.nextId = 0;
+
 export interface FakeRpcProjectContext {
   runtime: Partial<ProjectRuntime>;
   projectManager: Partial<ProjectManager>;
@@ -24,7 +47,7 @@ export interface FakeRpcProjectContext {
   triggerManager: Partial<TriggerManager>;
 }
 
-export function createFakeProjectCtx(overrides: FakeRpcProjectContext = {} as FakeRpcProjectContext) {
+export function createFakeProjectCtx(overrides: Partial<FakeRpcProjectContext> = {}) {
   const base = {
     runtime: { deleteSession: vi.fn() },
     projectManager: {

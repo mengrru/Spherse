@@ -2,29 +2,32 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import os from "node:os";
 import path from "node:path";
 import { installMarketplaceProjectZip } from "@spherse/core";
-import type {
-  MarketplaceManifestResponse,
-  MarketplaceProjectManifestResponse,
-  MarketplacePromptManifestResponse,
-  SkillDefinition,
-} from "@spherse/contracts";
-import { skillMethods } from "../rpc/methods/skills.js";
-import { marketplaceMethods } from "../rpc/methods/marketplace.js";
 import { marketplaceService, projectMarketplaceService } from "../marketplace.js";
 import { promptMarketplaceService } from "../prompt-marketplace.js";
+import { callMethod } from "@spherse/rpc/testing";
 import {
-  createFakeProjectCtx,
-  createRpcHarness,
-  flush,
-  type RpcHarness,
-} from "@spherse/rpc/testing";
+  PROMPT_MANIFEST,
+  PROJECT_MANIFEST,
+  PROJECT_ROOT,
+  PROJECT_ZIP_PATH,
+  SKILL,
+  SKILL_MANIFEST,
+  SKILL_ZIP_PATH,
+  createHarness,
+  waitForFrames,
+} from "./rpc-marketplace-testing.js";
 
-vi.mock("../marketplace.js", () => ({
-  marketplaceService: { getManifest: vi.fn(), downloadZip: vi.fn() },
-  projectMarketplaceService: { getManifest: vi.fn(), downloadZip: vi.fn() },
-}));
+vi.mock("../marketplace.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../marketplace.js")>();
+  return {
+    ...actual,
+    marketplaceService: { getManifest: vi.fn(), downloadZip: vi.fn() },
+    projectMarketplaceService: { getManifest: vi.fn(), downloadZip: vi.fn() },
+  };
+});
 
-vi.mock("../prompt-marketplace.js", () => ({
+vi.mock("../prompt-marketplace.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../prompt-marketplace.js")>()),
   promptMarketplaceService: { getPrompts: vi.fn() },
 }));
 
@@ -32,90 +35,6 @@ vi.mock("@spherse/core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@spherse/core")>();
   return { ...actual, installMarketplaceProjectZip: vi.fn() };
 });
-
-const SKILL: SkillDefinition = {
-  name: "demo-skill",
-  description: "Demo skill",
-  instructions: "You demo things.",
-  filePath: "/projects/p1/.spherse/skills/demo-skill/SKILL.md",
-  source: "project",
-  files: ["SKILL.md"],
-  version: "1.0.0",
-};
-
-const SKILL_MANIFEST: MarketplaceManifestResponse = {
-  schemaVersion: 1,
-  generatedAt: "2026-11-22T00:00:00Z",
-  skills: [
-    {
-      name: "demo-skill",
-      description: "Demo skill",
-      version: "1.0.0",
-      zipUrl: "https://marketplace.test/spherse/skills/demo-skill-1.0.0.zip",
-      size: 1024,
-      updatedAt: "2026-11-22T00:00:00Z",
-    },
-  ],
-};
-
-const SKILL_ZIP_PATH = "/tmp/marketplace-skill-test.zip";
-
-const PROJECT_MANIFEST: MarketplaceProjectManifestResponse = {
-  schemaVersion: 1,
-  generatedAt: "2026-11-22T00:00:00Z",
-  projects: [
-    {
-      name: "demo-world",
-      description: "Demo project",
-      version: "1.0.0",
-      category: "游戏",
-      zipUrl: "https://marketplace.test/spherse/projects/demo-world-1.0.0.zip",
-      size: 2048,
-      updatedAt: "2026-11-22T00:00:00Z",
-    },
-  ],
-};
-
-const PROJECT_ZIP_PATH = "/tmp/marketplace-project-test.zip";
-const PROJECT_ROOT = path.join(os.tmpdir(), "demo-world");
-
-const PROMPT_MANIFEST: MarketplacePromptManifestResponse = {
-  schemaVersion: 1,
-  generatedAt: "2026-11-22T00:00:00Z",
-  language: "en-us",
-  prompts: [
-    {
-      id: "brainstorm",
-      title: "Brainstorm",
-      description: "Brainstorm ideas",
-      category: "creative",
-      content: "Brainstorm about {{topic}}",
-    },
-  ],
-};
-
-function createHarness(): RpcHarness {
-  const base = createFakeProjectCtx();
-  const projectCtx = createFakeProjectCtx({
-    projectManager: {
-      ...base.projectManager,
-      listSkills: vi.fn().mockResolvedValue([SKILL]),
-      createSkill: vi.fn().mockResolvedValue(SKILL),
-      installSkill: vi.fn().mockResolvedValue(SKILL),
-    },
-  });
-  return createRpcHarness({
-    methods: { ...skillMethods, ...marketplaceMethods },
-    projectCtx,
-  });
-}
-
-async function waitForFrames(harness: RpcHarness, count = 1): Promise<unknown[]> {
-  for (let i = 0; i < 100 && harness.sent().length < count; i += 1) {
-    await flush();
-  }
-  return harness.sent();
-}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -221,6 +140,22 @@ describe("skills rpc methods", () => {
     });
     expect(marketplaceService.downloadZip).not.toHaveBeenCalled();
   });
+
+  it("skills.installMarketplace maps an unknown skill to app error 100", async () => {
+    const harness = createHarness();
+    const frame = await callMethod(harness, "skills.installMarketplace", {
+      projectId: "p1",
+      name: "missing",
+      version: "1.0.0",
+    });
+    expect(frame).toMatchObject({
+      type: "result",
+      ok: false,
+      error: { code: 100, message: 'Skill "missing" is not available in the marketplace' },
+    });
+    expect(marketplaceService.downloadZip).not.toHaveBeenCalled();
+    expect(harness.known.projectManager.installSkill).not.toHaveBeenCalled();
+  });
 });
 
 describe("marketplace rpc methods", () => {
@@ -254,21 +189,20 @@ describe("marketplace rpc methods", () => {
     expect(frames[1]).toMatchObject({ type: "result", id: 12, ok: true, data: PROMPT_MANIFEST });
   });
 
-  it("marketplace.prompts rejects an invalid language with invalid params", async () => {
+  it("marketplace.prompts rejects invalid language params with invalid params", async () => {
     const harness = createHarness();
-    harness.receive({
-      type: "call",
-      id: 13,
-      method: "marketplace.prompts",
-      params: { language: "not a language" },
-    });
-    const frames = await waitForFrames(harness);
-    expect(frames[0]).toMatchObject({
-      type: "result",
-      id: 13,
-      ok: false,
-      error: { code: -32602 },
-    });
+    for (const language of [
+      "not a language",
+      "zh_CN",
+      "ZH-CN",
+      "english",
+      "zh-cn-extra",
+      "x",
+      "zh-cn.json",
+    ]) {
+      const frame = await callMethod(harness, "marketplace.prompts", { language });
+      expect(frame).toMatchObject({ type: "result", ok: false, error: { code: -32602 } });
+    }
     expect(promptMarketplaceService.getPrompts).not.toHaveBeenCalled();
   });
 
@@ -348,59 +282,21 @@ describe("marketplace rpc methods", () => {
     });
     expect(projectMarketplaceService.downloadZip).not.toHaveBeenCalled();
   });
-});
 
-describe("skills and marketplace param validation", () => {
-  it("rejects skills.create with missing required fields", async () => {
+  it("marketplace.installProject rejects a destDir that is not a directory with invalid params", async () => {
     const harness = createHarness();
-    harness.receive({
-      type: "call",
-      id: 20,
-      method: "skills.create",
-      params: { projectId: "p1", name: "demo-skill" },
+    const missing = path.join(os.tmpdir(), "rpc-marketplace-missing-dest");
+    const frame = await callMethod(harness, "marketplace.installProject", {
+      name: "demo-world",
+      version: "1.0.0",
+      destDir: missing,
     });
-    const frames = await waitForFrames(harness);
-    expect(frames[0]).toMatchObject({
+    expect(frame).toMatchObject({
       type: "result",
-      id: 20,
       ok: false,
-      error: { code: -32602, message: "Invalid params for skills.create" },
+      error: { code: -32602, message: `destDir is not a directory: ${missing}` },
     });
-    expect(harness.known.projectManager.createSkill).not.toHaveBeenCalled();
-  });
-
-  it("rejects skills.installMarketplace with unknown extra params", async () => {
-    const harness = createHarness();
-    harness.receive({
-      type: "call",
-      id: 21,
-      method: "skills.installMarketplace",
-      params: { projectId: "p1", name: "demo-skill", version: "1.0.0", extra: true },
-    });
-    const frames = await waitForFrames(harness);
-    expect(frames[0]).toMatchObject({
-      type: "result",
-      id: 21,
-      ok: false,
-      error: { code: -32602 },
-    });
-    expect(marketplaceService.getManifest).not.toHaveBeenCalled();
-  });
-
-  it("maps an unknown project to app error 100", async () => {
-    const harness = createHarness();
-    harness.receive({
-      type: "call",
-      id: 22,
-      method: "skills.list",
-      params: { projectId: "missing" },
-    });
-    const frames = await waitForFrames(harness);
-    expect(frames[0]).toMatchObject({
-      type: "result",
-      id: 22,
-      ok: false,
-      error: { code: 100, message: "Unknown project" },
-    });
+    expect(projectMarketplaceService.downloadZip).not.toHaveBeenCalled();
+    expect(installMarketplaceProjectZip).not.toHaveBeenCalled();
   });
 });

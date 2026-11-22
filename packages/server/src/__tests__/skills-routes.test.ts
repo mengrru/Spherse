@@ -20,7 +20,7 @@ const FULL_SKILL = {
   version: "1.0.0",
 };
 
-describe("GET /api/projects/:projectId/skills route", () => {
+describe("GET /api/projects/:projectId/skills/:name route", () => {
   let app: Fastify.FastifyInstance;
 
   beforeEach(async () => {
@@ -28,7 +28,6 @@ describe("GET /api/projects/:projectId/skills route", () => {
     app.addHook("preHandler", async (req: FastifyRequest) => {
       req.projectCtx = {
         projectManager: {
-          listSkills: vi.fn().mockResolvedValue([FULL_SKILL]),
           getSkill: vi.fn().mockResolvedValue(FULL_SKILL),
         },
       };
@@ -39,23 +38,6 @@ describe("GET /api/projects/:projectId/skills route", () => {
 
   afterEach(async () => {
     await app.close();
-  });
-
-  it("strips instructions from the list response", async () => {
-    const res = await app.inject({ method: "GET", url: "/api/projects/p1/skills" });
-
-    expect(res.statusCode).toBe(200);
-    const body = res.json();
-    expect(body).toEqual([
-      {
-        name: "demo",
-        description: "Demo skill",
-        filePath: "/tmp/p/.spherse/skills/demo/SKILL.md",
-        source: "project",
-        files: ["helper.ts"],
-        version: "1.0.0",
-      },
-    ]);
   });
 
   it("keeps instructions on the single-skill endpoint", async () => {

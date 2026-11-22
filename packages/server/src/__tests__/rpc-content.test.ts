@@ -53,6 +53,11 @@ async function call(method: string, params: unknown): Promise<ResultFrame> {
 beforeAll(async () => {
   projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), "rpc-content-"));
   await fs.writeFile(path.join(projectRoot, "notes.md"), "hello world", "utf-8");
+  await fs.writeFile(
+    path.join(projectRoot, "doc.pdf"),
+    Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x35, 0x00, 0x0a]),
+  );
+  await fs.writeFile(path.join(projectRoot, "empty.txt"), "", "utf-8");
   await fs.mkdir(path.join(projectRoot, "dir", "nested"), { recursive: true });
   await fs.writeFile(path.join(projectRoot, "dir", "a.md"), "a", "utf-8");
   await fs.writeFile(path.join(projectRoot, "dir", "nested", "b.md"), "b", "utf-8");
@@ -100,6 +105,18 @@ describe("rpc content methods", () => {
     expect(frame.data).toEqual({ content: "hello world", path: "notes.md", binary: false });
   });
 
+  it("content.read returns empty content with binary true for a binary file", async () => {
+    const frame = await call("content.read", { projectId: "p1", path: "doc.pdf" });
+    expect(frame).toMatchObject({ type: "result", ok: true });
+    expect(frame.data).toEqual({ content: "", path: "doc.pdf", binary: true });
+  });
+
+  it("content.read returns binary false for an empty text file", async () => {
+    const frame = await call("content.read", { projectId: "p1", path: "empty.txt" });
+    expect(frame).toMatchObject({ type: "result", ok: true });
+    expect(frame.data).toEqual({ content: "", path: "empty.txt", binary: false });
+  });
+
   it("content.list returns directory entries", async () => {
     const frame = await call("content.list", { projectId: "p1", path: "dir" });
     expect(frame).toMatchObject({ type: "result", ok: true });
@@ -142,11 +159,20 @@ describe("rpc content methods", () => {
     expect(harness.known.projectManager.createEntry).toHaveBeenCalledWith("x.md", "touch");
   });
 
+  it("content.stat returns directory stats", async () => {
+    const frame = await call("content.stat", { projectId: "p1", path: "dir" });
+    expect(frame).toMatchObject({ type: "result", ok: true });
+    const data = frame.data as { size: number; mtime: number; isDirectory: boolean };
+    expect(data.isDirectory).toBe(true);
+    expect(typeof data.size).toBe("number");
+    expect(typeof data.mtime).toBe("number");
+  });
+
   it("content.fileTree walks files and skips ignored dirs", async () => {
     const frame = await call("content.fileTree", { projectId: "p1" });
     expect(frame).toMatchObject({ type: "result", ok: true });
     const files = frame.data as string[];
-    expect([...files].sort()).toEqual(["dir/a.md", "dir/nested/b.md", "notes.md"]);
+    expect([...files].sort()).toEqual(["dir/a.md", "dir/nested/b.md", "doc.pdf", "empty.txt", "notes.md"]);
   });
 
   it("data.read forwards filters to the data store", async () => {
@@ -228,11 +254,21 @@ describe("rpc content method error mapping", () => {
     expect(outOfRange).toMatchObject({ type: "result", ok: false, error: { code: -32602 } });
   });
 
+  it("maps missing paths in stat to app error 100", async () => {
+    const frame = await call("content.stat", { projectId: "p1", path: "does-not-exist.txt" });
+    expect(frame).toMatchObject({ type: "result", ok: false, error: { code: 100 } });
+  });
+
   it("maps AccessDeniedError to app error 101", async () => {
     const frame = await call("content.read", {
       projectId: "p1",
       path: ".spherse/agents/a/profile.md",
     });
+    expect(frame).toMatchObject({ type: "result", ok: false, error: { code: 101 } });
+  });
+
+  it("maps denied paths in stat to app error 101", async () => {
+    const frame = await call("content.stat", { projectId: "p1", path: ".spherse" });
     expect(frame).toMatchObject({ type: "result", ok: false, error: { code: 101 } });
   });
 

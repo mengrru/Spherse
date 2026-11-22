@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { ModelCatalog } from "@spherse/core";
+import type { ModelCatalog, ModelSettings } from "@spherse/core";
 import type { ProjectRegistry } from "../registry.js";
 import type { ModelSettingsStore } from "../model-settings.js";
 import { createRpcModelSettings } from "../rpc/model-settings-port.js";
@@ -18,10 +18,10 @@ const applied = {
   },
 };
 
-function createDeps() {
+function createDeps(next: unknown = applied) {
   const store = {
-    applyUpdate: vi.fn(() => applied),
-    sanitize: vi.fn(() => ({ models: applied })),
+    applyUpdate: vi.fn(() => next),
+    sanitize: vi.fn(() => ({ models: next })),
   } as unknown as ModelSettingsStore;
   const registry = {
     setDefaultModel: vi.fn(),
@@ -50,5 +50,24 @@ describe("rpc model settings port", () => {
     expect(registry.setSampling).toHaveBeenCalledWith({ temperature: 0.5 });
     expect(registry.setThinkingLevel).toHaveBeenCalledWith("low");
     expect(result).toEqual({ models: applied });
+  });
+
+  it("apply skips setDefaultModel for an empty default model but still fans out sampling and thinking level", () => {
+    const noDefaultModel: ModelSettings = {
+      text: {
+        defaultModel: "",
+        providers: {},
+        sampling: { temperature: 0.9 },
+        thinkingLevel: "off",
+      },
+      image: { defaultModel: "", providers: {} },
+      customProviders: [],
+    };
+    const { store, registry, catalog } = createDeps(noDefaultModel);
+    const port = createRpcModelSettings(store, catalog, registry);
+    port.apply({ models: {} });
+    expect(registry.setDefaultModel).not.toHaveBeenCalled();
+    expect(registry.setSampling).toHaveBeenCalledWith({ temperature: 0.9 });
+    expect(registry.setThinkingLevel).toHaveBeenCalledWith("off");
   });
 });

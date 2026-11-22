@@ -4,6 +4,7 @@ import {
   AccessDeniedError,
   ConflictError,
   NotFoundError,
+  ValidationError,
   type ProjectManager,
   type ProjectRuntime,
   type SessionManager,
@@ -138,12 +139,21 @@ export function defineRpcMethod<P extends TSchema>(
   };
 }
 
-function toAppError(err: unknown): RpcAppError {
+export function toAppError(err: unknown): RpcAppError {
   if (err instanceof RpcAppError) return err;
   if (err instanceof NotFoundError) return new RpcAppError(100, err.message);
   if (err instanceof AccessDeniedError) return new RpcAppError(101, err.message);
   if (err instanceof ConflictError) return new RpcAppError(102, err.message);
-  return new RpcAppError(-32603, err instanceof Error ? err.message : String(err));
+  if (err instanceof ValidationError) return new RpcAppError(-32602, err.message);
+  const message = err instanceof Error ? err.message : String(err);
+  const statusCode = (err as { statusCode?: unknown }).statusCode;
+  if (typeof statusCode === "number") {
+    if (statusCode === 404) return new RpcAppError(100, message);
+    if (statusCode === 401 || statusCode === 403) return new RpcAppError(101, message);
+    if (statusCode === 409) return new RpcAppError(102, message);
+    if (statusCode === 400) return new RpcAppError(-32602, message);
+  }
+  return new RpcAppError(-32603, message);
 }
 
 export class RpcDispatcher {

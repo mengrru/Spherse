@@ -1,10 +1,16 @@
-import { afterAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { ModelCatalog } from "@spherse/core";
+import type { ModelSettingsResponse } from "@spherse/contracts";
 import { connectionMethods } from "@spherse/rpc/methods";
 import { settingsMethods } from "../rpc/methods/settings.js";
+import { ModelSettingsStore } from "../model-settings.js";
+import type { ProjectRegistry } from "../registry.js";
+import { createRpcModelSettings } from "../rpc/model-settings-port.js";
 import {
+  callMethod,
   createFakeProjectCtx,
   createRpcHarness,
   flush,
@@ -277,5 +283,116 @@ describe("rpc settings/connection param validation", () => {
       ok: false,
       error: { code: -32602 },
     });
+  });
+});
+
+describe("rpc settings methods (model settings through the real port)", () => {
+  const originalAnthropicKey = process.env.ANTHROPIC_API_KEY;
+  let tmpDir: string;
+  let filePath: string;
+  let store: ModelSettingsStore;
+  let registry: {
+    setDefaultModel: ReturnType<typeof vi.fn>;
+    setSampling: ReturnType<typeof vi.fn>;
+    setThinkingLevel: ReturnType<typeof vi.fn>;
+  };
+  let harness: RpcHarness;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "rpc-settings-models-"));
+    filePath = path.join(tmpDir, "model-settings.json");
+    store = new ModelSettingsStore({ filePath });
+    registry = { setDefaultModel: vi.fn(), setSampling: vi.fn(), setThinkingLevel: vi.fn() };
+    harness = createRpcHarness({
+      methods: settingsMethods,
+      modelSettings: {
+        ...createRpcModelSettings(
+          store,
+          new ModelCatalog(),
+          registry as unknown as ProjectRegistry,
+        ),
+      },
+    });
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  afterAll(() => {
+    if (originalAnthropicKey === undefined) delete process.env.ANTHROPIC_API_KEY;
+    else process.env.ANTHROPIC_API_KEY = originalAnthropicKey;
+  });
+
+  const readPersisted = () => JSON.parse(fs.readFileSync(filePath, "utf-8"));
+
+  it("settings.getModels returns empty sanitized settings by default", async () => {
+    const frame = await callMethod(harness, "settings.getModels", undefined);
+    expect(frame).toMatchObject({ type: "result", ok: true });
+    expect(frame.data).toEqual({
+      models: {
+        text: { defaultModel: "", providers: {} },
+        image: { defaultModel: "", providers: {} },
+      },
+      customProviders: [],
+    });
+  });
+
+  it("settings.updateModels round-trips settings without leaking api keys", async () => {
+    const frame = await callMethod(harness, "settings.updateModels", {
+      models: {
+        text: {
+          defaultModel: "anthropic/claude-sonnet-4",
+          providers: { anthropic: { apiKey: "sk-secret" } },
+          sampling: { temperature: 0.4 },
+          thinkingLevel: "high",
+        },
+        image: { defaultModel: "", providers: {} },
+      },
+    });
+    expect(frame).toMatchObject({ type: "result", ok: true });
+    const body = frame.data as ModelSettingsResponse;
+    expect(body.models.text.defaultModel).toBe("anthropic/claude-sonnet-4");
+    expect(body.models.text.providers).toEqual({ anthropic: { configured: true } });
+    expect(body.models.text.sampling).toEqual({ temperature: 0.4 });
+    expect(body.models.text.thinkingLevel).toBe("high");
+    expect(JSON.stringify(frame)).not.toContain("sk-secret");
+
+    expect(store.get().text.providers.anthropic?.apiKey).toBe("sk-secret");
+    expect(readPersisted().text.providers.anthropic.apiKey).toBe("sk-secret");
+  });
+
+  it("settings.updateModels clears the key when apiKey is empty", async () => {
+    await callMethod(harness, "settings.updateModels", {
+      models: {
+        text: { defaultModel: "m", providers: { anthropic: { apiKey: "sk-secret" } } },
+        image: { defaultModel: "" },
+      },
+    });
+    const frame = await callMethod(harness, "settings.updateModels", {
+      models: {
+        text: { defaultModel: "m", providers: { anthropic: { apiKey: "" } } },
+        image: { defaultModel: "" },
+      },
+    });
+    expect(frame).toMatchObject({ type: "result", ok: true });
+    expect((frame.data as ModelSettingsResponse).models.text.providers).toEqual({});
+    expect(store.get().text.providers).toEqual({});
+  });
+
+  it("settings.updateModels rejects an invalid payload and leaves the store untouched", async () => {
+    const frame = await callMethod(harness, "settings.updateModels", {
+      models: {
+        text: { defaultModel: "", thinkingLevel: "xhigh" },
+        image: { defaultModel: "" },
+      },
+    });
+    expect(frame).toMatchObject({ type: "result", ok: false, error: { code: -32602 } });
+    expect(store.get()).toEqual({
+      text: { defaultModel: "", providers: {} },
+      image: { defaultModel: "", providers: {} },
+      customProviders: [],
+    });
+    expect(fs.existsSync(filePath)).toBe(false);
   });
 });
