@@ -355,3 +355,30 @@ describe("rpc agents error mapping", () => {
     });
   });
 });
+
+describe("rpc agents quickLinks passthrough", () => {
+  it("returns quickLinks from the profile", async () => {
+    const profile = {
+      id: "a1",
+      name: "A",
+      slug: "a",
+      systemPrompt: "x",
+      filePath: "p",
+      quickLinks: ["world/characters.md"],
+    };
+    const harness = createRpcHarness({
+      methods: agentMethods,
+      projectCtx: createFakeProjectCtx({
+        projectManager: { getAgentProfile: vi.fn(async () => profile) },
+      }),
+    });
+    harness.receive({ type: "call", id: 1, method: "agents.get", params: { projectId: "p1", id: "a1" } });
+    await flush();
+    expect(harness.sent()[0]).toMatchObject({
+      type: "result",
+      id: 1,
+      ok: true,
+      data: { quickLinks: ["world/characters.md"] },
+    });
+  });
+});

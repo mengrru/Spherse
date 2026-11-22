@@ -1,5 +1,5 @@
 import { RpcClient } from "@spherse/rpc";
-import { RpcWsTransport } from "./ws-transport.js";
+import { RpcWsTransport } from "./ws-transport";
 
 interface SharedEntry {
   client: RpcClient;
@@ -7,18 +7,16 @@ interface SharedEntry {
 
 const shared = new Map<string, SharedEntry>();
 
-function keyOf(baseUrl: string, accessToken: string | null): string {
-  return `${baseUrl}\n${accessToken ?? ""}`;
-}
+export type RpcAccessTokenGetter = () => string | null;
 
-export function getSharedRpcClient(baseUrl: string, accessToken: string | null): RpcClient {
-  const key = keyOf(baseUrl, accessToken);
+export function getSharedRpcClient(baseUrl: string, accessToken: RpcAccessTokenGetter): RpcClient {
+  const key = baseUrl;
   const existing = shared.get(key);
   if (existing) return existing.client;
   const client = new RpcClient(
     new RpcWsTransport({
       baseUrl: () => baseUrl,
-      accessToken: () => accessToken,
+      accessToken: () => accessToken() ?? null,
     }),
   );
   void client.connect().catch(() => {});

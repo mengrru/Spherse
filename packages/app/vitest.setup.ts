@@ -2,6 +2,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
+(globalThis as { __SPHERSE_RPC_DISABLED__?: boolean }).__SPHERSE_RPC_DISABLED__ = true;
+
 afterEach(() => {
   cleanup();
 });

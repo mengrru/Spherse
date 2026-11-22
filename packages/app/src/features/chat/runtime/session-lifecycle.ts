@@ -108,7 +108,7 @@ export function createSessionLifecycle(
       ? createRpcSessionLink(
           () => record.params,
           linkHandlers,
-          () => getSharedRpcClient(record.params.baseUrl, record.params.accessToken),
+          () => getSharedRpcClient(record.params.baseUrl, () => record.params.accessToken),
         )
       : createSessionLink(() => record.params, linkHandlers);
     record.link = link;

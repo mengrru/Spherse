@@ -61,6 +61,7 @@ export async function launchChatApp(project: ChatProject): Promise<{ app: Electr
     },
   });
   const page = await app.firstWindow();
+  await page.evaluate(() => localStorage.setItem("spherse:rpc-client", "0"));
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
   await openProjectInApp(page, project);

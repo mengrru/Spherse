@@ -65,6 +65,7 @@ async function launchApp(project: { root: string; projectId: string }): Promise<
     },
   });
   const page = await app.firstWindow();
+  await page.evaluate(() => localStorage.setItem("spherse:rpc-client", "0"));
   await page.setViewportSize({ width: 1200, height: 800 });
   await page.waitForLoadState("domcontentloaded");
   await page.evaluate(async ({ id, projectRoot }) => {

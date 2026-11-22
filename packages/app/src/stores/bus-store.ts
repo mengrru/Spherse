@@ -97,7 +97,7 @@ async function initRpcBus(
   const baseUrl = await bridge.getServerBaseUrl();
   if (!baseUrl) return;
   const token = (await bridge.getServerAccessToken?.()) ?? null;
-  const client = getSharedRpcClient(baseUrl, token);
+  const client = getSharedRpcClient(baseUrl, () => token);
   rpcBinding = {
     client,
     dispatchers: new Map(),
