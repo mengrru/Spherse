@@ -4,6 +4,9 @@ import type { AgentMcpUpdateRequest } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
 
+/**
+ * @deprecated 业务面已迁移至 /ws/rpc（agents 方法组），本 REST 路由仅为过渡保留，将随 P2 下线；新代码禁止新增依赖。
+ */
 export function registerAgentMcpRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get<{ Params: { projectId: string; id: string } }>(
     "/api/projects/:projectId/agents/:id/mcp",

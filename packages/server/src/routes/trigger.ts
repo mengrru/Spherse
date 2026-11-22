@@ -10,6 +10,9 @@ function isValidTriggerMode(mode: string, targetSessionId: string | undefined): 
   return !requiresTargetSession(mode, targetSessionId);
 }
 
+/**
+ * @deprecated 业务面已迁移至 /ws/rpc（triggers 方法组），本 REST 路由仅为过渡保留，将随 P2 下线；新代码禁止新增依赖。
+ */
 export function registerTriggerRoutes(fastify: FastifyInstance, _registry: ProjectRegistry): void {
   fastify.get<{ Params: { projectId: string } }>(
     "/api/projects/:projectId/triggers",

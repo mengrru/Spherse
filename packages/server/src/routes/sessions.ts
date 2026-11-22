@@ -4,6 +4,9 @@ import type { ProjectRegistry } from "../registry.js";
 import type { ChatSessionHub } from "../chat/index.js";
 import { notFound } from "../errors.js";
 
+/**
+ * @deprecated 业务面已迁移至 /ws/rpc（sessions / chat 方法组），本 REST 路由仅为过渡保留，将随 P2 下线；新代码禁止新增依赖。
+ */
 export function registerSessionRoutes(
   fastify: FastifyInstance,
   _registry: ProjectRegistry,

@@ -10,6 +10,9 @@ import type { ProjectRegistry } from "../registry.js";
 import { notFound, conflict } from "../errors.js";
 import { marketplaceService, type MarketplaceService } from "../marketplace.js";
 
+/**
+ * @deprecated 业务面已迁移至 /ws/rpc（marketplace 方法组），本 REST 路由仅为过渡保留，将随 P2 下线；新代码禁止新增依赖。
+ */
 export function registerMarketplaceRoutes(
   fastify: FastifyInstance,
   _registry: ProjectRegistry,

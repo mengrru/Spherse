@@ -13,6 +13,9 @@ interface SettingsRouteOptions {
   modelCatalog: ModelCatalog;
 }
 
+/**
+ * @deprecated 业务面已迁移至 /ws/rpc（settings 方法组），本 REST 路由仅为过渡保留，将随 P2 下线；新代码禁止新增依赖。
+ */
 export function registerSettingsRoutes(
   fastify: FastifyInstance,
   registry: ProjectRegistry,

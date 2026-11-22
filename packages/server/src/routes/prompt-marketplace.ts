@@ -5,6 +5,9 @@ import { promptMarketplaceService, type PromptMarketplaceService } from "../prom
 
 const PROMPT_LANGUAGE_RE = /^[a-z]{2}(-[a-z]{2})?$/;
 
+/**
+ * @deprecated 业务面已迁移至 /ws/rpc（marketplace.prompts 方法组），本 REST 路由仅为过渡保留，将随 P2 下线；新代码禁止新增依赖。
+ */
 export function registerPromptMarketplaceRoutes(
   fastify: FastifyInstance,
   options?: {
