@@ -162,6 +162,9 @@ export {
   isRpcPongFrame,
   chatScope,
   parseChatScope,
+  busScope,
+  parseBusScope,
+  BUS_CHANNELS,
 } from "./rpc.js";
 export type {
   RpcErrorObject,
@@ -175,6 +178,7 @@ export type {
   RpcEventFrame,
   RpcSnapshotFrame,
   RpcPongFrame,
+  BusChannelScope,
 } from "./rpc.js";
 
 export {

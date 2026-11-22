@@ -67,6 +67,19 @@ export interface RpcChatHub {
   ): Promise<void>;
 }
 
+export interface RpcBusEvent {
+  type: string;
+  payload: unknown;
+}
+
+export interface RpcBusSource {
+  attach(
+    projectId: string,
+    channel: string,
+    emit: (event: RpcBusEvent) => void,
+  ): { ok: true; detach: () => void } | { ok: false; error: string };
+}
+
 export interface RpcProjectContext {
   runtime: ProjectRuntime;
   projectManager: ProjectManager;
@@ -99,6 +112,7 @@ export interface RpcContext {
   authRequired: boolean;
   appVersion: string | null;
   hub: RpcChatHub;
+  bus?: RpcBusSource;
 }
 
 export interface RpcMethodEntry {

@@ -1,71 +1,23 @@
 import type { FastifyInstance, FastifyBaseLogger } from "fastify";
 import type { WebSocket } from "@fastify/websocket";
-import type { TriggerEventPayload, TriggerManager, ProjectManager, AgentChangePayload, SessionChangePayload } from "@spherse/core";
 import { parseBusClientMessage } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
-import { acquireFsWatch, releaseFsWatch } from "./fs-watcher.js";
-import type { FsWatchListener } from "./fs-watcher.js";
-import { addDebugSubscriber, removeDebugSubscriber } from "../lib/debug-sink.js";
-import type { DebugSubscriber } from "../lib/debug-sink.js";
+import { attachBusChannel, type BusChannel } from "./bus-channels.js";
 
-const EVENT_TYPES = ["trigger_triggered", "trigger_completed", "trigger_failed", "trigger_updated"] as const;
-type TriggerEventType = (typeof EVENT_TYPES)[number];
-
-type BusChannel = "trigger" | "agent" | "session" | "fs-watch" | "debug";
-
-interface TriggerHandle {
-  triggerManager: TriggerManager;
-  handlers: Map<TriggerEventType, (payload: TriggerEventPayload) => void>;
-}
-
-function buildTriggerPayload(type: TriggerEventType, payload: TriggerEventPayload) {
-  switch (type) {
-    case "trigger_triggered":
-      return {
-        agentId: payload.agentId,
-        triggerId: payload.triggerId,
-        eventName: payload.eventName,
-        sessionId: payload.sessionId,
-        triggeredAt: payload.triggeredAt!,
-      };
-    case "trigger_completed":
-      return {
-        agentId: payload.agentId,
-        triggerId: payload.triggerId,
-        sessionId: payload.sessionId!,
-        status: "success" as const,
-      };
-    case "trigger_failed":
-      return {
-        agentId: payload.agentId,
-        triggerId: payload.triggerId,
-        error: payload.error!,
-      };
-    case "trigger_updated":
-      return {
-        agentId: payload.agentId,
-        triggerId: payload.triggerId,
-        trigger: payload.trigger,
-      };
-  }
+export function handleBusWebSocket(
+  fastify: FastifyInstance,
+  registry: ProjectRegistry,
+): void {
+  fastify.get("/ws/bus", { websocket: true }, (socket) => {
+    const handler = new BusConnectionHandler(socket, registry, fastify.log);
+    socket.on("message", (raw: Buffer) => handler.onMessage(raw));
+    socket.on("close", () => handler.onClose());
+    socket.on("error", () => handler.onClose());
+  });
 }
 
 class BusConnectionHandler {
-  private readonly subscriptions = new Set<string>();
-  private readonly triggerHandles = new Map<string, TriggerHandle>();
-  private readonly agentHandles = new Map<string, { projectManager: ProjectManager; handler: (payload: AgentChangePayload) => void }>();
-  private readonly sessionHandles = new Map<string, { projectManager: ProjectManager; handler: (payload: SessionChangePayload) => void }>();
-  private readonly fsWatchListener: FsWatchListener = (projectId, evt) => {
-    this.safeSend({
-      channel: "fs-watch",
-      projectId,
-      type: "change",
-      payload: { eventType: evt.eventType, path: evt.path },
-    });
-  };
-  private readonly debugSend: DebugSubscriber = (envelopeJson) => {
-    this.safeSend(envelopeJson);
-  };
+  private readonly subscriptions = new Map<string, () => void>();
   private closed = false;
 
   constructor(
@@ -107,148 +59,46 @@ class BusConnectionHandler {
   private subscribe(projectId: string, channel: BusChannel): void {
     const key = `${projectId}::${channel}`;
     if (this.subscriptions.has(key)) return;
-    switch (channel) {
-      case "trigger": {
-        const ctx = this.registry.get(projectId);
-        if (!ctx) {
-          this.logger.debug({ projectId }, "bus subscribe trigger: unknown project");
-          return;
-        }
-        const handlers = new Map<TriggerEventType, (payload: TriggerEventPayload) => void>();
-        for (const type of EVENT_TYPES) {
-          const handler = (payload: TriggerEventPayload) => {
-            this.safeSend({
-              channel: "trigger",
-              projectId,
-              type,
-              payload: buildTriggerPayload(type, payload),
-            });
-          };
-          handlers.set(type, handler);
-          ctx.triggerManager.on(type, handler);
-        }
-        this.triggerHandles.set(projectId, { triggerManager: ctx.triggerManager, handlers });
-        this.subscriptions.add(key);
-        break;
-      }
-      case "agent": {
-        const ctx = this.registry.get(projectId);
-        if (!ctx) {
-          this.logger.debug({ projectId }, "bus subscribe agent: unknown project");
-          return;
-        }
-        const handler = (payload: AgentChangePayload) => {
-          this.safeSend({
-            channel: "agent",
-            projectId,
-            type: "agent_updated",
-            payload: { agentId: payload.agentId, action: payload.action },
-          });
-        };
-        ctx.projectManager.onAgentChange(handler);
-        this.agentHandles.set(projectId, { projectManager: ctx.projectManager, handler });
-        this.subscriptions.add(key);
-        break;
-      }
-      case "session": {
-        const ctx = this.registry.get(projectId);
-        if (!ctx) {
-          this.logger.debug({ projectId }, "bus subscribe session: unknown project");
-          return;
-        }
-        const handler = (payload: SessionChangePayload) => {
-          this.safeSend({
-            channel: "session",
-            projectId,
-            type: "session_updated",
-            payload: { agentId: payload.agentId, sessionId: payload.sessionId, action: payload.action },
-          });
-        };
-        ctx.projectManager.onSessionChange(handler);
-        this.sessionHandles.set(projectId, { projectManager: ctx.projectManager, handler });
-        this.subscriptions.add(key);
-        break;
-      }
-      case "fs-watch": {
-        const ctx = this.registry.get(projectId);
-        if (!ctx) {
-          this.logger.debug({ projectId }, "bus subscribe fs-watch: unknown project");
-          return;
-        }        const projectRoot = ctx.projectManager.getRootPath();
-        const result = acquireFsWatch(projectRoot, projectId, this.fsWatchListener);
-        if (!result.ok) {
-          this.safeSend({
-            channel: "__system__",
-            projectId,
-            type: "fs_watch_error",
-            payload: { error: result.error.message },
-          });
-          return;
-        }
-        this.subscriptions.add(key);
-        break;
-      }
-      case "debug": {
-        addDebugSubscriber(this.debugSend);
-        this.subscriptions.add(key);
-        break;
-      }
+    if (channel !== "debug" && !this.registry.get(projectId)) {
+      this.logger.debug({ projectId, channel }, "bus subscribe: unknown project");
+      return;
     }
+    const result = attachBusChannel(this.registry, projectId, channel, (type, payload) => {
+      this.safeSend({
+        channel,
+        ...(channel === "debug" ? {} : { projectId }),
+        type,
+        payload,
+      });
+    }, this.logger);
+    if (!result.ok) {
+      if (channel === "fs-watch") {
+        this.safeSend({
+          channel: "__system__",
+          projectId,
+          type: "fs_watch_error",
+          payload: { error: result.error },
+        });
+        return;
+      }
+      this.logger.debug({ projectId, channel, error: result.error }, "bus subscribe failed");
+      return;
+    }
+    this.subscriptions.set(key, result.detach);
   }
 
   private unsubscribe(projectId: string, channel: BusChannel): void {
     const key = `${projectId}::${channel}`;
-    if (!this.subscriptions.has(key)) return;
+    const detach = this.subscriptions.get(key);
+    if (!detach) return;
     this.subscriptions.delete(key);
-    this.releaseSubscription(projectId, channel);
-  }
-
-  private releaseSubscription(projectId: string, channel: BusChannel): void {
-    switch (channel) {
-      case "trigger": {
-        const handle = this.triggerHandles.get(projectId);
-        if (handle) {
-          for (const [type, handler] of handle.handlers) {
-            handle.triggerManager.off(type, handler);
-          }
-          this.triggerHandles.delete(projectId);
-        }
-        break;
-      }
-      case "agent": {
-        const handle = this.agentHandles.get(projectId);
-        if (handle) {
-          handle.projectManager.offAgentChange(handle.handler);
-          this.agentHandles.delete(projectId);
-        }
-        break;
-      }
-      case "session": {
-        const handle = this.sessionHandles.get(projectId);
-        if (handle) {
-          handle.projectManager.offSessionChange(handle.handler);
-          this.sessionHandles.delete(projectId);
-        }
-        break;
-      }
-      case "fs-watch":
-        releaseFsWatch(projectId, this.fsWatchListener);
-        break;
-      case "debug":
-        removeDebugSubscriber(this.debugSend);
-        break;
-    }
+    detach();
   }
 
   onClose(): void {
     if (this.closed) return;
     this.closed = true;
-    for (const key of this.subscriptions) {
-      const sep = key.indexOf("::");
-      const projectId = key.slice(0, sep);
-      const channel = key.slice(sep + 2) as BusChannel;
-      this.releaseSubscription(projectId, channel);
-    }
+    for (const detach of this.subscriptions.values()) detach();
     this.subscriptions.clear();
   }
 
@@ -257,16 +107,4 @@ class BusConnectionHandler {
       this.socket.send(typeof msg === "string" ? msg : JSON.stringify(msg));
     } catch { /* socket already closed */ }
   }
-}
-
-export function handleBusWebSocket(
-  fastify: FastifyInstance,
-  registry: ProjectRegistry,
-): void {
-  fastify.get("/ws/bus", { websocket: true }, (socket) => {
-    const handler = new BusConnectionHandler(socket, registry, fastify.log);
-    socket.on("message", (raw: Buffer) => handler.onMessage(raw));
-    socket.on("close", () => handler.onClose());
-    socket.on("error", () => handler.onClose());
-  });
 }

@@ -1,8 +1,11 @@
 import { create } from "zustand";
-import { parseBusServerMessage } from "@spherse/contracts";
+import { parseBusServerMessage, parseBusScope, busScope, type BusChannelScope } from "@spherse/contracts";
 import type { HostBridge } from "../lib/host-bridge";
+import type { RpcClient } from "@spherse/rpc";
 import { buildWsUrl } from "../lib/api";
 import { WsConnection, type WsConnectionState } from "../lib/ws/ws-connection";
+import { isRpcClientEnabled } from "../lib/rpc/enabled";
+import { getSharedRpcClient } from "../lib/rpc/shared";
 
 export type BusChannel = "trigger" | "agent" | "session" | "fs-watch" | "debug";
 export type BusStatus = "idle" | "connecting" | "open" | "closed";
@@ -29,21 +32,26 @@ const DEBUG_KEY = "__global__::debug";
 let connection: WsConnection | null = null;
 const handlers = new Map<string, Set<BusHandler>>();
 
+interface RpcBusDispatcher {
+  dispatch: (event: { event: string; payload: unknown }) => void;
+  removeEvent: () => void;
+}
+
+interface RpcBusBinding {
+  client: RpcClient;
+  dispatchers: Map<string, RpcBusDispatcher>;
+  removeClosed: (() => void) | undefined;
+  removeReopen: (() => void) | undefined;
+}
+
+let rpcBinding: RpcBusBinding | null = null;
+
 function keyFor(projectId: string, channel: BusChannel): string {
   return `${projectId}::${channel}`;
 }
 
 function sendRaw(msg: unknown): void {
   connection?.send(JSON.stringify(msg));
-}
-
-function replaySubscriptions(): void {
-  for (const key of handlers.keys()) {
-    const sep = key.indexOf("::");
-    const projectId = key.slice(0, sep);
-    const channel = key.slice(sep + 2) as BusChannel;
-    sendRaw({ kind: "subscribe", projectId, channel });
-  }
 }
 
 function dispatchMessage(parsed: unknown): void {
@@ -73,12 +81,63 @@ function isActive(state: WsConnectionState): boolean {
   return state === "connecting" || state === "open" || state === "waiting-backoff";
 }
 
+function dispatchRpcEvent(scope: string, type: string, payload: unknown): void {
+  const bus = parseBusScope(scope);
+  if (!bus) return;
+  const subs = handlers.get(keyFor(bus.projectId, bus.channel as BusChannel));
+  if (subs) {
+    for (const h of subs) h(type, payload);
+  }
+}
+
+async function initRpcBus(
+  set: (partial: Partial<BusStore>) => void,
+  bridge: HostBridge,
+): Promise<void> {
+  const baseUrl = await bridge.getServerBaseUrl();
+  if (!baseUrl) return;
+  const token = (await bridge.getServerAccessToken?.()) ?? null;
+  const client = getSharedRpcClient(baseUrl, token);
+  rpcBinding = {
+    client,
+    dispatchers: new Map(),
+    removeClosed: undefined,
+    removeReopen: undefined,
+  };
+  rpcBinding.removeClosed = client.onClosed(() => {
+    set({ status: "closed" });
+  });
+  rpcBinding.removeReopen = client.onReopen(() => {
+    set({ status: "open", resumedAt: Date.now() });
+    for (const scope of rpcBinding!.dispatchers.keys()) {
+      void client.subscribe(scope).catch(() => {});
+    }
+  });
+  set({ status: "connecting" });
+  await client.connect();
+  set({ status: "open", resumedAt: Date.now() });
+}
+
+function teardownRpcBus(): void {
+  if (!rpcBinding) return;
+  for (const scope of rpcBinding.dispatchers.keys()) {
+    rpcBinding.client.unsubscribe(scope);
+  }
+  rpcBinding.removeClosed?.();
+  rpcBinding.removeReopen?.();
+  rpcBinding = null;
+}
+
 export const useBusStore = create<BusStore>((set) => ({
   status: "idle",
   resumedAt: null,
 
   async init(bridge) {
-
+    if (isRpcClientEnabled()) {
+      if (rpcBinding) return;
+      await initRpcBus(set, bridge);
+      return;
+    }
     if (connection && isActive(connection.getState())) return;
     connection?.close();
     connection = new WsConnection(
@@ -116,6 +175,10 @@ export const useBusStore = create<BusStore>((set) => ({
   },
 
   resumeProbe() {
+    if (rpcBinding) {
+      void rpcBinding.client.connect().catch(() => {});
+      return;
+    }
     connection?.probe();
   },
 
@@ -128,7 +191,18 @@ export const useBusStore = create<BusStore>((set) => ({
       handlers.set(key, subs);
     }
     subs.add(handler);
-    if (wasEmpty) sendRaw({ kind: "subscribe", projectId, channel });
+    if (wasEmpty) {
+      if (rpcBinding) {
+        const scope = channel === "debug" ? busScope("__global__", "debug") : busScope(projectId, channel as BusChannelScope);
+        const dispatch = (event: { event: string; payload: unknown }) =>
+          dispatchRpcEvent(scope, event.event, event.payload);
+        const removeEvent = rpcBinding.client.onEvent(scope, dispatch);
+        rpcBinding.dispatchers.set(scope, { dispatch, removeEvent });
+        void rpcBinding.client.subscribe(scope).catch(() => {});
+        return;
+      }
+      sendRaw({ kind: "subscribe", projectId, channel });
+    }
   },
 
   removeHandler(projectId, channel, handler) {
@@ -138,19 +212,46 @@ export const useBusStore = create<BusStore>((set) => ({
     subs.delete(handler);
     if (subs.size === 0) {
       handlers.delete(key);
+      if (rpcBinding) {
+        const scope = channel === "debug" ? busScope("__global__", "debug") : busScope(projectId, channel as BusChannelScope);
+        const dispatcher = rpcBinding.dispatchers.get(scope);
+        if (dispatcher) {
+          rpcBinding.client.unsubscribe(scope);
+          dispatcher.removeEvent();
+          rpcBinding.dispatchers.delete(scope);
+        }
+        return;
+      }
       sendRaw({ kind: "unsubscribe", projectId, channel });
     }
   },
 
   emitAgentTriggerEvent(projectId, eventName, payload) {
+    if (rpcBinding) {
+      void rpcBinding.client
+        .call("bus.emitTriggerEvent", { projectId, eventName, ...(payload !== undefined ? { payload } : {}) })
+        .catch((err: unknown) => {
+          console.warn("[bus-store] emit trigger event failed:", err);
+        });
+      return;
+    }
     sendRaw({ kind: "emit-trigger-event", projectId, eventName, payload });
   },
 
   teardown() {
+    teardownRpcBus();
     connection?.close();
     connection = null;
     handlers.clear();
-
     set({ status: "idle", resumedAt: null });
   },
 }));
+
+function replaySubscriptions(): void {
+  for (const key of handlers.keys()) {
+    const sep = key.indexOf("::");
+    const projectId = key.slice(0, sep);
+    const channel = key.slice(sep + 2) as BusChannel;
+    sendRaw({ kind: "subscribe", projectId, channel });
+  }
+}

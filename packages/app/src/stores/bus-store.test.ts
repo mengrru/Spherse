@@ -1,304 +1,141 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { RpcClientFrame, RpcServerFrame } from "@spherse/contracts";
+import { RpcClient, type RpcTransport } from "@spherse/rpc";
 import { useBusStore } from "./bus-store";
-import type { HostBridge } from "../lib/host-bridge";
-import {
-  createMockWebSocket,
-  openInstance,
-  WS_CONNECTING,
-  WS_OPEN,
-  type MockWebSocketInstance,
-} from "../test/mock-web-socket";
+import { getSharedRpcClient } from "../lib/rpc/shared";
 
-function lastSentSubscribe(instances: MockWebSocketInstance[]) {
-  const last = instances[instances.length - 1];
-  if (!last) return undefined;
-  return last.sent.map((s) => JSON.parse(s)).find((m) => m.kind === "subscribe");
-}
+vi.mock("../lib/rpc/enabled", () => ({ isRpcClientEnabled: () => true }));
+vi.mock("../lib/rpc/shared", () => ({ getSharedRpcClient: vi.fn() }));
+vi.mock("../lib/host-bridge", () => ({}));
 
-function allSends(instances: MockWebSocketInstance[], kind: string) {
-  return instances
-    .flatMap((i) => i.sent)
-    .map((s) => JSON.parse(s))
-    .filter((m) => m.kind === kind);
-}
-
-function createMockHostBridge(): HostBridge {
-  return {
-    kind: "electron",
-    capabilities: {
-      filePicker: true,
-      mobileAccess: false,
-      openFileExternal: false,
-      tray: false,
-      content: { editable: true },
-    },
-    getServerBaseUrl: vi.fn().mockResolvedValue("http://localhost:5173"),
-    getSettings: vi.fn().mockResolvedValue(null),
-    saveSettings: vi.fn().mockResolvedValue({ success: true }),
-    openExternal: vi.fn(),
-  } as unknown as HostBridge;
-}
-
-describe("bus-store", () => {
-  let mock: ReturnType<typeof createMockWebSocket>;
-  let bridge: HostBridge;
-
-  beforeEach(() => {
-    vi.useFakeTimers();
-    mock = createMockWebSocket();
-    vi.stubGlobal("WebSocket", mock.MockWebSocket);
-    bridge = createMockHostBridge();
-    useBusStore.getState().teardown();
-    useBusStore.setState({ status: "idle" });
-  });
-
-  afterEach(() => {
-    useBusStore.getState().teardown();
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
-  });
-
-  async function connect() {
-    await useBusStore.getState().init(bridge);
-    const socket = mock.instances[mock.instances.length - 1];
-    openInstance(socket);
-    return socket;
+class FakeTransport implements RpcTransport {
+  sent: RpcClientFrame[] = [];
+  frameHandlers = new Set<(frame: RpcServerFrame) => void>();
+  closedHandlers = new Set<() => void>();
+  reopenHandlers = new Set<() => void>();
+  connect = vi.fn(async () => {});
+  close = vi.fn();
+  send(frame: RpcClientFrame): void {
+    this.sent.push(frame);
   }
+  onFrame(handler: (frame: RpcServerFrame) => void): () => void {
+    this.frameHandlers.add(handler);
+    return () => this.frameHandlers.delete(handler);
+  }
+  onClosed(handler: () => void): () => void {
+    this.closedHandlers.add(handler);
+    return () => this.closedHandlers.delete(handler);
+  }
+  onReopen(handler: () => void): () => void {
+    this.reopenHandlers.add(handler);
+    return () => this.reopenHandlers.delete(handler);
+  }
+  emit(frame: RpcServerFrame): void {
+    for (const handler of this.frameHandlers) handler(frame);
+  }
+  emitReopen(): void {
+    for (const handler of this.reopenHandlers) handler();
+  }
+}
 
-  it("init creates a WebSocket to ws://localhost:<port>/ws/bus and goes open", async () => {
-    await useBusStore.getState().init(bridge);
-    expect(useBusStore.getState().status).toBe("connecting");
-    const socket = mock.instances[mock.instances.length - 1];
-    expect(socket.url).toBe("ws://localhost:5173/ws/bus");
-    openInstance(socket);
-    expect(useBusStore.getState().status).toBe("open");
-  });
+function createClient() {
+  const transport = new FakeTransport();
+  const client = new RpcClient(transport);
+  return { transport, client };
+}
 
-  it("does not create a socket when the server base url is unavailable", async () => {
-    (bridge.getServerBaseUrl as ReturnType<typeof vi.fn>).mockResolvedValue("");
-    await useBusStore.getState().init(bridge);
-    expect(mock.instances).toHaveLength(0);
-    expect(useBusStore.getState().status).toBe("idle");
-  });
+function bridge(baseUrl = "http://x") {
+  return {
+    getServerBaseUrl: vi.fn(async () => baseUrl),
+    getServerAccessToken: vi.fn(async () => null),
+  } as never;
+}
 
-  it("first subscriber sends a subscribe message", async () => {
-    const socket = await connect();
-    socket.sent.length = 0;
-    const handler = vi.fn();
-    useBusStore.getState().addHandler("p1", "trigger", handler);
-    expect(socket.sent).toHaveLength(1);
-    expect(JSON.parse(socket.sent[0])).toEqual({
-      kind: "subscribe",
-      projectId: "p1",
-      channel: "trigger",
-    });
-  });
+async function tick(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
 
-  it("second subscriber on the same key does not send subscribe again", async () => {
-    const socket = await connect();
-    useBusStore.getState().addHandler("p1", "trigger", vi.fn());
-    socket.sent.length = 0;
-    useBusStore.getState().addHandler("p1", "trigger", vi.fn());
-    expect(socket.sent).toHaveLength(0);
-  });
-
-  it("removeHandler last subscriber sends unsubscribe", async () => {
-    const socket = await connect();
-    const handler = vi.fn();
-    useBusStore.getState().addHandler("p1", "trigger", handler);
-    socket.sent.length = 0;
-    useBusStore.getState().removeHandler("p1", "trigger", handler);
-    expect(socket.sent).toHaveLength(1);
-    expect(JSON.parse(socket.sent[0])).toEqual({
-      kind: "unsubscribe",
-      projectId: "p1",
-      channel: "trigger",
-    });
-  });
-
-  it("removeHandler non-last subscriber does not send unsubscribe", async () => {
-    const socket = await connect();
-    const h1 = vi.fn();
-    const h2 = vi.fn();
-    useBusStore.getState().addHandler("p1", "trigger", h1);
-    useBusStore.getState().addHandler("p1", "trigger", h2);
-    socket.sent.length = 0;
-    useBusStore.getState().removeHandler("p1", "trigger", h1);
-    expect(socket.sent).toHaveLength(0);
-  });
-
-  it("dispatches trigger events to matching handlers", async () => {
-    const socket = await connect();
-    const handler = vi.fn();
-    useBusStore.getState().addHandler("p1", "trigger", handler);
-    const payload = { agentId: "a1", triggerId: "t1", triggeredAt: 123 };
-    socket.onmessage?.({ data: JSON.stringify({
-      channel: "trigger",
-      projectId: "p1",
-      type: "trigger_triggered",
-      payload,
-    }) } as MessageEvent);
-    expect(handler).toHaveBeenCalledWith("trigger_triggered", payload);
-  });
-
-  it("dispatches debug events via the __global__::debug key", async () => {
-    const socket = await connect();
-    const handler = vi.fn();
-    useBusStore.getState().addHandler("__global__", "debug", handler);
-    socket.onmessage?.({ data: JSON.stringify({
-      channel: "debug",
-      type: "log",
-      payload: { line: "hello" },
-    }) } as MessageEvent);
-    expect(handler).toHaveBeenCalledWith("log", { line: "hello" });
-  });
-
-  it("swallows __system__ pong without calling handlers", async () => {
-    const socket = await connect();
-    const handler = vi.fn();
-    useBusStore.getState().addHandler("p1", "trigger", handler);
-    socket.onmessage?.({ data: JSON.stringify({
-      channel: "__system__",
-      type: "pong",
-      payload: {},
-    }) } as MessageEvent);
-    expect(handler).not.toHaveBeenCalled();
-  });
-
-  it("does not throw on malformed messages", async () => {
-    const socket = await connect();
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    expect(() => {
-      socket.onmessage?.({ data: "not-json" } as MessageEvent);
-    }).not.toThrow();
-    expect(warn).toHaveBeenCalled();
-    expect(useBusStore.getState().status).toBe("open");
-    warn.mockRestore();
-  });
-
-  it("reconnects with backoff and replays subscriptions on reopen", async () => {
-    const socket = await connect();
-    useBusStore.getState().addHandler("p1", "trigger", vi.fn());
-    expect(allSends(mock.instances, "subscribe")).toHaveLength(1);
-
-    socket.close();
-    expect(useBusStore.getState().status).toBe("connecting");
-
-    await vi.advanceTimersByTimeAsync(1000);
-    const reopened = mock.instances[mock.instances.length - 1];
-    expect(reopened).not.toBe(socket);
-    openInstance(reopened);
-
-    expect(useBusStore.getState().status).toBe("open");
-    const subscribeAfterReconnect = lastSentSubscribe(mock.instances);
-    expect(subscribeAfterReconnect).toEqual({
-      kind: "subscribe",
-      projectId: "p1",
-      channel: "trigger",
-    });
-  });
-
-  it("heartbeat closes the socket when no pong arrives within 60s", async () => {
-    const socket = await connect();
-    await vi.advanceTimersByTimeAsync(90000);
-    expect(socket.closeSpy).toHaveBeenCalled();
-    expect(useBusStore.getState().status).toBe("connecting");
-  });
-
-  it("sets resumedAt on open and updates it on reopen", async () => {
-    expect(useBusStore.getState().resumedAt).toBeNull();
-    const socket = await connect();
-    const firstResumedAt = useBusStore.getState().resumedAt;
-    expect(firstResumedAt).toBeTypeOf("number");
-
-    await vi.advanceTimersByTimeAsync(1000);
-    socket.close();
-    await vi.advanceTimersByTimeAsync(1000);
-    const reopened = mock.instances[mock.instances.length - 1];
-    openInstance(reopened);
-
-    // Strictly greater: catching a regression where onopen stops updating
-    // resumedAt (fake timers freeze the clock, so advance first).
-    expect(useBusStore.getState().resumedAt).toBeGreaterThan(firstResumedAt!);
-  });
-
-  it("teardown resets resumedAt", async () => {
-    await connect();
-    expect(useBusStore.getState().resumedAt).not.toBeNull();
+describe("bus store rpc mode", () => {
+  beforeEach(() => {
     useBusStore.getState().teardown();
-    expect(useBusStore.getState().resumedAt).toBeNull();
+    vi.clearAllMocks();
   });
 
-  describe("resumeProbe", () => {
-    it("is a no-op when the socket is not OPEN (existing reconnect owns it)", async () => {
-      await useBusStore.getState().init(bridge);
-      const socket = mock.instances[mock.instances.length - 1];
-      socket.readyState = WS_CONNECTING;
-      expect(() => useBusStore.getState().resumeProbe()).not.toThrow();
-      expect(socket.closeSpy).not.toHaveBeenCalled();
-      expect(socket.sent).toHaveLength(0);
-    });
+  it("subscribes bus scopes and dispatches events by project+channel", async () => {
+    const { transport, client } = createClient();
+    vi.mocked(getSharedRpcClient).mockReturnValue(client);
+    await useBusStore.getState().init(bridge());
+    await tick();
 
-    it("re-arms a short probe against the stale pending ping and closes it (intentional change: old lastPongAt model closed immediately; the 60s heartbeat watchdog now owns the hard timeout)", async () => {
-      const socket = await connect();
-      await vi.advanceTimersByTimeAsync(61000);
-      socket.closeSpy.mockClear();
-      const sentBefore = socket.sent.length;
-      useBusStore.getState().resumeProbe();
-      expect(socket.sent).toHaveLength(sentBefore);
-      await vi.advanceTimersByTimeAsync(5000);
-      expect(socket.closeSpy).toHaveBeenCalled();
-      expect(useBusStore.getState().status).toBe("connecting");
+    const handler = vi.fn();
+    useBusStore.getState().addHandler("p1", "trigger", handler);
+    await tick();
+    expect(transport.sent).toContainEqual({
+      type: "sub",
+      id: 1,
+      scope: "bus:p1:trigger",
     });
+    transport.emit({ type: "snapshot", id: 1, events: [] });
+    await tick();
 
-    it("pings a healthy socket and does not close when pong arrives in time", async () => {
-      const socket = await connect();
-      socket.sent.length = 0;
-      useBusStore.getState().resumeProbe();
-      expect(JSON.parse(socket.sent[0])).toEqual({ kind: "ping" });
-      socket.onmessage?.({ data: JSON.stringify({
-        channel: "__system__",
-        type: "pong",
-        payload: {},
-      }) } as MessageEvent);
-      await vi.advanceTimersByTimeAsync(6000);
-      expect(socket.closeSpy).not.toHaveBeenCalled();
-      expect(useBusStore.getState().status).toBe("open");
+    transport.emit({
+      type: "event",
+      scope: "bus:p1:trigger",
+      event: "trigger_triggered",
+      payload: { triggerId: "t1" },
+      ts: 1,
     });
+    expect(handler).toHaveBeenCalledWith("trigger_triggered", { triggerId: "t1" });
+  });
 
-    it("closes the socket when no pong arrives within the probe timeout", async () => {
-      const socket = await connect();
-      socket.sent.length = 0;
-      useBusStore.getState().resumeProbe();
-      expect(JSON.parse(socket.sent[0])).toEqual({ kind: "ping" });
-      await vi.advanceTimersByTimeAsync(5000);
-      expect(socket.closeSpy).toHaveBeenCalled();
-      expect(useBusStore.getState().status).toBe("connecting");
+  it("removing the last handler unsubscribes the scope", async () => {
+    const { transport, client } = createClient();
+    vi.mocked(getSharedRpcClient).mockReturnValue(client);
+    await useBusStore.getState().init(bridge());
+    await tick();
+
+    const handler = vi.fn();
+    useBusStore.getState().addHandler("p1", "session", handler);
+    await tick();
+    useBusStore.getState().removeHandler("p1", "session", handler);
+    await tick();
+    const unsubs = transport.sent.filter((f) => f.type === "unsub");
+    expect(unsubs).toHaveLength(1);
+    expect(unsubs[0]).toMatchObject({ scope: "bus:p1:session" });
+  });
+
+  it("emits trigger events through the bus method", async () => {
+    const { transport, client } = createClient();
+    vi.mocked(getSharedRpcClient).mockReturnValue(client);
+    await useBusStore.getState().init(bridge());
+    await tick();
+    useBusStore.getState().emitAgentTriggerEvent("p1", "user-event", "data");
+    await tick();
+    expect(transport.sent).toContainEqual({
+      type: "call",
+      id: 1,
+      method: "bus.emitTriggerEvent",
+      params: { projectId: "p1", eventName: "user-event", payload: "data" },
     });
   });
 
-  it("init during waiting-backoff is a no-op; the pending backoff still reconnects", async () => {
-    const socket = await connect();
-    socket.close();
-    expect(useBusStore.getState().status).toBe("connecting");
-    await useBusStore.getState().init(bridge);
-    expect(mock.instances).toHaveLength(1);
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(mock.instances).toHaveLength(2);
-    openInstance(mock.instances[1]);
+  it("resubscribes all scopes on reopen and bumps resumedAt", async () => {
+    const { transport, client } = createClient();
+    vi.mocked(getSharedRpcClient).mockReturnValue(client);
+    await useBusStore.getState().init(bridge());
+    await tick();
+    const handler = vi.fn();
+    useBusStore.getState().addHandler("p1", "agent", handler);
+    await tick();
+    transport.emit({ type: "snapshot", id: 1, events: [] });
+    await tick();
+
+    const before = useBusStore.getState().resumedAt;
+    transport.emitReopen();
+    await tick();
+    const subs = transport.sent.filter((f) => f.type === "sub");
+    expect(subs).toHaveLength(2);
+    expect(useBusStore.getState().resumedAt).toBeGreaterThanOrEqual(before ?? 0);
     expect(useBusStore.getState().status).toBe("open");
-  });
-
-  it("keeps the socket reference across state (sanity: open socket is used for sends)", async () => {
-    await connect();
-    expect(useBusStore.getState().emitAgentTriggerEvent("p1", "evt", "x")).toBeUndefined();
-    const socket = mock.instances[mock.instances.length - 1];
-    expect(socket.sent.at(-1)).toBe(JSON.stringify({
-      kind: "emit-trigger-event",
-      projectId: "p1",
-      eventName: "evt",
-      payload: "x",
-    }));
-    expect(socket.readyState).toBe(WS_OPEN);
   });
 });

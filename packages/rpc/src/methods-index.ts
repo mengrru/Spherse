@@ -5,3 +5,4 @@ export { triggerMethods } from "./methods/triggers.js";
 export { debugMethods } from "./methods/debug.js";
 export { chatMethods } from "./methods/chat.js";
 export { connectionMethods } from "./methods/connection.js";
+export { busMethods } from "./methods/bus.js";

@@ -5,6 +5,7 @@ import { triggerMethods } from "./triggers.js";
 import { debugMethods } from "./debug.js";
 import { chatMethods } from "./chat.js";
 import { connectionMethods } from "./connection.js";
+import { busMethods } from "./bus.js";
 
 export function buildBaseMethodRegistry(): Map<string, RpcMethodEntry> {
   const entries: Array<Record<string, RpcMethodEntry>> = [
@@ -14,6 +15,7 @@ export function buildBaseMethodRegistry(): Map<string, RpcMethodEntry> {
     debugMethods,
     chatMethods,
     connectionMethods,
+    busMethods,
   ];
   const methods = new Map<string, RpcMethodEntry>();
   for (const group of entries) {

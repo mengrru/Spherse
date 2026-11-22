@@ -15,6 +15,8 @@ export type {
   RpcMethodEntry,
   RpcConnectionState,
   RpcModelSettings,
+  RpcBusEvent,
+  RpcBusSource,
   RpcProjectContext,
   RpcProjectInfo,
   RpcRegistry,

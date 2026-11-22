@@ -41,7 +41,7 @@ export function createFakeProjectCtx(overrides: FakeRpcProjectContext = {} as Fa
       createSession: vi.fn().mockResolvedValue("s1"),
       getSessionStatus: vi.fn(() => ({ currentTokens: 0, contextWindowLimit: null })),
     },
-    triggerManager: {},
+    triggerManager: { onUserEvent: vi.fn() },
   };
   return {
     runtime: { ...base.runtime, ...overrides.runtime },
@@ -105,6 +105,35 @@ export function createHubMock(): HubMock {
   };
 }
 
+export interface BusSourceMock {
+  attach: ReturnType<typeof vi.fn>;
+  detach: ReturnType<typeof vi.fn>;
+  emit: (event: { type: string; payload: unknown }) => void;
+}
+
+export function createBusSourceMock(): { source: import("./context.js").RpcBusSource; mock: BusSourceMock } {
+  let currentEmit: ((event: { type: string; payload: unknown }) => void) | undefined;
+  const detach = vi.fn();
+  const attach = vi.fn(
+    (
+      _projectId: string,
+      _channel: string,
+      emit: (event: { type: string; payload: unknown }) => void,
+    ) => {
+      currentEmit = emit;
+      return { ok: true as const, detach };
+    },
+  );
+  return {
+    source: { attach } as never,
+    mock: {
+      attach,
+      detach,
+      emit: (event) => currentEmit?.(event),
+    },
+  };
+}
+
 export interface RpcHarnessOptions {
   methods?: Record<string, RpcMethodEntry>;
   projectCtx?: ReturnType<typeof createFakeProjectCtx>;
@@ -113,6 +142,7 @@ export interface RpcHarnessOptions {
   authRequired?: boolean;
   appVersion?: string | null;
   hubMock?: HubMock;
+  busSource?: import("./context.js").RpcBusSource;
 }
 
 export interface RpcHarness {
@@ -152,6 +182,7 @@ export function createRpcHarness(options: RpcHarnessOptions = {}): RpcHarness {
     authRequired: options.authRequired ?? false,
     appVersion: options.appVersion ?? "test",
     hub: hubMock.hub,
+    ...(options.busSource !== undefined ? { bus: options.busSource } : {}),
   };
   const dispatcher = new RpcDispatcher({
     methods: new Map<string, RpcMethodEntry>(Object.entries(options.methods ?? {})),

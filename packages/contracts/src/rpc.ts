@@ -109,6 +109,23 @@ export function isRpcPongFrame(payload: unknown): payload is RpcPongFrame {
 
 const CHAT_SCOPE_PREFIX = "chat";
 
+export const BUS_CHANNELS = ["trigger", "agent", "session", "fs-watch", "debug"] as const;
+
+export type BusChannelScope = (typeof BUS_CHANNELS)[number];
+
+export function busScope(projectId: string, channel: BusChannelScope): string {
+  return `bus:${projectId}:${channel}`;
+}
+
+export function parseBusScope(scope: string): { projectId: string; channel: BusChannelScope } | null {
+  const parts = scope.split(":");
+  if (parts.length !== 3 || parts[0] !== "bus") return null;
+  const [, projectId, channel] = parts;
+  if (!projectId) return null;
+  if (!(BUS_CHANNELS as readonly string[]).includes(channel)) return null;
+  return { projectId, channel: channel as BusChannelScope };
+}
+
 export const schemas = {
   rpcErrorObject,
   rpcMethodName,
