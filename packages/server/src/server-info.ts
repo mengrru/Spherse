@@ -1,4 +1,4 @@
-export { SERVER_VERSION, API_VERSION } from "@spherse/rpc";
+export { SERVER_VERSION, API_VERSION } from "@spherse/rpc/host";
 
 let appVersion: string | undefined;
 

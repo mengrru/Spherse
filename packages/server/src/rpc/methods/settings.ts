@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import { Type } from "@sinclair/typebox";
 import { schemas, parseContract } from "@spherse/contracts";
 import { getImageSupportedProviders, resolveProjectPath } from "@spherse/core";
-import { defineRpcMethod, type RpcMethodEntry } from "@spherse/rpc";
+import { defineRpcMethod, type RpcMethodEntry } from "@spherse/rpc/host";
 
 const supportedProviders = defineRpcMethod(Type.Object({}), (_params, ctx) =>
   parseContract(schemas.providerCatalog, ctx.registry.getSupportedProviders()),

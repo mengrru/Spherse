@@ -3,7 +3,7 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import { schemas, parseContract } from "@spherse/contracts";
 import { installMarketplaceProjectZip } from "@spherse/core";
-import { RpcAppError, defineRpcMethod, type RpcMethodEntry } from "@spherse/rpc";
+import { RpcAppError, defineRpcMethod, type RpcMethodEntry } from "@spherse/rpc/host";
 import { projectMarketplaceService } from "../../marketplace.js";
 import { promptMarketplaceService } from "../../prompt-marketplace.js";
 

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { connectionMethods } from "@spherse/rpc";
+import { connectionMethods } from "@spherse/rpc/methods";
 import { settingsMethods } from "../rpc/methods/settings.js";
 import {
   createFakeProjectCtx,

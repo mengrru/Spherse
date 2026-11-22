@@ -16,7 +16,7 @@ import {
   type DataStore,
 } from "@spherse/core";
 import { CONTENT_ERROR_CODES, parseContract, schemas } from "@spherse/contracts";
-import { RpcAppError, defineRpcMethod, type RpcContext, type RpcMethodEntry } from "@spherse/rpc";
+import { RpcAppError, defineRpcMethod, type RpcContext, type RpcMethodEntry } from "@spherse/rpc/host";
 
 async function readFileContent(absolutePath: string): Promise<{ content: string; binary: boolean }> {
   const handle = await fs.open(absolutePath, "r");

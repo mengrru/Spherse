@@ -3,7 +3,7 @@ import { schemas } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import { notFound } from "../errors.js";
 import { getAppVersion } from "../server-info.js";
-import { SERVER_VERSION, API_VERSION } from "@spherse/rpc";
+import { SERVER_VERSION, API_VERSION } from "@spherse/rpc/host";
 
 export interface ConnectionRouteOptions {
   authRequired: boolean;

@@ -1,6 +1,6 @@
 import type { ModelSettingsRequest } from "@spherse/contracts";
 import type { ModelCatalog } from "@spherse/core";
-import type { RpcModelSettings } from "@spherse/rpc";
+import type { RpcModelSettings } from "@spherse/rpc/host";
 import type { ModelSettingsStore } from "../model-settings.js";
 import { applyModelSettingsToEnv } from "../model-settings.js";
 import type { ProjectRegistry } from "../registry.js";

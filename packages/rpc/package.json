@@ -2,6 +2,7 @@
   "name": "@spherse/rpc",
   "version": "0.1.0",
   "type": "module",
+  "sideEffects": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -12,6 +13,14 @@
     "./testing": {
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js"
+    },
+    "./methods": {
+      "types": "./dist/methods-index.d.ts",
+      "import": "./dist/methods-index.js"
+    },
+    "./host": {
+      "types": "./dist/host.d.ts",
+      "import": "./dist/host.js"
     }
   },
   "scripts": {

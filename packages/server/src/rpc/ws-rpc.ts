@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { RpcAppError, RpcConnectionHandler, RpcDispatcher, type RpcContext } from "@spherse/rpc";
+import { RpcAppError, RpcConnectionHandler, RpcDispatcher, type RpcContext } from "@spherse/rpc/host";
 import { RpcErrorCode } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import type { ChatSessionHub } from "../chat/index.js";

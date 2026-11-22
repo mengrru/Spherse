@@ -1,5 +1,5 @@
-import type { RpcMethodEntry } from "@spherse/rpc";
-import { buildBaseMethodRegistry } from "@spherse/rpc";
+import type { RpcMethodEntry } from "@spherse/rpc/host";
+import { buildBaseMethodRegistry } from "@spherse/rpc/methods";
 import { contentMethods } from "./content.js";
 import { settingsMethods } from "./settings.js";
 import { skillMethods } from "./skills.js";
