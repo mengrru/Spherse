@@ -53,7 +53,7 @@ Fastify 反代（`server/src/routes/preview.ts`）承担四职责：URL 命名�
 ### 环境约束
 
 - 桌面生产环境 `loadFile`（file:// origin，`desktop/electron/window.ts:26`）**不支持 Service Worker**；SW 虚拟路由需要先改自定义标准协议（app://，`registerSchemesAsPrivileged` + `protocol.handle`）
-- CORS 矩阵未验证：Anthropic 确认可直连；OpenAI 官方 API 不允许浏览器 CORS；Google/OpenRouter 一般可直连；zai/minimax/xiaomi/qwen/moonshot 待实测。Electron 可绕但 web PWA 无解，需逐 provider 实测出矩阵
+- CORS 矩阵未验证：~~Anthropic 确认可直连~~（**2026-11-22 实测修正：Anthropic 预检 403 拒绝，不可直连**）；OpenAI 官方 API 不允许浏览器 CORS（官方策略确认）；Google 待外网补测；zai/minimax/xiaomi/qwen(dashscope)/moonshot/deepseek/openrouter 实测可直连。矩阵实测：`docs/dev/investigation/2026-11-22-cors-matrix/`。Electron 可绕但 web PWA 无解，按矩阵裁剪 provider 面
 - 触发器定时器现状跑在 Electron main 进程常驻；进浏览器后受页面生命周期约束
 
 ## 架构
@@ -150,7 +150,7 @@ Fastify 反代（`server/src/routes/preview.ts`）承担四职责：URL 命名�
 
 | 阶段 | 内容 | 出口判据 |
 |---|---|---|
-| P0 | spike：cordis-in-Worker（含 SharedWorker 形态）验证；目标浏览器矩阵定义（SharedWorker/OPFS/SW 最低版本，iOS Safari 重点）与 OPFS 多写者约束验证；CORS 矩阵实测；`@modelcontextprotocol/client` 安装对齐与 browser 面终验 | spike 结论落 docs/dev/investigation（envelope 选型已完成：`2026-11-22-rpc-envelope-selection`） |
+| P0 | spike：cordis-in-Worker（含 SharedWorker 形态）验证；目标浏览器矩阵定义（SharedWorker/OPFS/SW 最低版本，iOS Safari 重点）与 OPFS 多写者约束验证；CORS 矩阵实测；`@modelcontextprotocol/client` 安装对齐与 browser 面终验 | spike 结论落 docs/dev/investigation（**已完成**：envelope `2026-11-22-rpc-envelope-selection`、cordis-SharedWorker `2026-11-22-cordis-sharedworker-spike`、浏览器矩阵+OPFS+MCP `2026-11-22-browser-matrix`、CORS `2026-11-22-cors-matrix`） |
 | P1 | contracts 增补 RPC/事件/错误码 schema；core 引入 cordis host，capability/store 先行插件化（BackendPort 不动，桌面行为不变） | 全量 verify 通过，桌面行为无回归 |
 | P2 | Fastify RPC transport + 前端切 RPC + 删 REST（routes ~2.0k 行删除、server 非测试源码 ~4.5k 行上移、**~8.4k 行 REST 契约测试重写为 RPC 契约测试——P2 显式交付物**）；事件面 RPC 化（chat replayable + bus live-only，通道语义表落 contracts） | 桌面版全功能回归 + E2E 通过 |
 | P3 | packages/browser 壳 + SharedWorker host + browser store 插件（IndexedDB/OPFS）+ AuthProvider browser 实现；上传走 RPC（Blob 直传 Worker 落 OPFS） | browser 版可跑端到端会话：chat/审批/附件上传可用；资源面功能按 P3 降级定义验收——theme.css 回落默认主题、preview 卡片显示占位、欢迎页/侧板隐藏，不计为失败 |
