@@ -83,6 +83,12 @@ export default [
     },
   },
   {
+    files: ["packages/web/public/sw-update-handler.js"],
+    languageOptions: {
+      globals: globals.serviceworker,
+    },
+  },
+  {
     files: ["packages/desktop/src/**/*.{ts,tsx}", "packages/web/src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [

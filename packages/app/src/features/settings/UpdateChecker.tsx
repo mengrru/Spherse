@@ -15,6 +15,7 @@ import { useUpdateChecker } from "./use-update-checker";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useGlobalApiClient } from "../../lib/use-connection";
 import { DOWNLOAD_PAGE_URL } from "../../lib/urls";
+import { clearStaticCacheAndReload } from "../../lib/pwa-update";
 
 export function UpdateChecker() {
   const bridge = useHostBridge();
@@ -31,6 +32,7 @@ export function UpdateChecker() {
   } = useUpdateChecker();
   const [appVersion, setAppVersion] = useState("");
   const [desktopVersion, setDesktopVersion] = useState<string | null>(null);
+  const [clearingCache, setClearingCache] = useState(false);
   const hasUpdater = Boolean(bridge.updater);
 
   useEffect(() => {
@@ -54,6 +56,23 @@ export function UpdateChecker() {
           {t("settings.about.desktopVersion")}
           {desktopVersion ? `v${desktopVersion}` : "—"}
         </p>
+      )}
+
+      {bridge.kind === "web" && (
+        <div className="mt-1">
+          {clearingCache ? (
+            <Button disabled>{t("settings.about.clearingCache")}</Button>
+          ) : (
+            <Button
+              onClick={() => {
+                setClearingCache(true);
+                void clearStaticCacheAndReload();
+              }}
+            >
+              {t("settings.about.clearCacheUpdate")}
+            </Button>
+          )}
+        </div>
       )}
 
       {hasUpdater && (

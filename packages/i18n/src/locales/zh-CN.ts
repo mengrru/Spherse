@@ -259,6 +259,8 @@ export const zhCN = {
   "settings.about.retry": "重试",
   // error 态引导用户前往官网下载页（landing page，按平台/架构自动选包）手动下载新版本的按钮
   "settings.about.gotoDownloadPage": "前往官网下载",
+  "settings.about.clearCacheUpdate": "清除缓存并更新",
+  "settings.about.clearingCache": "正在清除缓存...",
   // 更新确认弹窗标题，{version} 为新版本号
   "settings.update.newVersion": "发现新版本 v{version}",
   // 更新确认弹窗中 release notes 区域标题
@@ -1493,6 +1495,7 @@ export const zhCN = {
   "web-version.reconnect": "重新连接",
   // 硬拦截全屏页「刷新页面」主按钮（网页缓存可能过旧，刷新拉取新版本，不清除连接）
   "web-version.reload": "刷新页面",
+  "web-version.clearing": "正在清除缓存并更新...",
   // 硬拦截全屏页「临时收起」按钮——用户暂不升级时先继续使用（仅本次会话有效，刷新后重新检测；以虚化样式呈现不作引导）
   "web-version.dismiss": "暂不升级，继续使用",
   // 桌面端与 web 端仅 patch 版本不同时的软提示 toast，{appVersion}/{webVersion} 为两端版本号

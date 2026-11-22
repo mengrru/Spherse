@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
 import { Button } from "@spherse/app/ui/button";
 import { useSettingsStore } from "@spherse/app/stores/settings";
+import { clearStaticCacheAndReload } from "@spherse/app/pwa-update";
 import { WEB_CONNECTION_STORAGE_KEY } from "./host-bridge-web";
 
 declare const __SPHERSE_WEB_VERSION__: string;
@@ -13,6 +15,7 @@ export function VersionBlockOverlay({
   onDismiss: () => void;
 }) {
   const locale = useSettingsStore((state) => state.locale) ?? DEFAULT_LOCALE;
+  const [clearing, setClearing] = useState(false);
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-background px-6 text-foreground">
       <div className="w-full max-w-sm text-center">
@@ -26,8 +29,16 @@ export function VersionBlockOverlay({
           })}
         </p>
         <div className="flex justify-center gap-3">
-          <Button onClick={() => window.location.reload()}>
-            {translate(locale, "web-version.reload")}
+          <Button
+            disabled={clearing}
+            onClick={() => {
+              setClearing(true);
+              void clearStaticCacheAndReload();
+            }}
+          >
+            {clearing
+              ? translate(locale, "web-version.clearing")
+              : translate(locale, "web-version.reload")}
           </Button>
           <Button
             variant="outline"
