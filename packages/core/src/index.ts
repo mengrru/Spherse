@@ -72,6 +72,8 @@ export type { ManageTriggerDetails } from "./tools/manage-trigger.js";
 export type { AgentChangePayload, AgentChangeAction } from "./store/project.js";
 export type { SessionChangePayload, SessionChangeAction, SessionStorePort } from "./store/session.js";
 export type { ProjectStorageOptions, SessionStoreFactory, MemoryStoreFactory } from "./store/storage-port.js";
+export type { FsPort, FsEntry, FsStat, FsWatchEvent, FsPortCapabilities } from "./store/fs-port.js";
+export { NodeFsPort } from "./store/node-fs-port.js";
 export { isValidCron, isReservedEventName, requiresTargetSession } from "./trigger/validation.js";
 export type { Attachment } from "./attachments/index.js";
 export type { McpTransportType } from "./mcp/index.js";
