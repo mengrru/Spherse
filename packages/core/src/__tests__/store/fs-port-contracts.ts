@@ -3,24 +3,24 @@ import type { FsPort, FsWatchEvent } from "../../store/fs-port.js";
 
 export interface FsPortContractSubject {
   port: FsPort;
-  close: () => void;
+  close: () => void | Promise<void>;
 }
 
 export function runFsPortContract(
   subjectName: string,
-  createSubject: () => FsPortContractSubject,
+  createSubject: () => FsPortContractSubject | Promise<FsPortContractSubject>,
 ): void {
   describe(`FsPort contract: ${subjectName}`, () => {
     let subject: FsPortContractSubject;
     let port: FsPort;
 
-    beforeEach(() => {
-      subject = createSubject();
+    beforeEach(async () => {
+      subject = await createSubject();
       port = subject.port;
     });
 
-    afterEach(() => {
-      subject.close();
+    afterEach(async () => {
+      await subject.close();
     });
 
     it("writes and reads text and binary round-trip", async () => {

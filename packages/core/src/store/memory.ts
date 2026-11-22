@@ -7,32 +7,34 @@ import { escapeLikePattern } from "../session/search.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 import type { FsPort } from "./fs-port.js";
 import { NodeFsPort } from "./node-fs-port.js";
+import {
+  type MemoryEntry,
+  type MemoryEntryPatch,
+  type MemoryStorePort,
+  MEMORY_DIR,
+  CORE_FILE,
+  DB_FILE,
+  MAX_CORE_CHARS,
+  MAX_ENTRY_CONTENT_CHARS,
+  LIST_LIMIT,
+  SEARCH_LIMIT,
+  normalizeTags,
+} from "./memory-port.js";
 
-export interface MemoryEntry {
-  id: string;
-  content: string;
-  tags?: string[];
-  kind: string;
-  source?: string;
-  createdAt: number;
-  updatedAt: number;
-}
-
-export interface MemoryEntryPatch {
-  content?: string;
-  tags?: string[];
-}
-
-export const MEMORY_DIR = "memory";
-export const CORE_FILE = "core.md";
-export const DB_FILE = "memory.db";
-export const MAX_CORE_CHARS = 4000;
-export const MAX_ENTRY_CONTENT_CHARS = 2000;
-export const MAX_TAGS = 8;
-export const MAX_TAG_CHARS = 24;
-export const RECALL_LIMIT = 8;
-export const LIST_LIMIT = 200;
-export const SEARCH_LIMIT = 50;
+export type { MemoryEntry, MemoryEntryPatch, MemoryStorePort } from "./memory-port.js";
+export {
+  MEMORY_DIR,
+  CORE_FILE,
+  DB_FILE,
+  MAX_CORE_CHARS,
+  MAX_ENTRY_CONTENT_CHARS,
+  MAX_TAGS,
+  MAX_TAG_CHARS,
+  RECALL_LIMIT,
+  LIST_LIMIT,
+  SEARCH_LIMIT,
+  normalizeTags,
+} from "./memory-port.js";
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS entries (
@@ -94,21 +96,6 @@ function rowToEntry(row: EntryRow): MemoryEntry {
   };
 }
 
-export function normalizeTags(tags: string[] | undefined): string[] | undefined {
-  if (!tags || tags.length === 0) return undefined;
-  const cleaned = [...new Set(tags.map((t) => t.trim()).filter((t) => t.length > 0))];
-  if (cleaned.length === 0) return undefined;
-  if (cleaned.length > MAX_TAGS) {
-    throw new ValidationError(`memory tags allow at most ${MAX_TAGS} entries`);
-  }
-  for (const tag of cleaned) {
-    if (tag.length > MAX_TAG_CHARS) {
-      throw new ValidationError(`memory tag exceeds ${MAX_TAG_CHARS} characters`);
-    }
-  }
-  return cleaned;
-}
-
 function assertEntryContent(content: string): void {
   if (content.trim().length === 0) {
     throw new ValidationError("memory content must not be empty");
@@ -126,19 +113,6 @@ function assertCoreContent(content: string): void {
       `core memory exceeds ${MAX_CORE_CHARS} characters; prune it or move granular facts into memory_save`,
     );
   }
-}
-
-export interface MemoryStorePort {
-  close(): void;
-  getCore(): Promise<string>;
-  saveCore(content: string): Promise<void>;
-  appendCore(content: string): Promise<string>;
-  count(): number;
-  list(limit?: number): MemoryEntry[];
-  save(content: string, tags?: string[]): MemoryEntry;
-  update(id: string, patch: MemoryEntryPatch): MemoryEntry;
-  deleteEntry(id: string): void;
-  search(query: string, limit?: number): MemoryEntry[];
 }
 
 export class SqliteMemoryStore implements MemoryStorePort {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type { SessionStorePort } from "../../store/session.js";
-import type { MemoryStorePort } from "../../store/memory.js";
+import type { SessionStorePort } from "../../store/session-port.js";
+import type { MemoryStorePort } from "../../store/memory-port.js";
 import type { SessionEvent } from "../../session/events.js";
 
 function userMsg(text: string, timestamp: number): AgentMessage {
@@ -19,12 +19,12 @@ function assistantMsg(text: string, timestamp: number): AgentMessage {
 
 export interface SessionStoreContractSubject {
   store: SessionStorePort;
-  close: () => void;
+  close: () => void | Promise<void>;
 }
 
 export function runSessionStorePortContract(
   subjectName: string,
-  createSubject: () => SessionStoreContractSubject,
+  createSubject: () => SessionStoreContractSubject | Promise<SessionStoreContractSubject>,
 ): void {
   describe(`SessionStorePort contract: ${subjectName}`, () => {
     let subject: SessionStoreContractSubject;
@@ -41,8 +41,8 @@ export function runSessionStorePortContract(
     };
 
     describe("appendEvents", () => {
-      beforeEach(() => {
-        subject = createSubject();
+      beforeEach(async () => {
+        subject = await createSubject();
       });
 
       it("rejects a first batch that does not start at seq 0", () => {
@@ -109,8 +109,8 @@ export function runSessionStorePortContract(
     });
 
     describe("readEventsAfter", () => {
-      beforeEach(() => {
-        subject = createSubject();
+      beforeEach(async () => {
+        subject = await createSubject();
       });
 
       it("returns events strictly after since in ascending seq order", () => {
@@ -126,8 +126,8 @@ export function runSessionStorePortContract(
     });
 
     describe("searchMessages", () => {
-      beforeEach(() => {
-        subject = createSubject();
+      beforeEach(async () => {
+        subject = await createSubject();
       });
 
       it("matches ascii case-insensitively", () => {
@@ -151,8 +151,8 @@ export function runSessionStorePortContract(
     });
 
     describe("legacy migration group", () => {
-      beforeEach(() => {
-        subject = createSubject();
+      beforeEach(async () => {
+        subject = await createSubject();
       });
 
       it("migrates a strictly zero-based batch once and marks migrated", () => {
@@ -184,8 +184,8 @@ export function runSessionStorePortContract(
     });
 
     describe("session lifecycle", () => {
-      beforeEach(() => {
-        subject = createSubject();
+      beforeEach(async () => {
+        subject = await createSubject();
       });
 
       it("lists, renames and archives sessions", () => {
@@ -200,26 +200,26 @@ export function runSessionStorePortContract(
       });
     });
 
-    afterEach(() => {
-      subject.close();
+    afterEach(async () => {
+      await subject.close();
     });
   });
 }
 
 export interface MemoryStoreContractSubject {
   store: MemoryStorePort;
-  close: () => void;
+  close: () => void | Promise<void>;
 }
 
 export function runMemoryStorePortContract(
   subjectName: string,
-  createSubject: () => MemoryStoreContractSubject,
+  createSubject: () => MemoryStoreContractSubject | Promise<MemoryStoreContractSubject>,
 ): void {
   describe(`MemoryStorePort contract: ${subjectName}`, () => {
     let subject: MemoryStoreContractSubject;
 
-    beforeEach(() => {
-      subject = createSubject();
+    beforeEach(async () => {
+      subject = await createSubject();
     });
 
     it("saves, lists, counts, updates and deletes entries", () => {
@@ -256,8 +256,8 @@ export function runMemoryStorePortContract(
       expect(await subject.store.getCore()).toContain("- one");
     });
 
-    afterEach(() => {
-      subject.close();
+    afterEach(async () => {
+      await subject.close();
     });
   });
 }

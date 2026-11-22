@@ -1,12 +1,27 @@
 import Database from "better-sqlite3";
-import crypto from "node:crypto";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import crypto from "node:crypto";
 import type { SessionInfo } from "../types.js";
 import type { SessionEvent } from "../session/events.js";
 import { EVENT_SCHEMA_VERSION } from "../session/events.js";
 import { collectAbandonedSeqs } from "../session/fold.js";
 import { escapeLikePattern, matchMessageData, type MessageSearchHit } from "../session/search.js";
 import { type Logger, createSilentLogger } from "../logger.js";
+import {
+  type SessionStorePort,
+  type SessionChangeAction,
+  type SessionChangePayload,
+  type SessionMessageEntry,
+  parseAgentMessageContent,
+} from "./session-port.js";
+
+export type {
+  SessionStorePort,
+  SessionChangeAction,
+  SessionChangePayload,
+  SessionMessageEntry,
+} from "./session-port.js";
+export { parseAgentMessageContent, isAgentMessage, CURRENT_MESSAGE_CONTENT_VERSION } from "./session-port.js";
 
 interface PragmaColumnInfo {
   name: string;
@@ -54,25 +69,7 @@ interface MaxIdRow {
   maxId: number | null;
 }
 
-type MessageWithId = { id: number; message: AgentMessage };
-
-const CURRENT_MESSAGE_CONTENT_VERSION = 1;
-
-const KNOWN_MESSAGE_ROLES = new Set([
-  "user",
-  "assistant",
-  "toolResult",
-  "bashExecution",
-  "custom",
-  "branchSummary",
-  "compactionSummary",
-]);
-
-function isAgentMessage(v: unknown): v is AgentMessage {
-  if (typeof v !== "object" || v === null) return false;
-  const role = (v as { role?: unknown }).role;
-  return typeof role === "string" && KNOWN_MESSAGE_ROLES.has(role);
-}
+type MessageWithId = SessionMessageEntry;
 
 const MIGRATION = `
 CREATE TABLE IF NOT EXISTS sessions (
@@ -113,55 +110,6 @@ CREATE TABLE IF NOT EXISTS events (
   PRIMARY KEY (session_id, seq)
 );
 `;
-
-export type SessionChangeAction = "created" | "updated" | "deleted";
-
-export interface SessionChangePayload {
-  agentId: string;
-  sessionId: string;
-  action: SessionChangeAction;
-}
-
-export interface SessionStorePort {
-  close(): void;
-  createSession(title?: string, source?: string): string;
-  getSession(id: string): SessionInfo | null;
-  listSessions(): SessionInfo[];
-  listSessionsPage(limit: number, offset: number): { items: SessionInfo[]; hasMore: boolean };
-  updateSessionTitle(sessionId: string, title: string): void;
-  archiveSession(sessionId: string): void;
-  appendEvents(sessionId: string, events: ReadonlyArray<SessionEvent>, schemaVersion: number): void;
-  readEvents(sessionId: string): SessionEvent[];
-  readEventsAfter(sessionId: string, sinceSeq: number, limit: number): SessionEvent[];
-  readEventCount(sessionId: string): number;
-  maxSeq(sessionId: string): number | null;
-  searchMessages(query: string, prefetchLimit: number): MessageSearchHit[];
-  migrateEvents(sessionId: string, events: ReadonlyArray<SessionEvent>, schemaVersion: number): void;
-  isMigrated(sessionId: string): boolean;
-  sessionNeedsMigration(sessionId: string): boolean;
-  getSessionMessages(sessionId: string): AgentMessage[];
-  getSessionMessagesWithIds(sessionId: string): MessageWithId[];
-  getMessagesAfter(sessionId: string, anchorId: number): MessageWithId[];
-  getLatestCompaction(
-    sessionId: string,
-  ): {
-    id: number;
-    anchorMessageId: number;
-    digestContent: string;
-    tokenEstimate: number;
-    createdAt: number;
-  } | null;
-  getRecentMessages(
-    sessionId: string,
-    limit: number,
-    beforeId?: number,
-  ): {
-    messages: AgentMessage[];
-    entries: MessageWithId[];
-    hasMore: boolean;
-    oldestId: number | null;
-  };
-}
 
 export class SqliteSessionStore implements SessionStorePort {
   private agentId: string;
@@ -552,7 +500,7 @@ export class SqliteSessionStore implements SessionStorePort {
 
     const collected: MessageWithId[] = rows.map((row) => ({
       id: row.id,
-      message: SqliteSessionStore.parseMessage(row.content, row.id, row.message_content_schema_version),
+      message: parseAgentMessageContent(row.content, row.id, row.message_content_schema_version),
     }));
 
     // role 埋在 content JSON 内，SQL 无法过滤：页首为孤儿 toolResult 时逐行向旧方向扩展，
@@ -568,7 +516,7 @@ export class SqliteSessionStore implements SessionStorePort {
       if (!row) break;
       collected.push({
         id: row.id,
-        message: SqliteSessionStore.parseMessage(row.content, row.id, row.message_content_schema_version),
+        message: parseAgentMessageContent(row.content, row.id, row.message_content_schema_version),
       });
     }
 
@@ -602,30 +550,8 @@ export class SqliteSessionStore implements SessionStorePort {
   private static rowToMessageEntry(row: MessageRow): MessageWithId {
     return {
       id: row.id,
-      message: SqliteSessionStore.parseMessage(
-        row.content,
-        row.id,
-        row.message_content_schema_version,
-      ),
+      message: parseAgentMessageContent(row.content, row.id, row.message_content_schema_version),
     };
-  }
-
-  private static parseMessage(
-    content: string,
-    rowId: number,
-    schemaVersion: number,
-  ): AgentMessage {
-    const parsed: unknown = JSON.parse(content);
-    const adapted =
-      schemaVersion === CURRENT_MESSAGE_CONTENT_VERSION
-        ? parsed
-        : adaptMessageContent(parsed, schemaVersion);
-    if (!isAgentMessage(adapted)) {
-      throw new Error(
-        `Corrupt message at messages.id=${rowId} (schema_version=${schemaVersion}): expected {role, ...} got ${JSON.stringify(parsed).slice(0, 200)}`,
-      );
-    }
-    return adapted;
   }
 }
 
@@ -635,15 +561,6 @@ function assertSupportedEventVersion(row: EventRow): void {
       `Cannot read event with schema_version=${row.schema_version}; current code supports up to ${EVENT_SCHEMA_VERSION}. Please upgrade the app.`,
     );
   }
-}
-
-function adaptMessageContent(parsed: unknown, fromVersion: number): unknown {
-  if (fromVersion > CURRENT_MESSAGE_CONTENT_VERSION) {
-    throw new Error(
-      `Cannot read message with schema_version=${fromVersion}; current code supports up to ${CURRENT_MESSAGE_CONTENT_VERSION}. Please upgrade the app.`,
-    );
-  }
-  return parsed;
 }
 
 export { SqliteSessionStore as SessionStore };
