@@ -1,11 +1,10 @@
 import type { AgentProfile, SessionInfo, SkillDefinition } from "./types.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
-import type { MemoryEntry, MemoryEntryPatch } from "./store/memory.js";
-import { MAX_CORE_CHARS, LIST_LIMIT, SEARCH_LIMIT } from "./store/memory.js";
+import type { MemoryEntry, MemoryEntryPatch } from "./store/memory-port.js";
+import { MAX_CORE_CHARS, LIST_LIMIT, SEARCH_LIMIT } from "./store/memory-port.js";
 import { ProjectStore } from "./store/project.js";
 import type { ChangelogEntry, AgentChangePayload } from "./store/project.js";
 import type { FsPort } from "./store/fs-port.js";
-import { NodeFsPort } from "./store/node-fs-port.js";
 import type { SessionChangePayload } from "./store/session.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { resolveProjectPath } from "./utils/path-safety.js";
@@ -37,7 +36,7 @@ export class ProjectManager {
     this.projectStore = projectStore;
     this.fileWriteMutex = fileWriteMutex;
     this.logger = logger ?? createSilentLogger();
-    this.fsPort = fsPort ?? new NodeFsPort(projectStore.getRootPath());
+    this.fsPort = fsPort ?? projectStore.getFsPort();
   }
 
   private toRelPosix(resolved: string): string {
@@ -109,19 +108,19 @@ export class ProjectManager {
   }
 
   onAgentChange(listener: (payload: AgentChangePayload) => void): void {
-    this.projectStore.on("agent_updated", listener);
+    this.projectStore.on("agent_updated", listener as (...args: unknown[]) => void);
   }
 
   offAgentChange(listener: (payload: AgentChangePayload) => void): void {
-    this.projectStore.off("agent_updated", listener);
+    this.projectStore.off("agent_updated", listener as (...args: unknown[]) => void);
   }
 
   onSessionChange(listener: (payload: SessionChangePayload) => void): void {
-    this.projectStore.on("session_updated", listener);
+    this.projectStore.on("session_updated", listener as (...args: unknown[]) => void);
   }
 
   offSessionChange(listener: (payload: SessionChangePayload) => void): void {
-    this.projectStore.off("session_updated", listener);
+    this.projectStore.off("session_updated", listener as (...args: unknown[]) => void);
   }
 
   async deleteAgent(agentId: string): Promise<void> {

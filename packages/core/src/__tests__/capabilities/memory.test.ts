@@ -9,6 +9,7 @@ import { createStoreRegistry } from "../../kernel/ports.js";
 import { ProjectStore } from "../../store/project.js";
 import { createSilentLogger } from "../../logger.js";
 import { llmAccessPolicy } from "../../access/access-policy.js";
+import { makeStorage } from "../helpers.js";
 
 const PROFILE_MEMORY_OFF = `---
 name: Mem Agent
@@ -50,7 +51,7 @@ describe("memory capability", () => {
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-memcap-"));
-    projectStore = new ProjectStore(tmpDir, createSilentLogger());
+    projectStore = new ProjectStore(tmpDir, makeStorage(tmpDir), createSilentLogger());
     await projectStore.create("Test");
   });
   afterEach(async () => {

@@ -3,9 +3,24 @@ import fsSync from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { llmAccessPolicy, type AccessPolicy } from "../access/access-policy.js";
+import { NodeFsPort } from "../store/node-fs-port.js";
+import { SqliteSessionStore } from "../store/session.js";
+import { SqliteMemoryStore } from "../store/memory.js";
+import type { ProjectStorageOptions } from "../store/storage-port.js";
 
 export function permissivePolicy(projectRoot: string): () => AccessPolicy {
   return () => llmAccessPolicy(projectRoot, []);
+}
+
+export function makeStorage(root: string): ProjectStorageOptions {
+  return {
+    fsPort: new NodeFsPort(root),
+    sessionStoreFactory: (ctx) =>
+      new SqliteSessionStore(path.join(ctx.agentDir, "sessions.db"), ctx.agentId, ctx.logger, ctx.onSessionChange),
+    memoryStoreFactory: (ctx) => new SqliteMemoryStore(ctx.agentDir),
+  installSkillZip: (zipPath, skillDir, fileWriteMutex, options) =>
+    import("../store/node-skill-install.js").then((m) => m.installSkillZip(zipPath, skillDir, fileWriteMutex, options)),
+  };
 }
 
 export async function createTempProject(): Promise<string> {

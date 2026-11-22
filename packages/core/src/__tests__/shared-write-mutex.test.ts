@@ -8,9 +8,11 @@ import { ProjectStore } from "../store/project.js";
 import { SessionManager } from "../session/session-manager.js";
 import { RunConfigHolder, createRuntimeDeps } from "../session/runtime.js";
 import { builtinToolCapabilities } from "../capabilities/builtin.js";
+import { interactionCapability } from "../capabilities/interaction/index.js";
 import { createStoreRegistry } from "../kernel/ports.js";
 import { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { createSilentLogger } from "../logger.js";
+import { makeStorage } from "./helpers.js";
 
 async function createTempProject(): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), "wb-mutex-test-"));
@@ -44,14 +46,14 @@ describe("shared FileWriteMutex wiring", () => {
   it("manual construction threads one explicit mutex through all holders", async () => {
     const mutex = new FileWriteMutex();
     const logger = createSilentLogger();
-    const store = new ProjectStore("/tmp/never-opened", logger, mutex);
+    const store = new ProjectStore("/tmp/never-opened", makeStorage("/tmp/never-opened"), logger, mutex);
     new ProjectManager(store, logger, mutex);
     const sm = new SessionManager(
       createRuntimeDeps({
         projectStore: store,
         logger,
         fileWriteMutex: mutex,
-        capabilities: builtinToolCapabilities(),
+        capabilities: builtinToolCapabilities(undefined, { interaction: interactionCapability() }),
         stores: createStoreRegistry(logger),
         runConfig: new RunConfigHolder(),
       }),
@@ -61,7 +63,7 @@ describe("shared FileWriteMutex wiring", () => {
 
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "wb-mutex-manual-"));
     try {
-      const opened = new ProjectStore(dir, logger, mutex);
+      const opened = new ProjectStore(dir, makeStorage(dir), logger, mutex);
       await opened.create("T");
       expect((opened.skill as unknown as { fileWriteMutex: FileWriteMutex }).fileWriteMutex).toBe(
         mutex,

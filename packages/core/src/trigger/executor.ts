@@ -1,8 +1,8 @@
-import { EventEmitter } from "node:events";
 import type { SessionEventPayload, SessionPort } from "../kernel/ports.js";
 import type { TriggerStore } from "../store/trigger.js";
 import type { TriggerEntry, TriggerLogEntry } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
+import { Emitter } from "../utils/emitter.js";
 import { resolveTemplateVars } from "./template.js";
 
 export interface TriggerExecutorDeps {
@@ -30,7 +30,7 @@ function readTurnError(event: SessionEventPayload): string | undefined {
   return undefined;
 }
 
-export class TriggerExecutor extends EventEmitter {
+export class TriggerExecutor extends Emitter {
   private readonly inProgress = new Set<string>();
   private readonly logger: Logger;
 

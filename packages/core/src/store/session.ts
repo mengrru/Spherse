@@ -1,12 +1,12 @@
 import Database from "better-sqlite3";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import crypto from "node:crypto";
 import type { SessionInfo } from "../types.js";
 import type { SessionEvent } from "../session/events.js";
 import { EVENT_SCHEMA_VERSION } from "../session/events.js";
 import { collectAbandonedSeqs } from "../session/fold.js";
 import { escapeLikePattern, matchMessageData, type MessageSearchHit } from "../session/search.js";
 import { type Logger, createSilentLogger } from "../logger.js";
+import { uuid } from "../utils/random.js";
 import {
   type SessionStorePort,
   type SessionChangeAction,
@@ -158,7 +158,7 @@ export class SqliteSessionStore implements SessionStorePort {
   }
 
   createSession(title?: string, source?: string): string {
-    const id = crypto.randomUUID();
+    const id = uuid();
     const now = Date.now();
     this.db
       .prepare<[string, string, string | null, number, number, string]>(

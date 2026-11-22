@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import { MAX_CORE_CHARS } from "../store/memory.js";
-import type { MemoryStorePort } from "../store/memory.js";
+import { MAX_CORE_CHARS } from "../store/memory-port.js";
+import type { MemoryStorePort } from "../store/memory-port.js";
 
 const MemoryCoreReplaceParams = Type.Object({
   content: Type.String({ description: "The complete new core memory content" }),

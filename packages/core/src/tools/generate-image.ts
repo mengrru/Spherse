@@ -1,10 +1,11 @@
 import path from "node:path";
-import crypto from "node:crypto";
 import type { ProviderImagesOptions } from "@earendil-works/pi-ai";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { FsPort } from "../store/fs-port.js";
+import { base64ToBytes } from "../utils/bytes.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
+import { getEnv, randomBytes } from "../utils/random.js";
 import { getImageModels } from "../model-providers/index.js";
 
 type ImageGenOptions = ProviderImagesOptions & {
@@ -52,8 +53,8 @@ export interface ImageCardResultDetails extends ImageCardDetails {
 }
 
 function readImageConfig(): { provider: string; modelId: string; apiKey: string } | null {
-  const modelStr = process.env.SPHERSE_IMAGE_MODEL;
-  const apiKey = process.env.SPHERSE_IMAGE_API_KEY;
+  const modelStr = getEnv("SPHERSE_IMAGE_MODEL");
+  const apiKey = getEnv("SPHERSE_IMAGE_API_KEY");
   if (!modelStr || !apiKey) return null;
   const slashIdx = modelStr.indexOf("/");
   if (slashIdx <= 0) return null;
@@ -71,7 +72,7 @@ function buildFilename(mimeType: string): string {
   const ts =
     `${now.getUTCFullYear()}${pad(now.getUTCMonth() + 1)}${pad(now.getUTCDate())}` +
     `${pad(now.getUTCHours())}${pad(now.getUTCMinutes())}${pad(now.getUTCSeconds())}`;
-  const hex = crypto.randomBytes(2).toString("hex");
+  const hex = Array.from(randomBytes(2), (b) => b.toString(16).padStart(2, "0")).join("");
   return `${ts}-${hex}.${ext}`;
 }
 
@@ -160,7 +161,7 @@ export function createGenerateImageTool(
         return { content: [{ type: "text" as const, text: `图片生成失败：${message}` }], details: { type: "image", status: "error", prompt, errorMessage: message } };
       }
 
-      const buf = Buffer.from(imageContent.data, "base64");
+      const buf = base64ToBytes(imageContent.data);
       let destRel: string;
       do {
         const filename = buildFilename(imageContent.mimeType);

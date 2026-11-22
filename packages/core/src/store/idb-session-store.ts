@@ -4,6 +4,7 @@ import type { SessionEvent } from "../session/events.js";
 import { collectAbandonedSeqs } from "../session/fold.js";
 import { matchMessageData, type MessageSearchHit } from "../session/search.js";
 import type { Logger } from "../logger.js";
+import { uuid } from "../utils/random.js";
 import type { SessionChangeAction, SessionChangePayload, SessionStorePort } from "./session-port.js";
 import { parseAgentMessageContent } from "./session-port.js";
 import { openDatabase, requestAsPromise } from "./idb-util.js";
@@ -175,7 +176,7 @@ export class IdbSessionStore implements SessionStorePort {
   }
 
   createSession(title?: string, source?: string): string {
-    const id = crypto.randomUUID();
+    const id = uuid();
     const now = Date.now();
     const record: SessionRecord = {
       id,

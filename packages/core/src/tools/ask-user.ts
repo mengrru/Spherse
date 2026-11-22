@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+import { uuid } from "../utils/random.js";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AskGate, AskOutcome } from "../kernel/gates.js";
@@ -87,7 +87,7 @@ export function createAskUserTool(askGate?: AskGate): AgentTool<typeof AskUserPa
       try {
         outcome = await askGate.ask(
           {
-            requestId: crypto.randomUUID(),
+            requestId: uuid(),
             toolCallId,
             toolName: "ask_user",
             args: params,

@@ -6,6 +6,7 @@ import { ProjectStore } from "../store/project.js";
 import { ProjectManager } from "../project-manager.js";
 import { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { createSilentLogger } from "../logger.js";
+import { makeStorage } from "./helpers.js";
 
 const PROFILE_A = `---
 name: Agent A
@@ -30,7 +31,7 @@ describe("ProjectManager.listProjectSessions", () => {
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-sessions-"));
-    store = new ProjectStore(tmpDir, createSilentLogger());
+    store = new ProjectStore(tmpDir, makeStorage(tmpDir), createSilentLogger());
     await store.create("Test");
     pm = new ProjectManager(store, createSilentLogger(), new FileWriteMutex());
     agentA = (await store.createAgent(undefined, PROFILE_A)).getProfile().id;

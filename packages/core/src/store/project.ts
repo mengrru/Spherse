@@ -1,6 +1,4 @@
 import path from "node:path";
-import crypto from "node:crypto";
-import { EventEmitter } from "node:events";
 import matter from "gray-matter";
 import { nanoid } from "nanoid";
 import { PRESET_SKILL_SOURCES, AGENTS_INDEX_TEMPLATE } from "@spherse/presets";
@@ -12,10 +10,11 @@ import { SkillStore } from "./skill.js";
 import { AgentStore } from "./agent-store.js";
 import type { ProjectStorageOptions } from "./storage-port.js";
 import type { FsPort } from "./fs-port.js";
-import { NodeFsPort } from "./node-fs-port.js";
 import { AgentProfileStore, assertSafeSlug } from "./agent-profile.js";
 import type { SessionChangePayload } from "./session.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+import { uuid } from "../utils/random.js";
+import { Emitter } from "../utils/emitter.js";
 import { deriveAgentSlugBase, buildAgentDirName } from "./agent-slug.js";
 import { type Logger, createSilentLogger } from "../logger.js";
 import { ValidationError, NotFoundError } from "../errors.js";
@@ -36,11 +35,11 @@ export interface AgentChangePayload {
 
 /** Emits `agent_updated` (`AgentChangePayload`) whenever an agent is created, updated or deleted,
  *  and `session_updated` (`SessionChangePayload`) whenever a session is created, renamed or deleted. */
-export class ProjectStore extends EventEmitter {
+export class ProjectStore extends Emitter {
   private rootPath: string;
   private spherseDir: string;
   private logger: Logger;
-  private readonly storage?: ProjectStorageOptions;
+  private readonly storage: ProjectStorageOptions;
   private readonly fileWriteMutex?: FileWriteMutex;
   private readonly fsPort: FsPort;
 
@@ -50,9 +49,9 @@ export class ProjectStore extends EventEmitter {
 
   constructor(
     rootPath: string,
+    storage: ProjectStorageOptions,
     logger?: Logger,
     fileWriteMutex?: FileWriteMutex,
-    storage?: ProjectStorageOptions,
   ) {
     super();
     this.rootPath = path.resolve(rootPath);
@@ -60,7 +59,7 @@ export class ProjectStore extends EventEmitter {
     this.logger = logger ?? createSilentLogger();
     this.fileWriteMutex = fileWriteMutex;
     this.storage = storage;
-    this.fsPort = storage?.fsPort ?? new NodeFsPort(this.rootPath);
+    this.fsPort = storage.fsPort;
   }
 
   private createSkillStore(): SkillStore {
@@ -71,6 +70,7 @@ export class ProjectStore extends EventEmitter {
       PRESET_SKILL_SOURCES,
       this.fileWriteMutex,
       [{ dir: path.join(this.rootPath, ".agents", "skills"), relDir: path.posix.join(".agents", "skills") }],
+      this.storage.installSkillZip,
     );
   }
 
@@ -132,7 +132,7 @@ export class ProjectStore extends EventEmitter {
       const profile = await profileStore.read();
       if (!profile) continue;
 
-      const agentStore = new AgentStore(agentDir, profile.id, this.fsPort, relAgentDir, this.logger, this.fileWriteMutex, this.forwardSessionChange, this.storage);
+      const agentStore = new AgentStore(agentDir, profile.id, this.fsPort, relAgentDir, this.storage, this.logger, this.fileWriteMutex, this.forwardSessionChange);
       await agentStore.open();
       this._agents.set(profile.id, agentStore);
     }
@@ -194,7 +194,7 @@ export class ProjectStore extends EventEmitter {
       throw new ValidationError("agent profile name is required");
     }
 
-    const id = crypto.randomUUID();
+    const id = uuid();
     const createdAt = typeof data.createdAt === "number" ? data.createdAt : Date.now();
     const frontmatter = { ...data, id, createdAt };
     const serialized = matter.stringify(body, frontmatter);
@@ -211,7 +211,7 @@ export class ProjectStore extends EventEmitter {
       await this.fsPort.writeFile(path.posix.join(relAgentDir, "theme.css"), themeContent);
     }
 
-    const agentStore = new AgentStore(agentDir, id, this.fsPort, relAgentDir, this.logger, this.fileWriteMutex, this.forwardSessionChange, this.storage);
+    const agentStore = new AgentStore(agentDir, id, this.fsPort, relAgentDir, this.storage, this.logger, this.fileWriteMutex, this.forwardSessionChange);
     await agentStore.open();
     this._agents.set(id, agentStore);
     this.logger.info({ agentId: id, slug: dirName }, "agent created");

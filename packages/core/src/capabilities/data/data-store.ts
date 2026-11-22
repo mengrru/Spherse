@@ -1,5 +1,5 @@
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { uuid } from "../../utils/random.js";
 import type { FileWriteMutex } from "../../utils/file-write-mutex.js";
 import type { Logger } from "../../logger.js";
 import type { FsPort } from "../../store/fs-port.js";
@@ -214,7 +214,7 @@ export function createDataStore(opts: CreateDataStoreOptions): DataStore {
       const row: Record<string, unknown> = { ...validated.value };
       for (const [field, gen] of Object.entries(mutation.auto ?? {})) {
         if (field === mutation.match) continue;
-        row[field] = gen === "uuid" ? randomUUID() : new Date().toISOString();
+        row[field] = gen === "uuid" ? uuid() : new Date().toISOString();
       }
       target.value.push(row);
       return row;
@@ -243,7 +243,7 @@ export function createDataStore(opts: CreateDataStoreOptions): DataStore {
       }
       for (const [field, gen] of Object.entries(mutation.auto ?? {})) {
         if (field === mutation.match || validated.value[field] !== undefined) continue;
-        row[field] = gen === "uuid" ? randomUUID() : new Date().toISOString();
+        row[field] = gen === "uuid" ? uuid() : new Date().toISOString();
       }
       return row;
     }
@@ -259,7 +259,7 @@ export function createDataStore(opts: CreateDataStoreOptions): DataStore {
       }
       const patch: Record<string, unknown> = { ...validated.value };
       for (const [field, gen] of Object.entries(mutation.auto ?? {})) {
-        patch[field] = gen === "uuid" ? randomUUID() : new Date().toISOString();
+        patch[field] = gen === "uuid" ? uuid() : new Date().toISOString();
       }
       const target = (parent.value as Record<string, unknown>)[leaf];
       (parent.value as Record<string, unknown>)[leaf] = {

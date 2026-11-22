@@ -25,6 +25,8 @@ function makeSkillStore(
     builtinSources,
     undefined,
     additionalSkillDirs,
+    (zipPath, skillDir, fileWriteMutex, options) =>
+      import("../../store/node-skill-install.js").then((m) => m.installSkillZip(zipPath, skillDir, fileWriteMutex, options)),
   );
 }
 

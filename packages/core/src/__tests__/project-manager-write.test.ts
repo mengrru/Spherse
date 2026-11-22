@@ -6,6 +6,7 @@ import { ProjectStore } from "../store/project.js";
 import { ProjectManager } from "../project-manager.js";
 import { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { createSilentLogger } from "../logger.js";
+import { makeStorage } from "./helpers.js";
 
 describe("ProjectManager write facade policy regression", () => {
   let tmpDir: string;
@@ -14,7 +15,7 @@ describe("ProjectManager write facade policy regression", () => {
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-write-"));
-    store = new ProjectStore(tmpDir, createSilentLogger());
+    store = new ProjectStore(tmpDir, makeStorage(tmpDir), createSilentLogger());
     await store.create("Test");
     pm = new ProjectManager(store, createSilentLogger(), new FileWriteMutex());
   });
@@ -56,7 +57,7 @@ describe("ProjectManager extended write facades (M9)", () => {
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-ext-"));
-    store = new ProjectStore(tmpDir, createSilentLogger());
+    store = new ProjectStore(tmpDir, makeStorage(tmpDir), createSilentLogger());
     await store.create("Test");
     pm = new ProjectManager(store, createSilentLogger(), new FileWriteMutex());
   });
@@ -115,7 +116,7 @@ describe("ProjectManager renamePath", () => {
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-rename-"));
-    store = new ProjectStore(tmpDir, createSilentLogger());
+    store = new ProjectStore(tmpDir, makeStorage(tmpDir), createSilentLogger());
     await store.create("Test");
     pm = new ProjectManager(store, createSilentLogger(), new FileWriteMutex());
   });

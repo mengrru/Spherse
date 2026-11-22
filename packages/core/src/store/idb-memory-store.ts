@@ -1,6 +1,7 @@
 import type { FsPort } from "./fs-port.js";
 import type { Logger } from "../logger.js";
 import { NotFoundError, ValidationError } from "../errors.js";
+import { uuid } from "../utils/random.js";
 import {
   type MemoryEntry,
   type MemoryEntryPatch,
@@ -185,7 +186,7 @@ export class IdbMemoryStore implements MemoryStorePort {
     assertEntryContent(content);
     const normTags = normalizeTags(tags);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = uuid();
     const record: EntryRecord = {
       id,
       content,

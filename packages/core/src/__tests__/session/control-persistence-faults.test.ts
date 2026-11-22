@@ -25,6 +25,7 @@ import { SessionControlBus } from "../../session/control-bus.js";
 import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
 import { createModelResolver } from "../../session/model-resolver.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
+import { interactionCapability } from "../../capabilities/interaction/index.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
 
 const TEST_AGENT_PROFILE = `---
@@ -157,7 +158,7 @@ describe("control persistence fault injection (gate -> runner -> storage seam)",
       runConfig: new RunConfigHolder({ defaultModel: "openai/gpt-4o" }),
       modelResolver: createModelResolver(stubCatalog),
       modelCatalog: stubCatalog,
-      capabilities: builtinToolCapabilities(),
+      capabilities: builtinToolCapabilities(undefined, { interaction: interactionCapability() }),
       stores: createStoreRegistry(),
       attachmentProcessors: [],
     } as any;

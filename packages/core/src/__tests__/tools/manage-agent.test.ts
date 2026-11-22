@@ -3,7 +3,7 @@ import matter from "gray-matter";
 import { createManageAgentTool, isManageAgentWriteAction } from "../../tools/manage-agent.js";
 import { ProjectStore } from "../../store/project.js";
 import { createSilentLogger } from "../../logger.js";
-import { createTempProject, cleanupDir } from "../helpers.js";
+import { createTempProject, cleanupDir, makeStorage } from "../helpers.js";
 
 const KNOWN_TOOLS = { names: ["read_file", "write_file", "manage_agent"] };
 
@@ -47,7 +47,7 @@ describe("createManageAgentTool", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    store = new ProjectStore(projectRoot, createSilentLogger());
+    store = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
     await store.create("TestProject");
   });
 

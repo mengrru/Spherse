@@ -4,6 +4,7 @@ import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { isPathInside } from "../utils/path-safety.js";
+import { bytesToUtf8 } from "../utils/bytes.js";
 import { AccessDeniedError } from "../errors.js";
 
 const MAX_OUTPUT = 100 * 1024;
@@ -205,20 +206,20 @@ export function createRunCommandTool(projectRoot: string): AgentTool<typeof RunC
         };
         signal?.addEventListener("abort", onAbort, { once: true });
 
-        const appendStdout = (chunk: Buffer | string) => {
+        const appendStdout = (chunk: Uint8Array | string) => {
           if (stdout.length >= MAX_OUTPUT) {
             truncated = true;
             return;
           }
-          stdout += chunk.toString("utf-8").slice(0, MAX_OUTPUT - stdout.length);
+          stdout += (typeof chunk === "string" ? chunk : bytesToUtf8(chunk)).slice(0, MAX_OUTPUT - stdout.length);
           emitUpdate();
         };
-        const appendStderr = (chunk: Buffer | string) => {
+        const appendStderr = (chunk: Uint8Array | string) => {
           if (stderr.length >= MAX_OUTPUT) {
             truncated = true;
             return;
           }
-          stderr += chunk.toString("utf-8").slice(0, MAX_OUTPUT - stderr.length);
+          stderr += (typeof chunk === "string" ? chunk : bytesToUtf8(chunk)).slice(0, MAX_OUTPUT - stderr.length);
           emitUpdate();
         };
 

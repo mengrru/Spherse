@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import { RECALL_LIMIT } from "../store/memory.js";
-import type { MemoryStorePort, MemoryEntry } from "../store/memory.js";
+import { RECALL_LIMIT } from "../store/memory-port.js";
+import type { MemoryStorePort, MemoryEntry } from "../store/memory-port.js";
 
 const MemoryRecallParams = Type.Object({
   query: Type.String({ minLength: 1, description: "Keywords to search for (substring match)" }),

@@ -3,6 +3,7 @@ import { createSilentLogger } from "../logger.js";
 import { ProjectManager } from "../project-manager.js";
 import type { SessionInfo } from "../types.js";
 import { ProjectStore } from "../store/project.js";
+import { makeStorage } from "./helpers.js";
 import type { AgentStore } from "../store/agent-store.js";
 import fs from "node:fs";
 import os from "node:os";
@@ -27,6 +28,7 @@ function createProjectManagerWithSessions(initial: Record<string, SessionInfo>) 
   const projectStore = {
     getAgent: vi.fn(() => agentStore),
     getRootPath: vi.fn(() => "/tmp"),
+    getFsPort: vi.fn(() => ({}) as never),
   } as unknown as ProjectStore;
 
   const manager = new ProjectManager(projectStore, createSilentLogger());
@@ -94,7 +96,7 @@ describe("ProjectManager.renameSession", () => {
 describe("ProjectManager event-backed session reads", () => {
   const setup = async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-events-"));
-    const projectStore = new ProjectStore(root, createSilentLogger());
+    const projectStore = new ProjectStore(root, makeStorage(root), createSilentLogger());
     await projectStore.create("Test");
     const agentStore = await projectStore.createAgent(
       "test-agent",
@@ -224,7 +226,7 @@ describe("ProjectManager event-backed session reads", () => {
 describe("ProjectManager history fold cache", () => {
   const setup = async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-cache-"));
-    const projectStore = new ProjectStore(root, createSilentLogger());
+    const projectStore = new ProjectStore(root, makeStorage(root), createSilentLogger());
     await projectStore.create("Test");
     const agentStore = await projectStore.createAgent(
       "test-agent",

@@ -7,6 +7,7 @@ import { ProjectManager } from "../project-manager.js";
 import { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { createSilentLogger } from "../logger.js";
 import type { SessionChangePayload } from "../store/session.js";
+import { makeStorage } from "./helpers.js";
 
 const PROFILE = `---
 name: Agent A
@@ -24,7 +25,7 @@ describe("ProjectManager.onSessionChange", () => {
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-pm-session-events-"));
-    store = new ProjectStore(tmpDir, createSilentLogger());
+    store = new ProjectStore(tmpDir, makeStorage(tmpDir), createSilentLogger());
     await store.create("Test");
     pm = new ProjectManager(store, createSilentLogger(), new FileWriteMutex());
     agentId = (await store.createAgent(undefined, PROFILE)).getProfile().id;

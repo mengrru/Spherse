@@ -1,7 +1,7 @@
 import type { Capability, KernelServices } from "../../kernel/capability.js";
 import type { ContextBlock } from "../../kernel/context-block.js";
 import type { ProjectStore } from "../../store/project.js";
-import type { MemoryStorePort } from "../../store/memory.js";
+import type { MemoryStorePort } from "../../store/memory-port.js";
 import { createMemoryCoreAppendTool } from "../../tools/memory-core-append.js";
 import { createMemoryCoreReplaceTool } from "../../tools/memory-core-replace.js";
 import { createMemorySaveTool } from "../../tools/memory-save.js";

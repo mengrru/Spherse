@@ -6,6 +6,7 @@ import path from "node:path";
 import os from "node:os";
 import { ProjectStore } from "../../store/project.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
+import { interactionCapability } from "../../capabilities/interaction/index.js";
 import { memoryCapability } from "../../capabilities/memory/index.js";
 import type { Capability } from "../../kernel/capability.js";
 import { RunConfigHolder, createRuntimeDeps } from "../../session/runtime.js";
@@ -14,6 +15,7 @@ import { buildPromptAndTools, composeStreamFn, streamDecoratorsFor } from "../..
 import { createSilentLogger } from "../../logger.js";
 import { FileWriteMutex } from "../../utils/file-write-mutex.js";
 import type { AgentProfile } from "../../types.js";
+import { makeStorage } from "../helpers.js";
 
 const PROFILE: AgentProfile = {
   id: "a1",
@@ -31,7 +33,7 @@ describe("builtin tool capabilities via real assembly path", () => {
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-asmtools-"));
-    store = new ProjectStore(tmpDir, createSilentLogger());
+    store = new ProjectStore(tmpDir, makeStorage(tmpDir), createSilentLogger());
     await store.create("Test");
   });
   afterEach(async () => {
@@ -44,7 +46,7 @@ describe("builtin tool capabilities via real assembly path", () => {
       projectStore: store,
       logger: createSilentLogger(),
       fileWriteMutex: new FileWriteMutex(),
-      capabilities: [...builtinToolCapabilities()],
+      capabilities: [...builtinToolCapabilities(undefined, { interaction: interactionCapability() })],
       stores: createStoreRegistry(),
       runConfig: new RunConfigHolder(),
     });
@@ -106,7 +108,7 @@ describe("builtin tool capabilities via real assembly path", () => {
         projectStore: store,
         logger: createSilentLogger(),
         fileWriteMutex: new FileWriteMutex(),
-        capabilities: [...builtinToolCapabilities(), memoryCapability()],
+        capabilities: [...builtinToolCapabilities(undefined, { interaction: interactionCapability() }), memoryCapability()],
         stores: createStoreRegistry(),
         runConfig: new RunConfigHolder(),
       });
@@ -154,7 +156,7 @@ describe("builtin tool capabilities via real assembly path", () => {
         projectStore: store,
         logger: createSilentLogger(),
         fileWriteMutex: new FileWriteMutex(),
-        capabilities: [...builtinToolCapabilities(), memoryCapability(), shadow],
+        capabilities: [...builtinToolCapabilities(undefined, { interaction: interactionCapability() }), memoryCapability(), shadow],
         stores: createStoreRegistry(),
         runConfig: new RunConfigHolder(),
       });
@@ -182,7 +184,7 @@ describe("builtin tool capabilities via real assembly path", () => {
       const streamFn = composeStreamFn(
         { getChatStreamFn: () => base } as never,
         undefined,
-        streamDecoratorsFor(builtinToolCapabilities(), {
+        streamDecoratorsFor(builtinToolCapabilities(undefined, { interaction: interactionCapability() }), {
           agentId: profile.id,
           profile,
           projectStore: store,

@@ -2,8 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "node:path";
 import { createSilentLogger } from "../../logger.js";
 import { AgentStore } from "../../store/agent-store.js";
-import { NodeFsPort } from "../../store/node-fs-port.js";
-import { createTempProject, cleanupDir, ensureDir, writeFile } from "../helpers.js";
+import { createTempProject, cleanupDir, ensureDir, writeFile, makeStorage } from "../helpers.js";
 
 const VALID_PROFILE = `---
 name: World Builder
@@ -25,7 +24,8 @@ describe("AgentStore", () => {
     agentDir = path.join(tmpRoot, "agents", "test-agent-a1b2c3");
     await ensureDir(tmpRoot, "agents/test-agent-a1b2c3");
     await writeFile(agentDir, "profile.md", VALID_PROFILE);
-    store = new AgentStore(agentDir, agentId, new NodeFsPort(tmpRoot), "agents/test-agent-a1b2c3", createSilentLogger());
+    const storage = makeStorage(tmpRoot);
+    store = new AgentStore(agentDir, agentId, storage.fsPort, "agents/test-agent-a1b2c3", storage, createSilentLogger());
     await store.open();
   });
 

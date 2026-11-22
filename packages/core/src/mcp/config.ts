@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+import { uuid } from "../utils/random.js";
 import type {
   AgentMcpConfig,
   McpServerConfig,
@@ -16,7 +16,7 @@ const SUPPORTED_TRANSPORTS: ReadonlySet<McpTransportType> = new Set([
 export type McpNormalizeWarnFn = (entry: unknown, reason: string) => void;
 
 export function generateMcpServerId(): string {
-  return crypto.randomUUID();
+  return uuid();
 }
 
 export function isMcpTransportType(value: unknown): value is McpTransportType {

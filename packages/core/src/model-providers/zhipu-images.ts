@@ -6,6 +6,7 @@ import type {
   ProviderImagesOptions,
 } from "@earendil-works/pi-ai";
 import { createProvider, envApiKeyAuth } from "@earendil-works/pi-ai";
+import { bytesToBase64 } from "../utils/bytes.js";
 
 export type ZhipuImagesApi = "zhipu-images";
 
@@ -147,9 +148,9 @@ export async function generateImagesZhipu(
         if (!imgRes.ok) {
           return { ...base, stopReason: "error", errorMessage: `Failed to fetch image: ${imgRes.status}` };
         }
-        const buf = Buffer.from(await imgRes.arrayBuffer());
+        const buf = new Uint8Array(await imgRes.arrayBuffer());
         const mimeType = imgRes.headers.get("content-type") ?? inferMimeTypeFromUrl(item.url);
-        base.output.push({ type: "image", data: buf.toString("base64"), mimeType });
+        base.output.push({ type: "image", data: bytesToBase64(buf), mimeType });
       }
     }
 

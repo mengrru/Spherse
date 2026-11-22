@@ -1,19 +1,19 @@
-import path from "node:path";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createSilentLogger } from "../logger.js";
 import { ProjectStore } from "../store/project.js";
+import { NodeFsPort } from "../store/node-fs-port.js";
 import { PRESET_SKILL_SOURCES, PRESET_AGENTS } from "@spherse/presets";
-import { createTempProject, cleanupDir, pathExists } from "./helpers.js";
+import { createTempProject, cleanupDir, pathExists, makeStorage } from "./helpers.js";
 
 describe("initPresets", () => {
   let projectRoot: string;
-  let spherseDir: string;
+  let fsPort: NodeFsPort;
   let projectStore: ProjectStore;
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    spherseDir = path.join(projectRoot, ".spherse");
-    projectStore = new ProjectStore(projectRoot, createSilentLogger());
+    fsPort = new NodeFsPort(projectRoot);
+    projectStore = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
     await projectStore.create("TestProject");
   });
 
@@ -24,7 +24,7 @@ describe("initPresets", () => {
 
   it("creates .spherse/skills/ directory but does not copy preset skills", async () => {
     const { initPresets } = await import("../presets.js");
-    await initPresets(projectStore, spherseDir, createSilentLogger());
+    await initPresets(projectStore, fsPort, createSilentLogger());
 
     expect(pathExists(projectRoot, ".spherse/skills")).toBe(true);
     for (const skill of PRESET_SKILL_SOURCES) {
@@ -34,7 +34,7 @@ describe("initPresets", () => {
 
   it("creates preset agents declared in presets.json", async () => {
     const { initPresets } = await import("../presets.js");
-    await initPresets(projectStore, spherseDir, createSilentLogger());
+    await initPresets(projectStore, fsPort, createSilentLogger());
 
     const profiles = projectStore.listAgents();
     expect(profiles.length).toBe(PRESET_AGENTS.length);
@@ -49,7 +49,7 @@ describe("initPresets", () => {
 
   it("creates the assistant preset with every tool except run_command", async () => {
     const { initPresets } = await import("../presets.js");
-    await initPresets(projectStore, spherseDir, createSilentLogger());
+    await initPresets(projectStore, fsPort, createSilentLogger());
 
     const profile = projectStore.listAgents().find((p) => p.name === "小助手");
     expect(profile).toBeDefined();
@@ -73,6 +73,6 @@ describe("initPresets", () => {
 
   it("does not throw when called on empty project", async () => {
     const { initPresets } = await import("../presets.js");
-    await expect(initPresets(projectStore, spherseDir, createSilentLogger())).resolves.toBeUndefined();
+    await expect(initPresets(projectStore, fsPort, createSilentLogger())).resolves.toBeUndefined();
   });
 });

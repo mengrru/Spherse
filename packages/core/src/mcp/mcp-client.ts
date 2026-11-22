@@ -1,10 +1,11 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
+import type { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { TextContent, ImageContent } from "@earendil-works/pi-ai";
 import type { Logger } from "../logger.js";
 import { createSilentLogger } from "../logger.js";
+import { bytesToUtf8 } from "../utils/bytes.js";
 import { makeMcpToolName } from "./config.js";
 import { jsonSchemaToTypebox } from "./json-schema-to-typebox.js";
 import type {
@@ -264,15 +265,26 @@ function cleanEnv(env: Record<string, string | undefined>): Record<string, strin
   return out;
 }
 
-function buildTransport(config: McpServerConfig): StdioClientTransport | StreamableHTTPClientTransport {
+type McpTransport =
+  | { kind: "stdio"; transport: StdioClientTransport }
+  | { kind: "http"; transport: StreamableHTTPClientTransport };
+
+async function buildTransport(config: McpServerConfig): Promise<McpTransport> {
   if (config.transport === "stdio") {
-    return new StdioClientTransport({
-      command: config.command,
-      args: config.args,
-      env: { ...cleanEnv(process.env), ...config.env },
-      cwd: config.cwd,
-      stderr: "pipe",
-    });
+    const [{ StdioClientTransport }, { env: parentEnv }] = await Promise.all([
+      import("@modelcontextprotocol/client/stdio"),
+      import("node:process"),
+    ]);
+    return {
+      kind: "stdio",
+      transport: new StdioClientTransport({
+        command: config.command,
+        args: config.args,
+        env: { ...cleanEnv(parentEnv), ...config.env },
+        cwd: config.cwd,
+        stderr: "pipe",
+      }),
+    };
   }
   let url: URL;
   try {
@@ -283,7 +295,7 @@ function buildTransport(config: McpServerConfig): StdioClientTransport | Streama
   const requestInit: RequestInit = config.headers
     ? { headers: config.headers }
     : {};
-  return new StreamableHTTPClientTransport(url, { requestInit });
+  return { kind: "http", transport: new StreamableHTTPClientTransport(url, { requestInit }) };
 }
 
 export interface ConnectResult {
@@ -404,7 +416,8 @@ export async function connectMcpServer(
   opts?: ConnectServerOptions,
 ): Promise<ConnectResult> {
   const log = logger ?? createSilentLogger();
-  const transport = buildTransport(config);
+  const built = await buildTransport(config);
+  const transport = built.transport;
   const client = new Client(CLIENT_INFO, {
     capabilities: {},
     versionNegotiation: { mode: "auto" },
@@ -412,19 +425,16 @@ export async function connectMcpServer(
   let closedByUs = false;
 
   let stderrBuffer = "";
-  const onStderrData = (chunk: Buffer | string) => {
-    stderrBuffer += typeof chunk === "string" ? chunk : chunk.toString();
+  const onStderrData = (chunk: Uint8Array | string) => {
+    stderrBuffer += typeof chunk === "string" ? chunk : bytesToUtf8(chunk);
     if (stderrBuffer.length > STDERR_BUFFER_LIMIT) {
       stderrBuffer = stderrBuffer.slice(-STDERR_BUFFER_LIMIT);
     }
   };
-  if (transport instanceof StdioClientTransport) {
-    transport.stderr?.on("data", onStderrData);
-  }
+  const stdio = built.kind === "stdio" ? built.transport : undefined;
+  stdio?.stderr?.on("data", onStderrData);
   const unbindStderr = () => {
-    if (transport instanceof StdioClientTransport) {
-      transport.stderr?.off("data", onStderrData);
-    }
+    stdio?.stderr?.off("data", onStderrData);
   };
 
   const signal = opts?.signal;

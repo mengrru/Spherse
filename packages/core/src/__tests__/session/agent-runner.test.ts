@@ -26,6 +26,7 @@ import { deriveMessages } from "../../session/fold.js";
 import { RunConfigHolder, type RuntimeDeps } from "../../session/runtime.js";
 import { createModelResolver } from "../../session/model-resolver.js";
 import { builtinToolCapabilities } from "../../capabilities/builtin.js";
+import { interactionCapability } from "../../capabilities/interaction/index.js";
 import { attachmentsCapability } from "../../capabilities/attachments/index.js";
 import { timePerceptionCapability } from "../../capabilities/time-perception/index.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
@@ -127,7 +128,7 @@ describe("AgentRunner context engineering", () => {
       runConfig,
       modelResolver: createModelResolver(stubCatalog),
       modelCatalog: stubCatalog,
-      capabilities: builtinToolCapabilities(),
+      capabilities: builtinToolCapabilities(undefined, { interaction: interactionCapability() }),
       stores: createStoreRegistry(),
     };
   });
@@ -401,7 +402,7 @@ Agent with time perception.`,
     const tpDeps = {
       ...deps,
       capabilities: [
-        ...builtinToolCapabilities(),
+        ...builtinToolCapabilities(undefined, { interaction: interactionCapability() }),
         attachmentsCapability(),
         timePerceptionCapability(),
       ],
@@ -502,7 +503,7 @@ Agent with time perception.`,
       ...deps,
       runConfig: new RunConfigHolder({ defaultModel: "openai/gpt-4o" }),
       capabilities: [
-        ...builtinToolCapabilities(),
+        ...builtinToolCapabilities(undefined, { interaction: interactionCapability() }),
         attachmentsCapability(),
         timePerceptionCapability(),
       ],
@@ -1027,7 +1028,7 @@ describe("AgentRunner yolo mode", () => {
       runConfig: new RunConfigHolder(),
       modelResolver: createModelResolver(stubCatalog),
       modelCatalog: stubCatalog,
-      capabilities: builtinToolCapabilities(),
+      capabilities: builtinToolCapabilities(undefined, { interaction: interactionCapability() }),
       stores: createStoreRegistry(),
     };
   });
@@ -1170,7 +1171,7 @@ describe("AgentRunner in-flight ownership", () => {
       runConfig,
       modelResolver: createModelResolver(stubCatalog),
       modelCatalog: stubCatalog,
-      capabilities: builtinToolCapabilities(),
+      capabilities: builtinToolCapabilities(undefined, { interaction: interactionCapability() }),
       stores: createStoreRegistry(),
       attachmentProcessors: [],
     };

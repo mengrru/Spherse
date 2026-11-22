@@ -1,14 +1,15 @@
 import type { Capability } from "../../kernel/capability.js";
-import { createRunCommandTool } from "../../tools/run-command.js";
-import { createAskUserTool } from "../../tools/ask-user.js";
-import { withApproval } from "../../tools/with-approval.js";
+import { interactionCoreCapability } from "./core.js";
+import { runCommandCapability } from "./run-command.js";
 
 export function interactionCapability(): Capability {
+  const runCommand = runCommandCapability();
+  const core = interactionCoreCapability();
   return {
     id: "interaction",
     tools: (host) => [
-      withApproval(createRunCommandTool(host.projectRoot), host.approvalGate),
-      createAskUserTool(host.askGate),
+      ...(runCommand.tools?.(host) ?? []),
+      ...(core.tools?.(host) ?? []),
     ],
   };
 }

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { bytesToBase64 } from "../utils/bytes.js";
 import { resolveProjectPath, isPathInside } from "../utils/path-safety.js";
 import { AccessDeniedError } from "../errors.js";
 import { PROJECT_META_DIR } from "../types.js";
@@ -20,7 +21,7 @@ export function createImageAttachmentProcessor(): AttachmentProcessor {
       }
       const buf = await fsPort.readBinaryFile(path.relative(root, resolved).split(path.sep).join("/"));
       return [
-        { type: "image", data: Buffer.from(buf).toString("base64"), mimeType: attachment.mimeType },
+        { type: "image", data: bytesToBase64(buf), mimeType: attachment.mimeType },
       ];
     },
   };

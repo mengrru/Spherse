@@ -14,6 +14,7 @@ import { SessionEventLog } from "../../session/event-log.js";
 import { deriveMessages } from "../../session/fold.js";
 import { ProjectStore } from "../../store/project.js";
 import { createSilentLogger } from "../../logger.js";
+import { makeStorage } from "../helpers.js";
 
 const TEST_AGENT_PROFILE = `---
 name: Compaction Agent
@@ -80,7 +81,7 @@ describe("compaction capability", () => {
 
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "wb-compcap-"));
-    projectStore = new ProjectStore(tmpDir, createSilentLogger());
+    projectStore = new ProjectStore(tmpDir, makeStorage(tmpDir), createSilentLogger());
     await projectStore.create("Test");
     const agentStore = await projectStore.createAgent("comp-agent", TEST_AGENT_PROFILE);
     agentId = agentStore.getProfile().id;

@@ -1,6 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { providerEnvKey } from "../model-providers/catalog.js";
+import { getEnv } from "../utils/random.js";
 
 export const WEB_SEARCH_TOOL_NAME = "web_search";
 
@@ -44,7 +45,7 @@ export interface WebSearchDeps {
 
 export function readDeepSeekApiKey(): string | undefined {
   const envName = providerEnvKey("deepseek");
-  const value = envName ? process.env[envName] : undefined;
+  const value = envName ? getEnv(envName) : undefined;
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
 }

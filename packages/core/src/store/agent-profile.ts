@@ -1,8 +1,8 @@
 import path from "node:path";
-import crypto from "node:crypto";
 import matter from "gray-matter";
 import type { AgentMemoryConfig, AgentProfile, ThinkingLevel, TimePerceptionConfig } from "../types.js";
 import { ValidationError } from "../errors.js";
+import { uuid } from "../utils/random.js";
 import type { FsPort } from "./fs-port.js";
 
 const THINKING_LEVELS: readonly ThinkingLevel[] = ["off", "low", "medium", "high"];
@@ -83,7 +83,7 @@ export class AgentProfileStore {
       data.createdAt = Date.now();
     }
     if (!data.id) {
-      data.id = crypto.randomUUID();
+      data.id = uuid();
     }
 
     const serialized = matter.stringify(body, data);
@@ -130,7 +130,7 @@ export class AgentProfileStore {
       if (!data.name) return null;
 
       if (!data.id) {
-        data.id = crypto.randomUUID();
+        data.id = uuid();
         await this.fsPort.writeFile(this.relProfilePath, matter.stringify(content, data));
       }
 

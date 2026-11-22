@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createAppendChangelogTool } from "../../tools/append-changelog.js";
 import { ProjectStore } from "../../store/project.js";
 import { createSilentLogger } from "../../logger.js";
-import { createTempProject, cleanupDir, readFile } from "../helpers.js";
+import { createTempProject, cleanupDir, readFile, makeStorage } from "../helpers.js";
 
 describe("createAppendChangelogTool", () => {
   let projectRoot: string;
@@ -10,7 +10,7 @@ describe("createAppendChangelogTool", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    projectStore = new ProjectStore(projectRoot, createSilentLogger());
+    projectStore = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
     await projectStore.create("TestProject");
   });
 

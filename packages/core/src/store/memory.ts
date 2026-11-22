@@ -1,10 +1,10 @@
 import Database from "better-sqlite3";
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { escapeLikePattern } from "../session/search.js";
 import { type Logger, createSilentLogger } from "../logger.js";
+import { uuid } from "../utils/random.js";
 import type { FsPort } from "./fs-port.js";
 import { NodeFsPort } from "./node-fs-port.js";
 import {
@@ -224,7 +224,7 @@ export class SqliteMemoryStore implements MemoryStorePort {
     assertEntryContent(content);
     const normTags = normalizeTags(tags);
     const now = Date.now();
-    const id = crypto.randomUUID();
+    const id = uuid();
     this.db
       .prepare(
         "INSERT INTO entries (id, content, tags, kind, created_at, updated_at) VALUES (?, ?, ?, 'fact', ?, ?)",

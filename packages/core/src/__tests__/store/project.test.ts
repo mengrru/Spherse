@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createSilentLogger } from "../../logger.js";
 import { ProjectStore } from "../../store/project.js";
 import { ProjectConfigStore } from "../../store/project-config.js";
-import { createTempProject, cleanupDir, readFile, removeFile, pathExists, writeFile } from "../helpers.js";
+import { createTempProject, cleanupDir, readFile, removeFile, pathExists, writeFile, makeStorage } from "../helpers.js";
 
 const VALID_PROFILE = `---
 name: World Builder
@@ -19,7 +19,7 @@ describe("ProjectStore — lifecycle", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    store = new ProjectStore(projectRoot, createSilentLogger());
+    store = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
   });
 
   afterEach(async () => {
@@ -38,7 +38,7 @@ describe("ProjectStore — lifecycle", () => {
 
   it("opens an existing project", async () => {
     await store.create("MyProject");
-    const store2 = new ProjectStore(projectRoot, createSilentLogger());
+    const store2 = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
     await store2.open();
     const config = store2.config.get();
     expect(config.name).toBe("MyProject");
@@ -92,7 +92,7 @@ describe("ProjectStore — config delegation", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    store = new ProjectStore(projectRoot, createSilentLogger());
+    store = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
     await store.create("TestProject");
   });
 
@@ -137,7 +137,7 @@ describe("ProjectStore — agent management", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    store = new ProjectStore(projectRoot, createSilentLogger());
+    store = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
     await store.create("TestProject");
   });
 
@@ -204,7 +204,7 @@ describe("ProjectStore — agent management", () => {
     await store.createAgent("world-builder", VALID_PROFILE);
     await store.createAgent("lore-keeper", VALID_PROFILE.replace("World Builder", "Lore Keeper"));
 
-    const store2 = new ProjectStore(projectRoot, createSilentLogger());
+    const store2 = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
     await store2.open();
     expect(store2.agents.size).toBe(2);
     expect(store2.listAgents()).toHaveLength(2);
@@ -250,7 +250,7 @@ describe("ProjectStore — agent sessions and schedules access", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    store = new ProjectStore(projectRoot, createSilentLogger());
+    store = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
     await store.create("TestProject");
   });
 

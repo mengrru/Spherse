@@ -3,7 +3,7 @@ import type { SessionManager } from "./session/session-manager.js";
 import type { TriggerManager } from "./trigger/trigger-manager.js";
 import type { TimerService } from "./trigger/timer-service.js";
 import type { AgentMcpConfig } from "./mcp/index.js";
-import type { MemoryEntry, MemoryEntryPatch } from "./store/memory.js";
+import type { MemoryEntry, MemoryEntryPatch } from "./store/memory-port.js";
 import type { TriggerCapability } from "./capabilities/trigger/index.js";
 import type { DataStore } from "./capabilities/data/index.js";
 import type { AgentConfigChangeKind, Capability } from "./kernel/capability.js";

@@ -1,6 +1,6 @@
 import type { Logger } from "../logger.js";
-import type { SessionChangePayload, SessionStorePort } from "./session.js";
-import type { MemoryStorePort } from "./memory.js";
+import type { SessionChangePayload, SessionStorePort } from "./session-port.js";
+import type { MemoryStorePort } from "./memory-port.js";
 import type { FsPort } from "./fs-port.js";
 
 export interface SessionStoreFactoryContext {
@@ -20,8 +20,16 @@ export interface MemoryStoreFactoryContext {
 
 export type MemoryStoreFactory = (context: MemoryStoreFactoryContext) => MemoryStorePort;
 
+export type SkillZipInstaller = (
+  zipPath: string,
+  skillDir: string,
+  fileWriteMutex: import("../utils/file-write-mutex.js").FileWriteMutex,
+  options?: { overwrite?: boolean },
+) => Promise<string>;
+
 export interface ProjectStorageOptions {
-  fsPort?: FsPort;
-  sessionStoreFactory?: SessionStoreFactory;
-  memoryStoreFactory?: MemoryStoreFactory;
+  fsPort: FsPort;
+  sessionStoreFactory: SessionStoreFactory;
+  memoryStoreFactory: MemoryStoreFactory;
+  installSkillZip?: SkillZipInstaller;
 }

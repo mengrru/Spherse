@@ -1,9 +1,9 @@
-import { EventEmitter } from "node:events";
 import type { SessionPort } from "../kernel/ports.js";
 import type { ProjectStore } from "../store/project.js";
 import type { TriggerStore } from "../store/trigger.js";
 import type { TriggerEntry, TriggerLogEntry } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
+import { Emitter } from "../utils/emitter.js";
 import { TriggerScheduler, getNextCronDate, type TriggerRef } from "./scheduler.js";
 import { TriggerExecutor } from "./executor.js";
 
@@ -18,7 +18,7 @@ export interface TriggerEventPayload {
   trigger?: TriggerEntry;
 }
 
-export class TriggerManager extends EventEmitter {
+export class TriggerManager extends Emitter {
   private readonly projectStore: ProjectStore;
   private readonly logger: Logger;
   private readonly scheduler: TriggerScheduler;

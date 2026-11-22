@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { createManageProjectConfigTool } from "../../tools/manage-project-config.js";
 import { ProjectStore } from "../../store/project.js";
 import { createSilentLogger } from "../../logger.js";
-import { createTempProject, cleanupDir, readFile } from "../helpers.js";
+import { createTempProject, cleanupDir, readFile, makeStorage } from "../helpers.js";
 
 describe("createManageProjectConfigTool", () => {
   let projectRoot: string;
@@ -11,7 +11,7 @@ describe("createManageProjectConfigTool", () => {
 
   beforeEach(async () => {
     projectRoot = await createTempProject();
-    store = new ProjectStore(projectRoot, createSilentLogger());
+    store = new ProjectStore(projectRoot, makeStorage(projectRoot), createSilentLogger());
     await store.create("TestProject");
   });
 

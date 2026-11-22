@@ -5,19 +5,26 @@ import { skillCapability } from "./skill/index.js";
 import { changelogCapability } from "./changelog/index.js";
 import { renderCapability } from "./render/index.js";
 import { agentMgmtCapability } from "./agent-mgmt/index.js";
-import { interactionCapability } from "./interaction/index.js";
+import { interactionCoreCapability } from "./interaction/core.js";
 import { projectConfigCapability } from "./project-config/index.js";
 import { dataCapability } from "./data/index.js";
 import { webSearchCapability } from "./web-search/index.js";
 
-export function builtinToolCapabilities(sharedDataStore?: DataStore): Capability[] {
+export interface BuiltinToolCapabilitiesOptions {
+  interaction?: Capability;
+}
+
+export function builtinToolCapabilities(
+  sharedDataStore?: DataStore,
+  options?: BuiltinToolCapabilitiesOptions,
+): Capability[] {
   return [
     fsCapability(),
     skillCapability(),
     changelogCapability(),
     renderCapability(),
     agentMgmtCapability(),
-    interactionCapability(),
+    options?.interaction ?? interactionCoreCapability(),
     projectConfigCapability(),
     dataCapability(sharedDataStore),
     webSearchCapability(),

@@ -2,8 +2,6 @@ import path from "node:path";
 import matter from "gray-matter";
 import type { AgentProfile } from "../types.js";
 import { AgentProfileStore } from "./agent-profile.js";
-import { CORE_FILE, MEMORY_DIR, SqliteMemoryStore } from "./memory.js";
-import { SqliteSessionStore } from "./session.js";
 import { TriggerStore } from "./trigger.js";
 import { SkillStore } from "./skill.js";
 import { McpConfigStore } from "./mcp-config.js";
@@ -33,10 +31,10 @@ export class AgentStore {
     agentId: string,
     fsPort: FsPort,
     relAgentDir: string,
+    storage: ProjectStorageOptions,
     logger?: Logger,
     fileWriteMutex?: FileWriteMutex,
     onSessionChange?: (payload: SessionChangePayload) => void,
-    storage?: ProjectStorageOptions,
   ) {
     this.agentDir = agentDir;
     this.agentId = agentId;
@@ -55,7 +53,7 @@ export class AgentStore {
     this._triggerStore = new TriggerStore(fsPort, relAgentDir, logger);
   }
 
-  private readonly storage?: ProjectStorageOptions;
+  private readonly storage: ProjectStorageOptions;
   private fileWriteMutex?: FileWriteMutex;
   private readonly onSessionChange?: (payload: SessionChangePayload) => void;
 
@@ -118,19 +116,12 @@ export class AgentStore {
 
   get sessions(): SessionStorePort {
     if (!this._sessionStore) {
-      this._sessionStore = this.storage?.sessionStoreFactory
-        ? this.storage.sessionStoreFactory({
-            agentId: this.agentId,
-            agentDir: this.agentDir,
-            logger: this.logger,
-            onSessionChange: this.onSessionChange,
-          })
-        : new SqliteSessionStore(
-            path.join(this.agentDir, "sessions.db"),
-            this.agentId,
-            this.logger,
-            this.onSessionChange,
-          );
+      this._sessionStore = this.storage.sessionStoreFactory({
+        agentId: this.agentId,
+        agentDir: this.agentDir,
+        logger: this.logger,
+        onSessionChange: this.onSessionChange,
+      });
     }
     return this._sessionStore;
   }
@@ -165,14 +156,11 @@ export class AgentStore {
 
   get memory(): MemoryStorePort {
     if (!this._memoryStore) {
-      this._memoryStore = this.storage?.memoryStoreFactory
-        ? this.storage.memoryStoreFactory({ agentDir: this.agentDir, logger: this.logger, fsPort: this.fsPort })
-        : new SqliteMemoryStore(
-            this.agentDir,
-            this.fsPort,
-            path.posix.join(this.relAgentDir, MEMORY_DIR, CORE_FILE),
-            this.logger,
-          );
+      this._memoryStore = this.storage.memoryStoreFactory({
+        agentDir: this.agentDir,
+        logger: this.logger,
+        fsPort: this.fsPort,
+      });
     }
     return this._memoryStore;
   }

@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+import { uuid } from "../utils/random.js";
 import type { TSchema } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { ApprovalGate } from "../kernel/gates.js";
@@ -19,7 +19,7 @@ export function withApproval<TParams extends TSchema, TDetails>(
         return original(toolCallId, params, signal, onUpdate);
       }
       const decision = await gate.request({
-        requestId: crypto.randomUUID(),
+        requestId: uuid(),
         toolCallId,
         toolName: tool.name,
         args: params,

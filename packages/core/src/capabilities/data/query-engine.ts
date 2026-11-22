@@ -1,6 +1,7 @@
 import type { ManifestParam, ManifestQuery, QueryResult } from "./types.js";
 import { getByDotPath } from "./dot-path.js";
 import { validateQueryParams } from "./validate.js";
+import { base64ToBytes, bytesToBase64, bytesToUtf8, utf8ToBytes } from "../../utils/bytes.js";
 
 export const MAX_PAGE_LIMIT = 100;
 export const DEFAULT_PAGE_LIMIT = 20;
@@ -13,13 +14,13 @@ function isObjectRow(r: unknown): r is Row {
 }
 
 function encodeCursor(value: string | number): string {
-  return Buffer.from(String(value), "utf8").toString("base64");
+  return bytesToBase64(utf8ToBytes(String(value)));
 }
 
 export function decodeCursor(cursor: string): string | null {
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(cursor)) return null;
   try {
-    const decoded = Buffer.from(cursor, "base64").toString("utf8");
+    const decoded = bytesToUtf8(base64ToBytes(cursor));
     return decoded.length > 0 ? decoded : null;
   } catch {
     return null;

@@ -20,7 +20,8 @@ export class SessionManager {
   constructor(deps: RuntimeDeps, options?: { initialRunConfig?: RunConfigHolder }) {
     this.deps = deps;
     this.runConfigHolder = options?.initialRunConfig ?? new RunConfigHolder();
-    deps.projectStore.on("agent_updated", (payload: AgentChangePayload) => {
+    deps.projectStore.on("agent_updated", (raw) => {
+      const payload = raw as AgentChangePayload;
       if (payload.action !== "updated") return;
       for (const session of this.sessions.values()) {
         if (session.getAgentId() === payload.agentId) session.markReloadPending();
