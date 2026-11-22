@@ -7,9 +7,14 @@ import { createMockHostBridge } from "../../test/host-bridge";
 import { renderWithProviders } from "../../test/render";
 import { UpdateChecker } from "./UpdateChecker";
 import { useUpdateChecker } from "./use-update-checker";
+import { clearStaticCacheAndReload } from "../../lib/pwa-update";
 
 vi.mock("./use-update-checker", () => ({
   useUpdateChecker: vi.fn(),
+}));
+
+vi.mock("../../lib/pwa-update", () => ({
+  clearStaticCacheAndReload: vi.fn(async () => undefined),
 }));
 
 const getConnectionInfo = vi.hoisted(() =>
@@ -71,6 +76,27 @@ describe("UpdateChecker", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "检查更新" }));
     expect(check).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("button", { name: "清除缓存并更新" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers cache clear and update on web host and shows busy state while clearing", async () => {
+    mockHookState({ status: "idle" });
+    const bridge = createMockHostBridge({
+      kind: "web",
+      getAppVersion: vi.fn(async () => "0.9.0-web"),
+    });
+    renderWithProviders(<UpdateChecker />, { bridge });
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "清除缓存并更新" }),
+    );
+    expect(clearStaticCacheAndReload).toHaveBeenCalledTimes(1);
+    expect(
+      await screen.findByRole("button", { name: "正在清除缓存..." }),
+    ).toBeDisabled();
   });
 
   it("shows client and desktop versions without the update section when no updater channel exists (web host)", async () => {

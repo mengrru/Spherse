@@ -2,8 +2,10 @@ import { createRoot, type Root } from "react-dom/client";
 import { toast } from "sonner";
 import {
   compareAppVersion,
+  isWebOutdated,
   type AppVersionCompatibility,
 } from "@spherse/app/version-compat";
+import { clearStaticCacheAndReload } from "@spherse/app/pwa-update";
 import { DEFAULT_LOCALE, translate } from "@spherse/i18n";
 import { useSettingsStore } from "@spherse/app/stores/settings";
 import { readWebConnection } from "./host-bridge-web";
@@ -20,6 +22,8 @@ let overlayRoot: Root | null = null;
 let overlayDismissed = false;
 let pendingOnDismiss: (() => void) | null = null;
 let lastNotified: AppVersionCompatibility | null = null;
+
+const PATCH_UPDATE_TOAST_DURATION_MS = 10_000;
 
 // 「暂不升级，继续使用」：仅本次会话生效，刷新页面后重新检测
 function dismissVersionBlock(): void {
@@ -72,11 +76,21 @@ export async function runWebVersionGuard(
     if (result === lastNotified) return result;
     lastNotified = result;
     if (result === "patch-mismatch") {
+      const locale = currentLocale();
       toast.warning(
-        translate(currentLocale(), "web-version.patchWarning", {
+        translate(locale, "web-version.patchWarning", {
           appVersion: appVersion ?? "",
           webVersion: __SPHERSE_WEB_VERSION__,
         }),
+        isWebOutdated(appVersion, __SPHERSE_WEB_VERSION__)
+          ? {
+              duration: PATCH_UPDATE_TOAST_DURATION_MS,
+              action: {
+                label: translate(locale, "web-version.updateNow"),
+                onClick: () => void clearStaticCacheAndReload(),
+              },
+            }
+          : undefined,
       );
     } else if (result === "unknown") {
       toast.warning(translate(currentLocale(), "web-version.unknownWarning"));

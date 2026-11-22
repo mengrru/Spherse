@@ -233,6 +233,7 @@ spherse/
 │   │       │   ├── use-connection.ts  # useApiClient(projectId) / useGlobalApiClient()（无 projectId 的全局 client，项目市场/提示词模板市场用）/ useConnection() — 基于 app-store connection 派生 ApiClient
 │   │       │   ├── categories.ts    # 市场分类 chips 归并/过滤纯函数（deriveCategories/filterByCategory，泛型 { category } 条目），项目市场与提示词模板市场共用
 │   │       │   ├── connect-payload.ts # 连接 payload 编解码（桌面端 buildConnectUrl 生成 QR 链接 ↔ web 端 parseConnectPayload 解析 base/token/targetPath）
+│   │       │   ├── pwa-update.ts     # PWA 深度刷新（clearStaticCacheAndReload：update → SW 清 workbox 缓存 ack → unregister → reload；web 壳 settings 与版本拦截层经 `@spherse/app/pwa-update` 复用）
 │   │       │   ├── urls.ts            # 官网域派生的集中 URL 常量（WEB_APP_URL/DOCS_URL/DOWNLOAD_PAGE_URL）
 │   │       │   ├── ws/                # 通用 WS 连接抽象：ws-connection.ts（WsConnection 状态机——idle/connecting/open/waiting-backoff/failed/fatal/closed、心跳 awaitingPongSince、退避重试、probe；bus 与 chat（PR3 起）共用）
 │   │       │   ├── utils.ts          # shadcn/ui cn() 工具
@@ -391,15 +392,18 @@ spherse/
 │   │       ├── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
 │   │       └── ui-sdk-bridge.spec.ts   # 注入式 @spherse/sdk 桥接 E2E 测试（window.spherse.* 暴露面 / fire 导航 / call 往返 / api.* HTTP 桥接 resolve+reject / navigate 订阅回放）
 │   ├── web/                          # @spherse/web — Web 版本壳 / 移动端 PWA（GitHub Pages：prod 部署到 /web/ 随发版，dev 分支部署到 /dev/web/；构建产物路径无关，`WEB_ENV=dev` 注入 manifest/title Dev 标识）
-│   │   ├── vite.config.ts            # Vite + vite-plugin-pwa（manifest + generateSW app shell precache）+ manualChunks（vendor-react/vendor-markdown）
+│   │   ├── vite.config.ts            # Vite + vite-plugin-pwa（manifest + generateSW app shell precache + cleanupOutdatedCaches + importScripts 注入 sw-update-handler.js）+ manualChunks（vendor-react/vendor-markdown）
 │   │   ├── index.html                # 入口 HTML（theme-color / apple-mobile-web-app / viewport-fit=cover 元数据）
 │   │   ├── public/                   # PWA 静态资源
 │   │   │   ├── favicon.svg
+│   │   │   ├── sw-update-handler.js  # SW 消息处理（SPHERSE_CLEAR_STATIC_CACHE：清 workbox-* 缓存 + skipWaiting + ack，消息串与 app/src/lib/pwa-update.ts 成对维护）
 │   │   │   └── icons/                # PWA 图标（pwa-192/512、maskable-512、apple-touch-icon，从 desktop/build 派生）
 │   │   ├── pages-assets/404.html     # GitHub Pages SPA fallback（/web、/dev/web → 补尾斜杠，其余 → /）
 │   │   └── src/                      # Web 版本专属源码
 │   │       ├── main.tsx              # 注入 WebHostBridge 调 createAppRoot
 │   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集：prefs 走 spherse:prefs 并迁移旧 spherse:settings、token 探活、clearConnection 断开清理）
+│   │       ├── version-guard.tsx     # web 版本协商（对比 server /api/connection/info 的 appVersion 与 __SPHERSE_WEB_VERSION__：incompatible 挂拦截层；patch-mismatch 且 web 落后（isWebOutdated）时 toast 附「立即更新」深度刷新）
+│   │       ├── version-block-overlay.tsx # 版本不兼容拦截层（「刷新页面」走 pwa-update 深度刷新清缓存重建 SW；重新连接清 localStorage）
 │   │       └── pages/
 │   │           ├── MobileConnectPage.tsx # 连接页 shell（模式切换、连接流程、URL 参数自动连接、connecting 态）
 │   │           └── connect/          # 连接页子模块：ScanPanel（应用内扫码 + 二维码图片识别兜底）、ManualPanel（手动输入表单）、qr-decode.ts（BarcodeDetector/jsQR 解码纯函数）

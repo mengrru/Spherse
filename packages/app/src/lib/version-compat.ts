@@ -14,3 +14,12 @@ export function compareAppVersion(
   if (appMajor !== webMajor || appMinor !== webMinor) return "incompatible";
   return compareSemver(appVersion, webVersion) === 0 ? "ok" : "patch-mismatch";
 }
+
+export function isWebOutdated(
+  appVersion: string | null | undefined,
+  webVersion: string,
+): boolean {
+  if (!appVersion) return false;
+  const comparison = compareSemver(appVersion, webVersion);
+  return comparison !== null && comparison > 0;
+}
