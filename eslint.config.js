@@ -64,6 +64,7 @@ export default [
       "packages/landing/src/**/*.{ts,tsx}",
       "packages/desktop/src/**/*.{ts,tsx}",
       "packages/web/src/**/*.{ts,tsx}",
+      "packages/browser/src/**/*.{ts,tsx}",
     ],
     languageOptions: {
       globals: globals.browser,

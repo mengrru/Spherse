@@ -32,13 +32,23 @@ export class OpfsFsPort implements FsPort {
 
   static async open(rootDirName: string): Promise<OpfsFsPort> {
     const opfsRoot = await navigator.storage.getDirectory();
-    const root = await opfsRoot.getDirectoryHandle(rootDirName, { create: true });
+    let root: FileSystemDirectoryHandle = opfsRoot;
+    for (const part of rootDirName.split("/")) {
+      if (part === "") continue;
+      root = await root.getDirectoryHandle(part, { create: true });
+    }
     return new OpfsFsPort(root, rootDirName);
   }
 
   async destroy(): Promise<void> {
+    const segments = this.rootName.split("/").filter((part) => part !== "");
+    if (segments.length === 0) return;
     const opfsRoot = await navigator.storage.getDirectory();
-    await opfsRoot.removeEntry(this.rootName, { recursive: true });
+    let parent: FileSystemDirectoryHandle = opfsRoot;
+    for (const part of segments.slice(0, -1)) {
+      parent = await parent.getDirectoryHandle(part);
+    }
+    await parent.removeEntry(segments[segments.length - 1], { recursive: true });
   }
 
   private async dirFor(segments: string[], create: boolean): Promise<FileSystemDirectoryHandle> {
@@ -124,7 +134,13 @@ export class OpfsFsPort implements FsPort {
     if (segments.length === 0) {
       return { isFile: false, isDirectory: true, size: 0, mtime: 0 };
     }
-    const dir = await this.dirFor(dirnameSegments(segments), false);
+    let dir: FileSystemDirectoryHandle;
+    try {
+      dir = await this.dirFor(dirnameSegments(segments), false);
+    } catch (err) {
+      if ((err as DOMException)?.name === "NotFoundError") return null;
+      throw err;
+    }
     const name = segments[segments.length - 1];
     try {
       const file = await dir.getFileHandle(name);

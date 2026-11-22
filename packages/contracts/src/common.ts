@@ -9,11 +9,14 @@ export const schemas = {
 export type OkResponse = Static<typeof schemas.okResponse>;
 export type ErrorResponse = Static<typeof schemas.errorResponse>;
 
-function stripUndefined<T>(value: T): T {
+export function stripUndefined<T>(value: T): T {
   if (Array.isArray(value)) {
     return value.map((item) => stripUndefined(item)) as unknown as T;
   }
   if (value !== null && typeof value === "object") {
+    if (Object.getPrototypeOf(value) !== Object.prototype) {
+      return value;
+    }
     const out: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
       if (entry !== undefined) out[key] = stripUndefined(entry);

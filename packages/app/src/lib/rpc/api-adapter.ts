@@ -20,6 +20,7 @@ import type {
 } from "../types.js";
 import type { AgentMcpConfig } from "../types.js";
 import { RpcCallError, type RpcClient } from "@spherse/rpc";
+import { isLocalRuntimeBaseUrl } from "./shared.js";
 
 const STATUS_BY_CODE: Record<number, number> = {
   100: 404,
@@ -432,6 +433,15 @@ export function createRpcApiClient(
       return (await res.json()) as { ok: boolean };
     },
     async uploadAttachedImage(blob: Blob, meta?: { width?: number; height?: number }) {
+      if (isLocalRuntimeBaseUrl(baseUrl)) {
+        const result = await rpcClient.call<AttachmentUploadResponse>("attachments.upload", {
+          projectId,
+          file: blob,
+          ...(meta?.width !== undefined ? { width: meta.width } : {}),
+          ...(meta?.height !== undefined ? { height: meta.height } : {}),
+        });
+        return parseApiResponse(attachmentUploadResponse, result) as AttachmentUploadResponse;
+      }
       const form = new FormData();
       form.append("file", blob);
       if (meta?.width !== undefined) form.append("width", String(meta.width));
@@ -444,6 +454,10 @@ export function createRpcApiClient(
       return parseApiResponse(attachmentUploadResponse, await res.json()) as AttachmentUploadResponse;
     },
     async deleteAttachment(path: string) {
+      if (isLocalRuntimeBaseUrl(baseUrl)) {
+        await rpcClient.call("attachments.delete", { projectId, path });
+        return;
+      }
       const res = await authedFetch(`${apiBase}/attachments`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },

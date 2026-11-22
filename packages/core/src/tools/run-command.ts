@@ -1,4 +1,5 @@
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import cp from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
@@ -92,7 +93,7 @@ export function resolveWindowsShell(): string {
   if (cachedWinShell !== undefined) return cachedWinShell;
   for (const candidate of ["pwsh", "powershell"]) {
     try {
-      const r = spawnSync(candidate, ["-NoProfile", "-NonInteractive", "-Command", "exit 0"], {
+      const r = cp.spawnSync(candidate, ["-NoProfile", "-NonInteractive", "-Command", "exit 0"], {
         shell: false,
         timeout: 5000,
       });
@@ -118,7 +119,7 @@ function killProcessTree(child: ChildProcess, platform: string): void {
   try {
     if (!child.pid) return;
     if (platform === "win32") {
-      spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+      cp.spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
     } else {
       process.kill(-child.pid, "SIGTERM");
     }
@@ -225,7 +226,7 @@ export function createRunCommandTool(projectRoot: string): AgentTool<typeof RunC
 
         let child: ChildProcess;
         try {
-          child = spawn(target.file, target.args, {
+          child = cp.spawn(target.file, target.args, {
             cwd,
             env: process.env,
             detached: target.detached,

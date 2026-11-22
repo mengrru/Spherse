@@ -74,6 +74,9 @@ export type { SessionChangePayload, SessionChangeAction, SessionStorePort } from
 export type { ProjectStorageOptions, SessionStoreFactory, MemoryStoreFactory } from "./store/storage-port.js";
 export type { FsPort, FsEntry, FsStat, FsWatchEvent, FsPortCapabilities } from "./store/fs-port.js";
 export { NodeFsPort } from "./store/node-fs-port.js";
+export { OpfsFsPort } from "./store/opfs-fs-port.js";
+export { IdbSessionStore } from "./store/idb-session-store.js";
+export { IdbMemoryStore } from "./store/idb-memory-store.js";
 export type { HostContext, HostFiber } from "./host/context.js";
 export { HostServiceKey, createHostContext } from "./host/context.js";
 export { registerCoreServices } from "./host/services.js";

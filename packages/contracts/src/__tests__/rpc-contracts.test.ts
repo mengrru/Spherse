@@ -119,6 +119,19 @@ describe("rpc server frame contract", () => {
 });
 
 describe("chat scope helpers", () => {
+  it("preserves non-plain objects such as Blob inside call params", () => {
+    const blob = new Blob(["x"], { type: "image/png" });
+    const frame = parseRpcClientFrame({
+      type: "call",
+      id: 3,
+      method: "attachments.upload",
+      params: { projectId: "p1", file: blob },
+    });
+    expect(frame.type).toBe("call");
+    if (frame.type !== "call") return;
+    expect(frame.params?.file).toBeInstanceOf(Blob);
+  });
+
   it("roundtrips a chat scope", () => {
     const scope = chatScope("proj-1", "agent-2", "sess-3");
     expect(parseChatScope(scope)).toEqual({

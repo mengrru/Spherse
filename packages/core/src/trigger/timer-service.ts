@@ -23,7 +23,7 @@ export class TimerService {
       this.onTick();
       this.scheduleNext(TimerService.POLL_INTERVAL);
     }, delay);
-    this.timer.unref();
+    (this.timer as { unref?: () => void }).unref?.();
   }
 
   stop(): void {

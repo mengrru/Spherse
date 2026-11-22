@@ -192,7 +192,7 @@ export class RpcDispatcher {
     if (frame.params === undefined) {
       params = Value.Parse(entry.params, {});
     } else if (Value.Check(entry.params, frame.params)) {
-      params = Value.Parse(entry.params, frame.params);
+      params = frame.params;
     } else {
       send({
         type: "result",

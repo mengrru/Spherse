@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { Type } from "@sinclair/typebox";
 import { RpcConnectionHandler } from "../connection.js";
 import { sessionMethods } from "../methods/sessions.js";
 import {
@@ -224,6 +225,31 @@ describe("rpc chat subscriptions", () => {
     handler.onClose();
     expect(hubMock.attachments[0].close).toHaveBeenCalledTimes(1);
     expect(hubMock.attachments[1].close).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes validated params through without cloning", async () => {
+    const marker = new Blob(["x"], { type: "image/png" });
+    const seen: unknown[] = [];
+    const harness = createRpcHarness({
+      methods: {
+        "probe.echo": {
+          params: Type.Object({ file: Type.Unknown() }),
+          handler: (params: unknown) => {
+            seen.push((params as { file: unknown }).file);
+            return { ok: true };
+          },
+        },
+      },
+    });
+    harness.handler.onMessage({
+      type: "call",
+      id: 9,
+      method: "probe.echo",
+      params: { file: marker },
+    });
+    await flush();
+    expect(seen[0]).toBe(marker);
+    expect(harness.sent()[0]).toMatchObject({ type: "result", id: 9, ok: true });
   });
 });
 

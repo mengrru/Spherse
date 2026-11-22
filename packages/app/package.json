@@ -16,7 +16,8 @@
     "./ui/button": "./src/components/ui/button.tsx",
     "./ui/input": "./src/components/ui/input.tsx",
     "./ui/field": "./src/components/ui/field.tsx",
-    "./ui/alert-dialog": "./src/components/ui/alert-dialog.tsx"
+    "./ui/alert-dialog": "./src/components/ui/alert-dialog.tsx",
+    "./lib/rpc/shared": "./src/lib/rpc/shared.ts"
   },
   "scripts": {
     "pretest": "npm run build --workspace=@spherse/i18n",

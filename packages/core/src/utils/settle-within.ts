@@ -16,7 +16,7 @@ export function settleWithin(
       } catch { /* ignore */ }
       resolve();
     }, timeoutMs);
-    timer.unref();
+    (timer as { unref?: () => void }).unref?.();
     promise.then(
       () => {
         settled = true;

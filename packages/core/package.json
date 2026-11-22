@@ -14,6 +14,10 @@
       "types": "./dist/assemble.d.ts",
       "import": "./dist/assemble.js"
     },
+    "./paths": {
+      "types": "./dist/utils/paths.d.ts",
+      "import": "./dist/utils/paths.js"
+    },
     "./host": {
       "types": "./dist/host/index.d.ts",
       "import": "./dist/host/index.js"

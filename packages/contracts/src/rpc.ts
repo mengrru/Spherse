@@ -1,5 +1,6 @@
 import { Type, type Static } from "@sinclair/typebox";
-import { parseContract } from "./common.js";
+import { Value } from "@sinclair/typebox/value";
+import { parseContract, stripUndefined } from "./common.js";
 
 export const RPC_PROTOCOL_VERSION = 1;
 
@@ -92,7 +93,11 @@ export type RpcPongFrame = Static<typeof rpcPongFrame>;
 export type RpcServerFrame = Static<typeof rpcServerFrame>;
 
 export function parseRpcClientFrame(payload: unknown): RpcClientFrame {
-  return parseContract(rpcClientFrame, payload);
+  const jsonSafe = stripUndefined(payload);
+  if (!Value.Check(rpcClientFrame, jsonSafe)) {
+    throw new Error("Invalid payload: rpc client frame rejected");
+  }
+  return jsonSafe as RpcClientFrame;
 }
 
 export function parseRpcServerFrame(payload: unknown): RpcServerFrame {
