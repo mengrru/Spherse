@@ -127,7 +127,20 @@ function assertCoreContent(content: string): void {
   }
 }
 
-export class MemoryStore {
+export interface MemoryStorePort {
+  close(): void;
+  getCore(): Promise<string>;
+  saveCore(content: string): Promise<void>;
+  appendCore(content: string): Promise<string>;
+  count(): number;
+  list(limit?: number): MemoryEntry[];
+  save(content: string, tags?: string[]): MemoryEntry;
+  update(id: string, patch: MemoryEntryPatch): MemoryEntry;
+  deleteEntry(id: string): void;
+  search(query: string, limit?: number): MemoryEntry[];
+}
+
+export class SqliteMemoryStore implements MemoryStorePort {
   private readonly dbPath: string;
   private readonly corePath: string;
   private readonly db: Database.Database;
@@ -302,3 +315,5 @@ export class MemoryStore {
     return rows.map(rowToEntry);
   }
 }
+
+export { SqliteMemoryStore as MemoryStore };

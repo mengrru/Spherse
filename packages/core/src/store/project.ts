@@ -12,6 +12,7 @@ import { PROJECT_META_DIR } from "../types.js";
 import { ProjectConfigStore } from "./project-config.js";
 import { SkillStore } from "./skill.js";
 import { AgentStore } from "./agent-store.js";
+import type { ProjectStorageOptions } from "./storage-port.js";
 import { AgentProfileStore, assertSafeSlug } from "./agent-profile.js";
 import type { SessionChangePayload } from "./session.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
@@ -47,18 +48,25 @@ export class ProjectStore extends EventEmitter {
   private rootPath: string;
   private spherseDir: string;
   private logger: Logger;
+  private readonly storage?: ProjectStorageOptions;
   private readonly fileWriteMutex?: FileWriteMutex;
 
   private _configStore: ProjectConfigStore | null = null;
   private _skillStore: SkillStore | null = null;
   private _agents: Map<string, AgentStore> = new Map();
 
-  constructor(rootPath: string, logger?: Logger, fileWriteMutex?: FileWriteMutex) {
+  constructor(
+    rootPath: string,
+    logger?: Logger,
+    fileWriteMutex?: FileWriteMutex,
+    storage?: ProjectStorageOptions,
+  ) {
     super();
     this.rootPath = path.resolve(rootPath);
     this.spherseDir = path.join(this.rootPath, PROJECT_META_DIR);
     this.logger = logger ?? createSilentLogger();
     this.fileWriteMutex = fileWriteMutex;
+    this.storage = storage;
   }
 
   async open(): Promise<void> {
@@ -121,7 +129,7 @@ export class ProjectStore extends EventEmitter {
       const profile = await profileStore.read();
       if (!profile) continue;
 
-      const agentStore = new AgentStore(agentDir, profile.id, this.logger, this.fileWriteMutex, this.forwardSessionChange);
+      const agentStore = new AgentStore(agentDir, profile.id, this.logger, this.fileWriteMutex, this.forwardSessionChange, this.storage);
       await agentStore.open();
       this._agents.set(profile.id, agentStore);
     }
@@ -195,7 +203,7 @@ export class ProjectStore extends EventEmitter {
       await fs.writeFile(path.join(agentDir, "theme.css"), themeContent, "utf-8");
     }
 
-    const agentStore = new AgentStore(agentDir, id, this.logger, this.fileWriteMutex, this.forwardSessionChange);
+    const agentStore = new AgentStore(agentDir, id, this.logger, this.fileWriteMutex, this.forwardSessionChange, this.storage);
     await agentStore.open();
     this._agents.set(id, agentStore);
     this.logger.info({ agentId: id, slug: dirName }, "agent created");

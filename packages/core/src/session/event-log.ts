@@ -1,6 +1,6 @@
 import type { SessionEvent, SessionEventType, SessionEventMap } from "./events.js";
 import { EVENT_SCHEMA_VERSION } from "./events.js";
-import type { SessionStore } from "../store/session.js";
+import type { SessionStorePort } from "../store/session.js";
 
 export interface SessionEventWriter {
   append<T extends SessionEventType>(type: T, data: SessionEventMap[T]): SessionEvent;
@@ -14,7 +14,7 @@ export class SessionEventLog implements SessionEventWriter {
   private readonly listeners = new Set<Listener>();
 
   constructor(
-    private readonly store: SessionStore,
+    private readonly store: SessionStorePort,
     private readonly sessionId: string,
   ) {}
 
@@ -70,7 +70,7 @@ export class SessionEventLog implements SessionEventWriter {
     };
   }
 
-  static open(store: SessionStore, sessionId: string): SessionEventLog {
+  static open(store: SessionStorePort, sessionId: string): SessionEventLog {
     const log = new SessionEventLog(store, sessionId);
     const existing = store.readEvents(sessionId);
     if (existing.some((event, index) => event.seq !== index)) {

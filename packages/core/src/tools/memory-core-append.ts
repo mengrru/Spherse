@@ -1,13 +1,13 @@
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import type { MemoryStore } from "../store/memory.js";
+import type { MemoryStorePort } from "../store/memory.js";
 
 const MemoryCoreAppendParams = Type.Object({
   content: Type.String({ description: "The fact or note to append to core memory" }),
 });
 
 export function createMemoryCoreAppendTool(
-  getStore: () => MemoryStore | undefined,
+  getStore: () => MemoryStorePort | undefined,
 ): AgentTool<typeof MemoryCoreAppendParams> {
   return {
     name: "memory_core_append",

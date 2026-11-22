@@ -2,6 +2,7 @@ import path from "node:path";
 import { PROJECT_META_DIR } from "./types.js";
 import type { SamplingParams, ThinkingLevel } from "./types.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
+import type { ProjectStorageOptions } from "./store/storage-port.js";
 import { ProjectStore } from "./store/project.js";
 import { ProjectManager } from "./project-manager.js";
 import { SessionManager } from "./session/session-manager.js";
@@ -31,6 +32,7 @@ export interface AssembleOptions {
   logger?: Logger;
   modelCatalog?: ModelCatalog;
   capabilities?: Capability[] | ((builtin: Capability[]) => Capability[]);
+  storage?: ProjectStorageOptions;
 }
 
 export function defaultCapabilities(
@@ -56,7 +58,7 @@ export async function assembleProject(
   const logger = options?.logger ?? createSilentLogger();
 
   const fileWriteMutex = new FileWriteMutex();
-  const projectStore = new ProjectStore(projectRoot, logger, fileWriteMutex);
+  const projectStore = new ProjectStore(projectRoot, logger, fileWriteMutex, options?.storage);
   const dataStore = createDataStore({ projectRoot, fileWriteMutex, logger });
 
   let isNewProject = false;

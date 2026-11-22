@@ -122,7 +122,48 @@ export interface SessionChangePayload {
   action: SessionChangeAction;
 }
 
-export class SessionStore {
+export interface SessionStorePort {
+  close(): void;
+  createSession(title?: string, source?: string): string;
+  getSession(id: string): SessionInfo | null;
+  listSessions(): SessionInfo[];
+  listSessionsPage(limit: number, offset: number): { items: SessionInfo[]; hasMore: boolean };
+  updateSessionTitle(sessionId: string, title: string): void;
+  archiveSession(sessionId: string): void;
+  appendEvents(sessionId: string, events: ReadonlyArray<SessionEvent>, schemaVersion: number): void;
+  readEvents(sessionId: string): SessionEvent[];
+  readEventsAfter(sessionId: string, sinceSeq: number, limit: number): SessionEvent[];
+  readEventCount(sessionId: string): number;
+  maxSeq(sessionId: string): number | null;
+  searchMessages(query: string, prefetchLimit: number): MessageSearchHit[];
+  migrateEvents(sessionId: string, events: ReadonlyArray<SessionEvent>, schemaVersion: number): void;
+  isMigrated(sessionId: string): boolean;
+  sessionNeedsMigration(sessionId: string): boolean;
+  getSessionMessages(sessionId: string): AgentMessage[];
+  getSessionMessagesWithIds(sessionId: string): MessageWithId[];
+  getMessagesAfter(sessionId: string, anchorId: number): MessageWithId[];
+  getLatestCompaction(
+    sessionId: string,
+  ): {
+    id: number;
+    anchorMessageId: number;
+    digestContent: string;
+    tokenEstimate: number;
+    createdAt: number;
+  } | null;
+  getRecentMessages(
+    sessionId: string,
+    limit: number,
+    beforeId?: number,
+  ): {
+    messages: AgentMessage[];
+    entries: MessageWithId[];
+    hasMore: boolean;
+    oldestId: number | null;
+  };
+}
+
+export class SqliteSessionStore implements SessionStorePort {
   private agentId: string;
   private db: Database.Database;
   private logger: Logger;
@@ -185,7 +226,7 @@ export class SessionStore {
     const row = this.db
       .prepare<[string], SessionRow>("SELECT * FROM sessions WHERE id = ?")
       .get(id);
-    return row ? SessionStore.rowToSessionInfo(row) : null;
+    return row ? SqliteSessionStore.rowToSessionInfo(row) : null;
   }
 
   listSessions(): SessionInfo[] {
@@ -194,7 +235,7 @@ export class SessionStore {
         "SELECT * FROM sessions WHERE agent_id = ? AND status = 'active' ORDER BY updated_at DESC, id DESC",
       )
       .all(this.agentId);
-    return rows.map((row) => SessionStore.rowToSessionInfo(row));
+    return rows.map((row) => SqliteSessionStore.rowToSessionInfo(row));
   }
 
   listSessionsPage(limit: number, offset: number): { items: SessionInfo[]; hasMore: boolean } {
@@ -205,7 +246,7 @@ export class SessionStore {
       .all(this.agentId, limit + 1, offset);
     const hasMore = rows.length > limit;
     const sliced = hasMore ? rows.slice(0, limit) : rows;
-    const items = sliced.map((row) => SessionStore.rowToSessionInfo(row));
+    const items = sliced.map((row) => SqliteSessionStore.rowToSessionInfo(row));
     return { items, hasMore };
   }
 
@@ -263,7 +304,7 @@ export class SessionStore {
         "SELECT * FROM events WHERE session_id = ? ORDER BY seq ASC",
       )
       .all(sessionId);
-    return SessionStore.rowsToEvents(rows);
+    return SqliteSessionStore.rowsToEvents(rows);
   }
 
   readEventsAfter(sessionId: string, sinceSeq: number, limit: number): SessionEvent[] {
@@ -272,7 +313,7 @@ export class SessionStore {
         "SELECT * FROM events WHERE session_id = ? AND seq > ? ORDER BY seq ASC LIMIT ?",
       )
       .all(sessionId, sinceSeq, limit);
-    return SessionStore.rowsToEvents(rows);
+    return SqliteSessionStore.rowsToEvents(rows);
   }
 
   readEventCount(sessionId: string): number {
@@ -357,7 +398,7 @@ export class SessionStore {
       "SELECT * FROM events WHERE session_id = ? AND type IN ('turn/retried', 'turn/withdrawn')",
     );
     for (const sessionId of sessionIds) {
-      result.set(sessionId, collectAbandonedSeqs(SessionStore.rowsToEvents(stmt.all(sessionId))));
+      result.set(sessionId, collectAbandonedSeqs(SqliteSessionStore.rowsToEvents(stmt.all(sessionId))));
     }
     return result;
   }
@@ -439,7 +480,7 @@ export class SessionStore {
         "SELECT * FROM messages WHERE session_id = ? ORDER BY id ASC",
       )
       .all(sessionId);
-    return rows.map((row) => SessionStore.rowToMessageEntry(row));
+    return rows.map((row) => SqliteSessionStore.rowToMessageEntry(row));
   }
 
   getMessagesAfter(sessionId: string, anchorId: number): MessageWithId[] {
@@ -448,7 +489,7 @@ export class SessionStore {
         "SELECT * FROM messages WHERE session_id = ? AND id > ? ORDER BY id ASC",
       )
       .all(sessionId, anchorId);
-    return rows.map((row) => SessionStore.rowToMessageEntry(row));
+    return rows.map((row) => SqliteSessionStore.rowToMessageEntry(row));
   }
 
   getLatestCompaction(
@@ -511,7 +552,7 @@ export class SessionStore {
 
     const collected: MessageWithId[] = rows.map((row) => ({
       id: row.id,
-      message: SessionStore.parseMessage(row.content, row.id, row.message_content_schema_version),
+      message: SqliteSessionStore.parseMessage(row.content, row.id, row.message_content_schema_version),
     }));
 
     // role 埋在 content JSON 内，SQL 无法过滤：页首为孤儿 toolResult 时逐行向旧方向扩展，
@@ -527,7 +568,7 @@ export class SessionStore {
       if (!row) break;
       collected.push({
         id: row.id,
-        message: SessionStore.parseMessage(row.content, row.id, row.message_content_schema_version),
+        message: SqliteSessionStore.parseMessage(row.content, row.id, row.message_content_schema_version),
       });
     }
 
@@ -561,7 +602,7 @@ export class SessionStore {
   private static rowToMessageEntry(row: MessageRow): MessageWithId {
     return {
       id: row.id,
-      message: SessionStore.parseMessage(
+      message: SqliteSessionStore.parseMessage(
         row.content,
         row.id,
         row.message_content_schema_version,
@@ -604,3 +645,5 @@ function adaptMessageContent(parsed: unknown, fromVersion: number): unknown {
   }
   return parsed;
 }
+
+export { SqliteSessionStore as SessionStore };

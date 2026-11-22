@@ -1,13 +1,13 @@
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import type { MemoryStore } from "../store/memory.js";
+import type { MemoryStorePort } from "../store/memory.js";
 
 const MemoryDeleteParams = Type.Object({
   id: Type.String({ description: "The id of the memory entry to delete (shown by memory_recall)" }),
 });
 
 export function createMemoryDeleteTool(
-  getStore: () => MemoryStore | undefined,
+  getStore: () => MemoryStorePort | undefined,
 ): AgentTool<typeof MemoryDeleteParams> {
   return {
     name: "memory_delete",

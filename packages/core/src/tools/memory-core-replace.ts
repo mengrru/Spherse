@@ -1,14 +1,14 @@
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import { MAX_CORE_CHARS } from "../store/memory.js";
-import type { MemoryStore } from "../store/memory.js";
+import type { MemoryStorePort } from "../store/memory.js";
 
 const MemoryCoreReplaceParams = Type.Object({
   content: Type.String({ description: "The complete new core memory content" }),
 });
 
 export function createMemoryCoreReplaceTool(
-  getStore: () => MemoryStore | undefined,
+  getStore: () => MemoryStorePort | undefined,
 ): AgentTool<typeof MemoryCoreReplaceParams> {
   return {
     name: "memory_core_replace",

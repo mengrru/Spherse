@@ -1,6 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
-import type { MemoryStore } from "../store/memory.js";
+import type { MemoryStorePort } from "../store/memory.js";
 
 const MemorySaveParams = Type.Object({
   content: Type.String({
@@ -12,7 +12,7 @@ const MemorySaveParams = Type.Object({
 });
 
 export function createMemorySaveTool(
-  getStore: () => MemoryStore | undefined,
+  getStore: () => MemoryStorePort | undefined,
 ): AgentTool<typeof MemorySaveParams> {
   return {
     name: "memory_save",

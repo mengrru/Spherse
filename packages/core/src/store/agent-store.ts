@@ -2,25 +2,27 @@ import path from "node:path";
 import matter from "gray-matter";
 import type { AgentProfile } from "../types.js";
 import { AgentProfileStore } from "./agent-profile.js";
-import { SessionStore } from "./session.js";
+import { SqliteMemoryStore } from "./memory.js";
+import { SqliteSessionStore } from "./session.js";
 import { TriggerStore } from "./trigger.js";
 import { SkillStore } from "./skill.js";
 import { McpConfigStore } from "./mcp-config.js";
-import { MemoryStore } from "./memory.js";
+import type { ProjectStorageOptions } from "./storage-port.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
 import { type Logger, createSilentLogger } from "../logger.js";
-import type { SessionChangePayload } from "./session.js";
+import type { SessionChangePayload, SessionStorePort } from "./session.js";
+import type { MemoryStorePort } from "./memory.js";
 
 export class AgentStore {
   private agentDir: string;
   private agentId: string;
   private _profile: AgentProfile | null = null;
   private _profileStore: AgentProfileStore;
-  private _sessionStore: SessionStore | null = null;
+  private _sessionStore: SessionStorePort | null = null;
   private _triggerStore: TriggerStore;
   private _skillStore: SkillStore | null = null;
   private _mcpStore: McpConfigStore | null = null;
-  private _memoryStore: MemoryStore | null = null;
+  private _memoryStore: MemoryStorePort | null = null;
   private logger: Logger;
 
   constructor(
@@ -29,12 +31,14 @@ export class AgentStore {
     logger?: Logger,
     fileWriteMutex?: FileWriteMutex,
     onSessionChange?: (payload: SessionChangePayload) => void,
+    storage?: ProjectStorageOptions,
   ) {
     this.agentDir = agentDir;
     this.agentId = agentId;
     this.logger = logger ?? createSilentLogger();
     this.fileWriteMutex = fileWriteMutex;
     this.onSessionChange = onSessionChange;
+    this.storage = storage;
     this._profileStore = new AgentProfileStore(
       path.join(agentDir, "profile.md"),
       path.basename(agentDir),
@@ -42,6 +46,7 @@ export class AgentStore {
     this._triggerStore = new TriggerStore(agentDir, logger);
   }
 
+  private readonly storage?: ProjectStorageOptions;
   private fileWriteMutex?: FileWriteMutex;
   private readonly onSessionChange?: (payload: SessionChangePayload) => void;
 
@@ -98,14 +103,21 @@ export class AgentStore {
     return this._profileStore;
   }
 
-  get sessions(): SessionStore {
+  get sessions(): SessionStorePort {
     if (!this._sessionStore) {
-      this._sessionStore = new SessionStore(
-        path.join(this.agentDir, "sessions.db"),
-        this.agentId,
-        this.logger,
-        this.onSessionChange,
-      );
+      this._sessionStore = this.storage?.sessionStoreFactory
+        ? this.storage.sessionStoreFactory({
+            agentId: this.agentId,
+            agentDir: this.agentDir,
+            logger: this.logger,
+            onSessionChange: this.onSessionChange,
+          })
+        : new SqliteSessionStore(
+            path.join(this.agentDir, "sessions.db"),
+            this.agentId,
+            this.logger,
+            this.onSessionChange,
+          );
     }
     return this._sessionStore;
   }
@@ -128,9 +140,11 @@ export class AgentStore {
     return this._mcpStore;
   }
 
-  get memory(): MemoryStore {
+  get memory(): MemoryStorePort {
     if (!this._memoryStore) {
-      this._memoryStore = new MemoryStore(this.agentDir, this.logger);
+      this._memoryStore = this.storage?.memoryStoreFactory
+        ? this.storage.memoryStoreFactory({ agentDir: this.agentDir, logger: this.logger })
+        : new SqliteMemoryStore(this.agentDir, this.logger);
     }
     return this._memoryStore;
   }

@@ -2,7 +2,7 @@ import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import { NotFoundError } from "../errors.js";
 import type { SessionEvent } from "./events.js";
 import { EVENT_SCHEMA_VERSION } from "./events.js";
-import type { SessionStore } from "../store/session.js";
+import type { SessionStorePort } from "../store/session.js";
 
 export interface MigrationResult {
   sessionId: string;
@@ -12,7 +12,7 @@ export interface MigrationResult {
 
 function planLegacyMigration(
   sessionId: string,
-  store: SessionStore,
+  store: SessionStorePort,
 ): SessionEvent[] {
   const latest = store.getLatestCompaction(sessionId);
   const rows = store.getSessionMessagesWithIds(sessionId);
@@ -98,7 +98,7 @@ function messageEventOf(message: AgentMessage, seq: number, time: number): Sessi
 }
 
 export function migrateLegacySession(
-  store: SessionStore,
+  store: SessionStorePort,
   sessionId: string,
 ): MigrationResult {
   const session = store.getSession(sessionId);
