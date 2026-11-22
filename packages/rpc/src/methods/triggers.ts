@@ -1,6 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import { nanoid } from "nanoid";
-import { isValidCron, isReservedEventName, requiresTargetSession } from "@spherse/core";
+import { isValidCron, isReservedEventName, requiresTargetSession } from "@spherse/core/trigger/validation";
 import { schemas, parseContract } from "@spherse/contracts";
 import { RpcAppError, defineRpcMethod } from "../context.js";
 

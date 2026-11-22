@@ -1,5 +1,4 @@
-import { HostServiceKey } from "@spherse/core";
-import type { HostContext } from "@spherse/core";
+import { HostServiceKey, type HostContext } from "@spherse/core/host";
 import type { RpcMethodEntry } from "./context.js";
 
 export function registerRpcMethodGroups(

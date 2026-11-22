@@ -18,7 +18,15 @@
       "types": "./dist/host/index.d.ts",
       "import": "./dist/host/index.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "import": "./dist/errors.js"
+    },
+    "./trigger/validation": {
+      "types": "./dist/trigger/validation.d.ts",
+      "import": "./dist/trigger/validation.js"
+    }
   },
   "scripts": {
     "build": "tsc",

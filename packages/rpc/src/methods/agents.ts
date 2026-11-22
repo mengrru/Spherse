@@ -1,6 +1,6 @@
 import { Type } from "@sinclair/typebox";
 import { schemas, parseContract } from "@spherse/contracts";
-import { ValidationError } from "@spherse/core";
+import { ValidationError } from "@spherse/core/errors";
 import { RpcAppError, defineRpcMethod, type RpcMethodEntry } from "../context.js";
 
 async function mapMemoryError<T>(fn: () => T | Promise<T>): Promise<T> {
