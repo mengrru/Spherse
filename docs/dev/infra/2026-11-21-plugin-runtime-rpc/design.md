@@ -153,7 +153,7 @@ Fastify 反代（`server/src/routes/preview.ts`）承担四职责：URL 命名�
 | P0 | spike：cordis-in-Worker（含 SharedWorker 形态）验证；目标浏览器矩阵定义（SharedWorker/OPFS/SW 最低版本，iOS Safari 重点）与 OPFS 多写者约束验证；CORS 矩阵实测；`@modelcontextprotocol/client` 安装对齐与 browser 面终验 | spike 结论落 docs/dev/investigation（**已完成**：envelope `2026-11-22-rpc-envelope-selection`、cordis-SharedWorker `2026-11-22-cordis-sharedworker-spike`、浏览器矩阵+OPFS+MCP `2026-11-22-browser-matrix`、CORS `2026-11-22-cors-matrix`） |
 | P1 | contracts 增补 RPC/事件/错误码 schema；core 引入 cordis host，capability/store 先行插件化（BackendPort 不动，桌面行为不变） | 全量 verify 通过，桌面行为无回归 |
 | P2 | Fastify RPC transport + 前端切 RPC + 删 REST（routes ~2.0k 行删除、server 非测试源码 ~4.5k 行上移、**~8.4k 行 REST 契约测试重写为 RPC 契约测试——P2 显式交付物**）；事件面 RPC 化（chat replayable + bus live-only，通道语义表落 contracts） | 桌面版全功能回归 + E2E 通过 |
-| P3 | packages/browser 壳 + SharedWorker host + browser store 插件（IndexedDB/OPFS）+ AuthProvider browser 实现；上传走 RPC（Blob 直传 Worker 落 OPFS） | browser 版可跑端到端会话：chat/审批/附件上传可用；资源面功能按 P3 降级定义验收——theme.css 回落默认主题、preview 卡片显示占位、欢迎页/侧板隐藏，不计为失败 |
+| P3 | packages/browser 壳 + SharedWorker host + browser store 插件（IndexedDB/OPFS）+ AuthProvider browser 实现；上传走 RPC（Blob 直传 Worker 落 OPFS） | **已完成（2026-11-23）**：browser 版端到端可用（vitest browser mode 契约测试 + playwright e2e 全绿）；资源面 SW 虚拟路由一并完成（原 P4 前半，按 `2026-11-22-browser-resource-plane` design），preview/theme.css/SDK 注入/Range/白名单/__auth 剥离全通 |
 | P4 | 资源面：SW 虚拟路由（Range/ETag/注入/逃逸防护）+ 桌面 app:// 协议改造 | 双形态 preview/theme.css/上传下载全通 |
 | P5 | 前端插件槽位 + RPC allowlist 权限模型（吸收 SDK op allowlist） | 一个样例前端插件跑通 |
 

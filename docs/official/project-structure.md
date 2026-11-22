@@ -401,6 +401,16 @@ spherse/
 │   │       ├── ui-sdk.spec.ts          # UI SDK postMessage action E2E 测试
 │   │       ├── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
 │   │       └── ui-sdk-bridge.spec.ts   # 注入式 @spherse/sdk 桥接 E2E 测试（window.spherse.* 暴露面 / fire 导航 / call 往返 / api.* HTTP 桥接 resolve+reject / navigate 订阅回放）
+│   ├── browser/                      # @spherse/browser — 浏览器本地版壳（P3：SharedWorker 内跑完整 runtime，无 server 进程）
+│   │   ├── vite.config.ts            # Vite（react + tailwind + `node:path`→`@spherse/core/paths` alias + Node-only 动态目标 external；worker.format es；sw 独立入口固定输出 sw.js）
+│   │   ├── src/
+│   │   │   ├── main.tsx              # 注入 local transport 工厂 + BrowserHostBridge + createAppRoot + SW 注册（生产 /sw.js module）
+│   │   │   ├── host-bridge-browser.tsx # BrowserHostBridge（kind web、baseUrl=origin、project API 走 RPC browser.* / connection.*）
+│   │   │   ├── onboarding.tsx        # 本地项目 onboarding（创建/选择项目，复用 renderConnectPage 槽位）
+│   │   │   ├── client/runtime-transport.ts # RpcSharedWorkerTransport（postMessage 对象帧，structured clone 透传 Blob）
+│   │   │   ├── worker/               # SharedWorker 侧：index（onconnect）+ rpc-app（RpcContext 组装/端口适配）+ registry（OPFS 持久注册表 + assembleProjectCore + OPFS/IDB storage 注入）+ model-settings + bus（trigger/agent/session 三通道）+ methods/（browser 版 content/settings/skills/attachments + browser.createProject）
+│   │   │   └── sw/index.ts           # 资源面 SW：拦截 /api/projects/:id/preview/*（__auth 剥离、SDK 保留路由、HTML 注入、Range/ETag、白名单 403、OPFS 读）
+│   │   └── e2e/                      # playwright chromium e2e（真实 SW/OPFS/SharedWorker：壳冒烟 + 资源面断言集）
 │   ├── web/                          # @spherse/web — Web 版本壳 / 移动端 PWA（GitHub Pages：prod 部署到 /web/ 随发版，dev 分支部署到 /dev/web/；构建产物路径无关，`WEB_ENV=dev` 注入 manifest/title Dev 标识）
 │   │   ├── vite.config.ts            # Vite + vite-plugin-pwa（manifest + generateSW app shell precache）+ manualChunks（vendor-react/vendor-markdown）
 │   │   ├── index.html                # 入口 HTML（theme-color / apple-mobile-web-app / viewport-fit=cover 元数据）

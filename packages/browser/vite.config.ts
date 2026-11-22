@@ -39,6 +39,10 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, "./index.html"),
+        sw: resolve(__dirname, "./src/sw/index.ts"),
+      },
+      output: {
+        entryFileNames: (chunk) => (chunk.name === "sw" ? "sw.js" : "assets/[name]-[hash].js"),
       },
       external: (id) =>
         id === "@modelcontextprotocol/client/stdio" ||
