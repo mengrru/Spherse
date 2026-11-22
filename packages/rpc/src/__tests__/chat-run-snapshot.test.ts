@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RunSnapshot } from "../chat/chat-run-snapshot.js";
+import { RunSnapshot } from "../chat-run-snapshot.js";
 
 const start = { type: "message_start", message: { role: "assistant" }, messageId: "m1" };
 const update = (text: string) => ({

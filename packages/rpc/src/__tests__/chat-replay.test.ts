@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { detectOpenTurn, replayHandshake } from "../chat/chat-replay.js";
+import { detectOpenTurn, replayHandshake } from "../chat-replay.js";
 
 interface FakeEvent {
   type: string;

@@ -5,10 +5,10 @@ import {
   parseChatClientMessage,
   parseChatServerEvent,
 } from "@spherse/contracts";
-import { classifyRunError } from "./classify-run-error.js";
-import type { ChatSessionAttachment } from "./chat-channel.js";
+import { classifyRunError } from "@spherse/rpc/chat";
+import type { ChatSessionAttachment } from "@spherse/rpc/chat";
 import type { ProjectRegistry } from "../registry.js";
-import type { ChatSessionHub } from "./chat-session-hub.js";
+import type { ChatSessionHub } from "@spherse/rpc/chat";
 
 const validateOutbound = process.env.SPHERSE_VALIDATE_WS === "1";
 

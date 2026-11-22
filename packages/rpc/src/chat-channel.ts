@@ -3,8 +3,7 @@ import {
   type Attachment,
   type SessionManager,
 } from "@spherse/core";
-import type { FastifyBaseLogger } from "fastify";
-import { ChannelClosedError } from "../errors.js";
+import { ChannelClosedError } from "./chat-errors.js";
 import { classifyRunError } from "./classify-run-error.js";
 import { detectOpenTurn, replayHandshake } from "./chat-replay.js";
 import { RunSnapshot } from "./chat-run-snapshot.js";
@@ -45,7 +44,7 @@ export class ChatChannel {
 
   private constructor(
     private readonly runtime: SessionManager,
-    private readonly logger: FastifyBaseLogger,
+    private readonly logger: import("./context.js").RpcLogger,
     readonly agentId: string,
     readonly sessionId: string,
     private readonly dispose: () => void,
@@ -53,7 +52,7 @@ export class ChatChannel {
 
   static open(
     runtime: SessionManager,
-    logger: FastifyBaseLogger,
+    logger: import("./context.js").RpcLogger,
     agentId: string,
     sessionId: string,
     dispose: () => void,

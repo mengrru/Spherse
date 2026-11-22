@@ -1,6 +1,5 @@
 import type { SessionManager } from "@spherse/core";
-import type { FastifyBaseLogger } from "fastify";
-import { RuntimeClosedError } from "../errors.js";
+import { RuntimeClosedError } from "./chat-errors.js";
 import { ChatChannel, type ChannelCloseReason, type ChatSessionAttachment } from "./chat-channel.js";
 
 type Subscriber = (event: unknown) => void;
@@ -10,7 +9,7 @@ export class ChatSessionHub {
   private readonly closedRuntimes = new WeakSet<SessionManager>();
   private closed = false;
 
-  constructor(private readonly logger: FastifyBaseLogger) {}
+  constructor(private readonly logger: import("./context.js").RpcLogger) {}
 
   attach(
     runtime: SessionManager,

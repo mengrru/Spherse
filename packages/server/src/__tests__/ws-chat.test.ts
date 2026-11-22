@@ -7,7 +7,7 @@ import {
 } from "@spherse/core";
 
 import { handleChatWebSocket } from "../chat/ws-chat.js";
-import { ChatSessionHub } from "../chat/chat-session-hub.js";
+import { ChatSessionHub } from "@spherse/rpc/chat";
 import { CHAT_CLOSE_CODES } from "@spherse/contracts";
 
 interface MockSocket {

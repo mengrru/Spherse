@@ -21,6 +21,14 @@
     "./host": {
       "types": "./dist/host.d.ts",
       "import": "./dist/host.js"
+    },
+    "./chat": {
+      "types": "./dist/chat.d.ts",
+      "import": "./dist/chat.js"
+    },
+    "./chat-wire-projector": {
+      "types": "./dist/chat-wire-projector.d.ts",
+      "import": "./dist/chat-wire-projector.js"
     }
   },
   "scripts": {

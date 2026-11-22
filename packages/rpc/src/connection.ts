@@ -47,14 +47,18 @@ export class RpcConnectionHandler {
     return this.subscriptions.get(chatScope(projectId, agentId, sessionId));
   }
 
-  onMessage(raw: string | Uint8Array): void {
-    const text = typeof raw === "string" ? raw : new TextDecoder().decode(raw);
+  onMessage(raw: string | Uint8Array | object): void {
     let parsed: unknown;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      this.logger.debug({ raw: text.slice(0, 200) }, "rpc frame is not json");
-      return;
+    if (typeof raw === "object" && raw !== null && !(raw instanceof Uint8Array)) {
+      parsed = raw;
+    } else {
+      const text = typeof raw === "string" ? raw : new TextDecoder().decode(raw);
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        this.logger.debug({ raw: text.slice(0, 200) }, "rpc frame is not json");
+        return;
+      }
     }
     let frame;
     try {

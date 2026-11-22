@@ -10,7 +10,7 @@ import {
   type HubMock,
   type RpcHarness,
 } from "@spherse/rpc/testing";
-import { ChatSessionHub } from "../chat/chat-session-hub.js";
+import { ChatSessionHub } from "@spherse/rpc/chat";
 
 const SESSION = { projectId: "p1", agentId: "a1", sessionId: "s1" };
 const SCOPE = "chat:p1:a1:s1";

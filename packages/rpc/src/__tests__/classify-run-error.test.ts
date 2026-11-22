@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { ModelNotConfiguredError, ConflictError, ValidationError } from "@spherse/core";
 import { ErrorEventCode } from "@spherse/contracts";
-import { classifyRunError } from "../chat/classify-run-error.js";
-import { ChannelClosedError, RuntimeClosedError } from "../errors.js";
+import { classifyRunError } from "../classify-run-error.js";
+import { ChannelClosedError, RuntimeClosedError } from "../chat-errors.js";
 
 describe("classifyRunError", () => {
   it("classifies ModelNotConfiguredError", () => {

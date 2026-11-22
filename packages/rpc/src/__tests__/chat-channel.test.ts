@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { ChatSessionHub } from "../chat/chat-session-hub.js";
-import { ChatChannel } from "../chat/chat-channel.js";
+import { ChatSessionHub } from "../chat-session-hub.js";
+import { ChatChannel } from "../chat-channel.js";
 
 function createRuntime() {
   let logListener: ((event: any) => void) | undefined;
