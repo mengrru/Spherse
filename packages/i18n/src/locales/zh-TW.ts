@@ -728,6 +728,7 @@ export const zhTW: Record<TranslationKey, string> = {
   "web-version.reload": "重新整理頁面",
   "web-version.clearing": "正在清除快取並更新...",
   "web-version.dismiss": "暫不升級，繼續使用",
+  "web-version.updateNow": "立即更新",
   "web-version.patchWarning": "桌面端版本（{appVersion}）與網頁版（{webVersion}）略有差異，如遇異常請升級桌面端",
   "web-version.unknownWarning": "無法確認桌面端版本，如遇異常請升級桌面端",
 

@@ -728,6 +728,7 @@ export const en: Record<TranslationKey, string> = {
   "web-version.reload": "Refresh page",
   "web-version.clearing": "Clearing cache and updating...",
   "web-version.dismiss": "Continue without upgrading",
+  "web-version.updateNow": "Update now",
   "web-version.patchWarning": "Desktop app version ({appVersion}) differs slightly from the web client ({webVersion}). If anything looks wrong, please upgrade the desktop app.",
   "web-version.unknownWarning": "Unable to detect the desktop app version. If anything looks wrong, please upgrade the desktop app.",
 

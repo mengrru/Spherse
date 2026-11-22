@@ -32,7 +32,8 @@ generateSW 模式下经 `workbox.importScripts` 引入的自定义消息处理�
 ### UI 入口
 
 - **Settings → 关于/版本区块**（`UpdateChecker.tsx`）：web host（`bridge.kind === "web"`）显示「清除缓存并更新」按钮，点击进入 busy 态（「正在清除缓存...」），完成后页面 reload。桌面端不显示。
-- **VersionBlockOverlay**：「刷新页面」按钮升级为同一深度刷新流程（busy 态「正在清除缓存并更新...」），修复旧 precache 刷不掉的问题。
+- **VersionBlockOverlay**：「刷新页面」按钮升级为同一深度刷新流程（busy 态「正在清除缓存并更新...」，其余按钮 busy 中禁用），修复旧 precache 刷不掉的问题。
+- **patch-mismatch toast**（`version-guard.tsx`）：web 版本落后于桌面端（`isWebOutdated`，新增于 `version-compat.ts`）时，toast 附「立即更新」action（10s 展示），点击走同一深度刷新；web 更新时维持原「升级桌面端」提示不加按钮（清缓存无助）。incompatible overlay 与 unknown toast 不另加入口（前者已有深度刷新按钮，后者清缓存无法解决服务端版本未知）。
 
 helper 放 `packages/app`（app 无法反向依赖 web；helper 本身是纯 DOM API，任何 host 可用），经 package exports 子路径 `@spherse/app/pwa-update` 供 web 壳复用。
 
@@ -52,6 +53,8 @@ helper 放 `packages/app`（app 无法反向依赖 web；helper 本身是纯 DOM
 - `packages/web/vite.config.ts`：workbox 增加 `cleanupOutdatedCaches: true`、`importScripts: ["sw-update-handler.js"]`。
 - `packages/app/package.json`：新增 exports 子路径 `./pwa-update`。
 - `packages/app/src/features/settings/UpdateChecker.tsx`：web host「清除缓存并更新」按钮。
+- `packages/app/src/lib/version-compat.ts`：新增 `isWebOutdated`（app 版本严格新于 web 即 web 缓存可更新）及测试。
+- `packages/web/src/version-guard.tsx`：patch-mismatch 且 web 落后时 toast 附「立即更新」action 走深度刷新。
 - `packages/web/src/version-block-overlay.tsx`：刷新按钮升级为深度刷新。
-- `packages/i18n` 三语 locale：`settings.about.clearCacheUpdate` / `settings.about.clearingCache` / `web-version.clearing`。
+- `packages/i18n` 三语 locale：`settings.about.clearCacheUpdate` / `settings.about.clearingCache` / `web-version.clearing` / `web-version.updateNow`。
 - `eslint.config.js`：为 SW 脚本声明 `globals.serviceworker` 作用域。

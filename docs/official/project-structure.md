@@ -402,7 +402,7 @@ spherse/
 │   │   └── src/                      # Web 版本专属源码
 │   │       ├── main.tsx              # 注入 WebHostBridge 调 createAppRoot
 │   │       ├── host-bridge-web.tsx   # HostBridge 的 Web 实现（HTTP+localStorage 子集：prefs 走 spherse:prefs 并迁移旧 spherse:settings、token 探活、clearConnection 断开清理）
-│   │       ├── version-guard.tsx     # web 版本协商（对比 server /api/connection/info 的 appVersion 与 __SPHERSE_WEB_VERSION__，incompatible 挂拦截层）
+│   │       ├── version-guard.tsx     # web 版本协商（对比 server /api/connection/info 的 appVersion 与 __SPHERSE_WEB_VERSION__：incompatible 挂拦截层；patch-mismatch 且 web 落后（isWebOutdated）时 toast 附「立即更新」深度刷新）
 │   │       ├── version-block-overlay.tsx # 版本不兼容拦截层（「刷新页面」走 pwa-update 深度刷新清缓存重建 SW；重新连接清 localStorage）
 │   │       └── pages/
 │   │           ├── MobileConnectPage.tsx # 连接页 shell（模式切换、连接流程、URL 参数自动连接、connecting 态）
