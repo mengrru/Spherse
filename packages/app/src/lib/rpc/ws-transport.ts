@@ -14,7 +14,9 @@ export class RpcWsTransport implements RpcTransport {
   private readonly connection: WsConnection;
   private readonly frameHandlers = new Set<(frame: RpcServerFrame) => void>();
   private readonly closedHandlers = new Set<() => void>();
+  private readonly reopenHandlers = new Set<() => void>();
   private notifiedClosed = false;
+  private openedOnce = false;
 
   constructor(options: RpcWsTransportOptions) {
     this.connection = new WsConnection(
@@ -48,6 +50,14 @@ export class RpcWsTransport implements RpcTransport {
           for (const handler of this.frameHandlers) handler(frame);
         },
         onStateChange: ({ state }) => {
+          if (state === "open") {
+            if (this.openedOnce) {
+              for (const handler of this.reopenHandlers) handler();
+            }
+            this.openedOnce = true;
+            this.notifiedClosed = false;
+            return;
+          }
           if (state === "closed" || state === "failed" || state === "fatal") {
             if (this.notifiedClosed) return;
             this.notifiedClosed = true;
@@ -74,6 +84,11 @@ export class RpcWsTransport implements RpcTransport {
   onClosed(handler: () => void): () => void {
     this.closedHandlers.add(handler);
     return () => this.closedHandlers.delete(handler);
+  }
+
+  onReopen(handler: () => void): () => void {
+    this.reopenHandlers.add(handler);
+    return () => this.reopenHandlers.delete(handler);
   }
 
   close(): void {

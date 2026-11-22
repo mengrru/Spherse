@@ -6,8 +6,12 @@ import { createSessionRecovery, type SessionRecovery } from "./session-recovery"
 import {
   createSessionLink,
   type SessionLink,
+  type SessionLinkHandlers,
   type SessionLinkParams,
 } from "./session-link";
+import { createRpcSessionLink } from "./session-link-rpc";
+import { isRpcClientEnabled } from "../../../lib/rpc/enabled";
+import { getSharedRpcClient } from "../../../lib/rpc/shared";
 import type { ChatSessionState } from "./session-state";
 
 interface SessionLinkRecord {
@@ -64,7 +68,7 @@ export function createSessionLifecycle(
     }
 
     const record: SessionLinkRecord = { link: undefined as unknown as SessionLink, params };
-    const link = createSessionLink(() => record.params, {
+    const linkHandlers: SessionLinkHandlers = {
       onOpen: (since) => {
         recoveries.get(sessionId)?.onOpen(since);
         deps.onLinkOpen(sessionId);
@@ -99,7 +103,14 @@ export function createSessionLifecycle(
         return session.cursor;
       },
       isAttached: () => (host.getSession(sessionId)?.attachedCount ?? 0) > 0,
-    });
+    };
+    const link = isRpcClientEnabled()
+      ? createRpcSessionLink(
+          () => record.params,
+          linkHandlers,
+          () => getSharedRpcClient(record.params.baseUrl, record.params.accessToken),
+        )
+      : createSessionLink(() => record.params, linkHandlers);
     record.link = link;
 
     const recovery = createSessionRecovery({

@@ -11,6 +11,16 @@ type PendingEntry = {
 
 export type RpcEventHandler = (event: RpcEventFrame) => void;
 
+export class RpcCallError extends Error {
+  constructor(
+    message: string,
+    readonly code: number,
+    readonly data?: unknown,
+  ) {
+    super(message);
+  }
+}
+
 export interface SubscribeOptions {
   since?: number;
 }
@@ -22,16 +32,26 @@ export class RpcClient {
   private readonly eventHandlers = new Map<string, Set<RpcEventHandler>>();
   private readonly activeSubs = new Map<string, SubscribeOptions>();
   private closed = false;
+  private readonly reopenHandlers = new Set<() => void>();
   private readonly frameHandler: (frame: RpcServerFrame) => void;
   private readonly closedHandler: () => void;
   private readonly removeFrameListener: () => void;
   private readonly removeClosedListener: () => void;
+  private readonly removeReopenListener: (() => void) | undefined;
 
   constructor(private readonly transport: RpcTransport) {
     this.frameHandler = (frame) => this.handleFrame(frame);
     this.closedHandler = () => this.handleClosed();
     this.removeFrameListener = transport.onFrame(this.frameHandler);
     this.removeClosedListener = transport.onClosed(this.closedHandler);
+    this.removeReopenListener = transport.onReopen?.(() => {
+      for (const handler of this.reopenHandlers) handler();
+    });
+  }
+
+  onReopen(handler: () => void): () => void {
+    this.reopenHandlers.add(handler);
+    return () => this.reopenHandlers.delete(handler);
   }
 
   connect(): Promise<void> {
@@ -112,6 +132,7 @@ export class RpcClient {
     this.closed = true;
     this.removeFrameListener();
     this.removeClosedListener();
+    this.removeReopenListener?.();
     this.failPending(new Error("rpc client disposed"));
     this.eventHandlers.clear();
     this.activeSubs.clear();
@@ -146,7 +167,14 @@ export class RpcClient {
       if (frame.ok) {
         call.resolve(frame.data);
       } else {
-        call.reject(new Error(frame.error?.message ?? "rpc call failed"));
+        const error = frame.error;
+        call.reject(
+          new RpcCallError(
+            error?.message ?? "rpc call failed",
+            error?.code ?? -32603,
+            error?.data,
+          ),
+        );
       }
       return;
     }

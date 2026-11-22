@@ -132,6 +132,31 @@ const remove = defineRpcMethod(
   },
 );
 
+const status = defineRpcMethod(
+  Type.Object({ projectId: Type.String(), agentId: Type.String(), sessionId: Type.String() }),
+  (params, ctx) => {
+    const { sessionRuntime } = ctx.resolveProject(params.projectId);
+    return parseContract(
+      schemas.sessionStatus,
+      sessionRuntime.getSessionStatus(params.agentId, params.sessionId),
+    );
+  },
+);
+
+const sendMessage = defineRpcMethod(
+  Type.Object({
+    projectId: Type.String(),
+    agentId: Type.String(),
+    sessionId: Type.String(),
+    content: Type.String({ minLength: 1 }),
+  }),
+  async (params, ctx) => {
+    const project = ctx.resolveProject(params.projectId);
+    await ctx.hub.startDetachedRun(project.sessionRuntime, params.agentId, params.sessionId, params.content);
+    return parseContract(schemas.okResponse, { ok: true });
+  },
+);
+
 export const sessionMethods: Record<string, ReturnType<typeof defineRpcMethod>> = {
   "sessions.listProject": listProject,
   "sessions.search": search,
@@ -142,4 +167,6 @@ export const sessionMethods: Record<string, ReturnType<typeof defineRpcMethod>> 
   "sessions.messagesPage": messagesPage,
   "sessions.rename": rename,
   "sessions.delete": remove,
+  "sessions.status": status,
+  "sessions.sendMessage": sendMessage,
 };

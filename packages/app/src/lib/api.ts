@@ -46,7 +46,7 @@ import type {
 import { parseApiResponse, schemas } from "@spherse/contracts";
 import { Type } from "@sinclair/typebox";
 
-const attachmentUploadResponse = Type.Object({
+export const attachmentUploadResponse = Type.Object({
   type: Type.Literal("image"),
   path: Type.String(),
   width: Type.Optional(Type.Number()),
@@ -90,7 +90,7 @@ function encodePathSegments(filePath: string): string {
   return filePath.split("/").map(encodeURIComponent).join("/");
 }
 
-function createAuthedFetch(accessToken?: string | null) {
+export function createAuthedFetch(accessToken?: string | null) {
   const authHeaders: Record<string, string> | undefined = accessToken
     ? { Authorization: `Bearer ${accessToken}` }
     : undefined;

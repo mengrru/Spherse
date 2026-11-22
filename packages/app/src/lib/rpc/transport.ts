@@ -5,5 +5,6 @@ export interface RpcTransport {
   send(frame: RpcClientFrame): void;
   onFrame(handler: (frame: RpcServerFrame) => void): () => void;
   onClosed(handler: () => void): () => void;
+  onReopen?(handler: () => void): () => void;
   close(): void;
 }

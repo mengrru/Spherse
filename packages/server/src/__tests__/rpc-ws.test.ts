@@ -92,8 +92,33 @@ describe("rpc connection handler", () => {
     });
   });
 
-  it("maps unexpected handler failures to internal error", async () => {
+  it("returns session status via sessions.status", async () => {
     const { receive, sent, known } = createHandler();
+    (
+      known.sessionRuntime.getSessionStatus as ReturnType<typeof vi.fn>
+    ).mockReturnValue({ currentTokens: 0, contextWindowLimit: null });
+    receive({ type: "call", id: 7, method: "sessions.status", params: { projectId: "p1", agentId: "a", sessionId: "s" } });
+    await flush();
+    expect(known.sessionRuntime.getSessionStatus).toHaveBeenCalledWith("a", "s");
+    expect(sent()[0]).toMatchObject({ type: "result", id: 7, ok: true, data: { currentTokens: 0 } });
+  });
+
+  it("runs a detached send via sessions.sendMessage and the hub", async () => {
+    const { receive, sent, hubMock } = createHandler();
+    receive({
+      type: "call",
+      id: 8,
+      method: "sessions.sendMessage",
+      params: { projectId: "p1", agentId: "a", sessionId: "s", content: "hello" },
+    });
+    await flush();
+    expect(hubMock.attach).not.toHaveBeenCalled();
+    expect((hubMock.hub as unknown as { startDetachedRun: ReturnType<typeof vi.fn> }).startDetachedRun)
+      .toHaveBeenCalledWith(expect.anything(), "a", "s", "hello");
+    expect(sent()[0]).toMatchObject({ type: "result", id: 8, ok: true, data: { ok: true } });
+  });
+
+  it("maps unexpected handler failures to internal error", async () => {    const { receive, sent, known } = createHandler();
     (known.projectManager.listProjectSessions as ReturnType<typeof vi.fn>).mockImplementation(
       () => {
         throw new Error("boom");

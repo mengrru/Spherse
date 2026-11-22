@@ -42,7 +42,10 @@ export function createFakeProjectCtx(
       getSessionHistory: vi.fn(() => []),
       getRecentSessionHistory: vi.fn(() => ({ entries: [], hasMore: false, oldestId: null })),
     },
-    sessionRuntime: { createSession: vi.fn().mockResolvedValue("s1") },
+    sessionRuntime: {
+      createSession: vi.fn().mockResolvedValue("s1"),
+      getSessionStatus: vi.fn(() => ({ currentTokens: 0, contextWindowLimit: null })),
+    },
     triggerManager: {},
     ...overrides,
   } as unknown as ProjectContextCompat;
@@ -92,7 +95,7 @@ export function createHubMock(): HubMock {
     },
   );
   return {
-    hub: { attach } as unknown as ChatSessionHub,
+    hub: { attach, startDetachedRun: vi.fn(async () => {}) } as unknown as ChatSessionHub,
     attach,
     attachments,
     emit: (ev: unknown) => currentSubscriber?.(ev),
@@ -120,8 +123,7 @@ export interface RpcHarness {
 
 export function createRpcHarness(options: RpcHarnessOptions = {}): RpcHarness {
   const known = options.projectCtx ?? createFakeProjectCtx();
-  const hubMock = options.hubMock ?? createHubMock();
-  const registryBase = {
+  const hubMock = options.hubMock ?? createHubMock();  const registryBase = {
     get: vi.fn((projectId: string) =>
       projectId === UNKNOWN_PROJECT_ID ? undefined : known,
     ),
@@ -148,6 +150,7 @@ export function createRpcHarness(options: RpcHarnessOptions = {}): RpcHarness {
     modelCatalog,
     authRequired: options.authRequired ?? false,
     appVersion: "test",
+    hub: hubMock.hub,
   };
   const dispatcher = new RpcDispatcher({
     methods: new Map<string, RpcMethodEntry>(Object.entries(options.methods ?? {})),

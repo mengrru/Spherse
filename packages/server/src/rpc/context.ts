@@ -12,6 +12,7 @@ import type { ProjectRegistry } from "../registry.js";
 import type { ModelSettingsStore } from "../model-settings.js";
 import type { ProjectContextCompat } from "../registry.js";
 import type { ChatSessionAttachment } from "../chat/chat-channel.js";
+import type { ChatSessionHub } from "../chat/chat-session-hub.js";
 
 export class RpcAppError extends Error {
   constructor(
@@ -30,6 +31,7 @@ export interface RpcContext {
   modelCatalog: ModelCatalog;
   authRequired: boolean;
   appVersion: string | null;
+  hub: ChatSessionHub;
 }
 
 export interface RpcMethodEntry {

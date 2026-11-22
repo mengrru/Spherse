@@ -185,6 +185,7 @@ export function handleRpcWebSocket(
     modelCatalog: options.modelCatalog,
     authRequired: options.authRequired,
     appVersion: getAppVersion() ?? null,
+    hub,
   };
   fastify.get("/ws/rpc", { websocket: true }, (socket) => {
     const dispatcher = new RpcDispatcher({ methods, ctx, logger: fastify.log });
