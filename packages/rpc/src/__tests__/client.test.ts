@@ -54,12 +54,17 @@ function event(scope: string, seq?: number): RpcEventFrame {
   };
 }
 
+async function tick(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 describe("rpc client", () => {
   it("sends call frames with monotonic ids and resolves on result", async () => {
     const transport = new FakeTransport();
     const client = new RpcClient(transport);
     const first = client.call<{ ok: boolean }>("sessions.listProject", { projectId: "p1" });
     const second = client.call("sessions.search", { projectId: "p1", q: "x" });
+    await tick();
     expect(transport.sent).toEqual([
       { type: "call", id: 1, method: "sessions.listProject", params: { projectId: "p1" } },
       { type: "call", id: 2, method: "sessions.search", params: { projectId: "p1", q: "x" } },
@@ -74,6 +79,7 @@ describe("rpc client", () => {
     const transport = new FakeTransport();
     const client = new RpcClient(transport);
     const pending = client.call("sessions.get", { projectId: "p", agentId: "a", sessionId: "s" });
+    await tick();
     transport.emit(result(1, false, undefined, { code: 100, message: "Session not found" }));
     await expect(pending).rejects.toThrow("Session not found");
   });
@@ -97,6 +103,7 @@ describe("rpc client", () => {
     const handler = vi.fn();
     client.onEvent("chat:p:a:s", handler);
     const pending = client.subscribe("chat:p:a:s", { since: 5 });
+    await tick();
     expect(transport.sent).toEqual([{ type: "sub", id: 1, scope: "chat:p:a:s", since: 5 }]);
     transport.emit({
       type: "snapshot",
@@ -111,6 +118,7 @@ describe("rpc client", () => {
     const transport = new FakeTransport();
     const client = new RpcClient(transport);
     const pending = client.subscribe("chat:p:a:s");
+    await tick();
     transport.emit(result(1, false, undefined, { code: -32000, message: "Scope not supported" }));
     await expect(pending).rejects.toThrow("Scope not supported");
   });
@@ -119,9 +127,11 @@ describe("rpc client", () => {
     const transport = new FakeTransport();
     const client = new RpcClient(transport);
     const first = client.subscribe("chat:p:a:s", { since: 2 });
+    await tick();
     transport.emit({ type: "snapshot", id: 1, events: [] });
     await first;
     const all = client.resubscribeAll();
+    await tick();
     expect(transport.sent.slice(-1)).toEqual([
       { type: "sub", id: 2, scope: "chat:p:a:s", since: 2 },
     ]);
@@ -134,6 +144,7 @@ describe("rpc client", () => {
     const client = new RpcClient(transport);
     const call = client.call("sessions.listProject", { projectId: "p" });
     const sub = client.subscribe("chat:p:a:s");
+    await tick();
     transport.emitClosed();
     await expect(call).rejects.toThrow("rpc transport closed");
     await expect(sub).rejects.toThrow("rpc transport closed");
@@ -143,6 +154,7 @@ describe("rpc client", () => {
     const transport = new FakeTransport();
     const client = new RpcClient(transport);
     const call = client.call("sessions.listProject", { projectId: "p" });
+    await tick();
     client.dispose();
     await expect(call).rejects.toThrow("rpc client disposed");
     expect(transport.close).toHaveBeenCalledTimes(1);
@@ -153,5 +165,37 @@ describe("rpc client", () => {
     const transport = new FakeTransport();
     new RpcClient(transport);
     expect(() => transport.emit(result(99, true, {}))).not.toThrow();
+  });
+});
+
+describe("rpc client connect gating", () => {
+  it("defers frames until the transport connect promise resolves", async () => {
+    const transport = new FakeTransport();
+    let releaseConnect: (() => void) | undefined;
+    transport.connect = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseConnect = resolve;
+        }),
+    );
+    const client = new RpcClient(transport);
+    const pending = client.call("sessions.listProject", { projectId: "p" });
+    await tick();
+    expect(transport.sent).toEqual([]);
+    releaseConnect?.();
+    await tick();
+    expect(transport.sent).toMatchObject([{ type: "call", id: 1, method: "sessions.listProject" }]);
+    transport.emit(result(1, true, { ok: true }));
+    await expect(pending).resolves.toEqual({ ok: true });
+  });
+
+  it("rejects calls when connect fails", async () => {
+    const transport = new FakeTransport();
+    transport.connect = vi.fn(async () => {
+      throw new Error("socket failed");
+    });
+    const client = new RpcClient(transport);
+    await expect(client.call("sessions.get")).rejects.toThrow("socket failed");
+    expect(transport.sent).toEqual([]);
   });
 });

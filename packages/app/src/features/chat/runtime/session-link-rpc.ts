@@ -12,6 +12,7 @@ export function createRpcSessionLink(
   let disposed = false;
   let removeEvent: (() => void) | undefined;
   let removeReopen: (() => void) | undefined;
+  let removeClosed: (() => void) | undefined;
 
   const scopeOf = (): string => {
     const params = getParams();
@@ -22,9 +23,13 @@ export function createRpcSessionLink(
     handlers.onFrame(decodeServerFrame({ type: "error", message }));
   };
 
+  const emitState = (state: "connecting" | "open" | "closed"): void => {
+    handlers.onStateChange({ state, attempt: 0, delayMs: 0, closeCode: undefined });
+  };
+
   const subscribe = (): void => {
+    emitState("connecting");
     const rpc = getRpc();
-    const params = getParams();
     const since = handlers.getSince();
     rpc
       .subscribe(scopeOf(), since !== undefined ? { since } : {})
@@ -32,6 +37,7 @@ export function createRpcSessionLink(
         if (disposed) return;
         open = true;
         handlers.onOpen(since);
+        emitState("open");
       })
       .catch((err: unknown) => {
         if (disposed) return;
@@ -40,8 +46,8 @@ export function createRpcSessionLink(
           open = false;
           handlers.onClose();
         }
+        emitState("closed");
       });
-    void params;
   };
 
   const sendCall = (method: string, params: Record<string, unknown>): void => {
@@ -62,7 +68,20 @@ export function createRpcSessionLink(
       removeReopen?.();
       removeReopen = rpc.onReopen(() => {
         if (disposed) return;
+        if (open) {
+          open = false;
+          handlers.onClose();
+        }
         subscribe();
+      });
+      removeClosed?.();
+      removeClosed = rpc.onClosed(() => {
+        if (disposed) return;
+        if (open) {
+          open = false;
+          handlers.onClose();
+        }
+        emitState("closed");
       });
       void rpc.connect().catch(() => {});
       subscribe();
@@ -125,6 +144,7 @@ export function createRpcSessionLink(
       open = false;
       removeEvent?.();
       removeReopen?.();
+      removeClosed?.();
       getRpc().unsubscribe(scopeOf());
     },
     isOpen: () => open,

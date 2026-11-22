@@ -80,6 +80,7 @@ describe("rpc session link", () => {
       getSince: vi.fn(() => 7),
     });
     link.connect();
+    await flush();
     const sub = transport.sent.find((f): f is Extract<typeof f, { type: "sub" }> => f.type === "sub");
     expect(sub).toEqual({ type: "sub", id: 1, scope: "chat:p1:a1:s1", since: 7 });
     if (!sub) throw new Error("sub frame missing");
@@ -103,6 +104,7 @@ describe("rpc session link", () => {
   it("maps client messages to chat methods", async () => {
     const { link, transport } = createHarness();
     link.connect();
+    await flush();
     link.send({ type: "message", content: "hi", clientId: "c1" });
     link.send({ type: "retry" });
     link.send({ type: "withdraw" });
@@ -113,7 +115,14 @@ describe("rpc session link", () => {
       kind: "approval",
       approved: true,
     });
-    link.send({ type: "resolve_control_request", requestId: "r2", kind: "question", answer: "yes" });
+    link.send({
+      type: "resolve_control_request",
+      requestId: "r2",
+      kind: "question",
+      answer: "yes",
+    });
+    await flush();
+    await flush();
     const calls = transport.sent.filter((f) => f.type === "call");
     expect(calls.map((c) => (c as { method: string }).method)).toEqual([
       "chat.send",
@@ -145,9 +154,11 @@ describe("rpc session link", () => {
   it("surfaces call failures as error frames", async () => {
     const { link, transport, handlers } = createHarness();
     link.connect();
+    await flush();
     const call = transport.sent.find((f) => f.type === "call") as { id: number };
     expect(call).toBeUndefined();
     link.send({ type: "message", content: "hi" });
+    await flush();
     const callFrame = transport.sent.find((f) => f.type === "call") as { id: number };
     transport.emit({
       type: "result",
@@ -166,9 +177,11 @@ describe("rpc session link", () => {
         .mockReturnValue(12),
     });
     link.connect();
+    await flush();
     transport.emit({ type: "snapshot", id: 1, events: [] });
     await flush();
     transport.emitReopen();
+    await flush();
     const subs = transport.sent.filter((f) => f.type === "sub");
     expect(subs).toHaveLength(2);
     expect(subs[1]).toMatchObject({ scope: "chat:p1:a1:s1", since: 12 });
@@ -180,9 +193,11 @@ describe("rpc session link", () => {
   it("dispose unsubscribes and stops delivering events", async () => {
     const { link, transport, handlers } = createHarness();
     link.connect();
+    await flush();
     transport.emit({ type: "snapshot", id: 1, events: [] });
     await flush();
     link.dispose();
+    await flush();
     const unsub = transport.sent.find((f) => f.type === "unsub");
     expect(unsub).toMatchObject({ scope: "chat:p1:a1:s1" });
     transport.emit(event("chat:p1:a1:s1", { type: "session_ready", lastSeq: 4, replay: true }));

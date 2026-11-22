@@ -33,6 +33,7 @@ export class RpcClient {
   private readonly activeSubs = new Map<string, SubscribeOptions>();
   private closed = false;
   private readonly reopenHandlers = new Set<() => void>();
+  private readonly closedHandlers = new Set<() => void>();
   private readonly frameHandler: (frame: RpcServerFrame) => void;
   private readonly closedHandler: () => void;
   private readonly removeFrameListener: () => void;
@@ -41,7 +42,10 @@ export class RpcClient {
 
   constructor(private readonly transport: RpcTransport) {
     this.frameHandler = (frame) => this.handleFrame(frame);
-    this.closedHandler = () => this.handleClosed();
+    this.closedHandler = () => {
+      this.failPending(new Error("rpc transport closed"));
+      for (const handler of this.closedHandlers) handler();
+    };
     this.removeFrameListener = transport.onFrame(this.frameHandler);
     this.removeClosedListener = transport.onClosed(this.closedHandler);
     this.removeReopenListener = transport.onReopen?.(() => {
@@ -54,6 +58,11 @@ export class RpcClient {
     return () => this.reopenHandlers.delete(handler);
   }
 
+  onClosed(handler: () => void): () => void {
+    this.closedHandlers.add(handler);
+    return () => this.closedHandlers.delete(handler);
+  }
+
   connect(): Promise<void> {
     return this.transport.connect();
   }
@@ -61,18 +70,22 @@ export class RpcClient {
   call<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {
     if (this.closed) return Promise.reject(new Error("rpc client disposed"));
     const id = this.nextId++;
-    this.transport.send({
-      type: "call",
-      id,
-      method,
-      ...(params !== undefined ? { params } : {}),
-    });
-    return new Promise<T>((resolve, reject) => {
-      this.pendingCalls.set(id, {
-        resolve: (value) => resolve(value as T),
-        reject,
+    return this.withReady(() => {
+      this.transport.send({
+        type: "call",
+        id,
+        method,
+        ...(params !== undefined ? { params } : {}),
       });
-    });
+    }).then(
+      () =>
+        new Promise<T>((resolve, reject) => {
+          this.pendingCalls.set(id, {
+            resolve: (value) => resolve(value as T),
+            reject,
+          });
+        }),
+    );
   }
 
   onEvent(scope: string, handler: RpcEventHandler): () => void {
@@ -92,25 +105,32 @@ export class RpcClient {
     if (this.closed) return Promise.reject(new Error("rpc client disposed"));
     const id = this.nextId++;
     this.activeSubs.set(scope, options);
-    this.transport.send({
-      type: "sub",
-      id,
-      scope,
-      ...(options.since !== undefined ? { since: options.since } : {}),
-    });
-    return new Promise<void>((resolve, reject) => {
-      this.pendingSubs.set(id, { resolve: () => resolve(), reject });
-    });
+    return this.withReady(() => {
+      this.transport.send({
+        type: "sub",
+        id,
+        scope,
+        ...(options.since !== undefined ? { since: options.since } : {}),
+      });
+    }).then(
+      () =>
+        new Promise<void>((resolve, reject) => {
+          this.pendingSubs.set(id, { resolve: () => resolve(), reject });
+        }),
+    );
   }
 
   unsubscribe(scope: string): void {
     if (!this.activeSubs.has(scope)) return;
     this.activeSubs.delete(scope);
     const id = this.nextId++;
-    this.transport.send({ type: "unsub", id, scope });
+    void this.withReady(() => {
+      this.transport.send({ type: "unsub", id, scope });
+    });
   }
 
   async resubscribeAll(): Promise<void> {
+    await this.withReady(() => {});
     await Promise.all(
       [...this.activeSubs.entries()].map(([scope, options]) => {
         const id = this.nextId++;
@@ -125,6 +145,13 @@ export class RpcClient {
         });
       }),
     );
+  }
+
+  private withReady(send: () => void): Promise<void> {
+    return this.transport.connect().then(() => {
+      if (this.closed) throw new Error("rpc client disposed");
+      send();
+    });
   }
 
   dispose(): void {
@@ -184,10 +211,6 @@ export class RpcClient {
     const set = this.eventHandlers.get(event.scope);
     if (!set) return;
     for (const handler of set) handler(event);
-  }
-
-  private handleClosed(): void {
-    this.failPending(new Error("rpc transport closed"));
   }
 
   private failPending(error: Error): void {
