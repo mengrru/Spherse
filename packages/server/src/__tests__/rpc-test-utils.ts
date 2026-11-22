@@ -52,11 +52,21 @@ export interface HubMock {
   hub: ChatSessionHub;
   attach: ReturnType<typeof vi.fn>;
   emit: (ev: unknown) => void;
-  attachments: { close: ReturnType<typeof vi.fn>; ready: Promise<void> }[];
+  attachments: ChatAttachmentMock[];
+}
+
+export interface ChatAttachmentMock {
+  close: ReturnType<typeof vi.fn>;
+  ready: Promise<void>;
+  sendMessage: ReturnType<typeof vi.fn>;
+  retryLastTurn: ReturnType<typeof vi.fn>;
+  withdrawLastTurn: ReturnType<typeof vi.fn>;
+  abort: ReturnType<typeof vi.fn>;
+  resolveControlRequest: ReturnType<typeof vi.fn>;
 }
 
 export function createHubMock(): HubMock {
-  const attachments: HubMock["attachments"] = [];
+  const attachments: ChatAttachmentMock[] = [];
   let currentSubscriber: ((ev: unknown) => void) | undefined;
   const attach = vi.fn(
     (
@@ -67,7 +77,15 @@ export function createHubMock(): HubMock {
       options: { since?: number } | undefined,
     ) => {
       currentSubscriber = subscriber;
-      const attachment = { close: vi.fn(), ready: Promise.resolve() };
+      const attachment: ChatAttachmentMock = {
+        close: vi.fn(),
+        ready: Promise.resolve(),
+        sendMessage: vi.fn(async () => {}),
+        retryLastTurn: vi.fn(async () => {}),
+        withdrawLastTurn: vi.fn(async () => {}),
+        abort: vi.fn(),
+        resolveControlRequest: vi.fn(),
+      };
       attachments.push(attachment);
       void options;
       return attachment as unknown as ChatSessionAttachment;

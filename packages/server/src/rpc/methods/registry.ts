@@ -8,6 +8,7 @@ import { triggerMethods } from "./triggers.js";
 import { debugMethods } from "./debug.js";
 import { skillMethods } from "./skills.js";
 import { marketplaceMethods } from "./marketplace.js";
+import { chatMethods } from "./chat.js";
 
 export function buildMethodRegistry(): Map<string, RpcMethodEntry> {
   const entries: Array<Record<string, RpcMethodEntry>> = [
@@ -20,6 +21,7 @@ export function buildMethodRegistry(): Map<string, RpcMethodEntry> {
     debugMethods,
     skillMethods,
     marketplaceMethods,
+    chatMethods,
   ];
   const methods = new Map<string, RpcMethodEntry>();
   for (const group of entries) {

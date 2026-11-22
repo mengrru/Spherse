@@ -9,6 +9,7 @@ export { triggerMethods } from "./methods/triggers.js";
 export { debugMethods } from "./methods/debug.js";
 export { skillMethods } from "./methods/skills.js";
 export { marketplaceMethods } from "./methods/marketplace.js";
+export { chatMethods } from "./methods/chat.js";
 export { buildMethodRegistry } from "./methods/registry.js";
 export { RpcConnectionHandler, handleRpcWebSocket } from "./ws-rpc.js";
 export type { RpcServerOptions } from "./ws-rpc.js";

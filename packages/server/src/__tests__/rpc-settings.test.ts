@@ -1,4 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { applyModelSettingsToEnv } from "../model-settings.js";
 import { connectionMethods } from "../rpc/methods/connection.js";
 import { settingsMethods } from "../rpc/methods/settings.js";
@@ -8,6 +11,12 @@ import {
   flush,
   type RpcHarness,
 } from "./rpc-test-utils.js";
+
+const alphaRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rpc-settings-alpha-"));
+
+afterAll(() => {
+  fs.rmSync(alphaRoot, { recursive: true, force: true });
+});
 
 vi.mock("../model-settings.js", () => ({
   applyModelSettingsToEnv: vi.fn(),
@@ -56,7 +65,7 @@ const sanitizedSettings = {
 };
 
 const projectInfos = [
-  { id: "p1", name: "alpha", rootPath: "/tmp/alpha", lastOpened: "2026-01-02T00:00:00.000Z" },
+  { id: "p1", name: "alpha", rootPath: alphaRoot, lastOpened: "2026-01-02T00:00:00.000Z" },
   { id: "p2", name: "beta", rootPath: "/tmp/beta" },
 ];
 
@@ -82,7 +91,7 @@ const projectManager = {
   updateWelcomePageSettings: vi.fn(async () => ({ path: "next.md" })),
   getSidePanelSettings: vi.fn(() => ({ path: null })),
   updateSidePanelSettings: vi.fn(async () => ({ path: "panel.md" })),
-  getRootPath: vi.fn(() => "/tmp/alpha"),
+  getRootPath: vi.fn(() => alphaRoot),
   writeFile: vi.fn(async () => {}),
 };
 
@@ -131,7 +140,7 @@ describe("rpc connection methods", () => {
     expect(sent()[0].data).toEqual({
       id: "p1",
       name: "alpha",
-      rootPath: "/tmp/alpha",
+      rootPath: alphaRoot,
       lastOpened: "2026-01-02T00:00:00.000Z",
     });
   });

@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyBaseLogger } from "fastify";
 import type { WebSocket } from "@fastify/websocket";
 import {
+  chatScope,
   parseChatScope,
   parseRpcClientFrame,
   type RpcEventFrame,
@@ -44,6 +45,10 @@ export class RpcConnectionHandler {
     private readonly logger: FastifyBaseLogger,
   ) {}
 
+  chatAttachment(projectId: string, agentId: string, sessionId: string): ChatSessionAttachment | undefined {
+    return this.subscriptions.get(chatScope(projectId, agentId, sessionId));
+  }
+
   onMessage(raw: Buffer): void {
     let parsed: unknown;
     try {
@@ -72,7 +77,7 @@ export class RpcConnectionHandler {
       return;
     }
     void this.dispatcher
-      .dispatchCall(frame, (result) => this.send(result))
+      .dispatchCall(frame, (result) => this.send(result), this)
       .catch((err) => this.logger.error({ err }, "rpc dispatch failed"));
   }
 

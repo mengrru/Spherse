@@ -11,6 +11,7 @@ import type { RpcServerFrame, RpcCallFrame } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import type { ModelSettingsStore } from "../model-settings.js";
 import type { ProjectContextCompat } from "../registry.js";
+import type { ChatSessionAttachment } from "../chat/chat-channel.js";
 
 export class RpcAppError extends Error {
   constructor(
@@ -33,14 +34,25 @@ export interface RpcContext {
 
 export interface RpcMethodEntry {
   params: TSchema;
-  handler(params: unknown, ctx: RpcContext): unknown;
+  handler(params: unknown, ctx: RpcContext, conn: RpcConnectionState): unknown;
+}
+
+export interface RpcConnectionState {
+  chatAttachment(projectId: string, agentId: string, sessionId: string): ChatSessionAttachment | undefined;
 }
 
 export function defineRpcMethod<P extends TSchema>(
   params: P,
-  handler: (params: Static<P>, ctx: RpcContext) => unknown,
+  handler: (params: Static<P>, ctx: RpcContext, conn: RpcConnectionState) => unknown,
 ): RpcMethodEntry {
-  return { params, handler: handler as (params: unknown, ctx: RpcContext) => unknown };
+  return {
+    params,
+    handler: handler as (
+      params: unknown,
+      ctx: RpcContext,
+      conn: RpcConnectionState,
+    ) => unknown,
+  };
 }
 
 function toAppError(err: unknown): RpcAppError {
@@ -66,7 +78,11 @@ export class RpcDispatcher {
     this.logger = options.logger;
   }
 
-  async dispatchCall(frame: RpcCallFrame, send: (frame: RpcServerFrame) => void): Promise<void> {
+  async dispatchCall(
+    frame: RpcCallFrame,
+    send: (frame: RpcServerFrame) => void,
+    conn: RpcConnectionState,
+  ): Promise<void> {
     const entry = this.methods.get(frame.method);
     if (!entry) {
       send({
@@ -92,7 +108,7 @@ export class RpcDispatcher {
       return;
     }
     try {
-      const data = await entry.handler(params, this.ctx);
+      const data = await entry.handler(params, this.ctx, conn);
       send({ type: "result", id: frame.id, ok: true, data });
     } catch (err) {
       const appError = toAppError(err);
