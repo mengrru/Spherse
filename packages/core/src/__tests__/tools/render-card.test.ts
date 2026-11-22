@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { llmAccessPolicy } from "../../access/access-policy.js";
 import { createRenderCardTool } from "../../tools/render-card.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { createTempProject, cleanupDir, writeFile, permissivePolicy } from "../helpers.js";
 
 describe("createRenderCardTool", () => {
@@ -17,7 +18,7 @@ describe("createRenderCardTool", () => {
   });
 
   it("sends card data via onUpdate for inline HTML content", async () => {
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const onUpdate = vi.fn();
     const html = "<h1>Hello World</h1>";
 
@@ -44,7 +45,7 @@ describe("createRenderCardTool", () => {
   });
 
   it("sends card data with custom dimensions", async () => {
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const onUpdate = vi.fn();
 
     await tool.execute(
@@ -62,7 +63,7 @@ describe("createRenderCardTool", () => {
   });
 
   it("sends card data with title", async () => {
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const onUpdate = vi.fn();
 
     await tool.execute(
@@ -78,7 +79,7 @@ describe("createRenderCardTool", () => {
 
   it("reads HTML from file_path", async () => {
     await writeFile(projectRoot, "output/report.html", "<h2>Report</h2>");
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const onUpdate = vi.fn();
 
     const result = await tool.execute(
@@ -99,7 +100,7 @@ describe("createRenderCardTool", () => {
     const imgPath = path.join(projectRoot, "assets/photo.png");
     await fs.mkdir(path.dirname(imgPath), { recursive: true });
     await fs.writeFile(imgPath, pngBytes);
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const onUpdate = vi.fn();
 
     const result = await tool.execute(
@@ -119,7 +120,7 @@ describe("createRenderCardTool", () => {
   });
 
   it("returns error when image file_path does not exist", async () => {
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const onUpdate = vi.fn();
 
     const result = await tool.execute(
@@ -140,7 +141,7 @@ describe("createRenderCardTool", () => {
     await fs.mkdir(path.dirname(imgPath), { recursive: true });
     await fs.writeFile(imgPath, pngBytes);
     const policy = () => llmAccessPolicy(projectRoot, ["secrets"]);
-    const tool = createRenderCardTool(projectRoot, policy);
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), policy);
     const onUpdate = vi.fn();
 
     const result = await tool.execute(
@@ -155,7 +156,7 @@ describe("createRenderCardTool", () => {
   });
 
   it("returns error when neither content nor file_path is provided", async () => {
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const onUpdate = vi.fn();
 
     const result = await tool.execute(
@@ -171,7 +172,7 @@ describe("createRenderCardTool", () => {
   });
 
   it("returns error when file_path does not exist", async () => {
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const onUpdate = vi.fn();
 
     const result = await tool.execute(
@@ -189,7 +190,7 @@ describe("createRenderCardTool", () => {
   it("denies blocked file_path without returning HTML", async () => {
     await writeFile(projectRoot, "secrets/card.html", "<strong>secret</strong>");
     const policy = () => llmAccessPolicy(projectRoot, ["secrets"]);
-    const tool = createRenderCardTool(projectRoot, policy);
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), policy);
     const onUpdate = vi.fn();
 
     const result = await tool.execute(
@@ -205,7 +206,7 @@ describe("createRenderCardTool", () => {
   });
 
   it("rejects path traversal in file_path", async () => {
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
 
     await expect(
       tool.execute(
@@ -219,7 +220,7 @@ describe("createRenderCardTool", () => {
 
   it("prefers file_path over content when both provided", async () => {
     await writeFile(projectRoot, "chart.html", "<canvas></canvas>");
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const onUpdate = vi.fn();
 
     await tool.execute(
@@ -235,7 +236,7 @@ describe("createRenderCardTool", () => {
   });
 
   it("excludes html from return details to avoid context window waste", async () => {
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const html = "<h1>Card</h1>";
 
     const result = await tool.execute(
@@ -257,7 +258,7 @@ describe("createRenderCardTool", () => {
 
   it("excludes html from return details for file_path rendering", async () => {
     await writeFile(projectRoot, "output/report.html", "<h2>Report</h2>");
-    const tool = createRenderCardTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createRenderCardTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
 
     const result = await tool.execute(
       "tc1",

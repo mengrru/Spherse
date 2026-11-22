@@ -165,6 +165,7 @@ export class AgentRunner {
         message,
         attachments,
         this.deps.projectRoot,
+        this.deps.projectStore.getFsPort(),
         this.deps.attachmentProcessors,
       );
       const sanitizedUserMessage = sanitizer

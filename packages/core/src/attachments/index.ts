@@ -1,5 +1,6 @@
 import type { UserMessage } from "@earendil-works/pi-ai";
 import type { AgentEvent } from "@earendil-works/pi-agent-core";
+import type { FsPort } from "../store/fs-port.js";
 
 export interface Attachment {
   type: string;
@@ -16,6 +17,7 @@ export interface AttachmentProcessor {
   readonly type: string;
   preprocess(ctx: {
     projectRoot: string;
+    fsPort: FsPort;
     attachment: Attachment;
   }): Promise<PreparedContentBlock[]>;
 }
@@ -26,6 +28,7 @@ export async function prepareAttachmentUserMessage(
   text: string,
   attachments: ReadonlyArray<Attachment>,
   projectRoot: string,
+  fsPort: FsPort,
   processors: ReadonlyArray<AttachmentProcessor>,
 ): Promise<UserMessage> {
   const byType = new Map(processors.map((p) => [p.type, p]));
@@ -33,7 +36,7 @@ export async function prepareAttachmentUserMessage(
   for (const att of attachments) {
     const proc = byType.get(att.type);
     if (!proc) throw new Error(`Unsupported attachment type: ${att.type}`);
-    blocks.push(...(await proc.preprocess({ projectRoot, attachment: att })));
+    blocks.push(...(await proc.preprocess({ projectRoot, fsPort, attachment: att })));
   }
   return {
     role: "user",

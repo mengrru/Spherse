@@ -158,6 +158,10 @@ export class ProjectStore extends EventEmitter {
     return this.rootPath;
   }
 
+  getFsPort(): FsPort {
+    return this.fsPort;
+  }
+
   listAgents(): AgentProfile[] {
     return [...this._agents.values()]
       .map((a) => a.getProfile())

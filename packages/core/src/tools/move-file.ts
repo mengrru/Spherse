@@ -1,10 +1,9 @@
-import fs from "node:fs/promises";
-import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicyProvider } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+import type { FsPort } from "../store/fs-port.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
 const MoveFileParams = Type.Object({
@@ -14,6 +13,7 @@ const MoveFileParams = Type.Object({
 
 export function createMoveFileTool(
   projectRoot: string,
+  fsPort: FsPort,
   mutex: FileWriteMutex,
   getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof MoveFileParams> {
@@ -27,6 +27,8 @@ export function createMoveFileTool(
     async execute(_toolCallId, params, _signal) {
       const resolvedSource = resolveProjectPath(root, params.source);
       const resolvedDest = resolveProjectPath(root, params.destination);
+      const relSource = path.relative(root, resolvedSource).split(path.sep).join("/");
+      const relDest = path.relative(root, resolvedDest).split(path.sep).join("/");
       const policy = getPolicy();
 
       try {
@@ -47,7 +49,7 @@ export function createMoveFileTool(
         };
       }
 
-      if (!fsSync.existsSync(resolvedSource)) {
+      if ((await fsPort.stat(relSource)) === null) {
         return {
           content: [{ type: "text" as const, text: `Source not found: ${params.source}` }],
           details: { source: params.source, exists: false },
@@ -62,26 +64,26 @@ export function createMoveFileTool(
       }
 
       return mutex.run(resolvedDest, async () => {
-        if (fsSync.existsSync(resolvedDest)) {
+        if ((await fsPort.stat(relDest)) !== null) {
           return {
             content: [{ type: "text" as const, text: `Destination already exists: ${params.destination}` }],
             details: { source: params.source, destination: params.destination, destinationExists: true },
           };
         }
 
-        await fs.mkdir(path.dirname(resolvedDest), { recursive: true });
+        await fsPort.mkdirp(path.posix.dirname(relDest));
 
         try {
-          await fs.rename(resolvedSource, resolvedDest);
+          await fsPort.rename(relSource, relDest);
         } catch (err: unknown) {
           if (err instanceof Error && (err as NodeJS.ErrnoException).code === "EXDEV") {
-            const sourceStat = await fs.stat(resolvedSource);
-            if (sourceStat.isDirectory()) {
-              await fs.cp(resolvedSource, resolvedDest, { recursive: true });
-              await fs.rm(resolvedSource, { recursive: true, force: true });
+            const sourceStat = await fsPort.stat(relSource);
+            if (sourceStat !== null && sourceStat.isDirectory) {
+              await fsPort.copyTree(relSource, relDest);
+              await fsPort.rm(relSource, { recursive: true });
             } else {
-              await fs.copyFile(resolvedSource, resolvedDest);
-              await fs.unlink(resolvedSource);
+              await fsPort.copyFile(relSource, relDest);
+              await fsPort.unlink(relSource);
             }
           } else {
             throw err;

@@ -1,10 +1,9 @@
-import fs from "node:fs/promises";
-import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicyProvider } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+import type { FsPort } from "../store/fs-port.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
 const CopyFileParams = Type.Object({
@@ -14,6 +13,7 @@ const CopyFileParams = Type.Object({
 
 export function createCopyFileTool(
   projectRoot: string,
+  fsPort: FsPort,
   mutex: FileWriteMutex,
   getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof CopyFileParams> {
@@ -27,6 +27,8 @@ export function createCopyFileTool(
     async execute(_toolCallId, params, _signal) {
       const resolvedSource = resolveProjectPath(root, params.source);
       const resolvedDest = resolveProjectPath(root, params.destination);
+      const relSource = path.relative(root, resolvedSource).split(path.sep).join("/");
+      const relDest = path.relative(root, resolvedDest).split(path.sep).join("/");
       const policy = getPolicy();
 
       try {
@@ -47,22 +49,22 @@ export function createCopyFileTool(
         };
       }
 
-      if (!fsSync.existsSync(resolvedSource)) {
+      const sourceStat = await fsPort.stat(relSource);
+      if (sourceStat === null) {
         return {
           content: [{ type: "text" as const, text: `Source not found: ${params.source}` }],
           details: { source: params.source, exists: false },
         };
       }
 
-      const sourceStat = await fs.stat(resolvedSource);
-      if (sourceStat.isDirectory()) {
+      if (sourceStat.isDirectory) {
         return {
           content: [{ type: "text" as const, text: `Source is a directory, copy_file only supports files: ${params.source}` }],
           details: { source: params.source, isDirectory: true },
         };
       }
 
-      if (fsSync.existsSync(resolvedDest)) {
+      if ((await fsPort.stat(relDest)) !== null) {
         return {
           content: [{ type: "text" as const, text: `Destination already exists: ${params.destination}` }],
           details: { source: params.source, destination: params.destination, destinationExists: true },
@@ -70,15 +72,15 @@ export function createCopyFileTool(
       }
 
       return mutex.run(resolvedDest, async () => {
-        if (fsSync.existsSync(resolvedDest)) {
+        if ((await fsPort.stat(relDest)) !== null) {
           return {
             content: [{ type: "text" as const, text: `Destination already exists: ${params.destination}` }],
             details: { source: params.source, destination: params.destination, destinationExists: true },
           };
         }
 
-        await fs.mkdir(path.dirname(resolvedDest), { recursive: true });
-        await fs.copyFile(resolvedSource, resolvedDest);
+        await fsPort.mkdirp(path.posix.dirname(relDest));
+        await fsPort.copyFile(relSource, relDest);
 
         return {
           content: [{ type: "text" as const, text: `Successfully copied ${params.source} to ${params.destination}` }],

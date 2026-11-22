@@ -3,6 +3,7 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import { createImageAttachmentProcessor } from "../../attachments/image-processor.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { attachmentsCapability } from "../../capabilities/attachments/index.js";
 import { AccessDeniedError } from "../../errors.js";
 
@@ -33,6 +34,7 @@ describe("image attachment processor", () => {
 
     const blocks = await processor.preprocess({
       projectRoot: tmpDir,
+      fsPort: new NodeFsPort(tmpDir),
       attachment: {
         type: "image",
         path: ".spherse/attachments/test.png",
@@ -55,6 +57,7 @@ describe("image attachment processor", () => {
     await expect(
       processor.preprocess({
         projectRoot: tmpDir,
+      fsPort: new NodeFsPort(tmpDir),
         attachment: { type: "image", path: "evil.png", mimeType: "image/png" },
       }),
     ).rejects.toBeInstanceOf(AccessDeniedError);
@@ -68,6 +71,7 @@ describe("image attachment processor", () => {
     await expect(
       processor.preprocess({
         projectRoot: tmpDir,
+      fsPort: new NodeFsPort(tmpDir),
         attachment: {
           type: "image",
           path: ".spherse/generated-images/x.png",
@@ -81,6 +85,7 @@ describe("image attachment processor", () => {
     await expect(
       processor.preprocess({
         projectRoot: tmpDir,
+      fsPort: new NodeFsPort(tmpDir),
         attachment: { type: "image", path: "../outside.png", mimeType: "image/png" },
       }),
     ).rejects.toBeInstanceOf(AccessDeniedError);

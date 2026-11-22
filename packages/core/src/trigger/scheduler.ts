@@ -17,7 +17,7 @@ export function getNextCronDate(cron: string, now = Date.now()): Date | null {
 }
 
 export interface TriggerSchedulerDeps {
-  readAll(): TriggerRef[];
+  readAll(): Promise<TriggerRef[]>;
   onDue(ref: TriggerRef): void;
   isRunning(triggerId: string): boolean;
 }
@@ -32,8 +32,8 @@ export class TriggerScheduler {
 
   constructor(private readonly deps: TriggerSchedulerDeps) {}
 
-  onTimeTick(now = Date.now()): void {
-    const refs = this.deps.readAll();
+  async onTimeTick(now = Date.now()): Promise<void> {
+    const refs = await this.deps.readAll();
     this.gc(refs);
 
     for (const ref of refs) {

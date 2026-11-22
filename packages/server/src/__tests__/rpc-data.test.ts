@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createDataStore, FileWriteMutex, type ProjectRuntime } from "@spherse/core";
+import { createDataStore, FileWriteMutex, NodeFsPort, type ProjectRuntime } from "@spherse/core";
 import { callMethod, createFakeProjectCtx, createRpcHarness, type RpcHarness } from "@spherse/rpc/testing";
 import { contentMethods } from "../rpc/methods/content.js";
 import { createSilentLoggerForTests } from "./test-logger.js";
@@ -24,6 +24,7 @@ beforeAll(async () => {
   await fs.writeFile(path.join(tmpDir, "broken.data.json"), "{half");
   const dataStore = createDataStore({
     projectRoot: tmpDir,
+    fsPort: new NodeFsPort(tmpDir),
     fileWriteMutex: new FileWriteMutex(),
     logger: createSilentLoggerForTests(),
   });

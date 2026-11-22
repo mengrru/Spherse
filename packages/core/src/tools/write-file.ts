@@ -1,9 +1,9 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicyProvider } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+import type { FsPort } from "../store/fs-port.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 import { checkJson } from "./json-check.js";
 
@@ -15,6 +15,7 @@ const WriteFileParams = Type.Object({
 
 export function createWriteFileTool(
   projectRoot: string,
+  fsPort: FsPort,
   mutex: FileWriteMutex,
   getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof WriteFileParams> {
@@ -29,6 +30,7 @@ export function createWriteFileTool(
     parameters: WriteFileParams,
     async execute(_toolCallId, params, _signal?: AbortSignal) {
       const resolved = resolveProjectPath(root, params.path);
+      const rel = path.relative(root, resolved).split(path.sep).join("/");
       const createDirs = params.createDirs ?? true;
 
       try {
@@ -57,10 +59,10 @@ export function createWriteFileTool(
         }
 
         if (createDirs) {
-          await fs.mkdir(path.dirname(resolved), { recursive: true });
+          await fsPort.mkdirp(path.posix.dirname(rel));
         }
 
-        await fs.writeFile(resolved, params.content, "utf-8");
+        await fsPort.writeFile(rel, params.content);
 
         return {
           content: [{ type: "text" as const, text: `Successfully wrote ${params.content.length} bytes to ${params.path}` }],

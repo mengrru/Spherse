@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { llmAccessPolicy } from "../../access/access-policy.js";
 import { createSearchContentTool } from "../../tools/search-content.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { createTempProject, cleanupDir, writeFile, permissivePolicy } from "../helpers.js";
 
 describe("createSearchContentTool", () => {
@@ -19,7 +20,7 @@ describe("createSearchContentTool", () => {
   it("finds matching lines across files", async () => {
     await writeFile(projectRoot, "a.txt", "hello world\nfoo bar");
     await writeFile(projectRoot, "b.txt", "hello universe");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { query: "hello" }, undefined as any);
     const text = result.content[0].text as string;
     expect(text).toContain("hello world");
@@ -29,7 +30,7 @@ describe("createSearchContentTool", () => {
 
   it("performs case-insensitive search", async () => {
     await writeFile(projectRoot, "a.txt", "Hello World");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { query: "hello" }, undefined as any);
     expect(result.details?.matches).toBe(1);
   });
@@ -37,7 +38,7 @@ describe("createSearchContentTool", () => {
   it("searches within a subdirectory", async () => {
     await writeFile(projectRoot, "top.txt", "match here");
     await writeFile(projectRoot, "sub/deep.txt", "match deep");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { query: "match", path: "sub" }, undefined as any);
     expect(result.details?.matches).toBe(1);
     expect(result.content[0].text).toContain("deep.txt");
@@ -46,7 +47,7 @@ describe("createSearchContentTool", () => {
   it("filters by includePatterns", async () => {
     await writeFile(projectRoot, "doc.md", "search me");
     await writeFile(projectRoot, "data.json", "search me too");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { query: "search", includePatterns: ["*.md"] },
@@ -60,14 +61,14 @@ describe("createSearchContentTool", () => {
     await writeFile(projectRoot, ".hidden/config", "secret match");
     await writeFile(projectRoot, "node_modules/pkg/index.js", "match in deps");
     await writeFile(projectRoot, "visible.txt", "match visible");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { query: "match" }, undefined as any);
     expect(result.details?.matches).toBe(1);
   });
 
   it("returns no matches message when nothing found", async () => {
     await writeFile(projectRoot, "a.txt", "nothing relevant");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { query: "missing" }, undefined as any);
     expect(result.content[0].text).toContain("No matches found");
     expect(result.details?.matches).toBe(0);
@@ -77,14 +78,14 @@ describe("createSearchContentTool", () => {
     for (let i = 0; i < 110; i++) {
       await writeFile(projectRoot, `file${i}.txt`, `match line`);
     }
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { query: "match" }, undefined as any);
     expect(result.details?.matches).toBe(100);
     expect(result.details?.truncated).toBe(true);
   });
 
   it("returns error for non-existent path", async () => {
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { query: "x", path: "nope" }, undefined as any);
     expect(result.content[0].text).toContain("Path not found");
   });
@@ -93,7 +94,7 @@ describe("createSearchContentTool", () => {
     await writeFile(projectRoot, "secrets/key.md", "needle secret");
     await writeFile(projectRoot, "public.md", "needle public");
     const policy = () => llmAccessPolicy(projectRoot, ["secrets"]);
-    const tool = createSearchContentTool(projectRoot, policy);
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), policy);
 
     const result = await tool.execute("tc1", { query: "needle" }, undefined as any);
     expect(result.content[0].text).toContain("public.md");
@@ -110,7 +111,7 @@ describe("createSearchContentTool", () => {
     await writeFile(projectRoot, ".spherse/agents/bot-abc/sessions.db", "needle in db");
     await writeFile(projectRoot, ".spherse/agents/bot-abc/profile.md", "needle in profile");
     await writeFile(projectRoot, ".spherse/theme.css", "needle in theme");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
 
     const result = await tool.execute("tc1", { query: "needle", path: ".spherse", include_meta: true }, undefined as any);
     const text = result.content[0].text as string;
@@ -122,7 +123,7 @@ describe("createSearchContentTool", () => {
   it("excludes .spherse from search by default (include_meta=false)", async () => {
     await writeFile(projectRoot, ".spherse/theme.css", "needle in theme");
     await writeFile(projectRoot, "notes.txt", "needle in notes");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
 
     const result = await tool.execute("tc1", { query: "needle" }, undefined as any);
     const text = result.content[0].text as string;
@@ -132,7 +133,7 @@ describe("createSearchContentTool", () => {
 
   it("denies searching .spherse directly without include_meta", async () => {
     await writeFile(projectRoot, ".spherse/theme.css", "needle");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
 
     const result = await tool.execute("tc1", { query: "needle", path: ".spherse" }, undefined as any);
     expect(result.details?.denied).toBe(true);
@@ -141,7 +142,7 @@ describe("createSearchContentTool", () => {
 
   it("denies searching .spherse subdirectories without include_meta", async () => {
     await writeFile(projectRoot, ".spherse/agents/bot/profile.md", "needle");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
 
     const result = await tool.execute("tc1", { query: "needle", path: ".spherse/agents" }, undefined as any);
     expect(result.details?.denied).toBe(true);
@@ -151,7 +152,7 @@ describe("createSearchContentTool", () => {
   it("searches .spherse recursively from root when include_meta=true", async () => {
     await writeFile(projectRoot, ".spherse/agents/bot/profile.md", "needle in profile");
     await writeFile(projectRoot, "notes.txt", "needle in notes");
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
 
     const result = await tool.execute("tc1", { query: "needle", include_meta: true }, undefined as any);
     const text = result.content[0].text as string;
@@ -167,7 +168,7 @@ describe("createSearchContentTool", () => {
 
     await writeFile(projectRoot, "notes.txt", "needle in text");
 
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { query: "needle" }, undefined as any);
     const text = result.content[0].text as string;
 
@@ -183,7 +184,7 @@ describe("createSearchContentTool", () => {
     await fs.mkdir(path.dirname(imgPath), { recursive: true });
     await fs.writeFile(imgPath, png);
 
-    const tool = createSearchContentTool(projectRoot, permissivePolicy(projectRoot));
+    const tool = createSearchContentTool(projectRoot, new NodeFsPort(projectRoot), permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { query: "needle" }, undefined as any);
 
     expect(result.details?.matches).toBe(1);

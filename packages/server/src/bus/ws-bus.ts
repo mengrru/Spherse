@@ -50,7 +50,7 @@ class BusConnectionHandler {
           this.logger.debug({ projectId: msg.projectId }, "emit-trigger-event: unknown project");
           return;
         }
-        ctx.triggerManager.onUserEvent(msg.eventName, msg.payload ?? "");
+        void ctx.triggerManager.onUserEvent(msg.eventName, msg.payload ?? "");
         break;
       }
     }

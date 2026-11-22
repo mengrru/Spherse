@@ -54,8 +54,8 @@ describe("AgentStore", () => {
     expect(store.sessions.getSession(id)).not.toBeNull();
   });
 
-  it("triggers getter provides TriggerStore", () => {
-    store.triggers.create({
+  it("triggers getter provides TriggerStore", async () => {
+    await store.triggers.create({
       id: "trig-1",
       enabled: true,
       type: "time",
@@ -66,7 +66,7 @@ describe("AgentStore", () => {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
-    expect(store.triggers.list()).toHaveLength(1);
+    expect(await store.triggers.list()).toHaveLength(1);
   });
 
   it("skills getter provides a SkillStore scoped to the agent dir", async () => {

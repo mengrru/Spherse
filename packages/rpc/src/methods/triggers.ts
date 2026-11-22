@@ -10,24 +10,25 @@ function invalidParams(message: string): RpcAppError {
 
 const list = defineRpcMethod(
   Type.Object({ projectId: Type.String(), agentId: Type.String() }),
-  (params, ctx) => {
+  async (params, ctx) => {
     const { triggerManager } = ctx.resolveProject(params.projectId);
-    const entries = triggerManager.list(params.agentId);
-    return parseContract(
-      schemas.triggerListResponse,
-      entries.map((entry) => ({
+    const entries = await triggerManager.list(params.agentId);
+    const result = [];
+    for (const entry of entries) {
+      result.push({
         ...entry,
-        nextTriggerAt: triggerManager.getNextTrigger(params.agentId, entry.id)?.getTime() ?? null,
-      })),
-    );
+        nextTriggerAt: (await triggerManager.getNextTrigger(params.agentId, entry.id))?.getTime() ?? null,
+      });
+    }
+    return parseContract(schemas.triggerListResponse, result);
   },
 );
 
 const listProject = defineRpcMethod(
   Type.Object({ projectId: Type.String() }),
-  (params, ctx) => {
+  async (params, ctx) => {
     const { triggerManager } = ctx.resolveProject(params.projectId);
-    const triggers = triggerManager.listProject().map(({ agentId, entry, nextTriggerAt }) => ({
+    const triggers = (await triggerManager.listProject()).map(({ agentId, entry, nextTriggerAt }) => ({
       agentId,
       ...entry,
       nextTriggerAt: nextTriggerAt?.getTime() ?? null,
@@ -57,7 +58,7 @@ const create = defineRpcMethod(
     },
     { additionalProperties: false },
   ),
-  (params, ctx) => {
+  async (params, ctx) => {
     if (params.type === "time") {
       if (!params.cron || !isValidCron(params.cron)) {
         throw invalidParams("invalid cron expression");
@@ -90,7 +91,7 @@ const create = defineRpcMethod(
       createdAt: now,
       updatedAt: now,
     };
-    triggerManager.create(params.agentId, entry);
+    await triggerManager.create(params.agentId, entry);
     return parseContract(schemas.triggerEntry, entry);
   },
 );
@@ -120,7 +121,7 @@ const update = defineRpcMethod(
     },
     { additionalProperties: false },
   ),
-  (params, ctx) => {
+  async (params, ctx) => {
     const { projectId, agentId, triggerId, ...data } = params;
     if (data.cron !== undefined && !isValidCron(data.cron)) {
       throw invalidParams("invalid cron expression");
@@ -129,7 +130,7 @@ const update = defineRpcMethod(
       throw invalidParams("eventName cannot use reserved prefix 'sp:'");
     }
     const { triggerManager } = ctx.resolveProject(projectId);
-    const existing = triggerManager.get(agentId, triggerId);
+    const existing = await triggerManager.get(agentId, triggerId);
     if (!existing) throw new RpcAppError(100, "Trigger not found");
     const resolvedMode = data.mode ?? existing.mode;
     const resolvedTarget =
@@ -137,7 +138,7 @@ const update = defineRpcMethod(
     if (requiresTargetSession(resolvedMode, resolvedTarget)) {
       throw invalidParams("targetSessionId is required for existing_session mode");
     }
-    const updated = triggerManager.update(agentId, triggerId, data);
+    const updated = await triggerManager.update(agentId, triggerId, data);
     if (!updated) throw new RpcAppError(100, "Trigger not found");
     return parseContract(schemas.triggerEntry, updated);
   },
@@ -145,34 +146,34 @@ const update = defineRpcMethod(
 
 const remove = defineRpcMethod(
   Type.Object({ projectId: Type.String(), agentId: Type.String(), triggerId: Type.String() }),
-  (params, ctx) => {
+  async (params, ctx) => {
     const { triggerManager } = ctx.resolveProject(params.projectId);
-    triggerManager.delete(params.agentId, params.triggerId);
+    await triggerManager.delete(params.agentId, params.triggerId);
     return parseContract(schemas.okResponse, { ok: true });
   },
 );
 
 const run = defineRpcMethod(
   Type.Object({ projectId: Type.String(), agentId: Type.String(), triggerId: Type.String() }),
-  (params, ctx) => {
+  async (params, ctx) => {
     const { triggerManager } = ctx.resolveProject(params.projectId);
-    const entry = triggerManager.get(params.agentId, params.triggerId);
+    const entry = await triggerManager.get(params.agentId, params.triggerId);
     if (!entry) throw new RpcAppError(100, "Trigger not found");
-    triggerManager.runNow(params.agentId, params.triggerId);
+    await triggerManager.runNow(params.agentId, params.triggerId);
     return parseContract(schemas.okResponse, { ok: true });
   },
 );
 
 const resetBinding = defineRpcMethod(
   Type.Object({ projectId: Type.String(), agentId: Type.String(), triggerId: Type.String() }),
-  (params, ctx) => {
+  async (params, ctx) => {
     const { triggerManager } = ctx.resolveProject(params.projectId);
-    const entry = triggerManager.get(params.agentId, params.triggerId);
+    const entry = await triggerManager.get(params.agentId, params.triggerId);
     if (!entry) throw new RpcAppError(100, "Trigger not found");
     if (entry.mode !== "reusable_session") {
       throw invalidParams("reset-binding only applies to reusable_session triggers");
     }
-    const updated = triggerManager.update(params.agentId, params.triggerId, {
+    const updated = await triggerManager.update(params.agentId, params.triggerId, {
       boundSessionId: undefined,
     });
     if (!updated) throw new RpcAppError(100, "Trigger not found");
@@ -186,20 +187,20 @@ const logs = defineRpcMethod(
     agentId: Type.String(),
     limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
   }),
-  (params, ctx) => {
+  async (params, ctx) => {
     const { triggerManager } = ctx.resolveProject(params.projectId);
     return parseContract(
       schemas.triggerLogListResponse,
-      triggerManager.getRecentLogs(params.agentId, params.limit),
+      await triggerManager.getRecentLogs(params.agentId, params.limit),
     );
   },
 );
 
 const get = defineRpcMethod(
   Type.Object({ projectId: Type.String(), agentId: Type.String(), triggerId: Type.String() }),
-  (params, ctx) => {
+  async (params, ctx) => {
     const { triggerManager } = ctx.resolveProject(params.projectId);
-    const entry = triggerManager.get(params.agentId, params.triggerId);
+    const entry = await triggerManager.get(params.agentId, params.triggerId);
     if (!entry) throw new RpcAppError(100, "Trigger not found");
     return parseContract(schemas.triggerEntry, entry);
   },

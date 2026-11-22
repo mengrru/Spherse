@@ -191,7 +191,7 @@ export async function buildPromptAndTools(
     }),
   );
 
-  const files = await readContextFiles(deps.projectRoot, profile.context, llmPolicyOf(host));
+  const files = await readContextFiles(deps.projectRoot, deps.projectStore.getFsPort(), profile.context, llmPolicyOf(host));
   blocks.push(buildPreloadedContext(files));
 
   for (const capability of deps.capabilities) {

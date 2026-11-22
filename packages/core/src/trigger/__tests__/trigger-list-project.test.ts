@@ -74,15 +74,15 @@ describe("TriggerManager.listProject", () => {
     };
   }
 
-  it("returns an empty list for a project without triggers", () => {
-    expect(triggerManager.listProject()).toEqual([]);
+  it("returns an empty list for a project without triggers", async () => {
+    expect(await triggerManager.listProject()).toEqual([]);
   });
 
-  it("merges triggers across agents with agentId attached", () => {
-    triggerManager.create(agentId, timeEntry("t-a1"));
-    triggerManager.create(otherAgentId, eventEntry("t-b1"));
+  it("merges triggers across agents with agentId attached", async () => {
+    await triggerManager.create(agentId, timeEntry("t-a1"));
+    await triggerManager.create(otherAgentId, eventEntry("t-b1"));
 
-    const result = triggerManager.listProject();
+    const result = await triggerManager.listProject();
 
     expect(result).toHaveLength(2);
     const byId = Object.fromEntries(result.map((item) => [item.entry.id, item]));
@@ -90,11 +90,11 @@ describe("TriggerManager.listProject", () => {
     expect(byId["t-b1"].agentId).toBe(otherAgentId);
   });
 
-  it("computes nextTriggerAt for enabled time triggers and null otherwise", () => {
-    triggerManager.create(agentId, timeEntry("t-time"));
-    triggerManager.create(otherAgentId, eventEntry("t-event"));
+  it("computes nextTriggerAt for enabled time triggers and null otherwise", async () => {
+    await triggerManager.create(agentId, timeEntry("t-time"));
+    await triggerManager.create(otherAgentId, eventEntry("t-event"));
 
-    const result = triggerManager.listProject();
+    const result = await triggerManager.listProject();
     const byId = Object.fromEntries(result.map((item) => [item.entry.id, item]));
 
     expect(byId["t-time"].nextTriggerAt).toBeInstanceOf(Date);
@@ -102,10 +102,10 @@ describe("TriggerManager.listProject", () => {
     expect(byId["t-event"].nextTriggerAt).toBeNull();
   });
 
-  it("returns null nextTriggerAt for disabled time triggers", () => {
-    triggerManager.create(agentId, { ...timeEntry("t-off"), enabled: false });
+  it("returns null nextTriggerAt for disabled time triggers", async () => {
+    await triggerManager.create(agentId, { ...timeEntry("t-off"), enabled: false });
 
-    const [item] = triggerManager.listProject();
+    const [item] = await triggerManager.listProject();
 
     expect(item.nextTriggerAt).toBeNull();
   });

@@ -4,6 +4,7 @@ import type { SamplingParams, ThinkingLevel } from "./types.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import type { ProjectStorageOptions } from "./store/storage-port.js";
 import { ProjectStore } from "./store/project.js";
+import { NodeFsPort } from "./store/node-fs-port.js";
 import { ProjectManager } from "./project-manager.js";
 import { SessionManager } from "./session/session-manager.js";
 import { RunConfigHolder, createRuntimeDeps } from "./session/runtime.js";
@@ -58,8 +59,9 @@ export async function assembleProject(
   const logger = options?.logger ?? createSilentLogger();
 
   const fileWriteMutex = new FileWriteMutex();
-  const projectStore = new ProjectStore(projectRoot, logger, fileWriteMutex, options?.storage);
-  const dataStore = createDataStore({ projectRoot, fileWriteMutex, logger });
+  const fsPort = options?.storage?.fsPort ?? new NodeFsPort(projectRoot);
+  const projectStore = new ProjectStore(projectRoot, logger, fileWriteMutex, { ...options?.storage, fsPort });
+  const dataStore = createDataStore({ projectRoot, fsPort: projectStore.getFsPort(), fileWriteMutex, logger });
 
   let isNewProject = false;
   try {
@@ -78,7 +80,7 @@ export async function assembleProject(
     await initPresets(projectStore, spherseDir, logger);
   }
 
-  const projectManager = new ProjectManager(projectStore, logger, fileWriteMutex);
+  const projectManager = new ProjectManager(projectStore, logger, fileWriteMutex, fsPort);
   const stores = createStoreRegistry(logger);
   const capabilities =
     typeof options?.capabilities === "function"

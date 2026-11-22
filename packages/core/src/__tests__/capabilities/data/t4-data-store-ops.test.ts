@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDataStore } from "../../../capabilities/data/data-store.js";
+import { NodeFsPort } from "../../../store/node-fs-port.js";
 import { FileWriteMutex } from "../../../utils/file-write-mutex.js";
 import { createSilentLogger } from "../../../logger.js";
 import {
@@ -61,7 +62,7 @@ const abs = (f: string) => path.join(dir, f);
 
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "spdata-"));
-  store = createDataStore({ projectRoot: dir, fileWriteMutex: new FileWriteMutex(), logger: createSilentLogger() });
+  store = createDataStore({ projectRoot: dir, fsPort: new NodeFsPort(dir), fileWriteMutex: new FileWriteMutex(), logger: createSilentLogger() });
   events.length = 0;
   store.onChange((e) => events.push(e));
   await fs.writeFile(abs(FILE), JSON.stringify({ $manifest: MANIFEST, todos: [], stats: { hp: 100 } }, null, 2));

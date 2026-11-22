@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { llmAccessPolicy } from "../../access/access-policy.js";
 import { createCopyFileTool } from "../../tools/copy-file.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { FileWriteMutex } from "../../utils/file-write-mutex.js";
 import { createTempProject, cleanupDir, writeFile, readFile, ensureDir, pathExists, permissivePolicy } from "../helpers.js";
 
@@ -19,7 +20,7 @@ describe("createCopyFileTool", () => {
 
   it("copies a file", async () => {
     await writeFile(projectRoot, "src.txt", "content");
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { source: "src.txt", destination: "dest.txt" }, undefined as any);
     expect(result.content[0].text).toContain("Successfully copied");
     expect(await readFile(projectRoot, "dest.txt")).toBe("content");
@@ -28,13 +29,13 @@ describe("createCopyFileTool", () => {
 
   it("creates parent directories for destination", async () => {
     await writeFile(projectRoot, "file.txt", "data");
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     await tool.execute("tc1", { source: "file.txt", destination: "a/b/c/file.txt" }, undefined as any);
     expect(await readFile(projectRoot, "a/b/c/file.txt")).toBe("data");
   });
 
   it("returns error when source does not exist", async () => {
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { source: "nope.txt", destination: "dest.txt" }, undefined as any);
     expect(result.content[0].text).toContain("Source not found");
     expect(result.details?.exists).toBe(false);
@@ -42,7 +43,7 @@ describe("createCopyFileTool", () => {
 
   it("returns error when source is a directory", async () => {
     await ensureDir(projectRoot, "mydir");
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { source: "mydir", destination: "mydir2" }, undefined as any);
     expect(result.content[0].text).toContain("Source is a directory");
     expect(result.details?.isDirectory).toBe(true);
@@ -51,7 +52,7 @@ describe("createCopyFileTool", () => {
   it("returns error when destination already exists", async () => {
     await writeFile(projectRoot, "src.txt", "a");
     await writeFile(projectRoot, "dest.txt", "b");
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { source: "src.txt", destination: "dest.txt" }, undefined as any);
     expect(result.content[0].text).toContain("Destination already exists");
     expect(result.details?.destinationExists).toBe(true);
@@ -59,7 +60,7 @@ describe("createCopyFileTool", () => {
 
   it("returns error when source is denied by access policy", async () => {
     await writeFile(projectRoot, "secrets/key.txt", "secret");
-    const tool = createCopyFileTool(projectRoot, mutex, () => llmAccessPolicy(projectRoot, ["secrets"]));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, () => llmAccessPolicy(projectRoot, ["secrets"]));
     const result = await tool.execute("tc1", { source: "secrets/key.txt", destination: "public/key.txt" }, undefined as any);
     expect(result.content[0].text).toContain("Access denied");
     expect(result.details?.denied).toBe(true);
@@ -68,7 +69,7 @@ describe("createCopyFileTool", () => {
   it("denies copying a file onto AGENTS.md", async () => {
     await writeFile(projectRoot, "src.txt", "content");
     await writeFile(projectRoot, "AGENTS.md", "# Index");
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { source: "src.txt", destination: "AGENTS.md" }, undefined as any);
     expect(result.content[0].text).toContain("Access denied");
     expect(result.content[0].text).toContain("transfer destination");
@@ -78,7 +79,7 @@ describe("createCopyFileTool", () => {
 
   it("denies copying onto AGENTS.md via case variant path", async () => {
     await writeFile(projectRoot, "src.txt", "content");
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { source: "src.txt", destination: "agents.md" }, undefined as any);
     expect(result.content[0].text).toContain("Access denied");
     expect(result.details?.denied).toBe(true);
@@ -86,7 +87,7 @@ describe("createCopyFileTool", () => {
 
   it("copies AGENTS.md to a user file (non-destructive read)", async () => {
     await writeFile(projectRoot, "AGENTS.md", "# Index");
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute("tc1", { source: "AGENTS.md", destination: "notes/index-backup.md" }, undefined as any);
     expect(result.content[0].text).toContain("Successfully copied");
     expect(await readFile(projectRoot, "notes/index-backup.md")).toBe("# Index");
@@ -94,7 +95,7 @@ describe("createCopyFileTool", () => {
   });
 
   it("rejects path traversal on source", async () => {
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     await expect(
       tool.execute("tc1", { source: "../../etc/passwd", destination: "dest.txt" }, undefined as any),
     ).rejects.toThrow("Path traversal denied");
@@ -102,7 +103,7 @@ describe("createCopyFileTool", () => {
 
   it("rejects path traversal on destination", async () => {
     await writeFile(projectRoot, "src.txt", "a");
-    const tool = createCopyFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createCopyFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     await expect(
       tool.execute("tc1", { source: "src.txt", destination: "../../escape.txt" }, undefined as any),
     ).rejects.toThrow("Path traversal denied");

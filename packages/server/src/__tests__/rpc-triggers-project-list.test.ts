@@ -15,7 +15,7 @@ let harness: RpcHarness;
 let listProject: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
-  listProject = vi.fn().mockReturnValue([
+  listProject = vi.fn().mockResolvedValue([
     {
       agentId: "a1",
       entry: {
@@ -94,7 +94,7 @@ describe("triggers.listProject", () => {
   });
 
   it("returns an empty list for projects without triggers", async () => {
-    listProject.mockReturnValue([]);
+    listProject.mockResolvedValue([]);
     const frame = (await callMethod(harness, "triggers.listProject", { projectId: "p1" })) as ResultFrame;
     expect(frame).toMatchObject({ type: "result", ok: true });
     expect(frame.data).toEqual({ ok: true, triggers: [] });

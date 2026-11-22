@@ -1,9 +1,9 @@
-import crypto from "node:crypto";
-import fs from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { FileWriteMutex } from "../../utils/file-write-mutex.js";
 import type { Logger } from "../../logger.js";
+import type { FsPort } from "../../store/fs-port.js";
+import { sha256Hex } from "../../utils/sha256.js";
 import { OutlineCache } from "./outline-cache.js";
 import { buildOutline } from "./outline.js";
 import { checkManifestHealth, readManifestFromDoc } from "./manifest.js";
@@ -39,49 +39,57 @@ interface LoadedDoc {
 
 export interface CreateDataStoreOptions {
   projectRoot: string;
+  fsPort: FsPort;
   fileWriteMutex: FileWriteMutex;
   logger: Logger;
 }
 
 export function createDataStore(opts: CreateDataStoreOptions): DataStore {
   const root = path.resolve(opts.projectRoot);
+  const fsPort = opts.fsPort;
   const mutex = opts.fileWriteMutex;
   const logger = opts.logger;
   const outlineCache = new OutlineCache(64);
   const changeHandlers = new Set<(e: DataChangeEvent) => void>();
   const idempotencyCache = new Map<string, unknown>();
+  const utf8Decoder = new TextDecoder();
+  const utf8Encoder = new TextEncoder();
 
-  function sha256(buf: Buffer): string {
-    return crypto.createHash("sha256").update(buf).digest("hex");
+  function relOf(absPath: string): string {
+    return toPosixRelative(root, absPath);
   }
 
-  function tmpPathFor(absPath: string): string {
-    return path.join(path.dirname(absPath), `.${path.basename(absPath)}.spdata.tmp`);
+  function tmpRelFor(relPath: string): string {
+    const idx = relPath.lastIndexOf("/");
+    const dir = idx === -1 ? "" : relPath.slice(0, idx);
+    const name = idx === -1 ? relPath : relPath.slice(idx + 1);
+    return dir === "" ? `.${name}.spdata.tmp` : `${dir}/.${name}.spdata.tmp`;
   }
 
   async function loadDoc(absPath: string): Promise<LoadedDoc> {
-    let buf: Buffer;
+    const rel = relOf(absPath);
+    let buf: Uint8Array;
     try {
-      buf = await fs.readFile(absPath);
+      buf = await fsPort.readBinaryFile(rel);
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        return { doc: {}, version: sha256(Buffer.alloc(0)), existed: false };
+        return { doc: {}, version: await sha256Hex(new Uint8Array(0)), existed: false };
       }
       throw err;
     }
     if (buf.length > MAX_FILE_SIZE) {
-      throw new Error(`data file exceeds 20MB limit: ${toPosixRelative(root, absPath)}`);
+      throw new Error(`data file exceeds 20MB limit: ${rel}`);
     }
     let parsed: unknown;
     try {
-      parsed = JSON.parse(buf.toString("utf8"));
+      parsed = JSON.parse(utf8Decoder.decode(buf));
     } catch {
-      throw new DataFileCorruptedError(toPosixRelative(root, absPath));
+      throw new DataFileCorruptedError(rel);
     }
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-      throw new DataFileCorruptedError(toPosixRelative(root, absPath));
+      throw new DataFileCorruptedError(rel);
     }
-    return { doc: parsed as Record<string, unknown>, version: sha256(buf), existed: true };
+    return { doc: parsed as Record<string, unknown>, version: await sha256Hex(buf), existed: true };
   }
 
   let pendingEvents: DataChangeEvent[] = [];
@@ -110,19 +118,20 @@ export function createDataStore(opts: CreateDataStoreOptions): DataStore {
     origin: DataOrigin,
     summary?: string,
   ): Promise<string> {
+    const rel = relOf(absPath);
     const content = JSON.stringify(doc, null, 2);
-    const buf = Buffer.from(content, "utf8");
-    if (buf.length > MAX_FILE_SIZE) {
-      throw new Error(`data file exceeds 20MB limit: ${toPosixRelative(root, absPath)}`);
+    const bytes = utf8Encoder.encode(content);
+    if (bytes.length > MAX_FILE_SIZE) {
+      throw new Error(`data file exceeds 20MB limit: ${rel}`);
     }
-    await fs.mkdir(path.dirname(absPath), { recursive: true });
-    const tmp = tmpPathFor(absPath);
-    await fs.writeFile(tmp, buf);
-    await fs.rename(tmp, absPath);
-    const version = sha256(buf);
+    await fsPort.mkdirp(path.posix.dirname(rel));
+    const tmp = tmpRelFor(rel);
+    await fsPort.writeBinaryFile(tmp, bytes);
+    await fsPort.rename(tmp, rel);
+    const version = await sha256Hex(bytes);
     outlineCache.invalidateFile(absPath);
     pendingEvents.push({
-      file: toPosixRelative(root, absPath),
+      file: rel,
       version,
       origin,
       ...(summary !== undefined ? { summary } : {}),
@@ -304,40 +313,41 @@ export function createDataStore(opts: CreateDataStoreOptions): DataStore {
   const store: DataStore = {
     async outline(file): Promise<OutlineResult> {
       const absPath = resolveDataFile(root, file);
+      const rel = relOf(absPath);
       let sizeBytes = 0;
-      let buf: Buffer;
+      let buf: Uint8Array;
       try {
-        buf = await fs.readFile(absPath);
+        buf = await fsPort.readBinaryFile(rel);
         sizeBytes = buf.length;
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-        buf = Buffer.alloc(0);
+        buf = new Uint8Array(0);
       }
       if (buf.length > MAX_FILE_SIZE) {
-        throw new Error(`data file exceeds 20MB limit: ${toPosixRelative(root, absPath)}`);
+        throw new Error(`data file exceeds 20MB limit: ${rel}`);
       }
       let doc: Record<string, unknown> = {};
       let parsed: unknown;
       try {
-        parsed = buf.length > 0 ? JSON.parse(buf.toString("utf8")) : {};
+        parsed = buf.length > 0 ? JSON.parse(utf8Decoder.decode(buf)) : {};
       } catch {
-        throw new DataFileCorruptedError(toPosixRelative(root, absPath));
+        throw new DataFileCorruptedError(rel);
       }
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-        throw new DataFileCorruptedError(toPosixRelative(root, absPath));
+        throw new DataFileCorruptedError(rel);
       }
       doc = parsed as Record<string, unknown>;
-      const version = sha256(buf);
+      const version = await sha256Hex(buf);
 
       const manifest = readManifestFromDoc(doc);
       const health = checkManifestHealth(doc, manifest);
       const cached = outlineCache.get(absPath, version);
       if (cached !== undefined) {
-        return { file: toPosixRelative(root, absPath), sizeBytes, version, outline: cached, health };
+        return { file: rel, sizeBytes, version, outline: cached, health };
       }
-      const outline = buildOutline(doc, { file: toPosixRelative(root, absPath), version, sizeBytes, manifest, health });
+      const outline = buildOutline(doc, { file: rel, version, sizeBytes, manifest, health });
       outlineCache.set(absPath, version, outline);
-      return { file: toPosixRelative(root, absPath), sizeBytes, version, outline, health };
+      return { file: rel, sizeBytes, version, outline, health };
     },
 
     async read(file, opts): Promise<ReadResult> {

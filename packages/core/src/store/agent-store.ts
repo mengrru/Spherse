@@ -52,7 +52,7 @@ export class AgentStore {
       path.join(agentDir, "profile.md"),
       path.basename(agentDir),
     );
-    this._triggerStore = new TriggerStore(agentDir, logger);
+    this._triggerStore = new TriggerStore(fsPort, relAgentDir, logger);
   }
 
   private readonly storage?: ProjectStorageOptions;

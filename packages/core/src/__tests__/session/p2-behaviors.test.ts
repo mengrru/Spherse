@@ -202,9 +202,9 @@ describe("trigger turn metadata (executor → assembled SessionPort → event lo
         createdAt: 0,
         updatedAt: 0,
       };
-      runtime.triggerManager.create(agentId, entry);
-      expect(runtime.triggerManager.get(agentId, "tr-meta")).toMatchObject({ id: "tr-meta" });
-      runtime.triggerManager.runNow(agentId, "tr-meta");
+      await runtime.triggerManager.create(agentId, entry);
+      expect(await runtime.triggerManager.get(agentId, "tr-meta")).toMatchObject({ id: "tr-meta" });
+      await runtime.triggerManager.runNow(agentId, "tr-meta");
 
       let userEntry: { id: number; message: unknown; source?: string; triggerName?: string } | undefined;
       await vi.waitFor(() => {

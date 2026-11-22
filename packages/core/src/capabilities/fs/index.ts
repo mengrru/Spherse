@@ -14,16 +14,17 @@ export function fsCapability(): Capability {
     id: "fs",
     tools: (host) => {
       const { projectRoot, fileWriteMutex } = host;
+      const fsPort = host.projectStore.getFsPort();
       const getPolicy = llmPolicyOf(host);
       return [
-        createReadFileTool(projectRoot, getPolicy),
-        createWriteFileTool(projectRoot, fileWriteMutex, getPolicy),
-        createEditFileTool(projectRoot, fileWriteMutex, getPolicy),
-        createListFilesTool(projectRoot, getPolicy),
-        createSearchContentTool(projectRoot, getPolicy),
-        createMoveFileTool(projectRoot, fileWriteMutex, getPolicy),
-        createCopyFileTool(projectRoot, fileWriteMutex, getPolicy),
-        createGenerateImageTool(projectRoot),
+        createReadFileTool(projectRoot, fsPort, getPolicy),
+        createWriteFileTool(projectRoot, fsPort, fileWriteMutex, getPolicy),
+        createEditFileTool(projectRoot, fsPort, fileWriteMutex, getPolicy),
+        createListFilesTool(projectRoot, fsPort, getPolicy),
+        createSearchContentTool(projectRoot, fsPort, getPolicy),
+        createMoveFileTool(projectRoot, fsPort, fileWriteMutex, getPolicy),
+        createCopyFileTool(projectRoot, fsPort, fileWriteMutex, getPolicy),
+        createGenerateImageTool(projectRoot, fsPort),
       ];
     },
   };

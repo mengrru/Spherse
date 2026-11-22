@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createDataStore } from "../../../capabilities/data/data-store.js";
+import { NodeFsPort } from "../../../store/node-fs-port.js";
 import { FileWriteMutex } from "../../../utils/file-write-mutex.js";
 import { createSilentLogger } from "../../../logger.js";
 import {
@@ -20,7 +21,7 @@ const events: DataChangeEvent[] = [];
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "spdata-"));
   mutex = new FileWriteMutex();
-  store = createDataStore({ projectRoot: dir, fileWriteMutex: mutex, logger: createSilentLogger() });
+  store = createDataStore({ projectRoot: dir, fsPort: new NodeFsPort(dir), fileWriteMutex: mutex, logger: createSilentLogger() });
   events.length = 0;
   store.onChange((e) => events.push(e));
 });

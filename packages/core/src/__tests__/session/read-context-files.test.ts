@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { llmAccessPolicy } from "../../access/access-policy.js";
 import { readContextFiles } from "../../session/read-context-files.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { createTempProject, cleanupDir, writeFile } from "../helpers.js";
 
 describe("readContextFiles", () => {
@@ -15,18 +16,18 @@ describe("readContextFiles", () => {
   });
 
   it("returns empty array when context is empty", async () => {
-    const result = await readContextFiles(projectRoot, []);
+    const result = await readContextFiles(projectRoot, new NodeFsPort(projectRoot), []);
     expect(result).toEqual([]);
   });
 
   it("returns empty array when context is undefined", async () => {
-    const result = await readContextFiles(projectRoot, undefined);
+    const result = await readContextFiles(projectRoot, new NodeFsPort(projectRoot), undefined);
     expect(result).toEqual([]);
   });
 
   it("injects single context file", async () => {
     await writeFile(projectRoot, "world/magic.md", "Magic system content");
-    const result = await readContextFiles(projectRoot, ["world/magic.md"]);
+    const result = await readContextFiles(projectRoot, new NodeFsPort(projectRoot), ["world/magic.md"]);
     expect(result).toHaveLength(1);
     expect(result[0].path).toBe("world/magic.md");
     expect(result[0].content).toBe("Magic system content");
@@ -35,7 +36,7 @@ describe("readContextFiles", () => {
   it("injects multiple context files", async () => {
     await writeFile(projectRoot, "world/magic.md", "Magic content");
     await writeFile(projectRoot, "world/factions.md", "Factions content");
-    const result = await readContextFiles(projectRoot, [
+    const result = await readContextFiles(projectRoot, new NodeFsPort(projectRoot), [
       "world/magic.md",
       "world/factions.md",
     ]);
@@ -48,7 +49,7 @@ describe("readContextFiles", () => {
 
   it("skips non-existent files", async () => {
     await writeFile(projectRoot, "world/exists.md", "Exists");
-    const result = await readContextFiles(projectRoot, [
+    const result = await readContextFiles(projectRoot, new NodeFsPort(projectRoot), [
       "world/exists.md",
       "world/missing.md",
     ]);
@@ -58,7 +59,7 @@ describe("readContextFiles", () => {
   });
 
   it("returns empty array when all files are missing", async () => {
-    const result = await readContextFiles(projectRoot, [
+    const result = await readContextFiles(projectRoot, new NodeFsPort(projectRoot), [
       "nope.md",
       "also-nope.md",
     ]);
@@ -66,7 +67,7 @@ describe("readContextFiles", () => {
   });
 
   it("skips path traversal attempts", async () => {
-    const result = await readContextFiles(projectRoot, [
+    const result = await readContextFiles(projectRoot, new NodeFsPort(projectRoot), [
       "../../../etc/passwd",
     ]);
     expect(result).toEqual([]);
@@ -76,7 +77,7 @@ describe("readContextFiles", () => {
     await writeFile(projectRoot, "secrets/key.md", "secret context");
     const policy = () => llmAccessPolicy(projectRoot, ["secrets"]);
 
-    const result = await readContextFiles(projectRoot, ["secrets/key.md"], policy);
+    const result = await readContextFiles(projectRoot, new NodeFsPort(projectRoot), ["secrets/key.md"], policy);
 
     expect(result).toEqual([]);
   });

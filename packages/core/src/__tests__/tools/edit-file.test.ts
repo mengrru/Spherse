@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { llmAccessPolicy } from "../../access/access-policy.js";
 import { createEditFileTool } from "../../tools/edit-file.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { FileWriteMutex } from "../../utils/file-write-mutex.js";
 import { createTempProject, cleanupDir, writeFile, readFile, permissivePolicy } from "../helpers.js";
 
@@ -19,7 +20,7 @@ describe("createEditFileTool", () => {
 
   it("replaces a single occurrence", async () => {
     await writeFile(projectRoot, "code.ts", "const x = 1;\nconst y = 2;");
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "code.ts", old_string: "const x = 1;", new_string: "const x = 10;" },
@@ -33,7 +34,7 @@ describe("createEditFileTool", () => {
 
   it("edits an existing AGENTS.md", async () => {
     await writeFile(projectRoot, "AGENTS.md", "# Guide\n\nOld rules.");
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "AGENTS.md", old_string: "Old rules.", new_string: "New rules." },
@@ -45,7 +46,7 @@ describe("createEditFileTool", () => {
 
   it("deletes text by using empty new_string", async () => {
     await writeFile(projectRoot, "a.txt", "keep thisremove this");
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     await tool.execute(
       "tc1",
       { path: "a.txt", old_string: "remove this", new_string: "" },
@@ -56,7 +57,7 @@ describe("createEditFileTool", () => {
 
   it("returns error when old_string not found", async () => {
     await writeFile(projectRoot, "a.txt", "hello");
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "a.txt", old_string: "not here", new_string: "x" },
@@ -68,7 +69,7 @@ describe("createEditFileTool", () => {
 
   it("returns error when multiple matches without replace_all", async () => {
     await writeFile(projectRoot, "a.txt", "abc abc abc");
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "a.txt", old_string: "abc", new_string: "x" },
@@ -80,7 +81,7 @@ describe("createEditFileTool", () => {
 
   it("replaces all occurrences when replace_all is true", async () => {
     await writeFile(projectRoot, "a.txt", "abc abc abc");
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "a.txt", old_string: "abc", new_string: "x", replace_all: true },
@@ -92,7 +93,7 @@ describe("createEditFileTool", () => {
   });
 
   it("returns error for non-existent file", async () => {
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "nope.txt", old_string: "a", new_string: "b" },
@@ -105,7 +106,7 @@ describe("createEditFileTool", () => {
   it("denies blocked paths because it reads before writing", async () => {
     await writeFile(projectRoot, "secrets/key.md", "old secret");
     const policy = () => llmAccessPolicy(projectRoot, ["secrets"]);
-    const tool = createEditFileTool(projectRoot, mutex, policy);
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, policy);
 
     const result = await tool.execute(
       "tc1",
@@ -118,7 +119,7 @@ describe("createEditFileTool", () => {
   });
 
   it("rejects path traversal", async () => {
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     await expect(
       tool.execute("tc1", { path: "../etc/hosts", old_string: "a", new_string: "b" }, undefined as any),
     ).rejects.toThrow("Path traversal denied");
@@ -126,7 +127,7 @@ describe("createEditFileTool", () => {
 
   it("writes when edit produces valid JSON", async () => {
     await writeFile(projectRoot, "data.json", '{"a":1}');
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "data.json", old_string: '"a":1', new_string: '"a":2' },
@@ -138,7 +139,7 @@ describe("createEditFileTool", () => {
 
   it("rejects edit that produces invalid JSON and leaves file unchanged", async () => {
     await writeFile(projectRoot, "data.json", '{"a":1}');
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "data.json", old_string: '"a":1', new_string: '"a":1,' },
@@ -151,7 +152,7 @@ describe("createEditFileTool", () => {
 
   it("allows editing a .json file down to empty content", async () => {
     await writeFile(projectRoot, "data.json", '{"a":1}');
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "data.json", old_string: '{"a":1}', new_string: "" },
@@ -163,7 +164,7 @@ describe("createEditFileTool", () => {
 
   it("does not validate non-json files", async () => {
     await writeFile(projectRoot, "notes.txt", "hello { broken");
-    const tool = createEditFileTool(projectRoot, mutex, permissivePolicy(projectRoot));
+    const tool = createEditFileTool(projectRoot, new NodeFsPort(projectRoot), mutex, permissivePolicy(projectRoot));
     const result = await tool.execute(
       "tc1",
       { path: "notes.txt", old_string: "hello", new_string: "bye" },

@@ -4,6 +4,8 @@ import type { MemoryEntry, MemoryEntryPatch } from "./store/memory.js";
 import { MAX_CORE_CHARS, LIST_LIMIT, SEARCH_LIMIT } from "./store/memory.js";
 import { ProjectStore } from "./store/project.js";
 import type { ChangelogEntry, AgentChangePayload } from "./store/project.js";
+import type { FsPort } from "./store/fs-port.js";
+import { NodeFsPort } from "./store/node-fs-port.js";
 import type { SessionChangePayload } from "./store/session.js";
 import { FileWriteMutex } from "./utils/file-write-mutex.js";
 import { resolveProjectPath } from "./utils/path-safety.js";
@@ -12,7 +14,6 @@ import { type Logger, createSilentLogger } from "./logger.js";
 import { ConflictError, NotFoundError, ValidationError } from "./errors.js";
 import { deriveHistoryEntries, type DerivedMessageEntry } from "./session/fold.js";
 import type { ProjectMessageSearchHit } from "./session/search.js";
-import fs from "node:fs/promises";
 import path from "node:path";
 
 const HISTORY_CACHE_LIMIT = 32;
@@ -27,14 +28,20 @@ export class ProjectManager {
   private projectStore: ProjectStore;
   private fileWriteMutex: FileWriteMutex;
   private logger: Logger;
+  private fsPort: FsPort;
 
   private serverPolicy: ReturnType<typeof serverAccessPolicy> | undefined;
   private readonly historyCache = new Map<string, HistoryCacheEntry>();
 
-  constructor(projectStore: ProjectStore, logger: Logger, fileWriteMutex: FileWriteMutex) {
+  constructor(projectStore: ProjectStore, logger: Logger, fileWriteMutex: FileWriteMutex, fsPort?: FsPort) {
     this.projectStore = projectStore;
     this.fileWriteMutex = fileWriteMutex;
     this.logger = logger ?? createSilentLogger();
+    this.fsPort = fsPort ?? new NodeFsPort(projectStore.getRootPath());
+  }
+
+  private toRelPosix(resolved: string): string {
+    return path.relative(this.getRootPath(), resolved).split(path.sep).join("/");
   }
 
   private derivedHistoryEntries(
@@ -403,23 +410,25 @@ export class ProjectManager {
   async writeFile(relativePath: string, content: string): Promise<void> {
     const resolved = resolveProjectPath(this.getRootPath(), relativePath);
     this.policy().assertWrite(relativePath);
+    const rel = this.toRelPosix(resolved);
     await this.fileWriteMutex.run(resolved, async () => {
-      await fs.mkdir(path.dirname(resolved), { recursive: true });
-      await fs.writeFile(resolved, content, "utf-8");
+      await this.fsPort.mkdirp(path.posix.dirname(rel));
+      await this.fsPort.writeFile(rel, content);
     });
   }
 
   async createEntry(relativePath: string, action: "mkdir" | "touch"): Promise<void> {
     const resolved = resolveProjectPath(this.getRootPath(), relativePath);
     this.policy().assertWrite(relativePath);
+    const rel = this.toRelPosix(resolved);
     await this.fileWriteMutex.run(resolved, async () => {
-      const stat = await fs.stat(resolved).catch(() => null);
+      const stat = await this.fsPort.stat(rel);
       if (stat) throw new ConflictError(`Entry already exists: ${relativePath}`);
       if (action === "mkdir") {
-        await fs.mkdir(resolved, { recursive: true });
+        await this.fsPort.mkdirp(rel);
       } else {
-        await fs.mkdir(path.dirname(resolved), { recursive: true });
-        await fs.writeFile(resolved, "", "utf-8");
+        await this.fsPort.mkdirp(path.posix.dirname(rel));
+        await this.fsPort.writeFile(rel, "");
       }
     });
   }
@@ -427,13 +436,14 @@ export class ProjectManager {
   async deletePath(relativePath: string): Promise<void> {
     const resolved = resolveProjectPath(this.getRootPath(), relativePath);
     this.policy().assertWrite(relativePath);
+    const rel = this.toRelPosix(resolved);
     await this.fileWriteMutex.run(resolved, async () => {
-      const stat = await fs.stat(resolved).catch(() => null);
+      const stat = await this.fsPort.stat(rel);
       if (!stat) return;
-      if (stat.isDirectory()) {
-        await fs.rm(resolved, { recursive: true });
+      if (stat.isDirectory) {
+        await this.fsPort.rm(rel, { recursive: true });
       } else {
-        await fs.unlink(resolved);
+        await this.fsPort.unlink(rel);
       }
     });
   }
@@ -446,20 +456,22 @@ export class ProjectManager {
     if (path.dirname(dest) !== path.dirname(src)) {
       throw new ValidationError(`Rename must stay in the same directory: ${fromRelative} → ${toRelative}`);
     }
+    const relFrom = this.toRelPosix(src);
+    const relTo = this.toRelPosix(dest);
     await this.fileWriteMutex.run(dest, async () => {
-      const srcStat = await fs.stat(src).catch(() => null);
+      const srcStat = await this.fsPort.stat(relFrom);
       if (!srcStat) throw new NotFoundError(`Entry not found: ${fromRelative}`);
-      const destStat = await fs.stat(dest).catch(() => null);
+      const destStat = await this.fsPort.stat(relTo);
       const sameEntity =
         destStat !== null &&
-        destStat.dev === srcStat.dev &&
-        destStat.ino === srcStat.ino &&
+        typeof srcStat.id === "string" &&
+        srcStat.id === destStat.id &&
         src.toLowerCase() === dest.toLowerCase();
       if (destStat && !sameEntity) {
         throw new ConflictError(`Entry already exists: ${toRelative}`);
       }
       try {
-        await fs.rename(src, dest);
+        await this.fsPort.rename(relFrom, relTo);
       } catch (err) {
         if ((err as NodeJS.ErrnoException).code === "ENOENT") {
           throw new NotFoundError(`Entry not found: ${fromRelative}`);
@@ -474,18 +486,21 @@ export class ProjectManager {
     const dest = resolveProjectPath(this.getRootPath(), toRelative);
     this.policy().assertRead(fromRelative);
     this.policy().assertWrite(toRelative);
+    const relFrom = this.toRelPosix(src);
+    const relTo = this.toRelPosix(dest);
     await this.fileWriteMutex.run(dest, async () => {
-      await fs.mkdir(path.dirname(dest), { recursive: true });
-      await fs.copyFile(src, dest);
+      await this.fsPort.mkdirp(path.posix.dirname(relTo));
+      await this.fsPort.copyFile(relFrom, relTo);
     });
   }
 
   async writeBinaryFile(relativePath: string, data: Uint8Array): Promise<void> {
     const resolved = resolveProjectPath(this.getRootPath(), relativePath);
     this.policy().assertWrite(relativePath);
+    const rel = this.toRelPosix(resolved);
     await this.fileWriteMutex.run(resolved, async () => {
-      await fs.mkdir(path.dirname(resolved), { recursive: true });
-      await fs.writeFile(resolved, data);
+      await this.fsPort.mkdirp(path.posix.dirname(rel));
+      await this.fsPort.writeBinaryFile(rel, data);
     });
   }
 

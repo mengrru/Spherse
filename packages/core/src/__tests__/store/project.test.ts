@@ -265,7 +265,7 @@ describe("ProjectStore — agent sessions and schedules access", () => {
     const sessionId = agentStore.sessions.createSession("Test");
     expect(agentStore.sessions.getSession(sessionId)).not.toBeNull();
 
-    agentStore.triggers.create({
+    await agentStore.triggers.create({
       id: "trig-1",
       enabled: true,
       type: "time",
@@ -276,6 +276,6 @@ describe("ProjectStore — agent sessions and schedules access", () => {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
-    expect(agentStore.triggers.list()).toHaveLength(1);
+    expect(await agentStore.triggers.list()).toHaveLength(1);
   });
 });

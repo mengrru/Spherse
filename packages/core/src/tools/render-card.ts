@@ -1,8 +1,8 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicyProvider } from "../access/access-policy.js";
+import type { FsPort } from "../store/fs-port.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "svg", "ico", "webp"]);
@@ -53,6 +53,7 @@ const RenderCardParams = Type.Object({
 
 export function createRenderCardTool(
   projectRoot: string,
+  fsPort: FsPort,
   getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof RenderCardParams> {
   const root = path.resolve(projectRoot);
@@ -68,6 +69,7 @@ export function createRenderCardTool(
 
       if (params.file_path) {
         const resolved = resolveProjectPath(root, params.file_path);
+        const rel = path.relative(root, resolved).split(path.sep).join("/");
         try {
           getPolicy().assertRead(params.file_path);
         } catch (err) {
@@ -78,9 +80,7 @@ export function createRenderCardTool(
         }
 
         if (isImageFile(params.file_path)) {
-          try {
-            await fs.access(resolved, fs.constants.R_OK);
-          } catch {
+          if ((await fsPort.stat(rel)) === null) {
             return {
               content: [{ type: "text" as const, text: `Error: file not found at ${params.file_path}` }],
               details: { error: true },
@@ -89,7 +89,7 @@ export function createRenderCardTool(
           html = "";
         } else {
           try {
-            html = await fs.readFile(resolved, "utf-8");
+            html = await fsPort.readFile(rel);
           } catch {
             return {
               content: [{ type: "text" as const, text: `Error: file not found at ${params.file_path}` }],

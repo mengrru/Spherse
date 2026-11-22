@@ -148,15 +148,19 @@ export function createManageTriggerTool(
 
       switch (action) {
         case "list": {
-          const entries = triggerManager.list(agentId).map((entry) => ({
-            ...entry,
-            nextTriggerAt: triggerManager.getNextTrigger(agentId, entry.id)?.toISOString() ?? null,
-          }));
+          const entries = await triggerManager.list(agentId);
+          const summarized: (TriggerEntry & { nextTriggerAt: string | null })[] = [];
+          for (const entry of entries) {
+            summarized.push({
+              ...entry,
+              nextTriggerAt: (await triggerManager.getNextTrigger(agentId, entry.id))?.toISOString() ?? null,
+            });
+          }
           return ok(
             action,
-            entries.length === 0
+            summarized.length === 0
               ? `Agent "${agentId}" has no triggers.`
-              : JSON.stringify(entries, null, 2),
+              : JSON.stringify(summarized, null, 2),
             { agentId },
           );
         }
@@ -192,7 +196,7 @@ export function createManageTriggerTool(
             createdAt: now,
             updatedAt: now,
           };
-          triggerManager.create(agentId, entry);
+          await triggerManager.create(agentId, entry);
           return ok(action, `Trigger created:\n${JSON.stringify(entry, null, 2)}`, {
             agentId,
             triggerId: entry.id,
@@ -201,7 +205,7 @@ export function createManageTriggerTool(
         case "update": {
           const triggerId = params.trigger_id;
           if (!triggerId) return fail(action, "`trigger_id` is required for `update`.");
-          const existing = triggerManager.get(agentId, triggerId);
+          const existing = await triggerManager.get(agentId, triggerId);
           if (!existing) return fail(action, `trigger "${triggerId}" not found on agent "${agentId}".`);
 
           const type = params.type ?? existing.type;
@@ -235,7 +239,7 @@ export function createManageTriggerTool(
               ? (params.notification_message ?? existing.notificationMessage)
               : undefined,
           };
-          const updated = triggerManager.update(agentId, triggerId, patch);
+          const updated = await triggerManager.update(agentId, triggerId, patch);
           if (!updated) return fail(action, `trigger "${triggerId}" not found on agent "${agentId}".`);
           return ok(action, `Trigger updated:\n${JSON.stringify(updated, null, 2)}`, {
             agentId,
@@ -245,20 +249,20 @@ export function createManageTriggerTool(
         case "delete": {
           const triggerId = params.trigger_id;
           if (!triggerId) return fail(action, "`trigger_id` is required for `delete`.");
-          const existing = triggerManager.get(agentId, triggerId);
+          const existing = await triggerManager.get(agentId, triggerId);
           if (!existing) return fail(action, `trigger "${triggerId}" not found on agent "${agentId}".`);
-          triggerManager.delete(agentId, triggerId);
+          await triggerManager.delete(agentId, triggerId);
           return ok(action, `Trigger "${existing.name || triggerId}" deleted.`, { agentId, triggerId });
         }
         case "reset_binding": {
           const triggerId = params.trigger_id;
           if (!triggerId) return fail(action, "`trigger_id` is required for `reset_binding`.");
-          const existing = triggerManager.get(agentId, triggerId);
+          const existing = await triggerManager.get(agentId, triggerId);
           if (!existing) return fail(action, `trigger "${triggerId}" not found on agent "${agentId}".`);
           if (existing.mode !== "reusable_session") {
             return fail(action, "`reset_binding` only applies to `reusable_session` triggers.");
           }
-          const updated = triggerManager.update(agentId, triggerId, { boundSessionId: undefined });
+          const updated = await triggerManager.update(agentId, triggerId, { boundSessionId: undefined });
           if (!updated) return fail(action, `trigger "${triggerId}" not found on agent "${agentId}".`);
           return ok(action, `Binding cleared for trigger "${existing.name || triggerId}".`, {
             agentId,

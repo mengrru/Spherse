@@ -26,6 +26,7 @@ function createProjectManagerWithSessions(initial: Record<string, SessionInfo>) 
 
   const projectStore = {
     getAgent: vi.fn(() => agentStore),
+    getRootPath: vi.fn(() => "/tmp"),
   } as unknown as ProjectStore;
 
   const manager = new ProjectManager(projectStore, createSilentLogger());

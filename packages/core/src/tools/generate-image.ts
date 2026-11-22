@@ -1,10 +1,9 @@
-import fs from "node:fs/promises";
-import fsSync from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { ProviderImagesOptions } from "@earendil-works/pi-ai";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
+import type { FsPort } from "../store/fs-port.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 import { getImageModels } from "../model-providers/index.js";
 
@@ -76,7 +75,10 @@ function buildFilename(mimeType: string): string {
   return `${ts}-${hex}.${ext}`;
 }
 
-export function createGenerateImageTool(projectRoot: string): AgentTool<typeof GenerateImageParams> {
+export function createGenerateImageTool(
+  projectRoot: string,
+  fsPort: FsPort,
+): AgentTool<typeof GenerateImageParams> {
   const root = path.resolve(projectRoot);
 
   return {
@@ -160,15 +162,14 @@ export function createGenerateImageTool(projectRoot: string): AgentTool<typeof G
 
       const buf = Buffer.from(imageContent.data, "base64");
       let destRel: string;
-      let abs: string;
       do {
         const filename = buildFilename(imageContent.mimeType);
         destRel = `${GENERATED_DIR}/${filename}`;
-        abs = resolveProjectPath(root, destRel);
-      } while (fsSync.existsSync(abs));
+        resolveProjectPath(root, destRel);
+      } while ((await fsPort.stat(destRel)) !== null);
 
-      await fs.mkdir(path.dirname(abs), { recursive: true });
-      await fs.writeFile(abs, buf);
+      await fsPort.mkdirp(GENERATED_DIR);
+      await fsPort.writeBinaryFile(destRel, buf);
 
       const modelLabel = `${config.provider}/${config.modelId}`;
       const details: ImageCardResultDetails = {

@@ -50,7 +50,7 @@ export function createEmitTriggerEventTool(
       }
 
       const payload = params.payload ?? "";
-      const firedCount = triggerManager.onUserEvent(eventName, payload);
+      const firedCount = await triggerManager.onUserEvent(eventName, payload);
 
       if (firedCount === 0) {
         return {

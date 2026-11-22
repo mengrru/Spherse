@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { dataCapability } from "../../../capabilities/data/capability.js";
 import { createDataStore } from "../../../capabilities/data/data-store.js";
+import { NodeFsPort } from "../../../store/node-fs-port.js";
 import { FileWriteMutex } from "../../../utils/file-write-mutex.js";
 import { createSilentLogger } from "../../../logger.js";
 import type { ToolHost } from "../../../kernel/ports.js";
@@ -34,6 +35,7 @@ function makeHost(): ToolHost {
     projectRoot: dir,
     projectStore: {
       getRootPath: () => dir,
+      getFsPort: () => new NodeFsPort(dir),
       config: { getAiAccessSettings: () => ({ deniedPaths: [] }) },
     } as unknown as ToolHost["projectStore"],
     fileWriteMutex: mutex,
@@ -58,7 +60,7 @@ describe("dataCapability assembly", () => {
   });
 
   it("uses the shared DataStore instance (same mutex semantics across calls)", async () => {
-    const shared = createDataStore({ projectRoot: dir, fileWriteMutex: mutex, logger: createSilentLogger() });
+    const shared = createDataStore({ projectRoot: dir, fsPort: new NodeFsPort(dir), fileWriteMutex: mutex, logger: createSilentLogger() });
     const host = makeHost();
     const tools = dataCapability(shared).tools!(host);
     const mutate = tools.find((t) => t.name === "mutate_data") as ReturnType<typeof getTool>;
@@ -116,6 +118,7 @@ describe("data tools behavior", () => {
       ...host,
       projectStore: {
         getRootPath: () => dir,
+      getFsPort: () => new NodeFsPort(dir),
         config: { getAiAccessSettings: () => ({ deniedPaths: ["board.data.json"] }) },
       } as unknown as ToolHost["projectStore"],
     };

@@ -90,85 +90,85 @@ describe("TriggerManager", () => {
     };
   }
 
-  it("creates and lists triggers", () => {
+  it("creates and lists triggers", async () => {
     const entry = makeTimeEntry();
-    triggerManager.create(agentId, entry);
-    expect(triggerManager.list(agentId)).toHaveLength(1);
+    await triggerManager.create(agentId, entry);
+    expect(await triggerManager.list(agentId)).toHaveLength(1);
   });
 
-  it("deletes a trigger", () => {
+  it("deletes a trigger", async () => {
     const entry = makeTimeEntry();
-    triggerManager.create(agentId, entry);
-    triggerManager.delete(agentId, entry.id);
-    expect(triggerManager.list(agentId)).toHaveLength(0);
+    await triggerManager.create(agentId, entry);
+    await triggerManager.delete(agentId, entry.id);
+    expect(await triggerManager.list(agentId)).toHaveLength(0);
   });
 
-  it("updates and emits event", () => {
+  it("updates and emits event", async () => {
     const entry = makeTimeEntry();
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
     const emitted = vi.fn();
     triggerManager.on("trigger_updated", emitted);
-    triggerManager.update(agentId, entry.id, { enabled: false });
-    expect(triggerManager.list(agentId)[0].enabled).toBe(false);
+    await triggerManager.update(agentId, entry.id, { enabled: false });
+    expect((await triggerManager.list(agentId))[0].enabled).toBe(false);
     expect(emitted).toHaveBeenCalled();
   });
 
-  it("returns null for next trigger when disabled", () => {
+  it("returns null for next trigger when disabled", async () => {
     const entry = makeTimeEntry({ enabled: false });
-    triggerManager.create(agentId, entry);
-    expect(triggerManager.getNextTrigger(agentId, entry.id)).toBeNull();
+    await triggerManager.create(agentId, entry);
+    expect(await triggerManager.getNextTrigger(agentId, entry.id)).toBeNull();
   });
 
-  it("returns null for next trigger on event type", () => {
+  it("returns null for next trigger on event type", async () => {
     const entry = makeEventEntry();
-    triggerManager.create(agentId, entry);
-    expect(triggerManager.getNextTrigger(agentId, entry.id)).toBeNull();
+    await triggerManager.create(agentId, entry);
+    expect(await triggerManager.getNextTrigger(agentId, entry.id)).toBeNull();
   });
 
-  it("computes next trigger from cron for time type", () => {
+  it("computes next trigger from cron for time type", async () => {
     const entry = makeTimeEntry({ cron: "*/30 * * * *" });
-    triggerManager.create(agentId, entry);
-    const next = triggerManager.getNextTrigger(agentId, entry.id);
+    await triggerManager.create(agentId, entry);
+    const next = await triggerManager.getNextTrigger(agentId, entry.id);
     expect(next).not.toBeNull();
     expect(next!.getTime()).toBeGreaterThan(Date.now());
   });
 
-  it("returns null for bad cron", () => {
+  it("returns null for bad cron", async () => {
     const entry = makeTimeEntry({ cron: "invalid" });
-    triggerManager.create(agentId, entry);
-    expect(triggerManager.getNextTrigger(agentId, entry.id)).toBeNull();
+    await triggerManager.create(agentId, entry);
+    expect(await triggerManager.getNextTrigger(agentId, entry.id)).toBeNull();
   });
 
-  it("reads triggers from disk (no register needed)", () => {
+  it("reads triggers from disk (no register needed)", async () => {
     const entry = makeTimeEntry({ name: "Disk Trigger" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
     const newManager = new TriggerManager({
       sessionRuntime,
       projectStore,
       logger: createSilentLogger(),
     });
-    const found = newManager.get(agentId, entry.id);
+    const found = await newManager.get(agentId, entry.id);
     expect(found).not.toBeNull();
     expect(found!.name).toBe("Disk Trigger");
   });
 
-  it("writes and reads logs", () => {
-    triggerManager.create(agentId, makeTimeEntry());
-    const logs = triggerManager.getRecentLogs(agentId);
+  it("writes and reads logs", async () => {
+    await triggerManager.create(agentId, makeTimeEntry());
+    const logs = await triggerManager.getRecentLogs(agentId);
     expect(Array.isArray(logs)).toBe(true);
   });
 
-  it("does not allow one agent to access another agent's trigger by id", () => {
+  it("does not allow one agent to access another agent's trigger by id", async () => {
     const otherEntry = makeTimeEntry({ name: "Other Agent Trigger" });
-    triggerManager.create(otherAgentId, otherEntry);
+    await triggerManager.create(otherAgentId, otherEntry);
 
-    expect(triggerManager.get(agentId, otherEntry.id)).toBeNull();
-    expect(triggerManager.update(agentId, otherEntry.id, { enabled: false })).toBeNull();
-    expect(triggerManager.runNow(agentId, otherEntry.id)).toBeNull();
+    expect(await triggerManager.get(agentId, otherEntry.id)).toBeNull();
+    expect(await triggerManager.update(agentId, otherEntry.id, { enabled: false })).toBeNull();
+    expect(await triggerManager.runNow(agentId, otherEntry.id)).toBeNull();
 
-    expect(triggerManager.get(otherAgentId, otherEntry.id)).not.toBeNull();
-    expect(triggerManager.list(otherAgentId)).toHaveLength(1);
+    expect(await triggerManager.get(otherAgentId, otherEntry.id)).not.toBeNull();
+    expect(await triggerManager.list(otherAgentId)).toHaveLength(1);
   });
 
   it("onUserEvent fires matching event triggers", async () => {
@@ -177,43 +177,44 @@ describe("TriggerManager", () => {
     vi.spyOn(sessionRuntime, "restoreSession").mockResolvedValue("fake-session");
 
     const entry = makeEventEntry({ eventName: "user-login", message: "Hello {{payload}}" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onUserEvent("user-login", "Alice");
-    await new Promise((r) => setTimeout(r, 0));
+    await triggerManager.onUserEvent("user-login", "Alice");
 
     expect(createSessionSpy).toHaveBeenCalledWith(agentId, "triggered");
-    expect(sendMessageSpy).toHaveBeenCalledWith(
-      "fake-session",
-      "Hello Alice",
-      [],
-      expect.any(Function),
-      { source: "triggered", triggerName: "user-login" },
-    );
+    await vi.waitFor(() => {
+      expect(sendMessageSpy).toHaveBeenCalledWith(
+        "fake-session",
+        "Hello Alice",
+        [],
+        expect.any(Function),
+        { source: "triggered", triggerName: "user-login" },
+      );
+    });
 
     sendMessageSpy.mockRestore();
     createSessionSpy.mockRestore();
   });
 
-  it("onUserEvent does not fire non-matching event triggers", () => {
+  it("onUserEvent does not fire non-matching event triggers", async () => {
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
 
     const entry = makeEventEntry({ eventName: "user-login" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onUserEvent("different-event", "test");
+    await triggerManager.onUserEvent("different-event", "test");
 
     expect(sendMessageSpy).not.toHaveBeenCalled();
     sendMessageSpy.mockRestore();
   });
 
-  it("onUserEvent rejects sp: reserved prefix", () => {
+  it("onUserEvent rejects sp: reserved prefix", async () => {
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
 
     const entry = makeEventEntry({ eventName: "user-login" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onUserEvent("sp:time-tick", "test");
+    await triggerManager.onUserEvent("sp:time-tick", "test");
 
     expect(sendMessageSpy).not.toHaveBeenCalled();
     sendMessageSpy.mockRestore();
@@ -224,18 +225,19 @@ describe("TriggerManager", () => {
     vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fake-session");
 
     const entry = makeEventEntry({ message: "Payload: [{{payload}}]" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onUserEvent("test-event", "");
-    await new Promise((r) => setTimeout(r, 0));
+    await triggerManager.onUserEvent("test-event", "");
 
-    expect(sendMessageSpy).toHaveBeenCalledWith(
-      "fake-session",
-      "Payload: []",
-      [],
-      expect.any(Function),
-      { source: "triggered", triggerName: "test-event" },
-    );
+    await vi.waitFor(() => {
+      expect(sendMessageSpy).toHaveBeenCalledWith(
+        "fake-session",
+        "Payload: []",
+        [],
+        expect.any(Function),
+        { source: "triggered", triggerName: "test-event" },
+      );
+    });
     sendMessageSpy.mockRestore();
   });
 
@@ -246,14 +248,15 @@ describe("TriggerManager", () => {
     const future = new Date(Date.now() + 2 * 60 * 1000);
     const cronStr = `${future.getMinutes()} ${future.getHours()} * * *`;
     const entry = makeTimeEntry({ cron: cronStr });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
     try {
-      triggerManager.onTimeTick();
+      await triggerManager.onTimeTick();
       vi.setSystemTime(Date.now() + 5 * 60 * 1000);
-      triggerManager.onTimeTick();
-      await new Promise((r) => setTimeout(r, 0));
-      expect(sendMessageSpy).toHaveBeenCalled();
+      await triggerManager.onTimeTick();
+      await vi.waitFor(() => {
+        expect(sendMessageSpy).toHaveBeenCalled();
+      });
     } finally {
       vi.useRealTimers();
       sendMessageSpy.mockRestore();
@@ -269,16 +272,17 @@ describe("TriggerManager", () => {
     const near = new Date(start + 2 * 60 * 1000);
     const nearCron = `${near.getMinutes()} ${near.getHours()} * * *`;
     const entry = makeTimeEntry({ cron: farCron });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
     try {
-      triggerManager.onTimeTick();
+      await triggerManager.onTimeTick();
       vi.setSystemTime(start + 30_000);
-      triggerManager.update(agentId, entry.id, { cron: nearCron });
+      await triggerManager.update(agentId, entry.id, { cron: nearCron });
       vi.setSystemTime(start + 5 * 60 * 1000);
-      triggerManager.onTimeTick();
-      await new Promise((r) => setTimeout(r, 0));
-      expect(sendMessageSpy).toHaveBeenCalledTimes(1);
+      await triggerManager.onTimeTick();
+      await vi.waitFor(() => {
+        expect(sendMessageSpy).toHaveBeenCalledTimes(1);
+      });
     } finally {
       vi.useRealTimers();
       sendMessageSpy.mockRestore();
@@ -293,15 +297,15 @@ describe("TriggerManager", () => {
     const near = new Date(start + 2 * 60 * 1000);
     const cronStr = `${near.getMinutes()} ${near.getHours()} * * *`;
     const entry = makeTimeEntry({ cron: cronStr });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
     try {
-      triggerManager.onTimeTick();
+      await triggerManager.onTimeTick();
       vi.setSystemTime(start + 30_000);
-      triggerManager.update(agentId, entry.id, { enabled: false });
+      await triggerManager.update(agentId, entry.id, { enabled: false });
       vi.setSystemTime(start + 3 * 60 * 1000);
-      triggerManager.update(agentId, entry.id, { enabled: true });
-      triggerManager.onTimeTick();
+      await triggerManager.update(agentId, entry.id, { enabled: true });
+      await triggerManager.onTimeTick();
       await new Promise((r) => setTimeout(r, 0));
       expect(sendMessageSpy).not.toHaveBeenCalled();
     } finally {
@@ -310,13 +314,13 @@ describe("TriggerManager", () => {
     }
   });
 
-  it("onTimeTick does not fire event type triggers", () => {
+  it("onTimeTick does not fire event type triggers", async () => {
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
 
     const entry = makeEventEntry();
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onTimeTick();
+    await triggerManager.onTimeTick();
     expect(sendMessageSpy).not.toHaveBeenCalled();
     sendMessageSpy.mockRestore();
   });
@@ -326,25 +330,26 @@ describe("TriggerManager", () => {
     vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fake-session");
 
     const entry = makeTimeEntry({ cron: "0 9 1 1 2099" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.runNow(agentId, entry.id);
-    await new Promise((r) => setTimeout(r, 0));
-    expect(sendMessageSpy).toHaveBeenCalled();
+    await triggerManager.runNow(agentId, entry.id);
+    await vi.waitFor(() => {
+      expect(sendMessageSpy).toHaveBeenCalled();
+    });
     sendMessageSpy.mockRestore();
   });
 
-  it("emits trigger_triggered lifecycle event", () => {
+  it("emits trigger_triggered lifecycle event", async () => {
     vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
     vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fake-session");
 
     const entry = makeEventEntry();
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
     const handler = vi.fn();
     triggerManager.on("trigger_triggered", handler);
 
-    triggerManager.onUserEvent("test-event", "data");
+    await triggerManager.onUserEvent("test-event", "data");
     expect(handler).toHaveBeenCalledWith(
       expect.objectContaining({ agentId, triggerId: entry.id }),
     );
@@ -352,14 +357,14 @@ describe("TriggerManager", () => {
     vi.restoreAllMocks();
   });
 
-  it("deleteAllForAgent removes all triggers for an agent", () => {
-    triggerManager.create(agentId, makeTimeEntry());
-    triggerManager.create(agentId, makeEventEntry());
-    triggerManager.create(otherAgentId, makeTimeEntry());
+  it("deleteAllForAgent removes all triggers for an agent", async () => {
+    await triggerManager.create(agentId, makeTimeEntry());
+    await triggerManager.create(agentId, makeEventEntry());
+    await triggerManager.create(otherAgentId, makeTimeEntry());
 
-    triggerManager.deleteAllForAgent(agentId);
-    expect(triggerManager.list(agentId)).toHaveLength(0);
-    expect(triggerManager.list(otherAgentId)).toHaveLength(1);
+    await triggerManager.deleteAllForAgent(agentId);
+    expect(await triggerManager.list(agentId)).toHaveLength(0);
+    expect(await triggerManager.list(otherAgentId)).toHaveLength(1);
   });
 
   it("existing_session restores the configured target session", async () => {
@@ -369,10 +374,9 @@ describe("TriggerManager", () => {
     const createSessionSpy = vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("nope");
 
     const entry = makeEventEntry({ mode: "existing_session", targetSessionId: targetId });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onUserEvent("test-event", "data");
-    await new Promise((r) => setTimeout(r, 0));
+    await triggerManager.onUserEvent("test-event", "data");
 
     expect(restoreSessionSpy).toHaveBeenCalledWith(agentId, targetId);
     expect(createSessionSpy).not.toHaveBeenCalled();
@@ -387,16 +391,17 @@ describe("TriggerManager", () => {
     runtime.deleteSession(agentId, targetId);
 
     const entry = makeEventEntry({ mode: "existing_session", targetSessionId: targetId });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
 
-    triggerManager.onUserEvent("test-event", "data");
-    await new Promise((r) => setTimeout(r, 0));
+    await triggerManager.onUserEvent("test-event", "data");
 
     expect(sendMessageSpy).not.toHaveBeenCalled();
-    const logs = triggerManager.getRecentLogs(agentId, 1);
-    expect(logs[0]).toMatchObject({ status: "failed", triggerId: entry.id });
+    await vi.waitFor(async () => {
+      const logs = await triggerManager.getRecentLogs(agentId, 1);
+      expect(logs[0]).toMatchObject({ status: "failed", triggerId: entry.id });
+    });
 
     sendMessageSpy.mockRestore();
   });
@@ -406,13 +411,14 @@ describe("TriggerManager", () => {
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
 
     const entry = makeEventEntry({ mode: "reusable_session" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onUserEvent("test-event", "data");
-    await new Promise((r) => setTimeout(r, 0));
+    await triggerManager.onUserEvent("test-event", "data");
 
     expect(createSessionSpy).toHaveBeenCalledWith(agentId, "triggered");
-    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe("new-sess");
+    await vi.waitFor(async () => {
+      expect((await triggerManager.get(agentId, entry.id))?.boundSessionId).toBe("new-sess");
+    });
 
     createSessionSpy.mockRestore();
     sendMessageSpy.mockRestore();
@@ -423,15 +429,16 @@ describe("TriggerManager", () => {
     vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
 
     const entry = makeEventEntry({ mode: "reusable_session" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
     const updated = vi.fn();
     triggerManager.on("trigger_updated", updated);
 
-    triggerManager.onUserEvent("test-event", "data");
-    await new Promise((r) => setTimeout(r, 0));
+    await triggerManager.onUserEvent("test-event", "data");
 
-    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe("new-sess");
+    await vi.waitFor(async () => {
+      expect((await triggerManager.get(agentId, entry.id))?.boundSessionId).toBe("new-sess");
+    });
     expect(updated).not.toHaveBeenCalled();
 
     vi.restoreAllMocks();
@@ -444,14 +451,13 @@ describe("TriggerManager", () => {
     vi.spyOn(sessionRuntime, "sessionExists").mockReturnValue(true);
 
     const entry = makeEventEntry({ mode: "reusable_session", boundSessionId: "bound-sess" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onUserEvent("test-event", "data");
-    await new Promise((r) => setTimeout(r, 0));
+    await triggerManager.onUserEvent("test-event", "data");
 
     expect(restoreSessionSpy).toHaveBeenCalledWith(agentId, "bound-sess");
     expect(createSessionSpy).not.toHaveBeenCalled();
-    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe("bound-sess");
+    expect((await triggerManager.get(agentId, entry.id))?.boundSessionId).toBe("bound-sess");
 
     createSessionSpy.mockRestore();
     restoreSessionSpy.mockRestore();
@@ -466,13 +472,14 @@ describe("TriggerManager", () => {
     vi.spyOn(sessionRuntime, "sessionExists").mockReturnValue(false);
 
     const entry = makeEventEntry({ mode: "reusable_session", boundSessionId: "gone-sess" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onUserEvent("test-event", "data");
-    await new Promise((r) => setTimeout(r, 0));
+    await triggerManager.onUserEvent("test-event", "data");
 
     expect(createSessionSpy).toHaveBeenCalledWith(agentId, "triggered");
-    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe("fresh-sess");
+    await vi.waitFor(async () => {
+      expect((await triggerManager.get(agentId, entry.id))?.boundSessionId).toBe("fresh-sess");
+    });
 
     createSessionSpy.mockRestore();
     restoreSessionSpy.mockRestore();
@@ -490,17 +497,17 @@ describe("TriggerManager", () => {
     vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
 
     const entry = makeEventEntry({ mode: "reusable_session" });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
-    triggerManager.onUserEvent("test-event", "1");
-    triggerManager.onUserEvent("test-event", "2");
+    await triggerManager.onUserEvent("test-event", "1");
+    await triggerManager.onUserEvent("test-event", "2");
 
     expect(createSessionSpy).toHaveBeenCalledTimes(1);
 
     resolveCreate("new-sess");
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe("new-sess");
+    await vi.waitFor(async () => {
+      expect((await triggerManager.get(agentId, entry.id))?.boundSessionId).toBe("new-sess");
+    });
 
     createSessionSpy.mockRestore();
     vi.restoreAllMocks();
@@ -509,21 +516,22 @@ describe("TriggerManager", () => {
   it("reusable_session rebinds lazily after the bound session is deleted", async () => {
     const sessionId = await sessionRuntime.createSession(agentId);
     const entry = makeEventEntry({ mode: "reusable_session", boundSessionId: sessionId });
-    triggerManager.create(agentId, entry);
+    await triggerManager.create(agentId, entry);
 
     runtime.deleteSession(agentId, sessionId);
 
-    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe(sessionId);
+    expect((await triggerManager.get(agentId, entry.id))?.boundSessionId).toBe(sessionId);
     expect(sessionRuntime.sessionExists(agentId, sessionId)).toBe(false);
 
     const createSessionSpy = vi.spyOn(sessionRuntime, "createSession").mockResolvedValue("fresh-sess");
     const sendMessageSpy = vi.spyOn(sessionRuntime, "sendMessage").mockResolvedValue(undefined);
 
-    triggerManager.onUserEvent("test-event", "data");
-    await new Promise((r) => setTimeout(r, 0));
+    await triggerManager.onUserEvent("test-event", "data");
 
     expect(createSessionSpy).toHaveBeenCalledWith(agentId, "triggered");
-    expect(triggerManager.get(agentId, entry.id)?.boundSessionId).toBe("fresh-sess");
+    await vi.waitFor(async () => {
+      expect((await triggerManager.get(agentId, entry.id))?.boundSessionId).toBe("fresh-sess");
+    });
 
     createSessionSpy.mockRestore();
     sendMessageSpy.mockRestore();

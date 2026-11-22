@@ -12,6 +12,7 @@ export function dataCapability(shared?: DataStore): Capability {
     tools: (host) => {
       const store = shared ?? (own ??= createDataStore({
         projectRoot: host.projectRoot,
+        fsPort: host.projectStore.getFsPort(),
         fileWriteMutex: host.fileWriteMutex,
         logger: host.logger,
       }));

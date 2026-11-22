@@ -99,8 +99,8 @@ describe("direct trigger run is visible through the session event log (log-deriv
       createdAt: Date.now(),
       updatedAt: Date.now(),
     } as never;
-    runtime.triggerManager.create(agentId, entry);
-    runtime.triggerManager.onUserEvent("vis-evt", "world");
+    await runtime.triggerManager.create(agentId, entry);
+    await runtime.triggerManager.onUserEvent("vis-evt", "world");
 
     await vi.waitFor(() => {
       expect(events).toContainEqual(
@@ -155,8 +155,8 @@ describe("direct trigger run is visible through the session event log (log-deriv
     expect(persisted.data.triggerName).toBe("log-vis-trigger");
 
     const logStore = (runtime.triggerManager as any).getTriggerStore(agentId);
-    await vi.waitFor(() => {
-      const logs = logStore.getRecentLogs(20) as any[];
+    await vi.waitFor(async () => {
+      const logs = (await logStore.getRecentLogs(20)) as any[];
       expect(logs.some((l) => l.triggerId === "tr-log-vis" && l.status === "success")).toBe(true);
     });
     attachment.close();
@@ -189,8 +189,8 @@ describe("direct trigger run is visible through the session event log (log-deriv
       createdAt: Date.now(),
       updatedAt: Date.now(),
     } as never;
-    runtime.triggerManager.create(agentId, entry);
-    runtime.triggerManager.onUserEvent("mid-evt", "");
+    await runtime.triggerManager.create(agentId, entry);
+    await runtime.triggerManager.onUserEvent("mid-evt", "");
     await vi.waitFor(() => expect(dispatch).toBeDefined());
 
     const lateEvents: any[] = [];

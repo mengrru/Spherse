@@ -54,11 +54,11 @@ export class TriggerManager extends EventEmitter {
     return agentStore ? agentStore.triggers : null;
   }
 
-  private readAllTriggers(): TriggerRef[] {
+  private async readAllTriggers(): Promise<TriggerRef[]> {
     const result: TriggerRef[] = [];
     for (const [agentId, agentStore] of this.projectStore.agents) {
       const profile = agentStore.getProfile();
-      const entries = agentStore.triggers.list();
+      const entries = await agentStore.triggers.list();
       for (const entry of entries) {
         result.push({ agentId, agentName: profile.name, entry });
       }
@@ -66,15 +66,15 @@ export class TriggerManager extends EventEmitter {
     return result;
   }
 
-  onTimeTick(): void {
-    this.scheduler.onTimeTick();
+  async onTimeTick(): Promise<void> {
+    await this.scheduler.onTimeTick();
   }
 
-  onUserEvent(eventName: string, payload: string): number {
+  async onUserEvent(eventName: string, payload: string): Promise<number> {
     if (eventName.startsWith("sp:")) return 0;
 
     let fired = 0;
-    for (const { agentId, agentName, entry } of this.readAllTriggers()) {
+    for (const { agentId, agentName, entry } of await this.readAllTriggers()) {
       if (entry.type !== "event" || !entry.enabled || !entry.eventName) continue;
       if (entry.eventName !== eventName) continue;
       if (this.executor.isRunning(entry.id)) continue;
@@ -85,13 +85,13 @@ export class TriggerManager extends EventEmitter {
     return fired;
   }
 
-  list(agentId: string): TriggerEntry[] {
-    return this.getTriggerStore(agentId)?.list() ?? [];
+  async list(agentId: string): Promise<TriggerEntry[]> {
+    return (await this.getTriggerStore(agentId)?.list()) ?? [];
   }
 
-  listProject(): { agentId: string; entry: TriggerEntry; nextTriggerAt: Date | null }[] {
+  async listProject(): Promise<{ agentId: string; entry: TriggerEntry; nextTriggerAt: Date | null }[]> {
     const result: { agentId: string; entry: TriggerEntry; nextTriggerAt: Date | null }[] = [];
-    for (const { agentId, entry } of this.readAllTriggers()) {
+    for (const { agentId, entry } of await this.readAllTriggers()) {
       const next =
         entry.enabled && entry.type === "time" && entry.cron
           ? getNextCronDate(entry.cron)
@@ -101,17 +101,17 @@ export class TriggerManager extends EventEmitter {
     return result;
   }
 
-  get(agentId: string, triggerId: string): TriggerEntry | null {
-    return this.getTriggerStore(agentId)?.get(triggerId) ?? null;
+  async get(agentId: string, triggerId: string): Promise<TriggerEntry | null> {
+    return (await this.getTriggerStore(agentId)?.get(triggerId)) ?? null;
   }
 
-  create(agentId: string, entry: TriggerEntry): void {
-    this.getTriggerStore(agentId)?.create(entry);
+  async create(agentId: string, entry: TriggerEntry): Promise<void> {
+    await this.getTriggerStore(agentId)?.create(entry);
     this.emit("trigger_updated", { agentId, triggerId: entry.id, trigger: entry });
   }
 
-  update(agentId: string, triggerId: string, partial: Partial<TriggerEntry>): TriggerEntry | null {
-    const updated = this.getTriggerStore(agentId)?.update(triggerId, partial) ?? null;
+  async update(agentId: string, triggerId: string, partial: Partial<TriggerEntry>): Promise<TriggerEntry | null> {
+    const updated = (await this.getTriggerStore(agentId)?.update(triggerId, partial)) ?? null;
     if (updated) {
       if (updated.type === "time" && updated.cron) {
         this.scheduler.markFired(triggerId, updated.cron);
@@ -123,29 +123,29 @@ export class TriggerManager extends EventEmitter {
     return updated;
   }
 
-  delete(agentId: string, triggerId: string): void {
-    this.getTriggerStore(agentId)?.delete(triggerId);
+  async delete(agentId: string, triggerId: string): Promise<void> {
+    await this.getTriggerStore(agentId)?.delete(triggerId);
     this.scheduler.invalidate(triggerId);
     this.emit("trigger_updated", { agentId, triggerId });
   }
 
-  deleteAllForAgent(agentId: string): void {
+  async deleteAllForAgent(agentId: string): Promise<void> {
     const store = this.getTriggerStore(agentId);
-    for (const entry of store?.list() ?? []) {
+    for (const entry of (await store?.list()) ?? []) {
       this.scheduler.invalidate(entry.id);
     }
-    store?.deleteAll();
+    await store?.deleteAll();
     this.logger.info({ agentId }, "agent triggers deleted");
   }
 
-  getNextTrigger(agentId: string, triggerId: string): Date | null {
-    const entry = this.get(agentId, triggerId);
+  async getNextTrigger(agentId: string, triggerId: string): Promise<Date | null> {
+    const entry = await this.get(agentId, triggerId);
     if (!entry || !entry.enabled || entry.type !== "time" || !entry.cron) return null;
     return getNextCronDate(entry.cron);
   }
 
-  getRecentLogs(agentId: string, limit?: number): TriggerLogEntry[] {
-    return this.getTriggerStore(agentId)?.getRecentLogs(limit) ?? [];
+  async getRecentLogs(agentId: string, limit?: number): Promise<TriggerLogEntry[]> {
+    return (await this.getTriggerStore(agentId)?.getRecentLogs(limit)) ?? [];
   }
 
   stopAll(): void {
@@ -153,8 +153,8 @@ export class TriggerManager extends EventEmitter {
     this.logger.info("trigger manager stopped");
   }
 
-  runNow(agentId: string, triggerId: string): TriggerEntry | null {
-    const entry = this.get(agentId, triggerId);
+  async runNow(agentId: string, triggerId: string): Promise<TriggerEntry | null> {
+    const entry = await this.get(agentId, triggerId);
     if (!entry) return null;
     if (this.executor.isRunning(triggerId)) return entry;
     if (entry.type === "time" && entry.cron) {

@@ -1,26 +1,33 @@
-import fs from "node:fs";
 import path from "node:path";
 import YAML from "yaml";
 import type { TriggerEntry, TriggerLogEntry } from "../types.js";
 import { type Logger, createSilentLogger } from "../logger.js";
+import type { FsPort } from "./fs-port.js";
 
 export class TriggerStore {
-  private triggersDir: string;
-  private triggersPath: string;
-  private logsPath: string;
+  private fsPort: FsPort;
+  private relTriggersDir: string;
+  private relTriggersPath: string;
+  private relLogsPath: string;
   private logger: Logger;
 
-  constructor(agentDir: string, logger?: Logger) {
-    this.triggersDir = path.join(agentDir, "triggers");
-    this.triggersPath = path.join(this.triggersDir, "index.yml");
-    this.logsPath = path.join(this.triggersDir, "logs.jsonl");
+  constructor(fsPort: FsPort, relAgentDir: string, logger?: Logger) {
+    this.fsPort = fsPort;
+    this.relTriggersDir = path.posix.join(relAgentDir, "triggers");
+    this.relTriggersPath = path.posix.join(this.relTriggersDir, "index.yml");
+    this.relLogsPath = path.posix.join(this.relTriggersDir, "logs.jsonl");
     this.logger = logger ?? createSilentLogger();
   }
 
-  list(): TriggerEntry[] {
+  async list(): Promise<TriggerEntry[]> {
+    let raw: string;
     try {
-      const raw = fs.readFileSync(this.triggersPath, "utf-8");
-      if (!raw.trim()) return [];
+      raw = await this.fsPort.readFile(this.relTriggersPath);
+    } catch {
+      return [];
+    }
+    if (!raw.trim()) return [];
+    try {
       const parsed = YAML.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
@@ -28,62 +35,62 @@ export class TriggerStore {
     }
   }
 
-  get(triggerId: string): TriggerEntry | null {
-    const entries = this.list();
+  async get(triggerId: string): Promise<TriggerEntry | null> {
+    const entries = await this.list();
     return entries.find((e) => e.id === triggerId) ?? null;
   }
 
-  saveAll(entries: TriggerEntry[]): void {
+  async saveAll(entries: TriggerEntry[]): Promise<void> {
     if (entries.length === 0) {
-      try { fs.unlinkSync(this.triggersPath); } catch { /* file may not exist */ }
+      await this.fsPort.unlink(this.relTriggersPath);
       return;
     }
-    fs.mkdirSync(this.triggersDir, { recursive: true });
+    await this.fsPort.mkdirp(this.relTriggersDir);
     const content = YAML.stringify(entries);
-    fs.writeFileSync(this.triggersPath, content, "utf-8");
+    await this.fsPort.writeFile(this.relTriggersPath, content);
     this.logger.info({ count: entries.length }, "triggers saved");
   }
 
-  create(entry: TriggerEntry): void {
-    const entries = this.list();
+  async create(entry: TriggerEntry): Promise<void> {
+    const entries = await this.list();
     entries.push(entry);
-    this.saveAll(entries);
+    await this.saveAll(entries);
   }
 
-  update(triggerId: string, partial: Partial<TriggerEntry>): TriggerEntry | null {
-    const entries = this.list();
+  async update(triggerId: string, partial: Partial<TriggerEntry>): Promise<TriggerEntry | null> {
+    const entries = await this.list();
     const idx = entries.findIndex((e) => e.id === triggerId);
     if (idx === -1) return null;
     entries[idx] = { ...entries[idx], ...partial, updatedAt: Date.now() };
-    this.saveAll(entries);
+    await this.saveAll(entries);
     return entries[idx];
   }
 
-  delete(triggerId: string): void {
-    const entries = this.list().filter((e) => e.id !== triggerId);
-    this.saveAll(entries);
+  async delete(triggerId: string): Promise<void> {
+    const entries = (await this.list()).filter((e) => e.id !== triggerId);
+    await this.saveAll(entries);
   }
 
-  deleteAll(): void {
-    try { fs.unlinkSync(this.triggersPath); } catch { /* file may not exist */ }
-    try { fs.unlinkSync(this.logsPath); } catch { /* file may not exist */ }
-    try { fs.rmdirSync(this.triggersDir); } catch { /* dir may not exist or not empty */ }
+  async deleteAll(): Promise<void> {
+    await this.fsPort.unlink(this.relTriggersPath);
+    await this.fsPort.unlink(this.relLogsPath);
+    await this.fsPort.rm(this.relTriggersDir, { recursive: true });
     this.logger.info("trigger files deleted");
   }
 
   private static MAX_LOG_LINES = 5000;
 
-  appendLog(entry: TriggerLogEntry): void {
-    fs.mkdirSync(this.triggersDir, { recursive: true });
-    fs.appendFileSync(this.logsPath, JSON.stringify(entry) + "\n", "utf-8");
+  async appendLog(entry: TriggerLogEntry): Promise<void> {
+    await this.fsPort.mkdirp(this.relTriggersDir);
+    await this.fsPort.appendFile(this.relLogsPath, JSON.stringify(entry) + "\n");
 
     try {
-      const stat = fs.statSync(this.logsPath);
-      if (stat.size > 1024 * 1024 * 2) {
-        const raw = fs.readFileSync(this.logsPath, "utf-8");
+      const stat = await this.fsPort.stat(this.relLogsPath);
+      if (stat && stat.size > 1024 * 1024 * 2) {
+        const raw = await this.fsPort.readFile(this.relLogsPath);
         const lines = raw.trim().split("\n").filter(Boolean);
         if (lines.length > TriggerStore.MAX_LOG_LINES) {
-          fs.writeFileSync(this.logsPath, lines.slice(-TriggerStore.MAX_LOG_LINES).join("\n") + "\n", "utf-8");
+          await this.fsPort.writeFile(this.relLogsPath, lines.slice(-TriggerStore.MAX_LOG_LINES).join("\n") + "\n");
         }
       }
     } catch {
@@ -91,16 +98,17 @@ export class TriggerStore {
     }
   }
 
-  getRecentLogs(limit: number = 50): TriggerLogEntry[] {
+  async getRecentLogs(limit: number = 50): Promise<TriggerLogEntry[]> {
+    let raw: string;
     try {
-      const raw = fs.readFileSync(this.logsPath, "utf-8");
-      const lines = raw.trim().split("\n").filter(Boolean);
-      const recent = lines.slice(-limit);
-      return recent.map((line) => {
-        try { return JSON.parse(line); } catch { return null; }
-      }).filter(Boolean) as TriggerLogEntry[];
+      raw = await this.fsPort.readFile(this.relLogsPath);
     } catch {
       return [];
     }
+    const lines = raw.trim().split("\n").filter(Boolean);
+    const recent = lines.slice(-limit);
+    return recent.map((line) => {
+      try { return JSON.parse(line); } catch { return null; }
+    }).filter(Boolean) as TriggerLogEntry[];
   }
 }

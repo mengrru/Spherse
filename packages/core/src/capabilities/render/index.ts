@@ -6,7 +6,7 @@ export function renderCapability(): Capability {
   return {
     id: "render",
     tools: (host) => [
-      createRenderCardTool(host.projectRoot, llmPolicyOf(host)),
+      createRenderCardTool(host.projectRoot, host.projectStore.getFsPort(), llmPolicyOf(host)),
     ],
   };
 }

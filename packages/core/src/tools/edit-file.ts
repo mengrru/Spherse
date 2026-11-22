@@ -1,9 +1,9 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicyProvider } from "../access/access-policy.js";
 import type { FileWriteMutex } from "../utils/file-write-mutex.js";
+import type { FsPort } from "../store/fs-port.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 import { checkJson } from "./json-check.js";
 
@@ -16,6 +16,7 @@ const EditFileParams = Type.Object({
 
 export function createEditFileTool(
   projectRoot: string,
+  fsPort: FsPort,
   mutex: FileWriteMutex,
   getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof EditFileParams> {
@@ -31,6 +32,7 @@ export function createEditFileTool(
     parameters: EditFileParams,
     async execute(_toolCallId, params, _signal) {
       const resolved = resolveProjectPath(root, params.path);
+      const rel = path.relative(root, resolved).split(path.sep).join("/");
       try {
         getPolicy().assertRead(params.path);
       } catch (err) {
@@ -54,7 +56,7 @@ export function createEditFileTool(
       return mutex.run(resolved, async () => {
         let content: string;
         try {
-          content = await fs.readFile(resolved, "utf-8");
+          content = await fsPort.readFile(rel);
         } catch {
           return {
             content: [{ type: "text" as const, text: `Error: file not found at ${params.path}` }],
@@ -107,7 +109,7 @@ export function createEditFileTool(
           }
         }
 
-        await fs.writeFile(resolved, newContent, "utf-8");
+        await fsPort.writeFile(rel, newContent);
 
         return {
           content: [

@@ -1,9 +1,8 @@
-import fs from "node:fs/promises";
-import fsSync from "node:fs";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicy, AccessPolicyProvider } from "../access/access-policy.js";
+import type { FsPort } from "../store/fs-port.js";
 import { shouldSkipDirEntry } from "../utils/fs-walk.js";
 import { resolveProjectPath, isProjectMetaPath } from "../utils/path-safety.js";
 import { isBinaryBuffer } from "../utils/binary-detect.js";
@@ -48,30 +47,32 @@ interface SearchResult {
 }
 
 async function searchInFile(
-  filePath: string,
+  fsPort: FsPort,
+  absPath: string,
+  relPath: string,
   query: string,
   results: SearchResult[],
   maxResults: number,
 ): Promise<void> {
   if (results.length >= maxResults) return;
 
-  let buf: Buffer;
+  let buf: Uint8Array;
   try {
-    buf = await fs.readFile(filePath);
+    buf = await fsPort.readBinaryFile(relPath);
   } catch {
     return;
   }
 
   if (isBinaryBuffer(buf)) return;
 
-  const content = buf.toString("utf-8");
+  const content = new TextDecoder().decode(buf);
   const lines = content.split("\n");
   const lowerQuery = query.toLowerCase();
 
   for (let i = 0; i < lines.length && results.length < maxResults; i++) {
     if (lines[i].toLowerCase().includes(lowerQuery)) {
       results.push({
-        file: filePath,
+        file: absPath,
         line: i + 1,
         text: lines[i].trimEnd(),
       });
@@ -80,7 +81,8 @@ async function searchInFile(
 }
 
 async function searchDir(
-  dirPath: string,
+  fsPort: FsPort,
+  relDir: string,
   query: string,
   includePatterns: string[] | undefined,
   results: SearchResult[],
@@ -91,19 +93,19 @@ async function searchDir(
 ): Promise<void> {
   if (results.length >= maxResults) return;
 
-  const entries = await fs.readdir(dirPath, { withFileTypes: true });
+  const entries = await fsPort.readdir(relDir === "" ? "." : relDir);
 
   for (const entry of entries) {
     if (results.length >= maxResults) break;
 
-    const entryPath = path.join(dirPath, entry.name);
-    const relativePath = path.relative(projectRoot, entryPath).split(path.sep).join("/");
-    if (!policy.canRead(relativePath)) continue;
+    const entryRel = relDir === "" ? entry.name : `${relDir}/${entry.name}`;
+    if (!policy.canRead(entryRel)) continue;
 
-    if (entry.isDirectory()) {
+    if (entry.isDirectory) {
       if (shouldSkipInSearch(entry.name, includeMeta)) continue;
       await searchDir(
-        entryPath,
+        fsPort,
+        entryRel,
         query,
         includePatterns,
         results,
@@ -112,15 +114,16 @@ async function searchDir(
         policy,
         includeMeta,
       );
-    } else if (entry.isFile()) {
+    } else {
       if (!matchesPattern(entry.name, includePatterns)) continue;
-      await searchInFile(entryPath, query, results, maxResults);
+      await searchInFile(fsPort, path.join(projectRoot, entryRel), entryRel, query, results, maxResults);
     }
   }
 }
 
 export function createSearchContentTool(
   projectRoot: string,
+  fsPort: FsPort,
   getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof SearchContentParams> {
   const root = path.resolve(projectRoot);
@@ -132,7 +135,9 @@ export function createSearchContentTool(
     description: "Search file contents in the project for a query string. Returns matching file:line:text. Skips dotfiles, node_modules, and binary files. The .spherse metadata directory is excluded by default; set include_meta=true to search it.",
     parameters: SearchContentParams,
     async execute(_toolCallId, params, _signal) {
-      const searchPath = params.path ? resolveProjectPath(root, params.path) : root;
+      const searchRel = params.path
+        ? path.relative(root, resolveProjectPath(root, params.path)).split(path.sep).join("/")
+        : "";
       const policy = getPolicy();
       const includeMeta = params.include_meta ?? false;
 
@@ -154,7 +159,7 @@ export function createSearchContentTool(
         }
       }
 
-      if (!fsSync.existsSync(searchPath)) {
+      if ((await fsPort.stat(searchRel === "" ? "." : searchRel)) === null) {
         return {
           content: [{ type: "text" as const, text: `Path not found: ${params.path ?? "/"}` }],
           details: { query: params.query, path: params.path, matches: 0 },
@@ -162,7 +167,7 @@ export function createSearchContentTool(
       }
 
       const results: SearchResult[] = [];
-      await searchDir(searchPath, params.query, params.includePatterns, results, MAX_RESULTS, root, policy, includeMeta);
+      await searchDir(fsPort, searchRel, params.query, params.includePatterns, results, MAX_RESULTS, root, policy, includeMeta);
 
       const text = results.length > 0
         ? results.map((r) => `${r.file}:${r.line}: ${r.text}`).join("\n")

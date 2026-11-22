@@ -8,9 +8,9 @@ const emitTriggerEvent = defineRpcMethod(
     eventName: Type.String({ minLength: 1 }),
     payload: Type.Optional(Type.String()),
   }),
-  (params, ctx) => {
+  async (params, ctx) => {
     const { triggerManager } = ctx.resolveProject(params.projectId);
-    triggerManager.onUserEvent(params.eventName, params.payload ?? "");
+    await triggerManager.onUserEvent(params.eventName, params.payload ?? "");
     return parseContract(schemas.okResponse, { ok: true });
   },
 );

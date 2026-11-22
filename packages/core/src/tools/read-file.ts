@@ -1,8 +1,8 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import { Type } from "@sinclair/typebox";
 import type { AgentTool } from "@earendil-works/pi-agent-core";
 import type { AccessPolicyProvider } from "../access/access-policy.js";
+import type { FsPort } from "../store/fs-port.js";
 import { resolveProjectPath } from "../utils/path-safety.js";
 import { isBinaryBuffer } from "../utils/binary-detect.js";
 
@@ -25,9 +25,11 @@ const ReadFileParams = Type.Object({
 
 export function createReadFileTool(
   projectRoot: string,
+  fsPort: FsPort,
   getPolicy: AccessPolicyProvider,
 ): AgentTool<typeof ReadFileParams> {
   const root = path.resolve(projectRoot);
+  const utf8Decoder = new TextDecoder();
 
   return {
     name: "read_file",
@@ -46,9 +48,9 @@ export function createReadFileTool(
         };
       }
 
-      let buf: Buffer;
+      let buf: Uint8Array;
       try {
-        buf = await fs.readFile(resolved);
+        buf = await fsPort.readBinaryFile(path.relative(root, resolved).split(path.sep).join("/"));
       } catch {
         return {
           content: [{ type: "text" as const, text: `Error: file not found at ${params.path}` }],
@@ -68,7 +70,7 @@ export function createReadFileTool(
         };
       }
 
-      const content = buf.toString("utf-8");
+      const content = utf8Decoder.decode(buf);
       return {
         content: [{ type: "text" as const, text: content }],
         details: { path: params.path, size: content.length },

@@ -5,6 +5,7 @@ import path from "node:path";
 import type { AgentEvent } from "@earendil-works/pi-agent-core";
 import { attachmentsCapability } from "../../capabilities/attachments/index.js";
 import { prepareAttachmentUserMessage, type Attachment } from "../../attachments/index.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { createEventPipeline } from "../../kernel/event-pipeline.js";
 import { logEventMiddleware } from "../../session/event-middlewares.js";
 import { createAttachmentSanitizer } from "../../attachments/sanitizer.js";
@@ -35,6 +36,7 @@ describe("attachment processors via capability", () => {
       "look",
       [imageAttachment(".spherse/attachments/a.png")],
       tmpDir,
+      new NodeFsPort(tmpDir),
       processors,
     );
     expect(processors).toHaveLength(1);
@@ -44,7 +46,7 @@ describe("attachment processors via capability", () => {
 
   it("prepareAttachmentUserMessage rejects types no capability provides", async () => {
     await expect(
-      prepareAttachmentUserMessage("x", [{ type: "pdf", path: "a.pdf", mimeType: "application/pdf" }], "/tmp/x", [
+      prepareAttachmentUserMessage("x", [{ type: "pdf", path: "a.pdf", mimeType: "application/pdf" }], "/tmp/x", new NodeFsPort("/tmp/x"), [
         ...([] as never[]),
       ]),
     ).rejects.toThrow(/Unsupported attachment type: pdf/);
@@ -68,6 +70,7 @@ describe("attachment processors via capability", () => {
       "read this",
       [{ type: "pdf", path: "doc.pdf", mimeType: "application/pdf" }],
       "/tmp/x",
+      new NodeFsPort("/tmp/x"),
       processors,
     );
     expect(msg.content).toEqual([

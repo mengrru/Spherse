@@ -102,7 +102,7 @@ export class TriggerExecutor extends EventEmitter {
             await this.deps.session.restoreSession(agentId, sessionId);
           } else {
             sessionId = await this.deps.session.createSession(agentId, "triggered");
-            this.deps.getTriggerStore(agentId)?.update(entry.id, { boundSessionId: sessionId });
+            await this.deps.getTriggerStore(agentId)?.update(entry.id, { boundSessionId: sessionId });
           }
           break;
         }
@@ -114,7 +114,7 @@ export class TriggerExecutor extends EventEmitter {
       }
 
       logEntry.sessionId = sessionId;
-      this.deps.getTriggerStore(agentId)?.appendLog(logEntry);
+      await this.deps.getTriggerStore(agentId)?.appendLog(logEntry);
 
       const resolvedMessage = resolveTemplateVars(entry.message, { agentName, payload });
 
@@ -137,7 +137,7 @@ export class TriggerExecutor extends EventEmitter {
       }
 
       if (agentEnded) {
-        this.deps.getTriggerStore(agentId)?.appendLog({
+        await this.deps.getTriggerStore(agentId)?.appendLog({
           ...logEntry,
           completedAt: Date.now(),
           status: "success",
@@ -150,7 +150,7 @@ export class TriggerExecutor extends EventEmitter {
         });
       }
     } catch (err) {
-      this.deps.getTriggerStore(agentId)?.appendLog({
+      await this.deps.getTriggerStore(agentId)?.appendLog({
         ...logEntry,
         completedAt: Date.now(),
         status: "failed",

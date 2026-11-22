@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createGenerateImageTool } from "../../tools/generate-image.js";
+import { NodeFsPort } from "../../store/node-fs-port.js";
 import { createTempProject, cleanupDir, pathExists } from "../helpers.js";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -49,7 +50,7 @@ describe("createGenerateImageTool", () => {
   });
 
   it("writes image to .spherse/generated-images/ and returns done details", async () => {
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     const onUpdate = vi.fn();
 
     const result = await tool.execute("tc1", { prompt: "一只猫" }, undefined as any, onUpdate);
@@ -70,7 +71,7 @@ describe("createGenerateImageTool", () => {
   });
 
   it("includes image storage path in content text", async () => {
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     const onUpdate = vi.fn();
 
     const result = await tool.execute("tc1", { prompt: "一只猫" }, undefined as any, onUpdate);
@@ -85,7 +86,7 @@ describe("createGenerateImageTool", () => {
   });
 
   it("calls onUpdate twice: generating placeholder before generateImages, then done", async () => {
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     const onUpdate = vi.fn();
 
     await tool.execute("tc1", { prompt: "test" }, undefined as any, onUpdate);
@@ -98,7 +99,7 @@ describe("createGenerateImageTool", () => {
   });
 
   it("generates filename matching yyyyMMddHHmmss-UTC + 4 hex", async () => {
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     const result = await tool.execute("tc1", { prompt: "x" }, undefined as any, undefined as any);
     const filename = path.basename((result.details as any).path);
     expect(filename).toMatch(/^\d{14}-[0-9a-f]{4}\.png$/);
@@ -106,7 +107,7 @@ describe("createGenerateImageTool", () => {
 
   it("returns error content without calling generateImages when env missing", async () => {
     delete process.env.SPHERSE_IMAGE_MODEL;
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     const onUpdate = vi.fn();
 
     const result = await tool.execute("tc1", { prompt: "x" }, undefined as any, onUpdate);
@@ -118,7 +119,7 @@ describe("createGenerateImageTool", () => {
 
   it("returns error when key for active provider missing", async () => {
     delete process.env.SPHERSE_IMAGE_API_KEY;
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     const result = await tool.execute("tc1", { prompt: "x" }, undefined as any, undefined as any);
     expect(result.content[0].text).toContain("配置");
   });
@@ -130,7 +131,7 @@ describe("createGenerateImageTool", () => {
       errorMessage: "upstream failed",
       output: [],
     });
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     const onUpdate = vi.fn();
 
     const result = await tool.execute("tc1", { prompt: "x" }, undefined as any, onUpdate);
@@ -144,7 +145,7 @@ describe("createGenerateImageTool", () => {
       ...mockAssistantImages(),
       output: [{ type: "text", text: "no image" }],
     });
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     const result = await tool.execute("tc1", { prompt: "x" }, undefined as any, undefined as any);
     expect(result.content[0].text).toContain("失败");
   });
@@ -155,7 +156,7 @@ describe("createGenerateImageTool", () => {
     mockImageModels.getModelOfType.mockReturnValue({ id: "glm-image", api: "zhipu-images", provider: "zhipu" });
     mockImageModels.generateImages.mockResolvedValue({ ...mockAssistantImages(), api: "zhipu-images", provider: "zhipu", model: "glm-image" });
 
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     await tool.execute("tc1", { prompt: "x" }, undefined as any, undefined as any);
 
     expect(mockImageModels.getModelOfType).toHaveBeenCalledWith("image", "zhipu", "glm-image");
@@ -164,7 +165,7 @@ describe("createGenerateImageTool", () => {
   });
 
   it("passes size and quality through to generateImages options", async () => {
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     await tool.execute(
       "tc1",
       { prompt: "x", size: "1536x1024", quality: "high" },
@@ -180,7 +181,7 @@ describe("createGenerateImageTool", () => {
   });
 
   it("omits size and quality from options when not provided", async () => {
-    const tool = createGenerateImageTool(projectRoot);
+    const tool = createGenerateImageTool(projectRoot, new NodeFsPort(projectRoot));
     await tool.execute("tc1", { prompt: "x" }, undefined as any, undefined as any);
 
     const passedOptions = mockImageModels.generateImages.mock.calls[0][2];
