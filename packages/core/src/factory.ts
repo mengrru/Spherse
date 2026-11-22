@@ -18,12 +18,19 @@ import { compactionCapability } from "./capabilities/compaction/index.js";
 import { memoryCapability } from "./capabilities/memory/index.js";
 import { timePerceptionCapability } from "./capabilities/time-perception/index.js";
 import { createStoreRegistry, type SessionPort } from "./kernel/ports.js";
-import type { Capability } from "./kernel/capability.js";
+import { CapabilityRegistry, type Capability } from "./kernel/capability.js";
+import { ConflictError } from "./errors.js";
 import { ProjectRuntime } from "./project-runtime.js";
 import { initPresets } from "./presets.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { ProjectConfigNotFoundError } from "./errors.js";
 import { ModelCatalog } from "./model-providers/catalog.js";
+import { createHostContext, type HostFiber } from "./host/context.js";
+import { registerCoreServices } from "./host/services.js";
+import { defineCapabilityPlugin } from "./host/capability-plugin.js";
+import type { SessionStoreFactory, MemoryStoreFactory } from "./store/storage-port.js";
+import { SqliteSessionStore } from "./store/session.js";
+import { SqliteMemoryStore } from "./store/memory.js";
 
 export interface AssembleOptions {
   projectName?: string;
@@ -87,6 +94,35 @@ export async function assembleProject(
       ? options.capabilities(defaultCapabilities(projectStore, logger, dataStore))
       : (options?.capabilities ?? defaultCapabilities(projectStore, logger, dataStore));
 
+  const host = createHostContext();
+  const capabilityRegistry = new CapabilityRegistry();
+  for (const capability of capabilities) {
+    try {
+      capabilityRegistry.register(capability);
+    } catch (err) {
+      if (err instanceof ConflictError) {
+        logger.warn({ capability: capability.id }, "duplicate capability id, host view keeps the first");
+      } else {
+        throw err;
+      }
+    }
+  }
+  const sessionStoreFactory: SessionStoreFactory = options?.storage?.sessionStoreFactory
+    ?? ((ctx) => new SqliteSessionStore(path.join(ctx.agentDir, "sessions.db"), ctx.agentId, ctx.logger, ctx.onSessionChange));
+  const memoryStoreFactory: MemoryStoreFactory = options?.storage?.memoryStoreFactory
+    ?? ((ctx) => new SqliteMemoryStore(ctx.agentDir));
+  registerCoreServices(host, {
+    fs: fsPort,
+    logger,
+    fileWriteMutex,
+    projectStore,
+    stores,
+    data: dataStore,
+    sessionStoreFactory,
+    memoryStoreFactory,
+    capabilities: capabilityRegistry,
+  });
+
   const runConfig = new RunConfigHolder({
     ...(options?.defaultModel !== undefined ? { defaultModel: options.defaultModel } : {}),
     ...(options?.sampling !== undefined ? { sampling: options.sampling } : {}),
@@ -113,16 +149,35 @@ export async function assembleProject(
     sessionExists: (agentId, sessionId) => sessionRuntime.sessionExists(agentId, sessionId),
   };
 
-  for (const capability of capabilities) {
-    if (!capability.init) continue;
-    await capability.init({
-      projectRoot: projectStore.getRootPath(),
-      metaDir: path.join(projectStore.getRootPath(), PROJECT_META_DIR),
-      logger,
-      fileWriteMutex,
-      stores,
-      session: sessionPort,
-    });
+  const kernelServices = {
+    projectRoot: projectStore.getRootPath(),
+    metaDir: path.join(projectStore.getRootPath(), PROJECT_META_DIR),
+    logger,
+    fileWriteMutex,
+    stores,
+    session: sessionPort,
+  };
+
+  const pluginWrappers = capabilities.map((capability) =>
+    defineCapabilityPlugin(capability, kernelServices, capabilityRegistry),
+  );
+  const fibers: HostFiber[] = [];
+  try {
+    for (const wrapper of pluginWrappers) {
+      const fiber = host.plugin(wrapper.plugin);
+      wrapper.fiber = fiber;
+      fibers.push(fiber);
+      await wrapper.ready;
+    }
+  } catch (err) {
+    for (const fiber of fibers) {
+      try {
+        await fiber.dispose();
+      } catch {
+        /* fiber state hygiene only */
+      }
+    }
+    throw err;
   }
 
   return new ProjectRuntime({
@@ -132,6 +187,8 @@ export async function assembleProject(
     logger,
     capabilities,
     dataStore,
+    host,
+    hostFibers: fibers,
   });
 }
 

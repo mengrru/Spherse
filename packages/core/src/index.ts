@@ -74,6 +74,10 @@ export type { SessionChangePayload, SessionChangeAction, SessionStorePort } from
 export type { ProjectStorageOptions, SessionStoreFactory, MemoryStoreFactory } from "./store/storage-port.js";
 export type { FsPort, FsEntry, FsStat, FsWatchEvent, FsPortCapabilities } from "./store/fs-port.js";
 export { NodeFsPort } from "./store/node-fs-port.js";
+export type { HostContext, HostFiber } from "./host/context.js";
+export { HostServiceKey, createHostContext } from "./host/context.js";
+export { registerCoreServices } from "./host/services.js";
+export { defineCapabilityPlugin } from "./host/capability-plugin.js";
 export { isValidCron, isReservedEventName, requiresTargetSession } from "./trigger/validation.js";
 export type { Attachment } from "./attachments/index.js";
 export type { McpTransportType } from "./mcp/index.js";

@@ -10,6 +10,8 @@ import type { AgentConfigChangeKind, Capability } from "./kernel/capability.js";
 import type { AgentProfile } from "./types.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { settleWithin } from "./utils/settle-within.js";
+import { createHostContext } from "./host/context.js";
+import type { HostContext, HostFiber } from "./host/context.js";
 
 const CAPABILITY_SHUTDOWN_TIMEOUT_MS = 5_000;
 
@@ -18,9 +20,11 @@ export class ProjectRuntime {
   readonly sessionRuntime: SessionManager;
   readonly projectId: string;
   readonly dataStore: DataStore | undefined;
+  readonly host: HostContext;
   private logger: Logger;
   private _shutdownDone = false;
   private readonly capabilities: ReadonlyArray<Capability>;
+  private readonly hostFibers: ReadonlyArray<HostFiber>;
 
   constructor(deps: {
     projectManager: ProjectManager;
@@ -29,6 +33,8 @@ export class ProjectRuntime {
     logger?: Logger;
     capabilities: ReadonlyArray<Capability>;
     dataStore?: DataStore;
+    host?: HostContext;
+    hostFibers?: ReadonlyArray<HostFiber>;
   }) {
     this.projectManager = deps.projectManager;
     this.sessionRuntime = deps.sessionRuntime;
@@ -36,6 +42,8 @@ export class ProjectRuntime {
     this.dataStore = deps.dataStore;
     this.logger = deps.logger ?? createSilentLogger();
     this.capabilities = deps.capabilities;
+    this.host = deps.host ?? createHostContext();
+    this.hostFibers = deps.hostFibers ?? [];
   }
 
   private triggerCapability(): TriggerCapability | undefined {
@@ -144,5 +152,12 @@ export class ProjectRuntime {
       );
     }
     this.projectManager.close();
+    for (const fiber of this.hostFibers) {
+      try {
+        await fiber.dispose();
+      } catch {
+        /* fiber state hygiene only */
+      }
+    }
   }
 }
