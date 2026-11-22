@@ -26,7 +26,7 @@ import { type Logger, createSilentLogger } from "./logger.js";
 import { ProjectConfigNotFoundError } from "./errors.js";
 import { ModelCatalog } from "./model-providers/catalog.js";
 import { createHostContext, type HostFiber } from "./host/context.js";
-import { registerCoreServices } from "./host/services.js";
+import { registerCoreServices, registerRuntimeServices } from "./host/services.js";
 import { defineCapabilityPlugin } from "./host/capability-plugin.js";
 import type { SessionStoreFactory, MemoryStoreFactory } from "./store/storage-port.js";
 import { SqliteSessionStore } from "./store/session.js";
@@ -139,6 +139,7 @@ export async function assembleProject(
   });
 
   const sessionRuntime = new SessionManager(deps, { initialRunConfig: runConfig });
+  registerRuntimeServices(host, { sessionManager: sessionRuntime, projectManager: projectManager });
 
   const sessionPort: SessionPort = {
     createSession: (agentId, source) => sessionRuntime.createSession(agentId, source),

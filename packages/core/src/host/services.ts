@@ -34,3 +34,13 @@ export function registerCoreServices(host: HostContext, services: HostCoreServic
   host.provide(HostServiceKey.memoryStoreFactory, services.memoryStoreFactory);
   host.provide(HostServiceKey.capabilities, services.capabilities);
 }
+
+export interface HostRuntimeServices {
+  sessionManager: import("../session/session-manager.js").SessionManager;
+  projectManager: import("../project-manager.js").ProjectManager;
+}
+
+export function registerRuntimeServices(host: HostContext, services: HostRuntimeServices): void {
+  host.provide(HostServiceKey.session, services.sessionManager);
+  host.provide(HostServiceKey.pm, services.projectManager);
+}

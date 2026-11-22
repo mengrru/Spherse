@@ -4,9 +4,10 @@ import { RpcErrorCode } from "@spherse/contracts";
 import type { ProjectRegistry } from "../registry.js";
 import type { ChatSessionHub } from "../chat/index.js";
 import type { ModelSettingsStore } from "../model-settings.js";
-import type { ModelCatalog } from "@spherse/core";
+import type { ModelCatalog, HostContext } from "@spherse/core";
 import { getAppVersion } from "../server-info.js";
 import { buildMethodRegistry } from "./methods/registry.js";
+import { registerRpcMethodGroups } from "@spherse/rpc/host";
 import { createRpcModelSettings } from "./model-settings-port.js";
 import { attachBusChannel } from "../bus/bus-channels.js";
 
@@ -20,9 +21,10 @@ export function handleRpcWebSocket(
   fastify: FastifyInstance,
   registry: ProjectRegistry,
   hub: ChatSessionHub,
+  appHost: HostContext,
   options: RpcServerOptions,
 ): void {
-  const methods = buildMethodRegistry();
+  const methods = registerRpcMethodGroups(appHost, [buildMethodRegistry()]);
   const bus: RpcBusSource = {
     attach: (projectId, channel, emit) =>
       attachBusChannel(

@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import type { AddressInfo } from "node:net";
 import websocket from "@fastify/websocket";
 import multipart from "@fastify/multipart";
-import { ModelCatalog } from "@spherse/core";
+import { ModelCatalog, createHostContext, HostServiceKey } from "@spherse/core";
 import type { Logger } from "@spherse/core";
 import {
   NotFoundError,
@@ -115,6 +115,8 @@ export async function createMultiProjectServer(
   });
 
   const chatHub = new ChatSessionHub(logger);
+  const appHost = createHostContext();
+  appHost.provide(HostServiceKey.hub, chatHub);
 
   const modelCatalog = options?.modelCatalog ?? new ModelCatalog();
   const modelSettingsStore = new ModelSettingsStore({ filePath: options?.modelSettingsPath });
@@ -138,7 +140,7 @@ export async function createMultiProjectServer(
   });
   handleChatWebSocket(fastify, registry, chatHub);
   handleBusWebSocket(fastify, registry);
-  handleRpcWebSocket(fastify, registry, chatHub, {
+  handleRpcWebSocket(fastify, registry, chatHub, appHost, {
     modelSettingsStore,
     modelCatalog,
     authRequired: Boolean(options?.auth?.accessToken),

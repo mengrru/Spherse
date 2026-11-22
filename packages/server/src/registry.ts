@@ -1,7 +1,7 @@
 import path from "node:path";
 import { nanoid } from "nanoid";
 import { createProject, ModelCatalog } from "@spherse/core";
-import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger, SamplingParams, ThinkingLevel } from "@spherse/core";
+import type { ProjectRuntime, ProjectManager, SessionManager, TriggerManager, Logger, SamplingParams, ThinkingLevel, HostContext } from "@spherse/core";
 
 export interface ProjectContext {
   runtime: ProjectRuntime;
@@ -12,6 +12,7 @@ export type ProjectContextCompat = ProjectContext & {
   readonly projectManager: ProjectManager;
   readonly sessionRuntime: SessionManager;
   readonly triggerManager: TriggerManager;
+  readonly host: HostContext;
 };
 
 export interface ProjectInfo {
@@ -119,6 +120,9 @@ export class ProjectRegistry {
       },
       get triggerManager() {
         return runtime.triggerManager;
+      },
+      get host() {
+        return runtime.host;
       },
     });
     this.projects.set(projectId, ctx);

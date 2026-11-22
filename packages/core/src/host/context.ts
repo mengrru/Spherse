@@ -13,6 +13,10 @@ export const HostServiceKey = {
   sessionStoreFactory: "spherse/session-store-factory",
   memoryStoreFactory: "spherse/memory-store-factory",
   capabilities: "spherse/capabilities",
+  session: "spherse/session",
+  pm: "spherse/pm",
+  rpcMethods: "spherse/rpc-methods",
+  hub: "spherse/hub",
 } as const;
 
 export function createHostContext(): HostContext {

@@ -23,3 +23,4 @@ export type {
 } from "./context.js";
 export { RpcConnectionHandler } from "./connection.js";
 export type { RpcSocket } from "./connection.js";
+export { registerRpcMethodGroups, getRpcMethodGroups } from "./host-bridge.js";
