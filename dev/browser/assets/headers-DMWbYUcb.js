@@ -1,0 +1,1 @@
+function c(r){const e={};for(const[n,o]of r.entries())e[n]=o;return e}function a(...r){const e=new Map;for(const n of r)for(const[o,t]of Object.entries(n??{})){const s=o.toLowerCase();e.delete(s),t!==null&&e.set(s,[o,t])}return e.size>0?Object.fromEntries(e.values()):void 0}export{c as h,a as p};

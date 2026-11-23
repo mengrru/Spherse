@@ -1,0 +1,1 @@
+function l(a){let t=3735928559,h=1103547991;for(let e=0;e<a.length;e++){const i=a.charCodeAt(e);t=Math.imul(t^i,2654435761),h=Math.imul(h^i,1597334677)}return t=Math.imul(t^t>>>16,2246822507)^Math.imul(h^h>>>13,3266489909),h=Math.imul(h^h>>>16,2246822507)^Math.imul(t^t>>>13,3266489909),(h>>>0).toString(36)+(t>>>0).toString(36)}export{l as s};
