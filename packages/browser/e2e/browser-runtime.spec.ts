@@ -4,9 +4,11 @@ import { rpcCall, setupMiniRpc } from "./helpers/mini-rpc";
 test.describe("browser runtime e2e", () => {
   test("boots the shell, creates a project and renders the project view", async ({ page }) => {
     await page.goto("/");
-    await page.waitForSelector("input[placeholder='新项目名称']", { timeout: 20000 });
-    await page.fill("input[placeholder='新项目名称']", `e2e-${Date.now()}`);
-    await page.click("text=创建项目");
+    await page.waitForSelector("text=打开或创建项目", { timeout: 20000 });
+    await page.click("text=打开或创建项目");
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("项目名称").fill(`e2e-${Date.now()}`);
+    await dialog.getByRole("button", { name: "创建", exact: true }).click();
     await page.waitForURL(/#\/project\/.+/, { timeout: 30000 });
     await expect(page.locator("body")).toContainText("对话", { timeout: 20000 });
   });

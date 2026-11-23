@@ -23,3 +23,22 @@ describe("ModelCatalog instances", () => {
     expect(() => a.resolveModelById("cb/mB")).toThrow(/Could not resolve model/);
   });
 });
+
+describe("ModelCatalog provider api key injection", () => {
+  it("injects keys over env and clears them", async () => {
+    const saved = process.env.DEEPSEEK_API_KEY;
+    delete process.env.DEEPSEEK_API_KEY;
+    try {
+      const catalog = new ModelCatalog();
+      const models = catalog.getChatModels();
+      expect(await models.checkAuth("deepseek")).toBeUndefined();
+      catalog.setProviderApiKeys({ deepseek: "sk-injected" });
+      expect(await models.checkAuth("deepseek")).toMatchObject({ type: "api_key" });
+      expect(catalog.getProviderApiKey("deepseek")).toBe("sk-injected");
+      catalog.setProviderApiKeys({});
+      expect(await models.checkAuth("deepseek")).toBeUndefined();
+    } finally {
+      if (saved !== undefined) process.env.DEEPSEEK_API_KEY = saved;
+    }
+  });
+});

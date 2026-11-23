@@ -196,6 +196,10 @@ describe("browser worker rpc", () => {
       "settings.getModels",
     );
     expect(reread.models.text.defaultModel).toBe("openai/gpt-4o");
+    const { ModelCatalog } = await import("@spherse/core");
+    const probe = new ModelCatalog();
+    probe.setProviderApiKeys({ deepseek: "sk-browser-test" });
+    expect(await probe.getChatModels().checkAuth("deepseek")).toMatchObject({ type: "api_key" });
   });
 
   it("reads project theme and file entries via fs port", async () => {
@@ -224,12 +228,24 @@ describe("browser worker rpc", () => {
       title: "still here",
     });
 
+    await client.call("settings.updateModels", {
+      models: {
+        text: { defaultModel: "deepseek/deepseek-chat", providers: { deepseek: { apiKey: "sk-persist" } } },
+        image: { defaultModel: "", providers: {} },
+      },
+    });
+
     const app2 = await BrowserRpcApp.create({ appVersion: "test" });
     const channel2 = new MessageChannel();
     app2.attachPort(channel2.port1);
     const client2 = new RpcClient(new MessagePortTransport(channel2.port2));
     await client2.connect();
     try {
+      const replayed = await client2.call<{
+        models: { text: { defaultModel: string; providers: Record<string, { configured: boolean }> } };
+      }>("settings.getModels");
+      expect(replayed.models.text.defaultModel).toBe("deepseek/deepseek-chat");
+      expect(replayed.models.text.providers.deepseek).toEqual({ configured: true });
       const projects = await client2.call<Array<{ id: string; name: string }>>("connection.projects");
       const demo = projects.find((entry) => entry.name === "demo");
       expect(demo).toBeDefined();

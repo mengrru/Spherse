@@ -3,6 +3,19 @@ import { FEATURE_HOST_MATRIX, isFeatureEnabled } from "./feature-registry";
 
 const WEB_ENABLED_FEATURES = ["agent-dialog", "agent-mcp", "agent-memory", "agent-trigger", "settings"] as const;
 
+const BROWSER_ENABLED_FEATURES = [
+  "agent-dialog",
+  "agent-mcp",
+  "agent-memory",
+  "agent-trigger",
+  "content-split-pane",
+  "floating-chat",
+  "floating-content-browser",
+  "open-project",
+  "settings",
+  "text-selection-session",
+] as const;
+
 describe("feature-registry", () => {
   it("declares the full gated feature set in the current matrix", () => {
     const allFeatures = Object.keys(FEATURE_HOST_MATRIX) as Array<keyof typeof FEATURE_HOST_MATRIX>;
@@ -18,6 +31,7 @@ describe("feature-registry", () => {
         "floating-content-browser",
         "open-project",
         "open-project-folder",
+        "project-marketplace",
         "settings",
         "text-selection-session",
       ].sort(),
@@ -45,6 +59,20 @@ describe("feature-registry", () => {
     for (const feature of allFeatures) {
       if ((WEB_ENABLED_FEATURES as readonly string[]).includes(feature)) continue;
       expect(isFeatureEnabled(feature, "web")).toBe(false);
+    }
+  });
+
+  it("enables desktop-like features on the browser host", () => {
+    for (const feature of BROWSER_ENABLED_FEATURES) {
+      expect(isFeatureEnabled(feature, "browser")).toBe(true);
+    }
+  });
+
+  it("keeps electron-only features disabled on the browser host", () => {
+    const allFeatures = Object.keys(FEATURE_HOST_MATRIX) as Array<keyof typeof FEATURE_HOST_MATRIX>;
+    for (const feature of allFeatures) {
+      if ((BROWSER_ENABLED_FEATURES as readonly string[]).includes(feature)) continue;
+      expect(isFeatureEnabled(feature, "browser")).toBe(false);
     }
   });
 });

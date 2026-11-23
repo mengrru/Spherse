@@ -69,7 +69,7 @@ function mergeProviderKeys(
   return next;
 }
 
-function extractProviderKeys(providers: Record<string, ProviderCredentials> | undefined): Record<string, string> {
+export function extractProviderKeys(providers: Record<string, ProviderCredentials> | undefined): Record<string, string> {
   const keys: Record<string, string> = {};
   for (const [id, creds] of Object.entries(providers ?? {})) {
     if (creds?.apiKey) keys[id] = creds.apiKey;
@@ -151,6 +151,7 @@ export function createBrowserModelSettings(
     apply: (req: unknown) => {
       const applyAsync = async () => {
         const next = await store.applyUpdate(req as ModelSettingsRequest);
+        catalog.setProviderApiKeys(extractProviderKeys(next.text.providers));
         catalog.syncCustomProviders(
           next.customProviders ?? [],
           extractProviderKeys(next.text.providers),

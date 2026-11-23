@@ -14,6 +14,7 @@ import { BrowserProjectRegistry } from "./registry.js";
 import {
   BrowserModelSettingsStore,
   createBrowserModelSettings,
+  extractProviderKeys,
 } from "./model-settings.js";
 import { createWorkerBusSource } from "./bus.js";
 import { buildBrowserMethodRegistry } from "./methods/index.js";
@@ -65,6 +66,17 @@ export class BrowserRpcApp {
     const catalog = new ModelCatalog();
     const registry = await BrowserProjectRegistry.open(toCoreLogger(logger), catalog);
     const modelSettingsStore = await BrowserModelSettingsStore.open();
+    const storedSettings = modelSettingsStore.get();
+    catalog.setProviderApiKeys(extractProviderKeys(storedSettings.text.providers));
+    catalog.syncCustomProviders(
+      storedSettings.customProviders ?? [],
+      extractProviderKeys(storedSettings.text.providers),
+    );
+    if (storedSettings.text.defaultModel) {
+      registry.setDefaultModel(storedSettings.text.defaultModel);
+    }
+    registry.setSampling(storedSettings.text.sampling);
+    registry.setThinkingLevel(storedSettings.text.thinkingLevel);
     const hub = new ChatSessionHub(logger);
     const registryPort: RpcRegistry = {
       getSupportedProviders: () => catalog.getSupportedProviders(),

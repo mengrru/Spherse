@@ -49,6 +49,7 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
   const settingsEnabled = useFeature("settings");
   const openProjectEnabled = useFeature("open-project");
   const openProjectFolderEnabled = useFeature("open-project-folder");
+  const marketEnabled = useFeature("project-marketplace");
   const openSettings = useAppUiStore((s) => s.openSettings);
   const bridge = useHostBridge();
   const canEditProject = bridge.capabilities.content.editable;
@@ -181,10 +182,12 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
                 <PlusIcon />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" side="right">
-                <DropdownMenuItem onClick={() => setMarketOpen(true)}>
-                  <GlobeIcon />
-                  {t("activity-bar.openProjectMenu.market")}
-                </DropdownMenuItem>
+                {marketEnabled && (
+                  <DropdownMenuItem onClick={() => setMarketOpen(true)}>
+                    <GlobeIcon />
+                    {t("activity-bar.openProjectMenu.market")}
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleAddProject}>
                   <FolderOpenIcon />
                   {t("activity-bar.openProjectMenu.local")}
@@ -220,7 +223,7 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
             onOpenChange={(open) => { if (!open) setSidePanelSettingsProjectId(null); }}
           />
         )}
-        {globalClient && (
+        {globalClient && marketEnabled && (
           <ProjectMarketDialog
             open={marketOpen}
             onOpenChange={setMarketOpen}

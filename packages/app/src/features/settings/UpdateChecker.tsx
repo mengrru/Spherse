@@ -53,7 +53,7 @@ export function UpdateChecker() {
       <p className="text-sm text-muted-foreground">v{appVersion}</p>
       {!hasUpdater && (
         <p className="text-sm text-muted-foreground">
-          {t("settings.about.desktopVersion")}
+          {t(bridge.kind === "browser" ? "settings.browserVersion" : "settings.about.desktopVersion")}
           {desktopVersion ? `v${desktopVersion}` : "—"}
         </p>
       )}

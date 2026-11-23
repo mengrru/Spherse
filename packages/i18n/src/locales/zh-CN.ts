@@ -247,6 +247,7 @@ export const zhCN = {
   "settings.about.version": "当前版本",
   // 关于页 web 端显示的桌面端（所连 server）版本行
   "settings.about.desktopVersion": "桌面端版本：",
+  "settings.browserVersion": "浏览器版本：",
   // 关于 tab → 检查更新按钮（idle 态）
   "settings.about.checkUpdate": "检查更新",
   // 检查更新按钮 loading 态（checking）
@@ -1447,6 +1448,11 @@ export const zhCN = {
   "onboarding.desc.openMarket": "不知道从哪儿开始？挑一个现成的世界，下载打开就能玩",
   // 引导页操作（打开/创建）发生未预期异常时的通用错误提示
   "onboarding.error.unexpected": "操作失败，请重试",
+  "onboarding.browser.createProject": "创建项目",
+  "onboarding.browser.projectName": "项目名称",
+  "onboarding.browser.desc": "输入一个新项目名称，数据保存在本浏览器",
+  "onboarding.browser.cancel": "取消",
+  "onboarding.browser.create": "创建",
 
   // --- 移动端连接页（MobileConnectPage） ---
   // 移动端未连接 server 时显示的连接页主标题

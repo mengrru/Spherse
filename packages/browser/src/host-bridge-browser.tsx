@@ -6,7 +6,6 @@ import type {
 } from "@spherse/app/host-bridge";
 import { getSharedRpcClient, isLocalRuntimeBaseUrl } from "@spherse/app/lib/rpc/shared";
 import { RpcSharedWorkerTransport } from "./client/runtime-transport";
-import { LocalOnboarding } from "./onboarding";
 
 declare const __SPHERSE_BROWSER_VERSION__: string;
 
@@ -79,7 +78,6 @@ export function createBrowserHostBridge(): HostBridge {
     async closeProject() {},
     async openProjectFolder() {},
     async openFileExternal() {},
-    async downloadFile() {},
     async setLastActiveProject(id: string | null) {
       if (id === null) localStorage.removeItem(LAST_ACTIVE_PROJECT_KEY);
       else localStorage.setItem(LAST_ACTIVE_PROJECT_KEY, id);
@@ -112,10 +110,9 @@ export function createBrowserHostBridge(): HostBridge {
   };
 
   return {
-    kind: "web",
+    kind: "browser",
     getServerBaseUrl: async () => window.location.origin,
     getServerAccessToken: async () => null,
-    clearConnection: async () => {},
     getAppVersion: async () => __SPHERSE_BROWSER_VERSION__,
     capabilities: BROWSER_CAPABILITIES,
     prefs: prefsApi,
@@ -131,7 +128,6 @@ export function createBrowserHostBridge(): HostBridge {
       setTimeout(() => URL.revokeObjectURL(url), 5000);
     },
     project: projectApi,
-    renderConnectPage: () => <LocalOnboarding />,
   };
 }
 

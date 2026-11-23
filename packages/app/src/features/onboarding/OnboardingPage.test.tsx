@@ -5,13 +5,17 @@ import { createMockHostBridge } from "../../test/host-bridge";
 import { createTestQueryClient, renderWithProviders } from "../../test/render";
 import { useAppStore } from "../../stores/app-store";
 import { OnboardingPage } from "./OnboardingPage";
+import type { ProjectHostApi } from "../../lib/host-bridge";
 
 let openProject: ReturnType<typeof vi.fn>;
+let refreshProjects: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   openProject = vi.fn();
+  refreshProjects = vi.fn(async () => {});
   useAppStore.setState({
     openProject,
+    refreshProjects,
     connection: { baseUrl: "http://localhost:4567", accessToken: null },
   } as never);
 });
@@ -25,6 +29,27 @@ function renderOnboarding() {
     bridge: createMockHostBridge(),
     queryClient: createTestQueryClient(),
   });
+}
+
+function renderBrowserOnboarding() {
+  const openProjectRpc = vi.fn(async (name: string) => ({ projectId: `p-${name}` }));
+  const project: ProjectHostApi = {
+    selectDirectory: vi.fn(async () => null),
+    selectSkillZip: vi.fn(async () => null),
+    openProject: openProjectRpc,
+    restoreProjects: vi.fn(async () => []),
+    addOpenProject: vi.fn(async () => {}),
+    closeProject: vi.fn(async () => {}),
+    openProjectFolder: vi.fn(async () => {}),
+    openFileExternal: vi.fn(async () => {}),
+    setLastActiveProject: vi.fn(async () => {}),
+    getLastActiveProject: vi.fn(async () => null),
+  };
+  renderWithProviders(<OnboardingPage />, {
+    bridge: createMockHostBridge({ kind: "browser", project }),
+    queryClient: createTestQueryClient(),
+  });
+  return openProjectRpc;
 }
 
 describe("OnboardingPage re-entry guard", () => {
@@ -106,5 +131,25 @@ describe("OnboardingPage project market", () => {
     renderOnboarding();
     expect(screen.queryByRole("button", { name: /逛逛项目市场/ })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /打开或创建项目/ })).toBeInTheDocument();
+  });
+});
+
+describe("OnboardingPage browser host", () => {
+  it("does not render the market card on the browser host", () => {
+    renderBrowserOnboarding();
+    expect(screen.queryByRole("button", { name: /逛逛项目市场/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /打开或创建项目/ })).toBeInTheDocument();
+  });
+
+  it("creates a project by name through the inline dialog on the browser host", async () => {
+    const openProjectRpc = renderBrowserOnboarding();
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: /打开或创建项目/ }));
+    await user.type(screen.getByLabelText("项目名称"), "我的世界");
+    await user.click(screen.getByRole("button", { name: "创建" }));
+
+    await vi.waitFor(() => expect(openProjectRpc).toHaveBeenCalledWith("我的世界"));
+    expect(refreshProjects).toHaveBeenCalledTimes(1);
   });
 });

@@ -48,7 +48,7 @@ export type UpdateEvent =
   | { type: "update-downloaded" }
   | { type: "update-error"; message: string; phase?: "check" | "download" };
 
-export type HostKind = "electron" | "web";
+export type HostKind = "electron" | "web" | "browser";
 
 export interface GeneralPrefs {
   locale: string;

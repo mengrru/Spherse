@@ -7,6 +7,7 @@ import {
   type ProviderHeaders,
 } from "@earendil-works/pi-ai";
 import { builtinModels } from "@earendil-works/pi-ai/providers/all";
+import { defaultProviderAuthContext } from "@earendil-works/pi-ai";
 import { openAICompletionsApi } from "@earendil-works/pi-ai/api/openai-completions.lazy";
 import type { StreamFn } from "@earendil-works/pi-agent-core";
 import type {
@@ -202,15 +203,38 @@ export class ModelCatalog {
   private readonly models: MutableModels;
   private registeredDefs: CustomProviderDef[] = [];
   private readonly customIds = new Set<string>();
+  private readonly providerApiKeys = new Map<string, string>();
 
   constructor() {
-    this.models = builtinModels();
+    const baseAuthContext = defaultProviderAuthContext();
+    this.models = builtinModels({
+      authContext: {
+        env: async (name) => this.providerApiKeys.get(name) ?? (await baseAuthContext.env(name)),
+        fileExists: (path) => baseAuthContext.fileExists(path),
+      },
+    });
     this.models.setProvider(createZhipuImagesProvider());
     this.models.setProvider(createSeedreamImagesProvider());
     const openaiBase = this.models.getProvider("openai");
     if (openaiBase) {
       this.models.setProvider(withOpenaiImages(openaiBase));
     }
+  }
+
+  setProviderApiKeys(keys: Record<string, string>): void {
+    this.providerApiKeys.clear();
+    for (const [providerId, apiKey] of Object.entries(keys)) {
+      if (!apiKey) continue;
+      const envKeys = PROVIDER_ENV_KEYS[providerId];
+      if (!envKeys || envKeys.length === 0) continue;
+      this.providerApiKeys.set(envKeys[0], apiKey);
+    }
+  }
+
+  getProviderApiKey(providerId: string): string | undefined {
+    const envKeys = PROVIDER_ENV_KEYS[providerId];
+    if (!envKeys || envKeys.length === 0) return undefined;
+    return this.providerApiKeys.get(envKeys[0]);
   }
 
   syncCustomProviders(defs: CustomProviderDef[], apiKeys: Record<string, string>): void {

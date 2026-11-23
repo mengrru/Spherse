@@ -69,7 +69,7 @@ export function App() {
           // connect page instead of stranding on "project not found".
           // A deep link into the index route (?base=&token=...) is preserved:
           // the connect page consumes those params itself.
-          if (bridge.kind === "web" && !isIndexRoute(hash)) {
+          if (bridge.kind !== "electron" && !isIndexRoute(hash)) {
             navigate("/", { replace: true });
           }
           return;
@@ -86,6 +86,13 @@ export function App() {
         if (bridge.kind === "web") {
           const locale = useSettingsStore.getState().locale ?? DEFAULT_LOCALE;
           toast.error(translate(locale, "mobile-connect.connectFailed", { error: (err as Error).message }));
+          const hash = window.location.hash.replace(/^#/, "") || "/";
+          if (!isIndexRoute(hash)) {
+            navigate("/", { replace: true });
+          }
+        } else if (bridge.kind === "browser") {
+          const locale = useSettingsStore.getState().locale ?? DEFAULT_LOCALE;
+          toast.error(translate(locale, "onboarding.error.unexpected"));
           const hash = window.location.hash.replace(/^#/, "") || "/";
           if (!isIndexRoute(hash)) {
             navigate("/", { replace: true });

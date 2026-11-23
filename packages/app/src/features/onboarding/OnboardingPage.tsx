@@ -5,7 +5,19 @@ import { toast } from "sonner";
 import { useAppStore } from "../../stores/app-store";
 import { useHostBridge } from "../../context/host-bridge-context";
 import { useGlobalApiClient } from "../../lib/use-connection";
+import { useFeature } from "../../lib/use-feature";
 import { ProjectMarketDialog } from "../project-market/ProjectMarketDialog";
+import { Button } from "../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
 
 export function OnboardingPage() {
   const { t } = useI18n();
@@ -13,15 +25,44 @@ export function OnboardingPage() {
   const bridge = useHostBridge();
   const openProject = useAppStore((state) => state.openProject);
   const globalClient = useGlobalApiClient();
+  const marketEnabled = useFeature("project-marketplace");
   const [marketOpen, setMarketOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
   const busyRef = useRef(false);
 
-  const handleOpenOrCreate = async () => {
+  const handleOpenOrCreate = () => {
+    if (bridge.kind === "browser") {
+      setProjectName("");
+      setCreateOpen(true);
+      return;
+    }
+    void handleSelectDirectory();
+  };
+
+  const handleSelectDirectory = async () => {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
       const projectId = await openProject(bridge);
       if (projectId) navigate(`/project/${projectId}`);
+    } catch {
+      toast.error(t("onboarding.error.unexpected"));
+    } finally {
+      busyRef.current = false;
+    }
+  };
+
+  const handleBrowserCreate = async () => {
+    const name = projectName.trim();
+    if (!name || busyRef.current || !bridge.project) return;
+    busyRef.current = true;
+    try {
+      const result = await bridge.project.openProject(name);
+      if (!result) throw new Error("project creation returned no id");
+      await useAppStore.getState().refreshProjects(bridge);
+      setCreateOpen(false);
+      navigate(`/project/${result.projectId}`);
     } catch {
       toast.error(t("onboarding.error.unexpected"));
     } finally {
@@ -41,7 +82,7 @@ export function OnboardingPage() {
           desc={t("onboarding.desc.openOrCreate")}
           onClick={handleOpenOrCreate}
         />
-        {globalClient && (
+        {globalClient && marketEnabled && (
           <ActionCard
             title={t("onboarding.action.openMarket")}
             desc={t("onboarding.desc.openMarket")}
@@ -49,13 +90,43 @@ export function OnboardingPage() {
           />
         )}
       </div>
-      {globalClient && (
+      {globalClient && marketEnabled && (
         <ProjectMarketDialog
           open={marketOpen}
           onOpenChange={setMarketOpen}
           client={globalClient}
         />
       )}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("onboarding.browser.createProject")}</DialogTitle>
+            <DialogDescription>{t("onboarding.browser.desc")}</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="onboarding-browser-project-name">
+              {t("onboarding.browser.projectName")}
+            </Label>
+            <Input
+              id="onboarding-browser-project-name"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleBrowserCreate();
+              }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              {t("onboarding.browser.cancel")}
+            </Button>
+            <Button onClick={() => void handleBrowserCreate()} disabled={!projectName.trim()}>
+              {t("onboarding.browser.create")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
