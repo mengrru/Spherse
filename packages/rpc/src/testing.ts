@@ -28,13 +28,20 @@ export interface RpcResultFrame {
 export async function callMethod(harness: RpcHarness, method: string, params: unknown): Promise<RpcResultFrame> {
   const id = (callMethod.nextId += 1);
   harness.receive({ type: "call", id, method, params });
-  for (let i = 0; i < 200; i += 1) {
-    const frame = harness.sent().find((sent) => {
+  const poll = () =>
+    harness.sent().find((sent) => {
       const candidate = sent as RpcResultFrame;
       return candidate.type === "result" && candidate.id === id;
     });
+  for (let i = 0; i < 200; i += 1) {
+    const frame = poll();
     if (frame) return frame as RpcResultFrame;
     await flush();
+  }
+  for (let i = 0; i < 100; i += 1) {
+    const frame = poll();
+    if (frame) return frame as RpcResultFrame;
+    await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw new Error(`no result frame for ${method}`);
 }
