@@ -37,7 +37,8 @@
     "verify": "npm run lint && npm run build && npm run typecheck && npm test --workspaces --if-present && npm run check:i18n",
     "verify:e2e": "npm run verify && npm run test:e2e -w @spherse/desktop",
     "prepare": "husky",
-    "verify:web-e2e": "npm run verify && npm run test:e2e -w @spherse/browser"
+    "verify:web-e2e": "npm run verify && npm run test:e2e -w @spherse/browser",
+    "build:browser": "npm run build --workspace=@spherse/i18n --workspace=@spherse/presets --workspace=@spherse/sdk --workspace=@spherse/core --workspace=@spherse/contracts --workspace=@spherse/rpc --workspace=@spherse/browser"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

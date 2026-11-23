@@ -9,7 +9,13 @@ import type { RpcLogger, RpcModelSettings } from "@spherse/rpc/host";
 import type { BrowserProjectRegistry } from "./registry.js";
 import { readOpfsJson, writeOpfsJson } from "./opfs-json.js";
 
-const MODEL_SETTINGS_FILE = "spherse-model-settings.json";
+function storageScope(): string {
+  const base = import.meta.env.BASE_URL;
+  if (base === "/" || base === "" || base === "./") return "";
+  return `${base.split("/").filter(Boolean).join("-")}/`;
+}
+
+const MODEL_SETTINGS_FILE = `${storageScope()}spherse-model-settings.json`;
 
 function emptyGroup(): ModelGroupSettings {
   return { defaultModel: "", providers: {} };

@@ -44,6 +44,7 @@ import type {
   ConnectionInfoResponse,
 } from "@spherse/contracts";
 import { parseApiResponse, schemas } from "@spherse/contracts";
+import { localAssetPrefix } from "./rpc/shared.js";
 import { Type } from "@sinclair/typebox";
 
 export const attachmentUploadResponse = Type.Object({
@@ -548,7 +549,7 @@ export function createApiClient(baseUrl: string, projectId: string, accessToken?
     getPreviewUrl(filePath: string, version?: number): string {
       const encodedPath = encodePathSegments(filePath);
       const pathMiddle = accessToken ? `/preview/__auth/${encodeURIComponent(accessToken)}/${encodedPath}` : `/preview/${encodedPath}`;
-      const base = `${apiBase}${pathMiddle}`;
+      const base = `${localAssetPrefix(baseUrl)}${apiBase}${pathMiddle}`;
       return version !== undefined ? `${base}?v=${version}` : base;
     },
 

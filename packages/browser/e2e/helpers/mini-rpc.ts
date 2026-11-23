@@ -14,9 +14,12 @@ export async function setupMiniRpc(page: Page): Promise<void> {
       document.querySelector("script[type=module]")?.src;
     if (!mainUrl) throw new Error("main bundle url not found");
     const text = await (await fetch(mainUrl)).text();
-    const match = text.match(/new URL\(""\+new URL\("([^"]+)",import\.meta\.url\)/);
-    if (!match) throw new Error("worker ref not found in main bundle");
-    const workerUrl = new URL(match[1], mainUrl).href;
+    const match = text.match(
+      /new SharedWorker\(new URL\((""?\+?new URL\()?("([^"]+)",import\.meta\.url\)(?:\.href)?|"([^"]+)")/,
+    );
+    const ref = match?.[3] ?? match?.[4];
+    if (!ref) throw new Error("worker ref not found in main bundle");
+    const workerUrl = new URL(ref, mainUrl).href;
     const worker = new SharedWorker(workerUrl, { type: "module" });
     worker.port.start();
     let nextId = 1;

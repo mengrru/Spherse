@@ -20,7 +20,7 @@ import type {
 } from "../types.js";
 import type { AgentMcpConfig } from "../types.js";
 import { RpcCallError, type RpcClient } from "@spherse/rpc";
-import { isLocalRuntimeBaseUrl } from "./shared.js";
+import { isLocalRuntimeBaseUrl, localAssetPrefix } from "./shared.js";
 
 const STATUS_BY_CODE: Record<number, number> = {
   100: 404,
@@ -404,7 +404,7 @@ export function createRpcApiClient(
       const pathMiddle = accessToken
         ? `/preview/__auth/${encodeURIComponent(accessToken)}/${encodedPath}`
         : `/preview/${encodedPath}`;
-      const base = `${apiBase}${pathMiddle}`;
+      const base = `${localAssetPrefix(baseUrl)}${apiBase}${pathMiddle}`;
       return version !== undefined ? `${base}?v=${version}` : base;
     },
 

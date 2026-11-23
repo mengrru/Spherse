@@ -15,7 +15,10 @@
         "../app/src/*"
       ]
     },
-    "baseUrl": "."
+    "baseUrl": ".",
+    "types": [
+      "vite/client"
+    ]
   },
   "include": [
     "src/sw"

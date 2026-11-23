@@ -1,0 +1,45 @@
+name: Deploy Browser Dev
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22.19
+
+      - run: npm ci
+
+      - name: Build browser app (dev deploy)
+        env:
+          SPHERSE_BROWSER_BASE: /dev/browser/
+        run: npm run build:browser
+
+      # dev 部署只更新 gh-pages 的 dev/browser（增量，保留 landing、/web/ 与 /dev/web/）；
+      # base=/dev/browser/ 由构建注入：SW scope、资源面虚拟路径与 OPFS/IDB 存储前缀均随派生
+      - name: Stage Pages content
+        run: |
+          set -e
+          mkdir -p ./pages-out/dev/browser
+          cp -r packages/browser/dist/. ./pages-out/dev/browser/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./pages-out
+          keep_files: true

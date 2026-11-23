@@ -8,7 +8,7 @@ const browserVersion = JSON.parse(readFileSync(new URL("./package.json", import.
 
 export default defineConfig({
   root: ".",
-  base: "./",
+  base: process.env.SPHERSE_BROWSER_BASE ?? "/",
   define: {
     __SPHERSE_BROWSER_VERSION__: JSON.stringify(browserVersion),
   },

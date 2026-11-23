@@ -17,8 +17,14 @@ const BROWSER_CAPABILITIES = {
   content: { editable: true },
 } as const;
 
-const PREFS_STORAGE_KEY = "spherse:prefs";
-const LAST_ACTIVE_PROJECT_KEY = "spherse:last-active-project";
+function storageKeyScope(): string {
+  const base = import.meta.env.BASE_URL;
+  if (!base || base === "/" || base === "./") return "";
+  return `:${base.split("/").filter(Boolean).join("-")}`;
+}
+
+const PREFS_STORAGE_KEY = `spherse:prefs${storageKeyScope()}`;
+const LAST_ACTIVE_PROJECT_KEY = `spherse:last-active-project${storageKeyScope()}`;
 const PLACEHOLDER_LAST_OPENED = new Date(0).toISOString();
 
 interface ProjectListEntry {

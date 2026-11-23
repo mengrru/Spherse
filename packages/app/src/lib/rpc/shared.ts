@@ -19,6 +19,10 @@ export function isLocalRuntimeBaseUrl(baseUrl: string): boolean {
   return localTransportFactory !== null && baseUrl !== "" && baseUrl === window.location.origin;
 }
 
+export function localAssetPrefix(baseUrl: string): string {
+  return isLocalRuntimeBaseUrl(baseUrl) ? import.meta.env.BASE_URL : "";
+}
+
 export function getSharedRpcClient(baseUrl: string, accessToken: RpcAccessTokenGetter): RpcClient {
   const key = baseUrl;
   const existing = shared.get(key);

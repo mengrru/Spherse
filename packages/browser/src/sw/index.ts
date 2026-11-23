@@ -42,6 +42,18 @@ interface RegistryFile {
   projects: Array<{ id: string; name: string; dirName: string; createdAt: string; lastOpened?: string }>;
 }
 
+function storageScope(): string {
+  const base = import.meta.env.BASE_URL;
+  if (base === "/" || base === "" || base === "./") return "";
+  return `${base.split("/").filter(Boolean).join("-")}/`;
+}
+
+function assetBase(): string {
+  const base = import.meta.env.BASE_URL;
+  if (!base || base === "./") return "/";
+  return base.endsWith("/") ? base : `${base}/`;
+}
+
 let registryCache: RegistryFile | null = null;
 let registryLoad: Promise<RegistryFile | null> | null = null;
 
@@ -51,7 +63,12 @@ async function loadRegistry(): Promise<RegistryFile | null> {
     registryLoad = (async () => {
       try {
         const root = await navigator.storage.getDirectory();
-        const handle = await root.getFileHandle("spherse-registry.json");
+        const segments = `${storageScope()}spherse-registry.json`.split("/").filter((s) => s.length > 0);
+        let dir = root;
+        for (const segment of segments.slice(0, -1)) {
+          dir = await dir.getDirectoryHandle(segment);
+        }
+        const handle = await dir.getFileHandle(segments[segments.length - 1]);
         const file = await handle.getFile();
         registryCache = JSON.parse(await file.text()) as RegistryFile;
         return registryCache;
@@ -74,7 +91,7 @@ interface ParsedPreviewRequest {
 }
 
 function parsePreviewUrl(pathname: string): ParsedPreviewRequest | null {
-  const prefix = "/api/projects/";
+  const prefix = `${assetBase()}api/projects/`;
   if (!pathname.startsWith(prefix)) return null;
   const rest = pathname.slice(prefix.length);
   const marker = "/preview/";
@@ -128,7 +145,7 @@ async function openProjectFile(projectId: string, relPath: string): Promise<File
   if (!dirName) return null;
   const root = await navigator.storage.getDirectory();
   let dir: FileSystemDirectoryHandle = root;
-  for (const segment of `projects/${dirName}`.split("/")) {
+  for (const segment of `${storageScope()}projects/${dirName}`.split("/")) {
     if (!segment) continue;
     dir = await dir.getDirectoryHandle(segment);
   }
@@ -166,7 +183,7 @@ async function handlePreviewRequest(request: Request): Promise<Response> {
     invalidateRegistry();
     dirName = (await findProjectDirName(projectId)) ?? null;
   }
-  const policy = serverAccessPolicy(`/projects/${dirName ?? `unknown-${projectId}`}`);
+  const policy = serverAccessPolicy(`/${storageScope()}projects/${dirName ?? `unknown-${projectId}`}`);
   try {
     policy.assertRead(relPath);
   } catch {
@@ -249,7 +266,7 @@ swScope.addEventListener("activate", (event) => {
 swScope.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== swScope.location.origin) return;
-  if (!url.pathname.startsWith("/api/projects/")) return;
+  if (!url.pathname.startsWith(`${assetBase()}api/projects/`)) return;
   event.respondWith(handlePreviewRequest(event.request));
 });
 

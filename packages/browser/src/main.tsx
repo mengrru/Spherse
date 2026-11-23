@@ -8,7 +8,7 @@ const bridge = createBrowserHostBridge();
 createAppRoot(bridge);
 
 if (import.meta.env.MODE === "production") {
-  void navigator.serviceWorker.register("/sw.js", { scope: "/", type: "module" }).catch(() => {});
+  void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL, type: "module" }).catch(() => {});
 } else {
-  void navigator.serviceWorker.register("/src/sw/index.ts", { type: "module", scope: "/" }).catch(() => {});
+  void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}src/sw/index.ts`, { type: "module", scope: import.meta.env.BASE_URL }).catch(() => {});
 }

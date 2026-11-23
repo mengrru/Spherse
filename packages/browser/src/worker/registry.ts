@@ -12,7 +12,13 @@ import type { SessionChangePayload } from "@spherse/core";
 import { readOpfsJson, writeOpfsJson } from "./opfs-json.js";
 import { LazyMemoryStore, LazySessionStore } from "./lazy-stores.js";
 
-const REGISTRY_FILE = "spherse-registry.json";
+function storageScope(): string {
+  const base = import.meta.env.BASE_URL;
+  if (base === "/" || base === "" || base === "./") return "";
+  return `${base.split("/").filter(Boolean).join("-")}/`;
+}
+
+const REGISTRY_FILE = `${storageScope()}spherse-registry.json`;
 
 interface RegistryEntry {
   id: string;
@@ -151,9 +157,9 @@ export class BrowserProjectRegistry {
   }
 
   private async doOpen(entry: RegistryEntry): Promise<RuntimeRecord> {
-    const fsPort = await OpfsFsPort.open(`projects/${entry.dirName}`);
-    const projectRoot = `/projects/${entry.dirName}`;
-    const storeKeyPrefix = `projects/${entry.dirName}`;
+    const fsPort = await OpfsFsPort.open(`${storageScope()}projects/${entry.dirName}`);
+    const projectRoot = `/${storageScope()}projects/${entry.dirName}`;
+    const storeKeyPrefix = `${storageScope()}projects/${entry.dirName}`;
     const sessionStores = new Map<string, LazySessionStore>();
     const memoryStores = new Map<string, LazyMemoryStore>();
     const storeKeyOf = (agentDir: string): string => `${storeKeyPrefix}${agentDir.slice(projectRoot.length)}`;
@@ -254,7 +260,7 @@ export class BrowserProjectRegistry {
       .map((entry) => ({
         id: entry.id,
         name: entry.name,
-        rootPath: `/projects/${entry.dirName}`,
+        rootPath: `/${storageScope()}projects/${entry.dirName}`,
         lastOpened: entry.lastOpened,
       }))
       .sort((a, b) => (b.lastOpened ?? "").localeCompare(a.lastOpened ?? ""));
@@ -266,7 +272,7 @@ export class BrowserProjectRegistry {
     return {
       id: entry.id,
       name: entry.name,
-      rootPath: `/projects/${entry.dirName}`,
+      rootPath: `/${storageScope()}projects/${entry.dirName}`,
       lastOpened: entry.lastOpened,
     };
   }

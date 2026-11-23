@@ -402,7 +402,7 @@ spherse/
 │   │       ├── ui-sdk-data-crud.spec.ts # UI SDK data CRUD key-value 持久化 E2E 测试
 │   │       └── ui-sdk-bridge.spec.ts   # 注入式 @spherse/sdk 桥接 E2E 测试（window.spherse.* 暴露面 / fire 导航 / call 往返 / api.* HTTP 桥接 resolve+reject / navigate 订阅回放）
 │   ├── browser/                      # @spherse/browser — 浏览器本地版壳（P3：SharedWorker 内跑完整 runtime，无 server 进程）
-│   │   ├── vite.config.ts            # Vite（react + tailwind + `node:path`→`@spherse/core/paths` alias + Node-only 动态目标 external；worker.format es；sw 独立入口固定输出 sw.js）
+│   │   ├── vite.config.ts            # Vite（react + tailwind + `node:path`→`@spherse/core/paths` alias + Node-only 动态目标 external；worker.format es；sw 独立入口固定输出 sw.js；base 由 SPHERSE_BROWSER_BASE 注入——默认 /，子路径部署（/dev/browser/）时 SW scope/资源面前缀/OPFS·IDB·localStorage 存储隔离前缀全部从 import.meta.env.BASE_URL 派生）
 │   │   ├── src/
 │   │   │   ├── main.tsx              # 注入 local transport 工厂 + BrowserHostBridge + createAppRoot + SW 注册（生产 /sw.js module）
 │   │   │   ├── host-bridge-browser.tsx # BrowserHostBridge（kind web、baseUrl=origin、project API 走 RPC browser.* / connection.*）

@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { useBusSubscription } from "./useBusSubscription";
 import { useReconnectedSync } from "./useReconnectedSync";
+import { localAssetPrefix } from "../lib/rpc/shared.js";
 
 const THEME_CSS_PATH = ".spherse/theme.css";
 
 function buildThemeHref(baseUrl: string, projectId: string, accessToken: string | null): string {
   const authSegment = accessToken ? `__auth/${encodeURIComponent(accessToken)}/` : "";
-  return `${baseUrl}/api/projects/${projectId}/preview/${authSegment}.spherse/theme.css?t=${Date.now()}`;
+  return `${localAssetPrefix(baseUrl)}${baseUrl}/api/projects/${projectId}/preview/${authSegment}.spherse/theme.css?t=${Date.now()}`;
 }
 
 function mountThemeLink(href: string): void {
