@@ -47,5 +47,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install browser test runtime
+        run: npx playwright install chromium --only-shell
+
       - name: Lint, build, and test
         run: npm run verify
