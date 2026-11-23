@@ -285,5 +285,8 @@ export async function waitForFrames(harness: RpcHarness, count = 1): Promise<unk
   for (let i = 0; i < 100 && harness.sent().length < count; i += 1) {
     await flush();
   }
+  for (let i = 0; i < 100 && harness.sent().length < count; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   return harness.sent();
 }
