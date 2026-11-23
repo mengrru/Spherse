@@ -17,8 +17,6 @@ function turnContextSnapshot() {
     systemPrompt: "p",
     messages: [],
     tools: [],
-    compaction: null,
-    compactionCount: 0,
   };
 }
 
@@ -105,43 +103,12 @@ describe("debug.sessionEvents", () => {
 });
 
 describe("debug.turnContext", () => {
-  it("returns the turn context snapshot with compaction metadata", async () => {
-    (harness.known.sessionRuntime.getTurnContext as ReturnType<typeof vi.fn>).mockReturnValue({
-      ...turnContextSnapshot(),
-      compaction: {
-        seq: 12,
-        anchorSeq: 8,
-        digestSource: "llm",
-        excludedCount: 3,
-        digestLength: 2048,
-        appliedAtMs: 1700000000000,
-      },
-      compactionCount: 1,
-    });
+  it("returns the turn context snapshot without compaction metadata", async () => {
     const frame = (await callMethod(harness, "debug.turnContext", {
       projectId: "p1",
       sessionId: "s1",
     })) as ResultFrame;
     expect(frame).toMatchObject({ type: "result", ok: true });
-    expect(frame.data).toMatchObject({
-      compaction: { seq: 12, anchorSeq: 8, digestSource: "llm", excludedCount: 3, digestLength: 2048 },
-      compactionCount: 1,
-    });
-  });
-
-  it("fails with an internal error when the snapshot misses required compaction fields", async () => {
-    (harness.known.sessionRuntime.getTurnContext as ReturnType<typeof vi.fn>).mockReturnValue({
-      sessionId: "s1",
-      capturedAt: "2024-01-01T00:00:00.000Z",
-      systemPrompt: "p",
-      messages: [],
-      tools: [],
-    });
-    const frame = (await callMethod(harness, "debug.turnContext", {
-      projectId: "p1",
-      sessionId: "s1",
-    })) as ResultFrame;
-    expect(frame).toMatchObject({ type: "result", ok: false, error: { code: -32603 } });
-    expect(frame.error?.message).toContain("Invalid payload");
+    expect(frame.data).toMatchObject({ sessionId: "s1", systemPrompt: "p" });
   });
 });

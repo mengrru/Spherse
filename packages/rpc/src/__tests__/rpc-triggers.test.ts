@@ -41,8 +41,6 @@ function turnContextSnapshot() {
     systemPrompt: "sys",
     messages: [],
     tools: [],
-    compaction: null,
-    compactionCount: 0,
   };
 }
 

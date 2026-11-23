@@ -87,47 +87,7 @@ describe("debug.turnContext against the real SessionManager", () => {
       sessionId,
     })) as ResultFrame;
     expect(frame).toMatchObject({ type: "result", ok: true });
-    const snapshot = frame.data as { sessionId: string; compaction: unknown; compactionCount: number };
+    const snapshot = frame.data as { sessionId: string };
     expect(snapshot.sessionId).toBe(sessionId);
-    expect(snapshot.compaction).toBeNull();
-    expect(snapshot.compactionCount).toBe(0);
-  });
-
-  it("exposes only the latest compaction metadata from the real event log", async () => {
-    const sessionId = await createSessionWithAgent();
-    const runner = runtime.sessionRuntime.sessions.get(sessionId);
-    runner.eventLog.append("compaction/applied", {
-      anchorSeq: 1,
-      digestContent: "first digest",
-      excludedSeqs: [2],
-      digestSource: "llm",
-    });
-    runner.eventLog.append("compaction/applied", {
-      anchorSeq: 3,
-      digestContent: "second digest!",
-      excludedSeqs: [4, 5],
-      digestSource: "mechanical",
-    });
-
-    const frame = (await callMethod(harness, "debug.turnContext", {
-      projectId: "p1",
-      sessionId,
-    })) as ResultFrame;
-    expect(frame).toMatchObject({ type: "result", ok: true });
-    const snapshot = frame.data as {
-      sessionId: string;
-      compaction: Record<string, unknown>;
-      compactionCount: number;
-    };
-    expect(snapshot.sessionId).toBe(sessionId);
-    expect(snapshot.compactionCount).toBe(2);
-    expect(snapshot.compaction).toEqual({
-      seq: 1,
-      anchorSeq: 3,
-      digestSource: "mechanical",
-      excludedCount: 2,
-      digestLength: 14,
-      appliedAtMs: expect.any(Number),
-    });
   });
 });
