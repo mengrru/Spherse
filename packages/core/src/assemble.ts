@@ -37,6 +37,7 @@ export interface AssembleCoreOptions {
   logger?: Logger;
   modelCatalog?: ModelCatalog;
   capabilities?: Capability[] | ((builtin: Capability[]) => Capability[]);
+  interaction?: Capability;
   storage: {
     fsPort: FsPort;
     sessionStoreFactory: SessionStoreFactory;
@@ -48,9 +49,10 @@ export function defaultCoreCapabilities(
   projectStore: ProjectStore,
   logger: Logger,
   dataStore?: DataStore,
+  interaction?: Capability,
 ): Capability[] {
   return [
-    ...builtinToolCapabilities(dataStore),
+    ...builtinToolCapabilities(dataStore, interaction ? { interaction } : {}),
     createTriggerCapability({ projectStore, logger }),
     createMcpCapability({ projectStore, logger }),
     attachmentsCapability(),
@@ -91,8 +93,8 @@ export async function assembleProjectCore(
   const stores = createStoreRegistry(logger);
   const capabilities =
     typeof options.capabilities === "function"
-      ? options.capabilities(defaultCoreCapabilities(projectStore, logger, dataStore))
-      : (options.capabilities ?? defaultCoreCapabilities(projectStore, logger, dataStore));
+      ? options.capabilities(defaultCoreCapabilities(projectStore, logger, dataStore, options.interaction))
+      : (options.capabilities ?? defaultCoreCapabilities(projectStore, logger, dataStore, options.interaction));
 
   const host = createHostContext();
   const capabilityRegistry = new CapabilityRegistry();

@@ -68,6 +68,7 @@ export async function assembleProject(
   };
   return assembleProjectCore(projectRoot, {
     projectName: options?.projectName,
+    interaction: interactionCapability(),
     defaultModel: options?.defaultModel,
     sampling: options?.sampling,
     thinkingLevel: options?.thinkingLevel,
