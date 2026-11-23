@@ -100,6 +100,9 @@ async function call(method: string, params?: unknown): Promise<RpcHarness> {
   for (let i = 0; i < 10 && harness.sent().length === 0; i++) {
     await flush();
   }
+  for (let i = 0; i < 100 && harness.sent().length === 0; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   return harness;
 }
 

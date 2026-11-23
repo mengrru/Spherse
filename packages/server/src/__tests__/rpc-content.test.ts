@@ -35,6 +35,7 @@ async function settle(): Promise<void> {
   for (let i = 0; i < 10; i++) {
     await flush();
   }
+  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 async function call(method: string, params: unknown): Promise<ResultFrame> {
