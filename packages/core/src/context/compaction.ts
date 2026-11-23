@@ -74,7 +74,7 @@ export function wrapDigestContent(plainText: string, covers?: string): string {
   return lines.join("\n");
 }
 
-function isDigestMessage(msg: Message): boolean {
+export function isDigestMessage(msg: Message): boolean {
   if (msg.role !== "user") return false;
   if (typeof msg.content === "string") {
     return msg.content.includes("<compaction-digest");

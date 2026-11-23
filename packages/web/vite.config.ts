@@ -76,6 +76,8 @@ export default defineConfig({
         navigateFallback: "index.html",
         navigateFallbackDenylist: [/^\/api\//, /^\/ws\//, /^\/preview\//],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        cleanupOutdatedCaches: true,
+        importScripts: ["sw-update-handler.js"],
       },
       devOptions: {
         enabled: false,

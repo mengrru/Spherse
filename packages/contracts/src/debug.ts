@@ -1,14 +1,5 @@
 import { Type, type Static } from "@sinclair/typebox";
 
-const turnContextCompactionMeta = Type.Object({
-  seq: Type.Integer(),
-  anchorSeq: Type.Integer(),
-  digestSource: Type.Union([Type.Literal("llm"), Type.Literal("mechanical"), Type.Null()]),
-  excludedCount: Type.Integer({ minimum: 0 }),
-  digestLength: Type.Integer({ minimum: 0 }),
-  appliedAtMs: Type.Integer(),
-});
-
 const turnContextSnapshot = Type.Object({
   sessionId: Type.String(),
   capturedAt: Type.String(),
@@ -21,8 +12,6 @@ const turnContextSnapshot = Type.Object({
       parameters: Type.Unknown(),
     }),
   ),
-  compaction: Type.Union([turnContextCompactionMeta, Type.Null()]),
-  compactionCount: Type.Integer({ minimum: 0 }),
 });
 
 const debugSessionEvent = Type.Object({
@@ -39,11 +28,9 @@ const sessionEventLog = Type.Object({
 
 export const schemas = {
   turnContextSnapshot,
-  turnContextCompactionMeta,
   sessionEventLog,
 } as const;
 
 export type TurnContextSnapshotContract = Static<typeof turnContextSnapshot>;
-export type TurnContextCompactionMetaContract = Static<typeof turnContextCompactionMeta>;
 export type DebugSessionEventContract = Static<typeof debugSessionEvent>;
 export type SessionEventLogContract = Static<typeof sessionEventLog>;

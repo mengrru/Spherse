@@ -61,6 +61,13 @@ export const schemas = {
   sessionStatus: Type.Object({
     currentTokens: Type.Number(),
     contextWindowLimit: Type.Union([Type.Number(), Type.Null()]),
+    cacheHitRate: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+    turnInputTokens: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+    turnCacheReadTokens: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+    turnCacheWriteTokens: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+    turnOutputTokens: Type.Optional(Type.Union([Type.Number(), Type.Null()])),
+    userMessageCount: Type.Optional(Type.Number()),
+    messageCount: Type.Optional(Type.Number()),
   }),
   sessionSearchResponse: Type.Object({
     results: Type.Array(sessionSearchHit),

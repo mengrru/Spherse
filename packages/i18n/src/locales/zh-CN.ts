@@ -259,6 +259,8 @@ export const zhCN = {
   "settings.about.retry": "重试",
   // error 态引导用户前往官网下载页（landing page，按平台/架构自动选包）手动下载新版本的按钮
   "settings.about.gotoDownloadPage": "前往官网下载",
+  "settings.about.clearCacheUpdate": "清除缓存并更新",
+  "settings.about.clearingCache": "正在清除缓存...",
   // 更新确认弹窗标题，{version} 为新版本号
   "settings.update.newVersion": "发现新版本 v{version}",
   // 更新确认弹窗中 release notes 区域标题
@@ -1148,6 +1150,24 @@ export const zhCN = {
   "session.statusLoadFailed": "状态加载失败",
   // 会话状态弹窗中上下文窗口上限无法解析（未配置模型等）时显示的占位符
   "session.statusUnknown": "未知",
+  // 会话状态弹窗中「本轮缓存命中率」字段的标签，仅统计当前轮次（最后一条用户消息起），非全会话累计
+  "session.statusTurnCacheHitRate": "本轮缓存命中率",
+  // 会话状态弹窗中缓存命中率的分母说明小字，{read} 为本轮缓存读取 token 数，{total} 为本轮缓存读取与输入 token 之和
+  "session.statusCacheHitRateDetail": "缓存读取 / (缓存读取 + 输入)：{read} / {total}",
+  // 会话状态弹窗中「本轮 Token 用量」区块的标签，展示当前轮次 input/output/cacheRead/cacheWrite 四项
+  "session.statusTurnTokens": "本轮 Token 用量",
+  // 会话状态弹窗中本轮 token 细分之「输入」的标签（非缓存命中的输入 token）
+  "session.statusTurnInput": "输入",
+  // 会话状态弹窗中本轮 token 细分之「输出」的标签
+  "session.statusTurnOutput": "输出",
+  // 会话状态弹窗中本轮 token 细分之「缓存读取」的标签
+  "session.statusTurnCacheRead": "缓存读取",
+  // 会话状态弹窗中本轮 token 细分之「缓存写入」的标签
+  "session.statusTurnCacheWrite": "缓存写入",
+  // 会话状态弹窗中「上下文用户消息数」字段的标签，统计当前上下文消息缓冲（压缩后历史折叠为摘要、不含被丢弃消息），非完整历史总数
+  "session.statusUserMessages": "上下文用户消息数",
+  // 会话状态弹窗中「上下文总消息数」字段的标签，统计当前上下文消息缓冲（压缩后历史折叠为摘要、不含被丢弃消息），非完整历史总数
+  "session.statusTotalMessages": "上下文总消息数",
 
   // --- Settings ---
   // 设置中语言选择器的标签
@@ -1367,12 +1387,6 @@ export const zhCN = {
   "debug.eventLogLoadFailed": "Failed to load event log",
   // Turn Context 弹窗：单条事件一键复制按钮的提示
   "debug.eventLogCopy": "Copy",
-  // Turn Context 弹窗：压缩状态行，会话从未发生过压缩时显示
-  "debug.compactionNone": "未压缩",
-  // Turn Context 弹窗：压缩状态行，{seq} 为压缩事件序号，{anchorSeq} 为压缩锚点事件序号，{source} 为摘要来源（llm/mechanical），{excludedCount} 为被压缩排除的事件条数，{digestLength} 为摘要文本长度（字符数）
-  "debug.compactionLast": "最近一次压缩：seq {seq} · 锚点 {anchorSeq} · 来源 {source} · 排除 {excludedCount} 条 · 摘要 {digestLength} 字符",
-  // Turn Context 弹窗：压缩状态行结尾的会话累计压缩次数，{count} 为累计次数
-  "debug.compactionTotal": "累计 {count} 次",
 
   // 欢迎页文件缺失时的错误提示，{path} 为文件路径
   "welcome-page.fileMissing": "欢迎页文件不存在：{path}",
@@ -1481,9 +1495,11 @@ export const zhCN = {
   "web-version.reconnect": "重新连接",
   // 硬拦截全屏页「刷新页面」主按钮（网页缓存可能过旧，刷新拉取新版本，不清除连接）
   "web-version.reload": "刷新页面",
+  "web-version.clearing": "正在清除缓存并更新...",
   // 硬拦截全屏页「临时收起」按钮——用户暂不升级时先继续使用（仅本次会话有效，刷新后重新检测；以虚化样式呈现不作引导）
   "web-version.dismiss": "暂不升级，继续使用",
   // 桌面端与 web 端仅 patch 版本不同时的软提示 toast，{appVersion}/{webVersion} 为两端版本号
+  "web-version.updateNow": "立即更新",
   "web-version.patchWarning": "桌面端版本（{appVersion}）与网页版（{webVersion}）略有差异，如遇异常请升级桌面端",
   // web 端无法获取桌面端版本（旧版桌面端）时的软提示 toast
   "web-version.unknownWarning": "无法确认桌面端版本，如遇异常请升级桌面端",

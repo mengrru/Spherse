@@ -135,7 +135,6 @@ export type {
 } from "./prompt-marketplace.js";
 export type {
   TurnContextSnapshotContract,
-  TurnContextCompactionMetaContract,
   DebugSessionEventContract,
   SessionEventLogContract,
 } from "./debug.js";

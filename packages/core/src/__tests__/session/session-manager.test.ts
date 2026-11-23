@@ -778,7 +778,17 @@ describe("SessionManager getSessionStatus", () => {
     ];
 
     const status = runtime.sessionRuntime.getSessionStatus(agentId, sessionId);
-    expect(status).toEqual({ currentTokens: 512, contextWindowLimit: 128000 });
+    expect(status).toEqual({
+      currentTokens: 512,
+      contextWindowLimit: 128000,
+      cacheHitRate: null,
+      turnInputTokens: null,
+      turnCacheReadTokens: null,
+      turnCacheWriteTokens: null,
+      turnOutputTokens: null,
+      userMessageCount: 1,
+      messageCount: 2,
+    });
   });
 
   it("computes status from persisted history for a non-live session", async () => {
@@ -810,7 +820,17 @@ describe("SessionManager getSessionStatus", () => {
     runtime.sessionRuntime.setDefaultModel("p/m");
 
     const status = runtime.sessionRuntime.getSessionStatus(agentId, sessionId);
-    expect(status).toEqual({ currentTokens: 999, contextWindowLimit: 64000 });
+    expect(status).toEqual({
+      currentTokens: 999,
+      contextWindowLimit: 64000,
+      cacheHitRate: null,
+      turnInputTokens: null,
+      turnCacheReadTokens: null,
+      turnCacheWriteTokens: null,
+      turnOutputTokens: null,
+      userMessageCount: 0,
+      messageCount: 1,
+    });
   });
 
   it("throws NotFoundError for an unknown agent on the non-live path", async () => {

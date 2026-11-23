@@ -204,17 +204,39 @@ describe("api contracts", () => {
   });
 
   it("validates session status response", () => {
-    expect(parseApiResponse(schemas.sessionStatus, { currentTokens: 512, contextWindowLimit: 32768 })).toEqual({
+    const fullStatus = {
       currentTokens: 512,
       contextWindowLimit: 32768,
-    });
-    expect(parseApiResponse(schemas.sessionStatus, { currentTokens: 0, contextWindowLimit: null })).toEqual({
-      currentTokens: 0,
-      contextWindowLimit: null,
-    });
+      cacheHitRate: 0.75,
+      turnInputTokens: 100,
+      turnCacheReadTokens: 300,
+      turnCacheWriteTokens: 50,
+      turnOutputTokens: 62,
+      userMessageCount: 4,
+      messageCount: 11,
+    };
+    expect(parseApiResponse(schemas.sessionStatus, fullStatus)).toEqual(fullStatus);
+    expect(
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, cacheHitRate: null }),
+    ).toEqual({ ...fullStatus, cacheHitRate: null });
+    expect(
+      parseApiResponse(schemas.sessionStatus, {
+        currentTokens: 0,
+        contextWindowLimit: null,
+      }),
+    ).toEqual({ currentTokens: 0, contextWindowLimit: null });
     expect(() => parseApiResponse(schemas.sessionStatus, { currentTokens: "x" })).toThrow(/Invalid payload/);
     expect(() =>
       parseApiResponse(schemas.sessionStatus, { currentTokens: 1, contextWindowLimit: "no" }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, cacheHitRate: "87%" }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, userMessageCount: "4" }),
+    ).toThrow(/Invalid payload/);
+    expect(() =>
+      parseApiResponse(schemas.sessionStatus, { ...fullStatus, messageCount: null }),
     ).toThrow(/Invalid payload/);
   });
 
@@ -576,52 +598,15 @@ describe("api contracts", () => {
   });
 
   it("validates turn context snapshot", () => {
-    const base = {
+    const snapshot = {
       sessionId: "s1",
       capturedAt: "2024-01-01T00:00:00.000Z",
       systemPrompt: "p",
       messages: [],
       tools: [{ name: "t", description: "d", parameters: {} }],
     };
-    const uncompacted = { ...base, compaction: null, compactionCount: 0 };
-    expect(parseApiResponse(schemas.turnContextSnapshot, uncompacted)).toEqual(uncompacted);
-
-    const compacted = {
-      ...base,
-      compaction: {
-        seq: 12,
-        anchorSeq: 8,
-        digestSource: "llm",
-        excludedCount: 3,
-        digestLength: 2048,
-        appliedAtMs: 1700000000000,
-      },
-      compactionCount: 2,
-    };
-    expect(parseApiResponse(schemas.turnContextSnapshot, compacted)).toEqual(compacted);
-
-    expect(parseApiResponse(schemas.turnContextSnapshot, { ...base, compaction: { ...compacted.compaction, digestSource: null }, compactionCount: 1 })).toMatchObject({
-      compaction: { digestSource: null },
-    });
-
-    expect(() => parseApiResponse(schemas.turnContextSnapshot, base)).toThrow(/Invalid payload/);
+    expect(parseApiResponse(schemas.turnContextSnapshot, snapshot)).toEqual(snapshot);
     expect(() => parseApiResponse(schemas.turnContextSnapshot, { sessionId: "s1" })).toThrow(/Invalid payload/);
-    expect(() => parseApiResponse(schemas.turnContextSnapshot, { ...uncompacted, compactionCount: undefined })).toThrow(/Invalid payload/);
-    expect(() =>
-      parseApiResponse(schemas.turnContextSnapshot, {
-        ...compacted,
-        compaction: { ...compacted.compaction, digestSource: "other" },
-      }),
-    ).toThrow(/Invalid payload/);
-    expect(() =>
-      parseApiResponse(schemas.turnContextSnapshot, {
-        ...compacted,
-        compaction: { ...compacted.compaction, excludedCount: -1 },
-      }),
-    ).toThrow(/Invalid payload/);
-    expect(() => parseApiResponse(schemas.turnContextSnapshot, { ...uncompacted, compaction: "none" })).toThrow(
-      /Invalid payload/,
-    );
   });
 
   it("validates session event log", () => {

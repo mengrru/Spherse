@@ -1,11 +1,6 @@
-import type { DebugSessionEventContract, TurnContextCompactionMetaContract } from "@spherse/contracts";
+import type { DebugSessionEventContract } from "@spherse/contracts";
 
 type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
-
-export interface CompactionStatus {
-  compaction: TurnContextCompactionMetaContract | null;
-  compactionCount: number;
-}
 
 const EVENT_BADGE_VARIANTS: Record<string, BadgeVariant> = {
   "user/message": "default",
@@ -22,25 +17,6 @@ const EVENT_BADGE_VARIANTS: Record<string, BadgeVariant> = {
 
 export function eventBadgeVariant(type: string): BadgeVariant {
   return EVENT_BADGE_VARIANTS[type] ?? "outline";
-}
-
-export function compactionStatusFromEvents(events: DebugSessionEventContract[]): CompactionStatus {
-  let compaction: TurnContextCompactionMetaContract | null = null;
-  let compactionCount = 0;
-  for (const event of events) {
-    if (event.type !== "compaction/applied") continue;
-    compactionCount += 1;
-    const data = (event.data ?? {}) as Record<string, unknown>;
-    compaction = {
-      seq: event.seq,
-      anchorSeq: typeof data.anchorSeq === "number" ? data.anchorSeq : 0,
-      digestSource: data.digestSource === "llm" || data.digestSource === "mechanical" ? data.digestSource : null,
-      excludedCount: Array.isArray(data.excludedSeqs) ? data.excludedSeqs.length : 0,
-      digestLength: typeof data.digestContent === "string" ? data.digestContent.length : 0,
-      appliedAtMs: event.time,
-    };
-  }
-  return { compaction, compactionCount };
 }
 
 interface ContentBlock {
