@@ -405,8 +405,7 @@ spherse/
 │   │   ├── vite.config.ts            # Vite（react + tailwind + `node:path`→`@spherse/core/paths` alias + Node-only 动态目标 external；worker.format es；sw 独立入口固定输出 sw.js；base 由 SPHERSE_BROWSER_BASE 注入——默认 /，子路径部署（/dev/browser/）时 SW scope/资源面前缀/OPFS·IDB·localStorage 存储隔离前缀全部从 import.meta.env.BASE_URL 派生）
 │   │   ├── src/
 │   │   │   ├── main.tsx              # 注入 local transport 工厂 + BrowserHostBridge + createAppRoot + SW 注册（生产 /sw.js module）
-│   │   │   ├── host-bridge-browser.tsx # BrowserHostBridge（kind web、baseUrl=origin、project API 走 RPC browser.* / connection.*）
-│   │   │   ├── onboarding.tsx        # 本地项目 onboarding（创建/选择项目，复用 renderConnectPage 槽位）
+│   │   │   ├── host-bridge-browser.tsx # BrowserHostBridge（kind browser、baseUrl=origin、project API 走 RPC browser.* / connection.*）
 │   │   │   ├── client/runtime-transport.ts # RpcSharedWorkerTransport（postMessage 对象帧，structured clone 透传 Blob）
 │   │   │   ├── worker/               # SharedWorker 侧：index（onconnect）+ rpc-app（RpcContext 组装/端口适配）+ registry（OPFS 持久注册表 + assembleProjectCore + OPFS/IDB storage 注入）+ model-settings + bus（trigger/agent/session 三通道）+ methods/（browser 版 content/settings/skills/attachments + browser.createProject）
 │   │   │   └── sw/index.ts           # 资源面 SW：拦截 /api/projects/:id/preview/*（__auth 剥离、SDK 保留路由、HTML 注入、Range/ETag、白名单 403、OPFS 读）
