@@ -58,7 +58,7 @@ ProjectRuntime           对外协调层，聚合以上全部
   - 不变量：`seq` 在单个 session log 内从 0 连续，`open` 校验损坏即抛；`appendBatch` 落库失败回滚内存追加
   - restore 先 `repairLog` 为未闭合 turn 持久化补写合成 error toolResult 与 `turn/end(aborted)`（二次恢复幂等），再 fold
 - **控制事件（重启点）**：`turn/retried`、`turn/withdrawn`、`compaction/applied`，restore 时按语义重建；WS 协议不受存储格式影响
-  - withdraw：`turn/withdrawn {seq}` 锚定被撤回的 user message，fold 从日志推导废弃区间 `[seq, 本事件 seq)`；末轮已被 digest 覆盖（lastUserEvent.seq ≤ anchorSeq）时拒绝撤回
+  - withdraw：每次定位最新未废弃的 user message，支持连续撤回；`turn/withdrawn {seq}` 锚定被撤回的 user message，fold 从日志推导废弃区间 `[seq, 本事件 seq)`；没有未废弃的 user message，或目标轮已被 digest 覆盖（lastUserEvent.seq ≤ anchorSeq）时拒绝撤回
   - compaction：阈值触发时经 agent 自身 streamFn 生成 LLM 摘要——精确复刻请求前缀（systemPrompt + tools + fold 视图 + 追加摘要指令）命中 provider prompt cache；失败且 tokens ≤ 90% window 跳过本轮，> 90% 回退机械拼接
     摘要长度预算按压缩时 context tokens 的 5% 动态给定（clamp 1500–16000），同时约束摘要指令文本与 stream `maxTokens`（再与模型输出上限取 min）
     摘要来源以 `digestSource: "llm" | "mechanical"` 标记

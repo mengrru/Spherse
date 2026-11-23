@@ -58,7 +58,7 @@ Composer.send
 3. 事件经 EventPipeline（log → capability middlewares → 附件 sanitizer → persistMiddleware）流向 hub；control 事件旁路——`controlBus.swapEventSink` 直达 sink 不过中间件
 4. 落库映射：`message_end` → `assistant/message` / `tool/result`；`agent_end` → `turn/end`（reason 取自最后 assistant 的 stopReason）
 5. `retryLastTurn`：要求末条为失败 assistant；追加 `turn/retried`（abandonedSeqs）+ `turn/start`，`agent.continue()`
-6. `withdrawLastTurn`：定位最后 `user/message`，已被 abandoned/compaction 覆盖则拒绝；追加 `turn/withdrawn`
+6. `withdrawLastTurn`：跳过 abandoned 事件，定位最新未废弃的 `user/message`，支持连续撤回；没有目标或目标已被 compaction 覆盖则拒绝，否则追加 `turn/withdrawn`
 
 ## Renderer：Entry → MessageGroup → 组件
 
