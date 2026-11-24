@@ -1,3 +1,4 @@
+import "./pwa.css";
 import { createAppRoot } from "@spherse/app/main";
 import { setLocalRuntimeTransportFactory } from "@spherse/app/lib/rpc/shared";
 import { createBrowserHostBridge } from "./host-bridge-browser.js";
