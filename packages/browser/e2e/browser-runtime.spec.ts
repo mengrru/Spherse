@@ -93,6 +93,19 @@ test.describe("resource plane via SW", () => {
     expect(results.themeStatus).toBe(200);
     expect(results.themeType).toContain("text/css");
 
+    await page.goto(`/#/project/${projectId}`);
+    await page.waitForTimeout(3000);
+    const themeChain = await page.evaluate(async () => {
+      const link = document.getElementById("custom-theme-link") as HTMLLinkElement | null;
+      if (!link) return { link: "missing" };
+      const href = link.getAttribute("href") ?? "";
+      const validShape = /^\/dev\/browser\/api\/|^\/api\//.test(href) && !href.includes("http");
+      const res = await fetch(href);
+      return { link: "present", href, validShape, fetchStatus: res.status, type: res.headers.get("content-type") };
+    });
+    expect(themeChain.link).toBe("present");
+    expect(themeChain.validShape).toBe(true);
+
     const iframeRendered = await page.evaluate(async (projectId) => {
       const iframe = document.createElement("iframe");
       iframe.src = `/api/projects/${projectId}/preview/cards/demo.html`;

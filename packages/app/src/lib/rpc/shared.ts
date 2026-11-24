@@ -23,6 +23,17 @@ export function localAssetPrefix(baseUrl: string): string {
   return isLocalRuntimeBaseUrl(baseUrl) ? import.meta.env.BASE_URL : "";
 }
 
+function normalizedAssetBase(): string {
+  const base = import.meta.env.BASE_URL;
+  if (!base || base === "./" || base === "/") return "";
+  return base.endsWith("/") ? base : `${base}/`;
+}
+
+export function resolveResourcePath(baseUrl: string, path: string): string {
+  if (isLocalRuntimeBaseUrl(baseUrl)) return `${normalizedAssetBase()}${path}`;
+  return `${baseUrl}${path}`;
+}
+
 export function getSharedRpcClient(baseUrl: string, accessToken: RpcAccessTokenGetter): RpcClient {
   const key = baseUrl;
   const existing = shared.get(key);
