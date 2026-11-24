@@ -11,7 +11,7 @@ export type RpcAccessTokenGetter = () => string | null;
 
 let localTransportFactory: (() => RpcTransport) | null = null;
 
-export function setLocalRuntimeTransportFactory(factory: () => RpcTransport): void {
+export function setLocalRuntimeTransportFactory(factory: (() => RpcTransport) | null): void {
   localTransportFactory = factory;
 }
 
@@ -30,7 +30,11 @@ function normalizedAssetBase(): string {
 }
 
 export function resolveResourcePath(baseUrl: string, path: string): string {
-  if (isLocalRuntimeBaseUrl(baseUrl)) return `${normalizedAssetBase()}${path}`;
+  if (isLocalRuntimeBaseUrl(baseUrl)) {
+    const base = normalizedAssetBase();
+    if (base === "") return path;
+    return path.startsWith("/") ? `${base}${path.slice(1)}` : `${base}${path}`;
+  }
   return `${baseUrl}${path}`;
 }
 
