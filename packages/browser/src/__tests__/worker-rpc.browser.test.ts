@@ -249,6 +249,10 @@ describe("browser worker rpc", () => {
       const projects = await client2.call<Array<{ id: string; name: string }>>("connection.projects");
       const demo = projects.find((entry) => entry.name === "demo");
       expect(demo).toBeDefined();
+      const warmedAgents = await client2.call<Array<{ id: string }>>("agents.list", {
+        projectId: demo!.id,
+      });
+      expect(warmedAgents.length).toBeGreaterThan(0);
       const reopenedId = await app2.registry.create("demo");
       expect(reopenedId).toBe(demo!.id);
       const sessions = await client2.call<{ sessions: Array<{ id: string; title?: string }> }>(

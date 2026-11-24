@@ -77,7 +77,18 @@ export class BrowserProjectRegistry {
     const registry = new BrowserProjectRegistry(logger, catalog);
     const file = await readOpfsJson<RegistryFile>(REGISTRY_FILE, { projects: [] });
     registry.entries = Array.isArray(file.projects) ? file.projects : [];
+    await registry.warmup();
     return registry;
+  }
+
+  private async warmup(): Promise<void> {
+    for (const entry of [...this.entries]) {
+      try {
+        await this.ensureRuntime(entry);
+      } catch (err) {
+        this.logger.warn({ err, dirName: entry.dirName }, "project warmup failed, skipping runtime");
+      }
+    }
   }
 
   getSupportedProviders(): unknown {

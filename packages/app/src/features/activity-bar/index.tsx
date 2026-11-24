@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { useAppUiStore } from "../../stores/app-ui-store";
 import { useProjectActions } from "./use-project-actions";
+import { BrowserCreateProjectDialog } from "../onboarding/BrowserCreateProjectDialog";
 import { ProjectAvatar } from "./ProjectAvatar";
 import { Button } from "../../components/ui/button";
 import {
@@ -53,8 +54,10 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
   const openSettings = useAppUiStore((s) => s.openSettings);
   const bridge = useHostBridge();
   const canEditProject = bridge.capabilities.content.editable;
+  const [marketOpen, setMarketOpen] = useState(false);
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const { handleAddProject, handleSelectProject, handleCloseProject, handleOpenProjectFolder } =
-    useProjectActions();
+    useProjectActions({ onCreateProjectOpenChange: setCreateProjectOpen });
   const [settingsProjectId, setSettingsProjectId] = useState<string | null>(null);
   const settingsProject = settingsProjectId ? projects.get(settingsProjectId) : null;
   const settingsClient = useApiClient(settingsProjectId);
@@ -64,7 +67,7 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
   const [sidePanelSettingsProjectId, setSidePanelSettingsProjectId] = useState<string | null>(null);
   const sidePanelSettingsProject = sidePanelSettingsProjectId ? projects.get(sidePanelSettingsProjectId) : null;
   const sidePanelSettingsClient = useApiClient(sidePanelSettingsProjectId);
-  const [marketOpen, setMarketOpen] = useState(false);
+
   const globalClient = useGlobalApiClient();
   const activeProjectClient = useApiClient(activeProjectId);
   const { data: customSidePanelData, isError: customSidePanelError } = useCustomSidePanel(
@@ -222,6 +225,9 @@ export function ActivityBar({ pinToggle }: ActivityBarProps) {
             open={true}
             onOpenChange={(open) => { if (!open) setSidePanelSettingsProjectId(null); }}
           />
+        )}
+        {createProjectOpen && (
+          <BrowserCreateProjectDialog open={createProjectOpen} onOpenChange={setCreateProjectOpen} />
         )}
         {globalClient && marketEnabled && (
           <ProjectMarketDialog

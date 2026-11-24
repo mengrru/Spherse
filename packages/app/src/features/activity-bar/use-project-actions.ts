@@ -11,7 +11,8 @@ export function buildProjectRoute(projectId: string, lastRoute?: string): string
   return `/project/${projectId}${suffix}`;
 }
 
-export function useProjectActions() {
+export function useProjectActions(options: { onCreateProjectOpenChange: (open: boolean) => void }) {
+  const setCreateOpen = options.onCreateProjectOpenChange;
   const navigate = useNavigate();
   const { t } = useI18n();
   const bridge = useHostBridge();
@@ -19,6 +20,10 @@ export function useProjectActions() {
   const openProjectFolder = useAppStore((s) => s.openProjectFolder);
 
   const handleAddProject = async () => {
+    if (bridge.kind === "browser") {
+      setCreateOpen(true);
+      return;
+    }
     try {
       const projectId = await openProject(bridge);
       if (projectId) {

@@ -7,17 +7,7 @@ import { useHostBridge } from "../../context/host-bridge-context";
 import { useGlobalApiClient } from "../../lib/use-connection";
 import { useFeature } from "../../lib/use-feature";
 import { ProjectMarketDialog } from "../project-market/ProjectMarketDialog";
-import { Button } from "../../components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../../components/ui/dialog";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
+import { BrowserCreateProjectDialog } from "./BrowserCreateProjectDialog";
 
 export function OnboardingPage() {
   const { t } = useI18n();
@@ -28,12 +18,10 @@ export function OnboardingPage() {
   const marketEnabled = useFeature("project-marketplace");
   const [marketOpen, setMarketOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [projectName, setProjectName] = useState("");
   const busyRef = useRef(false);
 
   const handleOpenOrCreate = () => {
     if (bridge.kind === "browser") {
-      setProjectName("");
       setCreateOpen(true);
       return;
     }
@@ -46,23 +34,6 @@ export function OnboardingPage() {
     try {
       const projectId = await openProject(bridge);
       if (projectId) navigate(`/project/${projectId}`);
-    } catch {
-      toast.error(t("onboarding.error.unexpected"));
-    } finally {
-      busyRef.current = false;
-    }
-  };
-
-  const handleBrowserCreate = async () => {
-    const name = projectName.trim();
-    if (!name || busyRef.current || !bridge.project) return;
-    busyRef.current = true;
-    try {
-      const result = await bridge.project.openProject(name);
-      if (!result) throw new Error("project creation returned no id");
-      await useAppStore.getState().refreshProjects(bridge);
-      setCreateOpen(false);
-      navigate(`/project/${result.projectId}`);
     } catch {
       toast.error(t("onboarding.error.unexpected"));
     } finally {
@@ -97,36 +68,7 @@ export function OnboardingPage() {
           client={globalClient}
         />
       )}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("onboarding.browser.createProject")}</DialogTitle>
-            <DialogDescription>{t("onboarding.browser.desc")}</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-2">
-            <Label htmlFor="onboarding-browser-project-name">
-              {t("onboarding.browser.projectName")}
-            </Label>
-            <Input
-              id="onboarding-browser-project-name"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleBrowserCreate();
-              }}
-              autoFocus
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
-              {t("onboarding.browser.cancel")}
-            </Button>
-            <Button onClick={() => void handleBrowserCreate()} disabled={!projectName.trim()}>
-              {t("onboarding.browser.create")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BrowserCreateProjectDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }
