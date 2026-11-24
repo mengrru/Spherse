@@ -94,7 +94,13 @@ test.describe("resource plane via SW", () => {
     expect(results.themeType).toContain("text/css");
 
     await page.goto(`/#/project/${projectId}`);
-    await page.waitForTimeout(3000);
+    await page.reload();
+    await expect
+      .poll(async () => page.evaluate(() => document.getElementById("custom-theme-link") !== null), {
+        timeout: 20000,
+        intervals: [500, 1000],
+      })
+      .toBe(true);
     const themeChain = await page.evaluate(async () => {
       const link = document.getElementById("custom-theme-link") as HTMLLinkElement | null;
       if (!link) return { link: "missing" };
