@@ -102,3 +102,14 @@
   - 任何路径不得自建 `FileWriteMutex`——装配点唯一实例全链路注入
 - `pathRules` 仅作用于 LLM 端；capability 私有文件对 server 路由不可读写，如需开放经 PM 门面方法显式授权
 - 运行时配置变更信号是 `onAgentConfigChanged`（当前生产仅 dispatch `"mcp"`，`"tools"` / `"profile"` 为预留）；profile 变更走热重载路径（见 [core.md](core.md)「生命周期」），能力经 `turnHooks.onReload` 感知
+
+## 外部能力插件
+
+用户可在 `<project>/.spherse/plugins/<dir>/` 放置第三方 capability：`manifest.json`（name/version/main，TypeBox 校验）+ ESM `main` 文件，default export 一个 Capability 形状对象。目录约定见 [data-conventions.md](../data-conventions.md)。
+
+- **装载边界**：仅 Node 侧装配（`factory.assembleProject` 动态 import loader）；browser 装配路径不经 factory，模块图不可达，明确不支持外部插件
+- **错误语义两段**：静态预检（manifest 校验/形状校验/路径逃逸/import/id 冲突）失败 → `logger.warn` 跳过、装配继续；`init` 运行时失败 → 与内置同等 fail-fast（错误信息含插件名，删目录即恢复）
+- **冲突**：id 与内置或用户注入列表冲突的外部插件被剔除（禁止 shadow 内置工具——数组语义是后注册者工具覆盖）
+- **信任模型**：进程内全权执行、与内置平权，无沙箱——安全性 = "用户自装"信任链；插件约定零宿主 import（值 import `@spherse/core` 在 workspace 外不可解析，类型消费走 `import type` 编译期擦除）
+- **语义档位**：只加不减、重启生效（无卸载/禁用/热插拔；贡献折叠发生在 runner 创建点）；装载诊断经 `ProjectRuntime.pluginLoadReport`（loaded/skipped）
+- **契约影响**：`Capability` 接口自本特性起是对外承诺——breaking 变更需评估插件生态影响（semver 纪律）

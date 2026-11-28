@@ -19,7 +19,9 @@ import { SqliteMemoryStore } from "./store/memory.js";
 import { installSkillZip } from "./store/node-skill-install.js";
 import { assembleProjectCore, type AssembleCoreOptions } from "./assemble.js";
 import { ProjectRuntime } from "./project-runtime.js";
+import type { PluginLoadReport } from "./plugins/loader.js";
 import type { Logger } from "./logger.js";
+import { createSilentLogger } from "./logger.js";
 import { ModelCatalog } from "./model-providers/catalog.js";
 
 export type { AssembleCoreOptions } from "./assemble.js";
@@ -56,6 +58,7 @@ export async function assembleProject(
   projectRoot: string,
   options?: AssembleOptions,
 ): Promise<ProjectRuntime> {
+  const logger = options?.logger ?? createSilentLogger();
   const storage: AssembleCoreOptions["storage"] = {
     fsPort: options?.storage?.fsPort ?? new NodeFsPort(projectRoot),
     sessionStoreFactory:
@@ -66,6 +69,38 @@ export async function assembleProject(
       ((ctx: Parameters<MemoryStoreFactory>[0]) => new SqliteMemoryStore(ctx.agentDir)),
     ...(options?.storage?.installSkillZip ? { installSkillZip: options.storage.installSkillZip } : { installSkillZip }),
   };
+  const fsPort = storage.fsPort;
+  const { loadExternalCapabilities } = await import("./plugins/loader.js");
+  const external = await loadExternalCapabilities(projectRoot, fsPort, logger);
+  const userCapabilities = options?.capabilities;
+  const loaded: string[] = [];
+  const externalConflict = (resolved: readonly Capability[]): Capability[] => {
+    const knownIds = new Set(resolved.map((c) => c.id));
+    const accepted = external.capabilities.filter((c) => {
+      if (knownIds.has(c.id)) {
+        logger.warn({ plugin: c.id }, "external capability skipped: id conflicts with existing capability");
+        return false;
+      }
+      return true;
+    });
+    loaded.splice(0, loaded.length, ...accepted.map((c) => c.id));
+    return accepted;
+  };
+  let capabilities: AssembleCoreOptions["capabilities"];
+  if (Array.isArray(userCapabilities)) {
+    capabilities = [...userCapabilities, ...externalConflict(userCapabilities)];
+  } else if (userCapabilities !== undefined) {
+    capabilities = (builtin) => {
+      const resolved = userCapabilities(builtin);
+      return [...resolved, ...externalConflict(resolved)];
+    };
+  } else {
+    capabilities = (builtin) => [...builtin, ...externalConflict(builtin)];
+  }
+  const pluginLoadReport: PluginLoadReport = {
+    loaded,
+    skipped: external.skipped,
+  };
   return assembleProjectCore(projectRoot, {
     projectName: options?.projectName,
     interaction: interactionCapability(),
@@ -74,7 +109,8 @@ export async function assembleProject(
     thinkingLevel: options?.thinkingLevel,
     logger: options?.logger,
     modelCatalog: options?.modelCatalog,
-    capabilities: options?.capabilities,
+    capabilities,
+    pluginLoadReport,
     storage,
   });
 }

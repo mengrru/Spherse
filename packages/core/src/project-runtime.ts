@@ -11,6 +11,7 @@ import type { AgentProfile } from "./types.js";
 import { type Logger, createSilentLogger } from "./logger.js";
 import { settleWithin } from "./utils/settle-within.js";
 import { createHostContext } from "./host/context.js";
+import type { PluginLoadReport } from "./plugins/loader.js";
 import type { HostContext, HostFiber } from "./host/context.js";
 
 const CAPABILITY_SHUTDOWN_TIMEOUT_MS = 5_000;
@@ -25,6 +26,7 @@ export class ProjectRuntime {
   private _shutdownDone = false;
   private readonly capabilities: ReadonlyArray<Capability>;
   private readonly hostFibers: ReadonlyArray<HostFiber>;
+  readonly pluginLoadReport?: PluginLoadReport;
 
   constructor(deps: {
     projectManager: ProjectManager;
@@ -35,6 +37,7 @@ export class ProjectRuntime {
     dataStore?: DataStore;
     host?: HostContext;
     hostFibers?: ReadonlyArray<HostFiber>;
+    pluginLoadReport?: PluginLoadReport;
   }) {
     this.projectManager = deps.projectManager;
     this.sessionRuntime = deps.sessionRuntime;
@@ -44,6 +47,7 @@ export class ProjectRuntime {
     this.capabilities = deps.capabilities;
     this.host = deps.host ?? createHostContext();
     this.hostFibers = deps.hostFibers ?? [];
+    this.pluginLoadReport = deps.pluginLoadReport;
   }
 
   private triggerCapability(): TriggerCapability | undefined {

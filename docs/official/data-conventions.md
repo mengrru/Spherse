@@ -59,6 +59,7 @@ project-root/
 - `attachments/`：`POST /api/projects/:projectId/attachments` 上传，仅 png / jpg / webp、≤5MB，命名 `{epoch-ms}-{8hex}.{ext}`；多模态 base64 仅在本轮 LLM 调用瞬间存在，持久化前被 sanitizer 剥离
 - `generated-images/`：`generate_image` 自动保存，命名 `{yyyyMMddHHmmss-UTC}-{4hex}.{ext}`，重名冲突时重试
 - builtin skill 随 app 内置、`SkillStore` 内存合并，不写入磁盘（见「Skill 定义格式」）
+- `plugins/`：用户手动放置（无安装工具）；目录随项目导出/迁移携带（项目自带能力可分发）；坏插件只产生 warn 跳过或装配失败诊断，无静默数据改动
 
 ## project.yaml
 

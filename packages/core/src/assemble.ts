@@ -28,6 +28,7 @@ import { ModelCatalog } from "./model-providers/catalog.js";
 import { createHostContext, type HostFiber } from "./host/context.js";
 import { registerCoreServices, registerRuntimeServices } from "./host/services.js";
 import { defineCapabilityPlugin } from "./host/capability-plugin.js";
+import type { PluginLoadReport } from "./plugins/loader.js";
 
 export interface AssembleCoreOptions {
   projectName?: string;
@@ -38,6 +39,7 @@ export interface AssembleCoreOptions {
   modelCatalog?: ModelCatalog;
   capabilities?: Capability[] | ((builtin: Capability[]) => Capability[]);
   interaction?: Capability;
+  pluginLoadReport?: PluginLoadReport;
   storage: {
     fsPort: FsPort;
     sessionStoreFactory: SessionStoreFactory;
@@ -188,6 +190,7 @@ export async function assembleProjectCore(
     dataStore,
     host,
     hostFibers: fibers,
+    pluginLoadReport: options.pluginLoadReport,
   });
 }
 
