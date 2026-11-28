@@ -193,3 +193,5 @@ export type {
   SessionUpdatedEvent,
   FsWatchChangeEvent,
 } from "./bus.js";
+
+export { rpcMethodSchemas, type RpcMethodSchema } from "./rpc-methods.js";

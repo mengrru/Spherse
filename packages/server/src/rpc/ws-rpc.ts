@@ -10,6 +10,7 @@ import { buildMethodRegistry } from "./methods/registry.js";
 import { registerRpcMethodGroups } from "@spherse/rpc/host";
 import { createRpcModelSettings } from "./model-settings-port.js";
 import { attachBusChannel } from "../bus/bus-channels.js";
+import { registerRpcDebugGateway } from "./debug-gateway.js";
 
 export interface RpcServerOptions {
   modelSettingsStore: ModelSettingsStore;
@@ -52,6 +53,9 @@ export function handleRpcWebSocket(
     hub,
     bus,
   };
+  if (process.env.NODE_ENV !== "production" || process.env.SPHERSE_RPC_DEBUG === "1") {
+    registerRpcDebugGateway(fastify, methods, ctx);
+  }
   fastify.get("/ws/rpc", { websocket: true }, (socket) => {
     const dispatcher = new RpcDispatcher({ methods, ctx, logger: fastify.log });
     const handler = new RpcConnectionHandler(socket, dispatcher, hub, ctx, fastify.log);

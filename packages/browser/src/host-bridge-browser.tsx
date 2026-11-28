@@ -5,6 +5,7 @@ import type {
   RestoredProject,
 } from "@spherse/app/host-bridge";
 import { getSharedRpcClient, isLocalRuntimeBaseUrl } from "@spherse/app/lib/rpc/shared";
+import { createTypedRpcClient } from "@spherse/rpc";
 import { RpcSharedWorkerTransport } from "./client/runtime-transport";
 
 declare const __SPHERSE_BROWSER_VERSION__: string;
@@ -26,21 +27,8 @@ const PREFS_STORAGE_KEY = `spherse:prefs${storageKeyScope()}`;
 const LAST_ACTIVE_PROJECT_KEY = `spherse:last-active-project${storageKeyScope()}`;
 const PLACEHOLDER_LAST_OPENED = new Date(0).toISOString();
 
-interface ProjectListEntry {
-  id: string;
-  name: string;
-  lastOpened?: string;
-}
-
-interface ProjectInfo {
-  id: string;
-  name: string;
-  rootPath: string;
-  lastOpened?: string;
-}
-
 export function createBrowserHostBridge(): HostBridge {
-  const client = getSharedRpcClient(window.location.origin, () => null);
+  const typed = createTypedRpcClient(getSharedRpcClient(window.location.origin, () => null));
 
   const projectApi: ProjectHostApi = {
     async selectDirectory() {
@@ -50,16 +38,14 @@ export function createBrowserHostBridge(): HostBridge {
       return null;
     },
     async openProject(name: string) {
-      const result = await client.call<{ projectId: string }>("browser.createProject", { name });
+      const result = await typed.call("browser.createProject", { name });
       return { projectId: result.projectId };
     },
     async restoreProjects() {
-      const entries = await client.call<ProjectListEntry[]>("connection.projects", {});
+      const entries = await typed.call("connection.projects");
       if (entries.length === 0) return [];
       const infos = await Promise.allSettled(
-        entries.map((entry) =>
-          client.call<ProjectInfo>("connection.projectInfo", { projectId: entry.id }),
-        ),
+        entries.map((entry) => typed.call("connection.projectInfo", { projectId: entry.id })),
       );
       const restored: RestoredProject[] = [];
       infos.forEach((result, index) => {

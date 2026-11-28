@@ -269,3 +269,19 @@ describe("browser worker rpc", () => {
     }
   });
 });
+
+describe("browser rpc method map guard", () => {
+  it("browser-only methods are covered by the contract map", async () => {
+    const { rpcMethodSchemas } = await import("@spherse/contracts");
+    const { buildBrowserMethodRegistry } = await import("../worker/methods/index.js");
+    const { buildBaseMethodRegistry } = await import("@spherse/rpc/methods");
+    const base = new Set(buildBaseMethodRegistry().keys());
+    for (const key of [...buildBrowserMethodRegistry().keys()]) {
+      if (base.has(key)) continue;
+      expect(
+        (rpcMethodSchemas as Record<string, unknown>)[key],
+        `missing map entry for browser method ${key}`,
+      ).toBeDefined();
+    }
+  });
+});
