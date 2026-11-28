@@ -59,6 +59,23 @@ export default [
     },
   },
   {
+    files: ["packages/rpc/src/methods/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["node:*"],
+              message:
+                "rpc 方法组基座必须 browser-safe（SharedWorker 直接打包）；Node 专属实现放宿主包（server/browser），判据见 packages/rpc/README.md",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: [
       "packages/app/src/**/*.{ts,tsx}",
       "packages/landing/src/**/*.{ts,tsx}",

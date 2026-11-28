@@ -147,7 +147,7 @@ spherse/
 │   │       ├── client.ts            # RpcClient：call/sub/snapshot/event 派发 + RpcCallError（保留错误码）+ onReopen（root 导出）
 │   │       ├── transport.ts         # RpcTransport 接口（WS / postMessage 传输的统一抽象；root 导出）
 │   │       ├── host.ts              # ./host 入口：context + connection（服务端/Worker 宿主用）
-│   │       ├── methods-index.ts     # ./methods 入口：六组 browser-safe 方法 + buildBaseMethodRegistry（宿主装配用）
+│   │       ├── methods-index.ts     # ./methods 入口：八组 browser-safe 方法基座（sessions/agents/triggers/debug/chat/connection/bus + content/settings）+ buildBaseMethodRegistry（宿主装配共用；放置判据与 eslint 守门见 rpc README）
 │   │       ├── methods/             # browser-safe 方法组：sessions/agents/triggers/debug/chat/connection
 │   │       └── testing.ts           # ./testing 子路径导出：createRpcHarness 等测试助手（server 与本包测试共用）
 │   ├── contracts/                   # @spherse/contracts — 跨进程边界 wire 协议（HTTP/WS schema + parser）

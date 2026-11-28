@@ -2,10 +2,10 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { ModelCatalog } from "@spherse/core";
+import { NodeFsPort, ModelCatalog } from "@spherse/core";
 import type { ModelSettingsResponse } from "@spherse/contracts";
 import { connectionMethods } from "@spherse/rpc/methods";
-import { settingsMethods } from "../rpc/methods/settings.js";
+import { settingsMethods } from "@spherse/rpc/methods";
 import { ModelSettingsStore } from "../model-settings.js";
 import type { ProjectRegistry } from "../registry.js";
 import { createRpcModelSettings } from "../rpc/model-settings-port.js";
@@ -82,6 +82,7 @@ const projectManager = {
   getSidePanelSettings: vi.fn(() => ({ path: null })),
   updateSidePanelSettings: vi.fn(async () => ({ path: "panel.md" })),
   getRootPath: vi.fn(() => alphaRoot),
+  getFsPort: () => new NodeFsPort(alphaRoot),
   writeFile: vi.fn(async () => {}),
 };
 
@@ -226,7 +227,6 @@ describe("rpc settings methods (project)", () => {
 
   it("settings.getTheme returns empty content when theme file is missing", async () => {
     const { sent } = await call("settings.getTheme", { projectId: "p1" });
-    expect(projectManager.getRootPath).toHaveBeenCalledWith();
     expect(sent()[0].data).toEqual({ ok: true, content: "" });
   });
 

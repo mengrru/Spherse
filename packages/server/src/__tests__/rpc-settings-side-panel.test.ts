@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createProject, type ProjectRuntime } from "@spherse/core";
-import { settingsMethods } from "../rpc/methods/settings.js";
+import { settingsMethods } from "@spherse/rpc/methods";
 import {
   callMethod,
   createFakeProjectCtx,

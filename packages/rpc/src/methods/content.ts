@@ -15,7 +15,7 @@ import {
   type FsPort,
 } from "@spherse/core";
 import { CONTENT_ERROR_CODES, parseContract, schemas } from "@spherse/contracts";
-import { RpcAppError, defineRpcMethod, type RpcContext, type RpcMethodEntry } from "@spherse/rpc/host";
+import { RpcAppError, defineRpcMethod, type RpcContext, type RpcMethodEntry } from "../context.js";
 
 function toRelPath(root: string, resolved: string): string {
   return resolved.length > root.length ? resolved.slice(root.length + 1) : "";

@@ -1,15 +1,11 @@
 import type { RpcMethodEntry } from "@spherse/rpc/host";
 import { buildBaseMethodRegistry } from "@spherse/rpc/methods";
-import { contentMethods } from "./content.js";
-import { settingsMethods } from "./settings.js";
 import { skillMethods } from "./skills.js";
 import { marketplaceMethods } from "./marketplace.js";
 
 export function buildMethodRegistry(): Map<string, RpcMethodEntry> {
   const methods = buildBaseMethodRegistry();
   const entries: Array<Record<string, RpcMethodEntry>> = [
-    contentMethods,
-    settingsMethods,
     skillMethods,
     marketplaceMethods,
   ];

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { createProject, type ProjectRuntime } from "@spherse/core";
 import { callMethod, createRpcHarness, type RpcHarness } from "@spherse/rpc/testing";
-import { contentMethods } from "../rpc/methods/content.js";
+import { contentMethods } from "@spherse/rpc/methods";
 import { createSilentLoggerForTests } from "./test-logger.js";
 
 describe("write facade contract: real ProjectManager through rpc content methods", () => {

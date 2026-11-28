@@ -4,7 +4,7 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDataStore, FileWriteMutex, NodeFsPort, type ProjectRuntime } from "@spherse/core";
 import { callMethod, createFakeProjectCtx, createRpcHarness, type RpcHarness } from "@spherse/rpc/testing";
-import { contentMethods } from "../rpc/methods/content.js";
+import { contentMethods } from "@spherse/rpc/methods";
 import { createSilentLoggerForTests } from "./test-logger.js";
 
 interface ResultFrame {

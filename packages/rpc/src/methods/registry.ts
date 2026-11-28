@@ -1,5 +1,7 @@
 import type { RpcMethodEntry } from "../context.js";
 import { sessionMethods } from "./sessions.js";
+import { contentMethods } from "./content.js";
+import { settingsMethods } from "./settings.js";
 import { agentMethods } from "./agents.js";
 import { triggerMethods } from "./triggers.js";
 import { debugMethods } from "./debug.js";
@@ -12,6 +14,8 @@ export function buildBaseMethodRegistry(): Map<string, RpcMethodEntry> {
     sessionMethods,
     agentMethods,
     triggerMethods,
+    contentMethods,
+    settingsMethods,
     debugMethods,
     chatMethods,
     connectionMethods,

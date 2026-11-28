@@ -6,3 +6,5 @@ export { debugMethods } from "./methods/debug.js";
 export { chatMethods } from "./methods/chat.js";
 export { connectionMethods } from "./methods/connection.js";
 export { busMethods } from "./methods/bus.js";
+export { contentMethods } from "./methods/content.js";
+export { settingsMethods } from "./methods/settings.js";

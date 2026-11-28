@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { VersionConflictError, type ProjectManager, type ProjectRuntime } from "@spherse/core";
-import { contentMethods } from "../rpc/methods/content.js";
+import { VersionConflictError, NodeFsPort, type ProjectManager, type ProjectRuntime } from "@spherse/core";
+import { contentMethods } from "@spherse/rpc/methods";
 import {
   createFakeProjectCtx,
   createRpcHarness,
@@ -74,6 +74,7 @@ beforeAll(async () => {
 
   const projectManager = {
     getRootPath: () => projectRoot,
+    getFsPort: () => new NodeFsPort(projectRoot),
     writeFile: vi.fn(),
     createEntry: vi.fn(),
     deletePath: vi.fn(),

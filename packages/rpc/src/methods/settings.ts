@@ -1,7 +1,7 @@
 import { Type } from "@sinclair/typebox";
 import { parseContract, schemas } from "@spherse/contracts";
 import { getImageSupportedProviders } from "@spherse/core";
-import { defineRpcMethod, type RpcMethodEntry } from "@spherse/rpc/host";
+import { defineRpcMethod, type RpcMethodEntry } from "../context.js";
 
 const supportedProviders = defineRpcMethod(Type.Object({}), (_params, ctx) =>
   parseContract(schemas.providerCatalog, ctx.registry.getSupportedProviders()),
