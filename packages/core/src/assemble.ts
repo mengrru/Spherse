@@ -152,11 +152,9 @@ export async function assembleProjectCore(
     defineCapabilityPlugin(capability, kernelServices, contributions),
   );
   const fibers: HostFiber[] = [];
-  const capabilityEntries = new Map<string, Array<{ fiber: HostFiber; capability: Capability }>>();
   try {
     for (const wrapper of pluginWrappers) {
       const fiber = host.plugin(wrapper.plugin);
-      wrapper.fiber = fiber;
       fibers.push(fiber);
       await wrapper.ready;
     }
@@ -170,12 +168,6 @@ export async function assembleProjectCore(
     }
     throw err;
   }
-  for (let i = 0; i < capabilities.length; i++) {
-    const entry = { fiber: fibers[i]!, capability: capabilities[i]! };
-    const existing = capabilityEntries.get(entry.capability.id);
-    if (existing) existing.push(entry);
-    else capabilityEntries.set(entry.capability.id, [entry]);
-  }
 
   return new ProjectRuntime({
     projectManager,
@@ -186,7 +178,6 @@ export async function assembleProjectCore(
     dataStore,
     host,
     hostFibers: fibers,
-    capabilityEntries,
     kernelServices,
     contributions,
     pluginLoadReport: options.pluginLoadReport,

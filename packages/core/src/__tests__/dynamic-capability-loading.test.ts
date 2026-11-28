@@ -3,7 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { assembleProject } from "../factory.js";
-import { RunConfigHolder, createRuntimeDeps } from "../session/runtime.js";
+import { buildPromptAndTools, streamDecoratorsFor } from "../session/agent-assembly.js";
+import { RunConfigHolder, createRuntimeDeps, type RuntimeDeps } from "../session/runtime.js";
 import type { Capability } from "../kernel/capability.js";
 import { createSilentLogger } from "../logger.js";
 import { createStoreRegistry } from "../kernel/ports.js";
@@ -171,6 +172,77 @@ describe("ProjectRuntime dynamic capability loading", () => {
       await runtime.unloadCapability("gone");
       expect(runtime.capabilities.map((c) => c.id)).toContain("survivor");
       expect(runtime.capabilities.map((c) => c.id)).not.toContain("gone");
+    } finally {
+      await runtime.shutdown();
+    }
+  });
+});
+
+describe("effectiveness matrix through real folding paths", () => {
+  it("tools fold at next buildPromptAndTools after loadCapability", async () => {
+    const projectRoot = makeProject("folding");
+    const runtime = await assembleProject(projectRoot, { projectName: "folding" });
+    try {
+      const deps = runtime.sessionRuntime.getRuntimeDeps();
+      const dynamic: Capability = {
+        id: "folding-cap",
+        init: async () => {},
+        tools: () => [{ name: "folding_tool" } as never],
+      };
+      const profile = { id: "agent-a", name: "A", slug: "a", tools: ["folding_tool"], context: [], systemPrompt: "" } as never;
+      await runtime.loadCapability(dynamic);
+      const result = await buildPromptAndTools(deps, profile, "s1", undefined, undefined);
+      expect(result.tools.map((t) => t.name)).toContain("folding_tool");
+      expect(result.toolCatalog.names).toContain("folding_tool");
+      await runtime.unloadCapability("folding-cap");
+      const after = await buildPromptAndTools(deps, profile, "s1", undefined, undefined);
+      expect(after.tools.map((t) => t.name)).not.toContain("folding_tool");
+    } finally {
+      await runtime.shutdown();
+    }
+  });
+
+  it("streamDecorators visible at next evaluation after load, gone after unload", async () => {
+    const projectRoot = makeProject("decorators");
+    const runtime = await assembleProject(projectRoot, { projectName: "decorators" });
+    try {
+      const decorator = (() => ((base: unknown) => base)) as never;
+      const dynamic: Capability = {
+        id: "decorator-cap",
+        init: async () => {},
+        streamDecorators: [decorator as never],
+      };
+      const view = { profile: { tools: [] } as never } as never;
+      const deps: RuntimeDeps = runtime.sessionRuntime.getRuntimeDeps();
+      const before = streamDecoratorsFor(deps.capabilities, view).length;
+      await runtime.loadCapability(dynamic);
+      expect(streamDecoratorsFor(deps.capabilities, view).length).toBe(before + 1);
+      await runtime.unloadCapability("decorator-cap");
+      expect(streamDecoratorsFor(deps.capabilities, view).length).toBe(before);
+    } finally {
+      await runtime.shutdown();
+    }
+  });
+
+  it("unloading an assembly-time capability id is refused", async () => {
+    const projectRoot = makeProject("refuse");
+    const runtime = await assembleProject(projectRoot, { projectName: "refuse" });
+    try {
+      expect(await runtime.unloadCapability("trigger")).toBe(false);
+      expect(runtime.capabilities.map((c) => c.id)).toContain("trigger");
+    } finally {
+      await runtime.shutdown();
+    }
+  });
+
+  it("concurrent loads of the same id: exactly one succeeds", async () => {
+    const projectRoot = makeProject("concurrent");
+    const runtime = await assembleProject(projectRoot, { projectName: "concurrent" });
+    try {
+      const mk = (): Capability => ({ id: "race-cap", init: async () => {} });
+      const results = await Promise.allSettled([runtime.loadCapability(mk()), runtime.loadCapability(mk())]);
+      expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+      expect(results.filter((r) => r.status === "rejected")).toHaveLength(1);
     } finally {
       await runtime.shutdown();
     }

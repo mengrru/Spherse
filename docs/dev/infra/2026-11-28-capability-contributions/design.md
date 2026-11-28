@@ -157,3 +157,5 @@ id → entry 映射：`ProjectRuntime` 现持 `hostFibers` 数组——改为 `M
 - 构造函数保留 `capabilities` 参数作降级路径（`createFixedContributions` 固定快照、push/pull 空操作）——供不走 assemble 的直接构造场景；assemble 路径恒传 contributions + kernelServices + capabilityEntries。
 - shutdown 的 fiber dispose 循环扩展为 hostFibers + capabilityEntries 双循环（unload 场景重复 dispose 由 cordis 容错，cordis-host 单测既有断言覆盖）。
 - 外部插件 v1 的 `pluginLoadReport.loaded` 共享引用填充机制不变（合并函数执行时刻填充）。
+- code review 后追加：**capabilityEntries Map 只存动态装载 entry**（原设计含装配期条目——导致 unload 可摘除结构性内置与 shutdown 双 dispose；改为装配期 fiber 走 hostFibers、Map 仅动态，M4/m6 自然消解）；`loadCapability` 加 in-flight id 互斥（并发同 id TOCTOU）；`unloadCapability` 补 `_shutdownDone` guard；矩阵契约测试改经真折叠路径（`buildPromptAndTools`/`streamDecoratorsFor`/`getRuntimeDeps()` 公共 API）；`CapabilityPlugin.fiber` 死字段删除。
+- 装配期 capability（含外部插件 v1）不可运行时卸载——`unloadCapability` 仅对动态装载 id 生效（结构性能力移除走装配层），已在 capabilities.md 声明。

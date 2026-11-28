@@ -105,9 +105,9 @@
 
 ## 贡献通道与动态装载
 
-capability 贡献经 `CapabilityContributions` 收集器（host 服务 `spherse/capabilities`）进入折叠管线，**先验后发**：每个 capability 装载为 cordis fiber（`defineCapabilityPlugin`），`init` 成功后才 `push`（贡献可见），fiber dispose 时 `pull`。`RuntimeDeps.capabilities` 是 getter（访问时刻快照，copy-on-write 冻结数组）——消费端折叠点每次求值取当前集合。
+capability 贡献经 `CapabilityContributions` 收集器（host 服务 `spherse/capabilities`）进入折叠管线，**先验后发**：每个 capability 装载为 cordis fiber（`defineCapabilityPlugin`），`init` 成功后才 `push`（贡献可见），fiber dispose 时 `pull`。`RuntimeDeps.capabilities` 是 getter（访问时刻快照，copy-on-write 冻结数组）——拉取类消费点（每次求值）取当前集合，折叠类消费点（runner 创建/装配）取折叠时刻集合（见下表）。
 
-`ProjectRuntime` 提供 `loadCapability(cap)`（init 成功才发布，失败 reject 且贡献从未可见、重复 id reject）与 `unloadCapability(id)`（pull + `shutdown?.()`，按 id 处理全部同名 entry）。装配语义不变：串行 init 失败即停。
+`ProjectRuntime` 提供 `loadCapability(cap)`（init 成功才发布，失败 reject 且贡献从未可见、并发/重复 id reject）与 `unloadCapability(id)`（pull + `shutdown?.()`，按 id 处理全部同名 entry）。**装配期装载的 capability（含外部插件 v1）不可运行时卸载**——unload 仅对动态装载生效，结构性能力（trigger 等）的重启移除走目录/装配层。装配语义不变：串行 init 失败即停。
 
 生效矩阵（装载/卸载后何时可见）：
 

@@ -29,7 +29,8 @@ export class ProjectRuntime {
   private _shutdownDone = false;
   private readonly contributions: CapabilityContributions;
   private readonly hostFibers: ReadonlyArray<HostFiber>;
-  private readonly capabilityEntries: Map<string, Array<{ fiber: HostFiber; capability: Capability }>>;
+  private readonly dynamicEntries = new Map<string, Array<{ fiber: HostFiber; capability: Capability }>>();
+  private readonly loadingIds = new Set<string>();
   private readonly kernelServices: KernelServices | undefined;
   readonly pluginLoadReport?: PluginLoadReport;
 
@@ -42,7 +43,6 @@ export class ProjectRuntime {
     dataStore?: DataStore;
     host?: HostContext;
     hostFibers?: ReadonlyArray<HostFiber>;
-    capabilityEntries?: Map<string, Array<{ fiber: HostFiber; capability: Capability }>>;
     kernelServices?: KernelServices;
     contributions?: CapabilityContributions;
     pluginLoadReport?: PluginLoadReport;
@@ -55,7 +55,6 @@ export class ProjectRuntime {
     this.contributions = deps.contributions ?? createFixedContributions(deps.capabilities);
     this.host = deps.host ?? createHostContext();
     this.hostFibers = deps.hostFibers ?? [];
-    this.capabilityEntries = deps.capabilityEntries ?? new Map();
     this.kernelServices = deps.kernelServices;
     this.pluginLoadReport = deps.pluginLoadReport;
   }
@@ -177,7 +176,7 @@ export class ProjectRuntime {
         /* fiber state hygiene only */
       }
     }
-    for (const entries of this.capabilityEntries.values()) {
+    for (const entries of this.dynamicEntries.values()) {
       for (const { fiber } of entries) {
         try {
           await fiber.dispose();
@@ -190,30 +189,35 @@ export class ProjectRuntime {
 
   async loadCapability(capability: Capability): Promise<void> {
     if (this._shutdownDone) throw new Error("runtime is shutting down");
-    if (this.contributions.has(capability.id)) {
+    if (this.loadingIds.has(capability.id) || this.contributions.has(capability.id)) {
       throw new Error(`capability id already loaded: ${capability.id}`);
     }
     if (!this.kernelServices) throw new Error("runtime was assembled without kernelServices");
-    const wrapper = defineCapabilityPlugin(capability, this.kernelServices, this.contributions);
-    const fiber = this.host.plugin(wrapper.plugin);
-    wrapper.fiber = fiber;
+    this.loadingIds.add(capability.id);
     try {
-      await wrapper.ready;
-    } catch (err) {
+      const wrapper = defineCapabilityPlugin(capability, this.kernelServices, this.contributions);
+      const fiber = this.host.plugin(wrapper.plugin);
       try {
-        await fiber.dispose();
-      } catch {
-        /* fiber state hygiene only */
+        await wrapper.ready;
+      } catch (err) {
+        try {
+          await fiber.dispose();
+        } catch {
+          /* fiber state hygiene only */
+        }
+        throw err;
       }
-      throw err;
+      const entries = this.dynamicEntries.get(capability.id) ?? [];
+      entries.push({ fiber, capability });
+      this.dynamicEntries.set(capability.id, entries);
+    } finally {
+      this.loadingIds.delete(capability.id);
     }
-    const entries = this.capabilityEntries.get(capability.id) ?? [];
-    entries.push({ fiber, capability });
-    this.capabilityEntries.set(capability.id, entries);
   }
 
   async unloadCapability(id: string): Promise<boolean> {
-    const entries = this.capabilityEntries.get(id);
+    if (this._shutdownDone) throw new Error("runtime is shutting down");
+    const entries = this.dynamicEntries.get(id);
     if (!entries || entries.length === 0) return false;
     for (const { fiber, capability } of [...entries]) {
       try {
@@ -238,7 +242,7 @@ export class ProjectRuntime {
         },
       );
     }
-    this.capabilityEntries.delete(id);
+    this.dynamicEntries.delete(id);
     return true;
   }
 }

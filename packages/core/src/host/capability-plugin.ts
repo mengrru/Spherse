@@ -1,11 +1,10 @@
 import type { Capability, KernelServices } from "../kernel/capability.js";
 import type { CapabilityContributions } from "./contributions.js";
-import type { HostContext, HostFiber } from "./context.js";
+import type { HostContext } from "./context.js";
 
 export interface CapabilityPlugin {
   plugin: (ctx: HostContext) => Promise<() => void>;
   ready: Promise<void>;
-  fiber?: HostFiber;
 }
 
 export function defineCapabilityPlugin(
