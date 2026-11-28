@@ -48,6 +48,10 @@ ProjectRuntime           对外协调层，聚合以上全部
 
 `PathRule` 类型定义在 `access/path-category.ts`（语义归属 access），kernel 仅 type 引用，避免类型环。
 
+## 贡献通道与 RuntimeDeps
+
+`RuntimeDeps.capabilities` 与 `attachmentProcessors` 是 **getter**（`createRuntimeDeps` 接收 `capabilities: () => ReadonlyArray<Capability>` 源函数）：消费端（runner / agent-assembly）每次属性访问取访问时刻快照——贡献集合是活的（收集器 push/pull，见 capabilities.md「贡献通道与动态装载」）。`createTurnHooks` 工厂在每次 runner 创建时对当时的快照折叠（折叠类贡献不回溯）。`freezeRuntimeDeps` 直接冻结对象（getter 属性可冻描述符、调用行为保留）。
+
 ## 会话运行时
 
 - **SessionManager** 是纯 session 池：session map 生命周期、legacy 迁移、hot-reload 标记、`setDefaultModel` / `setSampling` 经 `RunConfigHolder` 单点派发。构造只收成品 `RuntimeDeps`，不自带默认装配；对外提供事件读取门面（`readSessionEventsAfter` / `getSessionLastSeq` / `subscribeSessionEvents`，内存日志优先、store 回落），server 侧 chat 重放经此消费、不触达 runner 内部

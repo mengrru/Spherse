@@ -53,7 +53,7 @@ describe("shared FileWriteMutex wiring", () => {
         projectStore: store,
         logger,
         fileWriteMutex: mutex,
-        capabilities: builtinToolCapabilities(undefined, { interaction: interactionCapability() }),
+        capabilities: () => builtinToolCapabilities(undefined, { interaction: interactionCapability() }),
         stores: createStoreRegistry(logger),
         runConfig: new RunConfigHolder(),
       }),

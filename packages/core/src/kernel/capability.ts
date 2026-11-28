@@ -1,5 +1,4 @@
 import type { AgentEvent, AgentMessage, AgentTool, StreamFn } from "@earendil-works/pi-agent-core";
-import { ConflictError } from "../errors.js";
 import type { ContextBlock } from "./context-block.js";
 import type { EventMiddleware } from "./event-pipeline.js";
 import type { TurnHooksFactory } from "./turn-hooks.js";
@@ -42,25 +41,3 @@ export interface Capability extends TurnMiddlewareSource {
   shutdown?(): Promise<void>;
 }
 
-export class CapabilityRegistry {
-  private readonly map = new Map<string, Capability>();
-
-  register(capability: Capability): void {
-    if (this.map.has(capability.id)) {
-      throw new ConflictError(`Capability "${capability.id}" is already registered`);
-    }
-    this.map.set(capability.id, capability);
-  }
-
-  byId(id: string): Capability | undefined {
-    return this.map.get(id);
-  }
-
-  all(): Capability[] {
-    return [...this.map.values()];
-  }
-
-  get size(): number {
-    return this.map.size;
-  }
-}

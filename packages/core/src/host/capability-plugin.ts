@@ -1,9 +1,9 @@
-import { ConflictError } from "../errors.js";
-import type { Capability, CapabilityRegistry, KernelServices } from "../kernel/capability.js";
+import type { Capability, KernelServices } from "../kernel/capability.js";
+import type { CapabilityContributions } from "./contributions.js";
 import type { HostContext, HostFiber } from "./context.js";
 
 export interface CapabilityPlugin {
-  plugin: (ctx: HostContext) => Promise<void>;
+  plugin: (ctx: HostContext) => Promise<() => void>;
   ready: Promise<void>;
   fiber?: HostFiber;
 }
@@ -11,7 +11,7 @@ export interface CapabilityPlugin {
 export function defineCapabilityPlugin(
   capability: Capability,
   kernelServices: KernelServices,
-  registry: CapabilityRegistry,
+  contributions: CapabilityContributions,
 ): CapabilityPlugin {
   let markReady!: () => void;
   let markFailed!: (err: unknown) => void;
@@ -21,22 +21,17 @@ export function defineCapabilityPlugin(
   });
   const plugin = async (_ctx: HostContext) => {
     try {
-      registry.register(capability);
-    } catch (err) {
-      if (err instanceof ConflictError) {
-        kernelServices.logger.warn({ capability: capability.id }, "duplicate capability id, host view keeps the first");
-      } else {
-        throw err;
-      }
-    }
-    try {
       if (capability.init) {
         await capability.init(kernelServices);
       }
+      contributions.push(capability);
       markReady();
     } catch (err) {
       markFailed(err);
     }
+    return () => {
+      contributions.pull(capability);
+    };
   };
   return { plugin, ready };
 }

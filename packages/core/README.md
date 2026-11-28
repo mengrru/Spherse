@@ -64,6 +64,10 @@
 6. **测试随能力走**：capability 目录下逻辑 + `__tests__/capabilities/` 对应测试；组合语义（hooks 链、middleware 序）测 kernel 组合子本身。
 7. **产品化提醒**：core 层接入完成后，用户可见的工具还需 app tool-registry、i18n 三语、presets 默认模板——那是独立 feature，不要塞进能力目录。
 
+## 贡献通道与动态装载
+
+capability 经 `host/contributions.ts` 收集器进入折叠管线（先验后发：init 成功才 push、fiber dispose 即 pull）；`RuntimeDeps.capabilities` 为 getter 活快照。`ProjectRuntime.loadCapability/unloadCapability` 提供运行时装卸（语义与生效矩阵见 `docs/official/architecture/capabilities.md`）。Capability 接口与各能力实现零依赖此机制（对内置 capability 完全透明）。
+
 ## 外部能力插件
 
 `src/plugins/`（仅 `factory.ts` 动态 import）：扫描 `<project>/.spherse/plugins/<dir>/`（manifest + ESM default export Capability 形状对象），静态预检全失败路径 warn 跳过，init 失败与内置同等 fail-fast；browser 模块图不可达。语义与信任模型见 `docs/official/architecture/capabilities.md`「外部能力插件」。

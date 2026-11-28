@@ -11,11 +11,11 @@ spherse/
 │   │       ├── marketplace-project.ts # installMarketplaceProjectZip(zipPath, destDir)：市场项目 zip 校验（单一顶层目录/zip-slip/顶层名规则）+ tmp 解压 + 目标自动重命名（{name}-{n} 从 2 起）+ 原子移入，返回 {projectRoot, folderName}
 │   │       ├── presets.ts            # initPresets()：新项目预置 agent 注入（core 内唯一 presets import）
 │   │       ├── project-manager.ts    # ProjectManager：数据访问门面（server 不得见 store 实例）+ 写入门面（writeFile/writeBinaryFile/createEntry/deletePath/copyFileWithin = resolve+policy+per-path mutex）
-│   │       ├── project-runtime.ts    # ProjectRuntime：轻量协调层（capability 生命周期遍历：onAgentDeleted/onAgentConfigChanged/shutdown；triggerManager/timerService 为 derived getter）；pluginLoadReport 外部插件装载诊断
-│   │       ├── host/                # cordis 宿主（全仓库唯一 import cordis 处）：context.ts（HostContext/HostServiceKey/createHostContext）、services.ts（registerCoreServices/registerRuntimeServices）、capability-plugin.ts（注册型插件包装，ready promise 自管 init 错误）
+│   │       ├── project-runtime.ts    # ProjectRuntime：轻量协调层（capability 生命周期遍历：onAgentDeleted/onAgentConfigChanged/shutdown；triggerManager/timerService 为 derived getter；loadCapability/unloadCapability 动态装载——先验后发；capabilities getter = 贡献快照）；pluginLoadReport 外部插件装载诊断
+│   │       ├── host/                # cordis 宿主（全仓库唯一 import cordis 处）：context.ts（HostContext/HostServiceKey/createHostContext）、services.ts（registerCoreServices/registerRuntimeServices）、capability-plugin.ts（插件包装：init 成功 push 贡献、ready promise 自管 init 错误、dispose 即 pull）、contributions.ts（CapabilityContributions 收集器，copy-on-write 快照，spherse/capabilities 服务值）
 │   │       ├── plugins/             # 外部 capability 插件装载（仅 factory 动态 import，browser 模块图不可达）：manifest.ts（TypeBox schema）+ loader.ts（发现→manifest 校验→isPathInside 逃逸核验→import→14 成员形状校验→id 冲突，全部失败 warn 跳过）
 │   │       ├── kernel/               # 内核：零 I/O 纯组合子（capabilities 与 session 的公共契约层）
-│   │       │   ├── capability.ts     # Capability 接口（tools/contextBlocks/turnHooks/attachmentProcessors/pathRules/eventMiddlewares/init/onAgentDeleted/onAgentConfigChanged/shutdown）+ TurnMiddlewareSource + CapabilityRegistry
+│   │       │   ├── capability.ts     # Capability 接口（tools/contextBlocks/turnHooks/attachmentProcessors/pathRules/eventMiddlewares/init/onAgentDeleted/onAgentConfigChanged/shutdown）+ TurnMiddlewareSource
 │   │       │   ├── ports.ts          # SessionPort / ToolHost / SessionView（窄视图）/ StoreRegistry（含 forAgent 作用域）/ KernelServices（PathRule 定义在 access/path-category.ts，kernel 仅 type 引用）
 │   │       │   ├── gates.ts          # ApprovalGate / AskGate 端口（session control 请求的类型源）
 │   │       │   ├── event-pipeline.ts # EventMiddleware + createEventPipeline（横切组合律）

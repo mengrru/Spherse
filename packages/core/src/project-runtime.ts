@@ -13,6 +13,9 @@ import { settleWithin } from "./utils/settle-within.js";
 import { createHostContext } from "./host/context.js";
 import type { PluginLoadReport } from "./plugins/loader.js";
 import type { HostContext, HostFiber } from "./host/context.js";
+import type { CapabilityContributions } from "./host/contributions.js";
+import { defineCapabilityPlugin } from "./host/capability-plugin.js";
+import type { KernelServices } from "./kernel/ports.js";
 
 const CAPABILITY_SHUTDOWN_TIMEOUT_MS = 5_000;
 
@@ -24,8 +27,10 @@ export class ProjectRuntime {
   readonly host: HostContext;
   private logger: Logger;
   private _shutdownDone = false;
-  private readonly capabilities: ReadonlyArray<Capability>;
+  private readonly contributions: CapabilityContributions;
   private readonly hostFibers: ReadonlyArray<HostFiber>;
+  private readonly capabilityEntries: Map<string, Array<{ fiber: HostFiber; capability: Capability }>>;
+  private readonly kernelServices: KernelServices | undefined;
   readonly pluginLoadReport?: PluginLoadReport;
 
   constructor(deps: {
@@ -37,6 +42,9 @@ export class ProjectRuntime {
     dataStore?: DataStore;
     host?: HostContext;
     hostFibers?: ReadonlyArray<HostFiber>;
+    capabilityEntries?: Map<string, Array<{ fiber: HostFiber; capability: Capability }>>;
+    kernelServices?: KernelServices;
+    contributions?: CapabilityContributions;
     pluginLoadReport?: PluginLoadReport;
   }) {
     this.projectManager = deps.projectManager;
@@ -44,14 +52,20 @@ export class ProjectRuntime {
     this.projectId = deps.projectId;
     this.dataStore = deps.dataStore;
     this.logger = deps.logger ?? createSilentLogger();
-    this.capabilities = deps.capabilities;
+    this.contributions = deps.contributions ?? createFixedContributions(deps.capabilities);
     this.host = deps.host ?? createHostContext();
     this.hostFibers = deps.hostFibers ?? [];
+    this.capabilityEntries = deps.capabilityEntries ?? new Map();
+    this.kernelServices = deps.kernelServices;
     this.pluginLoadReport = deps.pluginLoadReport;
   }
 
+  get capabilities(): ReadonlyArray<Capability> {
+    return this.contributions.snapshot();
+  }
+
   private triggerCapability(): TriggerCapability | undefined {
-    return this.capabilities.find((c): c is TriggerCapability => c.id === "trigger");
+    return this.contributions.snapshot().find((c): c is TriggerCapability => c.id === "trigger");
   }
 
   get triggerManager(): TriggerManager {
@@ -73,7 +87,7 @@ export class ProjectRuntime {
 
   async deleteAgent(agentId: string): Promise<void> {
     this.sessionRuntime.evictAgent(agentId);
-    for (const capability of this.capabilities) {
+    for (const capability of this.contributions.snapshot()) {
       try {
         await capability.onAgentDeleted?.(agentId);
       } catch (err) {
@@ -87,7 +101,7 @@ export class ProjectRuntime {
     agentId: string,
     kind: AgentConfigChangeKind,
   ): Promise<void> {
-    for (const capability of this.capabilities) {
+    for (const capability of this.contributions.snapshot()) {
       try {
         await capability.onAgentConfigChanged?.(agentId, kind);
       } catch (err) {
@@ -137,7 +151,7 @@ export class ProjectRuntime {
     this._shutdownDone = true;
     this.logger.info({ projectId: this.projectId }, "project runtime shutting down");
     await this.sessionRuntime.closeAll();
-    for (const capability of this.capabilities) {
+    for (const capability of this.contributions.snapshot()) {
       await settleWithin(
         capability.shutdown?.(),
         CAPABILITY_SHUTDOWN_TIMEOUT_MS,
@@ -163,5 +177,78 @@ export class ProjectRuntime {
         /* fiber state hygiene only */
       }
     }
+    for (const entries of this.capabilityEntries.values()) {
+      for (const { fiber } of entries) {
+        try {
+          await fiber.dispose();
+        } catch {
+          /* fiber state hygiene only */
+        }
+      }
+    }
   }
+
+  async loadCapability(capability: Capability): Promise<void> {
+    if (this._shutdownDone) throw new Error("runtime is shutting down");
+    if (this.contributions.has(capability.id)) {
+      throw new Error(`capability id already loaded: ${capability.id}`);
+    }
+    if (!this.kernelServices) throw new Error("runtime was assembled without kernelServices");
+    const wrapper = defineCapabilityPlugin(capability, this.kernelServices, this.contributions);
+    const fiber = this.host.plugin(wrapper.plugin);
+    wrapper.fiber = fiber;
+    try {
+      await wrapper.ready;
+    } catch (err) {
+      try {
+        await fiber.dispose();
+      } catch {
+        /* fiber state hygiene only */
+      }
+      throw err;
+    }
+    const entries = this.capabilityEntries.get(capability.id) ?? [];
+    entries.push({ fiber, capability });
+    this.capabilityEntries.set(capability.id, entries);
+  }
+
+  async unloadCapability(id: string): Promise<boolean> {
+    const entries = this.capabilityEntries.get(id);
+    if (!entries || entries.length === 0) return false;
+    for (const { fiber, capability } of [...entries]) {
+      try {
+        await fiber.dispose();
+      } catch {
+        /* fiber state hygiene only */
+      }
+      await settleWithin(
+        capability.shutdown?.(),
+        CAPABILITY_SHUTDOWN_TIMEOUT_MS,
+        (outcome, detail) => {
+          this.logger.warn(
+            {
+              projectId: this.projectId,
+              capability: capability.id,
+              outcome,
+              err: outcome === "error" ? detail : undefined,
+              timeoutMs: CAPABILITY_SHUTDOWN_TIMEOUT_MS,
+            },
+            "capability shutdown did not complete, continuing",
+          );
+        },
+      );
+    }
+    this.capabilityEntries.delete(id);
+    return true;
+  }
+}
+
+function createFixedContributions(capabilities: ReadonlyArray<Capability>): CapabilityContributions {
+  const frozen = Object.freeze([...capabilities]);
+  return {
+    snapshot: () => frozen,
+    push: () => {},
+    pull: () => {},
+    has: (id) => frozen.some((c) => c.id === id),
+  };
 }

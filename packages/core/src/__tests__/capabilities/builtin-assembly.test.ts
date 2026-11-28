@@ -46,7 +46,7 @@ describe("builtin tool capabilities via real assembly path", () => {
       projectStore: store,
       logger: createSilentLogger(),
       fileWriteMutex: new FileWriteMutex(),
-      capabilities: [...builtinToolCapabilities(undefined, { interaction: interactionCapability() })],
+      capabilities: () => [...builtinToolCapabilities(undefined, { interaction: interactionCapability() })],
       stores: createStoreRegistry(),
       runConfig: new RunConfigHolder(),
     });
@@ -108,7 +108,7 @@ describe("builtin tool capabilities via real assembly path", () => {
         projectStore: store,
         logger: createSilentLogger(),
         fileWriteMutex: new FileWriteMutex(),
-        capabilities: [...builtinToolCapabilities(undefined, { interaction: interactionCapability() }), memoryCapability()],
+        capabilities: () => [...builtinToolCapabilities(undefined, { interaction: interactionCapability() }), memoryCapability()],
         stores: createStoreRegistry(),
         runConfig: new RunConfigHolder(),
       });
@@ -156,7 +156,7 @@ describe("builtin tool capabilities via real assembly path", () => {
         projectStore: store,
         logger: createSilentLogger(),
         fileWriteMutex: new FileWriteMutex(),
-        capabilities: [...builtinToolCapabilities(undefined, { interaction: interactionCapability() }), memoryCapability(), shadow],
+        capabilities: () => [...builtinToolCapabilities(undefined, { interaction: interactionCapability() }), memoryCapability(), shadow],
         stores: createStoreRegistry(),
         runConfig: new RunConfigHolder(),
       });

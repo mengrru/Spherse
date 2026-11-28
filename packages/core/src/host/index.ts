@@ -5,4 +5,4 @@ export {
   type HostCoreServices,
   type HostRuntimeServices,
 } from "./services.js";
-export { defineCapabilityPlugin, type CapabilityPlugin } from "./capability-plugin.js";
+export type { CapabilityPlugin } from "./capability-plugin.js";

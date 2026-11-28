@@ -1,29 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ConflictError } from "../../errors.js";
-import { CapabilityRegistry, type Capability } from "../../kernel/capability.js";
 import { createStoreRegistry } from "../../kernel/ports.js";
 import { serializeBlocks } from "../../kernel/context-block.js";
-
-function cap(id: string): Capability {
-  return { id };
-}
-
-describe("CapabilityRegistry", () => {
-  it("registers and looks up capabilities by id", () => {
-    const registry = new CapabilityRegistry();
-    const fs = cap("fs");
-    registry.register(fs);
-    expect(registry.byId("fs")).toBe(fs);
-    expect(registry.all()).toEqual([fs]);
-    expect(registry.size).toBe(1);
-  });
-
-  it("rejects duplicate ids with ConflictError", () => {
-    const registry = new CapabilityRegistry();
-    registry.register(cap("memory"));
-    expect(() => registry.register(cap("memory"))).toThrow(ConflictError);
-  });
-});
 
 describe("StoreRegistry", () => {
   it("keeps global stores independent from agent-scoped stores", () => {

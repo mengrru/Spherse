@@ -103,6 +103,25 @@
 - `pathRules` 仅作用于 LLM 端；capability 私有文件对 server 路由不可读写，如需开放经 PM 门面方法显式授权
 - 运行时配置变更信号是 `onAgentConfigChanged`（当前生产仅 dispatch `"mcp"`，`"tools"` / `"profile"` 为预留）；profile 变更走热重载路径（见 [core.md](core.md)「生命周期」），能力经 `turnHooks.onReload` 感知
 
+## 贡献通道与动态装载
+
+capability 贡献经 `CapabilityContributions` 收集器（host 服务 `spherse/capabilities`）进入折叠管线，**先验后发**：每个 capability 装载为 cordis fiber（`defineCapabilityPlugin`），`init` 成功后才 `push`（贡献可见），fiber dispose 时 `pull`。`RuntimeDeps.capabilities` 是 getter（访问时刻快照，copy-on-write 冻结数组）——消费端折叠点每次求值取当前集合。
+
+`ProjectRuntime` 提供 `loadCapability(cap)`（init 成功才发布，失败 reject 且贡献从未可见、重复 id reject）与 `unloadCapability(id)`（pull + `shutdown?.()`，按 id 处理全部同名 entry）。装配语义不变：串行 init 失败即停。
+
+生效矩阵（装载/卸载后何时可见）：
+
+| 贡献点 | 可见时机 |
+|---|---|
+| `tools`/`featureTools`/`pathRules`/`contextBlocks` | 下次装配（新 session/agent 重装配） |
+| `streamDecorators` | 新 runner 立即；既有 runner 在下次 sampling/reload 变更时 |
+| `contextProjectors` | 新 session（runner 创建时闭包进 convertToLlm，不回溯） |
+| `previewTransforms`/`attachmentProcessors` | 下次拉取 |
+| `eventMiddlewares`/`turnHooks` | 新 session（runner 创建时折叠，不回溯） |
+| `onAgentDeleted`/`onAgentConfigChanged`/`shutdown` 广播 | 立即 |
+
+卸载与进程 shutdown 次序刻意不同：unload = pull（广播立即不可见）→ shutdown；进程 shutdown = shutdown（期间广播仍可见）→ dispose/pull。
+
 ## 外部能力插件
 
 用户可在 `<project>/.spherse/plugins/<dir>/` 放置第三方 capability：`manifest.json`（name/version/main，TypeBox 校验）+ ESM `main` 文件，default export 一个 Capability 形状对象。目录约定见 [data-conventions.md](../data-conventions.md)。
@@ -111,5 +130,5 @@
 - **错误语义两段**：静态预检（manifest 校验/形状校验/路径逃逸/import/id 冲突）失败 → `logger.warn` 跳过、装配继续；`init` 运行时失败 → 与内置同等 fail-fast（错误信息含插件名，删目录即恢复）
 - **冲突**：id 与内置或用户注入列表冲突的外部插件被剔除（禁止 shadow 内置工具——数组语义是后注册者工具覆盖）
 - **信任模型**：进程内全权执行、与内置平权，无沙箱——安全性 = "用户自装"信任链；插件约定零宿主 import（值 import `@spherse/core` 在 workspace 外不可解析，类型消费走 `import type` 编译期擦除）
-- **语义档位**：只加不减、重启生效（无卸载/禁用/热插拔；贡献折叠发生在 runner 创建点）；装载诊断经 `ProjectRuntime.pluginLoadReport`（loaded/skipped）
+- **语义档位**：只加不减；静态装载（目录扫描在装配期）+ 装载后本进程内经贡献通道动态可见（见上节生效矩阵）；卸载仅经 `ProjectRuntime.unloadCapability`（运行时 API，非配置面）；装载诊断经 `ProjectRuntime.pluginLoadReport`（loaded/skipped）
 - **契约影响**：`Capability` 接口自本特性起是对外承诺——breaking 变更需评估插件生态影响（semver 纪律）

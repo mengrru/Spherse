@@ -5,7 +5,7 @@ import type { ProjectStore } from "../store/project.js";
 import type { DataStore } from "../capabilities/data/index.js";
 import type { StoreRegistry } from "../kernel/ports.js";
 import type { SessionStoreFactory, MemoryStoreFactory } from "../store/storage-port.js";
-import type { CapabilityRegistry } from "../kernel/capability.js";
+import type { CapabilityContributions } from "./contributions.js";
 import { HostServiceKey } from "./context.js";
 import type { HostContext } from "./context.js";
 
@@ -18,7 +18,7 @@ export interface HostCoreServices {
   data?: DataStore;
   sessionStoreFactory: SessionStoreFactory;
   memoryStoreFactory: MemoryStoreFactory;
-  capabilities: CapabilityRegistry;
+  capabilities: CapabilityContributions;
 }
 
 export function registerCoreServices(host: HostContext, services: HostCoreServices): void {

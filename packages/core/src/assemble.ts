@@ -18,8 +18,7 @@ import { compactionCapability } from "./capabilities/compaction/index.js";
 import { memoryCapability } from "./capabilities/memory/index.js";
 import { timePerceptionCapability } from "./capabilities/time-perception/index.js";
 import { createStoreRegistry, type SessionPort } from "./kernel/ports.js";
-import { CapabilityRegistry, type Capability } from "./kernel/capability.js";
-import { ConflictError } from "./errors.js";
+import type { Capability } from "./kernel/capability.js";
 import { ProjectRuntime } from "./project-runtime.js";
 import { initPresets } from "./presets.js";
 import { type Logger, createSilentLogger } from "./logger.js";
@@ -28,6 +27,7 @@ import { ModelCatalog } from "./model-providers/catalog.js";
 import { createHostContext, type HostFiber } from "./host/context.js";
 import { registerCoreServices, registerRuntimeServices } from "./host/services.js";
 import { defineCapabilityPlugin } from "./host/capability-plugin.js";
+import { createCapabilityContributions } from "./host/contributions.js";
 import type { PluginLoadReport } from "./plugins/loader.js";
 
 export interface AssembleCoreOptions {
@@ -99,18 +99,7 @@ export async function assembleProjectCore(
       : (options.capabilities ?? defaultCoreCapabilities(projectStore, logger, dataStore, options.interaction));
 
   const host = createHostContext();
-  const capabilityRegistry = new CapabilityRegistry();
-  for (const capability of capabilities) {
-    try {
-      capabilityRegistry.register(capability);
-    } catch (err) {
-      if (err instanceof ConflictError) {
-        logger.warn({ capability: capability.id }, "duplicate capability id, host view keeps the first");
-      } else {
-        throw err;
-      }
-    }
-  }
+  const contributions = createCapabilityContributions();
   registerCoreServices(host, {
     fs: fsPort,
     logger,
@@ -120,7 +109,7 @@ export async function assembleProjectCore(
     data: dataStore,
     sessionStoreFactory: options.storage.sessionStoreFactory,
     memoryStoreFactory: options.storage.memoryStoreFactory,
-    capabilities: capabilityRegistry,
+    capabilities: contributions,
   });
 
   const runConfig = new RunConfigHolder({
@@ -133,7 +122,7 @@ export async function assembleProjectCore(
     logger,
     fileWriteMutex,
     modelCatalog: options.modelCatalog,
-    capabilities,
+    capabilities: contributions.snapshot,
     stores,
     runConfig,
   });
@@ -160,9 +149,10 @@ export async function assembleProjectCore(
   };
 
   const pluginWrappers = capabilities.map((capability) =>
-    defineCapabilityPlugin(capability, kernelServices, capabilityRegistry),
+    defineCapabilityPlugin(capability, kernelServices, contributions),
   );
   const fibers: HostFiber[] = [];
+  const capabilityEntries = new Map<string, Array<{ fiber: HostFiber; capability: Capability }>>();
   try {
     for (const wrapper of pluginWrappers) {
       const fiber = host.plugin(wrapper.plugin);
@@ -180,6 +170,12 @@ export async function assembleProjectCore(
     }
     throw err;
   }
+  for (let i = 0; i < capabilities.length; i++) {
+    const entry = { fiber: fibers[i]!, capability: capabilities[i]! };
+    const existing = capabilityEntries.get(entry.capability.id);
+    if (existing) existing.push(entry);
+    else capabilityEntries.set(entry.capability.id, [entry]);
+  }
 
   return new ProjectRuntime({
     projectManager,
@@ -190,6 +186,9 @@ export async function assembleProjectCore(
     dataStore,
     host,
     hostFibers: fibers,
+    capabilityEntries,
+    kernelServices,
+    contributions,
     pluginLoadReport: options.pluginLoadReport,
   });
 }

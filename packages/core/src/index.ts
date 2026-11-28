@@ -80,7 +80,6 @@ export { IdbMemoryStore } from "./store/idb-memory-store.js";
 export type { HostContext, HostFiber } from "./host/context.js";
 export { HostServiceKey, createHostContext } from "./host/context.js";
 export { registerCoreServices } from "./host/services.js";
-export { defineCapabilityPlugin } from "./host/capability-plugin.js";
 export { isValidCron, isReservedEventName, requiresTargetSession } from "./trigger/validation.js";
 export type { Attachment } from "./attachments/index.js";
 export type { McpTransportType } from "./mcp/index.js";

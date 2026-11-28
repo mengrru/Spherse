@@ -51,22 +51,24 @@ export interface RuntimeDeps {
 }
 
 export function freezeRuntimeDeps(deps: RuntimeDeps): Readonly<RuntimeDeps> {
-  return Object.freeze({ ...deps });
+  return Object.freeze(deps);
 }
 
-export function createRuntimeDeps(input: {
+export interface RuntimeDepsSource {
   projectStore: ProjectStore;
   logger: Logger;
   fileWriteMutex: FileWriteMutex;
-  capabilities: ReadonlyArray<Capability>;
+  capabilities: () => ReadonlyArray<Capability>;
   stores: StoreRegistry;
   runConfig: RunConfigSource;
   modelResolver?: ModelResolver;
   modelCatalog?: ModelCatalog;
-}): Readonly<RuntimeDeps> {
-  const capabilities = input.capabilities;
+}
+
+export function createRuntimeDeps(input: RuntimeDepsSource): Readonly<RuntimeDeps> {
+  const getCapabilities = input.capabilities;
   const catalog = input.modelCatalog ?? new ModelCatalog();
-  return freezeRuntimeDeps({
+  const deps: RuntimeDeps = {
     projectStore: input.projectStore,
     projectRoot: input.projectStore.getRootPath(),
     fileWriteMutex: input.fileWriteMutex,
@@ -74,14 +76,19 @@ export function createRuntimeDeps(input: {
     runConfig: input.runConfig,
     createTurnHooks: (agentId, sessionId) =>
       composeTurnHooks(
-        capabilities
+        getCapabilities()
           .map((c) => c.turnHooks?.(agentId, sessionId))
           .filter((h): h is NonNullable<ReturnType<TurnHooksFactory>> => Boolean(h)),
       ),
     modelCatalog: catalog,
     modelResolver: input.modelResolver ?? createModelResolver(catalog),
-    capabilities,
+    get capabilities() {
+      return getCapabilities();
+    },
     stores: input.stores,
-    attachmentProcessors: capabilities.flatMap((c) => c.attachmentProcessors ?? []),
-  });
+    get attachmentProcessors() {
+      return getCapabilities().flatMap((c) => c.attachmentProcessors ?? []);
+    },
+  };
+  return freezeRuntimeDeps(deps);
 }
