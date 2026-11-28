@@ -142,6 +142,7 @@ browser worker 图直连 `assembleProjectCore`（browser/src/worker/registry.ts:
 | manifest `main` 路径逃逸 | `isPathInside` 核验（仓库路径红线） |
 | 外部 id 撞内置/用户 override | 预检排除集跳过（禁止 shadow 内置，M4）+ registry `ConflictError` warn 兜底（P1 既有） |
 | ESM `import()` Windows 路径 | `pathToFileURL` 统一处理 |
+| 插件目录内符号链接指向外部 | lexical `isPathInside` 不拦 symlink，`import()` 会跟随；与仓库路径安全实践一致，被 D-P6 全权信任模型吸收（用户自装任意代码本就全权） |
 | `.spherse/plugins` 随项目导出携带第三方代码 | 定性为 feature（项目自带能力可分发），data-conventions 声明 |
 
 ## Review 处理记录（2026-11-28）
@@ -161,3 +162,5 @@ browser worker 图直连 `assembleProjectCore`（browser/src/worker/registry.ts:
 
 - factory 对 loader 采用**动态 `import()`**（design 原文静态 import）：vitest browser mode 从 core 源码加载 `@spherse/core` 根入口时，factory → loader → `node:url` 会被 vite externalize 报错（构建产物不受影响，仅测试源码路径触发）。动态 import 使 loader 不进 factory 静态图；类型经 `import type` 引用。browser 10/10 恢复、构建产物 grep 零 `node:url`/`loadExternalCapabilities`。
 - `pluginLoadReport.loaded` 为共享数组引用、在合并函数执行时填充（design 未细化）：id 冲突剔除发生在 capabilities 解析（core 内）晚于 factory 构造 report，共享引用保证 report 反映剔除后结果。
+- **排除机制实现为解析期全集检查**（design §3.2 原文是"factory 侧预构 builtin id 排除集"，未实现）：factory 无法预构 builtin 列表（ProjectStore 在 core 内），实际在 capabilities 解析时对 resolved 全集（builtin + 用户 override + 已接受外部）检查——覆盖面更强（函数分支的用户注入 id 也在检查内），被剔除者记入 `pluginLoadReport.skipped`（stage `id-conflict`）。
+- code review 后追加：`checkCapabilityShape` 增加 plain-object 原型判定（类实例 default export 的原型成员会被 spread 丢失造成静默空 capability，直接在 shape 阶段拒绝）；补 13 成员表驱动、用户 array/function 分支、init cause 链断言测试。

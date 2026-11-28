@@ -46,6 +46,8 @@ const ARRAY_MEMBERS = [
 
 function checkCapabilityShape(input: unknown): Capability | undefined {
   if (typeof input !== "object" || input === null) return undefined;
+  const proto = Object.getPrototypeOf(input);
+  if (proto !== Object.prototype && proto !== null) return undefined;
   const candidate = input as Record<string, unknown>;
   if (typeof candidate.id !== "string" || candidate.id.length === 0) return undefined;
   for (const member of FUNCTION_MEMBERS) {

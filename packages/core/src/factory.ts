@@ -78,7 +78,9 @@ export async function assembleProject(
     const knownIds = new Set(resolved.map((c) => c.id));
     const accepted = external.capabilities.filter((c) => {
       if (knownIds.has(c.id)) {
-        logger.warn({ plugin: c.id }, "external capability skipped: id conflicts with existing capability");
+        const err = new Error(`capability id conflicts with existing capability: ${c.id}`);
+        logger.warn({ plugin: c.id, err }, "external capability skipped: id conflicts with existing capability");
+        external.skipped.push({ dir: c.id, stage: "id-conflict", err });
         return false;
       }
       return true;

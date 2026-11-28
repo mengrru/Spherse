@@ -46,8 +46,9 @@ project-root/
 │   │       └── assets/            # 可选：agent 私有静态资源（theme 配图、字体等），LLM 读写、server 只读
 │   ├── generated-images/          # generate_image 落盘（首次生图时创建）
 │   ├── attachments/               # 聊天图片上传落盘
-│   └── skills/                    # 新建项目时创建的空目录（用户自建 project skill）
-│       └── <skill-name>/SKILL.md
+│   ├── skills/                    # 新建项目时创建的空目录（用户自建 project skill）
+│   │   └── <skill-name>/SKILL.md
+│   └── plugins/                   # 可选：外部 capability 插件（<dir>/manifest.json + ESM main；仅桌面/server 装配时装载，见 architecture/capabilities.md「外部能力插件」）
 ├── AGENTS.md                      # 创建时写默认模板；缺失不影响任何功能
 └── CHANGELOG.md                   # 创建时写空文件；append_changelog 工具追加
 ```

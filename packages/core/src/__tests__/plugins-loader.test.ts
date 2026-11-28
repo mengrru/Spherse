@@ -139,6 +139,39 @@ describe("loadExternalCapabilities", () => {
     expect(result.skipped[0]!.stage).toBe("id-conflict");
   });
 
+  it("rejects class-instance default exports whose members live on the prototype", async () => {
+    const projectRoot = makeProject();
+    writePlugin(projectRoot, "class-instance", {
+      "manifest.json": JSON.stringify({ name: "cls", version: "1.0.0", main: "index.mjs" }),
+      "index.mjs": `class Cap { constructor() { this.id = "cls-plugin"; } async init() {} tools() { return []; } }
+export default new Cap();\n`,
+    });
+    const fsPort = new NodeFsPort(projectRoot);
+    const result = await loadExternalCapabilities(projectRoot, fsPort, createSilentLogger());
+    expect(result.capabilities).toEqual([]);
+    expect(result.skipped[0]!.stage).toBe("shape");
+  });
+
+  it("rejects every optional member of the wrong kind (table-driven over all 13)", async () => {
+    const functionMembers = ["init", "tools", "featureTools", "contextBlocks", "turnHooks", "onAgentDeleted", "onAgentConfigChanged", "shutdown"];
+    const arrayMembers = ["streamDecorators", "contextProjectors", "previewTransforms", "attachmentProcessors", "pathRules"];
+    const cases: Array<{ member: string; value: unknown }> = [
+      ...functionMembers.map((member) => ({ member, value: 123 })),
+      ...arrayMembers.map((member) => ({ member, value: "nope" })),
+    ];
+    for (const { member, value } of cases) {
+      const projectRoot = makeProject();
+      writePlugin(projectRoot, "table", {
+        "manifest.json": JSON.stringify({ name: "table", version: "1.0.0", main: "index.mjs" }),
+        "index.mjs": `export default { id: "table-plugin", [${JSON.stringify(member)}]: ${JSON.stringify(value)} };\n`,
+      });
+      const fsPort = new NodeFsPort(projectRoot);
+      const result = await loadExternalCapabilities(projectRoot, fsPort, createSilentLogger());
+      expect(result.capabilities, `member ${member} should be rejected`).toEqual([]);
+      expect(result.skipped[0]!.stage).toBe("shape");
+    }
+  });
+
   it("ignores files that are not directories", async () => {
     const projectRoot = makeProject();
     fs.writeFileSync(path.join(projectRoot, ".spherse", "plugins", "stray.txt"), "x");
