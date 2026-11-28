@@ -1,6 +1,6 @@
 # Server 层架构
 
-> 覆盖：Fastify 组合根与生命周期、鉴权模型（always-on token / 认证制 CORS / Host 校验）、路由域与错误映射、WebSocket（chat 挂载 + 全局 bus）、preview、data 路由与日志。
+> 覆盖：Fastify 组合根与生命周期、鉴权模型（always-on token / 认证制 CORS / Host 校验）、RPC 通道（/ws/rpc，业务 API 主通道）、REST 路由域（deprecated 观察期 + 资源面长期保留）、WebSocket、preview、data 路由与日志。
 > core 侧机制见 [core.md](core.md)；chat WS 协议与会话链路见 [chat.md](chat.md)；contract 文件组织与绑定规范见 `packages/server/README.md`。
 > desktop 侧的启动与 token 重建链见 [desktop.md](desktop.md)。
 
@@ -8,7 +8,7 @@
 
 - `createMultiProjectServer({ auth?, port?, modelCatalog?, appVersion?, modelSettingsPath? })` 创建单实例，返回 `{ fastify, registry, logger, addAllowedHosts, removeAllowedHosts, close }`
 - 初始化顺序：logger → appVersion → Fastify（debug 级 + query redact）→ **Host 校验 hook → 认证制 CORS hook** → websocket → multipart（5MB）→ 错误处理器
-  - 之后：ModelCatalog（未注入时自建）→ ModelSettingsStore（load `modelSettingsPath`，缺省纯内存）→ env 注入 + custom providers 注册 → ProjectRegistry（以 store 中的 defaultModel/sampling/thinkingLevel 构造）→ ChatSessionHub → auth hook → 全部路由 → chat / bus WS handler
+  - 之后：ModelCatalog（未注入时自建）→ ModelSettingsStore（load `modelSettingsPath`，缺省纯内存）→ env 注入 + custom providers 注册 → ProjectRegistry（以 store 中的 defaultModel/sampling/thinkingLevel 构造）→ appHost（`createHostContext`，`spherse/hub` 服务 + `registerRpcMethodGroups` 方法组注册）→ ChatSessionHub（实现来自 `@spherse/rpc/chat`，server 只做挂载）→ auth hook → 全部路由 → rpc / chat / bus WS handler
   - onRequest hook 顺序固定 Host → CORS → auth；CORS hook 对 OPTIONS 直接 204 短路
   - hook 注册在根实例（`fastify.register` 封装上下文内不生效）
 - **端口**：默认固定 53972、只绑 `127.0.0.1`；`EADDRINUSE` 才回退 OS 随机端口
@@ -51,6 +51,8 @@
 
 ## 路由
 
+REST 路由域处于 **deprecated 观察期**：RPC 灰度默认开（`/ws/rpc` 为主通道），renderer 的 RPC 适配器已不再调用业务面 REST；观察期后删除业务面路由（约 2.0k 行）。**长期保留的是资源面**：preview / download / upload / attachments / images（URL 型资源消费，浏览器原生加载器直取，不进 RPC envelope——桌面走 Fastify、browser 版走 SW 虚拟路由，语义对齐见 `docs/dev/infra/2026-11-22-browser-resource-plane/design.md`）。
+
 18 个域文件由 `routes/index.ts` 聚合注册；项目级路由统一 `/api/projects/:projectId/...`，全局 preHandler 从 registry 解析并注入 `req.projectCtx`（miss 抛 404）；全局路由不带 projectId、不经过该 preHandler（鉴权仍由 auth onRequest hook 覆盖）：
 
 | 域 | 端点概要 |
@@ -90,7 +92,12 @@
 
 ## WebSocket
 
-- **bus（`/ws/bus`）**：全局多路复用，通道 `trigger` / `agent` / `session` / `fs-watch` / `debug` + 系统 `__system__`（pong、watch 错误）
+- **rpc（`/ws/rpc`，业务 API 主通道）**：单一 WS 连接上的 JSON-RPC 2.0 + 事件通道
+  - 装配（`rpc/ws-rpc.ts`）：`registerRpcMethodGroups(appHost, [buildMethodRegistry()])` → `RpcContext{resolveProject, registry, modelSettings, authRequired, appVersion, hub, bus}` → 每连接 `new RpcDispatcher + RpcConnectionHandler`（连接实现与 dispatcher 来自 `@spherse/rpc/host`）
+  - 方法组：`@spherse/rpc/methods` 的八组共享基座（sessions/agents/triggers/debug/chat/connection/bus/content/settings——browser-safe，与 browser 版 SharedWorker 共用）+ server 本地两组（skills/marketplace，Node 专属：service env 覆盖、zip 下载流；放置判据见 `packages/rpc/README.md`）
+  - 事件订阅：同连接上 `chat:{p}:{a}:{s}`（replayable，hub attach）与 `bus:{p}:{channel}`（live-only）scope；断线重连经 snapshot/replay 握手
+  - `modelSettings` 为 `RpcModelSettings` 端口（`rpc/model-settings-port.ts`）：sanitize → ModelSettingsStore；apply → 持久化 + env 注入 + registry fan-out
+- **bus（`/ws/bus`，legacy，deprecated 观察期）**：全局多路复用，通道 `trigger` / `agent` / `session` / `fs-watch` / `debug` + 系统 `__system__`（pong、watch 错误）
   - client→server：`subscribe` / `unsubscribe`（按 `(projectId, channel)`）、`ping`、`emit-trigger-event`
   - 非法消息 debug 日志丢弃；连接关闭释放全部订阅
 - **debug 日志流**：`createServerLogger` 用 pino multistream——pretty transport 之外，debug bus stream 把每行日志包成 debug 通道事件广播
@@ -98,7 +105,7 @@
 - **fs-watcher**：按项目引用计数的共享 `fs.watch`（recursive），多订阅者共享 1 个 OS watcher，listeners 归零才 close
   - 过滤决策基于 core `categorizePath` 的 watched-category 集合：userFiles / rootIndex / changelog / projectConfig / projectTheme / agentTheme / skills
   - `node_modules` / `.git` 任意路径段降噪
-- **chat（`/ws/projects/:projectId/chat/:agentId/:sessionId`）**：server 侧只做挂载、registry miss 关闭、hub attach 与出入站 contract 校验——协议与生命周期见 [chat.md](chat.md)
+- **chat（`/ws/projects/:projectId/chat/:agentId/:sessionId`，legacy，deprecated 观察期——RPC 模式下走 /ws/rpc 的 chat scope 订阅）**：server 侧只做挂载、registry miss 关闭、hub attach 与出入站 contract 校验——协议与生命周期见 [chat.md](chat.md)；ChatSessionHub/Channel 等七件实现已下沉 `@spherse/rpc/chat`（server 的 `chat/` 只剩 ws-chat 挂载与 re-export）
 
 ## preview 路由
 

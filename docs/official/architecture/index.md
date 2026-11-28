@@ -16,11 +16,12 @@ Spherse 是本地运行的个人 Agent 运行时：多个拥有独立系统提�
 | `contracts` | 跨进程边界 wire 协议：HTTP / WS 的 typebox schema + parser，server 与 renderer 共同依赖 |
 | `presets` | 预置模板与静态内容，构建期经 sync 脚本生成可导入常量（builtin skill 源码、预置 agent；提示词模板已迁往 spherse-assets 提示词模板市场，经 OSS 下发） |
 | `i18n` | locale catalog 与翻译纯函数（`.`）+ React 绑定（`./react`） |
-| `server` | Fastify API 层：HTTP / WS 边界、ProjectRegistry——薄转发层，含少量编排逻辑（ChatSessionHub 会话编排、错误分级） |
+| `server` | Fastify API 层：`/ws/rpc` 业务主通道（方法组与 hub 共享 `@spherse/rpc` 基座）+ REST 资源面（preview/download/upload；业务面 REST deprecated 观察期）、ProjectRegistry 薄转发与鉴权/host 防护 |
 | `sdk` | 被注入 iframe 的浏览器运行时（`window.spherse`），esbuild 单文件 IIFE |
 | `app` | 共享 React renderer：路由、feature UI、查询缓存、UI SDK host 桥 |
 | `desktop` | Electron 桌面壳：main / preload / 生命周期，最终组合根所在 |
 | `web` | 移动端 PWA 壳：`WebHostBridge`，经公网地址连接桌面 server（quick 模式 tunnel 或 manual 自填域名） |
+| `browser` | 浏览器本地版壳：`BrowserHostBridge`，无 server 进程——runtime 经 SharedWorker host 跑在本页 origin，存储 OPFS/IndexedDB，资源面走 SW 虚拟路由（`/dev/browser/` 部署经 `SPHERSE_BROWSER_BASE` 参数化） |
 | `landing` | GitHub Pages 项目介绍页（复用 `@spherse/i18n` 的类型与 locale 工具，自建 catalog） |
 
 依赖方向单向收窄：

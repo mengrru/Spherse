@@ -181,7 +181,7 @@ spherse/
     │   │       ├── shutdown.ts           # closeMultiProjectServer()：hub → registry → fastify 关停顺序、阶段超时与失败隔离
 │   │       ├── marketplace.ts        # 市场域 service 工厂（createMarketplaceServiceImpl 参数化 manifest schema / zip 上限 / 超时 / tmp 前缀）：skills 单例（OSS spherse/skills/manifest.json，env SPHERSE_MARKETPLACE_MANIFEST_URL 覆盖，50MB）+ projects 单例（spherse/projects/manifest.json，env SPHERSE_PROJECT_MARKETPLACE_MANIFEST_URL 覆盖，100MB/300s）；均含 30s 内存缓存 + zip 下载（同源 SSRF 校验、流内计数）
 │   │       ├── prompt-marketplace.ts # 提示词模板市场 service（OSS spherse/prompts/{lang}.json，env SPHERSE_PROMPT_MARKETPLACE_BASE_URL 覆盖，5MB 上限含流式计数）：语言回退链（zh-cn → [zh-cn, en-us]；其它 zh-* → [L, zh-cn, en-us]；其余 → [L, en-us, zh-cn]）+ 按请求语言 30s 缓存与 in-flight 去重，整链 404 → 404
-│   │       ├── routes/               # REST 路由，按业务域拆分
+│   │       ├── routes/               # REST 路由，按业务域拆分（业务面 deprecated 观察期——RPC 已是主通道；资源面 preview/download/upload/attachments/images 长期保留）
 │   │       │   ├── index.ts          # registerAllRoutes 聚合
 │   │       │   ├── agents.ts         # Agent 查询与 raw 内容读取
     │   │       │   ├── agent-write.ts    # Agent 创建/更新/删除
@@ -202,15 +202,13 @@ spherse/
 │   │       │   ├── upload.ts         # 通用文件上传 API（POST /api/projects/:projectId/upload/*，multipart 单文件 → 目标目录，per-route 100MB 上限，同名大小写不敏感自动重命名，落盘走 PM writeBinaryFile）
 │       │       │   ├── trigger.ts         # 触发器 CRUD 与手动触发（/triggers、/trigger-logs、/run）
 │       │       │   └── debug.ts         # Debug 路由（dev only）：turn-context 导出 + session 事件日志读取（?agentId=）
-│   │       ├── chat/                  # chat 域（对外仅经 index.ts 导出 handleChatWebSocket + ChatSessionHub）
-│   │       │   ├── index.ts            # 域门面
-│   │       │   ├── chat-session-hub.ts # ChatSessionHub：channel 注册表（按 SessionManager 身份 × sessionId），closeRuntime/close 收口 + admission
-│   │       │   ├── chat-channel.ts     # ChatChannel：单 session 生命周期（opening/open/closed 状态机、lazy restore 单飞、lease、run 序列化、fanout、空闲 release）
-│   │       │   ├── chat-run-snapshot.ts # RunSnapshot：in-flight 快照压缩（message/tool update 按窗口合并、落库完成项移除）
-│   │       │   ├── chat-replay.ts      # detectOpenTurn / replayHandshake：log 反向 open-turn 扫描与握手重放纯函数
-│   │       │   ├── chat-wire-projector.ts # ChatWireProjector：persist→wire 翻译纯状态机（echo/seq 配对/run 级 messageId）
-│   │       │   ├── ws-chat.ts          # WebSocket 对话流端点（/ws/projects/:projectId/chat/...，?since= 游标重放）
-│   │       │   └── classify-run-error.ts # run 错误 → wire error code 分类
+│   │       ├── rpc/                  # 业务 API 主通道（/ws/rpc：JSON-RPC + 事件双通道；与 browser 版 SharedWorker 共用 @spherse/rpc 基座）
+│   │       │   ├── ws-rpc.ts          # 装配：appHost 方法组注册（registerRpcMethodGroups）→ RpcContext{resolveProject/registry/modelSettings/hub/bus} → 每连接 RpcDispatcher + RpcConnectionHandler
+│   │       │   ├── model-settings-port.ts # RpcModelSettings 端口：sanitize → ModelSettingsStore；apply → 持久化 + env 注入 + registry fan-out
+│   │       │   └── methods/           # Node 专属方法组（skills/marketplace——service env 覆盖与 zip 下载流；放置判据见 rpc README）+ registry 合并（基座八组 + 宿主组）
+│   │       ├── chat/                  # chat WS legacy 挂载（hub/channel/replay/projector 等七件实现已下沉 @spherse/rpc/chat）
+│   │       │   ├── index.ts            # 域门面（re-export handleChatWebSocket + ChatSessionHub）
+│   │       │   └── ws-chat.ts          # WebSocket 对话流端点（/ws/projects/:projectId/chat/:agentId/:sessionId，?since= 游标重放；RPC 模式下走 /ws/rpc chat scope）
 │   │       ├── bus/                  # bus 域（全局多路复用 bus WebSocket，trigger/agent/session/fs-watch/debug 按 projectId×channel 订阅；对外经 index.ts 导出 handleBusWebSocket）
 │   │       │   ├── ws-bus.ts           # 端点 + BusConnectionHandler（订阅生命周期、trigger/agent/session payload 转发）
 │   │       │   └── fs-watcher.ts       # 按项目引用计数的共享 fs.watch（多订阅者共享 1 个 OS watcher）；过滤决策基于 core categorizePath 的 watched-category 集合 + node_modules/.git 段级降噪

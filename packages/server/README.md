@@ -2,13 +2,21 @@
 
 Fastify API 层，为 Spherse 桌面应用提供多项目 HTTP + WebSocket 服务。在 Electron main process 中以固定默认端口 `53972` 绑定 `127.0.0.1` 启动（`EADDRINUSE` 时回退 OS 随机端口）。HTTP / WS 边界的 schema 与 parser 定义在独立包 `@spherse/contracts`，server 与 renderer 共同依赖。
 
+## RPC 通道（业务 API 主通道）
+
+`/ws/rpc`：单一 WS 连接上的 JSON-RPC 2.0 + 事件通道（envelope 契约在 `@spherse/contracts`），装配链与通道语义见 [architecture/server.md](../../docs/official/architecture/server.md) 的 WebSocket 节。
+
+- 方法组 = `@spherse/rpc/methods` 八组共享基座（browser-safe，与 browser 版 SharedWorker 共用）+ 本包 `rpc/methods/` 的 Node 专属组（skills/marketplace）；**放置判据写死在 eslint 守门**：只依赖 RpcContext 抽象的进基座、平台专属机制的留宿主，判据全文见 [rpc README](../rpc/README.md)
+- 契约测试统一用 `@spherse/rpc/testing` 的 `createRpcHarness` + `callMethod`（不 mock 被测方法本身）
+- REST 业务面处于 deprecated 观察期（renderer 已走 RPC）；资源面（preview/download/upload/attachments/images）长期保留，继续按下方 Route 绑定规范维护
+
 ## Routes & Contracts 规范
 
 ### 文件组织（一一对应）
 
 `@spherse/contracts` 的 `src/` 与本包 `routes/` 按业务域同名文件一一对应；新增域时在新包 `src/index.ts` 追加 import / spread / type re-export。schema 定义规范（命名、`Type.Optional`、`Type.Unknown` 约束等）见 [`packages/contracts/README.md`](../contracts/README.md)。
 
-`src/` 目录按域而非按层组织：内聚的 WS 域收进域目录（`chat/`——hub/channel/run-snapshot/replay/projector/ws-chat/classify-run-error，对外只经 `chat/index.ts` 导出 `handleChatWebSocket` + `ChatSessionHub`，channel/projector 等是内部实现；hub 的生命周期入口为 `closeRuntime` / `close`，由 `MultiProjectServer.close()` 统一驱动，见 [ADR-0012](../../docs/dev/decisions/0012-chat-hub-lifecycle-ownership.md)；`bus/`——ws-bus 端点 + fs-watcher，对外只经 `bus/index.ts` 导出 `handleBusWebSocket`）；唯一按角色分组的例外是 `middlewares/`（auth/cors/host-guard 三件套——Fastify onRequest 请求边界防护，仅由 `index.ts` 装配点引用）。不设 `services/`、`ws/` 等其余通用层目录：跨域共享的有状态编排留顶层（`registry.ts`、`model-settings.ts`、`shutdown.ts`、`marketplace.ts`、`prompt-marketplace.ts`），无依赖纯工具进 `lib/`（`debug-sink.ts`），单文件域不开目录、长胖再升级为域目录。
+`src/` 目录按域而非按层组织：`rpc/`——业务 API 主通道（`ws-rpc.ts` 装配 RpcContext 与方法组、`methods/` 存放 Node 专属组、`model-settings-port.ts` 是 RpcModelSettings 端口实现）；chat 七件套（hub/channel/replay/projector 等）已下沉 `@spherse/rpc/chat`，本包 `chat/` 只剩 ws-chat legacy 挂载与 re-export（hub 生命周期仍由 `MultiProjectServer.close()` 统一驱动，见 [ADR-0012](../../docs/dev/decisions/0012-chat-hub-lifecycle-ownership.md)）；`bus/`——ws-bus 端点 + fs-watcher（legacy，deprecated 观察期），对外只经 `bus/index.ts` 导出 `handleBusWebSocket`；唯一按角色分组的例外是 `middlewares/`（auth/cors/host-guard 三件套——Fastify onRequest 请求边界防护，仅由 `index.ts` 装配点引用）。不设 `services/`、`ws/` 等其余通用层目录：跨域共享的有状态编排留顶层（`registry.ts`、`model-settings.ts`、`shutdown.ts`、`marketplace.ts`、`prompt-marketplace.ts`），无依赖纯工具进 `lib/`（`debug-sink.ts`），单文件域不开目录、长胖再升级为域目录。
 
 ### Route 绑定规范
 
